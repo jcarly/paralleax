@@ -65,6 +65,30 @@ describe('Stories API', () => {
     expect(response.body.id).toEqual(expect.any(String));
   });
 
+  it('POST /api/stories/demo creates a populated demo story', async () => {
+    const response = await request(httpServer).post('/api/stories/demo').send({}).expect(201);
+    const story = response.body as Story;
+
+    expect(story).toMatchObject({
+      title: 'Demo: branching investigation',
+    });
+    expect(story.id).toEqual(expect.any(String));
+    expect(story.interactions).toHaveLength(9);
+    expect(
+      story.interactions.some((interaction) =>
+        interaction.triggers.some((trigger) => trigger.inputInteractionIds.length > 1),
+      ),
+    ).toBe(true);
+    expect(
+      story.interactions.some((interaction) =>
+        interaction.triggers.some((trigger) => trigger.conditions.length > 0),
+      ),
+    ).toBe(true);
+
+    const listResponse = await request(httpServer).get('/api/stories').expect(200);
+    expect((listResponse.body as Story[]).some((item) => item.id === story.id)).toBe(true);
+  });
+
   it('GET /api/stories/:storyId returns a story', async () => {
     const story = await createStory('Story to read');
 

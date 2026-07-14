@@ -19,6 +19,9 @@ export class StoriesController {
   @Post() create(@Body() input: CreateStoryDto) {
     return this.stories.create(input);
   }
+  @Post('demo') createDemo() {
+    return this.stories.createDemo();
+  }
   @Patch(':storyId') rename(@Param('storyId') id: string, @Body() input: UpdateStoryDto) {
     return this.stories.rename(id, input.title);
   }

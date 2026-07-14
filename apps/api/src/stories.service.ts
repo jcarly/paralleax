@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import {
+  createDemoStory,
   deleteInteractionFromStory,
   deleteTriggerInStory,
   normalizeTriggerInputIds,
@@ -38,6 +39,12 @@ export class StoriesService {
       createdAt: now,
       updatedAt: now,
     };
+    this.repository.save(story);
+    return structuredClone(story);
+  }
+  createDemo(): Story {
+    const now = new Date().toISOString();
+    const story = createDemoStory(randomUUID(), now);
     this.repository.save(story);
     return structuredClone(story);
   }

@@ -8,6 +8,7 @@ This project follows a lightweight [Keep a Changelog](https://keepachangelog.com
 
 ### Added
 
+- Local demo story generator with API and web UI support for creating a populated test story without external AI services.
 - Canvas `Add root` action that places new root interactions below the lowest existing root.
 - Graph creation shortcuts: dropping an output connection on empty canvas creates a child, and dropping an input connection creates a linked source interaction.
 - Hover action buttons on interactions for creating source and child interactions directly from the graph.

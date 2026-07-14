@@ -8,6 +8,7 @@ Cover the critical MVP paths: Story, Interaction, Trigger, and Reader.
 
 - Shared: story operations delete only the intended trigger and preserve valid inputs.
 - Shared: stale server merges cannot restore locally deleted triggers.
+- Shared/API/Web: demo story generation creates roots, branches, multi-input triggers, and conditions.
 - Shared: child placement selects a non-overlapping output position.
 - Shared: root and parent placement select non-overlapping graph positions.
 - Editor: editing an interaction title keeps the page visible and updates the block.

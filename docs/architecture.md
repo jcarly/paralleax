@@ -20,6 +20,8 @@ Paralleax is a TypeScript monorepo.
 - `apps/api`: NestJS. Exposes story endpoints. Story application logic lives in
   `StoriesService`, while MVP in-memory storage is isolated behind `StoriesRepository`.
 - `packages/shared`: shared types, narrative reader logic, story operations, trigger cleanup rules, stale-response merge rules, and graph placement helpers used by both the web app and API.
+  It also contains the local demo story generator used for manual testing and
+  regression-friendly sample data.
 
 ## Guiding Principle
 
@@ -35,6 +37,8 @@ The UI creates, visualizes, and edits a story. The engine must be able to evalua
 4. Edits are saved through the API.
 5. The editor and API use shared story operations for trigger updates, deletion cleanup, stale-response merges, and child placement.
 6. The reader uses shared rules to determine the available interactions.
+7. The story list can request a local demo story from the API; the API builds it
+   through the shared deterministic generator and stores it in memory.
 
 ## Storage
 

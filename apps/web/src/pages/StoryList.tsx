@@ -21,6 +21,11 @@ export function StoryList() {
     setStories((items) => [...items, story]);
   }
 
+  async function createDemo() {
+    const story = await api.createDemoStory();
+    setStories((items) => [...items, story]);
+  }
+
   async function remove(id: string) {
     await api.deleteStory(id);
     setStories((items) => items.filter((item) => item.id !== id));
@@ -33,7 +38,12 @@ export function StoryList() {
           <h1>Stories</h1>
           <p>Create a story, edit its graph, then launch the reader.</p>
         </div>
-        <button onClick={create}>New story</button>
+        <div className="actions">
+          <button className="secondary" onClick={createDemo}>
+            Generate demo
+          </button>
+          <button onClick={create}>New story</button>
+        </div>
       </div>
       {error && <p className="error">{error}</p>}
       <div className="story-grid">

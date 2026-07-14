@@ -18,6 +18,10 @@ Then open http://localhost:5173.
 2. Select `New story`.
 3. Open the story with `Edit`.
 
+Use `Generate demo` to create a populated local demo story with roots, branches,
+multi-input triggers, and simple visited / not visited conditions. This is useful
+for testing the editor and reader without manually building a graph.
+
 Stories are stored in memory during the MVP. Restarting the API resets the data.
 
 ## Edit the Story Title
