@@ -12,7 +12,11 @@ describe('App', () => {
   afterEach(() => cleanup());
 
   it('renders the shell and list route', () => {
-    render(<MemoryRouter initialEntries={['/']}><App /></MemoryRouter>);
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <App />
+      </MemoryRouter>,
+    );
 
     expect(screen.getByRole('link', { name: 'Paralleax' })).toHaveAttribute('href', '/');
     expect(screen.getByText('Interactive story editor')).toBeInTheDocument();
@@ -20,11 +24,19 @@ describe('App', () => {
   });
 
   it('routes to editor and player pages', () => {
-    render(<MemoryRouter initialEntries={['/stories/story-1/edit']}><App /></MemoryRouter>);
+    render(
+      <MemoryRouter initialEntries={['/stories/story-1/edit']}>
+        <App />
+      </MemoryRouter>,
+    );
     expect(screen.getByText('Editeur mock')).toBeInTheDocument();
 
     cleanup();
-    render(<MemoryRouter initialEntries={['/stories/story-1/play']}><App /></MemoryRouter>);
+    render(
+      <MemoryRouter initialEntries={['/stories/story-1/play']}>
+        <App />
+      </MemoryRouter>,
+    );
     expect(screen.getByText('Lecteur mock')).toBeInTheDocument();
   });
 });

@@ -14,11 +14,11 @@ services:
     command: sh -c 'npm install --legacy-peer-deps --audit=false --no-update-notifier 2>&1 ; npm run dev -w @paralleax/api'
     environment:
       <<: *proxy-environment
-      CHOKIDAR_USEPOLLING: "true"
+      CHOKIDAR_USEPOLLING: 'true'
       PORT: 3000
-      NODE_OPTIONS: "--max-old-space-size=2048"
+      NODE_OPTIONS: '--max-old-space-size=2048'
     ports:
-      - "3000:3000"
+      - '3000:3000'
     volumes:
       - .:/workspace
     working_dir: /workspace
@@ -28,11 +28,11 @@ services:
     command: sh -c 'npm install --legacy-peer-deps --audit=false --no-update-notifier 2>&1 ; npm run dev -w @paralleax/web -- --host 0.0.0.0'
     environment:
       <<: *proxy-environment
-      CHOKIDAR_USEPOLLING: "true"
+      CHOKIDAR_USEPOLLING: 'true'
       VITE_API_PROXY_TARGET: http://api:3000
-      NODE_OPTIONS: "--max-old-space-size=2048"
+      NODE_OPTIONS: '--max-old-space-size=2048'
     ports:
-      - "5173:5173"
+      - '5173:5173'
     volumes:
       - .:/workspace
     working_dir: /workspace

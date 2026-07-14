@@ -19,7 +19,13 @@ describe('api client', () => {
   });
 
   it('calls story endpoints with JSON headers and bodies', async () => {
-    const story = { id: 'story-1', title: 'Story', interactions: [], createdAt: 'now', updatedAt: 'now' };
+    const story = {
+      id: 'story-1',
+      title: 'Story',
+      interactions: [],
+      createdAt: 'now',
+      updatedAt: 'now',
+    };
     fetchMock.mockResolvedValue(jsonResponse(story));
 
     await expect(api.createStory('New')).resolves.toEqual(story);
@@ -44,7 +50,13 @@ describe('api client', () => {
   });
 
   it('calls interaction and trigger endpoints', async () => {
-    const story = { id: 'story-1', title: 'Story', interactions: [], createdAt: 'now', updatedAt: 'now' };
+    const story = {
+      id: 'story-1',
+      title: 'Story',
+      interactions: [],
+      createdAt: 'now',
+      updatedAt: 'now',
+    };
     fetchMock.mockResolvedValue(jsonResponse(story));
 
     await api.listStories();
@@ -78,29 +90,38 @@ describe('api client', () => {
     });
 
     await api.addTrigger('story-1', 'interaction-1');
-    expect(fetchMock).toHaveBeenLastCalledWith('/api/stories/story-1/interactions/interaction-1/triggers', {
-      headers: { 'Content-Type': 'application/json' },
-      method: 'POST',
-    });
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      '/api/stories/story-1/interactions/interaction-1/triggers',
+      {
+        headers: { 'Content-Type': 'application/json' },
+        method: 'POST',
+      },
+    );
 
     await api.updateTrigger('story-1', 'interaction-1', 'trigger-1', {
       inputInteractionIds: ['source-1'],
       conditions: [{ interactionId: 'source-1', hasBeenVisited: true }],
     });
-    expect(fetchMock).toHaveBeenLastCalledWith('/api/stories/story-1/interactions/interaction-1/triggers/trigger-1', {
-      headers: { 'Content-Type': 'application/json' },
-      method: 'PATCH',
-      body: JSON.stringify({
-        inputInteractionIds: ['source-1'],
-        conditions: [{ interactionId: 'source-1', hasBeenVisited: true }],
-      }),
-    });
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      '/api/stories/story-1/interactions/interaction-1/triggers/trigger-1',
+      {
+        headers: { 'Content-Type': 'application/json' },
+        method: 'PATCH',
+        body: JSON.stringify({
+          inputInteractionIds: ['source-1'],
+          conditions: [{ interactionId: 'source-1', hasBeenVisited: true }],
+        }),
+      },
+    );
 
     await api.deleteTrigger('story-1', 'interaction-1', 'trigger-1');
-    expect(fetchMock).toHaveBeenLastCalledWith('/api/stories/story-1/interactions/interaction-1/triggers/trigger-1', {
-      headers: { 'Content-Type': 'application/json' },
-      method: 'DELETE',
-    });
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      '/api/stories/story-1/interactions/interaction-1/triggers/trigger-1',
+      {
+        headers: { 'Content-Type': 'application/json' },
+        method: 'DELETE',
+      },
+    );
   });
 
   it('returns undefined for 204 responses', async () => {

@@ -15,6 +15,8 @@ default:
 quality:
   stage: verify
   script:
+    - npm run lint
+    - npm run format
     - npm run typecheck
     - npm run coverage
     - npm run build

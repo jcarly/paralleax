@@ -18,7 +18,9 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@paralleax/shared': fileURLToPath(new URL('../../packages/shared/src/index.ts', import.meta.url)),
+      '@paralleax/shared': fileURLToPath(
+        new URL('../../packages/shared/src/index.ts', import.meta.url),
+      ),
     },
   },
   server: {

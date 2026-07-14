@@ -4,4 +4,10 @@ import { BrowserRouter } from 'react-router-dom';
 import '@xyflow/react/dist/style.css';
 import './styles.css';
 import { App } from './App';
-ReactDOM.createRoot(document.getElementById('root')!).render(<React.StrictMode><BrowserRouter><App /></BrowserRouter></React.StrictMode>);
+ReactDOM.createRoot(document.getElementById('root')!).render(
+  <React.StrictMode>
+    <BrowserRouter>
+      <App />
+    </BrowserRouter>
+  </React.StrictMode>,
+);

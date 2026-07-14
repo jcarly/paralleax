@@ -51,7 +51,9 @@ test.describe('Story editor', () => {
     await page.getByLabel('Title').fill('New title');
     await page.getByLabel('Title').blur();
 
-    await expect(page.getByTestId('interaction-node').filter({ hasText: 'New title' })).toBeVisible();
+    await expect(
+      page.getByTestId('interaction-node').filter({ hasText: 'New title' }),
+    ).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Interaction' })).toBeVisible();
     await expect(page.getByText('Loading...')).toHaveCount(0);
   });
@@ -73,10 +75,16 @@ test.describe('Story editor', () => {
 
     await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2);
     await page.mouse.down();
-    await page.mouse.move(box!.x + box!.width / 2 + 120, box!.y + box!.height / 2 + 40, { steps: 8 });
+    await page.mouse.move(box!.x + box!.width / 2 + 120, box!.y + box!.height / 2 + 40, {
+      steps: 8,
+    });
     await page.mouse.up();
 
-    await expect(page.getByTestId('interaction-node').filter({ hasText: 'Original title' })).toBeVisible();
-    await expect(page.getByTestId('interaction-node').filter({ hasText: 'Original content' })).toBeVisible();
+    await expect(
+      page.getByTestId('interaction-node').filter({ hasText: 'Original title' }),
+    ).toBeVisible();
+    await expect(
+      page.getByTestId('interaction-node').filter({ hasText: 'Original content' }),
+    ).toBeVisible();
   });
 });

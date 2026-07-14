@@ -10,16 +10,18 @@ export function StoryPlayer() {
   const [current, setCurrent] = useState<Interaction>();
   const [visited, setVisited] = useState<string[]>([]);
 
-  useEffect(() => { void api.getStory(storyId).then(setStory); }, [storyId]);
+  useEffect(() => {
+    void api.getStory(storyId).then(setStory);
+  }, [storyId]);
 
   const choices = useMemo(
-    () => story ? getAvailableInteractions(story, current?.id ?? null, visited) : [],
+    () => (story ? getAvailableInteractions(story, current?.id ?? null, visited) : []),
     [story, current, visited],
   );
 
   function choose(interaction: Interaction) {
     setCurrent(interaction);
-    setVisited((ids) => ids.includes(interaction.id) ? ids : [...ids, interaction.id]);
+    setVisited((ids) => (ids.includes(interaction.id) ? ids : [...ids, interaction.id]));
   }
 
   function restart() {
@@ -33,7 +35,9 @@ export function StoryPlayer() {
     <main className="player-page">
       <div className="player-top">
         <Link to={`/stories/${story.id}/edit`}>Back to editor</Link>
-        <button className="secondary" onClick={restart}>Restart</button>
+        <button className="secondary" onClick={restart}>
+          Restart
+        </button>
       </div>
       <article className="player-card">
         <p className="eyebrow">{story.title}</p>
@@ -50,7 +54,9 @@ export function StoryPlayer() {
         )}
         <div className="choices">
           {choices.map((choice) => (
-            <button key={choice.id} onClick={() => choose(choice)}>{choice.title}</button>
+            <button key={choice.id} onClick={() => choose(choice)}>
+              {choice.title}
+            </button>
           ))}
           {choices.length === 0 && current && <p className="ending">End of this branch.</p>}
         </div>

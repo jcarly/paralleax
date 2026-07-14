@@ -35,11 +35,13 @@ function storyFixture(): Story {
         title: 'End',
         body: 'End body',
         position: { x: 760, y: 410 },
-        triggers: [{
-          id: 'trigger-end',
-          inputInteractionIds: ['root', 'middle'],
-          conditions: [{ interactionId: 'root', hasBeenVisited: true }],
-        }],
+        triggers: [
+          {
+            id: 'trigger-end',
+            inputInteractionIds: ['root', 'middle'],
+            conditions: [{ interactionId: 'root', hasBeenVisited: true }],
+          },
+        ],
       },
     ],
   };
@@ -57,7 +59,11 @@ describe('shared story operations', () => {
 
   it('removes only the requested trigger from its output interaction', () => {
     const story = storyFixture();
-    story.interactions[2].triggers.push({ id: 'trigger-alt', inputInteractionIds: ['middle'], conditions: [] });
+    story.interactions[2].triggers.push({
+      id: 'trigger-alt',
+      inputInteractionIds: ['middle'],
+      conditions: [],
+    });
 
     const updated = deleteTriggerInStory(story, 'end', 'trigger-end');
 
@@ -91,10 +97,15 @@ describe('shared story operations', () => {
     const staleIncoming = storyFixture();
     staleIncoming.interactions[1].position = { x: 445, y: 275 };
 
-    const merged = mergeServerStory(current, staleIncoming, {
-      interactionId: 'middle',
-      patch: { position: { x: 445, y: 275 } },
-    }, { preserveCurrentTriggers: true });
+    const merged = mergeServerStory(
+      current,
+      staleIncoming,
+      {
+        interactionId: 'middle',
+        patch: { position: { x: 445, y: 275 } },
+      },
+      { preserveCurrentTriggers: true },
+    );
 
     expect(merged.interactions[1].position).toEqual({ x: 445, y: 275 });
     expect(merged.interactions[1].triggers).toEqual([]);

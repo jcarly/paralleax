@@ -132,6 +132,8 @@ npm run coverage -w @paralleax/shared
 ## Typecheck and Build
 
 ```bash
+npm run lint
+npm run format
 npm run typecheck
 npm run build
 ```
@@ -139,6 +141,8 @@ npm run build
 Full verification before pushing:
 
 ```bash
+npm run lint
+npm run format
 npm run typecheck
 npm run test
 npm run test:e2e -w @paralleax/web
@@ -152,6 +156,8 @@ CI is defined in `.gitlab-ci.yml`.
 
 It runs on every commit pushed to GitLab and on merge requests. It executes:
 
+- ESLint;
+- Prettier format check;
 - TypeScript typecheck;
 - shared, API, and web coverage;
 - full monorepo build;

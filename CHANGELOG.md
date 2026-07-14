@@ -8,6 +8,7 @@ This project follows a lightweight [Keep a Changelog](https://keepachangelog.com
 
 ### Added
 
+- ESLint flat config, Prettier config, and CI checks for linting and formatting.
 - Shared Vitest coverage for pure story operations, trigger cleanup, stale-response merges, and child placement.
 - Docker Compose development setup with source bind mounts so code changes apply without rebuilding the image.
 - GitLab CI that runs typecheck, coverage, build, and Playwright functional tests on pushed commits and merge requests.

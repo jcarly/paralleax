@@ -26,15 +26,15 @@ describe('Stories API', () => {
   });
 
   async function createStory(title = 'Test story'): Promise<Story> {
-    const response = await request(httpServer)
-      .post('/api/stories')
-      .send({ title })
-      .expect(201);
+    const response = await request(httpServer).post('/api/stories').send({ title }).expect(201);
 
     return response.body as Story;
   }
 
-  async function createInteraction(storyId: string, input: Record<string, unknown> = {}): Promise<Story> {
+  async function createInteraction(
+    storyId: string,
+    input: Record<string, unknown> = {},
+  ): Promise<Story> {
     const response = await request(httpServer)
       .post(`/api/stories/${storyId}/interactions`)
       .send(input)
@@ -68,9 +68,7 @@ describe('Stories API', () => {
   it('GET /api/stories/:storyId returns a story', async () => {
     const story = await createStory('Story to read');
 
-    const response = await request(httpServer)
-      .get(`/api/stories/${story.id}`)
-      .expect(200);
+    const response = await request(httpServer).get(`/api/stories/${story.id}`).expect(200);
 
     expect(response.body).toMatchObject({
       id: story.id,
@@ -92,13 +90,9 @@ describe('Stories API', () => {
   it('DELETE /api/stories/:storyId deletes a story', async () => {
     const story = await createStory('Story to delete');
 
-    await request(httpServer)
-      .delete(`/api/stories/${story.id}`)
-      .expect(204);
+    await request(httpServer).delete(`/api/stories/${story.id}`).expect(204);
 
-    await request(httpServer)
-      .get(`/api/stories/${story.id}`)
-      .expect(404);
+    await request(httpServer).get(`/api/stories/${story.id}`).expect(404);
   });
 
   it('POST /api/stories/:storyId/interactions creates a root interaction', async () => {
@@ -177,7 +171,9 @@ describe('Stories API', () => {
     const withSecondParent = await createInteraction(story.id);
     const secondParent = withSecondParent.interactions.find((item) => item.id !== firstParent.id)!;
     const withChild = await createInteraction(story.id, { parentId: firstParent.id });
-    const child = withChild.interactions.find((item) => item.id !== firstParent.id && item.id !== secondParent.id)!;
+    const child = withChild.interactions.find(
+      (item) => item.id !== firstParent.id && item.id !== secondParent.id,
+    )!;
     const trigger = child.triggers[0];
 
     await request(httpServer)
@@ -192,7 +188,9 @@ describe('Stories API', () => {
       .delete(`/api/stories/${story.id}/interactions/${firstParent.id}`)
       .expect(200);
 
-    const updatedChild = (response.body as Story).interactions.find((item) => item.id === child.id)!;
+    const updatedChild = (response.body as Story).interactions.find(
+      (item) => item.id === child.id,
+    )!;
     expect(updatedChild.triggers).toHaveLength(1);
     expect(updatedChild.triggers[0].inputInteractionIds).toEqual([secondParent.id]);
     expect(updatedChild.triggers[0].conditions).toEqual([]);
@@ -230,7 +228,9 @@ describe('Stories API', () => {
       })
       .expect(200);
 
-    const updatedChild = (response.body as Story).interactions.find((item) => item.id === child.id)!;
+    const updatedChild = (response.body as Story).interactions.find(
+      (item) => item.id === child.id,
+    )!;
     expect(updatedChild.triggers[0].inputInteractionIds).toEqual([parent.id]);
     expect(updatedChild.triggers[0].conditions).toEqual([
       { interactionId: parent.id, hasBeenVisited: true },
@@ -251,8 +251,6 @@ describe('Stories API', () => {
   });
 
   it('returns 404 for unknown story ids', async () => {
-    await request(httpServer)
-      .get('/api/stories/missing-story')
-      .expect(404);
+    await request(httpServer).get('/api/stories/missing-story').expect(404);
   });
 });

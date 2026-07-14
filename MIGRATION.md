@@ -2,15 +2,15 @@
 
 ## Mappings
 
-| Meteor prototype | Refactor |
-|---|---|
-| `StoryCollection` | NestJS `StoriesService` |
+| Meteor prototype        | Refactor                                 |
+| ----------------------- | ---------------------------------------- |
+| `StoryCollection`       | NestJS `StoriesService`                  |
 | `InteractionCollection` | `Story.interactions` in the shared model |
-| `TriggerCollection` | `Interaction.triggers` |
-| Meteor methods | REST routes in `StoriesController` |
-| `react-xarrows` | React Flow edges |
-| `StoryEditor` | `apps/web/src/pages/StoryEditor.tsx` |
-| `StoryViewer` | `apps/web/src/pages/StoryPlayer.tsx` |
+| `TriggerCollection`     | `Interaction.triggers`                   |
+| Meteor methods          | REST routes in `StoriesController`       |
+| `react-xarrows`         | React Flow edges                         |
+| `StoryEditor`           | `apps/web/src/pages/StoryEditor.tsx`     |
+| `StoryViewer`           | `apps/web/src/pages/StoryPlayer.tsx`     |
 
 ## Deliberate Simplifications
 

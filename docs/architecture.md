@@ -36,4 +36,5 @@ Durable persistence is postponed to a later version.
 - Shared: Vitest for narrative rules and pure story operations.
 - Functional: Playwright.
 - Coverage: Jest coverage for the API, Vitest V8 coverage for shared and the web app.
+- Code style: ESLint and Prettier.
 - GitLab CI: typecheck, coverage, build, and Playwright on every pushed commit.
