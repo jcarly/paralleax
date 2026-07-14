@@ -8,6 +8,7 @@ This project follows a lightweight [Keep a Changelog](https://keepachangelog.com
 
 ### Added
 
+- Unit tests for web canvas connection helpers.
 - Unit tests for web editor selection helpers.
 - Unit tests for web story-to-graph mapping.
 - Unit tests for the API in-memory story repository.
@@ -28,6 +29,7 @@ This project follows a lightweight [Keep a Changelog](https://keepachangelog.com
 
 ### Changed
 
+- Canvas connection validation and created-trigger selection are now isolated in a tested web helper.
 - Editor interaction and trigger selection lookups are now isolated in a tested web helper.
 - React Flow node and trigger edge mapping is now isolated in a tested web helper.
 - API in-memory storage is now isolated behind `StoriesRepository`, keeping `StoriesService`

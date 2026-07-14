@@ -23,6 +23,7 @@ import {
 } from '@paralleax/shared';
 import { api } from '../api';
 import { InteractionNode } from '../components/InteractionNode';
+import { findCreatedTrigger, getPendingConnection } from '../storyConnection';
 import {
   buildInteractionNodes,
   buildTriggerEdges,
@@ -141,32 +142,22 @@ export function StoryEditor() {
 
   const connectInteractions = useCallback(
     async (connection: Connection) => {
-      if (
-        !story ||
-        !connection.source ||
-        !connection.target ||
-        connection.source === connection.target
-      )
-        return;
-      const sourceId = connection.source;
-      const targetId = connection.target;
-      const target = story.interactions.find((item) => item.id === targetId);
-      if (!target) return;
-      if (target.triggers.some((trigger) => trigger.inputInteractionIds.includes(sourceId))) return;
+      const pending = getPendingConnection(story, connection);
+      if (!pending) return;
 
-      const existingTriggerIds = new Set(target.triggers.map((trigger) => trigger.id));
-      const withTrigger = await api.addTrigger(storyId, target.id);
-      const nextTarget = withTrigger.interactions.find((item) => item.id === target.id);
-      const nextTrigger =
-        nextTarget?.triggers.find((trigger) => !existingTriggerIds.has(trigger.id)) ??
-        nextTarget?.triggers.at(-1);
+      const withTrigger = await api.addTrigger(storyId, pending.target.id);
+      const nextTrigger = findCreatedTrigger(
+        withTrigger,
+        pending.target.id,
+        pending.existingTriggerIds,
+      );
       if (!nextTrigger) {
         setStory((current) => (current ? mergeIncomingStory(current, withTrigger) : withTrigger));
         return;
       }
 
-      const updated = await api.updateTrigger(storyId, target.id, nextTrigger.id, {
-        inputInteractionIds: [sourceId],
+      const updated = await api.updateTrigger(storyId, pending.target.id, nextTrigger.id, {
+        inputInteractionIds: [pending.sourceId],
         conditions: nextTrigger.conditions,
       });
       setStory((current) => (current ? mergeIncomingStory(current, updated) : updated));
