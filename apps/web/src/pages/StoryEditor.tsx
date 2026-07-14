@@ -1,30 +1,18 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Background,
   Controls,
   MiniMap,
   ReactFlow,
   useNodesState,
-  type Connection,
   type EdgeMouseHandler,
   type NodeMouseHandler,
 } from '@xyflow/react';
 import { Link, useParams } from 'react-router-dom';
-import {
-  deleteTriggerInStory,
-  getNextChildPosition,
-  mergeServerStory,
-  updateInteractionInStory,
-  updateTriggerInStory,
-  type InteractionContentPatch,
-  type Story,
-  type TriggerCondition,
-} from '@paralleax/shared';
-import { api } from '../api';
 import { InteractionInspector } from '../components/InteractionInspector';
 import { InteractionNode } from '../components/InteractionNode';
 import { TriggerInspector } from '../components/TriggerInspector';
-import { findCreatedTrigger, getPendingConnection } from '../storyConnection';
+import { useStoryEditorPersistence } from '../hooks/useStoryEditorPersistence';
 import {
   buildInteractionNodes,
   buildTriggerEdges,
@@ -32,34 +20,28 @@ import {
   type SelectedTrigger,
 } from '../storyGraph';
 import { findInteraction, findSelectedTrigger } from '../storySelection';
-import { planTriggerInputDeletion } from '../storyTriggerInput';
 
 const nodeTypes = { interaction: InteractionNode };
 
 export function StoryEditor() {
   const { storyId = '' } = useParams();
-  const [story, setStory] = useState<Story>();
+  const {
+    story,
+    setStory,
+    error,
+    renameStory,
+    saveTrigger,
+    deleteTrigger,
+    deleteTriggerInput,
+    connectInteractions,
+    createRoot,
+    createChild,
+    patchInteraction,
+    deleteInteraction,
+  } = useStoryEditorPersistence(storyId);
   const [selectedId, setSelectedId] = useState<string>();
   const [selectedTrigger, setSelectedTrigger] = useState<SelectedTrigger>();
-  const [error, setError] = useState('');
   const [nodes, setNodes, onNodesChange] = useNodesState<InteractionFlowNode>([]);
-  const deletedTriggerIds = useRef(new Set<string>());
-
-  const load = useCallback(
-    () =>
-      api
-        .getStory(storyId)
-        .then((next) => {
-          deletedTriggerIds.current.clear();
-          setStory(next);
-        })
-        .catch((e: Error) => setError(e.message)),
-    [storyId],
-  );
-
-  useEffect(() => {
-    void load();
-  }, [load]);
 
   const selected = findInteraction(story, selectedId);
   const selectedTriggerTarget = findSelectedTrigger(story, selectedTrigger);
@@ -86,117 +68,28 @@ export function StoryEditor() {
     });
   };
 
-  function mergeIncomingStory(
-    current: Story,
-    incoming: Story,
-    edited?: { interactionId: string; patch: InteractionContentPatch },
-    options: { preserveCurrentTriggers?: boolean } = {},
-  ): Story {
-    return mergeServerStory(current, incoming, edited, {
-      ...options,
-      deletedTriggerIds: deletedTriggerIds.current,
-    });
-  }
-
-  async function saveTrigger(
-    interactionId: string,
-    triggerId: string,
-    inputInteractionIds: string[],
-    conditions: TriggerCondition[],
-  ) {
-    const nextInputs = [...new Set(inputInteractionIds)];
-    const patch = { inputInteractionIds: nextInputs, conditions };
-    setStory((current) =>
-      current ? updateTriggerInStory(current, interactionId, triggerId, patch) : current,
-    );
-    const next = await api.updateTrigger(storyId, interactionId, triggerId, patch);
-    setStory((current) => (current ? mergeIncomingStory(current, next) : next));
-  }
-
-  async function deleteTrigger(interactionId: string, triggerId: string) {
-    deletedTriggerIds.current.add(triggerId);
-    setStory((current) =>
-      current ? deleteTriggerInStory(current, interactionId, triggerId) : current,
-    );
-    const next = await api.deleteTrigger(storyId, interactionId, triggerId);
-    setStory((current) => (current ? mergeIncomingStory(current, next) : next));
+  async function deleteSelectedTrigger(interactionId: string, triggerId: string) {
+    await deleteTrigger(interactionId, triggerId);
     setSelectedTrigger(undefined);
   }
 
-  async function deleteTriggerInput(
+  async function deleteSelectedTriggerInput(
     interactionId: string,
     triggerId: string,
     inputInteractionId: string,
   ) {
-    const plan = planTriggerInputDeletion(story, interactionId, triggerId, inputInteractionId);
-    if (!plan) return;
-
-    if (plan.action === 'delete-trigger') {
-      await deleteTrigger(interactionId, triggerId);
-      return;
-    }
-
-    await saveTrigger(interactionId, triggerId, plan.inputInteractionIds, plan.conditions);
+    await deleteTriggerInput(interactionId, triggerId, inputInteractionId);
     setSelectedTrigger(undefined);
   }
 
-  const connectInteractions = useCallback(
-    async (connection: Connection) => {
-      const pending = getPendingConnection(story, connection);
-      if (!pending) return;
-
-      const withTrigger = await api.addTrigger(storyId, pending.target.id);
-      const nextTrigger = findCreatedTrigger(
-        withTrigger,
-        pending.target.id,
-        pending.existingTriggerIds,
-      );
-      if (!nextTrigger) {
-        setStory((current) => (current ? mergeIncomingStory(current, withTrigger) : withTrigger));
-        return;
-      }
-
-      const updated = await api.updateTrigger(storyId, pending.target.id, nextTrigger.id, {
-        inputInteractionIds: [pending.sourceId],
-        conditions: nextTrigger.conditions,
-      });
-      setStory((current) => (current ? mergeIncomingStory(current, updated) : updated));
-    },
-    [story, storyId],
-  );
-
-  async function createRoot() {
-    const next = await api.createInteraction(storyId, { position: { x: 100, y: 120 } });
-    setStory((current) => (current ? mergeIncomingStory(current, next) : next));
-  }
-
-  async function createChild() {
+  async function createSelectedChild() {
     if (!story || !selected) return;
-    const next = await api.createInteraction(storyId, {
-      parentId: selected.id,
-      position: getNextChildPosition(story, selected),
-    });
-    setStory((current) => (current ? mergeIncomingStory(current, next) : next));
-  }
-
-  async function patchInteraction(id: string, patch: InteractionContentPatch) {
-    setStory((current) => (current ? updateInteractionInStory(current, id, patch) : current));
-    const updated = await api.updateInteraction(storyId, id, patch);
-    setStory((current) => {
-      if (!current) return updated;
-      return mergeIncomingStory(
-        current,
-        updated,
-        { interactionId: id, patch },
-        { preserveCurrentTriggers: true },
-      );
-    });
+    await createChild(selected);
   }
 
   async function remove() {
     if (!selected) return;
-    const next = await api.deleteInteraction(storyId, selected.id);
-    setStory((current) => (current ? mergeIncomingStory(current, next) : next));
+    await deleteInteraction(selected.id);
     setSelectedId(undefined);
   }
 
@@ -209,15 +102,11 @@ export function StoryEditor() {
           className="story-title-input"
           value={story.title}
           onChange={(e) => setStory({ ...story, title: e.target.value })}
-          onBlur={(e) =>
-            void api.renameStory(storyId, e.target.value).then((next) => {
-              setStory((current) => (current ? mergeIncomingStory(current, next) : next));
-            })
-          }
+          onBlur={(e) => void renameStory(e.target.value)}
         />
         <div className="actions">
           <button onClick={() => void createRoot()}>Add root</button>
-          <button disabled={!selected} onClick={() => void createChild()}>
+          <button disabled={!selected} onClick={() => void createSelectedChild()}>
             Add child
           </button>
           <Link className="button secondary" to={`/stories/${storyId}/play`}>
@@ -254,8 +143,8 @@ export function StoryEditor() {
               onSaveTrigger={saveTrigger}
               onPatch={patchInteraction}
               onDelete={remove}
-              onDeleteTrigger={deleteTrigger}
-              onDeleteTriggerInput={deleteTriggerInput}
+              onDeleteTrigger={deleteSelectedTrigger}
+              onDeleteTriggerInput={deleteSelectedTriggerInput}
             />
           ) : selectedTriggerTarget ? (
             <TriggerInspector
@@ -264,8 +153,8 @@ export function StoryEditor() {
               trigger={selectedTriggerTarget.trigger}
               selectedInputInteractionId={selectedTrigger?.inputInteractionId}
               onSaveTrigger={saveTrigger}
-              onDeleteTrigger={deleteTrigger}
-              onDeleteTriggerInput={deleteTriggerInput}
+              onDeleteTrigger={deleteSelectedTrigger}
+              onDeleteTriggerInput={deleteSelectedTriggerInput}
             />
           ) : (
             <div className="empty-state">

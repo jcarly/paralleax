@@ -30,6 +30,8 @@ This project follows a lightweight [Keep a Changelog](https://keepachangelog.com
 
 ### Changed
 
+- Story editor API persistence and stale-response merge orchestration now live in
+  `useStoryEditorPersistence`.
 - Editor inspector UI is now split into dedicated `InteractionInspector` and
   `TriggerInspector` components.
 - Trigger input deletion planning is now isolated in a tested web helper.
