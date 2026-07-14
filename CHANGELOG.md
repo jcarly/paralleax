@@ -30,6 +30,8 @@ This project follows a lightweight [Keep a Changelog](https://keepachangelog.com
 
 ### Changed
 
+- Editor inspector UI is now split into dedicated `InteractionInspector` and
+  `TriggerInspector` components.
 - Trigger input deletion planning is now isolated in a tested web helper.
 - Canvas connection validation and created-trigger selection are now isolated in a tested web helper.
 - Editor interaction and trigger selection lookups are now isolated in a tested web helper.

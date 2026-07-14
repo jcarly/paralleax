@@ -5,6 +5,8 @@ Paralleax is a TypeScript monorepo.
 ## Applications
 
 - `apps/web`: React, Vite, React Flow. Contains the editor, reader, and web tests.
+  Editor inspector UI lives in dedicated components under `components/`, while
+  `StoryEditor` keeps page orchestration.
   Graph mapping from stories to React Flow nodes and edges lives in `storyGraph.ts`
   so trigger edge rendering can be tested outside the editor component.
   Editor selection lookups live in `storySelection.ts` so inspector behavior is
