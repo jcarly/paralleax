@@ -8,6 +8,7 @@ This project follows a lightweight [Keep a Changelog](https://keepachangelog.com
 
 ### Added
 
+- Coverage thresholds for API, shared, and web test suites.
 - Unit tests for web trigger input deletion planning.
 - Unit tests for web canvas connection helpers.
 - Unit tests for web editor selection helpers.
