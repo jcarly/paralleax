@@ -29,6 +29,7 @@ import {
   type InteractionFlowNode,
   type SelectedTrigger,
 } from '../storyGraph';
+import { findInteraction, findRootTrigger, findSelectedTrigger } from '../storySelection';
 
 const nodeTypes = { interaction: InteractionNode };
 
@@ -57,13 +58,8 @@ export function StoryEditor() {
     void load();
   }, [load]);
 
-  const selected = story?.interactions.find((item) => item.id === selectedId);
-  const selectedTriggerInteraction = story?.interactions.find(
-    (item) => item.id === selectedTrigger?.interactionId,
-  );
-  const selectedTriggerValue = selectedTriggerInteraction?.triggers.find(
-    (trigger) => trigger.id === selectedTrigger?.triggerId,
-  );
+  const selected = findInteraction(story, selectedId);
+  const selectedTriggerTarget = findSelectedTrigger(story, selectedTrigger);
   const storyNodes = useMemo(() => buildInteractionNodes(story, selectedId), [story, selectedId]);
 
   useEffect(() => {
@@ -270,11 +266,11 @@ export function StoryEditor() {
               onDeleteTrigger={deleteTrigger}
               onDeleteTriggerInput={deleteTriggerInput}
             />
-          ) : selectedTriggerInteraction && selectedTriggerValue ? (
+          ) : selectedTriggerTarget ? (
             <TriggerInspector
               story={story}
-              interaction={selectedTriggerInteraction}
-              trigger={selectedTriggerValue}
+              interaction={selectedTriggerTarget.interaction}
+              trigger={selectedTriggerTarget.trigger}
               selectedInputInteractionId={selectedTrigger?.inputInteractionId}
               onSaveTrigger={saveTrigger}
               onDeleteTrigger={deleteTrigger}
@@ -466,9 +462,7 @@ function InteractionInspector({
     inputInteractionId: string,
   ) => Promise<void>;
 }) {
-  const rootTrigger = interaction.triggers.find(
-    (trigger) => trigger.inputInteractionIds.length === 0,
-  );
+  const rootTrigger = findRootTrigger(interaction);
 
   function updateLocalInteraction(patch: Partial<Interaction>) {
     onChange(updateInteractionInStory(story, interaction.id, patch));
