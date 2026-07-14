@@ -69,7 +69,9 @@ MVP conditions only check reading history. Variables, places, characters, and ti
 
 Select an edge and choose `Delete link`.
 
-If the trigger has several inputs, only the selected input link is removed. If the selected input was the last input, the whole trigger is deleted.
+If the trigger has several inputs, only the selected input link is removed. If the selected input was the last input, the trigger remains and becomes a root trigger with no input.
+
+The last trigger of an interaction cannot be deleted.
 
 ## Test the Story
 

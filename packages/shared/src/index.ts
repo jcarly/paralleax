@@ -110,7 +110,13 @@ export function deleteTriggerInStory(
     ...story,
     interactions: story.interactions.map((item) =>
       item.id === interactionId
-        ? { ...item, triggers: item.triggers.filter((trigger) => trigger.id !== triggerId) }
+        ? {
+            ...item,
+            triggers:
+              item.triggers.length <= 1
+                ? item.triggers
+                : item.triggers.filter((trigger) => trigger.id !== triggerId),
+          }
         : item,
     ),
   };
@@ -123,21 +129,17 @@ export function deleteInteractionFromStory(story: Story, interactionId: string):
       .filter((item) => item.id !== interactionId)
       .map((item) => ({
         ...item,
-        triggers: item.triggers.flatMap((trigger) => {
-          const hadDeletedInput = trigger.inputInteractionIds.includes(interactionId);
+        triggers: item.triggers.map((trigger) => {
           const inputInteractionIds = trigger.inputInteractionIds.filter(
             (id) => id !== interactionId,
           );
-          if (hadDeletedInput && inputInteractionIds.length === 0) return [];
-          return [
-            {
-              ...trigger,
-              inputInteractionIds,
-              conditions: trigger.conditions.filter(
-                (condition) => condition.interactionId !== interactionId,
-              ),
-            },
-          ];
+          return {
+            ...trigger,
+            inputInteractionIds,
+            conditions: trigger.conditions.filter(
+              (condition) => condition.interactionId !== interactionId,
+            ),
+          };
         }),
       })),
   };
@@ -147,7 +149,11 @@ export function mergeServerStory(
   current: Story,
   incoming: Story,
   edited?: { interactionId: string; patch: InteractionContentPatch },
-  options: { preserveCurrentTriggers?: boolean; deletedTriggerIds?: ReadonlySet<string> } = {},
+  options: {
+    preserveCurrentTriggers?: boolean;
+    deletedTriggerIds?: ReadonlySet<string>;
+    deletedTriggerInputKeys?: ReadonlySet<string>;
+  } = {},
 ): Story {
   return {
     ...incoming,
@@ -155,7 +161,14 @@ export function mergeServerStory(
       const currentItem = current.interactions.find((candidate) => candidate.id === item.id);
       const triggers = (
         options.preserveCurrentTriggers && currentItem ? currentItem.triggers : item.triggers
-      ).filter((trigger) => !options.deletedTriggerIds?.has(trigger.id));
+      )
+        .filter((trigger) => !options.deletedTriggerIds?.has(trigger.id))
+        .map((trigger) => ({
+          ...trigger,
+          inputInteractionIds: trigger.inputInteractionIds.filter(
+            (inputId) => !options.deletedTriggerInputKeys?.has(`${trigger.id}:${inputId}`),
+          ),
+        }));
       if (!currentItem) return { ...item, triggers };
       const patch = item.id === edited?.interactionId ? edited.patch : undefined;
 

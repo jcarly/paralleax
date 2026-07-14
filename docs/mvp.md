@@ -26,6 +26,7 @@ The MVP validates the narrative core before adding characters, places, variables
 ## MVP Rules
 
 - An interaction can be available without input: it is then a starting point.
+- An interaction should keep at least one trigger, including root interactions.
 - An interaction can have one or more input interactions through its trigger.
 - Several interactions can share the same input interaction: this creates a choice.
 - MVP conditions only check whether an interaction has been visited or not.

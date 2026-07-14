@@ -19,6 +19,7 @@ export function useStoryEditorPersistence(storyId: string) {
   const [story, setStory] = useState<Story>();
   const [error, setError] = useState('');
   const deletedTriggerIds = useRef(new Set<string>());
+  const deletedTriggerInputKeys = useRef(new Set<string>());
 
   const mergeIncomingStory = useCallback(
     (
@@ -30,6 +31,7 @@ export function useStoryEditorPersistence(storyId: string) {
       mergeServerStory(current, incoming, edited, {
         ...options,
         deletedTriggerIds: deletedTriggerIds.current,
+        deletedTriggerInputKeys: deletedTriggerInputKeys.current,
       }),
     [],
   );
@@ -40,6 +42,7 @@ export function useStoryEditorPersistence(storyId: string) {
         .getStory(storyId)
         .then((next) => {
           deletedTriggerIds.current.clear();
+          deletedTriggerInputKeys.current.clear();
           setStory(next);
         })
         .catch((e: Error) => setError(e.message)),
@@ -62,6 +65,9 @@ export function useStoryEditorPersistence(storyId: string) {
     conditions: TriggerCondition[],
   ) {
     const nextInputs = [...new Set(inputInteractionIds)];
+    nextInputs.forEach((inputId) =>
+      deletedTriggerInputKeys.current.delete(`${triggerId}:${inputId}`),
+    );
     const patch = { inputInteractionIds: nextInputs, conditions };
     setStory((current) =>
       current ? updateTriggerInStory(current, interactionId, triggerId, patch) : current,
@@ -87,11 +93,7 @@ export function useStoryEditorPersistence(storyId: string) {
     const plan = planTriggerInputDeletion(story, interactionId, triggerId, inputInteractionId);
     if (!plan) return;
 
-    if (plan.action === 'delete-trigger') {
-      await deleteTrigger(interactionId, triggerId);
-      return;
-    }
-
+    deletedTriggerInputKeys.current.add(`${triggerId}:${inputInteractionId}`);
     await saveTrigger(interactionId, triggerId, plan.inputInteractionIds, plan.conditions);
   }
 
@@ -115,6 +117,7 @@ export function useStoryEditorPersistence(storyId: string) {
         inputInteractionIds: [pending.sourceId],
         conditions: nextTrigger.conditions,
       });
+      deletedTriggerInputKeys.current.delete(`${nextTrigger.id}:${pending.sourceId}`);
       setStory((current) => (current ? mergeIncomingStory(current, updated) : updated));
     },
     [mergeIncomingStory, story, storyId],

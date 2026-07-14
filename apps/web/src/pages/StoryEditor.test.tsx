@@ -76,6 +76,7 @@ vi.mock('@xyflow/react', async () => {
         {edges.map((edge: any) => (
           <button
             key={edge.id}
+            className={edge.className}
             data-testid={`flow-edge-${edge.source}-${edge.target}`}
             onClick={(event) => onEdgeClick?.(event, edge)}
           />
@@ -464,23 +465,27 @@ describe('StoryEditor', () => {
     const story = storyWithThreeInteractions();
     story.interactions[2].triggers = [];
     const withoutRootLink = structuredClone(story);
-    withoutRootLink.interactions[1].triggers = [];
+    withoutRootLink.interactions[1].triggers[0].inputInteractionIds = [];
     const staleWithNewTrigger = structuredClone(story);
     staleWithNewTrigger.interactions[2].triggers = [
       { id: 'trigger-new', inputInteractionIds: [], conditions: [] },
     ];
     const staleConnectedStory = structuredClone(staleWithNewTrigger);
     staleConnectedStory.interactions[2].triggers[0].inputInteractionIds = ['interaction-2'];
-    vi.mocked(api.deleteTrigger).mockResolvedValue(withoutRootLink);
     vi.mocked(api.addTrigger).mockResolvedValue(staleWithNewTrigger);
-    vi.mocked(api.updateTrigger).mockResolvedValue(staleConnectedStory);
+    vi.mocked(api.updateTrigger)
+      .mockResolvedValueOnce(withoutRootLink)
+      .mockResolvedValueOnce(staleConnectedStory);
 
     await renderEditor(story);
     await user.click(screen.getByTestId('flow-edge-interaction-1-interaction-2'));
     await user.click(screen.getByRole('button', { name: 'Delete link' }));
 
     await waitFor(() => {
-      expect(api.deleteTrigger).toHaveBeenCalledWith('story-1', 'interaction-2', 'trigger-2');
+      expect(api.updateTrigger).toHaveBeenCalledWith('story-1', 'interaction-2', 'trigger-2', {
+        inputInteractionIds: [],
+        conditions: [],
+      });
     });
     expect(screen.queryByTestId('flow-edge-interaction-1-interaction-2')).not.toBeInTheDocument();
 
@@ -512,6 +517,7 @@ describe('StoryEditor', () => {
     await renderEditor(story);
     await user.click(screen.getByTestId('flow-edge-interaction-1-interaction-3'));
 
+    expect(screen.getByTestId('flow-edge-interaction-1-interaction-3')).toHaveClass('selected');
     expect(screen.getByRole('heading', { name: 'Trigger' })).toBeInTheDocument();
     expect(screen.getByText('Output interaction: Third interaction')).toBeInTheDocument();
 
@@ -695,22 +701,27 @@ describe('StoryEditor', () => {
         'This root trigger has no input; select an edge to edit linked trigger inputs.',
       ),
     ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Delete trigger' })).toBeDisabled();
   });
 
-  it('deletes the selected edge link from the edge editor', async () => {
+  it('removes the selected edge link and keeps the trigger as a root trigger', async () => {
     const user = userEvent.setup();
     const story = storyWithTwoInteractions();
-    const withoutTrigger = structuredClone(story);
-    withoutTrigger.interactions[1].triggers = [];
-    vi.mocked(api.deleteTrigger).mockResolvedValue(withoutTrigger);
+    const withoutInput = structuredClone(story);
+    withoutInput.interactions[1].triggers[0].inputInteractionIds = [];
+    vi.mocked(api.updateTrigger).mockResolvedValue(withoutInput);
 
     await renderEditor(story);
     await user.click(screen.getByTestId('flow-edge-interaction-1-interaction-2'));
     await user.click(screen.getByRole('button', { name: 'Delete link' }));
 
     await waitFor(() => {
-      expect(api.deleteTrigger).toHaveBeenCalledWith('story-1', 'interaction-2', 'trigger-2');
+      expect(api.updateTrigger).toHaveBeenCalledWith('story-1', 'interaction-2', 'trigger-2', {
+        inputInteractionIds: [],
+        conditions: [],
+      });
     });
+    expect(api.deleteTrigger).not.toHaveBeenCalled();
     expect(screen.queryByTestId('flow-edge-interaction-1-interaction-2')).not.toBeInTheDocument();
   });
 
@@ -737,17 +748,17 @@ describe('StoryEditor', () => {
     expect(screen.getByTestId('flow-edge-interaction-3-interaction-2')).toBeInTheDocument();
   });
 
-  it('does not restore a deleted trigger when a later interaction move returns stale trigger data', async () => {
+  it('does not restore a deleted link when a later interaction move returns stale trigger data', async () => {
     const user = userEvent.setup();
     const story = storyWithTwoInteractions();
-    const withoutTrigger = structuredClone(story);
-    withoutTrigger.interactions[1].triggers = [];
+    const withoutLink = structuredClone(story);
+    withoutLink.interactions[1].triggers[0].inputInteractionIds = [];
     const staleMovedStory = structuredClone(story);
     staleMovedStory.interactions[1].position = { x: 445, y: 195 };
-    let resolveDelete: (story: Story) => void = () => {};
-    vi.mocked(api.deleteTrigger).mockReturnValue(
+    let resolveLinkDeletion: (story: Story) => void = () => {};
+    vi.mocked(api.updateTrigger).mockReturnValue(
       new Promise((resolve) => {
-        resolveDelete = resolve;
+        resolveLinkDeletion = resolve;
       }),
     );
     vi.mocked(api.updateInteraction).mockResolvedValue(staleMovedStory);
@@ -767,7 +778,7 @@ describe('StoryEditor', () => {
     expect(screen.queryByTestId('flow-edge-interaction-1-interaction-2')).not.toBeInTheDocument();
 
     await act(async () => {
-      resolveDelete(withoutTrigger);
+      resolveLinkDeletion(withoutLink);
     });
   });
 

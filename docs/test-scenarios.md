@@ -16,12 +16,14 @@ Cover the critical MVP paths: Story, Interaction, Trigger, and Reader.
 - Editor: selecting an interaction without a trigger shows a controlled error state instead of a blank page.
 - Editor: a trigger can accept several input interactions.
 - Editor: selecting a graph edge opens the trigger editor for that edge.
+- Editor: selecting a graph edge visibly highlights that edge.
 - Editor: deleting a trigger removes its edge and a later interaction move must not restore it from stale API data.
 - Editor: deleting a trigger link and then creating another link must not restore the deleted link from stale API data.
-- Editor: deleting one edge of a trigger with several inputs removes only that input link.
+- Editor: deleting one edge removes only that input link and keeps the trigger as a root trigger when no inputs remain.
+- Editor/API: the last trigger of an interaction cannot be deleted.
 - Editor: creating a new canvas connection creates a dedicated trigger and does not mutate existing linked triggers.
 - Editor: deleting an interaction removes triggers that output to it.
-- Editor: deleting an interaction removes it from trigger inputs without accidentally creating unintended starting interactions.
+- Editor: deleting an interaction removes it from trigger inputs and turns orphaned triggers into root triggers.
 - Reader engine: an interaction without input is available at startup.
 - Reader engine: an interaction with input is only available after the source interaction.
 - Reader engine: visited / not visited conditions filter choices correctly.

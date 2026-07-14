@@ -72,29 +72,69 @@ describe('shared story operations', () => {
     ]);
   });
 
-  it('deletes triggers that only depended on a deleted input interaction', () => {
+  it('keeps the last trigger of an interaction', () => {
+    const updated = deleteTriggerInStory(storyFixture(), 'middle', 'trigger-middle');
+
+    expect(updated.interactions[1].triggers).toEqual([
+      { id: 'trigger-middle', inputInteractionIds: ['root'], conditions: [] },
+    ]);
+  });
+
+  it('keeps triggers as root triggers when deleting their only input interaction', () => {
     const updated = deleteInteractionFromStory(storyFixture(), 'root');
 
     expect(updated.interactions.map((item) => item.id)).toEqual(['middle', 'end']);
-    expect(updated.interactions[0].triggers).toEqual([]);
+    expect(updated.interactions[0].triggers).toEqual([
+      { id: 'trigger-middle', inputInteractionIds: [], conditions: [] },
+    ]);
     expect(updated.interactions[1].triggers[0].inputInteractionIds).toEqual(['middle']);
     expect(updated.interactions[1].triggers[0].conditions).toEqual([]);
   });
 
   it('does not restore locally deleted triggers from stale server stories', () => {
-    const current = deleteTriggerInStory(storyFixture(), 'middle', 'trigger-middle');
-    const staleIncoming = storyFixture();
+    const story = storyFixture();
+    story.interactions[1].triggers.push({
+      id: 'trigger-middle-alt',
+      inputInteractionIds: [],
+      conditions: [],
+    });
+    const current = deleteTriggerInStory(story, 'middle', 'trigger-middle');
+    const staleIncoming = structuredClone(story);
 
     const merged = mergeServerStory(current, staleIncoming, undefined, {
       deletedTriggerIds: new Set(['trigger-middle']),
     });
 
-    expect(merged.interactions[1].triggers).toEqual([]);
+    expect(merged.interactions[1].triggers).toEqual([
+      { id: 'trigger-middle-alt', inputInteractionIds: [], conditions: [] },
+    ]);
+  });
+
+  it('does not restore locally deleted trigger inputs from stale server stories', () => {
+    const current = updateTriggerInStory(storyFixture(), 'middle', 'trigger-middle', {
+      inputInteractionIds: [],
+      conditions: [],
+    });
+    const staleIncoming = storyFixture();
+
+    const merged = mergeServerStory(current, staleIncoming, undefined, {
+      deletedTriggerInputKeys: new Set(['trigger-middle:root']),
+    });
+
+    expect(merged.interactions[1].triggers).toEqual([
+      { id: 'trigger-middle', inputInteractionIds: [], conditions: [] },
+    ]);
   });
 
   it('preserves local triggers when merging interaction-only saves', () => {
-    const current = deleteTriggerInStory(storyFixture(), 'middle', 'trigger-middle');
-    const staleIncoming = storyFixture();
+    const story = storyFixture();
+    story.interactions[1].triggers.push({
+      id: 'trigger-middle-alt',
+      inputInteractionIds: [],
+      conditions: [],
+    });
+    const current = deleteTriggerInStory(story, 'middle', 'trigger-middle');
+    const staleIncoming = structuredClone(story);
     staleIncoming.interactions[1].position = { x: 445, y: 275 };
 
     const merged = mergeServerStory(
@@ -108,7 +148,9 @@ describe('shared story operations', () => {
     );
 
     expect(merged.interactions[1].position).toEqual({ x: 445, y: 275 });
-    expect(merged.interactions[1].triggers).toEqual([]);
+    expect(merged.interactions[1].triggers).toEqual([
+      { id: 'trigger-middle-alt', inputInteractionIds: [], conditions: [] },
+    ]);
   });
 
   it('finds the next child position below occupied outputs', () => {

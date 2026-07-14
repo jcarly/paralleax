@@ -44,17 +44,16 @@ const story: Story = {
 };
 
 describe('trigger input deletion planning', () => {
-  it('deletes the trigger when the selected input is its last input', () => {
+  it('plans an empty root trigger when the selected input is its last input', () => {
     expect(
       planTriggerInputDeletion(story, 'interaction-2', 'trigger-single', 'interaction-1'),
-    ).toEqual({ action: 'delete-trigger' });
+    ).toEqual({ inputInteractionIds: [], conditions: [] });
   });
 
   it('updates the trigger when other inputs remain', () => {
     expect(
       planTriggerInputDeletion(story, 'interaction-2', 'trigger-multiple', 'interaction-1'),
     ).toEqual({
-      action: 'update-trigger',
       inputInteractionIds: ['interaction-3'],
       conditions: [{ interactionId: 'interaction-1', hasBeenVisited: true }],
     });

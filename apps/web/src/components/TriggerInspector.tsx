@@ -138,7 +138,11 @@ export function TriggerInspector({
           Delete link
         </button>
       ) : (
-        <button className="danger" onClick={() => void onDeleteTrigger(interaction.id, trigger.id)}>
+        <button
+          className="danger"
+          disabled={interaction.triggers.length <= 1}
+          onClick={() => void onDeleteTrigger(interaction.id, trigger.id)}
+        >
           Delete trigger
         </button>
       )}

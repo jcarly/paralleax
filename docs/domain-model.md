@@ -42,6 +42,8 @@ Main MVP fields:
 
 A trigger has exactly one output interaction: the interaction that owns the trigger. Its inputs are alternative sources. In other words, several input interactions on the same trigger represent an OR: any one of them can make the output interaction reachable, as long as the trigger conditions also match.
 
+Every interaction should keep at least one trigger. A root interaction is represented by a trigger with no inputs.
+
 ### MVP Condition
 
 A condition checks whether an interaction has already been visited or not.

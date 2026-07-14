@@ -46,7 +46,9 @@ Conditions answer "what must already be true about the path?"
 
 A trigger with no inputs makes its output interaction available at the beginning of the story.
 
-This is intentional for explicit starting interactions, but it must not happen accidentally after deleting another interaction.
+This is the generic representation of a root interaction.
+
+Every interaction should keep at least one trigger. A root interaction is not a special interaction type; it is an interaction whose trigger has no inputs.
 
 ## Deleting Interactions
 
@@ -60,9 +62,9 @@ If the deleted interaction is the trigger output:
 If the deleted interaction is one of the trigger inputs:
 
 - remove that input from the trigger;
-- if the trigger has no remaining inputs, delete the trigger unless it is explicitly meant to be a starting trigger.
+- if the trigger has no remaining inputs, keep the trigger as an empty root trigger.
 
-This avoids accidentally turning a child interaction into a starting interaction.
+This keeps the model generic: an interaction remains available only through triggers, including root interactions.
 
 If the deleted interaction appears in trigger conditions:
 
@@ -85,7 +87,9 @@ The interaction inspector may still show trigger information as a convenience, b
 
 An edge represents one trigger input, not necessarily the whole trigger. If a trigger has several input interactions, it appears as several edges that share the same trigger id.
 
-Deleting an edge should remove only the selected input from the trigger. If that input was the last input of a linked trigger, the trigger can be deleted because it no longer has a source.
+Deleting an edge should remove only the selected input from the trigger. If that input was the last input of a linked trigger, the trigger remains and becomes an empty root trigger.
+
+The last trigger of an interaction cannot be deleted. This preserves the invariant that every interaction has at least one availability rule.
 
 Creating a new canvas connection should create a dedicated linked trigger for that source and output interaction. It must not silently mutate an unrelated existing trigger, because existing triggers may carry different conditions.
 

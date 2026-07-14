@@ -15,10 +15,14 @@
 
 ## V0.2 - Persistence and Robustness
 
+- Save status feedback in the editor.
+- Visible save error handling.
+- Delete confirmations for interactions and triggers.
+- JSON export/import for stories.
 - Durable storage.
 - Migrations.
-- More complete error handling.
 - Reproducible demo data.
+- UI wording pass for author-facing trigger vocabulary.
 
 ## V0.3 - Advanced Narrative Model
 

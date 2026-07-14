@@ -33,6 +33,10 @@ This project follows a lightweight [Keep a Changelog](https://keepachangelog.com
 
 ### Changed
 
+- Selected trigger edges are now visually highlighted in the editor.
+- The editor minimap was removed to reduce visual noise.
+- Interactions now keep at least one trigger; removing the last trigger input turns the trigger into a root trigger instead of deleting it.
+- Interaction deletion now turns orphaned triggers into root triggers instead of removing them.
 - Story editor API persistence and stale-response merge orchestration now live in
   `useStoryEditorPersistence`.
 - Editor inspector UI is now split into dedicated `InteractionInspector` and

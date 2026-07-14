@@ -30,20 +30,30 @@ export function buildInteractionNodes(
   );
 }
 
-export function buildTriggerEdges(story: Story | undefined): TriggerFlowEdge[] {
+export function buildTriggerEdges(
+  story: Story | undefined,
+  selectedTrigger?: SelectedTrigger,
+): TriggerFlowEdge[] {
   return (
     story?.interactions.flatMap((target) =>
       target.triggers.flatMap((trigger) =>
-        trigger.inputInteractionIds.map((source) => ({
-          id: `${trigger.id}-${source}`,
-          source,
-          target: target.id,
-          markerEnd: { type: MarkerType.ArrowClosed },
-          label: trigger.conditions.length
-            ? `${trigger.conditions.length} condition(s)`
-            : undefined,
-          data: { interactionId: target.id, triggerId: trigger.id, inputInteractionId: source },
-        })),
+        trigger.inputInteractionIds.map((source) => {
+          const isSelected =
+            selectedTrigger?.interactionId === target.id &&
+            selectedTrigger.triggerId === trigger.id &&
+            selectedTrigger.inputInteractionId === source;
+          return {
+            id: `${trigger.id}-${source}`,
+            source,
+            target: target.id,
+            markerEnd: { type: MarkerType.ArrowClosed },
+            label: trigger.conditions.length
+              ? `${trigger.conditions.length} condition(s)`
+              : undefined,
+            className: isSelected ? 'trigger-edge selected' : 'trigger-edge',
+            data: { interactionId: target.id, triggerId: trigger.id, inputInteractionId: source },
+          };
+        }),
       ),
     ) ?? []
   );

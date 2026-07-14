@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   Background,
   Controls,
-  MiniMap,
   ReactFlow,
   useNodesState,
   type EdgeMouseHandler,
@@ -51,7 +50,7 @@ export function StoryEditor() {
     setNodes(storyNodes);
   }, [setNodes, storyNodes]);
 
-  const edges = useMemo(() => buildTriggerEdges(story), [story]);
+  const edges = useMemo(() => buildTriggerEdges(story, selectedTrigger), [story, selectedTrigger]);
 
   const select: NodeMouseHandler = (_, node) => {
     setSelectedId(node.id);
@@ -130,7 +129,6 @@ export function StoryEditor() {
             fitView
           >
             <Background />
-            <MiniMap />
             <Controls />
           </ReactFlow>
         </section>

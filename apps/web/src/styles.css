@@ -220,6 +220,14 @@ header span {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.react-flow__edge.trigger-edge.selected .react-flow__edge-path {
+  stroke: #c53d4f;
+  stroke-width: 3;
+}
+.react-flow__edge.trigger-edge.selected .react-flow__edge-text {
+  fill: #9f2e3f;
+  font-weight: 750;
+}
 .player-page {
   max-width: 760px;
   margin: 0 auto;

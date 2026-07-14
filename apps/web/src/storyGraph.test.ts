@@ -63,14 +63,21 @@ describe('story graph mapping', () => {
     ]);
   });
 
-  it('builds one edge per trigger input', () => {
-    expect(buildTriggerEdges(story)).toEqual([
+  it('builds one edge per trigger input with selected edge state', () => {
+    expect(
+      buildTriggerEdges(story, {
+        interactionId: 'interaction-2',
+        triggerId: 'trigger-linked',
+        inputInteractionId: 'interaction-3',
+      }),
+    ).toEqual([
       {
         id: 'trigger-linked-interaction-1',
         source: 'interaction-1',
         target: 'interaction-2',
         markerEnd: { type: MarkerType.ArrowClosed },
         label: '1 condition(s)',
+        className: 'trigger-edge',
         data: {
           interactionId: 'interaction-2',
           triggerId: 'trigger-linked',
@@ -83,6 +90,7 @@ describe('story graph mapping', () => {
         target: 'interaction-2',
         markerEnd: { type: MarkerType.ArrowClosed },
         label: '1 condition(s)',
+        className: 'trigger-edge selected',
         data: {
           interactionId: 'interaction-2',
           triggerId: 'trigger-linked',

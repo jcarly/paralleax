@@ -148,7 +148,7 @@ describe('Stories API', () => {
     });
   });
 
-  it('DELETE /api/stories/:storyId/interactions/:interactionId deletes an interaction and removes triggers that only used it as input', async () => {
+  it('DELETE /api/stories/:storyId/interactions/:interactionId deletes an interaction and turns orphaned triggers into root triggers', async () => {
     const story = await createStory();
     const withParent = await createInteraction(story.id);
     const parent = withParent.interactions[0];
@@ -161,7 +161,10 @@ describe('Stories API', () => {
 
     expect(response.body.interactions).toHaveLength(1);
     expect(response.body.interactions[0].id).toBe(child.id);
-    expect(response.body.interactions[0].triggers).toEqual([]);
+    expect(response.body.interactions[0].triggers[0]).toMatchObject({
+      inputInteractionIds: [],
+      conditions: [],
+    });
   });
 
   it('DELETE /api/stories/:storyId/interactions/:interactionId keeps triggers that still have other inputs', async () => {
@@ -241,13 +244,29 @@ describe('Stories API', () => {
     const story = await createStory();
     const withInteraction = await createInteraction(story.id);
     const interaction = withInteraction.interactions[0];
-    const trigger = interaction.triggers[0];
+    const withSecondTrigger = await request(httpServer)
+      .post(`/api/stories/${story.id}/interactions/${interaction.id}/triggers`)
+      .expect(201);
+    const updatedInteraction = (withSecondTrigger.body as Story).interactions[0];
+    const trigger = updatedInteraction.triggers[0];
 
     const response = await request(httpServer)
       .delete(`/api/stories/${story.id}/interactions/${interaction.id}/triggers/${trigger.id}`)
       .expect(200);
 
-    expect(response.body.interactions[0].triggers).toEqual([]);
+    expect(response.body.interactions[0].triggers).toHaveLength(1);
+    expect(response.body.interactions[0].triggers[0].id).not.toBe(trigger.id);
+  });
+
+  it('DELETE /api/stories/:storyId/interactions/:interactionId/triggers/:triggerId rejects deleting the last trigger', async () => {
+    const story = await createStory();
+    const withInteraction = await createInteraction(story.id);
+    const interaction = withInteraction.interactions[0];
+    const trigger = interaction.triggers[0];
+
+    await request(httpServer)
+      .delete(`/api/stories/${story.id}/interactions/${interaction.id}/triggers/${trigger.id}`)
+      .expect(400);
   });
 
   it('returns 404 for unknown story ids', async () => {
