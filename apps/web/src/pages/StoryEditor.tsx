@@ -31,6 +31,7 @@ import {
   type SelectedTrigger,
 } from '../storyGraph';
 import { findInteraction, findRootTrigger, findSelectedTrigger } from '../storySelection';
+import { planTriggerInputDeletion } from '../storyTriggerInput';
 
 const nodeTypes = { interaction: InteractionNode };
 
@@ -126,17 +127,15 @@ export function StoryEditor() {
     triggerId: string,
     inputInteractionId: string,
   ) {
-    const interaction = story?.interactions.find((item) => item.id === interactionId);
-    const trigger = interaction?.triggers.find((item) => item.id === triggerId);
-    if (!trigger) return;
+    const plan = planTriggerInputDeletion(story, interactionId, triggerId, inputInteractionId);
+    if (!plan) return;
 
-    const nextInputs = trigger.inputInteractionIds.filter((id) => id !== inputInteractionId);
-    if (nextInputs.length === 0) {
+    if (plan.action === 'delete-trigger') {
       await deleteTrigger(interactionId, triggerId);
       return;
     }
 
-    await saveTrigger(interactionId, triggerId, nextInputs, trigger.conditions);
+    await saveTrigger(interactionId, triggerId, plan.inputInteractionIds, plan.conditions);
     setSelectedTrigger(undefined);
   }
 

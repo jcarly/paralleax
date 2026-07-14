@@ -11,6 +11,8 @@ Paralleax is a TypeScript monorepo.
   testable outside the React component.
   Canvas connection decisions live in `storyConnection.ts`; the editor component
   keeps API orchestration while pure trigger-link rules stay unit-tested.
+  Trigger input deletion planning lives in `storyTriggerInput.ts`, keeping the
+  "delete link or delete whole trigger" rule explicit and tested.
 - `apps/api`: NestJS. Exposes story endpoints. Story application logic lives in
   `StoriesService`, while MVP in-memory storage is isolated behind `StoriesRepository`.
 - `packages/shared`: shared types, narrative reader logic, story operations, trigger cleanup rules, stale-response merge rules, and graph placement helpers used by both the web app and API.
