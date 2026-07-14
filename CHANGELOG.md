@@ -8,6 +8,10 @@ This project follows a lightweight [Keep a Changelog](https://keepachangelog.com
 
 ### Added
 
+- Canvas `Add root` action that places new root interactions below the lowest existing root.
+- Graph creation shortcuts: dropping an output connection on empty canvas creates a child, and dropping an input connection creates a linked source interaction.
+- Hover action buttons on interactions for creating source and child interactions directly from the graph.
+- Shared placement helpers and tests for root and parent interaction creation.
 - User guide for the current MVP authoring workflow.
 - Playwright coverage for editing root trigger path conditions from the interaction inspector.
 - Coverage thresholds for API, shared, and web test suites.
@@ -33,6 +37,8 @@ This project follows a lightweight [Keep a Changelog](https://keepachangelog.com
 
 ### Changed
 
+- Editor colors now use CSS custom properties, and selected trigger edges use the same primary selection color as selected interactions.
+- Drag-created interactions now use the connection drop position instead of automatic placement.
 - Selected trigger edges are now visually highlighted in the editor.
 - The editor minimap was removed to reduce visual noise.
 - Interactions now keep at least one trigger; removing the last trigger input turns the trigger into a root trigger instead of deleting it.

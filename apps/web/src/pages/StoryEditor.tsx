@@ -1,13 +1,17 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Background,
   Controls,
   ReactFlow,
   useNodesState,
   type EdgeMouseHandler,
+  type OnConnectEnd,
+  type OnConnectStart,
   type NodeMouseHandler,
+  type ReactFlowInstance,
 } from '@xyflow/react';
 import { Link, useParams } from 'react-router-dom';
+import type { Position } from '@paralleax/shared';
 import { InteractionInspector } from '../components/InteractionInspector';
 import { InteractionNode } from '../components/InteractionNode';
 import { TriggerInspector } from '../components/TriggerInspector';
@@ -17,10 +21,12 @@ import {
   buildTriggerEdges,
   type InteractionFlowNode,
   type SelectedTrigger,
+  type TriggerFlowEdge,
 } from '../storyGraph';
 import { findInteraction, findSelectedTrigger } from '../storySelection';
 
 const nodeTypes = { interaction: InteractionNode };
+const droppedNodeOffset = { x: 110, y: 48 };
 
 export function StoryEditor() {
   const { storyId = '' } = useParams();
@@ -35,16 +41,30 @@ export function StoryEditor() {
     connectInteractions,
     createRoot,
     createChild,
+    createChildFromInteraction,
+    createParentForInteraction,
     patchInteraction,
     deleteInteraction,
   } = useStoryEditorPersistence(storyId);
   const [selectedId, setSelectedId] = useState<string>();
   const [selectedTrigger, setSelectedTrigger] = useState<SelectedTrigger>();
   const [nodes, setNodes, onNodesChange] = useNodesState<InteractionFlowNode>([]);
+  const pendingConnectionStart = useRef<{
+    nodeId: string;
+    handleType: 'source' | 'target';
+  } | null>(null);
+  const flowInstance = useRef<ReactFlowInstance<InteractionFlowNode, TriggerFlowEdge> | null>(null);
 
   const selected = findInteraction(story, selectedId);
   const selectedTriggerTarget = findSelectedTrigger(story, selectedTrigger);
-  const storyNodes = useMemo(() => buildInteractionNodes(story, selectedId), [story, selectedId]);
+  const storyNodes = useMemo(
+    () =>
+      buildInteractionNodes(story, selectedId, {
+        onCreateChild: (interactionId) => void createChildFromInteraction(interactionId),
+        onCreateParent: (interactionId) => void createParentForInteraction(interactionId),
+      }),
+    [createChildFromInteraction, createParentForInteraction, selectedId, story],
+  );
 
   useEffect(() => {
     setNodes(storyNodes);
@@ -65,6 +85,31 @@ export function StoryEditor() {
       triggerId: data.triggerId,
       inputInteractionId: data.inputInteractionId,
     });
+  };
+
+  const startCanvasConnection: OnConnectStart = (_, params) => {
+    if (!params.nodeId || !params.handleType) {
+      pendingConnectionStart.current = null;
+      return;
+    }
+    pendingConnectionStart.current = {
+      nodeId: params.nodeId,
+      handleType: params.handleType,
+    };
+  };
+
+  const endCanvasConnection: OnConnectEnd = (_, connectionState) => {
+    const start = pendingConnectionStart.current;
+    pendingConnectionStart.current = null;
+    if (!start || connectionState.isValid === true || connectionState.toNode) return;
+    const position = getDroppedInteractionPosition(connectionState.pointer, flowInstance.current);
+
+    if (start.handleType === 'source') {
+      void createChildFromInteraction(start.nodeId, position);
+      return;
+    }
+
+    void createParentForInteraction(start.nodeId, position);
   };
 
   async function deleteSelectedTrigger(interactionId: string, triggerId: string) {
@@ -104,7 +149,6 @@ export function StoryEditor() {
           onBlur={(e) => void renameStory(e.target.value)}
         />
         <div className="actions">
-          <button onClick={() => void createRoot()}>Add root</button>
           <button disabled={!selected} onClick={() => void createSelectedChild()}>
             Add child
           </button>
@@ -115,12 +159,20 @@ export function StoryEditor() {
       </div>
       <div className="editor-layout">
         <section className="canvas">
+          <button className="canvas-action" onClick={() => void createRoot()}>
+            Add root
+          </button>
           <ReactFlow
             nodes={nodes}
             edges={edges}
             nodeTypes={nodeTypes}
+            onInit={(instance) => {
+              flowInstance.current = instance;
+            }}
             onNodesChange={onNodesChange}
             onConnect={(connection) => void connectInteractions(connection)}
+            onConnectStart={startCanvasConnection}
+            onConnectEnd={endCanvasConnection}
             onEdgeClick={selectTrigger}
             onNodeClick={select}
             onNodeDragStop={(_, node) =>
@@ -164,4 +216,16 @@ export function StoryEditor() {
       </div>
     </main>
   );
+}
+
+function getDroppedInteractionPosition(
+  pointer: Position | null,
+  flow: ReactFlowInstance<InteractionFlowNode, TriggerFlowEdge> | null,
+): Position | undefined {
+  if (!pointer || !flow) return undefined;
+  const flowPosition = flow.screenToFlowPosition(pointer);
+  return {
+    x: Math.round(flowPosition.x - droppedNodeOffset.x),
+    y: Math.round(flowPosition.y - droppedNodeOffset.y),
+  };
 }

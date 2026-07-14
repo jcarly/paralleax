@@ -93,6 +93,13 @@ The last trigger of an interaction cannot be deleted. This preserves the invaria
 
 Creating a new canvas connection should create a dedicated linked trigger for that source and output interaction. It must not silently mutate an unrelated existing trigger, because existing triggers may carry different conditions.
 
+Dropping a connection on empty canvas is a creation shortcut:
+
+- dropping from an output handle creates a linked child interaction;
+- dropping from an input handle creates a source interaction and links it to the target interaction.
+
+New interactions created by dropping a connection on empty canvas should be placed where the connection is released. Hover action buttons can use automatic placement to keep linked interactions readable.
+
 ## Multiple Triggers for One Output
 
 An interaction can have several triggers.

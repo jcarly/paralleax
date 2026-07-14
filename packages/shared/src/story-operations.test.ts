@@ -3,6 +3,8 @@ import {
   deleteInteractionFromStory,
   deleteTriggerInStory,
   getNextChildPosition,
+  getNextParentPosition,
+  getNextRootPosition,
   mergeServerStory,
   normalizeTriggerInputIds,
   updateTriggerInStory,
@@ -158,6 +160,32 @@ describe('shared story operations', () => {
     story.interactions[1].position = { x: 420, y: 260 };
 
     expect(getNextChildPosition(story, story.interactions[0])).toEqual({ x: 420, y: 410 });
+  });
+
+  it('finds the next parent position beside the target without overlap', () => {
+    const story = storyFixture();
+    story.interactions.push({
+      id: 'other-parent',
+      title: 'Other parent',
+      body: 'Already there',
+      position: { x: 420, y: 260 },
+      triggers: [{ id: 'trigger-other-parent', inputInteractionIds: [], conditions: [] }],
+    });
+
+    expect(getNextParentPosition(story, story.interactions[2])).toEqual({ x: 420, y: 410 });
+  });
+
+  it('finds the next root position below the lowest existing root', () => {
+    const story = storyFixture();
+    story.interactions.push({
+      id: 'second-root',
+      title: 'Second root',
+      body: 'Another start',
+      position: { x: 80, y: 520 },
+      triggers: [{ id: 'trigger-second-root', inputInteractionIds: [], conditions: [] }],
+    });
+
+    expect(getNextRootPosition(story)).toEqual({ x: 80, y: 670 });
   });
 
   it('normalizes trigger inputs without changing their first-seen order', () => {

@@ -33,57 +33,95 @@ vi.mock('@xyflow/react', async () => {
       nodes,
       edges,
       nodeTypes,
+      onInit,
       onConnect,
+      onConnectStart,
+      onConnectEnd,
       onEdgeClick,
       onNodeClick,
       onNodeDragStop,
       children,
-    }: any) => (
-      <div data-testid="react-flow">
-        {nodes.map((node: any) => {
-          const NodeComponent = nodeTypes[node.type];
-          return (
+    }: any) => {
+      const onInitRef = React.useRef(onInit);
+      React.useEffect(() => {
+        onInitRef.current?.({
+          screenToFlowPosition: ({ x, y }: { x: number; y: number }) => ({ x: x - 50, y: y - 40 }),
+        });
+      }, []);
+
+      return (
+        <div data-testid="react-flow">
+          {nodes.map((node: any) => {
+            const NodeComponent = nodeTypes[node.type];
+            return (
+              <div
+                key={node.id}
+                data-testid={`flow-node-${node.id}`}
+                onClick={(event) => onNodeClick?.(event, node)}
+                role="button"
+                tabIndex={0}
+              >
+                <NodeComponent id={node.id} data={node.data} />
+                <span
+                  data-testid={`drag-node-${node.id}`}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onNodeDragStop?.(event, {
+                      ...node,
+                      position: { x: node.position.x + 25, y: node.position.y + 15 },
+                    });
+                  }}
+                />
+                <span
+                  data-testid={`drop-source-${node.id}`}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onConnectStart?.(event, { nodeId: node.id, handleType: 'source' });
+                    onConnectEnd?.(event, {
+                      isValid: null,
+                      toNode: null,
+                      pointer: { x: 580, y: 500 },
+                    });
+                  }}
+                />
+                <span
+                  data-testid={`drop-target-${node.id}`}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onConnectStart?.(event, { nodeId: node.id, handleType: 'target' });
+                    onConnectEnd?.(event, {
+                      isValid: null,
+                      toNode: null,
+                      pointer: { x: 320, y: 260 },
+                    });
+                  }}
+                />
+              </div>
+            );
+          })}
+          {nodes.flatMap((source: any) =>
+            nodes
+              .filter((target: any) => target.id !== source.id)
+              .map((target: any) => (
+                <button
+                  key={`${source.id}-${target.id}`}
+                  data-testid={`connect-${source.id}-${target.id}`}
+                  onClick={() => onConnect?.({ source: source.id, target: target.id })}
+                />
+              )),
+          )}
+          {edges.map((edge: any) => (
             <button
-              key={node.id}
-              data-testid={`flow-node-${node.id}`}
-              onClick={(event) => onNodeClick?.(event, node)}
-            >
-              <NodeComponent data={node.data} />
-              <span
-                data-testid={`drag-node-${node.id}`}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onNodeDragStop?.(event, {
-                    ...node,
-                    position: { x: node.position.x + 25, y: node.position.y + 15 },
-                  });
-                }}
-              />
-            </button>
-          );
-        })}
-        {nodes.flatMap((source: any) =>
-          nodes
-            .filter((target: any) => target.id !== source.id)
-            .map((target: any) => (
-              <button
-                key={`${source.id}-${target.id}`}
-                data-testid={`connect-${source.id}-${target.id}`}
-                onClick={() => onConnect?.({ source: source.id, target: target.id })}
-              />
-            )),
-        )}
-        {edges.map((edge: any) => (
-          <button
-            key={edge.id}
-            className={edge.className}
-            data-testid={`flow-edge-${edge.source}-${edge.target}`}
-            onClick={(event) => onEdgeClick?.(event, edge)}
-          />
-        ))}
-        {children}
-      </div>
-    ),
+              key={edge.id}
+              className={edge.className}
+              data-testid={`flow-edge-${edge.source}-${edge.target}`}
+              onClick={(event) => onEdgeClick?.(event, edge)}
+            />
+          ))}
+          {children}
+        </div>
+      );
+    },
     useNodesState: (initialNodes: any[]) => {
       const [nodes, setNodes] = React.useState(initialNodes);
       return [nodes, setNodes, vi.fn()];
@@ -200,7 +238,7 @@ describe('StoryEditor', () => {
       id: 'interaction-root',
       title: 'Created root',
       body: 'Root body',
-      position: { x: 100, y: 120 },
+      position: { x: 80, y: 270 },
       triggers: [{ id: 'trigger-root', inputInteractionIds: [], conditions: [] }],
     });
     const withChild = storyWithTwoInteractions();
@@ -211,7 +249,7 @@ describe('StoryEditor', () => {
     await renderEditor();
 
     await user.click(screen.getByRole('button', { name: 'Add root' }));
-    expect(api.createInteraction).toHaveBeenCalledWith('story-1', { position: { x: 100, y: 120 } });
+    expect(api.createInteraction).toHaveBeenCalledWith('story-1', { position: { x: 80, y: 270 } });
     expect(await screen.findByText('Created root')).toBeInTheDocument();
 
     await user.click(screen.getByTestId('flow-node-interaction-1'));
@@ -219,6 +257,120 @@ describe('StoryEditor', () => {
     expect(api.createInteraction).toHaveBeenLastCalledWith('story-1', {
       parentId: 'interaction-1',
       position: { x: 420, y: 260 },
+    });
+  });
+
+  it('creates a child interaction when a source connection is dropped on empty canvas', async () => {
+    const story = storyWithTwoInteractions();
+    story.interactions[1].position = { x: 420, y: 260 };
+    const withNewChild = structuredClone(story);
+    withNewChild.interactions.push({
+      id: 'interaction-3',
+      title: 'Dropped output',
+      body: 'Created from source drop',
+      position: { x: 420, y: 412 },
+      triggers: [{ id: 'trigger-3', inputInteractionIds: ['interaction-1'], conditions: [] }],
+    });
+    vi.mocked(api.createInteraction).mockResolvedValue(withNewChild);
+
+    await renderEditor(story);
+    await userEvent.click(screen.getByTestId('drop-source-interaction-1'));
+
+    await waitFor(() => {
+      expect(api.createInteraction).toHaveBeenCalledWith('story-1', {
+        parentId: 'interaction-1',
+        position: { x: 420, y: 412 },
+      });
+    });
+  });
+
+  it('creates a child interaction from the hovered node action', async () => {
+    const withNewChild = storyWithTwoInteractions();
+    vi.mocked(api.createInteraction).mockResolvedValue(withNewChild);
+
+    await renderEditor();
+    const node = screen.getByTestId('flow-node-interaction-1');
+    await userEvent.click(within(node).getByRole('button', { name: 'Create child interaction' }));
+
+    await waitFor(() => {
+      expect(api.createInteraction).toHaveBeenCalledWith('story-1', {
+        parentId: 'interaction-1',
+        position: { x: 420, y: 260 },
+      });
+    });
+  });
+
+  it('creates a parent interaction when a target connection is dropped on empty canvas', async () => {
+    const story = storyWithTwoInteractions();
+    const withParent = structuredClone(story);
+    withParent.interactions.push({
+      id: 'interaction-parent',
+      title: 'Dropped input',
+      body: 'Created from target drop',
+      position: { x: 160, y: 172 },
+      triggers: [{ id: 'trigger-parent', inputInteractionIds: [], conditions: [] }],
+    });
+    const withTrigger = structuredClone(withParent);
+    withTrigger.interactions[1].triggers.push({
+      id: 'trigger-new',
+      inputInteractionIds: [],
+      conditions: [],
+    });
+    const connectedStory = structuredClone(withTrigger);
+    connectedStory.interactions[1].triggers[1].inputInteractionIds = ['interaction-parent'];
+    vi.mocked(api.createInteraction).mockResolvedValue(withParent);
+    vi.mocked(api.addTrigger).mockResolvedValue(withTrigger);
+    vi.mocked(api.updateTrigger).mockResolvedValue(connectedStory);
+
+    await renderEditor(story);
+    await userEvent.click(screen.getByTestId('drop-target-interaction-2'));
+
+    await waitFor(() => {
+      expect(api.createInteraction).toHaveBeenCalledWith('story-1', {
+        position: { x: 160, y: 172 },
+      });
+      expect(api.addTrigger).toHaveBeenCalledWith('story-1', 'interaction-2');
+      expect(api.updateTrigger).toHaveBeenCalledWith('story-1', 'interaction-2', 'trigger-new', {
+        inputInteractionIds: ['interaction-parent'],
+        conditions: [],
+      });
+    });
+  });
+
+  it('creates a parent interaction from the hovered node action', async () => {
+    const story = storyWithTwoInteractions();
+    const withParent = structuredClone(story);
+    withParent.interactions.push({
+      id: 'interaction-parent',
+      title: 'Created source',
+      body: 'Source body',
+      position: { x: 80, y: 330 },
+      triggers: [{ id: 'trigger-parent', inputInteractionIds: [], conditions: [] }],
+    });
+    const withTrigger = structuredClone(withParent);
+    withTrigger.interactions[1].triggers.push({
+      id: 'trigger-new',
+      inputInteractionIds: [],
+      conditions: [],
+    });
+    const connectedStory = structuredClone(withTrigger);
+    connectedStory.interactions[1].triggers[1].inputInteractionIds = ['interaction-parent'];
+    vi.mocked(api.createInteraction).mockResolvedValue(withParent);
+    vi.mocked(api.addTrigger).mockResolvedValue(withTrigger);
+    vi.mocked(api.updateTrigger).mockResolvedValue(connectedStory);
+
+    await renderEditor(story);
+    const node = screen.getByTestId('flow-node-interaction-2');
+    await userEvent.click(within(node).getByRole('button', { name: 'Create source interaction' }));
+
+    await waitFor(() => {
+      expect(api.createInteraction).toHaveBeenCalledWith('story-1', {
+        position: { x: 80, y: 330 },
+      });
+      expect(api.updateTrigger).toHaveBeenCalledWith('story-1', 'interaction-2', 'trigger-new', {
+        inputInteractionIds: ['interaction-parent'],
+        conditions: [],
+      });
     });
   });
 

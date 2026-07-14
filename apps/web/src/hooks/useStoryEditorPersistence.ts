@@ -3,11 +3,14 @@ import type { Connection } from '@xyflow/react';
 import {
   deleteTriggerInStory,
   getNextChildPosition,
+  getNextParentPosition,
+  getNextRootPosition,
   mergeServerStory,
   updateInteractionInStory,
   updateTriggerInStory,
   type Interaction,
   type InteractionContentPatch,
+  type Position,
   type Story,
   type TriggerCondition,
 } from '@paralleax/shared';
@@ -123,19 +126,80 @@ export function useStoryEditorPersistence(storyId: string) {
     [mergeIncomingStory, story, storyId],
   );
 
-  async function createRoot() {
-    const next = await api.createInteraction(storyId, { position: { x: 100, y: 120 } });
-    setStory((current) => (current ? mergeIncomingStory(current, next) : next));
-  }
-
-  async function createChild(parent: Interaction) {
-    if (!story) return;
+  const createRoot = useCallback(async () => {
     const next = await api.createInteraction(storyId, {
-      parentId: parent.id,
-      position: getNextChildPosition(story, parent),
+      position: story ? getNextRootPosition(story) : getNextRootPosition(emptyStory(storyId)),
     });
     setStory((current) => (current ? mergeIncomingStory(current, next) : next));
-  }
+  }, [mergeIncomingStory, story, storyId]);
+
+  const createChild = useCallback(
+    async (parent: Interaction) => {
+      if (!story) return;
+      const next = await api.createInteraction(storyId, {
+        parentId: parent.id,
+        position: getNextChildPosition(story, parent),
+      });
+      setStory((current) => (current ? mergeIncomingStory(current, next) : next));
+    },
+    [mergeIncomingStory, story, storyId],
+  );
+
+  const createChildFromInteraction = useCallback(
+    async (sourceId: string, position?: Position) => {
+      if (!story) return;
+      const source = story.interactions.find((interaction) => interaction.id === sourceId);
+      if (!source) return;
+      const next = await api.createInteraction(storyId, {
+        parentId: source.id,
+        position: position ?? getNextChildPosition(story, source),
+      });
+      setStory((current) => (current ? mergeIncomingStory(current, next) : next));
+    },
+    [mergeIncomingStory, story, storyId],
+  );
+
+  const createConnectionTrigger = useCallback(
+    async (baseStory: Story, sourceId: string, targetId: string) => {
+      const target = baseStory.interactions.find((interaction) => interaction.id === targetId);
+      const existingTriggerIds = new Set(target?.triggers.map((trigger) => trigger.id) ?? []);
+      const withTrigger = await api.addTrigger(storyId, targetId);
+      const nextTrigger = findCreatedTrigger(withTrigger, targetId, existingTriggerIds);
+      if (!nextTrigger) return withTrigger;
+
+      deletedTriggerInputKeys.current.delete(`${nextTrigger.id}:${sourceId}`);
+      return api.updateTrigger(storyId, targetId, nextTrigger.id, {
+        inputInteractionIds: [sourceId],
+        conditions: nextTrigger.conditions,
+      });
+    },
+    [storyId],
+  );
+
+  const createParentForInteraction = useCallback(
+    async (targetId: string, position?: Position) => {
+      if (!story) return;
+      const target = story.interactions.find((interaction) => interaction.id === targetId);
+      if (!target) return;
+      const existingInteractionIds = new Set(
+        story.interactions.map((interaction) => interaction.id),
+      );
+      const withParent = await api.createInteraction(storyId, {
+        position: position ?? getNextParentPosition(story, target),
+      });
+      const createdParent = withParent.interactions.find(
+        (interaction) => !existingInteractionIds.has(interaction.id),
+      );
+      if (!createdParent) {
+        setStory((current) => (current ? mergeIncomingStory(current, withParent) : withParent));
+        return;
+      }
+
+      const nextStory = await createConnectionTrigger(withParent, createdParent.id, target.id);
+      setStory((current) => (current ? mergeIncomingStory(current, nextStory) : nextStory));
+    },
+    [createConnectionTrigger, mergeIncomingStory, story, storyId],
+  );
 
   async function patchInteraction(id: string, patch: InteractionContentPatch) {
     setStory((current) => (current ? updateInteractionInStory(current, id, patch) : current));
@@ -167,7 +231,19 @@ export function useStoryEditorPersistence(storyId: string) {
     connectInteractions,
     createRoot,
     createChild,
+    createChildFromInteraction,
+    createParentForInteraction,
     patchInteraction,
     deleteInteraction,
+  };
+}
+
+function emptyStory(storyId: string): Story {
+  return {
+    id: storyId,
+    title: '',
+    interactions: [],
+    createdAt: '',
+    updatedAt: '',
   };
 }

@@ -12,9 +12,15 @@ export interface SelectedTrigger extends Record<string, unknown> {
 
 export type TriggerFlowEdge = Edge<SelectedTrigger>;
 
+export interface InteractionNodeActions {
+  onCreateChild?: (interactionId: string) => void;
+  onCreateParent?: (interactionId: string) => void;
+}
+
 export function buildInteractionNodes(
   story: Story | undefined,
   selectedId: string | undefined,
+  actions: InteractionNodeActions = {},
 ): InteractionFlowNode[] {
   return (
     story?.interactions.map((item) => ({
@@ -25,6 +31,8 @@ export function buildInteractionNodes(
         title: item.title,
         body: item.body,
         selected: item.id === selectedId,
+        ...(actions.onCreateChild ? { onCreateChild: actions.onCreateChild } : {}),
+        ...(actions.onCreateParent ? { onCreateParent: actions.onCreateParent } : {}),
       },
     })) ?? []
   );

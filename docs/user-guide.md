@@ -26,10 +26,14 @@ Use the title field at the top of the editor. The title is saved when the field 
 
 ## Create Interactions
 
-- `Add root` creates a starting interaction.
+- `Add root` on the canvas creates a starting interaction.
 - Select an interaction, then `Add child` creates an output interaction linked to it.
+- Hover an interaction and use the left `+` to create a source interaction.
+- Hover an interaction and use the right `+` to create a child interaction.
+- Drag from an interaction output handle and release on empty canvas to create a linked child interaction.
+- Drag from an interaction input handle and release on empty canvas to create a source interaction that links into it.
 
-New child interactions are placed below existing outputs when possible, to keep the graph readable.
+New root interactions are placed below the lowest existing root. Hover-created linked interactions are placed near their source or target while avoiding existing interactions when possible. Drag-created interactions are placed where the connection is released.
 
 ## Edit Interaction Content
 

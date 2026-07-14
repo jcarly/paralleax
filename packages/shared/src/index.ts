@@ -49,6 +49,8 @@ export const childOffsetY = 140;
 export const childVerticalGap = 150;
 export const minNodeVerticalDistance = 120;
 export const sameColumnTolerance = 260;
+export const rootColumnX = 80;
+export const rootStartY = 120;
 
 function hasOwn<T extends object, K extends PropertyKey>(
   item: T,
@@ -190,6 +192,36 @@ export function getNextChildPosition(story: Story, parent: Interaction): Positio
   const firstY = parent.position.y + childOffsetY;
   const occupied = story.interactions.filter((item) => item.id !== parent.id);
 
+  return findFreePosition(occupied, x, firstY);
+}
+
+export function getNextParentPosition(story: Story, target: Interaction): Position {
+  const x = target.position.x - childOffsetX;
+  return findFreePosition(
+    story.interactions.filter((item) => item.id !== target.id),
+    x,
+    target.position.y,
+  );
+}
+
+export function getNextRootPosition(story: Story): Position {
+  const roots = story.interactions.filter((interaction) =>
+    interaction.triggers.some((trigger) => trigger.inputInteractionIds.length === 0),
+  );
+  if (roots.length === 0) return { x: rootColumnX, y: rootStartY };
+
+  const lowestRoot = roots.reduce((lowest, interaction) =>
+    interaction.position.y > lowest.position.y ? interaction : lowest,
+  );
+
+  return findFreePosition(
+    story.interactions,
+    lowestRoot.position.x,
+    lowestRoot.position.y + childVerticalGap,
+  );
+}
+
+function findFreePosition(occupied: Interaction[], x: number, firstY: number): Position {
   for (let index = 0; index <= occupied.length + 1; index += 1) {
     const y = firstY + index * childVerticalGap;
     const isFree = occupied.every(
