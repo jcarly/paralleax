@@ -5,7 +5,8 @@ Paralleax is a TypeScript monorepo.
 ## Applications
 
 - `apps/web`: React, Vite, React Flow. Contains the editor, reader, and web tests.
-- `apps/api`: NestJS. Exposes story endpoints and keeps data in memory during the MVP.
+- `apps/api`: NestJS. Exposes story endpoints. Story application logic lives in
+  `StoriesService`, while MVP in-memory storage is isolated behind `StoriesRepository`.
 - `packages/shared`: shared types, narrative reader logic, story operations, trigger cleanup rules, stale-response merge rules, and graph placement helpers used by both the web app and API.
 
 ## Guiding Principle
@@ -26,6 +27,10 @@ The UI creates, visualizes, and edits a story. The engine must be able to evalua
 ## Storage
 
 Storage is in memory during the MVP. This keeps the prototype simple to test, but data is lost when the API restarts.
+
+The API accesses that storage through `StoriesRepository` instead of reading a `Map`
+directly from the service. Durable persistence can replace the repository later
+without moving story endpoint behavior or trigger cleanup rules.
 
 Durable persistence is postponed to a later version.
 

@@ -13,20 +13,19 @@ import {
   UpdateInteractionDto,
   UpdateTriggerDto,
 } from './dto';
+import { StoriesRepository } from './stories.repository';
 
 @Injectable()
 export class StoriesService {
-  private readonly stories = new Map<string, Story>();
-
-  constructor() {
+  constructor(private readonly repository: StoriesRepository) {
     this.seed();
   }
 
   list(): Story[] {
-    return [...this.stories.values()].map((story) => structuredClone(story));
+    return this.repository.list();
   }
   get(id: string): Story {
-    const story = this.stories.get(id);
+    const story = this.repository.find(id);
     if (!story) throw new NotFoundException('Story not found');
     return structuredClone(story);
   }
@@ -39,7 +38,7 @@ export class StoriesService {
       createdAt: now,
       updatedAt: now,
     };
-    this.stories.set(story.id, story);
+    this.repository.save(story);
     return structuredClone(story);
   }
   rename(id: string, title: string): Story {
@@ -48,7 +47,7 @@ export class StoriesService {
     return this.touch(story);
   }
   delete(id: string): void {
-    if (!this.stories.delete(id)) throw new NotFoundException('Story not found');
+    if (!this.repository.delete(id)) throw new NotFoundException('Story not found');
   }
   createInteraction(storyId: string, input: CreateInteractionDto): Story {
     const story = this.mutate(storyId);
@@ -119,7 +118,7 @@ export class StoriesService {
     return this.replace(storyId, deleteTriggerInStory(story, interactionId, triggerId));
   }
   private mutate(id: string): Story {
-    const story = this.stories.get(id);
+    const story = this.repository.find(id);
     if (!story) throw new NotFoundException('Story not found');
     return story;
   }
@@ -129,7 +128,8 @@ export class StoriesService {
     return item;
   }
   private replace(id: string, story: Story): Story {
-    this.stories.set(id, story);
+    story.id = id;
+    this.repository.save(story);
     return this.touch(story);
   }
   private touch(story: Story): Story {

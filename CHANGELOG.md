@@ -8,6 +8,7 @@ This project follows a lightweight [Keep a Changelog](https://keepachangelog.com
 
 ### Added
 
+- Unit tests for the API in-memory story repository.
 - ESLint flat config, Prettier config, and CI checks for linting and formatting.
 - Shared Vitest coverage for pure story operations, trigger cleanup, stale-response merges, and child placement.
 - Docker Compose development setup with source bind mounts so code changes apply without rebuilding the image.
@@ -25,6 +26,9 @@ This project follows a lightweight [Keep a Changelog](https://keepachangelog.com
 
 ### Changed
 
+- API in-memory storage is now isolated behind `StoriesRepository`, keeping `StoriesService`
+  focused on story application behavior.
+- Web unit tests now allow enough time for coverage instrumentation on slower local or CI runs.
 - Story and trigger operations now live in `packages/shared` and are reused by both the NestJS API and the React editor.
 - Root test and coverage commands now include the shared workspace.
 - Docker development now uses Node.js 22 and npm 11, matching the documented project requirements.
