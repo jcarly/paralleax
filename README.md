@@ -34,11 +34,12 @@ Recommended reading order:
 2. [MVP scope](docs/mvp.md): what is intentionally included or excluded right now.
 3. [Domain model](docs/domain-model.md): Story, Interaction, Trigger, Reader, and future concepts.
 4. [Trigger semantics](docs/triggers.md): input rules, deletion behavior, and trigger editing UX.
-5. [Architecture](docs/architecture.md): monorepo structure and runtime flow.
-6. [Design principles](docs/design-principles.md): UX and technical principles.
-7. [Test scenarios](docs/test-scenarios.md): critical regression scenarios.
-8. [Roadmap](docs/roadmap.md): planned progression after the MVP.
-9. [Changelog](CHANGELOG.md): notable implementation, test, and documentation changes.
+5. [User guide](docs/user-guide.md): current authoring workflow.
+6. [Architecture](docs/architecture.md): monorepo structure and runtime flow.
+7. [Design principles](docs/design-principles.md): UX and technical principles.
+8. [Test scenarios](docs/test-scenarios.md): critical regression scenarios.
+9. [Roadmap](docs/roadmap.md): planned progression after the MVP.
+10. [Changelog](CHANGELOG.md): notable implementation, test, and documentation changes.
 
 Supporting references:
 

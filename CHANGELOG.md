@@ -8,6 +8,7 @@ This project follows a lightweight [Keep a Changelog](https://keepachangelog.com
 
 ### Added
 
+- User guide for the current MVP authoring workflow.
 - Playwright coverage for editing root trigger path conditions from the interaction inspector.
 - Coverage thresholds for API, shared, and web test suites.
 - Unit tests for web trigger input deletion planning.
