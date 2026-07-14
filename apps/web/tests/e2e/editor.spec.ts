@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
+import type { Story } from '@paralleax/shared';
 
-const story = {
+const story: Story = {
   id: 'story-1',
   title: 'Test story',
   createdAt: '2026-07-14T08:00:00.000Z',
@@ -20,10 +21,22 @@ function cloneStory() {
   return structuredClone(story);
 }
 
-async function mockStory(page: Page) {
+function storyWithConditionCandidate(): Story {
+  const next = cloneStory();
+  next.interactions.push({
+    id: 'interaction-2',
+    title: 'Visited scene',
+    body: 'A previous scene.',
+    position: { x: 440, y: 140 },
+    triggers: [{ id: 'trigger-2', inputInteractionIds: ['interaction-1'], conditions: [] }],
+  });
+  return next;
+}
+
+async function mockStory(page: Page, initialStory: Story = cloneStory()) {
   await page.route('**/api/stories/story-1', async (route) => {
     if (route.request().method() === 'GET') {
-      await route.fulfill({ json: cloneStory() });
+      await route.fulfill({ json: structuredClone(initialStory) });
       return;
     }
 
@@ -86,5 +99,34 @@ test.describe('Story editor', () => {
     await expect(
       page.getByTestId('interaction-node').filter({ hasText: 'Original content' }),
     ).toBeVisible();
+  });
+
+  test('edits root trigger path conditions from the interaction inspector', async ({ page }) => {
+    const initialStory = storyWithConditionCandidate();
+    await mockStory(page, initialStory);
+    const updated = structuredClone(initialStory);
+    updated.interactions[0].triggers[0].conditions = [
+      { interactionId: 'interaction-2', hasBeenVisited: true },
+    ];
+
+    await page.route(
+      '**/api/stories/story-1/interactions/interaction-1/triggers/trigger-1',
+      async (route) => {
+        expect(route.request().method()).toBe('PATCH');
+        expect(route.request().postDataJSON()).toEqual({
+          inputInteractionIds: [],
+          conditions: [{ interactionId: 'interaction-2', hasBeenVisited: true }],
+        });
+        await route.fulfill({ json: updated });
+      },
+    );
+
+    await page.goto('/stories/story-1/edit');
+    await page.getByTestId('interaction-node').filter({ hasText: 'Original title' }).click();
+    await page.getByRole('button', { name: 'Add condition' }).click();
+
+    await expect(page.getByRole('heading', { name: 'Path conditions' })).toBeVisible();
+    await expect(page.getByRole('combobox').first()).toHaveValue('interaction-2');
+    await expect(page.getByRole('combobox').nth(1)).toHaveValue('visited');
   });
 });

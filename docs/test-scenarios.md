@@ -30,6 +30,7 @@ Cover the critical MVP paths: Story, Interaction, Trigger, and Reader.
 
 - Editor: open a story, select an interaction, rename its title, and verify that the canvas and inspector stay visible.
 - Editor: move an interaction and verify that title and content remain visible after saving.
+- Editor: edit root trigger path conditions from the interaction inspector.
 - Editor: create a root interaction and verify that it appears on the canvas.
 - Editor: create a child interaction from the selected interaction, then verify the trigger input link and absence of overlap with other outputs.
 - Editor: configure several inputs on the same trigger and verify that all inputs remain checked.
