@@ -19,6 +19,7 @@
 - Visible save error handling.
 - Delete confirmations for interactions and triggers.
 - JSON export/import for stories.
+- Evaluate Tailwind CSS for broader UI styling while keeping React Flow-specific graph styles isolated.
 - Durable storage.
 - Migrations.
 - Reproducible demo data.

@@ -37,6 +37,7 @@ This project follows a lightweight [Keep a Changelog](https://keepachangelog.com
 
 ### Changed
 
+- Web CSS is now organized into explicit sections for tokens, base styles, app shell, story list, editor, graph, reader, and responsive rules.
 - Editor colors now use CSS custom properties, and selected trigger edges use the same primary selection color as selected interactions.
 - Drag-created interactions now use the connection drop position instead of automatic placement.
 - Selected trigger edges are now visually highlighted in the editor.
@@ -81,6 +82,7 @@ This project follows a lightweight [Keep a Changelog](https://keepachangelog.com
 
 ### Documentation
 
+- Documented the styling direction: keep plain CSS for the MVP and evaluate Tailwind CSS when the UI surface grows.
 - Added and updated product, MVP, architecture, domain model, design principles, roadmap, UML, and ADR documentation.
 - Documented the strict MVP boundary: Story, Interaction, Trigger, and Reader only.
 - Documented the current trigger model: one output interaction per trigger, multiple input interactions allowed, inputs act as OR conditions.

@@ -46,6 +46,17 @@ without moving story endpoint behavior or trigger cleanup rules.
 
 Durable persistence is postponed to a later version.
 
+## Styling
+
+The web app currently uses plain CSS with shared custom properties for colors and
+elevation. This keeps the MVP light while the graph editor behavior is still
+stabilizing.
+
+Tailwind CSS is the preferred future styling framework once the UI grows enough
+to benefit from utility classes and a stricter design system. React Flow-specific
+styles, such as node handles and selected trigger edges, may remain in dedicated
+CSS because they target third-party graph classes directly.
+
 ## Tests and CI
 
 - API: Jest and Supertest.
