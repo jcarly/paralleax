@@ -24,6 +24,7 @@ quality:
     paths:
       - apps/api/coverage/
       - apps/web/coverage/
+      - packages/shared/coverage/
 
 e2e:
   stage: verify

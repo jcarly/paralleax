@@ -6,7 +6,7 @@ Paralleax is a TypeScript monorepo.
 
 - `apps/web`: React, Vite, React Flow. Contains the editor, reader, and web tests.
 - `apps/api`: NestJS. Exposes story endpoints and keeps data in memory during the MVP.
-- `packages/shared`: shared types and narrative logic used by both the web app and API.
+- `packages/shared`: shared types, narrative reader logic, story operations, trigger cleanup rules, stale-response merge rules, and graph placement helpers used by both the web app and API.
 
 ## Guiding Principle
 
@@ -20,7 +20,8 @@ The UI creates, visualizes, and edits a story. The engine must be able to evalua
 2. The web app loads a story from the API.
 3. The editor displays interactions as a graph.
 4. Edits are saved through the API.
-5. The reader uses shared rules to determine the available interactions.
+5. The editor and API use shared story operations for trigger updates, deletion cleanup, stale-response merges, and child placement.
+6. The reader uses shared rules to determine the available interactions.
 
 ## Storage
 
@@ -32,6 +33,7 @@ Durable persistence is postponed to a later version.
 
 - API: Jest and Supertest.
 - Web: Vitest and Testing Library.
+- Shared: Vitest for narrative rules and pure story operations.
 - Functional: Playwright.
-- Coverage: Jest coverage for the API, Vitest V8 coverage for the web app.
+- Coverage: Jest coverage for the API, Vitest V8 coverage for shared and the web app.
 - GitLab CI: typecheck, coverage, build, and Playwright on every pushed commit.

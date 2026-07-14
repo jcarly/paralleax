@@ -13,110 +13,26 @@ import {
   type NodeMouseHandler,
 } from '@xyflow/react';
 import { Link, useParams } from 'react-router-dom';
-import type { Interaction, Story, TriggerCondition } from '@paralleax/shared';
+import {
+  deleteTriggerInStory,
+  getNextChildPosition,
+  mergeServerStory,
+  updateInteractionInStory,
+  updateTriggerInStory,
+  type Interaction,
+  type InteractionContentPatch,
+  type Story,
+  type TriggerCondition,
+} from '@paralleax/shared';
 import { api } from '../api';
 import { InteractionNode, type InteractionNodeData } from '../components/InteractionNode';
 
 const nodeTypes = { interaction: InteractionNode };
 type InteractionFlowNode = Node<InteractionNodeData>;
-type InteractionContentPatch = Partial<Pick<Interaction, 'title' | 'body' | 'position'>>;
 interface SelectedTrigger {
   interactionId: string;
   triggerId: string;
   inputInteractionId?: string;
-}
-const childOffsetX = 340;
-const childOffsetY = 140;
-const childVerticalGap = 150;
-const minNodeVerticalDistance = 120;
-const sameColumnTolerance = 260;
-
-function updateInteractionInStory(story: Story, interactionId: string, patch: Partial<Interaction>): Story {
-  return {
-    ...story,
-    interactions: story.interactions.map((item) =>
-      item.id === interactionId ? { ...item, ...patch } : item,
-    ),
-  };
-}
-
-function updateTriggerInStory(
-  story: Story,
-  interactionId: string,
-  triggerId: string,
-  patch: { inputInteractionIds: string[]; conditions: TriggerCondition[] },
-): Story {
-  return {
-    ...story,
-    interactions: story.interactions.map((item) =>
-      item.id === interactionId
-        ? {
-          ...item,
-          triggers: item.triggers.map((trigger) =>
-            trigger.id === triggerId ? { ...trigger, ...patch } : trigger,
-          ),
-        }
-        : item,
-    ),
-  };
-}
-
-function deleteTriggerInStory(story: Story, interactionId: string, triggerId: string): Story {
-  return {
-    ...story,
-    interactions: story.interactions.map((item) =>
-      item.id === interactionId
-        ? { ...item, triggers: item.triggers.filter((trigger) => trigger.id !== triggerId) }
-        : item,
-    ),
-  };
-}
-
-function hasOwn<T extends object, K extends PropertyKey>(item: T, key: K): item is T & Record<K, unknown> {
-  return Object.prototype.hasOwnProperty.call(item, key);
-}
-
-function mergeServerStory(
-  current: Story,
-  incoming: Story,
-  edited?: { interactionId: string; patch: InteractionContentPatch },
-  options: { preserveCurrentTriggers?: boolean; deletedTriggerIds?: ReadonlySet<string> } = {},
-): Story {
-  return {
-    ...incoming,
-    interactions: incoming.interactions.map((item) => {
-      const currentItem = current.interactions.find((candidate) => candidate.id === item.id);
-      const triggers = (options.preserveCurrentTriggers && currentItem ? currentItem.triggers : item.triggers)
-        .filter((trigger) => !options.deletedTriggerIds?.has(trigger.id));
-      if (!currentItem) return { ...item, triggers };
-      const patch = item.id === edited?.interactionId ? edited.patch : undefined;
-
-      return {
-        ...item,
-        title: hasOwn(patch ?? {}, 'title') ? patch?.title ?? '' : currentItem.title,
-        body: hasOwn(patch ?? {}, 'body') ? patch?.body ?? '' : currentItem.body,
-        position: hasOwn(patch ?? {}, 'position') ? patch?.position ?? currentItem.position : currentItem.position,
-        triggers,
-      };
-    }),
-  };
-}
-
-function getNextChildPosition(story: Story, parent: Interaction) {
-  const x = parent.position.x + childOffsetX;
-  const firstY = parent.position.y + childOffsetY;
-  const occupied = story.interactions.filter((item) => item.id !== parent.id);
-
-  for (let index = 0; index <= occupied.length + 1; index += 1) {
-    const y = firstY + index * childVerticalGap;
-    const isFree = occupied.every((item) =>
-      Math.abs(item.position.x - x) > sameColumnTolerance
-      || Math.abs(item.position.y - y) >= minNodeVerticalDistance,
-    );
-    if (isFree) return { x, y };
-  }
-
-  return { x, y: firstY + (occupied.length + 2) * childVerticalGap };
 }
 
 export function StoryEditor() {

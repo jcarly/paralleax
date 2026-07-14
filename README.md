@@ -19,7 +19,7 @@ Characters, places, variables, AI, real-time collaboration, authentication, and 
 
 - `apps/web`: React + Vite + React Flow application.
 - `apps/api`: NestJS API.
-- `packages/shared`: shared MVP model and reader rules used by both the web app and API.
+- `packages/shared`: shared MVP model, reader rules, story operations, trigger cleanup rules, merge rules, and graph placement helpers used by both the web app and API.
 - `docs`: product, architecture, ADR, UML, and test scenario documentation.
 
 For now, the API stores data in memory. Stories are reset when the server restarts.
@@ -84,10 +84,12 @@ Run one workspace only:
 ```bash
 npm run test -w @paralleax/api
 npm run test -w @paralleax/web
+npm run test -w @paralleax/shared
 ```
 
 These commands cover:
 
+- Shared: Vitest tests for narrative rules, story operations, trigger cleanup, stale-response merge behavior, and graph placement helpers.
 - API: Jest/Supertest tests for the NestJS endpoints.
 - Web: Vitest/Testing Library tests for pages, components, and API calls.
 
@@ -117,12 +119,14 @@ Generated HTML reports:
 
 - `apps/api/coverage/index.html`
 - `apps/web/coverage/index.html`
+- `packages/shared/coverage/index.html`
 
 Run one workspace only:
 
 ```bash
 npm run coverage -w @paralleax/api
 npm run coverage -w @paralleax/web
+npm run coverage -w @paralleax/shared
 ```
 
 ## Typecheck and Build
@@ -149,7 +153,7 @@ CI is defined in `.gitlab-ci.yml`.
 It runs on every commit pushed to GitLab and on merge requests. It executes:
 
 - TypeScript typecheck;
-- API and web coverage;
+- shared, API, and web coverage;
 - full monorepo build;
 - Playwright functional tests.
 

@@ -1,6 +1,12 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
-import type { Story } from '@paralleax/shared';
+import {
+  deleteInteractionFromStory,
+  deleteTriggerInStory,
+  normalizeTriggerInputIds,
+  updateTriggerInStory,
+  type Story,
+} from '@paralleax/shared';
 import { CreateInteractionDto, CreateStoryDto, UpdateInteractionDto, UpdateTriggerDto } from './dto';
 
 @Injectable()
@@ -42,28 +48,17 @@ export class StoriesService {
   }
   deleteInteraction(storyId: string, interactionId: string): Story {
     const story = this.mutate(storyId);
-    if (!story.interactions.some((item) => item.id === interactionId)) throw new NotFoundException('Interaction not found');
-    story.interactions = story.interactions.filter((item) => item.id !== interactionId);
-    for (const item of story.interactions) {
-      item.triggers = item.triggers.flatMap((trigger) => {
-        const hadDeletedInput = trigger.inputInteractionIds.includes(interactionId);
-        const inputInteractionIds = trigger.inputInteractionIds.filter((id) => id !== interactionId);
-        if (hadDeletedInput && inputInteractionIds.length === 0) return [];
-        return [{
-          ...trigger,
-          inputInteractionIds,
-          conditions: trigger.conditions.filter((condition) => condition.interactionId !== interactionId),
-        }];
-      });
-    }
-    return this.touch(story);
+    this.interaction(story, interactionId);
+    return this.replace(storyId, deleteInteractionFromStory(story, interactionId));
   }
   updateTrigger(storyId: string, interactionId: string, triggerId: string, input: UpdateTriggerDto): Story {
     const story = this.mutate(storyId); const interaction = this.interaction(story, interactionId);
     const trigger = interaction.triggers.find((item) => item.id === triggerId);
     if (!trigger) throw new NotFoundException('Trigger not found');
-    trigger.inputInteractionIds = [...new Set(input.inputInteractionIds)]; trigger.conditions = input.conditions;
-    return this.touch(story);
+    return this.replace(storyId, updateTriggerInStory(story, interactionId, triggerId, {
+      inputInteractionIds: normalizeTriggerInputIds(input.inputInteractionIds),
+      conditions: input.conditions,
+    }));
   }
   addTrigger(storyId: string, interactionId: string): Story {
     const story = this.mutate(storyId); this.interaction(story, interactionId).triggers.push({ id: randomUUID(), inputInteractionIds: [], conditions: [] });
@@ -73,11 +68,11 @@ export class StoriesService {
     const story = this.mutate(storyId);
     const interaction = this.interaction(story, interactionId);
     if (!interaction.triggers.some((item) => item.id === triggerId)) throw new NotFoundException('Trigger not found');
-    interaction.triggers = interaction.triggers.filter((item) => item.id !== triggerId);
-    return this.touch(story);
+    return this.replace(storyId, deleteTriggerInStory(story, interactionId, triggerId));
   }
   private mutate(id: string): Story { const story = this.stories.get(id); if (!story) throw new NotFoundException('Story not found'); return story; }
   private interaction(story: Story, id: string) { const item = story.interactions.find((interaction) => interaction.id === id); if (!item) throw new NotFoundException('Interaction not found'); return item; }
+  private replace(id: string, story: Story): Story { this.stories.set(id, story); return this.touch(story); }
   private touch(story: Story): Story { story.updatedAt = new Date().toISOString(); return structuredClone(story); }
   private seed() {
     const story = this.create({ title: 'The forest path' });

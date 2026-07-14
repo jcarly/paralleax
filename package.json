@@ -9,8 +9,8 @@
   "scripts": {
     "dev": "concurrently -n api,web -c auto \"npm run dev -w @paralleax/api\" \"npm run dev -w @paralleax/web\"",
     "build": "npm run build -w @paralleax/shared && npm run build -w @paralleax/api && npm run build -w @paralleax/web",
-    "test": "npm run test -w @paralleax/api && npm run test -w @paralleax/web",
-    "coverage": "npm run coverage -w @paralleax/api && npm run coverage -w @paralleax/web",
+    "test": "npm run test -w @paralleax/shared && npm run test -w @paralleax/api && npm run test -w @paralleax/web",
+    "coverage": "npm run coverage -w @paralleax/shared && npm run coverage -w @paralleax/api && npm run coverage -w @paralleax/web",
     "typecheck": "npm run build -w @paralleax/shared && npm run typecheck -w @paralleax/api && npm run typecheck -w @paralleax/web",
     "docker:up": "docker compose up",
     "docker:down": "docker compose down",

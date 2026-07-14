@@ -8,6 +8,7 @@ This project follows a lightweight [Keep a Changelog](https://keepachangelog.com
 
 ### Added
 
+- Shared Vitest coverage for pure story operations, trigger cleanup, stale-response merges, and child placement.
 - Docker Compose development setup with source bind mounts so code changes apply without rebuilding the image.
 - GitLab CI that runs typecheck, coverage, build, and Playwright functional tests on pushed commits and merge requests.
 - Playwright functional tests for critical editor regressions.
@@ -23,6 +24,8 @@ This project follows a lightweight [Keep a Changelog](https://keepachangelog.com
 
 ### Changed
 
+- Story and trigger operations now live in `packages/shared` and are reused by both the NestJS API and the React editor.
+- Root test and coverage commands now include the shared workspace.
 - Docker development now uses Node.js 22 and npm 11, matching the documented project requirements.
 - `npm run docker:up` no longer forces a rebuild on every start; restart the Compose stack when dependencies change.
 - Canvas connections now create a dedicated linked trigger instead of mutating the first trigger on the target interaction.

@@ -6,6 +6,9 @@ Cover the critical MVP paths: Story, Interaction, Trigger, and Reader.
 
 ## Unit / Component Tests
 
+- Shared: story operations delete only the intended trigger and preserve valid inputs.
+- Shared: stale server merges cannot restore locally deleted triggers.
+- Shared: child placement selects a non-overlapping output position.
 - Editor: editing an interaction title keeps the page visible and updates the block.
 - Editor: moving an interaction saves only the position without clearing the title or body.
 - Editor: moving an interaction does not delete titles or content from other interactions.
