@@ -1,0 +1,61 @@
+classDiagram
+  direction LR
+
+  class Story {
+    +UUID id
+    +string title
+    +DateTime createdAt
+    +DateTime updatedAt
+  }
+
+  class Interaction {
+    +UUID id
+    +UUID storyId
+    +string title
+    +text body
+    +number positionX
+    +number positionY
+    +DateTime createdAt
+    +DateTime updatedAt
+  }
+
+  class Trigger {
+    +UUID id
+    +UUID storyId
+    +UUID outputInteractionId
+  }
+
+  class TriggerInput {
+    +UUID triggerId
+    +UUID interactionId
+  }
+
+  class TriggerRequirement {
+    +UUID triggerId
+    +UUID interactionId
+    +InteractionState expectedState
+  }
+
+  class InteractionState {
+    <<enumeration>>
+    COMPLETED
+    NOT_COMPLETED
+  }
+
+  class PlaySession {
+    <<runtime only>>
+    +UUID? currentInteractionId
+    +Set~UUID~ completedInteractionIds
+  }
+
+  Story "1" *-- "0..*" Interaction
+  Story "1" *-- "0..*" Trigger
+  Trigger "1" --> "1" Interaction : output
+  Trigger "1" *-- "0..*" TriggerInput
+  TriggerInput "*" --> "1" Interaction : input
+  Trigger "1" *-- "0..*" TriggerRequirement
+  TriggerRequirement "*" --> "1" Interaction : condition
+  TriggerRequirement --> InteractionState
+  PlaySession ..> Story : reads
+  PlaySession ..> Interaction : progresses through
+  PlaySession ..> Trigger : evaluates

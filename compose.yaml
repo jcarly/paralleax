@@ -1,0 +1,38 @@
+name: paralleax
+
+x-proxy-environment: &proxy-environment
+  HTTP_PROXY: ${HTTP_PROXY:-}
+  HTTPS_PROXY: ${HTTPS_PROXY:-}
+  NO_PROXY: ${NO_PROXY:-localhost,127.0.0.1,api,web}
+  http_proxy: ${HTTP_PROXY:-}
+  https_proxy: ${HTTPS_PROXY:-}
+  no_proxy: ${NO_PROXY:-localhost,127.0.0.1,api,web}
+
+services:
+  api:
+    image: node:20-alpine
+    command: sh -c 'npm install --legacy-peer-deps --audit=false --no-update-notifier 2>&1 ; npm run dev -w @paralleax/api'
+    environment:
+      <<: *proxy-environment
+      PORT: 3000
+      NODE_OPTIONS: "--max-old-space-size=2048"
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/workspace
+    working_dir: /workspace
+
+  web:
+    image: node:20-alpine
+    command: sh -c 'npm install --legacy-peer-deps --audit=false --no-update-notifier 2>&1 ; npm run dev -w @paralleax/web -- --host 0.0.0.0'
+    environment:
+      <<: *proxy-environment
+      VITE_API_PROXY_TARGET: http://api:3000
+      NODE_OPTIONS: "--max-old-space-size=2048"
+    ports:
+      - "5173:5173"
+    volumes:
+      - .:/workspace
+    working_dir: /workspace
+    depends_on:
+      - api

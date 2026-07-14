@@ -1,0 +1,74 @@
+@startuml
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+hide methods
+
+class Story {
+  +id: UUID
+  +title: string
+  +createdAt: DateTime
+  +updatedAt: DateTime
+}
+
+class Interaction {
+  +id: UUID
+  +storyId: UUID
+  +title: string
+  +body: text
+  +positionX: number
+  +positionY: number
+  +createdAt: DateTime
+  +updatedAt: DateTime
+}
+
+class Trigger {
+  +id: UUID
+  +storyId: UUID
+  +outputInteractionId: UUID
+}
+
+class TriggerInput {
+  +triggerId: UUID
+  +interactionId: UUID
+}
+
+class TriggerRequirement {
+  +triggerId: UUID
+  +interactionId: UUID
+  +expectedState: InteractionState
+}
+
+enum InteractionState {
+  COMPLETED
+  NOT_COMPLETED
+}
+
+class PlaySession <<runtime only>> {
+  +currentInteractionId: UUID?
+  +completedInteractionIds: Set<UUID>
+}
+
+Story "1" *-- "0..*" Interaction
+Story "1" *-- "0..*" Trigger
+Trigger "1" --> "1" Interaction : output
+Trigger "1" *-- "0..*" TriggerInput
+TriggerInput "*" --> "1" Interaction : input
+Trigger "1" *-- "0..*" TriggerRequirement
+TriggerRequirement "*" --> "1" Interaction : condition
+TriggerRequirement --> InteractionState
+PlaySession ..> Story : reads
+PlaySession ..> Interaction : progresses through
+PlaySession ..> Trigger : evaluates
+
+note right of Trigger
+A trigger is eligible when:
+- the current interaction is one of its inputs,
+  or it has no input at story start;
+- every requirement matches the session history.
+end note
+
+note bottom of PlaySession
+Not persisted in the first MVP.
+The reader keeps this state locally.
+end note
+@enduml

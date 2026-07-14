@@ -1,0 +1,145 @@
+@startuml
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+hide methods
+
+package "Narrative project" {
+  class Story {
+    +id: UUID
+    +title: string
+  }
+
+  class World {
+    +id: UUID
+    +currentDateTime: DateTime
+  }
+
+  class Interaction {
+    +id: UUID
+    +title: string
+    +content: rich text
+    +duration: Duration
+  }
+
+  class Trigger {
+    +id: UUID
+    +availabilityDuration: Duration?
+    +appearanceProbability: decimal?
+    +automaticChoiceProbability: decimal?
+  }
+
+  class Condition {
+    +id: UUID
+    +operator: Operator
+    +expectedValue: value
+  }
+
+  class Effect {
+    +id: UUID
+    +operation: EffectOperation
+    +value: value
+  }
+
+  class Character {
+    +id: UUID
+    +name: string
+    +isPlayable: boolean
+  }
+
+  class Place {
+    +id: UUID
+    +name: string
+  }
+
+  class AttributeDefinition {
+    +id: UUID
+    +name: string
+    +type: ValueType
+  }
+
+  class AttributeValue {
+    +value: value
+  }
+
+  class Relationship {
+    +id: UUID
+  }
+
+  class Goal {
+    +id: UUID
+    +priority: number
+  }
+
+  class Media {
+    +id: UUID
+    +type: MediaType
+    +uri: string
+  }
+}
+
+package "Runtime" {
+  class PlaySession {
+    +id: UUID
+    +currentDateTime: DateTime
+  }
+
+  class InteractionOccurrence {
+    +startedAt: DateTime
+    +completedAt: DateTime?
+  }
+
+  class DecisionPolicy <<interface>> {
+    +choose(availableInteractions)
+  }
+
+  class PlayerDecision
+  class RandomDecision
+  class CharacterDecision
+}
+
+Story "1" *-- "1" World
+Story "1" *-- "0..*" Interaction
+World "1" *-- "0..*" Character
+World "1" *-- "0..*" Place
+World "1" *-- "0..*" AttributeDefinition
+
+Interaction "1" *-- "1..*" Trigger
+Interaction "1" *-- "0..*" Effect
+Interaction "0..*" -- "0..*" Character : participants
+Interaction "0..*" --> "0..1" Place : location
+Interaction "1" *-- "0..*" Media
+
+Trigger "1" *-- "0..*" Condition
+Trigger "0..*" --> "0..*" Interaction : previous interactions
+Condition "0..*" --> "0..1" Character
+Condition "0..*" --> "0..1" Place
+Condition "0..*" --> "0..1" AttributeDefinition
+Condition "0..*" --> "0..1" Interaction : history
+
+Effect "0..*" --> "0..1" Character : target
+Effect "0..*" --> "0..1" AttributeDefinition
+Effect "0..*" --> "0..1" Place
+
+Character "1" *-- "0..*" AttributeValue
+AttributeValue "*" --> "1" AttributeDefinition
+Character "1" *-- "0..*" Goal
+Relationship "*" --> "1" Character : source
+Relationship "*" --> "1" Character : target
+Relationship "1" *-- "0..*" AttributeValue
+
+PlaySession "*" --> "1" Story
+PlaySession "1" *-- "0..*" InteractionOccurrence
+InteractionOccurrence "*" --> "1" Interaction
+PlaySession --> DecisionPolicy
+DecisionPolicy <|.. PlayerDecision
+DecisionPolicy <|.. RandomDecision
+DecisionPolicy <|.. CharacterDecision
+CharacterDecision --> Character
+CharacterDecision --> Goal
+
+note right of Story
+Vision diagram only.
+These concepts are deliberately
+not implemented in the first MVP.
+end note
+@enduml
