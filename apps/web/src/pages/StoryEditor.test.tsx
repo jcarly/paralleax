@@ -1,5 +1,5 @@
 import React from 'react';
-import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -14,7 +14,9 @@ vi.mock('../api', () => ({
     updateInteraction: vi.fn(),
     deleteInteraction: vi.fn(),
     renameStory: vi.fn(),
+    addTrigger: vi.fn(),
     updateTrigger: vi.fn(),
+    deleteTrigger: vi.fn(),
   },
 }));
 
@@ -28,7 +30,7 @@ vi.mock('@xyflow/react', async () => {
     MarkerType: { ArrowClosed: 'arrowclosed' },
     MiniMap: () => <div data-testid="flow-minimap" />,
     Position: { Left: 'left', Right: 'right' },
-    ReactFlow: ({ nodes, nodeTypes, onNodeClick, onNodeDragStop, children }: any) => (
+    ReactFlow: ({ nodes, edges, nodeTypes, onConnect, onEdgeClick, onNodeClick, onNodeDragStop, children }: any) => (
       <div data-testid="react-flow">
         {nodes.map((node: any) => {
           const NodeComponent = nodeTypes[node.type];
@@ -52,6 +54,22 @@ vi.mock('@xyflow/react', async () => {
             </button>
           );
         })}
+        {nodes.flatMap((source: any) =>
+          nodes.filter((target: any) => target.id !== source.id).map((target: any) => (
+            <button
+              key={`${source.id}-${target.id}`}
+              data-testid={`connect-${source.id}-${target.id}`}
+              onClick={() => onConnect?.({ source: source.id, target: target.id })}
+            />
+          )),
+        )}
+        {edges.map((edge: any) => (
+          <button
+            key={edge.id}
+            data-testid={`flow-edge-${edge.source}-${edge.target}`}
+            onClick={(event) => onEdgeClick?.(event, edge)}
+          />
+        ))}
         {children}
       </div>
     ),
@@ -64,14 +82,14 @@ vi.mock('@xyflow/react', async () => {
 
 const baseStory: Story = {
   id: 'story-1',
-  title: 'Histoire test',
+  title: 'Test story',
   createdAt: '2026-07-14T08:00:00.000Z',
   updatedAt: '2026-07-14T08:00:00.000Z',
   interactions: [
     {
       id: 'interaction-1',
-      title: 'Titre original',
-      body: 'Contenu original',
+      title: 'Original title',
+      body: 'Original content',
       position: { x: 80, y: 120 },
       triggers: [{ id: 'trigger-1', inputInteractionIds: [], conditions: [] }],
     },
@@ -89,13 +107,25 @@ function storyWithTwoInteractions(): Story {
       cloneStory().interactions[0],
       {
         id: 'interaction-2',
-        title: 'Deuxieme interaction',
-        body: 'Suite du contenu',
+        title: 'Second interaction',
+        body: 'Next content',
         position: { x: 420, y: 180 },
         triggers: [{ id: 'trigger-2', inputInteractionIds: ['interaction-1'], conditions: [] }],
       },
     ],
   };
+}
+
+function storyWithThreeInteractions(): Story {
+  const story = storyWithTwoInteractions();
+  story.interactions.push({
+    id: 'interaction-3',
+    title: 'Third interaction',
+    body: 'Another child',
+    position: { x: 760, y: 300 },
+    triggers: [{ id: 'trigger-3', inputInteractionIds: [], conditions: [] }],
+  });
+  return story;
 }
 
 async function renderEditor(story: Story = baseStory) {
@@ -109,7 +139,7 @@ async function renderEditor(story: Story = baseStory) {
     </MemoryRouter>,
   );
 
-  await screen.findByText('Titre original');
+  await screen.findByText('Original title');
 }
 
 describe('StoryEditor', () => {
@@ -122,7 +152,7 @@ describe('StoryEditor', () => {
   });
 
   it('shows a loading error when the story cannot be loaded', async () => {
-    vi.mocked(api.getStory).mockRejectedValue(new Error('Story introuvable'));
+    vi.mocked(api.getStory).mockRejectedValue(new Error('Story not found'));
 
     render(
       <MemoryRouter initialEntries={['/stories/story-1/edit']}>
@@ -132,24 +162,24 @@ describe('StoryEditor', () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByText('Story introuvable')).toBeInTheDocument();
+    expect(await screen.findByText('Story not found')).toBeInTheDocument();
   });
 
   it('renames the story title', async () => {
     const user = userEvent.setup();
     const renamedStory = cloneStory();
-    renamedStory.title = 'Story renommee';
+    renamedStory.title = 'Renamed story';
     vi.mocked(api.renameStory).mockResolvedValue(renamedStory);
 
     await renderEditor();
 
-    const storyTitleInput = screen.getByDisplayValue('Histoire test');
+    const storyTitleInput = screen.getByDisplayValue('Test story');
     await user.clear(storyTitleInput);
-    await user.type(storyTitleInput, 'Story renommee');
+    await user.type(storyTitleInput, 'Renamed story');
     await user.tab();
 
-    expect(api.renameStory).toHaveBeenCalledWith('story-1', 'Story renommee');
-    expect(await screen.findByDisplayValue('Story renommee')).toBeInTheDocument();
+    expect(api.renameStory).toHaveBeenCalledWith('story-1', 'Renamed story');
+    expect(await screen.findByDisplayValue('Renamed story')).toBeInTheDocument();
   });
 
   it('creates root and child interactions', async () => {
@@ -157,8 +187,8 @@ describe('StoryEditor', () => {
     const withRoot = cloneStory();
     withRoot.interactions.push({
       id: 'interaction-root',
-      title: 'Racine creee',
-      body: 'Corps racine',
+      title: 'Created root',
+      body: 'Root body',
       position: { x: 100, y: 120 },
       triggers: [{ id: 'trigger-root', inputInteractionIds: [], conditions: [] }],
     });
@@ -169,54 +199,78 @@ describe('StoryEditor', () => {
 
     await renderEditor();
 
-    await user.click(screen.getByRole('button', { name: 'Ajouter une racine' }));
+    await user.click(screen.getByRole('button', { name: 'Add root' }));
     expect(api.createInteraction).toHaveBeenCalledWith('story-1', { position: { x: 100, y: 120 } });
-    expect(await screen.findByText('Racine creee')).toBeInTheDocument();
+    expect(await screen.findByText('Created root')).toBeInTheDocument();
 
     await user.click(screen.getByTestId('flow-node-interaction-1'));
-    await user.click(screen.getByRole('button', { name: 'Ajouter une suite' }));
+    await user.click(screen.getByRole('button', { name: 'Add child' }));
     expect(api.createInteraction).toHaveBeenLastCalledWith('story-1', {
       parentId: 'interaction-1',
       position: { x: 420, y: 260 },
     });
   });
 
+  it('places a new child interaction below existing outputs instead of overlapping them', async () => {
+    const user = userEvent.setup();
+    const story = storyWithTwoInteractions();
+    story.interactions[1].position = { x: 420, y: 260 };
+    const withNewChild = structuredClone(story);
+    withNewChild.interactions.push({
+      id: 'interaction-3',
+      title: 'New output',
+      body: 'Additional output',
+      position: { x: 420, y: 410 },
+      triggers: [{ id: 'trigger-3', inputInteractionIds: ['interaction-1'], conditions: [] }],
+    });
+    vi.mocked(api.createInteraction).mockResolvedValue(withNewChild);
+
+    await renderEditor(story);
+    await user.click(screen.getByTestId('flow-node-interaction-1'));
+    await user.click(screen.getByRole('button', { name: 'Add child' }));
+
+    expect(api.createInteraction).toHaveBeenCalledWith('story-1', {
+      parentId: 'interaction-1',
+      position: { x: 420, y: 410 },
+    });
+  });
+
   it('keeps the editor visible when an interaction title is edited', async () => {
     const user = userEvent.setup();
     const updatedStory = cloneStory();
-    updatedStory.interactions[0].title = 'Nouveau titre';
+    updatedStory.interactions[0].title = 'New title';
     vi.mocked(api.updateInteraction).mockResolvedValue(updatedStory);
 
     await renderEditor();
     await user.click(screen.getByTestId('flow-node-interaction-1'));
 
-    const titleInput = screen.getByLabelText('Titre');
+    const titleInput = screen.getByLabelText('Title');
     await user.clear(titleInput);
-    await user.type(titleInput, 'Nouveau titre');
+    await user.type(titleInput, 'New title');
     await user.tab();
 
-    expect(await screen.findByDisplayValue('Nouveau titre')).toBeInTheDocument();
-    expect(screen.getByText('Nouveau titre')).toBeInTheDocument();
-    expect(screen.queryByText('Chargement...')).not.toBeInTheDocument();
-    expect(api.updateInteraction).toHaveBeenCalledWith('story-1', 'interaction-1', { title: 'Nouveau titre' });
+    expect(await screen.findByDisplayValue('New title')).toBeInTheDocument();
+    expect(screen.getByText('New title')).toBeInTheDocument();
+    expect(screen.queryByText('Loading...')).not.toBeInTheDocument();
+    expect(api.updateInteraction).toHaveBeenCalledWith('story-1', 'interaction-1', { title: 'New title' });
   });
 
   it('updates interaction body from the inspector', async () => {
     const user = userEvent.setup();
     const updatedStory = cloneStory();
-    updatedStory.interactions[0].body = 'Nouveau contenu long';
+    updatedStory.interactions[0].body = 'Long new content';
     vi.mocked(api.updateInteraction).mockResolvedValue(updatedStory);
 
     await renderEditor();
     await user.click(screen.getByTestId('flow-node-interaction-1'));
 
-    const bodyInput = screen.getByLabelText('Contenu');
+    const bodyInput = screen.getByLabelText('Content');
     await user.clear(bodyInput);
-    await user.type(bodyInput, 'Nouveau contenu long');
+    await user.type(bodyInput, 'Long new content');
     await user.tab();
 
-    expect(api.updateInteraction).toHaveBeenCalledWith('story-1', 'interaction-1', { body: 'Nouveau contenu long' });
-    expect(await screen.findByDisplayValue('Nouveau contenu long')).toBeInTheDocument();
+    expect(api.updateInteraction).toHaveBeenCalledWith('story-1', 'interaction-1', { body: 'Long new content' });
+    expect(await screen.findByDisplayValue('Long new content')).toBeInTheDocument();
   });
 
   it('does not erase title or body when a drag save only returns a position update', async () => {
@@ -236,8 +290,8 @@ describe('StoryEditor', () => {
     });
 
     const interactionNode = within(flowNode).getByTestId('interaction-node');
-    expect(within(interactionNode).getByText('Titre original')).toBeInTheDocument();
-    expect(within(interactionNode).getByText('Contenu original')).toBeInTheDocument();
+    expect(within(interactionNode).getByText('Original title')).toBeInTheDocument();
+    expect(within(interactionNode).getByText('Original content')).toBeInTheDocument();
   });
 
   it('does not erase other interactions when one interaction is moved', async () => {
@@ -260,8 +314,8 @@ describe('StoryEditor', () => {
     });
 
     const otherInteractionNode = within(otherNode).getByTestId('interaction-node');
-    expect(within(otherInteractionNode).getByText('Deuxieme interaction')).toBeInTheDocument();
-    expect(within(otherInteractionNode).getByText('Suite du contenu')).toBeInTheDocument();
+    expect(within(otherInteractionNode).getByText('Second interaction')).toBeInTheDocument();
+    expect(within(otherInteractionNode).getByText('Next content')).toBeInTheDocument();
   });
 
   it('deletes the selected interaction', async () => {
@@ -272,26 +326,250 @@ describe('StoryEditor', () => {
 
     await renderEditor();
     await user.click(screen.getByTestId('flow-node-interaction-1'));
-    await user.click(screen.getByRole('button', { name: "Supprimer l'interaction" }));
+    await user.click(screen.getByRole('button', { name: 'Delete interaction' }));
 
     expect(api.deleteInteraction).toHaveBeenCalledWith('story-1', 'interaction-1');
-    expect(await screen.findByText('Selectionnez un bloc pour modifier son contenu et ses triggers.')).toBeInTheDocument();
+    expect(await screen.findByText('Select a block to edit its content, or select an edge to edit its trigger.')).toBeInTheDocument();
   });
 
-  it('updates trigger inputs from checkboxes', async () => {
+  it('updates linked trigger inputs from the edge editor', async () => {
     const user = userEvent.setup();
-    const story = storyWithTwoInteractions();
+    const story = storyWithThreeInteractions();
     const updatedStory = structuredClone(story);
-    updatedStory.interactions[0].triggers[0].inputInteractionIds = ['interaction-2'];
+    updatedStory.interactions[1].triggers[0].inputInteractionIds = ['interaction-1', 'interaction-3'];
     vi.mocked(api.updateTrigger).mockResolvedValue(updatedStory);
 
     await renderEditor(story);
-    await user.click(screen.getByTestId('flow-node-interaction-1'));
-    await user.click(screen.getByRole('checkbox', { name: 'Deuxieme interaction' }));
+    await user.click(screen.getByTestId('flow-edge-interaction-1-interaction-2'));
+    await user.click(screen.getByRole('checkbox', { name: 'Third interaction' }));
 
     await waitFor(() => {
-      expect(api.updateTrigger).toHaveBeenCalledWith('story-1', 'interaction-1', 'trigger-1', {
+      expect(api.updateTrigger).toHaveBeenCalledWith('story-1', 'interaction-2', 'trigger-2', {
+        inputInteractionIds: ['interaction-1', 'interaction-3'],
+        conditions: [],
+      });
+    });
+  });
+
+  it('persists a canvas connection as a trigger input', async () => {
+    const user = userEvent.setup();
+    const story = storyWithThreeInteractions();
+    const withTrigger = structuredClone(story);
+    withTrigger.interactions[2].triggers.push({ id: 'trigger-new', inputInteractionIds: [], conditions: [] });
+    const connectedStory = structuredClone(withTrigger);
+    connectedStory.interactions[2].triggers[1].inputInteractionIds = ['interaction-1'];
+    vi.mocked(api.addTrigger).mockResolvedValue(withTrigger);
+    vi.mocked(api.updateTrigger).mockResolvedValue(connectedStory);
+
+    await renderEditor(story);
+    await user.click(screen.getByTestId('connect-interaction-1-interaction-3'));
+
+    await waitFor(() => {
+      expect(api.addTrigger).toHaveBeenCalledWith('story-1', 'interaction-3');
+      expect(api.updateTrigger).toHaveBeenCalledWith('story-1', 'interaction-3', 'trigger-new', {
+        inputInteractionIds: ['interaction-1'],
+        conditions: [],
+      });
+    });
+    expect(await screen.findByTestId('flow-edge-interaction-1-interaction-3')).toBeInTheDocument();
+  });
+
+  it('creates a trigger before persisting a canvas connection when the target has none', async () => {
+    const user = userEvent.setup();
+    const story = storyWithTwoInteractions();
+    story.interactions[1].triggers = [];
+    const withTrigger = structuredClone(story);
+    withTrigger.interactions[1].triggers = [{ id: 'trigger-new', inputInteractionIds: [], conditions: [] }];
+    const connectedStory = structuredClone(withTrigger);
+    connectedStory.interactions[1].triggers[0].inputInteractionIds = ['interaction-1'];
+    vi.mocked(api.addTrigger).mockResolvedValue(withTrigger);
+    vi.mocked(api.updateTrigger).mockResolvedValue(connectedStory);
+
+    await renderEditor(story);
+    await user.click(screen.getByTestId('connect-interaction-1-interaction-2'));
+
+    await waitFor(() => {
+      expect(api.addTrigger).toHaveBeenCalledWith('story-1', 'interaction-2');
+      expect(api.updateTrigger).toHaveBeenCalledWith('story-1', 'interaction-2', 'trigger-new', {
+        inputInteractionIds: ['interaction-1'],
+        conditions: [],
+      });
+    });
+    expect(await screen.findByTestId('flow-edge-interaction-1-interaction-2')).toBeInTheDocument();
+  });
+
+  it('creates a dedicated trigger for a new canvas connection without changing existing linked triggers', async () => {
+    const user = userEvent.setup();
+    const story = storyWithThreeInteractions();
+    story.interactions[2].triggers = [
+      {
+        id: 'trigger-existing',
+        inputInteractionIds: ['interaction-1'],
+        conditions: [{ interactionId: 'interaction-1', hasBeenVisited: true }],
+      },
+    ];
+    const withNewTrigger = structuredClone(story);
+    withNewTrigger.interactions[2].triggers.push({ id: 'trigger-new', inputInteractionIds: [], conditions: [] });
+    const connectedStory = structuredClone(withNewTrigger);
+    connectedStory.interactions[2].triggers[1].inputInteractionIds = ['interaction-2'];
+    vi.mocked(api.addTrigger).mockResolvedValue(withNewTrigger);
+    vi.mocked(api.updateTrigger).mockResolvedValue(connectedStory);
+
+    await renderEditor(story);
+    await user.click(screen.getByTestId('connect-interaction-2-interaction-3'));
+
+    await waitFor(() => {
+      expect(api.updateTrigger).toHaveBeenCalledWith('story-1', 'interaction-3', 'trigger-new', {
         inputInteractionIds: ['interaction-2'],
+        conditions: [],
+      });
+    });
+    expect(await screen.findByTestId('flow-edge-interaction-1-interaction-3')).toBeInTheDocument();
+    expect(await screen.findByTestId('flow-edge-interaction-2-interaction-3')).toBeInTheDocument();
+  });
+
+  it('does not restore a deleted link when another canvas connection is created from that interaction', async () => {
+    const user = userEvent.setup();
+    const story = storyWithThreeInteractions();
+    story.interactions[2].triggers = [];
+    const withoutRootLink = structuredClone(story);
+    withoutRootLink.interactions[1].triggers = [];
+    const staleWithNewTrigger = structuredClone(story);
+    staleWithNewTrigger.interactions[2].triggers = [{ id: 'trigger-new', inputInteractionIds: [], conditions: [] }];
+    const staleConnectedStory = structuredClone(staleWithNewTrigger);
+    staleConnectedStory.interactions[2].triggers[0].inputInteractionIds = ['interaction-2'];
+    vi.mocked(api.deleteTrigger).mockResolvedValue(withoutRootLink);
+    vi.mocked(api.addTrigger).mockResolvedValue(staleWithNewTrigger);
+    vi.mocked(api.updateTrigger).mockResolvedValue(staleConnectedStory);
+
+    await renderEditor(story);
+    await user.click(screen.getByTestId('flow-edge-interaction-1-interaction-2'));
+    await user.click(screen.getByRole('button', { name: 'Delete link' }));
+
+    await waitFor(() => {
+      expect(api.deleteTrigger).toHaveBeenCalledWith('story-1', 'interaction-2', 'trigger-2');
+    });
+    expect(screen.queryByTestId('flow-edge-interaction-1-interaction-2')).not.toBeInTheDocument();
+
+    await user.click(screen.getByTestId('connect-interaction-2-interaction-3'));
+
+    await waitFor(() => {
+      expect(api.updateTrigger).toHaveBeenCalledWith('story-1', 'interaction-3', 'trigger-new', {
+        inputInteractionIds: ['interaction-2'],
+        conditions: [],
+      });
+    });
+    expect(screen.queryByTestId('flow-edge-interaction-1-interaction-2')).not.toBeInTheDocument();
+    expect(await screen.findByTestId('flow-edge-interaction-2-interaction-3')).toBeInTheDocument();
+  });
+
+  it('opens the trigger editor from an edge and updates that trigger conditions', async () => {
+    const user = userEvent.setup();
+    const story = storyWithThreeInteractions();
+    story.interactions[2].triggers = [
+      { id: 'trigger-start', inputInteractionIds: [], conditions: [] },
+      { id: 'trigger-edge', inputInteractionIds: ['interaction-1'], conditions: [] },
+    ];
+    const withCondition = structuredClone(story);
+    withCondition.interactions[2].triggers[1].conditions = [
+      { interactionId: 'interaction-1', hasBeenVisited: true },
+    ];
+    vi.mocked(api.updateTrigger).mockResolvedValue(withCondition);
+
+    await renderEditor(story);
+    await user.click(screen.getByTestId('flow-edge-interaction-1-interaction-3'));
+
+    expect(screen.getByRole('heading', { name: 'Trigger' })).toBeInTheDocument();
+    expect(screen.getByText('Output interaction: Third interaction')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Add condition' }));
+
+    await waitFor(() => {
+      expect(api.updateTrigger).toHaveBeenCalledWith('story-1', 'interaction-3', 'trigger-edge', {
+        inputInteractionIds: ['interaction-1'],
+        conditions: [{ interactionId: 'interaction-1', hasBeenVisited: true }],
+      });
+    });
+  });
+
+  it('keeps local interaction content when a trigger save returns stale interaction data', async () => {
+    const user = userEvent.setup();
+    const story = storyWithTwoInteractions();
+    const staleUpdatedStory = structuredClone(story);
+    staleUpdatedStory.interactions[0].title = '';
+    staleUpdatedStory.interactions[0].body = '';
+    staleUpdatedStory.interactions[0].position = { x: 0, y: 0 };
+    staleUpdatedStory.interactions[1].triggers[0].conditions = [{ interactionId: 'interaction-1', hasBeenVisited: true }];
+    staleUpdatedStory.interactions[1].title = '';
+    staleUpdatedStory.interactions[1].body = '';
+    staleUpdatedStory.interactions[1].position = { x: 0, y: 0 };
+    vi.mocked(api.updateTrigger).mockResolvedValue(staleUpdatedStory);
+
+    await renderEditor(story);
+    await user.click(screen.getByTestId('flow-edge-interaction-1-interaction-2'));
+    await user.click(screen.getByRole('button', { name: 'Add condition' }));
+
+    await waitFor(() => {
+      expect(api.updateTrigger).toHaveBeenCalledWith('story-1', 'interaction-2', 'trigger-2', {
+        inputInteractionIds: ['interaction-1'],
+        conditions: [{ interactionId: 'interaction-1', hasBeenVisited: true }],
+      });
+    });
+
+    const firstNode = within(screen.getByTestId('flow-node-interaction-1')).getByTestId('interaction-node');
+    const secondNode = within(screen.getByTestId('flow-node-interaction-2')).getByTestId('interaction-node');
+    expect(within(firstNode).getByText('Original title')).toBeInTheDocument();
+    expect(within(firstNode).getByText('Original content')).toBeInTheDocument();
+    expect(within(secondNode).getByText('Second interaction')).toBeInTheDocument();
+    expect(within(secondNode).getByText('Next content')).toBeInTheDocument();
+  });
+
+  it('merges a delayed trigger save into the latest local editor state', async () => {
+    const user = userEvent.setup();
+    const story = storyWithTwoInteractions();
+    let resolveTriggerSave: (story: Story) => void = () => {};
+    vi.mocked(api.updateTrigger).mockReturnValue(new Promise((resolve) => {
+      resolveTriggerSave = resolve;
+    }));
+
+    await renderEditor(story);
+    await user.click(screen.getByTestId('flow-edge-interaction-1-interaction-2'));
+    await user.click(screen.getByRole('button', { name: 'Add condition' }));
+
+    await user.click(screen.getByTestId('flow-node-interaction-2'));
+    const titleInput = screen.getByLabelText('Title');
+    await user.clear(titleInput);
+    await user.type(titleInput, 'Fresh second title');
+
+    const staleUpdatedStory = structuredClone(story);
+    staleUpdatedStory.interactions[1].triggers[0].conditions = [{ interactionId: 'interaction-1', hasBeenVisited: true }];
+    staleUpdatedStory.interactions[1].title = '';
+    staleUpdatedStory.interactions[1].body = '';
+
+    await act(async () => {
+      resolveTriggerSave(staleUpdatedStory);
+    });
+
+    const secondNode = within(screen.getByTestId('flow-node-interaction-2')).getByTestId('interaction-node');
+    expect(within(secondNode).getByText('Fresh second title')).toBeInTheDocument();
+    expect(within(secondNode).getByText('Next content')).toBeInTheDocument();
+  });
+
+  it('allows several input interactions for the same trigger', async () => {
+    const user = userEvent.setup();
+    const story = storyWithThreeInteractions();
+    story.interactions[2].triggers[0].inputInteractionIds = ['interaction-1'];
+    const withTwoInputs = structuredClone(story);
+    withTwoInputs.interactions[2].triggers[0].inputInteractionIds = ['interaction-1', 'interaction-2'];
+    vi.mocked(api.updateTrigger).mockResolvedValue(withTwoInputs);
+
+    await renderEditor(story);
+    await user.click(screen.getByTestId('flow-edge-interaction-1-interaction-3'));
+    await user.click(screen.getByRole('checkbox', { name: 'Second interaction' }));
+
+    await waitFor(() => {
+      expect(api.updateTrigger).toHaveBeenLastCalledWith('story-1', 'interaction-3', 'trigger-3', {
+        inputInteractionIds: ['interaction-1', 'interaction-2'],
         conditions: [],
       });
     });
@@ -317,7 +595,7 @@ describe('StoryEditor', () => {
 
     await renderEditor(story);
     await user.click(screen.getByTestId('flow-node-interaction-1'));
-    await user.click(screen.getByRole('button', { name: 'Ajouter une condition' }));
+    await user.click(screen.getByRole('button', { name: 'Add condition' }));
 
     await waitFor(() => {
       expect(api.updateTrigger).toHaveBeenLastCalledWith('story-1', 'interaction-1', 'trigger-1', {
@@ -326,8 +604,8 @@ describe('StoryEditor', () => {
       });
     });
 
-    await screen.findByDisplayValue('a ete visitee');
-    await user.selectOptions(screen.getByDisplayValue('a ete visitee'), 'not-visited');
+    await screen.findByDisplayValue('has been visited');
+    await user.selectOptions(screen.getByDisplayValue('has been visited'), 'not-visited');
     await waitFor(() => {
       expect(api.updateTrigger).toHaveBeenLastCalledWith('story-1', 'interaction-1', 'trigger-1', {
         inputInteractionIds: [],
@@ -344,6 +622,99 @@ describe('StoryEditor', () => {
     });
   });
 
+  it('shows linked trigger conditions only from the edge editor', async () => {
+    const story = storyWithTwoInteractions();
+
+    await renderEditor(story);
+    await userEvent.click(screen.getByTestId('flow-node-interaction-2'));
+
+    expect(screen.getByRole('heading', { name: 'Interaction' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Path conditions' })).not.toBeInTheDocument();
+    expect(screen.getByText('Select an edge to edit path conditions for linked triggers.')).toBeInTheDocument();
+  });
+
+  it('keeps root trigger editing in the interaction inspector', async () => {
+    await renderEditor();
+    await userEvent.click(screen.getByTestId('flow-node-interaction-1'));
+
+    expect(screen.getByRole('heading', { name: 'Trigger' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Path conditions' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Trigger inputs' })).not.toBeInTheDocument();
+    expect(screen.getByText('This root trigger has no input; select an edge to edit linked trigger inputs.')).toBeInTheDocument();
+  });
+
+  it('deletes the selected edge link from the edge editor', async () => {
+    const user = userEvent.setup();
+    const story = storyWithTwoInteractions();
+    const withoutTrigger = structuredClone(story);
+    withoutTrigger.interactions[1].triggers = [];
+    vi.mocked(api.deleteTrigger).mockResolvedValue(withoutTrigger);
+
+    await renderEditor(story);
+    await user.click(screen.getByTestId('flow-edge-interaction-1-interaction-2'));
+    await user.click(screen.getByRole('button', { name: 'Delete link' }));
+
+    await waitFor(() => {
+      expect(api.deleteTrigger).toHaveBeenCalledWith('story-1', 'interaction-2', 'trigger-2');
+    });
+    expect(screen.queryByTestId('flow-edge-interaction-1-interaction-2')).not.toBeInTheDocument();
+  });
+
+  it('deletes only the selected input link when a trigger has several inputs', async () => {
+    const user = userEvent.setup();
+    const story = storyWithThreeInteractions();
+    story.interactions[1].triggers[0].inputInteractionIds = ['interaction-1', 'interaction-3'];
+    const withoutSelectedInput = structuredClone(story);
+    withoutSelectedInput.interactions[1].triggers[0].inputInteractionIds = ['interaction-3'];
+    vi.mocked(api.updateTrigger).mockResolvedValue(withoutSelectedInput);
+
+    await renderEditor(story);
+    await user.click(screen.getByTestId('flow-edge-interaction-1-interaction-2'));
+    await user.click(screen.getByRole('button', { name: 'Delete link' }));
+
+    await waitFor(() => {
+      expect(api.updateTrigger).toHaveBeenCalledWith('story-1', 'interaction-2', 'trigger-2', {
+        inputInteractionIds: ['interaction-3'],
+        conditions: [],
+      });
+    });
+    expect(api.deleteTrigger).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('flow-edge-interaction-1-interaction-2')).not.toBeInTheDocument();
+    expect(screen.getByTestId('flow-edge-interaction-3-interaction-2')).toBeInTheDocument();
+  });
+
+  it('does not restore a deleted trigger when a later interaction move returns stale trigger data', async () => {
+    const user = userEvent.setup();
+    const story = storyWithTwoInteractions();
+    const withoutTrigger = structuredClone(story);
+    withoutTrigger.interactions[1].triggers = [];
+    const staleMovedStory = structuredClone(story);
+    staleMovedStory.interactions[1].position = { x: 445, y: 195 };
+    let resolveDelete: (story: Story) => void = () => {};
+    vi.mocked(api.deleteTrigger).mockReturnValue(new Promise((resolve) => {
+      resolveDelete = resolve;
+    }));
+    vi.mocked(api.updateInteraction).mockResolvedValue(staleMovedStory);
+
+    await renderEditor(story);
+    await user.click(screen.getByTestId('flow-edge-interaction-1-interaction-2'));
+    await user.click(screen.getByRole('button', { name: 'Delete link' }));
+
+    expect(screen.queryByTestId('flow-edge-interaction-1-interaction-2')).not.toBeInTheDocument();
+    await user.click(screen.getByTestId('drag-node-interaction-2'));
+
+    await waitFor(() => {
+      expect(api.updateInteraction).toHaveBeenCalledWith('story-1', 'interaction-2', {
+        position: { x: 445, y: 195 },
+      });
+    });
+    expect(screen.queryByTestId('flow-edge-interaction-1-interaction-2')).not.toBeInTheDocument();
+
+    await act(async () => {
+      resolveDelete(withoutTrigger);
+    });
+  });
+
   it('does not render a blank page when the selected interaction has no trigger', async () => {
     const storyWithoutTrigger = cloneStory();
     storyWithoutTrigger.interactions[0].triggers = [];
@@ -351,7 +722,7 @@ describe('StoryEditor', () => {
     await renderEditor(storyWithoutTrigger);
     await userEvent.click(screen.getByTestId('flow-node-interaction-1'));
 
-    expect(screen.getByText("Cette interaction n'a pas encore de trigger.")).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: "Supprimer l'interaction" })).toBeInTheDocument();
+    expect(screen.getByText('Select an edge to edit path conditions for linked triggers.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Delete interaction' })).toBeInTheDocument();
   });
 });

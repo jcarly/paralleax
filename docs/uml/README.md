@@ -1,16 +1,16 @@
-# UML de Paralleax
+# Paralleax UML
 
-Ce dossier distingue volontairement le modèle réellement ciblé par le premier MVP de la vision à long terme.
+This folder deliberately separates the first MVP target model from the long-term vision.
 
-## 1. Diagramme de classes du MVP
+## 1. MVP Class Diagram
 
-Le MVP contient uniquement :
+The MVP only contains:
 
-- des stories ;
-- des interactions positionnées dans l’éditeur ;
-- des triggers reliant une ou plusieurs interactions d’entrée à une interaction de sortie ;
-- des conditions fondées sur le fait d’avoir déjà parcouru, ou non, certaines interactions ;
-- un état de lecture local et non persisté.
+- stories;
+- interactions positioned in the editor;
+- triggers linking one or more input interactions to an output interaction;
+- conditions based on whether some interactions have already been visited or not;
+- a local, non-persisted reader state.
 
 ```mermaid
 classDiagram
@@ -76,19 +76,19 @@ classDiagram
   PlaySession ..> Trigger : evaluates
 ```
 
-### Règle d’éligibilité d’un trigger
+### Trigger Eligibility Rule
 
-Un trigger est proposé par le lecteur lorsque :
+A trigger is offered by the reader when:
 
-1. au début de la story, il ne possède aucune interaction d’entrée ; ou, pendant la lecture, l’interaction courante fait partie de ses entrées ;
-2. toutes ses exigences `COMPLETED` figurent dans l’historique de lecture ;
-3. aucune de ses exigences `NOT_COMPLETED` ne figure dans cet historique.
+1. at the beginning of the story, it has no input interaction; or, during reading, the current interaction is part of its inputs;
+2. all `COMPLETED` requirements are present in the reading history;
+3. none of its `NOT_COMPLETED` requirements are present in that history.
 
-Plusieurs interactions d’entrée sur un même trigger représentent un **OU** : chacune peut mener à la même interaction de sortie. Les conditions d’un trigger représentent un **ET** : elles doivent toutes être vérifiées.
+Several input interactions on the same trigger represent an **OR**: each can lead to the same output interaction. Trigger conditions represent an **AND**: all of them must be verified.
 
-## 2. Diagramme de classes Vision
+## 2. Vision Class Diagram
 
-Ce diagramme sert uniquement de boussole. Il ne constitue pas le backlog du MVP et ne doit pas complexifier son modèle.
+This diagram is only a compass. It is not the MVP backlog and must not make the MVP model more complex.
 
 ```mermaid
 classDiagram
@@ -157,11 +157,11 @@ classDiagram
   CharacterDecision --> Goal
 ```
 
-## Choix de conception retenus pour le MVP
+## MVP Design Choices
 
-- `Interaction` reste indépendante de `Trigger`, comme dans le prototype.
-- Un trigger possède exactement une interaction de sortie.
-- Une interaction peut avoir plusieurs triggers : cela permet plusieurs ensembles alternatifs de conditions.
-- Les entrées et les conditions sont modélisées par des tables d’association plutôt que par des tableaux d’identifiants. Cela convient à PostgreSQL et évite d’enfermer l’API dans le stockage choisi.
-- Le lecteur ne sauvegarde pas encore les parties.
-- Les personnages, lieux, attributs, effets, médias, temporalités et probabilités appartiennent uniquement à la Vision.
+- `Interaction` remains independent from `Trigger`, as in the prototype.
+- A trigger has exactly one output interaction.
+- An interaction can have several triggers: this allows several alternative condition sets.
+- Inputs and conditions are modeled as association tables rather than identifier arrays. This suits PostgreSQL and avoids locking the API into a storage choice.
+- The reader does not persist play sessions yet.
+- Characters, places, attributes, effects, media, temporal concepts, and probabilities belong only to the Vision.

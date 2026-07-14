@@ -18,17 +18,17 @@ vi.mock('../api', () => ({
 const stories: Story[] = [
   {
     id: 'story-1',
-    title: 'Premiere histoire',
+    title: 'First story',
     createdAt: '2026-07-14T08:00:00.000Z',
     updatedAt: '2026-07-14T08:00:00.000Z',
     interactions: [],
   },
   {
     id: 'story-2',
-    title: 'Deuxieme histoire',
+    title: 'Second story',
     createdAt: '2026-07-14T08:00:00.000Z',
     updatedAt: '2026-07-14T08:00:00.000Z',
-    interactions: [{ id: 'interaction-1', title: 'Depart', body: '', position: { x: 0, y: 0 }, triggers: [] }],
+    interactions: [{ id: 'interaction-1', title: 'Start', body: '', position: { x: 0, y: 0 }, triggers: [] }],
   },
 ];
 
@@ -44,21 +44,21 @@ describe('StoryList', () => {
 
     render(<MemoryRouter><StoryList /></MemoryRouter>);
 
-    expect(await screen.findByRole('heading', { name: 'Premiere histoire' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Deuxieme histoire' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'First story' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Second story' })).toBeInTheDocument();
     expect(screen.getByText('0 interaction(s)')).toBeInTheDocument();
     expect(screen.getByText('1 interaction(s)')).toBeInTheDocument();
 
-    const firstCard = screen.getByRole('heading', { name: 'Premiere histoire' }).closest('article')!;
-    expect(within(firstCard).getByRole('link', { name: /diter/i })).toHaveAttribute('href', '/stories/story-1/edit');
-    expect(within(firstCard).getByRole('link', { name: 'Lire' })).toHaveAttribute('href', '/stories/story-1/play');
+    const firstCard = screen.getByRole('heading', { name: 'First story' }).closest('article')!;
+    expect(within(firstCard).getByRole('link', { name: 'Edit' })).toHaveAttribute('href', '/stories/story-1/edit');
+    expect(within(firstCard).getByRole('link', { name: 'Read' })).toHaveAttribute('href', '/stories/story-1/play');
   });
 
   it('creates and deletes a story from the list', async () => {
     const user = userEvent.setup();
     const createdStory: Story = {
       id: 'story-3',
-      title: 'Nouvelle histoire',
+      title: 'New story',
       createdAt: '2026-07-14T08:00:00.000Z',
       updatedAt: '2026-07-14T08:00:00.000Z',
       interactions: [],
@@ -68,23 +68,23 @@ describe('StoryList', () => {
     vi.mocked(api.deleteStory).mockResolvedValue(undefined);
 
     render(<MemoryRouter><StoryList /></MemoryRouter>);
-    await screen.findByRole('heading', { name: 'Premiere histoire' });
+    await screen.findByRole('heading', { name: 'First story' });
 
-    await user.click(screen.getByRole('button', { name: 'Nouvelle histoire' }));
-    expect(await screen.findByRole('heading', { name: 'Nouvelle histoire' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'New story' }));
+    expect(await screen.findByRole('heading', { name: 'New story' })).toBeInTheDocument();
 
-    const firstCard = screen.getByRole('heading', { name: 'Premiere histoire' }).closest('article')!;
-    await user.click(within(firstCard).getByRole('button', { name: 'Supprimer' }));
+    const firstCard = screen.getByRole('heading', { name: 'First story' }).closest('article')!;
+    await user.click(within(firstCard).getByRole('button', { name: 'Delete' }));
 
-    await waitFor(() => expect(screen.queryByRole('heading', { name: 'Premiere histoire' })).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByRole('heading', { name: 'First story' })).not.toBeInTheDocument());
     expect(api.deleteStory).toHaveBeenCalledWith('story-1');
   });
 
   it('shows a loading error', async () => {
-    vi.mocked(api.listStories).mockRejectedValue(new Error('API indisponible'));
+    vi.mocked(api.listStories).mockRejectedValue(new Error('API unavailable'));
 
     render(<MemoryRouter><StoryList /></MemoryRouter>);
 
-    expect(await screen.findByText('API indisponible')).toBeInTheDocument();
+    expect(await screen.findByText('API unavailable')).toBeInTheDocument();
   });
 });

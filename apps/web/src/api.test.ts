@@ -22,18 +22,18 @@ describe('api client', () => {
     const story = { id: 'story-1', title: 'Story', interactions: [], createdAt: 'now', updatedAt: 'now' };
     fetchMock.mockResolvedValue(jsonResponse(story));
 
-    await expect(api.createStory('Nouvelle')).resolves.toEqual(story);
+    await expect(api.createStory('New')).resolves.toEqual(story);
     expect(fetchMock).toHaveBeenLastCalledWith('/api/stories', {
       headers: { 'Content-Type': 'application/json' },
       method: 'POST',
-      body: JSON.stringify({ title: 'Nouvelle' }),
+      body: JSON.stringify({ title: 'New' }),
     });
 
-    await api.renameStory('story-1', 'Renommee');
+    await api.renameStory('story-1', 'Renamed');
     expect(fetchMock).toHaveBeenLastCalledWith('/api/stories/story-1', {
       headers: { 'Content-Type': 'application/json' },
       method: 'PATCH',
-      body: JSON.stringify({ title: 'Renommee' }),
+      body: JSON.stringify({ title: 'Renamed' }),
     });
 
     await api.deleteStory('story-1');
@@ -64,11 +64,11 @@ describe('api client', () => {
       body: JSON.stringify({ parentId: 'parent-1', position: { x: 1, y: 2 } }),
     });
 
-    await api.updateInteraction('story-1', 'interaction-1', { title: 'Titre' });
+    await api.updateInteraction('story-1', 'interaction-1', { title: 'Title' });
     expect(fetchMock).toHaveBeenLastCalledWith('/api/stories/story-1/interactions/interaction-1', {
       headers: { 'Content-Type': 'application/json' },
       method: 'PATCH',
-      body: JSON.stringify({ title: 'Titre' }),
+      body: JSON.stringify({ title: 'Title' }),
     });
 
     await api.deleteInteraction('story-1', 'interaction-1');
@@ -94,6 +94,12 @@ describe('api client', () => {
         inputInteractionIds: ['source-1'],
         conditions: [{ interactionId: 'source-1', hasBeenVisited: true }],
       }),
+    });
+
+    await api.deleteTrigger('story-1', 'interaction-1', 'trigger-1');
+    expect(fetchMock).toHaveBeenLastCalledWith('/api/stories/story-1/interactions/interaction-1/triggers/trigger-1', {
+      headers: { 'Content-Type': 'application/json' },
+      method: 'DELETE',
     });
   });
 

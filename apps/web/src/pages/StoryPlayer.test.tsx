@@ -15,28 +15,28 @@ vi.mock('../api', () => ({
 
 const story: Story = {
   id: 'story-1',
-  title: 'Histoire jouable',
+  title: 'Playable story',
   createdAt: '2026-07-14T08:00:00.000Z',
   updatedAt: '2026-07-14T08:00:00.000Z',
   interactions: [
     {
       id: 'start',
-      title: 'Depart',
-      body: 'Vous arrivez.',
+      title: 'Start',
+      body: 'You arrive.',
       position: { x: 0, y: 0 },
       triggers: [{ id: 'trigger-start', inputInteractionIds: [], conditions: [] }],
     },
     {
       id: 'next',
-      title: 'Suite',
-      body: 'Vous continuez.',
+      title: 'Next',
+      body: 'You continue.',
       position: { x: 100, y: 0 },
       triggers: [{ id: 'trigger-next', inputInteractionIds: ['start'], conditions: [] }],
     },
     {
       id: 'hidden',
       title: 'Secret',
-      body: 'Vous avez trouve un secret.',
+      body: 'You found a secret.',
       position: { x: 200, y: 0 },
       triggers: [
         {
@@ -60,7 +60,7 @@ async function renderPlayer() {
     </MemoryRouter>,
   );
 
-  await screen.findByText('Histoire jouable');
+  await screen.findByText('Playable story');
 }
 
 describe('StoryPlayer', () => {
@@ -74,34 +74,34 @@ describe('StoryPlayer', () => {
     const user = userEvent.setup();
     await renderPlayer();
 
-    expect(screen.getByRole('heading', { name: /Commencer/ })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Depart' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Suite' })).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Start the story/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Start' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Next' })).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Depart' }));
-    expect(screen.getByRole('heading', { name: 'Depart' })).toBeInTheDocument();
-    expect(screen.getByText('Vous arrivez.')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Suite' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Start' }));
+    expect(screen.getByRole('heading', { name: 'Start' })).toBeInTheDocument();
+    expect(screen.getByText('You arrive.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Next' })).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Suite' }));
-    expect(screen.getByRole('heading', { name: 'Suite' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Next' }));
+    expect(screen.getByRole('heading', { name: 'Next' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Secret' })).toBeInTheDocument();
-    expect(screen.getByText('Depart')).toBeInTheDocument();
+    expect(screen.getByText('Start')).toBeInTheDocument();
   });
 
   it('shows an ending and can restart', async () => {
     const user = userEvent.setup();
     await renderPlayer();
 
-    await user.click(screen.getByRole('button', { name: 'Depart' }));
-    await user.click(screen.getByRole('button', { name: 'Suite' }));
+    await user.click(screen.getByRole('button', { name: 'Start' }));
+    await user.click(screen.getByRole('button', { name: 'Next' }));
     await user.click(screen.getByRole('button', { name: 'Secret' }));
 
     expect(screen.getByRole('heading', { name: 'Secret' })).toBeInTheDocument();
-    expect(screen.getByText('Fin de cette branche.')).toBeInTheDocument();
+    expect(screen.getByText('End of this branch.')).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Recommencer' }));
-    expect(screen.getByRole('heading', { name: /Commencer/ })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Depart' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Restart' }));
+    expect(screen.getByRole('heading', { name: /Start the story/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Start' })).toBeInTheDocument();
   });
 });

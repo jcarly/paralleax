@@ -1,2 +1,3 @@
 # ADR-001
-Conserver un MVP minimal.
+
+Keep a minimal MVP.

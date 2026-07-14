@@ -1,24 +1,24 @@
-# Notes de refonte du prototype Meteor
+# Meteor Prototype Refactor Notes
 
-## Correspondances
+## Mappings
 
-| Prototype Meteor | Refonte |
+| Meteor prototype | Refactor |
 |---|---|
-| `StoryCollection` | `StoriesService` NestJS |
-| `InteractionCollection` | `Story.interactions` dans le modèle partagé |
+| `StoryCollection` | NestJS `StoriesService` |
+| `InteractionCollection` | `Story.interactions` in the shared model |
 | `TriggerCollection` | `Interaction.triggers` |
-| méthodes Meteor | routes REST du `StoriesController` |
-| `react-xarrows` | arêtes React Flow |
+| Meteor methods | REST routes in `StoriesController` |
+| `react-xarrows` | React Flow edges |
 | `StoryEditor` | `apps/web/src/pages/StoryEditor.tsx` |
 | `StoryViewer` | `apps/web/src/pages/StoryPlayer.tsx` |
 
-## Simplifications assumées
+## Deliberate Simplifications
 
-- Les triggers sont imbriqués dans les interactions : ils ne nécessitent pas une collection autonome dans le MVP.
-- Une interaction créée possède un trigger initial.
-- Le panneau d’édition modifie actuellement le premier trigger de l’interaction, comme chemin principal du MVP.
-- Le service utilise un stockage en mémoire pour isoler et valider le comportement avant le choix d’une base de données.
+- Triggers are embedded in interactions: they do not need a standalone collection in the MVP.
+- A newly created interaction has an initial trigger.
+- The edit panel currently edits the interaction's first trigger as the MVP's main path.
+- The service uses in-memory storage to isolate and validate behavior before choosing a database.
 
-## Prochaine étape recommandée
+## Recommended Next Step
 
-Ajouter une persistance légère, idéalement SQLite avec Prisma en développement, sans modifier les contrats partagés ni l’interface du lecteur.
+Add lightweight persistence, ideally SQLite with Prisma in development, without changing the shared contracts or the reader interface.

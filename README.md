@@ -1,149 +1,183 @@
-# Paralleax — prototype refactoré
+# Paralleax
 
-Refonte du prototype Meteor en monorepo TypeScript minimal :
+Paralleax is an editor and engine for interactive scenarios.
 
-- `apps/web` : React + Vite + React Flow
-- `apps/api` : NestJS
-- `packages/shared` : modèle MVP et règles du lecteur partagés
-- `docs/uml` : UML MVP et Vision
+This repository contains the TypeScript refactor of the prototype, with a deliberately small MVP scope so the core product can be stabilized before advanced concepts are added.
 
-## Périmètre actuel
+## MVP Scope
 
-- CRUD des stories
-- création, édition, déplacement et suppression d’interactions
-- triggers simples fondés sur les interactions d’entrée
-- conditions « interaction visitée / non visitée »
-- lecteur de branches
-- stockage en mémoire côté API (les données sont réinitialisées au redémarrage)
+The MVP only covers:
 
-## Démarrage
+- `Story`: an interactive scenario.
+- `Interaction`: a narrative block displayed in the editor and reader.
+- `Trigger`: the rule that makes an interaction available from one or more input interactions.
+- `Reader`: story execution through successive choices.
 
-Prérequis : Node.js 22+ et npm 11+.
+Characters, places, variables, AI, real-time collaboration, authentication, and SQL persistence are intentionally out of scope until the MVP is validated.
+
+## Architecture
+
+- `apps/web`: React + Vite + React Flow application.
+- `apps/api`: NestJS API.
+- `packages/shared`: shared MVP model and reader rules used by both the web app and API.
+- `docs`: product, architecture, ADR, UML, and test scenario documentation.
+
+For now, the API stores data in memory. Stories are reset when the server restarts.
+
+## Documentation
+
+Start with the documentation index: [docs/README.md](docs/README.md).
+
+Recommended reading order:
+
+1. [Vision](docs/vision.md): product intent and long-term direction.
+2. [MVP scope](docs/mvp.md): what is intentionally included or excluded right now.
+3. [Domain model](docs/domain-model.md): Story, Interaction, Trigger, Reader, and future concepts.
+4. [Trigger semantics](docs/triggers.md): input rules, deletion behavior, and trigger editing UX.
+5. [Architecture](docs/architecture.md): monorepo structure and runtime flow.
+6. [Design principles](docs/design-principles.md): UX and technical principles.
+7. [Test scenarios](docs/test-scenarios.md): critical regression scenarios.
+8. [Roadmap](docs/roadmap.md): planned progression after the MVP.
+9. [Changelog](CHANGELOG.md): notable implementation, test, and documentation changes.
+
+Supporting references:
+
+- [ADR index](docs/decisions/): architecture decision records.
+- [UML diagrams](docs/uml/README.md): MVP and long-term model diagrams.
+- [Meteor prototype refactor notes](MIGRATION.md): mapping from the original prototype to this refactor.
+- [Project changelog](CHANGELOG.md): chronological implementation notes and maintenance rules.
+
+## Requirements
+
+- Node.js 22.x
+- npm 11+
+
+On PowerShell, use `npm.cmd` if `npm` is blocked by the Windows execution policy.
+
+## Installation
 
 ```bash
 npm install
+```
+
+## Local Development
+
+```bash
 npm run dev
 ```
 
-- application : http://localhost:5173
-- API : http://localhost:3000/api
+Local URLs:
 
-## Verifications
+- Web: http://localhost:5173
+- API: http://localhost:3000/api
 
-Sous PowerShell, utiliser `npm.cmd` pour eviter le blocage possible de `npm.ps1` par la politique d'execution Windows.
+## Tests
 
-### Tests automatises
+Run all unit and component tests:
 
-```powershell
-npm.cmd run test
+```bash
+npm run test
 ```
 
-Cette commande lance :
+Run one workspace only:
 
-- les tests API Jest/Supertest sur les endpoints NestJS ;
-- les tests unitaires web Vitest/Testing Library.
-
-Pour lancer uniquement une partie :
-
-```powershell
-npm.cmd run test -w @paralleax/api
-npm.cmd run test -w @paralleax/web
+```bash
+npm run test -w @paralleax/api
+npm run test -w @paralleax/web
 ```
 
-### Tests fonctionnels
+These commands cover:
 
-Installer le navigateur Playwright une premiere fois :
+- API: Jest/Supertest tests for the NestJS endpoints.
+- Web: Vitest/Testing Library tests for pages, components, and API calls.
 
-```powershell
-npm.cmd run playwright:install -w @paralleax/web
+## Playwright Functional Tests
+
+Install Chromium once:
+
+```bash
+npm run playwright:install -w @paralleax/web
 ```
 
-Puis lancer les scenarios fonctionnels :
+Run the functional scenarios:
 
-```powershell
-npm.cmd run test:e2e -w @paralleax/web
+```bash
+npm run test:e2e -w @paralleax/web
 ```
 
-Playwright demarre automatiquement le serveur Vite de `apps/web` pendant les tests.
+Playwright automatically starts the `apps/web` Vite server during the tests.
 
-### Couverture de tests
+## Test Coverage
 
-La couverture est mesuree avec :
-
-- Jest coverage pour l'API ;
-- Vitest coverage V8 pour le web.
-
-```powershell
-npm.cmd run coverage
+```bash
+npm run coverage
 ```
 
-Rapports HTML generes :
+Generated HTML reports:
 
 - `apps/api/coverage/index.html`
 - `apps/web/coverage/index.html`
 
-Pour lancer uniquement une partie :
+Run one workspace only:
 
-```powershell
-npm.cmd run coverage -w @paralleax/api
-npm.cmd run coverage -w @paralleax/web
+```bash
+npm run coverage -w @paralleax/api
+npm run coverage -w @paralleax/web
 ```
 
-### Typecheck et build
+## Typecheck and Build
 
-```powershell
-npm.cmd run typecheck
-npm.cmd run build
+```bash
+npm run typecheck
+npm run build
 ```
 
-Verification complete avant commit :
+Full verification before pushing:
 
-```powershell
-npm.cmd run test
-npm.cmd run test:e2e -w @paralleax/web
-npm.cmd run coverage
-npm.cmd run build
+```bash
+npm run typecheck
+npm run test
+npm run test:e2e -w @paralleax/web
+npm run coverage
+npm run build
 ```
 
-## Choix volontairement reportés
+## GitLab CI
 
-La persistance SQL, l’authentification, la collaboration temps réel et le modèle narratif avancé ne font pas partie de cette première refonte.
+CI is defined in `.gitlab-ci.yml`.
 
-## Développement avec Docker
+It runs on every commit pushed to GitLab and on merge requests. It executes:
 
-Cette configuration fixe l'environnement sur Node.js 22 et npm fourni par l'image officielle Node.
+- TypeScript typecheck;
+- API and web coverage;
+- full monorepo build;
+- Playwright functional tests.
 
-### Démarrage sans proxy
+Coverage reports and the Playwright HTML report are kept as GitLab artifacts.
+
+## Docker
+
+The Docker setup pins the environment to Node.js 22.
+
+In development, the repository is mounted inside the container. Source changes are picked up by Vite and Nest watch mode without rebuilding the Docker image.
+
+Start the stack:
 
 ```bash
 cp .env.example .env
-docker compose up --build
+docker compose up
 ```
 
-Sous PowerShell, la copie s'effectue avec :
+On PowerShell:
 
 ```powershell
 Copy-Item .env.example .env
-docker compose up --build
+docker compose up
 ```
 
-Ouvrir ensuite <http://localhost:5173>. L'API est exposée sur <http://localhost:3000/api>.
+Then open http://localhost:5173. The API is exposed at http://localhost:3000/api.
 
-### Démarrage derrière un proxy
-
-Renseigner `.env` :
-
-```dotenv
-HTTP_PROXY=http://proxy.exemple:8080
-HTTPS_PROXY=http://proxy.exemple:8080
-NO_PROXY=localhost,127.0.0.1,api,web
-```
-
-Les identifiants éventuellement présents dans l'URL du proxy ne doivent jamais être commités. Le fichier `.env` est ignoré par Git.
-
-Le proxy doit également être configuré dans Docker Desktop lorsque Docker ne parvient pas à télécharger l'image de base ou les dépendances pendant le build. Sous Docker Desktop : **Settings → Resources → Proxies** (l'emplacement peut varier selon la version).
-
-### Commandes utiles
+Useful commands:
 
 ```bash
 npm run docker:up
@@ -151,12 +185,28 @@ npm run docker:logs
 npm run docker:down
 ```
 
-Pour reconstruire complètement les dépendances :
+If dependencies change, restart the stack. The Compose command runs `npm install` when each service starts:
 
 ```bash
-docker compose down -v
-docker compose build --no-cache
+docker compose down
 docker compose up
 ```
 
-> Docker stabilise les versions, mais ne contourne pas un proxy ou un pare-feu : le build doit toujours pouvoir joindre `registry.npmjs.org`.
+Refresh everything from a clean container state:
+
+```bash
+docker compose down -v
+docker compose up
+```
+
+If the machine is behind a proxy, fill `.env`:
+
+```dotenv
+HTTP_PROXY=http://proxy.example:8080
+HTTPS_PROXY=http://proxy.example:8080
+NO_PROXY=localhost,127.0.0.1,api,web
+```
+
+Credentials that may appear in proxy URLs must never be committed. The `.env` file is ignored by Git.
+
+Docker does not bypass a proxy or firewall: the build must still be able to reach `registry.npmjs.org`.

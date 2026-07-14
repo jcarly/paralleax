@@ -2,14 +2,14 @@ import { expect, test, type Page } from '@playwright/test';
 
 const story = {
   id: 'story-1',
-  title: 'Histoire test',
+  title: 'Test story',
   createdAt: '2026-07-14T08:00:00.000Z',
   updatedAt: '2026-07-14T08:00:00.000Z',
   interactions: [
     {
       id: 'interaction-1',
-      title: 'Titre original',
-      body: 'Contenu original',
+      title: 'Original title',
+      body: 'Original content',
       position: { x: 120, y: 140 },
       triggers: [{ id: 'trigger-1', inputInteractionIds: [], conditions: [] }],
     },
@@ -38,22 +38,22 @@ test.describe('Story editor', () => {
 
   test('edits an interaction title without blanking the page', async ({ page }) => {
     const updated = cloneStory();
-    updated.interactions[0].title = 'Nouveau titre';
+    updated.interactions[0].title = 'New title';
 
     await page.route('**/api/stories/story-1/interactions/interaction-1', async (route) => {
       expect(route.request().method()).toBe('PATCH');
-      expect(route.request().postDataJSON()).toEqual({ title: 'Nouveau titre' });
+      expect(route.request().postDataJSON()).toEqual({ title: 'New title' });
       await route.fulfill({ json: updated });
     });
 
     await page.goto('/stories/story-1/edit');
-    await page.getByTestId('interaction-node').filter({ hasText: 'Titre original' }).click();
-    await page.getByLabel('Titre').fill('Nouveau titre');
-    await page.getByLabel('Titre').blur();
+    await page.getByTestId('interaction-node').filter({ hasText: 'Original title' }).click();
+    await page.getByLabel('Title').fill('New title');
+    await page.getByLabel('Title').blur();
 
-    await expect(page.getByTestId('interaction-node').filter({ hasText: 'Nouveau titre' })).toBeVisible();
+    await expect(page.getByTestId('interaction-node').filter({ hasText: 'New title' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Interaction' })).toBeVisible();
-    await expect(page.getByText('Chargement...')).toHaveCount(0);
+    await expect(page.getByText('Loading...')).toHaveCount(0);
   });
 
   test('keeps title and body visible after dragging an interaction', async ({ page }) => {
@@ -67,7 +67,7 @@ test.describe('Story editor', () => {
     });
 
     await page.goto('/stories/story-1/edit');
-    const node = page.getByTestId('interaction-node').filter({ hasText: 'Titre original' });
+    const node = page.getByTestId('interaction-node').filter({ hasText: 'Original title' });
     const box = await node.boundingBox();
     expect(box).not.toBeNull();
 
@@ -76,7 +76,7 @@ test.describe('Story editor', () => {
     await page.mouse.move(box!.x + box!.width / 2 + 120, box!.y + box!.height / 2 + 40, { steps: 8 });
     await page.mouse.up();
 
-    await expect(page.getByTestId('interaction-node').filter({ hasText: 'Titre original' })).toBeVisible();
-    await expect(page.getByTestId('interaction-node').filter({ hasText: 'Contenu original' })).toBeVisible();
+    await expect(page.getByTestId('interaction-node').filter({ hasText: 'Original title' })).toBeVisible();
+    await expect(page.getByTestId('interaction-node').filter({ hasText: 'Original content' })).toBeVisible();
   });
 });

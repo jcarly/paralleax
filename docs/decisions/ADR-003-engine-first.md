@@ -1,2 +1,3 @@
 # ADR-003
-Le moteur narratif est indépendant de l'UI.
+
+The narrative engine is independent from the UI.

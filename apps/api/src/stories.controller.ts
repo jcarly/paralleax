@@ -14,4 +14,5 @@ export class StoriesController {
   @Delete(':storyId/interactions/:interactionId') deleteInteraction(@Param('storyId') storyId: string, @Param('interactionId') interactionId: string) { return this.stories.deleteInteraction(storyId, interactionId); }
   @Post(':storyId/interactions/:interactionId/triggers') addTrigger(@Param('storyId') storyId: string, @Param('interactionId') interactionId: string) { return this.stories.addTrigger(storyId, interactionId); }
   @Patch(':storyId/interactions/:interactionId/triggers/:triggerId') updateTrigger(@Param('storyId') storyId: string, @Param('interactionId') interactionId: string, @Param('triggerId') triggerId: string, @Body() input: UpdateTriggerDto) { return this.stories.updateTrigger(storyId, interactionId, triggerId, input); }
+  @Delete(':storyId/interactions/:interactionId/triggers/:triggerId') deleteTrigger(@Param('storyId') storyId: string, @Param('interactionId') interactionId: string, @Param('triggerId') triggerId: string) { return this.stories.deleteTrigger(storyId, interactionId, triggerId); }
 }

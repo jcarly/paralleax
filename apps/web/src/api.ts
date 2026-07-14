@@ -15,4 +15,5 @@ export const api = {
   deleteInteraction: (storyId: string, interactionId: string) => request<Story>(`/stories/${storyId}/interactions/${interactionId}`, { method: 'DELETE' }),
   addTrigger: (storyId: string, interactionId: string) => request<Story>(`/stories/${storyId}/interactions/${interactionId}/triggers`, { method: 'POST' }),
   updateTrigger: (storyId: string, interactionId: string, triggerId: string, input: UpdateTriggerInput) => request<Story>(`/stories/${storyId}/interactions/${interactionId}/triggers/${triggerId}`, { method: 'PATCH', body: JSON.stringify(input) }),
+  deleteTrigger: (storyId: string, interactionId: string, triggerId: string) => request<Story>(`/stories/${storyId}/interactions/${interactionId}/triggers/${triggerId}`, { method: 'DELETE' }),
 };

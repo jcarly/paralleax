@@ -10,10 +10,11 @@ x-proxy-environment: &proxy-environment
 
 services:
   api:
-    image: node:20-alpine
+    image: node:22-alpine
     command: sh -c 'npm install --legacy-peer-deps --audit=false --no-update-notifier 2>&1 ; npm run dev -w @paralleax/api'
     environment:
       <<: *proxy-environment
+      CHOKIDAR_USEPOLLING: "true"
       PORT: 3000
       NODE_OPTIONS: "--max-old-space-size=2048"
     ports:
@@ -23,10 +24,11 @@ services:
     working_dir: /workspace
 
   web:
-    image: node:20-alpine
+    image: node:22-alpine
     command: sh -c 'npm install --legacy-peer-deps --audit=false --no-update-notifier 2>&1 ; npm run dev -w @paralleax/web -- --host 0.0.0.0'
     environment:
       <<: *proxy-environment
+      CHOKIDAR_USEPOLLING: "true"
       VITE_API_PROXY_TARGET: http://api:3000
       NODE_OPTIONS: "--max-old-space-size=2048"
     ports:

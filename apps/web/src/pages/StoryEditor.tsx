@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Background,
   Controls,
@@ -6,7 +6,9 @@ import {
   MiniMap,
   ReactFlow,
   useNodesState,
+  type Connection,
   type Edge,
+  type EdgeMouseHandler,
   type Node,
   type NodeMouseHandler,
 } from '@xyflow/react';
@@ -17,6 +19,17 @@ import { InteractionNode, type InteractionNodeData } from '../components/Interac
 
 const nodeTypes = { interaction: InteractionNode };
 type InteractionFlowNode = Node<InteractionNodeData>;
+type InteractionContentPatch = Partial<Pick<Interaction, 'title' | 'body' | 'position'>>;
+interface SelectedTrigger {
+  interactionId: string;
+  triggerId: string;
+  inputInteractionId?: string;
+}
+const childOffsetX = 340;
+const childOffsetY = 140;
+const childVerticalGap = 150;
+const minNodeVerticalDistance = 120;
+const sameColumnTolerance = 260;
 
 function updateInteractionInStory(story: Story, interactionId: string, patch: Partial<Interaction>): Story {
   return {
@@ -27,37 +40,99 @@ function updateInteractionInStory(story: Story, interactionId: string, patch: Pa
   };
 }
 
-function mergePatchedStory(
-  current: Story,
-  updated: Story,
+function updateTriggerInStory(
+  story: Story,
   interactionId: string,
-  patch: Partial<Pick<Interaction, 'title' | 'body' | 'position'>>,
+  triggerId: string,
+  patch: { inputInteractionIds: string[]; conditions: TriggerCondition[] },
 ): Story {
   return {
-    ...updated,
-    interactions: updated.interactions.map((item) => {
+    ...story,
+    interactions: story.interactions.map((item) =>
+      item.id === interactionId
+        ? {
+          ...item,
+          triggers: item.triggers.map((trigger) =>
+            trigger.id === triggerId ? { ...trigger, ...patch } : trigger,
+          ),
+        }
+        : item,
+    ),
+  };
+}
+
+function deleteTriggerInStory(story: Story, interactionId: string, triggerId: string): Story {
+  return {
+    ...story,
+    interactions: story.interactions.map((item) =>
+      item.id === interactionId
+        ? { ...item, triggers: item.triggers.filter((trigger) => trigger.id !== triggerId) }
+        : item,
+    ),
+  };
+}
+
+function hasOwn<T extends object, K extends PropertyKey>(item: T, key: K): item is T & Record<K, unknown> {
+  return Object.prototype.hasOwnProperty.call(item, key);
+}
+
+function mergeServerStory(
+  current: Story,
+  incoming: Story,
+  edited?: { interactionId: string; patch: InteractionContentPatch },
+  options: { preserveCurrentTriggers?: boolean; deletedTriggerIds?: ReadonlySet<string> } = {},
+): Story {
+  return {
+    ...incoming,
+    interactions: incoming.interactions.map((item) => {
       const currentItem = current.interactions.find((candidate) => candidate.id === item.id);
-      if (!currentItem) return item;
-      if (item.id !== interactionId) return currentItem;
+      const triggers = (options.preserveCurrentTriggers && currentItem ? currentItem.triggers : item.triggers)
+        .filter((trigger) => !options.deletedTriggerIds?.has(trigger.id));
+      if (!currentItem) return { ...item, triggers };
+      const patch = item.id === edited?.interactionId ? edited.patch : undefined;
+
       return {
         ...item,
-        title: patch.title ?? currentItem.title,
-        body: patch.body ?? currentItem.body,
-        position: patch.position ?? currentItem.position,
+        title: hasOwn(patch ?? {}, 'title') ? patch?.title ?? '' : currentItem.title,
+        body: hasOwn(patch ?? {}, 'body') ? patch?.body ?? '' : currentItem.body,
+        position: hasOwn(patch ?? {}, 'position') ? patch?.position ?? currentItem.position : currentItem.position,
+        triggers,
       };
     }),
   };
+}
+
+function getNextChildPosition(story: Story, parent: Interaction) {
+  const x = parent.position.x + childOffsetX;
+  const firstY = parent.position.y + childOffsetY;
+  const occupied = story.interactions.filter((item) => item.id !== parent.id);
+
+  for (let index = 0; index <= occupied.length + 1; index += 1) {
+    const y = firstY + index * childVerticalGap;
+    const isFree = occupied.every((item) =>
+      Math.abs(item.position.x - x) > sameColumnTolerance
+      || Math.abs(item.position.y - y) >= minNodeVerticalDistance,
+    );
+    if (isFree) return { x, y };
+  }
+
+  return { x, y: firstY + (occupied.length + 2) * childVerticalGap };
 }
 
 export function StoryEditor() {
   const { storyId = '' } = useParams();
   const [story, setStory] = useState<Story>();
   const [selectedId, setSelectedId] = useState<string>();
+  const [selectedTrigger, setSelectedTrigger] = useState<SelectedTrigger>();
   const [error, setError] = useState('');
   const [nodes, setNodes, onNodesChange] = useNodesState<InteractionFlowNode>([]);
+  const deletedTriggerIds = useRef(new Set<string>());
 
   const load = useCallback(
-    () => api.getStory(storyId).then(setStory).catch((e: Error) => setError(e.message)),
+    () => api.getStory(storyId).then((next) => {
+      deletedTriggerIds.current.clear();
+      setStory(next);
+    }).catch((e: Error) => setError(e.message)),
     [storyId],
   );
 
@@ -66,6 +141,8 @@ export function StoryEditor() {
   }, [load]);
 
   const selected = story?.interactions.find((item) => item.id === selectedId);
+  const selectedTriggerInteraction = story?.interactions.find((item) => item.id === selectedTrigger?.interactionId);
+  const selectedTriggerValue = selectedTriggerInteraction?.triggers.find((trigger) => trigger.id === selectedTrigger?.triggerId);
   const storyNodes = useMemo<InteractionFlowNode[]>(
     () =>
       story?.interactions.map((item) => ({
@@ -95,42 +172,132 @@ export function StoryEditor() {
             target: target.id,
             markerEnd: { type: MarkerType.ArrowClosed },
             label: trigger.conditions.length ? `${trigger.conditions.length} condition(s)` : undefined,
+            data: { interactionId: target.id, triggerId: trigger.id, inputInteractionId: source },
           })),
         ),
       ) ?? [],
     [story],
   );
 
-  const select: NodeMouseHandler = (_, node) => setSelectedId(node.id);
+  const select: NodeMouseHandler = (_, node) => {
+    setSelectedId(node.id);
+    setSelectedTrigger(undefined);
+  };
+  const selectTrigger: EdgeMouseHandler = (_, edge) => {
+    const data = edge.data as Partial<SelectedTrigger> | undefined;
+    if (!data?.interactionId || !data.triggerId) return;
+    setSelectedId(undefined);
+    setSelectedTrigger({
+      interactionId: data.interactionId,
+      triggerId: data.triggerId,
+      inputInteractionId: data.inputInteractionId,
+    });
+  };
+
+  function mergeIncomingStory(
+    current: Story,
+    incoming: Story,
+    edited?: { interactionId: string; patch: InteractionContentPatch },
+    options: { preserveCurrentTriggers?: boolean } = {},
+  ): Story {
+    return mergeServerStory(current, incoming, edited, {
+      ...options,
+      deletedTriggerIds: deletedTriggerIds.current,
+    });
+  }
+
+  async function saveTrigger(
+    interactionId: string,
+    triggerId: string,
+    inputInteractionIds: string[],
+    conditions: TriggerCondition[],
+  ) {
+    const nextInputs = [...new Set(inputInteractionIds)];
+    const patch = { inputInteractionIds: nextInputs, conditions };
+    setStory((current) => (current ? updateTriggerInStory(current, interactionId, triggerId, patch) : current));
+    const next = await api.updateTrigger(storyId, interactionId, triggerId, patch);
+    setStory((current) => (current ? mergeIncomingStory(current, next) : next));
+  }
+
+  async function deleteTrigger(interactionId: string, triggerId: string) {
+    deletedTriggerIds.current.add(triggerId);
+    setStory((current) => (current ? deleteTriggerInStory(current, interactionId, triggerId) : current));
+    const next = await api.deleteTrigger(storyId, interactionId, triggerId);
+    setStory((current) => (current ? mergeIncomingStory(current, next) : next));
+    setSelectedTrigger(undefined);
+  }
+
+  async function deleteTriggerInput(interactionId: string, triggerId: string, inputInteractionId: string) {
+    const interaction = story?.interactions.find((item) => item.id === interactionId);
+    const trigger = interaction?.triggers.find((item) => item.id === triggerId);
+    if (!trigger) return;
+
+    const nextInputs = trigger.inputInteractionIds.filter((id) => id !== inputInteractionId);
+    if (nextInputs.length === 0) {
+      await deleteTrigger(interactionId, triggerId);
+      return;
+    }
+
+    await saveTrigger(interactionId, triggerId, nextInputs, trigger.conditions);
+    setSelectedTrigger(undefined);
+  }
+
+  const connectInteractions = useCallback(async (connection: Connection) => {
+    if (!story || !connection.source || !connection.target || connection.source === connection.target) return;
+    const sourceId = connection.source;
+    const targetId = connection.target;
+    const target = story.interactions.find((item) => item.id === targetId);
+    if (!target) return;
+    if (target.triggers.some((trigger) => trigger.inputInteractionIds.includes(sourceId))) return;
+
+    const existingTriggerIds = new Set(target.triggers.map((trigger) => trigger.id));
+    const withTrigger = await api.addTrigger(storyId, target.id);
+    const nextTarget = withTrigger.interactions.find((item) => item.id === target.id);
+    const nextTrigger = nextTarget?.triggers.find((trigger) => !existingTriggerIds.has(trigger.id))
+      ?? nextTarget?.triggers.at(-1);
+    if (!nextTrigger) {
+      setStory((current) => (current ? mergeIncomingStory(current, withTrigger) : withTrigger));
+      return;
+    }
+
+    const updated = await api.updateTrigger(storyId, target.id, nextTrigger.id, {
+      inputInteractionIds: [sourceId],
+      conditions: nextTrigger.conditions,
+    });
+    setStory((current) => (current ? mergeIncomingStory(current, updated) : updated));
+  }, [story, storyId]);
 
   async function createRoot() {
-    setStory(await api.createInteraction(storyId, { position: { x: 100, y: 120 } }));
+    const next = await api.createInteraction(storyId, { position: { x: 100, y: 120 } });
+    setStory((current) => (current ? mergeIncomingStory(current, next) : next));
   }
 
   async function createChild() {
-    if (!selected) return;
-    setStory(await api.createInteraction(storyId, {
+    if (!story || !selected) return;
+    const next = await api.createInteraction(storyId, {
       parentId: selected.id,
-      position: { x: selected.position.x + 340, y: selected.position.y + 140 },
-    }));
+      position: getNextChildPosition(story, selected),
+    });
+    setStory((current) => (current ? mergeIncomingStory(current, next) : next));
   }
 
-  async function patchInteraction(id: string, patch: Partial<Pick<Interaction, 'title' | 'body' | 'position'>>) {
+  async function patchInteraction(id: string, patch: InteractionContentPatch) {
     setStory((current) => (current ? updateInteractionInStory(current, id, patch) : current));
     const updated = await api.updateInteraction(storyId, id, patch);
     setStory((current) => {
       if (!current) return updated;
-      return mergePatchedStory(current, updated, id, patch);
+      return mergeIncomingStory(current, updated, { interactionId: id, patch }, { preserveCurrentTriggers: true });
     });
   }
 
   async function remove() {
     if (!selected) return;
-    setStory(await api.deleteInteraction(storyId, selected.id));
+    const next = await api.deleteInteraction(storyId, selected.id);
+    setStory((current) => (current ? mergeIncomingStory(current, next) : next));
     setSelectedId(undefined);
   }
 
-  if (!story) return <main className="page">{error || 'Chargement...'}</main>;
+  if (!story) return <main className="page">{error || 'Loading...'}</main>;
 
   return (
     <main className="editor-page">
@@ -139,12 +306,14 @@ export function StoryEditor() {
           className="story-title-input"
           value={story.title}
           onChange={(e) => setStory({ ...story, title: e.target.value })}
-          onBlur={(e) => void api.renameStory(storyId, e.target.value).then(setStory)}
+          onBlur={(e) => void api.renameStory(storyId, e.target.value).then((next) => {
+            setStory((current) => (current ? mergeIncomingStory(current, next) : next));
+          })}
         />
         <div className="actions">
-          <button onClick={() => void createRoot()}>Ajouter une racine</button>
-          <button disabled={!selected} onClick={() => void createChild()}>Ajouter une suite</button>
-          <Link className="button secondary" to={`/stories/${storyId}/play`}>Tester</Link>
+          <button onClick={() => void createRoot()}>Add root</button>
+          <button disabled={!selected} onClick={() => void createChild()}>Add child</button>
+          <Link className="button secondary" to={`/stories/${storyId}/play`}>Test</Link>
         </div>
       </div>
       <div className="editor-layout">
@@ -154,6 +323,8 @@ export function StoryEditor() {
             edges={edges}
             nodeTypes={nodeTypes}
             onNodesChange={onNodesChange}
+            onConnect={(connection) => void connectInteractions(connection)}
+            onEdgeClick={selectTrigger}
             onNodeClick={select}
             onNodeDragStop={(_, node) => void patchInteraction(node.id, { position: node.position })}
             fitView
@@ -169,13 +340,26 @@ export function StoryEditor() {
               story={story}
               interaction={selected}
               onChange={(next) => setStory(next)}
+              onSaveTrigger={saveTrigger}
               onPatch={patchInteraction}
               onDelete={remove}
+              onDeleteTrigger={deleteTrigger}
+              onDeleteTriggerInput={deleteTriggerInput}
+            />
+          ) : selectedTriggerInteraction && selectedTriggerValue ? (
+            <TriggerInspector
+              story={story}
+              interaction={selectedTriggerInteraction}
+              trigger={selectedTriggerValue}
+              selectedInputInteractionId={selectedTrigger?.inputInteractionId}
+              onSaveTrigger={saveTrigger}
+              onDeleteTrigger={deleteTrigger}
+              onDeleteTriggerInput={deleteTriggerInput}
             />
           ) : (
             <div className="empty-state">
               <h2>Interaction</h2>
-              <p>Selectionnez un bloc pour modifier son contenu et ses triggers.</p>
+              <p>Select a block to edit its content, or select an edge to edit its trigger.</p>
             </div>
           )}
         </aside>
@@ -184,83 +368,64 @@ export function StoryEditor() {
   );
 }
 
-function InteractionInspector({
+function TriggerInspector({
   story,
   interaction,
-  onChange,
-  onPatch,
-  onDelete,
+  trigger,
+  selectedInputInteractionId,
+  onSaveTrigger,
+  onDeleteTrigger,
+  onDeleteTriggerInput,
+  showInputs = true,
 }: {
   story: Story;
   interaction: Interaction;
-  onChange: (story: Story) => void;
-  onPatch: (id: string, patch: Partial<Interaction>) => Promise<void>;
-  onDelete: () => Promise<void>;
+  trigger: Interaction['triggers'][number];
+  selectedInputInteractionId?: string;
+  onSaveTrigger: (
+    interactionId: string,
+    triggerId: string,
+    inputInteractionIds: string[],
+    conditions: TriggerCondition[],
+  ) => Promise<void>;
+  onDeleteTrigger: (interactionId: string, triggerId: string) => Promise<void>;
+  onDeleteTriggerInput: (interactionId: string, triggerId: string, inputInteractionId: string) => Promise<void>;
+  showInputs?: boolean;
 }) {
-  const trigger = interaction.triggers[0];
-
   async function updateTrigger(inputIds: string[], conditions: TriggerCondition[]) {
-    if (!trigger) return;
-    onChange(await api.updateTrigger(story.id, interaction.id, trigger.id, {
-      inputInteractionIds: inputIds,
-      conditions,
-    }));
-  }
-
-  function updateLocalInteraction(patch: Partial<Interaction>) {
-    onChange(updateInteractionInStory(story, interaction.id, patch));
-  }
-
-  if (!trigger) {
-    return (
-      <div>
-        <h2>Interaction</h2>
-        <p className="error">Cette interaction n'a pas encore de trigger.</p>
-        <button className="danger" onClick={() => void onDelete()}>Supprimer l'interaction</button>
-      </div>
-    );
+    await onSaveTrigger(interaction.id, trigger.id, inputIds, conditions);
   }
 
   return (
     <div>
-      <h2>Interaction</h2>
-      <label>
-        Titre
-        <input
-          value={interaction.title}
-          onChange={(e) => updateLocalInteraction({ title: e.target.value })}
-          onBlur={(e) => void onPatch(interaction.id, { title: e.target.value })}
-        />
-      </label>
-      <label>
-        Contenu
-        <textarea
-          rows={7}
-          value={interaction.body}
-          onChange={(e) => updateLocalInteraction({ body: e.target.value })}
-          onBlur={(e) => void onPatch(interaction.id, { body: e.target.value })}
-        />
-      </label>
-      <h3>Entrees du trigger</h3>
-      <p className="hint">Aucune entree signifie que l'interaction peut demarrer l'histoire.</p>
-      <div className="check-list">
-        {story.interactions.filter((item) => item.id !== interaction.id).map((item) => (
-          <label key={item.id}>
-            <input
-              type="checkbox"
-              checked={trigger.inputInteractionIds.includes(item.id)}
-              onChange={(e) => void updateTrigger(
-                e.target.checked
-                  ? [...trigger.inputInteractionIds, item.id]
-                  : trigger.inputInteractionIds.filter((id) => id !== item.id),
-                trigger.conditions,
-              )}
-            />
-            {item.title}
-          </label>
-        ))}
-      </div>
-      <h3>Conditions de parcours</h3>
+      <h2>Trigger</h2>
+      <p className="hint">Output interaction: {interaction.title}</p>
+      {showInputs ? (
+        <>
+          <h3>Trigger inputs</h3>
+          <p className="hint">No input means the interaction can start the story.</p>
+          <div className="check-list">
+            {story.interactions.filter((item) => item.id !== interaction.id).map((item) => (
+              <label key={item.id}>
+                <input
+                  type="checkbox"
+                  checked={trigger.inputInteractionIds.includes(item.id)}
+                  onChange={(e) => void updateTrigger(
+                    e.target.checked
+                      ? [...trigger.inputInteractionIds, item.id]
+                      : trigger.inputInteractionIds.filter((id) => id !== item.id),
+                    trigger.conditions,
+                  )}
+                />
+                {item.title}
+              </label>
+            ))}
+          </div>
+        </>
+      ) : (
+        <p className="hint">This root trigger has no input; select an edge to edit linked trigger inputs.</p>
+      )}
+      <h3>Path conditions</h3>
       <div className="conditions">
         {trigger.conditions.map((condition, index) => (
           <div className="condition" key={`${condition.interactionId}-${index}`}>
@@ -284,8 +449,8 @@ function InteractionInspector({
                 void updateTrigger(trigger.inputInteractionIds, next);
               }}
             >
-              <option value="visited">a ete visitee</option>
-              <option value="not-visited">n'a pas ete visitee</option>
+              <option value="visited">has been visited</option>
+              <option value="not-visited">has not been visited</option>
             </select>
             <button
               className="ghost danger"
@@ -312,10 +477,88 @@ function InteractionInspector({
           }
         }}
       >
-        Ajouter une condition
+        Add condition
       </button>
       <hr />
-      <button className="danger" onClick={() => void onDelete()}>Supprimer l'interaction</button>
+      {selectedInputInteractionId ? (
+        <button
+          className="danger"
+          onClick={() => void onDeleteTriggerInput(interaction.id, trigger.id, selectedInputInteractionId)}
+        >
+          Delete link
+        </button>
+      ) : (
+        <button className="danger" onClick={() => void onDeleteTrigger(interaction.id, trigger.id)}>Delete trigger</button>
+      )}
+    </div>
+  );
+}
+
+function InteractionInspector({
+  story,
+  interaction,
+  onChange,
+  onSaveTrigger,
+  onPatch,
+  onDelete,
+  onDeleteTrigger,
+  onDeleteTriggerInput,
+}: {
+  story: Story;
+  interaction: Interaction;
+  onChange: (story: Story) => void;
+  onSaveTrigger: (
+    interactionId: string,
+    triggerId: string,
+    inputInteractionIds: string[],
+    conditions: TriggerCondition[],
+  ) => Promise<void>;
+  onPatch: (id: string, patch: Partial<Interaction>) => Promise<void>;
+  onDelete: () => Promise<void>;
+  onDeleteTrigger: (interactionId: string, triggerId: string) => Promise<void>;
+  onDeleteTriggerInput: (interactionId: string, triggerId: string, inputInteractionId: string) => Promise<void>;
+}) {
+  const rootTrigger = interaction.triggers.find((trigger) => trigger.inputInteractionIds.length === 0);
+
+  function updateLocalInteraction(patch: Partial<Interaction>) {
+    onChange(updateInteractionInStory(story, interaction.id, patch));
+  }
+
+  return (
+    <div>
+      <h2>Interaction</h2>
+      <label>
+        Title
+        <input
+          value={interaction.title}
+          onChange={(e) => updateLocalInteraction({ title: e.target.value })}
+          onBlur={(e) => void onPatch(interaction.id, { title: e.target.value })}
+        />
+      </label>
+      <label>
+        Content
+        <textarea
+          rows={7}
+          value={interaction.body}
+          onChange={(e) => updateLocalInteraction({ body: e.target.value })}
+          onBlur={(e) => void onPatch(interaction.id, { body: e.target.value })}
+        />
+      </label>
+      {rootTrigger ? (
+        <TriggerInspector
+          story={story}
+          interaction={interaction}
+          trigger={rootTrigger}
+          onSaveTrigger={onSaveTrigger}
+          onDeleteTrigger={onDeleteTrigger}
+          onDeleteTriggerInput={onDeleteTriggerInput}
+          showInputs={false}
+        />
+      ) : (
+        <p className="hint">Select an edge to edit path conditions for linked triggers.</p>
+      )}
+      <hr />
+      <button className="danger" onClick={() => void onDelete()}>Delete interaction</button>
     </div>
   );
 }

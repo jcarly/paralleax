@@ -1,6 +1,6 @@
-# CONTRIBUTING
+# Contributing
 
-- Une fonctionnalité par branche.
-- Conventional Commits.
-- Revue avant fusion.
-- Respecter les ADR.
+- One feature per branch.
+- Use Conventional Commits.
+- Review before merging.
+- Follow the ADRs.

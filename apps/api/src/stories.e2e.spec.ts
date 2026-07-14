@@ -25,7 +25,7 @@ describe('Stories API', () => {
     await app.close();
   });
 
-  async function createStory(title = 'Story de test'): Promise<Story> {
+  async function createStory(title = 'Test story'): Promise<Story> {
     const response = await request(httpServer)
       .post('/api/stories')
       .send({ title })
@@ -55,18 +55,18 @@ describe('Stories API', () => {
   it('POST /api/stories creates a story', async () => {
     const response = await request(httpServer)
       .post('/api/stories')
-      .send({ title: 'Nouvelle story API' })
+      .send({ title: 'New API story' })
       .expect(201);
 
     expect(response.body).toMatchObject({
-      title: 'Nouvelle story API',
+      title: 'New API story',
       interactions: [],
     });
     expect(response.body.id).toEqual(expect.any(String));
   });
 
   it('GET /api/stories/:storyId returns a story', async () => {
-    const story = await createStory('Story a lire');
+    const story = await createStory('Story to read');
 
     const response = await request(httpServer)
       .get(`/api/stories/${story.id}`)
@@ -74,23 +74,23 @@ describe('Stories API', () => {
 
     expect(response.body).toMatchObject({
       id: story.id,
-      title: 'Story a lire',
+      title: 'Story to read',
     });
   });
 
   it('PATCH /api/stories/:storyId renames a story', async () => {
-    const story = await createStory('Ancien titre');
+    const story = await createStory('Old title');
 
     const response = await request(httpServer)
       .patch(`/api/stories/${story.id}`)
-      .send({ title: 'Titre renomme' })
+      .send({ title: 'Renamed title' })
       .expect(200);
 
-    expect(response.body.title).toBe('Titre renomme');
+    expect(response.body.title).toBe('Renamed title');
   });
 
   it('DELETE /api/stories/:storyId deletes a story', async () => {
-    const story = await createStory('Story a supprimer');
+    const story = await createStory('Story to delete');
 
     await request(httpServer)
       .delete(`/api/stories/${story.id}`)
@@ -111,7 +111,7 @@ describe('Stories API', () => {
 
     expect(response.body.interactions).toHaveLength(1);
     expect(response.body.interactions[0]).toMatchObject({
-      title: 'Nouvelle interaction',
+      title: 'New interaction',
       position: { x: 10, y: 20 },
     });
     expect(response.body.interactions[0].triggers[0].inputInteractionIds).toEqual([]);
@@ -140,21 +140,21 @@ describe('Stories API', () => {
     const response = await request(httpServer)
       .patch(`/api/stories/${story.id}/interactions/${interaction.id}`)
       .send({
-        title: 'Interaction renomme',
-        body: 'Nouveau contenu',
+        title: 'Renamed interaction',
+        body: 'New content',
         position: { x: 42, y: 84 },
       })
       .expect(200);
 
     expect(response.body.interactions[0]).toMatchObject({
       id: interaction.id,
-      title: 'Interaction renomme',
-      body: 'Nouveau contenu',
+      title: 'Renamed interaction',
+      body: 'New content',
       position: { x: 42, y: 84 },
     });
   });
 
-  it('DELETE /api/stories/:storyId/interactions/:interactionId deletes an interaction and cleans trigger references', async () => {
+  it('DELETE /api/stories/:storyId/interactions/:interactionId deletes an interaction and removes triggers that only used it as input', async () => {
     const story = await createStory();
     const withParent = await createInteraction(story.id);
     const parent = withParent.interactions[0];
@@ -167,7 +167,35 @@ describe('Stories API', () => {
 
     expect(response.body.interactions).toHaveLength(1);
     expect(response.body.interactions[0].id).toBe(child.id);
-    expect(response.body.interactions[0].triggers[0].inputInteractionIds).toEqual([]);
+    expect(response.body.interactions[0].triggers).toEqual([]);
+  });
+
+  it('DELETE /api/stories/:storyId/interactions/:interactionId keeps triggers that still have other inputs', async () => {
+    const story = await createStory();
+    const withFirstParent = await createInteraction(story.id);
+    const firstParent = withFirstParent.interactions[0];
+    const withSecondParent = await createInteraction(story.id);
+    const secondParent = withSecondParent.interactions.find((item) => item.id !== firstParent.id)!;
+    const withChild = await createInteraction(story.id, { parentId: firstParent.id });
+    const child = withChild.interactions.find((item) => item.id !== firstParent.id && item.id !== secondParent.id)!;
+    const trigger = child.triggers[0];
+
+    await request(httpServer)
+      .patch(`/api/stories/${story.id}/interactions/${child.id}/triggers/${trigger.id}`)
+      .send({
+        inputInteractionIds: [firstParent.id, secondParent.id],
+        conditions: [{ interactionId: firstParent.id, hasBeenVisited: true }],
+      })
+      .expect(200);
+
+    const response = await request(httpServer)
+      .delete(`/api/stories/${story.id}/interactions/${firstParent.id}`)
+      .expect(200);
+
+    const updatedChild = (response.body as Story).interactions.find((item) => item.id === child.id)!;
+    expect(updatedChild.triggers).toHaveLength(1);
+    expect(updatedChild.triggers[0].inputInteractionIds).toEqual([secondParent.id]);
+    expect(updatedChild.triggers[0].conditions).toEqual([]);
   });
 
   it('POST /api/stories/:storyId/interactions/:interactionId/triggers adds a trigger', async () => {
@@ -207,6 +235,19 @@ describe('Stories API', () => {
     expect(updatedChild.triggers[0].conditions).toEqual([
       { interactionId: parent.id, hasBeenVisited: true },
     ]);
+  });
+
+  it('DELETE /api/stories/:storyId/interactions/:interactionId/triggers/:triggerId deletes a trigger', async () => {
+    const story = await createStory();
+    const withInteraction = await createInteraction(story.id);
+    const interaction = withInteraction.interactions[0];
+    const trigger = interaction.triggers[0];
+
+    const response = await request(httpServer)
+      .delete(`/api/stories/${story.id}/interactions/${interaction.id}/triggers/${trigger.id}`)
+      .expect(200);
+
+    expect(response.body.interactions[0].triggers).toEqual([]);
   });
 
   it('returns 404 for unknown story ids', async () => {

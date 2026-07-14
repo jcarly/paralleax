@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
-import type { Story, Trigger } from '@paralleax/shared';
+import type { Story } from '@paralleax/shared';
 import { CreateInteractionDto, CreateStoryDto, UpdateInteractionDto, UpdateTriggerDto } from './dto';
 
 @Injectable()
@@ -17,11 +17,11 @@ export class StoriesService {
   }
   create(input: CreateStoryDto): Story {
     const now = new Date().toISOString();
-    const story: Story = { id: randomUUID(), title: input.title?.trim() || 'Nouvelle histoire', interactions: [], createdAt: now, updatedAt: now };
+    const story: Story = { id: randomUUID(), title: input.title?.trim() || 'New story', interactions: [], createdAt: now, updatedAt: now };
     this.stories.set(story.id, story);
     return structuredClone(story);
   }
-  rename(id: string, title: string): Story { const story = this.mutate(id); story.title = title.trim() || 'Sans titre'; return this.touch(story); }
+  rename(id: string, title: string): Story { const story = this.mutate(id); story.title = title.trim() || 'Untitled'; return this.touch(story); }
   delete(id: string): void { if (!this.stories.delete(id)) throw new NotFoundException('Story not found'); }
   createInteraction(storyId: string, input: CreateInteractionDto): Story {
     const story = this.mutate(storyId);
@@ -29,8 +29,8 @@ export class StoriesService {
     const interactionId = randomUUID();
     story.interactions.push({
       id: interactionId,
-      title: 'Nouvelle interaction',
-      body: 'Décrivez ici ce qui se passe.',
+      title: 'New interaction',
+      body: 'Describe what happens here.',
       position: input.position ?? { x: 80 + story.interactions.length * 40, y: 100 + story.interactions.length * 30 },
       triggers: [{ id: randomUUID(), inputInteractionIds: input.parentId ? [input.parentId] : [], conditions: [] }],
     });
@@ -44,9 +44,17 @@ export class StoriesService {
     const story = this.mutate(storyId);
     if (!story.interactions.some((item) => item.id === interactionId)) throw new NotFoundException('Interaction not found');
     story.interactions = story.interactions.filter((item) => item.id !== interactionId);
-    for (const item of story.interactions) for (const trigger of item.triggers) {
-      trigger.inputInteractionIds = trigger.inputInteractionIds.filter((id) => id !== interactionId);
-      trigger.conditions = trigger.conditions.filter((condition) => condition.interactionId !== interactionId);
+    for (const item of story.interactions) {
+      item.triggers = item.triggers.flatMap((trigger) => {
+        const hadDeletedInput = trigger.inputInteractionIds.includes(interactionId);
+        const inputInteractionIds = trigger.inputInteractionIds.filter((id) => id !== interactionId);
+        if (hadDeletedInput && inputInteractionIds.length === 0) return [];
+        return [{
+          ...trigger,
+          inputInteractionIds,
+          conditions: trigger.conditions.filter((condition) => condition.interactionId !== interactionId),
+        }];
+      });
     }
     return this.touch(story);
   }
@@ -61,15 +69,22 @@ export class StoriesService {
     const story = this.mutate(storyId); this.interaction(story, interactionId).triggers.push({ id: randomUUID(), inputInteractionIds: [], conditions: [] });
     return this.touch(story);
   }
+  deleteTrigger(storyId: string, interactionId: string, triggerId: string): Story {
+    const story = this.mutate(storyId);
+    const interaction = this.interaction(story, interactionId);
+    if (!interaction.triggers.some((item) => item.id === triggerId)) throw new NotFoundException('Trigger not found');
+    interaction.triggers = interaction.triggers.filter((item) => item.id !== triggerId);
+    return this.touch(story);
+  }
   private mutate(id: string): Story { const story = this.stories.get(id); if (!story) throw new NotFoundException('Story not found'); return story; }
   private interaction(story: Story, id: string) { const item = story.interactions.find((interaction) => interaction.id === id); if (!item) throw new NotFoundException('Interaction not found'); return item; }
   private touch(story: Story): Story { story.updatedAt = new Date().toISOString(); return structuredClone(story); }
   private seed() {
-    const story = this.create({ title: 'Le chemin de la forêt' });
+    const story = this.create({ title: 'The forest path' });
     this.createInteraction(story.id, { position: { x: 80, y: 180 } });
-    const current = this.mutate(story.id); const start = current.interactions[0]; start.title = 'À l’orée de la forêt'; start.body = 'Deux chemins s’ouvrent devant vous.';
+    const current = this.mutate(story.id); const start = current.interactions[0]; start.title = 'At the edge of the forest'; start.body = 'Two paths open before you.';
     this.createInteraction(story.id, { parentId: start.id, position: { x: 430, y: 80 } });
     this.createInteraction(story.id, { parentId: start.id, position: { x: 430, y: 300 } });
-    const final = this.mutate(story.id); final.interactions[1].title = 'Le sentier lumineux'; final.interactions[1].body = 'Vous avancez vers une clairière paisible.'; final.interactions[2].title = 'Le sentier sombre'; final.interactions[2].body = 'Les arbres se resserrent autour de vous.';
+    const final = this.mutate(story.id); final.interactions[1].title = 'The bright trail'; final.interactions[1].body = 'You move toward a peaceful clearing.'; final.interactions[2].title = 'The dark trail'; final.interactions[2].body = 'The trees close in around you.';
   }
 }

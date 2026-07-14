@@ -1,2 +1,3 @@
 # ADR-002
-Choix React + NestJS + TypeScript.
+
+Use React + NestJS + TypeScript.
