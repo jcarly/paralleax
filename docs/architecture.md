@@ -5,6 +5,8 @@ Paralleax is a TypeScript monorepo.
 ## Applications
 
 - `apps/web`: React, Vite, React Flow. Contains the editor, reader, and web tests.
+  Graph mapping from stories to React Flow nodes and edges lives in `storyGraph.ts`
+  so trigger edge rendering can be tested outside the editor component.
 - `apps/api`: NestJS. Exposes story endpoints. Story application logic lives in
   `StoriesService`, while MVP in-memory storage is isolated behind `StoriesRepository`.
 - `packages/shared`: shared types, narrative reader logic, story operations, trigger cleanup rules, stale-response merge rules, and graph placement helpers used by both the web app and API.

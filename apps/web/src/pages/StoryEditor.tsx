@@ -2,14 +2,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Background,
   Controls,
-  MarkerType,
   MiniMap,
   ReactFlow,
   useNodesState,
   type Connection,
-  type Edge,
   type EdgeMouseHandler,
-  type Node,
   type NodeMouseHandler,
 } from '@xyflow/react';
 import { Link, useParams } from 'react-router-dom';
@@ -25,15 +22,15 @@ import {
   type TriggerCondition,
 } from '@paralleax/shared';
 import { api } from '../api';
-import { InteractionNode, type InteractionNodeData } from '../components/InteractionNode';
+import { InteractionNode } from '../components/InteractionNode';
+import {
+  buildInteractionNodes,
+  buildTriggerEdges,
+  type InteractionFlowNode,
+  type SelectedTrigger,
+} from '../storyGraph';
 
 const nodeTypes = { interaction: InteractionNode };
-type InteractionFlowNode = Node<InteractionNodeData>;
-interface SelectedTrigger {
-  interactionId: string;
-  triggerId: string;
-  inputInteractionId?: string;
-}
 
 export function StoryEditor() {
   const { storyId = '' } = useParams();
@@ -67,43 +64,13 @@ export function StoryEditor() {
   const selectedTriggerValue = selectedTriggerInteraction?.triggers.find(
     (trigger) => trigger.id === selectedTrigger?.triggerId,
   );
-  const storyNodes = useMemo<InteractionFlowNode[]>(
-    () =>
-      story?.interactions.map((item) => ({
-        id: item.id,
-        type: 'interaction',
-        position: item.position,
-        data: {
-          title: item.title,
-          body: item.body,
-          selected: item.id === selectedId,
-        },
-      })) ?? [],
-    [story, selectedId],
-  );
+  const storyNodes = useMemo(() => buildInteractionNodes(story, selectedId), [story, selectedId]);
 
   useEffect(() => {
     setNodes(storyNodes);
   }, [setNodes, storyNodes]);
 
-  const edges = useMemo<Edge[]>(
-    () =>
-      story?.interactions.flatMap((target) =>
-        target.triggers.flatMap((trigger) =>
-          trigger.inputInteractionIds.map((source) => ({
-            id: `${trigger.id}-${source}`,
-            source,
-            target: target.id,
-            markerEnd: { type: MarkerType.ArrowClosed },
-            label: trigger.conditions.length
-              ? `${trigger.conditions.length} condition(s)`
-              : undefined,
-            data: { interactionId: target.id, triggerId: trigger.id, inputInteractionId: source },
-          })),
-        ),
-      ) ?? [],
-    [story],
-  );
+  const edges = useMemo(() => buildTriggerEdges(story), [story]);
 
   const select: NodeMouseHandler = (_, node) => {
     setSelectedId(node.id);
