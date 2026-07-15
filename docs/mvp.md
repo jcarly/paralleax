@@ -17,6 +17,8 @@ The MVP validates the narrative core before adding characters, places, variables
 - Timing and probabilities.
 - Automatic choices.
 - Media.
+- Final interactions.
+- Persisted reader sessions and player saves.
 - AI.
 - Real-time collaboration.
 - Authentication.
@@ -31,12 +33,18 @@ core is validated.
 
 ## MVP Rules
 
-- An interaction can be available without input: it is then a starting point.
+- An inputless trigger without conditions is a starting trigger.
+- An inputless trigger with conditions is a contextual trigger evaluated during
+  reading.
 - An interaction should keep at least one trigger, including root interactions.
 - An interaction can have one or more input interactions through its trigger.
 - Several interactions can share the same input interaction: this creates a choice.
+- Several triggers can connect the same input interaction to the same output
+  interaction to represent OR condition groups.
 - MVP conditions only check whether an interaction has been visited or not.
-- If no interaction is available in the reader, the branch stops.
+- If no interaction is available in the reader, the current branch stops. In the
+  MVP, this is the only ending signal; later versions may distinguish a stopped
+  branch from an explicitly completed story.
 
 ## Stability Criteria
 
@@ -45,5 +53,9 @@ The MVP is considered stable when:
 - the editor does not lose data while editing or moving interactions;
 - automatically created outputs do not overlap;
 - triggers accept several inputs;
+- inputless triggers can be either starting triggers or contextual triggers based
+  on whether they have conditions;
+- authors can express OR condition groups through several triggers between the
+  same interactions;
 - the reader respects inputs and conditions;
 - unit, component, API, and Playwright tests pass in CI.

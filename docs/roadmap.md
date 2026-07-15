@@ -8,6 +8,10 @@
 - Interaction movement without data loss.
 - Output creation without overlap.
 - Triggers with several inputs.
+- Connection UX for choosing between adding an input to an existing trigger and
+  creating a new trigger.
+- Contextual inputless triggers with visited / not visited conditions.
+- OR condition groups through several triggers between the same interactions.
 - Trigger editing from graph edges.
 - Trigger cleanup when deleting interactions.
 - Visited / not visited conditions.
@@ -23,6 +27,7 @@
 - Interface internationalization foundation with UI copy extracted into translation keys or variables.
 - Initial locale structure so additional languages can be added without rewriting components.
 - Durable storage.
+- Persisted reader sessions and player saves after story persistence is stable.
 - Migrations.
 - Reproducible demo data.
 - UI wording pass for author-facing trigger vocabulary.
@@ -45,6 +50,8 @@
 - Attributes.
 - Interaction impacts on attributes.
 - World-based conditions.
+- Contextual inputless triggers based on broader world state.
+- Final interactions and explicit story completion.
 
 ## V0.5 - Timing and Probabilities
 

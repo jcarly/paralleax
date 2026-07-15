@@ -28,7 +28,10 @@ A trigger is eligible when:
 
 For input rules:
 
-- a trigger with no inputs matches only when `currentInteractionId` is `null`;
+- a trigger with no inputs and no conditions matches only when
+  `currentInteractionId` is `null`;
+- a trigger with no inputs and at least one condition has no input constraint and
+  can match during reading when its conditions match;
 - a trigger with inputs matches when `currentInteractionId` is one of its input
   interaction ids.
 
@@ -40,15 +43,21 @@ For conditions:
 
 Inputs on the same trigger are evaluated as OR.
 
-## Starting Interactions
+## Inputless Triggers
 
-Starting interactions are interactions with at least one root trigger. A root
-trigger has no input interactions.
+Inputless triggers have no input interactions. The MVP distinguishes two cases:
 
-Root triggers are evaluated only at the start of reading, when there is no
+- an inputless trigger without conditions is a starting trigger;
+- an inputless trigger with conditions is a contextual trigger.
+
+Starting triggers are evaluated only at the start of reading, when there is no
 current interaction. They are not re-offered after the reader has selected an
-interaction unless another linked trigger also makes the same interaction
-available.
+interaction unless another trigger also makes the same interaction available.
+
+Contextual inputless triggers are evaluated during reading. In the MVP, they can
+only use visited / not visited conditions. Later, the same mechanism can support
+world context, such as the current place, current character, time period, or
+other state.
 
 ## Available Interaction List
 
@@ -86,6 +95,11 @@ If no interaction is available after the current interaction, the branch ends.
 The reader does not automatically restart, jump to another root interaction, or
 select an interaction by itself.
 
+This is not a permanent story-completion rule. Later versions should distinguish
+between a branch that currently has no available interaction and an explicit
+story ending, likely represented by a final interaction or a play-session
+completion state.
+
 ## Out of Scope
 
 The MVP reader does not support:
@@ -95,6 +109,7 @@ The MVP reader does not support:
 - timing;
 - probabilities;
 - automatic choices;
+- final interactions;
 - weighted or prioritized choices;
 - persisted play sessions;
 - ordered or repeated history semantics.

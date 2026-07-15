@@ -83,6 +83,12 @@ This project follows a lightweight [Keep a Changelog](https://keepachangelog.com
 
 ### Documentation
 
+- Documented target contextual inputless triggers, final interactions, and player
+  save direction.
+- Added contextual inputless triggers to the MVP reader model.
+- Moved grouped route variants for OR condition groups into the MVP documentation.
+- Documented the MVP graph connection UX for choosing between existing trigger
+  inputs and new triggers.
 - Expanded ADRs for the MVP scope, stack, engine independence, and React Flow boundary decisions.
 - Documented current reader semantics, non-goals, and reader execution edge cases.
 - Added an ADR index and aligned the root README documentation reading order.

@@ -6,6 +6,7 @@ import {
   getNextChildPosition,
   getNextParentPosition,
   getNextRootPosition,
+  getAvailableInteractions,
   mergeServerStory,
   normalizeTriggerInputIds,
   updateTriggerInStory,
@@ -219,5 +220,50 @@ describe('shared story operations', () => {
 
   it('normalizes trigger inputs without changing their first-seen order', () => {
     expect(normalizeTriggerInputIds(['b', 'a', 'b', 'c'])).toEqual(['b', 'a', 'c']);
+  });
+
+  it('keeps inputless triggers without conditions available only at story start', () => {
+    const story = storyFixture();
+
+    expect(getAvailableInteractions(story, null, []).map((item) => item.id)).toEqual(['root']);
+    expect(getAvailableInteractions(story, 'root', ['root']).map((item) => item.id)).toEqual([
+      'middle',
+      'end',
+    ]);
+  });
+
+  it('evaluates inputless triggers with conditions during reading', () => {
+    const story = storyFixture();
+    story.interactions.push({
+      id: 'contextual',
+      title: 'Contextual',
+      body: 'Available after root without a direct input.',
+      position: { x: 760, y: 120 },
+      triggers: [
+        {
+          id: 'trigger-contextual',
+          inputInteractionIds: [],
+          conditions: [{ interactionId: 'root', hasBeenVisited: true }],
+        },
+      ],
+    });
+
+    expect(getAvailableInteractions(story, null, []).map((item) => item.id)).toEqual(['root']);
+    expect(
+      getAvailableInteractions(story, 'middle', ['root', 'middle']).map((item) => item.id),
+    ).toEqual(['end', 'contextual']);
+  });
+
+  it('deduplicates interactions made available by several eligible triggers', () => {
+    const story = storyFixture();
+    story.interactions[2].triggers.push({
+      id: 'trigger-end-contextual',
+      inputInteractionIds: [],
+      conditions: [{ interactionId: 'middle', hasBeenVisited: true }],
+    });
+
+    expect(
+      getAvailableInteractions(story, 'middle', ['root', 'middle']).map((item) => item.id),
+    ).toEqual(['end']);
   });
 });

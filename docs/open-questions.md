@@ -32,6 +32,15 @@ changes`, and whether every non-read permission implies `read`.
 - Consider examples for simple branching, visited-history conditions, shared
   triggers, alternative triggers, and cycles.
 
+## Reader State and Completion
+
+- Define whether final interactions are the only explicit story completion rule
+  or whether other completion conditions can exist later.
+- Define how a stopped branch differs from a completed story once contextual
+  inputless triggers and world state exist.
+- Define play-session persistence: manual save, autosave, save slots, and how
+  save data relates to story updates.
+
 ## Story Translation
 
 - Decide whether translating user-authored story content is worth implementing at
@@ -45,6 +54,13 @@ changes`, and whether every non-read permission implies `read`.
 - Keep React Flow as a rendering and interaction layer while it fits the editor.
 - Revisit the integration if trigger semantics or story operations start changing
   only to satisfy React Flow constraints.
+- Refine the grouped-edge inspector UX for several triggers that connect the same
+  source and target as part of the MVP editor work.
+- Define the connection gesture for multi-input triggers: decide whether existing
+  triggers appear as temporary drop targets, split handles, menu choices, or
+  another affordance while the author is dragging a new link.
+- Define how the graph visually separates several inputs that feed the same
+  trigger before reaching one output interaction.
 
 ## Documentation and Diagrams
 

@@ -46,6 +46,14 @@ execute every format it can produce.
 Exports should preserve structured story data and let target platforms handle
 their own runtime-specific concerns.
 
+## Not a Full Player Account System in the MVP
+
+The MVP reader can execute a story, but it should not become a full player
+account or save-management system yet.
+
+Persisted play sessions and player saves can be explored after story persistence
+and reader semantics are stable.
+
 ## Not a Content Translation System Yet
 
 Interface internationalization is separate from translating user-authored story

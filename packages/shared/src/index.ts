@@ -352,10 +352,11 @@ export function isTriggerEligible(
   currentInteractionId: string | null,
   visited: Set<string>,
 ): boolean {
-  const inputMatches =
-    trigger.inputInteractionIds.length === 0
-      ? currentInteractionId === null
-      : currentInteractionId !== null && trigger.inputInteractionIds.includes(currentInteractionId);
+  const hasInputs = trigger.inputInteractionIds.length > 0;
+  const hasConditions = trigger.conditions.length > 0;
+  const inputMatches = hasInputs
+    ? currentInteractionId !== null && trigger.inputInteractionIds.includes(currentInteractionId)
+    : hasConditions || currentInteractionId === null;
   return (
     inputMatches &&
     trigger.conditions.every((condition) =>

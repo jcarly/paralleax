@@ -42,7 +42,12 @@ Main MVP fields:
 
 A trigger has exactly one output interaction: the interaction that owns the trigger. Its inputs are alternative sources. In other words, several input interactions on the same trigger represent an OR: any one of them can make the output interaction reachable, as long as the trigger conditions also match.
 
-Every interaction should keep at least one trigger. A root interaction is represented by a trigger with no inputs.
+Every interaction should keep at least one trigger.
+
+An inputless trigger without conditions is a starting trigger. An inputless
+trigger with conditions is contextual: it does not depend on a previous
+interaction input, but it can become available when its conditions match during
+reading.
 
 ### MVP Condition
 
@@ -222,6 +227,7 @@ Later, an interaction may contain:
 - delay added to the timeline;
 - attribute impacts;
 - media;
+- final interaction flag;
 - conditional content or display pseudo-code.
 
 ### Target Trigger
@@ -238,10 +244,36 @@ Later, a trigger may take into account:
 - automatic trigger probability;
 - availability timing.
 
+An inputless trigger in the target model does not necessarily mean "available
+only at story start." The MVP already uses the same base distinction: inputless
+triggers without conditions are starting triggers, while inputless triggers with
+conditions can be evaluated during reading. Later conditions may include context,
+such as being in a place or meeting a character.
+
+### Play Session
+
+Later, a play session may persist reader progress.
+
+Possible elements:
+
+- current interaction;
+- visited interactions;
+- current world state;
+- available save points or autosave state;
+- completion status.
+
+Player saves are separate from story authoring persistence. Story persistence
+stores the authored scenario; play-session persistence stores a reader's progress
+through that scenario.
+
 ## Target Narrative Rules
 
 - If several interactions are available after an interaction, the reader offers a choice.
 - A choice may become automatic if a trigger probability is defined.
 - Timing may make an option unavailable after expiration.
-- If no interaction is available, the branch ends.
-- Branches without input interactions may start or resume elsewhere depending on a place, time period, or character.
+- An inputless trigger may start a story or become available later through world
+  context, such as a place, time period, or character.
+- If no interaction is available, the current branch may pause or stop, but the
+  whole story is not necessarily complete.
+- A story is explicitly complete when the reader reaches a final interaction or a
+  later completion rule marks the play session as complete.

@@ -9,7 +9,9 @@ details. They should stay covered by tests as the editor grows.
 - An interaction should keep at least one trigger.
 - A trigger belongs to exactly one output interaction.
 - A trigger can have zero or more input interactions.
-- A trigger with no inputs is a root trigger.
+- An inputless trigger without conditions is a starting trigger.
+- An inputless trigger with conditions is a contextual trigger evaluated during
+  reading.
 - Inputs on the same trigger are OR conditions: any one input can make the output
   interaction reachable if the trigger conditions also match.
 - Conditions on the same trigger are AND conditions: all conditions must match.
@@ -23,8 +25,18 @@ details. They should stay covered by tests as the editor grows.
 - A graph edge represents one trigger input, not necessarily the whole trigger.
 - A trigger with several inputs appears as several graph edges that share the same
   trigger id.
-- Editing a linked trigger should happen from the graph edge representing the
-  relationship.
+- Several triggers between the same source and target should be displayed as a
+  grouped edge with several route variants, while remaining distinct triggers in
+  the domain model.
+- Editing a linked trigger should happen from the graph edge or grouped route
+  representing the relationship.
+- When connecting interactions, the editor must let the author choose between
+  adding the source as an input to an existing trigger and creating a new trigger
+  when both are possible.
+- Adding an input to an existing trigger preserves one trigger with shared
+  conditions across several inputs.
+- Creating a new trigger creates a separate condition group for the same output
+  interaction.
 - Interaction editing should stay focused on interaction content and root trigger
   behavior.
 - Creating or deleting one edge must not silently mutate unrelated trigger inputs.
@@ -45,3 +57,7 @@ details. They should stay covered by tests as the editor grows.
 - Direct edits and pending suggestions should share an event-log foundation.
 - Interface internationalization applies to product UI copy, not user-authored
   story content.
+- Later, contextual inputless triggers may also depend on world state, not only
+  visited / not visited interaction conditions.
+- Story completion should be explicit, such as through a final interaction or
+  play-session completion rule.

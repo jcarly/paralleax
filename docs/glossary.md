@@ -25,15 +25,26 @@ interactions.
 An interaction that can lead to a trigger's output interaction. Several inputs on
 the same trigger are alternatives: any one of them can satisfy the input rule.
 
-### Root Trigger
+### Starting Trigger
 
-A trigger with no input interactions. It makes its output interaction available
-at the beginning of the story.
+An inputless trigger without conditions. It makes its output interaction
+available at the beginning of the story.
+
+### Contextual Trigger
+
+An inputless trigger with conditions. It has no previous-interaction input, but
+it can become available during reading when its conditions match.
 
 ### Condition
 
 An additional rule checked by a trigger. MVP conditions only check whether an
 interaction has been visited or not.
+
+### OR Condition Group
+
+A route variant represented by a distinct trigger. Conditions inside one trigger
+are AND, while several triggers for the same route represent OR between condition
+groups.
 
 ### Reader
 
@@ -46,6 +57,15 @@ The editor representation of one trigger input. A trigger with several inputs is
 shown as several edges that share the same trigger id.
 
 ## Post-MVP Terms
+
+### Final Interaction
+
+An interaction that explicitly completes the story or play session.
+
+### Play Session
+
+A reader's progress through a story, including the current interaction, visited
+history, and later world state or save data.
 
 ### User
 

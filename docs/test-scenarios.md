@@ -27,6 +27,14 @@ Cover the critical MVP paths: Story, Interaction, Trigger, and Reader.
 - Editor: deleting one edge removes only that input link and keeps the trigger as a root trigger when no inputs remain.
 - Editor/API: the last trigger of an interaction cannot be deleted.
 - Editor: creating a new canvas connection creates a dedicated trigger and does not mutate existing linked triggers.
+- Editor: when connecting to an interaction with existing triggers, the author can choose whether to add the source as an input of an existing trigger or create a new trigger.
+- Editor: adding a source to an existing trigger keeps the trigger conditions shared by all of its inputs.
+- Editor/Reader: several triggers between the same interactions represent OR
+  condition groups and show as one grouped route in the editor.
+- Reader engine: an inputless trigger without conditions is available only at
+  story start.
+- Reader engine: an inputless trigger with conditions can become available during
+  reading.
 - Editor: deleting an interaction removes triggers that output to it.
 - Editor: deleting an interaction removes it from trigger inputs and turns orphaned triggers into root triggers.
 - Reader engine: an interaction without input is available at startup.
@@ -52,9 +60,12 @@ Cover the critical MVP paths: Story, Interaction, Trigger, and Reader.
 2. Interaction movement stability.
 3. Automatic output placement.
 4. Triggers with several inputs.
-5. Trigger editing from graph edges.
-6. Precise trigger link creation and deletion.
-7. Direct graph creation from connection gestures.
-8. Trigger deletion and stale-save stability.
-9. Trigger cleanup when deleting interactions.
-10. Reader non-regression.
+5. Connection UX for choosing existing trigger inputs or new triggers.
+6. Contextual inputless triggers.
+7. OR condition groups through several triggers between the same interactions.
+8. Trigger editing from graph edges.
+9. Precise trigger link creation and deletion.
+10. Direct graph creation from connection gestures.
+11. Trigger deletion and stale-save stability.
+12. Trigger cleanup when deleting interactions.
+13. Reader non-regression.
