@@ -79,10 +79,10 @@ The web app currently uses plain CSS with shared custom properties for colors an
 elevation. This keeps the MVP light while the graph editor behavior is still
 stabilizing.
 
-Tailwind CSS is the preferred future styling framework once the UI grows enough
-to benefit from utility classes and a stricter design system. React Flow-specific
-styles, such as node handles and selected trigger edges, may remain in dedicated
-CSS because they target third-party graph classes directly.
+Tailwind CSS is a candidate to evaluate once the UI surface justifies a
+design-system decision. React Flow-specific styles, such as node handles and
+selected trigger edges, may remain in dedicated CSS because they target
+third-party graph classes directly.
 
 ## Tests and CI
 

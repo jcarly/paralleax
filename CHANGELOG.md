@@ -83,6 +83,9 @@ This project follows a lightweight [Keep a Changelog](https://keepachangelog.com
 
 ### Documentation
 
+- Expanded ADRs for the MVP scope, stack, engine independence, and React Flow boundary decisions.
+- Documented current reader semantics, non-goals, and reader execution edge cases.
+- Added an ADR index and aligned the root README documentation reading order.
 - Added the post-MVP roadmap direction for users, story default access, per-user story permissions, suggestions, review visibility, and approval workflows.
 - Added the roadmap direction for interface internationalization foundations and translation-ready UI copy.
 - Added glossary, domain invariants, and open questions documentation for stable vocabulary, model rules, and postponed design decisions.

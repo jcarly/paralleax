@@ -33,17 +33,22 @@ Recommended reading order:
 1. [Vision](docs/vision.md): product intent and long-term direction.
 2. [MVP scope](docs/mvp.md): what is intentionally included or excluded right now.
 3. [Domain model](docs/domain-model.md): Story, Interaction, Trigger, Reader, and future concepts.
-4. [Trigger semantics](docs/triggers.md): input rules, deletion behavior, and trigger editing UX.
-5. [User guide](docs/user-guide.md): current authoring workflow.
-6. [Architecture](docs/architecture.md): monorepo structure and runtime flow.
-7. [Design principles](docs/design-principles.md): UX and technical principles.
-8. [Test scenarios](docs/test-scenarios.md): critical regression scenarios.
-9. [Roadmap](docs/roadmap.md): planned progression after the MVP.
-10. [Changelog](CHANGELOG.md): notable implementation, test, and documentation changes.
+4. [Glossary](docs/glossary.md): shared vocabulary for product, code, tests, and UI copy.
+5. [Domain invariants](docs/domain-invariants.md): rules the model and editor projection must preserve.
+6. [Reader semantics](docs/reader-semantics.md): current execution rules for available interactions.
+7. [Trigger semantics](docs/triggers.md): input rules, deletion behavior, and trigger editing UX.
+8. [User guide](docs/user-guide.md): current authoring workflow.
+9. [Architecture](docs/architecture.md): monorepo structure and runtime flow.
+10. [Design principles](docs/design-principles.md): UX and technical principles.
+11. [Non-goals](docs/non-goals.md): product boundaries and non-objectives.
+12. [Test scenarios](docs/test-scenarios.md): critical regression scenarios.
+13. [Roadmap](docs/roadmap.md): planned progression after the MVP.
+14. [Open questions](docs/open-questions.md): postponed product and architecture questions.
+15. [Changelog](CHANGELOG.md): notable implementation, test, and documentation changes.
 
 Supporting references:
 
-- [ADR index](docs/decisions/): architecture decision records.
+- [ADR index](docs/decisions/README.md): architecture decision records.
 - [UML diagrams](docs/uml/README.md): MVP and long-term model diagrams.
 - [Meteor prototype refactor notes](MIGRATION.md): mapping from the original prototype to this refactor.
 - [Project changelog](CHANGELOG.md): chronological implementation notes and maintenance rules.

@@ -23,6 +23,15 @@ changes`, and whether every non-read permission implies `read`.
   list of events, a temporary draft state, or both.
 - Define how rejected suggestions are retained and whether they can be reopened.
 
+## Story Format and Examples
+
+- Define a stable `story-format.md` before durable persistence, migrations, JSON
+  import/export, or external integrations depend on the story shape.
+- Decide whether documented examples should include simplified JSON, expected
+  reader results, and associated regression tests.
+- Consider examples for simple branching, visited-history conditions, shared
+  triggers, alternative triggers, and cycles.
+
 ## Story Translation
 
 - Decide whether translating user-authored story content is worth implementing at
@@ -36,8 +45,6 @@ changes`, and whether every non-read permission implies `read`.
 - Keep React Flow as a rendering and interaction layer while it fits the editor.
 - Revisit the integration if trigger semantics or story operations start changing
   only to satisfy React Flow constraints.
-- Consider an ADR if the React Flow boundary becomes a long-term architectural
-  decision.
 
 ## Documentation and Diagrams
 
