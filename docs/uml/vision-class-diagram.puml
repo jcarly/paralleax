@@ -4,9 +4,58 @@ skinparam linetype ortho
 hide methods
 
 package "Narrative project" {
+  class User {
+    +id: UUID
+    +displayName: string
+  }
+
   class Story {
     +id: UUID
     +title: string
+    +creatorUserId: UUID
+    +defaultAccess: StoryDefaultAccess
+  }
+
+  class UserStoryPermission {
+    +userId: UUID
+    +storyId: UUID
+    +permission: StoryPermissionLevel
+  }
+
+  class StoryChangeProposal {
+    +id: UUID
+    +authorUserId: UUID
+    +status: ChangeProposalStatus
+    +createdAt: DateTime
+  }
+
+  class StoryChangeEvent {
+    +id: UUID
+    +actorUserId: UUID
+    +targetType: string
+    +targetId: UUID
+    +operation: string
+    +createdAt: DateTime
+  }
+
+  enum StoryDefaultAccess {
+    PRIVATE
+    PUBLIC_READ
+    PUBLIC_SUGGESTIONS
+  }
+
+  enum StoryPermissionLevel {
+    READ
+    SUGGEST
+    REVIEW
+    EDIT
+    MANAGE
+  }
+
+  enum ChangeProposalStatus {
+    PENDING
+    ACCEPTED
+    REJECTED
   }
 
   class World {
@@ -96,6 +145,18 @@ package "Runtime" {
   class RandomDecision
   class CharacterDecision
 }
+
+User "1" --> "0..*" Story : creates
+Story --> StoryDefaultAccess
+Story "1" *-- "0..*" UserStoryPermission
+UserStoryPermission "*" --> "1" User
+UserStoryPermission --> StoryPermissionLevel
+Story "1" *-- "0..*" StoryChangeProposal
+StoryChangeProposal "*" --> "1" User : author
+StoryChangeProposal --> ChangeProposalStatus
+StoryChangeProposal "0..1" *-- "0..*" StoryChangeEvent
+Story "1" *-- "0..*" StoryChangeEvent
+StoryChangeEvent "*" --> "1" User : actor
 
 Story "1" *-- "1" World
 Story "1" *-- "0..*" Interaction

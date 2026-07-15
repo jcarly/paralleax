@@ -83,6 +83,11 @@ This project follows a lightweight [Keep a Changelog](https://keepachangelog.com
 
 ### Documentation
 
+- Added the post-MVP roadmap direction for users, story default access, per-user story permissions, suggestions, review visibility, and approval workflows.
+- Added the roadmap direction for interface internationalization foundations and translation-ready UI copy.
+- Added glossary, domain invariants, and open questions documentation for stable vocabulary, model rules, and postponed design decisions.
+- Documented the React Flow integration boundary and the target model for users, story permissions, event-log-based change proposals, and UI-only internationalization.
+- Removed generated UML image renders so editable diagram sources remain the single source of truth.
 - Documented the styling direction: keep plain CSS for the MVP and evaluate Tailwind CSS when the UI surface grows.
 - Added and updated product, MVP, architecture, domain model, design principles, roadmap, UML, and ADR documentation.
 - Documented the strict MVP boundary: Story, Interaction, Trigger, and Reader only.

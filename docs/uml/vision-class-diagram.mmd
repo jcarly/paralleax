@@ -2,6 +2,19 @@ classDiagram
   direction LR
 
   class Story
+  class User
+  class UserStoryPermission
+  class StoryChangeProposal
+  class StoryChangeEvent
+  class StoryDefaultAccess {
+    <<enumeration>>
+  }
+  class StoryPermissionLevel {
+    <<enumeration>>
+  }
+  class ChangeProposalStatus {
+    <<enumeration>>
+  }
   class World
   class Interaction
   class Trigger
@@ -22,6 +35,18 @@ classDiagram
   class PlayerDecision
   class RandomDecision
   class CharacterDecision
+
+  User "1" --> "0..*" Story : creates
+  Story --> StoryDefaultAccess
+  Story "1" *-- "0..*" UserStoryPermission
+  UserStoryPermission "*" --> "1" User
+  UserStoryPermission --> StoryPermissionLevel
+  Story "1" *-- "0..*" StoryChangeProposal
+  StoryChangeProposal "*" --> "1" User : author
+  StoryChangeProposal --> ChangeProposalStatus
+  StoryChangeProposal "0..1" *-- "0..*" StoryChangeEvent
+  Story "1" *-- "0..*" StoryChangeEvent
+  StoryChangeEvent "*" --> "1" User : actor
 
   Story "1" *-- "1" World
   Story "1" *-- "0..*" Interaction

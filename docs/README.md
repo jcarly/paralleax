@@ -7,13 +7,16 @@ This folder is the product and technical source of truth for the project.
 1. [Vision](vision.md): problem, product direction, inspirations, and target uses.
 2. [MVP scope](mvp.md): strict scope of the current version.
 3. [Domain model](domain-model.md): MVP model and target model.
-4. [Trigger semantics](triggers.md): trigger inputs, deletion behavior, and editing UX.
-5. [User guide](user-guide.md): current authoring workflow.
-6. [Architecture](architecture.md): technical organization of the monorepo.
-7. [Design principles](design-principles.md): UX and technical principles.
-8. [Test scenarios](test-scenarios.md): test scenarios to maintain.
-9. [Roadmap](roadmap.md): planned progression after the MVP.
-10. [Changelog](../CHANGELOG.md): notable implementation, test, and documentation changes.
+4. [Glossary](glossary.md): shared vocabulary for product, code, tests, and UI copy.
+5. [Domain invariants](domain-invariants.md): rules the model and editor projection must preserve.
+6. [Trigger semantics](triggers.md): trigger inputs, deletion behavior, and editing UX.
+7. [User guide](user-guide.md): current authoring workflow.
+8. [Architecture](architecture.md): technical organization of the monorepo.
+9. [Design principles](design-principles.md): UX and technical principles.
+10. [Test scenarios](test-scenarios.md): test scenarios to maintain.
+11. [Roadmap](roadmap.md): planned progression after the MVP.
+12. [Open questions](open-questions.md): postponed product and architecture questions.
+13. [Changelog](../CHANGELOG.md): notable implementation, test, and documentation changes.
 
 ## Documentation Map
 
@@ -23,12 +26,15 @@ docs/
   vision.md                 Product intent and long-term direction
   mvp.md                    Current MVP boundaries
   domain-model.md           Business model and future model
+  glossary.md               Shared product and technical vocabulary
+  domain-invariants.md      Domain and editor projection rules
   triggers.md               Trigger semantics and editor rules
   user-guide.md             Current authoring workflow
   architecture.md           Technical architecture
   design-principles.md      UX and engineering principles
   test-scenarios.md         Regression scenarios
   roadmap.md                Product progression
+  open-questions.md         Postponed product and architecture questions
   decisions/                Architecture decision records
   uml/                      MVP and vision diagrams
 ../CHANGELOG.md             Change tracking and maintenance rules

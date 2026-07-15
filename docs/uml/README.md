@@ -2,6 +2,10 @@
 
 This folder deliberately separates the first MVP target model from the long-term vision.
 
+The checked-in UML sources are Mermaid (`.mmd`) and PlantUML (`.puml`) text
+files. Generated image renders are intentionally not stored so diagrams do not
+drift from the editable sources.
+
 ## 1. MVP Class Diagram
 
 The MVP only contains:
@@ -95,6 +99,19 @@ classDiagram
   direction LR
 
   class Story
+  class User
+  class UserStoryPermission
+  class StoryChangeProposal
+  class StoryChangeEvent
+  class StoryDefaultAccess {
+    <<enumeration>>
+  }
+  class StoryPermissionLevel {
+    <<enumeration>>
+  }
+  class ChangeProposalStatus {
+    <<enumeration>>
+  }
   class World
   class Interaction
   class Trigger
@@ -115,6 +132,18 @@ classDiagram
   class PlayerDecision
   class RandomDecision
   class CharacterDecision
+
+  User "1" --> "0..*" Story : creates
+  Story --> StoryDefaultAccess
+  Story "1" *-- "0..*" UserStoryPermission
+  UserStoryPermission "*" --> "1" User
+  UserStoryPermission --> StoryPermissionLevel
+  Story "1" *-- "0..*" StoryChangeProposal
+  StoryChangeProposal "*" --> "1" User : author
+  StoryChangeProposal --> ChangeProposalStatus
+  StoryChangeProposal "0..1" *-- "0..*" StoryChangeEvent
+  Story "1" *-- "0..*" StoryChangeEvent
+  StoryChangeEvent "*" --> "1" User : actor
 
   Story "1" *-- "1" World
   Story "1" *-- "0..*" Interaction
@@ -165,3 +194,5 @@ classDiagram
 - Inputs and conditions are modeled as association tables rather than identifier arrays. This suits PostgreSQL and avoids locking the API into a storage choice.
 - The reader does not persist play sessions yet.
 - Characters, places, attributes, effects, media, temporal concepts, and probabilities belong only to the Vision.
+- Users, story permissions, and change proposals also belong only to the Vision.
+  They depend on authentication, durable persistence, and post-MVP collaboration rules.

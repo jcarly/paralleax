@@ -20,12 +20,25 @@
 - Delete confirmations for interactions and triggers.
 - JSON export/import for stories.
 - Evaluate Tailwind CSS for broader UI styling while keeping React Flow-specific graph styles isolated.
+- Interface internationalization foundation with UI copy extracted into translation keys or variables.
+- Initial locale structure so additional languages can be added without rewriting components.
 - Durable storage.
 - Migrations.
 - Reproducible demo data.
 - UI wording pass for author-facing trigger vocabulary.
 
-## V0.3 - Advanced Narrative Model
+## V0.3 - Users, Permissions, and Review
+
+- User accounts, authentication, and story ownership.
+- Story default access settings for private stories, public reading, and public suggestions.
+- Per-user story permissions for reading, suggesting edits, reviewing suggestions, direct editing, and managing settings.
+- Permission hierarchy and inheritance rules to define before implementation.
+- Review rights that let authorized users see all pending suggestions for a story.
+- Review workflow for proposed story changes.
+- Approval rules that can require creator or authorized reviewer validation before suggested changes affect the story.
+- Event-log-based change history for accepted, rejected, and pending story modifications.
+
+## V0.4 - Advanced Narrative Model
 
 - Characters.
 - Places.
@@ -33,7 +46,7 @@
 - Interaction impacts on attributes.
 - World-based conditions.
 
-## V0.4 - Timing and Probabilities
+## V0.5 - Timing and Probabilities
 
 - Delays.
 - Choices with timers.

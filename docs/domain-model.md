@@ -59,6 +59,127 @@ See [Trigger semantics](triggers.md) for deletion rules and editor behavior.
 
 The long-term model may introduce the following concepts.
 
+### User
+
+A user represents an account identity. Users do not have global author, reader,
+reviewer, or editor types in the domain model. Those capabilities are story-level
+permissions.
+
+Possible elements:
+
+- profile information;
+- owned stories through `Story.creatorUserId`;
+- story-specific permission overrides;
+- authored changes and suggestions.
+
+User accounts, authentication, and collaboration remain outside the MVP. They are
+documented as a post-MVP direction because story permissions and review workflows
+depend on durable identity and persistence.
+
+### Story Permissions
+
+Later, a story may define a default access level and optional per-user permission
+overrides.
+
+The story keeps the creator user id and a global access setting. The global
+setting answers what users can do by default when they are not the creator and do
+not have a specific permission entry.
+
+Possible global access settings:
+
+- private: users cannot read the story unless explicitly allowed;
+- public read: users can read the story by default;
+- public suggestions: users can read and suggest changes by default.
+
+Specific user permissions can be represented by a join model such as
+`UserStoryPermission`, with a `userId`, a `storyId`, and the permission granted
+for that story.
+
+Possible story-level permissions:
+
+- read;
+- suggest changes;
+- review suggestions;
+- edit directly;
+- manage story settings.
+
+The exact permission hierarchy is still to be defined. For example, the project
+must decide whether `edit directly` includes `suggest changes` and `read`, and
+whether `manage story settings` includes every other permission or only access
+configuration rights.
+
+The effective permission is resolved by checking story ownership first, then any
+specific `UserStoryPermission`, then the story default access setting. For
+example, a private story can still grant read access to selected users, and a
+public-read story can still grant suggestion or direct editing rights only to
+selected users.
+
+Pending suggestions are not visible through a per-suggestion setting. Any user
+with review or approval rights on a story can see all pending suggestions for
+that story.
+
+### Story Change Proposal
+
+A story change proposal represents a suggested modification that may require
+approval before it affects the canonical story.
+
+Possible elements:
+
+- proposed story, interaction, or trigger changes;
+- author of the proposal;
+- original change author for direct edits;
+- approval requirement;
+- status such as pending, accepted, or rejected;
+- review history.
+
+The target workflow should keep a history of story modifications so users can see
+who changed what. A suggestion can use the same change history model, but with a
+status that marks it as not applied yet.
+
+An event log is the preferred direction for this history. Each event should record
+who changed what, when it changed, and which story object was affected, such as a
+story, interaction, trigger, trigger input, or condition. Suggestions can then be
+represented as events that are pending and not applied to the canonical story
+until approved.
+
+Depending on the story settings and the user's effective permission, proposed
+changes may be applied directly or wait for approval from the creator or a user
+with review rights on that story.
+
+Technically, the exact representation remains open: a proposal may be stored as a
+diff, a draft branch, or a set of structured events. The important domain rule is
+that proposed changes must remain inspectable before they affect the canonical
+story.
+
+### Story Change Event
+
+A story change event represents one recorded modification in the story history.
+
+Possible elements:
+
+- user who made the change;
+- target object type, such as story, interaction, trigger, trigger input, or condition;
+- target object id;
+- operation type;
+- previous and next values when useful;
+- timestamp;
+- optional proposal id when the event belongs to a pending suggestion.
+
+Accepted direct edits and pending suggestions should use the same event-log
+foundation. The difference is whether the event has already been applied to the
+canonical story.
+
+### Interface Internationalization
+
+Interface internationalization concerns application UI copy only: labels,
+buttons, menus, messages, and other product text should be extracted into
+translation keys or variables.
+
+Story titles, interaction titles, and interaction bodies are user-authored
+content. They are not part of interface internationalization. Translating story
+content is a separate product question and may not be worth implementing. If it
+is explored later, it should not be coupled to UI translation infrastructure.
+
 ### World
 
 The world contains places, characters, and the current time state.

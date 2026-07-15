@@ -29,6 +29,29 @@ The narrative engine must stay independent from the interface.
 
 The UI creates, visualizes, and edits a story. The engine must be able to evaluate a story without depending on React, React Flow, or NestJS, so it can be reused by other renderers: web app, game, Unity, interactive film, or external tooling.
 
+## React Flow Boundary
+
+React Flow is currently a good fit for the editor because Paralleax needs custom
+interaction nodes, graph edges, dragging, zooming, panning, and connection
+gestures. These needs match React Flow's native primitives without forcing the
+narrative model into a UI-specific shape.
+
+The important boundary is that React Flow must remain a canvas interaction and
+rendering layer. Stories, interactions, triggers, and reader rules must stay in
+the Paralleax domain model and shared packages. The application may map domain
+objects to React Flow nodes and edges, but it should not store stories as React
+Flow data.
+
+Current trigger edges are a projection: each visible edge represents one input of
+a trigger owned by an output interaction. This is acceptable while trigger editing
+remains edge-focused. If triggers later need richer visual grouping, review
+states, or condition summaries, the editor may introduce custom edges or explicit
+trigger nodes, but the underlying domain model should still drive that projection.
+
+A warning sign would be changing trigger semantics only to match React Flow
+constraints. In that case, the integration should be revisited before the UI
+starts shaping the engine.
+
 ## Current Flow
 
 1. The API exposes stories through NestJS endpoints.
