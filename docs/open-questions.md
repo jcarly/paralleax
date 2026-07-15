@@ -7,7 +7,7 @@ not block the MVP unless a future implementation touches the affected area.
 
 - Define the permission hierarchy: decide whether `manage story settings`
   includes every other permission, whether `edit directly` includes `suggest
-  changes`, and whether every non-read permission implies `read`.
+changes`, and whether every non-read permission implies `read`.
 - Define public access semantics: decide whether public stories are accessible
   without an account or only by authenticated users.
 - Define approval rules: decide who can approve pending suggestions, whether the
