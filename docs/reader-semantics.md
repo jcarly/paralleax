@@ -59,6 +59,12 @@ only use visited / not visited conditions. Later, the same mechanism can support
 world context, such as the current place, current character, time period, or
 other state.
 
+A contextual inputless trigger can be offered at the same time as normal linked
+transitions. For example, after interaction `A`, interaction `B` may be
+available because `A` is one of its trigger inputs, while interaction `X` may
+also be available because its inputless trigger condition, such as `C has been
+visited`, is already true.
+
 ## Available Interaction List
 
 The reader returns each available interaction at most once.

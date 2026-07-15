@@ -36,6 +36,7 @@ Use these files as the persistent memory for project preferences and decisions:
 - Add or update tests for every behavior change.
 - Update documentation when implementation semantics change.
 - Update `CHANGELOG.md` for every user-visible, architectural, testing, or documentation change.
+- Before changing reader or trigger behavior, update or consult `docs/reader-semantics.md`, `docs/triggers.md`, and `docs/domain-invariants.md`.
 - Keep trigger logic aligned with the MVP model: a trigger belongs to exactly one output interaction and may have several input interactions.
 - Keep linked trigger editing on graph edges; keep interaction editing focused on interaction content and root trigger behavior.
 - Run relevant verification before finishing a change: typecheck, unit/component tests, Playwright when editor flows change, coverage when test breadth changes, and build.

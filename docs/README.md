@@ -14,11 +14,12 @@ This folder is the product and technical source of truth for the project.
 8. [User guide](user-guide.md): current authoring workflow.
 9. [Architecture](architecture.md): technical organization of the monorepo.
 10. [Design principles](design-principles.md): UX and technical principles.
-11. [Non-goals](non-goals.md): boundaries that protect the product direction.
-12. [Test scenarios](test-scenarios.md): test scenarios to maintain.
-13. [Roadmap](roadmap.md): planned progression after the MVP.
-14. [Open questions](open-questions.md): postponed product and architecture questions.
-15. [Changelog](../CHANGELOG.md): notable implementation, test, and documentation changes.
+11. [UI direction](ui-direction.md): target Story Canvas, filters, and inspector model.
+12. [Non-goals](non-goals.md): boundaries that protect the product direction.
+13. [Test scenarios](test-scenarios.md): test scenarios to maintain.
+14. [Roadmap](roadmap.md): planned progression after the MVP.
+15. [Open questions](open-questions.md): postponed product and architecture questions.
+16. [Changelog](../CHANGELOG.md): notable implementation, test, and documentation changes.
 
 ## Documentation Map
 
@@ -35,6 +36,7 @@ docs/
   user-guide.md             Current authoring workflow
   architecture.md           Technical architecture
   design-principles.md      UX and engineering principles
+  ui-direction.md           Target Story Canvas and filtering direction
   non-goals.md              Product boundaries and non-objectives
   test-scenarios.md         Regression scenarios
   roadmap.md                Product progression

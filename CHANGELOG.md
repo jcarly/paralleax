@@ -65,6 +65,7 @@ This project follows a lightweight [Keep a Changelog](https://keepachangelog.com
 - Story and trigger operations now live in `packages/shared` and are reused by both the NestJS API and the React editor.
 - Root test and coverage commands now include the shared workspace.
 - Docker development now uses Node.js 24 and npm 12, matching the documented project requirements.
+- Docker development now uses `npm ci` instead of permissive install flags so dependency installation matches CI more closely.
 - `npm run docker:up` no longer forces a rebuild on every start; restart the Compose stack when dependencies change.
 - Canvas connections now create a dedicated linked trigger instead of mutating the first trigger on the target interaction.
 - Edge deletion now removes the selected input link first, deleting the whole trigger only when no input remains.
@@ -105,6 +106,7 @@ This project follows a lightweight [Keep a Changelog](https://keepachangelog.com
 - Added the roadmap direction for interface internationalization foundations and translation-ready UI copy.
 - Added glossary, domain invariants, and open questions documentation for stable vocabulary, model rules, and postponed design decisions.
 - Documented the React Flow integration boundary and the target model for users, story permissions, event-log-based change proposals, and UI-only internationalization.
+- Documented the target Story Canvas UI direction with left-side filters, one contextual inspector, neutral future groups, and post-MVP character/place focal points.
 - Removed generated UML image renders so editable diagram sources remain the single source of truth.
 - Documented the styling direction: keep plain CSS for the MVP and evaluate Tailwind CSS when the UI surface grows.
 - Added and updated product, MVP, architecture, domain model, design principles, roadmap, UML, and ADR documentation.

@@ -23,6 +23,9 @@
 - Visible save error handling.
 - Delete confirmations for interactions and triggers.
 - JSON export/import for stories.
+- Story Canvas UX exploration: keep the current graph semantics, but refine the
+  editor toward a story-first canvas with left-side navigation/filtering and a
+  contextual right inspector.
 - Evaluate Tailwind CSS for broader UI styling while keeping React Flow-specific graph styles isolated.
 - Interface internationalization foundation with UI copy extracted into translation keys or variables.
 - Initial locale structure so additional languages can be added without rewriting components.
@@ -47,6 +50,8 @@
 
 - Characters.
 - Places.
+- Neutral grouping concept for quests, chapters, arcs, or scene sequences.
+- Story Canvas filters/focal points for future groups, characters, and places.
 - Attributes.
 - Interaction impacts on attributes.
 - World-based conditions.

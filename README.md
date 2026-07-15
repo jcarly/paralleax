@@ -40,11 +40,12 @@ Recommended reading order:
 8. [User guide](docs/user-guide.md): current authoring workflow.
 9. [Architecture](docs/architecture.md): monorepo structure and runtime flow.
 10. [Design principles](docs/design-principles.md): UX and technical principles.
-11. [Non-goals](docs/non-goals.md): product boundaries and non-objectives.
-12. [Test scenarios](docs/test-scenarios.md): critical regression scenarios.
-13. [Roadmap](docs/roadmap.md): planned progression after the MVP.
-14. [Open questions](docs/open-questions.md): postponed product and architecture questions.
-15. [Changelog](CHANGELOG.md): notable implementation, test, and documentation changes.
+11. [UI direction](docs/ui-direction.md): target Story Canvas, filters, and inspector model.
+12. [Non-goals](docs/non-goals.md): product boundaries and non-objectives.
+13. [Test scenarios](docs/test-scenarios.md): critical regression scenarios.
+14. [Roadmap](docs/roadmap.md): planned progression after the MVP.
+15. [Open questions](docs/open-questions.md): postponed product and architecture questions.
+16. [Changelog](CHANGELOG.md): notable implementation, test, and documentation changes.
 
 Supporting references:
 
@@ -201,7 +202,7 @@ npm run docker:logs
 npm run docker:down
 ```
 
-If dependencies change, restart the stack. The Compose command runs `npm install` when each service starts:
+If dependencies change, restart the stack. The Compose command runs `npm ci` when each service starts:
 
 ```bash
 docker compose down

@@ -6,6 +6,26 @@ The MVP must stay understandable for an author who is not a developer.
 
 Every addition must be justified by a clear narrative need. Advanced concepts are documented, but they must not enter the code until the Story, Interaction, Trigger, and Reader core is stable.
 
+## Author-First Canvas
+
+Paralleax should help authors think in narrative terms rather than graph
+implementation terms.
+
+The editor may use a graph internally and visually, but the primary experience
+should feel like working with story moments, branches, choices, and consequences.
+See [UI direction](ui-direction.md) for the target Story Canvas model.
+
+## One Model, Several Focal Points
+
+The story model is unique. The interface can change what it emphasizes.
+
+Instead of building unrelated editors for story, graph, character, place, or
+timeline views, Paralleax should favor one Story Canvas that can be filtered,
+focused, collapsed, or highlighted from different points of view.
+
+Characters, places, variables, media, groups, and timeline concerns remain
+post-MVP concepts.
+
 ## Progressive Complexity
 
 The tool should let users start with a simple graph, then progressively add conditions, multiple inputs, timing, probabilities, characters, or places.

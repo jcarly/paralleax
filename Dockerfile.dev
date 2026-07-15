@@ -10,7 +10,7 @@ COPY apps/api/package.json apps/api/package.json
 COPY apps/web/package.json apps/web/package.json
 COPY packages/shared/package.json packages/shared/package.json
 
-RUN npm install --legacy-peer-deps --no-update-notifier --force
+RUN npm ci --no-update-notifier
 
 COPY . .
 
