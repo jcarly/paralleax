@@ -15,7 +15,11 @@ import {
   type TriggerCondition,
 } from '@paralleax/shared';
 import { api } from '../api';
-import { findCreatedTrigger, getPendingConnection } from '../storyConnection';
+import {
+  findCreatedTrigger,
+  getPendingConnection,
+  getPendingTriggerInputConnection,
+} from '../storyConnection';
 import { planTriggerInputDeletion } from '../storyTriggerInput';
 
 export function useStoryEditorPersistence(storyId: string) {
@@ -126,6 +130,28 @@ export function useStoryEditorPersistence(storyId: string) {
     [mergeIncomingStory, story, storyId],
   );
 
+  const connectToExistingTrigger = useCallback(
+    async (sourceId: string, targetId: string, triggerId: string) => {
+      const pending = getPendingTriggerInputConnection(story, sourceId, targetId, triggerId);
+      if (!pending) return;
+
+      const inputInteractionIds = [...pending.trigger.inputInteractionIds, pending.sourceId];
+      deletedTriggerInputKeys.current.delete(`${pending.trigger.id}:${pending.sourceId}`);
+      const patch = {
+        inputInteractionIds,
+        conditions: pending.trigger.conditions,
+      };
+      setStory((current) =>
+        current
+          ? updateTriggerInStory(current, pending.targetId, pending.trigger.id, patch)
+          : current,
+      );
+      const updated = await api.updateTrigger(storyId, pending.targetId, pending.trigger.id, patch);
+      setStory((current) => (current ? mergeIncomingStory(current, updated) : updated));
+    },
+    [mergeIncomingStory, story, storyId],
+  );
+
   const createRoot = useCallback(async () => {
     const next = await api.createInteraction(storyId, {
       position: story ? getNextRootPosition(story) : getNextRootPosition(emptyStory(storyId)),
@@ -229,6 +255,7 @@ export function useStoryEditorPersistence(storyId: string) {
     deleteTrigger,
     deleteTriggerInput,
     connectInteractions,
+    connectToExistingTrigger,
     createRoot,
     createChild,
     createChildFromInteraction,

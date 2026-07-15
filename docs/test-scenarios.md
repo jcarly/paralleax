@@ -34,6 +34,10 @@ Cover the critical MVP paths: Story, Interaction, Trigger, and Reader.
 - Editor/API: the last trigger of an interaction cannot be deleted.
 - Editor: creating a new canvas connection creates a dedicated trigger and does not mutate existing linked triggers.
 - Editor: when connecting to an interaction with existing triggers, the author can choose whether to add the source as an input of an existing trigger or create a new trigger.
+- Editor: dropping a connection on an existing trigger marker adds the source as
+  another input of that trigger.
+- Editor: dropping a connection on the empty interaction input handle creates a
+  new trigger for that output interaction.
 - Editor: adding a source to an existing trigger keeps the trigger conditions shared by all of its inputs.
 - Editor/Reader: several triggers between the same interactions represent OR
   condition groups and show as one grouped route in the editor.

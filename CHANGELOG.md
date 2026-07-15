@@ -14,6 +14,11 @@ This project follows a lightweight [Keep a Changelog](https://keepachangelog.com
 - Hover action buttons on interactions for creating source and child interactions directly from the graph.
 - Visible trigger markers on graph links and root interactions.
 - Test action from the editor can start the reader from the selected interaction.
+- Connections can now target an existing trigger marker to add another input to
+  that trigger, while the empty interaction input handle creates a separate
+  trigger.
+- Shared trigger inputs now visually converge on the same circular trigger marker
+  before linking to the output interaction.
 - Shared placement helpers and tests for root and parent interaction creation.
 - User guide for the current MVP authoring workflow.
 - Playwright coverage for editing root trigger path conditions from the interaction inspector.

@@ -16,17 +16,19 @@ import { InteractionInspector } from '../components/InteractionInspector';
 import { InteractionNode } from '../components/InteractionNode';
 import { TriggerEdge } from '../components/TriggerEdge';
 import { TriggerInspector } from '../components/TriggerInspector';
+import { TriggerNode } from '../components/TriggerNode';
 import { useStoryEditorPersistence } from '../hooks/useStoryEditorPersistence';
 import {
   buildInteractionNodes,
+  buildTriggerNodes,
   buildTriggerEdges,
-  type InteractionFlowNode,
   type SelectedTrigger,
+  type StoryFlowNode,
   type TriggerFlowEdge,
 } from '../storyGraph';
 import { findInteraction, findSelectedTrigger } from '../storySelection';
 
-const nodeTypes = { interaction: InteractionNode };
+const nodeTypes = { interaction: InteractionNode, trigger: TriggerNode };
 const edgeTypes = { trigger: TriggerEdge };
 const droppedNodeOffset = { x: 110, y: 48 };
 
@@ -41,6 +43,7 @@ export function StoryEditor() {
     deleteTrigger,
     deleteTriggerInput,
     connectInteractions,
+    connectToExistingTrigger,
     createRoot,
     createChild,
     createChildFromInteraction,
@@ -50,12 +53,12 @@ export function StoryEditor() {
   } = useStoryEditorPersistence(storyId);
   const [selectedId, setSelectedId] = useState<string>();
   const [selectedTrigger, setSelectedTrigger] = useState<SelectedTrigger>();
-  const [nodes, setNodes, onNodesChange] = useNodesState<InteractionFlowNode>([]);
+  const [nodes, setNodes, onNodesChange] = useNodesState<StoryFlowNode>([]);
   const pendingConnectionStart = useRef<{
     nodeId: string;
     handleType: 'source' | 'target';
   } | null>(null);
-  const flowInstance = useRef<ReactFlowInstance<InteractionFlowNode, TriggerFlowEdge> | null>(null);
+  const flowInstance = useRef<ReactFlowInstance<StoryFlowNode, TriggerFlowEdge> | null>(null);
 
   const selected = findInteraction(story, selectedId);
   const selectedTriggerTarget = findSelectedTrigger(story, selectedTrigger);
@@ -78,10 +81,20 @@ export function StoryEditor() {
       }),
     [closeInspector, createChildFromInteraction, createParentForInteraction, selectedId, story],
   );
+  const triggerNodes = useMemo(
+    () =>
+      buildTriggerNodes(story, selectedTrigger, {
+        onSelectTrigger: (interactionId, triggerId) => {
+          closeInspector();
+          setSelectedTrigger({ interactionId, triggerId });
+        },
+      }),
+    [closeInspector, selectedTrigger, story],
+  );
 
   useEffect(() => {
-    setNodes(storyNodes);
-  }, [setNodes, storyNodes]);
+    setNodes([...storyNodes, ...triggerNodes]);
+  }, [setNodes, storyNodes, triggerNodes]);
 
   const selectTrigger: EdgeMouseHandler = (_, edge) => {
     const data = edge.data as Partial<SelectedTrigger> | undefined;
@@ -106,6 +119,7 @@ export function StoryEditor() {
   );
 
   const select: NodeMouseHandler = (_, node) => {
+    if (node.type !== 'interaction') return;
     closeInspector();
     setSelectedId(node.id);
   };
@@ -121,9 +135,23 @@ export function StoryEditor() {
     };
   };
 
-  const endCanvasConnection: OnConnectEnd = (_, connectionState) => {
+  const endCanvasConnection: OnConnectEnd = (event, connectionState) => {
     const start = pendingConnectionStart.current;
     pendingConnectionStart.current = null;
+    const triggerDropTarget = getTriggerDropTarget(event);
+    if (
+      start?.handleType === 'source' &&
+      triggerDropTarget?.interactionId &&
+      triggerDropTarget.triggerId
+    ) {
+      void connectToExistingTrigger(
+        start.nodeId,
+        triggerDropTarget.interactionId,
+        triggerDropTarget.triggerId,
+      );
+      return;
+    }
+
     if (!start || connectionState.isValid === true || connectionState.toNode) return;
     const position = getDroppedInteractionPosition(connectionState.pointer, flowInstance.current);
 
@@ -254,9 +282,19 @@ export function StoryEditor() {
   );
 }
 
+function getTriggerDropTarget(event: MouseEvent | TouchEvent) {
+  const target = event.target instanceof Element ? event.target : null;
+  const marker = target?.closest<HTMLElement>('[data-trigger-drop-target="true"]');
+  if (!marker) return undefined;
+  return {
+    interactionId: marker.dataset.interactionId,
+    triggerId: marker.dataset.triggerId,
+  };
+}
+
 function getDroppedInteractionPosition(
   pointer: Position | null,
-  flow: ReactFlowInstance<InteractionFlowNode, TriggerFlowEdge> | null,
+  flow: ReactFlowInstance<StoryFlowNode, TriggerFlowEdge> | null,
 ): Position | undefined {
   if (!pointer || !flow) return undefined;
   const flowPosition = flow.screenToFlowPosition(pointer);

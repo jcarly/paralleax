@@ -50,6 +50,7 @@ export function InteractionNode({ id, data }: NodeProps) {
       ) : null}
       <Handle
         type="target"
+        id="create-source-input"
         position={Position.Left}
         className="node-create node-create-parent nodrag nopan"
         role="button"
@@ -61,10 +62,19 @@ export function InteractionNode({ id, data }: NodeProps) {
       >
         +
       </Handle>
+      <Handle
+        type="target"
+        id="new-trigger-input"
+        position={Position.Left}
+        className="node-trigger-input nodrag nopan"
+        aria-label="Create new trigger input"
+        title="Create new trigger"
+      />
       <strong>{d.title}</strong>
       <span>{d.body}</span>
       <Handle
         type="source"
+        id="interaction-output"
         position={Position.Right}
         className="node-create node-create-child nodrag nopan"
         role="button"

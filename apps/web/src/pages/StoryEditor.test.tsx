@@ -120,15 +120,39 @@ vi.mock('@xyflow/react', async () => {
             <div key={edge.id}>
               <button
                 className={edge.className}
-                data-testid={`flow-edge-${edge.source}-${edge.target}`}
+                data-testid={
+                  edge.data?.inputInteractionId
+                    ? `flow-edge-${edge.data.inputInteractionId}-${edge.data.interactionId}`
+                    : `flow-edge-${edge.source}-${edge.target}`
+                }
                 onClick={(event) => onEdgeClick?.(event, edge)}
-              />
-              <button
-                data-testid={`flow-trigger-${edge.source}-${edge.target}`}
-                onClick={() => edge.data?.onSelectTrigger?.(edge.data)}
               />
             </div>
           ))}
+          {nodes
+            .filter((node: any) => node.type === 'trigger')
+            .flatMap((triggerNode: any) =>
+              nodes
+                .filter((node: any) => node.type === 'interaction')
+                .filter((node: any) => node.id !== triggerNode.data.interactionId)
+                .map((node: any) => (
+                  <button
+                    key={`${node.id}-${triggerNode.id}`}
+                    data-testid={`drop-source-${node.id}-on-trigger-${triggerNode.data.interactionId}`}
+                    data-trigger-drop-target="true"
+                    data-interaction-id={triggerNode.data.interactionId}
+                    data-trigger-id={triggerNode.data.triggerId}
+                    onClick={(event) => {
+                      onConnectStart?.(event, { nodeId: node.id, handleType: 'source' });
+                      onConnectEnd?.(event, {
+                        isValid: null,
+                        toNode: null,
+                        pointer: null,
+                      });
+                    }}
+                  />
+                )),
+            )}
           {children}
         </div>
       );
@@ -614,6 +638,33 @@ describe('StoryEditor', () => {
     expect(await screen.findByTestId('flow-edge-interaction-2-interaction-3')).toBeInTheDocument();
   });
 
+  it('adds a source to an existing trigger when the connection is dropped on its marker', async () => {
+    const user = userEvent.setup();
+    const story = storyWithThreeInteractions();
+    story.interactions[1].triggers[0].conditions = [
+      { interactionId: 'interaction-1', hasBeenVisited: true },
+    ];
+    const connectedStory = structuredClone(story);
+    connectedStory.interactions[1].triggers[0].inputInteractionIds = [
+      'interaction-1',
+      'interaction-3',
+    ];
+    vi.mocked(api.updateTrigger).mockResolvedValue(connectedStory);
+
+    await renderEditor(story);
+    await user.click(screen.getByTestId('drop-source-interaction-3-on-trigger-interaction-2'));
+
+    await waitFor(() => {
+      expect(api.addTrigger).not.toHaveBeenCalled();
+      expect(api.updateTrigger).toHaveBeenCalledWith('story-1', 'interaction-2', 'trigger-2', {
+        inputInteractionIds: ['interaction-1', 'interaction-3'],
+        conditions: [{ interactionId: 'interaction-1', hasBeenVisited: true }],
+      });
+    });
+    expect(screen.getByTestId('flow-edge-interaction-1-interaction-2')).toBeInTheDocument();
+    expect(await screen.findByTestId('flow-edge-interaction-3-interaction-2')).toBeInTheDocument();
+  });
+
   it('does not restore a deleted link when another canvas connection is created from that interaction', async () => {
     const user = userEvent.setup();
     const story = storyWithThreeInteractions();
@@ -767,7 +818,7 @@ describe('StoryEditor', () => {
 
     expect(screen.getByTestId('flow-edge-interaction-1-interaction-3')).toBeInTheDocument();
     expect(screen.getByTestId('flow-edge-interaction-2-interaction-3')).toBeInTheDocument();
-    expect(screen.getByTestId('flow-trigger-interaction-1-interaction-3')).toBeInTheDocument();
+    expect(screen.getByTestId('flow-trigger-interaction-3-trigger-3')).toBeInTheDocument();
   });
 
   it('adds, edits, and removes trigger conditions', async () => {

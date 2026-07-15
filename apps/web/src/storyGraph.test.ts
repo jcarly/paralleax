@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { MarkerType } from '@xyflow/react';
 import type { Story } from '@paralleax/shared';
-import { buildInteractionNodes, buildTriggerEdges } from './storyGraph';
+import {
+  buildInteractionNodes,
+  buildTriggerEdges,
+  buildTriggerNodes,
+  getTriggerNodeId,
+} from './storyGraph';
 
 const story: Story = {
   id: 'story-1',
@@ -69,6 +74,8 @@ describe('story graph mapping', () => {
   });
 
   it('builds one edge per trigger input with selected edge state', () => {
+    const triggerNodeId = getTriggerNodeId('interaction-2', 'trigger-linked');
+
     expect(
       buildTriggerEdges(story, {
         interactionId: 'interaction-2',
@@ -80,8 +87,9 @@ describe('story graph mapping', () => {
         id: 'trigger-linked-interaction-1',
         type: 'trigger',
         source: 'interaction-1',
-        target: 'interaction-2',
-        markerEnd: { type: MarkerType.ArrowClosed },
+        sourceHandle: 'interaction-output',
+        target: triggerNodeId,
+        targetHandle: 'trigger-input',
         className: 'trigger-edge',
         data: {
           interactionId: 'interaction-2',
@@ -95,8 +103,9 @@ describe('story graph mapping', () => {
         id: 'trigger-linked-interaction-3',
         type: 'trigger',
         source: 'interaction-3',
-        target: 'interaction-2',
-        markerEnd: { type: MarkerType.ArrowClosed },
+        sourceHandle: 'interaction-output',
+        target: triggerNodeId,
+        targetHandle: 'trigger-input',
         className: 'trigger-edge selected',
         data: {
           interactionId: 'interaction-2',
@@ -106,11 +115,52 @@ describe('story graph mapping', () => {
           conditionCount: 1,
         },
       },
+      {
+        id: 'trigger-linked-output',
+        type: 'trigger',
+        source: triggerNodeId,
+        sourceHandle: 'trigger-output',
+        target: 'interaction-2',
+        targetHandle: 'new-trigger-input',
+        markerEnd: { type: MarkerType.ArrowClosed },
+        className: 'trigger-edge',
+        data: {
+          interactionId: 'interaction-2',
+          triggerId: 'trigger-linked',
+          selected: false,
+          conditionCount: 1,
+        },
+      },
+    ]);
+  });
+
+  it('builds one shared trigger node for a multi-input trigger', () => {
+    expect(
+      buildTriggerNodes(story, {
+        interactionId: 'interaction-2',
+        triggerId: 'trigger-linked',
+      }),
+    ).toEqual([
+      {
+        id: 'trigger:interaction-2:trigger-linked',
+        type: 'trigger',
+        position: { x: 436, y: 229 },
+        draggable: false,
+        selectable: false,
+        data: {
+          interactionId: 'interaction-2',
+          triggerId: 'trigger-linked',
+          selected: true,
+          conditionCount: 1,
+          inputCount: 2,
+        },
+      },
     ]);
   });
 
   it('returns empty graph parts without a story', () => {
     expect(buildInteractionNodes(undefined, undefined)).toEqual([]);
+    expect(buildTriggerNodes(undefined)).toEqual([]);
     expect(buildTriggerEdges(undefined)).toEqual([]);
   });
 });

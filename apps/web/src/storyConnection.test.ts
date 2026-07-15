@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import type { Story } from '@paralleax/shared';
-import { findCreatedTrigger, getPendingConnection } from './storyConnection';
+import {
+  findCreatedTrigger,
+  getPendingConnection,
+  getPendingTriggerInputConnection,
+} from './storyConnection';
 
 const story: Story = {
   id: 'story-1',
@@ -44,7 +48,7 @@ describe('story connection helpers', () => {
       source: 'interaction-1',
       target: 'interaction-2',
       sourceHandle: null,
-      targetHandle: null,
+      targetHandle: 'new-trigger-input',
     });
 
     expect(pending?.sourceId).toBe('interaction-1');
@@ -52,7 +56,19 @@ describe('story connection helpers', () => {
     expect(pending?.existingTriggerIds.has('trigger-existing')).toBe(true);
   });
 
-  it('ignores missing, self, unknown target, and duplicate connections', () => {
+  it('prepares a new trigger connection even when another trigger already links the same interactions', () => {
+    const pending = getPendingConnection(story, {
+      source: 'interaction-3',
+      target: 'interaction-2',
+      sourceHandle: null,
+      targetHandle: 'new-trigger-input',
+    });
+
+    expect(pending?.sourceId).toBe('interaction-3');
+    expect(pending?.target.id).toBe('interaction-2');
+  });
+
+  it('ignores missing, self, unknown target, and non-route target handles', () => {
     expect(
       getPendingConnection(undefined, {
         source: 'interaction-1',
@@ -79,11 +95,45 @@ describe('story connection helpers', () => {
     ).toBeUndefined();
     expect(
       getPendingConnection(story, {
-        source: 'interaction-3',
+        source: 'interaction-1',
         target: 'interaction-2',
         sourceHandle: null,
-        targetHandle: null,
+        targetHandle: 'create-source-input',
       }),
+    ).toBeUndefined();
+  });
+
+  it('prepares an existing trigger input connection', () => {
+    const pending = getPendingTriggerInputConnection(
+      story,
+      'interaction-1',
+      'interaction-2',
+      'trigger-existing',
+    );
+
+    expect(pending?.sourceId).toBe('interaction-1');
+    expect(pending?.targetId).toBe('interaction-2');
+    expect(pending?.trigger.id).toBe('trigger-existing');
+  });
+
+  it('ignores invalid existing trigger input connections', () => {
+    expect(
+      getPendingTriggerInputConnection(undefined, 'interaction-1', 'interaction-2', 'trigger'),
+    ).toBeUndefined();
+    expect(
+      getPendingTriggerInputConnection(story, 'interaction-2', 'interaction-2', 'trigger-existing'),
+    ).toBeUndefined();
+    expect(
+      getPendingTriggerInputConnection(story, 'missing', 'interaction-2', 'trigger-existing'),
+    ).toBeUndefined();
+    expect(
+      getPendingTriggerInputConnection(story, 'interaction-1', 'missing', 'trigger-existing'),
+    ).toBeUndefined();
+    expect(
+      getPendingTriggerInputConnection(story, 'interaction-1', 'interaction-2', 'missing'),
+    ).toBeUndefined();
+    expect(
+      getPendingTriggerInputConnection(story, 'interaction-3', 'interaction-2', 'trigger-existing'),
     ).toBeUndefined();
   });
 

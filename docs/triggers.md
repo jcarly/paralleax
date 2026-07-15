@@ -125,12 +125,12 @@ Adding the source to an existing trigger means every input on that trigger share
 the same condition set. Creating a new trigger means the route has its own
 condition group.
 
-Graphically, the editor should support a split or merge connection gesture for
-multi-input triggers. For example, while a connection is being dragged toward an
-interaction, the graph may reveal a trigger marker or drop target in addition to
-the normal interaction target. Dropping on the trigger target adds the source as
-another input of that trigger. Dropping on the interaction or a "new route"
-affordance creates a separate trigger.
+Graphically, a linked trigger is represented as a circular marker between its
+inputs and its output interaction. When a trigger has several inputs, their links
+all meet at the same marker, then one output link goes from that marker to the
+output interaction. Dropping a connection on an existing trigger marker adds the
+source as another input of that trigger. Dropping a connection on the empty input
+handle of an interaction creates a separate trigger for that output interaction.
 
 Dropping a connection on empty canvas is a creation shortcut:
 

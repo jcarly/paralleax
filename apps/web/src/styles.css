@@ -320,13 +320,33 @@ header span {
 .node-create-child {
   right: -16px;
 }
+.node-trigger-input {
+  left: -7px;
+  top: calc(50% + 30px);
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--color-primary);
+  border-radius: 999px;
+  background: var(--color-surface);
+  opacity: 0;
+  transition:
+    opacity 120ms ease,
+    box-shadow 120ms ease;
+}
+.interaction-node:hover .node-create,
+.interaction-node:focus-within .node-create,
+.interaction-node:hover .node-trigger-input,
+.interaction-node:focus-within .node-trigger-input {
+  opacity: 1;
+}
 .interaction-node:hover .node-create,
 .interaction-node:focus-within .node-create {
-  opacity: 1;
   transform: translateY(-50%) scale(1);
 }
 .node-create:hover,
-.node-create:focus-visible {
+.node-create:focus-visible,
+.node-trigger-input:hover,
+.node-trigger-input:focus-visible {
   box-shadow: 0 0 0 5px var(--color-primary-halo-strong);
   outline: none;
 }
@@ -352,7 +372,6 @@ header span {
   stroke-width: 3;
 }
 .trigger-marker {
-  position: absolute;
   width: 18px;
   height: 18px;
   padding: 0;
@@ -361,6 +380,21 @@ header span {
   background: var(--color-trigger);
   box-shadow: 0 0 0 3px var(--color-trigger-halo);
   pointer-events: all;
+}
+.trigger-node {
+  position: relative;
+  width: 18px;
+  height: 18px;
+}
+.trigger-node .trigger-marker {
+  position: absolute;
+  inset: 0;
+}
+.trigger-node-handle {
+  width: 8px;
+  height: 8px;
+  border: 0;
+  background: transparent;
 }
 .trigger-marker:hover,
 .trigger-marker:focus-visible,
