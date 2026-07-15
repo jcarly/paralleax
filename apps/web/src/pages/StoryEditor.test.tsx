@@ -43,6 +43,7 @@ vi.mock('@xyflow/react', async () => {
       onConnectEnd,
       onEdgeClick,
       onNodeClick,
+      onPaneClick,
       onNodeDragStop,
       children,
     }: any) => {
@@ -55,6 +56,7 @@ vi.mock('@xyflow/react', async () => {
 
       return (
         <div data-testid="react-flow">
+          <button data-testid="flow-pane" onClick={(event) => onPaneClick?.(event)} />
           {nodes.map((node: any) => {
             const NodeComponent = nodeTypes[node.type];
             return (
@@ -505,9 +507,9 @@ describe('StoryEditor', () => {
     await user.click(screen.getByRole('button', { name: 'Delete interaction' }));
 
     expect(api.deleteInteraction).toHaveBeenCalledWith('story-1', 'interaction-1');
-    expect(
-      await screen.findByText('Select a block to edit its content, or select a trigger marker.'),
-    ).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByRole('complementary', { name: 'Inspector' })).not.toBeInTheDocument();
+    });
   });
 
   it('persists a canvas connection as a trigger input', async () => {
@@ -812,6 +814,29 @@ describe('StoryEditor', () => {
 
     expect(screen.queryByRole('heading', { name: 'Path conditions' })).not.toBeInTheDocument();
     expect(screen.getByLabelText('Title')).toHaveValue('Second interaction');
+  });
+
+  it('only shows the inspector while an interaction or trigger is selected', async () => {
+    const user = userEvent.setup();
+    const story = storyWithTwoInteractions();
+
+    await renderEditor(story);
+
+    expect(screen.queryByRole('complementary', { name: 'Inspector' })).not.toBeInTheDocument();
+
+    await user.click(screen.getByTestId('flow-node-interaction-1'));
+    expect(screen.getByRole('complementary', { name: 'Inspector' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Title')).toHaveValue('Original title');
+
+    await user.click(screen.getByRole('button', { name: 'Close inspector' }));
+    expect(screen.queryByRole('complementary', { name: 'Inspector' })).not.toBeInTheDocument();
+
+    await user.click(screen.getByTestId('flow-edge-interaction-1-interaction-2'));
+    expect(screen.getByRole('complementary', { name: 'Inspector' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Path conditions' })).toBeInTheDocument();
+
+    await user.click(screen.getByTestId('flow-pane'));
+    expect(screen.queryByRole('complementary', { name: 'Inspector' })).not.toBeInTheDocument();
   });
 
   it('edits root trigger conditions from the root trigger marker', async () => {

@@ -55,6 +55,8 @@ This project follows a lightweight [Keep a Changelog](https://keepachangelog.com
 - Interaction input and output controls now act as the visible connection handles.
 - Trigger inputs and outputs are no longer duplicated in the trigger inspector;
   the graph is the source of truth for those relationships.
+- The editor inspector now only appears for selected interactions or triggers and
+  can be closed by clicking the canvas background or its close button.
 - Trigger input deletion planning is now isolated in a tested web helper.
 - Canvas connection validation and created-trigger selection are now isolated in a tested web helper.
 - Editor interaction and trigger selection lookups are now isolated in a tested web helper.

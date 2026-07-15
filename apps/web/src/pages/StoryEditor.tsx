@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Background,
   Controls,
@@ -59,17 +59,24 @@ export function StoryEditor() {
 
   const selected = findInteraction(story, selectedId);
   const selectedTriggerTarget = findSelectedTrigger(story, selectedTrigger);
+  const hasInspectorSelection = Boolean(selected || selectedTriggerTarget);
+
+  const closeInspector = useCallback(() => {
+    setSelectedId(undefined);
+    setSelectedTrigger(undefined);
+  }, []);
+
   const storyNodes = useMemo(
     () =>
       buildInteractionNodes(story, selectedId, {
         onCreateChild: (interactionId) => void createChildFromInteraction(interactionId),
         onCreateParent: (interactionId) => void createParentForInteraction(interactionId),
         onSelectRootTrigger: (interactionId, triggerId) => {
-          setSelectedId(undefined);
+          closeInspector();
           setSelectedTrigger({ interactionId, triggerId });
         },
       }),
-    [createChildFromInteraction, createParentForInteraction, selectedId, story],
+    [closeInspector, createChildFromInteraction, createParentForInteraction, selectedId, story],
   );
 
   useEffect(() => {
@@ -79,25 +86,28 @@ export function StoryEditor() {
   const selectTrigger: EdgeMouseHandler = (_, edge) => {
     const data = edge.data as Partial<SelectedTrigger> | undefined;
     if (!data?.interactionId || !data.triggerId) return;
-    setSelectedId(undefined);
+    closeInspector();
     setSelectedTrigger({
       interactionId: data.interactionId,
       triggerId: data.triggerId,
       inputInteractionId: data.inputInteractionId,
     });
   };
-  const selectTriggerData = (trigger: SelectedTrigger) => {
-    setSelectedId(undefined);
-    setSelectedTrigger(trigger);
-  };
+  const selectTriggerData = useCallback(
+    (trigger: SelectedTrigger) => {
+      closeInspector();
+      setSelectedTrigger(trigger);
+    },
+    [closeInspector],
+  );
   const edges = useMemo(
     () => buildTriggerEdges(story, selectedTrigger, selectTriggerData),
-    [story, selectedTrigger],
+    [selectTriggerData, story, selectedTrigger],
   );
 
   const select: NodeMouseHandler = (_, node) => {
+    closeInspector();
     setSelectedId(node.id);
-    setSelectedTrigger(undefined);
   };
 
   const startCanvasConnection: OnConnectStart = (_, params) => {
@@ -170,7 +180,7 @@ export function StoryEditor() {
           </Link>
         </div>
       </div>
-      <div className="editor-layout">
+      <div className={`editor-layout ${hasInspectorSelection ? 'with-inspector' : ''}`}>
         <section className="canvas">
           <button className="canvas-action" onClick={() => void createRoot()}>
             Add root
@@ -189,6 +199,7 @@ export function StoryEditor() {
             onConnectEnd={endCanvasConnection}
             onEdgeClick={selectTrigger}
             onNodeClick={select}
+            onPaneClick={closeInspector}
             onNodeDragStop={(_, node) =>
               void patchInteraction(node.id, { position: node.position })
             }
@@ -198,31 +209,39 @@ export function StoryEditor() {
             <Controls />
           </ReactFlow>
         </section>
-        <aside className="inspector">
-          {selected ? (
-            <InteractionInspector
-              story={story}
-              interaction={selected}
-              onChange={(next) => setStory(next)}
-              onPatch={patchInteraction}
-              onDelete={remove}
-            />
-          ) : selectedTriggerTarget ? (
-            <TriggerInspector
-              story={story}
-              interaction={selectedTriggerTarget.interaction}
-              trigger={selectedTriggerTarget.trigger}
-              selectedInputInteractionId={selectedTrigger?.inputInteractionId}
-              onSaveTrigger={saveTrigger}
-              onDeleteTrigger={deleteSelectedTrigger}
-              onDeleteTriggerInput={deleteSelectedTriggerInput}
-            />
-          ) : (
-            <div className="empty-state">
-              <p>Select a block to edit its content, or select a trigger marker.</p>
+        {hasInspectorSelection ? (
+          <aside className="inspector" aria-label="Inspector">
+            <div className="inspector-header">
+              <button
+                className="ghost inspector-close"
+                type="button"
+                aria-label="Close inspector"
+                onClick={closeInspector}
+              >
+                x
+              </button>
             </div>
-          )}
-        </aside>
+            {selected ? (
+              <InteractionInspector
+                story={story}
+                interaction={selected}
+                onChange={(next) => setStory(next)}
+                onPatch={patchInteraction}
+                onDelete={remove}
+              />
+            ) : selectedTriggerTarget ? (
+              <TriggerInspector
+                story={story}
+                interaction={selectedTriggerTarget.interaction}
+                trigger={selectedTriggerTarget.trigger}
+                selectedInputInteractionId={selectedTrigger?.inputInteractionId}
+                onSaveTrigger={saveTrigger}
+                onDeleteTrigger={deleteSelectedTrigger}
+                onDeleteTriggerInput={deleteSelectedTriggerInput}
+              />
+            ) : null}
+          </aside>
+        ) : null}
       </div>
     </main>
   );

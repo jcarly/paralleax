@@ -24,6 +24,7 @@ Cover the critical MVP paths: Story, Interaction, Trigger, and Reader.
 - Editor: trigger markers are visible on linked edges and on root interactions.
 - Editor: selecting a linked trigger marker opens the trigger editor for that trigger.
 - Editor: selecting a root trigger marker opens root trigger conditions without mixing them into interaction content editing.
+- Editor: the inspector is hidden until an interaction or trigger is selected, and closing it or clicking the canvas background clears the selection.
 - Editor: selecting a graph edge visibly highlights that edge.
 - Editor: deleting a trigger removes its edge and a later interaction move must not restore it from stale API data.
 - Editor: deleting a trigger link and then creating another link must not restore the deleted link from stale API data.
