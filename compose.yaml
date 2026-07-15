@@ -8,9 +8,14 @@ x-proxy-environment: &proxy-environment
   https_proxy: ${HTTPS_PROXY:-}
   no_proxy: ${NO_PROXY:-localhost,127.0.0.1,api,web}
 
+x-dev-build: &dev-build
+  context: .
+  dockerfile: Dockerfile.dev
+
 services:
   api:
-    image: node:22-alpine
+    build: *dev-build
+    image: paralleax-dev
     command: sh -c 'npm install --legacy-peer-deps --audit=false --no-update-notifier 2>&1 ; npm run dev -w @paralleax/api'
     environment:
       <<: *proxy-environment
@@ -24,7 +29,8 @@ services:
     working_dir: /workspace
 
   web:
-    image: node:22-alpine
+    build: *dev-build
+    image: paralleax-dev
     command: sh -c 'npm install --legacy-peer-deps --audit=false --no-update-notifier 2>&1 ; npm run dev -w @paralleax/web -- --host 0.0.0.0'
     environment:
       <<: *proxy-environment

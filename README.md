@@ -55,8 +55,8 @@ Supporting references:
 
 ## Requirements
 
-- Node.js 22.x
-- npm 11+
+- Node.js 24.x
+- npm 12+
 
 On PowerShell, use `npm.cmd` if `npm` is blocked by the Windows execution policy.
 
@@ -173,7 +173,7 @@ Coverage reports and the Playwright HTML report are kept as GitLab artifacts.
 
 ## Docker
 
-The Docker setup pins the environment to Node.js 22.
+The Docker setup pins the environment to Node.js 24.
 
 In development, the repository is mounted inside the container. Source changes are picked up by Vite and Nest watch mode without rebuilding the Docker image.
 

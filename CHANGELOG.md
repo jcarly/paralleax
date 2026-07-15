@@ -38,6 +38,8 @@ This project follows a lightweight [Keep a Changelog](https://keepachangelog.com
 
 ### Changed
 
+- Updated the project runtime target to Node.js 24 and npm 12 for local, CI, and Docker usage.
+- Refreshed dependency ranges to match the current stable installed versions without taking the larger Jest, Vite, Vitest, or TypeScript major migrations.
 - Web CSS is now organized into explicit sections for tokens, base styles, app shell, story list, editor, graph, reader, and responsive rules.
 - Editor colors now use CSS custom properties, and selected trigger edges use the same primary selection color as selected interactions.
 - Drag-created interactions now use the connection drop position instead of automatic placement.
