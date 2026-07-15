@@ -26,6 +26,10 @@
 - Story Canvas UX exploration: keep the current graph semantics, but refine the
   editor toward a story-first canvas with left-side navigation/filtering and a
   contextual right inspector.
+- Simulation Mode for authors: start from any interaction, show relevant
+  available and unavailable interactions, explain failed trigger conditions,
+  expose simulated preconditions, allow journey reset/time travel, support forced
+  interactions, and link test results back to graph editing.
 - Evaluate Tailwind CSS for broader UI styling while keeping React Flow-specific graph styles isolated.
 - Interface internationalization foundation with UI copy extracted into translation keys or variables.
 - Initial locale structure so additional languages can be added without rewriting components.

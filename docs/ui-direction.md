@@ -85,6 +85,157 @@ The editor should avoid duplicating relationship lists that are already clearer
 on the canvas. For example, trigger inputs and outputs should primarily be read
 through graph links, with the inspector focused on properties that need editing.
 
+## Simulation Mode
+
+The reader used by authors should become a simulation and narrative debugging
+surface, not only a player preview.
+
+The author-facing button may still be labeled "Test", but the opened view should
+be understood as a Story Simulation. Its goal is to answer three questions:
+
+- what can the player do now?
+- why are other interactions unavailable?
+- how can the author immediately adjust either the story or the simulated state?
+
+This mode must remain separate from the final player reader. The player reader
+should only show what the player can actually choose, while Simulation Mode can
+reveal unavailable interactions, trigger diagnostics, and state controls.
+
+## Simulation Layout
+
+The target Simulation Mode layout has three areas:
+
+- left panel: simulation state, starting point, journey, and simulated
+  preconditions;
+- center panel: the current interaction, close to the final reader experience;
+- right panel: available and unavailable interactions, with explanations.
+
+The center panel keeps the author close to the player experience. The side
+panels add testing and debugging tools.
+
+## Interaction Availability Diagnostics
+
+Simulation Mode should not only list available choices.
+
+It should distinguish:
+
+- next interactions: interactions directly connected to the current
+  interaction;
+- contextual interactions: interactions without a direct input link that can be
+  evaluated in the current state;
+- all interactions: a collapsed or searchable section for inspecting or forcing
+  any interaction.
+
+Unavailable interactions should be dimmed but still inspectable. Selecting or
+hovering an unavailable interaction should explain why it is unavailable by
+showing trigger evaluation details:
+
+- satisfied previous interaction input;
+- missing required visited interaction;
+- failed forbidden visited interaction;
+- satisfied or failed condition group.
+
+This turns trigger evaluation into an author-facing debugging workflow instead
+of a hidden engine result.
+
+## Starting and Resuming Simulations
+
+Authors should be able to start a simulation from any interaction.
+
+Two actions must stay distinct:
+
+- start here: the selected interaction becomes the first interaction with an
+  empty journey;
+- resume here with simulated state: the selected interaction becomes the current
+  interaction while the author also defines which interactions should count as
+  already visited.
+
+Starting near the end of a branch must not imply that every previous interaction
+has been visited.
+
+## Journey and Simulated Preconditions
+
+Simulation state should distinguish between:
+
+- journey: interactions actually selected during the current simulation;
+- simulated preconditions: interactions artificially marked as visited for this
+  simulation.
+
+The reader engine may evaluate triggers against the union of both sets, but the
+UI should show them separately so authors understand what happened during this
+test and what was manually assumed.
+
+Checking a simulated precondition must not play the interaction, trigger its
+content, or modify the story. It only means: "for this simulation, consider this
+interaction as already visited."
+
+The state panel should make this temporary nature explicit: simulation changes
+do not change the Story.
+
+## Test Time Travel
+
+The simulation journey should be navigable.
+
+Clicking a previous step should restore the simulation to that moment. Later
+steps may be discarded or treated as a temporary branch. The goal is to let
+authors try several choices from the same state without replaying the whole
+story.
+
+## Editing Loop
+
+Simulation Mode should support a fast loop:
+
+```text
+Test -> notice -> edit -> retest
+```
+
+Each interaction should provide an action to open it in the graph editor. That
+action should:
+
+- leave Simulation Mode or move to a split authoring view;
+- focus the graph on the interaction;
+- select the interaction;
+- open the inspector;
+- preserve the simulation state enough to return and retest.
+
+Direct editing inside Simulation Mode should stay limited at first. Quick edits
+may include interaction title, body, notes, and simulated preconditions. Structural
+changes such as trigger constraints, links, and branching should keep using the
+graph editor to avoid duplicating the full editor inside the test surface.
+
+## Forced Interactions
+
+Authors may need to inspect an interaction even when it is unavailable.
+
+Simulation Mode may offer a secondary "Force interaction" action. Forced choices
+should be visually marked in the journey so authors do not confuse them with
+valid reader transitions.
+
+Forcing an interaction is a test shortcut, not a change to engine semantics.
+
+## Simulation MVP Direction
+
+A first useful version of Simulation Mode could include:
+
+- starting from any interaction;
+- showing directly relevant interactions as available or unavailable;
+- explaining satisfied and failed trigger conditions;
+- searching all interactions;
+- marking interactions as simulated preconditions;
+- resetting the simulation;
+- returning to a previous journey step;
+- forcing an unavailable interaction with a visible warning;
+- opening an interaction in the graph for editing;
+- returning to the simulation while preserving state when possible.
+
+Out of scope for the first simulation iteration:
+
+- complete trigger editing inside Simulation Mode;
+- variables or attributes;
+- saved simulation profiles;
+- comparison between simulations;
+- automatic exploration of every path.
+
 ## Future Drag and Drop
 
 Future target entities should be useful for creation, not only filtering.

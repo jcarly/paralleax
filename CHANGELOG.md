@@ -109,6 +109,9 @@ This project follows a lightweight [Keep a Changelog](https://keepachangelog.com
 - Added glossary, domain invariants, and open questions documentation for stable vocabulary, model rules, and postponed design decisions.
 - Documented the React Flow integration boundary and the target model for users, story permissions, event-log-based change proposals, and UI-only internationalization.
 - Documented the target Story Canvas UI direction with left-side filters, one contextual inspector, neutral future groups, and post-MVP character/place focal points.
+- Documented the target Simulation Mode direction for narrative debugging,
+  availability diagnostics, simulated preconditions, time travel, forced
+  interactions, and graph-editing handoff.
 - Removed generated UML image renders so editable diagram sources remain the single source of truth.
 - Documented the styling direction: keep plain CSS for the MVP and evaluate Tailwind CSS when the UI surface grows.
 - Added and updated product, MVP, architecture, domain model, design principles, roadmap, UML, and ADR documentation.

@@ -122,3 +122,22 @@ The MVP reader does not support:
 
 These can be added later only after the current Story / Interaction / Trigger /
 Reader behavior is stable and covered by tests.
+
+## Author Test Mode Direction
+
+The author-facing test mode may expose more controls than the player reader. It
+may eventually be presented as Simulation Mode.
+
+Future test tooling may let authors start from any interaction, list relevant
+unavailable interactions in a disabled state, explain failed trigger evaluation,
+force an unavailable interaction for inspection, edit or jump back to the graph
+from a tested interaction or trigger, and override visited preconditions
+manually.
+
+Simulation state should distinguish interactions actually selected during the
+test journey from interactions manually marked as simulated preconditions. The
+engine may evaluate availability against their union, but the UI should keep them
+visually separate.
+
+These controls are debugging and authoring tools. They should not change the
+player reader contract unless the reader semantics are explicitly updated.
