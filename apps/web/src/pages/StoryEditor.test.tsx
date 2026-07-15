@@ -271,6 +271,21 @@ describe('StoryEditor', () => {
     });
   });
 
+  it('links the test action to the selected interaction when one is selected', async () => {
+    const user = userEvent.setup();
+    await renderEditor(storyWithTwoInteractions());
+
+    const testLink = screen.getByRole('link', { name: 'Test' });
+    expect(testLink).toHaveAttribute('href', '/stories/story-1/play');
+
+    await user.click(screen.getByTestId('flow-node-interaction-2'));
+
+    expect(screen.getByRole('link', { name: 'Test from current interaction' })).toHaveAttribute(
+      'href',
+      '/stories/story-1/play?startInteractionId=interaction-2',
+    );
+  });
+
   it('creates a child interaction when a source connection is dropped on empty canvas', async () => {
     const story = storyWithTwoInteractions();
     story.interactions[1].position = { x: 420, y: 260 };

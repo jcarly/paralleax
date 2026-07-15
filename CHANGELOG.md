@@ -13,6 +13,7 @@ This project follows a lightweight [Keep a Changelog](https://keepachangelog.com
 - Graph creation shortcuts: dropping an output connection on empty canvas creates a child, and dropping an input connection creates a linked source interaction.
 - Hover action buttons on interactions for creating source and child interactions directly from the graph.
 - Visible trigger markers on graph links and root interactions.
+- Test action from the editor can start the reader from the selected interaction.
 - Shared placement helpers and tests for root and parent interaction creation.
 - User guide for the current MVP authoring workflow.
 - Playwright coverage for editing root trigger path conditions from the interaction inspector.

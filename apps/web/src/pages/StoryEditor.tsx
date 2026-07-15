@@ -175,8 +175,15 @@ export function StoryEditor() {
           <button disabled={!selected} onClick={() => void createSelectedChild()}>
             Add child
           </button>
-          <Link className="button secondary" to={`/stories/${storyId}/play`}>
-            Test
+          <Link
+            className="button secondary"
+            to={
+              selected
+                ? `/stories/${storyId}/play?startInteractionId=${encodeURIComponent(selected.id)}`
+                : `/stories/${storyId}/play`
+            }
+          >
+            {selected ? 'Test from current interaction' : 'Test'}
           </Link>
         </div>
       </div>

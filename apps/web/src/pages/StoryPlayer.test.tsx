@@ -49,11 +49,11 @@ const story: Story = {
   ],
 };
 
-async function renderPlayer() {
+async function renderPlayer(initialEntry = '/stories/story-1/play') {
   vi.mocked(api.getStory).mockResolvedValue(structuredClone(story));
 
   render(
-    <MemoryRouter initialEntries={['/stories/story-1/play']}>
+    <MemoryRouter initialEntries={[initialEntry]}>
       <Routes>
         <Route path="/stories/:storyId/play" element={<StoryPlayer />} />
       </Routes>
@@ -103,5 +103,20 @@ describe('StoryPlayer', () => {
     await user.click(screen.getByRole('button', { name: 'Restart' }));
     expect(screen.getByRole('heading', { name: /Start the story/ })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Start' })).toBeInTheDocument();
+  });
+
+  it('can start from a specific interaction', async () => {
+    const user = userEvent.setup();
+    await renderPlayer('/stories/story-1/play?startInteractionId=next');
+
+    expect(screen.getByRole('heading', { name: 'Next' })).toBeInTheDocument();
+    expect(screen.getByText('You continue.')).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /Start the story/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Start' })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Restart' }));
+
+    expect(screen.getByRole('heading', { name: 'Next' })).toBeInTheDocument();
+    expect(screen.getByText('You continue.')).toBeInTheDocument();
   });
 });
