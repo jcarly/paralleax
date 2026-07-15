@@ -14,6 +14,7 @@ import { Link, useParams } from 'react-router-dom';
 import type { Position } from '@paralleax/shared';
 import { InteractionInspector } from '../components/InteractionInspector';
 import { InteractionNode } from '../components/InteractionNode';
+import { TriggerEdge } from '../components/TriggerEdge';
 import { TriggerInspector } from '../components/TriggerInspector';
 import { useStoryEditorPersistence } from '../hooks/useStoryEditorPersistence';
 import {
@@ -26,6 +27,7 @@ import {
 import { findInteraction, findSelectedTrigger } from '../storySelection';
 
 const nodeTypes = { interaction: InteractionNode };
+const edgeTypes = { trigger: TriggerEdge };
 const droppedNodeOffset = { x: 110, y: 48 };
 
 export function StoryEditor() {
@@ -62,6 +64,10 @@ export function StoryEditor() {
       buildInteractionNodes(story, selectedId, {
         onCreateChild: (interactionId) => void createChildFromInteraction(interactionId),
         onCreateParent: (interactionId) => void createParentForInteraction(interactionId),
+        onSelectRootTrigger: (interactionId, triggerId) => {
+          setSelectedId(undefined);
+          setSelectedTrigger({ interactionId, triggerId });
+        },
       }),
     [createChildFromInteraction, createParentForInteraction, selectedId, story],
   );
@@ -70,12 +76,6 @@ export function StoryEditor() {
     setNodes(storyNodes);
   }, [setNodes, storyNodes]);
 
-  const edges = useMemo(() => buildTriggerEdges(story, selectedTrigger), [story, selectedTrigger]);
-
-  const select: NodeMouseHandler = (_, node) => {
-    setSelectedId(node.id);
-    setSelectedTrigger(undefined);
-  };
   const selectTrigger: EdgeMouseHandler = (_, edge) => {
     const data = edge.data as Partial<SelectedTrigger> | undefined;
     if (!data?.interactionId || !data.triggerId) return;
@@ -85,6 +85,19 @@ export function StoryEditor() {
       triggerId: data.triggerId,
       inputInteractionId: data.inputInteractionId,
     });
+  };
+  const selectTriggerData = (trigger: SelectedTrigger) => {
+    setSelectedId(undefined);
+    setSelectedTrigger(trigger);
+  };
+  const edges = useMemo(
+    () => buildTriggerEdges(story, selectedTrigger, selectTriggerData),
+    [story, selectedTrigger],
+  );
+
+  const select: NodeMouseHandler = (_, node) => {
+    setSelectedId(node.id);
+    setSelectedTrigger(undefined);
   };
 
   const startCanvasConnection: OnConnectStart = (_, params) => {
@@ -166,6 +179,7 @@ export function StoryEditor() {
             nodes={nodes}
             edges={edges}
             nodeTypes={nodeTypes}
+            edgeTypes={edgeTypes}
             onInit={(instance) => {
               flowInstance.current = instance;
             }}
@@ -190,11 +204,8 @@ export function StoryEditor() {
               story={story}
               interaction={selected}
               onChange={(next) => setStory(next)}
-              onSaveTrigger={saveTrigger}
               onPatch={patchInteraction}
               onDelete={remove}
-              onDeleteTrigger={deleteSelectedTrigger}
-              onDeleteTriggerInput={deleteSelectedTriggerInput}
             />
           ) : selectedTriggerTarget ? (
             <TriggerInspector
@@ -208,8 +219,7 @@ export function StoryEditor() {
             />
           ) : (
             <div className="empty-state">
-              <h2>Interaction</h2>
-              <p>Select a block to edit its content, or select an edge to edit its trigger.</p>
+              <p>Select a block to edit its content, or select a trigger marker.</p>
             </div>
           )}
         </aside>

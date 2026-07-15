@@ -46,7 +46,12 @@ describe('story graph mapping', () => {
         id: 'interaction-1',
         type: 'interaction',
         position: { x: 80, y: 120 },
-        data: { title: 'Start', body: 'Start body', selected: false },
+        data: {
+          title: 'Start',
+          body: 'Start body',
+          selected: false,
+          rootTriggerId: 'trigger-root',
+        },
       },
       {
         id: 'interaction-2',
@@ -73,28 +78,32 @@ describe('story graph mapping', () => {
     ).toEqual([
       {
         id: 'trigger-linked-interaction-1',
+        type: 'trigger',
         source: 'interaction-1',
         target: 'interaction-2',
         markerEnd: { type: MarkerType.ArrowClosed },
-        label: '1 condition(s)',
         className: 'trigger-edge',
         data: {
           interactionId: 'interaction-2',
           triggerId: 'trigger-linked',
           inputInteractionId: 'interaction-1',
+          selected: false,
+          conditionCount: 1,
         },
       },
       {
         id: 'trigger-linked-interaction-3',
+        type: 'trigger',
         source: 'interaction-3',
         target: 'interaction-2',
         markerEnd: { type: MarkerType.ArrowClosed },
-        label: '1 condition(s)',
         className: 'trigger-edge selected',
         data: {
           interactionId: 'interaction-2',
           triggerId: 'trigger-linked',
           inputInteractionId: 'interaction-3',
+          selected: true,
+          conditionCount: 1,
         },
       },
     ]);

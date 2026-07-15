@@ -15,6 +15,9 @@
   --color-primary-focus: #abb0da;
   --color-primary-halo: #4b58dc22;
   --color-primary-halo-strong: #4b58dc44;
+  --color-trigger: #e7b647;
+  --color-trigger-strong: #9b6816;
+  --color-trigger-halo: #e7b64740;
   --color-danger: #c53d4f;
   --color-error: #b32235;
   --color-header: #20243a;
@@ -230,19 +233,6 @@ header span {
   font-size: 0.82rem;
   color: var(--color-subtle);
 }
-.check-list {
-  max-height: 165px;
-  overflow: auto;
-  border: 1px solid var(--color-panel-border);
-  border-radius: 8px;
-  padding: 0.6rem;
-}
-.check-list label {
-  display: flex;
-  gap: 0.5rem;
-  margin: 0.25rem 0;
-  font-weight: 500;
-}
 .conditions {
   display: grid;
   gap: 0.5rem;
@@ -302,6 +292,14 @@ header span {
     transform 120ms ease,
     box-shadow 120ms ease;
 }
+.node-create.react-flow__handle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1;
+}
 .node-create-parent {
   left: -16px;
 }
@@ -318,13 +316,44 @@ header span {
   box-shadow: 0 0 0 5px var(--color-primary-halo-strong);
   outline: none;
 }
+.root-trigger-marker {
+  position: absolute;
+  left: -10px;
+  top: 10px;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: 2px solid var(--color-surface);
+  border-radius: 999px;
+  background: var(--color-trigger);
+  box-shadow: 0 0 0 3px var(--color-trigger-halo);
+}
+.root-trigger-marker:hover,
+.root-trigger-marker:focus-visible {
+  outline: none;
+  background: var(--color-trigger-strong);
+}
 .react-flow__edge.trigger-edge.selected .react-flow__edge-path {
   stroke: var(--color-primary);
   stroke-width: 3;
 }
-.react-flow__edge.trigger-edge.selected .react-flow__edge-text {
-  fill: var(--color-primary-strong);
-  font-weight: 750;
+.trigger-marker {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 2px solid var(--color-surface);
+  border-radius: 999px;
+  background: var(--color-trigger);
+  box-shadow: 0 0 0 3px var(--color-trigger-halo);
+  pointer-events: all;
+}
+.trigger-marker:hover,
+.trigger-marker:focus-visible,
+.trigger-marker.selected {
+  outline: none;
+  background: var(--color-trigger-strong);
+  box-shadow: 0 0 0 4px var(--color-trigger-halo);
 }
 
 /* Reader */

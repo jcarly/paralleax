@@ -8,7 +8,6 @@ export function TriggerInspector({
   onSaveTrigger,
   onDeleteTrigger,
   onDeleteTriggerInput,
-  showInputs = true,
 }: {
   story: Story;
   interaction: Interaction;
@@ -26,7 +25,6 @@ export function TriggerInspector({
     triggerId: string,
     inputInteractionId: string,
   ) => Promise<void>;
-  showInputs?: boolean;
 }) {
   async function updateTrigger(inputIds: string[], conditions: TriggerCondition[]) {
     await onSaveTrigger(interaction.id, trigger.id, inputIds, conditions);
@@ -34,39 +32,6 @@ export function TriggerInspector({
 
   return (
     <div>
-      <h2>Trigger</h2>
-      <p className="hint">Output interaction: {interaction.title}</p>
-      {showInputs ? (
-        <>
-          <h3>Trigger inputs</h3>
-          <p className="hint">No input means the interaction can start the story.</p>
-          <div className="check-list">
-            {story.interactions
-              .filter((item) => item.id !== interaction.id)
-              .map((item) => (
-                <label key={item.id}>
-                  <input
-                    type="checkbox"
-                    checked={trigger.inputInteractionIds.includes(item.id)}
-                    onChange={(e) =>
-                      void updateTrigger(
-                        e.target.checked
-                          ? [...trigger.inputInteractionIds, item.id]
-                          : trigger.inputInteractionIds.filter((id) => id !== item.id),
-                        trigger.conditions,
-                      )
-                    }
-                  />
-                  {item.title}
-                </label>
-              ))}
-          </div>
-        </>
-      ) : (
-        <p className="hint">
-          This root trigger has no input; select an edge to edit linked trigger inputs.
-        </p>
-      )}
       <h3>Path conditions</h3>
       <div className="conditions">
         {trigger.conditions.map((condition, index) => (

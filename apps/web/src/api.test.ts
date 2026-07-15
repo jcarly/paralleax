@@ -39,6 +39,7 @@ describe('api client', () => {
     expect(fetchMock).toHaveBeenLastCalledWith('/api/stories/demo', {
       headers: { 'Content-Type': 'application/json' },
       method: 'POST',
+      body: JSON.stringify({}),
     });
 
     await api.renameStory('story-1', 'Renamed');

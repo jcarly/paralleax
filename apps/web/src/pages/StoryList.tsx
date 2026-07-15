@@ -17,18 +17,33 @@ export function StoryList() {
   }, []);
 
   async function create() {
-    const story = await api.createStory();
-    setStories((items) => [...items, story]);
+    try {
+      setError('');
+      const story = await api.createStory();
+      setStories((items) => [...items, story]);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not create story');
+    }
   }
 
   async function createDemo() {
-    const story = await api.createDemoStory();
-    setStories((items) => [...items, story]);
+    try {
+      setError('');
+      const story = await api.createDemoStory();
+      setStories((items) => [...items, story]);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not generate demo story');
+    }
   }
 
   async function remove(id: string) {
-    await api.deleteStory(id);
-    setStories((items) => items.filter((item) => item.id !== id));
+    try {
+      setError('');
+      await api.deleteStory(id);
+      setStories((items) => items.filter((item) => item.id !== id));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not delete story');
+    }
   }
 
   return (

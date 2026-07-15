@@ -17,7 +17,8 @@ export const api = {
   getStory: (id: string) => request<Story>(`/stories/${id}`),
   createStory: (title?: string) =>
     request<Story>('/stories', { method: 'POST', body: JSON.stringify({ title }) }),
-  createDemoStory: () => request<Story>('/stories/demo', { method: 'POST' }),
+  createDemoStory: () =>
+    request<Story>('/stories/demo', { method: 'POST', body: JSON.stringify({}) }),
   renameStory: (id: string, title: string) =>
     request<Story>(`/stories/${id}`, { method: 'PATCH', body: JSON.stringify({ title }) }),
   deleteStory: (id: string) => request<void>(`/stories/${id}`, { method: 'DELETE' }),

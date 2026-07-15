@@ -67,7 +67,7 @@ test.describe('Story editor', () => {
     await expect(
       page.getByTestId('interaction-node').filter({ hasText: 'New title' }),
     ).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Interaction' })).toBeVisible();
+    await expect(page.getByLabel('Title')).toBeVisible();
     await expect(page.getByText('Loading...')).toHaveCount(0);
   });
 
@@ -101,7 +101,7 @@ test.describe('Story editor', () => {
     ).toBeVisible();
   });
 
-  test('edits root trigger path conditions from the interaction inspector', async ({ page }) => {
+  test('edits root trigger path conditions from the root trigger marker', async ({ page }) => {
     const initialStory = storyWithConditionCandidate();
     await mockStory(page, initialStory);
     const updated = structuredClone(initialStory);
@@ -122,7 +122,11 @@ test.describe('Story editor', () => {
     );
 
     await page.goto('/stories/story-1/edit');
-    await page.getByTestId('interaction-node').filter({ hasText: 'Original title' }).click();
+    await page
+      .getByTestId('interaction-node')
+      .filter({ hasText: 'Original title' })
+      .getByRole('button', { name: 'Select root trigger' })
+      .click();
     await page.getByRole('button', { name: 'Add condition' }).click();
 
     await expect(page.getByRole('heading', { name: 'Path conditions' })).toBeVisible();

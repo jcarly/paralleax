@@ -16,11 +16,14 @@ Cover the critical MVP paths: Story, Interaction, Trigger, and Reader.
 - Editor: moving an interaction does not delete titles or content from other interactions.
 - Editor: creating an output from an interaction takes existing outputs into account and avoids overlap.
 - Editor: hover action buttons create linked child and source interactions.
+- Editor: interaction input and output controls also act as graph connection handles.
 - Editor: dropping a source connection on empty canvas creates a linked child interaction at the drop position.
 - Editor: dropping a target connection on empty canvas creates a source interaction linked to the target at the drop position.
 - Editor: selecting an interaction without a trigger shows a controlled error state instead of a blank page.
 - Editor: a trigger can accept several input interactions.
-- Editor: selecting a graph edge opens the trigger editor for that edge.
+- Editor: trigger markers are visible on linked edges and on root interactions.
+- Editor: selecting a linked trigger marker opens the trigger editor for that trigger.
+- Editor: selecting a root trigger marker opens root trigger conditions without mixing them into interaction content editing.
 - Editor: selecting a graph edge visibly highlights that edge.
 - Editor: deleting a trigger removes its edge and a later interaction move must not restore it from stale API data.
 - Editor: deleting a trigger link and then creating another link must not restore the deleted link from stale API data.
@@ -45,10 +48,10 @@ Cover the critical MVP paths: Story, Interaction, Trigger, and Reader.
 
 - Editor: open a story, select an interaction, rename its title, and verify that the canvas and inspector stay visible.
 - Editor: move an interaction and verify that title and content remain visible after saving.
-- Editor: edit root trigger path conditions from the interaction inspector.
+- Editor: edit root trigger path conditions from the root trigger marker.
 - Editor: create a root interaction and verify that it appears on the canvas.
 - Editor: create a child interaction from the selected interaction, then verify the trigger input link and absence of overlap with other outputs.
-- Editor: configure several inputs on the same trigger and verify that all inputs remain checked.
+- Editor: configure several inputs on the same trigger and verify that graph links share the trigger marker.
 - Editor: click an edge, edit its conditions, close the editor, and verify that the edge remains attached to the same trigger.
 - Editor: delete an interaction and verify that invalid trigger links are removed from the canvas.
 - Reader: open a story, choose a starting interaction, and verify the following choices.

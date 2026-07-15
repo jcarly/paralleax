@@ -25,7 +25,11 @@ vi.mock('@xyflow/react', async () => {
   return {
     Background: () => <div data-testid="flow-background" />,
     Controls: () => <div data-testid="flow-controls" />,
-    Handle: () => null,
+    Handle: ({ children, ...props }: any) => (
+      <div {...props} data-testid={`handle-${props.type}`}>
+        {children}
+      </div>
+    ),
     MarkerType: { ArrowClosed: 'arrowclosed' },
     MiniMap: () => <div data-testid="flow-minimap" />,
     Position: { Left: 'left', Right: 'right' },
@@ -111,12 +115,17 @@ vi.mock('@xyflow/react', async () => {
               )),
           )}
           {edges.map((edge: any) => (
-            <button
-              key={edge.id}
-              className={edge.className}
-              data-testid={`flow-edge-${edge.source}-${edge.target}`}
-              onClick={(event) => onEdgeClick?.(event, edge)}
-            />
+            <div key={edge.id}>
+              <button
+                className={edge.className}
+                data-testid={`flow-edge-${edge.source}-${edge.target}`}
+                onClick={(event) => onEdgeClick?.(event, edge)}
+              />
+              <button
+                data-testid={`flow-trigger-${edge.source}-${edge.target}`}
+                onClick={() => edge.data?.onSelectTrigger?.(edge.data)}
+              />
+            </div>
           ))}
           {children}
         </div>
@@ -497,32 +506,8 @@ describe('StoryEditor', () => {
 
     expect(api.deleteInteraction).toHaveBeenCalledWith('story-1', 'interaction-1');
     expect(
-      await screen.findByText(
-        'Select a block to edit its content, or select an edge to edit its trigger.',
-      ),
+      await screen.findByText('Select a block to edit its content, or select a trigger marker.'),
     ).toBeInTheDocument();
-  });
-
-  it('updates linked trigger inputs from the edge editor', async () => {
-    const user = userEvent.setup();
-    const story = storyWithThreeInteractions();
-    const updatedStory = structuredClone(story);
-    updatedStory.interactions[1].triggers[0].inputInteractionIds = [
-      'interaction-1',
-      'interaction-3',
-    ];
-    vi.mocked(api.updateTrigger).mockResolvedValue(updatedStory);
-
-    await renderEditor(story);
-    await user.click(screen.getByTestId('flow-edge-interaction-1-interaction-2'));
-    await user.click(screen.getByRole('checkbox', { name: 'Third interaction' }));
-
-    await waitFor(() => {
-      expect(api.updateTrigger).toHaveBeenCalledWith('story-1', 'interaction-2', 'trigger-2', {
-        inputInteractionIds: ['interaction-1', 'interaction-3'],
-        conditions: [],
-      });
-    });
   });
 
   it('persists a canvas connection as a trigger input', async () => {
@@ -670,8 +655,7 @@ describe('StoryEditor', () => {
     await user.click(screen.getByTestId('flow-edge-interaction-1-interaction-3'));
 
     expect(screen.getByTestId('flow-edge-interaction-1-interaction-3')).toHaveClass('selected');
-    expect(screen.getByRole('heading', { name: 'Trigger' })).toBeInTheDocument();
-    expect(screen.getByText('Output interaction: Third interaction')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Path conditions' })).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Add condition' }));
 
@@ -758,27 +742,15 @@ describe('StoryEditor', () => {
     expect(within(secondNode).getByText('Next content')).toBeInTheDocument();
   });
 
-  it('allows several input interactions for the same trigger', async () => {
-    const user = userEvent.setup();
+  it('renders several graph links for the same multi-input trigger', async () => {
     const story = storyWithThreeInteractions();
-    story.interactions[2].triggers[0].inputInteractionIds = ['interaction-1'];
-    const withTwoInputs = structuredClone(story);
-    withTwoInputs.interactions[2].triggers[0].inputInteractionIds = [
-      'interaction-1',
-      'interaction-2',
-    ];
-    vi.mocked(api.updateTrigger).mockResolvedValue(withTwoInputs);
+    story.interactions[2].triggers[0].inputInteractionIds = ['interaction-1', 'interaction-2'];
 
     await renderEditor(story);
-    await user.click(screen.getByTestId('flow-edge-interaction-1-interaction-3'));
-    await user.click(screen.getByRole('checkbox', { name: 'Second interaction' }));
 
-    await waitFor(() => {
-      expect(api.updateTrigger).toHaveBeenLastCalledWith('story-1', 'interaction-3', 'trigger-3', {
-        inputInteractionIds: ['interaction-1', 'interaction-2'],
-        conditions: [],
-      });
-    });
+    expect(screen.getByTestId('flow-edge-interaction-1-interaction-3')).toBeInTheDocument();
+    expect(screen.getByTestId('flow-edge-interaction-2-interaction-3')).toBeInTheDocument();
+    expect(screen.getByTestId('flow-trigger-interaction-1-interaction-3')).toBeInTheDocument();
   });
 
   it('adds, edits, and removes trigger conditions', async () => {
@@ -800,7 +772,11 @@ describe('StoryEditor', () => {
       .mockResolvedValueOnce(withoutCondition);
 
     await renderEditor(story);
-    await user.click(screen.getByTestId('flow-node-interaction-1'));
+    await user.click(
+      within(screen.getByTestId('flow-node-interaction-1')).getByRole('button', {
+        name: 'Select root trigger',
+      }),
+    );
     await user.click(screen.getByRole('button', { name: 'Add condition' }));
 
     await waitFor(() => {
@@ -828,31 +804,25 @@ describe('StoryEditor', () => {
     });
   });
 
-  it('shows linked trigger conditions only from the edge editor', async () => {
+  it('keeps trigger conditions out of the interaction inspector', async () => {
     const story = storyWithTwoInteractions();
 
     await renderEditor(story);
     await userEvent.click(screen.getByTestId('flow-node-interaction-2'));
 
-    expect(screen.getByRole('heading', { name: 'Interaction' })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Path conditions' })).not.toBeInTheDocument();
-    expect(
-      screen.getByText('Select an edge to edit path conditions for linked triggers.'),
-    ).toBeInTheDocument();
+    expect(screen.getByLabelText('Title')).toHaveValue('Second interaction');
   });
 
-  it('keeps root trigger editing in the interaction inspector', async () => {
+  it('edits root trigger conditions from the root trigger marker', async () => {
     await renderEditor();
-    await userEvent.click(screen.getByTestId('flow-node-interaction-1'));
+    await userEvent.click(
+      within(screen.getByTestId('flow-node-interaction-1')).getByRole('button', {
+        name: 'Select root trigger',
+      }),
+    );
 
-    expect(screen.getByRole('heading', { name: 'Trigger' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Path conditions' })).toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: 'Trigger inputs' })).not.toBeInTheDocument();
-    expect(
-      screen.getByText(
-        'This root trigger has no input; select an edge to edit linked trigger inputs.',
-      ),
-    ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Delete trigger' })).toBeDisabled();
   });
 
@@ -941,9 +911,7 @@ describe('StoryEditor', () => {
     await renderEditor(storyWithoutTrigger);
     await userEvent.click(screen.getByTestId('flow-node-interaction-1'));
 
-    expect(
-      screen.getByText('Select an edge to edit path conditions for linked triggers.'),
-    ).toBeInTheDocument();
+    expect(screen.getByLabelText('Title')).toHaveValue('Original title');
     expect(screen.getByRole('button', { name: 'Delete interaction' })).toBeInTheDocument();
   });
 });

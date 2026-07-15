@@ -12,6 +12,7 @@ This project follows a lightweight [Keep a Changelog](https://keepachangelog.com
 - Canvas `Add root` action that places new root interactions below the lowest existing root.
 - Graph creation shortcuts: dropping an output connection on empty canvas creates a child, and dropping an input connection creates a linked source interaction.
 - Hover action buttons on interactions for creating source and child interactions directly from the graph.
+- Visible trigger markers on graph links and root interactions.
 - Shared placement helpers and tests for root and parent interaction creation.
 - User guide for the current MVP authoring workflow.
 - Playwright coverage for editing root trigger path conditions from the interaction inspector.
@@ -51,6 +52,9 @@ This project follows a lightweight [Keep a Changelog](https://keepachangelog.com
   `useStoryEditorPersistence`.
 - Editor inspector UI is now split into dedicated `InteractionInspector` and
   `TriggerInspector` components.
+- Interaction input and output controls now act as the visible connection handles.
+- Trigger inputs and outputs are no longer duplicated in the trigger inspector;
+  the graph is the source of truth for those relationships.
 - Trigger input deletion planning is now isolated in a tested web helper.
 - Canvas connection validation and created-trigger selection are now isolated in a tested web helper.
 - Editor interaction and trigger selection lookups are now isolated in a tested web helper.
@@ -60,7 +64,7 @@ This project follows a lightweight [Keep a Changelog](https://keepachangelog.com
 - Web unit tests now allow enough time for coverage instrumentation on slower local or CI runs.
 - Story and trigger operations now live in `packages/shared` and are reused by both the NestJS API and the React editor.
 - Root test and coverage commands now include the shared workspace.
-- Docker development now uses Node.js 22 and npm 11, matching the documented project requirements.
+- Docker development now uses Node.js 24 and npm 12, matching the documented project requirements.
 - `npm run docker:up` no longer forces a rebuild on every start; restart the Compose stack when dependencies change.
 - Canvas connections now create a dedicated linked trigger instead of mutating the first trigger on the target interaction.
 - Edge deletion now removes the selected input link first, deleting the whole trigger only when no input remains.
@@ -81,6 +85,9 @@ This project follows a lightweight [Keep a Changelog](https://keepachangelog.com
 - Dragging one interaction no longer clears other interactions.
 - Dragging an interaction after deleting a trigger no longer restores the deleted edge from stale API data.
 - Creating links from the canvas now persists trigger inputs instead of disappearing after creation.
+- Demo story generation now sends an explicit JSON body and surfaces action errors in the story list.
+- API development and build scripts now use the Nest webpack builder so runtime
+  routes include shared-package-backed endpoints such as demo story generation.
 - Interactions without triggers no longer render a blank page in the editor.
 
 ### Documentation

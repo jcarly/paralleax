@@ -32,10 +32,10 @@ Use the title field at the top of the editor. The title is saved when the field 
 
 - `Add root` on the canvas creates a starting interaction.
 - Select an interaction, then `Add child` creates an output interaction linked to it.
-- Hover an interaction and use the left `+` to create a source interaction.
-- Hover an interaction and use the right `+` to create a child interaction.
-- Drag from an interaction output handle and release on empty canvas to create a linked child interaction.
-- Drag from an interaction input handle and release on empty canvas to create a source interaction that links into it.
+- Hover an interaction and use the left `+` input handle to create a source interaction.
+- Hover an interaction and use the right `+` output handle to create a child interaction.
+- Drag from an interaction output `+` handle and release on empty canvas to create a linked child interaction.
+- Drag from an interaction input `+` handle and release on empty canvas to create a source interaction that links into it.
 
 New root interactions are placed below the lowest existing root. Hover-created linked interactions are placed near their source or target while avoiding existing interactions when possible. Drag-created interactions are placed where the connection is released.
 
@@ -59,9 +59,13 @@ A trigger defines when an interaction becomes available.
 - A linked trigger has one or more input interactions.
 - Several inputs on the same trigger act as alternatives: any input can make the output interaction reachable if conditions match.
 
-To edit a linked trigger, select the edge between two interactions.
+To edit a linked trigger, select the trigger marker on the edge between two
+interactions.
 
-To edit a root trigger, select the root interaction and use the trigger section in the interaction inspector.
+To edit a root trigger, select the root trigger marker on the interaction.
+
+The graph shows trigger inputs and outputs, so the inspector only edits trigger
+conditions and destructive actions such as deleting the selected link.
 
 ## Add Conditions
 
@@ -75,7 +79,7 @@ MVP conditions only check reading history. Variables, places, characters, and ti
 
 ## Delete Trigger Links
 
-Select an edge and choose `Delete link`.
+Select a trigger marker on an edge and choose `Delete link`.
 
 If the trigger has several inputs, only the selected input link is removed. If the selected input was the last input, the trigger remains and becomes a root trigger with no input.
 

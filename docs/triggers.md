@@ -84,19 +84,30 @@ If the deleted interaction appears in trigger conditions:
 
 ## Editing UX
 
-Linked triggers should be edited from the graph edge or grouped route, not primarily from the interaction inspector.
+Triggers should be edited from their visible graph marker, not primarily from the
+interaction inspector.
 
 Expected editor behavior:
 
-1. The user clicks an edge between two interactions.
-2. The trigger editor opens for the trigger represented by that edge.
+1. The user clicks a trigger marker on a link, or the root trigger marker on an
+   interaction.
+2. The trigger editor opens for the selected trigger.
 3. The user can edit conditions for that trigger.
-4. The user can see and manage the trigger inputs.
-5. The edge or grouped route remains attached to the same trigger after editing.
+4. The user can delete the selected input link when the trigger was selected
+   through a linked route.
+5. The marker remains attached to the same trigger after editing.
 
-The interaction inspector may still show trigger information as a convenience, but the canonical editing surface for a trigger is the edge or grouped route because that is the visible representation of the trigger relationship.
+The interaction inspector should stay focused on interaction content. Trigger
+inputs and outputs are represented by the graph itself, so the trigger inspector
+does not need to repeat input or output lists.
 
-An edge represents one trigger input, not necessarily the whole trigger. If a trigger has several input interactions, it appears as several edges that share the same trigger id.
+An edge represents one trigger input, not necessarily the whole trigger. If a
+trigger has several input interactions, it appears as several edges that share
+the same trigger id and marker identity.
+
+A root trigger should also have a visible marker, even though it has no input
+edge. This keeps root trigger editing visually separate from interaction content
+editing.
 
 Deleting an edge should remove only the selected input from the trigger. If that input was the last input of a linked trigger, the trigger remains and becomes an empty root trigger.
 
@@ -116,15 +127,17 @@ condition group.
 
 Graphically, the editor should support a split or merge connection gesture for
 multi-input triggers. For example, while a connection is being dragged toward an
-interaction, the graph may reveal a trigger drop target in addition to the normal
-interaction target. Dropping on the trigger target adds the source as another
-input of that trigger. Dropping on the interaction or a "new route" affordance
-creates a separate trigger.
+interaction, the graph may reveal a trigger marker or drop target in addition to
+the normal interaction target. Dropping on the trigger target adds the source as
+another input of that trigger. Dropping on the interaction or a "new route"
+affordance creates a separate trigger.
 
 Dropping a connection on empty canvas is a creation shortcut:
 
-- dropping from an output handle creates a linked child interaction;
-- dropping from an input handle creates a source interaction and links it to the target interaction.
+- dragging from an output handle creates a linked child interaction when dropped
+  on empty canvas;
+- dragging from an input handle creates a source interaction and links it to the
+  target interaction when dropped on empty canvas.
 
 New interactions created by dropping a connection on empty canvas should be placed where the connection is released. Hover action buttons can use automatic placement to keep linked interactions readable.
 

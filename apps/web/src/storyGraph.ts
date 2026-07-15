@@ -10,11 +10,18 @@ export interface SelectedTrigger extends Record<string, unknown> {
   inputInteractionId?: string;
 }
 
-export type TriggerFlowEdge = Edge<SelectedTrigger>;
+export interface TriggerEdgeData extends SelectedTrigger {
+  selected: boolean;
+  conditionCount: number;
+  onSelectTrigger?: (trigger: SelectedTrigger) => void;
+}
+
+export type TriggerFlowEdge = Edge<TriggerEdgeData>;
 
 export interface InteractionNodeActions {
   onCreateChild?: (interactionId: string) => void;
   onCreateParent?: (interactionId: string) => void;
+  onSelectRootTrigger?: (interactionId: string, triggerId: string) => void;
 }
 
 export function buildInteractionNodes(
@@ -23,24 +30,32 @@ export function buildInteractionNodes(
   actions: InteractionNodeActions = {},
 ): InteractionFlowNode[] {
   return (
-    story?.interactions.map((item) => ({
-      id: item.id,
-      type: 'interaction',
-      position: item.position,
-      data: {
-        title: item.title,
-        body: item.body,
-        selected: item.id === selectedId,
-        ...(actions.onCreateChild ? { onCreateChild: actions.onCreateChild } : {}),
-        ...(actions.onCreateParent ? { onCreateParent: actions.onCreateParent } : {}),
-      },
-    })) ?? []
+    story?.interactions.map((item) => {
+      const rootTrigger = item.triggers.find((trigger) => trigger.inputInteractionIds.length === 0);
+      return {
+        id: item.id,
+        type: 'interaction',
+        position: item.position,
+        data: {
+          title: item.title,
+          body: item.body,
+          selected: item.id === selectedId,
+          ...(rootTrigger ? { rootTriggerId: rootTrigger.id } : {}),
+          ...(actions.onCreateChild ? { onCreateChild: actions.onCreateChild } : {}),
+          ...(actions.onCreateParent ? { onCreateParent: actions.onCreateParent } : {}),
+          ...(actions.onSelectRootTrigger
+            ? { onSelectRootTrigger: actions.onSelectRootTrigger }
+            : {}),
+        },
+      };
+    }) ?? []
   );
 }
 
 export function buildTriggerEdges(
   story: Story | undefined,
   selectedTrigger?: SelectedTrigger,
+  onSelectTrigger?: (trigger: SelectedTrigger) => void,
 ): TriggerFlowEdge[] {
   return (
     story?.interactions.flatMap((target) =>
@@ -52,14 +67,19 @@ export function buildTriggerEdges(
             selectedTrigger.inputInteractionId === source;
           return {
             id: `${trigger.id}-${source}`,
+            type: 'trigger',
             source,
             target: target.id,
             markerEnd: { type: MarkerType.ArrowClosed },
-            label: trigger.conditions.length
-              ? `${trigger.conditions.length} condition(s)`
-              : undefined,
             className: isSelected ? 'trigger-edge selected' : 'trigger-edge',
-            data: { interactionId: target.id, triggerId: trigger.id, inputInteractionId: source },
+            data: {
+              interactionId: target.id,
+              triggerId: trigger.id,
+              inputInteractionId: source,
+              selected: isSelected,
+              conditionCount: trigger.conditions.length,
+              ...(onSelectTrigger ? { onSelectTrigger } : {}),
+            },
           };
         }),
       ),

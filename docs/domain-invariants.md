@@ -28,8 +28,12 @@ details. They should stay covered by tests as the editor grows.
 - Several triggers between the same source and target should be displayed as a
   grouped edge with several route variants, while remaining distinct triggers in
   the domain model.
-- Editing a linked trigger should happen from the graph edge or grouped route
+- Editing a linked trigger should happen from the graph trigger marker
   representing the relationship.
+- Editing a root trigger should happen from a visible root trigger marker rather
+  than from the interaction content inspector.
+- Interaction input and output lists should not be duplicated in the inspector
+  when the graph already represents them.
 - When connecting interactions, the editor must let the author choose between
   adding the source as an input to an existing trigger and creating a new trigger
   when both are possible.
