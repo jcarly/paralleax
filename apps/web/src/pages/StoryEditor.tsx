@@ -40,7 +40,9 @@ export function StoryEditor() {
     error,
     renameStory,
     saveTrigger,
+    createTriggerVariant,
     deleteTrigger,
+    deleteTriggerVariants,
     deleteTriggerInput,
     connectInteractions,
     connectToExistingTrigger,
@@ -53,6 +55,7 @@ export function StoryEditor() {
   } = useStoryEditorPersistence(storyId);
   const [selectedId, setSelectedId] = useState<string>();
   const [selectedTrigger, setSelectedTrigger] = useState<SelectedTrigger>();
+  const [isConnecting, setIsConnecting] = useState(false);
   const [nodes, setNodes, onNodesChange] = useNodesState<StoryFlowNode>([]);
   const pendingConnectionStart = useRef<{
     nodeId: string;
@@ -72,6 +75,7 @@ export function StoryEditor() {
   const storyNodes = useMemo(
     () =>
       buildInteractionNodes(story, selectedId, selectedTrigger, {
+        showNewTriggerInput: isConnecting,
         onCreateChild: (interactionId) => void createChildFromInteraction(interactionId),
         onCreateParent: (interactionId) => void createParentForInteraction(interactionId),
         onSelectRootTrigger: (interactionId, triggerId) => {
@@ -83,6 +87,7 @@ export function StoryEditor() {
       closeInspector,
       createChildFromInteraction,
       createParentForInteraction,
+      isConnecting,
       selectedId,
       selectedTrigger,
       story,
@@ -134,17 +139,20 @@ export function StoryEditor() {
   const startCanvasConnection: OnConnectStart = (_, params) => {
     if (!params.nodeId || !params.handleType) {
       pendingConnectionStart.current = null;
+      setIsConnecting(false);
       return;
     }
     pendingConnectionStart.current = {
       nodeId: params.nodeId,
       handleType: params.handleType,
     };
+    setIsConnecting(true);
   };
 
   const endCanvasConnection: OnConnectEnd = (event, connectionState) => {
     const start = pendingConnectionStart.current;
     pendingConnectionStart.current = null;
+    setIsConnecting(false);
     const triggerDropTarget = getTriggerDropTarget(event);
     if (
       start?.handleType === 'source' &&
@@ -172,6 +180,18 @@ export function StoryEditor() {
 
   async function deleteSelectedTrigger(interactionId: string, triggerId: string) {
     await deleteTrigger(interactionId, triggerId);
+    setSelectedTrigger(undefined);
+  }
+
+  async function createSelectedTriggerVariant(interactionId: string, triggerId: string) {
+    const createdTriggerId = await createTriggerVariant(interactionId, triggerId);
+    if (createdTriggerId) {
+      setSelectedTrigger({ interactionId, triggerId: createdTriggerId });
+    }
+  }
+
+  async function deleteSelectedTriggerVariants(interactionId: string, triggerIds: string[]) {
+    await deleteTriggerVariants(interactionId, triggerIds);
     setSelectedTrigger(undefined);
   }
 
@@ -268,7 +288,9 @@ export function StoryEditor() {
                 interaction={selectedTriggerTarget.interaction}
                 trigger={selectedTriggerTarget.trigger}
                 onSaveTrigger={saveTrigger}
+                onCreateTriggerVariant={createSelectedTriggerVariant}
                 onDeleteTrigger={deleteSelectedTrigger}
+                onDeleteTriggerVariants={deleteSelectedTriggerVariants}
               />
             ) : null}
           </aside>

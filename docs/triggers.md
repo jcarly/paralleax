@@ -198,6 +198,16 @@ while the trigger inspector exposes several route variants. Adding an "OR
 condition group" in that inspector creates another trigger behind the same visual
 link.
 
+When adding an OR condition group from the inspector, the editor creates a new
+trigger with the same inputs as the selected grouped route. The new trigger is a
+separate domain trigger, even though it shares the same visual marker.
+
+The grouped inspector should also support deleting variants at two levels:
+delete one OR condition group, or delete all OR condition groups behind the
+selected visual marker. If deleting all variants would remove the last trigger of
+an interaction, the existing invariant still applies: the last trigger becomes an
+inputless root trigger instead of leaving the interaction without a trigger.
+
 The domain model should still keep those variants as distinct triggers. The
 grouped edge is a display and editing convenience, not a different trigger
 semantics.

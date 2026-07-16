@@ -62,6 +62,15 @@ This project follows a lightweight [Keep a Changelog](https://keepachangelog.com
 
 ### Changed
 
+- Multiple triggers with the same visual route are now grouped into one trigger
+  marker and expose their alternative condition groups as `OR` variants in the
+  trigger inspector.
+- Trigger inspectors can now add an `OR` condition group by creating a new
+  trigger variant behind the same grouped visual route.
+- Trigger inspectors can now delete a single `OR` group or all `OR` groups behind
+  the selected grouped visual route.
+- New-trigger input handles on interaction cards now stay hidden until the author
+  is actively dragging a graph connection.
 - Updated the web app visual design toward the Creative Workspace direction with
   warmer tokens, neutral interaction cards, subtler panels, diamond trigger
   markers, and restrained graph links.

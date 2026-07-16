@@ -3,8 +3,10 @@ import { Handle, Position, type NodeProps } from '@xyflow/react';
 export interface TriggerNodeData extends Record<string, unknown> {
   interactionId: string;
   triggerId: string;
+  triggerIds: string[];
   conditionCount: number;
   inputCount: number;
+  orGroupCount: number;
   selected: boolean;
   onSelectTrigger?: (interactionId: string, triggerId: string) => void;
 }
@@ -13,6 +15,8 @@ export function TriggerNode({ data }: NodeProps) {
   const d = data as TriggerNodeData;
   const conditionLabel = d.conditionCount ? `${d.conditionCount} condition(s)` : 'No conditions';
   const inputLabel = `${d.inputCount} input${d.inputCount === 1 ? '' : 's'}`;
+  const orLabel =
+    d.orGroupCount > 1 ? `${d.orGroupCount} OR variants` : `${d.orGroupCount} trigger variant`;
 
   return (
     <div className="trigger-node">
@@ -29,8 +33,8 @@ export function TriggerNode({ data }: NodeProps) {
         data-interaction-id={d.interactionId}
         data-trigger-id={d.triggerId}
         data-testid={`flow-trigger-${d.interactionId}-${d.triggerId}`}
-        aria-label={`Trigger, ${inputLabel}, ${conditionLabel}`}
-        title={`${inputLabel}, ${conditionLabel}`}
+        aria-label={`Trigger, ${inputLabel}, ${conditionLabel}, ${orLabel}`}
+        title={`${inputLabel}, ${conditionLabel}, ${orLabel}`}
         onClick={(event) => {
           event.preventDefault();
           event.stopPropagation();

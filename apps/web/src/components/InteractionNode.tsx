@@ -6,6 +6,7 @@ export interface InteractionNodeData extends Record<string, unknown> {
   selected: boolean;
   rootTriggerId?: string;
   rootTriggerSelected?: boolean;
+  showNewTriggerInput?: boolean;
   onCreateChild?: (interactionId: string) => void;
   onCreateParent?: (interactionId: string) => void;
   onSelectRootTrigger?: (interactionId: string, triggerId: string) => void;
@@ -70,7 +71,7 @@ export function InteractionNode({ id, data }: NodeProps) {
         type="target"
         id="new-trigger-input"
         position={Position.Top}
-        className="node-trigger-input nodrag nopan"
+        className={`node-trigger-input nodrag nopan ${d.showNewTriggerInput ? 'is-visible' : ''}`}
         aria-label="Create new trigger input"
         title="Create new trigger"
       />

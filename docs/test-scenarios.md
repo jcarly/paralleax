@@ -43,7 +43,12 @@ Cover the critical MVP paths: Story, Interaction, Trigger, and Reader.
   new trigger for that output interaction.
 - Editor: adding a source to an existing trigger keeps the trigger conditions shared by all of its inputs.
 - Editor/Reader: several triggers between the same interactions represent OR
-  condition groups and show as one grouped route in the editor.
+  condition groups, show as one grouped route in the editor, and expose their
+  OR variants in the trigger inspector.
+- Editor: adding an OR condition group from the trigger inspector creates a new
+  trigger with the same inputs behind the grouped visual route.
+- Editor: the trigger inspector can delete one OR condition group or every OR
+  group behind the selected visual route.
 - Reader engine: an inputless trigger without conditions is available only at
   story start.
 - Reader engine: an inputless trigger with conditions can become available during

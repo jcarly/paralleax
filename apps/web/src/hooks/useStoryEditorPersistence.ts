@@ -83,6 +83,35 @@ export function useStoryEditorPersistence(storyId: string) {
     setStory((current) => (current ? mergeIncomingStory(current, next) : next));
   }
 
+  async function createTriggerVariant(interactionId: string, baseTriggerId: string) {
+    if (!story) return undefined;
+    const interaction = story.interactions.find((item) => item.id === interactionId);
+    const baseTrigger = interaction?.triggers.find((trigger) => trigger.id === baseTriggerId);
+    if (!interaction || !baseTrigger) return undefined;
+
+    const candidate = story.interactions.find((item) => item.id !== interaction.id);
+    if (!candidate) return undefined;
+
+    const existingTriggerIds = new Set(interaction.triggers.map((trigger) => trigger.id));
+    const withTrigger = await api.addTrigger(storyId, interactionId);
+    const nextTrigger = findCreatedTrigger(withTrigger, interactionId, existingTriggerIds);
+    if (!nextTrigger) {
+      setStory((current) => (current ? mergeIncomingStory(current, withTrigger) : withTrigger));
+      return undefined;
+    }
+
+    const patch = {
+      inputInteractionIds: baseTrigger.inputInteractionIds,
+      conditions: [{ interactionId: candidate.id, hasBeenVisited: true }],
+    };
+    patch.inputInteractionIds.forEach((inputId) =>
+      deletedTriggerInputKeys.current.delete(`${nextTrigger.id}:${inputId}`),
+    );
+    const updated = await api.updateTrigger(storyId, interactionId, nextTrigger.id, patch);
+    setStory((current) => (current ? mergeIncomingStory(current, updated) : updated));
+    return nextTrigger.id;
+  }
+
   async function deleteTrigger(interactionId: string, triggerId: string) {
     const interaction = story?.interactions.find((item) => item.id === interactionId);
     const removesTrigger = (interaction?.triggers.length ?? 0) > 1;
@@ -94,6 +123,27 @@ export function useStoryEditorPersistence(storyId: string) {
     );
     const next = await api.deleteTrigger(storyId, interactionId, triggerId);
     setStory((current) => (current ? mergeIncomingStory(current, next) : next));
+  }
+
+  async function deleteTriggerVariants(interactionId: string, triggerIds: string[]) {
+    if (!story || triggerIds.length === 0) return;
+
+    let optimisticStory = story;
+    for (const triggerId of triggerIds) {
+      const interaction = optimisticStory.interactions.find((item) => item.id === interactionId);
+      const removesTrigger = (interaction?.triggers.length ?? 0) > 1;
+      if (removesTrigger) {
+        deletedTriggerIds.current.add(triggerId);
+      }
+      optimisticStory = deleteTriggerInStory(optimisticStory, interactionId, triggerId);
+    }
+    setStory(optimisticStory);
+
+    let nextStory = optimisticStory;
+    for (const triggerId of triggerIds) {
+      nextStory = await api.deleteTrigger(storyId, interactionId, triggerId);
+    }
+    setStory((current) => (current ? mergeIncomingStory(current, nextStory) : nextStory));
   }
 
   async function deleteTriggerInput(
@@ -256,7 +306,9 @@ export function useStoryEditorPersistence(storyId: string) {
     error,
     renameStory,
     saveTrigger,
+    createTriggerVariant,
     deleteTrigger,
+    deleteTriggerVariants,
     deleteTriggerInput,
     connectInteractions,
     connectToExistingTrigger,

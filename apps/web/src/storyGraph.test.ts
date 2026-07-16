@@ -55,6 +55,7 @@ describe('story graph mapping', () => {
           title: 'Start',
           body: 'Start body',
           selected: false,
+          showNewTriggerInput: false,
           rootTriggerId: 'trigger-root',
           rootTriggerSelected: false,
         },
@@ -63,15 +64,23 @@ describe('story graph mapping', () => {
         id: 'interaction-2',
         type: 'interaction',
         position: { x: 80, y: 420 },
-        data: { title: 'Choice', body: 'Choice body', selected: true },
+        data: { title: 'Choice', body: 'Choice body', selected: true, showNewTriggerInput: false },
       },
       {
         id: 'interaction-3',
         type: 'interaction',
         position: { x: 320, y: 270 },
-        data: { title: 'Other', body: 'Other body', selected: false },
+        data: { title: 'Other', body: 'Other body', selected: false, showNewTriggerInput: false },
       },
     ]);
+  });
+
+  it('marks new-trigger input handles as visible while a connection is active', () => {
+    expect(
+      buildInteractionNodes(story, undefined, undefined, { showNewTriggerInput: true }).map(
+        (node) => node.data.showNewTriggerInput,
+      ),
+    ).toEqual([true, true, true]);
   });
 
   it('builds one edge per trigger input without selecting links directly', () => {
@@ -79,7 +88,7 @@ describe('story graph mapping', () => {
 
     expect(buildTriggerEdges(story)).toEqual([
       {
-        id: 'trigger-linked-interaction-1',
+        id: 'trigger:interaction-2:trigger-linked-interaction-1',
         type: 'trigger',
         source: 'interaction-1',
         sourceHandle: 'interaction-output',
@@ -89,13 +98,14 @@ describe('story graph mapping', () => {
         data: {
           interactionId: 'interaction-2',
           triggerId: 'trigger-linked',
+          triggerIds: ['trigger-linked'],
           inputInteractionId: 'interaction-1',
           selected: false,
           conditionCount: 1,
         },
       },
       {
-        id: 'trigger-linked-interaction-3',
+        id: 'trigger:interaction-2:trigger-linked-interaction-3',
         type: 'trigger',
         source: 'interaction-3',
         sourceHandle: 'interaction-output',
@@ -105,13 +115,14 @@ describe('story graph mapping', () => {
         data: {
           interactionId: 'interaction-2',
           triggerId: 'trigger-linked',
+          triggerIds: ['trigger-linked'],
           inputInteractionId: 'interaction-3',
           selected: false,
           conditionCount: 1,
         },
       },
       {
-        id: 'trigger-linked-output',
+        id: 'trigger:interaction-2:trigger-linked-output',
         type: 'trigger',
         source: triggerNodeId,
         sourceHandle: 'trigger-output',
@@ -122,6 +133,7 @@ describe('story graph mapping', () => {
         data: {
           interactionId: 'interaction-2',
           triggerId: 'trigger-linked',
+          triggerIds: ['trigger-linked'],
           selected: false,
           conditionCount: 1,
         },
@@ -145,12 +157,34 @@ describe('story graph mapping', () => {
         data: {
           interactionId: 'interaction-2',
           triggerId: 'trigger-linked',
+          triggerIds: ['trigger-linked'],
           selected: true,
           conditionCount: 1,
           inputCount: 2,
+          orGroupCount: 1,
         },
       },
     ]);
+  });
+
+  it('groups several triggers with the same inputs behind one trigger marker', () => {
+    const groupedStory = structuredClone(story);
+    groupedStory.interactions[1].triggers.push({
+      id: 'trigger-alternative',
+      inputInteractionIds: ['interaction-3', 'interaction-1'],
+      conditions: [{ interactionId: 'interaction-3', hasBeenVisited: false }],
+    });
+
+    expect(buildTriggerNodes(groupedStory)).toHaveLength(1);
+    expect(buildTriggerNodes(groupedStory)[0].data).toMatchObject({
+      interactionId: 'interaction-2',
+      triggerId: 'trigger-linked',
+      triggerIds: ['trigger-linked', 'trigger-alternative'],
+      conditionCount: 2,
+      inputCount: 2,
+      orGroupCount: 2,
+    });
+    expect(buildTriggerEdges(groupedStory)).toHaveLength(3);
   });
 
   it('returns empty graph parts without a story', () => {

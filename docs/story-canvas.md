@@ -117,9 +117,16 @@ UX rules:
 - deleting a trigger input should happen from the input link;
 - deleting the last input should convert the trigger into a root trigger;
 - connecting to an existing marker should add another input to that trigger;
-- connecting to the empty interaction input should create a separate trigger.
-- interactions with several triggers should show several trigger markers so each
-  trigger remains editable.
+- connecting to the empty interaction input should create a separate trigger;
+- interactions with several distinct trigger routes should show several trigger
+  markers so each route remains editable;
+- several triggers with the same inputs and output should be grouped behind one
+  visual marker, with their alternative condition groups shown as `OR` variants
+  in the inspector.
+- adding an `OR` condition group from the inspector should create another trigger
+  with the same inputs behind the same visual marker.
+- the inspector should let authors delete one OR group at a time, or delete every
+  OR group behind the selected visual marker in one action.
 
 When the author hovers a trigger marker, local action icons may appear around
 it. These icons can expose trigger actions such as editing conditions, deleting
@@ -149,7 +156,9 @@ Current direction:
 - the primary input action is the blue `+` near the top of the interaction;
 - the primary output action is the blue `+` near the bottom of the interaction;
 - trigger output arrows should point to the primary input action;
-- the empty input handle is a precise drop target for creating a new trigger.
+- the empty input handle is a precise drop target for creating a new trigger;
+- the empty input handle should stay hidden until the author is actively
+  dragging a connection, so normal reading of the graph is not overloaded.
 
 ## Inspector Behavior
 

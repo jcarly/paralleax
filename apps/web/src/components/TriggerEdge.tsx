@@ -54,7 +54,9 @@ export function TriggerEdge({
             onClick={(event) => {
               event.preventDefault();
               event.stopPropagation();
-              data.onDeleteTriggerInput?.(data.interactionId, data.triggerId, inputInteractionId);
+              (data.triggerIds ?? [data.triggerId]).forEach((triggerId) =>
+                data.onDeleteTriggerInput?.(data.interactionId, triggerId, inputInteractionId),
+              );
             }}
           >
             x
