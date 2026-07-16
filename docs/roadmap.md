@@ -27,6 +27,8 @@
   editor toward a story-first canvas with denser default spacing, adaptive edge
   routing, cleaner trigger marker placement, left-side navigation/filtering, a
   contextual right inspector, and representative canvas examples.
+- Navigation foundation: quick search, recentering, recent selections, and
+  model/story navigation patterns for larger graphs.
 - Simulation Mode for authors: start from any interaction, show relevant
   available and unavailable interactions, explain failed trigger conditions,
   expose simulated preconditions, allow journey reset/time travel, support forced
@@ -50,6 +52,8 @@
 - Permission hierarchy and inheritance rules to define before implementation.
 - Review rights that let authorized users see all pending suggestions for a story.
 - Review workflow for proposed story changes.
+- Contribution workflow for proposing interactions or branches before they are
+  accepted into the canonical story.
 - Approval rules that can require creator or authorized reviewer validation before suggested changes affect the story.
 - Event-log-based change history for accepted, rejected, and pending story modifications.
 
@@ -58,6 +62,7 @@
 - Characters.
 - Places.
 - Neutral grouping concept for quests, chapters, arcs, or scene sequences.
+- Author annotations that do not affect story execution.
 - Story Canvas filters/focal points for future groups, characters, and places.
 - Attributes.
 - Interaction impacts on attributes.
@@ -75,6 +80,7 @@
 ## V1.0 - Exports and Integrations
 
 - Embeddable reader.
+- Hosted platform publishing and story sharing.
 - Web app or executable exports.
 - Media support.
 - Unity exploration.

@@ -14,15 +14,20 @@ This folder is the product and technical source of truth for the project.
 8. [User guide](user-guide.md): current authoring workflow.
 9. [Architecture](architecture.md): technical organization of the monorepo.
 10. [Design principles](design-principles.md): UX and technical principles.
-11. [UI direction](ui-direction.md): target Story Canvas, filters, and inspector model.
-12. [Story Canvas](story-canvas.md): current canvas UX rules and open tuning points.
-13. [Design system](design-system.md): visual identity and reusable UI rules to define.
-14. [Mockups](mockups/README.md): static UX references for canvas and simulation design.
-15. [Non-goals](non-goals.md): boundaries that protect the product direction.
-16. [Test scenarios](test-scenarios.md): test scenarios to maintain.
-17. [Roadmap](roadmap.md): planned progression after the MVP.
-18. [Open questions](open-questions.md): postponed product and architecture questions.
-19. [Changelog](../CHANGELOG.md): notable implementation, test, and documentation changes.
+11. [UX principles](ux-principles.md): product UX rules that keep views aligned.
+12. [UI direction](ui-direction.md): target Story Canvas, filters, and inspector model.
+13. [Story Canvas](story-canvas.md): current canvas UX rules and open tuning points.
+14. [Navigation](navigation.md): model and story navigation direction.
+15. [Simulation](simulation.md): author-facing test and debugging direction.
+16. [Annotations](annotations.md): target authoring notes concept.
+17. [Design system](design-system.md): visual identity and reusable UI rules to define.
+18. [Mockups](mockups/README.md): static UX references for canvas and simulation design.
+19. [Business model](business-model.md): open source core and platform philosophy.
+20. [Non-goals](non-goals.md): boundaries that protect the product direction.
+21. [Test scenarios](test-scenarios.md): test scenarios to maintain.
+22. [Roadmap](roadmap.md): planned progression after the MVP.
+23. [Open questions](open-questions.md): postponed product and architecture questions.
+24. [Changelog](../CHANGELOG.md): notable implementation, test, and documentation changes.
 
 ## Documentation Map
 
@@ -31,7 +36,7 @@ docs/
   README.md                 Documentation index
   vision.md                 Product intent and long-term direction
   mvp.md                    Current MVP boundaries
-  domain-model.md           Business model and future model
+  domain-model.md           Domain model and target model
   glossary.md               Shared product and technical vocabulary
   domain-invariants.md      Domain and editor projection rules
   reader-semantics.md       Reader execution rules
@@ -39,10 +44,15 @@ docs/
   user-guide.md             Current authoring workflow
   architecture.md           Technical architecture
   design-principles.md      UX and engineering principles
+  ux-principles.md          Product UX principles
   ui-direction.md           Target Story Canvas and filtering direction
   story-canvas.md           Current Story Canvas UX rules
+  navigation.md             Model and story navigation direction
+  simulation.md             Author-facing simulation direction
+  annotations.md            Target authoring annotation concept
   design-system.md          Visual identity and reusable UI rules
   mockups/                  Static UX mockups
+  business-model.md         Open source and platform philosophy
   non-goals.md              Product boundaries and non-objectives
   test-scenarios.md         Regression scenarios
   roadmap.md                Product progression

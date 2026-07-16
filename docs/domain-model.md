@@ -195,6 +195,39 @@ Possible elements:
 - characters;
 - current date and time.
 
+### Group
+
+A group is a neutral logical grouping of interactions.
+
+It should not force a specific narrative vocabulary such as chapter, quest, arc,
+or scene sequence. Those labels may be author-facing choices later.
+
+Possible elements:
+
+- title;
+- description;
+- included interactions;
+- display order or canvas focus metadata.
+
+Groups are not part of the MVP implementation.
+
+### Annotation
+
+An annotation is authoring metadata.
+
+It can attach to a story object, a text range, or a canvas area, but it never
+participates in reader execution or trigger evaluation.
+
+Possible elements:
+
+- note on an interaction;
+- note on a trigger or condition;
+- annotation on interaction text;
+- free canvas note;
+- author and visibility metadata later when users exist.
+
+Annotations are not part of the MVP implementation.
+
 ### Character
 
 A character can be playable or non-playable.

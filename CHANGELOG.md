@@ -44,6 +44,8 @@ This project follows a lightweight [Keep a Changelog](https://keepachangelog.com
 - Design-system foundation notes for the future visual identity.
 - Static Story Canvas mockups for compact graph layout, trigger routing,
   inspector behavior, and author simulation.
+- UX principles, navigation, simulation, annotation, and business-model notes
+  clarifying that the graph is only one representation of the narrative model.
 - Trigger semantics documentation covering inputs, deletion behavior, and editor UX.
 - API endpoint to delete a trigger from an interaction.
 - Web API client support for trigger deletion.

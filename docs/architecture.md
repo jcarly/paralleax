@@ -42,6 +42,11 @@ the Paralleax domain model and shared packages. The application may map domain
 objects to React Flow nodes and edges, but it should not store stories as React
 Flow data.
 
+The graph is therefore a representation of the narrative model, not the product
+itself. Other surfaces, such as simulation, navigation, filtering, review, or a
+future reader platform, must be able to use the same story model without
+duplicating it.
+
 Current trigger rendering is a projection: a linked trigger is shown as a small
 React Flow trigger node between its input interactions and its output
 interaction. Each input edge connects an interaction to that trigger node, and

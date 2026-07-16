@@ -51,6 +51,12 @@ groups.
 The execution layer that evaluates the story and offers available interactions to
 the user reading or testing it.
 
+### Simulation Mode
+
+The author-facing testing surface. It can reveal unavailable interactions,
+trigger diagnostics, and temporary simulated state, unlike the final player
+reader.
+
 ### Graph Edge
 
 The editor representation of one trigger input. A trigger with several inputs is
@@ -66,6 +72,16 @@ An interaction that explicitly completes the story or play session.
 
 A reader's progress through a story, including the current interaction, visited
 history, and later world state or save data.
+
+### Group
+
+A neutral logical grouping of interactions. A group may represent a quest,
+chapter, arc, scene sequence, or another author-defined structure later.
+
+### Annotation
+
+Authoring metadata attached to a story object, text range, or canvas area. It
+does not participate in story execution.
 
 ### User
 

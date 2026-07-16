@@ -18,8 +18,8 @@ implementation terms.
 
 The editor may use a graph internally and visually, but the primary experience
 should feel like working with story moments, branches, choices, and consequences.
-See [UI direction](ui-direction.md) for the target Story Canvas model and
-[Story Canvas](story-canvas.md) for current graph UX rules.
+See [UX principles](ux-principles.md), [UI direction](ui-direction.md), and
+[Story Canvas](story-canvas.md).
 
 ## One Model, Several Focal Points
 
