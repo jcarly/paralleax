@@ -119,4 +119,21 @@ describe('StoryPlayer', () => {
     expect(screen.getByRole('heading', { name: 'Next' })).toBeInTheDocument();
     expect(screen.getByText('You continue.')).toBeInTheDocument();
   });
+
+  it('shows unavailable interactions in simulation mode and lets authors force them', async () => {
+    const user = userEvent.setup();
+    await renderPlayer('/stories/story-1/play?mode=simulation&startInteractionId=next');
+
+    expect(screen.getByText('Simulation')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Next' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Start' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Secret/ })).toHaveClass('unavailable');
+
+    await user.click(screen.getByRole('button', { name: /Secret/ }));
+
+    expect(screen.getByRole('heading', { name: 'Secret' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Start' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Next' })).not.toBeInTheDocument();
+    expect(screen.queryByText('End of this branch.')).not.toBeInTheDocument();
+  });
 });

@@ -3,10 +3,11 @@ import {
   deleteInteractionFromStory,
   deleteTriggerInStory,
   createDemoStory,
+  getAvailableInteractions,
+  getInputReachableInteractions,
   getNextChildPosition,
   getNextParentPosition,
   getNextRootPosition,
-  getAvailableInteractions,
   mergeServerStory,
   normalizeTriggerInputIds,
   updateTriggerInStory,
@@ -264,5 +265,28 @@ describe('shared story operations', () => {
     expect(
       getAvailableInteractions(story, 'middle', ['root', 'middle']).map((item) => item.id),
     ).toEqual(['end']);
+  });
+
+  it('lists input-reachable interactions without applying trigger conditions', () => {
+    const story = storyFixture();
+    story.interactions.push({
+      id: 'unrelated',
+      title: 'Unrelated',
+      body: 'Not reachable from the current input.',
+      position: { x: 320, y: 270 },
+      triggers: [
+        {
+          id: 'trigger-unrelated',
+          inputInteractionIds: ['end'],
+          conditions: [],
+        },
+      ],
+    });
+
+    expect(getInputReachableInteractions(story, 'root').map((item) => item.id)).toEqual([
+      'middle',
+      'end',
+    ]);
+    expect(getAvailableInteractions(story, 'root', []).map((item) => item.id)).toEqual(['middle']);
   });
 });

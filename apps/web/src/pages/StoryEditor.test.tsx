@@ -344,13 +344,13 @@ describe('StoryEditor', () => {
     await renderEditor(storyWithTwoInteractions());
 
     const testLink = screen.getByRole('link', { name: 'Test' });
-    expect(testLink).toHaveAttribute('href', '/stories/story-1/play');
+    expect(testLink).toHaveAttribute('href', '/stories/story-1/play?mode=simulation');
 
     await user.click(screen.getByTestId('flow-node-interaction-2'));
 
     expect(screen.getByRole('link', { name: 'Test from current interaction' })).toHaveAttribute(
       'href',
-      '/stories/story-1/play?startInteractionId=interaction-2',
+      '/stories/story-1/play?mode=simulation&startInteractionId=interaction-2',
     );
   });
 

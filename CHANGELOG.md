@@ -8,6 +8,10 @@ This project follows a lightweight [Keep a Changelog](https://keepachangelog.com
 
 ### Added
 
+- Author Simulation Mode now opens from the editor test action, lists
+  interactions reachable by trigger input logic, dims condition-blocked
+  interactions, and lets authors force an unavailable interaction for the current
+  simulation journey.
 - Local demo story generator with API and web UI support for creating a populated test story without external AI services.
 - Canvas `Add root` action that places new root interactions below the lowest existing root.
 - Graph creation shortcuts: dropping an output connection on empty canvas creates a child, and dropping an input connection creates a linked source interaction.
@@ -149,6 +153,8 @@ This project follows a lightweight [Keep a Changelog](https://keepachangelog.com
 
 ### Documentation
 
+- Documented the current Simulation Mode slice and its boundary from the player
+  reader.
 - Documented target contextual inputless triggers, final interactions, and player
   save direction.
 - Added contextual inputless triggers to the MVP reader model.

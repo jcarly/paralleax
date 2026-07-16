@@ -139,6 +139,28 @@ A first implementation can focus on:
 - resetting simulation state;
 - opening an interaction in the graph for editing.
 
+## Current Implementation
+
+The editor `Test` action opens the reader route with `mode=simulation`.
+
+Current behavior:
+
+- `/play` remains the player reader and only shows interactions that are
+  available to the player;
+- `/play?mode=simulation` enables the author-facing simulation surface;
+- if an interaction is selected in the editor, the test route also receives
+  `startInteractionId` so the simulation starts from that interaction;
+- Simulation Mode lists interactions that are reachable from the current
+  interaction according to trigger input logic;
+- interactions that are reachable by input but blocked by conditions are dimmed
+  but remain selectable;
+- selecting a dimmed interaction forces it for the current simulation journey
+  and does not change the story data or reader engine semantics;
+- restart resets the simulation to the original starting interaction.
+
+This first slice deliberately does not explain unavailability yet. Hover
+diagnostics and direct editing remain next steps.
+
 Out of scope for the first version:
 
 - full trigger editing inside Simulation Mode;

@@ -364,19 +364,25 @@ export function isTriggerEligible(
   currentInteractionId: string | null,
   visited: Set<string>,
 ): boolean {
-  const hasInputs = trigger.inputInteractionIds.length > 0;
-  const hasConditions = trigger.conditions.length > 0;
-  const inputMatches = hasInputs
-    ? currentInteractionId !== null && trigger.inputInteractionIds.includes(currentInteractionId)
-    : hasConditions || currentInteractionId === null;
   return (
-    inputMatches &&
+    doesTriggerInputMatch(trigger, currentInteractionId) &&
     trigger.conditions.every((condition) =>
       condition.hasBeenVisited
         ? visited.has(condition.interactionId)
         : !visited.has(condition.interactionId),
     )
   );
+}
+
+export function doesTriggerInputMatch(
+  trigger: Trigger,
+  currentInteractionId: string | null,
+): boolean {
+  const hasInputs = trigger.inputInteractionIds.length > 0;
+  const hasConditions = trigger.conditions.length > 0;
+  return hasInputs
+    ? currentInteractionId !== null && trigger.inputInteractionIds.includes(currentInteractionId)
+    : hasConditions || currentInteractionId === null;
 }
 
 export function getAvailableInteractions(
@@ -389,5 +395,14 @@ export function getAvailableInteractions(
     interaction.triggers.some((trigger) =>
       isTriggerEligible(trigger, currentInteractionId, visited),
     ),
+  );
+}
+
+export function getInputReachableInteractions(
+  story: Story,
+  currentInteractionId: string | null,
+): Interaction[] {
+  return story.interactions.filter((interaction) =>
+    interaction.triggers.some((trigger) => doesTriggerInputMatch(trigger, currentInteractionId)),
   );
 }

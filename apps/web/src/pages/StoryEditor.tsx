@@ -207,6 +207,11 @@ export function StoryEditor() {
   }
 
   if (!story) return <main className="page">{error || 'Loading...'}</main>;
+  const simulationPath = selected
+    ? `/stories/${storyId}/play?mode=simulation&startInteractionId=${encodeURIComponent(
+        selected.id,
+      )}`
+    : `/stories/${storyId}/play?mode=simulation`;
 
   return (
     <main className="editor-page">
@@ -221,14 +226,7 @@ export function StoryEditor() {
           <button disabled={!selected} onClick={() => void createSelectedChild()}>
             Add child
           </button>
-          <Link
-            className="button secondary"
-            to={
-              selected
-                ? `/stories/${storyId}/play?startInteractionId=${encodeURIComponent(selected.id)}`
-                : `/stories/${storyId}/play`
-            }
-          >
+          <Link className="button secondary" to={simulationPath}>
             {selected ? 'Test from current interaction' : 'Test'}
           </Link>
         </div>

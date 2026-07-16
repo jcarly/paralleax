@@ -66,6 +66,11 @@ Cover the critical MVP paths: Story, Interaction, Trigger, and Reader.
 - Reader engine: an interaction without input is available at startup.
 - Reader engine: an interaction with input is only available after the source interaction.
 - Reader engine: visited / not visited conditions filter choices correctly.
+- Simulation: the editor test action opens Simulation Mode instead of the player
+  reader.
+- Simulation: interactions reachable by trigger input logic are listed,
+  condition-blocked interactions are dimmed, and selecting one forces it for the
+  current simulation journey.
 
 ## Playwright Functional Tests
 
