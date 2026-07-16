@@ -39,6 +39,11 @@ This project follows a lightweight [Keep a Changelog](https://keepachangelog.com
 - API, web, and functional test documentation in the README.
 - Coverage commands for API and web test suites.
 - Documentation index under `docs/README.md`.
+- Story Canvas UX notes covering compact layout, adaptive edge routing, trigger
+  marker placement, interaction handles, and inspector behavior.
+- Design-system foundation notes for the future visual identity.
+- Static Story Canvas mockups for compact graph layout, trigger routing,
+  inspector behavior, and author simulation.
 - Trigger semantics documentation covering inputs, deletion behavior, and editor UX.
 - API endpoint to delete a trigger from an interaction.
 - Web API client support for trigger deletion.

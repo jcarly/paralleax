@@ -15,11 +15,14 @@ This folder is the product and technical source of truth for the project.
 9. [Architecture](architecture.md): technical organization of the monorepo.
 10. [Design principles](design-principles.md): UX and technical principles.
 11. [UI direction](ui-direction.md): target Story Canvas, filters, and inspector model.
-12. [Non-goals](non-goals.md): boundaries that protect the product direction.
-13. [Test scenarios](test-scenarios.md): test scenarios to maintain.
-14. [Roadmap](roadmap.md): planned progression after the MVP.
-15. [Open questions](open-questions.md): postponed product and architecture questions.
-16. [Changelog](../CHANGELOG.md): notable implementation, test, and documentation changes.
+12. [Story Canvas](story-canvas.md): current canvas UX rules and open tuning points.
+13. [Design system](design-system.md): visual identity and reusable UI rules to define.
+14. [Mockups](mockups/README.md): static UX references for canvas and simulation design.
+15. [Non-goals](non-goals.md): boundaries that protect the product direction.
+16. [Test scenarios](test-scenarios.md): test scenarios to maintain.
+17. [Roadmap](roadmap.md): planned progression after the MVP.
+18. [Open questions](open-questions.md): postponed product and architecture questions.
+19. [Changelog](../CHANGELOG.md): notable implementation, test, and documentation changes.
 
 ## Documentation Map
 
@@ -37,6 +40,9 @@ docs/
   architecture.md           Technical architecture
   design-principles.md      UX and engineering principles
   ui-direction.md           Target Story Canvas and filtering direction
+  story-canvas.md           Current Story Canvas UX rules
+  design-system.md          Visual identity and reusable UI rules
+  mockups/                  Static UX mockups
   non-goals.md              Product boundaries and non-objectives
   test-scenarios.md         Regression scenarios
   roadmap.md                Product progression

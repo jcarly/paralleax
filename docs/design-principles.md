@@ -18,7 +18,8 @@ implementation terms.
 
 The editor may use a graph internally and visually, but the primary experience
 should feel like working with story moments, branches, choices, and consequences.
-See [UI direction](ui-direction.md) for the target Story Canvas model.
+See [UI direction](ui-direction.md) for the target Story Canvas model and
+[Story Canvas](story-canvas.md) for current graph UX rules.
 
 ## One Model, Several Focal Points
 
@@ -56,11 +57,23 @@ The editor must make the narrative structure visible.
 UX principles:
 
 - directly linked interactions should be visually close;
+- default spacing should stay compact enough for authors to read small stories
+  without excessive panning;
 - a new output must not overlap existing outputs;
-- links should help users understand triggers;
+- links should help users understand triggers and should adapt visually to the
+  relative position of interactions and trigger markers;
 - links may later show visual hints: condition, timing, probability, automatic choice.
 - actions should live where the author expects them, such as deleting a trigger
   input directly from its graph link.
+
+## Visual Consistency
+
+Paralleax needs a deliberate visual identity before the editor grows.
+
+The design system should make the application calm and readable for long
+authoring sessions. Color, spacing, typography, selection states, and graph
+controls should be defined as reusable rules instead of one-off component
+choices. See [Design system](design-system.md).
 
 ## Usable Data
 

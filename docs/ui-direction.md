@@ -19,6 +19,9 @@ The Graph View is therefore not a separate product direction. It is one technica
 projection of the same Story Canvas, useful for inspecting links, trigger
 structure, root triggers, and complex branching.
 
+Current canvas UX rules and tuning points live in
+[Story Canvas](story-canvas.md).
+
 ## Layout Direction
 
 The target editor layout is:

@@ -24,8 +24,9 @@
 - Delete confirmations for interactions and triggers.
 - JSON export/import for stories.
 - Story Canvas UX exploration: keep the current graph semantics, but refine the
-  editor toward a story-first canvas with left-side navigation/filtering and a
-  contextual right inspector.
+  editor toward a story-first canvas with denser default spacing, adaptive edge
+  routing, cleaner trigger marker placement, left-side navigation/filtering, a
+  contextual right inspector, and representative canvas examples.
 - Simulation Mode for authors: start from any interaction, show relevant
   available and unavailable interactions, explain failed trigger conditions,
   expose simulated preconditions, allow journey reset/time travel, support forced
@@ -38,6 +39,8 @@
 - Migrations.
 - Reproducible demo data.
 - UI wording pass for author-facing trigger vocabulary.
+- Visual identity and design-system foundation for palette, typography, spacing,
+  graph controls, interaction nodes, trigger markers, and selection states.
 
 ## V0.3 - Users, Permissions, and Review
 
