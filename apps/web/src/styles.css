@@ -628,6 +628,42 @@ header span {
   line-height: 1.7;
   white-space: pre-wrap;
 }
+.simulation-title-input,
+.simulation-body-input {
+  width: 100%;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+  transition:
+    border-color 150ms ease,
+    background 150ms ease,
+    box-shadow 150ms ease;
+}
+.simulation-title-input {
+  margin: 0.67em 0;
+  padding: 0.2rem 0.35rem;
+  font-size: 2rem;
+  font-weight: 750;
+  line-height: 1.15;
+}
+.simulation-body-input {
+  min-height: 180px;
+  padding: 0.6rem 0.7rem;
+  font-size: 1.15rem;
+  line-height: 1.7;
+  resize: vertical;
+}
+.simulation-title-input:hover,
+.simulation-title-input:focus,
+.simulation-body-input:hover,
+.simulation-body-input:focus {
+  border-color: var(--color-control-border);
+  background: var(--color-surface-secondary);
+  outline: none;
+  box-shadow: 0 0 0 3px var(--color-primary-halo);
+}
 .choices {
   display: grid;
   gap: 0.75rem;

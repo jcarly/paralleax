@@ -10,6 +10,7 @@ import { api } from '../api';
 vi.mock('../api', () => ({
   api: {
     getStory: vi.fn(),
+    updateInteraction: vi.fn(),
   },
 }));
 
@@ -118,6 +119,8 @@ describe('StoryPlayer', () => {
 
     expect(screen.getByRole('heading', { name: 'Next' })).toBeInTheDocument();
     expect(screen.getByText('You continue.')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Current interaction title')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Current interaction content')).not.toBeInTheDocument();
   });
 
   it('shows unavailable interactions in simulation mode and lets authors force them', async () => {
@@ -125,7 +128,7 @@ describe('StoryPlayer', () => {
     await renderPlayer('/stories/story-1/play?mode=simulation&startInteractionId=next');
 
     expect(screen.getByText('Simulation')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Next' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Current interaction title')).toHaveValue('Next');
     expect(screen.getByRole('button', { name: 'Back' })).toBeDisabled();
     expect(screen.queryByRole('button', { name: 'Start' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Secret/ })).toHaveClass('unavailable');
@@ -133,15 +136,48 @@ describe('StoryPlayer', () => {
 
     await user.click(screen.getByRole('button', { name: /Secret/ }));
 
-    expect(screen.getByRole('heading', { name: 'Secret' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Current interaction title')).toHaveValue('Secret');
     expect(screen.queryByRole('button', { name: 'Start' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Next' })).not.toBeInTheDocument();
     expect(screen.queryByText('End of this branch.')).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Back' }));
 
-    expect(screen.getByRole('heading', { name: 'Next' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Current interaction title')).toHaveValue('Next');
     expect(screen.getByRole('button', { name: /Secret/ })).toHaveClass('unavailable');
     expect(screen.getByText('Requires "Start" to be visited.')).toBeInTheDocument();
+  });
+
+  it('edits the current title and content inline in simulation mode', async () => {
+    const user = userEvent.setup();
+    const renamed = structuredClone(story);
+    renamed.interactions[1].title = 'Renamed step';
+    const rewritten = structuredClone(renamed);
+    rewritten.interactions[1].body = 'Rewritten content.';
+    vi.mocked(api.updateInteraction)
+      .mockResolvedValueOnce(renamed)
+      .mockResolvedValueOnce(rewritten);
+
+    await renderPlayer('/stories/story-1/play?mode=simulation&startInteractionId=next');
+
+    const titleInput = screen.getByLabelText('Current interaction title');
+    await user.clear(titleInput);
+    await user.type(titleInput, 'Renamed step');
+    await user.tab();
+
+    expect(api.updateInteraction).toHaveBeenCalledWith('story-1', 'next', {
+      title: 'Renamed step',
+    });
+    expect(await screen.findByDisplayValue('Renamed step')).toBeInTheDocument();
+
+    const bodyInput = screen.getByLabelText('Current interaction content');
+    await user.clear(bodyInput);
+    await user.type(bodyInput, 'Rewritten content.');
+    await user.tab();
+
+    expect(api.updateInteraction).toHaveBeenCalledWith('story-1', 'next', {
+      body: 'Rewritten content.',
+    });
+    expect(await screen.findByDisplayValue('Rewritten content.')).toBeInTheDocument();
   });
 });

@@ -160,10 +160,12 @@ Current behavior:
   and does not change the story data or reader engine semantics;
 - a simulation `Back` action returns to the previous step of the current
   journey;
+- the current interaction title and content can be edited inline in Simulation
+  Mode and are saved to the story;
 - restart resets the simulation to the original starting interaction.
 
 This first slice only explains MVP visited / not visited conditions. Richer hover
-diagnostics and direct editing remain next steps.
+diagnostics, option creation, and trigger editing remain next steps.
 
 Out of scope for the first version:
 

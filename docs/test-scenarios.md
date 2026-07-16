@@ -75,6 +75,8 @@ Cover the critical MVP paths: Story, Interaction, Trigger, and Reader.
   not visited condition.
 - Simulation: authors can step back to the previous interaction in the current
   simulation journey.
+- Simulation: authors can edit the current interaction title and content inline
+  without opening the graph inspector.
 
 ## Playwright Functional Tests
 

@@ -97,6 +97,22 @@ export function StoryPlayer() {
     setVisited(uniqueJourneyIds(nextJourney));
   }
 
+  async function saveCurrentInteraction(patch: Partial<Pick<Interaction, 'title' | 'body'>>) {
+    if (!current) return;
+    const nextStory = await api.updateInteraction(storyId, current.id, patch);
+    setStory(nextStory);
+  }
+
+  function patchCurrentInteraction(patch: Partial<Pick<Interaction, 'title' | 'body'>>) {
+    if (!story || !current) return;
+    setStory({
+      ...story,
+      interactions: story.interactions.map((interaction) =>
+        interaction.id === current.id ? { ...interaction, ...patch } : interaction,
+      ),
+    });
+  }
+
   if (!story) return <main className="page">Loading...</main>;
 
   return (
@@ -117,8 +133,30 @@ export function StoryPlayer() {
         <p className="eyebrow">{story.title}</p>
         {current ? (
           <>
-            <h1>{current.title}</h1>
-            <div className="story-body">{current.body}</div>
+            {isSimulationMode ? (
+              <>
+                <input
+                  className="simulation-title-input"
+                  aria-label="Current interaction title"
+                  value={current.title}
+                  onChange={(event) => patchCurrentInteraction({ title: event.target.value })}
+                  onBlur={(event) => void saveCurrentInteraction({ title: event.target.value })}
+                />
+                <textarea
+                  className="simulation-body-input"
+                  aria-label="Current interaction content"
+                  value={current.body}
+                  rows={6}
+                  onChange={(event) => patchCurrentInteraction({ body: event.target.value })}
+                  onBlur={(event) => void saveCurrentInteraction({ body: event.target.value })}
+                />
+              </>
+            ) : (
+              <>
+                <h1>{current.title}</h1>
+                <div className="story-body">{current.body}</div>
+              </>
+            )}
           </>
         ) : (
           <>
