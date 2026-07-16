@@ -10,6 +10,11 @@ editing.
 The main surface should stay close to a reader experience rather than keeping
 the full canvas visible by default.
 
+Edition and simulation should feel like two states of the same workspace, not
+two different applications. Switching to simulation can change the central
+surface while keeping the surrounding navigation and inspector mental model
+stable.
+
 ## Purpose
 
 Simulation Mode should answer:
@@ -69,6 +74,10 @@ Possible explanations include:
 The goal is to make trigger logic understandable while testing, without forcing
 authors to read the underlying trigger structure first.
 
+Hovering an unavailable option may also focus the inspector on the relevant
+trigger explanation immediately. This keeps the reader-like surface clean while
+still making condition details easy to inspect.
+
 ## Forced Interactions
 
 Authors may need to inspect an unavailable interaction.
@@ -101,6 +110,12 @@ Simulation Mode should also support direct lightweight edits:
 - edit the current interaction content;
 - add output options directly from the simulation;
 - open the inspector for available options when trigger details need inspection.
+
+Inline editing is an important product direction. The author should be able to
+write in the context of play: click the current title or body, edit it, confirm,
+and continue the test. Adding a new option from the simulated reader should
+create the underlying interaction and trigger without making the author leave
+the writing flow.
 
 After editing the current interaction, the simulation does not need a special
 restart. Later stats or world-state changes can be applied when leaving the

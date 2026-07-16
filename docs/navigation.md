@@ -43,6 +43,12 @@ This keeps the surrounding story context visible and avoids making authors feel
 they switched to a different story. Connected path interactions should remain
 visible when they help preserve the route between filtered results.
 
+The first filter experience can stay simple, but future combined filters should
+avoid complex checkbox matrices. A promising direction is tag-based filtering:
+selecting `Alice` adds an `Alice` filter tag, selecting `Village` adds a
+`Village` tag, and each tag can be removed independently. The exact semantics
+still need validation.
+
 Open questions:
 
 - whether combining several filters is useful at first;

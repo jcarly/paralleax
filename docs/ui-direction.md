@@ -109,6 +109,10 @@ This mode must remain separate from the final player reader. The player reader
 should only show what the player can actually choose, while Simulation Mode can
 reveal unavailable interactions, trigger diagnostics, and state controls.
 
+The transition between editing and simulation should be nearly invisible. The
+author should feel they are still inside the same workspace, with the active
+interaction and inspector context preserved as much as possible.
+
 Detailed Simulation Mode rules live in [Simulation](simulation.md).
 
 ## Future Drag and Drop

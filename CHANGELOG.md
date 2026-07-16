@@ -49,6 +49,10 @@ This project follows a lightweight [Keep a Changelog](https://keepachangelog.com
 - Story Canvas UX decisions for left panel behavior, trigger marker actions,
   filtering, keyboard navigation, auto-layout, simulation editing, annotations,
   device targets, and accessibility.
+- Creative workspace design direction covering opinionated simplicity, neutral
+  interaction cards, contextual accents, trigger marker shape exploration, and
+  inline simulation editing.
+- Bitmap Story Canvas creative workspace reference saved under `docs/mockups`.
 - Trigger semantics documentation covering inputs, deletion behavior, and editor UX.
 - API endpoint to delete a trigger from an interaction.
 - Web API client support for trigger deletion.
@@ -58,6 +62,9 @@ This project follows a lightweight [Keep a Changelog](https://keepachangelog.com
 
 ### Changed
 
+- Updated the web app visual design toward the Creative Workspace direction with
+  warmer tokens, neutral interaction cards, subtler panels, diamond trigger
+  markers, and restrained graph links.
 - Updated the project runtime target to Node.js 24 and npm 12 for local, CI, and Docker usage.
 - Refreshed dependency ranges to match the current stable installed versions without taking the larger Jest, Vite, Vitest, or TypeScript major migrations.
 - Web CSS is now organized into explicit sections for tokens, base styles, app shell, story list, editor, graph, reader, and responsive rules.

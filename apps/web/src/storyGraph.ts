@@ -36,9 +36,10 @@ export interface TriggerNodeActions {
   onSelectTrigger?: (interactionId: string, triggerId: string) => void;
 }
 
-const interactionNodeWidth = 220;
+export const interactionNodeWidth = 210;
 const interactionNodeHeight = 96;
 const triggerNodeSize = 18;
+const triggerOutputMarker = { type: MarkerType.ArrowClosed, color: '#8d918f' } as const;
 
 export function buildInteractionNodes(
   story: Story | undefined,
@@ -178,7 +179,7 @@ export function buildTriggerEdges(
           sourceHandle: 'trigger-output',
           target: target.id,
           targetHandle: 'create-source-input',
-          markerEnd: { type: MarkerType.ArrowClosed },
+          markerEnd: triggerOutputMarker,
           className: 'trigger-edge',
           data: {
             interactionId: target.id,

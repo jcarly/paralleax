@@ -117,7 +117,7 @@ describe('story graph mapping', () => {
         sourceHandle: 'trigger-output',
         target: 'interaction-2',
         targetHandle: 'create-source-input',
-        markerEnd: { type: MarkerType.ArrowClosed },
+        markerEnd: { type: MarkerType.ArrowClosed, color: '#8d918f' },
         className: 'trigger-edge',
         data: {
           interactionId: 'interaction-2',
@@ -139,7 +139,7 @@ describe('story graph mapping', () => {
       {
         id: 'trigger:interaction-2:trigger-linked',
         type: 'trigger',
-        position: { x: 241, y: 347 },
+        position: { x: 236, y: 347 },
         draggable: false,
         selectable: false,
         data: {

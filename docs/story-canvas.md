@@ -47,6 +47,10 @@ Open tuning points:
 Interaction cards should keep a standard size by default. Free resizing would
 add too many layout possibilities and could make graph navigation harder.
 
+Cards should stay visually neutral. They are the readable narrative material,
+not the color-coding system. Concept badges and contextual accents can carry
+meaning without turning the graph into a mosaic.
+
 The information visible on a card should prioritize:
 
 - title;
@@ -99,8 +103,8 @@ projection concern.
 
 ## Trigger Markers
 
-Triggers should always stay visible as circular markers between their input
-interactions and their output interaction.
+Triggers should always stay visible as markers between their input interactions
+and their output interaction.
 
 The marker represents the trigger itself. Links from input interactions represent
 trigger inputs. The link from the marker to the output interaction represents
@@ -120,6 +124,10 @@ UX rules:
 When the author hovers a trigger marker, local action icons may appear around
 it. These icons can expose trigger actions such as editing conditions, deleting
 the trigger, or adding related affordances without selecting graph links.
+
+The exact marker shape is a visual design decision. A diamond or small hexagon
+may be clearer than a circle because it separates triggers from interaction
+handles and reinforces that a trigger is a decision point on a path.
 
 Open tuning points:
 
@@ -147,6 +155,10 @@ Current direction:
 
 The inspector should appear only when the author selects an interaction or a
 trigger.
+
+The selected object should be treated as the active object across the workspace:
+the canvas highlights it, the inspector edits it, and simulation can jump back
+to it without changing the underlying story model.
 
 Canvas relationships should be visible on the graph. The inspector should edit
 content, conditions, and trigger-level actions rather than repeating input and

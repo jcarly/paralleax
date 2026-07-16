@@ -29,7 +29,8 @@ import { findInteraction, findSelectedTrigger } from '../storySelection';
 
 const nodeTypes = { interaction: InteractionNode, trigger: TriggerNode };
 const edgeTypes = { trigger: TriggerEdge };
-const droppedNodeOffset = { x: 110, y: 48 };
+const droppedNodeOffset = { x: 105, y: 48 };
+const fitViewOptions = { padding: 0.18, maxZoom: 1 };
 
 export function StoryEditor() {
   const { storyId = '' } = useParams();
@@ -235,6 +236,7 @@ export function StoryEditor() {
               void patchInteraction(node.id, { position: node.position })
             }
             fitView
+            fitViewOptions={fitViewOptions}
           >
             <Background />
             <Controls />

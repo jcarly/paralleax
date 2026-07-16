@@ -363,7 +363,7 @@ describe('StoryEditor', () => {
     await waitFor(() => {
       expect(api.createInteraction).toHaveBeenCalledWith('story-1', {
         parentId: 'interaction-1',
-        position: { x: 420, y: 412 },
+        position: { x: 425, y: 412 },
       });
     });
   });
@@ -411,7 +411,7 @@ describe('StoryEditor', () => {
 
     await waitFor(() => {
       expect(api.createInteraction).toHaveBeenCalledWith('story-1', {
-        position: { x: 160, y: 172 },
+        position: { x: 165, y: 172 },
       });
       expect(api.addTrigger).toHaveBeenCalledWith('story-1', 'interaction-2');
       expect(api.updateTrigger).toHaveBeenCalledWith('story-1', 'interaction-2', 'trigger-new', {

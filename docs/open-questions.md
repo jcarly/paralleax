@@ -67,9 +67,15 @@ changes`, and whether every non-read permission implies `read`.
 - Decide whether interaction cards should support several zoom detail levels.
 - Decide whether future filters can be combined and whether they use AND, OR, or
   a user-selected mode.
+- Validate tag-based combined filters as a low-complexity alternative to
+  advanced filter panels.
 - Decide whether a separate isolation mode is useful later, beyond dimming
   unrelated interactions.
 - Decide how to represent annotation icons without overloading the canvas.
+- Decide whether trigger markers should remain circular or move to a diamond or
+  hexagon shape.
+- Decide how far contextual accent coloring should go when focusing a future
+  character, place, or group.
 
 ## Simulation
 
@@ -77,6 +83,8 @@ changes`, and whether every non-read permission implies `read`.
   much with future player saves.
 - Define how future stats or world-state changes apply when the current
   interaction is edited during simulation.
+- Validate how much inline editing belongs in Simulation Mode before it becomes
+  confusing or duplicates the main inspector.
 
 ## Devices
 

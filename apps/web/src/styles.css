@@ -2,41 +2,56 @@
 
 :root {
   /* Color tokens */
-  --color-text: #20222b;
-  --color-muted: #696d7a;
+  --color-text: #2d2d2d;
+  --color-muted: #757575;
   --color-surface: #ffffff;
-  --color-page: #f4f5f8;
-  --color-canvas: #eef0f5;
-  --color-border: #dddfe7;
-  --color-control-border: #cdd0da;
-  --color-primary: #4b58dc;
-  --color-primary-strong: #323b9a;
-  --color-primary-soft: #e9ebff;
-  --color-primary-focus: #abb0da;
-  --color-primary-halo: #4b58dc22;
-  --color-primary-halo-strong: #4b58dc44;
-  --color-trigger: #e7b647;
-  --color-trigger-strong: #9b6816;
-  --color-trigger-halo: #e7b64740;
-  --color-danger: #c53d4f;
-  --color-error: #b32235;
-  --color-header: #20243a;
-  --color-ghost: #555;
-  --color-subtle: #737785;
-  --color-panel-border: #e0e2e8;
-  --color-node-border: #b8bdd0;
-  --color-node-muted: #707482;
-  --color-accent: #6269ad;
-  --color-ending: #f0f1f5;
-  --color-debug: #666;
-  --color-empty: #6d7180;
+  --color-surface-secondary: #fbfaf8;
+  --color-page: #f6f4f1;
+  --color-canvas: #f5f3ef;
+  --color-border: #e5e1db;
+  --color-control-border: #d9d2c9;
+  --color-primary: #5c8df6;
+  --color-primary-strong: #2f5fcf;
+  --color-primary-soft: #edf3ff;
+  --color-primary-focus: #9bbaf8;
+  --color-primary-halo: #5c8df622;
+  --color-primary-halo-strong: #5c8df644;
+  --color-trigger: #f3a847;
+  --color-trigger-strong: #a9670f;
+  --color-trigger-soft: #fff4e3;
+  --color-trigger-halo: #f3a84733;
+  --color-place: #5faf72;
+  --color-group: #8a6af0;
+  --color-danger: #d8635b;
+  --color-error: #b93a37;
+  --color-header: #ffffff;
+  --color-ghost: #5f5d59;
+  --color-subtle: #8a837a;
+  --color-panel-border: #e5e1db;
+  --color-node-border: #d9d2c9;
+  --color-node-muted: #706d68;
+  --color-accent: #5c8df6;
+  --color-ending: #f0ede8;
+  --color-debug: #67625c;
+  --color-empty: #79736b;
+  --color-link: #8d918f;
+  --color-link-hover: #5f6f82;
 
   /* Elevation tokens */
-  --shadow-card: 0 6px 18px #2222;
-  --shadow-node: 0 5px 14px #2222;
-  --shadow-player: 0 12px 35px #2222;
+  --shadow-card: 0 2px 8px #2d2d2d14;
+  --shadow-node: 0 2px 8px #2d2d2d18;
+  --shadow-node-selected: 0 8px 22px #5c8df622;
+  --shadow-player: 0 12px 35px #2d2d2d18;
 
-  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  font-family:
+    Geist,
+    'Geist Sans',
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    sans-serif;
   color: var(--color-text);
   background: var(--color-page);
   font-synthesis: none;
@@ -49,6 +64,7 @@
 }
 body {
   margin: 0;
+  background: var(--color-page);
 }
 a {
   color: inherit;
@@ -58,9 +74,9 @@ a {
 
 button,
 .button {
-  border: 0;
+  border: 1px solid transparent;
   border-radius: 8px;
-  padding: 0.7rem 1rem;
+  padding: 0.62rem 0.9rem;
   background: var(--color-primary);
   color: white;
   font-weight: 650;
@@ -69,13 +85,32 @@ button,
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  box-shadow: var(--shadow-card);
+  transition:
+    background 150ms ease,
+    border-color 150ms ease,
+    box-shadow 150ms ease,
+    transform 150ms ease;
+}
+button:hover,
+.button:hover {
+  box-shadow: 0 4px 12px #2d2d2d1c;
+  transform: translateY(-1px);
+}
+button:focus-visible,
+.button:focus-visible,
+a:focus-visible {
+  outline: 3px solid var(--color-primary-halo-strong);
+  outline-offset: 2px;
 }
 button:disabled {
   opacity: 0.45;
   cursor: not-allowed;
+  transform: none;
 }
 .secondary {
-  background: var(--color-primary-soft);
+  border-color: #c9d9ff;
+  background: #ffffff;
   color: var(--color-primary-strong);
 }
 .danger {
@@ -84,6 +119,7 @@ button:disabled {
 .ghost {
   background: transparent;
   color: var(--color-ghost);
+  box-shadow: none;
 }
 .error {
   color: var(--color-error);
@@ -94,11 +130,13 @@ button:disabled {
 header {
   height: 58px;
   background: var(--color-header);
-  color: white;
+  color: var(--color-text);
   display: flex;
   align-items: center;
   padding: 0 1.25rem;
   gap: 1rem;
+  border-bottom: 1px solid var(--color-border);
+  box-shadow: 0 1px 0 #ffffff99;
 }
 header .brand {
   font-size: 1.15rem;
@@ -139,7 +177,7 @@ header span {
 .story-card {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: 14px;
+  border-radius: 12px;
   padding: 1.25rem;
   box-shadow: var(--shadow-card);
 }
@@ -158,25 +196,32 @@ header span {
   height: calc(100vh - 58px);
   display: flex;
   flex-direction: column;
+  background: var(--color-page);
 }
 .editor-toolbar {
-  height: 64px;
-  background: var(--color-surface);
+  height: 60px;
+  background: color-mix(in srgb, var(--color-surface) 94%, var(--color-page));
   border-bottom: 1px solid var(--color-border);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.7rem 1rem;
+  padding: 0.65rem 1rem;
+  box-shadow: 0 1px 0 #ffffffaa;
+  z-index: 2;
 }
 .story-title-input {
-  font-size: 1.15rem;
-  font-weight: 800;
+  min-width: min(420px, 50vw);
+  font-size: 1rem;
+  font-weight: 700;
   border: 1px solid transparent;
-  padding: 0.55rem;
-  border-radius: 7px;
+  padding: 0.5rem 0.7rem;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--color-text);
 }
 .story-title-input:focus {
   border-color: var(--color-primary-focus);
+  background: var(--color-surface);
   outline: none;
 }
 .editor-layout {
@@ -191,6 +236,26 @@ header span {
 .canvas {
   position: relative;
   background: var(--color-canvas);
+}
+.canvas .react-flow {
+  background-color: var(--color-canvas);
+}
+.canvas .react-flow__background {
+  opacity: 0.58;
+}
+.canvas .react-flow__background pattern circle {
+  fill: #d7d1c8;
+}
+.canvas .react-flow__controls {
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  box-shadow: var(--shadow-card);
+}
+.canvas .react-flow__controls-button {
+  border-bottom-color: var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
 }
 .canvas-action {
   position: absolute;
@@ -207,6 +272,7 @@ header span {
   border-left: 1px solid var(--color-border);
   padding: 1.2rem;
   overflow: auto;
+  box-shadow: -10px 0 28px #2d2d2d0f;
 }
 .inspector-header {
   display: flex;
@@ -218,19 +284,25 @@ header span {
   height: 32px;
   padding: 0;
   border: 1px solid var(--color-border);
+  background: var(--color-surface-secondary);
 }
 .inspector h2 {
   margin-top: 0;
 }
 .inspector h3 {
-  margin-top: 1.5rem;
+  margin-top: 1.35rem;
   margin-bottom: 0.5rem;
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-muted);
 }
 .inspector label {
   display: block;
-  font-size: 0.86rem;
+  font-size: 0.78rem;
   font-weight: 650;
   margin-bottom: 1rem;
+  color: var(--color-muted);
 }
 .inspector input[type='text'],
 .inspector input:not([type]),
@@ -238,10 +310,21 @@ header span {
 .inspector select {
   width: 100%;
   margin-top: 0.35rem;
-  padding: 0.65rem;
+  padding: 0.66rem 0.7rem;
   border: 1px solid var(--color-control-border);
-  border-radius: 7px;
+  border-radius: 8px;
+  background: var(--color-surface-secondary);
+  color: var(--color-text);
   font: inherit;
+}
+.inspector textarea {
+  line-height: 1.55;
+  resize: vertical;
+}
+.inspector hr {
+  border: 0;
+  border-top: 1px solid var(--color-border);
+  margin: 1.25rem 0;
 }
 .hint {
   font-size: 0.82rem;
@@ -265,25 +348,36 @@ header span {
 
 .interaction-node {
   position: relative;
-  width: 220px;
+  width: 210px;
   background: var(--color-surface);
-  border: 2px solid var(--color-node-border);
+  border: 1px solid var(--color-node-border);
   border-radius: 12px;
-  padding: 0.9rem;
+  padding: 0.85rem;
   box-shadow: var(--shadow-node);
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease,
+    transform 150ms ease;
 }
 .interaction-node.selected {
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px var(--color-primary-halo);
+  box-shadow:
+    0 0 0 3px var(--color-primary-halo),
+    var(--shadow-node-selected);
 }
 .interaction-node strong,
 .interaction-node span {
   display: block;
 }
+.interaction-node strong {
+  font-size: 0.92rem;
+  line-height: 1.25;
+}
 .interaction-node span {
   font-size: 0.8rem;
   color: var(--color-node-muted);
-  margin-top: 0.4rem;
+  line-height: 1.45;
+  margin-top: 0.45rem;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -351,20 +445,28 @@ header span {
   height: 16px;
   padding: 0;
   border: 2px solid var(--color-surface);
-  border-radius: 999px;
+  border-radius: 5px;
   background: var(--color-trigger);
   box-shadow: 0 0 0 3px var(--color-trigger-halo);
+  transform: rotate(45deg);
 }
 .root-trigger-marker:hover,
 .root-trigger-marker:focus-visible,
 .root-trigger-marker.selected {
   outline: none;
-  background: var(--color-primary);
-  box-shadow: 0 0 0 4px var(--color-primary-halo);
+  background: var(--color-trigger);
+  border-color: var(--color-primary);
+  box-shadow:
+    0 0 0 4px var(--color-primary-halo),
+    0 3px 10px #2d2d2d22;
 }
 .react-flow__edge.trigger-edge.selected .react-flow__edge-path {
-  stroke: var(--color-primary);
+  stroke: var(--color-trigger-strong);
   stroke-width: 3;
+}
+.react-flow__edge.trigger-edge .react-flow__edge-path {
+  stroke: var(--color-link);
+  stroke-width: 1.6;
 }
 .react-flow__edge.trigger-edge .react-flow__edge-path,
 .trigger-edge-hitbox {
@@ -375,10 +477,15 @@ header span {
   height: 18px;
   padding: 0;
   border: 2px solid var(--color-surface);
-  border-radius: 999px;
+  border-radius: 5px;
   background: var(--color-trigger);
   box-shadow: 0 0 0 3px var(--color-trigger-halo);
   pointer-events: all;
+  transform: rotate(45deg);
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease,
+    background 150ms ease;
 }
 .trigger-node {
   position: relative;
@@ -399,8 +506,11 @@ header span {
 .trigger-marker:focus-visible,
 .trigger-marker.selected {
   outline: none;
-  background: var(--color-primary);
-  box-shadow: 0 0 0 4px var(--color-primary-halo);
+  background: var(--color-trigger);
+  border-color: var(--color-primary);
+  box-shadow:
+    0 0 0 4px var(--color-primary-halo),
+    0 3px 10px #2d2d2d22;
 }
 .trigger-link-delete {
   position: absolute;
@@ -432,6 +542,7 @@ header span {
   max-width: 760px;
   margin: 0 auto;
   padding: 2rem;
+  background: var(--color-page);
 }
 .player-top {
   display: flex;
@@ -441,14 +552,15 @@ header span {
 }
 .player-card {
   background: var(--color-surface);
-  border-radius: 18px;
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
   padding: 2.5rem;
   min-height: 430px;
   box-shadow: var(--shadow-player);
 }
 .eyebrow {
   text-transform: uppercase;
-  letter-spacing: 0.09em;
+  letter-spacing: 0.08em;
   color: var(--color-accent);
   font-weight: 750;
   font-size: 0.75rem;
@@ -467,10 +579,15 @@ header span {
   text-align: left;
   justify-content: flex-start;
   padding: 1rem 1.2rem;
+  background: var(--color-primary-soft);
+  border-color: #d8e4ff;
+  color: var(--color-primary-strong);
+  box-shadow: none;
 }
 .ending {
   padding: 1rem;
   background: var(--color-ending);
+  border: 1px solid var(--color-border);
   border-radius: 8px;
 }
 .debug {
