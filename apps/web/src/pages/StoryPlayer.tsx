@@ -31,6 +31,10 @@ function getUnavailableReason(
     : `Requires "${title}" not to be visited.`;
 }
 
+function uniqueJourneyIds(journey: string[]) {
+  return journey.filter((id, index) => journey.indexOf(id) === index);
+}
+
 export function StoryPlayer() {
   const { storyId = '' } = useParams();
   const [searchParams] = useSearchParams();
@@ -38,6 +42,7 @@ export function StoryPlayer() {
   const startInteractionId = searchParams.get('startInteractionId');
   const [story, setStory] = useState<Story>();
   const [currentId, setCurrentId] = useState<string | null>(startInteractionId);
+  const [journey, setJourney] = useState<string[]>(startInteractionId ? [startInteractionId] : []);
   const [visited, setVisited] = useState<string[]>(startInteractionId ? [startInteractionId] : []);
 
   useEffect(() => {
@@ -74,12 +79,22 @@ export function StoryPlayer() {
 
   function choose(interaction: Interaction) {
     setCurrentId(interaction.id);
+    setJourney((ids) => [...ids, interaction.id]);
     setVisited((ids) => (ids.includes(interaction.id) ? ids : [...ids, interaction.id]));
   }
 
   function restart() {
     setCurrentId(startInteractionId);
+    setJourney(startInteractionId ? [startInteractionId] : []);
     setVisited(startInteractionId ? [startInteractionId] : []);
+  }
+
+  function stepBack() {
+    if (journey.length <= 1) return;
+    const nextJourney = journey.slice(0, -1);
+    setJourney(nextJourney);
+    setCurrentId(nextJourney.at(-1) ?? startInteractionId);
+    setVisited(uniqueJourneyIds(nextJourney));
   }
 
   if (!story) return <main className="page">Loading...</main>;
@@ -89,6 +104,11 @@ export function StoryPlayer() {
       <div className="player-top">
         <Link to={`/stories/${story.id}/edit`}>Back to editor</Link>
         {isSimulationMode ? <span className="mode-pill">Simulation</span> : null}
+        {isSimulationMode ? (
+          <button className="secondary" disabled={journey.length <= 1} onClick={stepBack}>
+            Back
+          </button>
+        ) : null}
         <button className="secondary" onClick={restart}>
           Restart
         </button>

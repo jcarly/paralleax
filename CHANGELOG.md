@@ -14,6 +14,8 @@ This project follows a lightweight [Keep a Changelog](https://keepachangelog.com
   simulation journey.
 - Simulation choices blocked by MVP visited / not visited conditions now show a
   short unavailability reason.
+- Simulation Mode now includes a `Back` action to return to the previous
+  interaction in the current test journey.
 - Local demo story generator with API and web UI support for creating a populated test story without external AI services.
 - Canvas `Add root` action that places new root interactions below the lowest existing root.
 - Graph creation shortcuts: dropping an output connection on empty canvas creates a child, and dropping an input connection creates a linked source interaction.

@@ -158,6 +158,8 @@ Current behavior:
   a short reason;
 - selecting a dimmed interaction forces it for the current simulation journey
   and does not change the story data or reader engine semantics;
+- a simulation `Back` action returns to the previous step of the current
+  journey;
 - restart resets the simulation to the original starting interaction.
 
 This first slice only explains MVP visited / not visited conditions. Richer hover

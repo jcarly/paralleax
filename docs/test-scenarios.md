@@ -73,6 +73,8 @@ Cover the critical MVP paths: Story, Interaction, Trigger, and Reader.
   current simulation journey.
 - Simulation: condition-blocked interactions explain the first failed visited /
   not visited condition.
+- Simulation: authors can step back to the previous interaction in the current
+  simulation journey.
 
 ## Playwright Functional Tests
 

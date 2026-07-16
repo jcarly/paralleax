@@ -126,6 +126,7 @@ describe('StoryPlayer', () => {
 
     expect(screen.getByText('Simulation')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Next' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Back' })).toBeDisabled();
     expect(screen.queryByRole('button', { name: 'Start' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Secret/ })).toHaveClass('unavailable');
     expect(screen.getByText('Requires "Start" to be visited.')).toBeInTheDocument();
@@ -136,5 +137,11 @@ describe('StoryPlayer', () => {
     expect(screen.queryByRole('button', { name: 'Start' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Next' })).not.toBeInTheDocument();
     expect(screen.queryByText('End of this branch.')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Back' }));
+
+    expect(screen.getByRole('heading', { name: 'Next' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Secret/ })).toHaveClass('unavailable');
+    expect(screen.getByText('Requires "Start" to be visited.')).toBeInTheDocument();
   });
 });
