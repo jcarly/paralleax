@@ -128,6 +128,7 @@ describe('StoryPlayer', () => {
     expect(screen.getByRole('heading', { name: 'Next' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Start' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Secret/ })).toHaveClass('unavailable');
+    expect(screen.getByText('Requires "Start" to be visited.')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: /Secret/ }));
 

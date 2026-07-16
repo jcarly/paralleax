@@ -41,6 +41,10 @@ export interface UpdateTriggerInput {
   inputInteractionIds: string[];
   conditions: TriggerCondition[];
 }
+export interface TriggerConditionFailure {
+  triggerId: string;
+  condition: TriggerCondition;
+}
 export type InteractionContentPatch = Partial<Pick<Interaction, 'title' | 'body' | 'position'>>;
 export type TriggerPatch = Pick<Trigger, 'inputInteractionIds' | 'conditions'>;
 
@@ -404,5 +408,38 @@ export function getInputReachableInteractions(
 ): Interaction[] {
   return story.interactions.filter((interaction) =>
     interaction.triggers.some((trigger) => doesTriggerInputMatch(trigger, currentInteractionId)),
+  );
+}
+
+export function getTriggerConditionFailures(
+  interaction: Interaction,
+  currentInteractionId: string | null,
+  visitedIds: string[],
+): TriggerConditionFailure[] {
+  const visited = new Set(visitedIds);
+  const inputMatchingTriggers = interaction.triggers.filter((trigger) =>
+    doesTriggerInputMatch(trigger, currentInteractionId),
+  );
+
+  if (
+    inputMatchingTriggers.some((trigger) =>
+      trigger.conditions.every((condition) =>
+        condition.hasBeenVisited
+          ? visited.has(condition.interactionId)
+          : !visited.has(condition.interactionId),
+      ),
+    )
+  ) {
+    return [];
+  }
+
+  return inputMatchingTriggers.flatMap((trigger) =>
+    trigger.conditions
+      .filter((condition) =>
+        condition.hasBeenVisited
+          ? !visited.has(condition.interactionId)
+          : visited.has(condition.interactionId),
+      )
+      .map((condition) => ({ triggerId: trigger.id, condition })),
   );
 }

@@ -8,6 +8,7 @@ import {
   getNextChildPosition,
   getNextParentPosition,
   getNextRootPosition,
+  getTriggerConditionFailures,
   mergeServerStory,
   normalizeTriggerInputIds,
   updateTriggerInStory,
@@ -288,5 +289,27 @@ describe('shared story operations', () => {
       'end',
     ]);
     expect(getAvailableInteractions(story, 'root', []).map((item) => item.id)).toEqual(['middle']);
+  });
+
+  it('explains failed trigger conditions for input-reachable interactions', () => {
+    const story = storyFixture();
+
+    expect(getTriggerConditionFailures(story.interactions[2], 'root', [])).toEqual([
+      {
+        triggerId: 'trigger-end',
+        condition: { interactionId: 'root', hasBeenVisited: true },
+      },
+    ]);
+  });
+
+  it('does not report condition failures when another matching trigger is eligible', () => {
+    const story = storyFixture();
+    story.interactions[2].triggers.push({
+      id: 'trigger-end-unconditional',
+      inputInteractionIds: ['root'],
+      conditions: [],
+    });
+
+    expect(getTriggerConditionFailures(story.interactions[2], 'root', [])).toEqual([]);
   });
 });

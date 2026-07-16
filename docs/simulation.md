@@ -154,11 +154,13 @@ Current behavior:
   interaction according to trigger input logic;
 - interactions that are reachable by input but blocked by conditions are dimmed
   but remain selectable;
+- dimmed interactions show the first failed visited / not visited condition as
+  a short reason;
 - selecting a dimmed interaction forces it for the current simulation journey
   and does not change the story data or reader engine semantics;
 - restart resets the simulation to the original starting interaction.
 
-This first slice deliberately does not explain unavailability yet. Hover
+This first slice only explains MVP visited / not visited conditions. Richer hover
 diagnostics and direct editing remain next steps.
 
 Out of scope for the first version:

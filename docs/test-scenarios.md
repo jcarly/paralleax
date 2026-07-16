@@ -71,6 +71,8 @@ Cover the critical MVP paths: Story, Interaction, Trigger, and Reader.
 - Simulation: interactions reachable by trigger input logic are listed,
   condition-blocked interactions are dimmed, and selecting one forces it for the
   current simulation journey.
+- Simulation: condition-blocked interactions explain the first failed visited /
+  not visited condition.
 
 ## Playwright Functional Tests
 

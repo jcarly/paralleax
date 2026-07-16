@@ -1,8 +1,35 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import type { Interaction, Story } from '@paralleax/shared';
-import { getAvailableInteractions, getInputReachableInteractions } from '@paralleax/shared';
+import {
+  getAvailableInteractions,
+  getInputReachableInteractions,
+  getTriggerConditionFailures,
+} from '@paralleax/shared';
 import { api } from '../api';
+
+function getInteractionTitle(story: Story, interactionId: string) {
+  return (
+    story.interactions.find((interaction) => interaction.id === interactionId)?.title ??
+    interactionId
+  );
+}
+
+function getUnavailableReason(
+  story: Story,
+  interaction: Interaction,
+  currentId: string | null,
+  visited: string[],
+) {
+  const failures = getTriggerConditionFailures(interaction, currentId, visited);
+  if (failures.length === 0) return undefined;
+
+  const firstFailure = failures[0].condition;
+  const title = getInteractionTitle(story, firstFailure.interactionId);
+  return firstFailure.hasBeenVisited
+    ? `Requires "${title}" to be visited.`
+    : `Requires "${title}" not to be visited.`;
+}
 
 export function StoryPlayer() {
   const { storyId = '' } = useParams();
@@ -33,9 +60,16 @@ export function StoryPlayer() {
         ? getInputReachableInteractions(story, current?.id ?? null).map((interaction) => ({
             interaction,
             available: availableChoiceIds.has(interaction.id),
+            unavailableReason: availableChoiceIds.has(interaction.id)
+              ? undefined
+              : getUnavailableReason(story, interaction, current?.id ?? null, visited),
           }))
-        : choices.map((interaction) => ({ interaction, available: true })),
-    [availableChoiceIds, choices, current, isSimulationMode, story],
+        : choices.map((interaction) => ({
+            interaction,
+            available: true,
+            unavailableReason: undefined,
+          })),
+    [availableChoiceIds, choices, current, isSimulationMode, story, visited],
   );
 
   function choose(interaction: Interaction) {
@@ -73,15 +107,21 @@ export function StoryPlayer() {
           </>
         )}
         <div className="choices">
-          {visibleChoices.map(({ interaction, available }) => (
+          {visibleChoices.map(({ interaction, available, unavailableReason }) => (
             <button
               className={`choice ${available ? 'available' : 'unavailable'}`}
               key={interaction.id}
               onClick={() => choose(interaction)}
-              title={available ? 'Available' : 'Unavailable in the current simulation state'}
+              title={
+                available
+                  ? 'Available'
+                  : (unavailableReason ?? 'Unavailable in the current simulation state')
+              }
             >
               <span>{interaction.title}</span>
-              {isSimulationMode && !available ? <small>Unavailable - force for test</small> : null}
+              {isSimulationMode && !available ? (
+                <small>{unavailableReason ?? 'Unavailable - force for test'}</small>
+              ) : null}
             </button>
           ))}
           {choices.length === 0 && current && !isSimulationMode ? (
