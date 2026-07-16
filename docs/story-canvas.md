@@ -37,7 +37,8 @@ easy to target.
 
 Open tuning points:
 
-- default vertical distance between interactions;
+- default vertical distance between interactions, currently tuned to `132px`
+  for automatic creation;
 - default horizontal offset for parallel branches;
 - minimum spacing around trigger markers;
 - behavior when several branches converge on the same interaction.
@@ -97,6 +98,8 @@ Target behavior:
 - trigger marker placement should minimize visual bends;
 - arrows should point to the meaningful interaction input action, not to an
   invisible or secondary handle.
+- edge rendering should infer whether a horizontal or vertical route is cleaner
+  from the source and target positions.
 
 The model must not change to satisfy edge routing. Routing is a canvas
 projection concern.
@@ -181,8 +184,8 @@ movement and focus, not for editing the trigger structure.
 
 Before adding more narrative features, the next canvas iteration should focus on:
 
-- reducing default spacing between automatically placed interactions;
-- improving adaptive edge routing for trigger markers;
+- testing compact automatic placement on representative author stories;
+- refining adaptive edge routing for trigger markers after real use;
 - refining trigger marker placement for vertical and converging flows;
-- defining the visual identity in [Design system](design-system.md);
+- expanding the MVP canvas rules in [Design system](design-system.md);
 - checking the result with representative small and branching stories.

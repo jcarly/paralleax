@@ -45,9 +45,9 @@ export type InteractionContentPatch = Partial<Pick<Interaction, 'title' | 'body'
 export type TriggerPatch = Pick<Trigger, 'inputInteractionIds' | 'conditions'>;
 
 export const childOffsetX = 0;
-export const childOffsetY = 150;
-export const childVerticalGap = 150;
-export const minNodeVerticalDistance = 120;
+export const childOffsetY = 132;
+export const childVerticalGap = 132;
+export const minNodeVerticalDistance = 112;
 export const sameColumnTolerance = 260;
 export const rootColumnX = 80;
 export const rootStartY = 120;

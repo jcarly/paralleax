@@ -36,11 +36,13 @@
   --color-empty: #79736b;
   --color-link: #8d918f;
   --color-link-hover: #5f6f82;
+  --color-link-soft: #b8b4ad;
 
   /* Elevation tokens */
   --shadow-card: 0 2px 8px #2d2d2d14;
   --shadow-node: 0 2px 8px #2d2d2d18;
   --shadow-node-selected: 0 8px 22px #5c8df622;
+  --shadow-node-hover: 0 5px 16px #2d2d2d1c;
   --shadow-player: 0 12px 35px #2d2d2d18;
 
   font-family:
@@ -377,13 +379,17 @@ header span {
   width: 210px;
   background: var(--color-surface);
   border: 1px solid var(--color-node-border);
-  border-radius: 12px;
-  padding: 0.85rem;
+  border-radius: 10px;
+  padding: 0.78rem 0.82rem;
   box-shadow: var(--shadow-node);
   transition:
     border-color 150ms ease,
     box-shadow 150ms ease,
     transform 150ms ease;
+}
+.interaction-node:hover {
+  border-color: #cfc7bc;
+  box-shadow: var(--shadow-node-hover);
 }
 .interaction-node.selected {
   border-color: var(--color-primary);
@@ -396,7 +402,7 @@ header span {
   display: block;
 }
 .interaction-node strong {
-  font-size: 0.92rem;
+  font-size: 0.9rem;
   line-height: 1.25;
 }
 .interaction-node span {
@@ -410,8 +416,8 @@ header span {
 }
 .node-create {
   position: absolute;
-  width: 28px;
-  height: 28px;
+  width: 26px;
+  height: 26px;
   padding: 0;
   border: 2px solid var(--color-surface);
   border-radius: 999px;
@@ -429,17 +435,17 @@ header span {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1rem;
+  font-size: 0.95rem;
   font-weight: 800;
   line-height: 1;
 }
 .node-create-parent {
-  top: -16px;
+  top: -15px;
   left: 50%;
   transform: translateX(-50%) scale(1);
 }
 .node-create-child {
-  bottom: -16px;
+  bottom: -15px;
   left: 50%;
   transform: translateX(-50%) scale(1);
 }
@@ -475,8 +481,8 @@ header span {
   position: absolute;
   left: -10px;
   top: 10px;
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   padding: 0;
   border: 2px solid var(--color-surface);
   border-radius: 5px;
@@ -499,16 +505,23 @@ header span {
   stroke-width: 3;
 }
 .react-flow__edge.trigger-edge .react-flow__edge-path {
-  stroke: var(--color-link);
-  stroke-width: 1.6;
+  stroke: var(--color-link-soft);
+  stroke-width: 1.45;
+  transition:
+    stroke 150ms ease,
+    stroke-width 150ms ease;
+}
+.react-flow__edge.trigger-edge:hover .react-flow__edge-path {
+  stroke: var(--color-link-hover);
+  stroke-width: 2;
 }
 .react-flow__edge.trigger-edge .react-flow__edge-path,
 .trigger-edge-hitbox {
   cursor: default;
 }
 .trigger-marker {
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   padding: 0;
   border: 2px solid var(--color-surface);
   border-radius: 5px;
@@ -523,8 +536,8 @@ header span {
 }
 .trigger-node {
   position: relative;
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
 }
 .trigger-node .trigger-marker {
   position: absolute;
@@ -548,14 +561,14 @@ header span {
 }
 .trigger-link-delete {
   position: absolute;
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
   padding: 0;
   border: 2px solid var(--color-surface);
   border-radius: 999px;
   background: var(--color-danger);
   box-shadow: 0 0 0 3px #c53d4f22;
-  font-size: 0.8rem;
+  font-size: 0.76rem;
   line-height: 1;
   opacity: 0;
   pointer-events: all;

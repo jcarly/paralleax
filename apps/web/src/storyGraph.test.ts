@@ -152,7 +152,7 @@ describe('story graph mapping', () => {
       {
         id: 'trigger:interaction-2:trigger-linked',
         type: 'trigger',
-        position: { x: 236, y: 347 },
+        position: { x: 235, y: 346 },
         draggable: false,
         selectable: false,
         data: {

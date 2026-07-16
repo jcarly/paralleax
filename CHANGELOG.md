@@ -76,6 +76,12 @@ This project follows a lightweight [Keep a Changelog](https://keepachangelog.com
   selected OR visual route.
 - New-trigger input handles on interaction cards now stay hidden until the author
   is actively dragging a graph connection.
+- Story Canvas automatic placement is now more compact while still skipping
+  occupied positions to avoid overlap.
+- Trigger links now use adaptive smooth-step routing so arrows and trigger
+  marker links read better across vertical, horizontal, and reversed layouts.
+- Interaction cards, trigger markers, graph links, and link deletion controls now
+  follow the first concrete MVP canvas visual rules.
 - Updated the web app visual design toward the Creative Workspace direction with
   warmer tokens, neutral interaction cards, subtler panels, diamond trigger
   markers, and restrained graph links.
@@ -162,6 +168,8 @@ This project follows a lightweight [Keep a Changelog](https://keepachangelog.com
   interactions, and graph-editing handoff.
 - Removed generated UML image renders so editable diagram sources remain the single source of truth.
 - Documented the styling direction: keep plain CSS for the MVP and evaluate Tailwind CSS when the UI surface grows.
+- Documented concrete MVP canvas visual rules for interaction cards, compact
+  placement, trigger markers, links, and selection states.
 - Added and updated product, MVP, architecture, domain model, design principles, roadmap, UML, and ADR documentation.
 - Documented the strict MVP boundary: Story, Interaction, Trigger, and Reader only.
 - Documented the current trigger model: one output interaction per trigger, multiple input interactions allowed, inputs act as OR conditions.

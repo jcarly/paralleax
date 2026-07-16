@@ -40,7 +40,7 @@ export interface TriggerNodeActions {
 
 export const interactionNodeWidth = 210;
 const interactionNodeHeight = 96;
-const triggerNodeSize = 18;
+const triggerNodeSize = 20;
 const triggerOutputMarker = { type: MarkerType.ArrowClosed, color: '#8d918f' } as const;
 
 export function buildInteractionNodes(

@@ -316,11 +316,11 @@ describe('StoryEditor', () => {
       id: 'interaction-root',
       title: 'Created root',
       body: 'Root body',
-      position: { x: 80, y: 270 },
+      position: { x: 80, y: 252 },
       triggers: [{ id: 'trigger-root', inputInteractionIds: [], conditions: [] }],
     });
     const withChild = storyWithTwoInteractions();
-    withChild.interactions[1].position = { x: 80, y: 420 };
+    withChild.interactions[1].position = { x: 80, y: 384 };
     vi.mocked(api.createInteraction)
       .mockResolvedValueOnce(withRoot)
       .mockResolvedValueOnce(withChild);
@@ -328,14 +328,14 @@ describe('StoryEditor', () => {
     await renderEditor();
 
     await user.click(screen.getByRole('button', { name: 'Add root' }));
-    expect(api.createInteraction).toHaveBeenCalledWith('story-1', { position: { x: 80, y: 270 } });
+    expect(api.createInteraction).toHaveBeenCalledWith('story-1', { position: { x: 80, y: 252 } });
     expect(await screen.findByText('Created root')).toBeInTheDocument();
 
     await user.click(screen.getByTestId('flow-node-interaction-1'));
     await user.click(screen.getByRole('button', { name: 'Add child' }));
     expect(api.createInteraction).toHaveBeenLastCalledWith('story-1', {
       parentId: 'interaction-1',
-      position: { x: 80, y: 420 },
+      position: { x: 80, y: 384 },
     });
   });
 
@@ -404,7 +404,7 @@ describe('StoryEditor', () => {
     await waitFor(() => {
       expect(api.createInteraction).toHaveBeenCalledWith('story-1', {
         parentId: 'interaction-1',
-        position: { x: 80, y: 270 },
+        position: { x: 80, y: 252 },
       });
     });
   });
@@ -453,7 +453,7 @@ describe('StoryEditor', () => {
       id: 'interaction-parent',
       title: 'Created source',
       body: 'Source body',
-      position: { x: 80, y: -30 },
+      position: { x: 80, y: 6 },
       triggers: [{ id: 'trigger-parent', inputInteractionIds: [], conditions: [] }],
     });
     const withTrigger = structuredClone(withParent);
@@ -474,7 +474,7 @@ describe('StoryEditor', () => {
 
     await waitFor(() => {
       expect(api.createInteraction).toHaveBeenCalledWith('story-1', {
-        position: { x: 80, y: -30 },
+        position: { x: 80, y: 6 },
       });
       expect(api.updateTrigger).toHaveBeenCalledWith('story-1', 'interaction-2', 'trigger-new', {
         inputInteractionIds: ['interaction-parent'],
@@ -492,7 +492,7 @@ describe('StoryEditor', () => {
       id: 'interaction-3',
       title: 'New output',
       body: 'Additional output',
-      position: { x: 80, y: 420 },
+      position: { x: 80, y: 384 },
       triggers: [{ id: 'trigger-3', inputInteractionIds: ['interaction-1'], conditions: [] }],
     });
     vi.mocked(api.createInteraction).mockResolvedValue(withNewChild);
@@ -503,7 +503,7 @@ describe('StoryEditor', () => {
 
     expect(api.createInteraction).toHaveBeenCalledWith('story-1', {
       parentId: 'interaction-1',
-      position: { x: 80, y: 420 },
+      position: { x: 80, y: 384 },
     });
   });
 

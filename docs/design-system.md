@@ -144,6 +144,45 @@ Guidelines:
 - destructive controls should remain visually distinct and require deliberate
   targeting.
 
+## MVP Canvas Rules
+
+These rules describe the current implementation target for the MVP editor.
+
+Interaction cards:
+
+- width stays fixed around `210px`;
+- cards stay neutral, white, and compact;
+- border radius should stay around `10px`;
+- title and excerpt are the only persistent content on the card;
+- selected cards use the primary blue accent through border and halo, not a
+  filled background.
+
+Automatic placement:
+
+- new child and parent interactions are placed on the same vertical axis by
+  default;
+- the default vertical step is compact, currently `132px`;
+- overlap avoidance remains more important than density, so placement may skip
+  several compact steps when nearby interactions already occupy the same column;
+- manual drag placement remains the author override.
+
+Trigger markers:
+
+- linked triggers use a small orange diamond marker around `20px`;
+- root triggers use the same visual language so roots are editable as triggers,
+  not hidden interaction metadata;
+- selected trigger markers use the same blue selection accent as selected
+  interactions;
+- trigger markers are the only selectable trigger surface.
+
+Links:
+
+- graph links are thin and muted by default;
+- links become stronger only on hover or selection;
+- link routing should adapt to source and target positions instead of assuming
+  every relationship is strictly top-to-bottom;
+- link deletion remains a small local control revealed on hover of the link.
+
 ## Component Direction
 
 Interaction cards are the core component. They should show only the information

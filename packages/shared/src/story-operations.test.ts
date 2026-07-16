@@ -188,7 +188,7 @@ describe('shared story operations', () => {
   it('finds the next child position below occupied vertical outputs', () => {
     const story = storyFixture();
 
-    expect(getNextChildPosition(story, story.interactions[0])).toEqual({ x: 80, y: 570 });
+    expect(getNextChildPosition(story, story.interactions[0])).toEqual({ x: 80, y: 648 });
   });
 
   it('finds the next parent position above the target without overlap', () => {
@@ -201,7 +201,7 @@ describe('shared story operations', () => {
       triggers: [{ id: 'trigger-other-parent', inputInteractionIds: [], conditions: [] }],
     });
 
-    expect(getNextParentPosition(story, story.interactions[2])).toEqual({ x: 80, y: -30 });
+    expect(getNextParentPosition(story, story.interactions[2])).toEqual({ x: 80, y: -108 });
   });
 
   it('finds the next root position below the lowest existing root', () => {
@@ -214,7 +214,7 @@ describe('shared story operations', () => {
       triggers: [{ id: 'trigger-second-root', inputInteractionIds: [], conditions: [] }],
     });
 
-    expect(getNextRootPosition(story)).toEqual({ x: 80, y: 670 });
+    expect(getNextRootPosition(story)).toEqual({ x: 80, y: 652 });
   });
 
   it('normalizes trigger inputs without changing their first-seen order', () => {
