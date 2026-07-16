@@ -19,7 +19,7 @@ const story: Story = {
       id: 'interaction-2',
       title: 'Second',
       body: 'Second body',
-      position: { x: 420, y: 120 },
+      position: { x: 80, y: 420 },
       triggers: [
         {
           id: 'trigger-single',
@@ -37,7 +37,7 @@ const story: Story = {
       id: 'interaction-3',
       title: 'Third',
       body: 'Third body',
-      position: { x: 80, y: 320 },
+      position: { x: 320, y: 270 },
       triggers: [],
     },
   ],

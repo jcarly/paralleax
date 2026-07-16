@@ -31,14 +31,14 @@ function storyFixture(): Story {
         id: 'middle',
         title: 'Middle',
         body: 'Middle body',
-        position: { x: 420, y: 260 },
+        position: { x: 80, y: 270 },
         triggers: [{ id: 'trigger-middle', inputInteractionIds: ['root'], conditions: [] }],
       },
       {
         id: 'end',
         title: 'End',
         body: 'End body',
-        position: { x: 760, y: 410 },
+        position: { x: 80, y: 420 },
         triggers: [
           {
             id: 'trigger-end',
@@ -104,11 +104,11 @@ describe('shared story operations', () => {
     ]);
   });
 
-  it('keeps the last trigger of an interaction', () => {
+  it('turns the last trigger of an interaction into a root trigger', () => {
     const updated = deleteTriggerInStory(storyFixture(), 'middle', 'trigger-middle');
 
     expect(updated.interactions[1].triggers).toEqual([
-      { id: 'trigger-middle', inputInteractionIds: ['root'], conditions: [] },
+      { id: 'trigger-middle', inputInteractionIds: [], conditions: [] },
     ]);
   });
 
@@ -185,24 +185,23 @@ describe('shared story operations', () => {
     ]);
   });
 
-  it('finds the next child position below occupied outputs', () => {
+  it('finds the next child position below occupied vertical outputs', () => {
     const story = storyFixture();
-    story.interactions[1].position = { x: 420, y: 260 };
 
-    expect(getNextChildPosition(story, story.interactions[0])).toEqual({ x: 420, y: 410 });
+    expect(getNextChildPosition(story, story.interactions[0])).toEqual({ x: 80, y: 570 });
   });
 
-  it('finds the next parent position beside the target without overlap', () => {
+  it('finds the next parent position above the target without overlap', () => {
     const story = storyFixture();
     story.interactions.push({
       id: 'other-parent',
       title: 'Other parent',
       body: 'Already there',
-      position: { x: 420, y: 260 },
+      position: { x: 80, y: 270 },
       triggers: [{ id: 'trigger-other-parent', inputInteractionIds: [], conditions: [] }],
     });
 
-    expect(getNextParentPosition(story, story.interactions[2])).toEqual({ x: 420, y: 410 });
+    expect(getNextParentPosition(story, story.interactions[2])).toEqual({ x: 80, y: -30 });
   });
 
   it('finds the next root position below the lowest existing root', () => {
@@ -238,7 +237,7 @@ describe('shared story operations', () => {
       id: 'contextual',
       title: 'Contextual',
       body: 'Available after root without a direct input.',
-      position: { x: 760, y: 120 },
+      position: { x: 320, y: 270 },
       triggers: [
         {
           id: 'trigger-contextual',

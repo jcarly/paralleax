@@ -9,7 +9,7 @@ Cover the critical MVP paths: Story, Interaction, Trigger, and Reader.
 - Shared: story operations delete only the intended trigger and preserve valid inputs.
 - Shared: stale server merges cannot restore locally deleted triggers.
 - Shared/API/Web: demo story generation creates roots, branches, multi-input triggers, and conditions.
-- Shared: child placement selects a non-overlapping output position.
+- Shared: child placement selects a non-overlapping vertical output position.
 - Shared: root and parent placement select non-overlapping graph positions.
 - Editor: editing an interaction title keeps the page visible and updates the block.
 - Editor: moving an interaction saves only the position without clearing the title or body.
@@ -27,11 +27,14 @@ Cover the critical MVP paths: Story, Interaction, Trigger, and Reader.
 - Editor: selecting a linked trigger marker opens the trigger editor for that trigger.
 - Editor: selecting a root trigger marker opens root trigger conditions without mixing them into interaction content editing.
 - Editor: the inspector is hidden until an interaction or trigger is selected, and closing it or clicking the canvas background clears the selection.
-- Editor: selecting a graph edge visibly highlights that edge.
-- Editor: deleting a trigger removes its edge and a later interaction move must not restore it from stale API data.
+- Editor: selecting a trigger marker visibly highlights that marker.
+- Editor: deleting a trigger input link removes its edge and a later interaction
+  move must not restore it from stale API data.
 - Editor: deleting a trigger link and then creating another link must not restore the deleted link from stale API data.
-- Editor: deleting one edge removes only that input link and keeps the trigger as a root trigger when no inputs remain.
-- Editor/API: the last trigger of an interaction cannot be deleted.
+- Editor: deleting one trigger input link removes only that input and keeps the
+  trigger as a root trigger when no inputs remain.
+- Editor/API: deleting the last trigger of an interaction turns it into a root
+  trigger.
 - Editor: creating a new canvas connection creates a dedicated trigger and does not mutate existing linked triggers.
 - Editor: when connecting to an interaction with existing triggers, the author can choose whether to add the source as an input of an existing trigger or create a new trigger.
 - Editor: dropping a connection on an existing trigger marker adds the source as
@@ -59,7 +62,8 @@ Cover the critical MVP paths: Story, Interaction, Trigger, and Reader.
 - Editor: create a root interaction and verify that it appears on the canvas.
 - Editor: create a child interaction from the selected interaction, then verify the trigger input link and absence of overlap with other outputs.
 - Editor: configure several inputs on the same trigger and verify that graph links share the trigger marker.
-- Editor: click an edge, edit its conditions, close the editor, and verify that the edge remains attached to the same trigger.
+- Editor: click a trigger marker, edit its conditions, close the editor, and
+  verify that the marker remains attached to the same trigger.
 - Editor: delete an interaction and verify that invalid trigger links are removed from the canvas.
 - Reader: open a story, choose a starting interaction, and verify the following choices.
 - Reader: restart resets history and choices to the initial state.
@@ -73,7 +77,7 @@ Cover the critical MVP paths: Story, Interaction, Trigger, and Reader.
 5. Connection UX for choosing existing trigger inputs or new triggers.
 6. Contextual inputless triggers.
 7. OR condition groups through several triggers between the same interactions.
-8. Trigger editing from graph edges.
+8. Trigger editing from graph markers.
 9. Precise trigger link creation and deletion.
 10. Direct graph creation from connection gestures.
 11. Trigger deletion and stale-save stability.

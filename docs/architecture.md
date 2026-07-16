@@ -10,13 +10,13 @@ Paralleax is a TypeScript monorepo.
   Story editor persistence and stale-response merge orchestration live in
   `useStoryEditorPersistence`.
   Graph mapping from stories to React Flow nodes and edges lives in `storyGraph.ts`
-  so trigger edge rendering can be tested outside the editor component.
+  so trigger node and edge rendering can be tested outside the editor component.
   Editor selection lookups live in `storySelection.ts` so inspector behavior is
   testable outside the React component.
   Canvas connection decisions live in `storyConnection.ts`; the editor component
   keeps API orchestration while pure trigger-link rules stay unit-tested.
-  Trigger input deletion planning lives in `storyTriggerInput.ts`, keeping the
-  "delete link or delete whole trigger" rule explicit and tested.
+  Trigger input deletion planning lives in `storyTriggerInput.ts`, keeping link
+  deletion explicit and tested.
 - `apps/api`: NestJS. Exposes story endpoints. Story application logic lives in
   `StoriesService`, while MVP in-memory storage is isolated behind `StoriesRepository`.
 - `packages/shared`: shared types, narrative reader logic, story operations, trigger cleanup rules, stale-response merge rules, and graph placement helpers used by both the web app and API.
@@ -42,11 +42,12 @@ the Paralleax domain model and shared packages. The application may map domain
 objects to React Flow nodes and edges, but it should not store stories as React
 Flow data.
 
-Current trigger edges are a projection: each visible edge represents one input of
-a trigger owned by an output interaction. This is acceptable while trigger editing
-remains edge-focused. If triggers later need richer visual grouping, review
-states, or condition summaries, the editor may introduce custom edges or explicit
-trigger nodes, but the underlying domain model should still drive that projection.
+Current trigger rendering is a projection: a linked trigger is shown as a small
+React Flow trigger node between its input interactions and its output
+interaction. Each input edge connects an interaction to that trigger node, and
+the trigger node connects to the output interaction. Root triggers remain markers
+on the interaction itself. The underlying domain model still owns trigger
+semantics; React Flow nodes only make the relationships easier to manipulate.
 
 A warning sign would be changing trigger semantics only to match React Flow
 constraints. In that case, the integration should be revisited before the UI
@@ -81,8 +82,8 @@ stabilizing.
 
 Tailwind CSS is a candidate to evaluate once the UI surface justifies a
 design-system decision. React Flow-specific styles, such as node handles and
-selected trigger edges, may remain in dedicated CSS because they target
-third-party graph classes directly.
+trigger markers, may remain in dedicated CSS because they target third-party
+graph classes directly.
 
 ## Tests and CI
 

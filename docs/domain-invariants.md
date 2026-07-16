@@ -9,6 +9,8 @@ details. They should stay covered by tests as the editor grows.
 - An interaction should keep at least one trigger.
 - A trigger belongs to exactly one output interaction.
 - A trigger can have zero or more input interactions.
+- Deleting the last trigger of an interaction keeps that trigger and turns it
+  into an inputless trigger.
 - An inputless trigger without conditions is a starting trigger.
 - An inputless trigger with conditions is a contextual trigger evaluated during
   reading.
@@ -44,8 +46,7 @@ details. They should stay covered by tests as the editor grows.
 - Interaction editing should stay focused on interaction content and root trigger
   behavior.
 - Creating or deleting one edge must not silently mutate unrelated trigger inputs.
-- Deleting a selected trigger edge removes only that input when other inputs
-  remain.
+- Deleting a trigger input link removes only that input when other inputs remain.
 - Removing the last input from a trigger turns it into a root trigger instead of
   deleting the interaction's last availability rule.
 

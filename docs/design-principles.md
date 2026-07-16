@@ -6,6 +6,11 @@ The MVP must stay understandable for an author who is not a developer.
 
 Every addition must be justified by a clear narrative need. Advanced concepts are documented, but they must not enter the code until the Story, Interaction, Trigger, and Reader core is stable.
 
+The interface should hide technical edge cases whenever the model can preserve
+meaning automatically. For example, deleting the last input of a trigger or the
+last trigger of an interaction should convert it into a root trigger instead of
+forcing the author to understand why a delete action is disabled.
+
 ## Author-First Canvas
 
 Paralleax should help authors think in narrative terms rather than graph
@@ -54,6 +59,8 @@ UX principles:
 - a new output must not overlap existing outputs;
 - links should help users understand triggers;
 - links may later show visual hints: condition, timing, probability, automatic choice.
+- actions should live where the author expects them, such as deleting a trigger
+  input directly from its graph link.
 
 ## Usable Data
 

@@ -4,15 +4,12 @@ export function TriggerInspector({
   story,
   interaction,
   trigger,
-  selectedInputInteractionId,
   onSaveTrigger,
   onDeleteTrigger,
-  onDeleteTriggerInput,
 }: {
   story: Story;
   interaction: Interaction;
   trigger: Interaction['triggers'][number];
-  selectedInputInteractionId?: string;
   onSaveTrigger: (
     interactionId: string,
     triggerId: string,
@@ -20,11 +17,6 @@ export function TriggerInspector({
     conditions: TriggerCondition[],
   ) => Promise<void>;
   onDeleteTrigger: (interactionId: string, triggerId: string) => Promise<void>;
-  onDeleteTriggerInput: (
-    interactionId: string,
-    triggerId: string,
-    inputInteractionId: string,
-  ) => Promise<void>;
 }) {
   async function updateTrigger(inputIds: string[], conditions: TriggerCondition[]) {
     await onSaveTrigger(interaction.id, trigger.id, inputIds, conditions);
@@ -93,24 +85,9 @@ export function TriggerInspector({
         Add condition
       </button>
       <hr />
-      {selectedInputInteractionId ? (
-        <button
-          className="danger"
-          onClick={() =>
-            void onDeleteTriggerInput(interaction.id, trigger.id, selectedInputInteractionId)
-          }
-        >
-          Delete link
-        </button>
-      ) : (
-        <button
-          className="danger"
-          disabled={interaction.triggers.length <= 1}
-          onClick={() => void onDeleteTrigger(interaction.id, trigger.id)}
-        >
-          Delete trigger
-        </button>
-      )}
+      <button className="danger" onClick={() => void onDeleteTrigger(interaction.id, trigger.id)}>
+        Delete trigger
+      </button>
     </div>
   );
 }

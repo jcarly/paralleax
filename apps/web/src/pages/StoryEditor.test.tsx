@@ -32,7 +32,7 @@ vi.mock('@xyflow/react', async () => {
     ),
     MarkerType: { ArrowClosed: 'arrowclosed' },
     MiniMap: () => <div data-testid="flow-minimap" />,
-    Position: { Left: 'left', Right: 'right' },
+    Position: { Bottom: 'bottom', Left: 'left', Right: 'right', Top: 'top' },
     ReactFlow: ({
       nodes,
       edges,
@@ -41,7 +41,6 @@ vi.mock('@xyflow/react', async () => {
       onConnect,
       onConnectStart,
       onConnectEnd,
-      onEdgeClick,
       onNodeClick,
       onPaneClick,
       onNodeDragStop,
@@ -125,8 +124,19 @@ vi.mock('@xyflow/react', async () => {
                     ? `flow-edge-${edge.data.inputInteractionId}-${edge.data.interactionId}`
                     : `flow-edge-${edge.source}-${edge.target}`
                 }
-                onClick={(event) => onEdgeClick?.(event, edge)}
               />
+              {edge.data?.inputInteractionId ? (
+                <button
+                  data-testid={`delete-link-${edge.data.inputInteractionId}-${edge.data.interactionId}`}
+                  onClick={() =>
+                    edge.data.onDeleteTriggerInput?.(
+                      edge.data.interactionId,
+                      edge.data.triggerId,
+                      edge.data.inputInteractionId,
+                    )
+                  }
+                />
+              ) : null}
             </div>
           ))}
           {nodes
@@ -144,6 +154,30 @@ vi.mock('@xyflow/react', async () => {
                     data-trigger-id={triggerNode.data.triggerId}
                     onClick={(event) => {
                       onConnectStart?.(event, { nodeId: node.id, handleType: 'source' });
+                      onConnectEnd?.(event, {
+                        isValid: null,
+                        toNode: null,
+                        pointer: null,
+                      });
+                    }}
+                  />
+                )),
+            )}
+          {nodes
+            .filter((node: any) => node.type === 'interaction' && node.data.rootTriggerId)
+            .flatMap((targetNode: any) =>
+              nodes
+                .filter((node: any) => node.type === 'interaction')
+                .filter((sourceNode: any) => sourceNode.id !== targetNode.id)
+                .map((sourceNode: any) => (
+                  <button
+                    key={`${sourceNode.id}-${targetNode.id}-${targetNode.data.rootTriggerId}`}
+                    data-testid={`drop-source-${sourceNode.id}-on-root-trigger-${targetNode.id}`}
+                    data-trigger-drop-target="true"
+                    data-interaction-id={targetNode.id}
+                    data-trigger-id={targetNode.data.rootTriggerId}
+                    onClick={(event) => {
+                      onConnectStart?.(event, { nodeId: sourceNode.id, handleType: 'source' });
                       onConnectEnd?.(event, {
                         isValid: null,
                         toNode: null,
@@ -193,7 +227,7 @@ function storyWithTwoInteractions(): Story {
         id: 'interaction-2',
         title: 'Second interaction',
         body: 'Next content',
-        position: { x: 420, y: 180 },
+        position: { x: 80, y: 270 },
         triggers: [{ id: 'trigger-2', inputInteractionIds: ['interaction-1'], conditions: [] }],
       },
     ],
@@ -206,7 +240,7 @@ function storyWithThreeInteractions(): Story {
     id: 'interaction-3',
     title: 'Third interaction',
     body: 'Another child',
-    position: { x: 760, y: 300 },
+    position: { x: 320, y: 420 },
     triggers: [{ id: 'trigger-3', inputInteractionIds: [], conditions: [] }],
   });
   return story;
@@ -277,6 +311,7 @@ describe('StoryEditor', () => {
       triggers: [{ id: 'trigger-root', inputInteractionIds: [], conditions: [] }],
     });
     const withChild = storyWithTwoInteractions();
+    withChild.interactions[1].position = { x: 80, y: 420 };
     vi.mocked(api.createInteraction)
       .mockResolvedValueOnce(withRoot)
       .mockResolvedValueOnce(withChild);
@@ -291,7 +326,7 @@ describe('StoryEditor', () => {
     await user.click(screen.getByRole('button', { name: 'Add child' }));
     expect(api.createInteraction).toHaveBeenLastCalledWith('story-1', {
       parentId: 'interaction-1',
-      position: { x: 420, y: 260 },
+      position: { x: 80, y: 420 },
     });
   });
 
@@ -312,7 +347,6 @@ describe('StoryEditor', () => {
 
   it('creates a child interaction when a source connection is dropped on empty canvas', async () => {
     const story = storyWithTwoInteractions();
-    story.interactions[1].position = { x: 420, y: 260 };
     const withNewChild = structuredClone(story);
     withNewChild.interactions.push({
       id: 'interaction-3',
@@ -345,7 +379,7 @@ describe('StoryEditor', () => {
     await waitFor(() => {
       expect(api.createInteraction).toHaveBeenCalledWith('story-1', {
         parentId: 'interaction-1',
-        position: { x: 420, y: 260 },
+        position: { x: 80, y: 270 },
       });
     });
   });
@@ -394,7 +428,7 @@ describe('StoryEditor', () => {
       id: 'interaction-parent',
       title: 'Created source',
       body: 'Source body',
-      position: { x: 80, y: 330 },
+      position: { x: 80, y: -30 },
       triggers: [{ id: 'trigger-parent', inputInteractionIds: [], conditions: [] }],
     });
     const withTrigger = structuredClone(withParent);
@@ -415,7 +449,7 @@ describe('StoryEditor', () => {
 
     await waitFor(() => {
       expect(api.createInteraction).toHaveBeenCalledWith('story-1', {
-        position: { x: 80, y: 330 },
+        position: { x: 80, y: -30 },
       });
       expect(api.updateTrigger).toHaveBeenCalledWith('story-1', 'interaction-2', 'trigger-new', {
         inputInteractionIds: ['interaction-parent'],
@@ -424,16 +458,16 @@ describe('StoryEditor', () => {
     });
   });
 
-  it('places a new child interaction below existing outputs instead of overlapping them', async () => {
+  it('places a new child interaction below occupied vertical outputs instead of overlapping them', async () => {
     const user = userEvent.setup();
     const story = storyWithTwoInteractions();
-    story.interactions[1].position = { x: 420, y: 260 };
+    story.interactions[1].position = { x: 80, y: 270 };
     const withNewChild = structuredClone(story);
     withNewChild.interactions.push({
       id: 'interaction-3',
       title: 'New output',
       body: 'Additional output',
-      position: { x: 420, y: 410 },
+      position: { x: 80, y: 420 },
       triggers: [{ id: 'trigger-3', inputInteractionIds: ['interaction-1'], conditions: [] }],
     });
     vi.mocked(api.createInteraction).mockResolvedValue(withNewChild);
@@ -444,7 +478,7 @@ describe('StoryEditor', () => {
 
     expect(api.createInteraction).toHaveBeenCalledWith('story-1', {
       parentId: 'interaction-1',
-      position: { x: 420, y: 410 },
+      position: { x: 80, y: 420 },
     });
   });
 
@@ -665,6 +699,26 @@ describe('StoryEditor', () => {
     expect(await screen.findByTestId('flow-edge-interaction-3-interaction-2')).toBeInTheDocument();
   });
 
+  it('turns a root trigger into a linked trigger when a connection is dropped on its marker', async () => {
+    const user = userEvent.setup();
+    const story = storyWithTwoInteractions();
+    const linkedRoot = structuredClone(story);
+    linkedRoot.interactions[0].triggers[0].inputInteractionIds = ['interaction-2'];
+    vi.mocked(api.updateTrigger).mockResolvedValue(linkedRoot);
+
+    await renderEditor(story);
+    await user.click(screen.getByTestId('drop-source-interaction-2-on-root-trigger-interaction-1'));
+
+    await waitFor(() => {
+      expect(api.addTrigger).not.toHaveBeenCalled();
+      expect(api.updateTrigger).toHaveBeenCalledWith('story-1', 'interaction-1', 'trigger-1', {
+        inputInteractionIds: ['interaction-2'],
+        conditions: [],
+      });
+    });
+    expect(await screen.findByTestId('flow-edge-interaction-2-interaction-1')).toBeInTheDocument();
+  });
+
   it('does not restore a deleted link when another canvas connection is created from that interaction', async () => {
     const user = userEvent.setup();
     const story = storyWithThreeInteractions();
@@ -683,8 +737,7 @@ describe('StoryEditor', () => {
       .mockResolvedValueOnce(staleConnectedStory);
 
     await renderEditor(story);
-    await user.click(screen.getByTestId('flow-edge-interaction-1-interaction-2'));
-    await user.click(screen.getByRole('button', { name: 'Delete link' }));
+    await user.click(screen.getByTestId('delete-link-interaction-1-interaction-2'));
 
     await waitFor(() => {
       expect(api.updateTrigger).toHaveBeenCalledWith('story-1', 'interaction-2', 'trigger-2', {
@@ -706,7 +759,7 @@ describe('StoryEditor', () => {
     expect(await screen.findByTestId('flow-edge-interaction-2-interaction-3')).toBeInTheDocument();
   });
 
-  it('opens the trigger editor from an edge and updates that trigger conditions', async () => {
+  it('opens the trigger editor from a marker and updates that trigger conditions', async () => {
     const user = userEvent.setup();
     const story = storyWithThreeInteractions();
     story.interactions[2].triggers = [
@@ -720,9 +773,9 @@ describe('StoryEditor', () => {
     vi.mocked(api.updateTrigger).mockResolvedValue(withCondition);
 
     await renderEditor(story);
-    await user.click(screen.getByTestId('flow-edge-interaction-1-interaction-3'));
+    await user.click(screen.getByTestId('flow-trigger-interaction-3-trigger-edge'));
 
-    expect(screen.getByTestId('flow-edge-interaction-1-interaction-3')).toHaveClass('selected');
+    expect(screen.getByTestId('flow-trigger-interaction-3-trigger-edge')).toHaveClass('selected');
     expect(screen.getByRole('heading', { name: 'Path conditions' })).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Add condition' }));
@@ -751,7 +804,7 @@ describe('StoryEditor', () => {
     vi.mocked(api.updateTrigger).mockResolvedValue(staleUpdatedStory);
 
     await renderEditor(story);
-    await user.click(screen.getByTestId('flow-edge-interaction-1-interaction-2'));
+    await user.click(screen.getByTestId('flow-trigger-interaction-2-trigger-2'));
     await user.click(screen.getByRole('button', { name: 'Add condition' }));
 
     await waitFor(() => {
@@ -784,7 +837,7 @@ describe('StoryEditor', () => {
     );
 
     await renderEditor(story);
-    await user.click(screen.getByTestId('flow-edge-interaction-1-interaction-2'));
+    await user.click(screen.getByTestId('flow-trigger-interaction-2-trigger-2'));
     await user.click(screen.getByRole('button', { name: 'Add condition' }));
 
     await user.click(screen.getByTestId('flow-node-interaction-2'));
@@ -897,7 +950,7 @@ describe('StoryEditor', () => {
     await user.click(screen.getByRole('button', { name: 'Close inspector' }));
     expect(screen.queryByRole('complementary', { name: 'Inspector' })).not.toBeInTheDocument();
 
-    await user.click(screen.getByTestId('flow-edge-interaction-1-interaction-2'));
+    await user.click(screen.getByTestId('flow-trigger-interaction-2-trigger-2'));
     expect(screen.getByRole('complementary', { name: 'Inspector' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Path conditions' })).toBeInTheDocument();
 
@@ -914,10 +967,27 @@ describe('StoryEditor', () => {
     );
 
     expect(screen.getByRole('heading', { name: 'Path conditions' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Delete trigger' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Delete trigger' })).toBeEnabled();
   });
 
-  it('removes the selected edge link and keeps the trigger as a root trigger', async () => {
+  it('turns the last linked trigger into a root trigger when deleting the trigger', async () => {
+    const user = userEvent.setup();
+    const story = storyWithTwoInteractions();
+    const rootTriggerStory = structuredClone(story);
+    rootTriggerStory.interactions[1].triggers[0].inputInteractionIds = [];
+    vi.mocked(api.deleteTrigger).mockResolvedValue(rootTriggerStory);
+
+    await renderEditor(story);
+    await user.click(screen.getByTestId('flow-trigger-interaction-2-trigger-2'));
+    await user.click(screen.getByRole('button', { name: 'Delete trigger' }));
+
+    await waitFor(() => {
+      expect(api.deleteTrigger).toHaveBeenCalledWith('story-1', 'interaction-2', 'trigger-2');
+    });
+    expect(screen.queryByTestId('flow-edge-interaction-1-interaction-2')).not.toBeInTheDocument();
+  });
+
+  it('removes a link and keeps the trigger as a root trigger', async () => {
     const user = userEvent.setup();
     const story = storyWithTwoInteractions();
     const withoutInput = structuredClone(story);
@@ -925,8 +995,7 @@ describe('StoryEditor', () => {
     vi.mocked(api.updateTrigger).mockResolvedValue(withoutInput);
 
     await renderEditor(story);
-    await user.click(screen.getByTestId('flow-edge-interaction-1-interaction-2'));
-    await user.click(screen.getByRole('button', { name: 'Delete link' }));
+    await user.click(screen.getByTestId('delete-link-interaction-1-interaction-2'));
 
     await waitFor(() => {
       expect(api.updateTrigger).toHaveBeenCalledWith('story-1', 'interaction-2', 'trigger-2', {
@@ -947,8 +1016,7 @@ describe('StoryEditor', () => {
     vi.mocked(api.updateTrigger).mockResolvedValue(withoutSelectedInput);
 
     await renderEditor(story);
-    await user.click(screen.getByTestId('flow-edge-interaction-1-interaction-2'));
-    await user.click(screen.getByRole('button', { name: 'Delete link' }));
+    await user.click(screen.getByTestId('delete-link-interaction-1-interaction-2'));
 
     await waitFor(() => {
       expect(api.updateTrigger).toHaveBeenCalledWith('story-1', 'interaction-2', 'trigger-2', {
@@ -967,7 +1035,7 @@ describe('StoryEditor', () => {
     const withoutLink = structuredClone(story);
     withoutLink.interactions[1].triggers[0].inputInteractionIds = [];
     const staleMovedStory = structuredClone(story);
-    staleMovedStory.interactions[1].position = { x: 445, y: 195 };
+    staleMovedStory.interactions[1].position = { x: 105, y: 285 };
     let resolveLinkDeletion: (story: Story) => void = () => {};
     vi.mocked(api.updateTrigger).mockReturnValue(
       new Promise((resolve) => {
@@ -977,15 +1045,14 @@ describe('StoryEditor', () => {
     vi.mocked(api.updateInteraction).mockResolvedValue(staleMovedStory);
 
     await renderEditor(story);
-    await user.click(screen.getByTestId('flow-edge-interaction-1-interaction-2'));
-    await user.click(screen.getByRole('button', { name: 'Delete link' }));
+    await user.click(screen.getByTestId('delete-link-interaction-1-interaction-2'));
 
     expect(screen.queryByTestId('flow-edge-interaction-1-interaction-2')).not.toBeInTheDocument();
     await user.click(screen.getByTestId('drag-node-interaction-2'));
 
     await waitFor(() => {
       expect(api.updateInteraction).toHaveBeenCalledWith('story-1', 'interaction-2', {
-        position: { x: 445, y: 195 },
+        position: { x: 105, y: 285 },
       });
     });
     expect(screen.queryByTestId('flow-edge-interaction-1-interaction-2')).not.toBeInTheDocument();

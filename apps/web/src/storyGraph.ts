@@ -17,6 +17,11 @@ export interface TriggerEdgeData extends SelectedTrigger {
   selected: boolean;
   conditionCount: number;
   onSelectTrigger?: (trigger: SelectedTrigger) => void;
+  onDeleteTriggerInput?: (
+    interactionId: string,
+    triggerId: string,
+    inputInteractionId: string,
+  ) => void;
 }
 
 export type TriggerFlowEdge = Edge<TriggerEdgeData>;
@@ -38,6 +43,7 @@ const triggerNodeSize = 18;
 export function buildInteractionNodes(
   story: Story | undefined,
   selectedId: string | undefined,
+  selectedTrigger?: SelectedTrigger,
   actions: InteractionNodeActions = {},
 ): InteractionFlowNode[] {
   return (
@@ -51,7 +57,14 @@ export function buildInteractionNodes(
           title: item.title,
           body: item.body,
           selected: item.id === selectedId,
-          ...(rootTrigger ? { rootTriggerId: rootTrigger.id } : {}),
+          ...(rootTrigger
+            ? {
+                rootTriggerId: rootTrigger.id,
+                rootTriggerSelected:
+                  selectedTrigger?.interactionId === item.id &&
+                  selectedTrigger.triggerId === rootTrigger.id,
+              }
+            : {}),
           ...(actions.onCreateChild ? { onCreateChild: actions.onCreateChild } : {}),
           ...(actions.onCreateParent ? { onCreateParent: actions.onCreateParent } : {}),
           ...(actions.onSelectRootTrigger
@@ -78,8 +91,8 @@ export function buildTriggerNodes(
             return input
               ? [
                   {
-                    x: input.position.x + interactionNodeWidth,
-                    y: input.position.y + interactionNodeHeight / 2,
+                    x: input.position.x + interactionNodeWidth / 2,
+                    y: input.position.y + interactionNodeHeight,
                   },
                 ]
               : [];
@@ -90,8 +103,8 @@ export function buildTriggerNodes(
           );
           const inputCount = Math.max(inputPositions.length, 1);
           const targetAnchor = {
-            x: target.position.x,
-            y: target.position.y + interactionNodeHeight / 2,
+            x: target.position.x + interactionNodeWidth / 2,
+            y: target.position.y,
           };
           const midpoint = {
             x: (averageInput.x / inputCount + targetAnchor.x) / 2,
@@ -126,23 +139,19 @@ export function buildTriggerNodes(
 
 export function buildTriggerEdges(
   story: Story | undefined,
-  selectedTrigger?: SelectedTrigger,
   onSelectTrigger?: (trigger: SelectedTrigger) => void,
+  onDeleteTriggerInput?: (
+    interactionId: string,
+    triggerId: string,
+    inputInteractionId: string,
+  ) => void,
 ): TriggerFlowEdge[] {
   return (
     story?.interactions.flatMap((target) =>
       target.triggers.flatMap((trigger) => {
         if (trigger.inputInteractionIds.length === 0) return [];
         const triggerNodeId = getTriggerNodeId(target.id, trigger.id);
-        const isTriggerSelected =
-          selectedTrigger?.interactionId === target.id &&
-          selectedTrigger.triggerId === trigger.id &&
-          !selectedTrigger.inputInteractionId;
         const inputEdges = trigger.inputInteractionIds.map((source) => {
-          const isInputSelected =
-            selectedTrigger?.interactionId === target.id &&
-            selectedTrigger.triggerId === trigger.id &&
-            selectedTrigger.inputInteractionId === source;
           return {
             id: `${trigger.id}-${source}`,
             type: 'trigger',
@@ -150,14 +159,15 @@ export function buildTriggerEdges(
             sourceHandle: 'interaction-output',
             target: triggerNodeId,
             targetHandle: 'trigger-input',
-            className: isInputSelected ? 'trigger-edge selected' : 'trigger-edge',
+            className: 'trigger-edge',
             data: {
               interactionId: target.id,
               triggerId: trigger.id,
               inputInteractionId: source,
-              selected: isInputSelected,
+              selected: false,
               conditionCount: trigger.conditions.length,
               ...(onSelectTrigger ? { onSelectTrigger } : {}),
+              ...(onDeleteTriggerInput ? { onDeleteTriggerInput } : {}),
             },
           };
         });
@@ -167,13 +177,13 @@ export function buildTriggerEdges(
           source: triggerNodeId,
           sourceHandle: 'trigger-output',
           target: target.id,
-          targetHandle: 'new-trigger-input',
+          targetHandle: 'create-source-input',
           markerEnd: { type: MarkerType.ArrowClosed },
-          className: isTriggerSelected ? 'trigger-edge selected' : 'trigger-edge',
+          className: 'trigger-edge',
           data: {
             interactionId: target.id,
             triggerId: trigger.id,
-            selected: isTriggerSelected,
+            selected: false,
             conditionCount: trigger.conditions.length,
             ...(onSelectTrigger ? { onSelectTrigger } : {}),
           },

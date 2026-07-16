@@ -4,7 +4,6 @@ import {
   Controls,
   ReactFlow,
   useNodesState,
-  type EdgeMouseHandler,
   type OnConnectEnd,
   type OnConnectStart,
   type NodeMouseHandler,
@@ -71,7 +70,7 @@ export function StoryEditor() {
 
   const storyNodes = useMemo(
     () =>
-      buildInteractionNodes(story, selectedId, {
+      buildInteractionNodes(story, selectedId, selectedTrigger, {
         onCreateChild: (interactionId) => void createChildFromInteraction(interactionId),
         onCreateParent: (interactionId) => void createParentForInteraction(interactionId),
         onSelectRootTrigger: (interactionId, triggerId) => {
@@ -79,7 +78,14 @@ export function StoryEditor() {
           setSelectedTrigger({ interactionId, triggerId });
         },
       }),
-    [closeInspector, createChildFromInteraction, createParentForInteraction, selectedId, story],
+    [
+      closeInspector,
+      createChildFromInteraction,
+      createParentForInteraction,
+      selectedId,
+      selectedTrigger,
+      story,
+    ],
   );
   const triggerNodes = useMemo(
     () =>
@@ -96,16 +102,6 @@ export function StoryEditor() {
     setNodes([...storyNodes, ...triggerNodes]);
   }, [setNodes, storyNodes, triggerNodes]);
 
-  const selectTrigger: EdgeMouseHandler = (_, edge) => {
-    const data = edge.data as Partial<SelectedTrigger> | undefined;
-    if (!data?.interactionId || !data.triggerId) return;
-    closeInspector();
-    setSelectedTrigger({
-      interactionId: data.interactionId,
-      triggerId: data.triggerId,
-      inputInteractionId: data.inputInteractionId,
-    });
-  };
   const selectTriggerData = useCallback(
     (trigger: SelectedTrigger) => {
       closeInspector();
@@ -113,9 +109,19 @@ export function StoryEditor() {
     },
     [closeInspector],
   );
+  const deleteSelectedTriggerInput = useCallback(
+    async (interactionId: string, triggerId: string, inputInteractionId: string) => {
+      await deleteTriggerInput(interactionId, triggerId, inputInteractionId);
+      setSelectedTrigger(undefined);
+    },
+    [deleteTriggerInput],
+  );
   const edges = useMemo(
-    () => buildTriggerEdges(story, selectedTrigger, selectTriggerData),
-    [selectTriggerData, story, selectedTrigger],
+    () =>
+      buildTriggerEdges(story, selectTriggerData, (interactionId, triggerId, inputId) => {
+        void deleteSelectedTriggerInput(interactionId, triggerId, inputId);
+      }),
+    [deleteSelectedTriggerInput, selectTriggerData, story],
   );
 
   const select: NodeMouseHandler = (_, node) => {
@@ -165,15 +171,6 @@ export function StoryEditor() {
 
   async function deleteSelectedTrigger(interactionId: string, triggerId: string) {
     await deleteTrigger(interactionId, triggerId);
-    setSelectedTrigger(undefined);
-  }
-
-  async function deleteSelectedTriggerInput(
-    interactionId: string,
-    triggerId: string,
-    inputInteractionId: string,
-  ) {
-    await deleteTriggerInput(interactionId, triggerId, inputInteractionId);
     setSelectedTrigger(undefined);
   }
 
@@ -232,7 +229,6 @@ export function StoryEditor() {
             onConnect={(connection) => void connectInteractions(connection)}
             onConnectStart={startCanvasConnection}
             onConnectEnd={endCanvasConnection}
-            onEdgeClick={selectTrigger}
             onNodeClick={select}
             onPaneClick={closeInspector}
             onNodeDragStop={(_, node) =>
@@ -269,10 +265,8 @@ export function StoryEditor() {
                 story={story}
                 interaction={selectedTriggerTarget.interaction}
                 trigger={selectedTriggerTarget.trigger}
-                selectedInputInteractionId={selectedTrigger?.inputInteractionId}
                 onSaveTrigger={saveTrigger}
                 onDeleteTrigger={deleteSelectedTrigger}
-                onDeleteTriggerInput={deleteSelectedTriggerInput}
               />
             ) : null}
           </aside>

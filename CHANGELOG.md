@@ -19,6 +19,9 @@ This project follows a lightweight [Keep a Changelog](https://keepachangelog.com
   trigger.
 - Shared trigger inputs now visually converge on the same circular trigger marker
   before linking to the output interaction.
+- Trigger link deletion now happens directly from the graph link, trigger markers
+  are the only selectable trigger surface, and deleting the last trigger converts
+  it into a root trigger instead of disabling the action.
 - Shared placement helpers and tests for root and parent interaction creation.
 - User guide for the current MVP authoring workflow.
 - Playwright coverage for editing root trigger path conditions from the interaction inspector.
@@ -49,6 +52,14 @@ This project follows a lightweight [Keep a Changelog](https://keepachangelog.com
 - Refreshed dependency ranges to match the current stable installed versions without taking the larger Jest, Vite, Vitest, or TypeScript major migrations.
 - Web CSS is now organized into explicit sections for tokens, base styles, app shell, story list, editor, graph, reader, and responsive rules.
 - Editor colors now use CSS custom properties, and selected trigger edges use the same primary selection color as selected interactions.
+- Interaction input and output handles are now always visible, trigger link hover
+  reveals the link deletion control without implying the whole edge is
+  selectable, and automatic linked interaction creation now defaults to a
+  vertical layout.
+- Graph link handles now attach to the top and bottom of interactions to match
+  the vertical creation flow.
+- Trigger output arrows now point to the blue input action instead of the empty
+  new-trigger input handle.
 - Drag-created interactions now use the connection drop position instead of automatic placement.
 - Selected trigger edges are now visually highlighted in the editor.
 - The editor minimap was removed to reduce visual noise.

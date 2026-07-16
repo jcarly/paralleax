@@ -19,7 +19,7 @@ const story: Story = {
       id: 'interaction-child',
       title: 'Child',
       body: 'Child body',
-      position: { x: 420, y: 120 },
+      position: { x: 80, y: 270 },
       triggers: [
         {
           id: 'trigger-linked',

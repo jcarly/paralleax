@@ -282,15 +282,26 @@ describe('Stories API', () => {
     expect(response.body.interactions[0].triggers[0].id).not.toBe(trigger.id);
   });
 
-  it('DELETE /api/stories/:storyId/interactions/:interactionId/triggers/:triggerId rejects deleting the last trigger', async () => {
+  it('DELETE /api/stories/:storyId/interactions/:interactionId/triggers/:triggerId turns the last trigger into a root trigger', async () => {
     const story = await createStory();
-    const withInteraction = await createInteraction(story.id);
-    const interaction = withInteraction.interactions[0];
+    const withParent = await createInteraction(story.id);
+    const parent = withParent.interactions[0];
+    const withInteraction = await createInteraction(story.id, { parentId: parent.id });
+    const interaction = (withInteraction as Story).interactions.find(
+      (item) => item.id !== parent.id,
+    )!;
     const trigger = interaction.triggers[0];
 
-    await request(httpServer)
+    const response = await request(httpServer)
       .delete(`/api/stories/${story.id}/interactions/${interaction.id}/triggers/${trigger.id}`)
-      .expect(400);
+      .expect(200);
+
+    const updatedInteraction = (response.body as Story).interactions.find(
+      (item) => item.id === interaction.id,
+    )!;
+    expect(updatedInteraction.triggers).toEqual([
+      { id: trigger.id, inputInteractionIds: [], conditions: [] },
+    ]);
   });
 
   it('returns 404 for unknown story ids', async () => {

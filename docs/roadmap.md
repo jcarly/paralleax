@@ -12,7 +12,7 @@
   creating a new trigger.
 - Contextual inputless triggers with visited / not visited conditions.
 - OR condition groups through several triggers between the same interactions.
-- Trigger editing from graph edges.
+- Trigger editing from graph markers.
 - Trigger cleanup when deleting interactions.
 - Visited / not visited conditions.
 - API, web, Playwright, and coverage tests in CI.

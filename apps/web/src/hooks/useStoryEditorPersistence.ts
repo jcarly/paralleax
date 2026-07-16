@@ -84,7 +84,11 @@ export function useStoryEditorPersistence(storyId: string) {
   }
 
   async function deleteTrigger(interactionId: string, triggerId: string) {
-    deletedTriggerIds.current.add(triggerId);
+    const interaction = story?.interactions.find((item) => item.id === interactionId);
+    const removesTrigger = (interaction?.triggers.length ?? 0) > 1;
+    if (removesTrigger) {
+      deletedTriggerIds.current.add(triggerId);
+    }
     setStory((current) =>
       current ? deleteTriggerInStory(current, interactionId, triggerId) : current,
     );

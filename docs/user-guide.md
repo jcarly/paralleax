@@ -32,12 +32,16 @@ Use the title field at the top of the editor. The title is saved when the field 
 
 - `Add root` on the canvas creates a starting interaction.
 - Select an interaction, then `Add child` creates an output interaction linked to it.
-- Hover an interaction and use the left `+` input handle to create a source interaction.
-- Hover an interaction and use the right `+` output handle to create a child interaction.
+- Use the visible top `+` input handle to create a source interaction.
+- Use the visible bottom `+` output handle to create a child interaction.
 - Drag from an interaction output `+` handle and release on empty canvas to create a linked child interaction.
 - Drag from an interaction input `+` handle and release on empty canvas to create a source interaction that links into it.
 
-New root interactions are placed below the lowest existing root. Hover-created linked interactions are placed near their source or target while avoiding existing interactions when possible. Drag-created interactions are placed where the connection is released.
+New root interactions are placed below the lowest existing root. Button-created
+child interactions are placed below their source by default, while
+button-created source interactions are placed above their target. These default
+placements avoid existing interactions when possible. Drag-created interactions
+are placed where the connection is released.
 
 ## Edit Interaction Content
 
@@ -65,7 +69,7 @@ interactions.
 To edit a root trigger, select the root trigger marker on the interaction.
 
 The graph shows trigger inputs and outputs, so the inspector only edits trigger
-conditions and destructive actions such as deleting the selected link.
+conditions and trigger-level actions.
 
 ## Add Conditions
 
@@ -79,11 +83,16 @@ MVP conditions only check reading history. Variables, places, characters, and ti
 
 ## Delete Trigger Links
 
-Select a trigger marker on an edge and choose `Delete link`.
+Use the `x` control that appears on the link between an input interaction and
+the trigger marker.
 
-If the trigger has several inputs, only the selected input link is removed. If the selected input was the last input, the trigger remains and becomes a root trigger with no input.
+If the trigger has several inputs, only that input link is removed. If the link
+was the last input, the trigger remains and becomes a root trigger with no input.
 
-The last trigger of an interaction cannot be deleted.
+Deleting the last trigger of an interaction also keeps the trigger and converts
+it into a root trigger. This keeps the interface simple: the author can delete
+links and triggers without first reasoning about whether the interaction would be
+left without an availability rule.
 
 ## Test the Story
 

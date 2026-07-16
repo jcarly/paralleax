@@ -93,8 +93,8 @@ Expected editor behavior:
    interaction.
 2. The trigger editor opens for the selected trigger.
 3. The user can edit conditions for that trigger.
-4. The user can delete the selected input link when the trigger was selected
-   through a linked route.
+4. The user can delete a trigger input directly from the link between the input
+   interaction and the trigger marker.
 5. The marker remains attached to the same trigger after editing.
 
 The interaction inspector should stay focused on interaction content. Trigger
@@ -109,9 +109,15 @@ A root trigger should also have a visible marker, even though it has no input
 edge. This keeps root trigger editing visually separate from interaction content
 editing.
 
-Deleting an edge should remove only the selected input from the trigger. If that input was the last input of a linked trigger, the trigger remains and becomes an empty root trigger.
+Deleting a link should happen directly on the graph, through a small control on
+the link between the input interaction and the trigger marker. It removes only
+that input from the trigger. If that input was the last input of a linked
+trigger, the trigger remains and becomes an empty root trigger.
 
-The last trigger of an interaction cannot be deleted. This preserves the invariant that every interaction has at least one availability rule.
+Deleting the last trigger of an interaction should also keep that trigger and
+turn it into an empty root trigger. This preserves the invariant that every
+interaction has at least one availability rule while keeping the UI simple: the
+author can delete without having to understand why an action is disabled.
 
 Creating a new canvas connection should create a dedicated linked trigger for that source and output interaction by default. It must not silently mutate an unrelated existing trigger, because existing triggers may carry different conditions.
 

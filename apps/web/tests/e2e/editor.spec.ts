@@ -27,7 +27,7 @@ function storyWithConditionCandidate(): Story {
     id: 'interaction-2',
     title: 'Visited scene',
     body: 'A previous scene.',
-    position: { x: 440, y: 140 },
+    position: { x: 120, y: 300 },
     triggers: [{ id: 'trigger-2', inputInteractionIds: ['interaction-1'], conditions: [] }],
   });
   return next;

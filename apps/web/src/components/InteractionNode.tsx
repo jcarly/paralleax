@@ -5,6 +5,7 @@ export interface InteractionNodeData extends Record<string, unknown> {
   body: string;
   selected: boolean;
   rootTriggerId?: string;
+  rootTriggerSelected?: boolean;
   onCreateChild?: (interactionId: string) => void;
   onCreateParent?: (interactionId: string) => void;
   onSelectRootTrigger?: (interactionId: string, triggerId: string) => void;
@@ -41,8 +42,11 @@ export function InteractionNode({ id, data }: NodeProps) {
     >
       {d.rootTriggerId ? (
         <button
-          className="root-trigger-marker nodrag nopan"
+          className={`root-trigger-marker nodrag nopan ${d.rootTriggerSelected ? 'selected' : ''}`}
           type="button"
+          data-trigger-drop-target="true"
+          data-interaction-id={id}
+          data-trigger-id={d.rootTriggerId}
           aria-label="Select root trigger"
           title="Root trigger"
           onClick={selectRootTrigger}
@@ -51,7 +55,7 @@ export function InteractionNode({ id, data }: NodeProps) {
       <Handle
         type="target"
         id="create-source-input"
-        position={Position.Left}
+        position={Position.Top}
         className="node-create node-create-parent nodrag nopan"
         role="button"
         tabIndex={0}
@@ -65,7 +69,7 @@ export function InteractionNode({ id, data }: NodeProps) {
       <Handle
         type="target"
         id="new-trigger-input"
-        position={Position.Left}
+        position={Position.Top}
         className="node-trigger-input nodrag nopan"
         aria-label="Create new trigger input"
         title="Create new trigger"
@@ -75,7 +79,7 @@ export function InteractionNode({ id, data }: NodeProps) {
       <Handle
         type="source"
         id="interaction-output"
-        position={Position.Right}
+        position={Position.Bottom}
         className="node-create node-create-child nodrag nopan"
         role="button"
         tabIndex={0}

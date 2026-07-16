@@ -25,7 +25,7 @@ const story: Story = {
       id: 'interaction-2',
       title: 'Choice',
       body: 'Choice body',
-      position: { x: 420, y: 160 },
+      position: { x: 80, y: 420 },
       triggers: [
         {
           id: 'trigger-linked',
@@ -38,7 +38,7 @@ const story: Story = {
       id: 'interaction-3',
       title: 'Other',
       body: 'Other body',
-      position: { x: 420, y: 320 },
+      position: { x: 320, y: 270 },
       triggers: [],
     },
   ],
@@ -46,7 +46,7 @@ const story: Story = {
 
 describe('story graph mapping', () => {
   it('builds interaction nodes with selection state', () => {
-    expect(buildInteractionNodes(story, 'interaction-2')).toEqual([
+    expect(buildInteractionNodes(story, 'interaction-2', undefined)).toEqual([
       {
         id: 'interaction-1',
         type: 'interaction',
@@ -56,33 +56,28 @@ describe('story graph mapping', () => {
           body: 'Start body',
           selected: false,
           rootTriggerId: 'trigger-root',
+          rootTriggerSelected: false,
         },
       },
       {
         id: 'interaction-2',
         type: 'interaction',
-        position: { x: 420, y: 160 },
+        position: { x: 80, y: 420 },
         data: { title: 'Choice', body: 'Choice body', selected: true },
       },
       {
         id: 'interaction-3',
         type: 'interaction',
-        position: { x: 420, y: 320 },
+        position: { x: 320, y: 270 },
         data: { title: 'Other', body: 'Other body', selected: false },
       },
     ]);
   });
 
-  it('builds one edge per trigger input with selected edge state', () => {
+  it('builds one edge per trigger input without selecting links directly', () => {
     const triggerNodeId = getTriggerNodeId('interaction-2', 'trigger-linked');
 
-    expect(
-      buildTriggerEdges(story, {
-        interactionId: 'interaction-2',
-        triggerId: 'trigger-linked',
-        inputInteractionId: 'interaction-3',
-      }),
-    ).toEqual([
+    expect(buildTriggerEdges(story)).toEqual([
       {
         id: 'trigger-linked-interaction-1',
         type: 'trigger',
@@ -106,12 +101,12 @@ describe('story graph mapping', () => {
         sourceHandle: 'interaction-output',
         target: triggerNodeId,
         targetHandle: 'trigger-input',
-        className: 'trigger-edge selected',
+        className: 'trigger-edge',
         data: {
           interactionId: 'interaction-2',
           triggerId: 'trigger-linked',
           inputInteractionId: 'interaction-3',
-          selected: true,
+          selected: false,
           conditionCount: 1,
         },
       },
@@ -121,7 +116,7 @@ describe('story graph mapping', () => {
         source: triggerNodeId,
         sourceHandle: 'trigger-output',
         target: 'interaction-2',
-        targetHandle: 'new-trigger-input',
+        targetHandle: 'create-source-input',
         markerEnd: { type: MarkerType.ArrowClosed },
         className: 'trigger-edge',
         data: {
@@ -144,7 +139,7 @@ describe('story graph mapping', () => {
       {
         id: 'trigger:interaction-2:trigger-linked',
         type: 'trigger',
-        position: { x: 436, y: 229 },
+        position: { x: 241, y: 347 },
         draggable: false,
         selectable: false,
         data: {
@@ -159,7 +154,7 @@ describe('story graph mapping', () => {
   });
 
   it('returns empty graph parts without a story', () => {
-    expect(buildInteractionNodes(undefined, undefined)).toEqual([]);
+    expect(buildInteractionNodes(undefined, undefined, undefined)).toEqual([]);
     expect(buildTriggerNodes(undefined)).toEqual([]);
     expect(buildTriggerEdges(undefined)).toEqual([]);
   });

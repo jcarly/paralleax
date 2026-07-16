@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import {
   createDemoStory,
@@ -122,8 +122,6 @@ export class StoriesService {
     const interaction = this.interaction(story, interactionId);
     if (!interaction.triggers.some((item) => item.id === triggerId))
       throw new NotFoundException('Trigger not found');
-    if (interaction.triggers.length <= 1)
-      throw new BadRequestException('An interaction must keep at least one trigger');
     return this.replace(storyId, deleteTriggerInStory(story, interactionId, triggerId));
   }
   private mutate(id: string): Story {

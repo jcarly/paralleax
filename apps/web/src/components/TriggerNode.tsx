@@ -19,7 +19,7 @@ export function TriggerNode({ data }: NodeProps) {
       <Handle
         type="target"
         id="trigger-input"
-        position={Position.Left}
+        position={Position.Top}
         className="trigger-node-handle trigger-node-input"
       />
       <button
@@ -40,7 +40,7 @@ export function TriggerNode({ data }: NodeProps) {
       <Handle
         type="source"
         id="trigger-output"
-        position={Position.Right}
+        position={Position.Bottom}
         className="trigger-node-handle trigger-node-output"
       />
     </div>

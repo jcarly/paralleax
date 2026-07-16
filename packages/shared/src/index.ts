@@ -44,8 +44,8 @@ export interface UpdateTriggerInput {
 export type InteractionContentPatch = Partial<Pick<Interaction, 'title' | 'body' | 'position'>>;
 export type TriggerPatch = Pick<Trigger, 'inputInteractionIds' | 'conditions'>;
 
-export const childOffsetX = 340;
-export const childOffsetY = 140;
+export const childOffsetX = 0;
+export const childOffsetY = 150;
 export const childVerticalGap = 150;
 export const minNodeVerticalDistance = 120;
 export const sameColumnTolerance = 260;
@@ -228,7 +228,9 @@ export function deleteTriggerInStory(
             ...item,
             triggers:
               item.triggers.length <= 1
-                ? item.triggers
+                ? item.triggers.map((trigger) =>
+                    trigger.id === triggerId ? { ...trigger, inputInteractionIds: [] } : trigger,
+                  )
                 : item.triggers.filter((trigger) => trigger.id !== triggerId),
           }
         : item,
@@ -309,11 +311,7 @@ export function getNextChildPosition(story: Story, parent: Interaction): Positio
 
 export function getNextParentPosition(story: Story, target: Interaction): Position {
   const x = target.position.x - childOffsetX;
-  return findFreePosition(
-    story.interactions.filter((item) => item.id !== target.id),
-    x,
-    target.position.y,
-  );
+  return findFreePositionAbove(story.interactions, x, target.position.y - childOffsetY);
 }
 
 export function getNextRootPosition(story: Story): Position {
@@ -345,6 +343,20 @@ function findFreePosition(occupied: Interaction[], x: number, firstY: number): P
   }
 
   return { x, y: firstY + (occupied.length + 2) * childVerticalGap };
+}
+
+function findFreePositionAbove(occupied: Interaction[], x: number, firstY: number): Position {
+  for (let index = 0; index <= occupied.length + 1; index += 1) {
+    const y = firstY - index * childVerticalGap;
+    const isFree = occupied.every(
+      (item) =>
+        Math.abs(item.position.x - x) > sameColumnTolerance ||
+        Math.abs(item.position.y - y) >= minNodeVerticalDistance,
+    );
+    if (isFree) return { x, y };
+  }
+
+  return { x, y: firstY - (occupied.length + 2) * childVerticalGap };
 }
 
 export function isTriggerEligible(
