@@ -69,6 +69,11 @@ This project follows a lightweight [Keep a Changelog](https://keepachangelog.com
   trigger variant behind the same grouped visual route.
 - Trigger inspectors can now delete a single `OR` group or all `OR` groups behind
   the selected grouped visual route.
+- Added regression coverage for deleting a grouped visual trigger input link
+  across every `OR` trigger variant behind that route.
+- Added regression coverage for grouped trigger route boundaries, including
+  exact input-set grouping, root-trigger OR restrictions, and deleting only the
+  selected OR visual route.
 - New-trigger input handles on interaction cards now stay hidden until the author
   is actively dragging a graph connection.
 - Updated the web app visual design toward the Creative Workspace direction with

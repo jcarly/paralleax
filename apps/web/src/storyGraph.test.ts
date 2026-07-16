@@ -5,6 +5,7 @@ import {
   buildInteractionNodes,
   buildTriggerEdges,
   buildTriggerNodes,
+  getRelatedTriggerVariantIds,
   getTriggerNodeId,
 } from './storyGraph';
 
@@ -185,6 +186,65 @@ describe('story graph mapping', () => {
       orGroupCount: 2,
     });
     expect(buildTriggerEdges(groupedStory)).toHaveLength(3);
+  });
+
+  it('keeps triggers with different input sets in separate visual groups', () => {
+    const splitStory = structuredClone(story);
+    splitStory.interactions[1].triggers = [
+      {
+        id: 'trigger-one-input',
+        inputInteractionIds: ['interaction-1'],
+        conditions: [{ interactionId: 'interaction-1', hasBeenVisited: true }],
+      },
+      {
+        id: 'trigger-two-inputs',
+        inputInteractionIds: ['interaction-1', 'interaction-3'],
+        conditions: [{ interactionId: 'interaction-3', hasBeenVisited: false }],
+      },
+    ];
+
+    expect(buildTriggerNodes(splitStory).map((node) => node.data.triggerIds)).toEqual([
+      ['trigger-one-input'],
+      ['trigger-two-inputs'],
+    ]);
+    expect(buildTriggerEdges(splitStory)).toHaveLength(5);
+  });
+
+  it('finds OR trigger variants by matching the same input set regardless of order', () => {
+    const interaction = structuredClone(story.interactions[1]);
+    interaction.triggers = [
+      {
+        id: 'trigger-a',
+        inputInteractionIds: ['interaction-1', 'interaction-3'],
+        conditions: [],
+      },
+      {
+        id: 'trigger-b',
+        inputInteractionIds: ['interaction-3', 'interaction-1'],
+        conditions: [],
+      },
+      {
+        id: 'trigger-c',
+        inputInteractionIds: ['interaction-1'],
+        conditions: [],
+      },
+      {
+        id: 'trigger-root',
+        inputInteractionIds: [],
+        conditions: [],
+      },
+    ];
+
+    expect(getRelatedTriggerVariantIds(interaction, interaction.triggers[0])).toEqual([
+      'trigger-a',
+      'trigger-b',
+    ]);
+    expect(getRelatedTriggerVariantIds(interaction, interaction.triggers[2])).toEqual([
+      'trigger-c',
+    ]);
+    expect(getRelatedTriggerVariantIds(interaction, interaction.triggers[3])).toEqual([
+      'trigger-root',
+    ]);
   });
 
   it('returns empty graph parts without a story', () => {

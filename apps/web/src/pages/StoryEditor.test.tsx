@@ -1,4 +1,4 @@
-import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -136,10 +136,12 @@ vi.mock('@xyflow/react', async () => {
                 <button
                   data-testid={`delete-link-${edge.data.inputInteractionId}-${edge.data.interactionId}`}
                   onClick={() =>
-                    edge.data.onDeleteTriggerInput?.(
-                      edge.data.interactionId,
-                      edge.data.triggerId,
-                      edge.data.inputInteractionId,
+                    (edge.data.triggerIds ?? [edge.data.triggerId]).forEach((triggerId: string) =>
+                      edge.data.onDeleteTriggerInput?.(
+                        edge.data.interactionId,
+                        triggerId,
+                        edge.data.inputInteractionId,
+                      ),
                     )
                   }
                 />
@@ -723,14 +725,13 @@ describe('StoryEditor', () => {
   });
 
   it('turns a root trigger into a linked trigger when a connection is dropped on its marker', async () => {
-    const user = userEvent.setup();
     const story = storyWithTwoInteractions();
     const linkedRoot = structuredClone(story);
     linkedRoot.interactions[0].triggers[0].inputInteractionIds = ['interaction-2'];
     vi.mocked(api.updateTrigger).mockResolvedValue(linkedRoot);
 
     await renderEditor(story);
-    await user.click(screen.getByTestId('drop-source-interaction-2-on-root-trigger-interaction-1'));
+    fireEvent.click(screen.getByTestId('drop-source-interaction-2-on-root-trigger-interaction-1'));
 
     await waitFor(() => {
       expect(api.addTrigger).not.toHaveBeenCalled();
@@ -862,11 +863,16 @@ describe('StoryEditor', () => {
     await renderEditor(story);
     await user.click(screen.getByTestId('flow-trigger-interaction-2-trigger-2'));
     await user.click(screen.getByRole('button', { name: 'Add condition' }));
+    await waitFor(() => {
+      expect(api.updateTrigger).toHaveBeenCalledWith('story-1', 'interaction-2', 'trigger-2', {
+        inputInteractionIds: ['interaction-1'],
+        conditions: [{ interactionId: 'interaction-1', hasBeenVisited: true }],
+      });
+    });
 
     await user.click(screen.getByTestId('flow-node-interaction-2'));
     const titleInput = screen.getByLabelText('Title');
-    await user.clear(titleInput);
-    await user.type(titleInput, 'Fresh second title');
+    fireEvent.change(titleInput, { target: { value: 'Fresh second title' } });
 
     const staleUpdatedStory = structuredClone(story);
     staleUpdatedStory.interactions[1].triggers[0].conditions = [
@@ -989,6 +995,50 @@ describe('StoryEditor', () => {
     expect(screen.queryByRole('complementary', { name: 'Inspector' })).not.toBeInTheDocument();
   });
 
+  it('deletes only the selected OR visual route when another trigger uses different inputs', async () => {
+    const user = userEvent.setup();
+    const story = storyWithThreeInteractions();
+    story.interactions[1].triggers = [
+      {
+        id: 'trigger-a',
+        inputInteractionIds: ['interaction-1'],
+        conditions: [{ interactionId: 'interaction-3', hasBeenVisited: true }],
+      },
+      {
+        id: 'trigger-b',
+        inputInteractionIds: ['interaction-1'],
+        conditions: [{ interactionId: 'interaction-3', hasBeenVisited: false }],
+      },
+      {
+        id: 'trigger-c',
+        inputInteractionIds: ['interaction-3'],
+        conditions: [{ interactionId: 'interaction-1', hasBeenVisited: true }],
+      },
+    ];
+    const afterFirstDelete = structuredClone(story);
+    afterFirstDelete.interactions[1].triggers = [
+      afterFirstDelete.interactions[1].triggers[1],
+      afterFirstDelete.interactions[1].triggers[2],
+    ];
+    const afterSecondDelete = structuredClone(afterFirstDelete);
+    afterSecondDelete.interactions[1].triggers = [afterSecondDelete.interactions[1].triggers[1]];
+    vi.mocked(api.deleteTrigger)
+      .mockResolvedValueOnce(afterFirstDelete)
+      .mockResolvedValueOnce(afterSecondDelete);
+
+    await renderEditor(story);
+    await user.click(screen.getByTestId('flow-trigger-interaction-2-trigger-a'));
+    await user.click(screen.getByRole('button', { name: 'Delete all OR groups' }));
+
+    await waitFor(() => {
+      expect(api.deleteTrigger).toHaveBeenNthCalledWith(1, 'story-1', 'interaction-2', 'trigger-a');
+      expect(api.deleteTrigger).toHaveBeenNthCalledWith(2, 'story-1', 'interaction-2', 'trigger-b');
+    });
+    expect(api.deleteTrigger).not.toHaveBeenCalledWith('story-1', 'interaction-2', 'trigger-c');
+    expect(screen.getByTestId('flow-trigger-interaction-2-trigger-c')).toBeInTheDocument();
+    expect(screen.getByTestId('flow-edge-interaction-3-interaction-2')).toBeInTheDocument();
+  });
+
   it('adds an OR condition group from the trigger inspector', async () => {
     const user = userEvent.setup();
     const story = storyWithThreeInteractions();
@@ -1019,6 +1069,19 @@ describe('StoryEditor', () => {
     });
     expect(await screen.findByText('OR')).toBeInTheDocument();
     expect(screen.getByText('Condition group 2')).toBeInTheDocument();
+  });
+
+  it('does not allow adding an OR condition group to a root trigger', async () => {
+    const user = userEvent.setup();
+    await renderEditor(storyWithTwoInteractions());
+
+    await user.click(
+      within(screen.getByTestId('flow-node-interaction-1')).getByRole('button', {
+        name: 'Select root trigger',
+      }),
+    );
+
+    expect(screen.getByRole('button', { name: 'Add OR condition group' })).toBeDisabled();
   });
 
   it('adds, edits, and removes trigger conditions', async () => {
@@ -1174,6 +1237,45 @@ describe('StoryEditor', () => {
     expect(api.deleteTrigger).not.toHaveBeenCalled();
     expect(screen.queryByTestId('flow-edge-interaction-1-interaction-2')).not.toBeInTheDocument();
     expect(screen.getByTestId('flow-edge-interaction-3-interaction-2')).toBeInTheDocument();
+  });
+
+  it('deletes the selected input link from every OR trigger variant behind a grouped edge', async () => {
+    const user = userEvent.setup();
+    const story = storyWithThreeInteractions();
+    story.interactions[1].triggers = [
+      {
+        id: 'trigger-a',
+        inputInteractionIds: ['interaction-1'],
+        conditions: [{ interactionId: 'interaction-3', hasBeenVisited: true }],
+      },
+      {
+        id: 'trigger-b',
+        inputInteractionIds: ['interaction-1'],
+        conditions: [{ interactionId: 'interaction-3', hasBeenVisited: false }],
+      },
+    ];
+    const afterFirstInputDelete = structuredClone(story);
+    afterFirstInputDelete.interactions[1].triggers[0].inputInteractionIds = [];
+    const afterSecondInputDelete = structuredClone(afterFirstInputDelete);
+    afterSecondInputDelete.interactions[1].triggers[1].inputInteractionIds = [];
+    vi.mocked(api.updateTrigger)
+      .mockResolvedValueOnce(afterFirstInputDelete)
+      .mockResolvedValueOnce(afterSecondInputDelete);
+
+    await renderEditor(story);
+    await user.click(screen.getByTestId('delete-link-interaction-1-interaction-2'));
+
+    await waitFor(() => {
+      expect(api.updateTrigger).toHaveBeenCalledWith('story-1', 'interaction-2', 'trigger-a', {
+        inputInteractionIds: [],
+        conditions: [{ interactionId: 'interaction-3', hasBeenVisited: true }],
+      });
+      expect(api.updateTrigger).toHaveBeenCalledWith('story-1', 'interaction-2', 'trigger-b', {
+        inputInteractionIds: [],
+        conditions: [{ interactionId: 'interaction-3', hasBeenVisited: false }],
+      });
+    });
+    expect(screen.queryByTestId('flow-edge-interaction-1-interaction-2')).not.toBeInTheDocument();
   });
 
   it('does not restore a deleted link when a later interaction move returns stale trigger data', async () => {

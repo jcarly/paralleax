@@ -49,6 +49,14 @@ Cover the critical MVP paths: Story, Interaction, Trigger, and Reader.
   trigger with the same inputs behind the grouped visual route.
 - Editor: the trigger inspector can delete one OR condition group or every OR
   group behind the selected visual route.
+- Editor: deleting every OR group behind one visual route does not delete
+  triggers that use a different input set for the same output interaction.
+- Editor: root triggers cannot create OR condition groups because they are not
+  linked visual routes.
+- Editor: deleting a grouped visual trigger input link removes that input from
+  every OR trigger variant behind the grouped route.
+- Editor graph mapping: OR trigger variants are grouped only when they share the
+  exact same input set, regardless of input order.
 - Reader engine: an inputless trigger without conditions is available only at
   story start.
 - Reader engine: an inputless trigger with conditions can become available during
