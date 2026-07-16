@@ -37,16 +37,22 @@ visible or emphasized. The right inspector edits the selected object.
 
 The left panel should be collapsible.
 
-In the MVP, it should stay limited to concepts that already exist, such as story
-navigation, search, and interaction-oriented filters.
+When a new story is created, the left panel should be open by default because it
+will later host creation and navigation for important story entities. If the
+author collapses it, the editor should remember that preference for the next
+opening.
+
+The panel does not need to be resizable at first. A fixed width keeps the layout
+predictable and avoids making the editor too configurable too early.
+
+In the MVP, it should stay limited to concepts that already exist, such as
+search and interaction-oriented navigation.
 
 After the MVP, it may expose tabs for target concepts:
 
-- groups;
 - characters;
 - places;
-- variables;
-- media.
+- search.
 
 These tabs should filter or focus the Story Canvas instead of replacing it with a
 different editor. For example, selecting a character later could dim unrelated
@@ -74,6 +80,8 @@ Groups are not part of the MVP.
 
 The inspector should be unique and contextual.
 
+It should open directly when an object is selected.
+
 Depending on the selection, it may edit:
 
 - an interaction;
@@ -87,6 +95,10 @@ Depending on the selection, it may edit:
 The editor should avoid duplicating relationship lists that are already clearer
 on the canvas. For example, trigger inputs and outputs should primarily be read
 through graph links, with the inspector focused on properties that need editing.
+
+When nothing is selected, the inspector should stay closed for now. Story-level
+properties can be introduced later when the story has meaningful editable
+settings.
 
 ## Simulation Mode
 

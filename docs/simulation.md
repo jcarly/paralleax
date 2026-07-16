@@ -4,8 +4,11 @@ Simulation Mode is the author-facing testing surface for a story.
 
 It is separate from the final player reader. The player reader should only show
 what a player can actually choose, while Simulation Mode can reveal unavailable
-interactions, trigger diagnostics, simulated state, and shortcuts back to
+interactions, availability explanations, simulated state, and shortcuts back to
 editing.
+
+The main surface should stay close to a reader experience rather than keeping
+the full canvas visible by default.
 
 ## Purpose
 
@@ -26,9 +29,12 @@ Simulation state should distinguish:
 - future variables or world state, once they exist after the MVP;
 - future time state, once timing exists after the MVP.
 
-MVP trigger evaluation may use the union of journey and simulated preconditions,
-but the UI should show them separately so authors understand what was played and
-what was assumed.
+MVP trigger evaluation may use the union of journey and simulated preconditions.
+
+The first UI does not need to visually distinguish real journey entries from
+simulated preconditions. The important behavior is that forcing or simulating an
+interaction makes the test behave as if the relevant conditions had been
+satisfied beforehand.
 
 ## Start From Anywhere
 
@@ -46,18 +52,22 @@ preconditions.
 This is useful for testing a late branch without replaying the whole story.
 Preconditions are temporary and do not modify the story.
 
-## Trigger Diagnostics
+## Availability Explanations
 
 Simulation Mode should explain trigger evaluation.
 
-For each relevant unavailable interaction, it should eventually show:
+For unavailable interactions, the reason can appear on hover instead of being
+displayed permanently.
+
+Possible explanations include:
 
 - whether an input interaction matched;
 - which required visited interaction is missing;
 - which forbidden visited interaction failed;
 - which condition group passed or failed.
 
-The goal is to turn trigger logic into an author-facing debugging workflow.
+The goal is to make trigger logic understandable while testing, without forcing
+authors to read the underlying trigger structure first.
 
 ## Forced Interactions
 
@@ -67,8 +77,11 @@ Simulation Mode may offer a secondary forced interaction action. Forced steps
 should be visually marked so authors do not confuse them with valid reader
 transitions.
 
-Forcing an interaction is a debugging shortcut, not a change to engine
-semantics.
+Selecting a dimmed unavailable interaction may force it for debugging, behaving
+as if its conditions had been fulfilled beforehand.
+
+Forcing an interaction is a debugging shortcut, not a permanent change to engine
+semantics or story data.
 
 ## Editing Loop
 
@@ -82,16 +95,33 @@ Each listed interaction should eventually expose an action to open it in the
 Story Canvas, focus it, select it, and open the inspector. Returning to
 simulation should preserve enough state to retest the same situation.
 
+Simulation Mode should also support direct lightweight edits:
+
+- edit the current interaction title;
+- edit the current interaction content;
+- add output options directly from the simulation;
+- open the inspector for available options when trigger details need inspection.
+
+After editing the current interaction, the simulation does not need a special
+restart. Later stats or world-state changes can be applied when leaving the
+interaction, so the current view remains stable while the author edits.
+
+The simulation journey should support simple backtracking, such as a back arrow
+above the reader area, so authors can try another branch without restarting the
+whole test.
+
 ## First Useful Version
 
 A first implementation can focus on:
 
 - starting from any interaction;
-- showing available and unavailable relevant interactions;
-- explaining simple visited / not visited trigger conditions;
-- marking simulated preconditions;
+- showing all available interactions;
+- showing unavailable interactions dimmed when useful;
+- explaining unavailable interactions on hover;
+- forcing an unavailable interaction by selecting it;
+- lightweight title and content editing;
+- adding output options from the simulation;
 - resetting simulation state;
-- forcing an unavailable interaction with a visible warning;
 - opening an interaction in the graph for editing.
 
 Out of scope for the first version:
@@ -100,3 +130,7 @@ Out of scope for the first version:
 - variables, places, characters, or world state;
 - saved simulation profiles;
 - automatic exploration of every path.
+
+Saving named simulation states is an open question. It may mean something close
+to player saves, and should not be designed before play-session persistence is
+clearer.

@@ -13,13 +13,41 @@ Examples:
 
 - search interactions by title or content;
 - jump to a selected interaction;
-- return to recently selected objects;
 - bookmark important interactions;
 - focus the inspector on the current selection;
 - later, filter by groups, characters, places, tags, or orphan interactions.
 
 Filters should not duplicate or fork the story model. They only change what is
 visible, emphasized, or dimmed on the same Story Canvas.
+
+There should not be a browser-like navigation history for canvas focus in the
+first versions. A modification history is still important, but it belongs to
+change tracking and undo/redo rather than navigation.
+
+## Search
+
+Selecting an interaction from search should:
+
+- recenter the canvas on that interaction;
+- zoom enough to make it readable;
+- select the interaction;
+- open the inspector.
+
+Search is a navigation action, not a separate view of the story.
+
+## Filters
+
+Filtering should dim unrelated elements by default instead of hiding them.
+
+This keeps the surrounding story context visible and avoids making authors feel
+they switched to a different story. Connected path interactions should remain
+visible when they help preserve the route between filtered results.
+
+Open questions:
+
+- whether combining several filters is useful at first;
+- whether combined filters should use AND or OR semantics;
+- whether a separate isolation mode is needed later.
 
 ## Navigation In The Story
 
@@ -41,12 +69,19 @@ is stable.
 
 Initial directions:
 
-- arrow keys move between related interactions;
-- `Enter` opens or focuses the selected object;
+- `Down` moves to the first output interaction;
+- `Left` and `Right` move between alternative outputs;
+- `Up` moves to a previous input interaction;
 - quick search opens from a stable shortcut;
 - escape closes transient panels or clears selection.
 
-Exact shortcuts should be defined when implementation begins.
+When several previous inputs exist, `Up` should choose the leftmost previous
+interaction, mirroring the bottom arrow's default preference.
+
+`Enter` does not need to open the inspector because selecting an interaction
+already opens it.
+
+Exact shortcuts should still be validated in prototypes before implementation.
 
 ## Recentering
 

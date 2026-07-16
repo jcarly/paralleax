@@ -62,6 +62,28 @@ changes`, and whether every non-read permission implies `read`.
 - Define how the graph visually separates several inputs that feed the same
   trigger before reaching one output interaction.
 
+## Story Canvas UX
+
+- Decide whether interaction cards should support several zoom detail levels.
+- Decide whether future filters can be combined and whether they use AND, OR, or
+  a user-selected mode.
+- Decide whether a separate isolation mode is useful later, beyond dimming
+  unrelated interactions.
+- Decide how to represent annotation icons without overloading the canvas.
+
+## Simulation
+
+- Define whether named simulation states are useful or whether they overlap too
+  much with future player saves.
+- Define how future stats or world-state changes apply when the current
+  interaction is edited during simulation.
+
+## Devices
+
+- Decide whether tablet editing should become a supported workflow.
+- Keep full phone-based graph editing out of current design work unless user
+  testing proves it is necessary.
+
 ## Documentation and Diagrams
 
 - Decide whether to add a local command for previewing Mermaid or PlantUML

@@ -46,6 +46,9 @@ This project follows a lightweight [Keep a Changelog](https://keepachangelog.com
   inspector behavior, and author simulation.
 - UX principles, navigation, simulation, annotation, and business-model notes
   clarifying that the graph is only one representation of the narrative model.
+- Story Canvas UX decisions for left panel behavior, trigger marker actions,
+  filtering, keyboard navigation, auto-layout, simulation editing, annotations,
+  device targets, and accessibility.
 - Trigger semantics documentation covering inputs, deletion behavior, and editor UX.
 - API endpoint to delete a trigger from an interaction.
 - Web API client support for trigger deletion.

@@ -29,10 +29,13 @@
   contextual right inspector, and representative canvas examples.
 - Navigation foundation: quick search, recentering, recent selections, and
   model/story navigation patterns for larger graphs.
-- Simulation Mode for authors: start from any interaction, show relevant
-  available and unavailable interactions, explain failed trigger conditions,
-  expose simulated preconditions, allow journey reset/time travel, support forced
-  interactions, and link test results back to graph editing.
+- Whole-graph auto-layout command with a vertical flow, immediate application,
+  and undo support.
+- Simulation Mode for authors: reader-like interface, start from any
+  interaction, show available interactions, dim unavailable interactions when
+  useful, explain unavailability on hover, support forced interactions,
+  lightweight title/content/option editing, and link test results back to graph
+  editing.
 - Evaluate Tailwind CSS for broader UI styling while keeping React Flow-specific graph styles isolated.
 - Interface internationalization foundation with UI copy extracted into translation keys or variables.
 - Initial locale structure so additional languages can be added without rewriting components.
@@ -42,7 +45,8 @@
 - Reproducible demo data.
 - UI wording pass for author-facing trigger vocabulary.
 - Visual identity and design-system foundation for palette, typography, spacing,
-  graph controls, interaction nodes, trigger markers, and selection states.
+  graph controls, interaction nodes, trigger markers, selection states,
+  accessibility, and desktop-first editing.
 
 ## V0.3 - Users, Permissions, and Review
 

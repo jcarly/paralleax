@@ -17,17 +17,18 @@ This folder is the product and technical source of truth for the project.
 11. [UX principles](ux-principles.md): product UX rules that keep views aligned.
 12. [UI direction](ui-direction.md): target Story Canvas, filters, and inspector model.
 13. [Story Canvas](story-canvas.md): current canvas UX rules and open tuning points.
-14. [Navigation](navigation.md): model and story navigation direction.
-15. [Simulation](simulation.md): author-facing test and debugging direction.
-16. [Annotations](annotations.md): target authoring notes concept.
-17. [Design system](design-system.md): visual identity and reusable UI rules to define.
-18. [Mockups](mockups/README.md): static UX references for canvas and simulation design.
-19. [Business model](business-model.md): open source core and platform philosophy.
-20. [Non-goals](non-goals.md): boundaries that protect the product direction.
-21. [Test scenarios](test-scenarios.md): test scenarios to maintain.
-22. [Roadmap](roadmap.md): planned progression after the MVP.
-23. [Open questions](open-questions.md): postponed product and architecture questions.
-24. [Changelog](../CHANGELOG.md): notable implementation, test, and documentation changes.
+14. [Auto layout](auto-layout.md): whole-graph reorganization direction.
+15. [Navigation](navigation.md): model and story navigation direction.
+16. [Simulation](simulation.md): author-facing test and debugging direction.
+17. [Annotations](annotations.md): target authoring notes concept.
+18. [Design system](design-system.md): visual identity and reusable UI rules to define.
+19. [Mockups](mockups/README.md): static UX references for canvas and simulation design.
+20. [Business model](business-model.md): open source core and platform philosophy.
+21. [Non-goals](non-goals.md): boundaries that protect the product direction.
+22. [Test scenarios](test-scenarios.md): test scenarios to maintain.
+23. [Roadmap](roadmap.md): planned progression after the MVP.
+24. [Open questions](open-questions.md): postponed product and architecture questions.
+25. [Changelog](../CHANGELOG.md): notable implementation, test, and documentation changes.
 
 ## Documentation Map
 
@@ -47,6 +48,7 @@ docs/
   ux-principles.md          Product UX principles
   ui-direction.md           Target Story Canvas and filtering direction
   story-canvas.md           Current Story Canvas UX rules
+  auto-layout.md            Whole-graph reorganization direction
   navigation.md             Model and story navigation direction
   simulation.md             Author-facing simulation direction
   annotations.md            Target authoring annotation concept

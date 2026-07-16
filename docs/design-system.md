@@ -15,6 +15,7 @@ authoring feel deliberate and readable.
 - Keep controls familiar and close to the object they affect.
 - Make interaction, trigger, link, hover, selection, disabled, and error states
   consistent across the app.
+- Make the interface feel warm and creative without becoming playful or noisy.
 
 ## Mockups
 
@@ -55,6 +56,37 @@ Guidelines:
 - selected elements should use a consistent primary accent;
 - destructive controls should remain visually distinct and require deliberate
   targeting.
+
+## Target Devices
+
+Full graph editing is a desktop-first workflow.
+
+Tablet editing may be possible later, but phone-based story creation is not a
+current design target. Mobile should prioritize reading and, much later,
+possibly light comments or review actions.
+
+The interface should stay the same conceptually for every author profile. It
+should be based on simplicity, intuition, and collaboration rather than separate
+specialized modes for solo authors, groups, or game masters.
+
+The first user tests can assume users who are basically comfortable with digital
+tools, but not necessarily familiar with node editors.
+
+## Accessibility Baseline
+
+The design system should define accessibility rules before visual complexity
+grows.
+
+Baseline rules:
+
+- color must never be the only carrier of meaning;
+- trigger states and condition hints should combine color with icons, shape, or
+  labels;
+- focus states must be visible;
+- click and drag targets must stay large enough to use comfortably;
+- selected, hovered, disabled, and error states must be distinguishable without
+  relying only on hue;
+- graph controls should remain usable with keyboard navigation where practical.
 
 ## Open Decisions
 

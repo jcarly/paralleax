@@ -10,6 +10,8 @@ without introducing new domain concepts before the MVP is validated.
 Static visual references live in
 [Story Canvas mockups](mockups/story-canvas.html).
 
+Auto-organization rules live in [Auto layout](auto-layout.md).
+
 ## UX Goals
 
 - Keep interactions visually close by default so small stories feel compact.
@@ -40,6 +42,39 @@ Open tuning points:
 - minimum spacing around trigger markers;
 - behavior when several branches converge on the same interaction.
 
+## Interaction Cards
+
+Interaction cards should keep a standard size by default. Free resizing would
+add too many layout possibilities and could make graph navigation harder.
+
+The information visible on a card should prioritize:
+
+- title;
+- short content excerpt;
+- future character indicator;
+- future place indicator.
+
+Notes may appear later, but they need a specific visual rule so they do not make
+the graph noisy.
+
+Several zoom detail levels may be useful later. For example, distant zoom could
+show mostly titles, while closer zoom could reveal excerpts and metadata. This
+should be explored before implementation rather than assumed for the MVP.
+
+## Creating Interactions
+
+Button or handle-based creation should place the new interaction automatically.
+
+If the author clicks and drags while creating, the interaction may be placed
+where it is dropped. This keeps quick creation simple while still allowing
+manual placement when the author wants control.
+
+Interaction title and content editing should continue through the inspector in
+the editor canvas.
+
+Creating from an empty canvas area should use a deliberate command, such as a
+context menu, rather than accidental double-click creation.
+
 ## Edge Routing
 
 Edges should adapt to the relative position of their source, trigger marker, and
@@ -64,7 +99,7 @@ projection concern.
 
 ## Trigger Markers
 
-Linked triggers should stay visible as circular markers between their input
+Triggers should always stay visible as circular markers between their input
 interactions and their output interaction.
 
 The marker represents the trigger itself. Links from input interactions represent
@@ -74,10 +109,17 @@ the trigger's output interaction.
 UX rules:
 
 - selecting a trigger should happen through the trigger marker;
+- links are not selectable by themselves;
 - deleting a trigger input should happen from the input link;
 - deleting the last input should convert the trigger into a root trigger;
 - connecting to an existing marker should add another input to that trigger;
 - connecting to the empty interaction input should create a separate trigger.
+- interactions with several triggers should show several trigger markers so each
+  trigger remains editable.
+
+When the author hovers a trigger marker, local action icons may appear around
+it. These icons can expose trigger actions such as editing conditions, deleting
+the trigger, or adding related affordances without selecting graph links.
 
 Open tuning points:
 
@@ -109,6 +151,10 @@ trigger.
 Canvas relationships should be visible on the graph. The inspector should edit
 content, conditions, and trigger-level actions rather than repeating input and
 output lists.
+
+The inspector may include compact navigation shortcuts for the selected
+interaction, such as previous inputs and next outputs. These shortcuts are for
+movement and focus, not for editing the trigger structure.
 
 ## Next UX Iteration
 
