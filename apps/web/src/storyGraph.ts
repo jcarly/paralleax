@@ -41,6 +41,9 @@ export interface TriggerNodeActions {
 export const interactionNodeWidth = 210;
 const interactionNodeHeight = 96;
 const triggerNodeSize = 20;
+const fallbackInteractionX = 80;
+const fallbackInteractionY = 120;
+const fallbackInteractionVerticalGap = 132;
 const triggerOutputMarker = { type: MarkerType.ArrowClosed, color: '#8d918f' } as const;
 
 export function buildInteractionNodes(
@@ -50,12 +53,12 @@ export function buildInteractionNodes(
   actions: InteractionNodeActions = {},
 ): InteractionFlowNode[] {
   return (
-    story?.interactions.map((item) => {
+    story?.interactions.map((item, index) => {
       const rootTrigger = item.triggers.find((trigger) => trigger.inputInteractionIds.length === 0);
       return {
         id: item.id,
         type: 'interaction',
-        position: item.position,
+        position: getInteractionPosition(item, index),
         data: {
           title: item.title,
           body: item.body,
@@ -86,15 +89,16 @@ export function buildTriggerNodes(
   actions: TriggerNodeActions = {},
 ): TriggerFlowNode[] {
   return (
-    story?.interactions.flatMap((target) =>
+    story?.interactions.flatMap((target, targetIndex) =>
       getLinkedTriggerGroups(target).map((group, triggerIndex) => {
         const inputPositions = group.inputInteractionIds.flatMap((inputId) => {
-          const input = story.interactions.find((item) => item.id === inputId);
+          const inputIndex = story.interactions.findIndex((item) => item.id === inputId);
+          const input = story.interactions[inputIndex];
           return input
             ? [
                 {
-                  x: input.position.x + interactionNodeWidth / 2,
-                  y: input.position.y + interactionNodeHeight,
+                  x: getInteractionPosition(input, inputIndex).x + interactionNodeWidth / 2,
+                  y: getInteractionPosition(input, inputIndex).y + interactionNodeHeight,
                 },
               ]
             : [];
@@ -104,9 +108,10 @@ export function buildTriggerNodes(
           { x: 0, y: 0 },
         );
         const inputCount = Math.max(inputPositions.length, 1);
+        const targetPosition = getInteractionPosition(target, targetIndex);
         const targetAnchor = {
-          x: target.position.x + interactionNodeWidth / 2,
-          y: target.position.y,
+          x: targetPosition.x + interactionNodeWidth / 2,
+          y: targetPosition.y,
         };
         const midpoint = {
           x: (averageInput.x / inputCount + targetAnchor.x) / 2,
@@ -140,6 +145,22 @@ export function buildTriggerNodes(
       }),
     ) ?? []
   );
+}
+
+function getInteractionPosition(interaction: Story['interactions'][number], index: number) {
+  if (
+    typeof interaction.position?.x === 'number' &&
+    Number.isFinite(interaction.position.x) &&
+    typeof interaction.position?.y === 'number' &&
+    Number.isFinite(interaction.position.y)
+  ) {
+    return interaction.position;
+  }
+
+  return {
+    x: fallbackInteractionX,
+    y: fallbackInteractionY + Math.max(index, 0) * fallbackInteractionVerticalGap,
+  };
 }
 
 export function buildTriggerEdges(

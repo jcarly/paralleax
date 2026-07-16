@@ -669,7 +669,7 @@ header span {
   gap: 0.75rem;
   margin-top: 2.2rem;
 }
-.choices button.choice {
+.choices .choice {
   text-align: left;
   justify-content: space-between;
   padding: 1rem 1.2rem;
@@ -679,25 +679,41 @@ header span {
   box-shadow: none;
   gap: 1rem;
 }
-.choices button.choice span,
-.choices button.choice small {
+.choices .choice span,
+.choices .choice small {
   display: block;
 }
-.choices button.choice small {
+.choices .choice small {
   color: var(--color-subtle);
   font-size: 0.76rem;
   font-weight: 650;
 }
-.choices button.choice.unavailable {
+.choices .choice.unavailable {
   background: var(--color-surface-secondary);
   border-color: var(--color-border);
   color: var(--color-muted);
   opacity: 0.62;
 }
-.choices button.choice.unavailable:hover,
-.choices button.choice.unavailable:focus-visible {
+.choices .choice.unavailable:hover,
+.choices .choice.unavailable:focus-visible {
   opacity: 0.9;
   border-color: var(--color-primary-focus);
+}
+.choices .add-option {
+  border-style: dashed;
+  background: var(--color-surface);
+  color: var(--color-primary-strong);
+}
+.choice-title-input {
+  width: 100%;
+  padding: 1rem 1.2rem;
+  border: 1px solid var(--color-primary-focus);
+  border-radius: 8px;
+  background: var(--color-surface);
+  color: var(--color-primary-strong);
+  font: inherit;
+  font-weight: 650;
+  box-shadow: 0 0 0 3px var(--color-primary-halo);
 }
 .ending {
   padding: 1rem;

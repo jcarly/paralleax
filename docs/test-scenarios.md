@@ -14,6 +14,8 @@ Cover the critical MVP paths: Story, Interaction, Trigger, and Reader.
 - Editor: editing an interaction title keeps the page visible and updates the block.
 - Editor: moving an interaction saves only the position without clearing the title or body.
 - Editor: moving an interaction does not delete titles or content from other interactions.
+- Editor graph mapping: interactions loaded without stored canvas positions use
+  stable fallback coordinates instead of blanking the Story Canvas.
 - Editor: creating an output from an interaction takes existing outputs into account and avoids overlap.
 - Editor: hover action buttons create linked child and source interactions.
 - Editor: interaction input and output controls also act as graph connection handles.
@@ -77,6 +79,15 @@ Cover the critical MVP paths: Story, Interaction, Trigger, and Reader.
   simulation journey.
 - Simulation: authors can edit the current interaction title and content inline
   without opening the graph inspector.
+- Simulation: authors can add a root option before selecting any interaction,
+  edit the new option title immediately, and see the action below existing
+  options.
+- Simulation: authors can add an option from the current interaction, edit the
+  new option title immediately, and open that option from the simulation choices.
+- Simulation: authors can add an option from a newly created option even if the
+  parent option has no stored canvas position yet.
+- Simulation: root and output options created from simulation receive graph
+  positions compatible with returning to the Story Canvas.
 
 ## Playwright Functional Tests
 

@@ -1,9 +1,12 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import type { Interaction, Story } from '@paralleax/shared';
 import {
+  ensureStoryInteractionPositions,
   getAvailableInteractions,
   getInputReachableInteractions,
+  getNextChildPosition,
+  getNextRootPosition,
   getTriggerConditionFailures,
 } from '@paralleax/shared';
 import { api } from '../api';
@@ -44,9 +47,13 @@ export function StoryPlayer() {
   const [currentId, setCurrentId] = useState<string | null>(startInteractionId);
   const [journey, setJourney] = useState<string[]>(startInteractionId ? [startInteractionId] : []);
   const [visited, setVisited] = useState<string[]>(startInteractionId ? [startInteractionId] : []);
+  const [editingChoiceId, setEditingChoiceId] = useState<string>();
+  const editingChoiceInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    void api.getStory(storyId).then(setStory);
+    void api
+      .getStory(storyId)
+      .then((nextStory) => setStory(ensureStoryInteractionPositions(nextStory)));
   }, [storyId]);
 
   const current = useMemo(
@@ -77,6 +84,11 @@ export function StoryPlayer() {
     [availableChoiceIds, choices, current, isSimulationMode, story, visited],
   );
 
+  useEffect(() => {
+    editingChoiceInputRef.current?.focus();
+    editingChoiceInputRef.current?.select();
+  }, [editingChoiceId]);
+
   function choose(interaction: Interaction) {
     setCurrentId(interaction.id);
     setJourney((ids) => [...ids, interaction.id]);
@@ -100,17 +112,50 @@ export function StoryPlayer() {
   async function saveCurrentInteraction(patch: Partial<Pick<Interaction, 'title' | 'body'>>) {
     if (!current) return;
     const nextStory = await api.updateInteraction(storyId, current.id, patch);
-    setStory(nextStory);
+    setStory(ensureStoryInteractionPositions(nextStory));
   }
 
-  function patchCurrentInteraction(patch: Partial<Pick<Interaction, 'title' | 'body'>>) {
-    if (!story || !current) return;
+  function patchInteraction(
+    interactionId: string,
+    patch: Partial<Pick<Interaction, 'title' | 'body'>>,
+  ) {
+    if (!story) return;
     setStory({
       ...story,
       interactions: story.interactions.map((interaction) =>
-        interaction.id === current.id ? { ...interaction, ...patch } : interaction,
+        interaction.id === interactionId ? { ...interaction, ...patch } : interaction,
       ),
     });
+  }
+
+  function patchCurrentInteraction(patch: Partial<Pick<Interaction, 'title' | 'body'>>) {
+    if (!current) return;
+    patchInteraction(current.id, patch);
+  }
+
+  async function addOption() {
+    if (!story) return;
+    const existingIds = new Set(story.interactions.map((interaction) => interaction.id));
+    const nextStory = await api.createInteraction(
+      storyId,
+      current
+        ? {
+            parentId: current.id,
+            position: getNextChildPosition(story, current),
+          }
+        : {
+            position: getNextRootPosition(story),
+          },
+    );
+    const created = nextStory.interactions.find((interaction) => !existingIds.has(interaction.id));
+    setStory(ensureStoryInteractionPositions(nextStory));
+    setEditingChoiceId(created?.id);
+  }
+
+  async function saveChoiceTitle(interaction: Interaction, title: string) {
+    setEditingChoiceId(undefined);
+    const nextStory = await api.updateInteraction(storyId, interaction.id, { title });
+    setStory(ensureStoryInteractionPositions(nextStory));
   }
 
   if (!story) return <main className="page">Loading...</main>;
@@ -166,22 +211,47 @@ export function StoryPlayer() {
         )}
         <div className="choices">
           {visibleChoices.map(({ interaction, available, unavailableReason }) => (
-            <button
-              className={`choice ${available ? 'available' : 'unavailable'}`}
-              key={interaction.id}
-              onClick={() => choose(interaction)}
-              title={
-                available
-                  ? 'Available'
-                  : (unavailableReason ?? 'Unavailable in the current simulation state')
-              }
-            >
-              <span>{interaction.title}</span>
-              {isSimulationMode && !available ? (
-                <small>{unavailableReason ?? 'Unavailable - force for test'}</small>
-              ) : null}
-            </button>
+            <div className="choice-row" key={interaction.id}>
+              {editingChoiceId === interaction.id ? (
+                <input
+                  ref={editingChoiceInputRef}
+                  className="choice-title-input"
+                  aria-label="New option title"
+                  value={interaction.title}
+                  onChange={(event) =>
+                    patchInteraction(interaction.id, { title: event.target.value })
+                  }
+                  onBlur={(event) => void saveChoiceTitle(interaction, event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') {
+                      event.preventDefault();
+                      event.currentTarget.blur();
+                    }
+                  }}
+                />
+              ) : (
+                <button
+                  className={`choice ${available ? 'available' : 'unavailable'}`}
+                  onClick={() => choose(interaction)}
+                  title={
+                    available
+                      ? 'Available'
+                      : (unavailableReason ?? 'Unavailable in the current simulation state')
+                  }
+                >
+                  <span>{interaction.title}</span>
+                  {isSimulationMode && !available ? (
+                    <small>{unavailableReason ?? 'Unavailable - force for test'}</small>
+                  ) : null}
+                </button>
+              )}
+            </div>
           ))}
+          {isSimulationMode ? (
+            <button className="choice add-option" onClick={() => void addOption()}>
+              Add option
+            </button>
+          ) : null}
           {choices.length === 0 && current && !isSimulationMode ? (
             <p className="ending">End of this branch.</p>
           ) : null}

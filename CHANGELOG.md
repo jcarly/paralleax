@@ -18,6 +18,13 @@ This project follows a lightweight [Keep a Changelog](https://keepachangelog.com
   interaction in the current test journey.
 - Simulation Mode now supports inline editing for the current interaction title
   and content.
+- Simulation Mode now supports adding an option from the current interaction and
+  immediately editing the new option title in the choice list.
+- Simulation Mode now keeps `Add option` below the visible choices and supports
+  creating root options before any interaction is selected.
+- Options created from Simulation Mode now use the same root or child placement
+  helpers as canvas-created interactions so returning to the graph has a valid
+  layout.
 - Local demo story generator with API and web UI support for creating a populated test story without external AI services.
 - Canvas `Add root` action that places new root interactions below the lowest existing root.
 - Graph creation shortcuts: dropping an output connection on empty canvas creates a child, and dropping an input connection creates a linked source interaction.
@@ -145,6 +152,12 @@ This project follows a lightweight [Keep a Changelog](https://keepachangelog.com
 
 ### Fixed
 
+- Story Canvas no longer crashes when loaded interactions are missing graph
+  positions; the graph projection falls back to stable canvas coordinates.
+- API story responses and Simulation Mode now normalize missing interaction
+  positions with stable defaults.
+- Creating an option from a newly created simulation option no longer crashes
+  when that parent option has no stored graph position yet.
 - Creating or deleting one trigger link no longer silently changes unrelated trigger edges.
 - Creating another trigger link after deleting one no longer restores the deleted edge from stale API responses.
 - Editing an interaction title no longer blanks the editor page.

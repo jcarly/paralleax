@@ -108,14 +108,15 @@ Simulation Mode should also support direct lightweight edits:
 
 - edit the current interaction title;
 - edit the current interaction content;
-- add output options directly from the simulation;
+- add root or output options directly from the simulation;
 - open the inspector for available options when trigger details need inspection.
 
 Inline editing is an important product direction. The author should be able to
 write in the context of play: click the current title or body, edit it, confirm,
 and continue the test. Adding a new option from the simulated reader should
 create the underlying interaction and trigger without making the author leave
-the writing flow.
+the writing flow. At the beginning of the simulation, before any current
+interaction is selected, the same action creates a root interaction.
 
 After editing the current interaction, the simulation does not need a special
 restart. Later stats or world-state changes can be applied when leaving the
@@ -135,7 +136,7 @@ A first implementation can focus on:
 - explaining unavailable interactions on hover;
 - forcing an unavailable interaction by selecting it;
 - lightweight title and content editing;
-- adding output options from the simulation;
+- adding root and output options from the simulation;
 - resetting simulation state;
 - opening an interaction in the graph for editing.
 
@@ -162,10 +163,18 @@ Current behavior:
   journey;
 - the current interaction title and content can be edited inline in Simulation
   Mode and are saved to the story;
+- `Add option` is displayed below the existing options in Simulation Mode;
+- at the beginning of a simulation, `Add option` creates a new root interaction
+  and focuses the new option title directly in the choice list;
+- from a current interaction, `Add option` creates a new output interaction and
+  focuses the new option title directly in the choice list;
+- options created from Simulation Mode use the same compact root or child
+  placement rules as canvas-created interactions so returning to the graph
+  remains stable;
 - restart resets the simulation to the original starting interaction.
 
 This first slice only explains MVP visited / not visited conditions. Richer hover
-diagnostics, option creation, and trigger editing remain next steps.
+diagnostics and trigger editing remain next steps.
 
 Out of scope for the first version:
 

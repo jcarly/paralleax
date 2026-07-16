@@ -10,6 +10,7 @@ import { api } from '../api';
 vi.mock('../api', () => ({
   api: {
     getStory: vi.fn(),
+    createInteraction: vi.fn(),
     updateInteraction: vi.fn(),
   },
 }));
@@ -179,5 +180,117 @@ describe('StoryPlayer', () => {
       body: 'Rewritten content.',
     });
     expect(await screen.findByDisplayValue('Rewritten content.')).toBeInTheDocument();
+  });
+
+  it('adds an option in simulation mode and focuses its title', async () => {
+    const user = userEvent.setup();
+    const withOption = structuredClone(story);
+    withOption.interactions.push({
+      id: 'option-1',
+      title: 'New option',
+      body: '',
+      position: { x: 300, y: 0 },
+      triggers: [{ id: 'trigger-option-1', inputInteractionIds: ['next'], conditions: [] }],
+    });
+    const renamedOption = structuredClone(withOption);
+    renamedOption.interactions[3].title = 'Ask the guard';
+    vi.mocked(api.createInteraction).mockResolvedValue(withOption);
+    vi.mocked(api.updateInteraction).mockResolvedValue(renamedOption);
+
+    await renderPlayer('/stories/story-1/play?mode=simulation&startInteractionId=next');
+    await user.click(screen.getByRole('button', { name: 'Add option' }));
+
+    expect(api.createInteraction).toHaveBeenCalledWith('story-1', {
+      parentId: 'next',
+      position: { x: 100, y: 132 },
+    });
+    const optionTitleInput = await screen.findByLabelText('New option title');
+    expect(optionTitleInput).toHaveFocus();
+    expect(optionTitleInput).toHaveValue('New option');
+
+    await user.clear(optionTitleInput);
+    await user.type(optionTitleInput, 'Ask the guard{Enter}');
+
+    expect(api.updateInteraction).toHaveBeenCalledWith('story-1', 'option-1', {
+      title: 'Ask the guard',
+    });
+    expect(await screen.findByRole('button', { name: 'Ask the guard' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Ask the guard' }));
+
+    expect(screen.getByLabelText('Current interaction title')).toHaveValue('Ask the guard');
+    expect(screen.getByLabelText('Current interaction content')).toHaveValue('');
+  });
+
+  it('adds an option from a newly created option without a stored position', async () => {
+    const user = userEvent.setup();
+    const withOption = structuredClone(story);
+    withOption.interactions.push({
+      id: 'option-1',
+      title: 'New option',
+      body: '',
+      position: { x: 300, y: 0 },
+      triggers: [{ id: 'trigger-option-1', inputInteractionIds: ['next'], conditions: [] }],
+    });
+    delete (withOption.interactions[3] as Partial<(typeof withOption.interactions)[number]>)
+      .position;
+    const withNestedOption = structuredClone(withOption);
+    withNestedOption.interactions.push({
+      id: 'option-2',
+      title: 'Nested option',
+      body: '',
+      position: { x: 80, y: 648 },
+      triggers: [{ id: 'trigger-option-2', inputInteractionIds: ['option-1'], conditions: [] }],
+    });
+    vi.mocked(api.createInteraction)
+      .mockResolvedValueOnce(withOption)
+      .mockResolvedValueOnce(withNestedOption);
+    vi.mocked(api.updateInteraction).mockResolvedValue(withOption);
+
+    await renderPlayer('/stories/story-1/play?mode=simulation&startInteractionId=next');
+    await user.click(screen.getByRole('button', { name: 'Add option' }));
+    await user.keyboard('{Enter}');
+
+    await user.click(await screen.findByRole('button', { name: 'New option' }));
+    await user.click(screen.getByRole('button', { name: 'Add option' }));
+
+    expect(api.createInteraction).toHaveBeenLastCalledWith('story-1', {
+      parentId: 'option-1',
+      position: { x: 80, y: 648 },
+    });
+    expect(await screen.findByLabelText('New option title')).toHaveValue('Nested option');
+  });
+
+  it('adds a root option at the beginning of simulation mode', async () => {
+    const user = userEvent.setup();
+    const withRoot = structuredClone(story);
+    withRoot.interactions.push({
+      id: 'root-2',
+      title: 'New option',
+      body: '',
+      position: { x: 0, y: 132 },
+      triggers: [{ id: 'trigger-root-2', inputInteractionIds: [], conditions: [] }],
+    });
+    vi.mocked(api.createInteraction).mockResolvedValue(withRoot);
+
+    await renderPlayer('/stories/story-1/play?mode=simulation');
+
+    expect(screen.getByRole('button', { name: 'Start' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add option' })).toBeInTheDocument();
+    expect(
+      screen
+        .getByRole('button', { name: 'Start' })
+        .compareDocumentPosition(screen.getByRole('button', { name: 'Add option' })) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+
+    await user.click(screen.getByRole('button', { name: 'Add option' }));
+
+    expect(api.createInteraction).toHaveBeenCalledWith('story-1', {
+      position: { x: 0, y: 132 },
+    });
+    const optionTitleInput = await screen.findByLabelText('New option title');
+    expect(optionTitleInput).toHaveFocus();
+    expect(optionTitleInput).toHaveValue('New option');
   });
 });

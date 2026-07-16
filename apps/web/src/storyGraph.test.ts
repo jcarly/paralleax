@@ -168,6 +168,29 @@ describe('story graph mapping', () => {
     ]);
   });
 
+  it('falls back to stable canvas positions when loaded interactions have no position', () => {
+    const storyWithMissingPositions = structuredClone(story);
+    delete (
+      storyWithMissingPositions.interactions[1] as Partial<(typeof story.interactions)[number]>
+    ).position;
+    delete (
+      storyWithMissingPositions.interactions[2] as Partial<(typeof story.interactions)[number]>
+    ).position;
+
+    expect(
+      buildInteractionNodes(storyWithMissingPositions, undefined, undefined)[1].position,
+    ).toEqual({ x: 80, y: 252 });
+    expect(() => buildTriggerNodes(storyWithMissingPositions)).not.toThrow();
+    expect(buildTriggerNodes(storyWithMissingPositions)[0]).toMatchObject({
+      id: 'trigger:interaction-2:trigger-linked',
+      type: 'trigger',
+      data: {
+        interactionId: 'interaction-2',
+        triggerId: 'trigger-linked',
+      },
+    });
+  });
+
   it('groups several triggers with the same inputs behind one trigger marker', () => {
     const groupedStory = structuredClone(story);
     groupedStory.interactions[1].triggers.push({

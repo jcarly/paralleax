@@ -4,6 +4,7 @@ import {
   createDemoStory,
   deleteInteractionFromStory,
   deleteTriggerInStory,
+  ensureStoryInteractionPositions,
   normalizeTriggerInputIds,
   updateTriggerInStory,
   type Story,
@@ -28,7 +29,7 @@ export class StoriesService {
   get(id: string): Story {
     const story = this.repository.find(id);
     if (!story) throw new NotFoundException('Story not found');
-    return structuredClone(story);
+    return structuredClone(ensureStoryInteractionPositions(story));
   }
   create(input: CreateStoryDto): Story {
     const now = new Date().toISOString();
@@ -140,6 +141,7 @@ export class StoriesService {
     return this.touch(story);
   }
   private touch(story: Story): Story {
+    story.interactions = ensureStoryInteractionPositions(story).interactions;
     story.updatedAt = new Date().toISOString();
     return structuredClone(story);
   }

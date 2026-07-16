@@ -3,6 +3,7 @@ import {
   deleteInteractionFromStory,
   deleteTriggerInStory,
   createDemoStory,
+  ensureStoryInteractionPositions,
   getAvailableInteractions,
   getInputReachableInteractions,
   getNextChildPosition,
@@ -187,10 +188,27 @@ describe('shared story operations', () => {
     ]);
   });
 
+  it('fills missing interaction positions with stable defaults', () => {
+    const story = storyFixture();
+    delete (story.interactions[1] as Partial<Story['interactions'][number]>).position;
+
+    expect(ensureStoryInteractionPositions(story).interactions[1].position).toEqual({
+      x: 80,
+      y: 252,
+    });
+  });
+
   it('finds the next child position below occupied vertical outputs', () => {
     const story = storyFixture();
 
     expect(getNextChildPosition(story, story.interactions[0])).toEqual({ x: 80, y: 648 });
+  });
+
+  it('finds the next child position when the parent has no stored position', () => {
+    const story = storyFixture();
+    delete (story.interactions[1] as Partial<Story['interactions'][number]>).position;
+
+    expect(getNextChildPosition(story, story.interactions[1])).toEqual({ x: 80, y: 648 });
   });
 
   it('finds the next parent position above the target without overlap', () => {

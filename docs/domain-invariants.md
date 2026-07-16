@@ -7,6 +7,8 @@ details. They should stay covered by tests as the editor grows.
 
 - A story contains zero or more interactions.
 - An interaction should keep at least one trigger.
+- An interaction should always have a canvas position. Loaded or incoming story
+  data with a missing position is normalized with a stable default position.
 - A trigger belongs to exactly one output interaction.
 - A trigger can have zero or more input interactions.
 - Deleting the last trigger of an interaction keeps that trigger and turns it
