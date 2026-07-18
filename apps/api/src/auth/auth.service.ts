@@ -1,6 +1,7 @@
 import { ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { createHash, randomBytes, randomUUID, scrypt as nodeScrypt, timingSafeEqual } from 'crypto';
 import { promisify } from 'util';
+import { AppConfigService } from '../config/app-config.service';
 import { AuthRepository, type AuthUser } from './auth.repository';
 
 const scrypt = promisify(nodeScrypt);
@@ -8,7 +9,10 @@ const sessionDurationMs = 30 * 24 * 60 * 60 * 1000;
 
 @Injectable()
 export class AuthService {
-  constructor(private readonly repository: AuthRepository) {}
+  constructor(
+    private readonly repository: AuthRepository,
+    private readonly config: AppConfigService,
+  ) {}
 
   async register(email: string, password: string) {
     const normalizedEmail = email.trim().toLowerCase();
@@ -63,7 +67,7 @@ export class AuthService {
   }
 
   private async claimLegacyStories(user: AuthUser) {
-    if (user.email === process.env.LEGACY_STORY_OWNER_EMAIL?.trim().toLowerCase()) {
+    if (user.email === this.config.legacyStoryOwnerEmail) {
       await this.repository.claimMigratedStories(user.id);
     }
   }

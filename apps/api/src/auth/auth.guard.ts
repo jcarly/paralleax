@@ -1,25 +1,9 @@
-import {
-  CanActivate,
-  createParamDecorator,
-  ExecutionContext,
-  Injectable,
-  SetMetadata,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import type { Request } from 'express';
+import type { RequestUser } from './auth.decorators';
 import { AuthService } from './auth.service';
-
-export interface RequestUser {
-  id: string;
-  email: string;
-  createdAt: string;
-}
-
-export const Public = () => SetMetadata('public', true);
-export const CurrentUser = createParamDecorator((_: unknown, context: ExecutionContext) => {
-  return context.switchToHttp().getRequest<Request & { user: RequestUser }>().user;
-});
+import { readSessionCookie } from './session-cookie';
 
 @Injectable()
 export class SessionGuard implements CanActivate {
@@ -43,11 +27,4 @@ export class SessionGuard implements CanActivate {
     request.user = { id: user.id, email: user.email, createdAt: user.createdAt };
     return true;
   }
-}
-
-export function readSessionCookie(cookieHeader: string | undefined) {
-  return cookieHeader
-    ?.split(';')
-    .map((part) => part.trim().split('='))
-    .find(([name]) => name === 'paralleax_session')?.[1];
 }

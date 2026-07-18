@@ -5,9 +5,9 @@ import {
   UpdateInteractionDto,
   UpdateStoryDto,
   UpdateTriggerDto,
-} from './dto';
+} from './dto/stories.dto';
 import { StoriesService } from './stories.service';
-import { CurrentUser, type RequestUser } from './auth';
+import { CurrentUser, type RequestUser } from '../auth/auth.decorators';
 @Controller('stories')
 export class StoriesController {
   constructor(private readonly stories: StoriesService) {}

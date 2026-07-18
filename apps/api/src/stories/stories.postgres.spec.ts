@@ -1,8 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import type { Story } from '@paralleax/shared';
 import { Pool } from 'pg';
-import type { DatabaseConnection } from './database.connection';
-import { DatabaseMigrator } from './database.migrator';
+import type { DatabaseConnection } from '../database/database.connection';
+import { DatabaseMigrator } from '../database/database.migrator';
 import { StoriesRepository } from './stories.repository';
 
 const connectionString = process.env.POSTGRES_TEST_DATABASE_URL;

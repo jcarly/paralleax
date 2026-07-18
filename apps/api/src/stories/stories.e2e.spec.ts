@@ -3,9 +3,9 @@ import { ValidationPipe, type INestApplication } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
 import * as request from 'supertest';
 import type { Story } from '@paralleax/shared';
-import { AppModule } from './app.module';
-import { AuthService } from './auth.service';
-import { DatabaseMigrator } from './database.migrator';
+import { AppModule } from '../app.module';
+import { AuthService } from '../auth/auth.service';
+import { DatabaseMigrator } from '../database/database.migrator';
 import { InMemoryStoriesRepository } from './stories.repository.memory';
 import { StoriesRepository } from './stories.repository';
 

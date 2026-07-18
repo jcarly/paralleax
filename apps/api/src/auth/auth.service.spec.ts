@@ -35,7 +35,7 @@ describe('AuthService', () => {
   });
 
   it('registers, authenticates, resolves, and logs out a session', async () => {
-    const auth = new AuthService(repository as never);
+    const auth = new AuthService(repository as never, config() as never);
     const registered = await auth.register('Author@Example.com', 'correct horse battery staple');
     expect(registered.user.email).toBe('author@example.com');
     expect(users.get('author@example.com')?.passwordHash).not.toContain('correct horse');
@@ -49,7 +49,7 @@ describe('AuthService', () => {
   });
 
   it('rejects duplicate emails and invalid passwords', async () => {
-    const auth = new AuthService(repository as never);
+    const auth = new AuthService(repository as never, config() as never);
     await auth.register('author@example.com', 'correct horse battery staple');
     await expect(auth.register('AUTHOR@example.com', 'another password')).rejects.toBeInstanceOf(
       ConflictException,
@@ -60,7 +60,7 @@ describe('AuthService', () => {
   });
 
   it('handles a concurrent duplicate insert as a conflict', async () => {
-    const auth = new AuthService(repository as never);
+    const auth = new AuthService(repository as never, config() as never);
     repository.createUser.mockResolvedValueOnce(false);
 
     await expect(
@@ -69,14 +69,13 @@ describe('AuthService', () => {
   });
 
   it('claims quarantined stories only for the configured legacy owner', async () => {
-    const previous = process.env.LEGACY_STORY_OWNER_EMAIL;
-    process.env.LEGACY_STORY_OWNER_EMAIL = 'legacy@example.com';
-    const auth = new AuthService(repository as never);
+    const auth = new AuthService(repository as never, config('legacy@example.com') as never);
 
     const registered = await auth.register('Legacy@Example.com', 'correct horse battery staple');
     expect(repository.claimMigratedStories).toHaveBeenCalledWith(registered.user.id);
-
-    if (previous === undefined) delete process.env.LEGACY_STORY_OWNER_EMAIL;
-    else process.env.LEGACY_STORY_OWNER_EMAIL = previous;
   });
 });
+
+function config(legacyStoryOwnerEmail?: string) {
+  return { legacyStoryOwnerEmail };
+}

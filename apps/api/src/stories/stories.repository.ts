@@ -1,10 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import type { Story } from '@paralleax/shared';
 import type { PoolClient } from 'pg';
-import { DatabaseConnection } from './database.connection';
-import { DatabaseMigrator } from './database.migrator';
-import type { Queryable } from './stories.persistence.types';
-import { persistStoryDifference, replaceStoryGraph } from './stories.persistence.writer';
+import { DatabaseConnection } from '../database/database.connection';
+import { DatabaseMigrator } from '../database/database.migrator';
+import type { Queryable } from './persistence/stories.persistence.types';
+import {
+  persistStoryDifference,
+  replaceStoryGraph,
+} from './persistence/stories.persistence.writer';
 
 type StoryRow = {
   id: string;

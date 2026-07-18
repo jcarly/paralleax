@@ -8,6 +8,10 @@ This project follows a lightweight [Keep a Changelog](https://keepachangelog.com
 
 ### Added
 
+- Feature-focused NestJS modules for authentication, stories, database lifecycle,
+  and validated runtime configuration.
+- Startup validation for database URL, PostgreSQL SSL, port, CORS origin,
+  environment mode, and optional legacy story owner email.
 - Relational PostgreSQL tables for interactions, triggers, trigger inputs, and
   trigger conditions, with foreign-key cleanup and ordering metadata.
 - PostgreSQL regression coverage for relational graph reconstruction and storage.
@@ -99,6 +103,8 @@ This project follows a lightweight [Keep a Changelog](https://keepachangelog.com
 
 ### Changed
 
+- API controllers, services, repositories, DTOs, guards, and tests are now
+  colocated under their owning feature instead of sharing a flat source folder.
 - Relational story write planning is extracted from `StoriesRepository` into a
   focused persistence writer, leaving the repository responsible for reads,
   ownership scope, migrations, and transactions.

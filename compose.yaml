@@ -47,8 +47,11 @@ services:
       CHOKIDAR_USEPOLLING: 'true'
       CHOKIDAR_INTERVAL: '100'
       PORT: 3000
+      NODE_ENV: ${NODE_ENV:-development}
       NODE_OPTIONS: '--max-old-space-size=2048'
       DATABASE_URL: ${DATABASE_URL:-postgres://paralleax:paralleax@db:5432/paralleax}
+      POSTGRES_SSL: ${POSTGRES_SSL:-false}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173}
       LEGACY_STORY_OWNER_EMAIL: ${LEGACY_STORY_OWNER_EMAIL:-}
     ports:
       - '3000:3000'

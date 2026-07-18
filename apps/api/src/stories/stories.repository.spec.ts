@@ -1,6 +1,6 @@
 import type { Story } from '@paralleax/shared';
-import type { DatabaseConnection } from './database.connection';
-import type { DatabaseMigrator } from './database.migrator';
+import type { DatabaseConnection } from '../database/database.connection';
+import type { DatabaseMigrator } from '../database/database.migrator';
 import { StoriesRepository } from './stories.repository';
 
 const mockQuery = jest.fn();

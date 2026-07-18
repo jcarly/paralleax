@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { DatabaseConnection } from './database.connection';
-import { DatabaseMigrator } from './database.migrator';
+import { DatabaseConnection } from '../database/database.connection';
+import { DatabaseMigrator } from '../database/database.migrator';
 
 export interface AuthUser {
   id: string;

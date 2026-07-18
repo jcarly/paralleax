@@ -31,6 +31,8 @@ Cover the critical MVP paths: Story, Interaction, Trigger, and Reader.
 - Shared/API/Web: demo story generation creates roots, branches, multi-input triggers, and conditions.
 - API: database migrations create schema state and skip already-applied
   migrations.
+- API configuration: valid local defaults are typed, while malformed database
+  URLs, origins, ports, SSL flags, environments, and legacy emails fail fast.
 - API: story repository assembles, stores, reads, lists, and deletes relational
   story graphs.
 - PostgreSQL integration: moving an interaction survives a fresh repository

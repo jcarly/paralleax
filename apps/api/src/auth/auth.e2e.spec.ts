@@ -2,11 +2,11 @@ import 'reflect-metadata';
 import { ValidationPipe, type INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import * as request from 'supertest';
-import { AppModule } from './app.module';
+import { AppModule } from '../app.module';
 import { AuthRepository, type AuthUser } from './auth.repository';
-import { DatabaseMigrator } from './database.migrator';
-import { InMemoryStoriesRepository } from './stories.repository.memory';
-import { StoriesRepository } from './stories.repository';
+import { DatabaseMigrator } from '../database/database.migrator';
+import { InMemoryStoriesRepository } from '../stories/stories.repository.memory';
+import { StoriesRepository } from '../stories/stories.repository';
 
 describe('Auth API', () => {
   let app: INestApplication;

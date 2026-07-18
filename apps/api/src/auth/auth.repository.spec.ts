@@ -1,5 +1,5 @@
-import type { DatabaseConnection } from './database.connection';
-import type { DatabaseMigrator } from './database.migrator';
+import type { DatabaseConnection } from '../database/database.connection';
+import type { DatabaseMigrator } from '../database/database.migrator';
 import { AuthRepository, type AuthUser } from './auth.repository';
 
 describe('AuthRepository', () => {

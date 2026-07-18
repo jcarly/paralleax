@@ -14,7 +14,7 @@ import {
   CreateStoryDto,
   UpdateInteractionDto,
   UpdateTriggerDto,
-} from './dto';
+} from './dto/stories.dto';
 import { StoriesRepository } from './stories.repository';
 
 @Injectable()

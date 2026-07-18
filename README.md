@@ -89,6 +89,10 @@ The API expects PostgreSQL. By default it uses:
 DATABASE_URL=postgres://paralleax:paralleax@localhost:5432/paralleax
 ```
 
+The API also validates `PORT`, `POSTGRES_SSL`, `CORS_ORIGIN`, `NODE_ENV`, and the
+optional `LEGACY_STORY_OWNER_EMAIL` at startup. See `.env.example` for local
+defaults.
+
 Stories created before accounts were introduced remain quarantined by default.
 To assign them to a specific local account, set `LEGACY_STORY_OWNER_EMAIL` before
 that account registers or signs in:

@@ -54,6 +54,16 @@ storage. It should be deterministic and unit-testable.
 
 The API exposes story operations through `StoriesController`.
 
+The NestJS application is organized by feature rather than technical layer:
+
+- `auth/` owns credentials, sessions, guards, decorators, and auth endpoints;
+- `stories/` owns story DTOs, application behavior, persistence, and endpoints;
+- `database/` owns the shared PostgreSQL connection and migration lifecycle;
+- `config/` validates environment configuration and exposes typed runtime values.
+
+`AppModule` composes these modules without registering their internal providers
+directly. Feature modules export only providers required by another module.
+
 `StoriesService` owns application-level story behavior:
 
 - creates and renames stories;
@@ -75,7 +85,7 @@ transactional mutation, is scoped by the authenticated creator id so knowledge
 of a story id cannot bypass ownership. It assembles relational story,
 interaction, trigger, input, and condition rows into the domain `Story` expected
 by the service and writes field-level differences for mutations.
-`stories.persistence.writer.ts` owns the relational write plan: full graph
+`stories/persistence/stories.persistence.writer.ts` owns the relational write plan: full graph
 replacement for initial saves and entity-level differences for mutations. The
 repository remains responsible for ownership-scoped reads and transaction
 orchestration, while the writer has no NestJS or connection-pool dependency.
@@ -83,6 +93,11 @@ orchestration, while the writer has no NestJS or connection-pool dependency.
 shared PostgreSQL pool. The service does not depend on the physical relational
 shape, so storage and query projections can evolve without moving endpoint
 behavior or shared domain rules.
+
+`AppConfigService` is the only runtime boundary for application environment
+values. It validates database and browser origins, port, SSL mode, environment,
+and optional legacy ownership configuration during startup. Consumers do not
+read `process.env` directly.
 
 Story mutations execute inside a transaction. The repository compares the loaded
 domain snapshot with the mutated result, then updates only changed story or
