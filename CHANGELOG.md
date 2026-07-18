@@ -99,6 +99,9 @@ This project follows a lightweight [Keep a Changelog](https://keepachangelog.com
 
 ### Changed
 
+- Relational story write planning is extracted from `StoriesRepository` into a
+  focused persistence writer, leaving the repository responsible for reads,
+  ownership scope, migrations, and transactions.
 - Story persistence now assembles the domain model from relational rows and
   writes field-level mutation differences instead of replacing one `jsonb`
   document. Existing test stories are intentionally removed by the migration.

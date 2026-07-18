@@ -75,6 +75,10 @@ transactional mutation, is scoped by the authenticated creator id so knowledge
 of a story id cannot bypass ownership. It assembles relational story,
 interaction, trigger, input, and condition rows into the domain `Story` expected
 by the service and writes field-level differences for mutations.
+`stories.persistence.writer.ts` owns the relational write plan: full graph
+replacement for initial saves and entity-level differences for mutations. The
+repository remains responsible for ownership-scoped reads and transaction
+orchestration, while the writer has no NestJS or connection-pool dependency.
 `DatabaseMigrator` owns schema evolution, and `DatabaseConnection` owns the
 shared PostgreSQL pool. The service does not depend on the physical relational
 shape, so storage and query projections can evolve without moving endpoint
