@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, OnModuleInit } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import {
   createDemoStory,
@@ -18,20 +18,22 @@ import {
 import { StoriesRepository } from './stories.repository';
 
 @Injectable()
-export class StoriesService {
-  constructor(private readonly repository: StoriesRepository) {
-    this.seed();
+export class StoriesService implements OnModuleInit {
+  constructor(private readonly repository: StoriesRepository) {}
+
+  async onModuleInit() {
+    await this.seed();
   }
 
-  list(): Story[] {
+  async list(): Promise<Story[]> {
     return this.repository.list();
   }
-  get(id: string): Story {
-    const story = this.repository.find(id);
+  async get(id: string): Promise<Story> {
+    const story = await this.repository.find(id);
     if (!story) throw new NotFoundException('Story not found');
     return structuredClone(ensureStoryInteractionPositions(story));
   }
-  create(input: CreateStoryDto): Story {
+  async create(input: CreateStoryDto): Promise<Story> {
     const now = new Date().toISOString();
     const story: Story = {
       id: randomUUID(),
@@ -40,25 +42,25 @@ export class StoriesService {
       createdAt: now,
       updatedAt: now,
     };
-    this.repository.save(story);
+    await this.repository.save(story);
     return structuredClone(story);
   }
-  createDemo(): Story {
+  async createDemo(): Promise<Story> {
     const now = new Date().toISOString();
     const story = createDemoStory(randomUUID(), now);
-    this.repository.save(story);
+    await this.repository.save(story);
     return structuredClone(story);
   }
-  rename(id: string, title: string): Story {
-    const story = this.mutate(id);
+  async rename(id: string, title: string): Promise<Story> {
+    const story = await this.mutate(id);
     story.title = title.trim() || 'Untitled';
     return this.touch(story);
   }
-  delete(id: string): void {
-    if (!this.repository.delete(id)) throw new NotFoundException('Story not found');
+  async delete(id: string): Promise<void> {
+    if (!(await this.repository.delete(id))) throw new NotFoundException('Story not found');
   }
-  createInteraction(storyId: string, input: CreateInteractionDto): Story {
-    const story = this.mutate(storyId);
+  async createInteraction(storyId: string, input: CreateInteractionDto): Promise<Story> {
+    const story = await this.mutate(storyId);
     if (input.parentId && !story.interactions.some((item) => item.id === input.parentId))
       throw new NotFoundException('Parent interaction not found');
     const interactionId = randomUUID();
@@ -80,24 +82,28 @@ export class StoriesService {
     });
     return this.touch(story);
   }
-  updateInteraction(storyId: string, interactionId: string, input: UpdateInteractionDto): Story {
-    const story = this.mutate(storyId);
+  async updateInteraction(
+    storyId: string,
+    interactionId: string,
+    input: UpdateInteractionDto,
+  ): Promise<Story> {
+    const story = await this.mutate(storyId);
     const interaction = this.interaction(story, interactionId);
     Object.assign(interaction, input);
     return this.touch(story);
   }
-  deleteInteraction(storyId: string, interactionId: string): Story {
-    const story = this.mutate(storyId);
+  async deleteInteraction(storyId: string, interactionId: string): Promise<Story> {
+    const story = await this.mutate(storyId);
     this.interaction(story, interactionId);
     return this.replace(storyId, deleteInteractionFromStory(story, interactionId));
   }
-  updateTrigger(
+  async updateTrigger(
     storyId: string,
     interactionId: string,
     triggerId: string,
     input: UpdateTriggerDto,
-  ): Story {
-    const story = this.mutate(storyId);
+  ): Promise<Story> {
+    const story = await this.mutate(storyId);
     const interaction = this.interaction(story, interactionId);
     const trigger = interaction.triggers.find((item) => item.id === triggerId);
     if (!trigger) throw new NotFoundException('Trigger not found');
@@ -109,8 +115,8 @@ export class StoriesService {
       }),
     );
   }
-  addTrigger(storyId: string, interactionId: string): Story {
-    const story = this.mutate(storyId);
+  async addTrigger(storyId: string, interactionId: string): Promise<Story> {
+    const story = await this.mutate(storyId);
     this.interaction(story, interactionId).triggers.push({
       id: randomUUID(),
       inputInteractionIds: [],
@@ -118,15 +124,15 @@ export class StoriesService {
     });
     return this.touch(story);
   }
-  deleteTrigger(storyId: string, interactionId: string, triggerId: string): Story {
-    const story = this.mutate(storyId);
+  async deleteTrigger(storyId: string, interactionId: string, triggerId: string): Promise<Story> {
+    const story = await this.mutate(storyId);
     const interaction = this.interaction(story, interactionId);
     if (!interaction.triggers.some((item) => item.id === triggerId))
       throw new NotFoundException('Trigger not found');
     return this.replace(storyId, deleteTriggerInStory(story, interactionId, triggerId));
   }
-  private mutate(id: string): Story {
-    const story = this.repository.find(id);
+  private async mutate(id: string): Promise<Story> {
+    const story = await this.repository.find(id);
     if (!story) throw new NotFoundException('Story not found');
     return story;
   }
@@ -135,29 +141,33 @@ export class StoriesService {
     if (!item) throw new NotFoundException('Interaction not found');
     return item;
   }
-  private replace(id: string, story: Story): Story {
+  private async replace(id: string, story: Story): Promise<Story> {
     story.id = id;
-    this.repository.save(story);
     return this.touch(story);
   }
-  private touch(story: Story): Story {
+  private async touch(story: Story): Promise<Story> {
     story.interactions = ensureStoryInteractionPositions(story).interactions;
     story.updatedAt = new Date().toISOString();
+    await this.repository.save(story);
     return structuredClone(story);
   }
-  private seed() {
-    const story = this.create({ title: 'The forest path' });
-    this.createInteraction(story.id, { position: { x: 80, y: 180 } });
-    const current = this.mutate(story.id);
+  private async seed() {
+    if ((await this.repository.list()).length > 0) return;
+
+    const story = await this.create({ title: 'The forest path' });
+    await this.createInteraction(story.id, { position: { x: 80, y: 180 } });
+    const current = await this.mutate(story.id);
     const start = current.interactions[0];
     start.title = 'At the edge of the forest';
     start.body = 'Two paths open before you.';
-    this.createInteraction(story.id, { parentId: start.id, position: { x: 430, y: 80 } });
-    this.createInteraction(story.id, { parentId: start.id, position: { x: 430, y: 300 } });
-    const final = this.mutate(story.id);
+    await this.touch(current);
+    await this.createInteraction(story.id, { parentId: start.id, position: { x: 430, y: 80 } });
+    await this.createInteraction(story.id, { parentId: start.id, position: { x: 430, y: 300 } });
+    const final = await this.mutate(story.id);
     final.interactions[1].title = 'The bright trail';
     final.interactions[1].body = 'You move toward a peaceful clearing.';
     final.interactions[2].title = 'The dark trail';
     final.interactions[2].body = 'The trees close in around you.';
+    await this.touch(final);
   }
 }

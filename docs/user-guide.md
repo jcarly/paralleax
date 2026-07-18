@@ -22,7 +22,9 @@ Use `Generate demo` to create a populated local demo story with roots, branches,
 multi-input triggers, and simple visited / not visited conditions. This is useful
 for testing the editor and reader without manually building a graph.
 
-Stories are stored in memory during the MVP. Restarting the API resets the data.
+Stories are persisted in PostgreSQL during the MVP. Restarting the API keeps the
+authored story data as long as the configured database or Docker volume remains
+available.
 
 ## Edit the Story Title
 

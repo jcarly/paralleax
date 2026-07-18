@@ -4,6 +4,9 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import * as request from 'supertest';
 import type { Story } from '@paralleax/shared';
 import { AppModule } from './app.module';
+import { DatabaseMigrator } from './database.migrator';
+import { InMemoryStoriesRepository } from './stories.repository.memory';
+import { StoriesRepository } from './stories.repository';
 
 describe('Stories API', () => {
   let app: INestApplication;
@@ -12,7 +15,12 @@ describe('Stories API', () => {
   beforeEach(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
-    }).compile();
+    })
+      .overrideProvider(StoriesRepository)
+      .useClass(InMemoryStoriesRepository)
+      .overrideProvider(DatabaseMigrator)
+      .useValue({ run: jest.fn().mockResolvedValue(undefined) })
+      .compile();
 
     app = moduleFixture.createNestApplication();
     app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));

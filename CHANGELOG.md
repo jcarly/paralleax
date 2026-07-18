@@ -8,6 +8,11 @@ This project follows a lightweight [Keep a Changelog](https://keepachangelog.com
 
 ### Added
 
+- PostgreSQL-backed API story persistence using a `jsonb` story document table.
+- Database migration runner for PostgreSQL schema creation and future schema
+  evolution.
+- Docker Compose PostgreSQL service with a persistent `postgres-data` volume and
+  local `DATABASE_URL` defaults.
 - Author Simulation Mode now opens from the editor test action, lists
   interactions reachable by trigger input logic, dims condition-blocked
   interactions, and lets authors force an unavailable interaction for the current
@@ -79,6 +84,14 @@ This project follows a lightweight [Keep a Changelog](https://keepachangelog.com
 
 ### Changed
 
+- Docker Compose now installs dependencies once before starting the API and web
+  services, using an isolated `node-modules` volume to prevent concurrent
+  installs from corrupting container dependencies, and defines an explicit file
+  polling interval compatible with Node.js 24.
+- API story operations now use an asynchronous repository boundary so storage can
+  be backed by PostgreSQL without changing endpoint semantics.
+- PostgreSQL schema creation now lives in explicit migrations instead of the
+  story repository.
 - Multiple triggers with the same visual route are now grouped into one trigger
   marker and expose their alternative condition groups as `OR` variants in the
   trigger inspector.
@@ -172,6 +185,10 @@ This project follows a lightweight [Keep a Changelog](https://keepachangelog.com
 
 ### Documentation
 
+- Documented PostgreSQL story persistence, Docker database setup, and the ADR for
+  storing MVP stories as PostgreSQL `jsonb` documents.
+- Expanded the architecture documentation with workspace responsibilities,
+  runtime flows, code placement guidance, and verification commands.
 - Documented the current Simulation Mode slice and its boundary from the player
   reader.
 - Documented target contextual inputless triggers, final interactions, and player

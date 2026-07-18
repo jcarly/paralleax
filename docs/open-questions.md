@@ -25,8 +25,10 @@ changes`, and whether every non-read permission implies `read`.
 
 ## Story Format and Examples
 
-- Define a stable `story-format.md` before durable persistence, migrations, JSON
-  import/export, or external integrations depend on the story shape.
+- Define a stable `story-format.md` before migrations, JSON import/export, or
+  external integrations depend on the story shape. The current PostgreSQL
+  persistence stores the MVP story document directly and does not yet define an
+  external exchange format.
 - Decide whether documented examples should include simplified JSON, expected
   reader results, and associated regression tests.
 - Consider examples for simple branching, visited-history conditions, shared

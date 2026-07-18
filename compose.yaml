@@ -3,44 +3,83 @@ name: paralleax
 x-proxy-environment: &proxy-environment
   HTTP_PROXY: ${HTTP_PROXY:-}
   HTTPS_PROXY: ${HTTPS_PROXY:-}
-  NO_PROXY: ${NO_PROXY:-localhost,127.0.0.1,api,web}
+  NO_PROXY: ${NO_PROXY:-localhost,127.0.0.1,api,web,db}
   http_proxy: ${HTTP_PROXY:-}
   https_proxy: ${HTTPS_PROXY:-}
-  no_proxy: ${NO_PROXY:-localhost,127.0.0.1,api,web}
+  no_proxy: ${NO_PROXY:-localhost,127.0.0.1,api,web,db}
 
 x-dev-build: &dev-build
   context: .
   dockerfile: Dockerfile.dev
 
 services:
+  dependencies:
+    build: *dev-build
+    image: paralleax-dev
+    command: npm ci --audit=false --no-update-notifier
+    volumes:
+      - .:/workspace
+      - node-modules:/workspace/node_modules
+    working_dir: /workspace
+
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-paralleax}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-paralleax}
+      POSTGRES_DB: ${POSTGRES_DB:-paralleax}
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-paralleax} -d ${POSTGRES_DB:-paralleax}']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
   api:
     build: *dev-build
     image: paralleax-dev
-    command: sh -c 'npm ci --audit=false --no-update-notifier 2>&1 ; npm run dev -w @paralleax/api'
+    command: npm run dev -w @paralleax/api
     environment:
       <<: *proxy-environment
       CHOKIDAR_USEPOLLING: 'true'
+      CHOKIDAR_INTERVAL: '100'
       PORT: 3000
       NODE_OPTIONS: '--max-old-space-size=2048'
+      DATABASE_URL: ${DATABASE_URL:-postgres://paralleax:paralleax@db:5432/paralleax}
     ports:
       - '3000:3000'
     volumes:
       - .:/workspace
+      - node-modules:/workspace/node_modules
     working_dir: /workspace
+    depends_on:
+      dependencies:
+        condition: service_completed_successfully
+      db:
+        condition: service_healthy
 
   web:
     build: *dev-build
     image: paralleax-dev
-    command: sh -c 'npm ci --audit=false --no-update-notifier 2>&1 ; npm run dev -w @paralleax/web -- --host 0.0.0.0'
+    command: npm run dev -w @paralleax/web -- --host 0.0.0.0
     environment:
       <<: *proxy-environment
       CHOKIDAR_USEPOLLING: 'true'
+      CHOKIDAR_INTERVAL: '100'
       VITE_API_PROXY_TARGET: http://api:3000
       NODE_OPTIONS: '--max-old-space-size=2048'
     ports:
       - '5173:5173'
     volumes:
       - .:/workspace
+      - node-modules:/workspace/node_modules
     working_dir: /workspace
     depends_on:
       - api
+
+volumes:
+  node-modules:
+  postgres-data:

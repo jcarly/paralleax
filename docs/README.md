@@ -71,6 +71,7 @@ docs/
 - [ADR-002 - React, NestJS, and TypeScript](decisions/ADR-002-stack.md)
 - [ADR-003 - Engine First](decisions/ADR-003-engine-first.md)
 - [ADR-004 - React Flow Boundary](decisions/ADR-004-react-flow-boundary.md)
+- [ADR-005 - PostgreSQL Story Persistence](decisions/ADR-005-postgresql-story-persistence.md)
 
 ## Diagrams
 

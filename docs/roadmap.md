@@ -15,6 +15,7 @@
 - Trigger editing from graph markers.
 - Trigger cleanup when deleting interactions.
 - Visited / not visited conditions.
+- PostgreSQL persistence for authored MVP stories.
 - API, web, Playwright, and coverage tests in CI.
 
 ## V0.2 - Persistence and Robustness
@@ -39,9 +40,8 @@
 - Evaluate Tailwind CSS for broader UI styling while keeping React Flow-specific graph styles isolated.
 - Interface internationalization foundation with UI copy extracted into translation keys or variables.
 - Initial locale structure so additional languages can be added without rewriting components.
-- Durable storage.
 - Persisted reader sessions and player saves after story persistence is stable.
-- Migrations.
+- Explicit migrations for future schema changes.
 - Reproducible demo data.
 - UI wording pass for author-facing trigger vocabulary.
 - Visual identity and design-system foundation for palette, typography, spacing,

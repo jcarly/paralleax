@@ -1,33 +1,97 @@
 # Architecture
 
-Paralleax is a TypeScript monorepo.
+Paralleax is a TypeScript monorepo for the Story, Interaction, Trigger, and
+Reader MVP.
 
-## Applications
+The codebase has three runtime workspaces:
 
-- `apps/web`: React, Vite, React Flow. Contains the editor, reader, and web tests.
-  Editor inspector UI lives in dedicated components under `components/`, while
-  `StoryEditor` keeps page orchestration.
-  Story editor persistence and stale-response merge orchestration live in
-  `useStoryEditorPersistence`.
-  Graph mapping from stories to React Flow nodes and edges lives in `storyGraph.ts`
-  so trigger node and edge rendering can be tested outside the editor component.
-  Editor selection lookups live in `storySelection.ts` so inspector behavior is
-  testable outside the React component.
-  Canvas connection decisions live in `storyConnection.ts`; the editor component
-  keeps API orchestration while pure trigger-link rules stay unit-tested.
-  Trigger input deletion planning lives in `storyTriggerInput.ts`, keeping link
-  deletion explicit and tested.
-- `apps/api`: NestJS. Exposes story endpoints. Story application logic lives in
-  `StoriesService`, while MVP in-memory storage is isolated behind `StoriesRepository`.
-- `packages/shared`: shared types, narrative reader logic, story operations, trigger cleanup rules, stale-response merge rules, and graph placement helpers used by both the web app and API.
-  It also contains the local demo story generator used for manual testing and
-  regression-friendly sample data.
+- `apps/web`: React, Vite, and React Flow. It contains the authoring editor,
+  player reader, Simulation Mode, UI components, web unit tests, and Playwright
+  tests.
+- `apps/api`: NestJS. It exposes story endpoints and persists MVP story data in
+  PostgreSQL behind a repository abstraction.
+- `packages/shared`: framework-independent domain types, reader rules, story
+  operations, trigger cleanup rules, stale-response merge rules, graph placement
+  helpers, and deterministic demo story generation.
 
-## Guiding Principle
+## Architecture Rule
 
 The narrative engine must stay independent from the interface.
 
-The UI creates, visualizes, and edits a story. The engine must be able to evaluate a story without depending on React, React Flow, or NestJS, so it can be reused by other renderers: web app, game, Unity, interactive film, or external tooling.
+The UI creates, visualizes, and edits a story. The engine must be able to
+evaluate a story without depending on React, React Flow, or NestJS, so it can be
+reused by other renderers: web app, game, Unity, interactive film, or external
+tooling.
+
+Domain behavior that must be shared by the editor, API, reader, tests, or future
+exporters belongs in `packages/shared`. UI-only projection, selection, and
+gesture behavior belongs in `apps/web`. HTTP orchestration, validation boundaries,
+and temporary persistence belong in `apps/api`.
+
+## Workspace Responsibilities
+
+### `packages/shared`
+
+`packages/shared/src/index.ts` is the current MVP domain module. It exports:
+
+- story model types: `Story`, `Interaction`, `Trigger`, `TriggerCondition`, and
+  shared input/update shapes;
+- story operations: `updateInteractionInStory`, `updateTriggerInStory`,
+  `deleteTriggerInStory`, and `deleteInteractionFromStory`;
+- response merge behavior: `mergeServerStory`, including protection against
+  stale responses restoring deleted triggers or trigger inputs;
+- graph placement helpers: `getNextRootPosition`, `getNextChildPosition`, and
+  `getNextParentPosition`;
+- reader and simulation helpers: `getAvailableInteractions`,
+  `getInputReachableInteractions`, and `getTriggerConditionFailures`;
+- `createDemoStory`, the deterministic local story used for manual testing and
+  regression-friendly sample data.
+
+Shared code must not import React, React Flow, NestJS, browser APIs, or server
+storage. It should be deterministic and unit-testable.
+
+### `apps/api`
+
+The API exposes story operations through `StoriesController`.
+
+`StoriesService` owns application-level story behavior:
+
+- creates and renames stories;
+- creates, updates, and deletes interactions;
+- creates, updates, and deletes triggers;
+- delegates trigger cleanup and story mutation rules to `packages/shared`;
+- normalizes missing interaction positions before returning stories;
+- updates timestamps before saving modified stories.
+
+`StoriesRepository` owns PostgreSQL reads and writes. `DatabaseMigrator` owns
+schema evolution, and `DatabaseConnection` owns the shared PostgreSQL pool. The
+service should not know whether storage is currently a PostgreSQL document
+table, a later normalized schema, or another persistence adapter. Storage can
+evolve without moving endpoint behavior or shared domain rules.
+
+### `apps/web`
+
+`StoryEditor` is the page-level orchestration component for the editor. It wires
+React Flow, selection state, inspectors, and persistence actions together.
+
+Supporting editor modules keep pure or focused behavior outside the page
+component:
+
+- `hooks/useStoryEditorPersistence.ts`: loading, optimistic updates, API writes,
+  stale-response merging, and create/delete workflows.
+- `storyGraph.ts`: projection from the domain story model to React Flow
+  interaction nodes, trigger nodes, and trigger edges.
+- `storySelection.ts`: selected interaction and trigger lookup helpers.
+- `storyConnection.ts`: canvas connection validation and created-trigger lookup.
+- `storyTriggerInput.ts`: deletion planning for one trigger input link.
+- `components/InteractionInspector.tsx`: interaction content editing.
+- `components/TriggerInspector.tsx`: trigger condition and OR variant editing.
+- `components/InteractionNode.tsx`, `TriggerNode.tsx`, and `TriggerEdge.tsx`:
+  React Flow rendering surfaces.
+
+The web app may map a story into React Flow nodes and edges, but it must not
+store story semantics as React Flow data. React Flow data is a projection of the
+domain model.
 
 ## React Flow Boundary
 
@@ -58,26 +122,116 @@ A warning sign would be changing trigger semantics only to match React Flow
 constraints. In that case, the integration should be revisited before the UI
 starts shaping the engine.
 
-## Current Flow
+## Runtime Flows
 
-1. The API exposes stories through NestJS endpoints.
-2. The web app loads a story from the API.
-3. The editor displays interactions as a graph.
-4. Edits are saved through the API.
-5. The editor and API use shared story operations for trigger updates, deletion cleanup, stale-response merges, and child placement.
-6. The reader uses shared rules to determine the available interactions.
-7. The story list can request a local demo story from the API; the API builds it
-   through the shared deterministic generator and stores it in memory.
+### Loading a Story in the Editor
+
+1. `StoryEditor` reads the story id from the route.
+2. `useStoryEditorPersistence` calls the API client in `apps/web/src/api.ts`.
+3. `StoriesController` delegates the request to `StoriesService`.
+4. `StoriesService` reads the story from `StoriesRepository`.
+5. Before returning the story, the service normalizes missing interaction
+   positions with `ensureStoryInteractionPositions`.
+6. The web app stores the returned domain story in React state.
+7. `storyGraph.ts` maps the story into React Flow nodes and edges for rendering.
+
+The loaded state remains a domain `Story`. React Flow nodes and edges are
+recomputed projections.
+
+### Editing Story Content
+
+1. The user edits an interaction title, body, or position in the editor.
+2. `useStoryEditorPersistence` applies an optimistic local update through shared
+   story operations.
+3. The hook sends the API request.
+4. The API updates the repository through `StoriesService`.
+5. The API response is merged back into the current local story with
+   `mergeServerStory`.
+
+This merge protects recent local edits from stale server responses. When adding
+or changing editor persistence behavior, update shared merge tests before relying
+on the behavior from React.
+
+### Editing Trigger Links
+
+Trigger link behavior crosses the graph projection and the domain model, so it is
+split deliberately:
+
+- `storyGraph.ts` decides how triggers appear as trigger nodes and edges.
+- `storyConnection.ts` decides whether a graph connection can become a trigger
+  input.
+- `storyTriggerInput.ts` decides the local mutation plan for deleting one input
+  link.
+- `useStoryEditorPersistence` performs optimistic updates and API writes.
+- `packages/shared` owns the actual trigger mutation and cleanup rules.
+
+A linked graph edge represents one trigger input. Several graph edges may point
+to the same trigger marker when one trigger has several inputs. Several triggers
+with the exact same input set are grouped visually as OR condition variants, but
+they remain distinct domain triggers.
+
+### Running the Reader
+
+The player reader and Simulation Mode both rely on shared reader helpers.
+
+- `StoryPlayer` calls `getAvailableInteractions` to list playable choices.
+- Simulation Mode can call `getInputReachableInteractions` to show interactions
+  whose input rule matches even when conditions block them.
+- Simulation Mode can call `getTriggerConditionFailures` to explain why an
+  interaction is not currently available.
+
+Reader semantics are documented in [Reader semantics](reader-semantics.md). Any
+change to these helpers should update that document and the shared tests in the
+same change.
+
+### Creating Demo Data
+
+The story list can request a local demo story from the API. The API calls
+`createDemoStory` from `packages/shared`, stores the generated story in
+`StoriesRepository`, and returns it to the web app.
+
+Demo data should stay deterministic. It is used for manual exploration and as a
+stable source of regression-friendly sample structures.
+
+## Where To Put New Code
+
+- Put reusable model behavior in `packages/shared`.
+- Put React component state, rendering, and browser-only behavior in `apps/web`.
+- Put API route handling, request/response boundaries, and PostgreSQL storage
+  access in `apps/api`.
+- Put pure editor projection helpers near the editor in `apps/web/src` when they
+  exist only to support React Flow or inspector behavior.
+- Add tests close to the behavior: shared Vitest tests for domain rules, API
+  Jest/Supertest tests for endpoints, web Vitest/Testing Library tests for UI
+  behavior, and Playwright tests for critical editor flows.
+
+Before adding a new concept, check [MVP scope](mvp.md), [Domain model](domain-model.md),
+and [Non-goals](non-goals.md). Characters, places, variables, AI, durable
+identity, and player save persistence remain outside the MVP implementation.
 
 ## Storage
 
-Storage is in memory during the MVP. This keeps the prototype simple to test, but data is lost when the API restarts.
+Authored stories are persisted in PostgreSQL during the MVP.
 
-The API accesses that storage through `StoriesRepository` instead of reading a `Map`
-directly from the service. Durable persistence can replace the repository later
-without moving story endpoint behavior or trigger cleanup rules.
+The API accesses storage through `StoriesRepository` instead of coupling
+`StoriesService` to SQL calls. `StoriesService` still owns application behavior,
+while shared story operations own trigger cleanup, normalization, reader rules,
+and merge semantics.
 
-Durable persistence is postponed to a later version.
+The current PostgreSQL schema stores each story as one `jsonb` document in the
+`stories` table, alongside `id`, `created_at`, and `updated_at` columns. This is
+intentional for the MVP: the domain `Story` remains the persistence unit, and
+the database must not reshape Story / Interaction / Trigger semantics before the
+narrative model is stable.
+
+The schema can be normalized later if query needs justify it. A normalized schema
+must preserve the same domain invariants and should be introduced with explicit
+migrations.
+
+Schema changes must always go through migrations. Do not create, alter, or drop
+tables from repositories or services. Add a new migration to the migration list,
+make it forward-only, and keep any required data transformation in that migration
+so deployed data evolves predictably.
 
 ## Styling
 
@@ -100,3 +254,22 @@ graph classes directly.
   with per-workspace thresholds enforced by the coverage commands.
 - Code style: ESLint and Prettier.
 - GitLab CI: typecheck, coverage, build, and Playwright on every pushed commit.
+
+## Verification Commands
+
+Use the narrowest relevant command while developing, then run the broader checks
+before finishing a behavior change.
+
+```bash
+npm run test -w @paralleax/shared
+npm run test -w @paralleax/api
+npm run test -w @paralleax/web
+npm run test:e2e -w @paralleax/web
+npm run typecheck
+npm run coverage
+npm run build
+```
+
+Documentation-only changes do not require the full test suite unless they also
+change implementation semantics. They should still keep links and terminology
+aligned with `docs/README.md`, `docs/domain-invariants.md`, and `CHANGELOG.md`.

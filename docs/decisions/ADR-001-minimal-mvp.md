@@ -2,7 +2,8 @@
 
 ## Status
 
-Accepted.
+Accepted. Amended by [ADR-005](ADR-005-postgresql-story-persistence.md) for
+authored story persistence.
 
 ## Context
 
@@ -26,13 +27,17 @@ The MVP is limited to:
 - Reader.
 
 The MVP excludes characters, places, attributes, variables, AI, media, real-time
-collaboration, authentication, user permissions, SQL persistence, and advanced
+collaboration, authentication, user permissions, player saves, and advanced
 exports.
+
+Authored story persistence was later added to the MVP through PostgreSQL without
+adding users, permissions, collaboration, or player save state. See
+[ADR-005](ADR-005-postgresql-story-persistence.md).
 
 ## Alternatives Considered
 
 - Build the target narrative model immediately.
-- Add users, permissions, and persistence before validating the editor.
+- Add users, permissions, and collaboration before validating the editor.
 - Start with a richer game-like model containing characters, places, and
   variables.
 
@@ -49,7 +54,7 @@ exports.
 
 - Some expected product features are intentionally unavailable in the prototype.
 - Several future decisions remain open until the MVP is stable.
-- Later versions may need migrations once durable persistence is introduced.
+- Later versions may need migrations as PostgreSQL persistence evolves.
 
 ## Follow-Up
 

@@ -8,6 +8,7 @@ This folder records accepted architecture and product-shaping decisions.
 - [ADR-002 - React, NestJS, and TypeScript](ADR-002-stack.md)
 - [ADR-003 - Engine First](ADR-003-engine-first.md)
 - [ADR-004 - React Flow Boundary](ADR-004-react-flow-boundary.md)
+- [ADR-005 - PostgreSQL Story Persistence](ADR-005-postgresql-story-persistence.md)
 
 ## Maintenance
 

@@ -13,16 +13,20 @@ The MVP only covers:
 - `Trigger`: the rule that makes an interaction available from one or more input interactions.
 - `Reader`: story execution through successive choices.
 
-Characters, places, variables, AI, real-time collaboration, authentication, and SQL persistence are intentionally out of scope until the MVP is validated.
+Characters, places, variables, AI, real-time collaboration, authentication, and
+player save persistence are intentionally out of scope until the MVP is
+validated.
 
 ## Architecture
 
 - `apps/web`: React + Vite + React Flow application.
-- `apps/api`: NestJS API.
+- `apps/api`: NestJS API backed by PostgreSQL story persistence.
 - `packages/shared`: shared MVP model, reader rules, story operations, trigger cleanup rules, merge rules, and graph placement helpers used by both the web app and API.
 - `docs`: product, architecture, ADR, UML, and test scenario documentation.
 
-For now, the API stores data in memory. Stories are reset when the server restarts.
+The API persists authored stories in PostgreSQL. The MVP stores each story as a
+domain JSON document so the database does not reshape trigger semantics before
+the narrative core is stable.
 
 ## Documentation
 
@@ -77,6 +81,15 @@ Local URLs:
 
 - Web: http://localhost:5173
 - API: http://localhost:3000/api
+
+The API expects PostgreSQL. By default it uses:
+
+```dotenv
+DATABASE_URL=postgres://paralleax:paralleax@localhost:5432/paralleax
+```
+
+Using Docker Compose is the easiest way to start the API, web app, and local
+database together.
 
 ## Tests
 
@@ -174,7 +187,8 @@ Coverage reports and the Playwright HTML report are kept as GitLab artifacts.
 
 ## Docker
 
-The Docker setup pins the environment to Node.js 24.
+The Docker setup pins the environment to Node.js 24 and starts a local
+PostgreSQL database for persisted MVP stories.
 
 In development, the repository is mounted inside the container. Source changes are picked up by Vite and Nest watch mode without rebuilding the Docker image.
 
@@ -193,6 +207,8 @@ docker compose up
 ```
 
 Then open http://localhost:5173. The API is exposed at http://localhost:3000/api.
+PostgreSQL is exposed at `localhost:5432` and stores data in the
+`postgres-data` Docker volume.
 
 Useful commands:
 
@@ -202,12 +218,17 @@ npm run docker:logs
 npm run docker:down
 ```
 
-If dependencies change, restart the stack. The Compose command runs `npm ci` when each service starts:
+If dependencies change, restart the stack. Compose runs one shared `npm ci`
+before starting the API and web services:
 
 ```bash
 docker compose down
 docker compose up
 ```
+
+Container dependencies live in a dedicated `node-modules` volume. This keeps
+Linux dependencies separate from the host and prevents the API and web services
+from installing into the same directory concurrently.
 
 Refresh everything from a clean container state:
 

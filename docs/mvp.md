@@ -8,6 +8,8 @@ The MVP validates the narrative core before adding characters, places, variables
 - Interaction: create, edit title and content, move in the editor, delete.
 - Trigger: define input interactions and simple conditions.
 - Reader: execute a story through successive choices.
+- Story persistence: save authored stories in PostgreSQL without adding accounts,
+  permissions, or reader saves.
 
 ## Out of Scope for Now
 
@@ -23,13 +25,12 @@ The MVP validates the narrative core before adding characters, places, variables
 - Real-time collaboration.
 - Authentication.
 - User accounts and story permissions.
-- SQL persistence.
 - Unity, executable, embeddable web app, or video exports.
 
 Authentication, user accounts, story permissions, and collaboration are grouped
-as a post-MVP direction because they depend on durable identity and persistence.
-They should not enter the code until the Story, Interaction, Trigger, and Reader
-core is validated.
+as a post-MVP direction because they depend on durable identity. They should not
+enter the code until the Story, Interaction, Trigger, Reader, and story
+persistence core is validated.
 
 ## MVP Rules
 

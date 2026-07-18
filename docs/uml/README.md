@@ -191,8 +191,11 @@ classDiagram
 - `Interaction` remains independent from `Trigger`, as in the prototype.
 - A trigger has exactly one output interaction.
 - An interaction can have several triggers: this allows several alternative condition sets.
-- Inputs and conditions are modeled as association tables rather than identifier arrays. This suits PostgreSQL and avoids locking the API into a storage choice.
+- Inputs and conditions are shown as separate conceptual associations. The
+  current PostgreSQL MVP stores the story as one `jsonb` domain document; a later
+  normalized schema may map these associations to physical tables if query needs
+  justify it.
 - The reader does not persist play sessions yet.
 - Characters, places, attributes, effects, media, temporal concepts, and probabilities belong only to the Vision.
 - Users, story permissions, and change proposals also belong only to the Vision.
-  They depend on authentication, durable persistence, and post-MVP collaboration rules.
+  They depend on authentication and post-MVP collaboration rules.
