@@ -30,8 +30,9 @@ The target editor layout is:
 - center canvas: the story projection;
 - right inspector: contextual editing for the current selection.
 
-The center canvas remains the main working area. The left panel changes what is
-visible or emphasized. The right inspector edits the selected object.
+The center canvas remains the main navigation and structural orientation area.
+The left panel changes what is visible or emphasized. The right inspector is the
+primary editing workspace for the selected object.
 
 ## Left Panel
 
@@ -99,6 +100,27 @@ through graph links, with the inspector focused on properties that need editing.
 When nothing is selected, the inspector should stay closed for now. Story-level
 properties can be introduced later when the story has meaningful editable
 settings.
+
+Inspector interactions should avoid unnecessary modals and route changes. The
+author should be able to open an object, edit it, follow a related interaction,
+and return while preserving canvas context.
+
+## Narrative Projection
+
+A future narrative projection may present the same Story / Interaction / Trigger
+model as an editable reading-oriented sequence of moments and choices rather
+than a graph. It must remain a synchronized projection, not a converted document
+or second source of truth. This is post-MVP exploration and should be validated
+against focus and simulation workflows before becoming a separate surface.
+
+## Focus Mode
+
+For larger stories, a focus mode should keep the active interaction, its direct
+predecessors, successors, and trigger routes prominent while strongly dimming
+unrelated canvas content. Focus should preserve spatial context instead of
+hiding objects as a filter would. The first implementation can derive visual
+distance from existing interaction and trigger relationships without changing
+the domain model.
 
 ## Simulation Mode
 

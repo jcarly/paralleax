@@ -80,6 +80,15 @@ the editor canvas.
 Creating from an empty canvas area should use a deliberate command, such as a
 context menu, rather than accidental double-click creation.
 
+The empty-story state should be useful and instructional. It should explain the
+first narrative action and offer creation of an MVP interaction directly; it
+must not prompt for future characters, places, or other out-of-scope entities.
+
+A contextual canvas menu is a strong candidate for frequent local actions such
+as creating an interaction, creating or connecting a trigger, duplicating,
+deleting, and later organizing the nearby graph. Commands should appear only
+when their meaning is unambiguous for the clicked canvas object or empty area.
+
 ## Edge Routing
 
 Edges should adapt to the relative position of their source, trigger marker, and
@@ -189,3 +198,8 @@ Before adding more narrative features, the next canvas iteration should focus on
 - refining trigger marker placement for vertical and converging flows;
 - expanding the MVP canvas rules in [Design system](design-system.md);
 - checking the result with representative small and branching stories.
+- evaluating a focus mode that dims interactions outside the active
+  interaction's immediate narrative neighborhood;
+- defining a small initial keyboard set for deletion, search, recentering, and
+  undo/redo without conflicting with browser or text-editing shortcuts;
+- testing an instructional empty-story state and a contextual canvas menu.

@@ -22,6 +22,8 @@ changes`, and whether every non-read permission implies `read`.
 - Define how pending suggestions are previewed: decide whether users inspect a
   list of events, a temporary draft state, or both.
 - Define how rejected suggestions are retained and whether they can be reopened.
+- Define snapshot cadence, event compaction, and retention once change history is
+  implemented; avoid one history event per text keystroke.
 
 ## Story Format and Examples
 
@@ -78,6 +80,22 @@ changes`, and whether every non-read permission implies `read`.
   hexagon shape.
 - Decide how far contextual accent coloring should go when focusing a future
   character, place, or group.
+- Validate whether focus mode should include only direct neighbors or a
+  configurable graph distance.
+- Define the first contextual-menu actions and keyboard shortcuts, including
+  browser and text-input conflict rules.
+- Validate whether a narrative, reading-oriented projection materially improves
+  authoring beyond the inspector and Simulation Mode.
+
+## Hosting and Scale
+
+- Choose managed hosting and authentication providers only when deployment work
+  begins; preserve NestJS and shared-domain ownership regardless of provider.
+- Define measurable thresholds for normalizing the MVP story document and for
+  introducing progressive loading.
+- Define backup retention and restoration testing before a public beta.
+- Add Redis, queues, workers, replicas, or multiple API instances only in
+  response to observed operational bottlenecks.
 
 ## Simulation
 

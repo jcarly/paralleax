@@ -201,6 +201,12 @@ This project follows a lightweight [Keep a Changelog](https://keepachangelog.com
 
 ### Documentation
 
+- Added product lessons for inspector-first contextual editing, a calm canvas,
+  focus mode, narrative projection, useful empty states, contextual actions, and
+  keyboard navigation while preserving the MVP boundary.
+- Added durable hosting and scalability guidance covering managed replaceable
+  infrastructure, domain ownership, progressive loading, normalization signals,
+  history snapshots, and evidence-driven operational growth.
 - Documented PostgreSQL story persistence, Docker database setup, and the ADR for
   storing MVP stories as PostgreSQL `jsonb` documents.
 - Expanded the architecture documentation with workspace responsibilities,

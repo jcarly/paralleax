@@ -30,6 +30,10 @@
   contextual right inspector, and representative canvas examples.
 - Navigation foundation: quick search, recentering, recent selections, and
   model/story navigation patterns for larger graphs.
+- Story Canvas focus mode that emphasizes the active interaction and its direct
+  narrative neighborhood without hiding the surrounding graph.
+- Instructional empty-story state, contextual canvas actions, and a small
+  conflict-safe keyboard shortcut foundation.
 - Whole-graph auto-layout command with a vertical flow, immediate application,
   and undo support.
 - Simulation Mode for authors: reader-like interface, start from any
@@ -89,3 +93,5 @@
 - Media support.
 - Unity exploration.
 - AI experiments.
+- Progressive loading for large stories when measured story sizes justify
+  lightweight canvas summaries and on-demand details.

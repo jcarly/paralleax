@@ -219,6 +219,9 @@ identity, and player save persistence remain outside the MVP implementation.
 
 Authored stories are persisted in PostgreSQL during the MVP.
 
+Deployment, progressive loading, normalization signals, and operational growth
+are documented separately in [Hosting and scale](hosting-and-scale.md).
+
 The API accesses storage through `StoriesRepository` instead of coupling
 `StoriesService` to SQL calls. `StoriesService` still owns application behavior,
 while shared story operations own trigger cleanup, normalization, reader rules,

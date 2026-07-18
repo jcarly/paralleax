@@ -64,6 +64,11 @@ See [Trigger semantics](triggers.md) for deletion rules and editor behavior.
 
 The long-term model may introduce the following concepts.
 
+Future characters, places, groups, users, and assets should be identifiable
+domain entities rather than decorative tags. Authors should be able to open,
+edit, reference, and navigate to related interactions from those entities. This
+direction does not move any of them into the MVP implementation.
+
 ### User
 
 A user represents an account identity. Users do not have global author, reader,

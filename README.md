@@ -57,6 +57,7 @@ Supporting references:
 - [UML diagrams](docs/uml/README.md): MVP and long-term model diagrams.
 - [Meteor prototype refactor notes](MIGRATION.md): mapping from the original prototype to this refactor.
 - [Project changelog](CHANGELOG.md): chronological implementation notes and maintenance rules.
+- [Hosting and scale](docs/hosting-and-scale.md): durable deployment and growth principles.
 
 ## Requirements
 

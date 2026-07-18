@@ -27,6 +27,11 @@ It edits the selected object, such as an interaction or trigger in the MVP, and
 future objects later. It should not duplicate relationship lists that are clearer
 on the canvas.
 
+The inspector is the primary editing workspace. The canvas primarily answers
+where the author is in the story and how the active object relates to nearby
+objects. Editing should remain in context: select, edit, close, and continue
+without modal-heavy screen changes.
+
 ## Opinionated Simplicity
 
 Paralleax should not ask authors to configure every detail.
@@ -56,6 +61,10 @@ because they need to zoom.
 Search, focus, bookmarks, recent selections, keyboard navigation, and contextual
 navigation should be treated as core authoring tools.
 
+Related objects should be navigable from contextual summaries. Selecting a
+referenced interaction should focus the same object on the canvas rather than
+opening a disconnected editor.
+
 ## Authors Think In Stories
 
 The interface should use narrative language whenever possible.
@@ -68,6 +77,18 @@ The preferred vocabulary is "active interaction" when the same object is being
 worked on in the canvas, inspector, or simulation. "Selected interaction" remains
 a technical UI state, but authors should feel that one story moment is active
 across the workspace.
+
+Empty states and action labels should teach this narrative workflow. Prefer
+prompts such as "What happens next?" when they remain precise; do not replace
+clear domain terminology where authors need to understand triggers or
+conditions.
+
+## Calm Canvas
+
+The canvas should feel editorial rather than diagrammatic. A restrained grid,
+thin links, neutral cards, deliberate spacing, and progressive disclosure should
+keep the story readable without resembling UML tooling. Perceived product
+quality depends as much on these small interactions as on model richness.
 
 ## The Graph Is A Representation
 
