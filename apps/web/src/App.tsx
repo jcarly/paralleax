@@ -7,6 +7,7 @@ import { StoryList } from './pages/StoryList';
 import { StoryPlayer } from './pages/StoryPlayer';
 export function App() {
   const [user, setUser] = useState<AuthUser | null>();
+  const [authNotice, setAuthNotice] = useState('');
 
   useEffect(() => {
     api
@@ -15,8 +16,26 @@ export function App() {
       .catch(() => setUser(null));
   }, []);
 
+  useEffect(() => {
+    const expireSession = () => {
+      setAuthNotice('Your session expired. Sign in again to continue.');
+      setUser(null);
+    };
+    window.addEventListener('paralleax:session-expired', expireSession);
+    return () => window.removeEventListener('paralleax:session-expired', expireSession);
+  }, []);
+
   if (user === undefined) return <main className="page">Loading...</main>;
-  if (user === null) return <AuthPage onAuthenticated={setUser} />;
+  if (user === null)
+    return (
+      <AuthPage
+        notice={authNotice}
+        onAuthenticated={(authenticatedUser) => {
+          setAuthNotice('');
+          setUser(authenticatedUser);
+        }}
+      />
+    );
 
   return (
     <div className="app">

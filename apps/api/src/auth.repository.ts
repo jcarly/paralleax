@@ -35,12 +35,15 @@ export class AuthRepository {
       : undefined;
   }
 
-  async createUser(user: AuthUser): Promise<void> {
+  async createUser(user: AuthUser): Promise<boolean> {
     await this.migrator.run();
-    await this.database.pool.query(
-      'INSERT INTO users (id, email, password_hash, created_at) VALUES ($1, $2, $3, $4)',
+    const result = await this.database.pool.query(
+      `INSERT INTO users (id, email, password_hash, created_at)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (email) DO NOTHING`,
       [user.id, user.email, user.passwordHash, user.createdAt],
     );
+    return result.rowCount === 1;
   }
 
   async createSession(session: {
@@ -81,6 +84,22 @@ export class AuthRepository {
           createdAt: row.created_at.toISOString(),
         }
       : undefined;
+  }
+
+  async deleteExpiredSessions(): Promise<void> {
+    await this.migrator.run();
+    await this.database.pool.query('DELETE FROM sessions WHERE expires_at <= now()');
+  }
+
+  async claimMigratedStories(userId: string): Promise<number> {
+    await this.migrator.run();
+    const result = await this.database.pool.query(
+      `UPDATE stories
+       SET creator_user_id = $1
+       WHERE creator_user_id = 'migration-user'`,
+      [userId],
+    );
+    return result.rowCount ?? 0;
   }
 
   async deleteSession(tokenHash: string): Promise<void> {

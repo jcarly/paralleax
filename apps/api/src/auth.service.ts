@@ -22,7 +22,10 @@ export class AuthService {
       passwordHash: await hashPassword(password),
       createdAt: now,
     };
-    await this.repository.createUser(user);
+    if (!(await this.repository.createUser(user))) {
+      throw new ConflictException('Email already registered');
+    }
+    await this.claimLegacyStories(user);
     return this.createSession(user);
   }
 
@@ -31,11 +34,13 @@ export class AuthService {
     if (!user || !(await verifyPassword(password, user.passwordHash))) {
       throw new UnauthorizedException('Invalid email or password');
     }
+    await this.claimLegacyStories(user);
     return this.createSession(user);
   }
 
   async userForToken(token: string | undefined) {
     if (!token) return undefined;
+    await this.repository.deleteExpiredSessions();
     return this.repository.findUserBySessionHash(hashToken(token));
   }
 
@@ -44,6 +49,7 @@ export class AuthService {
   }
 
   private async createSession(user: AuthUser) {
+    await this.repository.deleteExpiredSessions();
     const token = randomBytes(32).toString('base64url');
     const createdAt = new Date();
     await this.repository.createSession({
@@ -54,6 +60,12 @@ export class AuthService {
       expiresAt: new Date(createdAt.getTime() + sessionDurationMs).toISOString(),
     });
     return { user: publicUser(user), token };
+  }
+
+  private async claimLegacyStories(user: AuthUser) {
+    if (user.email === process.env.LEGACY_STORY_OWNER_EMAIL?.trim().toLowerCase()) {
+      await this.repository.claimMigratedStories(user.id);
+    }
   }
 }
 

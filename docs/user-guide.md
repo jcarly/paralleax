@@ -15,9 +15,19 @@ Then open http://localhost:5173.
 On first use, select `Create account` and register with an email address and a
 password of at least eight characters. Later visits restore the session from an
 HTTP-only cookie. Use `Sign out` in the header to end the current session.
+If a session expires while the app is open, Paralleax returns to the sign-in
+screen with an explanation instead of leaving an editor action in an ambiguous
+error state.
 
 Stories are private to the account that creates them. Another account cannot
 list, open, edit, or delete them.
+
+### Recover Stories Created Before Accounts
+
+Older local stories are quarantined under a non-login migration account. To
+recover them, set `LEGACY_STORY_OWNER_EMAIL` in `.env` to the intended owner's
+email, restart the API, then register or sign in with that exact email. Recovery
+is idempotent; leaving the setting empty keeps those stories quarantined.
 
 ## Create a Story
 

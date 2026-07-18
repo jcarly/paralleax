@@ -10,9 +10,19 @@ Cover the critical MVP paths: Story, Interaction, Trigger, and Reader.
   can restore.
 - Authentication: invalid credentials are rejected and logout revokes the
   server-side session.
+- Authentication: concurrent registration for one normalized email creates one
+  account and returns one conflict.
+- Authentication: an expired session during a protected request returns the UI
+  to sign-in with a clear explanation.
+- Authentication: expired database sessions are purged during authentication
+  activity.
+- Legacy ownership: quarantined stories are claimed only by the explicitly
+  configured owner email.
 - API ownership: unauthenticated story requests are rejected.
 - API ownership: one account cannot list, read, mutate, or delete another
   account's stories.
+- Browser: an author can register, create a story, sign out, sign back in, and
+  find the story again.
 
 ## Unit / Component Tests
 

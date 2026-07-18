@@ -49,6 +49,7 @@ services:
       PORT: 3000
       NODE_OPTIONS: '--max-old-space-size=2048'
       DATABASE_URL: ${DATABASE_URL:-postgres://paralleax:paralleax@db:5432/paralleax}
+      LEGACY_STORY_OWNER_EMAIL: ${LEGACY_STORY_OWNER_EMAIL:-}
     ports:
       - '3000:3000'
     volumes:

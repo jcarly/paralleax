@@ -62,7 +62,8 @@ details. They should stay covered by tests as the editor grows.
 - Every story has exactly one creator, and all story reads and mutations are
   scoped to the authenticated creator until sharing permissions are introduced.
 - Migrated pre-account stories belong to the reserved migration user; they must
-  not become visible to newly registered accounts.
+  not become visible to newly registered accounts unless the account email
+  explicitly matches the configured legacy owner.
 - Story permissions are story-level capabilities, not global user types.
 - The creator owns the story and story-specific permission overrides refine
   default access.

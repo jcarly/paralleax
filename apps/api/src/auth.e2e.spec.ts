@@ -18,8 +18,9 @@ describe('Auth API', () => {
     const authRepository = {
       findUserByEmail: (email: string) => Promise.resolve(users.get(email)),
       createUser: (user: AuthUser) => {
+        if (users.has(user.email)) return Promise.resolve(false);
         users.set(user.email, user);
-        return Promise.resolve();
+        return Promise.resolve(true);
       },
       createSession: (session: { tokenHash: string; userId: string; expiresAt: string }) => {
         sessions.set(session.tokenHash, session);
@@ -37,6 +38,14 @@ describe('Auth API', () => {
         sessions.delete(tokenHash);
         return Promise.resolve();
       },
+      deleteExpiredSessions: () => {
+        const now = new Date();
+        for (const [tokenHash, session] of sessions) {
+          if (new Date(session.expiresAt) <= now) sessions.delete(tokenHash);
+        }
+        return Promise.resolve();
+      },
+      claimMigratedStories: () => Promise.resolve(0),
     };
     const module = await Test.createTestingModule({ imports: [AppModule] })
       .overrideProvider(AuthRepository)
@@ -87,5 +96,18 @@ describe('Auth API', () => {
       .post('/api/auth/login')
       .send({ email: 'missing@example.com', password: 'wrong password' })
       .expect(401);
+  });
+
+  it('returns one conflict when the same email is registered concurrently', async () => {
+    const attempts = await Promise.all([
+      request(httpServer)
+        .post('/api/auth/register')
+        .send({ email: 'same@example.com', password: 'correct horse battery staple' }),
+      request(httpServer)
+        .post('/api/auth/register')
+        .send({ email: 'same@example.com', password: 'correct horse battery staple' }),
+    ]);
+
+    expect(attempts.map(({ status }) => status).sort()).toEqual([201, 409]);
   });
 });

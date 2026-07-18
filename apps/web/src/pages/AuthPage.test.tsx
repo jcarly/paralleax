@@ -37,4 +37,9 @@ describe('AuthPage', () => {
     await user.click(screen.getByRole('button', { name: 'Need an account?' }));
     expect(screen.getByRole('heading', { name: 'Create account' })).toBeInTheDocument();
   });
+
+  it('shows a session notice', () => {
+    render(<AuthPage notice="Your session expired." onAuthenticated={vi.fn()} />);
+    expect(screen.getByText('Your session expired.')).toBeInTheDocument();
+  });
 });

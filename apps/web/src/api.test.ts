@@ -147,4 +147,20 @@ describe('api client', () => {
 
     await expect(api.getStory('story-1')).rejects.toThrow('Bad request');
   });
+
+  it('signals an expired session for protected requests only', async () => {
+    const expired = vi.fn();
+    window.addEventListener('paralleax:session-expired', expired);
+    fetchMock.mockResolvedValue(
+      jsonResponse('Authentication required', { ok: false, status: 401 }),
+    );
+
+    await expect(api.listStories()).rejects.toThrow('Authentication required');
+    expect(expired).toHaveBeenCalledOnce();
+
+    expired.mockClear();
+    await expect(api.login('author@example.com', 'wrong password')).rejects.toThrow();
+    expect(expired).not.toHaveBeenCalled();
+    window.removeEventListener('paralleax:session-expired', expired);
+  });
 });

@@ -109,4 +109,10 @@ export const databaseMigrations: DatabaseMigration[] = [
       CREATE INDEX stories_creator_user_id_idx ON stories(creator_user_id);
     `,
   },
+  {
+    id: '202607180004_session_expiry_index',
+    sql: `
+      CREATE INDEX sessions_expires_at_idx ON sessions(expires_at);
+    `,
+  },
 ];

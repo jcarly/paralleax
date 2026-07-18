@@ -89,6 +89,14 @@ The API expects PostgreSQL. By default it uses:
 DATABASE_URL=postgres://paralleax:paralleax@localhost:5432/paralleax
 ```
 
+Stories created before accounts were introduced remain quarantined by default.
+To assign them to a specific local account, set `LEGACY_STORY_OWNER_EMAIL` before
+that account registers or signs in:
+
+```dotenv
+LEGACY_STORY_OWNER_EMAIL=author@example.com
+```
+
 Using Docker Compose is the easiest way to start the API, web app, and local
 database together.
 

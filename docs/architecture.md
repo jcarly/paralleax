@@ -66,7 +66,9 @@ The API exposes story operations through `StoriesController`.
 `AuthController` exposes registration, login, logout, and current-user endpoints.
 `AuthService` derives password hashes with scrypt and issues random opaque session
 tokens; only token hashes are stored. `SessionGuard` resolves the HTTP-only session
-cookie and protects every route unless it is explicitly public.
+cookie and protects every route unless it is explicitly public. Expired sessions
+are deleted opportunistically during session creation and resolution. User
+creation relies on an atomic unique-email insert rather than a prior lookup alone.
 
 `StoriesRepository` owns PostgreSQL reads and writes. Every query, including a
 transactional mutation, is scoped by the authenticated creator id so knowledge

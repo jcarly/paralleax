@@ -1,5 +1,5 @@
 import React from 'react';
-import { cleanup, render, screen } from '@testing-library/react';
+import { act, cleanup, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { App } from './App';
@@ -64,5 +64,21 @@ describe('App', () => {
       </MemoryRouter>,
     );
     expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument();
+  });
+
+  it('returns to sign in with a clear notice when the session expires', async () => {
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <App />
+      </MemoryRouter>,
+    );
+    expect(await screen.findByText('Liste mock')).toBeInTheDocument();
+
+    act(() => window.dispatchEvent(new Event('paralleax:session-expired')));
+
+    expect(screen.getByRole('heading', { name: 'Sign in' })).toBeInTheDocument();
+    expect(
+      screen.getByText('Your session expired. Sign in again to continue.'),
+    ).toBeInTheDocument();
   });
 });

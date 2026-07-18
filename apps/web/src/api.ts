@@ -9,7 +9,12 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     headers: { 'Content-Type': 'application/json' },
     ...init,
   });
-  if (!response.ok) throw new Error((await response.text()) || `HTTP ${response.status}`);
+  if (!response.ok) {
+    if (response.status === 401 && !path.startsWith('/auth/')) {
+      window.dispatchEvent(new Event('paralleax:session-expired'));
+    }
+    throw new Error((await response.text()) || `HTTP ${response.status}`);
+  }
   return response.status === 204 ? (undefined as T) : (response.json() as Promise<T>);
 }
 export interface AuthUser {

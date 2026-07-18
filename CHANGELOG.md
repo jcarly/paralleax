@@ -8,6 +8,10 @@ This project follows a lightweight [Keep a Changelog](https://keepachangelog.com
 
 ### Added
 
+- Session-expiry feedback that returns the web app to sign-in, plus a complete
+  browser regression from registration through sign-out and sign-in.
+- Explicit `LEGACY_STORY_OWNER_EMAIL` recovery for stories quarantined during the
+  account migration.
 - Local account registration and login with scrypt-derived password hashes,
   opaque PostgreSQL-backed sessions, and HTTP-only cookies.
 - Mandatory story ownership with creator-scoped API reads and mutations, plus a
@@ -91,6 +95,9 @@ This project follows a lightweight [Keep a Changelog](https://keepachangelog.com
 - Tests for multiple trigger inputs, trigger deletion, edge-based trigger editing, interaction title editing, and drag behavior.
 
 ### Changed
+
+- User creation now resolves concurrent duplicate-email registration atomically,
+  and authentication activity purges expired sessions using an expiry index.
 
 - Existing story mutations now run in PostgreSQL transactions with row-level
   locking so concurrent requests cannot overwrite each other's story fields.

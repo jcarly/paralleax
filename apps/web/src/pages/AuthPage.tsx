@@ -1,7 +1,13 @@
 import { useState, type FormEvent } from 'react';
 import { api, type AuthUser } from '../api';
 
-export function AuthPage({ onAuthenticated }: { onAuthenticated: (user: AuthUser) => void }) {
+export function AuthPage({
+  onAuthenticated,
+  notice = '',
+}: {
+  onAuthenticated: (user: AuthUser) => void;
+  notice?: string;
+}) {
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -22,6 +28,7 @@ export function AuthPage({ onAuthenticated }: { onAuthenticated: (user: AuthUser
   return (
     <main className="page narrow auth-page">
       <h1>{mode === 'login' ? 'Sign in' : 'Create account'}</h1>
+      {notice ? <p className="auth-notice">{notice}</p> : null}
       <form onSubmit={(event) => void submit(event)}>
         <label>
           Email

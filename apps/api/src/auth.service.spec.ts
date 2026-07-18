@@ -8,8 +8,9 @@ describe('AuthService', () => {
   const repository = {
     findUserByEmail: jest.fn((email: string) => Promise.resolve(users.get(email))),
     createUser: jest.fn((user: AuthUser) => {
+      if (users.has(user.email)) return Promise.resolve(false);
       users.set(user.email, user);
-      return Promise.resolve();
+      return Promise.resolve(true);
     }),
     createSession: jest.fn((session: { tokenHash: string; userId: string }) => {
       sessions.set(session.tokenHash, session.userId);
@@ -23,6 +24,8 @@ describe('AuthService', () => {
       sessions.delete(tokenHash);
       return Promise.resolve();
     }),
+    deleteExpiredSessions: jest.fn(() => Promise.resolve()),
+    claimMigratedStories: jest.fn(() => Promise.resolve(0)),
   };
 
   beforeEach(() => {
@@ -54,5 +57,26 @@ describe('AuthService', () => {
     await expect(auth.login('author@example.com', 'wrong password')).rejects.toBeInstanceOf(
       UnauthorizedException,
     );
+  });
+
+  it('handles a concurrent duplicate insert as a conflict', async () => {
+    const auth = new AuthService(repository as never);
+    repository.createUser.mockResolvedValueOnce(false);
+
+    await expect(
+      auth.register('author@example.com', 'correct horse battery staple'),
+    ).rejects.toBeInstanceOf(ConflictException);
+  });
+
+  it('claims quarantined stories only for the configured legacy owner', async () => {
+    const previous = process.env.LEGACY_STORY_OWNER_EMAIL;
+    process.env.LEGACY_STORY_OWNER_EMAIL = 'legacy@example.com';
+    const auth = new AuthService(repository as never);
+
+    const registered = await auth.register('Legacy@Example.com', 'correct horse battery staple');
+    expect(repository.claimMigratedStories).toHaveBeenCalledWith(registered.user.id);
+
+    if (previous === undefined) delete process.env.LEGACY_STORY_OWNER_EMAIL;
+    else process.env.LEGACY_STORY_OWNER_EMAIL = previous;
   });
 });
