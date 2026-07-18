@@ -26,7 +26,7 @@ export interface Story {
   updatedAt: string;
 }
 export interface CreateStoryInput {
-  title?: string;
+  title: string;
 }
 export interface CreateInteractionInput {
   parentId?: string;
@@ -34,7 +34,7 @@ export interface CreateInteractionInput {
 }
 export interface UpdateInteractionInput {
   title?: string;
-  body?: string;
+  body?: string | null;
   position?: Position;
 }
 export interface UpdateTriggerInput {

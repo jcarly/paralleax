@@ -3,8 +3,9 @@ import {
   IsArray,
   IsBoolean,
   IsNumber,
-  IsOptional,
+  IsObject,
   IsString,
+  ValidateIf,
   ValidateNested,
 } from 'class-validator';
 
@@ -13,19 +14,29 @@ export class PositionDto {
   @IsNumber() y!: number;
 }
 export class CreateStoryDto {
-  @IsOptional() @IsString() title?: string;
+  @IsString() title!: string;
 }
 export class UpdateStoryDto {
   @IsString() title!: string;
 }
 export class CreateInteractionDto {
-  @IsOptional() @IsString() parentId?: string;
-  @IsOptional() @ValidateNested() @Type(() => PositionDto) position?: PositionDto;
+  @ValidateIf((_, value) => value !== undefined) @IsString() parentId?: string;
+  @ValidateIf((_, value) => value !== undefined)
+  @IsObject()
+  @ValidateNested()
+  @Type(() => PositionDto)
+  position?: PositionDto;
 }
 export class UpdateInteractionDto {
-  @IsOptional() @IsString() title?: string;
-  @IsOptional() @IsString() body?: string;
-  @IsOptional() @ValidateNested() @Type(() => PositionDto) position?: PositionDto;
+  @ValidateIf((_, value) => value !== undefined) @IsString() title?: string;
+  @ValidateIf((_, value) => value !== undefined && value !== null)
+  @IsString()
+  body?: string | null;
+  @ValidateIf((_, value) => value !== undefined)
+  @IsObject()
+  @ValidateNested()
+  @Type(() => PositionDto)
+  position?: PositionDto;
 }
 export class TriggerConditionDto {
   @IsString() interactionId!: string;

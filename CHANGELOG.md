@@ -84,6 +84,14 @@ This project follows a lightweight [Keep a Changelog](https://keepachangelog.com
 
 ### Changed
 
+- Interaction title, content, and position saves are now serialized so rapid
+  editor updates cannot overwrite each other in persisted stories.
+- Position-only interaction updates no longer replace optional title and body
+  fields with `undefined` before persisting the story document.
+- API validation now requires story titles, rejects null interaction titles and
+  positions plus unknown request fields, and normalizes null interaction bodies
+  to empty strings. PostgreSQL now enforces the corresponding non-null story
+  document fields.
 - Docker Compose now installs dependencies once before starting the API and web
   services, using an isolated `node-modules` volume to prevent concurrent
   installs from corrupting container dependencies, and defines an explicit file

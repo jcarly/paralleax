@@ -27,6 +27,7 @@ export function useStoryEditorPersistence(storyId: string) {
   const [error, setError] = useState('');
   const deletedTriggerIds = useRef(new Set<string>());
   const deletedTriggerInputKeys = useRef(new Set<string>());
+  const interactionSaveQueue = useRef<Promise<void>>(Promise.resolve());
 
   const mergeIncomingStory = useCallback(
     (
@@ -281,18 +282,23 @@ export function useStoryEditorPersistence(storyId: string) {
     [createConnectionTrigger, mergeIncomingStory, story, storyId],
   );
 
-  async function patchInteraction(id: string, patch: InteractionContentPatch) {
+  function patchInteraction(id: string, patch: InteractionContentPatch): Promise<void> {
     setStory((current) => (current ? updateInteractionInStory(current, id, patch) : current));
-    const updated = await api.updateInteraction(storyId, id, patch);
-    setStory((current) => {
-      if (!current) return updated;
-      return mergeIncomingStory(
-        current,
-        updated,
-        { interactionId: id, patch },
-        { preserveCurrentTriggers: true },
-      );
-    });
+    interactionSaveQueue.current = interactionSaveQueue.current
+      .then(async () => {
+        const updated = await api.updateInteraction(storyId, id, patch);
+        setStory((current) => {
+          if (!current) return updated;
+          return mergeIncomingStory(
+            current,
+            updated,
+            { interactionId: id, patch },
+            { preserveCurrentTriggers: true },
+          );
+        });
+      })
+      .catch((e: Error) => setError(e.message));
+    return interactionSaveQueue.current;
   }
 
   async function deleteInteraction(interactionId: string) {

@@ -16,7 +16,14 @@ Cover the critical MVP paths: Story, Interaction, Trigger, and Reader.
 - Shared: child placement selects a non-overlapping vertical output position.
 - Shared: root and parent placement select non-overlapping graph positions.
 - Editor: editing an interaction title keeps the page visible and updates the block.
+- Editor: rapid title and content edits are persisted in order so reopening the
+  story keeps both values.
 - Editor: moving an interaction saves only the position without clearing the title or body.
+- API: updating only an interaction position keeps its persisted title and body.
+- API: interaction PATCH requests reject null titles, null positions, and unknown
+  fields, while a null body is persisted as an empty string.
+- API/PostgreSQL: persisted story documents require story and interaction titles,
+  interaction bodies, and numeric interaction positions.
 - Editor: moving an interaction does not delete titles or content from other interactions.
 - Editor graph mapping: interactions loaded without stored canvas positions use
   stable fallback coordinates instead of blanking the Story Canvas.

@@ -23,7 +23,9 @@ describe('Stories API', () => {
       .compile();
 
     app = moduleFixture.createNestApplication();
-    app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+    app.useGlobalPipes(
+      new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }),
+    );
     app.setGlobalPrefix('api');
     await app.init();
     httpServer = app.getHttpServer();
@@ -71,6 +73,11 @@ describe('Stories API', () => {
       interactions: [],
     });
     expect(response.body.id).toEqual(expect.any(String));
+  });
+
+  it('POST /api/stories requires a non-null title', async () => {
+    await request(httpServer).post('/api/stories').send({}).expect(400);
+    await request(httpServer).post('/api/stories').send({ title: null }).expect(400);
   });
 
   it('POST /api/stories/demo creates a populated demo story', async () => {
@@ -178,6 +185,54 @@ describe('Stories API', () => {
       body: 'New content',
       position: { x: 42, y: 84 },
     });
+  });
+
+  it('keeps persisted title and content when PATCH updates only an interaction position', async () => {
+    const story = await createStory();
+    const withInteraction = await createInteraction(story.id);
+    const interaction = withInteraction.interactions[0];
+
+    await request(httpServer)
+      .patch(`/api/stories/${story.id}/interactions/${interaction.id}`)
+      .send({ position: { x: 240, y: 360 } })
+      .expect(200);
+
+    const response = await request(httpServer).get(`/api/stories/${story.id}`).expect(200);
+
+    expect(response.body.interactions[0]).toMatchObject({
+      id: interaction.id,
+      title: interaction.title,
+      body: interaction.body,
+      position: { x: 240, y: 360 },
+    });
+  });
+
+  it('rejects null interaction titles and positions but normalizes a null body', async () => {
+    const story = await createStory();
+    const withInteraction = await createInteraction(story.id);
+    const interaction = withInteraction.interactions[0];
+    const path = `/api/stories/${story.id}/interactions/${interaction.id}`;
+
+    await request(httpServer).patch(path).send({ title: null }).expect(400);
+    await request(httpServer).patch(path).send({ position: null }).expect(400);
+
+    const response = await request(httpServer).patch(path).send({ body: null }).expect(200);
+    expect(response.body.interactions[0]).toMatchObject({
+      title: interaction.title,
+      body: '',
+      position: interaction.position,
+    });
+  });
+
+  it('rejects unknown interaction patch fields', async () => {
+    const story = await createStory();
+    const withInteraction = await createInteraction(story.id);
+    const interaction = withInteraction.interactions[0];
+
+    await request(httpServer)
+      .patch(`/api/stories/${story.id}/interactions/${interaction.id}`)
+      .send({ unexpected: true })
+      .expect(400);
   });
 
   it('DELETE /api/stories/:storyId/interactions/:interactionId deletes an interaction and turns orphaned triggers into root triggers', async () => {

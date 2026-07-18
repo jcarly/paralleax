@@ -37,7 +37,7 @@ export class StoriesService implements OnModuleInit {
     const now = new Date().toISOString();
     const story: Story = {
       id: randomUUID(),
-      title: input.title?.trim() || 'New story',
+      title: input.title.trim() || 'Untitled',
       interactions: [],
       createdAt: now,
       updatedAt: now,
@@ -89,7 +89,9 @@ export class StoriesService implements OnModuleInit {
   ): Promise<Story> {
     const story = await this.mutate(storyId);
     const interaction = this.interaction(story, interactionId);
-    Object.assign(interaction, input);
+    if (input.title !== undefined) interaction.title = input.title;
+    if (input.body !== undefined) interaction.body = input.body ?? '';
+    if (input.position !== undefined) interaction.position = input.position;
     return this.touch(story);
   }
   async deleteInteraction(storyId: string, interactionId: string): Promise<Story> {

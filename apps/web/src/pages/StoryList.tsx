@@ -19,7 +19,7 @@ export function StoryList() {
   async function create() {
     try {
       setError('');
-      const story = await api.createStory();
+      const story = await api.createStory('New story');
       setStories((items) => [...items, story]);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not create story');

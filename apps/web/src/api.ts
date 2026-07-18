@@ -15,7 +15,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 export const api = {
   listStories: () => request<Story[]>('/stories'),
   getStory: (id: string) => request<Story>(`/stories/${id}`),
-  createStory: (title?: string) =>
+  createStory: (title: string) =>
     request<Story>('/stories', { method: 'POST', body: JSON.stringify({ title }) }),
   createDemoStory: () =>
     request<Story>('/stories/demo', { method: 'POST', body: JSON.stringify({}) }),

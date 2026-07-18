@@ -29,8 +29,12 @@ describe('DatabaseMigrator', () => {
     expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining('schema_migrations'));
     expect(mockQuery).toHaveBeenCalledWith('BEGIN');
     expect(mockQuery).toHaveBeenCalledWith(databaseMigrations[0].sql);
+    expect(mockQuery).toHaveBeenCalledWith(databaseMigrations[1].sql);
     expect(mockQuery).toHaveBeenCalledWith('INSERT INTO schema_migrations (id) VALUES ($1)', [
       databaseMigrations[0].id,
+    ]);
+    expect(mockQuery).toHaveBeenCalledWith('INSERT INTO schema_migrations (id) VALUES ($1)', [
+      databaseMigrations[1].id,
     ]);
     expect(mockQuery).toHaveBeenCalledWith('COMMIT');
     expect(mockRelease).toHaveBeenCalledTimes(1);

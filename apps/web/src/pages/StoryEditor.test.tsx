@@ -549,6 +549,48 @@ describe('StoryEditor', () => {
     expect(await screen.findByDisplayValue('Long new content')).toBeInTheDocument();
   });
 
+  it('serializes title and body saves so reopening keeps both edits', async () => {
+    let resolveTitleSave!: (story: Story) => void;
+    let resolveBodySave!: (story: Story) => void;
+    vi.mocked(api.updateInteraction)
+      .mockImplementationOnce(
+        () => new Promise<Story>((resolve) => (resolveTitleSave = resolve)),
+      )
+      .mockImplementationOnce(
+        () => new Promise<Story>((resolve) => (resolveBodySave = resolve)),
+      );
+
+    await renderEditor();
+    fireEvent.click(screen.getByTestId('flow-node-interaction-1'));
+
+    fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'Saved title' } });
+    fireEvent.blur(screen.getByLabelText('Title'));
+    fireEvent.change(screen.getByLabelText('Content'), { target: { value: 'Saved content' } });
+    fireEvent.blur(screen.getByLabelText('Content'));
+
+    await waitFor(() => expect(api.updateInteraction).toHaveBeenCalledTimes(1));
+    expect(api.updateInteraction).toHaveBeenNthCalledWith(1, 'story-1', 'interaction-1', {
+      title: 'Saved title',
+    });
+
+    const titleStory = cloneStory();
+    titleStory.interactions[0].title = 'Saved title';
+    await act(async () => resolveTitleSave(titleStory));
+
+    await waitFor(() => expect(api.updateInteraction).toHaveBeenCalledTimes(2));
+    expect(api.updateInteraction).toHaveBeenNthCalledWith(2, 'story-1', 'interaction-1', {
+      body: 'Saved content',
+    });
+
+    const fullySavedStory = cloneStory();
+    fullySavedStory.interactions[0].title = 'Saved title';
+    fullySavedStory.interactions[0].body = 'Saved content';
+    await act(async () => resolveBodySave(fullySavedStory));
+
+    expect(await screen.findByDisplayValue('Saved title')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('Saved content')).toBeInTheDocument();
+  });
+
   it('does not erase title or body when a drag save only returns a position update', async () => {
     const movedStory = cloneStory();
     movedStory.interactions[0].position = { x: 105, y: 135 };
