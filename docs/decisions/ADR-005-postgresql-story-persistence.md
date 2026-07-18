@@ -27,6 +27,11 @@ Schema creation and future schema evolution must go through explicit migrations.
 `packages/shared` remains responsible for story operations, trigger cleanup
 rules, reader semantics, merge behavior, and graph placement helpers.
 
+Mutations of an existing story use one database transaction and acquire a row
+lock with `SELECT ... FOR UPDATE` before applying domain changes. This preserves
+the JSON document persistence unit while preventing concurrent requests from
+overwriting changes based on the same stale snapshot.
+
 ## Consequences
 
 - Authored stories survive API restarts.
@@ -36,6 +41,8 @@ rules, reader semantics, merge behavior, and graph placement helpers.
 - The database does not define trigger semantics; the domain model remains the
   source of truth.
 - Querying inside interactions or triggers is intentionally limited for now.
+- Updates to the same story are serialized by PostgreSQL; different stories can
+  still be updated independently.
 - A normalized schema can be introduced later if reporting, search, permissions,
   collaboration, or migration needs justify it.
 - Future schema changes must use explicit migrations instead of repository or

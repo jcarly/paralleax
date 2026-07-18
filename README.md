@@ -107,6 +107,12 @@ npm run test -w @paralleax/web
 npm run test -w @paralleax/shared
 ```
 
+Run the API integration tests against the Docker PostgreSQL service:
+
+```powershell
+docker compose exec -T -e POSTGRES_TEST_DATABASE_URL=postgres://paralleax:paralleax@db:5432/paralleax api npm run test:postgres -w @paralleax/api
+```
+
 These commands cover:
 
 - Shared: Vitest tests for narrative rules, story operations, trigger cleanup, stale-response merge behavior, and graph placement helpers.

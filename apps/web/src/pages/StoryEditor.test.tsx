@@ -553,12 +553,8 @@ describe('StoryEditor', () => {
     let resolveTitleSave!: (story: Story) => void;
     let resolveBodySave!: (story: Story) => void;
     vi.mocked(api.updateInteraction)
-      .mockImplementationOnce(
-        () => new Promise<Story>((resolve) => (resolveTitleSave = resolve)),
-      )
-      .mockImplementationOnce(
-        () => new Promise<Story>((resolve) => (resolveBodySave = resolve)),
-      );
+      .mockImplementationOnce(() => new Promise<Story>((resolve) => (resolveTitleSave = resolve)))
+      .mockImplementationOnce(() => new Promise<Story>((resolve) => (resolveBodySave = resolve)));
 
     await renderEditor();
     fireEvent.click(screen.getByTestId('flow-node-interaction-1'));

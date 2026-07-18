@@ -4,6 +4,9 @@ import type { DatabaseMigrator } from './database.migrator';
 import { StoriesRepository } from './stories.repository';
 
 const mockQuery = jest.fn();
+const mockClientQuery = jest.fn();
+const mockRelease = jest.fn();
+const mockConnect = jest.fn();
 const mockRunMigrations = jest.fn();
 
 function story(id = 'story-1'): Story {
@@ -18,7 +21,7 @@ function story(id = 'story-1'): Story {
 
 function repository() {
   return new StoriesRepository(
-    { pool: { query: mockQuery } } as unknown as DatabaseConnection,
+    { pool: { query: mockQuery, connect: mockConnect } } as unknown as DatabaseConnection,
     { run: mockRunMigrations } as unknown as DatabaseMigrator,
   );
 }
@@ -26,6 +29,10 @@ function repository() {
 describe('StoriesRepository', () => {
   beforeEach(() => {
     mockQuery.mockReset();
+    mockClientQuery.mockReset();
+    mockRelease.mockReset();
+    mockConnect.mockReset();
+    mockConnect.mockResolvedValue({ query: mockClientQuery, release: mockRelease });
     mockRunMigrations.mockReset();
     mockRunMigrations.mockResolvedValue(undefined);
   });
@@ -76,5 +83,51 @@ describe('StoriesRepository', () => {
 
     expect(mockRunMigrations).toHaveBeenCalledTimes(1);
     expect(mockQuery).toHaveBeenCalledWith('DELETE FROM stories WHERE id = $1', ['story-1']);
+  });
+
+  it('locks, updates, and commits one story mutation transactionally', async () => {
+    const saved = story();
+    mockClientQuery
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [{ data: saved }] })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [] });
+
+    const updated = await repository().mutate(saved.id, (current) => ({
+      ...current,
+      title: 'Updated transactionally',
+    }));
+
+    expect(updated?.title).toBe('Updated transactionally');
+    expect(mockClientQuery).toHaveBeenNthCalledWith(1, 'BEGIN');
+    expect(mockClientQuery).toHaveBeenNthCalledWith(
+      2,
+      'SELECT data FROM stories WHERE id = $1 FOR UPDATE',
+      [saved.id],
+    );
+    expect(mockClientQuery).toHaveBeenNthCalledWith(
+      3,
+      expect.stringContaining('UPDATE stories'),
+      expect.arrayContaining([saved.id, expect.stringContaining('Updated transactionally')]),
+    );
+    expect(mockClientQuery).toHaveBeenNthCalledWith(4, 'COMMIT');
+    expect(mockRelease).toHaveBeenCalledTimes(1);
+  });
+
+  it('rolls back and releases the transaction when a mutation fails', async () => {
+    const saved = story();
+    mockClientQuery
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [{ data: saved }] })
+      .mockResolvedValueOnce({ rows: [] });
+
+    await expect(
+      repository().mutate(saved.id, () => {
+        throw new Error('mutation failed');
+      }),
+    ).rejects.toThrow('mutation failed');
+
+    expect(mockClientQuery).toHaveBeenLastCalledWith('ROLLBACK');
+    expect(mockRelease).toHaveBeenCalledTimes(1);
   });
 });

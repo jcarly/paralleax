@@ -1,10 +1,5 @@
 import { useState } from 'react';
-import {
-  BaseEdge,
-  EdgeLabelRenderer,
-  getSmoothStepPath,
-  type EdgeProps,
-} from '@xyflow/react';
+import { BaseEdge, EdgeLabelRenderer, getSmoothStepPath, type EdgeProps } from '@xyflow/react';
 import type { TriggerFlowEdge } from '../storyGraph';
 
 type TriggerEdgeProps = EdgeProps<TriggerFlowEdge>;

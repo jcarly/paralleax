@@ -29,6 +29,19 @@ quality:
       - apps/web/coverage/
       - packages/shared/coverage/
 
+postgres-integration:
+  stage: verify
+  services:
+    - name: postgres:17-alpine
+      alias: postgres
+  variables:
+    POSTGRES_USER: paralleax
+    POSTGRES_PASSWORD: paralleax
+    POSTGRES_DB: paralleax_test
+    POSTGRES_TEST_DATABASE_URL: postgres://paralleax:paralleax@postgres:5432/paralleax_test
+  script:
+    - npm run test:postgres -w @paralleax/api
+
 e2e:
   stage: verify
   script:

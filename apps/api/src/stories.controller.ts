@@ -35,7 +35,7 @@ export class StoriesController {
   @Delete(':storyId')
   @HttpCode(204)
   delete(@Param('storyId') id: string) {
-    this.stories.delete(id);
+    return this.stories.delete(id);
   }
 
   @Post(':storyId/interactions') createInteraction(

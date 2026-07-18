@@ -42,6 +42,44 @@ export class StoriesRepository {
     );
   }
 
+  async mutate(
+    id: string,
+    mutation: (story: Story) => Story | Promise<Story>,
+  ): Promise<Story | undefined> {
+    await this.migrator.run();
+    const client = await this.database.pool.connect();
+    try {
+      await client.query('BEGIN');
+      const result = await client.query<{ data: Story }>(
+        'SELECT data FROM stories WHERE id = $1 FOR UPDATE',
+        [id],
+      );
+      if (!result.rows[0]) {
+        await client.query('ROLLBACK');
+        return undefined;
+      }
+
+      const updated = await mutation(structuredClone(result.rows[0].data));
+      await client.query(
+        `
+          UPDATE stories
+          SET data = $2::jsonb,
+              created_at = $3,
+              updated_at = $4
+          WHERE id = $1
+        `,
+        [updated.id, JSON.stringify(updated), updated.createdAt, updated.updatedAt],
+      );
+      await client.query('COMMIT');
+      return structuredClone(updated);
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
   async delete(id: string): Promise<boolean> {
     await this.migrator.run();
     const result = await this.database.pool.query('DELETE FROM stories WHERE id = $1', [id]);

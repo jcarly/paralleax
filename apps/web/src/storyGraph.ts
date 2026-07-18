@@ -216,10 +216,7 @@ export function buildTriggerEdges(
   );
 }
 
-function getInteractionCenter(
-  interaction: Story['interactions'][number],
-  index: number,
-) {
+function getInteractionCenter(interaction: Story['interactions'][number], index: number) {
   const position = getInteractionPosition(interaction, index);
   return {
     x: position.x + interactionNodeWidth / 2,
@@ -249,9 +246,7 @@ function getTriggerNodePosition(
   return {
     x: Math.round((averageInput.x / inputCount + targetCenter.x) / 2 - triggerNodeSize / 2),
     y: Math.round(
-      (averageInput.y / inputCount + targetCenter.y) / 2 -
-        triggerNodeSize / 2 +
-        triggerIndex * 24,
+      (averageInput.y / inputCount + targetCenter.y) / 2 - triggerNodeSize / 2 + triggerIndex * 24,
     ),
   };
 }

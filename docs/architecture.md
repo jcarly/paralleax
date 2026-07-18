@@ -69,6 +69,12 @@ service should not know whether storage is currently a PostgreSQL document
 table, a later normalized schema, or another persistence adapter. Storage can
 evolve without moving endpoint behavior or shared domain rules.
 
+Story mutations execute inside a transaction that locks the selected story row
+with `SELECT ... FOR UPDATE`. The mutation reads the latest document only after
+acquiring the lock, then writes and commits that document in the same
+transaction. Concurrent partial updates therefore cannot silently replace one
+another with stale story snapshots.
+
 ### `apps/web`
 
 `StoryEditor` is the page-level orchestration component for the editor. It wires
@@ -247,6 +253,8 @@ graph classes directly.
 ## Tests and CI
 
 - API: Jest and Supertest.
+- PostgreSQL integration: Jest against PostgreSQL 17, including persistence
+  across repository instances and concurrent row mutation coverage.
 - Web: Vitest and Testing Library.
 - Shared: Vitest for narrative rules and pure story operations.
 - Functional: Playwright.

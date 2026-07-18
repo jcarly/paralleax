@@ -8,6 +8,8 @@ This project follows a lightweight [Keep a Changelog](https://keepachangelog.com
 
 ### Added
 
+- PostgreSQL integration tests for restart-safe interaction persistence and
+  concurrent mutation behavior, with a dedicated GitLab CI job.
 - PostgreSQL-backed API story persistence using a `jsonb` story document table.
 - Database migration runner for PostgreSQL schema creation and future schema
   evolution.
@@ -84,6 +86,8 @@ This project follows a lightweight [Keep a Changelog](https://keepachangelog.com
 
 ### Changed
 
+- Existing story mutations now run in PostgreSQL transactions with row-level
+  locking so concurrent requests cannot overwrite each other's story fields.
 - Trigger links now route through real top, right, bottom, or left node anchors,
   keeping arrowheads aligned with their final segment and interaction edge.
 - Added functional coverage for arrow reorientation when an interaction moves

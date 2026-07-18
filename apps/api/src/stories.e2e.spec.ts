@@ -207,6 +207,24 @@ describe('Stories API', () => {
     });
   });
 
+  it('serializes concurrent partial updates without losing either field', async () => {
+    const story = await createStory();
+    const withInteraction = await createInteraction(story.id);
+    const interaction = withInteraction.interactions[0];
+    const path = `/api/stories/${story.id}/interactions/${interaction.id}`;
+
+    await Promise.all([
+      request(httpServer).patch(path).send({ title: 'Concurrent title' }).expect(200),
+      request(httpServer).patch(path).send({ body: 'Concurrent content' }).expect(200),
+    ]);
+
+    const response = await request(httpServer).get(`/api/stories/${story.id}`).expect(200);
+    expect(response.body.interactions[0]).toMatchObject({
+      title: 'Concurrent title',
+      body: 'Concurrent content',
+    });
+  });
+
   it('rejects null interaction titles and positions but normalizes a null body', async () => {
     const story = await createStory();
     const withInteraction = await createInteraction(story.id);

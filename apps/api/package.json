@@ -8,6 +8,7 @@
     "start": "node dist/main.js",
     "typecheck": "tsc --noEmit",
     "test": "jest --runInBand",
+    "test:postgres": "jest --runInBand stories.postgres.spec.ts",
     "coverage": "jest --runInBand --coverage"
   },
   "dependencies": {

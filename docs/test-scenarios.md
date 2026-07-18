@@ -13,6 +13,10 @@ Cover the critical MVP paths: Story, Interaction, Trigger, and Reader.
   migrations.
 - API: story repository stores, reads, lists, and deletes persisted PostgreSQL
   story documents.
+- PostgreSQL integration: moving an interaction survives a fresh repository
+  instance with its title and body intact.
+- API/PostgreSQL: concurrent partial updates to the same story are serialized and
+  preserve every updated field.
 - Shared: child placement selects a non-overlapping vertical output position.
 - Shared: root and parent placement select non-overlapping graph positions.
 - Editor: editing an interaction title keeps the page visible and updates the block.
