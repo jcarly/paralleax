@@ -6,6 +6,7 @@ import {
   buildTriggerEdges,
   buildTriggerNodes,
   getRelatedTriggerVariantIds,
+  getRoutingHandleIds,
   getTriggerNodeId,
 } from './storyGraph';
 
@@ -92,9 +93,9 @@ describe('story graph mapping', () => {
         id: 'trigger:interaction-2:trigger-linked-interaction-1',
         type: 'trigger',
         source: 'interaction-1',
-        sourceHandle: 'interaction-output',
+        sourceHandle: 'routing-output-bottom',
         target: triggerNodeId,
-        targetHandle: 'trigger-input',
+        targetHandle: 'routing-input-top',
         className: 'trigger-edge',
         data: {
           interactionId: 'interaction-2',
@@ -109,9 +110,9 @@ describe('story graph mapping', () => {
         id: 'trigger:interaction-2:trigger-linked-interaction-3',
         type: 'trigger',
         source: 'interaction-3',
-        sourceHandle: 'interaction-output',
+        sourceHandle: 'routing-output-left',
         target: triggerNodeId,
-        targetHandle: 'trigger-input',
+        targetHandle: 'routing-input-right',
         className: 'trigger-edge',
         data: {
           interactionId: 'interaction-2',
@@ -126,9 +127,9 @@ describe('story graph mapping', () => {
         id: 'trigger:interaction-2:trigger-linked-output',
         type: 'trigger',
         source: triggerNodeId,
-        sourceHandle: 'trigger-output',
+        sourceHandle: 'routing-output-bottom',
         target: 'interaction-2',
-        targetHandle: 'create-source-input',
+        targetHandle: 'routing-input-top',
         markerEnd: { type: MarkerType.ArrowClosed, color: '#8d918f' },
         className: 'trigger-edge',
         data: {
@@ -140,6 +141,25 @@ describe('story graph mapping', () => {
         },
       },
     ]);
+  });
+
+  it('routes edges through matching handles for every relative direction', () => {
+    expect(getRoutingHandleIds({ x: 0, y: 0 }, { x: 300, y: 20 })).toEqual({
+      sourceHandle: 'routing-output-right',
+      targetHandle: 'routing-input-left',
+    });
+    expect(getRoutingHandleIds({ x: 300, y: 20 }, { x: 0, y: 0 })).toEqual({
+      sourceHandle: 'routing-output-left',
+      targetHandle: 'routing-input-right',
+    });
+    expect(getRoutingHandleIds({ x: 0, y: 0 }, { x: 20, y: 300 })).toEqual({
+      sourceHandle: 'routing-output-bottom',
+      targetHandle: 'routing-input-top',
+    });
+    expect(getRoutingHandleIds({ x: 20, y: 300 }, { x: 0, y: 0 })).toEqual({
+      sourceHandle: 'routing-output-top',
+      targetHandle: 'routing-input-bottom',
+    });
   });
 
   it('builds one shared trigger node for a multi-input trigger', () => {

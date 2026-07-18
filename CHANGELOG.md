@@ -84,6 +84,10 @@ This project follows a lightweight [Keep a Changelog](https://keepachangelog.com
 
 ### Changed
 
+- Trigger links now route through real top, right, bottom, or left node anchors,
+  keeping arrowheads aligned with their final segment and interaction edge.
+- Added functional coverage for arrow reorientation when an interaction moves
+  across its trigger marker.
 - Interaction title, content, and position saves are now serialized so rapid
   editor updates cannot overwrite each other in persisted stories.
 - Position-only interaction updates no longer replace optional title and body

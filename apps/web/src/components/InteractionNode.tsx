@@ -11,6 +11,9 @@ export interface InteractionNodeData extends Record<string, unknown> {
   onCreateParent?: (interactionId: string) => void;
   onSelectRootTrigger?: (interactionId: string, triggerId: string) => void;
 }
+
+const routingHandles = [Position.Top, Position.Right, Position.Bottom, Position.Left];
+
 export function InteractionNode({ id, data }: NodeProps) {
   const d = data as InteractionNodeData;
   const createParent = (event: MouseEvent<HTMLDivElement>) => {
@@ -67,6 +70,15 @@ export function InteractionNode({ id, data }: NodeProps) {
       >
         +
       </Handle>
+      {routingHandles.map((position) => (
+        <Handle
+          key={`input-${position}`}
+          type="target"
+          id={`routing-input-${position}`}
+          position={position}
+          className="routing-handle"
+        />
+      ))}
       <Handle
         type="target"
         id="new-trigger-input"
@@ -91,6 +103,15 @@ export function InteractionNode({ id, data }: NodeProps) {
       >
         +
       </Handle>
+      {routingHandles.map((position) => (
+        <Handle
+          key={`output-${position}`}
+          type="source"
+          id={`routing-output-${position}`}
+          position={position}
+          className="routing-handle"
+        />
+      ))}
     </div>
   );
 }

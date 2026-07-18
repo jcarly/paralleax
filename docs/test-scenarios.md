@@ -35,6 +35,10 @@ Cover the critical MVP paths: Story, Interaction, Trigger, and Reader.
 - Editor: selecting an interaction without a trigger shows a controlled error state instead of a blank page.
 - Editor: a trigger can accept several input interactions.
 - Editor: trigger markers are visible on linked edges and on root interactions.
+- Editor: vertical and horizontal trigger links use matching source and target
+  sides so output arrows meet interactions with the correct orientation.
+- Playwright: moving an interaction across its trigger reverses the output
+  arrow's final horizontal direction and keeps it aligned with the target side.
 - Editor/Reader: when an interaction is selected, the test action starts the
   reader from that interaction.
 - Editor: selecting a linked trigger marker opens the trigger editor for that trigger.

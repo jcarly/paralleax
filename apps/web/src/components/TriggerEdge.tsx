@@ -2,7 +2,6 @@ import { useState } from 'react';
 import {
   BaseEdge,
   EdgeLabelRenderer,
-  Position,
   getSmoothStepPath,
   type EdgeProps,
 } from '@xyflow/react';
@@ -10,44 +9,18 @@ import type { TriggerFlowEdge } from '../storyGraph';
 
 type TriggerEdgeProps = EdgeProps<TriggerFlowEdge>;
 
-function getAdaptiveEdgePositions(
-  sourceX: number,
-  sourceY: number,
-  targetX: number,
-  targetY: number,
-) {
-  const verticalDistance = targetY - sourceY;
-  const horizontalDistance = targetX - sourceX;
-
-  if (Math.abs(horizontalDistance) > Math.abs(verticalDistance) * 1.6) {
-    return {
-      sourcePosition: horizontalDistance > 0 ? Position.Right : Position.Left,
-      targetPosition: horizontalDistance > 0 ? Position.Left : Position.Right,
-    };
-  }
-
-  return {
-    sourcePosition: verticalDistance >= 0 ? Position.Bottom : Position.Top,
-    targetPosition: verticalDistance >= 0 ? Position.Top : Position.Bottom,
-  };
-}
-
 export function TriggerEdge({
   id,
   sourceX,
   sourceY,
   targetX,
   targetY,
+  sourcePosition,
+  targetPosition,
   markerEnd,
   data,
 }: TriggerEdgeProps) {
   const [isHovered, setIsHovered] = useState(false);
-  const { sourcePosition, targetPosition } = getAdaptiveEdgePositions(
-    sourceX,
-    sourceY,
-    targetX,
-    targetY,
-  );
   const [edgePath, labelX, labelY] = getSmoothStepPath({
     sourceX,
     sourceY,

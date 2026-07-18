@@ -33,6 +33,29 @@ function storyWithConditionCandidate(): Story {
   return next;
 }
 
+function storyWithHorizontalLink(): Story {
+  const next = cloneStory();
+  next.interactions.push({
+    id: 'interaction-2',
+    title: 'Linked scene',
+    body: 'A scene connected through a trigger.',
+    position: { x: 680, y: 140 },
+    triggers: [{ id: 'trigger-2', inputInteractionIds: ['interaction-1'], conditions: [] }],
+  });
+  return next;
+}
+
+async function getEdgeEndDirection(page: Page, edgeId: string) {
+  return page
+    .locator(`[data-id="${edgeId}"] .react-flow__edge-path`)
+    .evaluate((element: SVGPathElement) => {
+      const length = element.getTotalLength();
+      const before = element.getPointAtLength(Math.max(0, length - 8));
+      const end = element.getPointAtLength(length);
+      return { dx: end.x - before.x, dy: end.y - before.y };
+    });
+}
+
 async function mockStory(page: Page, initialStory: Story = cloneStory()) {
   await page.route('**/api/stories/story-1', async (route) => {
     if (route.request().method() === 'GET') {
@@ -99,6 +122,39 @@ test.describe('Story editor', () => {
     await expect(
       page.getByTestId('interaction-node').filter({ hasText: 'Original content' }),
     ).toBeVisible();
+  });
+
+  test('reorients the output arrow when its target moves across the trigger', async ({ page }) => {
+    let current = storyWithHorizontalLink();
+    await mockStory(page, current);
+
+    await page.route('**/api/stories/story-1/interactions/interaction-2', async (route) => {
+      const patch = route.request().postDataJSON() as {
+        position: { x: number; y: number };
+      };
+      current = structuredClone(current);
+      current.interactions[1].position = patch.position;
+      await route.fulfill({ json: current });
+    });
+
+    await page.goto('/stories/story-1/edit');
+    const edgeId = 'trigger:interaction-2:trigger-2-output';
+    await expect(page.locator(`[data-id="${edgeId}"]`)).toBeVisible();
+    await expect.poll(async () => (await getEdgeEndDirection(page, edgeId)).dx).toBeGreaterThan(0);
+
+    const target = page.getByTestId('interaction-node').filter({ hasText: 'Linked scene' });
+    const box = await target.boundingBox();
+    expect(box).not.toBeNull();
+    await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box!.x + box!.width / 2 - 700, box!.y + box!.height / 2, {
+      steps: 12,
+    });
+    await page.mouse.up();
+
+    await expect.poll(async () => (await getEdgeEndDirection(page, edgeId)).dx).toBeLessThan(0);
+    const finalDirection = await getEdgeEndDirection(page, edgeId);
+    expect(Math.abs(finalDirection.dx)).toBeGreaterThan(Math.abs(finalDirection.dy));
   });
 
   test('edits root trigger path conditions from the root trigger marker', async ({ page }) => {

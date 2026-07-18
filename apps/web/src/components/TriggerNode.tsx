@@ -11,6 +11,8 @@ export interface TriggerNodeData extends Record<string, unknown> {
   onSelectTrigger?: (interactionId: string, triggerId: string) => void;
 }
 
+const routingHandles = [Position.Top, Position.Right, Position.Bottom, Position.Left];
+
 export function TriggerNode({ data }: NodeProps) {
   const d = data as TriggerNodeData;
   const conditionLabel = d.conditionCount ? `${d.conditionCount} condition(s)` : 'No conditions';
@@ -26,6 +28,15 @@ export function TriggerNode({ data }: NodeProps) {
         position={Position.Top}
         className="trigger-node-handle trigger-node-input"
       />
+      {routingHandles.map((position) => (
+        <Handle
+          key={`input-${position}`}
+          type="target"
+          id={`routing-input-${position}`}
+          position={position}
+          className="routing-handle"
+        />
+      ))}
       <button
         type="button"
         className={`trigger-marker nodrag nopan ${d.selected ? 'selected' : ''}`}
@@ -47,6 +58,15 @@ export function TriggerNode({ data }: NodeProps) {
         position={Position.Bottom}
         className="trigger-node-handle trigger-node-output"
       />
+      {routingHandles.map((position) => (
+        <Handle
+          key={`output-${position}`}
+          type="source"
+          id={`routing-output-${position}`}
+          position={position}
+          className="routing-handle"
+        />
+      ))}
     </div>
   );
 }

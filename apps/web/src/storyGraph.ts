@@ -1,4 +1,4 @@
-import { MarkerType, type Edge, type Node } from '@xyflow/react';
+import { MarkerType, Position, type Edge, type Node } from '@xyflow/react';
 import type { Story } from '@paralleax/shared';
 import type { InteractionNodeData } from './components/InteractionNode';
 import type { TriggerNodeData } from './components/TriggerNode';
@@ -91,32 +91,7 @@ export function buildTriggerNodes(
   return (
     story?.interactions.flatMap((target, targetIndex) =>
       getLinkedTriggerGroups(target).map((group, triggerIndex) => {
-        const inputPositions = group.inputInteractionIds.flatMap((inputId) => {
-          const inputIndex = story.interactions.findIndex((item) => item.id === inputId);
-          const input = story.interactions[inputIndex];
-          return input
-            ? [
-                {
-                  x: getInteractionPosition(input, inputIndex).x + interactionNodeWidth / 2,
-                  y: getInteractionPosition(input, inputIndex).y + interactionNodeHeight,
-                },
-              ]
-            : [];
-        });
-        const averageInput = inputPositions.reduce(
-          (acc, position) => ({ x: acc.x + position.x, y: acc.y + position.y }),
-          { x: 0, y: 0 },
-        );
-        const inputCount = Math.max(inputPositions.length, 1);
-        const targetPosition = getInteractionPosition(target, targetIndex);
-        const targetAnchor = {
-          x: targetPosition.x + interactionNodeWidth / 2,
-          y: targetPosition.y,
-        };
-        const midpoint = {
-          x: (averageInput.x / inputCount + targetAnchor.x) / 2,
-          y: (averageInput.y / inputCount + targetAnchor.y) / 2,
-        };
+        const position = getTriggerNodePosition(story, target, targetIndex, group, triggerIndex);
         const triggerIds = group.triggers.map((trigger) => trigger.id);
         const selected =
           selectedTrigger?.interactionId === target.id &&
@@ -125,10 +100,7 @@ export function buildTriggerNodes(
         return {
           id: getTriggerNodeId(target.id, group.primaryTrigger.id),
           type: 'trigger',
-          position: {
-            x: Math.round(midpoint.x - triggerNodeSize / 2),
-            y: Math.round(midpoint.y - triggerNodeSize / 2 + triggerIndex * 24),
-          },
+          position,
           draggable: false,
           selectable: false,
           data: {
@@ -173,19 +145,38 @@ export function buildTriggerEdges(
   ) => void,
 ): TriggerFlowEdge[] {
   return (
-    story?.interactions.flatMap((target) =>
-      getLinkedTriggerGroups(target).flatMap((group) => {
+    story?.interactions.flatMap((target, targetIndex) =>
+      getLinkedTriggerGroups(target).flatMap((group, triggerIndex) => {
         const triggerNodeId = getTriggerNodeId(target.id, group.primaryTrigger.id);
+        const triggerPosition = getTriggerNodePosition(
+          story,
+          target,
+          targetIndex,
+          group,
+          triggerIndex,
+        );
+        const triggerCenter = {
+          x: triggerPosition.x + triggerNodeSize / 2,
+          y: triggerPosition.y + triggerNodeSize / 2,
+        };
         const triggerIds = group.triggers.map((trigger) => trigger.id);
         const conditionCount = getTotalConditionCount(group.triggers);
         const inputEdges = group.inputInteractionIds.map((source) => {
+          const sourceIndex = story.interactions.findIndex((item) => item.id === source);
+          const sourceInteraction = story.interactions[sourceIndex];
+          const handles = getRoutingHandleIds(
+            sourceInteraction
+              ? getInteractionCenter(sourceInteraction, sourceIndex)
+              : triggerCenter,
+            triggerCenter,
+          );
           return {
             id: `${triggerNodeId}-${source}`,
             type: 'trigger',
             source,
-            sourceHandle: 'interaction-output',
+            sourceHandle: handles.sourceHandle,
             target: triggerNodeId,
-            targetHandle: 'trigger-input',
+            targetHandle: handles.targetHandle,
             className: 'trigger-edge',
             data: {
               interactionId: target.id,
@@ -199,13 +190,15 @@ export function buildTriggerEdges(
             },
           };
         });
+        const targetCenter = getInteractionCenter(target, targetIndex);
+        const outputHandles = getRoutingHandleIds(triggerCenter, targetCenter);
         const outputEdge: TriggerFlowEdge = {
           id: `${triggerNodeId}-output`,
           type: 'trigger',
           source: triggerNodeId,
-          sourceHandle: 'trigger-output',
+          sourceHandle: outputHandles.sourceHandle,
           target: target.id,
-          targetHandle: 'create-source-input',
+          targetHandle: outputHandles.targetHandle,
           markerEnd: triggerOutputMarker,
           className: 'trigger-edge',
           data: {
@@ -221,6 +214,69 @@ export function buildTriggerEdges(
       }),
     ) ?? []
   );
+}
+
+function getInteractionCenter(
+  interaction: Story['interactions'][number],
+  index: number,
+) {
+  const position = getInteractionPosition(interaction, index);
+  return {
+    x: position.x + interactionNodeWidth / 2,
+    y: position.y + interactionNodeHeight / 2,
+  };
+}
+
+function getTriggerNodePosition(
+  story: Story,
+  target: Story['interactions'][number],
+  targetIndex: number,
+  group: LinkedTriggerGroup,
+  triggerIndex: number,
+) {
+  const inputCenters = group.inputInteractionIds.flatMap((inputId) => {
+    const inputIndex = story.interactions.findIndex((item) => item.id === inputId);
+    const input = story.interactions[inputIndex];
+    return input ? [getInteractionCenter(input, inputIndex)] : [];
+  });
+  const averageInput = inputCenters.reduce(
+    (acc, position) => ({ x: acc.x + position.x, y: acc.y + position.y }),
+    { x: 0, y: 0 },
+  );
+  const inputCount = Math.max(inputCenters.length, 1);
+  const targetCenter = getInteractionCenter(target, targetIndex);
+
+  return {
+    x: Math.round((averageInput.x / inputCount + targetCenter.x) / 2 - triggerNodeSize / 2),
+    y: Math.round(
+      (averageInput.y / inputCount + targetCenter.y) / 2 -
+        triggerNodeSize / 2 +
+        triggerIndex * 24,
+    ),
+  };
+}
+
+export function getRoutingHandleIds(
+  source: { x: number; y: number },
+  target: { x: number; y: number },
+) {
+  const horizontalDistance = target.x - source.x;
+  const verticalDistance = target.y - source.y;
+  let sourcePosition: Position;
+  let targetPosition: Position;
+
+  if (Math.abs(horizontalDistance) > Math.abs(verticalDistance) * 1.6) {
+    sourcePosition = horizontalDistance >= 0 ? Position.Right : Position.Left;
+    targetPosition = horizontalDistance >= 0 ? Position.Left : Position.Right;
+  } else {
+    sourcePosition = verticalDistance >= 0 ? Position.Bottom : Position.Top;
+    targetPosition = verticalDistance >= 0 ? Position.Top : Position.Bottom;
+  }
+
+  return {
+    sourceHandle: `routing-output-${sourcePosition}`,
+    targetHandle: `routing-input-${targetPosition}`,
+  };
 }
 
 interface LinkedTriggerGroup {

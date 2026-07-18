@@ -470,6 +470,16 @@ header span {
   pointer-events: all;
   transform: scale(1);
 }
+.routing-handle.react-flow__handle {
+  width: 2px;
+  min-width: 2px;
+  height: 2px;
+  min-height: 2px;
+  border: 0;
+  background: transparent;
+  opacity: 0;
+  pointer-events: none;
+}
 .node-create:hover,
 .node-create:focus-visible,
 .node-trigger-input:hover,
