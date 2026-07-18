@@ -10,6 +10,7 @@ This folder records accepted architecture and product-shaping decisions.
 - [ADR-004 - React Flow Boundary](ADR-004-react-flow-boundary.md)
 - [ADR-005 - PostgreSQL Story Persistence](ADR-005-postgresql-story-persistence.md)
 - [ADR-006 - Users, Sessions, and Story Ownership](ADR-006-users-and-sessions.md)
+- [ADR-007 - Relational Story Persistence](ADR-007-relational-story-persistence.md)
 
 ## Maintenance
 

@@ -27,10 +27,9 @@ changes`, and whether every non-read permission implies `read`.
 
 ## Story Format and Examples
 
-- Define a stable `story-format.md` before migrations, JSON import/export, or
-  external integrations depend on the story shape. The current PostgreSQL
-  persistence stores the MVP story document directly and does not yet define an
-  external exchange format.
+- Define a stable `story-format.md` before JSON import/export or external
+  integrations depend on the story shape. Relational persistence does not yet
+  define an external exchange format.
 - Decide whether documented examples should include simplified JSON, expected
   reader results, and associated regression tests.
 - Consider examples for simple branching, visited-history conditions, shared
@@ -91,8 +90,8 @@ changes`, and whether every non-read permission implies `read`.
 
 - Choose managed hosting and authentication providers only when deployment work
   begins; preserve NestJS and shared-domain ownership regardless of provider.
-- Define measurable thresholds for normalizing the MVP story document and for
-  introducing progressive loading.
+- Define measurable thresholds for introducing progressive loading and cached
+  story projections over the normalized model.
 - Define backup retention and restoration testing before a public beta.
 - Add Redis, queues, workers, replicas, or multiple API instances only in
   response to observed operational bottlenecks.

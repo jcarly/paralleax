@@ -115,4 +115,52 @@ export const databaseMigrations: DatabaseMigration[] = [
       CREATE INDEX sessions_expires_at_idx ON sessions(expires_at);
     `,
   },
+  {
+    id: '202607180005_normalize_story_model',
+    sql: `
+      DELETE FROM stories;
+
+      ALTER TABLE stories
+      DROP COLUMN data,
+      ADD COLUMN title text NOT NULL;
+
+      CREATE TABLE interactions (
+        id text PRIMARY KEY,
+        story_id text NOT NULL REFERENCES stories(id) ON DELETE CASCADE,
+        title text NOT NULL,
+        body text NOT NULL,
+        position_x double precision NOT NULL,
+        position_y double precision NOT NULL,
+        sort_order integer NOT NULL
+      );
+
+      CREATE TABLE triggers (
+        id text PRIMARY KEY,
+        output_interaction_id text NOT NULL REFERENCES interactions(id) ON DELETE CASCADE,
+        sort_order integer NOT NULL
+      );
+
+      CREATE TABLE trigger_inputs (
+        trigger_id text NOT NULL REFERENCES triggers(id) ON DELETE CASCADE,
+        input_interaction_id text NOT NULL REFERENCES interactions(id) ON DELETE CASCADE,
+        sort_order integer NOT NULL,
+        PRIMARY KEY (trigger_id, input_interaction_id)
+      );
+
+      CREATE TABLE trigger_conditions (
+        trigger_id text NOT NULL REFERENCES triggers(id) ON DELETE CASCADE,
+        sort_order integer NOT NULL,
+        interaction_id text NOT NULL REFERENCES interactions(id) ON DELETE CASCADE,
+        has_been_visited boolean NOT NULL,
+        PRIMARY KEY (trigger_id, sort_order)
+      );
+
+      CREATE INDEX interactions_story_id_idx ON interactions(story_id);
+      CREATE INDEX triggers_output_interaction_id_idx ON triggers(output_interaction_id);
+      CREATE INDEX trigger_inputs_input_interaction_id_idx
+        ON trigger_inputs(input_interaction_id);
+      CREATE INDEX trigger_conditions_interaction_id_idx
+        ON trigger_conditions(interaction_id);
+    `,
+  },
 ];

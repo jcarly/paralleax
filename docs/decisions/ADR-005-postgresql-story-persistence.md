@@ -2,7 +2,9 @@
 
 ## Status
 
-Accepted.
+Superseded in part by ADR-007. PostgreSQL, explicit migrations, and repository
+boundaries remain accepted; JSON document storage and story-wide row locking do
+not.
 
 ## Context
 

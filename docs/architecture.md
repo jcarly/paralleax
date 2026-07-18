@@ -72,17 +72,20 @@ creation relies on an atomic unique-email insert rather than a prior lookup alon
 
 `StoriesRepository` owns PostgreSQL reads and writes. Every query, including a
 transactional mutation, is scoped by the authenticated creator id so knowledge
-of a story id cannot bypass ownership. `DatabaseMigrator` owns schema evolution,
-and `DatabaseConnection` owns the shared PostgreSQL pool. The
-service should not know whether storage is currently a PostgreSQL document
-table, a later normalized schema, or another persistence adapter. Storage can
-evolve without moving endpoint behavior or shared domain rules.
+of a story id cannot bypass ownership. It assembles relational story,
+interaction, trigger, input, and condition rows into the domain `Story` expected
+by the service and writes field-level differences for mutations.
+`DatabaseMigrator` owns schema evolution, and `DatabaseConnection` owns the
+shared PostgreSQL pool. The service does not depend on the physical relational
+shape, so storage and query projections can evolve without moving endpoint
+behavior or shared domain rules.
 
-Story mutations execute inside a transaction that locks the selected story row
-with `SELECT ... FOR UPDATE`. The mutation reads the latest document only after
-acquiring the lock, then writes and commits that document in the same
-transaction. Concurrent partial updates therefore cannot silently replace one
-another with stale story snapshots.
+Story mutations execute inside a transaction. The repository compares the loaded
+domain snapshot with the mutated result, then updates only changed story or
+interaction fields and changed trigger structures. Independent concurrent field
+updates therefore do not rewrite an unrelated story document. A later
+collaboration policy must still define conflicts when two users modify the same
+trigger structure.
 
 ### `apps/web`
 
@@ -236,15 +239,11 @@ The API accesses storage through `StoriesRepository` instead of coupling
 while shared story operations own trigger cleanup, normalization, reader rules,
 and merge semantics.
 
-The current PostgreSQL schema stores each story as one `jsonb` document in the
-`stories` table, alongside `id`, `created_at`, and `updated_at` columns. This is
-intentional for the MVP: the domain `Story` remains the persistence unit, and
-the database must not reshape Story / Interaction / Trigger semantics before the
-narrative model is stable.
-
-The schema can be normalized later if query needs justify it. A normalized schema
-must preserve the same domain invariants and should be introduced with explicit
-migrations.
+The current PostgreSQL schema stores Story, Interaction, Trigger, trigger input,
+and trigger condition state in relational tables. The repository reconstructs
+the existing domain `Story`, so persistence normalization does not leak into the
+shared engine or the HTTP contract. JSON remains a future versioned import/export
+format rather than the database source of truth.
 
 Schema changes must always go through migrations. Do not create, alter, or drop
 tables from repositories or services. Add a new migration to the migration list,

@@ -30,20 +30,14 @@ provider lock-in.
 
 ## Persistence Evolution
 
-The MVP intentionally stores one Story as one PostgreSQL `jsonb` document. This
-keeps the unstable Story / Interaction / Trigger model coherent and is adequate
-for current story sizes.
+The current MVP entities are normalized into stories, interactions, triggers,
+trigger inputs, and trigger conditions. This narrows write conflicts and prepares
+object-level permissions, search, and history while the repository continues to
+assemble the same domain `Story` for current clients.
 
-Normalization should be driven by evidence such as:
-
-- story documents becoming expensive to load or rewrite;
-- collaboration requiring independent conflict boundaries;
-- permissions, search, reporting, or history needing object-level queries;
-- interactions and triggers needing independent pagination or lifecycle rules.
-
-A future normalized shape may separate stories, interactions, triggers, trigger
-inputs, conditions, memberships, change events, and assets. Such a migration
-must preserve the domain model and use explicit forward migrations.
+Future memberships, change events, and assets should follow the same relational
+direction. Flexible settings or type-specific parameters may use `jsonb` when
+their shape is genuinely variable rather than merely undecided.
 
 ## Progressive Loading
 

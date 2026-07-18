@@ -8,6 +8,9 @@ This project follows a lightweight [Keep a Changelog](https://keepachangelog.com
 
 ### Added
 
+- Relational PostgreSQL tables for interactions, triggers, trigger inputs, and
+  trigger conditions, with foreign-key cleanup and ordering metadata.
+- PostgreSQL regression coverage for relational graph reconstruction and storage.
 - Session-expiry feedback that returns the web app to sign-in, plus a complete
   browser regression from registration through sign-out and sign-in.
 - Explicit `LEGACY_STORY_OWNER_EMAIL` recovery for stories quarantined during the
@@ -96,6 +99,9 @@ This project follows a lightweight [Keep a Changelog](https://keepachangelog.com
 
 ### Changed
 
+- Story persistence now assembles the domain model from relational rows and
+  writes field-level mutation differences instead of replacing one `jsonb`
+  document. Existing test stories are intentionally removed by the migration.
 - User creation now resolves concurrent duplicate-email registration atomically,
   and authentication activity purges expired sessions using an expiry index.
 

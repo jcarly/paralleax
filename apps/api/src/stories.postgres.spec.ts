@@ -45,6 +45,19 @@ describePostgres('StoriesRepository PostgreSQL integration', () => {
           position: { x: 80, y: 120 },
           triggers: [{ id: 'trigger-1', inputInteractionIds: [], conditions: [] }],
         },
+        {
+          id: 'interaction-2',
+          title: 'Next scene',
+          body: 'A linked scene',
+          position: { x: 320, y: 120 },
+          triggers: [
+            {
+              id: 'trigger-2',
+              inputInteractionIds: ['interaction-1'],
+              conditions: [{ interactionId: 'interaction-1', hasBeenVisited: true }],
+            },
+          ],
+        },
       ],
     };
   }
@@ -65,9 +78,14 @@ describePostgres('StoriesRepository PostgreSQL integration', () => {
       body: 'Original content',
       position: { x: 420, y: 360 },
     });
+    expect(reloaded?.interactions[1].triggers[0]).toEqual({
+      id: 'trigger-2',
+      inputInteractionIds: ['interaction-1'],
+      conditions: [{ interactionId: 'interaction-1', hasBeenVisited: true }],
+    });
   });
 
-  it('serializes concurrent row mutations without losing fields', async () => {
+  it('merges concurrent field-level mutations without losing fields', async () => {
     const story = persistedStory();
     await repository.save(story);
 
@@ -88,6 +106,30 @@ describePostgres('StoriesRepository PostgreSQL integration', () => {
       title: 'Concurrent title',
       body: 'Concurrent content',
     });
+  });
+
+  it('stores the story graph in relational tables', async () => {
+    const story = persistedStory();
+    await repository.save(story);
+
+    const result = await pool.query(
+      `SELECT
+         (SELECT count(*)::int FROM interactions WHERE story_id = $1) AS interactions,
+         (SELECT count(*)::int FROM triggers
+          JOIN interactions ON interactions.id = triggers.output_interaction_id
+          WHERE interactions.story_id = $1) AS triggers,
+         (SELECT count(*)::int FROM trigger_inputs
+          JOIN triggers ON triggers.id = trigger_inputs.trigger_id
+          JOIN interactions ON interactions.id = triggers.output_interaction_id
+          WHERE interactions.story_id = $1) AS inputs,
+         (SELECT count(*)::int FROM trigger_conditions
+          JOIN triggers ON triggers.id = trigger_conditions.trigger_id
+          JOIN interactions ON interactions.id = triggers.output_interaction_id
+          WHERE interactions.story_id = $1) AS conditions`,
+      [story.id],
+    );
+
+    expect(result.rows[0]).toEqual({ interactions: 2, triggers: 2, inputs: 1, conditions: 1 });
   });
 });
 

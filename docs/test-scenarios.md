@@ -31,12 +31,12 @@ Cover the critical MVP paths: Story, Interaction, Trigger, and Reader.
 - Shared/API/Web: demo story generation creates roots, branches, multi-input triggers, and conditions.
 - API: database migrations create schema state and skip already-applied
   migrations.
-- API: story repository stores, reads, lists, and deletes persisted PostgreSQL
-  story documents.
+- API: story repository assembles, stores, reads, lists, and deletes relational
+  story graphs.
 - PostgreSQL integration: moving an interaction survives a fresh repository
   instance with its title and body intact.
-- API/PostgreSQL: concurrent partial updates to the same story are serialized and
-  preserve every updated field.
+- API/PostgreSQL: concurrent field-level updates preserve every updated field
+  without replacing a monolithic story document.
 - Shared: child placement selects a non-overlapping vertical output position.
 - Shared: root and parent placement select non-overlapping graph positions.
 - Editor: editing an interaction title keeps the page visible and updates the block.
@@ -46,8 +46,8 @@ Cover the critical MVP paths: Story, Interaction, Trigger, and Reader.
 - API: updating only an interaction position keeps its persisted title and body.
 - API: interaction PATCH requests reject null titles, null positions, and unknown
   fields, while a null body is persisted as an empty string.
-- API/PostgreSQL: persisted story documents require story and interaction titles,
-  interaction bodies, and numeric interaction positions.
+- API/PostgreSQL: relational rows require story and interaction titles,
+  interaction bodies, numeric positions, and valid trigger relationships.
 - Editor: moving an interaction does not delete titles or content from other interactions.
 - Editor graph mapping: interactions loaded without stored canvas positions use
   stable fallback coordinates instead of blanking the Story Canvas.
