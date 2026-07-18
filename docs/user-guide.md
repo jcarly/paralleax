@@ -12,6 +12,13 @@ npm run dev
 
 Then open http://localhost:5173.
 
+On first use, select `Create account` and register with an email address and a
+password of at least eight characters. Later visits restore the session from an
+HTTP-only cookie. Use `Sign out` in the header to end the current session.
+
+Stories are private to the account that creates them. Another account cannot
+list, open, edit, or delete them.
+
 ## Create a Story
 
 1. Open the story list.
@@ -22,7 +29,7 @@ Use `Generate demo` to create a populated local demo story with roots, branches,
 multi-input triggers, and simple visited / not visited conditions. This is useful
 for testing the editor and reader without manually building a graph.
 
-Stories are persisted in PostgreSQL during the MVP. Restarting the API keeps the
+Stories are persisted in PostgreSQL. Restarting the API keeps the
 authored story data as long as the configured database or Docker volume remains
 available.
 

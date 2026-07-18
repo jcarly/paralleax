@@ -69,6 +69,15 @@ async function mockStory(page: Page, initialStory: Story = cloneStory()) {
 
 test.describe('Story editor', () => {
   test.beforeEach(async ({ page }) => {
+    await page.route('**/api/auth/me', (route) =>
+      route.fulfill({
+        json: {
+          id: 'user-1',
+          email: 'author@example.com',
+          createdAt: '2026-01-01T00:00:00.000Z',
+        },
+      }),
+    );
     await mockStory(page);
   });
 

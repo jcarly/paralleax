@@ -76,4 +76,37 @@ export const databaseMigrations: DatabaseMigration[] = [
       )
     `,
   },
+  {
+    id: '202607180003_users_and_story_ownership',
+    sql: `
+      CREATE TABLE users (
+        id text PRIMARY KEY,
+        email text NOT NULL UNIQUE,
+        password_hash text NOT NULL,
+        created_at timestamptz NOT NULL
+      );
+
+      CREATE TABLE sessions (
+        id text PRIMARY KEY,
+        user_id text NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        token_hash text NOT NULL UNIQUE,
+        created_at timestamptz NOT NULL,
+        expires_at timestamptz NOT NULL
+      );
+
+      INSERT INTO users (id, email, password_hash, created_at)
+      VALUES ('migration-user', 'migration@paralleax.invalid', 'disabled', now());
+
+      ALTER TABLE stories
+      ADD COLUMN creator_user_id text REFERENCES users(id);
+
+      UPDATE stories SET creator_user_id = 'migration-user';
+
+      ALTER TABLE stories
+      ALTER COLUMN creator_user_id SET NOT NULL;
+
+      CREATE INDEX sessions_token_hash_idx ON sessions(token_hash);
+      CREATE INDEX stories_creator_user_id_idx ON stories(creator_user_id);
+    `,
+  },
 ];

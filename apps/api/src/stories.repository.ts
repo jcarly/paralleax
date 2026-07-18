@@ -10,49 +10,51 @@ export class StoriesRepository {
     private readonly migrator: DatabaseMigrator,
   ) {}
 
-  async list(): Promise<Story[]> {
+  async list(ownerId = 'migration-user'): Promise<Story[]> {
     await this.migrator.run();
     const result = await this.database.pool.query<{ data: Story }>(
-      'SELECT data FROM stories ORDER BY updated_at DESC, created_at DESC',
+      'SELECT data FROM stories WHERE creator_user_id = $1 ORDER BY updated_at DESC, created_at DESC',
+      [ownerId],
     );
     return result.rows.map((row) => structuredClone(row.data));
   }
 
-  async find(id: string): Promise<Story | undefined> {
+  async find(id: string, ownerId = 'migration-user'): Promise<Story | undefined> {
     await this.migrator.run();
     const result = await this.database.pool.query<{ data: Story }>(
-      'SELECT data FROM stories WHERE id = $1',
-      [id],
+      'SELECT data FROM stories WHERE id = $1 AND creator_user_id = $2',
+      [id, ownerId],
     );
     return result.rows[0] ? structuredClone(result.rows[0].data) : undefined;
   }
 
-  async save(story: Story): Promise<void> {
+  async save(story: Story, ownerId = 'migration-user'): Promise<void> {
     await this.migrator.run();
     await this.database.pool.query(
       `
-        INSERT INTO stories (id, data, created_at, updated_at)
-        VALUES ($1, $2::jsonb, $3, $4)
+        INSERT INTO stories (id, data, created_at, updated_at, creator_user_id)
+        VALUES ($1, $2::jsonb, $3, $4, $5)
         ON CONFLICT (id) DO UPDATE
         SET data = EXCLUDED.data,
             created_at = EXCLUDED.created_at,
             updated_at = EXCLUDED.updated_at
       `,
-      [story.id, JSON.stringify(story), story.createdAt, story.updatedAt],
+      [story.id, JSON.stringify(story), story.createdAt, story.updatedAt, ownerId],
     );
   }
 
   async mutate(
     id: string,
     mutation: (story: Story) => Story | Promise<Story>,
+    ownerId = 'migration-user',
   ): Promise<Story | undefined> {
     await this.migrator.run();
     const client = await this.database.pool.connect();
     try {
       await client.query('BEGIN');
       const result = await client.query<{ data: Story }>(
-        'SELECT data FROM stories WHERE id = $1 FOR UPDATE',
-        [id],
+        'SELECT data FROM stories WHERE id = $1 AND creator_user_id = $2 FOR UPDATE',
+        [id, ownerId],
       );
       if (!result.rows[0]) {
         await client.query('ROLLBACK');
@@ -80,9 +82,12 @@ export class StoriesRepository {
     }
   }
 
-  async delete(id: string): Promise<boolean> {
+  async delete(id: string, ownerId = 'migration-user'): Promise<boolean> {
     await this.migrator.run();
-    const result = await this.database.pool.query('DELETE FROM stories WHERE id = $1', [id]);
+    const result = await this.database.pool.query(
+      'DELETE FROM stories WHERE id = $1 AND creator_user_id = $2',
+      [id, ownerId],
+    );
     return (result.rowCount ?? 0) > 0;
   }
 }

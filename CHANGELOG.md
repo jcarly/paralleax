@@ -8,6 +8,12 @@ This project follows a lightweight [Keep a Changelog](https://keepachangelog.com
 
 ### Added
 
+- Local account registration and login with scrypt-derived password hashes,
+  opaque PostgreSQL-backed sessions, and HTTP-only cookies.
+- Mandatory story ownership with creator-scoped API reads and mutations, plus a
+  migration owner for stories created before accounts existed.
+- Login and registration screens with session restoration and sign-out.
+- API, component, and ownership regression coverage for authentication flows.
 - PostgreSQL integration tests for restart-safe interaction persistence and
   concurrent mutation behavior, with a dedicated GitLab CI job.
 - PostgreSQL-backed API story persistence using a `jsonb` story document table.

@@ -4,6 +4,16 @@
 
 Cover the critical MVP paths: Story, Interaction, Trigger, and Reader.
 
+## Authentication and Ownership
+
+- Authentication: registration creates a session that the current-user endpoint
+  can restore.
+- Authentication: invalid credentials are rejected and logout revokes the
+  server-side session.
+- API ownership: unauthenticated story requests are rejected.
+- API ownership: one account cannot list, read, mutate, or delete another
+  account's stories.
+
 ## Unit / Component Tests
 
 - Shared: story operations delete only the intended trigger and preserve valid inputs.

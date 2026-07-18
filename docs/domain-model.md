@@ -75,16 +75,21 @@ A user represents an account identity. Users do not have global author, reader,
 reviewer, or editor types in the domain model. Those capabilities are story-level
 permissions.
 
-Possible elements:
+Current elements:
+
+- unique normalized email address;
+- password credentials stored only as a derived hash;
+- owned stories through `Story.creatorUserId`;
+
+Later elements:
 
 - profile information;
-- owned stories through `Story.creatorUserId`;
 - story-specific permission overrides;
 - authored changes and suggestions.
 
-User accounts, authentication, and collaboration remain outside the MVP. They are
-documented as a post-MVP direction because story permissions and review workflows
-depend on durable identity and persistence.
+The first post-MVP identity slice provides local accounts, server-side sessions,
+and private story ownership. Collaboration and delegated permissions remain later
+work because they require a durable identity foundation first.
 
 ### Story Permissions
 

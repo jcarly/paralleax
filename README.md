@@ -13,7 +13,7 @@ The MVP only covers:
 - `Trigger`: the rule that makes an interaction available from one or more input interactions.
 - `Reader`: story execution through successive choices.
 
-Characters, places, variables, AI, real-time collaboration, authentication, and
+Characters, places, variables, AI, real-time collaboration, delegated permissions, and
 player save persistence are intentionally out of scope until the MVP is
 validated.
 

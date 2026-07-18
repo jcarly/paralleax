@@ -54,7 +54,10 @@
 
 ## V0.3 - Users, Permissions, and Review
 
-- User accounts, authentication, and story ownership.
+- Implemented foundation: local user accounts, opaque cookie sessions, and
+  creator-only story ownership.
+- Account recovery, email verification, and external identity providers remain
+  future deployment concerns.
 - Story default access settings for private stories, public reading, and public suggestions.
 - Per-user story permissions for reading, suggesting edits, reviewing suggestions, direct editing, and managing settings.
 - Permission hierarchy and inheritance rules to define before implementation.

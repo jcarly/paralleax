@@ -9,6 +9,7 @@ This folder records accepted architecture and product-shaping decisions.
 - [ADR-003 - Engine First](ADR-003-engine-first.md)
 - [ADR-004 - React Flow Boundary](ADR-004-react-flow-boundary.md)
 - [ADR-005 - PostgreSQL Story Persistence](ADR-005-postgresql-story-persistence.md)
+- [ADR-006 - Users, Sessions, and Story Ownership](ADR-006-users-and-sessions.md)
 
 ## Maintenance
 

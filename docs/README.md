@@ -74,6 +74,7 @@ docs/
 - [ADR-003 - Engine First](decisions/ADR-003-engine-first.md)
 - [ADR-004 - React Flow Boundary](decisions/ADR-004-react-flow-boundary.md)
 - [ADR-005 - PostgreSQL Story Persistence](decisions/ADR-005-postgresql-story-persistence.md)
+- [ADR-006 - Users, Sessions, and Story Ownership](decisions/ADR-006-users-and-sessions.md)
 
 ## Diagrams
 

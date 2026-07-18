@@ -4,6 +4,7 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import * as request from 'supertest';
 import type { Story } from '@paralleax/shared';
 import { AppModule } from './app.module';
+import { AuthService } from './auth.service';
 import { DatabaseMigrator } from './database.migrator';
 import { InMemoryStoriesRepository } from './stories.repository.memory';
 import { StoriesRepository } from './stories.repository';
@@ -20,6 +21,17 @@ describe('Stories API', () => {
       .useClass(InMemoryStoriesRepository)
       .overrideProvider(DatabaseMigrator)
       .useValue({ run: jest.fn().mockResolvedValue(undefined) })
+      .overrideProvider(AuthService)
+      .useValue({
+        userForToken: jest.fn((token?: string) =>
+          Promise.resolve({
+            id:
+              token === 'user-two' ? 'user-2' : token === 'user-one' ? 'user-1' : 'migration-user',
+            email: `${token ?? 'test'}@paralleax.invalid`,
+            createdAt: '2026-01-01T00:00:00.000Z',
+          }),
+        ),
+      })
       .compile();
 
     app = moduleFixture.createNestApplication();
@@ -387,5 +399,24 @@ describe('Stories API', () => {
 
   it('returns 404 for unknown story ids', async () => {
     await request(httpServer).get('/api/stories/missing-story').expect(404);
+  });
+
+  it('isolates stories between authenticated owners', async () => {
+    const created = await request(httpServer)
+      .post('/api/stories')
+      .set('Cookie', 'paralleax_session=user-one')
+      .send({ title: 'Private story' })
+      .expect(201);
+
+    const otherList = await request(httpServer)
+      .get('/api/stories')
+      .set('Cookie', 'paralleax_session=user-two')
+      .expect(200);
+    expect(otherList.body).toEqual([]);
+
+    await request(httpServer)
+      .get(`/api/stories/${created.body.id}`)
+      .set('Cookie', 'paralleax_session=user-two')
+      .expect(404);
   });
 });

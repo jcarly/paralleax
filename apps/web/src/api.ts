@@ -12,7 +12,24 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   if (!response.ok) throw new Error((await response.text()) || `HTTP ${response.status}`);
   return response.status === 204 ? (undefined as T) : (response.json() as Promise<T>);
 }
+export interface AuthUser {
+  id: string;
+  email: string;
+  createdAt: string;
+}
 export const api = {
+  me: () => request<AuthUser>('/auth/me'),
+  register: (email: string, password: string) =>
+    request<AuthUser>('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
+    }),
+  login: (email: string, password: string) =>
+    request<AuthUser>('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
+    }),
+  logout: () => request<void>('/auth/logout', { method: 'POST' }),
   listStories: () => request<Story[]>('/stories'),
   getStory: (id: string) => request<Story>(`/stories/${id}`),
   createStory: (title: string) =>

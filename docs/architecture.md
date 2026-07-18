@@ -63,8 +63,15 @@ The API exposes story operations through `StoriesController`.
 - normalizes missing interaction positions before returning stories;
 - updates timestamps before saving modified stories.
 
-`StoriesRepository` owns PostgreSQL reads and writes. `DatabaseMigrator` owns
-schema evolution, and `DatabaseConnection` owns the shared PostgreSQL pool. The
+`AuthController` exposes registration, login, logout, and current-user endpoints.
+`AuthService` derives password hashes with scrypt and issues random opaque session
+tokens; only token hashes are stored. `SessionGuard` resolves the HTTP-only session
+cookie and protects every route unless it is explicitly public.
+
+`StoriesRepository` owns PostgreSQL reads and writes. Every query, including a
+transactional mutation, is scoped by the authenticated creator id so knowledge
+of a story id cannot bypass ownership. `DatabaseMigrator` owns schema evolution,
+and `DatabaseConnection` owns the shared PostgreSQL pool. The
 service should not know whether storage is currently a PostgreSQL document
 table, a later normalized schema, or another persistence adapter. Storage can
 evolve without moving endpoint behavior or shared domain rules.

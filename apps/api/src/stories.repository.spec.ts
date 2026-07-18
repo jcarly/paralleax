@@ -46,7 +46,8 @@ describe('StoriesRepository', () => {
 
     expect(mockRunMigrations).toHaveBeenCalledTimes(1);
     expect(mockQuery).toHaveBeenCalledWith(
-      'SELECT data FROM stories ORDER BY updated_at DESC, created_at DESC',
+      'SELECT data FROM stories WHERE creator_user_id = $1 ORDER BY updated_at DESC, created_at DESC',
+      ['migration-user'],
     );
     expect(saved.title).toBe('Repository story');
   });
@@ -58,7 +59,10 @@ describe('StoriesRepository', () => {
     await expect(repository().find(saved.id)).resolves.toEqual(saved);
 
     expect(mockRunMigrations).toHaveBeenCalledTimes(1);
-    expect(mockQuery).toHaveBeenCalledWith('SELECT data FROM stories WHERE id = $1', [saved.id]);
+    expect(mockQuery).toHaveBeenCalledWith(
+      'SELECT data FROM stories WHERE id = $1 AND creator_user_id = $2',
+      [saved.id, 'migration-user'],
+    );
   });
 
   it('saves stories with an upsert', async () => {
@@ -73,6 +77,7 @@ describe('StoriesRepository', () => {
       JSON.stringify(saved),
       saved.createdAt,
       saved.updatedAt,
+      'migration-user',
     ]);
   });
 
@@ -82,7 +87,10 @@ describe('StoriesRepository', () => {
     await expect(repository().delete('story-1')).resolves.toBe(true);
 
     expect(mockRunMigrations).toHaveBeenCalledTimes(1);
-    expect(mockQuery).toHaveBeenCalledWith('DELETE FROM stories WHERE id = $1', ['story-1']);
+    expect(mockQuery).toHaveBeenCalledWith(
+      'DELETE FROM stories WHERE id = $1 AND creator_user_id = $2',
+      ['story-1', 'migration-user'],
+    );
   });
 
   it('locks, updates, and commits one story mutation transactionally', async () => {
@@ -102,8 +110,8 @@ describe('StoriesRepository', () => {
     expect(mockClientQuery).toHaveBeenNthCalledWith(1, 'BEGIN');
     expect(mockClientQuery).toHaveBeenNthCalledWith(
       2,
-      'SELECT data FROM stories WHERE id = $1 FOR UPDATE',
-      [saved.id],
+      'SELECT data FROM stories WHERE id = $1 AND creator_user_id = $2 FOR UPDATE',
+      [saved.id, 'migration-user'],
     );
     expect(mockClientQuery).toHaveBeenNthCalledWith(
       3,
