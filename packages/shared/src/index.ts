@@ -20,6 +20,7 @@ export interface Interaction {
 }
 export interface Story {
   id: string;
+  revision?: number;
   title: string;
   interactions: Interaction[];
   createdAt: string;

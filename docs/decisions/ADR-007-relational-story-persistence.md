@@ -17,10 +17,11 @@ path.
 
 ## Decision
 
-- Persist stories, interactions, triggers, trigger inputs, and trigger conditions
-  in relational PostgreSQL tables.
-- Keep ownership, titles, bodies, positions, ordering, and MVP condition fields as
-  typed columns with foreign keys and cascading cleanup.
+- Persist stories, interactions, triggers, and trigger inputs in relational
+  PostgreSQL tables. Store each trigger's ordered condition value as JSONB.
+- Keep ownership, titles, bodies, positions, and ordering as typed columns with
+  foreign keys and cascading cleanup. Validate condition references at the API
+  boundary because PostgreSQL cannot apply foreign keys inside JSONB.
 - Keep the public API and shared engine model unchanged: `StoriesRepository`
   assembles relational rows into the existing `Story` domain shape.
 - Persist mutations as field- and entity-level differences inside a transaction,
@@ -32,10 +33,10 @@ path.
 
 ## Consequences
 
-- The normalization migration deliberately removes existing test stories. The
-  deterministic migration-user seed is recreated on API startup.
-- Interaction, trigger, input, and condition records can be queried and evolved
-  independently before permissions, history, and collaboration are added.
+- The normalization migrations deliberately remove existing test stories. Tests
+  create their own users and story fixtures; normal API startup creates no data.
+- Interaction, trigger, and input records can be queried independently before
+  permissions, history, and collaboration are added. Conditions evolve with their trigger.
 - The frontend and narrative engine continue to consume one assembled `Story`;
   progressive projections can be introduced later without duplicating semantics.
 - Concurrent changes to the same trigger structure still require a future

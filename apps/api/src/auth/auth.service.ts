@@ -1,7 +1,6 @@
 import { ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { createHash, randomBytes, randomUUID, scrypt as nodeScrypt, timingSafeEqual } from 'crypto';
 import { promisify } from 'util';
-import { AppConfigService } from '../config/app-config.service';
 import { AuthRepository, type AuthUser } from './auth.repository';
 
 const scrypt = promisify(nodeScrypt);
@@ -9,10 +8,7 @@ const sessionDurationMs = 30 * 24 * 60 * 60 * 1000;
 
 @Injectable()
 export class AuthService {
-  constructor(
-    private readonly repository: AuthRepository,
-    private readonly config: AppConfigService,
-  ) {}
+  constructor(private readonly repository: AuthRepository) {}
 
   async register(email: string, password: string) {
     const normalizedEmail = email.trim().toLowerCase();
@@ -29,7 +25,6 @@ export class AuthService {
     if (!(await this.repository.createUser(user))) {
       throw new ConflictException('Email already registered');
     }
-    await this.claimLegacyStories(user);
     return this.createSession(user);
   }
 
@@ -38,7 +33,6 @@ export class AuthService {
     if (!user || !(await verifyPassword(password, user.passwordHash))) {
       throw new UnauthorizedException('Invalid email or password');
     }
-    await this.claimLegacyStories(user);
     return this.createSession(user);
   }
 
@@ -64,12 +58,6 @@ export class AuthService {
       expiresAt: new Date(createdAt.getTime() + sessionDurationMs).toISOString(),
     });
     return { user: publicUser(user), token };
-  }
-
-  private async claimLegacyStories(user: AuthUser) {
-    if (user.email === this.config.legacyStoryOwnerEmail) {
-      await this.repository.claimMigratedStories(user.id);
-    }
   }
 }
 

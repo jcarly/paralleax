@@ -11,6 +11,7 @@ import {
 
 type StoryRow = {
   id: string;
+  revision: number;
   title: string;
   created_at: Date | string;
   updated_at: Date | string;
@@ -29,6 +30,7 @@ type TriggerRow = {
   story_id: string;
   output_interaction_id: string;
   sort_order: number;
+  conditions: TriggerCondition[];
 };
 type TriggerInputRow = {
   story_id: string;
@@ -36,13 +38,7 @@ type TriggerInputRow = {
   input_interaction_id: string;
   sort_order: number;
 };
-type TriggerConditionRow = {
-  story_id: string;
-  trigger_id: string;
-  interaction_id: string;
-  has_been_visited: boolean;
-  sort_order: number;
-};
+type TriggerCondition = { interactionId: string; hasBeenVisited: boolean };
 
 @Injectable()
 export class StoriesRepository {
@@ -51,10 +47,10 @@ export class StoriesRepository {
     private readonly migrator: DatabaseMigrator,
   ) {}
 
-  async list(ownerId = 'migration-user'): Promise<Story[]> {
+  async list(ownerId: string): Promise<Story[]> {
     await this.migrator.run();
     const result = await this.database.pool.query<StoryRow>(
-      `SELECT id, title, created_at, updated_at
+      `SELECT id, revision, title, created_at, updated_at
        FROM stories
        WHERE creator_user_id = $1
        ORDER BY updated_at DESC, created_at DESC`,
@@ -63,22 +59,22 @@ export class StoriesRepository {
     return this.assemble(this.database.pool, result.rows);
   }
 
-  async find(id: string, ownerId = 'migration-user'): Promise<Story | undefined> {
+  async find(id: string, ownerId: string): Promise<Story | undefined> {
     await this.migrator.run();
     return this.findWith(this.database.pool, id, ownerId);
   }
 
-  async save(story: Story, ownerId = 'migration-user'): Promise<void> {
+  async save(story: Story, ownerId: string): Promise<void> {
     await this.migrator.run();
     await this.transaction(async (client) => {
       await client.query(
-        `INSERT INTO stories (id, title, created_at, updated_at, creator_user_id)
-         VALUES ($1, $2, $3, $4, $5)
+        `INSERT INTO stories (id, revision, title, created_at, updated_at, creator_user_id)
+         VALUES ($1, $2, $3, $4, $5, $6)
          ON CONFLICT (id) DO UPDATE
          SET title = EXCLUDED.title,
              created_at = EXCLUDED.created_at,
              updated_at = EXCLUDED.updated_at`,
-        [story.id, story.title, story.createdAt, story.updatedAt, ownerId],
+        [story.id, story.revision ?? 1, story.title, story.createdAt, story.updatedAt, ownerId],
       );
       await replaceStoryGraph(client, story);
     });
@@ -87,10 +83,15 @@ export class StoriesRepository {
   async mutate(
     id: string,
     mutation: (story: Story) => Story | Promise<Story>,
-    ownerId = 'migration-user',
+    ownerId: string,
   ): Promise<Story | undefined> {
     await this.migrator.run();
     return this.transaction(async (client) => {
+      const lock = await client.query(
+        'SELECT id FROM stories WHERE id = $1 AND creator_user_id = $2 FOR UPDATE',
+        [id, ownerId],
+      );
+      if (!lock.rowCount) return undefined;
       const current = await this.findWith(client, id, ownerId);
       if (!current) return undefined;
       const updated = await mutation(structuredClone(current));
@@ -99,7 +100,7 @@ export class StoriesRepository {
     });
   }
 
-  async delete(id: string, ownerId = 'migration-user'): Promise<boolean> {
+  async delete(id: string, ownerId: string): Promise<boolean> {
     await this.migrator.run();
     const result = await this.database.pool.query(
       'DELETE FROM stories WHERE id = $1 AND creator_user_id = $2',
@@ -110,7 +111,7 @@ export class StoriesRepository {
 
   private async findWith(queryable: Queryable, id: string, ownerId: string) {
     const result = await queryable.query<StoryRow>(
-      `SELECT id, title, created_at, updated_at
+      `SELECT id, revision, title, created_at, updated_at
        FROM stories
        WHERE id = $1 AND creator_user_id = $2`,
       [id, ownerId],
@@ -129,7 +130,7 @@ export class StoriesRepository {
     );
     const triggers = await queryable.query<TriggerRow>(
       `SELECT triggers.id, interactions.story_id, triggers.output_interaction_id,
-                triggers.sort_order
+                triggers.sort_order, triggers.conditions
          FROM triggers
          JOIN interactions ON interactions.id = triggers.output_interaction_id
          WHERE interactions.story_id = ANY($1::text[])
@@ -146,20 +147,7 @@ export class StoriesRepository {
          ORDER BY output.story_id, trigger_inputs.trigger_id, trigger_inputs.sort_order`,
       [storyIds],
     );
-    const conditions = await queryable.query<TriggerConditionRow>(
-      `SELECT output.story_id, trigger_conditions.trigger_id,
-                trigger_conditions.interaction_id,
-                trigger_conditions.has_been_visited, trigger_conditions.sort_order
-         FROM trigger_conditions
-         JOIN triggers ON triggers.id = trigger_conditions.trigger_id
-         JOIN interactions output ON output.id = triggers.output_interaction_id
-         WHERE output.story_id = ANY($1::text[])
-         ORDER BY output.story_id, trigger_conditions.trigger_id, trigger_conditions.sort_order`,
-      [storyIds],
-    );
-
     const inputsByTrigger = groupBy(inputs.rows, ({ trigger_id }) => trigger_id);
-    const conditionsByTrigger = groupBy(conditions.rows, ({ trigger_id }) => trigger_id);
     const triggersByInteraction = groupBy(
       triggers.rows,
       ({ output_interaction_id }) => output_interaction_id,
@@ -168,6 +156,7 @@ export class StoriesRepository {
 
     return storyRows.map((row) => ({
       id: row.id,
+      revision: row.revision,
       title: row.title,
       createdAt: iso(row.created_at),
       updatedAt: iso(row.updated_at),
@@ -181,10 +170,7 @@ export class StoriesRepository {
           inputInteractionIds: (inputsByTrigger.get(trigger.id) ?? []).map(
             ({ input_interaction_id }) => input_interaction_id,
           ),
-          conditions: (conditionsByTrigger.get(trigger.id) ?? []).map((condition) => ({
-            interactionId: condition.interaction_id,
-            hasBeenVisited: condition.has_been_visited,
-          })),
+          conditions: trigger.conditions,
         })),
       })),
     }));

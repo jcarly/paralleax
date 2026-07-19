@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { Story } from '@paralleax/shared';
 import { api } from '../api';
+import { loadStoryEditor, loadStoryPlayer } from './storyRouteLoaders';
 
 export function StoryList() {
   const [stories, setStories] = useState<Story[]>([]);
@@ -67,10 +68,20 @@ export function StoryList() {
             <h2>{story.title}</h2>
             <p>{story.interactions.length} interaction(s)</p>
             <div className="actions">
-              <Link className="button" to={`/stories/${story.id}/edit`}>
+              <Link
+                className="button"
+                to={`/stories/${story.id}/edit`}
+                onMouseEnter={() => void loadStoryEditor()}
+                onFocus={() => void loadStoryEditor()}
+              >
                 Edit
               </Link>
-              <Link className="button secondary" to={`/stories/${story.id}/play`}>
+              <Link
+                className="button secondary"
+                to={`/stories/${story.id}/play`}
+                onMouseEnter={() => void loadStoryPlayer()}
+                onFocus={() => void loadStoryPlayer()}
+              >
                 Read
               </Link>
               <button className="danger ghost" onClick={() => void remove(story.id)}>

@@ -5,6 +5,11 @@ not block the MVP unless a future implementation touches the affected area.
 
 ## Users and Permissions
 
+- Define whether `StoryAccessPolicy` evaluates only persisted grants or also
+  public defaults, creator ownership, and future invitation state.
+- Define stale-revision behavior for each mutation: automatic retry for
+  independent fields, explicit conflict UI for structural trigger changes, or a
+  common merge policy.
 - Define the permission hierarchy: decide whether `manage story settings`
   includes every other permission, whether `edit directly` includes `suggest
 changes`, and whether every non-read permission implies `read`.
@@ -88,6 +93,12 @@ changes`, and whether every non-read permission implies `read`.
 
 ## Hosting and Scale
 
+- Confirm the production frontend/API domain topology before choosing between
+  SameSite cookie protection, Origin validation, and CSRF tokens.
+- Choose the stable API error code vocabulary before external clients depend on
+  it.
+- Define health-check depth and logging/redaction requirements before selecting
+  a hosting platform.
 - Choose managed hosting and authentication providers only when deployment work
   begins; preserve NestJS and shared-domain ownership regardless of provider.
 - Define measurable thresholds for introducing progressive loading and cached

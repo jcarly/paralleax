@@ -20,12 +20,12 @@ describe('AppConfigService', () => {
       PORT: '8080',
       CORS_ORIGIN: 'https://app.example.com',
       NODE_ENV: 'production',
-      LEGACY_STORY_OWNER_EMAIL: ' Owner@Example.com ',
+      POSTGRES_SSL_CA: 'certificate\\nline',
     });
     expect(config).toMatchObject({
       postgresSsl: true,
       port: 8080,
-      legacyStoryOwnerEmail: 'owner@example.com',
+      postgresSslCa: 'certificate\nline',
     });
     expect(config.nodeEnvironment).toBe('production');
   });
@@ -37,8 +37,16 @@ describe('AppConfigService', () => {
     [{ PORT: '70000' }, 'PORT must be an integer between 1 and 65535'],
     [{ POSTGRES_SSL: 'yes' }, 'POSTGRES_SSL must be true or false'],
     [{ NODE_ENV: 'staging' }, 'NODE_ENV must be one of'],
-    [{ LEGACY_STORY_OWNER_EMAIL: 'invalid' }, 'must be a valid email address'],
   ])('rejects invalid environment values', (environment, message) => {
     expect(() => loadAppConfig(environment)).toThrow(message);
+  });
+
+  it('requires explicit external endpoints in production', () => {
+    expect(() => loadAppConfig({ NODE_ENV: 'production' })).toThrow(
+      'DATABASE_URL is required in production',
+    );
+    expect(() =>
+      loadAppConfig({ NODE_ENV: 'production', DATABASE_URL: 'postgres://db/app' }),
+    ).toThrow('CORS_ORIGIN is required in production');
   });
 });

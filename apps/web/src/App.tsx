@@ -1,10 +1,17 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { Link, Route, Routes } from 'react-router-dom';
 import { api, type AuthUser } from './api';
 import { AuthPage } from './pages/AuthPage';
-import { StoryEditor } from './pages/StoryEditor';
 import { StoryList } from './pages/StoryList';
-import { StoryPlayer } from './pages/StoryPlayer';
+import { loadStoryEditor, loadStoryPlayer } from './pages/storyRouteLoaders';
+
+const StoryEditor = lazy(() =>
+  loadStoryEditor().then(({ StoryEditor }) => ({ default: StoryEditor })),
+);
+const StoryPlayer = lazy(() =>
+  loadStoryPlayer().then(({ StoryPlayer }) => ({ default: StoryPlayer })),
+);
+
 export function App() {
   const [user, setUser] = useState<AuthUser | null>();
   const [authNotice, setAuthNotice] = useState('');
@@ -49,11 +56,13 @@ export function App() {
           Sign out
         </button>
       </header>
-      <Routes>
-        <Route path="/" element={<StoryList />} />
-        <Route path="/stories/:storyId/edit" element={<StoryEditor />} />
-        <Route path="/stories/:storyId/play" element={<StoryPlayer />} />
-      </Routes>
+      <Suspense fallback={<main className="page">Loading workspace...</main>}>
+        <Routes>
+          <Route path="/" element={<StoryList />} />
+          <Route path="/stories/:storyId/edit" element={<StoryEditor />} />
+          <Route path="/stories/:storyId/play" element={<StoryPlayer />} />
+        </Routes>
+      </Suspense>
     </div>
   );
 }

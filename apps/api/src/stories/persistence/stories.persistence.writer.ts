@@ -8,7 +8,7 @@ export async function replaceStoryGraph(client: Queryable, story: Story) {
   }
   for (const interaction of story.interactions) {
     for (const [triggerIndex, trigger] of interaction.triggers.entries()) {
-      await insertTrigger(client, interaction.id, trigger, triggerIndex);
+      await insertTrigger(client, story.id, interaction.id, trigger, triggerIndex);
     }
   }
 }
@@ -18,6 +18,7 @@ export async function persistStoryDifference(client: Queryable, before: Story, a
   const storyValues: unknown[] = [after.id];
   addChange(storyChanges, storyValues, 'title', before.title, after.title);
   addChange(storyChanges, storyValues, 'updated_at', before.updatedAt, after.updatedAt);
+  addChange(storyChanges, storyValues, 'revision', before.revision, after.revision);
   if (storyChanges.length > 0) {
     await client.query(`UPDATE stories SET ${storyChanges.join(', ')} WHERE id = $1`, storyValues);
   }
@@ -37,7 +38,7 @@ export async function persistStoryDifference(client: Queryable, before: Story, a
     if (!previous) {
       await insertInteraction(client, after.id, interaction, index);
       for (const [triggerIndex, trigger] of interaction.triggers.entries()) {
-        await insertTrigger(client, interaction.id, trigger, triggerIndex);
+        await insertTrigger(client, after.id, interaction.id, trigger, triggerIndex);
       }
       continue;
     }
@@ -48,7 +49,7 @@ export async function persistStoryDifference(client: Queryable, before: Story, a
       before.interactions.findIndex(({ id }) => id === interaction.id),
       index,
     );
-    await persistTriggerDifference(client, previous, interaction);
+    await persistTriggerDifference(client, after.id, previous, interaction);
   }
 }
 
@@ -76,34 +77,26 @@ async function insertInteraction(
 
 async function insertTrigger(
   client: Queryable,
+  storyId: string,
   outputInteractionId: string,
   trigger: Trigger,
   sortOrder: number,
 ) {
   await client.query(
-    `INSERT INTO triggers (id, output_interaction_id, sort_order)
-     VALUES ($1, $2, $3)`,
-    [trigger.id, outputInteractionId, sortOrder],
+    `INSERT INTO triggers (id, story_id, output_interaction_id, conditions, sort_order)
+     VALUES ($1, $2, $3, $4, $5)`,
+    [trigger.id, storyId, outputInteractionId, JSON.stringify(trigger.conditions), sortOrder],
   );
-  await replaceTriggerDetails(client, trigger);
+  await replaceTriggerInputs(client, storyId, trigger);
 }
 
-async function replaceTriggerDetails(client: Queryable, trigger: Trigger) {
+async function replaceTriggerInputs(client: Queryable, storyId: string, trigger: Trigger) {
   await client.query('DELETE FROM trigger_inputs WHERE trigger_id = $1', [trigger.id]);
-  await client.query('DELETE FROM trigger_conditions WHERE trigger_id = $1', [trigger.id]);
   for (const [index, inputId] of trigger.inputInteractionIds.entries()) {
     await client.query(
-      `INSERT INTO trigger_inputs (trigger_id, input_interaction_id, sort_order)
-       VALUES ($1, $2, $3)`,
-      [trigger.id, inputId, index],
-    );
-  }
-  for (const [index, condition] of trigger.conditions.entries()) {
-    await client.query(
-      `INSERT INTO trigger_conditions
-       (trigger_id, sort_order, interaction_id, has_been_visited)
+      `INSERT INTO trigger_inputs (story_id, trigger_id, input_interaction_id, sort_order)
        VALUES ($1, $2, $3, $4)`,
-      [trigger.id, index, condition.interactionId, condition.hasBeenVisited],
+      [storyId, trigger.id, inputId, index],
     );
   }
 }
@@ -129,6 +122,7 @@ async function updateInteractionDifference(
 
 async function persistTriggerDifference(
   client: Queryable,
+  storyId: string,
   beforeInteraction: Interaction,
   afterInteraction: Interaction,
 ) {
@@ -142,7 +136,7 @@ async function persistTriggerDifference(
   for (const [index, trigger] of afterInteraction.triggers.entries()) {
     const previous = beforeTriggers.get(trigger.id);
     if (!previous) {
-      await insertTrigger(client, afterInteraction.id, trigger, index);
+      await insertTrigger(client, storyId, afterInteraction.id, trigger, index);
       continue;
     }
     const previousIndex = beforeInteraction.triggers.findIndex(({ id }) => id === trigger.id);
@@ -154,7 +148,11 @@ async function persistTriggerDifference(
         JSON.stringify(trigger.inputInteractionIds) ||
       JSON.stringify(previous.conditions) !== JSON.stringify(trigger.conditions)
     ) {
-      await replaceTriggerDetails(client, trigger);
+      await client.query('UPDATE triggers SET conditions = $2 WHERE id = $1', [
+        trigger.id,
+        JSON.stringify(trigger.conditions),
+      ]);
+      await replaceTriggerInputs(client, storyId, trigger);
     }
   }
 }

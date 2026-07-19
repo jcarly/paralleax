@@ -40,3 +40,10 @@ Use these files as the persistent memory for project preferences and decisions:
 - Keep trigger logic aligned with the MVP model: a trigger belongs to exactly one output interaction and may have several input interactions.
 - Keep linked trigger editing on graph edges; keep interaction editing focused on interaction content and root trigger behavior.
 - Run relevant verification before finishing a change: typecheck, unit/component tests, Playwright when editor flows change, coverage when test breadth changes, and build.
+- For React performance work, consult `docs/react-best-practices.md`. Prioritize
+  measured waterfalls and bundle cost before rerender micro-optimizations.
+- Keep React Flow as a projection of story state. Do not add duplicated derived
+  state or memoization without identifying the ownership boundary and measuring
+  the affected editor flow.
+- Lazy-load heavy route-only UI such as the editor when practical, keep dynamic
+  imports statically analyzable, and preserve direct feature imports.

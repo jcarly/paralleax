@@ -20,6 +20,12 @@
 
 ## V0.2 - Persistence and Robustness
 
+- Implemented foundation: `StoryEditor`, React Flow, and `StoryPlayer` are loaded
+  as route chunks after measuring the previous monolithic production bundle.
+- Consolidate dependent multi-request editor commands into atomic API operations
+  when network profiling confirms a meaningful interaction waterfall.
+- Add representative large-story profiling before changing graph projection,
+  memoization, or React Flow synchronization for performance.
 - Save status feedback in the editor.
 - Visible save error handling.
 - Delete confirmations for interactions and triggers.
@@ -56,6 +62,12 @@
 
 - Implemented foundation: local user accounts, opaque cookie sessions, and
   creator-only story ownership.
+- Before shared editing, require story revisions on mutations and return a
+  conflict when a client writes from an obsolete revision. Define the editor's
+  merge or retry behavior before enforcing this precondition.
+- Introduce a centralized `StoryAccessPolicy` with explicit `read`, `edit`,
+  `manage`, and `delete` capabilities before adding permission checks to feature
+  code.
 - Account recovery, email verification, and external identity providers remain
   future deployment concerns.
 - Story default access settings for private stories, public reading, and public suggestions.
@@ -67,6 +79,29 @@
   accepted into the canonical story.
 - Approval rules that can require creator or authorized reviewer validation before suggested changes affect the story.
 - Event-log-based change history for accepted, rejected, and pending story modifications.
+
+## Deployment Readiness Backlog
+
+These items are intentionally deferred until public deployment work begins or
+the current implementation reaches the stated trigger:
+
+- Describe response DTOs, cookie authentication, and `401`, `403`, `404`, and
+  `409` responses in the existing OpenAPI document as the permission contract
+  stabilizes.
+- Introduce a stable machine-readable API error envelope before several clients
+  or permission/conflict errors depend on error parsing.
+- Add an API and PostgreSQL health endpoint, graceful pool shutdown, structured
+  request logs, and request correlation identifiers before operating a hosted
+  environment.
+- Re-evaluate CSRF protection against the final frontend/API domain topology;
+  add explicit Origin checks or CSRF tokens if cookie and SameSite boundaries do
+  not provide the intended protection.
+- Move SQL migrations to one ordered file per migration when the migration list
+  becomes difficult to review; keep the current lightweight runner and do not
+  introduce an ORM only for migration organization.
+- Split story read projections from write persistence only when permissions,
+  lightweight story lists, or progressive loading make the current repository
+  materially harder to maintain.
 
 ## V0.4 - Advanced Narrative Model
 

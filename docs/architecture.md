@@ -83,7 +83,7 @@ creation relies on an atomic unique-email insert rather than a prior lookup alon
 `StoriesRepository` owns PostgreSQL reads and writes. Every query, including a
 transactional mutation, is scoped by the authenticated creator id so knowledge
 of a story id cannot bypass ownership. It assembles relational story,
-interaction, trigger, input, and condition rows into the domain `Story` expected
+interaction, trigger, and input rows plus trigger condition JSONB into the domain `Story` expected
 by the service and writes field-level differences for mutations.
 `stories/persistence/stories.persistence.writer.ts` owns the relational write plan: full graph
 replacement for initial saves and entity-level differences for mutations. The
@@ -95,11 +95,12 @@ shape, so storage and query projections can evolve without moving endpoint
 behavior or shared domain rules.
 
 `AppConfigService` is the only runtime boundary for application environment
-values. It validates database and browser origins, port, SSL mode, environment,
-and optional legacy ownership configuration during startup. Consumers do not
-read `process.env` directly.
+values. It validates database and browser origins, port, verified SSL settings,
+and environment during startup. Production endpoints must be explicit. Consumers
+do not read `process.env` directly.
 
-Story mutations execute inside a transaction. The repository compares the loaded
+Story mutations execute inside a transaction and lock their story row before
+reading the graph. The repository compares the loaded
 domain snapshot with the mutated result, then updates only changed story or
 interaction fields and changed trigger structures. Independent concurrent field
 updates therefore do not rewrite an unrelated story document. A later
@@ -129,6 +130,13 @@ component:
 The web app may map a story into React Flow nodes and edges, but it must not
 store story semantics as React Flow data. React Flow data is a projection of the
 domain model.
+
+Vite loads the editor and reader as separate route chunks. The authenticated
+shell and story list therefore do not download React Flow until an author opens
+the editor. Route imports remain literal so Vite can analyze and split them
+deterministically. Edit and reader links preload their corresponding chunk on
+hover or keyboard focus so explicit navigation intent hides most of the added
+route-loading latency.
 
 ## React Flow Boundary
 
@@ -258,8 +266,9 @@ The API accesses storage through `StoriesRepository` instead of coupling
 while shared story operations own trigger cleanup, normalization, reader rules,
 and merge semantics.
 
-The current PostgreSQL schema stores Story, Interaction, Trigger, trigger input,
-and trigger condition state in relational tables. The repository reconstructs
+The current PostgreSQL schema stores Story, Interaction, Trigger, and trigger
+input state in relational tables. Ordered trigger conditions are stored as JSONB
+on their owning trigger. The repository reconstructs
 the existing domain `Story`, so persistence normalization does not leak into the
 shared engine or the HTTP contract. JSON remains a future versioned import/export
 format rather than the database source of truth.

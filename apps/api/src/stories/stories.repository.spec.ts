@@ -8,6 +8,7 @@ const mockClientQuery = jest.fn();
 const mockRelease = jest.fn();
 const mockConnect = jest.fn();
 const mockRunMigrations = jest.fn();
+const ownerId = 'user-1';
 
 function story(id = 'story-1'): Story {
   return {
@@ -49,6 +50,7 @@ function graphStory(): Story {
 function storyRow(value = story()) {
   return {
     id: value.id,
+    revision: value.revision ?? 1,
     title: value.title,
     created_at: new Date(value.createdAt),
     updated_at: new Date(value.updatedAt),
@@ -64,7 +66,8 @@ function repository() {
 
 function relationalRead(query: jest.Mock, saved = story()) {
   query.mockImplementation((sql: string) => {
-    if (sql.includes('FROM stories')) return Promise.resolve({ rows: [storyRow(saved)] });
+    if (sql.includes('FROM stories'))
+      return Promise.resolve({ rows: [storyRow(saved)], rowCount: 1 });
     if (sql.includes('FROM trigger_inputs')) {
       return Promise.resolve({
         rows: saved.interactions.flatMap((interaction) =>
@@ -79,21 +82,6 @@ function relationalRead(query: jest.Mock, saved = story()) {
         ),
       });
     }
-    if (sql.includes('FROM trigger_conditions')) {
-      return Promise.resolve({
-        rows: saved.interactions.flatMap((interaction) =>
-          interaction.triggers.flatMap((trigger) =>
-            trigger.conditions.map((condition, index) => ({
-              story_id: saved.id,
-              trigger_id: trigger.id,
-              interaction_id: condition.interactionId,
-              has_been_visited: condition.hasBeenVisited,
-              sort_order: index,
-            })),
-          ),
-        ),
-      });
-    }
     if (sql.includes('FROM triggers')) {
       return Promise.resolve({
         rows: saved.interactions.flatMap((interaction) =>
@@ -102,6 +90,7 @@ function relationalRead(query: jest.Mock, saved = story()) {
             story_id: saved.id,
             output_interaction_id: interaction.id,
             sort_order: index,
+            conditions: trigger.conditions,
           })),
         ),
       });
@@ -134,13 +123,11 @@ describe('StoriesRepository', () => {
     const saved = story();
     relationalRead(mockQuery, saved);
 
-    const listed = await repository().list();
+    const listed = await repository().list(ownerId);
     listed[0].title = 'Mutated outside repository';
 
     expect(mockRunMigrations).toHaveBeenCalledTimes(1);
-    expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining('FROM stories'), [
-      'migration-user',
-    ]);
+    expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining('FROM stories'), [ownerId]);
     expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining('FROM interactions'), [
       [saved.id],
     ]);
@@ -151,16 +138,16 @@ describe('StoriesRepository', () => {
     const saved = graphStory();
     relationalRead(mockQuery, saved);
 
-    await expect(repository().find(saved.id)).resolves.toEqual(saved);
+    await expect(repository().find(saved.id, ownerId)).resolves.toEqual({ ...saved, revision: 1 });
     expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining('WHERE id = $1'), [
       saved.id,
-      'migration-user',
+      ownerId,
     ]);
   });
 
   it('returns no stories without querying graph tables when metadata is empty', async () => {
     mockQuery.mockResolvedValue({ rows: [] });
-    await expect(repository().list()).resolves.toEqual([]);
+    await expect(repository().list(ownerId)).resolves.toEqual([]);
     expect(mockQuery).toHaveBeenCalledTimes(1);
   });
 
@@ -168,15 +155,16 @@ describe('StoriesRepository', () => {
     mockClientQuery.mockResolvedValue({ rows: [], rowCount: 1 });
     const saved = story();
 
-    await repository().save(saved);
+    await repository().save(saved, ownerId);
 
     expect(mockClientQuery).toHaveBeenCalledWith('BEGIN');
     expect(mockClientQuery).toHaveBeenCalledWith(expect.stringContaining('ON CONFLICT (id)'), [
       saved.id,
+      1,
       saved.title,
       saved.createdAt,
       saved.updatedAt,
-      'migration-user',
+      ownerId,
     ]);
     expect(mockClientQuery).toHaveBeenCalledWith('DELETE FROM interactions WHERE story_id = $1', [
       saved.id,
@@ -188,7 +176,7 @@ describe('StoriesRepository', () => {
     mockClientQuery.mockResolvedValue({ rows: [], rowCount: 1 });
     const saved = graphStory();
 
-    await repository().save(saved);
+    await repository().save(saved, ownerId);
 
     expect(mockClientQuery).toHaveBeenCalledWith(
       expect.stringContaining('INSERT INTO interactions'),
@@ -196,25 +184,23 @@ describe('StoriesRepository', () => {
     );
     expect(mockClientQuery).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO triggers'), [
       'trigger-2',
+      saved.id,
       'interaction-2',
+      JSON.stringify([{ interactionId: 'interaction-1', hasBeenVisited: true }]),
       0,
     ]);
     expect(mockClientQuery).toHaveBeenCalledWith(
       expect.stringContaining('INSERT INTO trigger_inputs'),
-      ['trigger-2', 'interaction-1', 0],
-    );
-    expect(mockClientQuery).toHaveBeenCalledWith(
-      expect.stringContaining('INSERT INTO trigger_conditions'),
-      ['trigger-2', 0, 'interaction-1', true],
+      [saved.id, 'trigger-2', 'interaction-1', 0],
     );
   });
 
   it('deletes stories by owner and id', async () => {
     mockQuery.mockResolvedValue({ rowCount: 1 });
-    await expect(repository().delete('story-1')).resolves.toBe(true);
+    await expect(repository().delete('story-1', ownerId)).resolves.toBe(true);
     expect(mockQuery).toHaveBeenCalledWith(
       'DELETE FROM stories WHERE id = $1 AND creator_user_id = $2',
-      ['story-1', 'migration-user'],
+      ['story-1', ownerId],
     );
   });
 
@@ -222,18 +208,23 @@ describe('StoriesRepository', () => {
     const saved = story();
     let current = saved;
     mockClientQuery.mockImplementation((sql: string, values?: unknown[]) => {
-      if (sql.includes('FROM stories')) return Promise.resolve({ rows: [storyRow(current)] });
+      if (sql.includes('FROM stories'))
+        return Promise.resolve({ rows: [storyRow(current)], rowCount: 1 });
       if (sql.startsWith('UPDATE stories SET')) {
         current = { ...current, title: values?.[1] as string, updatedAt: values?.[2] as string };
       }
       return Promise.resolve({ rows: [], rowCount: 1 });
     });
 
-    const updated = await repository().mutate(saved.id, (value) => ({
-      ...value,
-      title: 'Updated transactionally',
-      updatedAt: '2026-01-02T00:00:00.000Z',
-    }));
+    const updated = await repository().mutate(
+      saved.id,
+      (value) => ({
+        ...value,
+        title: 'Updated transactionally',
+        updatedAt: '2026-01-02T00:00:00.000Z',
+      }),
+      ownerId,
+    );
 
     expect(updated?.title).toBe('Updated transactionally');
     expect(mockClientQuery).toHaveBeenCalledWith(
@@ -247,20 +238,24 @@ describe('StoriesRepository', () => {
     const saved = graphStory();
     relationalRead(mockClientQuery, saved);
 
-    await repository().mutate(saved.id, (value) => {
-      value.interactions[0].title = 'Renamed start';
-      value.interactions[0].position = { x: 50, y: 60 };
-      value.interactions[0].triggers[0].conditions = [
-        { interactionId: 'interaction-1', hasBeenVisited: false },
-      ];
-      value.interactions[0].triggers.push({
-        id: 'trigger-3',
-        inputInteractionIds: [],
-        conditions: [],
-      });
-      value.interactions.splice(1, 1);
-      return value;
-    });
+    await repository().mutate(
+      saved.id,
+      (value) => {
+        value.interactions[0].title = 'Renamed start';
+        value.interactions[0].position = { x: 50, y: 60 };
+        value.interactions[0].triggers[0].conditions = [
+          { interactionId: 'interaction-1', hasBeenVisited: false },
+        ];
+        value.interactions[0].triggers.push({
+          id: 'trigger-3',
+          inputInteractionIds: [],
+          conditions: [],
+        });
+        value.interactions.splice(1, 1);
+        return value;
+      },
+      ownerId,
+    );
 
     expect(mockClientQuery).toHaveBeenCalledWith(
       expect.stringContaining(
@@ -274,21 +269,27 @@ describe('StoriesRepository', () => {
     );
     expect(mockClientQuery).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO triggers'), [
       'trigger-3',
+      saved.id,
       'interaction-1',
+      JSON.stringify([]),
       1,
     ]);
     expect(mockClientQuery).toHaveBeenCalledWith(
-      expect.stringContaining('INSERT INTO trigger_conditions'),
-      ['trigger-1', 0, 'interaction-1', false],
+      'UPDATE triggers SET conditions = $2 WHERE id = $1',
+      ['trigger-1', JSON.stringify([{ interactionId: 'interaction-1', hasBeenVisited: false }])],
     );
   });
 
   it('rolls back and releases the transaction when a mutation fails', async () => {
     relationalRead(mockClientQuery);
     await expect(
-      repository().mutate('story-1', () => {
-        throw new Error('mutation failed');
-      }),
+      repository().mutate(
+        'story-1',
+        () => {
+          throw new Error('mutation failed');
+        },
+        ownerId,
+      ),
     ).rejects.toThrow('mutation failed');
 
     expect(mockClientQuery).toHaveBeenLastCalledWith('ROLLBACK');

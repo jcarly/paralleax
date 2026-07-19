@@ -91,17 +91,6 @@ export class AuthRepository {
     await this.database.pool.query('DELETE FROM sessions WHERE expires_at <= now()');
   }
 
-  async claimMigratedStories(userId: string): Promise<number> {
-    await this.migrator.run();
-    const result = await this.database.pool.query(
-      `UPDATE stories
-       SET creator_user_id = $1
-       WHERE creator_user_id = 'migration-user'`,
-      [userId],
-    );
-    return result.rowCount ?? 0;
-  }
-
   async deleteSession(tokenHash: string): Promise<void> {
     await this.migrator.run();
     await this.database.pool.query('DELETE FROM sessions WHERE token_hash = $1', [tokenHash]);

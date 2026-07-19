@@ -163,4 +163,41 @@ export const databaseMigrations: DatabaseMigration[] = [
         ON trigger_conditions(interaction_id);
     `,
   },
+  {
+    id: '202607180006_harden_story_graph',
+    sql: `
+      DELETE FROM stories;
+      DELETE FROM users WHERE id = 'migration-user';
+
+      ALTER TABLE stories ADD COLUMN revision integer NOT NULL DEFAULT 1;
+      DROP TABLE trigger_conditions;
+
+      ALTER TABLE interactions
+      ADD CONSTRAINT interactions_story_id_id_unique UNIQUE (story_id, id);
+
+      ALTER TABLE triggers
+      DROP CONSTRAINT triggers_output_interaction_id_fkey,
+      ADD COLUMN story_id text NOT NULL,
+      ADD COLUMN conditions jsonb NOT NULL DEFAULT '[]'::jsonb,
+      ADD CONSTRAINT triggers_conditions_array CHECK (jsonb_typeof(conditions) = 'array'),
+      ADD CONSTRAINT triggers_story_id_id_unique UNIQUE (story_id, id),
+      ADD CONSTRAINT triggers_output_interaction_fkey
+        FOREIGN KEY (story_id, output_interaction_id)
+        REFERENCES interactions(story_id, id) ON DELETE CASCADE;
+
+      ALTER TABLE trigger_inputs
+      DROP CONSTRAINT trigger_inputs_trigger_id_fkey,
+      DROP CONSTRAINT trigger_inputs_input_interaction_id_fkey,
+      ADD COLUMN story_id text NOT NULL,
+      ADD CONSTRAINT trigger_inputs_trigger_fkey
+        FOREIGN KEY (story_id, trigger_id)
+        REFERENCES triggers(story_id, id) ON DELETE CASCADE,
+      ADD CONSTRAINT trigger_inputs_interaction_fkey
+        FOREIGN KEY (story_id, input_interaction_id)
+        REFERENCES interactions(story_id, id) ON DELETE CASCADE;
+
+      CREATE INDEX triggers_story_id_idx ON triggers(story_id);
+      CREATE INDEX trigger_inputs_story_id_idx ON trigger_inputs(story_id);
+    `,
+  },
 ];

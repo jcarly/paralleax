@@ -5,6 +5,7 @@ import { CurrentUser, Public, type RequestUser } from './auth.decorators';
 import { AuthService } from './auth.service';
 import { CredentialsDto } from './dto/credentials.dto';
 import { readSessionCookie, sessionCookieName } from './session-cookie';
+import { Throttle } from '@nestjs/throttler';
 
 @Controller('auth')
 export class AuthController {
@@ -15,6 +16,7 @@ export class AuthController {
 
   @Public()
   @Post('register')
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
   async register(@Body() input: CredentialsDto, @Res({ passthrough: true }) response: Response) {
     const result = await this.auth.register(input.email, input.password);
     this.setSessionCookie(response, result.token);
@@ -24,6 +26,7 @@ export class AuthController {
   @Public()
   @Post('login')
   @HttpCode(200)
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   async login(@Body() input: CredentialsDto, @Res({ passthrough: true }) response: Response) {
     const result = await this.auth.login(input.email, input.password);
     this.setSessionCookie(response, result.token);

@@ -20,10 +20,8 @@ permission hierarchies, OAuth providers, or player profiles.
   only token hashes in PostgreSQL.
 - Make story ownership mandatory at the persistence boundary and scope every
   story read or mutation to the authenticated owner.
-- Preserve pre-user stories under a non-login migration user.
-- Allow those quarantined stories to be claimed only by the account whose email
-  matches the deployment's explicit `LEGACY_STORY_OWNER_EMAIL` setting. An unset
-  setting keeps them quarantined.
+- Discard pre-user stories when the normalized graph migration is applied. They
+  contain test-only data, so no reserved migration identity remains afterward.
 - Purge expired sessions opportunistically during authentication activity and
   index their expiry timestamp.
 - Keep NestJS as the identity and authorization boundary so a future managed

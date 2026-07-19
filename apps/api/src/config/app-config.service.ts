@@ -9,7 +9,7 @@ export class AppConfigService {
   readonly port!: number;
   readonly corsOrigin!: string;
   readonly nodeEnvironment!: NodeEnvironment;
-  readonly legacyStoryOwnerEmail?: string;
+  readonly postgresSslCa?: string;
 
   constructor() {
     Object.assign(this, loadAppConfig(process.env));
@@ -21,12 +21,19 @@ export class AppConfigService {
 }
 
 export function loadAppConfig(environment: NodeJS.ProcessEnv) {
+  const nodeEnvironment = enumValue('NODE_ENV', environment.NODE_ENV ?? 'development', [
+    'development',
+    'test',
+    'production',
+  ] as const);
+  if (nodeEnvironment === 'production' && !environment.DATABASE_URL) {
+    throw new Error('DATABASE_URL is required in production');
+  }
+  if (nodeEnvironment === 'production' && !environment.CORS_ORIGIN) {
+    throw new Error('CORS_ORIGIN is required in production');
+  }
   return {
-    nodeEnvironment: enumValue('NODE_ENV', environment.NODE_ENV ?? 'development', [
-      'development',
-      'test',
-      'production',
-    ] as const),
+    nodeEnvironment,
     databaseUrl: validUrl(
       'DATABASE_URL',
       environment.DATABASE_URL ?? 'postgres://paralleax:paralleax@localhost:5432/paralleax',
@@ -38,7 +45,7 @@ export function loadAppConfig(environment: NodeJS.ProcessEnv) {
     ]),
     port: validPort(environment.PORT ?? '3000'),
     postgresSsl: booleanValue('POSTGRES_SSL', environment.POSTGRES_SSL ?? 'false'),
-    legacyStoryOwnerEmail: optionalEmail(environment.LEGACY_STORY_OWNER_EMAIL),
+    postgresSslCa: environment.POSTGRES_SSL_CA?.replace(/\\n/g, '\n'),
   };
 }
 
@@ -72,13 +79,4 @@ function booleanValue(name: string, value: string) {
 function enumValue<T extends string>(name: string, value: string, allowed: readonly T[]): T {
   if (allowed.includes(value as T)) return value as T;
   throw new Error(`${name} must be one of: ${allowed.join(', ')}`);
-}
-
-function optionalEmail(value: string | undefined) {
-  const normalized = value?.trim().toLowerCase();
-  if (!normalized) return undefined;
-  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(normalized)) {
-    throw new Error('LEGACY_STORY_OWNER_EMAIL must be a valid email address');
-  }
-  return normalized;
 }

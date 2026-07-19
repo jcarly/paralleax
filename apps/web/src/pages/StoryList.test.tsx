@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Story } from '@paralleax/shared';
 import { StoryList } from './StoryList';
 import { api } from '../api';
+import { loadStoryEditor, loadStoryPlayer } from './storyRouteLoaders';
 
 vi.mock('../api', () => ({
   api: {
@@ -14,6 +15,11 @@ vi.mock('../api', () => ({
     createDemoStory: vi.fn(),
     deleteStory: vi.fn(),
   },
+}));
+
+vi.mock('./storyRouteLoaders', () => ({
+  loadStoryEditor: vi.fn(() => Promise.resolve()),
+  loadStoryPlayer: vi.fn(() => Promise.resolve()),
 }));
 
 const stories: Story[] = [
@@ -43,6 +49,7 @@ describe('StoryList', () => {
   });
 
   it('loads and displays stories with edit and play links', async () => {
+    const user = userEvent.setup();
     vi.mocked(api.listStories).mockResolvedValue(structuredClone(stories));
 
     render(
@@ -65,6 +72,11 @@ describe('StoryList', () => {
       'href',
       '/stories/story-1/play',
     );
+
+    await user.hover(within(firstCard).getByRole('link', { name: 'Edit' }));
+    expect(loadStoryEditor).toHaveBeenCalledOnce();
+    await user.hover(within(firstCard).getByRole('link', { name: 'Read' }));
+    expect(loadStoryPlayer).toHaveBeenCalledOnce();
   });
 
   it('creates and deletes a story from the list', async () => {

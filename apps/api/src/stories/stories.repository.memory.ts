@@ -5,19 +5,19 @@ export class InMemoryStoriesRepository {
   private readonly owners = new Map<string, string>();
   private readonly mutationQueues = new Map<string, Promise<void>>();
 
-  async list(ownerId = 'migration-user'): Promise<Story[]> {
+  async list(ownerId: string): Promise<Story[]> {
     return [...this.stories.entries()]
       .filter(([id]) => this.owners.get(id) === ownerId)
       .map(([, story]) => structuredClone(story));
   }
 
-  async find(id: string, ownerId = 'migration-user'): Promise<Story | undefined> {
+  async find(id: string, ownerId: string): Promise<Story | undefined> {
     if (this.owners.get(id) !== ownerId) return undefined;
     const story = this.stories.get(id);
     return story ? structuredClone(story) : undefined;
   }
 
-  async save(story: Story, ownerId = 'migration-user'): Promise<void> {
+  async save(story: Story, ownerId: string): Promise<void> {
     this.stories.set(story.id, structuredClone(story));
     this.owners.set(story.id, ownerId);
   }
@@ -25,7 +25,7 @@ export class InMemoryStoriesRepository {
   async mutate(
     id: string,
     mutation: (story: Story) => Story | Promise<Story>,
-    ownerId = 'migration-user',
+    ownerId: string,
   ): Promise<Story | undefined> {
     const previous = this.mutationQueues.get(id) ?? Promise.resolve();
     let release!: () => void;
@@ -46,7 +46,7 @@ export class InMemoryStoriesRepository {
     }
   }
 
-  async delete(id: string, ownerId = 'migration-user'): Promise<boolean> {
+  async delete(id: string, ownerId: string): Promise<boolean> {
     if (this.owners.get(id) !== ownerId) return false;
     this.owners.delete(id);
     return this.stories.delete(id);

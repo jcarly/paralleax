@@ -25,11 +25,12 @@ This folder is the product and technical source of truth for the project.
 19. [Mockups](mockups/README.md): static UX references for canvas and simulation design.
 20. [Business model](business-model.md): open source core and platform philosophy.
 21. [Hosting and scale](hosting-and-scale.md): durable deployment and growth principles.
-22. [Non-goals](non-goals.md): boundaries that protect the product direction.
-23. [Test scenarios](test-scenarios.md): test scenarios to maintain.
-24. [Roadmap](roadmap.md): planned progression after the MVP.
-25. [Open questions](open-questions.md): postponed product and architecture questions.
-26. [Changelog](../CHANGELOG.md): notable implementation, test, and documentation changes.
+22. [React best practices](react-best-practices.md): performance rules adapted to React, Vite, and React Flow.
+23. [Non-goals](non-goals.md): boundaries that protect the product direction.
+24. [Test scenarios](test-scenarios.md): test scenarios to maintain.
+25. [Roadmap](roadmap.md): planned progression after the MVP.
+26. [Open questions](open-questions.md): postponed product and architecture questions.
+27. [Changelog](../CHANGELOG.md): notable implementation, test, and documentation changes.
 
 ## Documentation Map
 
@@ -57,6 +58,7 @@ docs/
   mockups/                  Static UX mockups
   business-model.md         Open source and platform philosophy
   hosting-and-scale.md      Deployment and scalability direction
+  react-best-practices.md   React, Vite, and React Flow performance rules
   non-goals.md              Product boundaries and non-objectives
   test-scenarios.md         Regression scenarios
   roadmap.md                Product progression

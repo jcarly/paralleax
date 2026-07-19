@@ -9,6 +9,7 @@ const connectionString = process.env.POSTGRES_TEST_DATABASE_URL;
 const describePostgres = connectionString ? describe : describe.skip;
 
 describePostgres('StoriesRepository PostgreSQL integration', () => {
+  const ownerId = `postgres-user-${randomUUID()}`;
   const pool = new Pool({ connectionString });
   const database = { pool } as DatabaseConnection;
   const migrator = new DatabaseMigrator(database);
@@ -18,13 +19,19 @@ describePostgres('StoriesRepository PostgreSQL integration', () => {
   beforeAll(async () => {
     await waitForPostgres(pool);
     await migrator.run();
+    await pool.query(
+      `INSERT INTO users (id, email, password_hash, created_at)
+       VALUES ($1, $2, 'test-only', now())`,
+      [ownerId, `${ownerId}@example.test`],
+    );
   });
 
   afterEach(async () => {
-    await Promise.all(storyIds.splice(0).map((id) => repository.delete(id)));
+    await Promise.all(storyIds.splice(0).map((id) => repository.delete(id, ownerId)));
   });
 
   afterAll(async () => {
+    await pool.query('DELETE FROM users WHERE id = $1', [ownerId]);
     await pool.end();
   });
 
@@ -64,15 +71,19 @@ describePostgres('StoriesRepository PostgreSQL integration', () => {
 
   it('persists an interaction move across repository instances', async () => {
     const story = persistedStory();
-    await repository.save(story);
-    await repository.mutate(story.id, (current) => {
-      current.interactions[0].position = { x: 420, y: 360 };
-      current.updatedAt = new Date().toISOString();
-      return current;
-    });
+    await repository.save(story, ownerId);
+    await repository.mutate(
+      story.id,
+      (current) => {
+        current.interactions[0].position = { x: 420, y: 360 };
+        current.updatedAt = new Date().toISOString();
+        return current;
+      },
+      ownerId,
+    );
 
     const reloadedRepository = new StoriesRepository(database, migrator);
-    const reloaded = await reloadedRepository.find(story.id);
+    const reloaded = await reloadedRepository.find(story.id, ownerId);
     expect(reloaded?.interactions[0]).toMatchObject({
       title: 'Original title',
       body: 'Original content',
@@ -87,21 +98,29 @@ describePostgres('StoriesRepository PostgreSQL integration', () => {
 
   it('merges concurrent field-level mutations without losing fields', async () => {
     const story = persistedStory();
-    await repository.save(story);
+    await repository.save(story, ownerId);
 
     await Promise.all([
-      repository.mutate(story.id, async (current) => {
-        current.interactions[0].title = 'Concurrent title';
-        await new Promise((resolve) => setTimeout(resolve, 75));
-        return current;
-      }),
-      repository.mutate(story.id, (current) => {
-        current.interactions[0].body = 'Concurrent content';
-        return current;
-      }),
+      repository.mutate(
+        story.id,
+        async (current) => {
+          current.interactions[0].title = 'Concurrent title';
+          await new Promise((resolve) => setTimeout(resolve, 75));
+          return current;
+        },
+        ownerId,
+      ),
+      repository.mutate(
+        story.id,
+        (current) => {
+          current.interactions[0].body = 'Concurrent content';
+          return current;
+        },
+        ownerId,
+      ),
     ]);
 
-    const reloaded = await repository.find(story.id);
+    const reloaded = await repository.find(story.id, ownerId);
     expect(reloaded?.interactions[0]).toMatchObject({
       title: 'Concurrent title',
       body: 'Concurrent content',
@@ -110,7 +129,7 @@ describePostgres('StoriesRepository PostgreSQL integration', () => {
 
   it('stores the story graph in relational tables', async () => {
     const story = persistedStory();
-    await repository.save(story);
+    await repository.save(story, ownerId);
 
     const result = await pool.query(
       `SELECT
@@ -122,10 +141,8 @@ describePostgres('StoriesRepository PostgreSQL integration', () => {
           JOIN triggers ON triggers.id = trigger_inputs.trigger_id
           JOIN interactions ON interactions.id = triggers.output_interaction_id
           WHERE interactions.story_id = $1) AS inputs,
-         (SELECT count(*)::int FROM trigger_conditions
-          JOIN triggers ON triggers.id = trigger_conditions.trigger_id
-          JOIN interactions ON interactions.id = triggers.output_interaction_id
-          WHERE interactions.story_id = $1) AS conditions`,
+         (SELECT coalesce(sum(jsonb_array_length(conditions)), 0)::int FROM triggers
+          WHERE story_id = $1) AS conditions`,
       [story.id],
     );
 

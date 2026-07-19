@@ -60,13 +60,4 @@ describe('AuthRepository', () => {
       'token-hash',
     ]);
   });
-
-  it('claims stories quarantined under the migration user', async () => {
-    query.mockResolvedValue({ rowCount: 3 });
-    await expect(repository.claimMigratedStories(user.id)).resolves.toBe(3);
-    expect(query).toHaveBeenCalledWith(
-      expect.stringContaining("creator_user_id = 'migration-user'"),
-      [user.id],
-    );
-  });
 });

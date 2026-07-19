@@ -22,13 +22,6 @@ error state.
 Stories are private to the account that creates them. Another account cannot
 list, open, edit, or delete them.
 
-### Recover Stories Created Before Accounts
-
-Older local stories are quarantined under a non-login migration account. To
-recover them, set `LEGACY_STORY_OWNER_EMAIL` in `.env` to the intended owner's
-email, restart the API, then register or sign in with that exact email. Recovery
-is idempotent; leaving the setting empty keeps those stories quarantined.
-
 ## Create a Story
 
 1. Open the story list.

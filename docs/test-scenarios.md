@@ -16,8 +16,6 @@ Cover the critical MVP paths: Story, Interaction, Trigger, and Reader.
   to sign-in with a clear explanation.
 - Authentication: expired database sessions are purged during authentication
   activity.
-- Legacy ownership: quarantined stories are claimed only by the explicitly
-  configured owner email.
 - API ownership: unauthenticated story requests are rejected.
 - API ownership: one account cannot list, read, mutate, or delete another
   account's stories.
@@ -32,7 +30,9 @@ Cover the critical MVP paths: Story, Interaction, Trigger, and Reader.
 - API: database migrations create schema state and skip already-applied
   migrations.
 - API configuration: valid local defaults are typed, while malformed database
-  URLs, origins, ports, SSL flags, environments, and legacy emails fail fast.
+  URLs, origins, ports, SSL flags, environments, and missing production endpoints fail fast.
+- API/database: trigger inputs, outputs, and condition references cannot cross
+  story boundaries; relational references cascade when their owner is deleted.
 - API: story repository assembles, stores, reads, lists, and deletes relational
   story graphs.
 - PostgreSQL integration: moving an interaction survives a fresh repository

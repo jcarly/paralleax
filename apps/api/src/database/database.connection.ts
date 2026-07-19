@@ -9,7 +9,12 @@ export class DatabaseConnection implements OnModuleDestroy {
   constructor(config: AppConfigService) {
     this.pool = new Pool({
       connectionString: config.databaseUrl,
-      ssl: config.postgresSsl ? { rejectUnauthorized: false } : undefined,
+      ssl: config.postgresSsl
+        ? {
+            rejectUnauthorized: true,
+            ...(config.postgresSslCa ? { ca: config.postgresSslCa } : {}),
+          }
+        : undefined,
     });
   }
 

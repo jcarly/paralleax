@@ -1,5 +1,29 @@
 # Changelog
 
+## 2026-07-18
+
+- Stored ordered trigger conditions as JSONB on `triggers` while retaining
+  relational trigger inputs.
+- Enforced same-story trigger outputs and inputs with composite foreign keys and
+  cascade deletion, and rejected foreign condition references at the API boundary.
+- Removed the reserved migration user and automatic startup seed; PostgreSQL tests
+  now create their own persisted user and data explicitly.
+- Serialized story mutations with a row lock and introduced story revision metadata.
+- Added bounded DTO validation except for unrestricted interaction body length.
+- Added Helmet, authentication rate limits, verified PostgreSQL TLS configuration,
+  production configuration requirements, OpenAPI documentation, and clearer web
+  error messages.
+- Documented the deferred API hardening backlog and its implementation triggers,
+  including revision conflicts, centralized access policy, operations, error
+  contracts, CSRF review, migration layout, and repository projections.
+- Added project-specific React, Vite, and React Flow performance guidance based
+  on the Vercel React Best Practices catalog, with measurement requirements and
+  a prioritized frontend optimization backlog.
+- Split the editor, React Flow, and reader into lazy Vite route chunks so the
+  authenticated shell and story list no longer download editor code upfront.
+- Preload editor and reader route chunks when their story-list links receive
+  hover or keyboard focus.
+
 All notable project changes are tracked here.
 
 This project follows a lightweight [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) style while the MVP is still evolving quickly. Entries are grouped under `Unreleased` until the first tagged version.

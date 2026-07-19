@@ -13,7 +13,16 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     if (response.status === 401 && !path.startsWith('/auth/')) {
       window.dispatchEvent(new Event('paralleax:session-expired'));
     }
-    throw new Error((await response.text()) || `HTTP ${response.status}`);
+    const body = await response.text();
+    let message = body || `HTTP ${response.status}`;
+    try {
+      const error = JSON.parse(body) as { message?: string | string[] };
+      if (Array.isArray(error.message)) message = error.message.join(', ');
+      else if (error.message) message = error.message;
+    } catch {
+      // Preserve plain-text and non-JSON error responses.
+    }
+    throw new Error(message);
   }
   return response.status === 204 ? (undefined as T) : (response.json() as Promise<T>);
 }

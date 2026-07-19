@@ -24,9 +24,8 @@ validated.
 - `packages/shared`: shared MVP model, reader rules, story operations, trigger cleanup rules, merge rules, and graph placement helpers used by both the web app and API.
 - `docs`: product, architecture, ADR, UML, and test scenario documentation.
 
-The API persists authored stories in PostgreSQL. The MVP stores each story as a
-domain JSON document so the database does not reshape trigger semantics before
-the narrative core is stable.
+The API persists stories, interactions, triggers, and trigger inputs relationally
+in PostgreSQL. Trigger conditions remain an ordered JSONB value owned by their trigger.
 
 ## Documentation
 
@@ -89,17 +88,9 @@ The API expects PostgreSQL. By default it uses:
 DATABASE_URL=postgres://paralleax:paralleax@localhost:5432/paralleax
 ```
 
-The API also validates `PORT`, `POSTGRES_SSL`, `CORS_ORIGIN`, `NODE_ENV`, and the
-optional `LEGACY_STORY_OWNER_EMAIL` at startup. See `.env.example` for local
-defaults.
-
-Stories created before accounts were introduced remain quarantined by default.
-To assign them to a specific local account, set `LEGACY_STORY_OWNER_EMAIL` before
-that account registers or signs in:
-
-```dotenv
-LEGACY_STORY_OWNER_EMAIL=author@example.com
-```
+The API also validates `PORT`, `POSTGRES_SSL`, `POSTGRES_SSL_CA`, `CORS_ORIGIN`,
+and `NODE_ENV` at startup. `DATABASE_URL` and `CORS_ORIGIN` must be explicit in
+production. OpenAPI documentation is available at http://localhost:3000/api/docs.
 
 Using Docker Compose is the easiest way to start the API, web app, and local
 database together.

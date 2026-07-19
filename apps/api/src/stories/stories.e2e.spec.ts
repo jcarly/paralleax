@@ -25,8 +25,7 @@ describe('Stories API', () => {
       .useValue({
         userForToken: jest.fn((token?: string) =>
           Promise.resolve({
-            id:
-              token === 'user-two' ? 'user-2' : token === 'user-one' ? 'user-1' : 'migration-user',
+            id: token === 'user-two' ? 'user-2' : token === 'user-one' ? 'user-1' : 'test-user',
             email: `${token ?? 'test'}@paralleax.invalid`,
             createdAt: '2026-01-01T00:00:00.000Z',
           }),
@@ -69,9 +68,7 @@ describe('Stories API', () => {
     const response = await request(httpServer).get('/api/stories').expect(200);
 
     expect(Array.isArray(response.body)).toBe(true);
-    expect(response.body.length).toBeGreaterThan(0);
-    expect(response.body[0]).toHaveProperty('id');
-    expect(response.body[0]).toHaveProperty('interactions');
+    expect(response.body).toEqual([]);
   });
 
   it('POST /api/stories creates a story', async () => {
@@ -90,6 +87,11 @@ describe('Stories API', () => {
   it('POST /api/stories requires a non-null title', async () => {
     await request(httpServer).post('/api/stories').send({}).expect(400);
     await request(httpServer).post('/api/stories').send({ title: null }).expect(400);
+    await request(httpServer).post('/api/stories').send({ title: '' }).expect(400);
+    await request(httpServer)
+      .post('/api/stories')
+      .send({ title: 'x'.repeat(201) })
+      .expect(400);
   });
 
   it('POST /api/stories/demo creates a populated demo story', async () => {
@@ -355,6 +357,23 @@ describe('Stories API', () => {
     expect(updatedChild.triggers[0].conditions).toEqual([
       { interactionId: parent.id, hasBeenVisited: true },
     ]);
+  });
+
+  it('rejects trigger references to interactions from another story', async () => {
+    const first = await createStory('First story');
+    const firstGraph = await createInteraction(first.id);
+    const target = firstGraph.interactions[0];
+    const second = await createStory('Second story');
+    const secondGraph = await createInteraction(second.id);
+    const foreign = secondGraph.interactions[0];
+
+    await request(httpServer)
+      .patch(`/api/stories/${first.id}/interactions/${target.id}/triggers/${target.triggers[0].id}`)
+      .send({
+        inputInteractionIds: [foreign.id],
+        conditions: [{ interactionId: foreign.id, hasBeenVisited: true }],
+      })
+      .expect(400);
   });
 
   it('DELETE /api/stories/:storyId/interactions/:interactionId/triggers/:triggerId deletes a trigger', async () => {

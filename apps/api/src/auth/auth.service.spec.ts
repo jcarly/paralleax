@@ -25,7 +25,6 @@ describe('AuthService', () => {
       return Promise.resolve();
     }),
     deleteExpiredSessions: jest.fn(() => Promise.resolve()),
-    claimMigratedStories: jest.fn(() => Promise.resolve(0)),
   };
 
   beforeEach(() => {
@@ -35,7 +34,7 @@ describe('AuthService', () => {
   });
 
   it('registers, authenticates, resolves, and logs out a session', async () => {
-    const auth = new AuthService(repository as never, config() as never);
+    const auth = new AuthService(repository as never);
     const registered = await auth.register('Author@Example.com', 'correct horse battery staple');
     expect(registered.user.email).toBe('author@example.com');
     expect(users.get('author@example.com')?.passwordHash).not.toContain('correct horse');
@@ -49,7 +48,7 @@ describe('AuthService', () => {
   });
 
   it('rejects duplicate emails and invalid passwords', async () => {
-    const auth = new AuthService(repository as never, config() as never);
+    const auth = new AuthService(repository as never);
     await auth.register('author@example.com', 'correct horse battery staple');
     await expect(auth.register('AUTHOR@example.com', 'another password')).rejects.toBeInstanceOf(
       ConflictException,
@@ -60,22 +59,11 @@ describe('AuthService', () => {
   });
 
   it('handles a concurrent duplicate insert as a conflict', async () => {
-    const auth = new AuthService(repository as never, config() as never);
+    const auth = new AuthService(repository as never);
     repository.createUser.mockResolvedValueOnce(false);
 
     await expect(
       auth.register('author@example.com', 'correct horse battery staple'),
     ).rejects.toBeInstanceOf(ConflictException);
   });
-
-  it('claims quarantined stories only for the configured legacy owner', async () => {
-    const auth = new AuthService(repository as never, config('legacy@example.com') as never);
-
-    const registered = await auth.register('Legacy@Example.com', 'correct horse battery staple');
-    expect(repository.claimMigratedStories).toHaveBeenCalledWith(registered.user.id);
-  });
 });
-
-function config(legacyStoryOwnerEmail?: string) {
-  return { legacyStoryOwnerEmail };
-}

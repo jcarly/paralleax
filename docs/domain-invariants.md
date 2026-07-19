@@ -13,6 +13,8 @@ details. They should stay covered by tests as the editor grows.
   stored as strings; an API body value of `null` is normalized to an empty
   string.
 - A trigger belongs to exactly one output interaction.
+- Trigger inputs, outputs, and condition interaction references must belong to
+  the same story as their trigger.
 - A trigger can have zero or more input interactions.
 - Deleting the last trigger of an interaction keeps that trigger and turns it
   into an inputless trigger.
@@ -61,9 +63,6 @@ details. They should stay covered by tests as the editor grows.
   and passwords must never be persisted.
 - Every story has exactly one creator, and all story reads and mutations are
   scoped to the authenticated creator until sharing permissions are introduced.
-- Migrated pre-account stories belong to the reserved migration user; they must
-  not become visible to newly registered accounts unless the account email
-  explicitly matches the configured legacy owner.
 - Story permissions are story-level capabilities, not global user types.
 - The creator owns the story and story-specific permission overrides refine
   default access.
