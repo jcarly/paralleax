@@ -8,15 +8,20 @@ import {
   normalizeTriggerInputIds,
   updateTriggerInStory,
   type InteractionMutationResult,
+  type LocationMutationResult,
   type Story,
+  type TriggerCondition,
   type TriggerMutationResult,
 } from '@paralleax/shared';
 import {
   CreateInteractionDto,
+  CreateLocationDto,
   CreateStoryDto,
   CreateTriggerDto,
   UpdateInteractionDto,
+  UpdateLocationDto,
   UpdateTriggerDto,
+  TriggerConditionDto,
 } from './dto/stories.dto';
 import { StoriesRepository } from './stories.repository';
 
@@ -38,6 +43,7 @@ export class StoriesService {
       id: randomUUID(),
       revision: 1,
       title: input.title.trim() || 'Untitled',
+      locations: [],
       interactions: [],
       createdAt: now,
       updatedAt: now,
@@ -111,6 +117,15 @@ export class StoriesService {
         if (input.title !== undefined) interaction.title = input.title;
         if (input.body !== undefined) interaction.body = input.body ?? '';
         if (input.position !== undefined) interaction.position = input.position;
+        if (input.locationId !== undefined) {
+          if (
+            input.locationId !== null &&
+            !(story.locations ?? []).some(({ id }) => id === input.locationId)
+          ) {
+            throw new BadRequestException('Interaction location must belong to the same story');
+          }
+          interaction.locationId = input.locationId;
+        }
         return story;
       },
       userId,
@@ -140,10 +155,11 @@ export class StoriesService {
         const interaction = this.interaction(story, interactionId);
         const trigger = interaction.triggers.find((item) => item.id === triggerId);
         if (!trigger) throw new NotFoundException('Trigger not found');
-        this.assertTriggerReferences(story, input.inputInteractionIds, input.conditions);
+        const conditions = this.triggerConditions(story, input.conditions);
+        this.assertInteractionReferences(story, input.inputInteractionIds);
         return updateTriggerInStory(story, interactionId, triggerId, {
           inputInteractionIds: normalizeTriggerInputIds(input.inputInteractionIds),
-          conditions: input.conditions,
+          conditions,
         });
       },
       userId,
@@ -160,15 +176,12 @@ export class StoriesService {
     const story = await this.update(
       storyId,
       (story) => {
-        this.assertTriggerReferences(
-          story,
-          input.inputInteractionIds ?? [],
-          input.conditions ?? [],
-        );
+        const conditions = this.triggerConditions(story, input.conditions ?? []);
+        this.assertInteractionReferences(story, input.inputInteractionIds ?? []);
         this.interaction(story, interactionId).triggers.push({
           id: triggerId,
           inputInteractionIds: normalizeTriggerInputIds(input.inputInteractionIds ?? []),
-          conditions: input.conditions ?? [],
+          conditions,
         });
         return story;
       },
@@ -193,24 +206,90 @@ export class StoriesService {
       userId,
     );
   }
+  async createLocation(
+    storyId: string,
+    input: CreateLocationDto,
+    userId: string,
+  ): Promise<LocationMutationResult> {
+    const locationId = randomUUID();
+    const story = await this.update(
+      storyId,
+      (story) => {
+        (story.locations ??= []).push({
+          id: locationId,
+          name: input.name.trim(),
+          description: input.description ?? '',
+        });
+        return story;
+      },
+      userId,
+    );
+    return this.locationResult(story, locationId);
+  }
+  async updateLocation(
+    storyId: string,
+    locationId: string,
+    input: UpdateLocationDto,
+    userId: string,
+  ): Promise<LocationMutationResult> {
+    const story = await this.update(
+      storyId,
+      (story) => {
+        const location = this.location(story, locationId);
+        if (input.name !== undefined) location.name = input.name.trim();
+        if (input.description !== undefined) location.description = input.description;
+        return story;
+      },
+      userId,
+    );
+    return this.locationResult(story, locationId);
+  }
   private interaction(story: Story, id: string) {
     const item = story.interactions.find((interaction) => interaction.id === id);
     if (!item) throw new NotFoundException('Interaction not found');
     return item;
   }
-  private assertTriggerReferences(
-    story: Story,
-    inputInteractionIds: string[],
-    conditions: { interactionId: string }[],
-  ) {
+  private location(story: Story, id: string) {
+    const location = (story.locations ?? []).find((item) => item.id === id);
+    if (!location) throw new NotFoundException('Location not found');
+    return location;
+  }
+  private assertInteractionReferences(story: Story, inputInteractionIds: string[]) {
     const interactionIds = new Set(story.interactions.map(({ id }) => id));
-    const referencedIds = [
-      ...inputInteractionIds,
-      ...conditions.map(({ interactionId }) => interactionId),
-    ];
-    if (referencedIds.some((id) => !interactionIds.has(id))) {
+    if (inputInteractionIds.some((id) => !interactionIds.has(id))) {
       throw new BadRequestException('Trigger references must belong to the same story');
     }
+  }
+  private triggerConditions(story: Story, conditions: TriggerConditionDto[]): TriggerCondition[] {
+    const interactionIds = new Set(story.interactions.map(({ id }) => id));
+    const locationIds = new Set((story.locations ?? []).map(({ id }) => id));
+    return conditions.map((condition) => {
+      const isInteractionCondition =
+        condition.interactionId !== undefined && condition.hasBeenVisited !== undefined;
+      const isLocationCondition =
+        condition.locationId !== undefined && condition.isCurrentLocation !== undefined;
+      if (isInteractionCondition === isLocationCondition) {
+        throw new BadRequestException(
+          'A trigger condition must reference exactly one interaction or location',
+        );
+      }
+      if (isInteractionCondition) {
+        if (!interactionIds.has(condition.interactionId!)) {
+          throw new BadRequestException('Trigger references must belong to the same story');
+        }
+        return {
+          interactionId: condition.interactionId!,
+          hasBeenVisited: condition.hasBeenVisited!,
+        };
+      }
+      if (!locationIds.has(condition.locationId!)) {
+        throw new BadRequestException('Trigger references must belong to the same story');
+      }
+      return {
+        locationId: condition.locationId!,
+        isCurrentLocation: condition.isCurrentLocation!,
+      };
+    });
   }
   private interactionResult(story: Story, interactionId: string): InteractionMutationResult {
     return {
@@ -231,6 +310,13 @@ export class StoriesService {
     return {
       interactionId,
       trigger: structuredClone(trigger),
+      revision: story.revision ?? 1,
+      updatedAt: story.updatedAt,
+    };
+  }
+  private locationResult(story: Story, locationId: string): LocationMutationResult {
+    return {
+      location: structuredClone(this.location(story, locationId)),
       revision: story.revision ?? 1,
       updatedAt: story.updatedAt,
     };

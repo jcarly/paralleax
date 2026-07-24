@@ -14,6 +14,7 @@ import { Link, useParams } from 'react-router-dom';
 import type { Position } from '@paralleax/shared';
 import { InteractionInspector } from '../components/InteractionInspector';
 import { InteractionNode } from '../components/InteractionNode';
+import { LocationInspector } from '../components/LocationInspector';
 import { TriggerEdge } from '../components/TriggerEdge';
 import { TriggerInspector } from '../components/TriggerInspector';
 import { TriggerNode } from '../components/TriggerNode';
@@ -56,9 +57,13 @@ export function StoryEditor() {
     createParentForInteraction,
     patchInteraction,
     deleteInteraction,
+    createLocation,
+    updateLocation,
   } = useStoryEditorPersistence(storyId);
   const [selectedId, setSelectedId] = useState<string>();
   const [selectedTrigger, setSelectedTrigger] = useState<SelectedTrigger>();
+  const [selectedLocationId, setSelectedLocationId] = useState<string>();
+  const [isLocationPanelOpen, setIsLocationPanelOpen] = useState(true);
   const [isConnecting, setIsConnecting] = useState(false);
   const [pendingConnection, setPendingConnection] = useState<Connection>();
   const [nodes, setNodes, onNodesChange] = useNodesState<StoryFlowNode>([]);
@@ -70,11 +75,13 @@ export function StoryEditor() {
 
   const selected = findInteraction(story, selectedId);
   const selectedTriggerTarget = findSelectedTrigger(story, selectedTrigger);
-  const hasInspectorSelection = Boolean(selected || selectedTriggerTarget);
+  const selectedLocation = story?.locations?.find(({ id }) => id === selectedLocationId);
+  const hasInspectorSelection = Boolean(selected || selectedTriggerTarget || selectedLocation);
 
   const closeInspector = useCallback(() => {
     setSelectedId(undefined);
     setSelectedTrigger(undefined);
+    setSelectedLocationId(undefined);
   }, []);
 
   const storyNodes = useMemo(
@@ -214,6 +221,24 @@ export function StoryEditor() {
     setSelectedId(undefined);
   }
 
+  async function addLocation() {
+    const locationId = await createLocation();
+    if (!locationId) return;
+    closeInspector();
+    setSelectedLocationId(locationId);
+    setIsLocationPanelOpen(true);
+  }
+
+  function updateLocalLocation(nextLocation: NonNullable<typeof selectedLocation>) {
+    if (!story) return;
+    setStory({
+      ...story,
+      locations: (story.locations ?? []).map((location) =>
+        location.id === nextLocation.id ? nextLocation : location,
+      ),
+    });
+  }
+
   if (!story) return <main className="page">{error || 'Loading...'}</main>;
   const simulationPath = selected
     ? `/stories/${storyId}/play?mode=simulation&startInteractionId=${encodeURIComponent(
@@ -274,6 +299,14 @@ export function StoryEditor() {
           <button disabled={!selected} onClick={() => void createSelectedChild()}>
             Add child
           </button>
+          <button
+            className="secondary"
+            type="button"
+            aria-expanded={isLocationPanelOpen}
+            onClick={() => setIsLocationPanelOpen((open) => !open)}
+          >
+            Locations
+          </button>
           <Link className="button secondary" to={simulationPath}>
             {selected ? 'Test from current interaction' : 'Test'}
           </Link>
@@ -287,7 +320,41 @@ export function StoryEditor() {
           </button>
         </div>
       ) : null}
-      <div className={`editor-layout ${hasInspectorSelection ? 'with-inspector' : ''}`}>
+      <div
+        className={`editor-layout ${isLocationPanelOpen ? 'with-navigation' : ''} ${
+          hasInspectorSelection ? 'with-inspector' : ''
+        }`}
+      >
+        {isLocationPanelOpen ? (
+          <nav className="location-panel" aria-label="Locations">
+            <div className="location-panel-header">
+              <h2>Locations</h2>
+              <button type="button" onClick={() => void addLocation()}>
+                Add location
+              </button>
+            </div>
+            {(story.locations?.length ?? 0) === 0 ? (
+              <p className="hint">No locations yet.</p>
+            ) : (
+              <ul>
+                {(story.locations ?? []).map((location) => (
+                  <li key={location.id}>
+                    <button
+                      type="button"
+                      className={location.id === selectedLocationId ? 'selected' : 'ghost'}
+                      onClick={() => {
+                        closeInspector();
+                        setSelectedLocationId(location.id);
+                      }}
+                    >
+                      {location.name}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </nav>
+        ) : null}
         <section className="canvas">
           <button className="canvas-action" onClick={() => void createRoot()}>
             Add root
@@ -345,6 +412,12 @@ export function StoryEditor() {
                 onCreateTriggerVariant={createSelectedTriggerVariant}
                 onDeleteTrigger={deleteSelectedTrigger}
                 onDeleteTriggerVariants={deleteSelectedTriggerVariants}
+              />
+            ) : selectedLocation ? (
+              <LocationInspector
+                location={selectedLocation}
+                onLocalChange={updateLocalLocation}
+                onPatch={updateLocation}
               />
             ) : null}
           </aside>

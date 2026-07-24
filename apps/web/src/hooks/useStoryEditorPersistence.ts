@@ -11,6 +11,7 @@ import {
   type Interaction,
   type InteractionContentPatch,
   type InteractionMutationResult,
+  type LocationMutationResult,
   type Position,
   type Story,
   type TriggerCondition,
@@ -339,6 +340,36 @@ export function useStoryEditorPersistence(storyId: string) {
     setStory((current) => (current ? mergeIncomingStory(current, next) : next));
   }
 
+  async function createLocation() {
+    const result = await trackSave(() =>
+      api.createLocation(storyId, { name: 'New location', description: '' }),
+    );
+    if (!result) return undefined;
+    setStory((current) => (current ? applyLocationResult(current, result) : current));
+    return result.location.id;
+  }
+
+  async function updateLocation(
+    locationId: string,
+    patch: Partial<Pick<LocationMutationResult['location'], 'name' | 'description'>>,
+  ) {
+    setStory((current) =>
+      current
+        ? {
+            ...current,
+            locations: (current.locations ?? []).map((location) =>
+              location.id === locationId ? { ...location, ...patch } : location,
+            ),
+          }
+        : current,
+    );
+    const result = await trackSave(() => api.updateLocation(storyId, locationId, patch));
+    if (!result) return;
+    setStory((current) =>
+      current ? applyLocationPatchResult(current, result, locationId, patch) : current,
+    );
+  }
+
   return {
     story,
     setStory,
@@ -359,7 +390,41 @@ export function useStoryEditorPersistence(storyId: string) {
     createParentForInteraction,
     patchInteraction,
     deleteInteraction,
+    createLocation,
+    updateLocation,
   };
+}
+
+function applyLocationResult(story: Story, result: LocationMutationResult): Story {
+  const exists = (story.locations ?? []).some(({ id }) => id === result.location.id);
+  return applyMutationMetadata(
+    {
+      ...story,
+      locations: exists
+        ? (story.locations ?? []).map((location) =>
+            location.id === result.location.id ? result.location : location,
+          )
+        : [...(story.locations ?? []), result.location],
+    },
+    result,
+  );
+}
+
+function applyLocationPatchResult(
+  story: Story,
+  result: LocationMutationResult,
+  locationId: string,
+  patch: Partial<Pick<LocationMutationResult['location'], 'name' | 'description'>>,
+): Story {
+  return applyMutationMetadata(
+    {
+      ...story,
+      locations: (story.locations ?? []).map((location) =>
+        location.id === locationId ? { ...location, ...patch } : location,
+      ),
+    },
+    result,
+  );
 }
 
 function emptyStory(storyId: string): Story {

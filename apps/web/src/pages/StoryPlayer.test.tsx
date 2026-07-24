@@ -51,8 +51,8 @@ const story: Story = {
   ],
 };
 
-async function renderPlayer(initialEntry = '/stories/story-1/play') {
-  vi.mocked(api.getStory).mockResolvedValue(structuredClone(story));
+async function renderPlayer(initialEntry = '/stories/story-1/play', storyFixture = story) {
+  vi.mocked(api.getStory).mockResolvedValue(structuredClone(storyFixture));
 
   render(
     <MemoryRouter initialEntries={[initialEntry]}>
@@ -89,6 +89,22 @@ describe('StoryPlayer', () => {
     expect(screen.getByRole('heading', { name: 'Next' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Secret' })).toBeInTheDocument();
     expect(screen.getByText('Start')).toBeInTheDocument();
+  });
+
+  it('updates and preserves current location while evaluating choices', async () => {
+    const user = userEvent.setup();
+    const locatedStory = structuredClone(story);
+    locatedStory.locations = [{ id: 'harbor', name: 'Harbor', description: '' }];
+    locatedStory.interactions[0].locationId = 'harbor';
+    locatedStory.interactions[2].triggers[0].conditions = [
+      { locationId: 'harbor', isCurrentLocation: true },
+    ];
+
+    await renderPlayer('/stories/story-1/play', locatedStory);
+    await user.click(screen.getByRole('button', { name: 'Start' }));
+    await user.click(screen.getByRole('button', { name: 'Next' }));
+
+    expect(screen.getByRole('button', { name: 'Secret' })).toBeInTheDocument();
   });
 
   it('shows an ending and can restart', async () => {

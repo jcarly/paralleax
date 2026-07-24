@@ -2,6 +2,12 @@
 
 ## 2026-07-24
 
+- Added story-owned locations with relational PostgreSQL persistence,
+  same-story foreign keys, API validation, and entity-scoped mutations.
+- Added a collapsible location panel and inspector, interaction location
+  assignment, and typed current/not-current trigger conditions.
+- Extended reader and simulation state with deterministic current-location
+  transitions and location-condition explanations.
 - Added entity-scoped interaction and trigger mutation responses with story
   revision metadata.
 - Made trigger creation atomic by accepting initial input interactions and

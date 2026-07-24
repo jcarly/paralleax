@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import type { Story } from '@paralleax/shared';
+import type { Story, TriggerCondition } from '@paralleax/shared';
 import type { PoolClient } from 'pg';
 import { DatabaseConnection } from '../database/database.connection';
 import { DatabaseMigrator } from '../database/database.migrator';
@@ -23,6 +23,14 @@ type InteractionRow = {
   body: string;
   position_x: number;
   position_y: number;
+  location_id: string | null;
+  sort_order: number;
+};
+type LocationRow = {
+  id: string;
+  story_id: string;
+  name: string;
+  description: string;
   sort_order: number;
 };
 type TriggerRow = {
@@ -38,7 +46,6 @@ type TriggerInputRow = {
   input_interaction_id: string;
   sort_order: number;
 };
-type TriggerCondition = { interactionId: string; hasBeenVisited: boolean };
 
 @Injectable()
 export class StoriesRepository {
@@ -123,8 +130,14 @@ export class StoriesRepository {
     if (storyRows.length === 0) return [];
     const storyIds = storyRows.map(({ id }) => id);
     const interactions = await queryable.query<InteractionRow>(
-      `SELECT id, story_id, title, body, position_x, position_y, sort_order
+      `SELECT id, story_id, title, body, position_x, position_y, location_id, sort_order
          FROM interactions WHERE story_id = ANY($1::text[])
+         ORDER BY story_id, sort_order`,
+      [storyIds],
+    );
+    const locations = await queryable.query<LocationRow>(
+      `SELECT id, story_id, name, description, sort_order
+         FROM locations WHERE story_id = ANY($1::text[])
          ORDER BY story_id, sort_order`,
       [storyIds],
     );
@@ -153,6 +166,7 @@ export class StoriesRepository {
       ({ output_interaction_id }) => output_interaction_id,
     );
     const interactionsByStory = groupBy(interactions.rows, ({ story_id }) => story_id);
+    const locationsByStory = groupBy(locations.rows, ({ story_id }) => story_id);
 
     return storyRows.map((row) => ({
       id: row.id,
@@ -160,11 +174,17 @@ export class StoriesRepository {
       title: row.title,
       createdAt: iso(row.created_at),
       updatedAt: iso(row.updated_at),
+      locations: (locationsByStory.get(row.id) ?? []).map((location) => ({
+        id: location.id,
+        name: location.name,
+        description: location.description,
+      })),
       interactions: (interactionsByStory.get(row.id) ?? []).map((interaction) => ({
         id: interaction.id,
         title: interaction.title,
         body: interaction.body,
         position: { x: interaction.position_x, y: interaction.position_y },
+        locationId: interaction.location_id,
         triggers: (triggersByInteraction.get(interaction.id) ?? []).map((trigger) => ({
           id: trigger.id,
           inputInteractionIds: (inputsByTrigger.get(trigger.id) ?? []).map(

@@ -1,9 +1,11 @@
 import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post } from '@nestjs/common';
 import {
   CreateInteractionDto,
+  CreateLocationDto,
   CreateStoryDto,
   CreateTriggerDto,
   UpdateInteractionDto,
+  UpdateLocationDto,
   UpdateStoryDto,
   UpdateTriggerDto,
 } from './dto/stories.dto';
@@ -67,6 +69,23 @@ export class StoriesController {
     @CurrentUser() user: RequestUser,
   ) {
     return this.stories.deleteInteraction(storyId, interactionId, user.id);
+  }
+
+  @Post(':storyId/locations') createLocation(
+    @Param('storyId') storyId: string,
+    @Body() input: CreateLocationDto,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.stories.createLocation(storyId, input, user.id);
+  }
+
+  @Patch(':storyId/locations/:locationId') updateLocation(
+    @Param('storyId') storyId: string,
+    @Param('locationId') locationId: string,
+    @Body() input: UpdateLocationDto,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.stories.updateLocation(storyId, locationId, input, user.id);
   }
 
   @Post(':storyId/interactions/:interactionId/triggers') addTrigger(

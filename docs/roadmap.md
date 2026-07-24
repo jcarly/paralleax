@@ -104,12 +104,14 @@ the current implementation reaches the stated trigger:
 
 ## V0.4 - Advanced Narrative Model
 
+- Locations are implemented as the first world-state vertical: story-owned
+  definitions, interaction movement, and current-location trigger conditions.
 - Establish typed world-state conditions and interaction effects incrementally;
   do not introduce an unvalidated universal parameter bag.
 - Typed variables: stable attributes, changing resources, skills, flags, traits,
   and temporary statuses.
-- Places as domain entities, followed by movement and time only when play-session
-  state exists.
+- Extend locations with deletion/reference-resolution UX and persisted session
+  state only when those workflows are introduced.
 - Characters and directional relationships.
 - Neutral grouping concept for quests, chapters, arcs, or scene sequences.
 - Author annotations that do not affect story execution.

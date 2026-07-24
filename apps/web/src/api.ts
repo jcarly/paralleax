@@ -1,9 +1,12 @@
 import type {
   CreateInteractionInput,
+  CreateLocationInput,
   InteractionMutationResult,
+  LocationMutationResult,
   Story,
   TriggerMutationResult,
   UpdateInteractionInput,
+  UpdateLocationInput,
   UpdateTriggerInput,
 } from '@paralleax/shared';
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -69,6 +72,16 @@ export const api = {
     }),
   deleteInteraction: (storyId: string, interactionId: string) =>
     request<Story>(`/stories/${storyId}/interactions/${interactionId}`, { method: 'DELETE' }),
+  createLocation: (storyId: string, input: CreateLocationInput) =>
+    request<LocationMutationResult>(`/stories/${storyId}/locations`, {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
+  updateLocation: (storyId: string, locationId: string, input: UpdateLocationInput) =>
+    request<LocationMutationResult>(`/stories/${storyId}/locations/${locationId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(input),
+    }),
   addTrigger: (
     storyId: string,
     interactionId: string,

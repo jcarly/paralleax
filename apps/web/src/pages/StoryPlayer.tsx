@@ -23,11 +23,20 @@ function getUnavailableReason(
   interaction: Interaction,
   currentId: string | null,
   visited: string[],
+  currentLocationId: string | null,
 ) {
-  const failures = getTriggerConditionFailures(interaction, currentId, visited);
+  const failures = getTriggerConditionFailures(interaction, currentId, visited, currentLocationId);
   if (failures.length === 0) return undefined;
 
   const firstFailure = failures[0].condition;
+  if ('locationId' in firstFailure) {
+    const name =
+      story.locations?.find((location) => location.id === firstFailure.locationId)?.name ??
+      firstFailure.locationId;
+    return firstFailure.isCurrentLocation
+      ? `Requires the current location to be "${name}".`
+      : `Requires the current location not to be "${name}".`;
+  }
   const title = getInteractionTitle(story, firstFailure.interactionId);
   return firstFailure.hasBeenVisited
     ? `Requires "${title}" to be visited.`
@@ -36,6 +45,15 @@ function getUnavailableReason(
 
 function uniqueJourneyIds(journey: string[]) {
   return journey.filter((id, index) => journey.indexOf(id) === index);
+}
+
+function getJourneyLocation(story: Story | undefined, journey: string[]) {
+  if (!story) return null;
+  for (let index = journey.length - 1; index >= 0; index -= 1) {
+    const locationId = story.interactions.find(({ id }) => id === journey[index])?.locationId;
+    if (locationId) return locationId;
+  }
+  return null;
 }
 
 export function StoryPlayer() {
@@ -47,14 +65,19 @@ export function StoryPlayer() {
   const [currentId, setCurrentId] = useState<string | null>(startInteractionId);
   const [journey, setJourney] = useState<string[]>(startInteractionId ? [startInteractionId] : []);
   const [visited, setVisited] = useState<string[]>(startInteractionId ? [startInteractionId] : []);
+  const [currentLocationId, setCurrentLocationId] = useState<string | null>(null);
   const [editingChoiceId, setEditingChoiceId] = useState<string>();
   const editingChoiceInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    void api
-      .getStory(storyId)
-      .then((nextStory) => setStory(ensureStoryInteractionPositions(nextStory)));
-  }, [storyId]);
+    void api.getStory(storyId).then((nextStory) => {
+      const positioned = ensureStoryInteractionPositions(nextStory);
+      setStory(positioned);
+      setCurrentLocationId(
+        positioned.interactions.find(({ id }) => id === startInteractionId)?.locationId ?? null,
+      );
+    });
+  }, [startInteractionId, storyId]);
 
   const current = useMemo(
     () => story?.interactions.find((item) => item.id === currentId),
@@ -62,8 +85,9 @@ export function StoryPlayer() {
   );
 
   const choices = useMemo(
-    () => (story ? getAvailableInteractions(story, current?.id ?? null, visited) : []),
-    [story, current, visited],
+    () =>
+      story ? getAvailableInteractions(story, current?.id ?? null, visited, currentLocationId) : [],
+    [story, current, visited, currentLocationId],
   );
   const availableChoiceIds = useMemo(() => new Set(choices.map((choice) => choice.id)), [choices]);
   const visibleChoices = useMemo(
@@ -74,14 +98,20 @@ export function StoryPlayer() {
             available: availableChoiceIds.has(interaction.id),
             unavailableReason: availableChoiceIds.has(interaction.id)
               ? undefined
-              : getUnavailableReason(story, interaction, current?.id ?? null, visited),
+              : getUnavailableReason(
+                  story,
+                  interaction,
+                  current?.id ?? null,
+                  visited,
+                  currentLocationId,
+                ),
           }))
         : choices.map((interaction) => ({
             interaction,
             available: true,
             unavailableReason: undefined,
           })),
-    [availableChoiceIds, choices, current, isSimulationMode, story, visited],
+    [availableChoiceIds, choices, current, currentLocationId, isSimulationMode, story, visited],
   );
 
   useEffect(() => {
@@ -93,12 +123,16 @@ export function StoryPlayer() {
     setCurrentId(interaction.id);
     setJourney((ids) => [...ids, interaction.id]);
     setVisited((ids) => (ids.includes(interaction.id) ? ids : [...ids, interaction.id]));
+    if (interaction.locationId) setCurrentLocationId(interaction.locationId);
   }
 
   function restart() {
     setCurrentId(startInteractionId);
     setJourney(startInteractionId ? [startInteractionId] : []);
     setVisited(startInteractionId ? [startInteractionId] : []);
+    setCurrentLocationId(
+      story?.interactions.find(({ id }) => id === startInteractionId)?.locationId ?? null,
+    );
   }
 
   function stepBack() {
@@ -107,6 +141,7 @@ export function StoryPlayer() {
     setJourney(nextJourney);
     setCurrentId(nextJourney.at(-1) ?? startInteractionId);
     setVisited(uniqueJourneyIds(nextJourney));
+    setCurrentLocationId(getJourneyLocation(story, nextJourney));
   }
 
   async function saveCurrentInteraction(patch: Partial<Pick<Interaction, 'title' | 'body'>>) {

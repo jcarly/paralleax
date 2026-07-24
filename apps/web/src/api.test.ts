@@ -134,6 +134,20 @@ describe('api client', () => {
         method: 'DELETE',
       },
     );
+
+    await api.createLocation('story-1', { name: 'Harbor', description: '' });
+    expect(fetchMock).toHaveBeenLastCalledWith('/api/stories/story-1/locations', {
+      headers: { 'Content-Type': 'application/json' },
+      method: 'POST',
+      body: JSON.stringify({ name: 'Harbor', description: '' }),
+    });
+
+    await api.updateLocation('story-1', 'location-1', { name: 'Old harbor' });
+    expect(fetchMock).toHaveBeenLastCalledWith('/api/stories/story-1/locations/location-1', {
+      headers: { 'Content-Type': 'application/json' },
+      method: 'PATCH',
+      body: JSON.stringify({ name: 'Old harbor' }),
+    });
   });
 
   it('returns undefined for 204 responses', async () => {

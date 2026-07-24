@@ -200,4 +200,26 @@ export const databaseMigrations: DatabaseMigration[] = [
       CREATE INDEX trigger_inputs_story_id_idx ON trigger_inputs(story_id);
     `,
   },
+  {
+    id: '202607240007_locations',
+    sql: `
+      CREATE TABLE locations (
+        id text PRIMARY KEY,
+        story_id text NOT NULL REFERENCES stories(id) ON DELETE CASCADE,
+        name text NOT NULL,
+        description text NOT NULL DEFAULT '',
+        sort_order integer NOT NULL,
+        CONSTRAINT locations_story_id_id_unique UNIQUE (story_id, id)
+      );
+
+      ALTER TABLE interactions
+      ADD COLUMN location_id text,
+      ADD CONSTRAINT interactions_location_fkey
+        FOREIGN KEY (story_id, location_id)
+        REFERENCES locations(story_id, id) ON DELETE SET NULL (location_id);
+
+      CREATE INDEX locations_story_id_idx ON locations(story_id);
+      CREATE INDEX interactions_location_id_idx ON interactions(location_id);
+    `,
+  },
 ];

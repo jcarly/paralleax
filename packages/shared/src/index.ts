@@ -2,9 +2,19 @@ export interface Position {
   x: number;
   y: number;
 }
-export interface TriggerCondition {
+export interface InteractionVisitedCondition {
   interactionId: string;
   hasBeenVisited: boolean;
+}
+export interface LocationCondition {
+  locationId: string;
+  isCurrentLocation: boolean;
+}
+export type TriggerCondition = InteractionVisitedCondition | LocationCondition;
+export interface Location {
+  id: string;
+  name: string;
+  description: string;
 }
 export interface Trigger {
   id: string;
@@ -16,12 +26,14 @@ export interface Interaction {
   title: string;
   body: string;
   position: Position;
+  locationId?: string | null;
   triggers: Trigger[];
 }
 export interface Story {
   id: string;
   revision?: number;
   title: string;
+  locations?: Location[];
   interactions: Interaction[];
   createdAt: string;
   updatedAt: string;
@@ -37,6 +49,9 @@ export interface TriggerMutationResult extends StoryMutationMetadata {
   interactionId: string;
   trigger: Trigger;
 }
+export interface LocationMutationResult extends StoryMutationMetadata {
+  location: Location;
+}
 export interface CreateStoryInput {
   title: string;
 }
@@ -48,6 +63,15 @@ export interface UpdateInteractionInput {
   title?: string;
   body?: string | null;
   position?: Position;
+  locationId?: string | null;
+}
+export interface CreateLocationInput {
+  name: string;
+  description?: string;
+}
+export interface UpdateLocationInput {
+  name?: string;
+  description?: string;
 }
 export interface UpdateTriggerInput {
   inputInteractionIds: string[];
@@ -57,7 +81,9 @@ export interface TriggerConditionFailure {
   triggerId: string;
   condition: TriggerCondition;
 }
-export type InteractionContentPatch = Partial<Pick<Interaction, 'title' | 'body' | 'position'>>;
+export type InteractionContentPatch = Partial<
+  Pick<Interaction, 'title' | 'body' | 'position' | 'locationId'>
+>;
 export type TriggerPatch = Pick<Trigger, 'inputInteractionIds' | 'conditions'>;
 
 export const childOffsetX = 0;
@@ -72,6 +98,7 @@ export function createDemoStory(storyId: string, timestamp: string): Story {
   return {
     id: storyId,
     title: 'Demo: branching investigation',
+    locations: [],
     createdAt: timestamp,
     updatedAt: timestamp,
     interactions: [
@@ -269,7 +296,8 @@ export function deleteInteractionFromStory(story: Story, interactionId: string):
             ...trigger,
             inputInteractionIds,
             conditions: trigger.conditions.filter(
-              (condition) => condition.interactionId !== interactionId,
+              (condition) =>
+                !('interactionId' in condition) || condition.interactionId !== interactionId,
             ),
           };
         }),
@@ -311,6 +339,9 @@ export function mergeServerStory(
         position: hasOwn(patch ?? {}, 'position')
           ? (patch?.position ?? currentItem.position)
           : currentItem.position,
+        locationId: hasOwn(patch ?? {}, 'locationId')
+          ? (patch?.locationId ?? null)
+          : currentItem.locationId,
         triggers,
       };
     }),
@@ -438,14 +469,11 @@ export function isTriggerEligible(
   trigger: Trigger,
   currentInteractionId: string | null,
   visited: Set<string>,
+  currentLocationId: string | null = null,
 ): boolean {
   return (
     doesTriggerInputMatch(trigger, currentInteractionId) &&
-    trigger.conditions.every((condition) =>
-      condition.hasBeenVisited
-        ? visited.has(condition.interactionId)
-        : !visited.has(condition.interactionId),
-    )
+    trigger.conditions.every((condition) => conditionMatches(condition, visited, currentLocationId))
   );
 }
 
@@ -464,11 +492,12 @@ export function getAvailableInteractions(
   story: Story,
   currentInteractionId: string | null,
   visitedIds: string[],
+  currentLocationId: string | null = null,
 ): Interaction[] {
   const visited = new Set(visitedIds);
   return story.interactions.filter((interaction) =>
     interaction.triggers.some((trigger) =>
-      isTriggerEligible(trigger, currentInteractionId, visited),
+      isTriggerEligible(trigger, currentInteractionId, visited, currentLocationId),
     ),
   );
 }
@@ -486,6 +515,7 @@ export function getTriggerConditionFailures(
   interaction: Interaction,
   currentInteractionId: string | null,
   visitedIds: string[],
+  currentLocationId: string | null = null,
 ): TriggerConditionFailure[] {
   const visited = new Set(visitedIds);
   const inputMatchingTriggers = interaction.triggers.filter((trigger) =>
@@ -495,9 +525,7 @@ export function getTriggerConditionFailures(
   if (
     inputMatchingTriggers.some((trigger) =>
       trigger.conditions.every((condition) =>
-        condition.hasBeenVisited
-          ? visited.has(condition.interactionId)
-          : !visited.has(condition.interactionId),
+        conditionMatches(condition, visited, currentLocationId),
       ),
     )
   ) {
@@ -506,11 +534,21 @@ export function getTriggerConditionFailures(
 
   return inputMatchingTriggers.flatMap((trigger) =>
     trigger.conditions
-      .filter((condition) =>
-        condition.hasBeenVisited
-          ? !visited.has(condition.interactionId)
-          : visited.has(condition.interactionId),
-      )
+      .filter((condition) => !conditionMatches(condition, visited, currentLocationId))
       .map((condition) => ({ triggerId: trigger.id, condition })),
   );
+}
+
+function conditionMatches(
+  condition: TriggerCondition,
+  visited: Set<string>,
+  currentLocationId: string | null,
+) {
+  if ('interactionId' in condition) {
+    return condition.hasBeenVisited
+      ? visited.has(condition.interactionId)
+      : !visited.has(condition.interactionId);
+  }
+  const matches = currentLocationId === condition.locationId;
+  return condition.isCurrentLocation ? matches : !matches;
 }

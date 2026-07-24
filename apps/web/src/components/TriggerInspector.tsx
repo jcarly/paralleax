@@ -47,34 +47,81 @@ export function TriggerInspector({
           {hasOrVariants ? <h4>Condition group {variantIndex + 1}</h4> : null}
           <div className="conditions">
             {variant.conditions.map((condition, index) => (
-              <div className="condition" key={`${variant.id}-${condition.interactionId}-${index}`}>
-                <select
-                  value={condition.interactionId}
-                  onChange={(e) => {
-                    const next = [...variant.conditions];
-                    next[index] = { ...condition, interactionId: e.target.value };
-                    void updateTrigger(variant, variant.inputInteractionIds, next);
-                  }}
-                >
-                  {story.interactions
-                    .filter((item) => item.id !== interaction.id)
-                    .map((item) => (
-                      <option key={item.id} value={item.id}>
-                        {item.title}
-                      </option>
-                    ))}
-                </select>
-                <select
-                  value={condition.hasBeenVisited ? 'visited' : 'not-visited'}
-                  onChange={(e) => {
-                    const next = [...variant.conditions];
-                    next[index] = { ...condition, hasBeenVisited: e.target.value === 'visited' };
-                    void updateTrigger(variant, variant.inputInteractionIds, next);
-                  }}
-                >
-                  <option value="visited">has been visited</option>
-                  <option value="not-visited">has not been visited</option>
-                </select>
+              <div
+                className="condition"
+                key={`${variant.id}-${
+                  'interactionId' in condition ? condition.interactionId : condition.locationId
+                }-${index}`}
+              >
+                {'interactionId' in condition ? (
+                  <>
+                    <select
+                      aria-label="Condition interaction"
+                      value={condition.interactionId}
+                      onChange={(e) => {
+                        const next = [...variant.conditions];
+                        next[index] = { ...condition, interactionId: e.target.value };
+                        void updateTrigger(variant, variant.inputInteractionIds, next);
+                      }}
+                    >
+                      {story.interactions
+                        .filter((item) => item.id !== interaction.id)
+                        .map((item) => (
+                          <option key={item.id} value={item.id}>
+                            {item.title}
+                          </option>
+                        ))}
+                    </select>
+                    <select
+                      aria-label="Interaction condition operator"
+                      value={condition.hasBeenVisited ? 'visited' : 'not-visited'}
+                      onChange={(e) => {
+                        const next = [...variant.conditions];
+                        next[index] = {
+                          ...condition,
+                          hasBeenVisited: e.target.value === 'visited',
+                        };
+                        void updateTrigger(variant, variant.inputInteractionIds, next);
+                      }}
+                    >
+                      <option value="visited">has been visited</option>
+                      <option value="not-visited">has not been visited</option>
+                    </select>
+                  </>
+                ) : (
+                  <>
+                    <select
+                      aria-label="Condition location"
+                      value={condition.locationId}
+                      onChange={(event) => {
+                        const next = [...variant.conditions];
+                        next[index] = { ...condition, locationId: event.target.value };
+                        void updateTrigger(variant, variant.inputInteractionIds, next);
+                      }}
+                    >
+                      {(story.locations ?? []).map((location) => (
+                        <option key={location.id} value={location.id}>
+                          {location.name}
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      aria-label="Location condition operator"
+                      value={condition.isCurrentLocation ? 'current' : 'not-current'}
+                      onChange={(event) => {
+                        const next = [...variant.conditions];
+                        next[index] = {
+                          ...condition,
+                          isCurrentLocation: event.target.value === 'current',
+                        };
+                        void updateTrigger(variant, variant.inputInteractionIds, next);
+                      }}
+                    >
+                      <option value="current">is the current location</option>
+                      <option value="not-current">is not the current location</option>
+                    </select>
+                  </>
+                )}
                 <button
                   className="ghost danger"
                   onClick={() =>
@@ -103,7 +150,22 @@ export function TriggerInspector({
               }
             }}
           >
-            Add condition
+            Add interaction condition
+          </button>
+          <button
+            className="secondary"
+            disabled={(story.locations?.length ?? 0) === 0}
+            onClick={() => {
+              const location = story.locations?.[0];
+              if (location) {
+                void updateTrigger(variant, variant.inputInteractionIds, [
+                  ...variant.conditions,
+                  { locationId: location.id, isCurrentLocation: true },
+                ]);
+              }
+            }}
+          >
+            Add location condition
           </button>
           {hasOrVariants ? (
             <button

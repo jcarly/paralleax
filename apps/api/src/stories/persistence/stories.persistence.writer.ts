@@ -1,8 +1,12 @@
-import type { Interaction, Story, Trigger } from '@paralleax/shared';
+import type { Interaction, Location, Story, Trigger } from '@paralleax/shared';
 import type { Queryable } from './stories.persistence.types';
 
 export async function replaceStoryGraph(client: Queryable, story: Story) {
   await client.query('DELETE FROM interactions WHERE story_id = $1', [story.id]);
+  await client.query('DELETE FROM locations WHERE story_id = $1', [story.id]);
+  for (const [locationIndex, location] of (story.locations ?? []).entries()) {
+    await insertLocation(client, story.id, location, locationIndex);
+  }
   for (const [interactionIndex, interaction] of story.interactions.entries()) {
     await insertInteraction(client, story.id, interaction, interactionIndex);
   }
@@ -22,6 +26,8 @@ export async function persistStoryDifference(client: Queryable, before: Story, a
   if (storyChanges.length > 0) {
     await client.query(`UPDATE stories SET ${storyChanges.join(', ')} WHERE id = $1`, storyValues);
   }
+
+  await persistLocationDifference(client, before, after);
 
   const beforeInteractions = new Map(before.interactions.map((item) => [item.id, item]));
   const afterInteractions = new Map(after.interactions.map((item) => [item.id, item]));
@@ -61,8 +67,8 @@ async function insertInteraction(
 ) {
   await client.query(
     `INSERT INTO interactions
-     (id, story_id, title, body, position_x, position_y, sort_order)
-     VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+     (id, story_id, title, body, position_x, position_y, location_id, sort_order)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
     [
       interaction.id,
       storyId,
@@ -70,6 +76,7 @@ async function insertInteraction(
       interaction.body,
       interaction.position.x,
       interaction.position.y,
+      interaction.locationId ?? null,
       sortOrder,
     ],
   );
@@ -114,9 +121,62 @@ async function updateInteractionDifference(
   addChange(changes, values, 'body', before.body, after.body);
   addChange(changes, values, 'position_x', before.position.x, after.position.x);
   addChange(changes, values, 'position_y', before.position.y, after.position.y);
+  addChange(changes, values, 'location_id', before.locationId ?? null, after.locationId ?? null);
   addChange(changes, values, 'sort_order', beforeSortOrder, sortOrder);
   if (changes.length > 0) {
     await client.query(`UPDATE interactions SET ${changes.join(', ')} WHERE id = $1`, values);
+  }
+}
+
+async function insertLocation(
+  client: Queryable,
+  storyId: string,
+  location: Location,
+  sortOrder: number,
+) {
+  await client.query(
+    `INSERT INTO locations (id, story_id, name, description, sort_order)
+     VALUES ($1, $2, $3, $4, $5)`,
+    [location.id, storyId, location.name, location.description, sortOrder],
+  );
+}
+
+async function persistLocationDifference(client: Queryable, before: Story, after: Story) {
+  const beforeLocations = new Map(
+    (before.locations ?? []).map((location) => [location.id, location]),
+  );
+  const afterLocations = new Map(
+    (after.locations ?? []).map((location) => [location.id, location]),
+  );
+
+  for (const location of before.locations ?? []) {
+    if (!afterLocations.has(location.id)) {
+      await client.query('DELETE FROM locations WHERE id = $1 AND story_id = $2', [
+        location.id,
+        after.id,
+      ]);
+    }
+  }
+  for (const [index, location] of (after.locations ?? []).entries()) {
+    const previous = beforeLocations.get(location.id);
+    if (!previous) {
+      await insertLocation(client, after.id, location, index);
+      continue;
+    }
+    const changes: string[] = [];
+    const values: unknown[] = [location.id];
+    addChange(changes, values, 'name', previous.name, location.name);
+    addChange(changes, values, 'description', previous.description, location.description);
+    addChange(
+      changes,
+      values,
+      'sort_order',
+      (before.locations ?? []).findIndex(({ id }) => id === location.id),
+      index,
+    );
+    if (changes.length > 0) {
+      await client.query(`UPDATE locations SET ${changes.join(', ')} WHERE id = $1`, values);
+    }
   }
 }
 

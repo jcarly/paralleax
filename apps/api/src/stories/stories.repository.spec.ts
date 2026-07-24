@@ -22,12 +22,14 @@ function story(id = 'story-1'): Story {
 
 function graphStory(): Story {
   const saved = story();
+  saved.locations = [{ id: 'location-1', name: 'Harbor', description: 'A quiet harbor.' }];
   saved.interactions = [
     {
       id: 'interaction-1',
       title: 'Start',
       body: 'Begin here',
       position: { x: 10, y: 20 },
+      locationId: 'location-1',
       triggers: [{ id: 'trigger-1', inputInteractionIds: [], conditions: [] }],
     },
     {
@@ -82,6 +84,17 @@ function relationalRead(query: jest.Mock, saved = story()) {
         ),
       });
     }
+    if (sql.includes('FROM locations')) {
+      return Promise.resolve({
+        rows: (saved.locations ?? []).map((location, index) => ({
+          id: location.id,
+          story_id: saved.id,
+          name: location.name,
+          description: location.description,
+          sort_order: index,
+        })),
+      });
+    }
     if (sql.includes('FROM triggers')) {
       return Promise.resolve({
         rows: saved.interactions.flatMap((interaction) =>
@@ -104,6 +117,7 @@ function relationalRead(query: jest.Mock, saved = story()) {
           body: interaction.body,
           position_x: interaction.position.x,
           position_y: interaction.position.y,
+          location_id: interaction.locationId ?? null,
           sort_order: index,
         })),
       });
@@ -138,7 +152,14 @@ describe('StoriesRepository', () => {
     const saved = graphStory();
     relationalRead(mockQuery, saved);
 
-    await expect(repository().find(saved.id, ownerId)).resolves.toEqual({ ...saved, revision: 1 });
+    await expect(repository().find(saved.id, ownerId)).resolves.toEqual({
+      ...saved,
+      revision: 1,
+      interactions: saved.interactions.map((interaction) => ({
+        ...interaction,
+        locationId: interaction.locationId ?? null,
+      })),
+    });
     expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining('WHERE id = $1'), [
       saved.id,
       ownerId,
@@ -178,9 +199,16 @@ describe('StoriesRepository', () => {
 
     await repository().save(saved, ownerId);
 
+    expect(mockClientQuery).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO locations'), [
+      'location-1',
+      saved.id,
+      'Harbor',
+      'A quiet harbor.',
+      0,
+    ]);
     expect(mockClientQuery).toHaveBeenCalledWith(
       expect.stringContaining('INSERT INTO interactions'),
-      ['interaction-1', saved.id, 'Start', 'Begin here', 10, 20, 0],
+      ['interaction-1', saved.id, 'Start', 'Begin here', 10, 20, 'location-1', 0],
     );
     expect(mockClientQuery).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO triggers'), [
       'trigger-2',

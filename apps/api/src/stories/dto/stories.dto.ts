@@ -44,10 +44,39 @@ export class UpdateInteractionDto {
   @ValidateNested()
   @Type(() => PositionDto)
   position?: PositionDto;
+  @ValidateIf((_, value) => value !== undefined && value !== null)
+  @IsString()
+  locationId?: string | null;
 }
 export class TriggerConditionDto {
-  @IsString() interactionId!: string;
-  @IsBoolean() hasBeenVisited!: boolean;
+  @ValidateIf((condition) => condition.locationId === undefined)
+  @IsString()
+  interactionId?: string;
+  @ValidateIf((condition) => condition.locationId === undefined)
+  @IsBoolean()
+  hasBeenVisited?: boolean;
+  @ValidateIf((condition) => condition.interactionId === undefined)
+  @IsString()
+  locationId?: string;
+  @ValidateIf((condition) => condition.interactionId === undefined)
+  @IsBoolean()
+  isCurrentLocation?: boolean;
+}
+export class CreateLocationDto {
+  @IsString() @IsNotEmpty() @MaxLength(200) name!: string;
+  @ValidateIf((_, value) => value !== undefined)
+  @IsString()
+  description?: string;
+}
+export class UpdateLocationDto {
+  @ValidateIf((_, value) => value !== undefined)
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(200)
+  name?: string;
+  @ValidateIf((_, value) => value !== undefined)
+  @IsString()
+  description?: string;
 }
 export class CreateTriggerDto {
   @ValidateIf((_, value) => value !== undefined)

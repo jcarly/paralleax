@@ -273,8 +273,9 @@ stable source of regression-friendly sample structures.
   behavior, and Playwright tests for critical editor flows.
 
 Before adding a new concept, check [MVP scope](mvp.md), [Domain model](domain-model.md),
-and [Non-goals](non-goals.md). Characters, places, variables, AI, durable
-identity, and player save persistence remain outside the MVP implementation.
+and [Non-goals](non-goals.md). Locations are the first post-MVP world-state
+vertical; characters, variables, AI, and player save persistence remain outside
+the implemented narrative model.
 
 ## Storage
 
@@ -288,9 +289,11 @@ The API accesses storage through `StoriesRepository` instead of coupling
 while shared story operations own trigger cleanup, normalization, reader rules,
 and merge semantics.
 
-The current PostgreSQL schema stores Story, Interaction, Trigger, and trigger
-input state in relational tables. Ordered trigger conditions are stored as JSONB
-on their owning trigger. The repository reconstructs
+The current PostgreSQL schema stores Story, Location, Interaction, Trigger, and
+trigger input state in relational tables. Interaction-to-location references
+use a same-story composite foreign key. Ordered typed trigger conditions are
+stored as JSONB on their owning trigger and their references are validated by
+the application service. The repository reconstructs
 the existing domain `Story`, so persistence normalization does not leak into the
 shared engine or the HTTP contract. JSON remains a future versioned import/export
 format rather than the database source of truth.

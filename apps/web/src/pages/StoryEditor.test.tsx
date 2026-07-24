@@ -16,6 +16,8 @@ vi.mock('../api', () => ({
     addTrigger: vi.fn(),
     updateTrigger: vi.fn(),
     deleteTrigger: vi.fn(),
+    createLocation: vi.fn(),
+    updateLocation: vi.fn(),
   },
 }));
 
@@ -335,6 +337,78 @@ describe('StoryEditor', () => {
 
     expect(api.renameStory).toHaveBeenCalledWith('story-1', 'Renamed story');
     expect(await screen.findByDisplayValue('Renamed story')).toBeInTheDocument();
+  });
+
+  it('creates and edits a location from the location panel', async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.createLocation).mockResolvedValue({
+      location: { id: 'location-1', name: 'New location', description: '' },
+      revision: 2,
+      updatedAt: baseStory.updatedAt,
+    });
+    vi.mocked(api.updateLocation)
+      .mockResolvedValueOnce({
+        location: { id: 'location-1', name: 'Harbor', description: '' },
+        revision: 3,
+        updatedAt: baseStory.updatedAt,
+      })
+      .mockResolvedValueOnce({
+        location: { id: 'location-1', name: 'Harbor', description: 'A quiet harbor.' },
+        revision: 4,
+        updatedAt: baseStory.updatedAt,
+      });
+
+    await renderEditor();
+    await user.click(screen.getByRole('button', { name: 'Add location' }));
+
+    const inspector = screen.getByRole('complementary', { name: 'Inspector' });
+    const name = within(inspector).getByLabelText('Name');
+    await user.clear(name);
+    await user.type(name, 'Harbor');
+    fireEvent.blur(name);
+    const description = within(inspector).getByLabelText('Description');
+    await user.clear(description);
+    await user.type(description, 'A quiet harbor.');
+    fireEvent.blur(description);
+
+    await waitFor(() =>
+      expect(api.updateLocation).toHaveBeenLastCalledWith('story-1', 'location-1', {
+        description: 'A quiet harbor.',
+      }),
+    );
+    expect(screen.getByRole('button', { name: 'Harbor' })).toBeInTheDocument();
+  });
+
+  it('assigns locations to interactions and trigger conditions', async () => {
+    const user = userEvent.setup();
+    const locatedStory = cloneStory();
+    locatedStory.locations = [{ id: 'location-1', name: 'Harbor', description: '' }];
+    const assignedStory = cloneStory(locatedStory);
+    assignedStory.interactions[0].locationId = 'location-1';
+    vi.mocked(api.updateInteraction).mockResolvedValue(
+      interactionMutation(assignedStory, 'interaction-1'),
+    );
+    const conditionedStory = cloneStory(assignedStory);
+    conditionedStory.interactions[0].triggers[0].conditions = [
+      { locationId: 'location-1', isCurrentLocation: true },
+    ];
+    vi.mocked(api.updateTrigger).mockResolvedValue(
+      triggerMutation(conditionedStory, 'interaction-1', 'trigger-1'),
+    );
+
+    await renderEditor(locatedStory);
+    await user.click(screen.getByTestId('flow-node-interaction-1'));
+    await user.selectOptions(screen.getByLabelText('Location'), 'location-1');
+    expect(api.updateInteraction).toHaveBeenCalledWith('story-1', 'interaction-1', {
+      locationId: 'location-1',
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Select root trigger' }));
+    await user.click(screen.getByRole('button', { name: 'Add location condition' }));
+    expect(api.updateTrigger).toHaveBeenCalledWith('story-1', 'interaction-1', 'trigger-1', {
+      inputInteractionIds: [],
+      conditions: [{ locationId: 'location-1', isCurrentLocation: true }],
+    });
   });
 
   it('creates root and child interactions', async () => {
@@ -923,7 +997,7 @@ describe('StoryEditor', () => {
     expect(screen.getByTestId('flow-trigger-interaction-3-trigger-edge')).toHaveClass('selected');
     expect(screen.getByRole('heading', { name: 'Path conditions' })).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Add condition' }));
+    await user.click(screen.getByRole('button', { name: 'Add interaction condition' }));
 
     await waitFor(() => {
       expect(api.updateTrigger).toHaveBeenCalledWith('story-1', 'interaction-3', 'trigger-edge', {
@@ -950,7 +1024,7 @@ describe('StoryEditor', () => {
 
     await renderEditor(story);
     await user.click(screen.getByTestId('flow-trigger-interaction-2-trigger-2'));
-    await user.click(screen.getByRole('button', { name: 'Add condition' }));
+    await user.click(screen.getByRole('button', { name: 'Add interaction condition' }));
 
     await waitFor(() => {
       expect(api.updateTrigger).toHaveBeenCalledWith('story-1', 'interaction-2', 'trigger-2', {
@@ -983,7 +1057,7 @@ describe('StoryEditor', () => {
 
     await renderEditor(story);
     await user.click(screen.getByTestId('flow-trigger-interaction-2-trigger-2'));
-    await user.click(screen.getByRole('button', { name: 'Add condition' }));
+    await user.click(screen.getByRole('button', { name: 'Add interaction condition' }));
     await waitFor(() => {
       expect(api.updateTrigger).toHaveBeenCalledWith('story-1', 'interaction-2', 'trigger-2', {
         inputInteractionIds: ['interaction-1'],
@@ -1228,7 +1302,7 @@ describe('StoryEditor', () => {
         name: 'Select root trigger',
       }),
     );
-    await user.click(screen.getByRole('button', { name: 'Add condition' }));
+    await user.click(screen.getByRole('button', { name: 'Add interaction condition' }));
 
     await waitFor(() => {
       expect(api.updateTrigger).toHaveBeenLastCalledWith('story-1', 'interaction-1', 'trigger-1', {

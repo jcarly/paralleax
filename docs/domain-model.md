@@ -13,6 +13,7 @@ Main fields:
 - `id`
 - `title`
 - `interactions`
+- `locations`
 
 ### Interaction
 
@@ -25,6 +26,7 @@ Main MVP fields:
 - `body`
 - `position`
 - `triggers`
+- optional `locationId`
 
 The title is used for choices and editor display. The body is used by the reader.
 
@@ -49,14 +51,23 @@ trigger with conditions is contextual: it does not depend on a previous
 interaction input, but it can become available when its conditions match during
 reading.
 
-### MVP Condition
+### Condition
 
-A condition checks whether an interaction has already been visited or not.
+A condition checks the reader path or current location.
 
 Examples:
 
 - visited interaction;
 - not visited interaction.
+- current location;
+- not current location.
+
+### Location
+
+A location is an authored story entity with an id, name, and description.
+Interactions may move the reader to a location, and triggers may test whether it
+is or is not current. Locations are definitions in the story; the current
+location is runtime reader state.
 
 See [Trigger semantics](triggers.md) for deletion rules and editor behavior.
 
@@ -64,7 +75,7 @@ See [Trigger semantics](triggers.md) for deletion rules and editor behavior.
 
 The long-term model may introduce the following concepts.
 
-Future characters, places, groups, users, and assets should be identifiable
+Future characters, groups, users, and assets should be identifiable
 domain entities rather than decorative tags. Authors should be able to open,
 edit, reference, and navigate to related interactions from those entities. This
 direction does not move any of them into the MVP implementation.
@@ -320,10 +331,6 @@ them participate in narrative behavior. The first item vertical should keep a
 small scope: definitions, instances, one inventory, basic equipment, and a few
 typed conditions and effects. Durability, multiple containers, procedural
 properties, layered clothing, shops, and economy remain later increments.
-
-### Place
-
-A place represents a scene, location, or context where interactions can trigger.
 
 ### Target Interaction
 

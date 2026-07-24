@@ -2,7 +2,12 @@ import 'reflect-metadata';
 import { ValidationPipe, type INestApplication } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
 import * as request from 'supertest';
-import type { InteractionMutationResult, Story, TriggerMutationResult } from '@paralleax/shared';
+import type {
+  InteractionMutationResult,
+  LocationMutationResult,
+  Story,
+  TriggerMutationResult,
+} from '@paralleax/shared';
 import { AppModule } from '../app.module';
 import { AuthService } from '../auth/auth.service';
 import { DatabaseMigrator } from '../database/database.migrator';
@@ -368,6 +373,72 @@ describe('Stories API', () => {
       .send({
         inputInteractionIds: [foreign.id],
         conditions: [{ interactionId: foreign.id, hasBeenVisited: true }],
+      })
+      .expect(400);
+  });
+
+  it('creates and updates locations, then assigns one to an interaction', async () => {
+    const story = await createStory();
+    const withInteraction = await createInteraction(story.id);
+    const interaction = withInteraction.interactions[0];
+
+    const created = await request(httpServer)
+      .post(`/api/stories/${story.id}/locations`)
+      .send({ name: 'Harbor', description: 'A quiet harbor.' })
+      .expect(201);
+    const location = (created.body as LocationMutationResult).location;
+
+    const updated = await request(httpServer)
+      .patch(`/api/stories/${story.id}/locations/${location.id}`)
+      .send({ name: 'Old harbor' })
+      .expect(200);
+    expect((updated.body as LocationMutationResult).location).toMatchObject({
+      id: location.id,
+      name: 'Old harbor',
+      description: 'A quiet harbor.',
+    });
+
+    const assigned = await request(httpServer)
+      .patch(`/api/stories/${story.id}/interactions/${interaction.id}`)
+      .send({ locationId: location.id })
+      .expect(200);
+    expect((assigned.body as InteractionMutationResult).interaction.locationId).toBe(location.id);
+  });
+
+  it('validates location references in interactions and trigger conditions', async () => {
+    const first = await createStory('First story');
+    const firstGraph = await createInteraction(first.id);
+    const target = firstGraph.interactions[0];
+    const second = await createStory('Second story');
+    const foreignLocationResponse = await request(httpServer)
+      .post(`/api/stories/${second.id}/locations`)
+      .send({ name: 'Foreign place' })
+      .expect(201);
+    const foreignLocation = (foreignLocationResponse.body as LocationMutationResult).location;
+
+    await request(httpServer)
+      .patch(`/api/stories/${first.id}/interactions/${target.id}`)
+      .send({ locationId: foreignLocation.id })
+      .expect(400);
+
+    await request(httpServer)
+      .patch(`/api/stories/${first.id}/interactions/${target.id}/triggers/${target.triggers[0].id}`)
+      .send({
+        conditions: [{ locationId: foreignLocation.id, isCurrentLocation: true }],
+      })
+      .expect(400);
+
+    await request(httpServer)
+      .patch(`/api/stories/${first.id}/interactions/${target.id}/triggers/${target.triggers[0].id}`)
+      .send({
+        conditions: [
+          {
+            interactionId: target.id,
+            hasBeenVisited: true,
+            locationId: foreignLocation.id,
+            isCurrentLocation: true,
+          },
+        ],
       })
       .expect(400);
   });

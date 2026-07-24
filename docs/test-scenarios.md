@@ -4,6 +4,17 @@
 
 Cover the critical MVP paths: Story, Interaction, Trigger, and Reader.
 
+The first post-MVP location vertical also keeps these regressions covered:
+
+- API: create and update a story-owned location.
+- API: reject interaction and trigger location references from another story.
+- Editor: list, create, and edit locations from the collapsible left panel.
+- Editor: assign a location to an interaction and add a location condition.
+- Reader: entering a localized interaction changes current location; an
+  unlocalized interaction preserves it.
+- Reader: location conditions affect availability and remain correct after
+  stepping backward.
+
 ## Authentication and Ownership
 
 - Authentication: registration creates a session that the current-user endpoint

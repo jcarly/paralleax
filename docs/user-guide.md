@@ -87,7 +87,7 @@ conditions and trigger-level actions.
 
 In the trigger inspector:
 
-1. Select `Add condition`.
+1. Select `Add interaction condition` or `Add location condition`.
 2. Choose the interaction to check.
 3. Choose whether it must have been visited or not visited.
 

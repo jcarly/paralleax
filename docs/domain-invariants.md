@@ -13,8 +13,8 @@ details. They should stay covered by tests as the editor grows.
   stored as strings; an API body value of `null` is normalized to an empty
   string.
 - A trigger belongs to exactly one output interaction.
-- Trigger inputs, outputs, and condition interaction references must belong to
-  the same story as their trigger.
+- Trigger inputs, outputs, and all condition references must belong to the same
+  story as their trigger.
 - A trigger can have zero or more input interactions.
 - Deleting the last trigger of an interaction keeps that trigger and turns it
   into an inputless trigger.
@@ -24,7 +24,11 @@ details. They should stay covered by tests as the editor grows.
 - Inputs on the same trigger are OR conditions: any one input can make the output
   interaction reachable if the trigger conditions also match.
 - Conditions on the same trigger are AND conditions: all conditions must match.
-- MVP conditions only check visited or not visited interactions.
+- Conditions can check visited interactions or the current location.
+- A location belongs to exactly one story. An interaction may reference one
+  location from that story.
+- Selecting a localized interaction changes the reader's current location;
+  selecting an unlocalized interaction preserves it.
 - If no interaction is available in the reader, the current branch stops.
 
 ## Editor Projection Invariants

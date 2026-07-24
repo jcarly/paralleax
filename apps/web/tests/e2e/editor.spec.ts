@@ -192,7 +192,7 @@ test.describe('Story editor', () => {
       .filter({ hasText: 'Original title' })
       .getByRole('button', { name: 'Select root trigger' })
       .click();
-    await page.getByRole('button', { name: 'Add condition' }).click();
+    await page.getByRole('button', { name: 'Add interaction condition' }).click();
 
     await expect(page.getByRole('heading', { name: 'Path conditions' })).toBeVisible();
     await expect(page.getByRole('combobox').first()).toHaveValue('interaction-2');

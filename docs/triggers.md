@@ -37,10 +37,12 @@ Conditions on the same trigger represent an AND:
 
 - every "visited" condition must be present in the reader history;
 - every "not visited" condition must be absent from the reader history.
+- every "current location" condition must match the reader location;
+- every "not current location" condition must not match it.
 
 Inputs answer "where can this trigger come from?"
 
-Conditions answer "what must already be true about the path?"
+Conditions answer "what must already be true about the path or reader context?"
 
 ## Inputless Triggers
 

@@ -36,6 +36,24 @@ export function InteractionInspector({
           onBlur={(e) => void onPatch(interaction.id, { body: e.target.value })}
         />
       </label>
+      <label>
+        Location
+        <select
+          value={interaction.locationId ?? ''}
+          onChange={(event) => {
+            const locationId = event.target.value || null;
+            updateLocalInteraction({ locationId });
+            void onPatch(interaction.id, { locationId });
+          }}
+        >
+          <option value="">No location change</option>
+          {(story.locations ?? []).map((location) => (
+            <option key={location.id} value={location.id}>
+              {location.name}
+            </option>
+          ))}
+        </select>
+      </label>
       <hr />
       <button className="danger" onClick={() => void onDelete()}>
         Delete interaction

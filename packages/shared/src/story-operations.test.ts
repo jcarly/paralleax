@@ -330,4 +330,39 @@ describe('shared story operations', () => {
 
     expect(getTriggerConditionFailures(story.interactions[2], 'root', [])).toEqual([]);
   });
+
+  it('evaluates current-location trigger conditions', () => {
+    const story = storyFixture();
+    story.locations = [{ id: 'harbor', name: 'Harbor', description: '' }];
+    story.interactions[1].triggers[0].conditions = [
+      { locationId: 'harbor', isCurrentLocation: true },
+    ];
+
+    expect(
+      getAvailableInteractions(story, 'root', ['root'], 'harbor').map((item) => item.id),
+    ).toContain('middle');
+    expect(
+      getAvailableInteractions(story, 'root', ['root'], null).map((item) => item.id),
+    ).not.toContain('middle');
+    expect(getTriggerConditionFailures(story.interactions[1], 'root', [], null)).toEqual([
+      {
+        triggerId: 'trigger-middle',
+        condition: { locationId: 'harbor', isCurrentLocation: true },
+      },
+    ]);
+  });
+
+  it('supports triggers that forbid the current location', () => {
+    const story = storyFixture();
+    story.interactions[1].triggers[0].conditions = [
+      { locationId: 'harbor', isCurrentLocation: false },
+    ];
+
+    expect(
+      getAvailableInteractions(story, 'root', ['root'], null).map((item) => item.id),
+    ).toContain('middle');
+    expect(
+      getAvailableInteractions(story, 'root', ['root'], 'harbor').map((item) => item.id),
+    ).not.toContain('middle');
+  });
 });
