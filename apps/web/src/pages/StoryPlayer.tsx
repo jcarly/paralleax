@@ -24,8 +24,15 @@ function getUnavailableReason(
   currentId: string | null,
   visited: string[],
   currentLocationId: string | null,
+  currentCharacterIds: string[],
 ) {
-  const failures = getTriggerConditionFailures(interaction, currentId, visited, currentLocationId);
+  const failures = getTriggerConditionFailures(
+    interaction,
+    currentId,
+    visited,
+    currentLocationId,
+    currentCharacterIds,
+  );
   if (failures.length === 0) return undefined;
 
   const firstFailure = failures[0].condition;
@@ -37,10 +44,18 @@ function getUnavailableReason(
       ? `Requires the current location to be "${name}".`
       : `Requires the current location not to be "${name}".`;
   }
-  const title = getInteractionTitle(story, firstFailure.interactionId);
-  return firstFailure.hasBeenVisited
-    ? `Requires "${title}" to be visited.`
-    : `Requires "${title}" not to be visited.`;
+  if ('interactionId' in firstFailure) {
+    const title = getInteractionTitle(story, firstFailure.interactionId);
+    return firstFailure.hasBeenVisited
+      ? `Requires "${title}" to be visited.`
+      : `Requires "${title}" not to be visited.`;
+  }
+  const name =
+    story.characters?.find((character) => character.id === firstFailure.characterId)?.name ??
+    firstFailure.characterId;
+  return firstFailure.isPresent
+    ? `Requires "${name}" to be present.`
+    : `Requires "${name}" to be absent.`;
 }
 
 function uniqueJourneyIds(journey: string[]) {
@@ -86,7 +101,15 @@ export function StoryPlayer() {
 
   const choices = useMemo(
     () =>
-      story ? getAvailableInteractions(story, current?.id ?? null, visited, currentLocationId) : [],
+      story
+        ? getAvailableInteractions(
+            story,
+            current?.id ?? null,
+            visited,
+            currentLocationId,
+            current?.characterIds ?? [],
+          )
+        : [],
     [story, current, visited, currentLocationId],
   );
   const availableChoiceIds = useMemo(() => new Set(choices.map((choice) => choice.id)), [choices]);
@@ -104,6 +127,7 @@ export function StoryPlayer() {
                   current?.id ?? null,
                   visited,
                   currentLocationId,
+                  current?.characterIds ?? [],
                 ),
           }))
         : choices.map((interaction) => ({

@@ -7,6 +7,7 @@ import {
   ensureStoryInteractionPositions,
   normalizeTriggerInputIds,
   updateTriggerInStory,
+  type CharacterMutationResult,
   type InteractionMutationResult,
   type LocationMutationResult,
   type Story,
@@ -15,10 +16,12 @@ import {
 } from '@paralleax/shared';
 import {
   CreateInteractionDto,
+  CreateCharacterDto,
   CreateLocationDto,
   CreateStoryDto,
   CreateTriggerDto,
   UpdateInteractionDto,
+  UpdateCharacterDto,
   UpdateLocationDto,
   UpdateTriggerDto,
   TriggerConditionDto,
@@ -44,6 +47,7 @@ export class StoriesService {
       revision: 1,
       title: input.title.trim() || 'Untitled',
       locations: [],
+      characters: [],
       interactions: [],
       createdAt: now,
       updatedAt: now,
@@ -125,6 +129,13 @@ export class StoriesService {
             throw new BadRequestException('Interaction location must belong to the same story');
           }
           interaction.locationId = input.locationId;
+        }
+        if (input.characterIds !== undefined) {
+          const characterIds = new Set((story.characters ?? []).map(({ id }) => id));
+          if (input.characterIds.some((id) => !characterIds.has(id))) {
+            throw new BadRequestException('Interaction characters must belong to the same story');
+          }
+          interaction.characterIds = [...new Set(input.characterIds)];
         }
         return story;
       },
@@ -244,6 +255,44 @@ export class StoriesService {
     );
     return this.locationResult(story, locationId);
   }
+  async createCharacter(
+    storyId: string,
+    input: CreateCharacterDto,
+    userId: string,
+  ): Promise<CharacterMutationResult> {
+    const characterId = randomUUID();
+    const story = await this.update(
+      storyId,
+      (story) => {
+        (story.characters ??= []).push({
+          id: characterId,
+          name: input.name.trim(),
+          description: input.description ?? '',
+        });
+        return story;
+      },
+      userId,
+    );
+    return this.characterResult(story, characterId);
+  }
+  async updateCharacter(
+    storyId: string,
+    characterId: string,
+    input: UpdateCharacterDto,
+    userId: string,
+  ): Promise<CharacterMutationResult> {
+    const story = await this.update(
+      storyId,
+      (story) => {
+        const character = this.character(story, characterId);
+        if (input.name !== undefined) character.name = input.name.trim();
+        if (input.description !== undefined) character.description = input.description;
+        return story;
+      },
+      userId,
+    );
+    return this.characterResult(story, characterId);
+  }
   private interaction(story: Story, id: string) {
     const item = story.interactions.find((interaction) => interaction.id === id);
     if (!item) throw new NotFoundException('Interaction not found');
@@ -254,6 +303,11 @@ export class StoriesService {
     if (!location) throw new NotFoundException('Location not found');
     return location;
   }
+  private character(story: Story, id: string) {
+    const character = (story.characters ?? []).find((item) => item.id === id);
+    if (!character) throw new NotFoundException('Character not found');
+    return character;
+  }
   private assertInteractionReferences(story: Story, inputInteractionIds: string[]) {
     const interactionIds = new Set(story.interactions.map(({ id }) => id));
     if (inputInteractionIds.some((id) => !interactionIds.has(id))) {
@@ -263,14 +317,22 @@ export class StoriesService {
   private triggerConditions(story: Story, conditions: TriggerConditionDto[]): TriggerCondition[] {
     const interactionIds = new Set(story.interactions.map(({ id }) => id));
     const locationIds = new Set((story.locations ?? []).map(({ id }) => id));
+    const characterIds = new Set((story.characters ?? []).map(({ id }) => id));
     return conditions.map((condition) => {
       const isInteractionCondition =
         condition.interactionId !== undefined && condition.hasBeenVisited !== undefined;
       const isLocationCondition =
         condition.locationId !== undefined && condition.isCurrentLocation !== undefined;
-      if (isInteractionCondition === isLocationCondition) {
+      const isCharacterCondition =
+        condition.characterId !== undefined && condition.isPresent !== undefined;
+      if (
+        Number(isInteractionCondition) +
+          Number(isLocationCondition) +
+          Number(isCharacterCondition) !==
+        1
+      ) {
         throw new BadRequestException(
-          'A trigger condition must reference exactly one interaction or location',
+          'A trigger condition must reference exactly one interaction, location, or character',
         );
       }
       if (isInteractionCondition) {
@@ -282,12 +344,21 @@ export class StoriesService {
           hasBeenVisited: condition.hasBeenVisited!,
         };
       }
-      if (!locationIds.has(condition.locationId!)) {
+      if (isLocationCondition) {
+        if (!locationIds.has(condition.locationId!)) {
+          throw new BadRequestException('Trigger references must belong to the same story');
+        }
+        return {
+          locationId: condition.locationId!,
+          isCurrentLocation: condition.isCurrentLocation!,
+        };
+      }
+      if (!characterIds.has(condition.characterId!)) {
         throw new BadRequestException('Trigger references must belong to the same story');
       }
       return {
-        locationId: condition.locationId!,
-        isCurrentLocation: condition.isCurrentLocation!,
+        characterId: condition.characterId!,
+        isPresent: condition.isPresent!,
       };
     });
   }
@@ -317,6 +388,13 @@ export class StoriesService {
   private locationResult(story: Story, locationId: string): LocationMutationResult {
     return {
       location: structuredClone(this.location(story, locationId)),
+      revision: story.revision ?? 1,
+      updatedAt: story.updatedAt,
+    };
+  }
+  private characterResult(story: Story, characterId: string): CharacterMutationResult {
+    return {
+      character: structuredClone(this.character(story, characterId)),
       revision: story.revision ?? 1,
       updatedAt: story.updatedAt,
     };

@@ -23,6 +23,7 @@ function story(id = 'story-1'): Story {
 function graphStory(): Story {
   const saved = story();
   saved.locations = [{ id: 'location-1', name: 'Harbor', description: 'A quiet harbor.' }];
+  saved.characters = [{ id: 'character-1', name: 'Mira', description: 'An investigator.' }];
   saved.interactions = [
     {
       id: 'interaction-1',
@@ -30,6 +31,7 @@ function graphStory(): Story {
       body: 'Begin here',
       position: { x: 10, y: 20 },
       locationId: 'location-1',
+      characterIds: ['character-1'],
       triggers: [{ id: 'trigger-1', inputInteractionIds: [], conditions: [] }],
     },
     {
@@ -95,6 +97,29 @@ function relationalRead(query: jest.Mock, saved = story()) {
         })),
       });
     }
+    if (sql.includes('FROM interaction_characters')) {
+      return Promise.resolve({
+        rows: saved.interactions.flatMap((interaction) =>
+          (interaction.characterIds ?? []).map((characterId, index) => ({
+            story_id: saved.id,
+            interaction_id: interaction.id,
+            character_id: characterId,
+            sort_order: index,
+          })),
+        ),
+      });
+    }
+    if (sql.includes('FROM characters')) {
+      return Promise.resolve({
+        rows: (saved.characters ?? []).map((character, index) => ({
+          id: character.id,
+          story_id: saved.id,
+          name: character.name,
+          description: character.description,
+          sort_order: index,
+        })),
+      });
+    }
     if (sql.includes('FROM triggers')) {
       return Promise.resolve({
         rows: saved.interactions.flatMap((interaction) =>
@@ -155,9 +180,11 @@ describe('StoriesRepository', () => {
     await expect(repository().find(saved.id, ownerId)).resolves.toEqual({
       ...saved,
       revision: 1,
+      characters: saved.characters,
       interactions: saved.interactions.map((interaction) => ({
         ...interaction,
         locationId: interaction.locationId ?? null,
+        characterIds: interaction.characterIds ?? [],
       })),
     });
     expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining('WHERE id = $1'), [
@@ -209,6 +236,14 @@ describe('StoriesRepository', () => {
     expect(mockClientQuery).toHaveBeenCalledWith(
       expect.stringContaining('INSERT INTO interactions'),
       ['interaction-1', saved.id, 'Start', 'Begin here', 10, 20, 'location-1', 0],
+    );
+    expect(mockClientQuery).toHaveBeenCalledWith(
+      expect.stringContaining('INSERT INTO characters'),
+      ['character-1', saved.id, 'Mira', 'An investigator.', 0],
+    );
+    expect(mockClientQuery).toHaveBeenCalledWith(
+      expect.stringContaining('INSERT INTO interaction_characters'),
+      [saved.id, 'interaction-1', 'character-1', 0],
     );
     expect(mockClientQuery).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO triggers'), [
       'trigger-2',

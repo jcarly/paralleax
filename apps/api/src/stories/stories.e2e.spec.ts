@@ -3,6 +3,7 @@ import { ValidationPipe, type INestApplication } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
 import * as request from 'supertest';
 import type {
+  CharacterMutationResult,
   InteractionMutationResult,
   LocationMutationResult,
   Story,
@@ -439,6 +440,61 @@ describe('Stories API', () => {
             isCurrentLocation: true,
           },
         ],
+      })
+      .expect(400);
+  });
+
+  it('creates and updates characters, then assigns several to an interaction', async () => {
+    const story = await createStory();
+    const withInteraction = await createInteraction(story.id);
+    const interaction = withInteraction.interactions[0];
+
+    const created = await request(httpServer)
+      .post(`/api/stories/${story.id}/characters`)
+      .send({ name: 'Mira', description: 'An investigator.' })
+      .expect(201);
+    const character = (created.body as CharacterMutationResult).character;
+
+    const updated = await request(httpServer)
+      .patch(`/api/stories/${story.id}/characters/${character.id}`)
+      .send({ name: 'Mira Vale' })
+      .expect(200);
+    expect((updated.body as CharacterMutationResult).character).toMatchObject({
+      id: character.id,
+      name: 'Mira Vale',
+      description: 'An investigator.',
+    });
+
+    const assigned = await request(httpServer)
+      .patch(`/api/stories/${story.id}/interactions/${interaction.id}`)
+      .send({ characterIds: [character.id, character.id] })
+      .expect(200);
+    expect((assigned.body as InteractionMutationResult).interaction.characterIds).toEqual([
+      character.id,
+    ]);
+  });
+
+  it('rejects character references from another story', async () => {
+    const first = await createStory('First story');
+    const firstGraph = await createInteraction(first.id);
+    const target = firstGraph.interactions[0];
+    const second = await createStory('Second story');
+    const foreignResponse = await request(httpServer)
+      .post(`/api/stories/${second.id}/characters`)
+      .send({ name: 'Foreign character' })
+      .expect(201);
+    const foreign = (foreignResponse.body as CharacterMutationResult).character;
+
+    await request(httpServer)
+      .patch(`/api/stories/${first.id}/interactions/${target.id}`)
+      .send({ characterIds: [foreign.id] })
+      .expect(400);
+
+    await request(httpServer)
+      .patch(`/api/stories/${first.id}/interactions/${target.id}/triggers/${target.triggers[0].id}`)
+      .send({
+        inputInteractionIds: [],
+        conditions: [{ characterId: foreign.id, isPresent: true }],
       })
       .expect(400);
   });

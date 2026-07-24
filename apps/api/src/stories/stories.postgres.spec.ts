@@ -45,6 +45,7 @@ describePostgres('StoriesRepository PostgreSQL integration', () => {
       createdAt: now,
       updatedAt: now,
       locations: [{ id: 'location-1', name: 'Harbor', description: 'A quiet harbor.' }],
+      characters: [{ id: 'character-1', name: 'Mira', description: 'An investigator.' }],
       interactions: [
         {
           id: 'interaction-1',
@@ -52,6 +53,7 @@ describePostgres('StoriesRepository PostgreSQL integration', () => {
           body: 'Original content',
           position: { x: 80, y: 120 },
           locationId: 'location-1',
+          characterIds: ['character-1'],
           triggers: [{ id: 'trigger-1', inputInteractionIds: [], conditions: [] }],
         },
         {
@@ -66,6 +68,7 @@ describePostgres('StoriesRepository PostgreSQL integration', () => {
               conditions: [
                 { interactionId: 'interaction-1', hasBeenVisited: true },
                 { locationId: 'location-1', isCurrentLocation: true },
+                { characterId: 'character-1', isPresent: true },
               ],
             },
           ],
@@ -94,6 +97,7 @@ describePostgres('StoriesRepository PostgreSQL integration', () => {
       body: 'Original content',
       position: { x: 420, y: 360 },
       locationId: 'location-1',
+      characterIds: ['character-1'],
     });
     expect(reloaded?.locations).toEqual([
       { id: 'location-1', name: 'Harbor', description: 'A quiet harbor.' },
@@ -104,6 +108,7 @@ describePostgres('StoriesRepository PostgreSQL integration', () => {
       conditions: [
         { interactionId: 'interaction-1', hasBeenVisited: true },
         { locationId: 'location-1', isCurrentLocation: true },
+        { characterId: 'character-1', isPresent: true },
       ],
     });
   });
@@ -147,6 +152,9 @@ describePostgres('StoriesRepository PostgreSQL integration', () => {
       `SELECT
          (SELECT count(*)::int FROM interactions WHERE story_id = $1) AS interactions,
          (SELECT count(*)::int FROM locations WHERE story_id = $1) AS locations,
+         (SELECT count(*)::int FROM characters WHERE story_id = $1) AS characters,
+         (SELECT count(*)::int FROM interaction_characters WHERE story_id = $1)
+           AS interaction_characters,
          (SELECT count(*)::int FROM triggers
           JOIN interactions ON interactions.id = triggers.output_interaction_id
           WHERE interactions.story_id = $1) AS triggers,
@@ -162,9 +170,11 @@ describePostgres('StoriesRepository PostgreSQL integration', () => {
     expect(result.rows[0]).toEqual({
       interactions: 2,
       locations: 1,
+      characters: 1,
+      interaction_characters: 1,
       triggers: 2,
       inputs: 1,
-      conditions: 2,
+      conditions: 3,
     });
   });
 });

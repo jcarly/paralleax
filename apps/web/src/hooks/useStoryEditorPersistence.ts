@@ -8,6 +8,7 @@ import {
   mergeServerStory,
   updateInteractionInStory,
   updateTriggerInStory,
+  type CharacterMutationResult,
   type Interaction,
   type InteractionContentPatch,
   type InteractionMutationResult,
@@ -370,6 +371,36 @@ export function useStoryEditorPersistence(storyId: string) {
     );
   }
 
+  async function createCharacter() {
+    const result = await trackSave(() =>
+      api.createCharacter(storyId, { name: 'New character', description: '' }),
+    );
+    if (!result) return undefined;
+    setStory((current) => (current ? applyCharacterResult(current, result) : current));
+    return result.character.id;
+  }
+
+  async function updateCharacter(
+    characterId: string,
+    patch: Partial<Pick<CharacterMutationResult['character'], 'name' | 'description'>>,
+  ) {
+    setStory((current) =>
+      current
+        ? {
+            ...current,
+            characters: (current.characters ?? []).map((character) =>
+              character.id === characterId ? { ...character, ...patch } : character,
+            ),
+          }
+        : current,
+    );
+    const result = await trackSave(() => api.updateCharacter(storyId, characterId, patch));
+    if (!result) return;
+    setStory((current) =>
+      current ? applyCharacterPatchResult(current, result, characterId, patch) : current,
+    );
+  }
+
   return {
     story,
     setStory,
@@ -392,6 +423,8 @@ export function useStoryEditorPersistence(storyId: string) {
     deleteInteraction,
     createLocation,
     updateLocation,
+    createCharacter,
+    updateCharacter,
   };
 }
 
@@ -421,6 +454,38 @@ function applyLocationPatchResult(
       ...story,
       locations: (story.locations ?? []).map((location) =>
         location.id === locationId ? { ...location, ...patch } : location,
+      ),
+    },
+    result,
+  );
+}
+
+function applyCharacterResult(story: Story, result: CharacterMutationResult): Story {
+  const exists = (story.characters ?? []).some(({ id }) => id === result.character.id);
+  return applyMutationMetadata(
+    {
+      ...story,
+      characters: exists
+        ? (story.characters ?? []).map((character) =>
+            character.id === result.character.id ? result.character : character,
+          )
+        : [...(story.characters ?? []), result.character],
+    },
+    result,
+  );
+}
+
+function applyCharacterPatchResult(
+  story: Story,
+  result: CharacterMutationResult,
+  characterId: string,
+  patch: Partial<Pick<CharacterMutationResult['character'], 'name' | 'description'>>,
+): Story {
+  return applyMutationMetadata(
+    {
+      ...story,
+      characters: (story.characters ?? []).map((character) =>
+        character.id === characterId ? { ...character, ...patch } : character,
       ),
     },
     result,

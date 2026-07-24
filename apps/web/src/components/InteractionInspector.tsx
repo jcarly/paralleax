@@ -54,6 +54,29 @@ export function InteractionInspector({
           ))}
         </select>
       </label>
+      <fieldset>
+        <legend>Characters present</legend>
+        {(story.characters?.length ?? 0) === 0 ? (
+          <p className="hint">No characters yet.</p>
+        ) : (
+          (story.characters ?? []).map((character) => (
+            <label key={character.id}>
+              <input
+                type="checkbox"
+                checked={(interaction.characterIds ?? []).includes(character.id)}
+                onChange={(event) => {
+                  const characterIds = event.target.checked
+                    ? [...(interaction.characterIds ?? []), character.id]
+                    : (interaction.characterIds ?? []).filter((id) => id !== character.id);
+                  updateLocalInteraction({ characterIds });
+                  void onPatch(interaction.id, { characterIds });
+                }}
+              />
+              {character.name}
+            </label>
+          ))
+        )}
+      </fieldset>
       <hr />
       <button className="danger" onClick={() => void onDelete()}>
         Delete interaction

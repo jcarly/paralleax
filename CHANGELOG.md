@@ -2,6 +2,12 @@
 
 ## 2026-07-24
 
+- Added story-owned characters with relational persistence, same-story
+  interaction casts, entity-scoped API mutations, and validation.
+- Added character navigation and editing, multi-character interaction
+  assignment, and typed present/absent trigger conditions.
+- Extended reader and simulation evaluation with current-interaction character
+  presence and unavailable-choice explanations.
 - Added story-owned locations with relational PostgreSQL persistence,
   same-story foreign keys, API validation, and entity-scoped mutations.
 - Added a collapsible location panel and inspector, interaction location

@@ -50,7 +50,11 @@ export function TriggerInspector({
               <div
                 className="condition"
                 key={`${variant.id}-${
-                  'interactionId' in condition ? condition.interactionId : condition.locationId
+                  'interactionId' in condition
+                    ? condition.interactionId
+                    : 'locationId' in condition
+                      ? condition.locationId
+                      : condition.characterId
                 }-${index}`}
               >
                 {'interactionId' in condition ? (
@@ -88,7 +92,7 @@ export function TriggerInspector({
                       <option value="not-visited">has not been visited</option>
                     </select>
                   </>
-                ) : (
+                ) : 'locationId' in condition ? (
                   <>
                     <select
                       aria-label="Condition location"
@@ -119,6 +123,39 @@ export function TriggerInspector({
                     >
                       <option value="current">is the current location</option>
                       <option value="not-current">is not the current location</option>
+                    </select>
+                  </>
+                ) : (
+                  <>
+                    <select
+                      aria-label="Condition character"
+                      value={condition.characterId}
+                      onChange={(event) => {
+                        const next = [...variant.conditions];
+                        next[index] = { ...condition, characterId: event.target.value };
+                        void updateTrigger(variant, variant.inputInteractionIds, next);
+                      }}
+                    >
+                      {(story.characters ?? []).map((character) => (
+                        <option key={character.id} value={character.id}>
+                          {character.name}
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      aria-label="Character condition operator"
+                      value={condition.isPresent ? 'present' : 'absent'}
+                      onChange={(event) => {
+                        const next = [...variant.conditions];
+                        next[index] = {
+                          ...condition,
+                          isPresent: event.target.value === 'present',
+                        };
+                        void updateTrigger(variant, variant.inputInteractionIds, next);
+                      }}
+                    >
+                      <option value="present">is present</option>
+                      <option value="absent">is absent</option>
                     </select>
                   </>
                 )}
@@ -166,6 +203,21 @@ export function TriggerInspector({
             }}
           >
             Add location condition
+          </button>
+          <button
+            className="secondary"
+            disabled={(story.characters?.length ?? 0) === 0}
+            onClick={() => {
+              const character = story.characters?.[0];
+              if (character) {
+                void updateTrigger(variant, variant.inputInteractionIds, [
+                  ...variant.conditions,
+                  { characterId: character.id, isPresent: true },
+                ]);
+              }
+            }}
+          >
+            Add character condition
           </button>
           {hasOrVariants ? (
             <button

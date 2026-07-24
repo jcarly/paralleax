@@ -87,11 +87,13 @@ conditions and trigger-level actions.
 
 In the trigger inspector:
 
-1. Select `Add interaction condition` or `Add location condition`.
+1. Select `Add interaction condition`, `Add location condition`, or
+   `Add character condition`.
 2. Choose the interaction to check.
 3. Choose whether it must have been visited or not visited.
 
-MVP conditions only check reading history. Variables, places, characters, and timing are intentionally not part of the current MVP.
+Conditions can check reading history, current location, and characters present
+in the current interaction. Variables and timing are not implemented.
 
 ## Delete Trigger Links
 

@@ -222,4 +222,36 @@ export const databaseMigrations: DatabaseMigration[] = [
       CREATE INDEX interactions_location_id_idx ON interactions(location_id);
     `,
   },
+  {
+    id: '202607240008_characters',
+    sql: `
+      CREATE TABLE characters (
+        id text PRIMARY KEY,
+        story_id text NOT NULL REFERENCES stories(id) ON DELETE CASCADE,
+        name text NOT NULL,
+        description text NOT NULL DEFAULT '',
+        sort_order integer NOT NULL,
+        CONSTRAINT characters_story_id_id_unique UNIQUE (story_id, id)
+      );
+
+      CREATE TABLE interaction_characters (
+        story_id text NOT NULL,
+        interaction_id text NOT NULL,
+        character_id text NOT NULL,
+        sort_order integer NOT NULL,
+        PRIMARY KEY (interaction_id, character_id),
+        CONSTRAINT interaction_characters_interaction_fkey
+          FOREIGN KEY (story_id, interaction_id)
+          REFERENCES interactions(story_id, id) ON DELETE CASCADE,
+        CONSTRAINT interaction_characters_character_fkey
+          FOREIGN KEY (story_id, character_id)
+          REFERENCES characters(story_id, id) ON DELETE CASCADE
+      );
+
+      CREATE INDEX characters_story_id_idx ON characters(story_id);
+      CREATE INDEX interaction_characters_story_id_idx ON interaction_characters(story_id);
+      CREATE INDEX interaction_characters_character_id_idx
+        ON interaction_characters(character_id);
+    `,
+  },
 ];

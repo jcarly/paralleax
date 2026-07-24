@@ -18,6 +18,8 @@ vi.mock('../api', () => ({
     deleteTrigger: vi.fn(),
     createLocation: vi.fn(),
     updateLocation: vi.fn(),
+    createCharacter: vi.fn(),
+    updateCharacter: vi.fn(),
   },
 }));
 
@@ -409,6 +411,73 @@ describe('StoryEditor', () => {
       inputInteractionIds: [],
       conditions: [{ locationId: 'location-1', isCurrentLocation: true }],
     });
+  });
+
+  it('creates, edits, assigns, and conditions a character', async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.createCharacter).mockResolvedValue({
+      character: { id: 'character-1', name: 'New character', description: '' },
+      revision: 2,
+      updatedAt: baseStory.updatedAt,
+    });
+    vi.mocked(api.updateCharacter).mockResolvedValue({
+      character: { id: 'character-1', name: 'Mira', description: '' },
+      revision: 3,
+      updatedAt: baseStory.updatedAt,
+    });
+
+    await renderEditor();
+    await user.click(screen.getByRole('button', { name: 'Add character' }));
+    const inspector = screen.getByRole('complementary', { name: 'Inspector' });
+    const name = within(inspector).getByLabelText('Name');
+    await user.clear(name);
+    await user.type(name, 'Mira');
+    fireEvent.blur(name);
+    const description = within(inspector).getByLabelText('Description');
+    await user.type(description, 'An investigator.');
+    fireEvent.blur(description);
+    await waitFor(() =>
+      expect(api.updateCharacter).toHaveBeenCalledWith('story-1', 'character-1', {
+        description: 'An investigator.',
+      }),
+    );
+    expect(await screen.findByRole('button', { name: 'Mira' })).toBeInTheDocument();
+
+    await user.click(screen.getByTestId('flow-node-interaction-1'));
+    const assignedStory = cloneStory();
+    assignedStory.characters = [{ id: 'character-1', name: 'Mira', description: '' }];
+    assignedStory.interactions[0].characterIds = ['character-1'];
+    vi.mocked(api.updateInteraction).mockResolvedValue(
+      interactionMutation(assignedStory, 'interaction-1'),
+    );
+    await user.click(screen.getByRole('checkbox', { name: 'Mira' }));
+    expect(api.updateInteraction).toHaveBeenCalledWith('story-1', 'interaction-1', {
+      characterIds: ['character-1'],
+    });
+
+    const conditionedStory = cloneStory(assignedStory);
+    conditionedStory.interactions[0].triggers[0].conditions = [
+      { characterId: 'character-1', isPresent: true },
+    ];
+    vi.mocked(api.updateTrigger).mockResolvedValue(
+      triggerMutation(conditionedStory, 'interaction-1', 'trigger-1'),
+    );
+    await user.click(screen.getByRole('button', { name: 'Select root trigger' }));
+    await user.click(screen.getByRole('button', { name: 'Add character condition' }));
+    expect(api.updateTrigger).toHaveBeenCalledWith('story-1', 'interaction-1', 'trigger-1', {
+      inputInteractionIds: [],
+      conditions: [{ characterId: 'character-1', isPresent: true }],
+    });
+    await user.selectOptions(screen.getByLabelText('Character condition operator'), 'absent');
+    expect(api.updateTrigger).toHaveBeenLastCalledWith(
+      'story-1',
+      'interaction-1',
+      'trigger-1',
+      {
+        inputInteractionIds: [],
+        conditions: [{ characterId: 'character-1', isPresent: false }],
+      },
+    );
   });
 
   it('creates root and child interactions', async () => {

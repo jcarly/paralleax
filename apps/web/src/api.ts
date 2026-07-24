@@ -1,4 +1,6 @@
 import type {
+  CharacterMutationResult,
+  CreateCharacterInput,
   CreateInteractionInput,
   CreateLocationInput,
   InteractionMutationResult,
@@ -6,6 +8,7 @@ import type {
   Story,
   TriggerMutationResult,
   UpdateInteractionInput,
+  UpdateCharacterInput,
   UpdateLocationInput,
   UpdateTriggerInput,
 } from '@paralleax/shared';
@@ -79,6 +82,16 @@ export const api = {
     }),
   updateLocation: (storyId: string, locationId: string, input: UpdateLocationInput) =>
     request<LocationMutationResult>(`/stories/${storyId}/locations/${locationId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(input),
+    }),
+  createCharacter: (storyId: string, input: CreateCharacterInput) =>
+    request<CharacterMutationResult>(`/stories/${storyId}/characters`, {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
+  updateCharacter: (storyId: string, characterId: string, input: UpdateCharacterInput) =>
+    request<CharacterMutationResult>(`/stories/${storyId}/characters/${characterId}`, {
       method: 'PATCH',
       body: JSON.stringify(input),
     }),

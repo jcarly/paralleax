@@ -14,6 +14,7 @@ Main fields:
 - `title`
 - `interactions`
 - `locations`
+- `characters`
 
 ### Interaction
 
@@ -27,6 +28,7 @@ Main MVP fields:
 - `position`
 - `triggers`
 - optional `locationId`
+- `characterIds`
 
 The title is used for choices and editor display. The body is used by the reader.
 
@@ -61,6 +63,8 @@ Examples:
 - not visited interaction.
 - current location;
 - not current location.
+- character present;
+- character absent.
 
 ### Location
 
@@ -68,6 +72,13 @@ A location is an authored story entity with an id, name, and description.
 Interactions may move the reader to a location, and triggers may test whether it
 is or is not current. Locations are definitions in the story; the current
 location is runtime reader state.
+
+### Character
+
+A character is a story-owned authored entity with an id, name, and description.
+An interaction can involve several characters. Presence conditions inspect the
+cast of the current interaction; presence is scene context, not persistent
+play-session state.
 
 See [Trigger semantics](triggers.md) for deletion rules and editor behavior.
 
@@ -249,16 +260,8 @@ Possible elements:
 
 Annotations are not part of the MVP implementation.
 
-### Character
-
-A character can be playable or non-playable.
-
-Possible elements:
-
-- current place;
-- attributes;
-- relationships with other characters;
-- own narrative path.
+Later character increments may add playable points of view, attributes,
+relationships, and character-specific narrative paths.
 
 ### Attribute
 

@@ -24,11 +24,16 @@ details. They should stay covered by tests as the editor grows.
 - Inputs on the same trigger are OR conditions: any one input can make the output
   interaction reachable if the trigger conditions also match.
 - Conditions on the same trigger are AND conditions: all conditions must match.
-- Conditions can check visited interactions or the current location.
+- Conditions can check visited interactions, the current location, or character
+  presence in the current interaction.
 - A location belongs to exactly one story. An interaction may reference one
   location from that story.
 - Selecting a localized interaction changes the reader's current location;
   selecting an unlocalized interaction preserves it.
+- A character belongs to exactly one story. An interaction may reference several
+  characters from that story without duplicates.
+- Character presence is scoped to the current interaction and does not carry
+  over to the next interaction.
 - If no interaction is available in the reader, the current branch stops.
 
 ## Editor Projection Invariants

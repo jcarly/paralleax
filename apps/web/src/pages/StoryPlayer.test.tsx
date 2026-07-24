@@ -107,6 +107,21 @@ describe('StoryPlayer', () => {
     expect(screen.getByRole('button', { name: 'Secret' })).toBeInTheDocument();
   });
 
+  it('evaluates character conditions from the current interaction cast', async () => {
+    const user = userEvent.setup();
+    const characterStory = structuredClone(story);
+    characterStory.characters = [{ id: 'mira', name: 'Mira', description: '' }];
+    characterStory.interactions[0].characterIds = ['mira'];
+    characterStory.interactions[1].triggers[0].conditions = [
+      { characterId: 'mira', isPresent: true },
+    ];
+
+    await renderPlayer('/stories/story-1/play', characterStory);
+    await user.click(screen.getByRole('button', { name: 'Start' }));
+
+    expect(screen.getByRole('button', { name: 'Next' })).toBeInTheDocument();
+  });
+
   it('shows an ending and can restart', async () => {
     const user = userEvent.setup();
     await renderPlayer();

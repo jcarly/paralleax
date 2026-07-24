@@ -12,6 +12,7 @@ import {
 } from '@xyflow/react';
 import { Link, useParams } from 'react-router-dom';
 import type { Position } from '@paralleax/shared';
+import { CharacterInspector } from '../components/CharacterInspector';
 import { InteractionInspector } from '../components/InteractionInspector';
 import { InteractionNode } from '../components/InteractionNode';
 import { LocationInspector } from '../components/LocationInspector';
@@ -59,10 +60,13 @@ export function StoryEditor() {
     deleteInteraction,
     createLocation,
     updateLocation,
+    createCharacter,
+    updateCharacter,
   } = useStoryEditorPersistence(storyId);
   const [selectedId, setSelectedId] = useState<string>();
   const [selectedTrigger, setSelectedTrigger] = useState<SelectedTrigger>();
   const [selectedLocationId, setSelectedLocationId] = useState<string>();
+  const [selectedCharacterId, setSelectedCharacterId] = useState<string>();
   const [isLocationPanelOpen, setIsLocationPanelOpen] = useState(true);
   const [isConnecting, setIsConnecting] = useState(false);
   const [pendingConnection, setPendingConnection] = useState<Connection>();
@@ -76,12 +80,16 @@ export function StoryEditor() {
   const selected = findInteraction(story, selectedId);
   const selectedTriggerTarget = findSelectedTrigger(story, selectedTrigger);
   const selectedLocation = story?.locations?.find(({ id }) => id === selectedLocationId);
-  const hasInspectorSelection = Boolean(selected || selectedTriggerTarget || selectedLocation);
+  const selectedCharacter = story?.characters?.find(({ id }) => id === selectedCharacterId);
+  const hasInspectorSelection = Boolean(
+    selected || selectedTriggerTarget || selectedLocation || selectedCharacter,
+  );
 
   const closeInspector = useCallback(() => {
     setSelectedId(undefined);
     setSelectedTrigger(undefined);
     setSelectedLocationId(undefined);
+    setSelectedCharacterId(undefined);
   }, []);
 
   const storyNodes = useMemo(
@@ -239,6 +247,24 @@ export function StoryEditor() {
     });
   }
 
+  async function addCharacter() {
+    const characterId = await createCharacter();
+    if (!characterId) return;
+    closeInspector();
+    setSelectedCharacterId(characterId);
+    setIsLocationPanelOpen(true);
+  }
+
+  function updateLocalCharacter(patch: Partial<NonNullable<typeof selectedCharacter>>) {
+    if (!story || !selectedCharacter) return;
+    setStory({
+      ...story,
+      characters: (story.characters ?? []).map((character) =>
+        character.id === selectedCharacter.id ? { ...character, ...patch } : character,
+      ),
+    });
+  }
+
   if (!story) return <main className="page">{error || 'Loading...'}</main>;
   const simulationPath = selected
     ? `/stories/${storyId}/play?mode=simulation&startInteractionId=${encodeURIComponent(
@@ -305,7 +331,7 @@ export function StoryEditor() {
             aria-expanded={isLocationPanelOpen}
             onClick={() => setIsLocationPanelOpen((open) => !open)}
           >
-            Locations
+            Story context
           </button>
           <Link className="button secondary" to={simulationPath}>
             {selected ? 'Test from current interaction' : 'Test'}
@@ -326,7 +352,7 @@ export function StoryEditor() {
         }`}
       >
         {isLocationPanelOpen ? (
-          <nav className="location-panel" aria-label="Locations">
+          <nav className="location-panel" aria-label="Story context">
             <div className="location-panel-header">
               <h2>Locations</h2>
               <button type="button" onClick={() => void addLocation()}>
@@ -348,6 +374,32 @@ export function StoryEditor() {
                       }}
                     >
                       {location.name}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <div className="location-panel-header context-section">
+              <h2>Characters</h2>
+              <button type="button" onClick={() => void addCharacter()}>
+                Add character
+              </button>
+            </div>
+            {(story.characters?.length ?? 0) === 0 ? (
+              <p className="hint">No characters yet.</p>
+            ) : (
+              <ul>
+                {(story.characters ?? []).map((character) => (
+                  <li key={character.id}>
+                    <button
+                      type="button"
+                      className={character.id === selectedCharacterId ? 'selected' : 'ghost'}
+                      onClick={() => {
+                        closeInspector();
+                        setSelectedCharacterId(character.id);
+                      }}
+                    >
+                      {character.name}
                     </button>
                   </li>
                 ))}
@@ -418,6 +470,12 @@ export function StoryEditor() {
                 location={selectedLocation}
                 onLocalChange={updateLocalLocation}
                 onPatch={updateLocation}
+              />
+            ) : selectedCharacter ? (
+              <CharacterInspector
+                character={selectedCharacter}
+                onChange={updateLocalCharacter}
+                onPatch={updateCharacter}
               />
             ) : null}
           </aside>

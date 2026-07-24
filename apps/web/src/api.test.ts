@@ -148,6 +148,20 @@ describe('api client', () => {
       method: 'PATCH',
       body: JSON.stringify({ name: 'Old harbor' }),
     });
+
+    await api.createCharacter('story-1', { name: 'Mira', description: '' });
+    expect(fetchMock).toHaveBeenLastCalledWith('/api/stories/story-1/characters', {
+      headers: { 'Content-Type': 'application/json' },
+      method: 'POST',
+      body: JSON.stringify({ name: 'Mira', description: '' }),
+    });
+
+    await api.updateCharacter('story-1', 'character-1', { name: 'Mira Vale' });
+    expect(fetchMock).toHaveBeenLastCalledWith('/api/stories/story-1/characters/character-1', {
+      headers: { 'Content-Type': 'application/json' },
+      method: 'PATCH',
+      body: JSON.stringify({ name: 'Mira Vale' }),
+    });
   });
 
   it('returns undefined for 204 responses', async () => {

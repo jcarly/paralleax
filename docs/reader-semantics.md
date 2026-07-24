@@ -14,6 +14,7 @@ getAvailableInteractions(
   currentInteractionId: string | null,
   visitedIds: string[],
   currentLocationId?: string | null,
+  currentCharacterIds?: string[],
 ): Interaction[];
 ```
 
@@ -21,6 +22,7 @@ getAvailableInteractions(
 `visitedIds` is the list of interactions already chosen by the reader.
 `currentLocationId` is the reader's current authored location, or `null` before
 one has been established.
+`currentCharacterIds` lists the characters present in the current interaction.
 
 ## Trigger Eligibility
 
@@ -44,6 +46,10 @@ For conditions:
 - every `hasBeenVisited: false` condition must be absent from the visited history;
 - every `isCurrentLocation: true` condition must reference the current location;
 - every `isCurrentLocation: false` condition must reference a different location;
+- every `isPresent: true` condition must reference a character in the current
+  interaction;
+- every `isPresent: false` condition must reference a character absent from the
+  current interaction;
 - conditions on the same trigger are evaluated as AND.
 
 Inputs on the same trigger are evaluated as OR.
@@ -60,7 +66,7 @@ current interaction. They are not re-offered after the reader has selected an
 interaction unless another trigger also makes the same interaction available.
 
 Contextual inputless triggers are evaluated during reading. They can use visited
-history and the current authored location.
+history, the current authored location, and the current interaction's cast.
 
 ## Current Location
 
@@ -71,6 +77,13 @@ simulation initializes the current location from that interaction, if present.
 
 Stepping backward reconstructs the location by scanning the remaining journey
 and taking the most recent interaction that defines one.
+
+## Character Presence
+
+Each interaction has an authored set of present characters. Unlike location,
+presence does not carry over: the reader evaluates character conditions against
+the current interaction only. Before an interaction has been selected, the
+current cast is empty.
 
 A contextual inputless trigger can be offered at the same time as normal linked
 transitions. For example, after interaction `A`, interaction `B` may be
@@ -124,7 +137,6 @@ completion state.
 The MVP reader does not support:
 
 - variables or attributes;
-- characters;
 - timing;
 - probabilities;
 - automatic choices;

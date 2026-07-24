@@ -1,7 +1,7 @@
 # MVP
 
-The MVP validated the narrative core before adding characters, variables, AI,
-or advanced exports. Locations are the first post-MVP world-state vertical.
+The MVP validated the narrative core before adding variables, AI, or advanced
+exports. Locations and characters are the first post-MVP context verticals.
 
 ## Included
 
@@ -19,7 +19,6 @@ the narrative-core validation criteria.
 
 ## Out of Scope for Now
 
-- Characters.
 - Attributes and variables.
 - Timing and probabilities.
 - Automatic choices.

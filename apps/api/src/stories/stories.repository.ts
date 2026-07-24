@@ -33,6 +33,13 @@ type LocationRow = {
   description: string;
   sort_order: number;
 };
+type CharacterRow = LocationRow;
+type InteractionCharacterRow = {
+  story_id: string;
+  interaction_id: string;
+  character_id: string;
+  sort_order: number;
+};
 type TriggerRow = {
   id: string;
   story_id: string;
@@ -141,6 +148,18 @@ export class StoriesRepository {
          ORDER BY story_id, sort_order`,
       [storyIds],
     );
+    const characters = await queryable.query<CharacterRow>(
+      `SELECT id, story_id, name, description, sort_order
+         FROM characters WHERE story_id = ANY($1::text[])
+         ORDER BY story_id, sort_order`,
+      [storyIds],
+    );
+    const interactionCharacters = await queryable.query<InteractionCharacterRow>(
+      `SELECT story_id, interaction_id, character_id, sort_order
+         FROM interaction_characters WHERE story_id = ANY($1::text[])
+         ORDER BY story_id, interaction_id, sort_order`,
+      [storyIds],
+    );
     const triggers = await queryable.query<TriggerRow>(
       `SELECT triggers.id, interactions.story_id, triggers.output_interaction_id,
                 triggers.sort_order, triggers.conditions
@@ -167,6 +186,11 @@ export class StoriesRepository {
     );
     const interactionsByStory = groupBy(interactions.rows, ({ story_id }) => story_id);
     const locationsByStory = groupBy(locations.rows, ({ story_id }) => story_id);
+    const charactersByStory = groupBy(characters.rows, ({ story_id }) => story_id);
+    const charactersByInteraction = groupBy(
+      interactionCharacters.rows,
+      ({ interaction_id }) => interaction_id,
+    );
 
     return storyRows.map((row) => ({
       id: row.id,
@@ -179,12 +203,20 @@ export class StoriesRepository {
         name: location.name,
         description: location.description,
       })),
+      characters: (charactersByStory.get(row.id) ?? []).map((character) => ({
+        id: character.id,
+        name: character.name,
+        description: character.description,
+      })),
       interactions: (interactionsByStory.get(row.id) ?? []).map((interaction) => ({
         id: interaction.id,
         title: interaction.title,
         body: interaction.body,
         position: { x: interaction.position_x, y: interaction.position_y },
         locationId: interaction.location_id,
+        characterIds: (charactersByInteraction.get(interaction.id) ?? []).map(
+          ({ character_id }) => character_id,
+        ),
         triggers: (triggersByInteraction.get(interaction.id) ?? []).map((trigger) => ({
           id: trigger.id,
           inputInteractionIds: (inputsByTrigger.get(trigger.id) ?? []).map(

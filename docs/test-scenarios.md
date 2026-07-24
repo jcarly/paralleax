@@ -15,6 +15,14 @@ The first post-MVP location vertical also keeps these regressions covered:
 - Reader: location conditions affect availability and remain correct after
   stepping backward.
 
+The character vertical keeps these regressions covered:
+
+- API: create and update a story-owned character.
+- API: reject interaction and trigger character references from another story.
+- Editor: list, create, and edit characters from the context panel.
+- Editor: assign several characters to an interaction and add a presence condition.
+- Reader: present and absent conditions use only the current interaction's cast.
+
 ## Authentication and Ownership
 
 - Authentication: registration creates a session that the current-user endpoint

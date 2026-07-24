@@ -365,4 +365,35 @@ describe('shared story operations', () => {
       getAvailableInteractions(story, 'root', ['root'], 'harbor').map((item) => item.id),
     ).not.toContain('middle');
   });
+
+  it('evaluates character presence conditions from the current interaction', () => {
+    const story = storyFixture();
+    story.characters = [{ id: 'mira', name: 'Mira', description: '' }];
+    story.interactions[1].triggers[0].conditions = [{ characterId: 'mira', isPresent: true }];
+
+    expect(
+      getAvailableInteractions(story, 'root', ['root'], null, ['mira']).map((item) => item.id),
+    ).toContain('middle');
+    expect(
+      getAvailableInteractions(story, 'root', ['root'], null, []).map((item) => item.id),
+    ).not.toContain('middle');
+    expect(getTriggerConditionFailures(story.interactions[1], 'root', [], null, [])).toEqual([
+      {
+        triggerId: 'trigger-middle',
+        condition: { characterId: 'mira', isPresent: true },
+      },
+    ]);
+  });
+
+  it('supports triggers that require a character to be absent', () => {
+    const story = storyFixture();
+    story.interactions[1].triggers[0].conditions = [{ characterId: 'mira', isPresent: false }];
+
+    expect(
+      getAvailableInteractions(story, 'root', ['root'], null, []).map((item) => item.id),
+    ).toContain('middle');
+    expect(
+      getAvailableInteractions(story, 'root', ['root'], null, ['mira']).map((item) => item.id),
+    ).not.toContain('middle');
+  });
 });

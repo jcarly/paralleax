@@ -39,6 +39,8 @@ Conditions on the same trigger represent an AND:
 - every "not visited" condition must be absent from the reader history.
 - every "current location" condition must match the reader location;
 - every "not current location" condition must not match it.
+- every "present character" condition must belong to the current interaction's cast;
+- every "absent character" condition must not belong to that cast.
 
 Inputs answer "where can this trigger come from?"
 
