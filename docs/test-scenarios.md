@@ -46,6 +46,11 @@ Cover the critical MVP paths: Story, Interaction, Trigger, and Reader.
   story keeps both values.
 - Editor: moving an interaction saves only the position without clearing the title or body.
 - API: updating only an interaction position keeps its persisted title and body.
+- API/Web: interaction POST and PATCH return and apply only the saved interaction
+  plus story revision metadata.
+- API/Web: trigger POST accepts initial inputs and conditions atomically; trigger
+  POST and PATCH return and apply only the saved trigger plus story revision
+  metadata.
 - API: interaction PATCH requests reject null titles, null positions, and unknown
   fields, while a null body is persisted as an empty string.
 - API/PostgreSQL: relational rows require story and interaction titles,
@@ -79,6 +84,8 @@ Cover the critical MVP paths: Story, Interaction, Trigger, and Reader.
 - Editor/API: deleting the last trigger of an interaction turns it into a root
   trigger.
 - Editor: creating a new canvas connection creates a dedicated trigger and does not mutate existing linked triggers.
+- Editor: creating a connection or OR variant uses one trigger request rather
+  than a dependent POST followed by PATCH.
 - Editor: when connecting to an interaction with existing triggers, the author can choose whether to add the source as an input of an existing trigger or create a new trigger.
 - Editor: dropping a connection on an existing trigger marker adds the source as
   another input of that trigger.

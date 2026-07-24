@@ -1,6 +1,8 @@
 import type {
   CreateInteractionInput,
+  InteractionMutationResult,
   Story,
+  TriggerMutationResult,
   UpdateInteractionInput,
   UpdateTriggerInput,
 } from '@paralleax/shared';
@@ -31,6 +33,8 @@ export interface AuthUser {
   email: string;
   createdAt: string;
 }
+type InteractionSaveResponse = InteractionMutationResult | Story;
+type TriggerSaveResponse = TriggerMutationResult | Story;
 export const api = {
   me: () => request<AuthUser>('/auth/me'),
   register: (email: string, password: string) =>
@@ -54,20 +58,25 @@ export const api = {
     request<Story>(`/stories/${id}`, { method: 'PATCH', body: JSON.stringify({ title }) }),
   deleteStory: (id: string) => request<void>(`/stories/${id}`, { method: 'DELETE' }),
   createInteraction: (storyId: string, input: CreateInteractionInput) =>
-    request<Story>(`/stories/${storyId}/interactions`, {
+    request<InteractionSaveResponse>(`/stories/${storyId}/interactions`, {
       method: 'POST',
       body: JSON.stringify(input),
     }),
   updateInteraction: (storyId: string, interactionId: string, input: UpdateInteractionInput) =>
-    request<Story>(`/stories/${storyId}/interactions/${interactionId}`, {
+    request<InteractionSaveResponse>(`/stories/${storyId}/interactions/${interactionId}`, {
       method: 'PATCH',
       body: JSON.stringify(input),
     }),
   deleteInteraction: (storyId: string, interactionId: string) =>
     request<Story>(`/stories/${storyId}/interactions/${interactionId}`, { method: 'DELETE' }),
-  addTrigger: (storyId: string, interactionId: string) =>
-    request<Story>(`/stories/${storyId}/interactions/${interactionId}/triggers`, {
+  addTrigger: (
+    storyId: string,
+    interactionId: string,
+    input: UpdateTriggerInput = { inputInteractionIds: [], conditions: [] },
+  ) =>
+    request<TriggerSaveResponse>(`/stories/${storyId}/interactions/${interactionId}/triggers`, {
       method: 'POST',
+      body: JSON.stringify(input),
     }),
   updateTrigger: (
     storyId: string,
@@ -75,10 +84,13 @@ export const api = {
     triggerId: string,
     input: UpdateTriggerInput,
   ) =>
-    request<Story>(`/stories/${storyId}/interactions/${interactionId}/triggers/${triggerId}`, {
-      method: 'PATCH',
-      body: JSON.stringify(input),
-    }),
+    request<TriggerSaveResponse>(
+      `/stories/${storyId}/interactions/${interactionId}/triggers/${triggerId}`,
+      {
+        method: 'PATCH',
+        body: JSON.stringify(input),
+      },
+    ),
   deleteTrigger: (storyId: string, interactionId: string, triggerId: string) =>
     request<Story>(`/stories/${storyId}/interactions/${interactionId}/triggers/${triggerId}`, {
       method: 'DELETE',

@@ -96,12 +96,17 @@ describe('api client', () => {
       method: 'DELETE',
     });
 
-    await api.addTrigger('story-1', 'interaction-1');
+    const triggerInput = {
+      inputInteractionIds: ['source-1'],
+      conditions: [{ interactionId: 'source-1', hasBeenVisited: true }],
+    };
+    await api.addTrigger('story-1', 'interaction-1', triggerInput);
     expect(fetchMock).toHaveBeenLastCalledWith(
       '/api/stories/story-1/interactions/interaction-1/triggers',
       {
         headers: { 'Content-Type': 'application/json' },
         method: 'POST',
+        body: JSON.stringify(triggerInput),
       },
     );
 

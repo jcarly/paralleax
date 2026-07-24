@@ -29,10 +29,14 @@ identity boundary, expensive computation, or frequently rerendered subtree.
 - Keep dependent operations sequential when the second operation genuinely
   requires the first result.
 - When a common editor action requires several dependent HTTP calls, prefer one
-  atomic API command over client-side orchestration. Creating a trigger and then
-  assigning its inputs is the current candidate to review.
+  atomic API command over client-side orchestration. Trigger creation already
+  accepts initial inputs and conditions, so graph connections and OR variants
+  must not follow it with a redundant PATCH.
 - Preserve optimistic updates and stale-response protection when consolidating
   commands.
+- Apply interaction and trigger mutation responses directly to their owning
+  entity. Do not replace the local graph with a complete story response for an
+  entity-scoped save.
 
 ### Control Bundle Size
 

@@ -69,6 +69,8 @@ directly. Feature modules export only providers required by another module.
 - creates and renames stories;
 - creates, updates, and deletes interactions;
 - creates, updates, and deletes triggers;
+- returns the mutated interaction or trigger with story revision metadata for
+  entity-scoped create and update endpoints;
 - delegates trigger cleanup and story mutation rules to `packages/shared`;
 - normalizes missing interaction positions before returning stories;
 - updates timestamps before saving modified stories.
@@ -106,6 +108,13 @@ interaction fields and changed trigger structures. Independent concurrent field
 updates therefore do not rewrite an unrelated story document. A later
 collaboration policy must still define conflicts when two users modify the same
 trigger structure.
+
+Interaction and trigger create/update routes do not return the complete story.
+They return the saved entity plus the owning story revision and update timestamp.
+Trigger creation accepts its initial inputs and conditions in the same request,
+so creating a graph link does not require a dependent create-then-patch sequence.
+Delete routes may still return the story because their cleanup can affect several
+interactions and triggers.
 
 ### `apps/web`
 
@@ -190,12 +199,14 @@ recomputed projections.
    story operations.
 3. The hook sends the API request.
 4. The API updates the repository through `StoriesService`.
-5. The API response is merged back into the current local story with
-   `mergeServerStory`.
+5. The API returns the saved interaction and story mutation metadata.
+6. The hook applies that entity to the current local story without replacing
+   unrelated interactions or trigger structures.
 
-This merge protects recent local edits from stale server responses. When adding
-or changing editor persistence behavior, update shared merge tests before relying
-on the behavior from React.
+Story-level and delete responses still use `mergeServerStory`. Entity-scoped
+responses avoid carrying unrelated stale graph state in the first place. When
+adding or changing editor persistence behavior, keep both entity application and
+stale story merge regressions covered.
 
 ### Editing Trigger Links
 

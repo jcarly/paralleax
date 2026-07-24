@@ -26,6 +26,17 @@ export interface Story {
   createdAt: string;
   updatedAt: string;
 }
+export interface StoryMutationMetadata {
+  revision: number;
+  updatedAt: string;
+}
+export interface InteractionMutationResult extends StoryMutationMetadata {
+  interaction: Interaction;
+}
+export interface TriggerMutationResult extends StoryMutationMetadata {
+  interactionId: string;
+  trigger: Trigger;
+}
 export interface CreateStoryInput {
   title: string;
 }

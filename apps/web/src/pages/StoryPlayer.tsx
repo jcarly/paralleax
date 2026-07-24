@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
-import type { Interaction, Story } from '@paralleax/shared';
+import type { Interaction, InteractionMutationResult, Story } from '@paralleax/shared';
 import {
   ensureStoryInteractionPositions,
   getAvailableInteractions,
@@ -111,8 +111,10 @@ export function StoryPlayer() {
 
   async function saveCurrentInteraction(patch: Partial<Pick<Interaction, 'title' | 'body'>>) {
     if (!current) return;
-    const nextStory = await api.updateInteraction(storyId, current.id, patch);
-    setStory(ensureStoryInteractionPositions(nextStory));
+    const result = await api.updateInteraction(storyId, current.id, patch);
+    setStory((currentStory) =>
+      currentStory ? applyInteractionResponse(currentStory, result) : currentStory,
+    );
   }
 
   function patchInteraction(
@@ -135,8 +137,7 @@ export function StoryPlayer() {
 
   async function addOption() {
     if (!story) return;
-    const existingIds = new Set(story.interactions.map((interaction) => interaction.id));
-    const nextStory = await api.createInteraction(
+    const result = await api.createInteraction(
       storyId,
       current
         ? {
@@ -147,15 +148,19 @@ export function StoryPlayer() {
             position: getNextRootPosition(story),
           },
     );
-    const created = nextStory.interactions.find((interaction) => !existingIds.has(interaction.id));
-    setStory(ensureStoryInteractionPositions(nextStory));
+    const created = interactionFromResponse(result, story);
+    setStory((currentStory) =>
+      currentStory ? applyInteractionResponse(currentStory, result) : currentStory,
+    );
     setEditingChoiceId(created?.id);
   }
 
   async function saveChoiceTitle(interaction: Interaction, title: string) {
     setEditingChoiceId(undefined);
-    const nextStory = await api.updateInteraction(storyId, interaction.id, { title });
-    setStory(ensureStoryInteractionPositions(nextStory));
+    const result = await api.updateInteraction(storyId, interaction.id, { title });
+    setStory((currentStory) =>
+      currentStory ? applyInteractionResponse(currentStory, result) : currentStory,
+    );
   }
 
   if (!story) return <main className="page">Loading...</main>;
@@ -267,4 +272,24 @@ export function StoryPlayer() {
       </details>
     </main>
   );
+}
+
+function applyInteractionResponse(story: Story, result: InteractionMutationResult | Story) {
+  if ('interactions' in result) return ensureStoryInteractionPositions(result);
+  const interaction = result.interaction;
+  const exists = story.interactions.some(({ id }) => id === interaction.id);
+  return ensureStoryInteractionPositions({
+    ...story,
+    revision: result.revision,
+    updatedAt: result.updatedAt,
+    interactions: exists
+      ? story.interactions.map((item) => (item.id === interaction.id ? interaction : item))
+      : [...story.interactions, interaction],
+  });
+}
+
+function interactionFromResponse(result: InteractionMutationResult | Story, current: Story) {
+  if (!('interactions' in result)) return result.interaction;
+  const currentIds = new Set(current.interactions.map(({ id }) => id));
+  return result.interactions.find(({ id }) => !currentIds.has(id));
 }

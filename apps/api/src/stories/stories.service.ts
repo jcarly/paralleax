@@ -7,11 +7,14 @@ import {
   ensureStoryInteractionPositions,
   normalizeTriggerInputIds,
   updateTriggerInStory,
+  type InteractionMutationResult,
   type Story,
+  type TriggerMutationResult,
 } from '@paralleax/shared';
 import {
   CreateInteractionDto,
   CreateStoryDto,
+  CreateTriggerDto,
   UpdateInteractionDto,
   UpdateTriggerDto,
 } from './dto/stories.dto';
@@ -65,14 +68,16 @@ export class StoriesService {
     storyId: string,
     input: CreateInteractionDto,
     userId: string,
-  ): Promise<Story> {
-    return this.update(
+  ): Promise<InteractionMutationResult> {
+    const interactionId = randomUUID();
+    const triggerId = randomUUID();
+    const story = await this.update(
       storyId,
       (story) => {
         if (input.parentId && !story.interactions.some((item) => item.id === input.parentId))
           throw new NotFoundException('Parent interaction not found');
         story.interactions.push({
-          id: randomUUID(),
+          id: interactionId,
           title: 'New interaction',
           body: 'Describe what happens here.',
           position: input.position ?? {
@@ -81,7 +86,7 @@ export class StoriesService {
           },
           triggers: [
             {
-              id: randomUUID(),
+              id: triggerId,
               inputInteractionIds: input.parentId ? [input.parentId] : [],
               conditions: [],
             },
@@ -91,14 +96,15 @@ export class StoriesService {
       },
       userId,
     );
+    return this.interactionResult(story, interactionId);
   }
   async updateInteraction(
     storyId: string,
     interactionId: string,
     input: UpdateInteractionDto,
     userId: string,
-  ): Promise<Story> {
-    return this.update(
+  ): Promise<InteractionMutationResult> {
+    const story = await this.update(
       storyId,
       (story) => {
         const interaction = this.interaction(story, interactionId);
@@ -109,6 +115,7 @@ export class StoriesService {
       },
       userId,
     );
+    return this.interactionResult(story, interactionId);
   }
   async deleteInteraction(storyId: string, interactionId: string, userId: string): Promise<Story> {
     return this.update(
@@ -126,21 +133,14 @@ export class StoriesService {
     triggerId: string,
     input: UpdateTriggerDto,
     userId: string,
-  ): Promise<Story> {
-    return this.update(
+  ): Promise<TriggerMutationResult> {
+    const story = await this.update(
       storyId,
       (story) => {
         const interaction = this.interaction(story, interactionId);
         const trigger = interaction.triggers.find((item) => item.id === triggerId);
         if (!trigger) throw new NotFoundException('Trigger not found');
-        const interactionIds = new Set(story.interactions.map(({ id }) => id));
-        const referencedIds = [
-          ...input.inputInteractionIds,
-          ...input.conditions.map(({ interactionId: id }) => id),
-        ];
-        if (referencedIds.some((id) => !interactionIds.has(id))) {
-          throw new BadRequestException('Trigger references must belong to the same story');
-        }
+        this.assertTriggerReferences(story, input.inputInteractionIds, input.conditions);
         return updateTriggerInStory(story, interactionId, triggerId, {
           inputInteractionIds: normalizeTriggerInputIds(input.inputInteractionIds),
           conditions: input.conditions,
@@ -148,20 +148,33 @@ export class StoriesService {
       },
       userId,
     );
+    return this.triggerResult(story, interactionId, triggerId);
   }
-  async addTrigger(storyId: string, interactionId: string, userId: string): Promise<Story> {
-    return this.update(
+  async addTrigger(
+    storyId: string,
+    interactionId: string,
+    input: CreateTriggerDto,
+    userId: string,
+  ): Promise<TriggerMutationResult> {
+    const triggerId = randomUUID();
+    const story = await this.update(
       storyId,
       (story) => {
+        this.assertTriggerReferences(
+          story,
+          input.inputInteractionIds ?? [],
+          input.conditions ?? [],
+        );
         this.interaction(story, interactionId).triggers.push({
-          id: randomUUID(),
-          inputInteractionIds: [],
-          conditions: [],
+          id: triggerId,
+          inputInteractionIds: normalizeTriggerInputIds(input.inputInteractionIds ?? []),
+          conditions: input.conditions ?? [],
         });
         return story;
       },
       userId,
     );
+    return this.triggerResult(story, interactionId, triggerId);
   }
   async deleteTrigger(
     storyId: string,
@@ -184,6 +197,43 @@ export class StoriesService {
     const item = story.interactions.find((interaction) => interaction.id === id);
     if (!item) throw new NotFoundException('Interaction not found');
     return item;
+  }
+  private assertTriggerReferences(
+    story: Story,
+    inputInteractionIds: string[],
+    conditions: { interactionId: string }[],
+  ) {
+    const interactionIds = new Set(story.interactions.map(({ id }) => id));
+    const referencedIds = [
+      ...inputInteractionIds,
+      ...conditions.map(({ interactionId }) => interactionId),
+    ];
+    if (referencedIds.some((id) => !interactionIds.has(id))) {
+      throw new BadRequestException('Trigger references must belong to the same story');
+    }
+  }
+  private interactionResult(story: Story, interactionId: string): InteractionMutationResult {
+    return {
+      interaction: structuredClone(this.interaction(story, interactionId)),
+      revision: story.revision ?? 1,
+      updatedAt: story.updatedAt,
+    };
+  }
+  private triggerResult(
+    story: Story,
+    interactionId: string,
+    triggerId: string,
+  ): TriggerMutationResult {
+    const trigger = this.interaction(story, interactionId).triggers.find(
+      ({ id }) => id === triggerId,
+    );
+    if (!trigger) throw new NotFoundException('Trigger not found');
+    return {
+      interactionId,
+      trigger: structuredClone(trigger),
+      revision: story.revision ?? 1,
+      updatedAt: story.updatedAt,
+    };
   }
   private async update(
     id: string,

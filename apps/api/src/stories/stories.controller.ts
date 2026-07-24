@@ -2,6 +2,7 @@ import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post } from '@ne
 import {
   CreateInteractionDto,
   CreateStoryDto,
+  CreateTriggerDto,
   UpdateInteractionDto,
   UpdateStoryDto,
   UpdateTriggerDto,
@@ -71,9 +72,10 @@ export class StoriesController {
   @Post(':storyId/interactions/:interactionId/triggers') addTrigger(
     @Param('storyId') storyId: string,
     @Param('interactionId') interactionId: string,
+    @Body() input: CreateTriggerDto,
     @CurrentUser() user: RequestUser,
   ) {
-    return this.stories.addTrigger(storyId, interactionId, user.id);
+    return this.stories.addTrigger(storyId, interactionId, input, user.id);
   }
 
   @Patch(':storyId/interactions/:interactionId/triggers/:triggerId') updateTrigger(

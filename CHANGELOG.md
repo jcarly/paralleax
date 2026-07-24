@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-07-24
+
+- Added entity-scoped interaction and trigger mutation responses with story
+  revision metadata.
+- Made trigger creation atomic by accepting initial input interactions and
+  conditions in its POST request.
+- Updated editor and reader persistence to apply saved entities without
+  replacing unrelated story state, removing create-then-patch waterfalls.
+- Added API and web regressions for the independent mutation contracts and stale
+  graph-state protection.
+
 ## 2026-07-18
 
 - Stored ordered trigger conditions as JSONB on `triggers` while retaining

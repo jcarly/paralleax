@@ -10,16 +10,14 @@ import {
   updateTriggerInStory,
   type Interaction,
   type InteractionContentPatch,
+  type InteractionMutationResult,
   type Position,
   type Story,
   type TriggerCondition,
+  type TriggerMutationResult,
 } from '@paralleax/shared';
 import { api } from '../api';
-import {
-  findCreatedTrigger,
-  getPendingConnection,
-  getPendingTriggerInputConnection,
-} from '../storyConnection';
+import { getPendingConnection, getPendingTriggerInputConnection } from '../storyConnection';
 import { planTriggerInputDeletion } from '../storyTriggerInput';
 
 export function useStoryEditorPersistence(storyId: string) {
@@ -81,7 +79,9 @@ export function useStoryEditorPersistence(storyId: string) {
       current ? updateTriggerInStory(current, interactionId, triggerId, patch) : current,
     );
     const next = await api.updateTrigger(storyId, interactionId, triggerId, patch);
-    setStory((current) => (current ? mergeIncomingStory(current, next) : next));
+    setStory((current) =>
+      current ? applyTriggerResult(current, next, interactionId, triggerId) : current,
+    );
   }
 
   async function createTriggerVariant(interactionId: string, baseTriggerId: string) {
@@ -93,23 +93,19 @@ export function useStoryEditorPersistence(storyId: string) {
     const candidate = story.interactions.find((item) => item.id !== interaction.id);
     if (!candidate) return undefined;
 
-    const existingTriggerIds = new Set(interaction.triggers.map((trigger) => trigger.id));
-    const withTrigger = await api.addTrigger(storyId, interactionId);
-    const nextTrigger = findCreatedTrigger(withTrigger, interactionId, existingTriggerIds);
-    if (!nextTrigger) {
-      setStory((current) => (current ? mergeIncomingStory(current, withTrigger) : withTrigger));
-      return undefined;
-    }
-
     const patch = {
       inputInteractionIds: baseTrigger.inputInteractionIds,
       conditions: [{ interactionId: candidate.id, hasBeenVisited: true }],
     };
+    const created = await api.addTrigger(storyId, interactionId, patch);
+    const nextTrigger = savedTrigger(created, story, interactionId);
+    if (!nextTrigger) return undefined;
     patch.inputInteractionIds.forEach((inputId) =>
       deletedTriggerInputKeys.current.delete(`${nextTrigger.id}:${inputId}`),
     );
-    const updated = await api.updateTrigger(storyId, interactionId, nextTrigger.id, patch);
-    setStory((current) => (current ? mergeIncomingStory(current, updated) : updated));
+    setStory((current) =>
+      current ? applyTriggerResult(current, created, interactionId, nextTrigger.id) : current,
+    );
     return nextTrigger.id;
   }
 
@@ -161,28 +157,22 @@ export function useStoryEditorPersistence(storyId: string) {
 
   const connectInteractions = useCallback(
     async (connection: Connection) => {
+      if (!story) return;
       const pending = getPendingConnection(story, connection);
       if (!pending) return;
 
-      const withTrigger = await api.addTrigger(storyId, pending.target.id);
-      const nextTrigger = findCreatedTrigger(
-        withTrigger,
-        pending.target.id,
-        pending.existingTriggerIds,
-      );
-      if (!nextTrigger) {
-        setStory((current) => (current ? mergeIncomingStory(current, withTrigger) : withTrigger));
-        return;
-      }
-
-      const updated = await api.updateTrigger(storyId, pending.target.id, nextTrigger.id, {
+      const created = await api.addTrigger(storyId, pending.target.id, {
         inputInteractionIds: [pending.sourceId],
-        conditions: nextTrigger.conditions,
+        conditions: [],
       });
+      const nextTrigger = savedTrigger(created, story, pending.target.id);
+      if (!nextTrigger) return;
       deletedTriggerInputKeys.current.delete(`${nextTrigger.id}:${pending.sourceId}`);
-      setStory((current) => (current ? mergeIncomingStory(current, updated) : updated));
+      setStory((current) =>
+        current ? applyTriggerResult(current, created, pending.target.id, nextTrigger.id) : current,
+      );
     },
-    [mergeIncomingStory, story, storyId],
+    [story, storyId],
   );
 
   const connectToExistingTrigger = useCallback(
@@ -202,17 +192,21 @@ export function useStoryEditorPersistence(storyId: string) {
           : current,
       );
       const updated = await api.updateTrigger(storyId, pending.targetId, pending.trigger.id, patch);
-      setStory((current) => (current ? mergeIncomingStory(current, updated) : updated));
+      setStory((current) =>
+        current
+          ? applyTriggerResult(current, updated, pending.targetId, pending.trigger.id)
+          : current,
+      );
     },
-    [mergeIncomingStory, story, storyId],
+    [story, storyId],
   );
 
   const createRoot = useCallback(async () => {
     const next = await api.createInteraction(storyId, {
       position: story ? getNextRootPosition(story) : getNextRootPosition(emptyStory(storyId)),
     });
-    setStory((current) => (current ? mergeIncomingStory(current, next) : next));
-  }, [mergeIncomingStory, story, storyId]);
+    setStory((current) => (current ? applyInteractionResult(current, next) : current));
+  }, [story, storyId]);
 
   const createChild = useCallback(
     async (parent: Interaction) => {
@@ -221,9 +215,9 @@ export function useStoryEditorPersistence(storyId: string) {
         parentId: parent.id,
         position: getNextChildPosition(story, parent),
       });
-      setStory((current) => (current ? mergeIncomingStory(current, next) : next));
+      setStory((current) => (current ? applyInteractionResult(current, next) : current));
     },
-    [mergeIncomingStory, story, storyId],
+    [story, storyId],
   );
 
   const createChildFromInteraction = useCallback(
@@ -235,26 +229,23 @@ export function useStoryEditorPersistence(storyId: string) {
         parentId: source.id,
         position: position ?? getNextChildPosition(story, source),
       });
-      setStory((current) => (current ? mergeIncomingStory(current, next) : next));
+      setStory((current) => (current ? applyInteractionResult(current, next) : current));
     },
-    [mergeIncomingStory, story, storyId],
+    [story, storyId],
   );
 
   const createConnectionTrigger = useCallback(
-    async (baseStory: Story, sourceId: string, targetId: string) => {
-      const target = baseStory.interactions.find((interaction) => interaction.id === targetId);
-      const existingTriggerIds = new Set(target?.triggers.map((trigger) => trigger.id) ?? []);
-      const withTrigger = await api.addTrigger(storyId, targetId);
-      const nextTrigger = findCreatedTrigger(withTrigger, targetId, existingTriggerIds);
-      if (!nextTrigger) return withTrigger;
-
-      deletedTriggerInputKeys.current.delete(`${nextTrigger.id}:${sourceId}`);
-      return api.updateTrigger(storyId, targetId, nextTrigger.id, {
+    async (sourceId: string, targetId: string) => {
+      if (!story) throw new Error('Story is not loaded');
+      const created = await api.addTrigger(storyId, targetId, {
         inputInteractionIds: [sourceId],
-        conditions: nextTrigger.conditions,
+        conditions: [],
       });
+      const trigger = savedTrigger(created, story, targetId);
+      if (trigger) deletedTriggerInputKeys.current.delete(`${trigger.id}:${sourceId}`);
+      return created;
     },
-    [storyId],
+    [story, storyId],
   );
 
   const createParentForInteraction = useCallback(
@@ -262,24 +253,19 @@ export function useStoryEditorPersistence(storyId: string) {
       if (!story) return;
       const target = story.interactions.find((interaction) => interaction.id === targetId);
       if (!target) return;
-      const existingInteractionIds = new Set(
-        story.interactions.map((interaction) => interaction.id),
-      );
       const withParent = await api.createInteraction(storyId, {
         position: position ?? getNextParentPosition(story, target),
       });
-      const createdParent = withParent.interactions.find(
-        (interaction) => !existingInteractionIds.has(interaction.id),
-      );
-      if (!createdParent) {
-        setStory((current) => (current ? mergeIncomingStory(current, withParent) : withParent));
-        return;
-      }
-
-      const nextStory = await createConnectionTrigger(withParent, createdParent.id, target.id);
-      setStory((current) => (current ? mergeIncomingStory(current, nextStory) : nextStory));
+      const parent = savedInteraction(withParent, story);
+      if (!parent) return;
+      const linkedTrigger = await createConnectionTrigger(parent.id, target.id);
+      setStory((current) => {
+        if (!current) return current;
+        const withCreatedParent = applyInteractionResult(current, withParent, parent.id);
+        return applyTriggerResult(withCreatedParent, linkedTrigger, target.id);
+      });
     },
-    [createConnectionTrigger, mergeIncomingStory, story, storyId],
+    [createConnectionTrigger, story, storyId],
   );
 
   function patchInteraction(id: string, patch: InteractionContentPatch): Promise<void> {
@@ -288,13 +274,8 @@ export function useStoryEditorPersistence(storyId: string) {
       .then(async () => {
         const updated = await api.updateInteraction(storyId, id, patch);
         setStory((current) => {
-          if (!current) return updated;
-          return mergeIncomingStory(
-            current,
-            updated,
-            { interactionId: id, patch },
-            { preserveCurrentTriggers: true },
-          );
+          if (!current) return current;
+          return applyInteractionPatchResult(current, updated, id, patch);
         });
       })
       .catch((e: Error) => setError(e.message));
@@ -335,4 +316,96 @@ function emptyStory(storyId: string): Story {
     createdAt: '',
     updatedAt: '',
   };
+}
+
+function applyMutationMetadata(
+  story: Story,
+  mutation: { revision: number; updatedAt: string },
+): Story {
+  return { ...story, revision: mutation.revision, updatedAt: mutation.updatedAt };
+}
+
+function applyInteractionResult(
+  story: Story,
+  result: InteractionMutationResult | Story,
+  interactionId?: string,
+): Story {
+  if ('interactions' in result) return mergeServerStory(story, result);
+  const saved = savedInteraction(result, story, interactionId);
+  if (!saved) return story;
+  const exists = story.interactions.some(({ id }) => id === saved.id);
+  const interactions = exists
+    ? story.interactions.map((interaction) => (interaction.id === saved.id ? saved : interaction))
+    : [...story.interactions, saved];
+  return applyMutationMetadata({ ...story, interactions }, result);
+}
+
+function applyTriggerResult(
+  story: Story,
+  result: TriggerMutationResult | Story,
+  interactionId: string,
+  triggerId?: string,
+): Story {
+  if ('interactions' in result) return mergeServerStory(story, result);
+  const saved = savedTrigger(result, story, interactionId, triggerId);
+  if (!saved) return story;
+  return applyMutationMetadata(
+    {
+      ...story,
+      interactions: story.interactions.map((interaction) => {
+        if (interaction.id !== interactionId) return interaction;
+        const exists = interaction.triggers.some(({ id }) => id === saved.id);
+        return {
+          ...interaction,
+          triggers: exists
+            ? interaction.triggers.map((trigger) => (trigger.id === saved.id ? saved : trigger))
+            : [...interaction.triggers, saved],
+        };
+      }),
+    },
+    result,
+  );
+}
+
+function applyInteractionPatchResult(
+  story: Story,
+  result: InteractionMutationResult | Story,
+  interactionId: string,
+  patch: InteractionContentPatch,
+) {
+  if ('interactions' in result) {
+    return mergeServerStory(
+      story,
+      result,
+      { interactionId, patch },
+      { preserveCurrentTriggers: true },
+    );
+  }
+  return applyMutationMetadata(updateInteractionInStory(story, interactionId, patch), result);
+}
+
+function savedInteraction(
+  result: InteractionMutationResult | Story,
+  current: Story,
+  interactionId?: string,
+) {
+  if (!('interactions' in result)) return result.interaction;
+  if (interactionId) return result.interactions.find(({ id }) => id === interactionId);
+  const currentIds = new Set(current.interactions.map(({ id }) => id));
+  return result.interactions.find(({ id }) => !currentIds.has(id));
+}
+
+function savedTrigger(
+  result: TriggerMutationResult | Story,
+  current: Story,
+  interactionId: string,
+  triggerId?: string,
+) {
+  if (!('interactions' in result)) return result.trigger;
+  const triggers = result.interactions.find(({ id }) => id === interactionId)?.triggers ?? [];
+  if (triggerId) return triggers.find(({ id }) => id === triggerId);
+  const currentIds = new Set(
+    current.interactions.find(({ id }) => id === interactionId)?.triggers.map(({ id }) => id) ?? [],
+  );
+  return triggers.find(({ id }) => !currentIds.has(id));
 }

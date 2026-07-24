@@ -2,7 +2,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testi
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Story } from '@paralleax/shared';
+import type { InteractionMutationResult, Story, TriggerMutationResult } from '@paralleax/shared';
 import { StoryEditor } from './StoryEditor';
 import { api } from '../api';
 
@@ -227,6 +227,33 @@ function cloneStory(story: Story = baseStory): Story {
   return structuredClone(story);
 }
 
+function interactionMutation(story: Story, interactionId: string): InteractionMutationResult {
+  const interaction = story.interactions.find(({ id }) => id === interactionId);
+  if (!interaction) throw new Error(`Missing interaction ${interactionId} in test fixture`);
+  return {
+    interaction: structuredClone(interaction),
+    revision: story.revision ?? 2,
+    updatedAt: story.updatedAt,
+  };
+}
+
+function triggerMutation(
+  story: Story,
+  interactionId: string,
+  triggerId: string,
+): TriggerMutationResult {
+  const trigger = story.interactions
+    .find(({ id }) => id === interactionId)
+    ?.triggers.find(({ id }) => id === triggerId);
+  if (!trigger) throw new Error(`Missing trigger ${triggerId} in test fixture`);
+  return {
+    interactionId,
+    trigger: structuredClone(trigger),
+    revision: story.revision ?? 2,
+    updatedAt: story.updatedAt,
+  };
+}
+
 function storyWithTwoInteractions(): Story {
   return {
     ...cloneStory(),
@@ -428,8 +455,7 @@ describe('StoryEditor', () => {
     const connectedStory = structuredClone(withTrigger);
     connectedStory.interactions[1].triggers[1].inputInteractionIds = ['interaction-parent'];
     vi.mocked(api.createInteraction).mockResolvedValue(withParent);
-    vi.mocked(api.addTrigger).mockResolvedValue(withTrigger);
-    vi.mocked(api.updateTrigger).mockResolvedValue(connectedStory);
+    vi.mocked(api.addTrigger).mockResolvedValue(connectedStory);
 
     await renderEditor(story);
     await userEvent.click(screen.getByTestId('drop-target-interaction-2'));
@@ -438,11 +464,11 @@ describe('StoryEditor', () => {
       expect(api.createInteraction).toHaveBeenCalledWith('story-1', {
         position: { x: 165, y: 172 },
       });
-      expect(api.addTrigger).toHaveBeenCalledWith('story-1', 'interaction-2');
-      expect(api.updateTrigger).toHaveBeenCalledWith('story-1', 'interaction-2', 'trigger-new', {
+      expect(api.addTrigger).toHaveBeenCalledWith('story-1', 'interaction-2', {
         inputInteractionIds: ['interaction-parent'],
         conditions: [],
       });
+      expect(api.updateTrigger).not.toHaveBeenCalled();
     });
   });
 
@@ -465,8 +491,7 @@ describe('StoryEditor', () => {
     const connectedStory = structuredClone(withTrigger);
     connectedStory.interactions[1].triggers[1].inputInteractionIds = ['interaction-parent'];
     vi.mocked(api.createInteraction).mockResolvedValue(withParent);
-    vi.mocked(api.addTrigger).mockResolvedValue(withTrigger);
-    vi.mocked(api.updateTrigger).mockResolvedValue(connectedStory);
+    vi.mocked(api.addTrigger).mockResolvedValue(connectedStory);
 
     await renderEditor(story);
     const node = screen.getByTestId('flow-node-interaction-2');
@@ -476,10 +501,11 @@ describe('StoryEditor', () => {
       expect(api.createInteraction).toHaveBeenCalledWith('story-1', {
         position: { x: 80, y: 6 },
       });
-      expect(api.updateTrigger).toHaveBeenCalledWith('story-1', 'interaction-2', 'trigger-new', {
+      expect(api.addTrigger).toHaveBeenCalledWith('story-1', 'interaction-2', {
         inputInteractionIds: ['interaction-parent'],
         conditions: [],
       });
+      expect(api.updateTrigger).not.toHaveBeenCalled();
     });
   });
 
@@ -511,7 +537,9 @@ describe('StoryEditor', () => {
     const user = userEvent.setup();
     const updatedStory = cloneStory();
     updatedStory.interactions[0].title = 'New title';
-    vi.mocked(api.updateInteraction).mockResolvedValue(updatedStory);
+    vi.mocked(api.updateInteraction).mockResolvedValue(
+      interactionMutation(updatedStory, 'interaction-1'),
+    );
 
     await renderEditor();
     await user.click(screen.getByTestId('flow-node-interaction-1'));
@@ -659,18 +687,17 @@ describe('StoryEditor', () => {
     });
     const connectedStory = structuredClone(withTrigger);
     connectedStory.interactions[2].triggers[1].inputInteractionIds = ['interaction-1'];
-    vi.mocked(api.addTrigger).mockResolvedValue(withTrigger);
-    vi.mocked(api.updateTrigger).mockResolvedValue(connectedStory);
+    vi.mocked(api.addTrigger).mockResolvedValue(connectedStory);
 
     await renderEditor(story);
     await user.click(screen.getByTestId('connect-interaction-1-interaction-3'));
 
     await waitFor(() => {
-      expect(api.addTrigger).toHaveBeenCalledWith('story-1', 'interaction-3');
-      expect(api.updateTrigger).toHaveBeenCalledWith('story-1', 'interaction-3', 'trigger-new', {
+      expect(api.addTrigger).toHaveBeenCalledWith('story-1', 'interaction-3', {
         inputInteractionIds: ['interaction-1'],
         conditions: [],
       });
+      expect(api.updateTrigger).not.toHaveBeenCalled();
     });
     expect(await screen.findByTestId('flow-edge-interaction-1-interaction-3')).toBeInTheDocument();
   });
@@ -685,18 +712,17 @@ describe('StoryEditor', () => {
     ];
     const connectedStory = structuredClone(withTrigger);
     connectedStory.interactions[1].triggers[0].inputInteractionIds = ['interaction-1'];
-    vi.mocked(api.addTrigger).mockResolvedValue(withTrigger);
-    vi.mocked(api.updateTrigger).mockResolvedValue(connectedStory);
+    vi.mocked(api.addTrigger).mockResolvedValue(connectedStory);
 
     await renderEditor(story);
     await user.click(screen.getByTestId('connect-interaction-1-interaction-2'));
 
     await waitFor(() => {
-      expect(api.addTrigger).toHaveBeenCalledWith('story-1', 'interaction-2');
-      expect(api.updateTrigger).toHaveBeenCalledWith('story-1', 'interaction-2', 'trigger-new', {
+      expect(api.addTrigger).toHaveBeenCalledWith('story-1', 'interaction-2', {
         inputInteractionIds: ['interaction-1'],
         conditions: [],
       });
+      expect(api.updateTrigger).not.toHaveBeenCalled();
     });
     expect(await screen.findByTestId('flow-edge-interaction-1-interaction-2')).toBeInTheDocument();
   });
@@ -719,17 +745,17 @@ describe('StoryEditor', () => {
     });
     const connectedStory = structuredClone(withNewTrigger);
     connectedStory.interactions[2].triggers[1].inputInteractionIds = ['interaction-2'];
-    vi.mocked(api.addTrigger).mockResolvedValue(withNewTrigger);
-    vi.mocked(api.updateTrigger).mockResolvedValue(connectedStory);
+    vi.mocked(api.addTrigger).mockResolvedValue(connectedStory);
 
     await renderEditor(story);
     await user.click(screen.getByTestId('connect-interaction-2-interaction-3'));
 
     await waitFor(() => {
-      expect(api.updateTrigger).toHaveBeenCalledWith('story-1', 'interaction-3', 'trigger-new', {
+      expect(api.addTrigger).toHaveBeenCalledWith('story-1', 'interaction-3', {
         inputInteractionIds: ['interaction-2'],
         conditions: [],
       });
+      expect(api.updateTrigger).not.toHaveBeenCalled();
     });
     expect(await screen.findByTestId('flow-edge-interaction-1-interaction-3')).toBeInTheDocument();
     expect(await screen.findByTestId('flow-edge-interaction-2-interaction-3')).toBeInTheDocument();
@@ -793,10 +819,10 @@ describe('StoryEditor', () => {
     ];
     const staleConnectedStory = structuredClone(staleWithNewTrigger);
     staleConnectedStory.interactions[2].triggers[0].inputInteractionIds = ['interaction-2'];
-    vi.mocked(api.addTrigger).mockResolvedValue(staleWithNewTrigger);
-    vi.mocked(api.updateTrigger)
-      .mockResolvedValueOnce(withoutRootLink)
-      .mockResolvedValueOnce(staleConnectedStory);
+    vi.mocked(api.addTrigger).mockResolvedValue(
+      triggerMutation(staleConnectedStory, 'interaction-3', 'trigger-new'),
+    );
+    vi.mocked(api.updateTrigger).mockResolvedValueOnce(withoutRootLink);
 
     await renderEditor(story);
     await user.click(screen.getByTestId('delete-link-interaction-1-interaction-2'));
@@ -812,7 +838,7 @@ describe('StoryEditor', () => {
     await user.click(screen.getByTestId('connect-interaction-2-interaction-3'));
 
     await waitFor(() => {
-      expect(api.updateTrigger).toHaveBeenCalledWith('story-1', 'interaction-3', 'trigger-new', {
+      expect(api.addTrigger).toHaveBeenCalledWith('story-1', 'interaction-3', {
         inputInteractionIds: ['interaction-2'],
         conditions: [],
       });
@@ -1091,19 +1117,18 @@ describe('StoryEditor', () => {
     withOrGroup.interactions[1].triggers[1].conditions = [
       { interactionId: 'interaction-1', hasBeenVisited: true },
     ];
-    vi.mocked(api.addTrigger).mockResolvedValue(withNewTrigger);
-    vi.mocked(api.updateTrigger).mockResolvedValue(withOrGroup);
+    vi.mocked(api.addTrigger).mockResolvedValue(withOrGroup);
 
     await renderEditor(story);
     await user.click(screen.getByTestId('flow-trigger-interaction-2-trigger-2'));
     await user.click(screen.getByRole('button', { name: 'Add OR condition group' }));
 
     await waitFor(() => {
-      expect(api.addTrigger).toHaveBeenCalledWith('story-1', 'interaction-2');
-      expect(api.updateTrigger).toHaveBeenCalledWith('story-1', 'interaction-2', 'trigger-or', {
+      expect(api.addTrigger).toHaveBeenCalledWith('story-1', 'interaction-2', {
         inputInteractionIds: ['interaction-1'],
         conditions: [{ interactionId: 'interaction-1', hasBeenVisited: true }],
       });
+      expect(api.updateTrigger).not.toHaveBeenCalled();
     });
     expect(await screen.findByText('OR')).toBeInTheDocument();
     expect(screen.getByText('Condition group 2')).toBeInTheDocument();

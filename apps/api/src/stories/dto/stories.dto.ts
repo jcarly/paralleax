@@ -49,6 +49,19 @@ export class TriggerConditionDto {
   @IsString() interactionId!: string;
   @IsBoolean() hasBeenVisited!: boolean;
 }
+export class CreateTriggerDto {
+  @ValidateIf((_, value) => value !== undefined)
+  @IsArray()
+  @ArrayMaxSize(500)
+  @IsString({ each: true })
+  inputInteractionIds?: string[];
+  @ValidateIf((_, value) => value !== undefined)
+  @IsArray()
+  @ArrayMaxSize(500)
+  @ValidateNested({ each: true })
+  @Type(() => TriggerConditionDto)
+  conditions?: TriggerConditionDto[];
+}
 export class UpdateTriggerDto {
   @IsArray()
   @ArrayMaxSize(500)

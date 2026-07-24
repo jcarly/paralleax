@@ -2,7 +2,7 @@ import 'reflect-metadata';
 import { ValidationPipe, type INestApplication } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
 import * as request from 'supertest';
-import type { Story } from '@paralleax/shared';
+import type { InteractionMutationResult, Story, TriggerMutationResult } from '@paralleax/shared';
 import { AppModule } from '../app.module';
 import { AuthService } from '../auth/auth.service';
 import { DatabaseMigrator } from '../database/database.migrator';
@@ -56,11 +56,9 @@ describe('Stories API', () => {
     storyId: string,
     input: Record<string, unknown> = {},
   ): Promise<Story> {
-    const response = await request(httpServer)
-      .post(`/api/stories/${storyId}/interactions`)
-      .send(input)
-      .expect(201);
+    await request(httpServer).post(`/api/stories/${storyId}/interactions`).send(input).expect(201);
 
+    const response = await request(httpServer).get(`/api/stories/${storyId}`).expect(200);
     return response.body as Story;
   }
 
@@ -156,12 +154,13 @@ describe('Stories API', () => {
       .send({ position: { x: 10, y: 20 } })
       .expect(201);
 
-    expect(response.body.interactions).toHaveLength(1);
-    expect(response.body.interactions[0]).toMatchObject({
+    const result = response.body as InteractionMutationResult;
+    expect(result.interaction).toMatchObject({
       title: 'New interaction',
       position: { x: 10, y: 20 },
     });
-    expect(response.body.interactions[0].triggers[0].inputInteractionIds).toEqual([]);
+    expect(result.interaction.triggers[0].inputInteractionIds).toEqual([]);
+    expect(result.revision).toBe(2);
   });
 
   it('POST /api/stories/:storyId/interactions creates a child interaction linked to its parent', async () => {
@@ -174,9 +173,8 @@ describe('Stories API', () => {
       .send({ parentId: parent.id, position: { x: 100, y: 120 } })
       .expect(201);
 
-    const child = (response.body as Story).interactions.find((item) => item.id !== parent.id);
-    expect(child).toBeDefined();
-    expect(child?.triggers[0].inputInteractionIds).toEqual([parent.id]);
+    const result = response.body as InteractionMutationResult;
+    expect(result.interaction.triggers[0].inputInteractionIds).toEqual([parent.id]);
   });
 
   it('PATCH /api/stories/:storyId/interactions/:interactionId updates an interaction', async () => {
@@ -193,7 +191,7 @@ describe('Stories API', () => {
       })
       .expect(200);
 
-    expect(response.body.interactions[0]).toMatchObject({
+    expect((response.body as InteractionMutationResult).interaction).toMatchObject({
       id: interaction.id,
       title: 'Renamed interaction',
       body: 'New content',
@@ -249,7 +247,7 @@ describe('Stories API', () => {
     await request(httpServer).patch(path).send({ position: null }).expect(400);
 
     const response = await request(httpServer).patch(path).send({ body: null }).expect(200);
-    expect(response.body.interactions[0]).toMatchObject({
+    expect((response.body as InteractionMutationResult).interaction).toMatchObject({
       title: interaction.title,
       body: '',
       position: interaction.position,
@@ -327,8 +325,9 @@ describe('Stories API', () => {
       .post(`/api/stories/${story.id}/interactions/${interaction.id}/triggers`)
       .expect(201);
 
-    expect(response.body.interactions[0].triggers).toHaveLength(2);
-    expect(response.body.interactions[0].triggers[1]).toMatchObject({
+    const result = response.body as TriggerMutationResult;
+    expect(result.interactionId).toBe(interaction.id);
+    expect(result.trigger).toMatchObject({
       inputInteractionIds: [],
       conditions: [],
     });
@@ -350,13 +349,10 @@ describe('Stories API', () => {
       })
       .expect(200);
 
-    const updatedChild = (response.body as Story).interactions.find(
-      (item) => item.id === child.id,
-    )!;
-    expect(updatedChild.triggers[0].inputInteractionIds).toEqual([parent.id]);
-    expect(updatedChild.triggers[0].conditions).toEqual([
-      { interactionId: parent.id, hasBeenVisited: true },
-    ]);
+    const result = response.body as TriggerMutationResult;
+    expect(result.interactionId).toBe(child.id);
+    expect(result.trigger.inputInteractionIds).toEqual([parent.id]);
+    expect(result.trigger.conditions).toEqual([{ interactionId: parent.id, hasBeenVisited: true }]);
   });
 
   it('rejects trigger references to interactions from another story', async () => {
@@ -383,15 +379,15 @@ describe('Stories API', () => {
     const withSecondTrigger = await request(httpServer)
       .post(`/api/stories/${story.id}/interactions/${interaction.id}/triggers`)
       .expect(201);
-    const updatedInteraction = (withSecondTrigger.body as Story).interactions[0];
-    const trigger = updatedInteraction.triggers[0];
+    const createdTrigger = (withSecondTrigger.body as TriggerMutationResult).trigger;
+    const trigger = interaction.triggers[0];
 
     const response = await request(httpServer)
       .delete(`/api/stories/${story.id}/interactions/${interaction.id}/triggers/${trigger.id}`)
       .expect(200);
 
     expect(response.body.interactions[0].triggers).toHaveLength(1);
-    expect(response.body.interactions[0].triggers[0].id).not.toBe(trigger.id);
+    expect(response.body.interactions[0].triggers[0].id).toBe(createdTrigger.id);
   });
 
   it('DELETE /api/stories/:storyId/interactions/:interactionId/triggers/:triggerId turns the last trigger into a root trigger', async () => {
