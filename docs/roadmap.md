@@ -10,6 +10,8 @@
 - Triggers with several inputs.
 - Connection UX for choosing between adding an input to an existing trigger and
   creating a new trigger.
+- Visible saving, saved, and failed states with story reload recovery.
+- Confirmations before deleting interactions and triggers.
 - Contextual inputless triggers with visited / not visited conditions.
 - OR condition groups through several triggers between the same interactions.
 - Trigger editing from graph markers.
@@ -22,13 +24,10 @@
 
 - Implemented foundation: `StoryEditor`, React Flow, and `StoryPlayer` are loaded
   as route chunks after measuring the previous monolithic production bundle.
-- Consolidate dependent multi-request editor commands into atomic API operations
-  when network profiling confirms a meaningful interaction waterfall.
+- Implemented foundation: trigger creation accepts its initial inputs and
+  conditions atomically, removing the create-then-patch editor waterfall.
 - Add representative large-story profiling before changing graph projection,
   memoization, or React Flow synchronization for performance.
-- Save status feedback in the editor.
-- Visible save error handling.
-- Delete confirmations for interactions and triggers.
 - JSON export/import for stories.
 - Story Canvas UX exploration: keep the current graph semantics, but refine the
   editor toward a story-first canvas with denser default spacing, adaptive edge

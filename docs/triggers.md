@@ -127,6 +127,11 @@ the author choose between two actions while connecting:
 - add the source interaction as another input of an existing trigger;
 - create a new trigger for the same output interaction.
 
+A normal canvas connection opens this choice when at least one existing trigger
+can accept the source. Dropping directly on a visible trigger marker remains an
+intentional shortcut that adds the source to that trigger without opening the
+choice.
+
 Adding the source to an existing trigger means every input on that trigger shares
 the same condition set. Creating a new trigger means the route has its own
 condition group.

@@ -23,9 +23,28 @@ import { planTriggerInputDeletion } from '../storyTriggerInput';
 export function useStoryEditorPersistence(storyId: string) {
   const [story, setStory] = useState<Story>();
   const [error, setError] = useState('');
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const saveAttempt = useRef(0);
   const deletedTriggerIds = useRef(new Set<string>());
   const deletedTriggerInputKeys = useRef(new Set<string>());
   const interactionSaveQueue = useRef<Promise<void>>(Promise.resolve());
+
+  const trackSave = useCallback(async <T>(operation: () => Promise<T>): Promise<T | undefined> => {
+    const attempt = ++saveAttempt.current;
+    setError('');
+    setSaveStatus('saving');
+    try {
+      const result = await operation();
+      if (attempt === saveAttempt.current) setSaveStatus('saved');
+      return result;
+    } catch (caught) {
+      if (attempt === saveAttempt.current) {
+        setError(caught instanceof Error ? caught.message : 'The story could not be saved.');
+        setSaveStatus('error');
+      }
+      return undefined;
+    }
+  }, []);
 
   const mergeIncomingStory = useCallback(
     (
@@ -50,8 +69,13 @@ export function useStoryEditorPersistence(storyId: string) {
           deletedTriggerIds.current.clear();
           deletedTriggerInputKeys.current.clear();
           setStory(next);
+          setError('');
+          setSaveStatus('idle');
         })
-        .catch((e: Error) => setError(e.message)),
+        .catch((e: Error) => {
+          setError(e.message);
+          setSaveStatus('error');
+        }),
     [storyId],
   );
 
@@ -60,7 +84,8 @@ export function useStoryEditorPersistence(storyId: string) {
   }, [load]);
 
   async function renameStory(title: string) {
-    const next = await api.renameStory(storyId, title);
+    const next = await trackSave(() => api.renameStory(storyId, title));
+    if (!next) return;
     setStory((current) => (current ? mergeIncomingStory(current, next) : next));
   }
 
@@ -78,7 +103,8 @@ export function useStoryEditorPersistence(storyId: string) {
     setStory((current) =>
       current ? updateTriggerInStory(current, interactionId, triggerId, patch) : current,
     );
-    const next = await api.updateTrigger(storyId, interactionId, triggerId, patch);
+    const next = await trackSave(() => api.updateTrigger(storyId, interactionId, triggerId, patch));
+    if (!next) return;
     setStory((current) =>
       current ? applyTriggerResult(current, next, interactionId, triggerId) : current,
     );
@@ -97,7 +123,8 @@ export function useStoryEditorPersistence(storyId: string) {
       inputInteractionIds: baseTrigger.inputInteractionIds,
       conditions: [{ interactionId: candidate.id, hasBeenVisited: true }],
     };
-    const created = await api.addTrigger(storyId, interactionId, patch);
+    const created = await trackSave(() => api.addTrigger(storyId, interactionId, patch));
+    if (!created) return undefined;
     const nextTrigger = savedTrigger(created, story, interactionId);
     if (!nextTrigger) return undefined;
     patch.inputInteractionIds.forEach((inputId) =>
@@ -118,7 +145,8 @@ export function useStoryEditorPersistence(storyId: string) {
     setStory((current) =>
       current ? deleteTriggerInStory(current, interactionId, triggerId) : current,
     );
-    const next = await api.deleteTrigger(storyId, interactionId, triggerId);
+    const next = await trackSave(() => api.deleteTrigger(storyId, interactionId, triggerId));
+    if (!next) return;
     setStory((current) => (current ? mergeIncomingStory(current, next) : next));
   }
 
@@ -138,7 +166,9 @@ export function useStoryEditorPersistence(storyId: string) {
 
     let nextStory = optimisticStory;
     for (const triggerId of triggerIds) {
-      nextStory = await api.deleteTrigger(storyId, interactionId, triggerId);
+      const deleted = await trackSave(() => api.deleteTrigger(storyId, interactionId, triggerId));
+      if (!deleted) return;
+      nextStory = deleted;
     }
     setStory((current) => (current ? mergeIncomingStory(current, nextStory) : nextStory));
   }
@@ -161,10 +191,13 @@ export function useStoryEditorPersistence(storyId: string) {
       const pending = getPendingConnection(story, connection);
       if (!pending) return;
 
-      const created = await api.addTrigger(storyId, pending.target.id, {
-        inputInteractionIds: [pending.sourceId],
-        conditions: [],
-      });
+      const created = await trackSave(() =>
+        api.addTrigger(storyId, pending.target.id, {
+          inputInteractionIds: [pending.sourceId],
+          conditions: [],
+        }),
+      );
+      if (!created) return;
       const nextTrigger = savedTrigger(created, story, pending.target.id);
       if (!nextTrigger) return;
       deletedTriggerInputKeys.current.delete(`${nextTrigger.id}:${pending.sourceId}`);
@@ -172,7 +205,7 @@ export function useStoryEditorPersistence(storyId: string) {
         current ? applyTriggerResult(current, created, pending.target.id, nextTrigger.id) : current,
       );
     },
-    [story, storyId],
+    [story, storyId, trackSave],
   );
 
   const connectToExistingTrigger = useCallback(
@@ -191,33 +224,42 @@ export function useStoryEditorPersistence(storyId: string) {
           ? updateTriggerInStory(current, pending.targetId, pending.trigger.id, patch)
           : current,
       );
-      const updated = await api.updateTrigger(storyId, pending.targetId, pending.trigger.id, patch);
+      const updated = await trackSave(() =>
+        api.updateTrigger(storyId, pending.targetId, pending.trigger.id, patch),
+      );
+      if (!updated) return;
       setStory((current) =>
         current
           ? applyTriggerResult(current, updated, pending.targetId, pending.trigger.id)
           : current,
       );
     },
-    [story, storyId],
+    [story, storyId, trackSave],
   );
 
   const createRoot = useCallback(async () => {
-    const next = await api.createInteraction(storyId, {
-      position: story ? getNextRootPosition(story) : getNextRootPosition(emptyStory(storyId)),
-    });
+    const next = await trackSave(() =>
+      api.createInteraction(storyId, {
+        position: story ? getNextRootPosition(story) : getNextRootPosition(emptyStory(storyId)),
+      }),
+    );
+    if (!next) return;
     setStory((current) => (current ? applyInteractionResult(current, next) : current));
-  }, [story, storyId]);
+  }, [story, storyId, trackSave]);
 
   const createChild = useCallback(
     async (parent: Interaction) => {
       if (!story) return;
-      const next = await api.createInteraction(storyId, {
-        parentId: parent.id,
-        position: getNextChildPosition(story, parent),
-      });
+      const next = await trackSave(() =>
+        api.createInteraction(storyId, {
+          parentId: parent.id,
+          position: getNextChildPosition(story, parent),
+        }),
+      );
+      if (!next) return;
       setStory((current) => (current ? applyInteractionResult(current, next) : current));
     },
-    [story, storyId],
+    [story, storyId, trackSave],
   );
 
   const createChildFromInteraction = useCallback(
@@ -225,27 +267,33 @@ export function useStoryEditorPersistence(storyId: string) {
       if (!story) return;
       const source = story.interactions.find((interaction) => interaction.id === sourceId);
       if (!source) return;
-      const next = await api.createInteraction(storyId, {
-        parentId: source.id,
-        position: position ?? getNextChildPosition(story, source),
-      });
+      const next = await trackSave(() =>
+        api.createInteraction(storyId, {
+          parentId: source.id,
+          position: position ?? getNextChildPosition(story, source),
+        }),
+      );
+      if (!next) return;
       setStory((current) => (current ? applyInteractionResult(current, next) : current));
     },
-    [story, storyId],
+    [story, storyId, trackSave],
   );
 
   const createConnectionTrigger = useCallback(
     async (sourceId: string, targetId: string) => {
       if (!story) throw new Error('Story is not loaded');
-      const created = await api.addTrigger(storyId, targetId, {
-        inputInteractionIds: [sourceId],
-        conditions: [],
-      });
+      const created = await trackSave(() =>
+        api.addTrigger(storyId, targetId, {
+          inputInteractionIds: [sourceId],
+          conditions: [],
+        }),
+      );
+      if (!created) return undefined;
       const trigger = savedTrigger(created, story, targetId);
       if (trigger) deletedTriggerInputKeys.current.delete(`${trigger.id}:${sourceId}`);
       return created;
     },
-    [story, storyId],
+    [story, storyId, trackSave],
   );
 
   const createParentForInteraction = useCallback(
@@ -253,37 +301,41 @@ export function useStoryEditorPersistence(storyId: string) {
       if (!story) return;
       const target = story.interactions.find((interaction) => interaction.id === targetId);
       if (!target) return;
-      const withParent = await api.createInteraction(storyId, {
-        position: position ?? getNextParentPosition(story, target),
-      });
+      const withParent = await trackSave(() =>
+        api.createInteraction(storyId, {
+          position: position ?? getNextParentPosition(story, target),
+        }),
+      );
+      if (!withParent) return;
       const parent = savedInteraction(withParent, story);
       if (!parent) return;
       const linkedTrigger = await createConnectionTrigger(parent.id, target.id);
+      if (!linkedTrigger) return;
       setStory((current) => {
         if (!current) return current;
         const withCreatedParent = applyInteractionResult(current, withParent, parent.id);
         return applyTriggerResult(withCreatedParent, linkedTrigger, target.id);
       });
     },
-    [createConnectionTrigger, story, storyId],
+    [createConnectionTrigger, story, storyId, trackSave],
   );
 
   function patchInteraction(id: string, patch: InteractionContentPatch): Promise<void> {
     setStory((current) => (current ? updateInteractionInStory(current, id, patch) : current));
-    interactionSaveQueue.current = interactionSaveQueue.current
-      .then(async () => {
-        const updated = await api.updateInteraction(storyId, id, patch);
-        setStory((current) => {
-          if (!current) return current;
-          return applyInteractionPatchResult(current, updated, id, patch);
-        });
-      })
-      .catch((e: Error) => setError(e.message));
+    interactionSaveQueue.current = interactionSaveQueue.current.then(async () => {
+      const updated = await trackSave(() => api.updateInteraction(storyId, id, patch));
+      if (!updated) return;
+      setStory((current) => {
+        if (!current) return current;
+        return applyInteractionPatchResult(current, updated, id, patch);
+      });
+    });
     return interactionSaveQueue.current;
   }
 
   async function deleteInteraction(interactionId: string) {
-    const next = await api.deleteInteraction(storyId, interactionId);
+    const next = await trackSave(() => api.deleteInteraction(storyId, interactionId));
+    if (!next) return;
     setStory((current) => (current ? mergeIncomingStory(current, next) : next));
   }
 
@@ -291,6 +343,8 @@ export function useStoryEditorPersistence(storyId: string) {
     story,
     setStory,
     error,
+    saveStatus,
+    retry: load,
     renameStory,
     saveTrigger,
     createTriggerVariant,

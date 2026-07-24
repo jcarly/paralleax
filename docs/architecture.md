@@ -125,7 +125,8 @@ Supporting editor modules keep pure or focused behavior outside the page
 component:
 
 - `hooks/useStoryEditorPersistence.ts`: loading, optimistic updates, API writes,
-  stale-response merging, and create/delete workflows.
+  save status and error recovery, stale-response merging, and create/delete
+  workflows.
 - `storyGraph.ts`: projection from the domain story model to React Flow
   interaction nodes, trigger nodes, and trigger edges.
 - `storySelection.ts`: selected interaction and trigger lookup helpers.
@@ -225,6 +226,16 @@ A linked graph edge represents one trigger input. Several graph edges may point
 to the same trigger marker when one trigger has several inputs. Several triggers
 with the exact same input set are grouped visually as OR condition variants, but
 they remain distinct domain triggers.
+
+When a normal canvas connection can either extend an existing trigger or create
+a separate trigger, `StoryEditor` presents that choice before calling the
+persistence hook. Dropping directly on a trigger marker remains the explicit
+shortcut for extending that trigger.
+
+Every editor mutation passes through the persistence hook's save tracker. The
+toolbar exposes saving, saved, and failed states. A failed mutation leaves a
+visible error with an action that reloads the persisted story, which also
+recovers from optimistic local state that the server did not accept.
 
 ### Running the Reader
 

@@ -10,6 +10,14 @@
   replacing unrelated story state, removing create-then-patch waterfalls.
 - Added API and web regressions for the independent mutation contracts and stale
   graph-state protection.
+- Added explicit connection choices between extending an existing trigger and
+  creating a separate trigger.
+- Added saving, saved, and failed editor states with persisted-story reload
+  recovery after a failed mutation.
+- Added confirmations before deleting interactions, trigger variants, or grouped
+  trigger routes.
+- Updated the MVP definition to reflect the already implemented identity
+  foundation and the completed authoring-reliability criteria.
 
 ## 2026-07-18
 

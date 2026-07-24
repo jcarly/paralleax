@@ -242,6 +242,33 @@ header span {
   background: var(--color-surface);
   outline: none;
 }
+.save-status {
+  min-width: 4.5rem;
+  align-self: center;
+  color: var(--color-muted);
+  font-size: 0.85rem;
+  text-align: right;
+}
+.save-status.saved {
+  color: var(--color-place);
+}
+.save-status.error {
+  color: var(--color-error);
+}
+.save-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.55rem 1rem;
+  border-bottom: 1px solid #efbbb8;
+  background: #fff1f0;
+  color: var(--color-error);
+  z-index: 2;
+}
+.save-error button {
+  flex: none;
+}
 .editor-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -281,6 +308,34 @@ header span {
   left: 0.8rem;
   z-index: 4;
   box-shadow: var(--shadow-card);
+}
+.connection-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: #2d2d2d55;
+}
+.connection-dialog {
+  width: min(460px, 100%);
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  padding: 1.25rem;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-player);
+}
+.connection-dialog h2 {
+  margin: 0 0 0.4rem;
+}
+.connection-dialog p {
+  margin: 0 0 1rem;
+  color: var(--color-muted);
+}
+.connection-dialog-actions {
+  display: grid;
+  gap: 0.6rem;
 }
 
 /* Inspector */

@@ -42,6 +42,9 @@ Cover the critical MVP paths: Story, Interaction, Trigger, and Reader.
 - Shared: child placement selects a non-overlapping vertical output position.
 - Shared: root and parent placement select non-overlapping graph positions.
 - Editor: editing an interaction title keeps the page visible and updates the block.
+- Editor: an in-flight mutation displays a saving state, a successful mutation
+  displays a saved state, and a failed mutation displays its error with a reload
+  recovery action.
 - Editor: rapid title and content edits are persisted in order so reopening the
   story keeps both values.
 - Editor: moving an interaction saves only the position without clearing the title or body.
@@ -83,7 +86,11 @@ Cover the critical MVP paths: Story, Interaction, Trigger, and Reader.
   trigger as a root trigger when no inputs remain.
 - Editor/API: deleting the last trigger of an interaction turns it into a root
   trigger.
+- Editor: interaction and trigger deletion can be cancelled from their
+  confirmation prompt.
 - Editor: creating a new canvas connection creates a dedicated trigger and does not mutate existing linked triggers.
+- Editor: a connection to an interaction with an extendable trigger asks whether
+  to add the source to that trigger or create a separate trigger.
 - Editor: creating a connection or OR variant uses one trigger request rather
   than a dependent POST followed by PATCH.
 - Editor: when connecting to an interaction with existing triggers, the author can choose whether to add the source as an input of an existing trigger or create a new trigger.

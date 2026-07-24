@@ -8,8 +8,13 @@ The MVP validates the narrative core before adding characters, places, variables
 - Interaction: create, edit title and content, move in the editor, delete.
 - Trigger: define input interactions and simple conditions.
 - Reader: execute a story through successive choices.
-- Story persistence: save authored stories in PostgreSQL without adding accounts,
-  permissions, or reader saves.
+- Story persistence: save authored stories in PostgreSQL.
+- Authoring reliability: expose save progress and failures, confirm structural
+  deletions, and make ambiguous trigger connections explicit.
+
+Local accounts, sessions, and creator-only ownership were implemented as an
+early supporting foundation. They are present in the product but are not part of
+the narrative-core validation criteria.
 
 ## Out of Scope for Now
 
@@ -23,14 +28,12 @@ The MVP validates the narrative core before adding characters, places, variables
 - Persisted reader sessions and player saves.
 - AI.
 - Real-time collaboration.
-- Authentication.
-- User accounts and story permissions.
+- Story sharing and delegated permissions.
 - Unity, executable, embeddable web app, or video exports.
 
-Authentication, user accounts, story permissions, and collaboration are grouped
-as a post-MVP direction because they depend on durable identity. They should not
-enter the code until the Story, Interaction, Trigger, Reader, and story
-persistence core is validated.
+Story permissions and collaboration remain post-MVP directions. The existing
+local identity foundation does not imply that sharing or permission semantics
+have been validated.
 
 ## MVP Rules
 
@@ -58,5 +61,10 @@ The MVP is considered stable when:
   on whether they have conditions;
 - authors can express OR condition groups through several triggers between the
   same interactions;
+- authors explicitly choose between extending an existing trigger and creating a
+  separate trigger when both are possible;
+- saves expose in-progress, successful, and failed states, and a failed save can
+  be recovered by reloading the persisted story;
+- deleting an interaction or trigger requires confirmation;
 - the reader respects inputs and conditions;
 - unit, component, API, and Playwright tests pass in CI.

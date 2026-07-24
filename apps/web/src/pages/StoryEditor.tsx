@@ -6,6 +6,7 @@ import {
   useNodesState,
   type OnConnectEnd,
   type OnConnectStart,
+  type Connection,
   type NodeMouseHandler,
   type ReactFlowInstance,
 } from '@xyflow/react';
@@ -26,6 +27,7 @@ import {
   type TriggerFlowEdge,
 } from '../storyGraph';
 import { findInteraction, findSelectedTrigger } from '../storySelection';
+import { getPendingConnection } from '../storyConnection';
 
 const nodeTypes = { interaction: InteractionNode, trigger: TriggerNode };
 const edgeTypes = { trigger: TriggerEdge };
@@ -38,6 +40,8 @@ export function StoryEditor() {
     story,
     setStory,
     error,
+    saveStatus,
+    retry,
     renameStory,
     saveTrigger,
     createTriggerVariant,
@@ -56,6 +60,7 @@ export function StoryEditor() {
   const [selectedId, setSelectedId] = useState<string>();
   const [selectedTrigger, setSelectedTrigger] = useState<SelectedTrigger>();
   const [isConnecting, setIsConnecting] = useState(false);
+  const [pendingConnection, setPendingConnection] = useState<Connection>();
   const [nodes, setNodes, onNodesChange] = useNodesState<StoryFlowNode>([]);
   const pendingConnectionStart = useRef<{
     nodeId: string;
@@ -179,6 +184,7 @@ export function StoryEditor() {
   };
 
   async function deleteSelectedTrigger(interactionId: string, triggerId: string) {
+    if (!window.confirm('Delete this trigger?')) return;
     await deleteTrigger(interactionId, triggerId);
     setSelectedTrigger(undefined);
   }
@@ -191,6 +197,7 @@ export function StoryEditor() {
   }
 
   async function deleteSelectedTriggerVariants(interactionId: string, triggerIds: string[]) {
+    if (!window.confirm('Delete all condition groups on this route?')) return;
     await deleteTriggerVariants(interactionId, triggerIds);
     setSelectedTrigger(undefined);
   }
@@ -202,6 +209,7 @@ export function StoryEditor() {
 
   async function remove() {
     if (!selected) return;
+    if (!window.confirm(`Delete “${selected.title}” and its trigger links?`)) return;
     await deleteInteraction(selected.id);
     setSelectedId(undefined);
   }
@@ -212,6 +220,37 @@ export function StoryEditor() {
         selected.id,
       )}`
     : `/stories/${storyId}/play?mode=simulation`;
+  const pending = pendingConnection ? getPendingConnection(story, pendingConnection) : undefined;
+  const existingTriggerChoices =
+    pending?.target.triggers.filter(
+      (trigger) => !trigger.inputInteractionIds.includes(pending.sourceId),
+    ) ?? [];
+
+  function requestConnection(connection: Connection) {
+    const candidate = getPendingConnection(story, connection);
+    if (!candidate) return;
+    const canExtendExisting = candidate.target.triggers.some(
+      (trigger) => !trigger.inputInteractionIds.includes(candidate.sourceId),
+    );
+    if (canExtendExisting) {
+      setPendingConnection(connection);
+      return;
+    }
+    void connectInteractions(connection);
+  }
+
+  function createPendingTrigger() {
+    if (!pendingConnection) return;
+    const connection = pendingConnection;
+    setPendingConnection(undefined);
+    void connectInteractions(connection);
+  }
+
+  function extendPendingTrigger(triggerId: string) {
+    if (!pending) return;
+    setPendingConnection(undefined);
+    void connectToExistingTrigger(pending.sourceId, pending.target.id, triggerId);
+  }
 
   return (
     <main className="editor-page">
@@ -223,6 +262,15 @@ export function StoryEditor() {
           onBlur={(e) => void renameStory(e.target.value)}
         />
         <div className="actions">
+          <span className={`save-status ${saveStatus}`} role="status" aria-live="polite">
+            {saveStatus === 'saving'
+              ? 'Saving…'
+              : saveStatus === 'saved'
+                ? 'Saved'
+                : saveStatus === 'error'
+                  ? 'Save failed'
+                  : ''}
+          </span>
           <button disabled={!selected} onClick={() => void createSelectedChild()}>
             Add child
           </button>
@@ -231,6 +279,14 @@ export function StoryEditor() {
           </Link>
         </div>
       </div>
+      {error ? (
+        <div className="save-error" role="alert">
+          <span>{error}</span>
+          <button className="secondary" type="button" onClick={() => void retry()}>
+            Reload story
+          </button>
+        </div>
+      ) : null}
       <div className={`editor-layout ${hasInspectorSelection ? 'with-inspector' : ''}`}>
         <section className="canvas">
           <button className="canvas-action" onClick={() => void createRoot()}>
@@ -245,7 +301,7 @@ export function StoryEditor() {
               flowInstance.current = instance;
             }}
             onNodesChange={onNodesChange}
-            onConnect={(connection) => void connectInteractions(connection)}
+            onConnect={requestConnection}
             onConnectStart={startCanvasConnection}
             onConnectEnd={endCanvasConnection}
             onNodeClick={select}
@@ -294,6 +350,41 @@ export function StoryEditor() {
           </aside>
         ) : null}
       </div>
+      {pending && existingTriggerChoices.length > 0 ? (
+        <div className="connection-dialog-backdrop">
+          <section
+            className="connection-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="connection-dialog-title"
+          >
+            <h2 id="connection-dialog-title">Connect interactions</h2>
+            <p>Should this route share an existing trigger’s conditions?</p>
+            <div className="connection-dialog-actions">
+              {existingTriggerChoices.map((trigger, index) => (
+                <button
+                  className="secondary"
+                  type="button"
+                  key={trigger.id}
+                  onClick={() => extendPendingTrigger(trigger.id)}
+                >
+                  Add to condition group {index + 1}
+                </button>
+              ))}
+              <button type="button" onClick={createPendingTrigger}>
+                Create a new trigger
+              </button>
+              <button
+                className="ghost"
+                type="button"
+                onClick={() => setPendingConnection(undefined)}
+              >
+                Cancel
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
     </main>
   );
 }
