@@ -49,6 +49,22 @@ changes`, and whether every non-read permission implies `read`.
 - Define play-session persistence: manual save, autosave, save slots, and how
   save data relates to story updates.
 
+## World State, Conditions, Effects, and Items
+
+- Define the first typed condition and effect families before broad world-state
+  entities depend on them. Keep their payloads validated and versionable.
+- Decide which values are authored definitions, persisted play-session state, or
+  deterministic derived values.
+- Define item-definition deletion behavior when authored effects, conditions, or
+  existing play-session item instances reference it.
+- Define the initial inventory owner, item transfer rules, stack identity, and
+  equipment-slot conflict behavior for the first playable item vertical.
+- Decide whether extension properties are schema-backed per item type or limited
+  to validated plugin-owned namespaces; avoid unrestricted business logic in
+  arbitrary JSON.
+- Keep directional relationships separate from character attributes and decide
+  which relationship dimensions are available to conditions and effects.
+
 ## Story Translation
 
 - Decide whether translating user-authored story content is worth implementing at

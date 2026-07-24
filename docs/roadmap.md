@@ -104,8 +104,13 @@ the current implementation reaches the stated trigger:
 
 ## V0.4 - Advanced Narrative Model
 
-- Characters.
-- Places.
+- Establish typed world-state conditions and interaction effects incrementally;
+  do not introduce an unvalidated universal parameter bag.
+- Typed variables: stable attributes, changing resources, skills, flags, traits,
+  and temporary statuses.
+- Places as domain entities, followed by movement and time only when play-session
+  state exists.
+- Characters and directional relationships.
 - Neutral grouping concept for quests, chapters, arcs, or scene sequences.
 - Author annotations that do not affect story execution.
 - Story Canvas filters/focal points for future groups, characters, and places.
@@ -114,6 +119,11 @@ the current implementation reaches the stated trigger:
 - World-based conditions.
 - Contextual inputless triggers based on broader world state.
 - Final interactions and explicit story completion.
+- Item definitions as story-owned authoring entities.
+- A first playable item vertical with item instances in play-session state, one
+  inventory, basic equipment, tags, and typed item conditions/effects.
+- Later item increments: multiple containers, consumables, durability,
+  modifiers, shops, economy, and advanced clothing layers or coverage.
 
 ## V0.5 - Timing and Probabilities
 

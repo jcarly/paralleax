@@ -18,6 +18,9 @@
   trigger routes.
 - Updated the MVP definition to reflect the already implemented identity
   foundation and the completed authoring-reliability criteria.
+- Documented the post-MVP item direction: separate item definitions and
+  play-session instances, inventories and equipment, typed conditions and
+  effects, calculated modifiers, and progressive playable verticals.
 
 ## 2026-07-18
 

@@ -251,9 +251,75 @@ Possible elements:
 
 ### Attribute
 
-An attribute represents a statistic, item, relationship, or narrative property.
+An attribute represents a typed value such as a relatively stable attribute,
+changing resource, learned skill, flag, trait, or temporary status. Items and
+relationships are separate entities rather than special attribute names.
 
 It can be modified by an interaction and used as a trigger condition.
+
+### Item Definition
+
+An item definition describes the shared authoring model for one kind of object.
+It is not an owned object in a play session.
+
+Possible elements:
+
+- name and type;
+- reusable tags;
+- stackability and maximum stack size;
+- base value;
+- optional equipment, consumable, or other behavior definitions.
+
+Tags support flexible rules such as requiring any equipped item tagged
+`formal`, without coupling the trigger to one exact dress definition.
+
+### Item Instance
+
+An item instance represents one concrete object in play-session state.
+
+Possible elements:
+
+- item definition id;
+- owner or container id;
+- quantity for stackable items;
+- durability, quality, or other mutable state;
+- optional custom name and constrained extension properties.
+
+Definition and instance identity must remain separate so two instances of one
+definition can have different ownership, wear, customization, or location.
+
+### Inventory and Equipment
+
+Inventories and containers own item instances. Equipment is a relationship
+between a character, an item instance, and one or more allowed slots. Equipment
+definitions may expose modifiers, coverage, or layers, but advanced clothing
+simulation remains a later vertical.
+
+Items do not replace attributes. Equipment and item behavior contribute
+modifiers to an effective value calculated from base, permanent, equipment,
+temporary, and contextual modifiers. Derived values should not be persisted
+when they can be recomputed deterministically.
+
+### Conditions and Effects
+
+Future conditions inspect narrative, world, and play-session state. Future
+interaction effects modify that state after an interaction is selected.
+
+The model may use a discriminated family of condition and effect types, but each
+supported type must have a typed payload, validation, reader semantics, cleanup
+rules, and tests. A generic `{ type, parameters }` storage envelope must not
+become an unvalidated runtime contract.
+
+Examples of later condition families include attribute comparison, item
+ownership, equipment tags, place, and relationships. Examples of effects include
+attribute modification, giving or removing an item, changing equipment,
+movement, time advancement, and relationship modification.
+
+Items should be introduced only after the condition/effect boundary can make
+them participate in narrative behavior. The first item vertical should keep a
+small scope: definitions, instances, one inventory, basic equipment, and a few
+typed conditions and effects. Durability, multiple containers, procedural
+properties, layered clothing, shops, and economy remain later increments.
 
 ### Place
 
