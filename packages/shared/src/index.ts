@@ -139,6 +139,24 @@ export interface CharacterItemMutationResult extends StoryMutationMetadata {
   characterId: string;
   item: ItemInstance;
 }
+export interface ReaderProgressState {
+  version: 1;
+  journeyInteractionIds: string[];
+  currentInteractionId: string | null;
+  visitedInteractionIds: string[];
+  currentDateTime: string;
+  currentLocationId: string | null;
+  statValues: Record<string, number>;
+  ownedItemIds: string[];
+}
+export interface ReaderProgress {
+  state: ReaderProgressState;
+  updatedAt: string;
+}
+export interface SaveReaderProgressInput {
+  journeyInteractionIds: string[];
+  ownedItemIds?: string[];
+}
 export interface CreateStoryInput {
   title: string;
 }
@@ -881,4 +899,35 @@ export function getJourneyStatValues(story: Story, journey: string[]): Record<st
     const interaction = story.interactions.find(({ id }) => id === interactionId);
     return interaction ? applyInteractionStatEffects(values, interaction) : values;
   }, getInitialStatValues(story));
+}
+
+export function getJourneyLocation(story: Story, journey: string[]): string | null {
+  for (let index = journey.length - 1; index >= 0; index -= 1) {
+    const interaction = story.interactions.find(({ id }) => id === journey[index]);
+    if (interaction?.locationId) return interaction.locationId;
+  }
+  return null;
+}
+
+export function buildReaderProgressState(
+  story: Story,
+  journeyInteractionIds: string[],
+  ownedItemIds: string[] = [],
+): ReaderProgressState {
+  const interactionIds = new Set(story.interactions.map(({ id }) => id));
+  const itemIds = new Set(
+    (story.characters ?? []).flatMap((character) => (character.items ?? []).map(({ id }) => id)),
+  );
+  const journey = journeyInteractionIds.filter((id) => interactionIds.has(id));
+  const items = [...new Set(ownedItemIds.filter((id) => itemIds.has(id)))];
+  return {
+    version: 1,
+    journeyInteractionIds: journey,
+    currentInteractionId: journey.at(-1) ?? null,
+    visitedInteractionIds: [...new Set(journey)],
+    currentDateTime: getJourneyDateTime(story, journey),
+    currentLocationId: getJourneyLocation(story, journey),
+    statValues: getJourneyStatValues(story, journey),
+    ownedItemIds: items,
+  };
 }

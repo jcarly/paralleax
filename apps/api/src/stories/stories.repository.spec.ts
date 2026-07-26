@@ -460,4 +460,43 @@ describe('StoriesRepository', () => {
     expect(mockClientQuery).toHaveBeenLastCalledWith('ROLLBACK');
     expect(mockRelease).toHaveBeenCalledTimes(1);
   });
+
+  it('reads, upserts, and deletes user-scoped reader progress', async () => {
+    const state = {
+      version: 1 as const,
+      journeyInteractionIds: ['interaction-1'],
+      currentInteractionId: 'interaction-1',
+      visitedInteractionIds: ['interaction-1'],
+      currentDateTime: '2026-07-27T09:15',
+      currentLocationId: null,
+      statValues: {},
+      ownedItemIds: [],
+    };
+    mockQuery
+      .mockResolvedValueOnce({
+        rows: [{ state, updated_at: new Date('2026-07-27T09:15:00.000Z') }],
+        rowCount: 1,
+      })
+      .mockResolvedValueOnce({ rows: [], rowCount: 1 })
+      .mockResolvedValueOnce({ rows: [], rowCount: 1 });
+
+    await expect(repository().findProgress('story-1', ownerId)).resolves.toEqual({
+      state,
+      updatedAt: '2026-07-27T09:15:00.000Z',
+    });
+    await expect(
+      repository().saveProgress('story-1', ownerId, state, '2026-07-27T09:15:00.000Z'),
+    ).resolves.toBe(true);
+    await repository().deleteProgress('story-1', ownerId);
+
+    expect(mockQuery).toHaveBeenNthCalledWith(
+      2,
+      expect.stringContaining('INSERT INTO story_reader_progress'),
+      ['story-1', ownerId, JSON.stringify(state), '2026-07-27T09:15:00.000Z'],
+    );
+    expect(mockQuery).toHaveBeenLastCalledWith(
+      'DELETE FROM story_reader_progress WHERE story_id = $1 AND user_id = $2',
+      ['story-1', ownerId],
+    );
+  });
 });

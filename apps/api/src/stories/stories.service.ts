@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { randomUUID } from 'node:crypto';
 import {
   createDemoStory,
+  buildReaderProgressState,
   isStoryDate,
   isStoryDateTime,
   isStoryTime,
@@ -16,6 +17,7 @@ import {
   type InteractionMutationResult,
   type ItemDefinitionMutationResult,
   type LocationMutationResult,
+  type ReaderProgress,
   type StatDefinitionMutationResult,
   type Story,
   type TriggerCondition,
@@ -31,6 +33,7 @@ import {
   CreateStatDefinitionDto,
   CreateStoryDto,
   CreateTriggerDto,
+  SaveReaderProgressDto,
   UpdateInteractionDto,
   UpdateCharacterDto,
   UpdateCharacterStatDto,
@@ -95,6 +98,37 @@ export class StoriesService {
   }
   async delete(id: string, userId: string): Promise<void> {
     if (!(await this.repository.delete(id, userId))) throw new NotFoundException('Story not found');
+  }
+  async getProgress(storyId: string, userId: string): Promise<ReaderProgress | null> {
+    const progress = await this.repository.findProgress(storyId, userId);
+    return progress ?? null;
+  }
+  async saveProgress(
+    storyId: string,
+    input: SaveReaderProgressDto,
+    userId: string,
+  ): Promise<ReaderProgress> {
+    const story = await this.get(storyId, userId);
+    const interactionIds = new Set(story.interactions.map(({ id }) => id));
+    if (input.journeyInteractionIds.some((id) => !interactionIds.has(id))) {
+      throw new BadRequestException('Reader journey interactions must belong to the same story');
+    }
+    const itemIds = new Set(
+      (story.characters ?? []).flatMap((character) => (character.items ?? []).map(({ id }) => id)),
+    );
+    if ((input.ownedItemIds ?? []).some((id) => !itemIds.has(id))) {
+      throw new BadRequestException('Reader items must belong to the same story');
+    }
+    const state = buildReaderProgressState(story, input.journeyInteractionIds, input.ownedItemIds);
+    const updatedAt = new Date().toISOString();
+    if (!(await this.repository.saveProgress(storyId, userId, state, updatedAt))) {
+      throw new NotFoundException('Story not found');
+    }
+    return { state, updatedAt };
+  }
+  async deleteProgress(storyId: string, userId: string): Promise<void> {
+    await this.get(storyId, userId);
+    await this.repository.deleteProgress(storyId, userId);
   }
   async createInteraction(
     storyId: string,

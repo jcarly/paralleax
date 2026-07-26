@@ -10,6 +10,9 @@ import { api } from '../api';
 vi.mock('../api', () => ({
   api: {
     getStory: vi.fn(),
+    getReaderProgress: vi.fn(),
+    saveReaderProgress: vi.fn(),
+    deleteReaderProgress: vi.fn(),
     createInteraction: vi.fn(),
     updateInteraction: vi.fn(),
   },
@@ -53,6 +56,21 @@ const story: Story = {
 
 async function renderPlayer(initialEntry = '/stories/story-1/play', storyFixture = story) {
   vi.mocked(api.getStory).mockResolvedValue(structuredClone(storyFixture));
+  vi.mocked(api.getReaderProgress).mockResolvedValue(null);
+  vi.mocked(api.saveReaderProgress).mockResolvedValue({
+    state: {
+      version: 1,
+      journeyInteractionIds: [],
+      currentInteractionId: null,
+      visitedInteractionIds: [],
+      currentDateTime: '2000-01-03T08:00',
+      currentLocationId: null,
+      statValues: {},
+      ownedItemIds: [],
+    },
+    updatedAt: '2026-07-27T09:00:00.000Z',
+  });
+  vi.mocked(api.deleteReaderProgress).mockResolvedValue(undefined);
 
   render(
     <MemoryRouter initialEntries={[initialEntry]}>
@@ -84,11 +102,69 @@ describe('StoryPlayer', () => {
     expect(screen.getByRole('heading', { name: 'Start' })).toBeInTheDocument();
     expect(screen.getByText('You arrive.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Next' })).toBeInTheDocument();
+    expect(api.saveReaderProgress).toHaveBeenCalledWith('story-1', {
+      journeyInteractionIds: ['start'],
+      ownedItemIds: [],
+    });
 
     await user.click(screen.getByRole('button', { name: 'Next' }));
     expect(screen.getByRole('heading', { name: 'Next' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Secret' })).toBeInTheDocument();
     expect(screen.getByText('Start')).toBeInTheDocument();
+  });
+
+  it('resumes a saved reader journey with materialized state', async () => {
+    vi.mocked(api.getReaderProgress).mockResolvedValueOnce({
+      state: {
+        version: 1,
+        journeyInteractionIds: ['start'],
+        currentInteractionId: 'start',
+        visitedInteractionIds: ['start'],
+        currentDateTime: '2000-01-03T08:00',
+        currentLocationId: null,
+        statValues: {},
+        ownedItemIds: ['key-1'],
+      },
+      updatedAt: '2026-07-27T09:00:00.000Z',
+    });
+
+    await renderPlayer();
+
+    expect(await screen.findByRole('heading', { name: 'Start' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Next' })).toBeInTheDocument();
+    expect(screen.getByText('Progress saved')).toBeInTheDocument();
+  });
+
+  it('deletes saved progress when restarting', async () => {
+    const user = userEvent.setup();
+    await renderPlayer();
+    await user.click(screen.getByRole('button', { name: 'Start' }));
+    await user.click(screen.getByRole('button', { name: 'Restart' }));
+
+    expect(api.deleteReaderProgress).toHaveBeenCalledWith('story-1');
+    expect(screen.getByRole('heading', { name: 'Start the story' })).toBeInTheDocument();
+  });
+
+  it('reports a reader progress save failure', async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.saveReaderProgress).mockRejectedValueOnce(new Error('offline'));
+    await renderPlayer();
+
+    await user.click(screen.getByRole('button', { name: 'Start' }));
+
+    expect(await screen.findByText('Progress save failed')).toBeInTheDocument();
+  });
+
+  it('keeps author simulation isolated from reader progress', async () => {
+    const user = userEvent.setup();
+    await renderPlayer('/stories/story-1/play?mode=simulation');
+
+    await user.click(screen.getByRole('button', { name: 'Start' }));
+    await user.click(screen.getByRole('button', { name: 'Restart' }));
+
+    expect(api.getReaderProgress).not.toHaveBeenCalled();
+    expect(api.saveReaderProgress).not.toHaveBeenCalled();
+    expect(api.deleteReaderProgress).not.toHaveBeenCalled();
   });
 
   it('advances the story clock before evaluating temporal choices', async () => {

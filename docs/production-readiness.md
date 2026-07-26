@@ -139,7 +139,8 @@ and templates.
 - Clean expired sessions with scheduled maintenance rather than a global cleanup
   on every authenticated request.
 - Support account recovery, session revocation, export, and deletion before open
-  registration.
+  registration. Account export/deletion must include reader-progress JSON as
+  personal user data.
 
 ## Accessibility and Device Support
 

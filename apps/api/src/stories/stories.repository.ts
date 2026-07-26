@@ -1,5 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { DEFAULT_STORY_DATE_TIME, type Story, type TriggerCondition } from '@paralleax/shared';
+import {
+  DEFAULT_STORY_DATE_TIME,
+  type ReaderProgress,
+  type ReaderProgressState,
+  type Story,
+  type TriggerCondition,
+} from '@paralleax/shared';
 import type { PoolClient } from 'pg';
 import { DatabaseConnection } from '../database/database.connection';
 import type { Queryable } from './persistence/stories.persistence.types';
@@ -84,6 +90,10 @@ type TriggerInputRow = {
   input_interaction_id: string;
   sort_order: number;
 };
+type ReaderProgressRow = {
+  state: ReaderProgressState;
+  updated_at: Date | string;
+};
 
 @Injectable()
 export class StoriesRepository {
@@ -154,6 +164,45 @@ export class StoriesRepository {
       [id, ownerId],
     );
     return (result.rowCount ?? 0) > 0;
+  }
+
+  async findProgress(storyId: string, userId: string): Promise<ReaderProgress | undefined> {
+    const result = await this.database.pool.query<ReaderProgressRow>(
+      `SELECT progress.state, progress.updated_at
+       FROM story_reader_progress AS progress
+       JOIN stories ON stories.id = progress.story_id
+       WHERE progress.story_id = $1
+         AND progress.user_id = $2
+         AND stories.creator_user_id = $2`,
+      [storyId, userId],
+    );
+    const row = result.rows[0];
+    return row ? { state: row.state, updatedAt: iso(row.updated_at) } : undefined;
+  }
+
+  async saveProgress(
+    storyId: string,
+    userId: string,
+    state: ReaderProgressState,
+    updatedAt: string,
+  ): Promise<boolean> {
+    const result = await this.database.pool.query(
+      `INSERT INTO story_reader_progress (user_id, story_id, state, updated_at)
+       SELECT $2, $1, $3::jsonb, $4
+       FROM stories
+       WHERE id = $1 AND creator_user_id = $2
+       ON CONFLICT (user_id, story_id) DO UPDATE
+       SET state = EXCLUDED.state, updated_at = EXCLUDED.updated_at`,
+      [storyId, userId, JSON.stringify(state), updatedAt],
+    );
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  async deleteProgress(storyId: string, userId: string): Promise<void> {
+    await this.database.pool.query(
+      'DELETE FROM story_reader_progress WHERE story_id = $1 AND user_id = $2',
+      [storyId, userId],
+    );
   }
 
   private async findWith(queryable: Queryable, id: string, ownerId: string) {

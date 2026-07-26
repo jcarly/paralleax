@@ -162,6 +162,36 @@ The shared reader converts `visitedIds` to a set for condition checks. MVP
 conditions therefore care only whether an interaction has been visited at least
 once, not how many times it was visited or when it was visited.
 
+## Persisted Reader Progress
+
+Authenticated player reading, unlike author Simulation Mode, stores one
+versioned progress snapshot per user and story. The snapshot is JSON because the
+runtime state evolves as typed conditions and effects are added, while
+`user_id`, `story_id`, and `updated_at` remain relational columns.
+
+Version 1 stores:
+
+- the complete ordered journey, including repeated interaction visits;
+- the current interaction and unique visited-interaction list;
+- current story-local date and time;
+- current location;
+- current character-stat values;
+- owned item-instance ids.
+
+The ordered journey is authoritative for state that can currently be replayed.
+The API derives current interaction, visited ids, story time, location, and stats
+from that journey before writing JSON; clients cannot provide trusted derived
+values. Owned item ids are validated against item instances in the same story.
+The current engine has no item acquisition or removal effects yet, so this field
+is persisted and ready for that vertical but remains unchanged by interactions.
+
+The reader reconciles loaded progress with the authored story it fetched:
+interaction and item ids that no longer exist are removed, and replayable
+derived values are rebuilt without a second full-graph API read. Restart deletes
+the saved snapshot and returns to the authored starting state. Stepping backward
+in Simulation Mode remains an author-only operation and never reads or writes
+player progress.
+
 ## Repeated Interactions and Cycles
 
 The MVP reader does not forbid cycles.

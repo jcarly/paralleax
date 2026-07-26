@@ -208,6 +208,12 @@ The character-stat vertical keeps these regressions covered:
   and time slots, while invalid dates, ranges, and equal slot bounds are rejected.
 - Reader/simulation: the current story time is visible and temporal choices are
   evaluated after the selected interaction's duration.
+- Shared/API: reader progress keeps repeated journey visits and derives current
+  interaction, unique visits, date/time, location, and stats from replay.
+- API/PostgreSQL: one versioned JSON progress snapshot round-trips per user and
+  story, validates interaction/item references, and cascades with its owners.
+- Reader: normal play resumes and serializes progress saves, exposes save
+  failures, and restart deletes the snapshot; Simulation Mode never persists it.
 
 ## Operations Regression Tests
 
@@ -223,6 +229,7 @@ The character-stat vertical keeps these regressions covered:
 
 ## Playwright Functional Tests
 
+- Reader: resume a saved journey and persist the next selected interaction.
 - Editor: update the story-local starting date/time and an interaction duration.
 - Editor: open a story, select an interaction, rename its title, and verify that the canvas and inspector stay visible.
 - Editor: move an interaction and verify that title and content remain visible after saving.

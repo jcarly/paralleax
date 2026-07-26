@@ -1,9 +1,10 @@
-import type { Story } from '@paralleax/shared';
+import type { ReaderProgress, ReaderProgressState, Story } from '@paralleax/shared';
 
 export class InMemoryStoriesRepository {
   private readonly stories = new Map<string, Story>();
   private readonly owners = new Map<string, string>();
   private readonly mutationQueues = new Map<string, Promise<void>>();
+  private readonly progress = new Map<string, ReaderProgress>();
 
   async list(ownerId: string): Promise<Story[]> {
     return [...this.stories.entries()]
@@ -49,6 +50,31 @@ export class InMemoryStoriesRepository {
   async delete(id: string, ownerId: string): Promise<boolean> {
     if (this.owners.get(id) !== ownerId) return false;
     this.owners.delete(id);
+    this.progress.delete(`${ownerId}:${id}`);
     return this.stories.delete(id);
+  }
+
+  async findProgress(storyId: string, userId: string): Promise<ReaderProgress | undefined> {
+    if (this.owners.get(storyId) !== userId) return undefined;
+    const progress = this.progress.get(`${userId}:${storyId}`);
+    return progress ? structuredClone(progress) : undefined;
+  }
+
+  async saveProgress(
+    storyId: string,
+    userId: string,
+    state: ReaderProgressState,
+    updatedAt: string,
+  ): Promise<boolean> {
+    if (this.owners.get(storyId) !== userId) return false;
+    this.progress.set(`${userId}:${storyId}`, {
+      state: structuredClone(state),
+      updatedAt,
+    });
+    return true;
+  }
+
+  async deleteProgress(storyId: string, userId: string): Promise<void> {
+    this.progress.delete(`${userId}:${storyId}`);
   }
 }

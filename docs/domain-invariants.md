@@ -61,6 +61,14 @@ details. They should stay covered by tests as the editor grows.
 - Stat effects apply when their interaction is selected, before the next choices
   are evaluated. Replaying the journey reconstructs the same stat state.
 - If no interaction is available in the reader, the current branch stops.
+- Reader progress belongs to exactly one authenticated user and one story.
+- Its JSON state is versioned and keeps the ordered journey, including repeated
+  visits, plus a materialized runtime snapshot.
+- Current interaction, unique visits, story time, location, and stats are
+  reconstructed from the ordered journey before persistence.
+- Saved owned item ids must reference distinct item instances from the same
+  story. Interactions do not change runtime item ownership yet.
+- Author Simulation Mode never loads, updates, or deletes player progress.
 
 ## Editor Projection Invariants
 

@@ -146,4 +146,11 @@ Select `Test` from the editor to open the reader.
 
 The reader starts with interactions that have root triggers. After each choice, it shows the interactions made available by matching trigger inputs and conditions.
 
-Use `Restart` to clear the reading history and start again.
+Authenticated reading automatically saves progress after every selected
+interaction. Returning to the same story resumes the ordered journey, including
+the current interaction, story time, location, stats, and owned item instances.
+The status beside the reader controls reports saving, success, or failure.
+
+Use `Restart` to clear the reading history, delete that story's saved progress,
+and start again. Author Simulation Mode is separate and never loads or changes
+reader progress.

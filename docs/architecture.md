@@ -99,6 +99,12 @@ schema changes. The service does not depend on the physical relational shape,
 so storage and query projections can evolve without moving endpoint behavior or
 shared domain rules.
 
+Authenticated player progress uses one `story_reader_progress` row per user and
+story. Its keys and update timestamp are relational; its versioned JSONB state
+contains the ordered journey and materialized runtime values. `StoriesService`
+validates same-story references and rebuilds time, location, visits, and stats
+before saving. Simulation Mode stays isolated from this persistence flow.
+
 `HealthModule` exposes an unauthenticated process liveness check at
 `GET /api/health` and a readiness check at `GET /api/ready`. Readiness requires
 PostgreSQL connectivity, the migration table, and the latest known migration.

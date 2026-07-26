@@ -2,6 +2,14 @@
 
 ## 2026-07-26
 
+- Added one authenticated reader-progress save per user and story, using
+  relational ownership/timestamps and a versioned JSONB runtime snapshot.
+- Added automatic reader resume, serialized progress saves after each choice,
+  visible save status, and saved-progress deletion on restart.
+- Reader progress now preserves repeated journey visits and materializes current
+  interaction, unique visits, story-local date/time, location, character stats,
+  and owned item instances through server-side replay and validation.
+- Kept author Simulation Mode isolated from player progress persistence.
 - Added deterministic story-local date and time with an authored starting value,
   visible reader/simulation clock, and journey-based reconstruction on restart
   or backward navigation.

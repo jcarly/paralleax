@@ -5,6 +5,7 @@ import {
   createDemoStory,
   ensureStoryInteractionPositions,
   addStoryMinutes,
+  buildReaderProgressState,
   getJourneyStatValues,
   getJourneyDateTime,
   getAvailableInteractions,
@@ -483,5 +484,56 @@ describe('story time', () => {
     expect(
       getAvailableInteractions(story, 'root', ['root'], null, [], {}, '2026-09-02T08:00'),
     ).toContainEqual(story.interactions[1]);
+  });
+});
+
+describe('reader progress', () => {
+  it('materializes replayable state while keeping repeated journey visits', () => {
+    const story = storyFixture();
+    story.startDateTime = '2026-07-27T09:00';
+    story.interactions[0].durationMinutes = 15;
+    story.interactions[0].locationId = 'harbor';
+    story.characters = [
+      {
+        id: 'mira',
+        name: 'Mira',
+        description: '',
+        stats: [{ id: 'trust', statDefinitionId: 'trust-definition', initialValue: 1 }],
+        items: [{ id: 'key-1', itemDefinitionId: 'key-definition' }],
+      },
+    ];
+    story.interactions[0].statEffects = [{ statId: 'trust', operation: 'add', value: 2 }];
+
+    expect(buildReaderProgressState(story, ['root', 'middle', 'root'], ['key-1'])).toEqual({
+      version: 1,
+      journeyInteractionIds: ['root', 'middle', 'root'],
+      currentInteractionId: 'root',
+      visitedInteractionIds: ['root', 'middle'],
+      currentDateTime: '2026-07-27T09:30',
+      currentLocationId: 'harbor',
+      statValues: { trust: 5 },
+      ownedItemIds: ['key-1'],
+    });
+  });
+
+  it('reconciles deleted interactions, unknown items, and duplicate items', () => {
+    const story = storyFixture();
+    story.characters = [
+      {
+        id: 'mira',
+        name: 'Mira',
+        description: '',
+        items: [{ id: 'key-1', itemDefinitionId: 'key-definition' }],
+      },
+    ];
+
+    expect(
+      buildReaderProgressState(story, ['root', 'deleted', 'middle'], ['key-1', 'unknown', 'key-1']),
+    ).toMatchObject({
+      journeyInteractionIds: ['root', 'middle'],
+      currentInteractionId: 'middle',
+      visitedInteractionIds: ['root', 'middle'],
+      ownedItemIds: ['key-1'],
+    });
   });
 });

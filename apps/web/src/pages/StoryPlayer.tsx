@@ -3,6 +3,7 @@ import { Link, useParams, useSearchParams } from 'react-router-dom';
 import type { Interaction, InteractionMutationResult, Story } from '@paralleax/shared';
 import {
   applyInteractionStatEffects,
+  buildReaderProgressState,
   ensureStoryInteractionPositions,
   getAvailableInteractions,
   getInitialStatValues,
@@ -114,23 +115,43 @@ export function StoryPlayer() {
   const [visited, setVisited] = useState<string[]>(startInteractionId ? [startInteractionId] : []);
   const [currentLocationId, setCurrentLocationId] = useState<string | null>(null);
   const [statValues, setStatValues] = useState<Record<string, number>>({});
+  const [ownedItemIds, setOwnedItemIds] = useState<string[]>([]);
+  const [progressStatus, setProgressStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>(
+    'idle',
+  );
   const [editingChoiceId, setEditingChoiceId] = useState<string>();
   const editingChoiceInputRef = useRef<HTMLInputElement>(null);
+  const progressSaveQueue = useRef<Promise<void>>(Promise.resolve());
+  const progressAttempt = useRef(0);
 
   useEffect(() => {
-    void api.getStory(storyId).then((nextStory) => {
+    void Promise.all([
+      api.getStory(storyId),
+      isSimulationMode || startInteractionId
+        ? Promise.resolve(null)
+        : api.getReaderProgress(storyId),
+    ]).then(([nextStory, progress]) => {
       const positioned = ensureStoryInteractionPositions(nextStory);
+      const reconciledProgress = progress
+        ? buildReaderProgressState(
+            positioned,
+            progress.state.journeyInteractionIds,
+            progress.state.ownedItemIds,
+          )
+        : undefined;
+      const nextJourney =
+        reconciledProgress?.journeyInteractionIds ??
+        (startInteractionId ? [startInteractionId] : []);
       setStory(positioned);
-      setCurrentLocationId(
-        positioned.interactions.find(({ id }) => id === startInteractionId)?.locationId ?? null,
-      );
-      setStatValues(
-        startInteractionId
-          ? getJourneyStatValues(positioned, [startInteractionId])
-          : getInitialStatValues(positioned),
-      );
+      setJourney(nextJourney);
+      setVisited(uniqueJourneyIds(nextJourney));
+      setCurrentId(nextJourney.at(-1) ?? null);
+      setCurrentLocationId(getJourneyLocation(positioned, nextJourney));
+      setStatValues(getJourneyStatValues(positioned, nextJourney));
+      setOwnedItemIds(reconciledProgress?.ownedItemIds ?? []);
+      setProgressStatus(progress ? 'saved' : 'idle');
     });
-  }, [startInteractionId, storyId]);
+  }, [isSimulationMode, startInteractionId, storyId]);
 
   const current = useMemo(
     () => story?.interactions.find((item) => item.id === currentId),
@@ -200,11 +221,13 @@ export function StoryPlayer() {
   }, [editingChoiceId]);
 
   function choose(interaction: Interaction) {
+    const nextJourney = [...journey, interaction.id];
     setCurrentId(interaction.id);
-    setJourney((ids) => [...ids, interaction.id]);
+    setJourney(nextJourney);
     setVisited((ids) => (ids.includes(interaction.id) ? ids : [...ids, interaction.id]));
     if (interaction.locationId) setCurrentLocationId(interaction.locationId);
     setStatValues((values) => applyInteractionStatEffects(values, interaction));
+    if (!isSimulationMode) queueProgressSave(nextJourney, ownedItemIds);
   }
 
   function restart() {
@@ -221,6 +244,8 @@ export function StoryPlayer() {
           : getInitialStatValues(story)
         : {},
     );
+    setOwnedItemIds([]);
+    if (!isSimulationMode) queueProgressReset();
   }
 
   function stepBack() {
@@ -239,6 +264,39 @@ export function StoryPlayer() {
     setStory((currentStory) =>
       currentStory ? applyInteractionResponse(currentStory, result) : currentStory,
     );
+  }
+
+  function queueProgressSave(nextJourney: string[], nextOwnedItemIds: string[]) {
+    const attempt = ++progressAttempt.current;
+    setProgressStatus('saving');
+    const operation = progressSaveQueue.current
+      .then(() =>
+        api.saveReaderProgress(storyId, {
+          journeyInteractionIds: nextJourney,
+          ownedItemIds: nextOwnedItemIds,
+        }),
+      )
+      .then(() => {
+        if (attempt === progressAttempt.current) setProgressStatus('saved');
+      })
+      .catch(() => {
+        if (attempt === progressAttempt.current) setProgressStatus('error');
+      });
+    progressSaveQueue.current = operation.then(() => undefined);
+  }
+
+  function queueProgressReset() {
+    const attempt = ++progressAttempt.current;
+    setProgressStatus('saving');
+    const operation = progressSaveQueue.current
+      .then(() => api.deleteReaderProgress(storyId))
+      .then(() => {
+        if (attempt === progressAttempt.current) setProgressStatus('idle');
+      })
+      .catch(() => {
+        if (attempt === progressAttempt.current) setProgressStatus('error');
+      });
+    progressSaveQueue.current = operation.then(() => undefined);
   }
 
   function patchInteraction(
@@ -294,6 +352,17 @@ export function StoryPlayer() {
       <div className="player-top">
         <Link to={`/stories/${story.id}/edit`}>Back to editor</Link>
         {isSimulationMode ? <span className="mode-pill">Simulation</span> : null}
+        {!isSimulationMode ? (
+          <span className={`save-status ${progressStatus}`} role="status" aria-live="polite">
+            {progressStatus === 'saving'
+              ? 'Saving progress…'
+              : progressStatus === 'saved'
+                ? 'Progress saved'
+                : progressStatus === 'error'
+                  ? 'Progress save failed'
+                  : ''}
+          </span>
+        ) : null}
         {isSimulationMode ? (
           <button className="secondary" disabled={journey.length <= 1} onClick={stepBack}>
             Back

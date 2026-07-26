@@ -171,6 +171,89 @@ describe('Stories API', () => {
     await request(httpServer).get(`/api/stories/${story.id}`).expect(404);
   });
 
+  it('saves, resumes, reconciles, and resets reader progress', async () => {
+    const story = await createStory('Progress story');
+    await request(httpServer)
+      .patch(`/api/stories/${story.id}`)
+      .send({ startDateTime: '2026-07-27T09:00' })
+      .expect(200);
+    const withRoot = await createInteraction(story.id);
+    const root = withRoot.interactions[0];
+    const withChild = await createInteraction(story.id, { parentId: root.id });
+    const child = withChild.interactions.find(({ id }) => id !== root.id)!;
+
+    const definition = await request(httpServer)
+      .post(`/api/stories/${story.id}/stat-definitions`)
+      .send({ name: 'Trust' })
+      .expect(201);
+    const character = await request(httpServer)
+      .post(`/api/stories/${story.id}/characters`)
+      .send({ name: 'Mira' })
+      .expect(201);
+    const stat = await request(httpServer)
+      .post(`/api/stories/${story.id}/characters/${character.body.character.id}/stats`)
+      .send({ statDefinitionId: definition.body.statDefinition.id, initialValue: 1 })
+      .expect(201);
+    const itemDefinition = await request(httpServer)
+      .post(`/api/stories/${story.id}/item-definitions`)
+      .send({ name: 'Key' })
+      .expect(201);
+    const item = await request(httpServer)
+      .post(`/api/stories/${story.id}/characters/${character.body.character.id}/items`)
+      .send({ itemDefinitionId: itemDefinition.body.itemDefinition.id })
+      .expect(201);
+    await request(httpServer)
+      .patch(`/api/stories/${story.id}/interactions/${root.id}`)
+      .send({
+        durationMinutes: 15,
+        statEffects: [{ statId: stat.body.stat.id, operation: 'add', value: 2 }],
+      })
+      .expect(200);
+
+    const saved = await request(httpServer)
+      .patch(`/api/stories/${story.id}/progress`)
+      .send({
+        journeyInteractionIds: [root.id, child.id, root.id],
+        ownedItemIds: [item.body.item.id],
+        currentDateTime: '2099-01-01T00:00',
+        statValues: { forged: 999 },
+      })
+      .expect(400);
+
+    expect(saved.body.message).toEqual(
+      expect.arrayContaining([
+        'property currentDateTime should not exist',
+        'property statValues should not exist',
+      ]),
+    );
+
+    const progress = await request(httpServer)
+      .patch(`/api/stories/${story.id}/progress`)
+      .send({
+        journeyInteractionIds: [root.id, child.id, root.id],
+        ownedItemIds: [item.body.item.id],
+      })
+      .expect(200);
+    expect(progress.body.state).toMatchObject({
+      version: 1,
+      journeyInteractionIds: [root.id, child.id, root.id],
+      currentInteractionId: root.id,
+      visitedInteractionIds: [root.id, child.id],
+      currentDateTime: '2026-07-27T09:30',
+      statValues: { [stat.body.stat.id]: 5 },
+      ownedItemIds: [item.body.item.id],
+    });
+
+    await expect(
+      request(httpServer).get(`/api/stories/${story.id}/progress`).expect(200),
+    ).resolves.toMatchObject({ body: { progress: { state: progress.body.state } } });
+    await request(httpServer).delete(`/api/stories/${story.id}/progress`).expect(204);
+    await request(httpServer)
+      .get(`/api/stories/${story.id}/progress`)
+      .expect(200)
+      .expect({ progress: null });
+  });
+
   it('POST /api/stories/:storyId/interactions creates a root interaction', async () => {
     const story = await createStory();
 

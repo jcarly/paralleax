@@ -34,6 +34,17 @@ export class UpdateStoryDto {
   @Matches(/^\d{4}-\d{2}-\d{2}T(?:[01]\d|2[0-3]):[0-5]\d$/)
   startDateTime?: string;
 }
+export class SaveReaderProgressDto {
+  @IsArray()
+  @ArrayMaxSize(10_000)
+  @IsString({ each: true })
+  journeyInteractionIds!: string[];
+  @ValidateIf((_, value) => value !== undefined)
+  @IsArray()
+  @ArrayMaxSize(5_000)
+  @IsString({ each: true })
+  ownedItemIds?: string[];
+}
 export class CreateInteractionDto {
   @ValidateIf((_, value) => value !== undefined) @IsString() parentId?: string;
   @ValidateIf((_, value) => value !== undefined)

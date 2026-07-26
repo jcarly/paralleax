@@ -83,6 +83,31 @@ describe('api client', () => {
       headers: { 'Content-Type': 'application/json' },
     });
 
+    fetchMock.mockResolvedValueOnce(jsonResponse({ progress: null }));
+    await expect(api.getReaderProgress('story-1')).resolves.toBeNull();
+    expect(fetchMock).toHaveBeenLastCalledWith('/api/stories/story-1/progress', {
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    await api.saveReaderProgress('story-1', {
+      journeyInteractionIds: ['interaction-1', 'interaction-1'],
+      ownedItemIds: ['item-1'],
+    });
+    expect(fetchMock).toHaveBeenLastCalledWith('/api/stories/story-1/progress', {
+      headers: { 'Content-Type': 'application/json' },
+      method: 'PATCH',
+      body: JSON.stringify({
+        journeyInteractionIds: ['interaction-1', 'interaction-1'],
+        ownedItemIds: ['item-1'],
+      }),
+    });
+
+    await api.deleteReaderProgress('story-1');
+    expect(fetchMock).toHaveBeenLastCalledWith('/api/stories/story-1/progress', {
+      headers: { 'Content-Type': 'application/json' },
+      method: 'DELETE',
+    });
+
     await api.createInteraction('story-1', { parentId: 'parent-1', position: { x: 1, y: 2 } });
     expect(fetchMock).toHaveBeenLastCalledWith('/api/stories/story-1/interactions', {
       headers: { 'Content-Type': 'application/json' },

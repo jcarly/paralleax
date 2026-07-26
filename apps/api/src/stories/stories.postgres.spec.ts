@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { Story } from '@paralleax/shared';
+import { buildReaderProgressState, type Story } from '@paralleax/shared';
 import { Pool } from 'pg';
 import type { DatabaseConnection } from '../database/database.connection';
 import { DatabaseMigrator } from '../database/database.migrator';
@@ -180,6 +180,26 @@ describePostgres('StoriesRepository PostgreSQL integration', () => {
       title: 'Concurrent title',
       body: 'Concurrent content',
     });
+  });
+
+  it('round-trips versioned reader progress JSON per user and story', async () => {
+    const story = persistedStory();
+    await repository.save(story, ownerId);
+    const state = buildReaderProgressState(
+      story,
+      ['interaction-1', 'interaction-2', 'interaction-1'],
+      ['item-1', 'item-2'],
+    );
+    const updatedAt = '2026-07-27T10:00:00.000Z';
+
+    await expect(repository.saveProgress(story.id, ownerId, state, updatedAt)).resolves.toBe(true);
+    await expect(repository.findProgress(story.id, ownerId)).resolves.toEqual({
+      state,
+      updatedAt,
+    });
+
+    await repository.deleteProgress(story.id, ownerId);
+    await expect(repository.findProgress(story.id, ownerId)).resolves.toBeUndefined();
   });
 
   it('stores the story graph in relational tables', async () => {

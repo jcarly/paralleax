@@ -12,6 +12,8 @@ import type {
   InteractionMutationResult,
   ItemDefinitionMutationResult,
   LocationMutationResult,
+  ReaderProgress,
+  SaveReaderProgressInput,
   StatDefinitionMutationResult,
   Story,
   TriggerMutationResult,
@@ -89,6 +91,17 @@ export const api = {
   logout: () => request<void>('/auth/logout', { method: 'POST' }),
   listStories: () => request<Story[]>('/stories'),
   getStory: (id: string) => request<Story>(`/stories/${id}`),
+  getReaderProgress: (storyId: string) =>
+    request<{ progress: ReaderProgress | null }>(`/stories/${storyId}/progress`).then(
+      ({ progress }) => progress,
+    ),
+  saveReaderProgress: (storyId: string, input: SaveReaderProgressInput) =>
+    request<ReaderProgress>(`/stories/${storyId}/progress`, {
+      method: 'PATCH',
+      body: JSON.stringify(input),
+    }),
+  deleteReaderProgress: (storyId: string) =>
+    request<void>(`/stories/${storyId}/progress`, { method: 'DELETE' }),
   createStory: (title: string) =>
     request<Story>('/stories', { method: 'POST', body: JSON.stringify({ title }) }),
   createDemoStory: () =>

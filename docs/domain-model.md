@@ -111,6 +111,14 @@ conditions, effects, equipment, or stats yet.
 
 See [Trigger semantics](triggers.md) for deletion rules and editor behavior.
 
+### Reader Progress
+
+Reader progress belongs to one authenticated user and one story. Relational
+columns enforce ownership, uniqueness, timestamps, and cascading deletion. A
+versioned JSON state stores the ordered journey, current interaction, unique
+visits, story-local date/time, current location, stat values, and owned item
+instances. Replayable values are derived from the ordered journey by the API.
+
 ## Target Model
 
 The long-term model may introduce the following concepts.

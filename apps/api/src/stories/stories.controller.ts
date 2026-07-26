@@ -9,6 +9,7 @@ import {
   CreateStatDefinitionDto,
   CreateStoryDto,
   CreateTriggerDto,
+  SaveReaderProgressDto,
   UpdateInteractionDto,
   UpdateCharacterDto,
   UpdateCharacterStatDto,
@@ -39,6 +40,26 @@ export class StoriesController {
 
   @Get(':storyId') get(@Param('storyId') id: string, @CurrentUser() user: RequestUser) {
     return this.stories.get(id, user.id);
+  }
+
+  @Get(':storyId/progress')
+  async getProgress(@Param('storyId') id: string, @CurrentUser() user: RequestUser) {
+    return { progress: await this.stories.getProgress(id, user.id) };
+  }
+
+  @Patch(':storyId/progress')
+  saveProgress(
+    @Param('storyId') id: string,
+    @Body() input: SaveReaderProgressDto,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.stories.saveProgress(id, input, user.id);
+  }
+
+  @Delete(':storyId/progress')
+  @HttpCode(204)
+  deleteProgress(@Param('storyId') id: string, @CurrentUser() user: RequestUser) {
+    return this.stories.deleteProgress(id, user.id);
   }
 
   @Patch(':storyId') update(

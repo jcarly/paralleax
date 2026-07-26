@@ -9,6 +9,7 @@ exports. Locations and characters are the first post-MVP context verticals.
 - Interaction: create, edit title and content, move in the editor, delete.
 - Trigger: define input interactions and simple conditions.
 - Reader: execute a story through successive choices.
+- Reader progress: resume one authenticated playthrough per user and story.
 - Story persistence: save authored stories in PostgreSQL.
 - Story-local calendar time: authored start date/time, interaction durations,
   and trigger schedules based on dates, weekdays, and time slots.
@@ -26,7 +27,7 @@ the narrative-core validation criteria.
 - Automatic choices.
 - Media.
 - Final interactions.
-- Persisted reader sessions and player saves.
+- Multiple save slots and anonymous reader saves.
 - AI.
 - Real-time collaboration.
 - Story sharing and delegated permissions.

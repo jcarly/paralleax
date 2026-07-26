@@ -492,4 +492,21 @@ export const databaseMigrations: DatabaseMigration[] = [
         CHECK (duration_minutes >= 0);
     `,
   },
+  {
+    id: '202607260013_reader_progress',
+    sql: `
+      CREATE TABLE story_reader_progress (
+        user_id text NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        story_id text NOT NULL REFERENCES stories(id) ON DELETE CASCADE,
+        state jsonb NOT NULL,
+        updated_at timestamptz NOT NULL,
+        PRIMARY KEY (user_id, story_id),
+        CONSTRAINT story_reader_progress_state_object
+          CHECK (jsonb_typeof(state) = 'object')
+      );
+
+      CREATE INDEX story_reader_progress_story_id_idx
+        ON story_reader_progress(story_id);
+    `,
+  },
 ];
