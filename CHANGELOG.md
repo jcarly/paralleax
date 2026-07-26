@@ -2,6 +2,12 @@
 
 ## 2026-07-24
 
+- Added character-owned numeric stats with relational persistence and
+  entity-scoped create/update endpoints.
+- Added typed interaction stat effects (`add` and `set`) and numeric trigger
+  comparisons, including editor controls and same-story validation.
+- Extended reader and simulation state so stat effects are applied in journey
+  order and deterministically rebuilt on restart or backward navigation.
 - Added story-owned characters with relational persistence, same-story
   interaction casts, entity-scoped API mutations, and validation.
 - Added character navigation and editing, multi-character interaction

@@ -13,6 +13,7 @@ This folder records accepted architecture and product-shaping decisions.
 - [ADR-007 - Relational Story Persistence](ADR-007-relational-story-persistence.md)
 - [ADR-008 - Authored Locations and Runtime Location State](ADR-008-location-state.md)
 - [ADR-009 - Characters as Current-Interaction Context](ADR-009-character-presence.md)
+- [ADR-010 - Character Stats as Reconstructable Reader State](ADR-010-character-stats.md)
 
 ## Maintenance
 

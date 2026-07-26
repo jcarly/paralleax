@@ -26,6 +26,12 @@ export function TriggerInspector({
   const variantIds = getRelatedTriggerVariantIds(interaction, trigger);
   const variants = interaction.triggers.filter((item) => variantIds.includes(item.id));
   const hasOrVariants = variants.length > 1;
+  const stats = (story.characters ?? []).flatMap((character) =>
+    (character.stats ?? []).map((stat) => ({
+      ...stat,
+      label: `${character.name} — ${stat.name}`,
+    })),
+  );
 
   async function updateTrigger(
     targetTrigger: Interaction['triggers'][number],
@@ -54,7 +60,9 @@ export function TriggerInspector({
                     ? condition.interactionId
                     : 'locationId' in condition
                       ? condition.locationId
-                      : condition.characterId
+                      : 'characterId' in condition
+                        ? condition.characterId
+                        : condition.statId
                 }-${index}`}
               >
                 {'interactionId' in condition ? (
@@ -125,7 +133,7 @@ export function TriggerInspector({
                       <option value="not-current">is not the current location</option>
                     </select>
                   </>
-                ) : (
+                ) : 'characterId' in condition ? (
                   <>
                     <select
                       aria-label="Condition character"
@@ -157,6 +165,52 @@ export function TriggerInspector({
                       <option value="present">is present</option>
                       <option value="absent">is absent</option>
                     </select>
+                  </>
+                ) : (
+                  <>
+                    <select
+                      aria-label="Condition stat"
+                      value={condition.statId}
+                      onChange={(event) => {
+                        const next = [...variant.conditions];
+                        next[index] = { ...condition, statId: event.target.value };
+                        void updateTrigger(variant, variant.inputInteractionIds, next);
+                      }}
+                    >
+                      {stats.map((stat) => (
+                        <option key={stat.id} value={stat.id}>
+                          {stat.label}
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      aria-label="Stat condition operator"
+                      value={condition.operator}
+                      onChange={(event) => {
+                        const next = [...variant.conditions];
+                        next[index] = {
+                          ...condition,
+                          operator: event.target.value as typeof condition.operator,
+                        };
+                        void updateTrigger(variant, variant.inputInteractionIds, next);
+                      }}
+                    >
+                      <option value="eq">equals</option>
+                      <option value="lt">is less than</option>
+                      <option value="lte">is at most</option>
+                      <option value="gt">is greater than</option>
+                      <option value="gte">is at least</option>
+                    </select>
+                    <input
+                      aria-label="Stat condition value"
+                      type="number"
+                      value={condition.value}
+                      onChange={(event) => {
+                        const next = [...variant.conditions];
+                        next[index] = { ...condition, value: Number(event.target.value) };
+                        void updateTrigger(variant, variant.inputInteractionIds, next);
+                      }}
+                    />
                   </>
                 )}
                 <button
@@ -218,6 +272,21 @@ export function TriggerInspector({
             }}
           >
             Add character condition
+          </button>
+          <button
+            className="secondary"
+            disabled={stats.length === 0}
+            onClick={() => {
+              const stat = stats[0];
+              if (stat) {
+                void updateTrigger(variant, variant.inputInteractionIds, [
+                  ...variant.conditions,
+                  { statId: stat.id, operator: 'gte', value: stat.initialValue },
+                ]);
+              }
+            }}
+          >
+            Add stat condition
           </button>
           {hasOrVariants ? (
             <button

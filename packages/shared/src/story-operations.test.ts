@@ -4,6 +4,7 @@ import {
   deleteTriggerInStory,
   createDemoStory,
   ensureStoryInteractionPositions,
+  getJourneyStatValues,
   getAvailableInteractions,
   getInputReachableInteractions,
   getNextChildPosition,
@@ -395,5 +396,29 @@ describe('shared story operations', () => {
     expect(
       getAvailableInteractions(story, 'root', ['root'], null, ['mira']).map((item) => item.id),
     ).not.toContain('middle');
+  });
+});
+
+describe('character stats', () => {
+  it('applies add and set effects in journey order and evaluates stat conditions', () => {
+    const story = storyFixture();
+    story.characters = [
+      {
+        id: 'mira',
+        name: 'Mira',
+        description: '',
+        stats: [{ id: 'trust', name: 'Trust', initialValue: 2 }],
+      },
+    ];
+    story.interactions[0].statEffects = [{ statId: 'trust', operation: 'add', value: 3 }];
+    story.interactions[1].statEffects = [{ statId: 'trust', operation: 'set', value: 10 }];
+    story.interactions[1].triggers[0].conditions = [{ statId: 'trust', operator: 'gte', value: 5 }];
+
+    const afterRoot = getJourneyStatValues(story, ['root']);
+    expect(afterRoot).toEqual({ trust: 5 });
+    expect(getAvailableInteractions(story, 'root', ['root'], null, [], afterRoot)).toContainEqual(
+      story.interactions[1],
+    );
+    expect(getJourneyStatValues(story, ['root', 'middle'])).toEqual({ trust: 10 });
   });
 });

@@ -41,6 +41,8 @@ Conditions on the same trigger represent an AND:
 - every "not current location" condition must not match it.
 - every "present character" condition must belong to the current interaction's cast;
 - every "absent character" condition must not belong to that cast.
+- every stat comparison must match the current numeric value using `=`, `<`,
+  `<=`, `>`, or `>=`.
 
 Inputs answer "where can this trigger come from?"
 

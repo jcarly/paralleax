@@ -2,9 +2,12 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import type { Interaction, InteractionMutationResult, Story } from '@paralleax/shared';
 import {
+  applyInteractionStatEffects,
   ensureStoryInteractionPositions,
   getAvailableInteractions,
+  getInitialStatValues,
   getInputReachableInteractions,
+  getJourneyStatValues,
   getNextChildPosition,
   getNextRootPosition,
   getTriggerConditionFailures,
@@ -25,6 +28,7 @@ function getUnavailableReason(
   visited: string[],
   currentLocationId: string | null,
   currentCharacterIds: string[],
+  statValues: Readonly<Record<string, number>>,
 ) {
   const failures = getTriggerConditionFailures(
     interaction,
@@ -32,6 +36,7 @@ function getUnavailableReason(
     visited,
     currentLocationId,
     currentCharacterIds,
+    statValues,
   );
   if (failures.length === 0) return undefined;
 
@@ -49,6 +54,24 @@ function getUnavailableReason(
     return firstFailure.hasBeenVisited
       ? `Requires "${title}" to be visited.`
       : `Requires "${title}" not to be visited.`;
+  }
+  if ('statId' in firstFailure) {
+    const stat = (story.characters ?? [])
+      .flatMap((character) =>
+        (character.stats ?? []).map((item) => ({
+          ...item,
+          label: `${character.name} — ${item.name}`,
+        })),
+      )
+      .find(({ id }) => id === firstFailure.statId);
+    const operatorLabels = {
+      eq: 'equal to',
+      lt: 'less than',
+      lte: 'at most',
+      gt: 'greater than',
+      gte: 'at least',
+    };
+    return `Requires "${stat?.label ?? firstFailure.statId}" to be ${operatorLabels[firstFailure.operator]} ${firstFailure.value}.`;
   }
   const name =
     story.characters?.find((character) => character.id === firstFailure.characterId)?.name ??
@@ -81,6 +104,7 @@ export function StoryPlayer() {
   const [journey, setJourney] = useState<string[]>(startInteractionId ? [startInteractionId] : []);
   const [visited, setVisited] = useState<string[]>(startInteractionId ? [startInteractionId] : []);
   const [currentLocationId, setCurrentLocationId] = useState<string | null>(null);
+  const [statValues, setStatValues] = useState<Record<string, number>>({});
   const [editingChoiceId, setEditingChoiceId] = useState<string>();
   const editingChoiceInputRef = useRef<HTMLInputElement>(null);
 
@@ -90,6 +114,11 @@ export function StoryPlayer() {
       setStory(positioned);
       setCurrentLocationId(
         positioned.interactions.find(({ id }) => id === startInteractionId)?.locationId ?? null,
+      );
+      setStatValues(
+        startInteractionId
+          ? getJourneyStatValues(positioned, [startInteractionId])
+          : getInitialStatValues(positioned),
       );
     });
   }, [startInteractionId, storyId]);
@@ -108,9 +137,10 @@ export function StoryPlayer() {
             visited,
             currentLocationId,
             current?.characterIds ?? [],
+            statValues,
           )
         : [],
-    [story, current, visited, currentLocationId],
+    [story, current, visited, currentLocationId, statValues],
   );
   const availableChoiceIds = useMemo(() => new Set(choices.map((choice) => choice.id)), [choices]);
   const visibleChoices = useMemo(
@@ -128,6 +158,7 @@ export function StoryPlayer() {
                   visited,
                   currentLocationId,
                   current?.characterIds ?? [],
+                  statValues,
                 ),
           }))
         : choices.map((interaction) => ({
@@ -135,7 +166,16 @@ export function StoryPlayer() {
             available: true,
             unavailableReason: undefined,
           })),
-    [availableChoiceIds, choices, current, currentLocationId, isSimulationMode, story, visited],
+    [
+      availableChoiceIds,
+      choices,
+      current,
+      currentLocationId,
+      isSimulationMode,
+      statValues,
+      story,
+      visited,
+    ],
   );
 
   useEffect(() => {
@@ -148,6 +188,7 @@ export function StoryPlayer() {
     setJourney((ids) => [...ids, interaction.id]);
     setVisited((ids) => (ids.includes(interaction.id) ? ids : [...ids, interaction.id]));
     if (interaction.locationId) setCurrentLocationId(interaction.locationId);
+    setStatValues((values) => applyInteractionStatEffects(values, interaction));
   }
 
   function restart() {
@@ -156,6 +197,13 @@ export function StoryPlayer() {
     setVisited(startInteractionId ? [startInteractionId] : []);
     setCurrentLocationId(
       story?.interactions.find(({ id }) => id === startInteractionId)?.locationId ?? null,
+    );
+    setStatValues(
+      story
+        ? startInteractionId
+          ? getJourneyStatValues(story, [startInteractionId])
+          : getInitialStatValues(story)
+        : {},
     );
   }
 
@@ -166,6 +214,7 @@ export function StoryPlayer() {
     setCurrentId(nextJourney.at(-1) ?? startInteractionId);
     setVisited(uniqueJourneyIds(nextJourney));
     setCurrentLocationId(getJourneyLocation(story, nextJourney));
+    if (story) setStatValues(getJourneyStatValues(story, nextJourney));
   }
 
   async function saveCurrentInteraction(patch: Partial<Pick<Interaction, 'title' | 'body'>>) {

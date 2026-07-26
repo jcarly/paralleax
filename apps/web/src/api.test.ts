@@ -162,6 +162,29 @@ describe('api client', () => {
       method: 'PATCH',
       body: JSON.stringify({ name: 'Mira Vale' }),
     });
+
+    await api.createCharacterStat('story-1', 'character-1', {
+      name: 'Trust',
+      initialValue: 2,
+    });
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      '/api/stories/story-1/characters/character-1/stats',
+      {
+        headers: { 'Content-Type': 'application/json' },
+        method: 'POST',
+        body: JSON.stringify({ name: 'Trust', initialValue: 2 }),
+      },
+    );
+
+    await api.updateCharacterStat('story-1', 'character-1', 'stat-1', { initialValue: 3 });
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      '/api/stories/story-1/characters/character-1/stats/stat-1',
+      {
+        headers: { 'Content-Type': 'application/json' },
+        method: 'PATCH',
+        body: JSON.stringify({ initialValue: 3 }),
+      },
+    );
   });
 
   it('returns undefined for 204 responses', async () => {

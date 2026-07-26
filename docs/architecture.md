@@ -289,10 +289,10 @@ The API accesses storage through `StoriesRepository` instead of coupling
 while shared story operations own trigger cleanup, normalization, reader rules,
 and merge semantics.
 
-The current PostgreSQL schema stores Story, Location, Character, Interaction,
-Trigger, and trigger input state in relational tables. Interaction-to-location
-references and interaction-character joins use same-story composite foreign
-keys. Ordered typed trigger conditions are
+The current PostgreSQL schema stores Story, Location, Character, Character Stat,
+Interaction, Interaction Stat Effect, Trigger, and trigger input state in
+relational tables. Interaction-to-location, interaction-character, and stat
+effect references use same-story composite foreign keys. Ordered typed trigger conditions are
 stored as JSONB on their owning trigger and their references are validated by
 the application service. The repository reconstructs
 the existing domain `Story`, so persistence normalization does not leak into the

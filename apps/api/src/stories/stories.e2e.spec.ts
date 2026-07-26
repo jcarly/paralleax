@@ -4,6 +4,7 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import * as request from 'supertest';
 import type {
   CharacterMutationResult,
+  CharacterStatMutationResult,
   InteractionMutationResult,
   LocationMutationResult,
   Story,
@@ -472,6 +473,92 @@ describe('Stories API', () => {
     expect((assigned.body as InteractionMutationResult).interaction.characterIds).toEqual([
       character.id,
     ]);
+  });
+
+  it('creates and updates character stats, then uses them in effects and conditions', async () => {
+    const story = await createStory();
+    const graph = await createInteraction(story.id);
+    const interaction = graph.interactions[0];
+    const characterResponse = await request(httpServer)
+      .post(`/api/stories/${story.id}/characters`)
+      .send({ name: 'Mira' })
+      .expect(201);
+    const character = (characterResponse.body as CharacterMutationResult).character;
+
+    const created = await request(httpServer)
+      .post(`/api/stories/${story.id}/characters/${character.id}/stats`)
+      .send({ name: 'Trust', initialValue: 2 })
+      .expect(201);
+    const stat = (created.body as CharacterStatMutationResult).stat;
+    expect(stat).toMatchObject({ name: 'Trust', initialValue: 2 });
+
+    const updated = await request(httpServer)
+      .patch(`/api/stories/${story.id}/characters/${character.id}/stats/${stat.id}`)
+      .send({ initialValue: 3 })
+      .expect(200);
+    expect((updated.body as CharacterStatMutationResult).stat.initialValue).toBe(3);
+
+    const withEffect = await request(httpServer)
+      .patch(`/api/stories/${story.id}/interactions/${interaction.id}`)
+      .send({ statEffects: [{ statId: stat.id, operation: 'add', value: 1 }] })
+      .expect(200);
+    expect((withEffect.body as InteractionMutationResult).interaction.statEffects).toEqual([
+      { statId: stat.id, operation: 'add', value: 1 },
+    ]);
+
+    const conditioned = await request(httpServer)
+      .patch(
+        `/api/stories/${story.id}/interactions/${interaction.id}/triggers/${interaction.triggers[0].id}`,
+      )
+      .send({
+        inputInteractionIds: [],
+        conditions: [{ statId: stat.id, operator: 'gte', value: 4 }],
+      })
+      .expect(200);
+    expect((conditioned.body as TriggerMutationResult).trigger.conditions).toEqual([
+      { statId: stat.id, operator: 'gte', value: 4 },
+    ]);
+  });
+
+  it('rejects foreign stat references and duplicate effects', async () => {
+    const first = await createStory('First story');
+    const firstGraph = await createInteraction(first.id);
+    const target = firstGraph.interactions[0];
+    const localCharacterResponse = await request(httpServer)
+      .post(`/api/stories/${first.id}/characters`)
+      .send({ name: 'Local character' })
+      .expect(201);
+    const localCharacter = (localCharacterResponse.body as CharacterMutationResult).character;
+    const localStatResponse = await request(httpServer)
+      .post(`/api/stories/${first.id}/characters/${localCharacter.id}/stats`)
+      .send({ name: 'Trust', initialValue: 0 })
+      .expect(201);
+    const localStat = (localStatResponse.body as CharacterStatMutationResult).stat;
+    const second = await createStory('Second story');
+    const characterResponse = await request(httpServer)
+      .post(`/api/stories/${second.id}/characters`)
+      .send({ name: 'Mira' })
+      .expect(201);
+    const character = (characterResponse.body as CharacterMutationResult).character;
+    const statResponse = await request(httpServer)
+      .post(`/api/stories/${second.id}/characters/${character.id}/stats`)
+      .send({ name: 'Trust', initialValue: 0 })
+      .expect(201);
+    const stat = (statResponse.body as CharacterStatMutationResult).stat;
+
+    await request(httpServer)
+      .patch(`/api/stories/${first.id}/interactions/${target.id}`)
+      .send({ statEffects: [{ statId: stat.id, operation: 'add', value: 1 }] })
+      .expect(400);
+    await request(httpServer)
+      .patch(`/api/stories/${first.id}/interactions/${target.id}`)
+      .send({
+        statEffects: [
+          { statId: localStat.id, operation: 'add', value: 1 },
+          { statId: localStat.id, operation: 'set', value: 2 },
+        ],
+      })
+      .expect(400);
   });
 
   it('rejects character references from another story', async () => {

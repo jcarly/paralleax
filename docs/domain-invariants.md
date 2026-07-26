@@ -24,8 +24,8 @@ details. They should stay covered by tests as the editor grows.
 - Inputs on the same trigger are OR conditions: any one input can make the output
   interaction reachable if the trigger conditions also match.
 - Conditions on the same trigger are AND conditions: all conditions must match.
-- Conditions can check visited interactions, the current location, or character
-  presence in the current interaction.
+- Conditions can check visited interactions, the current location, character
+  presence in the current interaction, or a numeric character stat.
 - A location belongs to exactly one story. An interaction may reference one
   location from that story.
 - Selecting a localized interaction changes the reader's current location;
@@ -34,6 +34,12 @@ details. They should stay covered by tests as the editor grows.
   characters from that story without duplicates.
 - Character presence is scoped to the current interaction and does not carry
   over to the next interaction.
+- A character stat belongs to exactly one character and story, has a finite
+  numeric initial value, and may only be referenced inside that story.
+- An interaction has at most one effect per stat. An effect either adds a finite
+  value to the current value or replaces it.
+- Stat effects apply when their interaction is selected, before the next choices
+  are evaluated. Replaying the journey reconstructs the same stat state.
 - If no interaction is available in the reader, the current branch stops.
 
 ## Editor Projection Invariants

@@ -122,6 +122,28 @@ describe('StoryPlayer', () => {
     expect(screen.getByRole('button', { name: 'Next' })).toBeInTheDocument();
   });
 
+  it('applies interaction stat effects before evaluating the next choices', async () => {
+    const user = userEvent.setup();
+    const statStory = structuredClone(story);
+    statStory.characters = [
+      {
+        id: 'mira',
+        name: 'Mira',
+        description: '',
+        stats: [{ id: 'trust', name: 'Trust', initialValue: 1 }],
+      },
+    ];
+    statStory.interactions[0].statEffects = [{ statId: 'trust', operation: 'add', value: 2 }];
+    statStory.interactions[1].triggers[0].conditions = [
+      { statId: 'trust', operator: 'gte', value: 3 },
+    ];
+
+    await renderPlayer('/stories/story-1/play', statStory);
+    await user.click(screen.getByRole('button', { name: 'Start' }));
+
+    expect(screen.getByRole('button', { name: 'Next' })).toBeInTheDocument();
+  });
+
   it('shows an ending and can restart', async () => {
     const user = userEvent.setup();
     await renderPlayer();

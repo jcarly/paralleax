@@ -14,7 +14,14 @@ export interface CharacterCondition {
   characterId: string;
   isPresent: boolean;
 }
-export type TriggerCondition = InteractionVisitedCondition | LocationCondition | CharacterCondition;
+export type StatComparisonOperator = 'eq' | 'lt' | 'lte' | 'gt' | 'gte';
+export interface CharacterStatCondition {
+  statId: string;
+  operator: StatComparisonOperator;
+  value: number;
+}
+export type TriggerCondition =
+  InteractionVisitedCondition | LocationCondition | CharacterCondition | CharacterStatCondition;
 export interface Location {
   id: string;
   name: string;
@@ -24,6 +31,17 @@ export interface Character {
   id: string;
   name: string;
   description: string;
+  stats?: CharacterStat[];
+}
+export interface CharacterStat {
+  id: string;
+  name: string;
+  initialValue: number;
+}
+export interface StatEffect {
+  statId: string;
+  operation: 'add' | 'set';
+  value: number;
 }
 export interface Trigger {
   id: string;
@@ -37,6 +55,7 @@ export interface Interaction {
   position: Position;
   locationId?: string | null;
   characterIds?: string[];
+  statEffects?: StatEffect[];
   triggers: Trigger[];
 }
 export interface Story {
@@ -66,6 +85,10 @@ export interface LocationMutationResult extends StoryMutationMetadata {
 export interface CharacterMutationResult extends StoryMutationMetadata {
   character: Character;
 }
+export interface CharacterStatMutationResult extends StoryMutationMetadata {
+  characterId: string;
+  stat: CharacterStat;
+}
 export interface CreateStoryInput {
   title: string;
 }
@@ -79,6 +102,7 @@ export interface UpdateInteractionInput {
   position?: Position;
   locationId?: string | null;
   characterIds?: string[];
+  statEffects?: StatEffect[];
 }
 export interface CreateLocationInput {
   name: string;
@@ -96,6 +120,14 @@ export interface UpdateCharacterInput {
   name?: string;
   description?: string;
 }
+export interface CreateCharacterStatInput {
+  name: string;
+  initialValue: number;
+}
+export interface UpdateCharacterStatInput {
+  name?: string;
+  initialValue?: number;
+}
 export interface UpdateTriggerInput {
   inputInteractionIds: string[];
   conditions: TriggerCondition[];
@@ -105,7 +137,7 @@ export interface TriggerConditionFailure {
   condition: TriggerCondition;
 }
 export type InteractionContentPatch = Partial<
-  Pick<Interaction, 'title' | 'body' | 'position' | 'locationId' | 'characterIds'>
+  Pick<Interaction, 'title' | 'body' | 'position' | 'locationId' | 'characterIds' | 'statEffects'>
 >;
 export type TriggerPatch = Pick<Trigger, 'inputInteractionIds' | 'conditions'>;
 
@@ -369,6 +401,9 @@ export function mergeServerStory(
         characterIds: hasOwn(patch ?? {}, 'characterIds')
           ? (patch?.characterIds ?? [])
           : currentItem.characterIds,
+        statEffects: hasOwn(patch ?? {}, 'statEffects')
+          ? (patch?.statEffects ?? [])
+          : currentItem.statEffects,
         triggers,
       };
     }),
@@ -498,11 +533,12 @@ export function isTriggerEligible(
   visited: Set<string>,
   currentLocationId: string | null = null,
   currentCharacterIds: string[] = [],
+  statValues: Readonly<Record<string, number>> = {},
 ): boolean {
   return (
     doesTriggerInputMatch(trigger, currentInteractionId) &&
     trigger.conditions.every((condition) =>
-      conditionMatches(condition, visited, currentLocationId, currentCharacterIds),
+      conditionMatches(condition, visited, currentLocationId, currentCharacterIds, statValues),
     )
   );
 }
@@ -524,6 +560,7 @@ export function getAvailableInteractions(
   visitedIds: string[],
   currentLocationId: string | null = null,
   currentCharacterIds: string[] = [],
+  statValues: Readonly<Record<string, number>> = {},
 ): Interaction[] {
   const visited = new Set(visitedIds);
   return story.interactions.filter((interaction) =>
@@ -534,6 +571,7 @@ export function getAvailableInteractions(
         visited,
         currentLocationId,
         currentCharacterIds,
+        statValues,
       ),
     ),
   );
@@ -554,6 +592,7 @@ export function getTriggerConditionFailures(
   visitedIds: string[],
   currentLocationId: string | null = null,
   currentCharacterIds: string[] = [],
+  statValues: Readonly<Record<string, number>> = {},
 ): TriggerConditionFailure[] {
   const visited = new Set(visitedIds);
   const inputMatchingTriggers = interaction.triggers.filter((trigger) =>
@@ -563,7 +602,7 @@ export function getTriggerConditionFailures(
   if (
     inputMatchingTriggers.some((trigger) =>
       trigger.conditions.every((condition) =>
-        conditionMatches(condition, visited, currentLocationId, currentCharacterIds),
+        conditionMatches(condition, visited, currentLocationId, currentCharacterIds, statValues),
       ),
     )
   ) {
@@ -574,7 +613,7 @@ export function getTriggerConditionFailures(
     trigger.conditions
       .filter(
         (condition) =>
-          !conditionMatches(condition, visited, currentLocationId, currentCharacterIds),
+          !conditionMatches(condition, visited, currentLocationId, currentCharacterIds, statValues),
       )
       .map((condition) => ({ triggerId: trigger.id, condition })),
   );
@@ -585,6 +624,7 @@ function conditionMatches(
   visited: Set<string>,
   currentLocationId: string | null,
   currentCharacterIds: string[],
+  statValues: Readonly<Record<string, number>>,
 ) {
   if ('interactionId' in condition) {
     return condition.hasBeenVisited
@@ -595,6 +635,41 @@ function conditionMatches(
     const matches = currentLocationId === condition.locationId;
     return condition.isCurrentLocation ? matches : !matches;
   }
-  const isPresent = currentCharacterIds.includes(condition.characterId);
-  return condition.isPresent ? isPresent : !isPresent;
+  if ('characterId' in condition) {
+    const isPresent = currentCharacterIds.includes(condition.characterId);
+    return condition.isPresent ? isPresent : !isPresent;
+  }
+  const currentValue = statValues[condition.statId] ?? 0;
+  if (condition.operator === 'eq') return currentValue === condition.value;
+  if (condition.operator === 'lt') return currentValue < condition.value;
+  if (condition.operator === 'lte') return currentValue <= condition.value;
+  if (condition.operator === 'gt') return currentValue > condition.value;
+  return currentValue >= condition.value;
+}
+
+export function getInitialStatValues(story: Story): Record<string, number> {
+  return Object.fromEntries(
+    (story.characters ?? []).flatMap((character) =>
+      (character.stats ?? []).map((stat) => [stat.id, stat.initialValue]),
+    ),
+  );
+}
+
+export function applyInteractionStatEffects(
+  values: Readonly<Record<string, number>>,
+  interaction: Interaction,
+): Record<string, number> {
+  const next = { ...values };
+  for (const effect of interaction.statEffects ?? []) {
+    next[effect.statId] =
+      effect.operation === 'set' ? effect.value : (next[effect.statId] ?? 0) + effect.value;
+  }
+  return next;
+}
+
+export function getJourneyStatValues(story: Story, journey: string[]): Record<string, number> {
+  return journey.reduce((values, interactionId) => {
+    const interaction = story.interactions.find(({ id }) => id === interactionId);
+    return interaction ? applyInteractionStatEffects(values, interaction) : values;
+  }, getInitialStatValues(story));
 }

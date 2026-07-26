@@ -254,4 +254,40 @@ export const databaseMigrations: DatabaseMigration[] = [
         ON interaction_characters(character_id);
     `,
   },
+  {
+    id: '202607240009_character_stats',
+    sql: `
+      CREATE TABLE character_stats (
+        id text PRIMARY KEY,
+        story_id text NOT NULL,
+        character_id text NOT NULL,
+        name text NOT NULL,
+        initial_value double precision NOT NULL,
+        sort_order integer NOT NULL,
+        CONSTRAINT character_stats_story_id_id_unique UNIQUE (story_id, id),
+        CONSTRAINT character_stats_character_fkey
+          FOREIGN KEY (story_id, character_id)
+          REFERENCES characters(story_id, id) ON DELETE CASCADE
+      );
+
+      CREATE TABLE interaction_stat_effects (
+        story_id text NOT NULL,
+        interaction_id text NOT NULL,
+        stat_id text NOT NULL,
+        operation text NOT NULL CHECK (operation IN ('add', 'set')),
+        value double precision NOT NULL,
+        sort_order integer NOT NULL,
+        PRIMARY KEY (interaction_id, stat_id),
+        CONSTRAINT interaction_stat_effects_interaction_fkey
+          FOREIGN KEY (story_id, interaction_id)
+          REFERENCES interactions(story_id, id) ON DELETE CASCADE,
+        CONSTRAINT interaction_stat_effects_stat_fkey
+          FOREIGN KEY (story_id, stat_id)
+          REFERENCES character_stats(story_id, id) ON DELETE CASCADE
+      );
+
+      CREATE INDEX character_stats_character_id_idx ON character_stats(character_id);
+      CREATE INDEX interaction_stat_effects_stat_id_idx ON interaction_stat_effects(stat_id);
+    `,
+  },
 ];

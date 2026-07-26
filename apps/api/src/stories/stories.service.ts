@@ -8,6 +8,7 @@ import {
   normalizeTriggerInputIds,
   updateTriggerInStory,
   type CharacterMutationResult,
+  type CharacterStatMutationResult,
   type InteractionMutationResult,
   type LocationMutationResult,
   type Story,
@@ -17,11 +18,13 @@ import {
 import {
   CreateInteractionDto,
   CreateCharacterDto,
+  CreateCharacterStatDto,
   CreateLocationDto,
   CreateStoryDto,
   CreateTriggerDto,
   UpdateInteractionDto,
   UpdateCharacterDto,
+  UpdateCharacterStatDto,
   UpdateLocationDto,
   UpdateTriggerDto,
   TriggerConditionDto,
@@ -136,6 +139,18 @@ export class StoriesService {
             throw new BadRequestException('Interaction characters must belong to the same story');
           }
           interaction.characterIds = [...new Set(input.characterIds)];
+        }
+        if (input.statEffects !== undefined) {
+          const statIds = this.statIds(story);
+          if (input.statEffects.some(({ statId }) => !statIds.has(statId))) {
+            throw new BadRequestException('Stat effects must belong to the same story');
+          }
+          if (
+            new Set(input.statEffects.map(({ statId }) => statId)).size !== input.statEffects.length
+          ) {
+            throw new BadRequestException('An interaction can only affect a stat once');
+          }
+          interaction.statEffects = input.statEffects;
         }
         return story;
       },
@@ -268,6 +283,7 @@ export class StoriesService {
           id: characterId,
           name: input.name.trim(),
           description: input.description ?? '',
+          stats: [],
         });
         return story;
       },
@@ -293,6 +309,47 @@ export class StoriesService {
     );
     return this.characterResult(story, characterId);
   }
+  async createCharacterStat(
+    storyId: string,
+    characterId: string,
+    input: CreateCharacterStatDto,
+    userId: string,
+  ): Promise<CharacterStatMutationResult> {
+    const statId = randomUUID();
+    const story = await this.update(
+      storyId,
+      (story) => {
+        const character = this.character(story, characterId);
+        (character.stats ??= []).push({
+          id: statId,
+          name: input.name.trim(),
+          initialValue: input.initialValue,
+        });
+        return story;
+      },
+      userId,
+    );
+    return this.statResult(story, characterId, statId);
+  }
+  async updateCharacterStat(
+    storyId: string,
+    characterId: string,
+    statId: string,
+    input: UpdateCharacterStatDto,
+    userId: string,
+  ): Promise<CharacterStatMutationResult> {
+    const story = await this.update(
+      storyId,
+      (story) => {
+        const stat = this.stat(story, characterId, statId);
+        if (input.name !== undefined) stat.name = input.name.trim();
+        if (input.initialValue !== undefined) stat.initialValue = input.initialValue;
+        return story;
+      },
+      userId,
+    );
+    return this.statResult(story, characterId, statId);
+  }
   private interaction(story: Story, id: string) {
     const item = story.interactions.find((interaction) => interaction.id === id);
     if (!item) throw new NotFoundException('Interaction not found');
@@ -308,6 +365,16 @@ export class StoriesService {
     if (!character) throw new NotFoundException('Character not found');
     return character;
   }
+  private stat(story: Story, characterId: string, statId: string) {
+    const stat = this.character(story, characterId).stats?.find(({ id }) => id === statId);
+    if (!stat) throw new NotFoundException('Character stat not found');
+    return stat;
+  }
+  private statIds(story: Story) {
+    return new Set(
+      (story.characters ?? []).flatMap((character) => (character.stats ?? []).map(({ id }) => id)),
+    );
+  }
   private assertInteractionReferences(story: Story, inputInteractionIds: string[]) {
     const interactionIds = new Set(story.interactions.map(({ id }) => id));
     if (inputInteractionIds.some((id) => !interactionIds.has(id))) {
@@ -318,6 +385,7 @@ export class StoriesService {
     const interactionIds = new Set(story.interactions.map(({ id }) => id));
     const locationIds = new Set((story.locations ?? []).map(({ id }) => id));
     const characterIds = new Set((story.characters ?? []).map(({ id }) => id));
+    const statIds = this.statIds(story);
     return conditions.map((condition) => {
       const isInteractionCondition =
         condition.interactionId !== undefined && condition.hasBeenVisited !== undefined;
@@ -325,14 +393,19 @@ export class StoriesService {
         condition.locationId !== undefined && condition.isCurrentLocation !== undefined;
       const isCharacterCondition =
         condition.characterId !== undefined && condition.isPresent !== undefined;
+      const isStatCondition =
+        condition.statId !== undefined &&
+        condition.operator !== undefined &&
+        condition.value !== undefined;
       if (
         Number(isInteractionCondition) +
           Number(isLocationCondition) +
-          Number(isCharacterCondition) !==
+          Number(isCharacterCondition) +
+          Number(isStatCondition) !==
         1
       ) {
         throw new BadRequestException(
-          'A trigger condition must reference exactly one interaction, location, or character',
+          'A trigger condition must reference exactly one interaction, location, character, or stat',
         );
       }
       if (isInteractionCondition) {
@@ -353,12 +426,22 @@ export class StoriesService {
           isCurrentLocation: condition.isCurrentLocation!,
         };
       }
-      if (!characterIds.has(condition.characterId!)) {
+      if (isCharacterCondition) {
+        if (!characterIds.has(condition.characterId!)) {
+          throw new BadRequestException('Trigger references must belong to the same story');
+        }
+        return {
+          characterId: condition.characterId!,
+          isPresent: condition.isPresent!,
+        };
+      }
+      if (!statIds.has(condition.statId!)) {
         throw new BadRequestException('Trigger references must belong to the same story');
       }
       return {
-        characterId: condition.characterId!,
-        isPresent: condition.isPresent!,
+        statId: condition.statId!,
+        operator: condition.operator!,
+        value: condition.value!,
       };
     });
   }
@@ -395,6 +478,18 @@ export class StoriesService {
   private characterResult(story: Story, characterId: string): CharacterMutationResult {
     return {
       character: structuredClone(this.character(story, characterId)),
+      revision: story.revision ?? 1,
+      updatedAt: story.updatedAt,
+    };
+  }
+  private statResult(
+    story: Story,
+    characterId: string,
+    statId: string,
+  ): CharacterStatMutationResult {
+    return {
+      characterId,
+      stat: structuredClone(this.stat(story, characterId, statId)),
       revision: story.revision ?? 1,
       updatedAt: story.updatedAt,
     };

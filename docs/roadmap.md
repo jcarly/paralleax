@@ -108,6 +108,8 @@ the current implementation reaches the stated trigger:
   definitions, interaction movement, and current-location trigger conditions.
 - Characters are implemented as story-owned definitions, interaction casts, and
   present/absent trigger conditions.
+- Numeric character stats are implemented with initial values, typed interaction
+  effects, and trigger comparisons.
 - Establish typed world-state conditions and interaction effects incrementally;
   do not introduce an unvalidated universal parameter bag.
 - Typed variables: stable attributes, changing resources, skills, flags, traits,
@@ -118,9 +120,9 @@ the current implementation reaches the stated trigger:
 - Neutral grouping concept for quests, chapters, arcs, or scene sequences.
 - Author annotations that do not affect story execution.
 - Story Canvas filters/focal points for future groups, characters, and places.
-- Attributes.
-- Interaction impacts on attributes.
-- World-based conditions.
+- General attributes beyond character stats.
+- Interaction impacts on general attributes.
+- World-based conditions beyond location, character presence, and character stats.
 - Contextual inputless triggers based on broader world state.
 - Final interactions and explicit story completion.
 - Item definitions as story-owned authoring entities.

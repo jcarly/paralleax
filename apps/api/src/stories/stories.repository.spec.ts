@@ -23,7 +23,14 @@ function story(id = 'story-1'): Story {
 function graphStory(): Story {
   const saved = story();
   saved.locations = [{ id: 'location-1', name: 'Harbor', description: 'A quiet harbor.' }];
-  saved.characters = [{ id: 'character-1', name: 'Mira', description: 'An investigator.' }];
+  saved.characters = [
+    {
+      id: 'character-1',
+      name: 'Mira',
+      description: 'An investigator.',
+      stats: [{ id: 'stat-1', name: 'Trust', initialValue: 2 }],
+    },
+  ];
   saved.interactions = [
     {
       id: 'interaction-1',
@@ -32,6 +39,7 @@ function graphStory(): Story {
       position: { x: 10, y: 20 },
       locationId: 'location-1',
       characterIds: ['character-1'],
+      statEffects: [{ statId: 'stat-1', operation: 'add', value: 1 }],
       triggers: [{ id: 'trigger-1', inputInteractionIds: [], conditions: [] }],
     },
     {
@@ -104,6 +112,34 @@ function relationalRead(query: jest.Mock, saved = story()) {
             story_id: saved.id,
             interaction_id: interaction.id,
             character_id: characterId,
+            sort_order: index,
+          })),
+        ),
+      });
+    }
+    if (sql.includes('FROM interaction_stat_effects')) {
+      return Promise.resolve({
+        rows: saved.interactions.flatMap((interaction) =>
+          (interaction.statEffects ?? []).map((effect, index) => ({
+            story_id: saved.id,
+            interaction_id: interaction.id,
+            stat_id: effect.statId,
+            operation: effect.operation,
+            value: effect.value,
+            sort_order: index,
+          })),
+        ),
+      });
+    }
+    if (sql.includes('FROM character_stats')) {
+      return Promise.resolve({
+        rows: (saved.characters ?? []).flatMap((character) =>
+          (character.stats ?? []).map((stat, index) => ({
+            id: stat.id,
+            story_id: saved.id,
+            character_id: character.id,
+            name: stat.name,
+            initial_value: stat.initialValue,
             sort_order: index,
           })),
         ),
@@ -185,6 +221,7 @@ describe('StoriesRepository', () => {
         ...interaction,
         locationId: interaction.locationId ?? null,
         characterIds: interaction.characterIds ?? [],
+        statEffects: interaction.statEffects ?? [],
       })),
     });
     expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining('WHERE id = $1'), [
@@ -244,6 +281,14 @@ describe('StoriesRepository', () => {
     expect(mockClientQuery).toHaveBeenCalledWith(
       expect.stringContaining('INSERT INTO interaction_characters'),
       [saved.id, 'interaction-1', 'character-1', 0],
+    );
+    expect(mockClientQuery).toHaveBeenCalledWith(
+      expect.stringContaining('INSERT INTO character_stats'),
+      ['stat-1', saved.id, 'character-1', 'Trust', 2, 0],
+    );
+    expect(mockClientQuery).toHaveBeenCalledWith(
+      expect.stringContaining('INSERT INTO interaction_stat_effects'),
+      [saved.id, 'interaction-1', 'stat-1', 'add', 1, 0],
     );
     expect(mockClientQuery).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO triggers'), [
       'trigger-2',

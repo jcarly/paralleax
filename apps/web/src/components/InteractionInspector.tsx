@@ -13,6 +13,12 @@ export function InteractionInspector({
   onPatch: (id: string, patch: Partial<Interaction>) => Promise<void>;
   onDelete: () => Promise<void>;
 }) {
+  const stats = (story.characters ?? []).flatMap((character) =>
+    (character.stats ?? []).map((stat) => ({
+      ...stat,
+      label: `${character.name} — ${stat.name}`,
+    })),
+  );
   function updateLocalInteraction(patch: Partial<Interaction>) {
     onChange(updateInteractionInStory(story, interaction.id, patch));
   }
@@ -77,6 +83,99 @@ export function InteractionInspector({
           ))
         )}
       </fieldset>
+      <div className="inspector-section-header">
+        <h3>Stat effects</h3>
+        <button
+          className="secondary"
+          type="button"
+          disabled={stats.length === 0}
+          onClick={() => {
+            const candidate = stats.find(
+              (stat) => !(interaction.statEffects ?? []).some(({ statId }) => statId === stat.id),
+            );
+            if (!candidate) return;
+            const statEffects = [
+              ...(interaction.statEffects ?? []),
+              { statId: candidate.id, operation: 'add' as const, value: 1 },
+            ];
+            updateLocalInteraction({ statEffects });
+            void onPatch(interaction.id, { statEffects });
+          }}
+        >
+          Add effect
+        </button>
+      </div>
+      {(interaction.statEffects ?? []).map((effect, index) => (
+        <div className="stat-effect-row" key={effect.statId}>
+          <select
+            aria-label="Affected stat"
+            value={effect.statId}
+            onChange={(event) => {
+              const statEffects = [...(interaction.statEffects ?? [])];
+              statEffects[index] = { ...effect, statId: event.target.value };
+              updateLocalInteraction({ statEffects });
+              void onPatch(interaction.id, { statEffects });
+            }}
+          >
+            {stats.map((stat) => (
+              <option
+                disabled={(interaction.statEffects ?? []).some(
+                  (item, itemIndex) => itemIndex !== index && item.statId === stat.id,
+                )}
+                key={stat.id}
+                value={stat.id}
+              >
+                {stat.label}
+              </option>
+            ))}
+          </select>
+          <select
+            aria-label="Stat effect operation"
+            value={effect.operation}
+            onChange={(event) => {
+              const statEffects = [...(interaction.statEffects ?? [])];
+              statEffects[index] = {
+                ...effect,
+                operation: event.target.value as 'add' | 'set',
+              };
+              updateLocalInteraction({ statEffects });
+              void onPatch(interaction.id, { statEffects });
+            }}
+          >
+            <option value="add">add</option>
+            <option value="set">set to</option>
+          </select>
+          <input
+            aria-label="Stat effect value"
+            type="number"
+            value={effect.value}
+            onChange={(event) => {
+              const statEffects = [...(interaction.statEffects ?? [])];
+              statEffects[index] = { ...effect, value: Number(event.target.value) };
+              updateLocalInteraction({ statEffects });
+            }}
+            onBlur={(event) => {
+              const statEffects = [...(interaction.statEffects ?? [])];
+              statEffects[index] = { ...effect, value: Number(event.target.value) };
+              void onPatch(interaction.id, { statEffects });
+            }}
+          />
+          <button
+            aria-label="Delete stat effect"
+            className="ghost danger"
+            type="button"
+            onClick={() => {
+              const statEffects = (interaction.statEffects ?? []).filter(
+                (_, itemIndex) => itemIndex !== index,
+              );
+              updateLocalInteraction({ statEffects });
+              void onPatch(interaction.id, { statEffects });
+            }}
+          >
+            x
+          </button>
+        </div>
+      ))}
       <hr />
       <button className="danger" onClick={() => void onDelete()}>
         Delete interaction

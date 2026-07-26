@@ -29,6 +29,7 @@ Main MVP fields:
 - `triggers`
 - optional `locationId`
 - `characterIds`
+- `statEffects`
 
 The title is used for choices and editor display. The body is used by the reader.
 
@@ -65,6 +66,7 @@ Examples:
 - not current location.
 - character present;
 - character absent.
+- character stat numeric comparison.
 
 ### Location
 
@@ -75,10 +77,12 @@ location is runtime reader state.
 
 ### Character
 
-A character is a story-owned authored entity with an id, name, and description.
+A character is a story-owned authored entity with an id, name, description, and
+zero or more numeric stats. Each stat has an id, name, and initial value.
 An interaction can involve several characters. Presence conditions inspect the
 cast of the current interaction; presence is scene context, not persistent
-play-session state.
+play-session state. Interaction effects can add to or set a stat, while trigger
+conditions compare its current runtime value.
 
 See [Trigger semantics](triggers.md) for deletion rules and editor behavior.
 

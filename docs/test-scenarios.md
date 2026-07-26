@@ -23,6 +23,14 @@ The character vertical keeps these regressions covered:
 - Editor: assign several characters to an interaction and add a presence condition.
 - Reader: present and absent conditions use only the current interaction's cast.
 
+The character-stat vertical keeps these regressions covered:
+
+- API: create and update a character-owned stat; reject foreign references and
+  duplicate effects.
+- Editor: author an initial value, interaction effect, and trigger comparison.
+- Reader: apply `add` and `set` effects in journey order and reconstruct values
+  on restart or backward navigation.
+
 ## Authentication and Ownership
 
 - Authentication: registration creates a session that the current-user endpoint

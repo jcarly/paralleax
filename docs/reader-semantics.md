@@ -15,6 +15,7 @@ getAvailableInteractions(
   visitedIds: string[],
   currentLocationId?: string | null,
   currentCharacterIds?: string[],
+  statValues?: Readonly<Record<string, number>>,
 ): Interaction[];
 ```
 
@@ -23,6 +24,7 @@ getAvailableInteractions(
 `currentLocationId` is the reader's current authored location, or `null` before
 one has been established.
 `currentCharacterIds` lists the characters present in the current interaction.
+`statValues` contains the current numeric value of each character stat.
 
 ## Trigger Eligibility
 
@@ -50,6 +52,7 @@ For conditions:
   interaction;
 - every `isPresent: false` condition must reference a character absent from the
   current interaction;
+- stat conditions compare the current value with `=`, `<`, `<=`, `>`, or `>=`;
 - conditions on the same trigger are evaluated as AND.
 
 Inputs on the same trigger are evaluated as OR.
@@ -84,6 +87,17 @@ Each interaction has an authored set of present characters. Unlike location,
 presence does not carry over: the reader evaluates character conditions against
 the current interaction only. Before an interaction has been selected, the
 current cast is empty.
+
+## Character Stats
+
+Reader stat state starts from every authored stat's `initialValue`. Selecting an
+interaction applies its effects in authored order: `add` increments the current
+value and `set` replaces it. The next choices are evaluated against the resulting
+values.
+
+Starting simulation from a specific interaction applies that interaction's
+effects. Restart rebuilds the initial state, and stepping backward replays the
+remaining journey so effects are reversible without maintaining an inverse log.
 
 A contextual inputless trigger can be offered at the same time as normal linked
 transitions. For example, after interaction `A`, interaction `B` may be
@@ -136,7 +150,7 @@ completion state.
 
 The MVP reader does not support:
 
-- variables or attributes;
+- generic story variables or non-character attributes;
 - timing;
 - probabilities;
 - automatic choices;

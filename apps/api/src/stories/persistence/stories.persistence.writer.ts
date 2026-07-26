@@ -10,12 +10,16 @@ export async function replaceStoryGraph(client: Queryable, story: Story) {
   }
   for (const [characterIndex, character] of (story.characters ?? []).entries()) {
     await insertCharacter(client, story.id, character, characterIndex);
+    for (const [statIndex, stat] of (character.stats ?? []).entries()) {
+      await insertCharacterStat(client, story.id, character.id, stat, statIndex);
+    }
   }
   for (const [interactionIndex, interaction] of story.interactions.entries()) {
     await insertInteraction(client, story.id, interaction, interactionIndex);
   }
   for (const interaction of story.interactions) {
     await replaceInteractionCharacters(client, story.id, interaction);
+    await replaceInteractionStatEffects(client, story.id, interaction);
     for (const [triggerIndex, trigger] of interaction.triggers.entries()) {
       await insertTrigger(client, story.id, interaction.id, trigger, triggerIndex);
     }
@@ -50,6 +54,7 @@ export async function persistStoryDifference(client: Queryable, before: Story, a
     if (!previous) {
       await insertInteraction(client, after.id, interaction, index);
       await replaceInteractionCharacters(client, after.id, interaction);
+      await replaceInteractionStatEffects(client, after.id, interaction);
       for (const [triggerIndex, trigger] of interaction.triggers.entries()) {
         await insertTrigger(client, after.id, interaction.id, trigger, triggerIndex);
       }
@@ -66,6 +71,11 @@ export async function persistStoryDifference(client: Queryable, before: Story, a
       JSON.stringify(previous.characterIds ?? []) !== JSON.stringify(interaction.characterIds ?? [])
     ) {
       await replaceInteractionCharacters(client, after.id, interaction);
+    }
+    if (
+      JSON.stringify(previous.statEffects ?? []) !== JSON.stringify(interaction.statEffects ?? [])
+    ) {
+      await replaceInteractionStatEffects(client, after.id, interaction);
     }
     await persistTriggerDifference(client, after.id, previous, interaction);
   }
@@ -85,6 +95,24 @@ async function replaceInteractionCharacters(
        (story_id, interaction_id, character_id, sort_order)
        VALUES ($1, $2, $3, $4)`,
       [storyId, interaction.id, characterId, index],
+    );
+  }
+}
+
+async function replaceInteractionStatEffects(
+  client: Queryable,
+  storyId: string,
+  interaction: Interaction,
+) {
+  await client.query('DELETE FROM interaction_stat_effects WHERE interaction_id = $1', [
+    interaction.id,
+  ]);
+  for (const [index, effect] of (interaction.statEffects ?? []).entries()) {
+    await client.query(
+      `INSERT INTO interaction_stat_effects
+       (story_id, interaction_id, stat_id, operation, value, sort_order)
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [storyId, interaction.id, effect.statId, effect.operation, effect.value, index],
     );
   }
 }
@@ -223,6 +251,21 @@ async function insertCharacter(
   );
 }
 
+async function insertCharacterStat(
+  client: Queryable,
+  storyId: string,
+  characterId: string,
+  stat: NonNullable<Character['stats']>[number],
+  sortOrder: number,
+) {
+  await client.query(
+    `INSERT INTO character_stats
+     (id, story_id, character_id, name, initial_value, sort_order)
+     VALUES ($1, $2, $3, $4, $5, $6)`,
+    [stat.id, storyId, characterId, stat.name, stat.initialValue, sortOrder],
+  );
+}
+
 async function persistCharacterDifference(client: Queryable, before: Story, after: Story) {
   const beforeCharacters = new Map(
     (before.characters ?? []).map((character) => [character.id, character]),
@@ -242,6 +285,9 @@ async function persistCharacterDifference(client: Queryable, before: Story, afte
     const previous = beforeCharacters.get(character.id);
     if (!previous) {
       await insertCharacter(client, after.id, character, index);
+      for (const [statIndex, stat] of (character.stats ?? []).entries()) {
+        await insertCharacterStat(client, after.id, character.id, stat, statIndex);
+      }
       continue;
     }
     const changes: string[] = [];
@@ -257,6 +303,46 @@ async function persistCharacterDifference(client: Queryable, before: Story, afte
     );
     if (changes.length > 0) {
       await client.query(`UPDATE characters SET ${changes.join(', ')} WHERE id = $1`, values);
+    }
+    await persistStatDifference(client, after.id, previous, character);
+  }
+}
+
+async function persistStatDifference(
+  client: Queryable,
+  storyId: string,
+  before: Character,
+  after: Character,
+) {
+  const beforeStats = new Map((before.stats ?? []).map((stat) => [stat.id, stat]));
+  const afterStats = new Map((after.stats ?? []).map((stat) => [stat.id, stat]));
+  for (const stat of before.stats ?? []) {
+    if (!afterStats.has(stat.id)) {
+      await client.query('DELETE FROM character_stats WHERE id = $1 AND story_id = $2', [
+        stat.id,
+        storyId,
+      ]);
+    }
+  }
+  for (const [index, stat] of (after.stats ?? []).entries()) {
+    const previous = beforeStats.get(stat.id);
+    if (!previous) {
+      await insertCharacterStat(client, storyId, after.id, stat, index);
+      continue;
+    }
+    const changes: string[] = [];
+    const values: unknown[] = [stat.id];
+    addChange(changes, values, 'name', previous.name, stat.name);
+    addChange(changes, values, 'initial_value', previous.initialValue, stat.initialValue);
+    addChange(
+      changes,
+      values,
+      'sort_order',
+      (before.stats ?? []).findIndex(({ id }) => id === stat.id),
+      index,
+    );
+    if (changes.length > 0) {
+      await client.query(`UPDATE character_stats SET ${changes.join(', ')} WHERE id = $1`, values);
     }
   }
 }

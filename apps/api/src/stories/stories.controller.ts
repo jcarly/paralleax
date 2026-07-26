@@ -2,11 +2,13 @@ import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post } from '@ne
 import {
   CreateInteractionDto,
   CreateCharacterDto,
+  CreateCharacterStatDto,
   CreateLocationDto,
   CreateStoryDto,
   CreateTriggerDto,
   UpdateInteractionDto,
   UpdateCharacterDto,
+  UpdateCharacterStatDto,
   UpdateLocationDto,
   UpdateStoryDto,
   UpdateTriggerDto,
@@ -105,6 +107,25 @@ export class StoriesController {
     @CurrentUser() user: RequestUser,
   ) {
     return this.stories.updateCharacter(storyId, characterId, input, user.id);
+  }
+
+  @Post(':storyId/characters/:characterId/stats') createCharacterStat(
+    @Param('storyId') storyId: string,
+    @Param('characterId') characterId: string,
+    @Body() input: CreateCharacterStatDto,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.stories.createCharacterStat(storyId, characterId, input, user.id);
+  }
+
+  @Patch(':storyId/characters/:characterId/stats/:statId') updateCharacterStat(
+    @Param('storyId') storyId: string,
+    @Param('characterId') characterId: string,
+    @Param('statId') statId: string,
+    @Body() input: UpdateCharacterStatDto,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.stories.updateCharacterStat(storyId, characterId, statId, input, user.id);
   }
 
   @Post(':storyId/interactions/:interactionId/triggers') addTrigger(

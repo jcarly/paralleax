@@ -87,13 +87,24 @@ conditions and trigger-level actions.
 
 In the trigger inspector:
 
-1. Select `Add interaction condition`, `Add location condition`, or
-   `Add character condition`.
-2. Choose the interaction to check.
-3. Choose whether it must have been visited or not visited.
+1. Select the action for the condition type you need.
+2. Choose the interaction, location, character, or character stat to check.
+3. Choose its operator and, for a stat, the numeric comparison value.
 
 Conditions can check reading history, current location, and characters present
-in the current interaction. Variables and timing are not implemented.
+in the current interaction, or compare a character stat. General variables and
+timing are not implemented.
+
+## Character Stats
+
+Open a character from **Story context**, then use **Add stat** to define a named
+numeric value and its initial value. Select an interaction and use **Stat
+effects** to add to that value or set it directly when the interaction is
+selected.
+
+Select a trigger marker and use **Add stat condition** to compare the current
+value with a threshold. The reader applies an interaction's effects before it
+evaluates the next available interactions.
 
 ## Delete Trigger Links
 

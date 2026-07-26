@@ -20,6 +20,8 @@ vi.mock('../api', () => ({
     updateLocation: vi.fn(),
     createCharacter: vi.fn(),
     updateCharacter: vi.fn(),
+    createCharacterStat: vi.fn(),
+    updateCharacterStat: vi.fn(),
   },
 }));
 
@@ -469,15 +471,94 @@ describe('StoryEditor', () => {
       conditions: [{ characterId: 'character-1', isPresent: true }],
     });
     await user.selectOptions(screen.getByLabelText('Character condition operator'), 'absent');
-    expect(api.updateTrigger).toHaveBeenLastCalledWith(
-      'story-1',
-      'interaction-1',
-      'trigger-1',
+    expect(api.updateTrigger).toHaveBeenLastCalledWith('story-1', 'interaction-1', 'trigger-1', {
+      inputInteractionIds: [],
+      conditions: [{ characterId: 'character-1', isPresent: false }],
+    });
+  });
+
+  it('creates a character stat and configures interaction effects and trigger comparisons', async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.createCharacter).mockResolvedValue({
+      character: { id: 'character-1', name: 'Mira', description: '', stats: [] },
+      revision: 2,
+      updatedAt: baseStory.updatedAt,
+    });
+    vi.mocked(api.createCharacterStat).mockResolvedValue({
+      characterId: 'character-1',
+      stat: { id: 'stat-1', name: 'Trust', initialValue: 0 },
+      revision: 3,
+      updatedAt: baseStory.updatedAt,
+    });
+    vi.mocked(api.updateCharacterStat).mockResolvedValue({
+      characterId: 'character-1',
+      stat: { id: 'stat-1', name: 'Reputation', initialValue: 2 },
+      revision: 4,
+      updatedAt: baseStory.updatedAt,
+    });
+
+    await renderEditor();
+    await user.click(screen.getByRole('button', { name: 'Add character' }));
+    await user.click(screen.getByRole('button', { name: 'Add stat' }));
+    expect(api.createCharacterStat).toHaveBeenCalledWith('story-1', 'character-1', {
+      name: 'New stat',
+      initialValue: 0,
+    });
+    const statName = screen.getByLabelText('Stat name');
+    await user.clear(statName);
+    await user.type(statName, 'Reputation');
+    fireEvent.blur(statName);
+    const initialValue = screen.getByLabelText('Initial value');
+    await user.clear(initialValue);
+    await user.type(initialValue, '2');
+    fireEvent.blur(initialValue);
+    expect(api.updateCharacterStat).toHaveBeenCalledWith('story-1', 'character-1', 'stat-1', {
+      initialValue: 2,
+    });
+
+    await user.click(screen.getByTestId('flow-node-interaction-1'));
+    const withEffect = cloneStory();
+    withEffect.characters = [
       {
-        inputInteractionIds: [],
-        conditions: [{ characterId: 'character-1', isPresent: false }],
+        id: 'character-1',
+        name: 'Mira',
+        description: '',
+        stats: [{ id: 'stat-1', name: 'Trust', initialValue: 0 }],
       },
+    ];
+    withEffect.interactions[0].statEffects = [{ statId: 'stat-1', operation: 'add', value: 1 }];
+    vi.mocked(api.updateInteraction).mockResolvedValue(
+      interactionMutation(withEffect, 'interaction-1'),
     );
+    await user.click(screen.getByRole('button', { name: 'Add effect' }));
+    expect(api.updateInteraction).toHaveBeenCalledWith('story-1', 'interaction-1', {
+      statEffects: [{ statId: 'stat-1', operation: 'add', value: 1 }],
+    });
+    await user.selectOptions(screen.getByLabelText('Stat effect operation'), 'set');
+    const effectValue = screen.getByLabelText('Stat effect value');
+    await user.clear(effectValue);
+    await user.type(effectValue, '4');
+    fireEvent.blur(effectValue);
+    await user.click(screen.getByRole('button', { name: 'Delete stat effect' }));
+
+    const conditioned = cloneStory(withEffect);
+    conditioned.interactions[0].triggers[0].conditions = [
+      { statId: 'stat-1', operator: 'gte', value: 2 },
+    ];
+    vi.mocked(api.updateTrigger).mockResolvedValue(
+      triggerMutation(conditioned, 'interaction-1', 'trigger-1'),
+    );
+    await user.click(screen.getByRole('button', { name: 'Select root trigger' }));
+    await user.click(screen.getByRole('button', { name: 'Add stat condition' }));
+    expect(api.updateTrigger).toHaveBeenCalledWith('story-1', 'interaction-1', 'trigger-1', {
+      inputInteractionIds: [],
+      conditions: [{ statId: 'stat-1', operator: 'gte', value: 2 }],
+    });
+    await user.selectOptions(screen.getByLabelText('Stat condition operator'), 'lt');
+    const comparisonValue = screen.getByLabelText('Stat condition value');
+    await user.clear(comparisonValue);
+    await user.type(comparisonValue, '5');
+    await user.click(screen.getByRole('button', { name: 'x' }));
   });
 
   it('creates root and child interactions', async () => {

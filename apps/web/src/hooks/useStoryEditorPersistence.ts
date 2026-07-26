@@ -9,6 +9,7 @@ import {
   updateInteractionInStory,
   updateTriggerInStory,
   type CharacterMutationResult,
+  type CharacterStatMutationResult,
   type Interaction,
   type InteractionContentPatch,
   type InteractionMutationResult,
@@ -401,6 +402,36 @@ export function useStoryEditorPersistence(storyId: string) {
     );
   }
 
+  async function createCharacterStat(characterId: string) {
+    const result = await trackSave(() =>
+      api.createCharacterStat(storyId, characterId, { name: 'New stat', initialValue: 0 }),
+    );
+    if (!result) return;
+    setStory((current) => (current ? applyCharacterStatResult(current, result) : current));
+  }
+
+  async function updateCharacterStat(
+    characterId: string,
+    statId: string,
+    patch: Partial<Pick<CharacterStatMutationResult['stat'], 'name' | 'initialValue'>>,
+  ) {
+    setStory((current) =>
+      current ? updateLocalCharacterStat(current, characterId, statId, patch) : current,
+    );
+    const result = await trackSave(() =>
+      api.updateCharacterStat(storyId, characterId, statId, patch),
+    );
+    if (!result) return;
+    setStory((current) =>
+      current
+        ? applyMutationMetadata(
+            updateLocalCharacterStat(current, characterId, statId, patch),
+            result,
+          )
+        : current,
+    );
+  }
+
   return {
     story,
     setStory,
@@ -425,6 +456,8 @@ export function useStoryEditorPersistence(storyId: string) {
     updateLocation,
     createCharacter,
     updateCharacter,
+    createCharacterStat,
+    updateCharacterStat,
   };
 }
 
@@ -490,6 +523,41 @@ function applyCharacterPatchResult(
     },
     result,
   );
+}
+
+function applyCharacterStatResult(story: Story, result: CharacterStatMutationResult): Story {
+  return applyMutationMetadata(
+    {
+      ...story,
+      characters: (story.characters ?? []).map((character) =>
+        character.id === result.characterId
+          ? { ...character, stats: [...(character.stats ?? []), result.stat] }
+          : character,
+      ),
+    },
+    result,
+  );
+}
+
+function updateLocalCharacterStat(
+  story: Story,
+  characterId: string,
+  statId: string,
+  patch: Partial<Pick<CharacterStatMutationResult['stat'], 'name' | 'initialValue'>>,
+) {
+  return {
+    ...story,
+    characters: (story.characters ?? []).map((character) =>
+      character.id === characterId
+        ? {
+            ...character,
+            stats: (character.stats ?? []).map((stat) =>
+              stat.id === statId ? { ...stat, ...patch } : stat,
+            ),
+          }
+        : character,
+    ),
+  };
 }
 
 function emptyStory(storyId: string): Story {

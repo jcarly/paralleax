@@ -62,6 +62,8 @@ export function StoryEditor() {
     updateLocation,
     createCharacter,
     updateCharacter,
+    createCharacterStat,
+    updateCharacterStat,
   } = useStoryEditorPersistence(storyId);
   const [selectedId, setSelectedId] = useState<string>();
   const [selectedTrigger, setSelectedTrigger] = useState<SelectedTrigger>();
@@ -476,6 +478,8 @@ export function StoryEditor() {
                 character={selectedCharacter}
                 onChange={updateLocalCharacter}
                 onPatch={updateCharacter}
+                onCreateStat={createCharacterStat}
+                onPatchStat={updateCharacterStat}
               />
             ) : null}
           </aside>
