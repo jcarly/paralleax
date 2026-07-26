@@ -95,6 +95,12 @@ export function useStoryEditorPersistence(storyId: string) {
     setStory((current) => (current ? mergeIncomingStory(current, next) : next));
   }
 
+  async function updateStoryStartDateTime(startDateTime: string) {
+    const next = await trackSave(() => api.updateStory(storyId, { startDateTime }));
+    if (!next) return;
+    setStory((current) => (current ? mergeIncomingStory(current, next) : next));
+  }
+
   async function saveTrigger(
     interactionId: string,
     triggerId: string,
@@ -531,6 +537,7 @@ export function useStoryEditorPersistence(storyId: string) {
     saveStatus,
     retry: load,
     renameStory,
+    updateStoryStartDateTime,
     saveTrigger,
     createTriggerVariant,
     deleteTrigger,

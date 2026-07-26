@@ -12,6 +12,7 @@ function story(id = 'story-1'): Story {
   return {
     id,
     title: 'Repository story',
+    startDateTime: '2026-01-01T08:00',
     interactions: [],
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
@@ -44,6 +45,7 @@ function graphStory(): Story {
       locationId: 'location-1',
       characterIds: ['character-1'],
       statEffects: [{ statId: 'stat-1', operation: 'add', value: 1 }],
+      durationMinutes: 15,
       triggers: [{ id: 'trigger-1', inputInteractionIds: [], conditions: [] }],
     },
     {
@@ -51,6 +53,7 @@ function graphStory(): Story {
       title: 'Next',
       body: 'Continue here',
       position: { x: 30, y: 40 },
+      durationMinutes: 0,
       triggers: [
         {
           id: 'trigger-2',
@@ -68,6 +71,7 @@ function storyRow(value = story()) {
     id: value.id,
     revision: value.revision ?? 1,
     title: value.title,
+    start_date_time: value.startDateTime,
     created_at: new Date(value.createdAt),
     updated_at: new Date(value.updatedAt),
   };
@@ -216,6 +220,7 @@ function relationalRead(query: jest.Mock, saved = story()) {
           position_x: interaction.position.x,
           position_y: interaction.position.y,
           location_id: interaction.locationId ?? null,
+          duration_minutes: interaction.durationMinutes ?? 0,
           sort_order: index,
         })),
       });
@@ -282,6 +287,7 @@ describe('StoriesRepository', () => {
       saved.id,
       1,
       saved.title,
+      saved.startDateTime,
       saved.createdAt,
       saved.updatedAt,
       ownerId,
@@ -307,7 +313,7 @@ describe('StoriesRepository', () => {
     ]);
     expect(mockClientQuery).toHaveBeenCalledWith(
       expect.stringContaining('INSERT INTO interactions'),
-      ['interaction-1', saved.id, 'Start', 'Begin here', 10, 20, 'location-1', 0],
+      ['interaction-1', saved.id, 'Start', 'Begin here', 10, 20, 'location-1', 15, 0],
     );
     expect(mockClientQuery).toHaveBeenCalledWith(
       expect.stringContaining('INSERT INTO characters'),

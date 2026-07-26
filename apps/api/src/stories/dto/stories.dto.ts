@@ -6,7 +6,10 @@ import {
   IsNumber,
   IsObject,
   IsIn,
+  IsInt,
   IsString,
+  Matches,
+  Min,
   ArrayMaxSize,
   MaxLength,
   ValidateIf,
@@ -21,7 +24,15 @@ export class CreateStoryDto {
   @IsString() @IsNotEmpty() @MaxLength(200) title!: string;
 }
 export class UpdateStoryDto {
-  @IsString() @IsNotEmpty() @MaxLength(200) title!: string;
+  @ValidateIf((_, value) => value !== undefined)
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(200)
+  title?: string;
+  @ValidateIf((_, value) => value !== undefined)
+  @IsString()
+  @Matches(/^\d{4}-\d{2}-\d{2}T(?:[01]\d|2[0-3]):[0-5]\d$/)
+  startDateTime?: string;
 }
 export class CreateInteractionDto {
   @ValidateIf((_, value) => value !== undefined) @IsString() parentId?: string;
@@ -59,18 +70,59 @@ export class UpdateInteractionDto {
   @ValidateNested({ each: true })
   @Type(() => StatEffectDto)
   statEffects?: StatEffectDto[];
+  @ValidateIf((_, value) => value !== undefined)
+  @IsInt()
+  @Min(0)
+  durationMinutes?: number;
 }
 export class StatEffectDto {
   @IsString() statId!: string;
   @IsIn(['add', 'set']) operation!: 'add' | 'set';
   @IsNumber() value!: number;
 }
+export class DateRangeDto {
+  @IsString() @Matches(/^\d{4}-\d{2}-\d{2}$/) startDate!: string;
+  @IsString() @Matches(/^\d{4}-\d{2}-\d{2}$/) endDate!: string;
+}
+export class TimeSlotDto {
+  @IsString() @Matches(/^(?:[01]\d|2[0-3]):[0-5]\d$/) startTime!: string;
+  @IsString() @Matches(/^(?:[01]\d|2[0-3]):[0-5]\d$/) endTime!: string;
+}
+export class TemporalSpecDto {
+  @ValidateIf((_, value) => value !== undefined)
+  @IsArray()
+  @ArrayMaxSize(366)
+  @Matches(/^\d{4}-\d{2}-\d{2}$/, { each: true })
+  dates?: string[];
+  @ValidateIf((_, value) => value !== undefined)
+  @IsArray()
+  @ArrayMaxSize(100)
+  @ValidateNested({ each: true })
+  @Type(() => DateRangeDto)
+  dateRanges?: DateRangeDto[];
+  @ValidateIf((_, value) => value !== undefined)
+  @IsArray()
+  @ArrayMaxSize(7)
+  @IsIn(['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'], {
+    each: true,
+  })
+  weekdays?: Array<
+    'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday'
+  >;
+  @ValidateIf((_, value) => value !== undefined)
+  @IsArray()
+  @ArrayMaxSize(48)
+  @ValidateNested({ each: true })
+  @Type(() => TimeSlotDto)
+  timeSlots?: TimeSlotDto[];
+}
 export class TriggerConditionDto {
   @ValidateIf(
     (condition) =>
       condition.locationId === undefined &&
       condition.characterId === undefined &&
-      condition.statId === undefined,
+      condition.statId === undefined &&
+      condition.temporal === undefined,
   )
   @IsString()
   interactionId?: string;
@@ -78,7 +130,8 @@ export class TriggerConditionDto {
     (condition) =>
       condition.locationId === undefined &&
       condition.characterId === undefined &&
-      condition.statId === undefined,
+      condition.statId === undefined &&
+      condition.temporal === undefined,
   )
   @IsBoolean()
   hasBeenVisited?: boolean;
@@ -86,7 +139,8 @@ export class TriggerConditionDto {
     (condition) =>
       condition.interactionId === undefined &&
       condition.characterId === undefined &&
-      condition.statId === undefined,
+      condition.statId === undefined &&
+      condition.temporal === undefined,
   )
   @IsString()
   locationId?: string;
@@ -94,7 +148,8 @@ export class TriggerConditionDto {
     (condition) =>
       condition.interactionId === undefined &&
       condition.characterId === undefined &&
-      condition.statId === undefined,
+      condition.statId === undefined &&
+      condition.temporal === undefined,
   )
   @IsBoolean()
   isCurrentLocation?: boolean;
@@ -102,7 +157,8 @@ export class TriggerConditionDto {
     (condition) =>
       condition.interactionId === undefined &&
       condition.locationId === undefined &&
-      condition.statId === undefined,
+      condition.statId === undefined &&
+      condition.temporal === undefined,
   )
   @IsString()
   characterId?: string;
@@ -110,7 +166,8 @@ export class TriggerConditionDto {
     (condition) =>
       condition.interactionId === undefined &&
       condition.locationId === undefined &&
-      condition.statId === undefined,
+      condition.statId === undefined &&
+      condition.temporal === undefined,
   )
   @IsBoolean()
   isPresent?: boolean;
@@ -118,7 +175,8 @@ export class TriggerConditionDto {
     (condition) =>
       condition.interactionId === undefined &&
       condition.locationId === undefined &&
-      condition.characterId === undefined,
+      condition.characterId === undefined &&
+      condition.temporal === undefined,
   )
   @IsString()
   statId?: string;
@@ -126,7 +184,8 @@ export class TriggerConditionDto {
     (condition) =>
       condition.interactionId === undefined &&
       condition.locationId === undefined &&
-      condition.characterId === undefined,
+      condition.characterId === undefined &&
+      condition.temporal === undefined,
   )
   @IsIn(['eq', 'lt', 'lte', 'gt', 'gte'])
   operator?: 'eq' | 'lt' | 'lte' | 'gt' | 'gte';
@@ -134,10 +193,22 @@ export class TriggerConditionDto {
     (condition) =>
       condition.interactionId === undefined &&
       condition.locationId === undefined &&
-      condition.characterId === undefined,
+      condition.characterId === undefined &&
+      condition.temporal === undefined,
   )
   @IsNumber()
   value?: number;
+  @ValidateIf(
+    (condition) =>
+      condition.interactionId === undefined &&
+      condition.locationId === undefined &&
+      condition.characterId === undefined &&
+      condition.statId === undefined,
+  )
+  @IsObject()
+  @ValidateNested()
+  @Type(() => TemporalSpecDto)
+  temporal?: TemporalSpecDto;
 }
 export class CreateLocationDto {
   @IsString() @IsNotEmpty() @MaxLength(200) name!: string;

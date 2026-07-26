@@ -40,6 +40,9 @@ available.
 
 Use the title field at the top of the editor. The title is saved when the field loses focus.
 
+Use **Story starts** beside it to choose the initial narrative date and time.
+This is story-local time and does not change with the reader's device timezone.
+
 ## Create Interactions
 
 - `Add root` on the canvas creates a starting interaction.
@@ -59,7 +62,8 @@ are placed where the connection is released.
 
 1. Select an interaction block on the canvas.
 2. Edit `Title` and `Content` in the inspector.
-3. Leave the field to save the change.
+3. Set `Duration (minutes)` to define how much story time passes when it is selected.
+4. Leave the field to save the change.
 
 The title is used as the reader choice label. The content is displayed when the reader reaches that interaction.
 
@@ -88,12 +92,15 @@ conditions and trigger-level actions.
 In the trigger inspector:
 
 1. Select the action for the condition type you need.
-2. Choose the interaction, location, character, or assigned character stat to check.
+2. Choose the interaction, location, character, assigned character stat, or date/time rule to check.
 3. Choose its operator and, for a stat, the numeric comparison value.
 
-Conditions can check reading history, current location, and characters present
-in the current interaction, or compare a character stat. General variables and
-timing are not implemented.
+Conditions can check reading history, current location, characters present in
+the current interaction, compare a character stat, or filter the story-local
+calendar. A date/time condition can contain several exact dates, inclusive date
+ranges, weekdays, and time slots. Entries of one kind are alternatives; the
+non-empty kinds must all match. A time slot ending before it starts crosses
+midnight.
 
 ## Character Stats
 

@@ -4,7 +4,9 @@ import {
   deleteTriggerInStory,
   createDemoStory,
   ensureStoryInteractionPositions,
+  addStoryMinutes,
   getJourneyStatValues,
+  getJourneyDateTime,
   getAvailableInteractions,
   getInputReachableInteractions,
   getNextChildPosition,
@@ -421,5 +423,65 @@ describe('character stats', () => {
       story.interactions[1],
     );
     expect(getJourneyStatValues(story, ['root', 'middle'])).toEqual({ trust: 10 });
+  });
+});
+
+describe('story time', () => {
+  it('advances time for every interaction visit and across calendar boundaries', () => {
+    const story = storyFixture();
+    story.startDateTime = '2026-07-26T23:50';
+    story.interactions[0].durationMinutes = 15;
+    story.interactions[1].durationMinutes = 30;
+
+    expect(addStoryMinutes('2024-02-28T23:50', 20)).toBe('2024-02-29T00:10');
+    expect(getJourneyDateTime(story, ['root', 'middle', 'root'])).toBe('2026-07-27T00:50');
+  });
+
+  it('matches several dates, weekdays, and time slots with overnight support', () => {
+    const story = storyFixture();
+    story.interactions[1].triggers[0].conditions = [
+      {
+        temporal: {
+          dateRanges: [{ startDate: '2026-07-27', endDate: '2026-07-31' }],
+          weekdays: ['monday', 'tuesday'],
+          timeSlots: [
+            { startTime: '09:00', endTime: '12:00' },
+            { startTime: '22:00', endTime: '02:00' },
+          ],
+        },
+      },
+    ];
+
+    expect(
+      getAvailableInteractions(story, 'root', ['root'], null, [], {}, '2026-07-27T10:30'),
+    ).toContainEqual(story.interactions[1]);
+    expect(
+      getAvailableInteractions(story, 'root', ['root'], null, [], {}, '2026-07-28T23:30'),
+    ).toContainEqual(story.interactions[1]);
+    expect(
+      getAvailableInteractions(story, 'root', ['root'], null, [], {}, '2026-07-29T10:30'),
+    ).not.toContainEqual(story.interactions[1]);
+    expect(
+      getAvailableInteractions(story, 'root', ['root'], null, [], {}, '2026-07-27T12:00'),
+    ).not.toContainEqual(story.interactions[1]);
+  });
+
+  it('treats exact dates and date ranges as alternatives', () => {
+    const story = storyFixture();
+    story.interactions[1].triggers[0].conditions = [
+      {
+        temporal: {
+          dates: ['2026-08-15'],
+          dateRanges: [{ startDate: '2026-09-01', endDate: '2026-09-03' }],
+        },
+      },
+    ];
+
+    expect(
+      getAvailableInteractions(story, 'root', ['root'], null, [], {}, '2026-08-15T08:00'),
+    ).toContainEqual(story.interactions[1]);
+    expect(
+      getAvailableInteractions(story, 'root', ['root'], null, [], {}, '2026-09-02T08:00'),
+    ).toContainEqual(story.interactions[1]);
   });
 });

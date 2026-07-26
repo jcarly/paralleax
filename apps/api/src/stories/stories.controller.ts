@@ -41,12 +41,12 @@ export class StoriesController {
     return this.stories.get(id, user.id);
   }
 
-  @Patch(':storyId') rename(
+  @Patch(':storyId') update(
     @Param('storyId') id: string,
     @Body() input: UpdateStoryDto,
     @CurrentUser() user: RequestUser,
   ) {
-    return this.stories.rename(id, input.title, user.id);
+    return this.stories.updateStory(id, input, user.id);
   }
 
   @Delete(':storyId')

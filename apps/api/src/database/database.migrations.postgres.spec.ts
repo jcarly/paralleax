@@ -72,7 +72,7 @@ describePostgres('Database migrations PostgreSQL upgrade', () => {
 
     await expect(
       pool.query(
-        `SELECT title, revision, creator_user_id
+        `SELECT title, revision, creator_user_id, start_date_time
          FROM stories
          WHERE id = 'legacy-story'`,
       ),
@@ -82,13 +82,14 @@ describePostgres('Database migrations PostgreSQL upgrade', () => {
           title: 'Preserved legacy story',
           revision: 1,
           creator_user_id: 'migration-user',
+          start_date_time: '2000-01-03T08:00',
         },
       ],
       rowCount: 1,
     });
     await expect(
       pool.query(
-        `SELECT id, title, body, position_x, position_y
+        `SELECT id, title, body, position_x, position_y, duration_minutes
          FROM interactions
          WHERE story_id = 'legacy-story'
          ORDER BY sort_order`,
@@ -101,6 +102,7 @@ describePostgres('Database migrations PostgreSQL upgrade', () => {
           body: 'Legacy root body',
           position_x: 80,
           position_y: 120,
+          duration_minutes: 0,
         },
         {
           id: 'legacy-child',
@@ -108,6 +110,7 @@ describePostgres('Database migrations PostgreSQL upgrade', () => {
           body: 'Legacy child body',
           position_x: 80,
           position_y: 252,
+          duration_minutes: 0,
         },
       ],
       rowCount: 2,
@@ -132,7 +135,7 @@ describePostgres('Database migrations PostgreSQL upgrade', () => {
     await expect(
       pool.query(`SELECT id FROM users WHERE id = 'migration-user'`),
     ).resolves.toMatchObject({ rowCount: 1 });
-  });
+  }, 30_000);
 });
 
 async function waitForPostgres(pool: Pool) {

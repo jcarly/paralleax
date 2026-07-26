@@ -25,7 +25,16 @@ details. They should stay covered by tests as the editor grows.
   interaction reachable if the trigger conditions also match.
 - Conditions on the same trigger are AND conditions: all conditions must match.
 - Conditions can check visited interactions, the current location, character
-  presence in the current interaction, or a numeric character stat.
+  presence in the current interaction, a numeric character stat, or the
+  story-local calendar.
+- A story has a valid floating `YYYY-MM-DDTHH:mm` start date and time.
+- An interaction duration is a non-negative integer number of minutes. Selecting
+  an interaction advances time before evaluating its outgoing choices.
+- Temporal date ranges are inclusive and ordered. Time-slot starts are
+  inclusive, ends are exclusive, equal bounds are invalid, and a reversed slot
+  crosses midnight.
+- Temporal alternatives within dates/ranges, weekdays, or time slots are OR;
+  non-empty temporal categories and separate trigger conditions are AND.
 - A location belongs to exactly one story. An interaction may reference one
   location from that story.
 - Selecting a localized interaction changes the reader's current location;

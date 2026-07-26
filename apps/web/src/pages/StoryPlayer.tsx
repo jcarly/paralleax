@@ -8,6 +8,7 @@ import {
   getInitialStatValues,
   getInputReachableInteractions,
   getJourneyStatValues,
+  getJourneyDateTime,
   getNextChildPosition,
   getNextRootPosition,
   getTriggerConditionFailures,
@@ -29,6 +30,7 @@ function getUnavailableReason(
   currentLocationId: string | null,
   currentCharacterIds: string[],
   statValues: Readonly<Record<string, number>>,
+  currentDateTime: string,
 ) {
   const failures = getTriggerConditionFailures(
     interaction,
@@ -37,6 +39,7 @@ function getUnavailableReason(
     currentLocationId,
     currentCharacterIds,
     statValues,
+    currentDateTime,
   );
   if (failures.length === 0) return undefined;
 
@@ -75,6 +78,9 @@ function getUnavailableReason(
       gte: 'at least',
     };
     return `Requires "${stat?.label ?? firstFailure.statId}" to be ${operatorLabels[firstFailure.operator]} ${firstFailure.value}.`;
+  }
+  if ('temporal' in firstFailure) {
+    return `Requires a different story date or time. Current time: ${currentDateTime.replace('T', ' ')}.`;
   }
   const name =
     story.characters?.find((character) => character.id === firstFailure.characterId)?.name ??
@@ -130,6 +136,10 @@ export function StoryPlayer() {
     () => story?.interactions.find((item) => item.id === currentId),
     [currentId, story],
   );
+  const currentDateTime = useMemo(
+    () => (story ? getJourneyDateTime(story, journey) : '2000-01-03T08:00'),
+    [journey, story],
+  );
 
   const choices = useMemo(
     () =>
@@ -141,9 +151,10 @@ export function StoryPlayer() {
             currentLocationId,
             current?.characterIds ?? [],
             statValues,
+            currentDateTime,
           )
         : [],
-    [story, current, visited, currentLocationId, statValues],
+    [story, current, visited, currentLocationId, statValues, currentDateTime],
   );
   const availableChoiceIds = useMemo(() => new Set(choices.map((choice) => choice.id)), [choices]);
   const visibleChoices = useMemo(
@@ -162,6 +173,7 @@ export function StoryPlayer() {
                   currentLocationId,
                   current?.characterIds ?? [],
                   statValues,
+                  currentDateTime,
                 ),
           }))
         : choices.map((interaction) => ({
@@ -174,6 +186,7 @@ export function StoryPlayer() {
       choices,
       current,
       currentLocationId,
+      currentDateTime,
       isSimulationMode,
       statValues,
       story,
@@ -292,6 +305,9 @@ export function StoryPlayer() {
       </div>
       <article className="player-card">
         <p className="eyebrow">{story.title}</p>
+        <time className="story-clock" dateTime={currentDateTime}>
+          {currentDateTime.replace('T', ' ')}
+        </time>
         {current ? (
           <>
             {isSimulationMode ? (

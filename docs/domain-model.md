@@ -17,6 +17,7 @@ Main fields:
 - `characters`
 - `statDefinitions`
 - `itemDefinitions`
+- `startDateTime`
 
 ### Interaction
 
@@ -32,6 +33,7 @@ Main MVP fields:
 - optional `locationId`
 - `characterIds`
 - `statEffects`
+- `durationMinutes`
 
 The title is used for choices and editor display. The body is used by the reader.
 
@@ -69,6 +71,12 @@ Examples:
 - character present;
 - character absent.
 - character stat numeric comparison.
+- story-local exact dates, inclusive date ranges, weekdays, and time slots.
+
+The story clock is a deterministic floating calendar rather than the reader's
+wall clock. Interaction durations advance it, and temporal conditions filter
+trigger availability. See [Reader semantics](reader-semantics.md) for boundary
+and replay rules.
 
 ### Location
 

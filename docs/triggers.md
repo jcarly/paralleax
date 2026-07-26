@@ -43,10 +43,20 @@ Conditions on the same trigger represent an AND:
 - every "absent character" condition must not belong to that cast.
 - every stat comparison must match the current numeric value using `=`, `<`,
   `<=`, `>`, or `>=`.
+- every temporal condition must match each non-empty calendar category; entries
+  within its dates/date ranges, weekdays, or time slots are alternatives.
 
 Inputs answer "where can this trigger come from?"
 
 Conditions answer "what must already be true about the path or reader context?"
+
+Temporal trigger conditions use the story-local clock. Exact dates and inclusive
+date ranges are alternatives in one calendar-date category. Weekdays form
+another category. Time slots form a third category, use inclusive starts and
+exclusive ends, and may cross midnight when the end is earlier than the start.
+Non-empty categories are combined with AND. Authors can therefore express
+several dates, several weekdays, and several daily slots without creating an OR
+trigger variant for every combination.
 
 ## Inputless Triggers
 

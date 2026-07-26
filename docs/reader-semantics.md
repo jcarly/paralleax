@@ -16,6 +16,7 @@ getAvailableInteractions(
   currentLocationId?: string | null,
   currentCharacterIds?: string[],
   statValues?: Readonly<Record<string, number>>,
+  currentDateTime?: string,
 ): Interaction[];
 ```
 
@@ -25,6 +26,8 @@ getAvailableInteractions(
 one has been established.
 `currentCharacterIds` lists the characters present in the current interaction.
 `statValues` contains the current numeric value of each character stat.
+`currentDateTime` is the current story-local calendar value. When omitted, the
+story's authored `startDateTime` is used.
 
 ## Trigger Eligibility
 
@@ -53,6 +56,8 @@ For conditions:
 - every `isPresent: false` condition must reference a character absent from the
   current interaction;
 - stat conditions compare the current value with `=`, `<`, `<=`, `>`, or `>=`;
+- temporal conditions compare the current story-local date, weekday, and time
+  with their authored alternatives;
 - conditions on the same trigger are evaluated as AND.
 
 Inputs on the same trigger are evaluated as OR.
@@ -98,6 +103,37 @@ values.
 Starting simulation from a specific interaction applies that interaction's
 effects. Restart rebuilds the initial state, and stepping backward replays the
 remaining journey so effects are reversible without maintaining an inverse log.
+
+## Story Time
+
+Every story has an authored `startDateTime` in `YYYY-MM-DDTHH:mm` form. It is a
+floating narrative calendar value, not an instant in the reader's system time:
+the engine does not apply a browser timezone, daylight-saving transition, or
+locale conversion.
+
+Every interaction has a non-negative integer `durationMinutes`. Selecting an
+interaction advances story time by that duration before the following choices
+are evaluated. The first choices are evaluated at `startDateTime`. Starting
+simulation directly from an interaction includes that interaction's duration.
+Restart resets the clock, and stepping backward reconstructs it by replaying the
+remaining journey. Repeated visits advance time on every selection even though
+visited-history conditions retain set semantics.
+
+A temporal trigger condition can contain:
+
+- exact dates;
+- inclusive date ranges;
+- weekdays;
+- time slots.
+
+Entries inside one category are OR alternatives. Non-empty categories are ANDed:
+for example, a Monday/Tuesday filter plus 09:00-12:00 and 14:00-18:00 slots
+means either slot, but only on Monday or Tuesday. Exact dates and date ranges
+form one calendar-date category and are alternatives to each other.
+
+Time-slot starts are inclusive and ends are exclusive. A slot whose end is
+earlier than its start crosses midnight. Equal start and end values are invalid,
+rather than implicitly meaning either zero time or a full day.
 
 A contextual inputless trigger can be offered at the same time as normal linked
 transitions. For example, after interaction `A`, interaction `B` may be
@@ -151,7 +187,6 @@ completion state.
 The MVP reader does not support:
 
 - generic story variables or non-character attributes;
-- timing;
 - probabilities;
 - automatic choices;
 - final interactions;

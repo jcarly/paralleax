@@ -2,6 +2,9 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { randomUUID } from 'node:crypto';
 import {
   createDemoStory,
+  isStoryDate,
+  isStoryDateTime,
+  isStoryTime,
   deleteInteractionFromStory,
   deleteTriggerInStory,
   ensureStoryInteractionPositions,
@@ -35,6 +38,7 @@ import {
   UpdateItemDefinitionDto,
   UpdateStatDefinitionDto,
   UpdateTriggerDto,
+  UpdateStoryDto,
   TriggerConditionDto,
 } from './dto/stories.dto';
 import { StoriesRepository } from './stories.repository';
@@ -57,6 +61,7 @@ export class StoriesService {
       id: randomUUID(),
       revision: 1,
       title: input.title.trim() || 'Untitled',
+      startDateTime: now.slice(0, 16),
       locations: [],
       characters: [],
       interactions: [],
@@ -72,11 +77,17 @@ export class StoriesService {
     await this.repository.save(story, userId);
     return structuredClone(story);
   }
-  async rename(id: string, title: string, userId: string): Promise<Story> {
+  async updateStory(id: string, input: UpdateStoryDto, userId: string): Promise<Story> {
     return this.update(
       id,
       (story) => {
-        story.title = title.trim() || 'Untitled';
+        if (input.title !== undefined) story.title = input.title.trim() || 'Untitled';
+        if (input.startDateTime !== undefined) {
+          if (!isStoryDateTime(input.startDateTime)) {
+            throw new BadRequestException('Story start date and time is invalid');
+          }
+          story.startDateTime = input.startDateTime;
+        }
         return story;
       },
       userId,
@@ -105,6 +116,7 @@ export class StoriesService {
             x: 80 + story.interactions.length * 40,
             y: 100 + story.interactions.length * 30,
           },
+          durationMinutes: 0,
           triggers: [
             {
               id: triggerId,
@@ -159,6 +171,9 @@ export class StoriesService {
             throw new BadRequestException('An interaction can only affect a stat once');
           }
           interaction.statEffects = input.statEffects;
+        }
+        if (input.durationMinutes !== undefined) {
+          interaction.durationMinutes = input.durationMinutes;
         }
         return story;
       },
@@ -523,15 +538,17 @@ export class StoriesService {
         condition.statId !== undefined &&
         condition.operator !== undefined &&
         condition.value !== undefined;
+      const isTemporalCondition = condition.temporal !== undefined;
       if (
         Number(isInteractionCondition) +
           Number(isLocationCondition) +
           Number(isCharacterCondition) +
-          Number(isStatCondition) !==
+          Number(isStatCondition) +
+          Number(isTemporalCondition) !==
         1
       ) {
         throw new BadRequestException(
-          'A trigger condition must reference exactly one interaction, location, character, or stat',
+          'A trigger condition must contain exactly one supported condition type',
         );
       }
       if (isInteractionCondition) {
@@ -559,6 +576,35 @@ export class StoriesService {
         return {
           characterId: condition.characterId!,
           isPresent: condition.isPresent!,
+        };
+      }
+      if (isTemporalCondition) {
+        const temporal = condition.temporal!;
+        const dates = [...new Set(temporal.dates ?? [])];
+        const dateRanges = temporal.dateRanges ?? [];
+        const weekdays = [...new Set(temporal.weekdays ?? [])];
+        const timeSlots = temporal.timeSlots ?? [];
+        if (
+          dates.length + dateRanges.length + weekdays.length + timeSlots.length === 0 ||
+          dates.some((date) => !isStoryDate(date)) ||
+          dateRanges.some(
+            ({ startDate, endDate }) =>
+              !isStoryDate(startDate) || !isStoryDate(endDate) || startDate > endDate,
+          ) ||
+          timeSlots.some(
+            ({ startTime, endTime }) =>
+              !isStoryTime(startTime) || !isStoryTime(endTime) || startTime === endTime,
+          )
+        ) {
+          throw new BadRequestException('Temporal trigger condition is invalid');
+        }
+        return {
+          temporal: {
+            dates,
+            dateRanges: dateRanges.map((range) => ({ ...range })),
+            weekdays,
+            timeSlots: timeSlots.map((slot) => ({ ...slot })),
+          },
         };
       }
       if (!statIds.has(condition.statId!)) {

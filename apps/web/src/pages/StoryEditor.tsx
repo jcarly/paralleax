@@ -47,6 +47,7 @@ export function StoryEditor() {
     saveStatus,
     retry,
     renameStory,
+    updateStoryStartDateTime,
     saveTrigger,
     createTriggerVariant,
     deleteTrigger,
@@ -382,6 +383,16 @@ export function StoryEditor() {
           onChange={(e) => setStory({ ...story, title: e.target.value })}
           onBlur={(e) => void renameStory(e.target.value)}
         />
+        <label className="story-time-field">
+          Story starts
+          <input
+            aria-label="Story start date and time"
+            type="datetime-local"
+            value={story.startDateTime ?? '2000-01-03T08:00'}
+            onChange={(event) => setStory({ ...story, startDateTime: event.target.value })}
+            onBlur={(event) => void updateStoryStartDateTime(event.target.value)}
+          />
+        </label>
         <div className="actions">
           <span className={`save-status ${saveStatus}`} role="status" aria-live="polite">
             {saveStatus === 'saving'

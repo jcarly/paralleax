@@ -242,6 +242,17 @@ header span {
   background: var(--color-surface);
   outline: none;
 }
+.story-time-field {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--color-muted);
+  font-size: 0.8rem;
+}
+.story-time-field input {
+  margin: 0;
+  min-width: 11.5rem;
+}
 .save-status {
   min-width: 4.5rem;
   align-self: center;
@@ -543,6 +554,33 @@ header span {
 .condition input {
   margin: 0;
   min-width: 0;
+}
+.temporal-condition {
+  grid-column: 1 / -2;
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+  min-width: 0;
+}
+.weekday-options,
+.temporal-actions,
+.temporal-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+.weekday-options label {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  font-size: 0.75rem;
+}
+.temporal-row input {
+  flex: 1 1 8rem;
+}
+.temporal-actions button {
+  flex: 1 1 auto;
 }
 .inspector-section-header {
   display: flex;
@@ -862,6 +900,12 @@ header span {
   color: var(--color-accent);
   font-weight: 750;
   font-size: 0.75rem;
+}
+.story-clock {
+  display: block;
+  margin-bottom: 1rem;
+  color: var(--color-muted);
+  font-variant-numeric: tabular-nums;
 }
 .story-body {
   font-size: 1.15rem;

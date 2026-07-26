@@ -10,6 +10,8 @@ exports. Locations and characters are the first post-MVP context verticals.
 - Trigger: define input interactions and simple conditions.
 - Reader: execute a story through successive choices.
 - Story persistence: save authored stories in PostgreSQL.
+- Story-local calendar time: authored start date/time, interaction durations,
+  and trigger schedules based on dates, weekdays, and time slots.
 - Authoring reliability: expose save progress and failures, confirm structural
   deletions, and make ambiguous trigger connections explicit.
 
@@ -20,7 +22,7 @@ the narrative-core validation criteria.
 ## Out of Scope for Now
 
 - Attributes and variables.
-- Timing and probabilities.
+- Probabilities, automatic timing, and real-time choice countdowns.
 - Automatic choices.
 - Media.
 - Final interactions.
@@ -41,6 +43,8 @@ have been validated.
   reading.
 - An interaction should keep at least one trigger, including root interactions.
 - An interaction can have one or more input interactions through its trigger.
+- Selecting an interaction advances the story-local clock by its authored
+  duration before the next triggers are evaluated.
 - Several interactions can share the same input interaction: this creates a choice.
 - Several triggers can connect the same input interaction to the same output
   interaction to represent OR condition groups.

@@ -1,4 +1,10 @@
-import type { Interaction, Story, TriggerCondition } from '@paralleax/shared';
+import type {
+  Interaction,
+  Story,
+  TemporalCondition,
+  TriggerCondition,
+  Weekday,
+} from '@paralleax/shared';
 import { getRelatedTriggerVariantIds } from '../storyGraph';
 
 export function TriggerInspector({
@@ -65,7 +71,9 @@ export function TriggerInspector({
                       ? condition.locationId
                       : 'characterId' in condition
                         ? condition.characterId
-                        : condition.statId
+                        : 'statId' in condition
+                          ? condition.statId
+                          : 'time'
                 }-${index}`}
               >
                 {'interactionId' in condition ? (
@@ -169,6 +177,16 @@ export function TriggerInspector({
                       <option value="absent">is absent</option>
                     </select>
                   </>
+                ) : 'temporal' in condition ? (
+                  <TemporalConditionFields
+                    condition={condition}
+                    defaultDate={(story.startDateTime ?? '2000-01-03T08:00').slice(0, 10)}
+                    onChange={(nextCondition) => {
+                      const next = [...variant.conditions];
+                      next[index] = nextCondition;
+                      void updateTrigger(variant, variant.inputInteractionIds, next);
+                    }}
+                  />
                 ) : (
                   <>
                     <select
@@ -291,6 +309,17 @@ export function TriggerInspector({
           >
             Add stat condition
           </button>
+          <button
+            className="secondary"
+            onClick={() => {
+              void updateTrigger(variant, variant.inputInteractionIds, [
+                ...variant.conditions,
+                { temporal: { weekdays: ['monday'] } },
+              ]);
+            }}
+          >
+            Add date/time condition
+          </button>
           {hasOrVariants ? (
             <button
               className="ghost danger"
@@ -322,5 +351,179 @@ export function TriggerInspector({
         </button>
       )}
     </div>
+  );
+}
+
+const weekdayOptions: Array<{ value: Weekday; label: string }> = [
+  { value: 'monday', label: 'Mon' },
+  { value: 'tuesday', label: 'Tue' },
+  { value: 'wednesday', label: 'Wed' },
+  { value: 'thursday', label: 'Thu' },
+  { value: 'friday', label: 'Fri' },
+  { value: 'saturday', label: 'Sat' },
+  { value: 'sunday', label: 'Sun' },
+];
+
+function TemporalConditionFields({
+  condition,
+  defaultDate,
+  onChange,
+}: {
+  condition: TemporalCondition;
+  defaultDate: string;
+  onChange: (condition: TemporalCondition) => void;
+}) {
+  const temporal = condition.temporal;
+  const update = (patch: Partial<TemporalCondition['temporal']>) =>
+    onChange({ temporal: { ...temporal, ...patch } });
+
+  return (
+    <fieldset className="temporal-condition">
+      <legend>Date and time</legend>
+      <div className="weekday-options">
+        {weekdayOptions.map(({ value, label }) => (
+          <label key={value}>
+            <input
+              type="checkbox"
+              checked={(temporal.weekdays ?? []).includes(value)}
+              onChange={(event) =>
+                update({
+                  weekdays: event.target.checked
+                    ? [...(temporal.weekdays ?? []), value]
+                    : (temporal.weekdays ?? []).filter((weekday) => weekday !== value),
+                })
+              }
+            />
+            {label}
+          </label>
+        ))}
+      </div>
+      {(temporal.dates ?? []).map((date, index) => (
+        <div className="temporal-row" key={`date-${index}`}>
+          <input
+            aria-label={`Allowed date ${index + 1}`}
+            type="date"
+            value={date}
+            onChange={(event) => {
+              const dates = [...(temporal.dates ?? [])];
+              dates[index] = event.target.value;
+              update({ dates });
+            }}
+          />
+          <button
+            aria-label={`Delete allowed date ${index + 1}`}
+            className="ghost danger"
+            type="button"
+            onClick={() => update({ dates: temporal.dates?.filter((_, item) => item !== index) })}
+          >
+            x
+          </button>
+        </div>
+      ))}
+      {(temporal.dateRanges ?? []).map((range, index) => (
+        <div className="temporal-row" key={`range-${index}`}>
+          <input
+            aria-label={`Date range ${index + 1} start`}
+            type="date"
+            value={range.startDate}
+            onChange={(event) => {
+              const dateRanges = [...(temporal.dateRanges ?? [])];
+              dateRanges[index] = { ...range, startDate: event.target.value };
+              update({ dateRanges });
+            }}
+          />
+          <span>to</span>
+          <input
+            aria-label={`Date range ${index + 1} end`}
+            type="date"
+            value={range.endDate}
+            onChange={(event) => {
+              const dateRanges = [...(temporal.dateRanges ?? [])];
+              dateRanges[index] = { ...range, endDate: event.target.value };
+              update({ dateRanges });
+            }}
+          />
+          <button
+            aria-label={`Delete date range ${index + 1}`}
+            className="ghost danger"
+            type="button"
+            onClick={() =>
+              update({ dateRanges: temporal.dateRanges?.filter((_, item) => item !== index) })
+            }
+          >
+            x
+          </button>
+        </div>
+      ))}
+      {(temporal.timeSlots ?? []).map((slot, index) => (
+        <div className="temporal-row" key={`slot-${index}`}>
+          <input
+            aria-label={`Time slot ${index + 1} start`}
+            type="time"
+            value={slot.startTime}
+            onChange={(event) => {
+              const timeSlots = [...(temporal.timeSlots ?? [])];
+              timeSlots[index] = { ...slot, startTime: event.target.value };
+              update({ timeSlots });
+            }}
+          />
+          <span>to</span>
+          <input
+            aria-label={`Time slot ${index + 1} end`}
+            type="time"
+            value={slot.endTime}
+            onChange={(event) => {
+              const timeSlots = [...(temporal.timeSlots ?? [])];
+              timeSlots[index] = { ...slot, endTime: event.target.value };
+              update({ timeSlots });
+            }}
+          />
+          <button
+            aria-label={`Delete time slot ${index + 1}`}
+            className="ghost danger"
+            type="button"
+            onClick={() =>
+              update({ timeSlots: temporal.timeSlots?.filter((_, item) => item !== index) })
+            }
+          >
+            x
+          </button>
+        </div>
+      ))}
+      <div className="temporal-actions">
+        <button
+          className="secondary"
+          type="button"
+          onClick={() => update({ dates: [...(temporal.dates ?? []), defaultDate] })}
+        >
+          Add date
+        </button>
+        <button
+          className="secondary"
+          type="button"
+          onClick={() =>
+            update({
+              dateRanges: [
+                ...(temporal.dateRanges ?? []),
+                { startDate: defaultDate, endDate: defaultDate },
+              ],
+            })
+          }
+        >
+          Add date range
+        </button>
+        <button
+          className="secondary"
+          type="button"
+          onClick={() =>
+            update({
+              timeSlots: [...(temporal.timeSlots ?? []), { startTime: '09:00', endTime: '17:00' }],
+            })
+          }
+        >
+          Add time slot
+        </button>
+      </div>
+    </fieldset>
   );
 }

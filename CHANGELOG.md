@@ -2,6 +2,15 @@
 
 ## 2026-07-26
 
+- Added deterministic story-local date and time with an authored starting value,
+  visible reader/simulation clock, and journey-based reconstruction on restart
+  or backward navigation.
+- Added non-negative interaction durations that advance story time before the
+  following choices are evaluated, including repeated interaction visits.
+- Added temporal trigger conditions supporting several exact dates, inclusive
+  date ranges, weekdays, and daily or overnight time slots.
+- Added editor controls, API validation, relational persistence, migration, and
+  shared/API/web regression coverage for story time.
 - Added guarded PostgreSQL backup and restore commands with archive validation,
   partial-file publication, credential-safe process invocation, explicit target
   confirmation, and administrative-database protection.
@@ -17,6 +26,8 @@
   ownership.
 - Added PostgreSQL legacy-upgrade coverage and a unit guard prohibiting wholesale
   story deletion in future migrations.
+- Increased the legacy PostgreSQL migration test timeout to cover a real local
+  full-schema upgrade without relying on Jest's five-second unit-test default.
 - Added public API liveness and PostgreSQL/schema readiness endpoints, with
   readiness returning `503` without modifying the database when the schema is
   unavailable or behind.

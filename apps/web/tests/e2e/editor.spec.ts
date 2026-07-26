@@ -103,6 +103,36 @@ test.describe('Story editor', () => {
     await expect(page.getByText('Loading...')).toHaveCount(0);
   });
 
+  test('edits the story clock and interaction duration', async ({ page }) => {
+    const timed = cloneStory();
+    timed.startDateTime = '2026-07-27T09:30';
+    timed.interactions[0].durationMinutes = 45;
+
+    await page.route('**/api/stories/story-1', async (route) => {
+      if (route.request().method() !== 'PATCH') {
+        await route.fallback();
+        return;
+      }
+      expect(route.request().postDataJSON()).toEqual({ startDateTime: '2026-07-27T09:30' });
+      await route.fulfill({ json: timed });
+    });
+    await page.route('**/api/stories/story-1/interactions/interaction-1', async (route) => {
+      expect(route.request().method()).toBe('PATCH');
+      expect(route.request().postDataJSON()).toEqual({ durationMinutes: 45 });
+      await route.fulfill({ json: timed });
+    });
+
+    await page.goto('/stories/story-1/edit');
+    await page.getByLabel('Story start date and time').fill('2026-07-27T09:30');
+    await page.getByLabel('Story start date and time').blur();
+    await page.getByTestId('interaction-node').filter({ hasText: 'Original title' }).click();
+    await page.getByLabel('Duration (minutes)').fill('45');
+    await page.getByLabel('Duration (minutes)').blur();
+
+    await expect(page.getByLabel('Story start date and time')).toHaveValue('2026-07-27T09:30');
+    await expect(page.getByLabel('Duration (minutes)')).toHaveValue('45');
+  });
+
   test('keeps title and body visible after dragging an interaction', async ({ page }) => {
     const moved = cloneStory();
     moved.interactions[0].position = { x: 240, y: 180 };

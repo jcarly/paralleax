@@ -13,6 +13,7 @@ vi.mock('../api', () => ({
     updateInteraction: vi.fn(),
     deleteInteraction: vi.fn(),
     renameStory: vi.fn(),
+    updateStory: vi.fn(),
     addTrigger: vi.fn(),
     updateTrigger: vi.fn(),
     deleteTrigger: vi.fn(),
@@ -346,6 +347,23 @@ describe('StoryEditor', () => {
 
     expect(api.renameStory).toHaveBeenCalledWith('story-1', 'Renamed story');
     expect(await screen.findByDisplayValue('Renamed story')).toBeInTheDocument();
+  });
+
+  it('updates the story start date and time', async () => {
+    const updatedStory = cloneStory();
+    updatedStory.startDateTime = '2026-07-27T09:30';
+    vi.mocked(api.updateStory).mockResolvedValue(updatedStory);
+
+    await renderEditor();
+
+    const start = screen.getByLabelText('Story start date and time');
+    fireEvent.change(start, { target: { value: '2026-07-27T09:30' } });
+    fireEvent.blur(start);
+
+    expect(api.updateStory).toHaveBeenCalledWith('story-1', {
+      startDateTime: '2026-07-27T09:30',
+    });
+    expect(await screen.findByDisplayValue('2026-07-27T09:30')).toBeInTheDocument();
   });
 
   it('creates and edits a location from the location panel', async () => {

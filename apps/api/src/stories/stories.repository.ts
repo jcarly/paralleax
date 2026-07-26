@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import type { Story, TriggerCondition } from '@paralleax/shared';
+import { DEFAULT_STORY_DATE_TIME, type Story, type TriggerCondition } from '@paralleax/shared';
 import type { PoolClient } from 'pg';
 import { DatabaseConnection } from '../database/database.connection';
 import type { Queryable } from './persistence/stories.persistence.types';
@@ -12,6 +12,7 @@ type StoryRow = {
   id: string;
   revision: number;
   title: string;
+  start_date_time: string;
   created_at: Date | string;
   updated_at: Date | string;
 };
@@ -23,6 +24,7 @@ type InteractionRow = {
   position_x: number;
   position_y: number;
   location_id: string | null;
+  duration_minutes: number;
   sort_order: number;
 };
 type LocationRow = {
@@ -89,7 +91,7 @@ export class StoriesRepository {
 
   async list(ownerId: string): Promise<Story[]> {
     const result = await this.database.pool.query<StoryRow>(
-      `SELECT id, revision, title, created_at, updated_at
+      `SELECT id, revision, title, start_date_time, created_at, updated_at
        FROM stories
        WHERE creator_user_id = $1
        ORDER BY updated_at DESC, created_at DESC`,
@@ -105,13 +107,23 @@ export class StoriesRepository {
   async save(story: Story, ownerId: string): Promise<void> {
     await this.transaction(async (client) => {
       await client.query(
-        `INSERT INTO stories (id, revision, title, created_at, updated_at, creator_user_id)
-         VALUES ($1, $2, $3, $4, $5, $6)
+        `INSERT INTO stories
+         (id, revision, title, start_date_time, created_at, updated_at, creator_user_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)
          ON CONFLICT (id) DO UPDATE
          SET title = EXCLUDED.title,
+             start_date_time = EXCLUDED.start_date_time,
              created_at = EXCLUDED.created_at,
              updated_at = EXCLUDED.updated_at`,
-        [story.id, story.revision ?? 1, story.title, story.createdAt, story.updatedAt, ownerId],
+        [
+          story.id,
+          story.revision ?? 1,
+          story.title,
+          story.startDateTime ?? DEFAULT_STORY_DATE_TIME,
+          story.createdAt,
+          story.updatedAt,
+          ownerId,
+        ],
       );
       await replaceStoryGraph(client, story);
     });
@@ -146,7 +158,7 @@ export class StoriesRepository {
 
   private async findWith(queryable: Queryable, id: string, ownerId: string) {
     const result = await queryable.query<StoryRow>(
-      `SELECT id, revision, title, created_at, updated_at
+      `SELECT id, revision, title, start_date_time, created_at, updated_at
        FROM stories
        WHERE id = $1 AND creator_user_id = $2`,
       [id, ownerId],
@@ -158,7 +170,8 @@ export class StoriesRepository {
     if (storyRows.length === 0) return [];
     const storyIds = storyRows.map(({ id }) => id);
     const interactions = await queryable.query<InteractionRow>(
-      `SELECT id, story_id, title, body, position_x, position_y, location_id, sort_order
+      `SELECT id, story_id, title, body, position_x, position_y, location_id,
+              duration_minutes, sort_order
          FROM interactions WHERE story_id = ANY($1::text[])
          ORDER BY story_id, sort_order`,
       [storyIds],
@@ -252,6 +265,7 @@ export class StoriesRepository {
       id: row.id,
       revision: row.revision,
       title: row.title,
+      startDateTime: row.start_date_time,
       createdAt: iso(row.created_at),
       updatedAt: iso(row.updated_at),
       locations: (locationsByStory.get(row.id) ?? []).map((location) => ({
@@ -288,6 +302,7 @@ export class StoriesRepository {
         body: interaction.body,
         position: { x: interaction.position_x, y: interaction.position_y },
         locationId: interaction.location_id,
+        durationMinutes: interaction.duration_minutes,
         characterIds: (charactersByInteraction.get(interaction.id) ?? []).map(
           ({ character_id }) => character_id,
         ),

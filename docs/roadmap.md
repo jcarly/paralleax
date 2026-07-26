@@ -132,6 +132,8 @@ not optional cleanup after launch:
   effects, and trigger comparisons.
 - Item definitions and authored character-owned item instances are implemented;
   several instances may reference the same definition.
+- Deterministic story-local time, interaction durations, and trigger schedules
+  using dates, weekdays, and multiple time slots are implemented.
 - Establish typed world-state conditions and interaction effects incrementally;
   do not introduce an unvalidated universal parameter bag.
 - Typed variables: stable attributes, changing resources, skills, flags, traits,
@@ -154,8 +156,8 @@ not optional cleanup after launch:
 
 ## V0.5 - Timing and Probabilities
 
-- Delays.
-- Choices with timers.
+- Implemented: interaction durations and calendar-based trigger availability.
+- Real-time choice countdowns and delayed automatic choices.
 - Appearance probability.
 - Probabilistic automatic choices.
 

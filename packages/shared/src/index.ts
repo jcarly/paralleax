@@ -20,8 +20,30 @@ export interface CharacterStatCondition {
   operator: StatComparisonOperator;
   value: number;
 }
+export type Weekday =
+  'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
+export interface DateRange {
+  startDate: string;
+  endDate: string;
+}
+export interface TimeSlot {
+  startTime: string;
+  endTime: string;
+}
+export interface TemporalCondition {
+  temporal: {
+    dates?: string[];
+    dateRanges?: DateRange[];
+    weekdays?: Weekday[];
+    timeSlots?: TimeSlot[];
+  };
+}
 export type TriggerCondition =
-  InteractionVisitedCondition | LocationCondition | CharacterCondition | CharacterStatCondition;
+  | InteractionVisitedCondition
+  | LocationCondition
+  | CharacterCondition
+  | CharacterStatCondition
+  | TemporalCondition;
 export interface Location {
   id: string;
   name: string;
@@ -70,6 +92,7 @@ export interface Interaction {
   locationId?: string | null;
   characterIds?: string[];
   statEffects?: StatEffect[];
+  durationMinutes?: number;
   triggers: Trigger[];
 }
 export interface Story {
@@ -81,6 +104,7 @@ export interface Story {
   statDefinitions?: StatDefinition[];
   itemDefinitions?: ItemDefinition[];
   interactions: Interaction[];
+  startDateTime?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -118,6 +142,10 @@ export interface CharacterItemMutationResult extends StoryMutationMetadata {
 export interface CreateStoryInput {
   title: string;
 }
+export interface UpdateStoryInput {
+  title?: string;
+  startDateTime?: string;
+}
 export interface CreateInteractionInput {
   parentId?: string;
   position?: Position;
@@ -129,6 +157,7 @@ export interface UpdateInteractionInput {
   locationId?: string | null;
   characterIds?: string[];
   statEffects?: StatEffect[];
+  durationMinutes?: number;
 }
 export interface CreateLocationInput {
   name: string;
@@ -179,7 +208,16 @@ export interface TriggerConditionFailure {
   condition: TriggerCondition;
 }
 export type InteractionContentPatch = Partial<
-  Pick<Interaction, 'title' | 'body' | 'position' | 'locationId' | 'characterIds' | 'statEffects'>
+  Pick<
+    Interaction,
+    | 'title'
+    | 'body'
+    | 'position'
+    | 'locationId'
+    | 'characterIds'
+    | 'statEffects'
+    | 'durationMinutes'
+  >
 >;
 export type TriggerPatch = Pick<Trigger, 'inputInteractionIds' | 'conditions'>;
 
@@ -195,6 +233,7 @@ export function createDemoStory(storyId: string, timestamp: string): Story {
   return {
     id: storyId,
     title: 'Demo: branching investigation',
+    startDateTime: DEFAULT_STORY_DATE_TIME,
     locations: [],
     characters: [],
     createdAt: timestamp,
@@ -446,6 +485,9 @@ export function mergeServerStory(
         statEffects: hasOwn(patch ?? {}, 'statEffects')
           ? (patch?.statEffects ?? [])
           : currentItem.statEffects,
+        durationMinutes: hasOwn(patch ?? {}, 'durationMinutes')
+          ? (patch?.durationMinutes ?? 0)
+          : currentItem.durationMinutes,
         triggers,
       };
     }),
@@ -569,6 +611,104 @@ function hasPosition(interaction: Interaction): boolean {
   );
 }
 
+export const DEFAULT_STORY_DATE_TIME = '2000-01-03T08:00';
+const STORY_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+const STORY_TIME_PATTERN = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
+const STORY_DATE_TIME_PATTERN = /^\d{4}-\d{2}-\d{2}T(?:[01]\d|2[0-3]):[0-5]\d$/;
+const WEEKDAYS: Weekday[] = [
+  'sunday',
+  'monday',
+  'tuesday',
+  'wednesday',
+  'thursday',
+  'friday',
+  'saturday',
+];
+
+export function isStoryDate(value: string): boolean {
+  if (!STORY_DATE_PATTERN.test(value)) return false;
+  const [year, month, day] = value.split('-').map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return (
+    date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day
+  );
+}
+
+export function isStoryTime(value: string): boolean {
+  return STORY_TIME_PATTERN.test(value);
+}
+
+export function isStoryDateTime(value: string): boolean {
+  return STORY_DATE_TIME_PATTERN.test(value) && isStoryDate(value.slice(0, 10));
+}
+
+export function addStoryMinutes(dateTime: string, minutes: number): string {
+  if (!isStoryDateTime(dateTime)) throw new Error('Invalid story date and time');
+  if (!Number.isInteger(minutes) || minutes < 0) {
+    throw new Error('Interaction duration must be a non-negative integer');
+  }
+  const date = storyDateTimeToDate(dateTime);
+  date.setUTCMinutes(date.getUTCMinutes() + minutes);
+  return formatStoryDateTime(date);
+}
+
+export function getJourneyDateTime(story: Story, journey: string[]): string {
+  let current = story.startDateTime ?? DEFAULT_STORY_DATE_TIME;
+  for (const interactionId of journey) {
+    const interaction = story.interactions.find(({ id }) => id === interactionId);
+    if (interaction) current = addStoryMinutes(current, interaction.durationMinutes ?? 0);
+  }
+  return current;
+}
+
+export function temporalConditionMatches(
+  condition: TemporalCondition,
+  currentDateTime: string,
+): boolean {
+  if (!isStoryDateTime(currentDateTime)) return false;
+  const currentDate = currentDateTime.slice(0, 10);
+  const currentTime = currentDateTime.slice(11);
+  const calendar = [
+    ...(condition.temporal.dates ?? []).map((date) => currentDate === date),
+    ...(condition.temporal.dateRanges ?? []).map(
+      ({ startDate, endDate }) => currentDate >= startDate && currentDate <= endDate,
+    ),
+  ];
+  if (calendar.length > 0 && !calendar.some(Boolean)) return false;
+
+  const weekdays = condition.temporal.weekdays ?? [];
+  if (weekdays.length > 0) {
+    const weekday = WEEKDAYS[storyDateTimeToDate(currentDateTime).getUTCDay()];
+    if (!weekdays.includes(weekday)) return false;
+  }
+
+  const slots = condition.temporal.timeSlots ?? [];
+  return (
+    slots.length === 0 ||
+    slots.some(({ startTime, endTime }) =>
+      startTime < endTime
+        ? currentTime >= startTime && currentTime < endTime
+        : currentTime >= startTime || currentTime < endTime,
+    )
+  );
+}
+
+function storyDateTimeToDate(value: string): Date {
+  const [date, time] = value.split('T');
+  const [year, month, day] = date.split('-').map(Number);
+  const [hour, minute] = time.split(':').map(Number);
+  return new Date(Date.UTC(year, month - 1, day, hour, minute));
+}
+
+function formatStoryDateTime(value: Date): string {
+  return `${value.getUTCFullYear().toString().padStart(4, '0')}-${(value.getUTCMonth() + 1)
+    .toString()
+    .padStart(2, '0')}-${value.getUTCDate().toString().padStart(2, '0')}T${value
+    .getUTCHours()
+    .toString()
+    .padStart(2, '0')}:${value.getUTCMinutes().toString().padStart(2, '0')}`;
+}
+
 export function isTriggerEligible(
   trigger: Trigger,
   currentInteractionId: string | null,
@@ -576,11 +716,19 @@ export function isTriggerEligible(
   currentLocationId: string | null = null,
   currentCharacterIds: string[] = [],
   statValues: Readonly<Record<string, number>> = {},
+  currentDateTime = DEFAULT_STORY_DATE_TIME,
 ): boolean {
   return (
     doesTriggerInputMatch(trigger, currentInteractionId) &&
     trigger.conditions.every((condition) =>
-      conditionMatches(condition, visited, currentLocationId, currentCharacterIds, statValues),
+      conditionMatches(
+        condition,
+        visited,
+        currentLocationId,
+        currentCharacterIds,
+        statValues,
+        currentDateTime,
+      ),
     )
   );
 }
@@ -603,6 +751,7 @@ export function getAvailableInteractions(
   currentLocationId: string | null = null,
   currentCharacterIds: string[] = [],
   statValues: Readonly<Record<string, number>> = {},
+  currentDateTime = story.startDateTime ?? DEFAULT_STORY_DATE_TIME,
 ): Interaction[] {
   const visited = new Set(visitedIds);
   return story.interactions.filter((interaction) =>
@@ -614,6 +763,7 @@ export function getAvailableInteractions(
         currentLocationId,
         currentCharacterIds,
         statValues,
+        currentDateTime,
       ),
     ),
   );
@@ -635,6 +785,7 @@ export function getTriggerConditionFailures(
   currentLocationId: string | null = null,
   currentCharacterIds: string[] = [],
   statValues: Readonly<Record<string, number>> = {},
+  currentDateTime = DEFAULT_STORY_DATE_TIME,
 ): TriggerConditionFailure[] {
   const visited = new Set(visitedIds);
   const inputMatchingTriggers = interaction.triggers.filter((trigger) =>
@@ -644,7 +795,14 @@ export function getTriggerConditionFailures(
   if (
     inputMatchingTriggers.some((trigger) =>
       trigger.conditions.every((condition) =>
-        conditionMatches(condition, visited, currentLocationId, currentCharacterIds, statValues),
+        conditionMatches(
+          condition,
+          visited,
+          currentLocationId,
+          currentCharacterIds,
+          statValues,
+          currentDateTime,
+        ),
       ),
     )
   ) {
@@ -655,7 +813,14 @@ export function getTriggerConditionFailures(
     trigger.conditions
       .filter(
         (condition) =>
-          !conditionMatches(condition, visited, currentLocationId, currentCharacterIds, statValues),
+          !conditionMatches(
+            condition,
+            visited,
+            currentLocationId,
+            currentCharacterIds,
+            statValues,
+            currentDateTime,
+          ),
       )
       .map((condition) => ({ triggerId: trigger.id, condition })),
   );
@@ -667,6 +832,7 @@ function conditionMatches(
   currentLocationId: string | null,
   currentCharacterIds: string[],
   statValues: Readonly<Record<string, number>>,
+  currentDateTime: string,
 ) {
   if ('interactionId' in condition) {
     return condition.hasBeenVisited
@@ -681,6 +847,7 @@ function conditionMatches(
     const isPresent = currentCharacterIds.includes(condition.characterId);
     return condition.isPresent ? isPresent : !isPresent;
   }
+  if ('temporal' in condition) return temporalConditionMatches(condition, currentDateTime);
   const currentValue = statValues[condition.statId] ?? 0;
   if (condition.operator === 'eq') return currentValue === condition.value;
   if (condition.operator === 'lt') return currentValue < condition.value;

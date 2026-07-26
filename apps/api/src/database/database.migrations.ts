@@ -476,4 +476,20 @@ export const databaseMigrations: DatabaseMigration[] = [
       CREATE INDEX character_items_definition_id_idx ON character_items(item_definition_id);
     `,
   },
+  {
+    id: '202607260012_story_time',
+    sql: `
+      ALTER TABLE stories
+      ADD COLUMN start_date_time text NOT NULL DEFAULT '2000-01-03T08:00',
+      ADD CONSTRAINT stories_start_date_time_format
+        CHECK (
+          start_date_time ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}T([01][0-9]|2[0-3]):[0-5][0-9]$'
+        );
+
+      ALTER TABLE interactions
+      ADD COLUMN duration_minutes integer NOT NULL DEFAULT 0,
+      ADD CONSTRAINT interactions_duration_minutes_nonnegative
+        CHECK (duration_minutes >= 0);
+    `,
+  },
 ];

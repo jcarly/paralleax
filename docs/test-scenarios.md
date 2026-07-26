@@ -197,6 +197,17 @@ The character-stat vertical keeps these regressions covered:
 - Item definition inspector: local name and description edits persist on blur.
 - Web API client: reusable stat definition creation and updates keep their
   expected HTTP methods, paths, and JSON bodies.
+- Shared reader: interaction durations advance deterministic story-local time on
+  every visit, including across dates and leap days.
+- Shared reader: exact dates and inclusive ranges are alternatives, weekday and
+  calendar filters combine, slot ends are exclusive, and reversed slots cross
+  midnight.
+- API/editor: story start date/time and non-negative integer interaction
+  durations persist.
+- API/editor: one trigger condition stores several dates, date ranges, weekdays,
+  and time slots, while invalid dates, ranges, and equal slot bounds are rejected.
+- Reader/simulation: the current story time is visible and temporal choices are
+  evaluated after the selected interaction's duration.
 
 ## Operations Regression Tests
 
@@ -212,6 +223,7 @@ The character-stat vertical keeps these regressions covered:
 
 ## Playwright Functional Tests
 
+- Editor: update the story-local starting date/time and an interaction duration.
 - Editor: open a story, select an interaction, rename its title, and verify that the canvas and inspector stay visible.
 - Editor: move an interaction and verify that title and content remain visible after saving.
 - Editor: edit root trigger path conditions from the root trigger marker.

@@ -46,6 +46,23 @@ export function InteractionInspector({
         />
       </label>
       <label>
+        Duration (minutes)
+        <input
+          type="number"
+          min="0"
+          step="1"
+          value={interaction.durationMinutes ?? 0}
+          onChange={(event) => {
+            const durationMinutes = Math.max(0, Math.trunc(Number(event.target.value) || 0));
+            updateLocalInteraction({ durationMinutes });
+          }}
+          onBlur={(event) => {
+            const durationMinutes = Math.max(0, Math.trunc(Number(event.target.value) || 0));
+            void onPatch(interaction.id, { durationMinutes });
+          }}
+        />
+      </label>
+      <label>
         Location
         <select
           value={interaction.locationId ?? ''}

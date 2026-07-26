@@ -49,6 +49,13 @@ export async function persistStoryDifference(client: Queryable, before: Story, a
   const storyChanges: string[] = [];
   const storyValues: unknown[] = [after.id];
   addChange(storyChanges, storyValues, 'title', before.title, after.title);
+  addChange(
+    storyChanges,
+    storyValues,
+    'start_date_time',
+    before.startDateTime,
+    after.startDateTime,
+  );
   addChange(storyChanges, storyValues, 'updated_at', before.updatedAt, after.updatedAt);
   addChange(storyChanges, storyValues, 'revision', before.revision, after.revision);
   if (storyChanges.length > 0) {
@@ -146,8 +153,8 @@ async function insertInteraction(
 ) {
   await client.query(
     `INSERT INTO interactions
-     (id, story_id, title, body, position_x, position_y, location_id, sort_order)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+     (id, story_id, title, body, position_x, position_y, location_id, duration_minutes, sort_order)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
     [
       interaction.id,
       storyId,
@@ -156,6 +163,7 @@ async function insertInteraction(
       interaction.position.x,
       interaction.position.y,
       interaction.locationId ?? null,
+      interaction.durationMinutes ?? 0,
       sortOrder,
     ],
   );
@@ -201,6 +209,13 @@ async function updateInteractionDifference(
   addChange(changes, values, 'position_x', before.position.x, after.position.x);
   addChange(changes, values, 'position_y', before.position.y, after.position.y);
   addChange(changes, values, 'location_id', before.locationId ?? null, after.locationId ?? null);
+  addChange(
+    changes,
+    values,
+    'duration_minutes',
+    before.durationMinutes ?? 0,
+    after.durationMinutes ?? 0,
+  );
   addChange(changes, values, 'sort_order', beforeSortOrder, sortOrder);
   if (changes.length > 0) {
     await client.query(`UPDATE interactions SET ${changes.join(', ')} WHERE id = $1`, values);

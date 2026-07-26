@@ -148,6 +148,21 @@ describe('Stories API', () => {
     expect(response.body.title).toBe('Renamed title');
   });
 
+  it('updates and validates the story-local start date and time', async () => {
+    const story = await createStory('Timed story');
+
+    const response = await request(httpServer)
+      .patch(`/api/stories/${story.id}`)
+      .send({ startDateTime: '2026-07-27T09:30' })
+      .expect(200);
+
+    expect(response.body.startDateTime).toBe('2026-07-27T09:30');
+    await request(httpServer)
+      .patch(`/api/stories/${story.id}`)
+      .send({ startDateTime: '2026-02-30T09:30' })
+      .expect(400);
+  });
+
   it('DELETE /api/stories/:storyId deletes a story', async () => {
     const story = await createStory('Story to delete');
 
@@ -198,6 +213,7 @@ describe('Stories API', () => {
         title: 'Renamed interaction',
         body: 'New content',
         position: { x: 42, y: 84 },
+        durationMinutes: 45,
       })
       .expect(200);
 
@@ -206,7 +222,12 @@ describe('Stories API', () => {
       title: 'Renamed interaction',
       body: 'New content',
       position: { x: 42, y: 84 },
+      durationMinutes: 45,
     });
+    await request(httpServer)
+      .patch(`/api/stories/${story.id}/interactions/${interaction.id}`)
+      .send({ durationMinutes: -1 })
+      .expect(400);
   });
 
   it('keeps persisted title and content when PATCH updates only an interaction position', async () => {
@@ -363,6 +384,36 @@ describe('Stories API', () => {
     expect(result.interactionId).toBe(child.id);
     expect(result.trigger.inputInteractionIds).toEqual([parent.id]);
     expect(result.trigger.conditions).toEqual([{ interactionId: parent.id, hasBeenVisited: true }]);
+  });
+
+  it('stores several temporal dates, weekdays, and time slots on a trigger', async () => {
+    const story = await createStory();
+    const graph = await createInteraction(story.id);
+    const interaction = graph.interactions[0];
+    const trigger = interaction.triggers[0];
+    const temporal = {
+      dates: ['2026-08-15'],
+      dateRanges: [{ startDate: '2026-09-01', endDate: '2026-09-03' }],
+      weekdays: ['monday', 'tuesday'],
+      timeSlots: [
+        { startTime: '09:00', endTime: '12:00' },
+        { startTime: '22:00', endTime: '02:00' },
+      ],
+    };
+
+    const response = await request(httpServer)
+      .patch(`/api/stories/${story.id}/interactions/${interaction.id}/triggers/${trigger.id}`)
+      .send({ inputInteractionIds: [], conditions: [{ temporal }] })
+      .expect(200);
+
+    expect((response.body as TriggerMutationResult).trigger.conditions).toEqual([{ temporal }]);
+    await request(httpServer)
+      .patch(`/api/stories/${story.id}/interactions/${interaction.id}/triggers/${trigger.id}`)
+      .send({
+        inputInteractionIds: [],
+        conditions: [{ temporal: { timeSlots: [{ startTime: '09:00', endTime: '09:00' }] } }],
+      })
+      .expect(400);
   });
 
   it('rejects trigger references to interactions from another story', async () => {

@@ -49,6 +49,13 @@ describe('api client', () => {
       body: JSON.stringify({ title: 'Renamed' }),
     });
 
+    await api.updateStory('story-1', { startDateTime: '2026-07-27T09:30' });
+    expect(fetchMock).toHaveBeenLastCalledWith('/api/stories/story-1', {
+      headers: { 'Content-Type': 'application/json' },
+      method: 'PATCH',
+      body: JSON.stringify({ startDateTime: '2026-07-27T09:30' }),
+    });
+
     await api.deleteStory('story-1');
     expect(fetchMock).toHaveBeenLastCalledWith('/api/stories/story-1', {
       headers: { 'Content-Type': 'application/json' },

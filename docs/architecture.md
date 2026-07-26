@@ -43,7 +43,8 @@ and temporary persistence belong in `apps/api`.
 - graph placement helpers: `getNextRootPosition`, `getNextChildPosition`, and
   `getNextParentPosition`;
 - reader and simulation helpers: `getAvailableInteractions`,
-  `getInputReachableInteractions`, and `getTriggerConditionFailures`;
+  `getInputReachableInteractions`, `getTriggerConditionFailures`, and
+  deterministic story-calendar reconstruction;
 - `createDemoStory`, the deterministic local story used for manual testing and
   regression-friendly sample data.
 
@@ -324,7 +325,9 @@ Trigger, and trigger input state in
 relational tables. Interaction-to-location, interaction-character, and stat
 effect references use same-story composite foreign keys. Ordered typed trigger conditions are
 stored as JSONB on their owning trigger and their references are validated by
-the application service. The repository reconstructs
+the application service. Story-local start time and interaction durations are
+relational fields; temporal alternatives remain typed trigger-condition JSONB.
+The repository reconstructs
 the existing domain `Story`, so persistence normalization does not leak into the
 shared engine or the HTTP contract. JSON remains a future versioned import/export
 format rather than the database source of truth.

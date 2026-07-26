@@ -91,6 +91,29 @@ describe('StoryPlayer', () => {
     expect(screen.getByText('Start')).toBeInTheDocument();
   });
 
+  it('advances the story clock before evaluating temporal choices', async () => {
+    const user = userEvent.setup();
+    const timedStory = structuredClone(story);
+    timedStory.startDateTime = '2026-07-27T09:00';
+    timedStory.interactions[0].durationMinutes = 60;
+    timedStory.interactions[1].triggers[0].conditions = [
+      {
+        temporal: {
+          weekdays: ['monday'],
+          timeSlots: [{ startTime: '10:00', endTime: '11:00' }],
+        },
+      },
+    ];
+
+    await renderPlayer('/stories/story-1/play', timedStory);
+    expect(screen.getByText('2026-07-27 09:00')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Start' }));
+
+    expect(screen.getByText('2026-07-27 10:00')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Next' })).toBeInTheDocument();
+  });
+
   it('updates and preserves current location while evaluating choices', async () => {
     const user = userEvent.setup();
     const locatedStory = structuredClone(story);

@@ -42,6 +42,7 @@ describePostgres('StoriesRepository PostgreSQL integration', () => {
     return {
       id,
       title: 'PostgreSQL round trip',
+      startDateTime: '2026-07-27T09:30',
       createdAt: now,
       updatedAt: now,
       locations: [{ id: 'location-1', name: 'Harbor', description: 'A quiet harbor.' }],
@@ -68,6 +69,7 @@ describePostgres('StoriesRepository PostgreSQL integration', () => {
           locationId: 'location-1',
           characterIds: ['character-1'],
           statEffects: [{ statId: 'stat-1', operation: 'add', value: 1 }],
+          durationMinutes: 45,
           triggers: [{ id: 'trigger-1', inputInteractionIds: [], conditions: [] }],
         },
         {
@@ -84,6 +86,15 @@ describePostgres('StoriesRepository PostgreSQL integration', () => {
                 { locationId: 'location-1', isCurrentLocation: true },
                 { characterId: 'character-1', isPresent: true },
                 { statId: 'stat-1', operator: 'gte', value: 3 },
+                {
+                  temporal: {
+                    weekdays: ['monday', 'tuesday'],
+                    timeSlots: [
+                      { startTime: '09:00', endTime: '12:00' },
+                      { startTime: '22:00', endTime: '02:00' },
+                    ],
+                  },
+                },
               ],
             },
           ],
@@ -114,6 +125,7 @@ describePostgres('StoriesRepository PostgreSQL integration', () => {
       locationId: 'location-1',
       characterIds: ['character-1'],
       statEffects: [{ statId: 'stat-1', operation: 'add', value: 1 }],
+      durationMinutes: 45,
     });
     expect(reloaded?.locations).toEqual([
       { id: 'location-1', name: 'Harbor', description: 'A quiet harbor.' },
@@ -126,6 +138,15 @@ describePostgres('StoriesRepository PostgreSQL integration', () => {
         { locationId: 'location-1', isCurrentLocation: true },
         { characterId: 'character-1', isPresent: true },
         { statId: 'stat-1', operator: 'gte', value: 3 },
+        {
+          temporal: {
+            weekdays: ['monday', 'tuesday'],
+            timeSlots: [
+              { startTime: '09:00', endTime: '12:00' },
+              { startTime: '22:00', endTime: '02:00' },
+            ],
+          },
+        },
       ],
     });
   });
@@ -197,7 +218,7 @@ describePostgres('StoriesRepository PostgreSQL integration', () => {
       interaction_stat_effects: 1,
       triggers: 2,
       inputs: 1,
-      conditions: 4,
+      conditions: 5,
     });
   });
 });

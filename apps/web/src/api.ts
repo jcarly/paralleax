@@ -22,6 +22,7 @@ import type {
   UpdateLocationInput,
   UpdateStatDefinitionInput,
   UpdateTriggerInput,
+  UpdateStoryInput,
 } from '@paralleax/shared';
 
 export class ApiError extends Error {
@@ -94,6 +95,8 @@ export const api = {
     request<Story>('/stories/demo', { method: 'POST', body: JSON.stringify({}) }),
   renameStory: (id: string, title: string) =>
     request<Story>(`/stories/${id}`, { method: 'PATCH', body: JSON.stringify({ title }) }),
+  updateStory: (id: string, input: UpdateStoryInput) =>
+    request<Story>(`/stories/${id}`, { method: 'PATCH', body: JSON.stringify(input) }),
   deleteStory: (id: string) => request<void>(`/stories/${id}`, { method: 'DELETE' }),
   createInteraction: (storyId: string, input: CreateInteractionInput) =>
     request<InteractionSaveResponse>(`/stories/${storyId}/interactions`, {
