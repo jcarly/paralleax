@@ -910,7 +910,9 @@ describe('StoryEditor', () => {
     expect(api.updateInteraction).toHaveBeenCalledWith('story-1', 'interaction-1', {
       body: 'Long new content',
     });
-    expect(await screen.findByDisplayValue('Long new content')).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByLabelText('Content')).toHaveTextContent('Long new content'),
+    );
   });
 
   it('serializes title and body saves so reopening keeps both edits', async () => {
@@ -925,8 +927,10 @@ describe('StoryEditor', () => {
 
     fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'Saved title' } });
     fireEvent.blur(screen.getByLabelText('Title'));
-    fireEvent.change(screen.getByLabelText('Content'), { target: { value: 'Saved content' } });
-    fireEvent.blur(screen.getByLabelText('Content'));
+    const content = screen.getByLabelText('Content');
+    content.innerHTML = 'Saved content';
+    fireEvent.input(content);
+    fireEvent.blur(content);
 
     await waitFor(() => expect(api.updateInteraction).toHaveBeenCalledTimes(1));
     expect(screen.getByRole('status')).toHaveTextContent('Saving…');
@@ -949,7 +953,7 @@ describe('StoryEditor', () => {
     await act(async () => resolveBodySave(fullySavedStory));
 
     expect(await screen.findByDisplayValue('Saved title')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('Saved content')).toBeInTheDocument();
+    expect(screen.getByLabelText('Content')).toHaveTextContent('Saved content');
     expect(await screen.findByText('Saved')).toBeInTheDocument();
   });
 

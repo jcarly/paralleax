@@ -113,6 +113,19 @@ describe('StoryPlayer', () => {
     expect(screen.getByText('Start')).toBeInTheDocument();
   });
 
+  it('renders sanitized rich text and media in the reader', async () => {
+    const user = userEvent.setup();
+    const richStory = structuredClone(story);
+    richStory.interactions[0].body =
+      '<p>A <strong>rich</strong> opening.</p><img src="https://media.example/opening.gif"><script>alert(1)</script>';
+    await renderPlayer('/stories/story-1/play', richStory);
+
+    await user.click(screen.getByRole('button', { name: 'Start' }));
+    expect(screen.getByText('rich').tagName).toBe('STRONG');
+    expect(screen.getByRole('img')).toHaveAttribute('src', 'https://media.example/opening.gif');
+    expect(document.querySelector('script')).toBeNull();
+  });
+
   it('resumes a saved reader journey with materialized state', async () => {
     vi.mocked(api.getReaderProgress).mockResolvedValueOnce({
       state: {
@@ -331,7 +344,9 @@ describe('StoryPlayer', () => {
     expect(api.updateInteraction).toHaveBeenCalledWith('story-1', 'next', {
       body: 'Rewritten content.',
     });
-    expect(await screen.findByDisplayValue('Rewritten content.')).toBeInTheDocument();
+    expect(screen.getByLabelText('Current interaction content')).toHaveTextContent(
+      'Rewritten content.',
+    );
   });
 
   it('adds an option in simulation mode and focuses its title', async () => {
@@ -371,7 +386,7 @@ describe('StoryPlayer', () => {
     await user.click(screen.getByRole('button', { name: 'Ask the guard' }));
 
     expect(screen.getByLabelText('Current interaction title')).toHaveValue('Ask the guard');
-    expect(screen.getByLabelText('Current interaction content')).toHaveValue('');
+    expect(screen.getByLabelText('Current interaction content')).toBeEmptyDOMElement();
   });
 
   it('adds an option from a newly created option without a stored position', async () => {

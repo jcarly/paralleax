@@ -435,3 +435,5 @@ through that scenario.
   whole story is not necessarily complete.
 - A story is explicitly complete when the reader reaches a final interaction or a
   later completion rule marks the play session as complete.
+- `body` contains sanitized rich HTML. It supports text formatting, links,
+  images/GIFs, direct HTML5 video, and allowlisted YouTube/Vimeo embeds.

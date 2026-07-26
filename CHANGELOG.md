@@ -2,6 +2,10 @@
 
 ## 2026-07-26
 
+- Replaced the interaction body textarea with a WYSIWYG editor supporting rich
+  text, images, GIFs, direct videos, and controlled YouTube/Vimeo embeds.
+- Added server- and browser-side rich HTML sanitization and reader media styles.
+
 - Added optional image URLs for locations, characters, reusable items, and
   reusable stats, including stat pictograms, inspector previews, list
   thumbnails, relational persistence, validation, and regression coverage.

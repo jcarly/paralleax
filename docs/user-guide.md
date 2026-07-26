@@ -60,6 +60,11 @@ are placed where the connection is released.
 
 ## Edit Interaction Content
 
+The interaction **Content** field is a WYSIWYG editor. Its toolbar formats text,
+headings, and lists, and inserts images or animated GIFs by URL. **Video**
+accepts direct video URLs plus YouTube and Vimeo links. Media is referenced
+externally; Paralleax does not upload or host the file yet.
+
 1. Select an interaction block on the canvas.
 2. Edit `Title` and `Content` in the inspector.
 3. Set `Duration (minutes)` to define how much story time passes when it is selected.

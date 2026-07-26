@@ -168,6 +168,8 @@ component:
 - `storyConnection.ts`: canvas connection validation and created-trigger lookup.
 - `storyTriggerInput.ts`: deletion planning for one trigger input link.
 - `components/InteractionInspector.tsx`: interaction content editing.
+- `components/RichTextEditor.tsx` and `RichTextContent.tsx`: rich-body authoring
+  and defense-in-depth sanitized rendering.
 - `components/TriggerInspector.tsx`: trigger condition and OR variant editing.
 - `components/InteractionNode.tsx`, `TriggerNode.tsx`, and `TriggerEdge.tsx`:
   React Flow rendering surfaces.
@@ -243,6 +245,10 @@ Story-level and delete responses still use `mergeServerStory`. Entity-scoped
 responses avoid carrying unrelated stale graph state in the first place. When
 adding or changing editor persistence behavior, keep both entity application and
 stale story merge regressions covered.
+
+Interaction bodies are HTML. The API sanitizes them before persistence with a
+strict element, attribute, protocol, and iframe-host allowlist. The web renderer
+sanitizes the stored HTML again before using `dangerouslySetInnerHTML`.
 
 ### Editing Trigger Links
 

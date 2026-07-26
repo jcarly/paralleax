@@ -103,6 +103,31 @@ test.describe('Story editor', () => {
     await expect(page.getByText('Loading...')).toHaveCount(0);
   });
 
+  test('edits and saves rich interaction content', async ({ page }) => {
+    const richBody =
+      '<p>A <strong>rich</strong> scene.</p><img src="https://media.example/scene.gif">';
+    const updated = cloneStory();
+    updated.interactions[0].body = richBody;
+
+    await page.route('**/api/stories/story-1/interactions/interaction-1', async (route) => {
+      expect(route.request().method()).toBe('PATCH');
+      expect(route.request().postDataJSON()).toEqual({ body: richBody });
+      await route.fulfill({ json: updated });
+    });
+
+    await page.goto('/stories/story-1/edit');
+    await page.getByTestId('interaction-node').filter({ hasText: 'Original title' }).click();
+    const content = page.getByRole('textbox', { name: 'Content' });
+    await content.evaluate((element, html) => {
+      element.innerHTML = html;
+      element.dispatchEvent(new InputEvent('input', { bubbles: true }));
+    }, richBody);
+    await content.blur();
+
+    await expect(content.locator('strong')).toHaveText('rich');
+    await expect(content.locator('img')).toHaveAttribute('src', 'https://media.example/scene.gif');
+  });
+
   test('edits the story clock and interaction duration', async ({ page }) => {
     const timed = cloneStory();
     timed.startDateTime = '2026-07-27T09:30';

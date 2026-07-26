@@ -44,6 +44,7 @@ import {
   UpdateStoryDto,
   TriggerConditionDto,
 } from './dto/stories.dto';
+import { sanitizeRichText } from './rich-text';
 import { StoriesRepository } from './stories.repository';
 
 @Injectable()
@@ -176,7 +177,7 @@ export class StoriesService {
       (story) => {
         const interaction = this.interaction(story, interactionId);
         if (input.title !== undefined) interaction.title = input.title;
-        if (input.body !== undefined) interaction.body = input.body ?? '';
+        if (input.body !== undefined) interaction.body = sanitizeRichText(input.body ?? '');
         if (input.position !== undefined) interaction.position = input.position;
         if (input.locationId !== undefined) {
           if (

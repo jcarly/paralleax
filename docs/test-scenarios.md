@@ -51,6 +51,11 @@ The character-stat vertical keeps these regressions covered:
 
 ## Unit / Component Tests
 
+- Rich content: format and persist interaction HTML, insert image/GIF and video
+  URLs, and render the result in the reader.
+- Rich content security: remove scripts, event handlers, unsafe URLs, and
+  unapproved iframe hosts before persistence and display.
+
 - Context images: create and update image URLs for a location, character,
   reusable stat, and reusable item, then confirm previews and persisted values.
 - Context images: clear an image URL and keep the entity valid without an image.

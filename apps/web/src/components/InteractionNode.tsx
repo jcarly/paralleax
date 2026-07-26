@@ -88,7 +88,12 @@ export function InteractionNode({ id, data }: NodeProps) {
         title="Create new trigger"
       />
       <strong>{d.title}</strong>
-      <span>{d.body}</span>
+      <span>
+        {d.body
+          .replace(/<[^>]*>/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim()}
+      </span>
       <Handle
         type="source"
         id="interaction-output"

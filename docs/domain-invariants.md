@@ -10,8 +10,9 @@ details. They should stay covered by tests as the editor grows.
 - An interaction should always have a canvas position. Loaded or incoming story
   data with a missing position is normalized with a stable default position.
 - Story and interaction titles are required strings. Interaction bodies are
-  stored as strings; an API body value of `null` is normalized to an empty
-  string.
+  stored as sanitized rich HTML strings; an API body value of `null` is
+  normalized to an empty string. Scripts, event handlers, unsafe protocols, and
+  non-allowlisted iframe hosts are removed before persistence.
 - A trigger belongs to exactly one output interaction.
 - Trigger inputs, outputs, and all condition references must belong to the same
   story as their trigger.

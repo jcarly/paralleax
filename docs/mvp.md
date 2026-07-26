@@ -25,8 +25,8 @@ the narrative-core validation criteria.
 - Attributes and variables.
 - Probabilities, automatic timing, and real-time choice countdowns.
 - Automatic choices.
-- Interaction media and managed image uploads. Context entities may reference
-  externally hosted images by URL.
+- Managed media uploads. Rich interaction bodies and context entities may
+  reference externally hosted media by URL.
 - Final interactions.
 - Multiple save slots and anonymous reader saves.
 - AI.

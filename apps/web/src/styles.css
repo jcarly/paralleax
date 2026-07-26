@@ -500,6 +500,60 @@ header span {
   line-height: 1.55;
   resize: vertical;
 }
+
+.rich-text-editor {
+  margin: 0 0 1rem;
+}
+
+.rich-text-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  padding: 0.45rem;
+  border: 1px solid #cfd5df;
+  border-bottom: 0;
+  border-radius: 0.5rem 0.5rem 0 0;
+  background: #f5f7fa;
+}
+
+.rich-text-toolbar button {
+  min-width: 2rem;
+  padding: 0.35rem 0.5rem;
+}
+
+.rich-text-surface {
+  min-height: 10rem;
+  padding: 0.7rem;
+  overflow-wrap: anywhere;
+  border: 1px solid #cfd5df;
+  border-radius: 0 0 0.5rem 0.5rem;
+  background: white;
+}
+
+.rich-text-surface:focus {
+  border-color: #6d5bd0;
+  outline: 2px solid rgb(109 91 208 / 18%);
+}
+
+.rich-text-surface img,
+.story-body img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 0.75rem auto;
+}
+
+.rich-text-surface video,
+.rich-text-surface iframe,
+.story-body video,
+.story-body iframe {
+  display: block;
+  width: 100%;
+  max-width: 48rem;
+  aspect-ratio: 16 / 9;
+  margin: 0.75rem auto;
+  border: 0;
+}
 .inspector hr {
   border: 0;
   border-top: 1px solid var(--color-border);

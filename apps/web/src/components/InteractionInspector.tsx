@@ -1,4 +1,5 @@
 import { updateInteractionInStory, type Interaction, type Story } from '@paralleax/shared';
+import { RichTextEditor } from './RichTextEditor';
 
 export function InteractionInspector({
   story,
@@ -36,15 +37,11 @@ export function InteractionInspector({
           onBlur={(e) => void onPatch(interaction.id, { title: e.target.value })}
         />
       </label>
-      <label>
-        Content
-        <textarea
-          rows={7}
-          value={interaction.body}
-          onChange={(e) => updateLocalInteraction({ body: e.target.value })}
-          onBlur={(e) => void onPatch(interaction.id, { body: e.target.value })}
-        />
-      </label>
+      <RichTextEditor
+        value={interaction.body}
+        onChange={(body) => updateLocalInteraction({ body })}
+        onBlur={(body) => void onPatch(interaction.id, { body })}
+      />
       <label>
         Duration (minutes)
         <input

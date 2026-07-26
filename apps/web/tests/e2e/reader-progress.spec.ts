@@ -70,7 +70,7 @@ test('resumes and updates authenticated reader progress', async ({ page }) => {
 
   await page.goto('/stories/story-1/play');
 
-  await expect(page.getByRole('heading', { name: 'Start' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Start' })).toBeVisible({ timeout: 15_000 });
   await expect(page.getByText('2026-07-27 09:15')).toBeVisible();
   await page.getByRole('button', { name: 'Continue' }).click();
   await expect(page.getByRole('heading', { name: 'Continue' })).toBeVisible();

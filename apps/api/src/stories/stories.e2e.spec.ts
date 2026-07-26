@@ -368,6 +368,32 @@ describe('Stories API', () => {
     });
   });
 
+  it('sanitizes rich interaction content while preserving supported media', async () => {
+    const story = await createStory();
+    const withInteraction = await createInteraction(story.id);
+    const interaction = withInteraction.interactions[0];
+    const body =
+      '<h2>Arrival</h2><p><strong>Hello</strong></p>' +
+      '<img src="https://media.example/scene.gif" onerror="alert(1)">' +
+      '<video src="https://media.example/scene.mp4"></video>' +
+      '<iframe src="https://www.youtube-nocookie.com/embed/video-1"></iframe>' +
+      '<iframe src="https://evil.example/embed"></iframe><script>alert(1)</script>';
+
+    const response = await request(httpServer)
+      .patch(`/api/stories/${story.id}/interactions/${interaction.id}`)
+      .send({ body })
+      .expect(200);
+    const sanitized = (response.body as InteractionMutationResult).interaction.body;
+
+    expect(sanitized).toContain('<h2>Arrival</h2>');
+    expect(sanitized).toContain('https://media.example/scene.gif');
+    expect(sanitized).toContain('https://media.example/scene.mp4');
+    expect(sanitized).toContain('https://www.youtube-nocookie.com/embed/video-1');
+    expect(sanitized).not.toContain('onerror');
+    expect(sanitized).not.toContain('evil.example');
+    expect(sanitized).not.toContain('<script');
+  });
+
   it('rejects unknown interaction patch fields', async () => {
     const story = await createStory();
     const withInteraction = await createInteraction(story.id);

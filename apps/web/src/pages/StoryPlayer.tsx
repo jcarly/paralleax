@@ -15,6 +15,8 @@ import {
   getTriggerConditionFailures,
 } from '@paralleax/shared';
 import { api } from '../api';
+import { RichTextContent } from '../components/RichTextContent';
+import { RichTextEditor } from '../components/RichTextEditor';
 
 function getInteractionTitle(story: Story, interactionId: string) {
   return (
@@ -388,19 +390,17 @@ export function StoryPlayer() {
                   onChange={(event) => patchCurrentInteraction({ title: event.target.value })}
                   onBlur={(event) => void saveCurrentInteraction({ title: event.target.value })}
                 />
-                <textarea
-                  className="simulation-body-input"
-                  aria-label="Current interaction content"
+                <RichTextEditor
+                  ariaLabel="Current interaction content"
                   value={current.body}
-                  rows={6}
-                  onChange={(event) => patchCurrentInteraction({ body: event.target.value })}
-                  onBlur={(event) => void saveCurrentInteraction({ body: event.target.value })}
+                  onChange={(body) => patchCurrentInteraction({ body })}
+                  onBlur={(body) => void saveCurrentInteraction({ body })}
                 />
               </>
             ) : (
               <>
                 <h1>{current.title}</h1>
-                <div className="story-body">{current.body}</div>
+                <RichTextContent className="story-body" html={current.body} />
               </>
             )}
           </>
