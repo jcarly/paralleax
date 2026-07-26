@@ -1,19 +1,26 @@
 import 'reflect-metadata';
-import { ValidationPipe } from '@nestjs/common';
+import { ConsoleLogger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { AppConfigService } from './config/app-config.service';
+import { DatabaseMigrator } from './database/database.migrator';
+import { MigrationModule } from './database/migration.module';
+import { ApiExceptionFilter } from './operations/api-exception.filter';
+import { requestContextMiddleware } from './operations/request-context';
 import helmet from 'helmet';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const config = app.get(AppConfigService);
+  app.useLogger(new ConsoleLogger({ json: config.nodeEnvironment === 'production' }));
+  app.use(requestContextMiddleware);
   app.use(helmet(config.nodeEnvironment === 'production' ? {} : { contentSecurityPolicy: false }));
   app.enableCors({ origin: config.corsOrigin, credentials: true });
   app.useGlobalPipes(
     new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }),
   );
+  app.useGlobalFilters(new ApiExceptionFilter());
   app.setGlobalPrefix('api');
   if (config.nodeEnvironment !== 'production') {
     const openApi = new DocumentBuilder()
@@ -26,4 +33,14 @@ async function bootstrap() {
   }
   await app.listen(config.port);
 }
-void bootstrap();
+
+async function migrate() {
+  const app = await NestFactory.createApplicationContext(MigrationModule);
+  try {
+    await app.get(DatabaseMigrator).run();
+  } finally {
+    await app.close();
+  }
+}
+
+void (process.argv.includes('--migrate') ? migrate() : bootstrap());

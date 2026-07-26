@@ -20,8 +20,9 @@ permission hierarchies, OAuth providers, or player profiles.
   only token hashes in PostgreSQL.
 - Make story ownership mandatory at the persistence boundary and scope every
   story read or mutation to the authenticated owner.
-- Discard pre-user stories when the normalized graph migration is applied. They
-  contain test-only data, so no reserved migration identity remains afterward.
+- Preserve pre-user stories during relational normalization. Assign them to the
+  disabled `migration-user` identity until an administrator explicitly transfers
+  them to a real account.
 - Purge expired sessions opportunistically during authentication activity and
   index their expiry timestamp.
 - Keep NestJS as the identity and authorization boundary so a future managed
@@ -37,3 +38,11 @@ permission hierarchies, OAuth providers, or player profiles.
 - Production must use HTTPS so secure cookies can be enabled.
 - Concurrent registration attempts for one email resolve to one account and one
   conflict response at the database boundary.
+- Fresh installations remove the unused migration identity. Upgraded
+  installations retain it only while preserved stories still reference it.
+
+## Amendment — 2026-07-26
+
+The original decision treated all pre-user stories as disposable test data.
+Production-readiness requirements now prohibit migrations from deleting user
+stories. The ownership rule above supersedes that destructive migration choice.

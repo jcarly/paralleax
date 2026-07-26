@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
 import { DatabaseConnection } from '../database/database.connection';
-import { DatabaseMigrator } from '../database/database.migrator';
 
 export interface AuthUser {
   id: string;
@@ -11,13 +10,9 @@ export interface AuthUser {
 
 @Injectable()
 export class AuthRepository {
-  constructor(
-    private readonly database: DatabaseConnection,
-    private readonly migrator: DatabaseMigrator,
-  ) {}
+  constructor(private readonly database: DatabaseConnection) {}
 
   async findUserByEmail(email: string): Promise<AuthUser | undefined> {
-    await this.migrator.run();
     const result = await this.database.pool.query<{
       id: string;
       email: string;
@@ -36,7 +31,6 @@ export class AuthRepository {
   }
 
   async createUser(user: AuthUser): Promise<boolean> {
-    await this.migrator.run();
     const result = await this.database.pool.query(
       `INSERT INTO users (id, email, password_hash, created_at)
        VALUES ($1, $2, $3, $4)
@@ -53,7 +47,6 @@ export class AuthRepository {
     createdAt: string;
     expiresAt: string;
   }): Promise<void> {
-    await this.migrator.run();
     await this.database.pool.query(
       `INSERT INTO sessions (id, user_id, token_hash, created_at, expires_at)
        VALUES ($1, $2, $3, $4, $5)`,
@@ -62,7 +55,6 @@ export class AuthRepository {
   }
 
   async findUserBySessionHash(tokenHash: string): Promise<AuthUser | undefined> {
-    await this.migrator.run();
     const result = await this.database.pool.query<{
       id: string;
       email: string;
@@ -87,12 +79,10 @@ export class AuthRepository {
   }
 
   async deleteExpiredSessions(): Promise<void> {
-    await this.migrator.run();
     await this.database.pool.query('DELETE FROM sessions WHERE expires_at <= now()');
   }
 
   async deleteSession(tokenHash: string): Promise<void> {
-    await this.migrator.run();
     await this.database.pool.query('DELETE FROM sessions WHERE token_hash = $1', [tokenHash]);
   }
 }

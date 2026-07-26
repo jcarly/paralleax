@@ -1,17 +1,13 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import type { PoolClient } from 'pg';
 import { DatabaseConnection } from './database.connection';
 import { databaseMigrations } from './database.migrations';
 
 @Injectable()
-export class DatabaseMigrator implements OnModuleInit {
+export class DatabaseMigrator {
   private migrationRun?: Promise<void>;
 
   constructor(private readonly database: DatabaseConnection) {}
-
-  async onModuleInit() {
-    await this.run();
-  }
 
   run(): Promise<void> {
     this.migrationRun ??= this.runMigrations();

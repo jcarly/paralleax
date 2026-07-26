@@ -76,4 +76,12 @@ describe('DatabaseMigrator', () => {
 
     expect(mockConnect).toHaveBeenCalledTimes(1);
   });
+
+  it('keeps every migration free from wholesale story deletion', () => {
+    for (const migration of databaseMigrations) {
+      expect(migration.sql).not.toMatch(/\bDELETE\s+FROM\s+stories\b/i);
+      expect(migration.sql).not.toMatch(/\bTRUNCATE\s+(?:TABLE\s+)?stories\b/i);
+      expect(migration.sql).not.toMatch(/\bDROP\s+TABLE\s+(?:IF\s+EXISTS\s+)?stories\b/i);
+    }
+  });
 });

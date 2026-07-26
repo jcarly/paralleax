@@ -118,11 +118,14 @@ export const databaseMigrations: DatabaseMigration[] = [
   {
     id: '202607180005_normalize_story_model',
     sql: `
-      DELETE FROM stories;
+      ALTER TABLE stories
+      ADD COLUMN title text;
+
+      UPDATE stories
+      SET title = COALESCE(NULLIF(data->>'title', ''), 'Untitled');
 
       ALTER TABLE stories
-      DROP COLUMN data,
-      ADD COLUMN title text NOT NULL;
+      ALTER COLUMN title SET NOT NULL;
 
       CREATE TABLE interactions (
         id text PRIMARY KEY,
@@ -155,6 +158,91 @@ export const databaseMigrations: DatabaseMigration[] = [
         PRIMARY KEY (trigger_id, sort_order)
       );
 
+      INSERT INTO interactions
+        (id, story_id, title, body, position_x, position_y, sort_order)
+      SELECT
+        interaction->>'id',
+        story.id,
+        interaction->>'title',
+        interaction->>'body',
+        (interaction->'position'->>'x')::double precision,
+        (interaction->'position'->>'y')::double precision,
+        interaction_entry.ordinality - 1
+      FROM stories AS story
+      CROSS JOIN LATERAL jsonb_array_elements(story.data->'interactions')
+        WITH ORDINALITY AS interaction_entry(interaction, ordinality);
+
+      INSERT INTO triggers (id, output_interaction_id, sort_order)
+      SELECT
+        trigger->>'id',
+        interaction->>'id',
+        trigger_entry.ordinality - 1
+      FROM stories AS story
+      CROSS JOIN LATERAL jsonb_array_elements(story.data->'interactions')
+        AS interaction_entry(interaction)
+      CROSS JOIN LATERAL jsonb_array_elements(
+        CASE
+          WHEN jsonb_typeof(interaction->'triggers') = 'array'
+          THEN interaction->'triggers'
+          ELSE '[]'::jsonb
+        END
+      ) WITH ORDINALITY AS trigger_entry(trigger, ordinality)
+      WHERE jsonb_typeof(trigger->'id') = 'string';
+
+      INSERT INTO trigger_inputs
+        (trigger_id, input_interaction_id, sort_order)
+      SELECT
+        trigger->>'id',
+        input_entry.input_interaction_id,
+        input_entry.ordinality - 1
+      FROM stories AS story
+      CROSS JOIN LATERAL jsonb_array_elements(story.data->'interactions')
+        AS interaction_entry(interaction)
+      CROSS JOIN LATERAL jsonb_array_elements(
+        CASE
+          WHEN jsonb_typeof(interaction->'triggers') = 'array'
+          THEN interaction->'triggers'
+          ELSE '[]'::jsonb
+        END
+      ) AS trigger_entry(trigger)
+      CROSS JOIN LATERAL jsonb_array_elements_text(
+        CASE
+          WHEN jsonb_typeof(trigger->'inputInteractionIds') = 'array'
+          THEN trigger->'inputInteractionIds'
+          ELSE '[]'::jsonb
+        END
+      ) WITH ORDINALITY AS input_entry(input_interaction_id, ordinality)
+      ON CONFLICT (trigger_id, input_interaction_id) DO NOTHING;
+
+      INSERT INTO trigger_conditions
+        (trigger_id, sort_order, interaction_id, has_been_visited)
+      SELECT
+        trigger->>'id',
+        condition_entry.ordinality - 1,
+        condition->>'interactionId',
+        (condition->>'hasBeenVisited')::boolean
+      FROM stories AS story
+      CROSS JOIN LATERAL jsonb_array_elements(story.data->'interactions')
+        AS interaction_entry(interaction)
+      CROSS JOIN LATERAL jsonb_array_elements(
+        CASE
+          WHEN jsonb_typeof(interaction->'triggers') = 'array'
+          THEN interaction->'triggers'
+          ELSE '[]'::jsonb
+        END
+      ) AS trigger_entry(trigger)
+      CROSS JOIN LATERAL jsonb_array_elements(
+        CASE
+          WHEN jsonb_typeof(trigger->'conditions') = 'array'
+          THEN trigger->'conditions'
+          ELSE '[]'::jsonb
+        END
+      ) WITH ORDINALITY AS condition_entry(condition, ordinality)
+      WHERE jsonb_typeof(condition->'interactionId') = 'string'
+        AND jsonb_typeof(condition->'hasBeenVisited') = 'boolean';
+
+      ALTER TABLE stories DROP COLUMN data;
+
       CREATE INDEX interactions_story_id_idx ON interactions(story_id);
       CREATE INDEX triggers_output_interaction_id_idx ON triggers(output_interaction_id);
       CREATE INDEX trigger_inputs_input_interaction_id_idx
@@ -166,20 +254,42 @@ export const databaseMigrations: DatabaseMigration[] = [
   {
     id: '202607180006_harden_story_graph',
     sql: `
-      DELETE FROM stories;
-      DELETE FROM users WHERE id = 'migration-user';
-
       ALTER TABLE stories ADD COLUMN revision integer NOT NULL DEFAULT 1;
-      DROP TABLE trigger_conditions;
 
       ALTER TABLE interactions
       ADD CONSTRAINT interactions_story_id_id_unique UNIQUE (story_id, id);
 
       ALTER TABLE triggers
       DROP CONSTRAINT triggers_output_interaction_id_fkey,
-      ADD COLUMN story_id text NOT NULL,
+      ADD COLUMN story_id text,
       ADD COLUMN conditions jsonb NOT NULL DEFAULT '[]'::jsonb,
-      ADD CONSTRAINT triggers_conditions_array CHECK (jsonb_typeof(conditions) = 'array'),
+      ADD CONSTRAINT triggers_conditions_array CHECK (jsonb_typeof(conditions) = 'array');
+
+      UPDATE triggers AS trigger
+      SET story_id = interaction.story_id
+      FROM interactions AS interaction
+      WHERE interaction.id = trigger.output_interaction_id;
+
+      UPDATE triggers AS trigger
+      SET conditions = COALESCE(
+        (
+          SELECT jsonb_agg(
+            jsonb_build_object(
+              'interactionId', condition.interaction_id,
+              'hasBeenVisited', condition.has_been_visited
+            )
+            ORDER BY condition.sort_order
+          )
+          FROM trigger_conditions AS condition
+          WHERE condition.trigger_id = trigger.id
+        ),
+        '[]'::jsonb
+      );
+
+      DROP TABLE trigger_conditions;
+
+      ALTER TABLE triggers
+      ALTER COLUMN story_id SET NOT NULL,
       ADD CONSTRAINT triggers_story_id_id_unique UNIQUE (story_id, id),
       ADD CONSTRAINT triggers_output_interaction_fkey
         FOREIGN KEY (story_id, output_interaction_id)
@@ -188,7 +298,15 @@ export const databaseMigrations: DatabaseMigration[] = [
       ALTER TABLE trigger_inputs
       DROP CONSTRAINT trigger_inputs_trigger_id_fkey,
       DROP CONSTRAINT trigger_inputs_input_interaction_id_fkey,
-      ADD COLUMN story_id text NOT NULL,
+      ADD COLUMN story_id text;
+
+      UPDATE trigger_inputs AS input
+      SET story_id = trigger.story_id
+      FROM triggers AS trigger
+      WHERE trigger.id = input.trigger_id;
+
+      ALTER TABLE trigger_inputs
+      ALTER COLUMN story_id SET NOT NULL,
       ADD CONSTRAINT trigger_inputs_trigger_fkey
         FOREIGN KEY (story_id, trigger_id)
         REFERENCES triggers(story_id, id) ON DELETE CASCADE,
@@ -198,6 +316,12 @@ export const databaseMigrations: DatabaseMigration[] = [
 
       CREATE INDEX triggers_story_id_idx ON triggers(story_id);
       CREATE INDEX trigger_inputs_story_id_idx ON trigger_inputs(story_id);
+
+      DELETE FROM users AS legacy_owner
+      WHERE legacy_owner.id = 'migration-user'
+        AND NOT EXISTS (
+          SELECT 1 FROM stories WHERE creator_user_id = legacy_owner.id
+        );
     `,
   },
   {

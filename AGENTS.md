@@ -7,6 +7,7 @@ Read before any modification:
 - docs/architecture.md
 - docs/domain-model.md
 - docs/design-principles.md
+- docs/production-readiness.md
 
 ## Goal
 
@@ -28,6 +29,7 @@ Use these files as the persistent memory for project preferences and decisions:
 - `AGENTS.md`: collaboration rules and recurring project preferences for coding agents.
 - `docs/decisions/`: architecture decision records.
 - `docs/test-scenarios.md`: important regression scenarios that must stay covered.
+- `docs/production-readiness.md`: project-wide production gates and operational priorities.
 - `CHANGELOG.md`: notable implementation, test, and documentation changes.
 
 ## Working Agreements
@@ -36,6 +38,15 @@ Use these files as the persistent memory for project preferences and decisions:
 - Add or update tests for every behavior change.
 - Update documentation when implementation semantics change.
 - Update `CHANGELOG.md` for every user-visible, architectural, testing, or documentation change.
+- Treat `docs/production-readiness.md` as a project-wide constraint. Do not
+  describe or prepare a public production release while its applicable P0/P1
+  gates remain unresolved.
+- New migrations must preserve user data. Migration execution must move out of
+  request paths before production deployment work is considered complete.
+- When changing story listing or common mutations, avoid unnecessary full-graph
+  reads and writes; measure representative large-story behavior.
+- Production-facing work must include recovery, observability, security,
+  accessibility, and rollback concerns, not only the successful application path.
 - Before changing reader or trigger behavior, update or consult `docs/reader-semantics.md`, `docs/triggers.md`, and `docs/domain-invariants.md`.
 - Keep trigger logic aligned with the MVP model: a trigger belongs to exactly one output interaction and may have several input interactions.
 - Keep linked trigger editing on graph edges; keep interaction editing focused on interaction content and root trigger behavior.

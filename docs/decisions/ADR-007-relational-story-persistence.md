@@ -11,9 +11,8 @@ edits, object-level history, and later progressive loading. Persisting a whole
 story as one `jsonb` value makes every edit target the same row and provides weak
 database constraints for trigger relationships.
 
-Existing story data is test-only and does not require conversion. The migration
-may delete it rather than maintain two storage formats or a temporary dual-write
-path.
+Legacy JSON stories must be converted in the migration transaction. Existing
+data is never assumed to be disposable.
 
 ## Decision
 
@@ -33,8 +32,9 @@ path.
 
 ## Consequences
 
-- The normalization migrations deliberately remove existing test stories. Tests
-  create their own users and story fixtures; normal API startup creates no data.
+- The normalization migrations convert story metadata, interactions, triggers,
+  inputs, conditions, positions, timestamps, and ownership without deleting the
+  legacy story.
 - Interaction, trigger, and input records can be queried independently before
   permissions, history, and collaboration are added. Conditions evolve with their trigger.
 - The frontend and narrative engine continue to consume one assembled `Story`;
@@ -42,3 +42,10 @@ path.
 - Concurrent changes to the same trigger structure still require a future
   conflict/version policy; relational persistence only narrows the conflict
   boundary.
+
+## Amendment — 2026-07-26
+
+The original implementation deleted legacy JSON stories. The migration now
+performs a forward conversion and PostgreSQL integration tests verify that the
+graph, conditions, and owner survive. This amendment supersedes the earlier
+test-data exception.

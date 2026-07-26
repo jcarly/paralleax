@@ -13,7 +13,7 @@ describePostgres('StoriesRepository PostgreSQL integration', () => {
   const pool = new Pool({ connectionString });
   const database = { pool } as DatabaseConnection;
   const migrator = new DatabaseMigrator(database);
-  const repository = new StoriesRepository(database, migrator);
+  const repository = new StoriesRepository(database);
   const storyIds: string[] = [];
 
   beforeAll(async () => {
@@ -105,7 +105,7 @@ describePostgres('StoriesRepository PostgreSQL integration', () => {
       ownerId,
     );
 
-    const reloadedRepository = new StoriesRepository(database, migrator);
+    const reloadedRepository = new StoriesRepository(database);
     const reloaded = await reloadedRepository.find(story.id, ownerId);
     expect(reloaded?.interactions[0]).toMatchObject({
       title: 'Original title',

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { api } from './api';
+import { ApiError, api } from './api';
 
 function jsonResponse(body: unknown, init: Partial<Response> = {}) {
   return {
@@ -253,6 +253,30 @@ describe('api client', () => {
     });
 
     await expect(api.getStory('story-1')).rejects.toThrow('Bad request');
+  });
+
+  it('preserves stable API error metadata for support and recovery', async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse(
+        {
+          status: 409,
+          code: 'STORY_REVISION_CONFLICT',
+          message: 'The story changed elsewhere.',
+          requestId: 'request-1',
+        },
+        { ok: false, status: 409 },
+      ),
+    );
+
+    const error = await api.getStory('story-1').catch((reason: unknown) => reason);
+
+    expect(error).toBeInstanceOf(ApiError);
+    expect(error).toMatchObject({
+      message: 'The story changed elsewhere.',
+      status: 409,
+      code: 'STORY_REVISION_CONFLICT',
+      requestId: 'request-1',
+    });
   });
 
   it('signals an expired session for protected requests only', async () => {

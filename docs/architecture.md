@@ -92,9 +92,37 @@ replacement for initial saves and entity-level differences for mutations. The
 repository remains responsible for ownership-scoped reads and transaction
 orchestration, while the writer has no NestJS or connection-pool dependency.
 `DatabaseMigrator` owns schema evolution, and `DatabaseConnection` owns the
-shared PostgreSQL pool. The service does not depend on the physical relational
-shape, so storage and query projections can evolve without moving endpoint
-behavior or shared domain rules.
+shared PostgreSQL pool. Migrations run only through the explicit migration
+command before the API starts; repositories and user requests never initiate
+schema changes. The service does not depend on the physical relational shape,
+so storage and query projections can evolve without moving endpoint behavior or
+shared domain rules.
+
+`HealthModule` exposes an unauthenticated process liveness check at
+`GET /api/health` and a readiness check at `GET /api/ready`. Readiness requires
+PostgreSQL connectivity, the migration table, and the latest known migration.
+It does not apply missing migrations.
+
+Every HTTP request receives an `X-Request-Id`. A syntactically safe identifier
+from an upstream proxy is preserved; otherwise the API generates one. Completion
+logs contain only the request id, method, path without its query string, status,
+and duration. They never log request or response bodies.
+
+`ApiExceptionFilter` returns one stable error envelope:
+
+```json
+{
+  "status": 404,
+  "code": "NOT_FOUND",
+  "message": "Story not found",
+  "requestId": "..."
+}
+```
+
+Known operational errors may provide a more specific code. Unexpected errors
+return a generic message and never expose exception, stack, or SQL details.
+Production Nest logs use JSON output. The web client preserves status, code, and
+request id on `ApiError` for future support and recovery workflows.
 
 `AppConfigService` is the only runtime boundary for application environment
 values. It validates database and browser origins, port, verified SSL settings,
@@ -305,6 +333,16 @@ Schema changes must always go through migrations. Do not create, alter, or drop
 tables from repositories or services. Add a new migration to the migration list,
 make it forward-only, and keep any required data transformation in that migration
 so deployed data evolves predictably.
+
+Run migrations as a separate deployment step with `npm run migrate`. Production
+starts use `npm run migrate:prod -w @paralleax/api` against the already-built
+API bundle. A failed migration must prevent the API deployment from becoming
+ready.
+
+Historical JSON stories are converted into relational rows in place. The
+conversion preserves their disabled legacy owner until an administrator assigns
+them to a real account. Migration tests prohibit wholesale story deletion and
+exercise the complete legacy-to-current path against PostgreSQL.
 
 ## Styling
 

@@ -41,7 +41,9 @@ services:
   api:
     build: *dev-build
     image: paralleax-dev
-    command: npm run dev -w @paralleax/api
+    command: >
+      sh -c "npm run migrate -w @paralleax/api &&
+      npm run dev -w @paralleax/api"
     environment:
       <<: *proxy-environment
       CHOKIDAR_USEPOLLING: 'true'

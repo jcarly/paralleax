@@ -1,14 +1,9 @@
 import type { DatabaseConnection } from '../database/database.connection';
-import type { DatabaseMigrator } from '../database/database.migrator';
 import { AuthRepository, type AuthUser } from './auth.repository';
 
 describe('AuthRepository', () => {
   const query = jest.fn();
-  const migrator = { run: jest.fn().mockResolvedValue(undefined) } as unknown as DatabaseMigrator;
-  const repository = new AuthRepository(
-    { pool: { query } } as unknown as DatabaseConnection,
-    migrator,
-  );
+  const repository = new AuthRepository({ pool: { query } } as unknown as DatabaseConnection);
   const user: AuthUser = {
     id: 'user-1',
     email: 'author@example.com',

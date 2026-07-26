@@ -14,6 +14,7 @@ This folder records accepted architecture and product-shaping decisions.
 - [ADR-008 - Authored Locations and Runtime Location State](ADR-008-location-state.md)
 - [ADR-009 - Characters as Current-Interaction Context](ADR-009-character-presence.md)
 - [ADR-010 - Character Stats as Reconstructable Reader State](ADR-010-character-stats.md)
+- [ADR-011 - PostgreSQL Logical Recovery Baseline](ADR-011-postgresql-recovery.md)
 
 ## Maintenance
 

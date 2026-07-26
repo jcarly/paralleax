@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 import type { Story, TriggerCondition } from '@paralleax/shared';
 import type { PoolClient } from 'pg';
 import { DatabaseConnection } from '../database/database.connection';
-import { DatabaseMigrator } from '../database/database.migrator';
 import type { Queryable } from './persistence/stories.persistence.types';
 import {
   persistStoryDifference,
@@ -86,13 +85,9 @@ type TriggerInputRow = {
 
 @Injectable()
 export class StoriesRepository {
-  constructor(
-    private readonly database: DatabaseConnection,
-    private readonly migrator: DatabaseMigrator,
-  ) {}
+  constructor(private readonly database: DatabaseConnection) {}
 
   async list(ownerId: string): Promise<Story[]> {
-    await this.migrator.run();
     const result = await this.database.pool.query<StoryRow>(
       `SELECT id, revision, title, created_at, updated_at
        FROM stories
@@ -104,12 +99,10 @@ export class StoriesRepository {
   }
 
   async find(id: string, ownerId: string): Promise<Story | undefined> {
-    await this.migrator.run();
     return this.findWith(this.database.pool, id, ownerId);
   }
 
   async save(story: Story, ownerId: string): Promise<void> {
-    await this.migrator.run();
     await this.transaction(async (client) => {
       await client.query(
         `INSERT INTO stories (id, revision, title, created_at, updated_at, creator_user_id)
@@ -129,7 +122,6 @@ export class StoriesRepository {
     mutation: (story: Story) => Story | Promise<Story>,
     ownerId: string,
   ): Promise<Story | undefined> {
-    await this.migrator.run();
     return this.transaction(async (client) => {
       const lock = await client.query(
         'SELECT id FROM stories WHERE id = $1 AND creator_user_id = $2 FOR UPDATE',
@@ -145,7 +137,6 @@ export class StoriesRepository {
   }
 
   async delete(id: string, ownerId: string): Promise<boolean> {
-    await this.migrator.run();
     const result = await this.database.pool.query(
       'DELETE FROM stories WHERE id = $1 AND creator_user_id = $2',
       [id, ownerId],

@@ -6,9 +6,11 @@
     "dev": "nest start --watch --builder webpack",
     "build": "nest build --builder webpack",
     "start": "node dist/main.js",
+    "migrate": "nest start --builder webpack -- --migrate",
+    "migrate:prod": "node dist/main.js --migrate",
     "typecheck": "tsc --noEmit",
     "test": "jest --runInBand",
-    "test:postgres": "jest --runInBand stories.postgres.spec.ts",
+    "test:postgres": "jest --runInBand stories.postgres.spec.ts database.migrations.postgres.spec.ts",
     "coverage": "jest --runInBand --coverage"
   },
   "dependencies": {

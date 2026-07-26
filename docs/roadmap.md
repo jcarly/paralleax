@@ -22,6 +22,17 @@
 
 ## V0.2 - Persistence and Robustness
 
+- P0 data safety: migration execution is explicit and the historical JSON graph
+  upgrade is data-preserving with representative PostgreSQL coverage; next
+  establish automated backups and verify restoration.
+- P0 operations: health/readiness checks, structured production logs, request
+  IDs, and stable error envelopes are implemented; next add staging, error
+  reporting, metrics, and a production rollback path.
+- Add a lightweight `StorySummary` list projection without graph assembly.
+- Introduce targeted commands for common interaction, location, character, and
+  stat updates while retaining full-graph mutation for structural operations.
+- Replace avoidable quadratic order lookups and add a dedicated bulk persistence
+  path for imports, templates, and large demo stories.
 - Implemented foundation: `StoryEditor`, React Flow, and `StoryPlayer` are loaded
   as route chunks after measuring the previous monolithic production bundle.
 - Implemented foundation: trigger creation accepts its initial inputs and
@@ -81,8 +92,9 @@
 
 ## Deployment Readiness Backlog
 
-These items are intentionally deferred until public deployment work begins or
-the current implementation reaches the stated trigger:
+The complete gates live in [Production readiness](production-readiness.md).
+These items are required before the corresponding public deployment milestone,
+not optional cleanup after launch:
 
 - Describe response DTOs, cookie authentication, and `401`, `403`, `404`, and
   `409` responses in the existing OpenAPI document as the permission contract
@@ -101,6 +113,14 @@ the current implementation reaches the stated trigger:
 - Split story read projections from write persistence only when permissions,
   lightweight story lists, or progressive loading make the current repository
   materially harder to maintain.
+
+## Publication Readiness
+
+- Separate mutable drafts from immutable published story versions.
+- Add validation before publication and stable public reader URLs.
+- Add private, unlisted, and public visibility.
+- Separate author simulation tools from the public reader.
+- Define reporting, moderation, ownership, and content licensing rules.
 
 ## V0.4 - Advanced Narrative Model
 

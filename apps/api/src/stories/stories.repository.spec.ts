@@ -1,13 +1,11 @@
 import type { Story } from '@paralleax/shared';
 import type { DatabaseConnection } from '../database/database.connection';
-import type { DatabaseMigrator } from '../database/database.migrator';
 import { StoriesRepository } from './stories.repository';
 
 const mockQuery = jest.fn();
 const mockClientQuery = jest.fn();
 const mockRelease = jest.fn();
 const mockConnect = jest.fn();
-const mockRunMigrations = jest.fn();
 const ownerId = 'user-1';
 
 function story(id = 'story-1'): Story {
@@ -76,10 +74,9 @@ function storyRow(value = story()) {
 }
 
 function repository() {
-  return new StoriesRepository(
-    { pool: { query: mockQuery, connect: mockConnect } } as unknown as DatabaseConnection,
-    { run: mockRunMigrations } as unknown as DatabaseMigrator,
-  );
+  return new StoriesRepository({
+    pool: { query: mockQuery, connect: mockConnect },
+  } as unknown as DatabaseConnection);
 }
 
 function relationalRead(query: jest.Mock, saved = story()) {
@@ -231,17 +228,15 @@ describe('StoriesRepository', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockConnect.mockResolvedValue({ query: mockClientQuery, release: mockRelease });
-    mockRunMigrations.mockResolvedValue(undefined);
   });
 
-  it('assembles stories from relational rows after migrations are ready', async () => {
+  it('assembles stories from relational rows', async () => {
     const saved = story();
     relationalRead(mockQuery, saved);
 
     const listed = await repository().list(ownerId);
     listed[0].title = 'Mutated outside repository';
 
-    expect(mockRunMigrations).toHaveBeenCalledTimes(1);
     expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining('FROM stories'), [ownerId]);
     expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining('FROM interactions'), [
       [saved.id],

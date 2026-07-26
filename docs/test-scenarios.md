@@ -56,6 +56,23 @@ The character-stat vertical keeps these regressions covered:
 - Shared/API/Web: demo story generation creates roots, branches, multi-input triggers, and conditions.
 - API: database migrations create schema state and skip already-applied
   migrations.
+- PostgreSQL migration: a legacy JSON story keeps its title, interactions,
+  positions, triggers, inputs, conditions, timestamps, and disabled owner after
+  the complete relational upgrade.
+- Migration policy: no migration may delete, truncate, or drop the stories table
+  wholesale.
+- API: repositories never execute migrations as part of an authentication or
+  story request.
+- API: liveness succeeds without querying PostgreSQL; readiness succeeds only
+  when PostgreSQL is reachable and the latest schema migration is present.
+- API: every request receives a safe request id and completion logs exclude
+  query strings and request/response bodies.
+- API: validation and domain errors use a stable status/code/message/request-id
+  envelope; unexpected errors expose no internal message or stack.
+- Web: API errors preserve their status, machine code, and request id while
+  retaining the user-facing message.
+- Operations: the explicit migration command completes before the API process
+  starts in Docker Compose.
 - API configuration: valid local defaults are typed, while malformed database
   URLs, origins, ports, SSL flags, environments, and missing production endpoints fail fast.
 - API/database: trigger inputs, outputs, and condition references cannot cross
@@ -180,6 +197,18 @@ The character-stat vertical keeps these regressions covered:
 - Item definition inspector: local name and description edits persist on blur.
 - Web API client: reusable stat definition creation and updates keep their
   expected HTTP methods, paths, and JSON bodies.
+
+## Operations Regression Tests
+
+- A PostgreSQL backup is written through a partial path and accepted only after
+  `pg_restore --list` validates the archive.
+- Backup and restore commands pass credentials through PostgreSQL environment
+  variables rather than command arguments.
+- Restoration requires a separate restore URL and an exact target database
+  confirmation, and refuses PostgreSQL administrative databases.
+- PostgreSQL CI restores a custom-format archive into a temporary database and
+  compares migration, story, interaction, trigger, and user row counts with the
+  source database.
 
 ## Playwright Functional Tests
 

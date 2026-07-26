@@ -23,6 +23,19 @@ import type {
   UpdateStatDefinitionInput,
   UpdateTriggerInput,
 } from '@paralleax/shared';
+
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+    readonly code?: string,
+    readonly requestId?: string,
+  ) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`/api${path}`, {
     headers: { 'Content-Type': 'application/json' },
@@ -34,14 +47,22 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     }
     const body = await response.text();
     let message = body || `HTTP ${response.status}`;
+    let code: string | undefined;
+    let requestId: string | undefined;
     try {
-      const error = JSON.parse(body) as { message?: string | string[] };
+      const error = JSON.parse(body) as {
+        code?: string;
+        message?: string | string[];
+        requestId?: string;
+      };
       if (Array.isArray(error.message)) message = error.message.join(', ');
       else if (error.message) message = error.message;
+      code = error.code;
+      requestId = error.requestId;
     } catch {
       // Preserve plain-text and non-JSON error responses.
     }
-    throw new Error(message);
+    throw new ApiError(message, response.status, code, requestId);
   }
   return response.status === 204 ? (undefined as T) : (response.json() as Promise<T>);
 }

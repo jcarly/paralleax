@@ -2,6 +2,40 @@
 
 ## 2026-07-26
 
+- Added guarded PostgreSQL backup and restore commands with archive validation,
+  partial-file publication, credential-safe process invocation, explicit target
+  confirmation, and administrative-database protection.
+- Added a PostgreSQL CI recovery drill that restores into a temporary database
+  and compares migration and core-table row counts with the source.
+- Documented initial backup retention, RPO/RTO, migration recovery, and the
+  remaining provider scheduling, encryption, alerting, and restoration-drill
+  production gates.
+- Moved PostgreSQL migration execution out of repository request paths into
+  explicit development and production migration commands.
+- Replaced destructive legacy story normalization with an in-place relational
+  conversion that preserves graph content, trigger conditions, timestamps, and
+  ownership.
+- Added PostgreSQL legacy-upgrade coverage and a unit guard prohibiting wholesale
+  story deletion in future migrations.
+- Added public API liveness and PostgreSQL/schema readiness endpoints, with
+  readiness returning `503` without modifying the database when the schema is
+  unavailable or behind.
+- Added request correlation, body-free structured HTTP completion logs, JSON
+  production logging, and a stable API error envelope that hides unexpected
+  internal details.
+- Added typed web `ApiError` metadata for status, machine code, and request id.
+- Updated Docker Compose to complete migrations before starting the API.
+- Added a project-wide production-readiness baseline and made its data safety,
+  operations, performance, security, accessibility, publication, and
+  collaboration gates part of the persistent agent rules and roadmap.
+- Added an idempotent, adult-only SQL compatibility prototype inspired by Girl
+  Life's broad work, study, village, progression, and inventory systems.
+- Added a Girl Life gap analysis covering licensing and safety constraints plus
+  the domain, reader, editor, persistence, and import capabilities required for
+  a substantially complete mechanical conversion.
+- Extended the Girl Life import analysis with current production-readiness
+  constraints around migration safety, full-graph operations, bulk persistence,
+  observability, backup, restoration, and publication.
 - Added reusable story-level item definitions and separate character-owned item
   instances, including support for owning several copies of the same item.
 - Added item definition editing, character item assignment, relational
