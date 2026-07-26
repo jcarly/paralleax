@@ -1,4 +1,5 @@
-import type { Character } from '@paralleax/shared';
+import { useState } from 'react';
+import type { Character, StatDefinition } from '@paralleax/shared';
 
 export function CharacterInspector({
   character,
@@ -6,17 +7,30 @@ export function CharacterInspector({
   onPatch,
   onCreateStat,
   onPatchStat,
+  statDefinitions,
 }: {
   character: Character;
+  statDefinitions: StatDefinition[];
   onChange: (patch: Partial<Character>) => void;
   onPatch: (id: string, patch: Partial<Pick<Character, 'name' | 'description'>>) => Promise<void>;
-  onCreateStat: (characterId: string) => Promise<void>;
+  onCreateStat: (characterId: string, statDefinitionId: string) => Promise<void>;
   onPatchStat: (
     characterId: string,
     statId: string,
-    patch: { name?: string; initialValue?: number },
+    patch: { initialValue?: number },
   ) => Promise<void>;
 }) {
+  const availableDefinitions = statDefinitions.filter(
+    (definition) =>
+      !(character.stats ?? []).some(
+        ({ statDefinitionId }) => statDefinitionId === definition.id,
+      ),
+  );
+  const [selectedDefinitionId, setSelectedDefinitionId] = useState('');
+  const definitionId = availableDefinitions.some(({ id }) => id === selectedDefinitionId)
+    ? selectedDefinitionId
+    : (availableDefinitions[0]?.id ?? '');
+
   return (
     <div>
       <h3>Character</h3>
@@ -30,28 +44,41 @@ export function CharacterInspector({
       </label>
       <div className="inspector-section-header">
         <h3>Stats</h3>
-        <button className="secondary" type="button" onClick={() => void onCreateStat(character.id)}>
-          Add stat
-        </button>
       </div>
+      {availableDefinitions.length > 0 ? (
+        <div className="stat-assignment">
+          <select
+            aria-label="Stat to add"
+            value={definitionId}
+            onChange={(event) => setSelectedDefinitionId(event.target.value)}
+          >
+            {availableDefinitions.map((definition) => (
+              <option key={definition.id} value={definition.id}>
+                {definition.name}
+              </option>
+            ))}
+          </select>
+          <button
+            className="secondary"
+            type="button"
+            aria-label="Add stat"
+            onClick={() => void onCreateStat(character.id, definitionId)}
+          >
+            Add
+          </button>
+        </div>
+      ) : (
+        <p className="hint">
+          {statDefinitions.length === 0
+            ? 'Create a stat in the story context first.'
+            : 'All available stats are already assigned.'}
+        </p>
+      )}
       {(character.stats ?? []).map((stat) => (
         <div className="stat-row" key={stat.id}>
-          <label>
-            Stat name
-            <input
-              value={stat.name}
-              onChange={(event) =>
-                onChange({
-                  stats: (character.stats ?? []).map((item) =>
-                    item.id === stat.id ? { ...item, name: event.target.value } : item,
-                  ),
-                })
-              }
-              onBlur={(event) =>
-                void onPatchStat(character.id, stat.id, { name: event.target.value })
-              }
-            />
-          </label>
+          <span className="stat-name">
+            {statDefinitions.find(({ id }) => id === stat.statDefinitionId)?.name ?? 'Unknown stat'}
+          </span>
           <label>
             Initial value
             <input

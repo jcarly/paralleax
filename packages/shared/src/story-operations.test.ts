@@ -407,9 +407,10 @@ describe('character stats', () => {
         id: 'mira',
         name: 'Mira',
         description: '',
-        stats: [{ id: 'trust', name: 'Trust', initialValue: 2 }],
+        stats: [{ id: 'trust', statDefinitionId: 'trust-definition', initialValue: 2 }],
       },
     ];
+    story.statDefinitions = [{ id: 'trust-definition', name: 'Trust' }];
     story.interactions[0].statEffects = [{ statId: 'trust', operation: 'add', value: 3 }];
     story.interactions[1].statEffects = [{ statId: 'trust', operation: 'set', value: 10 }];
     story.interactions[1].triggers[0].conditions = [{ statId: 'trust', operator: 'gte', value: 5 }];

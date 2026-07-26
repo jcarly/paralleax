@@ -164,7 +164,7 @@ describe('api client', () => {
     });
 
     await api.createCharacterStat('story-1', 'character-1', {
-      name: 'Trust',
+      statDefinitionId: 'definition-1',
       initialValue: 2,
     });
     expect(fetchMock).toHaveBeenLastCalledWith(
@@ -172,7 +172,7 @@ describe('api client', () => {
       {
         headers: { 'Content-Type': 'application/json' },
         method: 'POST',
-        body: JSON.stringify({ name: 'Trust', initialValue: 2 }),
+        body: JSON.stringify({ statDefinitionId: 'definition-1', initialValue: 2 }),
       },
     );
 

@@ -16,6 +16,7 @@ import { CharacterInspector } from '../components/CharacterInspector';
 import { InteractionInspector } from '../components/InteractionInspector';
 import { InteractionNode } from '../components/InteractionNode';
 import { LocationInspector } from '../components/LocationInspector';
+import { StatDefinitionInspector } from '../components/StatDefinitionInspector';
 import { TriggerEdge } from '../components/TriggerEdge';
 import { TriggerInspector } from '../components/TriggerInspector';
 import { TriggerNode } from '../components/TriggerNode';
@@ -62,6 +63,8 @@ export function StoryEditor() {
     updateLocation,
     createCharacter,
     updateCharacter,
+    createStatDefinition,
+    updateStatDefinition,
     createCharacterStat,
     updateCharacterStat,
   } = useStoryEditorPersistence(storyId);
@@ -69,7 +72,13 @@ export function StoryEditor() {
   const [selectedTrigger, setSelectedTrigger] = useState<SelectedTrigger>();
   const [selectedLocationId, setSelectedLocationId] = useState<string>();
   const [selectedCharacterId, setSelectedCharacterId] = useState<string>();
+  const [selectedStatDefinitionId, setSelectedStatDefinitionId] = useState<string>();
   const [isLocationPanelOpen, setIsLocationPanelOpen] = useState(true);
+  const [openContextSections, setOpenContextSections] = useState({
+    locations: true,
+    characters: true,
+    stats: true,
+  });
   const [isConnecting, setIsConnecting] = useState(false);
   const [pendingConnection, setPendingConnection] = useState<Connection>();
   const [nodes, setNodes, onNodesChange] = useNodesState<StoryFlowNode>([]);
@@ -83,8 +92,15 @@ export function StoryEditor() {
   const selectedTriggerTarget = findSelectedTrigger(story, selectedTrigger);
   const selectedLocation = story?.locations?.find(({ id }) => id === selectedLocationId);
   const selectedCharacter = story?.characters?.find(({ id }) => id === selectedCharacterId);
+  const selectedStatDefinition = story?.statDefinitions?.find(
+    ({ id }) => id === selectedStatDefinitionId,
+  );
   const hasInspectorSelection = Boolean(
-    selected || selectedTriggerTarget || selectedLocation || selectedCharacter,
+    selected ||
+      selectedTriggerTarget ||
+      selectedLocation ||
+      selectedCharacter ||
+      selectedStatDefinition,
   );
 
   const closeInspector = useCallback(() => {
@@ -92,6 +108,7 @@ export function StoryEditor() {
     setSelectedTrigger(undefined);
     setSelectedLocationId(undefined);
     setSelectedCharacterId(undefined);
+    setSelectedStatDefinitionId(undefined);
   }, []);
 
   const storyNodes = useMemo(
@@ -257,6 +274,30 @@ export function StoryEditor() {
     setIsLocationPanelOpen(true);
   }
 
+  async function addStatDefinition() {
+    const statDefinitionId = await createStatDefinition();
+    if (!statDefinitionId) return;
+    closeInspector();
+    setSelectedStatDefinitionId(statDefinitionId);
+    setIsLocationPanelOpen(true);
+    setOpenContextSections((sections) => ({ ...sections, stats: true }));
+  }
+
+  function updateLocalStatDefinition(
+    nextDefinition: NonNullable<typeof selectedStatDefinition>,
+  ) {
+    setStory({
+      ...story!,
+      statDefinitions: (story?.statDefinitions ?? []).map((definition) =>
+        definition.id === nextDefinition.id ? nextDefinition : definition,
+      ),
+    });
+  }
+
+  function toggleContextSection(section: keyof typeof openContextSections) {
+    setOpenContextSections((sections) => ({ ...sections, [section]: !sections[section] }));
+  }
+
   function updateLocalCharacter(patch: Partial<NonNullable<typeof selectedCharacter>>) {
     if (!story || !selectedCharacter) return;
     setStory({
@@ -327,14 +368,6 @@ export function StoryEditor() {
           <button disabled={!selected} onClick={() => void createSelectedChild()}>
             Add child
           </button>
-          <button
-            className="secondary"
-            type="button"
-            aria-expanded={isLocationPanelOpen}
-            onClick={() => setIsLocationPanelOpen((open) => !open)}
-          >
-            Story context
-          </button>
           <Link className="button secondary" to={simulationPath}>
             {selected ? 'Test from current interaction' : 'Test'}
           </Link>
@@ -349,19 +382,39 @@ export function StoryEditor() {
         </div>
       ) : null}
       <div
-        className={`editor-layout ${isLocationPanelOpen ? 'with-navigation' : ''} ${
+        className={`editor-layout with-navigation ${isLocationPanelOpen ? '' : 'with-navigation-collapsed'} ${
           hasInspectorSelection ? 'with-inspector' : ''
         }`}
       >
-        {isLocationPanelOpen ? (
-          <nav className="location-panel" aria-label="Story context">
+        <nav
+          className={`location-panel ${isLocationPanelOpen ? '' : 'collapsed'}`}
+          aria-label="Story context"
+        >
+          <button
+            className="ghost navigation-toggle"
+            type="button"
+            aria-label={isLocationPanelOpen ? 'Collapse story context' : 'Expand story context'}
+            aria-expanded={isLocationPanelOpen}
+            onClick={() => setIsLocationPanelOpen((open) => !open)}
+          >
+            {isLocationPanelOpen ? '‹' : '›'}
+          </button>
+          {isLocationPanelOpen ? (
+            <div className="location-panel-content">
             <div className="location-panel-header">
-              <h2>Locations</h2>
-              <button type="button" onClick={() => void addLocation()}>
-                Add location
+              <button
+                className="ghost context-heading"
+                type="button"
+                aria-expanded={openContextSections.locations}
+                onClick={() => toggleContextSection('locations')}
+              >
+                <span>{openContextSections.locations ? '▾' : '▸'}</span> Locations
+              </button>
+              <button aria-label="Add location" type="button" onClick={() => void addLocation()}>
+                Add
               </button>
             </div>
-            {(story.locations?.length ?? 0) === 0 ? (
+            {!openContextSections.locations ? null : (story.locations?.length ?? 0) === 0 ? (
               <p className="hint">No locations yet.</p>
             ) : (
               <ul>
@@ -382,12 +435,19 @@ export function StoryEditor() {
               </ul>
             )}
             <div className="location-panel-header context-section">
-              <h2>Characters</h2>
-              <button type="button" onClick={() => void addCharacter()}>
-                Add character
+              <button
+                className="ghost context-heading"
+                type="button"
+                aria-expanded={openContextSections.characters}
+                onClick={() => toggleContextSection('characters')}
+              >
+                <span>{openContextSections.characters ? '▾' : '▸'}</span> Characters
+              </button>
+              <button aria-label="Add character" type="button" onClick={() => void addCharacter()}>
+                Add
               </button>
             </div>
-            {(story.characters?.length ?? 0) === 0 ? (
+            {!openContextSections.characters ? null : (story.characters?.length ?? 0) === 0 ? (
               <p className="hint">No characters yet.</p>
             ) : (
               <ul>
@@ -407,8 +467,42 @@ export function StoryEditor() {
                 ))}
               </ul>
             )}
-          </nav>
-        ) : null}
+            <div className="location-panel-header context-section">
+              <button
+                className="ghost context-heading"
+                type="button"
+                aria-expanded={openContextSections.stats}
+                onClick={() => toggleContextSection('stats')}
+              >
+                <span>{openContextSections.stats ? '▾' : '▸'}</span> Stats
+              </button>
+              <button aria-label="Add stat definition" type="button" onClick={() => void addStatDefinition()}>
+                Add
+              </button>
+            </div>
+            {!openContextSections.stats ? null : (story.statDefinitions?.length ?? 0) === 0 ? (
+              <p className="hint">No stats yet.</p>
+            ) : (
+              <ul>
+                {(story.statDefinitions ?? []).map((definition) => (
+                  <li key={definition.id}>
+                    <button
+                      type="button"
+                      className={definition.id === selectedStatDefinitionId ? 'selected' : 'ghost'}
+                      onClick={() => {
+                        closeInspector();
+                        setSelectedStatDefinitionId(definition.id);
+                      }}
+                    >
+                      {definition.name}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            </div>
+          ) : null}
+        </nav>
         <section className="canvas">
           <button className="canvas-action" onClick={() => void createRoot()}>
             Add root
@@ -476,10 +570,17 @@ export function StoryEditor() {
             ) : selectedCharacter ? (
               <CharacterInspector
                 character={selectedCharacter}
+                statDefinitions={story.statDefinitions ?? []}
                 onChange={updateLocalCharacter}
                 onPatch={updateCharacter}
                 onCreateStat={createCharacterStat}
                 onPatchStat={updateCharacterStat}
+              />
+            ) : selectedStatDefinition ? (
+              <StatDefinitionInspector
+                statDefinition={selectedStatDefinition}
+                onChange={updateLocalStatDefinition}
+                onPatch={updateStatDefinition}
               />
             ) : null}
           </aside>

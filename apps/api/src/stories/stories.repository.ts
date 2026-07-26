@@ -34,6 +34,12 @@ type LocationRow = {
   sort_order: number;
 };
 type CharacterRow = LocationRow;
+type StatDefinitionRow = {
+  id: string;
+  story_id: string;
+  name: string;
+  sort_order: number;
+};
 type InteractionCharacterRow = {
   story_id: string;
   interaction_id: string;
@@ -44,7 +50,7 @@ type CharacterStatRow = {
   id: string;
   story_id: string;
   character_id: string;
-  name: string;
+  stat_definition_id: string;
   initial_value: number;
   sort_order: number;
 };
@@ -170,6 +176,12 @@ export class StoriesRepository {
          ORDER BY story_id, sort_order`,
       [storyIds],
     );
+    const statDefinitions = await queryable.query<StatDefinitionRow>(
+      `SELECT id, story_id, name, sort_order
+         FROM stat_definitions WHERE story_id = ANY($1::text[])
+         ORDER BY story_id, sort_order`,
+      [storyIds],
+    );
     const interactionCharacters = await queryable.query<InteractionCharacterRow>(
       `SELECT story_id, interaction_id, character_id, sort_order
          FROM interaction_characters WHERE story_id = ANY($1::text[])
@@ -177,7 +189,7 @@ export class StoriesRepository {
       [storyIds],
     );
     const characterStats = await queryable.query<CharacterStatRow>(
-      `SELECT id, story_id, character_id, name, initial_value, sort_order
+      `SELECT id, story_id, character_id, stat_definition_id, initial_value, sort_order
          FROM character_stats WHERE story_id = ANY($1::text[])
          ORDER BY story_id, character_id, sort_order`,
       [storyIds],
@@ -215,6 +227,7 @@ export class StoriesRepository {
     const interactionsByStory = groupBy(interactions.rows, ({ story_id }) => story_id);
     const locationsByStory = groupBy(locations.rows, ({ story_id }) => story_id);
     const charactersByStory = groupBy(characters.rows, ({ story_id }) => story_id);
+    const statDefinitionsByStory = groupBy(statDefinitions.rows, ({ story_id }) => story_id);
     const charactersByInteraction = groupBy(
       interactionCharacters.rows,
       ({ interaction_id }) => interaction_id,
@@ -239,9 +252,13 @@ export class StoriesRepository {
         description: character.description,
         stats: (statsByCharacter.get(character.id) ?? []).map((stat) => ({
           id: stat.id,
-          name: stat.name,
+          statDefinitionId: stat.stat_definition_id,
           initialValue: stat.initial_value,
         })),
+      })),
+      statDefinitions: (statDefinitionsByStory.get(row.id) ?? []).map((definition) => ({
+        id: definition.id,
+        name: definition.name,
       })),
       interactions: (interactionsByStory.get(row.id) ?? []).map((interaction) => ({
         id: interaction.id,

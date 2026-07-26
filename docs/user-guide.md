@@ -88,7 +88,7 @@ conditions and trigger-level actions.
 In the trigger inspector:
 
 1. Select the action for the condition type you need.
-2. Choose the interaction, location, character, or character stat to check.
+2. Choose the interaction, location, character, or assigned character stat to check.
 3. Choose its operator and, for a stat, the numeric comparison value.
 
 Conditions can check reading history, current location, and characters present
@@ -97,10 +97,14 @@ timing are not implemented.
 
 ## Character Stats
 
-Open a character from **Story context**, then use **Add stat** to define a named
-numeric value and its initial value. Select an interaction and use **Stat
-effects** to add to that value or set it directly when the interaction is
-selected.
+Create a reusable definition from the collapsible **Stats** list in **Story
+context**. Then open a character, choose that definition, and use **Add stat**
+to assign it with an initial value. The same definition can be assigned to
+several characters, with an independent value for each.
+
+The **Locations**, **Characters**, and **Stats** lists can be collapsed
+independently. Collapse or expand the whole story context menu from the control
+in its top-right corner.
 
 Select a trigger marker and use **Add stat condition** to compare the current
 value with a threshold. The reader applies an interaction's effects before it

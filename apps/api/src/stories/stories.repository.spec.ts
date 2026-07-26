@@ -23,12 +23,13 @@ function story(id = 'story-1'): Story {
 function graphStory(): Story {
   const saved = story();
   saved.locations = [{ id: 'location-1', name: 'Harbor', description: 'A quiet harbor.' }];
+  saved.statDefinitions = [{ id: 'definition-1', name: 'Trust' }];
   saved.characters = [
     {
       id: 'character-1',
       name: 'Mira',
       description: 'An investigator.',
-      stats: [{ id: 'stat-1', name: 'Trust', initialValue: 2 }],
+      stats: [{ id: 'stat-1', statDefinitionId: 'definition-1', initialValue: 2 }],
     },
   ];
   saved.interactions = [
@@ -138,11 +139,21 @@ function relationalRead(query: jest.Mock, saved = story()) {
             id: stat.id,
             story_id: saved.id,
             character_id: character.id,
-            name: stat.name,
+            stat_definition_id: stat.statDefinitionId,
             initial_value: stat.initialValue,
             sort_order: index,
           })),
         ),
+      });
+    }
+    if (sql.includes('FROM stat_definitions')) {
+      return Promise.resolve({
+        rows: (saved.statDefinitions ?? []).map((definition, index) => ({
+          id: definition.id,
+          story_id: saved.id,
+          name: definition.name,
+          sort_order: index,
+        })),
       });
     }
     if (sql.includes('FROM characters')) {
@@ -283,8 +294,12 @@ describe('StoriesRepository', () => {
       [saved.id, 'interaction-1', 'character-1', 0],
     );
     expect(mockClientQuery).toHaveBeenCalledWith(
+      expect.stringContaining('INSERT INTO stat_definitions'),
+      ['definition-1', saved.id, 'Trust', 0],
+    );
+    expect(mockClientQuery).toHaveBeenCalledWith(
       expect.stringContaining('INSERT INTO character_stats'),
-      ['stat-1', saved.id, 'character-1', 'Trust', 2, 0],
+      ['stat-1', saved.id, 'character-1', 'definition-1', 2, 0],
     );
     expect(mockClientQuery).toHaveBeenCalledWith(
       expect.stringContaining('INSERT INTO interaction_stat_effects'),

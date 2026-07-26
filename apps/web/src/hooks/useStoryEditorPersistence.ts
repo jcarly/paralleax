@@ -14,6 +14,7 @@ import {
   type InteractionContentPatch,
   type InteractionMutationResult,
   type LocationMutationResult,
+  type StatDefinitionMutationResult,
   type Position,
   type Story,
   type TriggerCondition,
@@ -402,9 +403,12 @@ export function useStoryEditorPersistence(storyId: string) {
     );
   }
 
-  async function createCharacterStat(characterId: string) {
+  async function createCharacterStat(characterId: string, statDefinitionId: string) {
     const result = await trackSave(() =>
-      api.createCharacterStat(storyId, characterId, { name: 'New stat', initialValue: 0 }),
+      api.createCharacterStat(storyId, characterId, {
+        statDefinitionId,
+        initialValue: 0,
+      }),
     );
     if (!result) return;
     setStory((current) => (current ? applyCharacterStatResult(current, result) : current));
@@ -413,7 +417,7 @@ export function useStoryEditorPersistence(storyId: string) {
   async function updateCharacterStat(
     characterId: string,
     statId: string,
-    patch: Partial<Pick<CharacterStatMutationResult['stat'], 'name' | 'initialValue'>>,
+    patch: Partial<Pick<CharacterStatMutationResult['stat'], 'initialValue'>>,
   ) {
     setStory((current) =>
       current ? updateLocalCharacterStat(current, characterId, statId, patch) : current,
@@ -430,6 +434,49 @@ export function useStoryEditorPersistence(storyId: string) {
           )
         : current,
     );
+  }
+
+  async function createStatDefinition() {
+    const result = await trackSave(() =>
+      api.createStatDefinition(storyId, { name: 'New stat' }),
+    );
+    if (!result) return undefined;
+    setStory((current) =>
+      current
+        ? applyMutationMetadata(
+            {
+              ...current,
+              statDefinitions: [
+                ...(current.statDefinitions ?? []),
+                result.statDefinition,
+              ],
+            },
+            result,
+          )
+        : current,
+    );
+    return result.statDefinition.id;
+  }
+
+  async function updateStatDefinition(
+    statDefinitionId: string,
+    patch: Partial<StatDefinitionMutationResult['statDefinition']>,
+  ) {
+    setStory((current) =>
+      current
+        ? {
+            ...current,
+            statDefinitions: (current.statDefinitions ?? []).map((definition) =>
+              definition.id === statDefinitionId ? { ...definition, ...patch } : definition,
+            ),
+          }
+        : current,
+    );
+    const result = await trackSave(() =>
+      api.updateStatDefinition(storyId, statDefinitionId, patch),
+    );
+    if (!result) return;
+    setStory((current) => (current ? applyMutationMetadata(current, result) : current));
   }
 
   return {
@@ -456,6 +503,8 @@ export function useStoryEditorPersistence(storyId: string) {
     updateLocation,
     createCharacter,
     updateCharacter,
+    createStatDefinition,
+    updateStatDefinition,
     createCharacterStat,
     updateCharacterStat,
   };
@@ -543,7 +592,7 @@ function updateLocalCharacterStat(
   story: Story,
   characterId: string,
   statId: string,
-  patch: Partial<Pick<CharacterStatMutationResult['stat'], 'name' | 'initialValue'>>,
+  patch: Partial<Pick<CharacterStatMutationResult['stat'], 'initialValue'>>,
 ) {
   return {
     ...story,

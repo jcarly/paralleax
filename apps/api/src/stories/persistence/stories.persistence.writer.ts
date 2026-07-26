@@ -1,12 +1,23 @@
-import type { Character, Interaction, Location, Story, Trigger } from '@paralleax/shared';
+import type {
+  Character,
+  Interaction,
+  Location,
+  StatDefinition,
+  Story,
+  Trigger,
+} from '@paralleax/shared';
 import type { Queryable } from './stories.persistence.types';
 
 export async function replaceStoryGraph(client: Queryable, story: Story) {
   await client.query('DELETE FROM interactions WHERE story_id = $1', [story.id]);
   await client.query('DELETE FROM characters WHERE story_id = $1', [story.id]);
+  await client.query('DELETE FROM stat_definitions WHERE story_id = $1', [story.id]);
   await client.query('DELETE FROM locations WHERE story_id = $1', [story.id]);
   for (const [locationIndex, location] of (story.locations ?? []).entries()) {
     await insertLocation(client, story.id, location, locationIndex);
+  }
+  for (const [index, definition] of (story.statDefinitions ?? []).entries()) {
+    await insertStatDefinition(client, story.id, definition, index);
   }
   for (const [characterIndex, character] of (story.characters ?? []).entries()) {
     await insertCharacter(client, story.id, character, characterIndex);
@@ -37,6 +48,7 @@ export async function persistStoryDifference(client: Queryable, before: Story, a
   }
 
   await persistLocationDifference(client, before, after);
+  await persistStatDefinitionDifference(client, before, after);
   await persistCharacterDifference(client, before, after);
 
   const beforeInteractions = new Map(before.interactions.map((item) => [item.id, item]));
@@ -260,10 +272,60 @@ async function insertCharacterStat(
 ) {
   await client.query(
     `INSERT INTO character_stats
-     (id, story_id, character_id, name, initial_value, sort_order)
+     (id, story_id, character_id, stat_definition_id, initial_value, sort_order)
      VALUES ($1, $2, $3, $4, $5, $6)`,
-    [stat.id, storyId, characterId, stat.name, stat.initialValue, sortOrder],
+    [stat.id, storyId, characterId, stat.statDefinitionId, stat.initialValue, sortOrder],
   );
+}
+
+async function insertStatDefinition(
+  client: Queryable,
+  storyId: string,
+  definition: StatDefinition,
+  sortOrder: number,
+) {
+  await client.query(
+    `INSERT INTO stat_definitions (id, story_id, name, sort_order)
+     VALUES ($1, $2, $3, $4)`,
+    [definition.id, storyId, definition.name, sortOrder],
+  );
+}
+
+async function persistStatDefinitionDifference(client: Queryable, before: Story, after: Story) {
+  const beforeDefinitions = new Map(
+    (before.statDefinitions ?? []).map((definition) => [definition.id, definition]),
+  );
+  const afterDefinitions = new Map(
+    (after.statDefinitions ?? []).map((definition) => [definition.id, definition]),
+  );
+  for (const definition of before.statDefinitions ?? []) {
+    if (!afterDefinitions.has(definition.id)) {
+      await client.query('DELETE FROM stat_definitions WHERE id = $1 AND story_id = $2', [
+        definition.id,
+        after.id,
+      ]);
+    }
+  }
+  for (const [index, definition] of (after.statDefinitions ?? []).entries()) {
+    const previous = beforeDefinitions.get(definition.id);
+    if (!previous) {
+      await insertStatDefinition(client, after.id, definition, index);
+      continue;
+    }
+    const changes: string[] = [];
+    const values: unknown[] = [definition.id];
+    addChange(changes, values, 'name', previous.name, definition.name);
+    addChange(
+      changes,
+      values,
+      'sort_order',
+      (before.statDefinitions ?? []).findIndex(({ id }) => id === definition.id),
+      index,
+    );
+    if (changes.length > 0) {
+      await client.query(`UPDATE stat_definitions SET ${changes.join(', ')} WHERE id = $1`, values);
+    }
+  }
 }
 
 async function persistCharacterDifference(client: Queryable, before: Story, after: Story) {
@@ -332,7 +394,13 @@ async function persistStatDifference(
     }
     const changes: string[] = [];
     const values: unknown[] = [stat.id];
-    addChange(changes, values, 'name', previous.name, stat.name);
+    addChange(
+      changes,
+      values,
+      'stat_definition_id',
+      previous.statDefinitionId,
+      stat.statDefinitionId,
+    );
     addChange(changes, values, 'initial_value', previous.initialValue, stat.initialValue);
     addChange(
       changes,

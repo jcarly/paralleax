@@ -130,7 +130,7 @@ describe('StoryPlayer', () => {
         id: 'mira',
         name: 'Mira',
         description: '',
-        stats: [{ id: 'trust', name: 'Trust', initialValue: 1 }],
+        stats: [{ id: 'trust', statDefinitionId: 'trust-definition', initialValue: 1 }],
       },
     ];
     statStory.interactions[0].statEffects = [{ statId: 'trust', operation: 'add', value: 2 }];

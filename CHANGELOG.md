@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-07-26
+
+- Added story-level reusable stat definitions that can be assigned to multiple
+  characters with independent initial values.
+- Added collapsible Locations, Characters, and Stats lists to the editor context
+  menu.
+- Moved the story context collapse control into the top-right of the left menu
+  and removed it from the editor toolbar.
+- Added a forward-only migration from character-owned stat names to reusable
+  stat definitions.
+
 ## 2026-07-24
 
 - Added character-owned numeric stats with relational persistence and

@@ -172,18 +172,23 @@ export class UpdateCharacterDto {
   description?: string;
 }
 export class CreateCharacterStatDto {
-  @IsString() @IsNotEmpty() @MaxLength(200) name!: string;
+  @IsString() @IsNotEmpty() statDefinitionId!: string;
   @IsNumber() initialValue!: number;
 }
 export class UpdateCharacterStatDto {
+  @ValidateIf((_, value) => value !== undefined)
+  @IsNumber()
+  initialValue?: number;
+}
+export class CreateStatDefinitionDto {
+  @IsString() @IsNotEmpty() @MaxLength(200) name!: string;
+}
+export class UpdateStatDefinitionDto {
   @ValidateIf((_, value) => value !== undefined)
   @IsString()
   @IsNotEmpty()
   @MaxLength(200)
   name?: string;
-  @ValidateIf((_, value) => value !== undefined)
-  @IsNumber()
-  initialValue?: number;
 }
 export class CreateTriggerDto {
   @ValidateIf((_, value) => value !== undefined)

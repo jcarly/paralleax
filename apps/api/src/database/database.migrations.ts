@@ -290,4 +290,34 @@ export const databaseMigrations: DatabaseMigration[] = [
       CREATE INDEX interaction_stat_effects_stat_id_idx ON interaction_stat_effects(stat_id);
     `,
   },
+  {
+    id: '202607260010_reusable_stat_definitions',
+    sql: `
+      CREATE TABLE stat_definitions (
+        id text PRIMARY KEY,
+        story_id text NOT NULL REFERENCES stories(id) ON DELETE CASCADE,
+        name text NOT NULL,
+        sort_order integer NOT NULL,
+        CONSTRAINT stat_definitions_story_id_id_unique UNIQUE (story_id, id)
+      );
+
+      INSERT INTO stat_definitions (id, story_id, name, sort_order)
+      SELECT id, story_id, name, sort_order FROM character_stats;
+
+      ALTER TABLE character_stats
+      ADD COLUMN stat_definition_id text;
+
+      UPDATE character_stats SET stat_definition_id = id;
+
+      ALTER TABLE character_stats
+      ALTER COLUMN stat_definition_id SET NOT NULL,
+      DROP COLUMN name,
+      ADD CONSTRAINT character_stats_definition_fkey
+        FOREIGN KEY (story_id, stat_definition_id)
+        REFERENCES stat_definitions(story_id, id) ON DELETE CASCADE;
+
+      CREATE INDEX stat_definitions_story_id_idx ON stat_definitions(story_id);
+      CREATE INDEX character_stats_definition_id_idx ON character_stats(stat_definition_id);
+    `,
+  },
 ];

@@ -7,6 +7,7 @@ import type {
   CharacterStatMutationResult,
   InteractionMutationResult,
   LocationMutationResult,
+  StatDefinitionMutationResult,
   Story,
   TriggerMutationResult,
 } from '@paralleax/shared';
@@ -484,13 +485,18 @@ describe('Stories API', () => {
       .send({ name: 'Mira' })
       .expect(201);
     const character = (characterResponse.body as CharacterMutationResult).character;
+    const definitionResponse = await request(httpServer)
+      .post(`/api/stories/${story.id}/stat-definitions`)
+      .send({ name: 'Trust' })
+      .expect(201);
+    const definition = (definitionResponse.body as StatDefinitionMutationResult).statDefinition;
 
     const created = await request(httpServer)
       .post(`/api/stories/${story.id}/characters/${character.id}/stats`)
-      .send({ name: 'Trust', initialValue: 2 })
+      .send({ statDefinitionId: definition.id, initialValue: 2 })
       .expect(201);
     const stat = (created.body as CharacterStatMutationResult).stat;
-    expect(stat).toMatchObject({ name: 'Trust', initialValue: 2 });
+    expect(stat).toMatchObject({ statDefinitionId: definition.id, initialValue: 2 });
 
     const updated = await request(httpServer)
       .patch(`/api/stories/${story.id}/characters/${character.id}/stats/${stat.id}`)
@@ -529,9 +535,16 @@ describe('Stories API', () => {
       .send({ name: 'Local character' })
       .expect(201);
     const localCharacter = (localCharacterResponse.body as CharacterMutationResult).character;
+    const localDefinitionResponse = await request(httpServer)
+      .post(`/api/stories/${first.id}/stat-definitions`)
+      .send({ name: 'Trust' })
+      .expect(201);
+    const localDefinition = (
+      localDefinitionResponse.body as StatDefinitionMutationResult
+    ).statDefinition;
     const localStatResponse = await request(httpServer)
       .post(`/api/stories/${first.id}/characters/${localCharacter.id}/stats`)
-      .send({ name: 'Trust', initialValue: 0 })
+      .send({ statDefinitionId: localDefinition.id, initialValue: 0 })
       .expect(201);
     const localStat = (localStatResponse.body as CharacterStatMutationResult).stat;
     const second = await createStory('Second story');
@@ -540,9 +553,14 @@ describe('Stories API', () => {
       .send({ name: 'Mira' })
       .expect(201);
     const character = (characterResponse.body as CharacterMutationResult).character;
+    const definitionResponse = await request(httpServer)
+      .post(`/api/stories/${second.id}/stat-definitions`)
+      .send({ name: 'Trust' })
+      .expect(201);
+    const definition = (definitionResponse.body as StatDefinitionMutationResult).statDefinition;
     const statResponse = await request(httpServer)
       .post(`/api/stories/${second.id}/characters/${character.id}/stats`)
-      .send({ name: 'Trust', initialValue: 0 })
+      .send({ statDefinitionId: definition.id, initialValue: 0 })
       .expect(201);
     const stat = (statResponse.body as CharacterStatMutationResult).stat;
 

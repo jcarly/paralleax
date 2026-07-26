@@ -289,7 +289,8 @@ The API accesses storage through `StoriesRepository` instead of coupling
 while shared story operations own trigger cleanup, normalization, reader rules,
 and merge semantics.
 
-The current PostgreSQL schema stores Story, Location, Character, Character Stat,
+The current PostgreSQL schema stores Story, Location, Character, reusable Stat
+Definition, Character Stat Assignment,
 Interaction, Interaction Stat Effect, Trigger, and trigger input state in
 relational tables. Interaction-to-location, interaction-character, and stat
 effect references use same-story composite foreign keys. Ordered typed trigger conditions are

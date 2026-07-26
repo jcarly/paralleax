@@ -34,8 +34,12 @@ details. They should stay covered by tests as the editor grows.
   characters from that story without duplicates.
 - Character presence is scoped to the current interaction and does not carry
   over to the next interaction.
-- A character stat belongs to exactly one character and story, has a finite
-  numeric initial value, and may only be referenced inside that story.
+- A stat definition belongs to exactly one story and can be assigned to several
+  characters.
+- A character stat assignment belongs to exactly one character, references one
+  same-story stat definition, has a finite numeric initial value, and may only
+  be referenced inside that story.
+- A character cannot receive the same stat definition twice.
 - An interaction has at most one effect per stat. An effect either adds a finite
   value to the current value or replaces it.
 - Stat effects apply when their interaction is selected, before the next choices

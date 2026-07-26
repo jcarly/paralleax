@@ -20,6 +20,8 @@ vi.mock('../api', () => ({
     updateLocation: vi.fn(),
     createCharacter: vi.fn(),
     updateCharacter: vi.fn(),
+    createStatDefinition: vi.fn(),
+    updateStatDefinition: vi.fn(),
     createCharacterStat: vi.fn(),
     updateCharacterStat: vi.fn(),
   },
@@ -479,6 +481,11 @@ describe('StoryEditor', () => {
 
   it('creates a character stat and configures interaction effects and trigger comparisons', async () => {
     const user = userEvent.setup();
+    vi.mocked(api.createStatDefinition).mockResolvedValue({
+      statDefinition: { id: 'definition-1', name: 'Trust' },
+      revision: 2,
+      updatedAt: baseStory.updatedAt,
+    });
     vi.mocked(api.createCharacter).mockResolvedValue({
       character: { id: 'character-1', name: 'Mira', description: '', stats: [] },
       revision: 2,
@@ -486,28 +493,25 @@ describe('StoryEditor', () => {
     });
     vi.mocked(api.createCharacterStat).mockResolvedValue({
       characterId: 'character-1',
-      stat: { id: 'stat-1', name: 'Trust', initialValue: 0 },
-      revision: 3,
+      stat: { id: 'stat-1', statDefinitionId: 'definition-1', initialValue: 0 },
+      revision: 4,
       updatedAt: baseStory.updatedAt,
     });
     vi.mocked(api.updateCharacterStat).mockResolvedValue({
       characterId: 'character-1',
-      stat: { id: 'stat-1', name: 'Reputation', initialValue: 2 },
-      revision: 4,
+      stat: { id: 'stat-1', statDefinitionId: 'definition-1', initialValue: 2 },
+      revision: 5,
       updatedAt: baseStory.updatedAt,
     });
 
     await renderEditor();
+    await user.click(screen.getByRole('button', { name: 'Add stat definition' }));
     await user.click(screen.getByRole('button', { name: 'Add character' }));
     await user.click(screen.getByRole('button', { name: 'Add stat' }));
     expect(api.createCharacterStat).toHaveBeenCalledWith('story-1', 'character-1', {
-      name: 'New stat',
+      statDefinitionId: 'definition-1',
       initialValue: 0,
     });
-    const statName = screen.getByLabelText('Stat name');
-    await user.clear(statName);
-    await user.type(statName, 'Reputation');
-    fireEvent.blur(statName);
     const initialValue = screen.getByLabelText('Initial value');
     await user.clear(initialValue);
     await user.type(initialValue, '2');
@@ -523,9 +527,10 @@ describe('StoryEditor', () => {
         id: 'character-1',
         name: 'Mira',
         description: '',
-        stats: [{ id: 'stat-1', name: 'Trust', initialValue: 0 }],
+        stats: [{ id: 'stat-1', statDefinitionId: 'definition-1', initialValue: 0 }],
       },
     ];
+    withEffect.statDefinitions = [{ id: 'definition-1', name: 'Trust' }];
     withEffect.interactions[0].statEffects = [{ statId: 'stat-1', operation: 'add', value: 1 }];
     vi.mocked(api.updateInteraction).mockResolvedValue(
       interactionMutation(withEffect, 'interaction-1'),

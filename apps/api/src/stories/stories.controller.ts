@@ -4,12 +4,14 @@ import {
   CreateCharacterDto,
   CreateCharacterStatDto,
   CreateLocationDto,
+  CreateStatDefinitionDto,
   CreateStoryDto,
   CreateTriggerDto,
   UpdateInteractionDto,
   UpdateCharacterDto,
   UpdateCharacterStatDto,
   UpdateLocationDto,
+  UpdateStatDefinitionDto,
   UpdateStoryDto,
   UpdateTriggerDto,
 } from './dto/stories.dto';
@@ -98,6 +100,23 @@ export class StoriesController {
     @CurrentUser() user: RequestUser,
   ) {
     return this.stories.createCharacter(storyId, input, user.id);
+  }
+
+  @Post(':storyId/stat-definitions') createStatDefinition(
+    @Param('storyId') storyId: string,
+    @Body() input: CreateStatDefinitionDto,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.stories.createStatDefinition(storyId, input, user.id);
+  }
+
+  @Patch(':storyId/stat-definitions/:statDefinitionId') updateStatDefinition(
+    @Param('storyId') storyId: string,
+    @Param('statDefinitionId') statDefinitionId: string,
+    @Body() input: UpdateStatDefinitionDto,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.stories.updateStatDefinition(storyId, statDefinitionId, input, user.id);
   }
 
   @Patch(':storyId/characters/:characterId') updateCharacter(

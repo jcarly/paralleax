@@ -16,7 +16,10 @@ export function InteractionInspector({
   const stats = (story.characters ?? []).flatMap((character) =>
     (character.stats ?? []).map((stat) => ({
       ...stat,
-      label: `${character.name} — ${stat.name}`,
+      label: `${character.name} — ${
+        story.statDefinitions?.find(({ id }) => id === stat.statDefinitionId)?.name ??
+        'Unknown stat'
+      }`,
     })),
   );
   function updateLocalInteraction(patch: Partial<Interaction>) {

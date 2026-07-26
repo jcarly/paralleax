@@ -5,14 +5,17 @@ import type {
   CreateCharacterStatInput,
   CreateInteractionInput,
   CreateLocationInput,
+  CreateStatDefinitionInput,
   InteractionMutationResult,
   LocationMutationResult,
+  StatDefinitionMutationResult,
   Story,
   TriggerMutationResult,
   UpdateInteractionInput,
   UpdateCharacterInput,
   UpdateCharacterStatInput,
   UpdateLocationInput,
+  UpdateStatDefinitionInput,
   UpdateTriggerInput,
 } from '@paralleax/shared';
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -98,6 +101,20 @@ export const api = {
       method: 'PATCH',
       body: JSON.stringify(input),
     }),
+  createStatDefinition: (storyId: string, input: CreateStatDefinitionInput) =>
+    request<StatDefinitionMutationResult>(`/stories/${storyId}/stat-definitions`, {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
+  updateStatDefinition: (
+    storyId: string,
+    statDefinitionId: string,
+    input: UpdateStatDefinitionInput,
+  ) =>
+    request<StatDefinitionMutationResult>(
+      `/stories/${storyId}/stat-definitions/${statDefinitionId}`,
+      { method: 'PATCH', body: JSON.stringify(input) },
+    ),
   createCharacterStat: (storyId: string, characterId: string, input: CreateCharacterStatInput) =>
     request<CharacterStatMutationResult>(`/stories/${storyId}/characters/${characterId}/stats`, {
       method: 'POST',

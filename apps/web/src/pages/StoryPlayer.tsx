@@ -60,7 +60,10 @@ function getUnavailableReason(
       .flatMap((character) =>
         (character.stats ?? []).map((item) => ({
           ...item,
-          label: `${character.name} — ${item.name}`,
+          label: `${character.name} — ${
+            story.statDefinitions?.find(({ id }) => id === item.statDefinitionId)?.name ??
+            'Unknown stat'
+          }`,
         })),
       )
       .find(({ id }) => id === firstFailure.statId);

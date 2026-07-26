@@ -78,7 +78,9 @@ location is runtime reader state.
 ### Character
 
 A character is a story-owned authored entity with an id, name, description, and
-zero or more numeric stats. Each stat has an id, name, and initial value.
+zero or more assigned numeric stats. Stat definitions belong to the story and
+can be assigned to several characters without being recreated. Each assignment
+has its own id and initial value.
 An interaction can involve several characters. Presence conditions inspect the
 cast of the current interaction; presence is scene context, not persistent
 play-session state. Interaction effects can add to or set a stat, while trigger

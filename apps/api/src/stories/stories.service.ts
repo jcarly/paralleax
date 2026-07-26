@@ -11,6 +11,7 @@ import {
   type CharacterStatMutationResult,
   type InteractionMutationResult,
   type LocationMutationResult,
+  type StatDefinitionMutationResult,
   type Story,
   type TriggerCondition,
   type TriggerMutationResult,
@@ -20,12 +21,14 @@ import {
   CreateCharacterDto,
   CreateCharacterStatDto,
   CreateLocationDto,
+  CreateStatDefinitionDto,
   CreateStoryDto,
   CreateTriggerDto,
   UpdateInteractionDto,
   UpdateCharacterDto,
   UpdateCharacterStatDto,
   UpdateLocationDto,
+  UpdateStatDefinitionDto,
   UpdateTriggerDto,
   TriggerConditionDto,
 } from './dto/stories.dto';
@@ -291,6 +294,42 @@ export class StoriesService {
     );
     return this.characterResult(story, characterId);
   }
+  async createStatDefinition(
+    storyId: string,
+    input: CreateStatDefinitionDto,
+    userId: string,
+  ): Promise<StatDefinitionMutationResult> {
+    const statDefinitionId = randomUUID();
+    const story = await this.update(
+      storyId,
+      (story) => {
+        (story.statDefinitions ??= []).push({
+          id: statDefinitionId,
+          name: input.name.trim(),
+        });
+        return story;
+      },
+      userId,
+    );
+    return this.statDefinitionResult(story, statDefinitionId);
+  }
+  async updateStatDefinition(
+    storyId: string,
+    statDefinitionId: string,
+    input: UpdateStatDefinitionDto,
+    userId: string,
+  ): Promise<StatDefinitionMutationResult> {
+    const story = await this.update(
+      storyId,
+      (story) => {
+        const definition = this.statDefinition(story, statDefinitionId);
+        if (input.name !== undefined) definition.name = input.name.trim();
+        return story;
+      },
+      userId,
+    );
+    return this.statDefinitionResult(story, statDefinitionId);
+  }
   async updateCharacter(
     storyId: string,
     characterId: string,
@@ -320,9 +359,17 @@ export class StoriesService {
       storyId,
       (story) => {
         const character = this.character(story, characterId);
+        this.statDefinition(story, input.statDefinitionId);
+        if (
+          (character.stats ?? []).some(
+            ({ statDefinitionId }) => statDefinitionId === input.statDefinitionId,
+          )
+        ) {
+          throw new BadRequestException('Character already has this stat');
+        }
         (character.stats ??= []).push({
           id: statId,
-          name: input.name.trim(),
+          statDefinitionId: input.statDefinitionId,
           initialValue: input.initialValue,
         });
         return story;
@@ -342,7 +389,6 @@ export class StoriesService {
       storyId,
       (story) => {
         const stat = this.stat(story, characterId, statId);
-        if (input.name !== undefined) stat.name = input.name.trim();
         if (input.initialValue !== undefined) stat.initialValue = input.initialValue;
         return story;
       },
@@ -369,6 +415,11 @@ export class StoriesService {
     const stat = this.character(story, characterId).stats?.find(({ id }) => id === statId);
     if (!stat) throw new NotFoundException('Character stat not found');
     return stat;
+  }
+  private statDefinition(story: Story, id: string) {
+    const definition = (story.statDefinitions ?? []).find((item) => item.id === id);
+    if (!definition) throw new NotFoundException('Stat definition not found');
+    return definition;
   }
   private statIds(story: Story) {
     return new Set(
@@ -478,6 +529,16 @@ export class StoriesService {
   private characterResult(story: Story, characterId: string): CharacterMutationResult {
     return {
       character: structuredClone(this.character(story, characterId)),
+      revision: story.revision ?? 1,
+      updatedAt: story.updatedAt,
+    };
+  }
+  private statDefinitionResult(
+    story: Story,
+    statDefinitionId: string,
+  ): StatDefinitionMutationResult {
+    return {
+      statDefinition: structuredClone(this.statDefinition(story, statDefinitionId)),
       revision: story.revision ?? 1,
       updatedAt: story.updatedAt,
     };
