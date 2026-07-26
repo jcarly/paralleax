@@ -198,4 +198,66 @@ test.describe('Story editor', () => {
     await expect(page.getByRole('combobox').first()).toHaveValue('interaction-2');
     await expect(page.getByRole('combobox').nth(1)).toHaveValue('visited');
   });
+
+  test('gives a character two separate copies of one reusable item', async ({ page }) => {
+    await page.route('**/api/stories/story-1/item-definitions', async (route) => {
+      expect(route.request().method()).toBe('POST');
+      await route.fulfill({
+        json: {
+          itemDefinition: {
+            id: 'item-definition-1',
+            name: 'Archive key',
+            description: '',
+          },
+          revision: 2,
+          updatedAt: story.updatedAt,
+        },
+      });
+    });
+    await page.route('**/api/stories/story-1/characters', async (route) => {
+      expect(route.request().method()).toBe('POST');
+      await route.fulfill({
+        json: {
+          character: {
+            id: 'character-1',
+            name: 'Mira',
+            description: '',
+            stats: [],
+            items: [],
+          },
+          revision: 3,
+          updatedAt: story.updatedAt,
+        },
+      });
+    });
+    let itemCount = 0;
+    await page.route('**/api/stories/story-1/characters/character-1/items', async (route) => {
+      itemCount += 1;
+      expect(route.request().method()).toBe('POST');
+      expect(route.request().postDataJSON()).toEqual({
+        itemDefinitionId: 'item-definition-1',
+      });
+      await route.fulfill({
+        json: {
+          characterId: 'character-1',
+          item: {
+            id: `item-${itemCount}`,
+            itemDefinitionId: 'item-definition-1',
+          },
+          revision: 3 + itemCount,
+          updatedAt: story.updatedAt,
+        },
+      });
+    });
+
+    await page.goto('/stories/story-1/edit');
+    await page.getByRole('button', { name: 'Add item definition' }).click();
+    await page.getByRole('button', { name: 'Add character' }).click();
+    await page.getByRole('button', { name: 'Add item', exact: true }).click();
+    await page.getByRole('button', { name: 'Add item', exact: true }).click();
+
+    await expect(page.locator('.character-items li')).toHaveCount(2);
+    await expect(page.locator('.character-items li').first()).toHaveText('Archive key');
+    await expect(page.locator('.character-items li').last()).toHaveText('Archive key');
+  });
 });

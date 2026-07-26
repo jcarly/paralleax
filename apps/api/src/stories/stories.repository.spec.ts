@@ -24,12 +24,17 @@ function graphStory(): Story {
   const saved = story();
   saved.locations = [{ id: 'location-1', name: 'Harbor', description: 'A quiet harbor.' }];
   saved.statDefinitions = [{ id: 'definition-1', name: 'Trust' }];
+  saved.itemDefinitions = [{ id: 'item-definition-1', name: 'Key', description: 'A brass key.' }];
   saved.characters = [
     {
       id: 'character-1',
       name: 'Mira',
       description: 'An investigator.',
       stats: [{ id: 'stat-1', statDefinitionId: 'definition-1', initialValue: 2 }],
+      items: [
+        { id: 'item-1', itemDefinitionId: 'item-definition-1' },
+        { id: 'item-2', itemDefinitionId: 'item-definition-1' },
+      ],
     },
   ];
   saved.interactions = [
@@ -154,6 +159,30 @@ function relationalRead(query: jest.Mock, saved = story()) {
           name: definition.name,
           sort_order: index,
         })),
+      });
+    }
+    if (sql.includes('FROM item_definitions')) {
+      return Promise.resolve({
+        rows: (saved.itemDefinitions ?? []).map((definition, index) => ({
+          id: definition.id,
+          story_id: saved.id,
+          name: definition.name,
+          description: definition.description,
+          sort_order: index,
+        })),
+      });
+    }
+    if (sql.includes('FROM character_items')) {
+      return Promise.resolve({
+        rows: (saved.characters ?? []).flatMap((character) =>
+          (character.items ?? []).map((item, index) => ({
+            id: item.id,
+            story_id: saved.id,
+            character_id: character.id,
+            item_definition_id: item.itemDefinitionId,
+            sort_order: index,
+          })),
+        ),
       });
     }
     if (sql.includes('FROM characters')) {
@@ -298,8 +327,20 @@ describe('StoriesRepository', () => {
       ['definition-1', saved.id, 'Trust', 0],
     );
     expect(mockClientQuery).toHaveBeenCalledWith(
+      expect.stringContaining('INSERT INTO item_definitions'),
+      ['item-definition-1', saved.id, 'Key', 'A brass key.', 0],
+    );
+    expect(mockClientQuery).toHaveBeenCalledWith(
       expect.stringContaining('INSERT INTO character_stats'),
       ['stat-1', saved.id, 'character-1', 'definition-1', 2, 0],
+    );
+    expect(mockClientQuery).toHaveBeenCalledWith(
+      expect.stringContaining('INSERT INTO character_items'),
+      ['item-1', saved.id, 'character-1', 'item-definition-1', 0],
+    );
+    expect(mockClientQuery).toHaveBeenCalledWith(
+      expect.stringContaining('INSERT INTO character_items'),
+      ['item-2', saved.id, 'character-1', 'item-definition-1', 1],
     );
     expect(mockClientQuery).toHaveBeenCalledWith(
       expect.stringContaining('INSERT INTO interaction_stat_effects'),

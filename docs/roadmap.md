@@ -110,6 +110,8 @@ the current implementation reaches the stated trigger:
   present/absent trigger conditions.
 - Numeric character stats are implemented with initial values, typed interaction
   effects, and trigger comparisons.
+- Item definitions and authored character-owned item instances are implemented;
+  several instances may reference the same definition.
 - Establish typed world-state conditions and interaction effects incrementally;
   do not introduce an unvalidated universal parameter bag.
 - Typed variables: stable attributes, changing resources, skills, flags, traits,
@@ -125,7 +127,6 @@ the current implementation reaches the stated trigger:
 - World-based conditions beyond location, character presence, and character stats.
 - Contextual inputless triggers based on broader world state.
 - Final interactions and explicit story completion.
-- Item definitions as story-owned authoring entities.
 - A first playable item vertical with item instances in play-session state, one
   inventory, basic equipment, tags, and typed item conditions/effects.
 - Later item increments: multiple containers, consumables, durability,

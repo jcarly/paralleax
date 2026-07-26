@@ -22,8 +22,11 @@ vi.mock('../api', () => ({
     updateCharacter: vi.fn(),
     createStatDefinition: vi.fn(),
     updateStatDefinition: vi.fn(),
+    createItemDefinition: vi.fn(),
+    updateItemDefinition: vi.fn(),
     createCharacterStat: vi.fn(),
     updateCharacterStat: vi.fn(),
+    createCharacterItem: vi.fn(),
   },
 }));
 
@@ -564,6 +567,91 @@ describe('StoryEditor', () => {
     await user.clear(comparisonValue);
     await user.type(comparisonValue, '5');
     await user.click(screen.getByRole('button', { name: 'x' }));
+  });
+
+  it('creates an item definition and gives separate copies to a character', async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.createItemDefinition).mockResolvedValue({
+      itemDefinition: { id: 'item-definition-1', name: 'Key', description: 'A brass key.' },
+      revision: 2,
+      updatedAt: baseStory.updatedAt,
+    });
+    vi.mocked(api.updateItemDefinition).mockResolvedValue({
+      itemDefinition: {
+        id: 'item-definition-1',
+        name: 'Archive key',
+        description: 'A brass key.',
+      },
+      revision: 3,
+      updatedAt: baseStory.updatedAt,
+    });
+    vi.mocked(api.createCharacter).mockResolvedValue({
+      character: { id: 'character-1', name: 'Mira', description: '', items: [] },
+      revision: 4,
+      updatedAt: baseStory.updatedAt,
+    });
+    vi.mocked(api.createCharacterItem)
+      .mockResolvedValueOnce({
+        characterId: 'character-1',
+        item: { id: 'item-1', itemDefinitionId: 'item-definition-1' },
+        revision: 5,
+        updatedAt: baseStory.updatedAt,
+      })
+      .mockResolvedValueOnce({
+        characterId: 'character-1',
+        item: { id: 'item-2', itemDefinitionId: 'item-definition-1' },
+        revision: 6,
+        updatedAt: baseStory.updatedAt,
+      });
+
+    await renderEditor();
+    await user.click(screen.getByRole('button', { name: 'Add item definition' }));
+    const itemName = screen.getByLabelText('Name');
+    await user.clear(itemName);
+    await user.type(itemName, 'Archive key');
+    fireEvent.blur(itemName);
+    expect(api.updateItemDefinition).toHaveBeenCalledWith('story-1', 'item-definition-1', {
+      name: 'Archive key',
+    });
+    const itemDescription = screen.getByLabelText('Description');
+    await user.clear(itemDescription);
+    await user.type(itemDescription, 'Opens the archive.');
+    fireEvent.blur(itemDescription);
+    expect(api.updateItemDefinition).toHaveBeenLastCalledWith('story-1', 'item-definition-1', {
+      description: 'Opens the archive.',
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Add character' }));
+    await user.click(screen.getByRole('button', { name: 'Add item' }));
+    await user.click(screen.getByRole('button', { name: 'Add item' }));
+
+    expect(api.createCharacterItem).toHaveBeenCalledTimes(2);
+    expect(api.createCharacterItem).toHaveBeenNthCalledWith(1, 'story-1', 'character-1', {
+      itemDefinitionId: 'item-definition-1',
+    });
+    expect(api.createCharacterItem).toHaveBeenNthCalledWith(2, 'story-1', 'character-1', {
+      itemDefinitionId: 'item-definition-1',
+    });
+    expect(
+      within(screen.getByRole('complementary', { name: 'Inspector' })).getAllByText('Archive key'),
+    ).toHaveLength(3);
+  });
+
+  it('collapses each story context section and the whole navigation', async () => {
+    const user = userEvent.setup();
+    await renderEditor();
+
+    for (const section of ['Locations', 'Characters', 'Stats', 'Items']) {
+      const toggle = screen.getByRole('button', { name: new RegExp(section) });
+      expect(toggle).toHaveAttribute('aria-expanded', 'true');
+      await user.click(toggle);
+      expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    }
+
+    await user.click(screen.getByRole('button', { name: 'Collapse story context' }));
+    expect(screen.getByRole('button', { name: 'Expand story context' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Expand story context' }));
+    expect(screen.getByRole('button', { name: 'Collapse story context' })).toBeInTheDocument();
   });
 
   it('creates root and child interactions', async () => {

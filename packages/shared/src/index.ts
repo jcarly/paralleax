@@ -32,6 +32,7 @@ export interface Character {
   name: string;
   description: string;
   stats?: CharacterStat[];
+  items?: ItemInstance[];
 }
 export interface StatDefinition {
   id: string;
@@ -41,6 +42,15 @@ export interface CharacterStat {
   id: string;
   statDefinitionId: string;
   initialValue: number;
+}
+export interface ItemDefinition {
+  id: string;
+  name: string;
+  description: string;
+}
+export interface ItemInstance {
+  id: string;
+  itemDefinitionId: string;
 }
 export interface StatEffect {
   statId: string;
@@ -69,6 +79,7 @@ export interface Story {
   locations?: Location[];
   characters?: Character[];
   statDefinitions?: StatDefinition[];
+  itemDefinitions?: ItemDefinition[];
   interactions: Interaction[];
   createdAt: string;
   updatedAt: string;
@@ -96,6 +107,13 @@ export interface CharacterStatMutationResult extends StoryMutationMetadata {
 }
 export interface StatDefinitionMutationResult extends StoryMutationMetadata {
   statDefinition: StatDefinition;
+}
+export interface ItemDefinitionMutationResult extends StoryMutationMetadata {
+  itemDefinition: ItemDefinition;
+}
+export interface CharacterItemMutationResult extends StoryMutationMetadata {
+  characterId: string;
+  item: ItemInstance;
 }
 export interface CreateStoryInput {
   title: string;
@@ -140,6 +158,17 @@ export interface CreateStatDefinitionInput {
 }
 export interface UpdateStatDefinitionInput {
   name?: string;
+}
+export interface CreateItemDefinitionInput {
+  name: string;
+  description?: string;
+}
+export interface UpdateItemDefinitionInput {
+  name?: string;
+  description?: string;
+}
+export interface CreateCharacterItemInput {
+  itemDefinitionId: string;
 }
 export interface UpdateTriggerInput {
   inputInteractionIds: string[];

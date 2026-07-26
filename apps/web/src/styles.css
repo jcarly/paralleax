@@ -575,6 +575,20 @@ header span {
   font-size: 0.88rem;
   font-weight: 650;
 }
+.character-items {
+  display: grid;
+  gap: 0.4rem;
+  margin: 0.5rem 0 1rem;
+  padding: 0;
+  list-style: none;
+}
+.character-items li {
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 0.55rem 0.65rem;
+  background: var(--color-surface-secondary);
+  font-size: 0.88rem;
+}
 .stat-row {
   grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
 }

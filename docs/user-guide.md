@@ -102,13 +102,23 @@ context**. Then open a character, choose that definition, and use **Add stat**
 to assign it with an initial value. The same definition can be assigned to
 several characters, with an independent value for each.
 
-The **Locations**, **Characters**, and **Stats** lists can be collapsed
+The **Locations**, **Characters**, **Stats**, and **Items** lists can be collapsed
 independently. Collapse or expand the whole story context menu from the control
 in its top-right corner.
 
 Select a trigger marker and use **Add stat condition** to compare the current
 value with a threshold. The reader applies an interaction's effects before it
 evaluates the next available interactions.
+
+## Character Items
+
+Create a reusable item definition from the collapsible **Items** list in
+**Story context**. Item definitions currently have a name and description.
+
+Open a character, choose a definition under **Items**, and use **Add item**.
+Every addition creates a separate owned instance, so the same character can own
+several copies of the same item. Items do not have stats, effects, conditions,
+equipment behavior, or reader state yet.
 
 ## Delete Trigger Links
 

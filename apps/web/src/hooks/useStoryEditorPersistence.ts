@@ -9,10 +9,12 @@ import {
   updateInteractionInStory,
   updateTriggerInStory,
   type CharacterMutationResult,
+  type CharacterItemMutationResult,
   type CharacterStatMutationResult,
   type Interaction,
   type InteractionContentPatch,
   type InteractionMutationResult,
+  type ItemDefinitionMutationResult,
   type LocationMutationResult,
   type StatDefinitionMutationResult,
   type Position,
@@ -437,19 +439,14 @@ export function useStoryEditorPersistence(storyId: string) {
   }
 
   async function createStatDefinition() {
-    const result = await trackSave(() =>
-      api.createStatDefinition(storyId, { name: 'New stat' }),
-    );
+    const result = await trackSave(() => api.createStatDefinition(storyId, { name: 'New stat' }));
     if (!result) return undefined;
     setStory((current) =>
       current
         ? applyMutationMetadata(
             {
               ...current,
-              statDefinitions: [
-                ...(current.statDefinitions ?? []),
-                result.statDefinition,
-              ],
+              statDefinitions: [...(current.statDefinitions ?? []), result.statDefinition],
             },
             result,
           )
@@ -479,6 +476,54 @@ export function useStoryEditorPersistence(storyId: string) {
     setStory((current) => (current ? applyMutationMetadata(current, result) : current));
   }
 
+  async function createItemDefinition() {
+    const result = await trackSave(() =>
+      api.createItemDefinition(storyId, { name: 'New item', description: '' }),
+    );
+    if (!result) return undefined;
+    setStory((current) =>
+      current
+        ? applyMutationMetadata(
+            {
+              ...current,
+              itemDefinitions: [...(current.itemDefinitions ?? []), result.itemDefinition],
+            },
+            result,
+          )
+        : current,
+    );
+    return result.itemDefinition.id;
+  }
+
+  async function updateItemDefinition(
+    itemDefinitionId: string,
+    patch: Partial<Pick<ItemDefinitionMutationResult['itemDefinition'], 'name' | 'description'>>,
+  ) {
+    setStory((current) =>
+      current
+        ? {
+            ...current,
+            itemDefinitions: (current.itemDefinitions ?? []).map((definition) =>
+              definition.id === itemDefinitionId ? { ...definition, ...patch } : definition,
+            ),
+          }
+        : current,
+    );
+    const result = await trackSave(() =>
+      api.updateItemDefinition(storyId, itemDefinitionId, patch),
+    );
+    if (!result) return;
+    setStory((current) => (current ? applyMutationMetadata(current, result) : current));
+  }
+
+  async function createCharacterItem(characterId: string, itemDefinitionId: string) {
+    const result = await trackSave(() =>
+      api.createCharacterItem(storyId, characterId, { itemDefinitionId }),
+    );
+    if (!result) return;
+    setStory((current) => (current ? applyCharacterItemResult(current, result) : current));
+  }
+
   return {
     story,
     setStory,
@@ -505,8 +550,11 @@ export function useStoryEditorPersistence(storyId: string) {
     updateCharacter,
     createStatDefinition,
     updateStatDefinition,
+    createItemDefinition,
+    updateItemDefinition,
     createCharacterStat,
     updateCharacterStat,
+    createCharacterItem,
   };
 }
 
@@ -581,6 +629,20 @@ function applyCharacterStatResult(story: Story, result: CharacterStatMutationRes
       characters: (story.characters ?? []).map((character) =>
         character.id === result.characterId
           ? { ...character, stats: [...(character.stats ?? []), result.stat] }
+          : character,
+      ),
+    },
+    result,
+  );
+}
+
+function applyCharacterItemResult(story: Story, result: CharacterItemMutationResult): Story {
+  return applyMutationMetadata(
+    {
+      ...story,
+      characters: (story.characters ?? []).map((character) =>
+        character.id === result.characterId
+          ? { ...character, items: [...(character.items ?? []), result.item] }
           : character,
       ),
     },

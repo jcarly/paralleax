@@ -2,7 +2,9 @@ import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post } from '@ne
 import {
   CreateInteractionDto,
   CreateCharacterDto,
+  CreateCharacterItemDto,
   CreateCharacterStatDto,
+  CreateItemDefinitionDto,
   CreateLocationDto,
   CreateStatDefinitionDto,
   CreateStoryDto,
@@ -10,6 +12,7 @@ import {
   UpdateInteractionDto,
   UpdateCharacterDto,
   UpdateCharacterStatDto,
+  UpdateItemDefinitionDto,
   UpdateLocationDto,
   UpdateStatDefinitionDto,
   UpdateStoryDto,
@@ -110,6 +113,23 @@ export class StoriesController {
     return this.stories.createStatDefinition(storyId, input, user.id);
   }
 
+  @Post(':storyId/item-definitions') createItemDefinition(
+    @Param('storyId') storyId: string,
+    @Body() input: CreateItemDefinitionDto,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.stories.createItemDefinition(storyId, input, user.id);
+  }
+
+  @Patch(':storyId/item-definitions/:itemDefinitionId') updateItemDefinition(
+    @Param('storyId') storyId: string,
+    @Param('itemDefinitionId') itemDefinitionId: string,
+    @Body() input: UpdateItemDefinitionDto,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.stories.updateItemDefinition(storyId, itemDefinitionId, input, user.id);
+  }
+
   @Patch(':storyId/stat-definitions/:statDefinitionId') updateStatDefinition(
     @Param('storyId') storyId: string,
     @Param('statDefinitionId') statDefinitionId: string,
@@ -135,6 +155,15 @@ export class StoriesController {
     @CurrentUser() user: RequestUser,
   ) {
     return this.stories.createCharacterStat(storyId, characterId, input, user.id);
+  }
+
+  @Post(':storyId/characters/:characterId/items') createCharacterItem(
+    @Param('storyId') storyId: string,
+    @Param('characterId') characterId: string,
+    @Body() input: CreateCharacterItemDto,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.stories.createCharacterItem(storyId, characterId, input, user.id);
   }
 
   @Patch(':storyId/characters/:characterId/stats/:statId') updateCharacterStat(

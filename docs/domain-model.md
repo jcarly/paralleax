@@ -15,6 +15,8 @@ Main fields:
 - `interactions`
 - `locations`
 - `characters`
+- `statDefinitions`
+- `itemDefinitions`
 
 ### Interaction
 
@@ -85,6 +87,19 @@ An interaction can involve several characters. Presence conditions inspect the
 cast of the current interaction; presence is scene context, not persistent
 play-session state. Interaction effects can add to or set a stat, while trigger
 conditions compare its current runtime value.
+
+### Item Definition
+
+An item definition is a reusable story-owned description with an id, name, and
+description. It describes a kind of object and is not itself owned by a
+character.
+
+### Item Instance
+
+An item instance belongs to exactly one character and references one item
+definition from the same story. Adding the same definition several times creates
+separate instances with distinct ids. Items do not affect reader state,
+conditions, effects, equipment, or stats yet.
 
 See [Trigger semantics](triggers.md) for deletion rules and editor behavior.
 
@@ -277,7 +292,7 @@ relationships are separate entities rather than special attribute names.
 
 It can be modified by an interaction and used as a trigger condition.
 
-### Item Definition
+### Future Item Definition
 
 An item definition describes the shared authoring model for one kind of object.
 It is not an owned object in a play session.
@@ -293,7 +308,7 @@ Possible elements:
 Tags support flexible rules such as requiring any equipped item tagged
 `formal`, without coupling the trigger to one exact dress definition.
 
-### Item Instance
+### Future Item Instance
 
 An item instance represents one concrete object in play-session state.
 
@@ -335,11 +350,11 @@ ownership, equipment tags, place, and relationships. Examples of effects include
 attribute modification, giving or removing an item, changing equipment,
 movement, time advancement, and relationship modification.
 
-Items should be introduced only after the condition/effect boundary can make
-them participate in narrative behavior. The first item vertical should keep a
-small scope: definitions, instances, one inventory, basic equipment, and a few
-typed conditions and effects. Durability, multiple containers, procedural
-properties, layered clothing, shops, and economy remain later increments.
+The authoring foundation contains definitions and character-owned instances.
+The first playable item vertical should add one runtime inventory, basic
+equipment, and a few typed conditions and effects. Durability, multiple
+containers, procedural properties, layered clothing, shops, and economy remain
+later increments.
 
 ### Target Interaction
 

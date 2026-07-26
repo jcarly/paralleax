@@ -320,4 +320,36 @@ export const databaseMigrations: DatabaseMigration[] = [
       CREATE INDEX character_stats_definition_id_idx ON character_stats(stat_definition_id);
     `,
   },
+  {
+    id: '202607260011_item_definitions_and_character_items',
+    sql: `
+      CREATE TABLE item_definitions (
+        id text PRIMARY KEY,
+        story_id text NOT NULL REFERENCES stories(id) ON DELETE CASCADE,
+        name text NOT NULL,
+        description text NOT NULL DEFAULT '',
+        sort_order integer NOT NULL,
+        CONSTRAINT item_definitions_story_id_id_unique UNIQUE (story_id, id)
+      );
+
+      CREATE TABLE character_items (
+        id text PRIMARY KEY,
+        story_id text NOT NULL,
+        character_id text NOT NULL,
+        item_definition_id text NOT NULL,
+        sort_order integer NOT NULL,
+        CONSTRAINT character_items_story_id_id_unique UNIQUE (story_id, id),
+        CONSTRAINT character_items_character_fkey
+          FOREIGN KEY (story_id, character_id)
+          REFERENCES characters(story_id, id) ON DELETE CASCADE,
+        CONSTRAINT character_items_definition_fkey
+          FOREIGN KEY (story_id, item_definition_id)
+          REFERENCES item_definitions(story_id, id) ON DELETE CASCADE
+      );
+
+      CREATE INDEX item_definitions_story_id_idx ON item_definitions(story_id);
+      CREATE INDEX character_items_character_id_idx ON character_items(character_id);
+      CREATE INDEX character_items_definition_id_idx ON character_items(item_definition_id);
+    `,
+  },
 ];

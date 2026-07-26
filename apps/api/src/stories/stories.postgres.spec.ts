@@ -46,12 +46,17 @@ describePostgres('StoriesRepository PostgreSQL integration', () => {
       updatedAt: now,
       locations: [{ id: 'location-1', name: 'Harbor', description: 'A quiet harbor.' }],
       statDefinitions: [{ id: 'definition-1', name: 'Trust' }],
+      itemDefinitions: [{ id: 'item-definition-1', name: 'Key', description: 'A brass key.' }],
       characters: [
         {
           id: 'character-1',
           name: 'Mira',
           description: 'An investigator.',
           stats: [{ id: 'stat-1', statDefinitionId: 'definition-1', initialValue: 2 }],
+          items: [
+            { id: 'item-1', itemDefinitionId: 'item-definition-1' },
+            { id: 'item-2', itemDefinitionId: 'item-definition-1' },
+          ],
         },
       ],
       interactions: [

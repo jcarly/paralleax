@@ -40,6 +40,13 @@ details. They should stay covered by tests as the editor grows.
   same-story stat definition, has a finite numeric initial value, and may only
   be referenced inside that story.
 - A character cannot receive the same stat definition twice.
+- An item definition belongs to exactly one story.
+- A character item instance belongs to exactly one character and references one
+  item definition from the same story.
+- Several item instances owned by one character may reference the same item
+  definition; every instance keeps a distinct id.
+- Authored item ownership does not participate in reader state, trigger
+  conditions, or interaction effects yet.
 - An interaction has at most one effect per stat. An effect either adds a finite
   value to the current value or replaces it.
 - Stat effects apply when their interaction is selected, before the next choices

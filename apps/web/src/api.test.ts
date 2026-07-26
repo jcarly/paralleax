@@ -163,6 +163,23 @@ describe('api client', () => {
       body: JSON.stringify({ name: 'Mira Vale' }),
     });
 
+    await api.createStatDefinition('story-1', { name: 'Trust' });
+    expect(fetchMock).toHaveBeenLastCalledWith('/api/stories/story-1/stat-definitions', {
+      headers: { 'Content-Type': 'application/json' },
+      method: 'POST',
+      body: JSON.stringify({ name: 'Trust' }),
+    });
+
+    await api.updateStatDefinition('story-1', 'definition-1', { name: 'Confidence' });
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      '/api/stories/story-1/stat-definitions/definition-1',
+      {
+        headers: { 'Content-Type': 'application/json' },
+        method: 'PATCH',
+        body: JSON.stringify({ name: 'Confidence' }),
+      },
+    );
+
     await api.createCharacterStat('story-1', 'character-1', {
       statDefinitionId: 'definition-1',
       initialValue: 2,
@@ -183,6 +200,40 @@ describe('api client', () => {
         headers: { 'Content-Type': 'application/json' },
         method: 'PATCH',
         body: JSON.stringify({ initialValue: 3 }),
+      },
+    );
+
+    await api.createItemDefinition('story-1', {
+      name: 'Key',
+      description: 'A brass key.',
+    });
+    expect(fetchMock).toHaveBeenLastCalledWith('/api/stories/story-1/item-definitions', {
+      headers: { 'Content-Type': 'application/json' },
+      method: 'POST',
+      body: JSON.stringify({ name: 'Key', description: 'A brass key.' }),
+    });
+
+    await api.updateItemDefinition('story-1', 'item-definition-1', {
+      name: 'Archive key',
+    });
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      '/api/stories/story-1/item-definitions/item-definition-1',
+      {
+        headers: { 'Content-Type': 'application/json' },
+        method: 'PATCH',
+        body: JSON.stringify({ name: 'Archive key' }),
+      },
+    );
+
+    await api.createCharacterItem('story-1', 'character-1', {
+      itemDefinitionId: 'item-definition-1',
+    });
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      '/api/stories/story-1/characters/character-1/items',
+      {
+        headers: { 'Content-Type': 'application/json' },
+        method: 'POST',
+        body: JSON.stringify({ itemDefinitionId: 'item-definition-1' }),
       },
     );
   });

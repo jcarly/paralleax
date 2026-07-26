@@ -40,6 +40,7 @@ type StatDefinitionRow = {
   name: string;
   sort_order: number;
 };
+type ItemDefinitionRow = LocationRow;
 type InteractionCharacterRow = {
   story_id: string;
   interaction_id: string;
@@ -52,6 +53,13 @@ type CharacterStatRow = {
   character_id: string;
   stat_definition_id: string;
   initial_value: number;
+  sort_order: number;
+};
+type CharacterItemRow = {
+  id: string;
+  story_id: string;
+  character_id: string;
+  item_definition_id: string;
   sort_order: number;
 };
 type StatEffectRow = {
@@ -182,6 +190,12 @@ export class StoriesRepository {
          ORDER BY story_id, sort_order`,
       [storyIds],
     );
+    const itemDefinitions = await queryable.query<ItemDefinitionRow>(
+      `SELECT id, story_id, name, description, sort_order
+         FROM item_definitions WHERE story_id = ANY($1::text[])
+         ORDER BY story_id, sort_order`,
+      [storyIds],
+    );
     const interactionCharacters = await queryable.query<InteractionCharacterRow>(
       `SELECT story_id, interaction_id, character_id, sort_order
          FROM interaction_characters WHERE story_id = ANY($1::text[])
@@ -191,6 +205,12 @@ export class StoriesRepository {
     const characterStats = await queryable.query<CharacterStatRow>(
       `SELECT id, story_id, character_id, stat_definition_id, initial_value, sort_order
          FROM character_stats WHERE story_id = ANY($1::text[])
+         ORDER BY story_id, character_id, sort_order`,
+      [storyIds],
+    );
+    const characterItems = await queryable.query<CharacterItemRow>(
+      `SELECT id, story_id, character_id, item_definition_id, sort_order
+         FROM character_items WHERE story_id = ANY($1::text[])
          ORDER BY story_id, character_id, sort_order`,
       [storyIds],
     );
@@ -228,11 +248,13 @@ export class StoriesRepository {
     const locationsByStory = groupBy(locations.rows, ({ story_id }) => story_id);
     const charactersByStory = groupBy(characters.rows, ({ story_id }) => story_id);
     const statDefinitionsByStory = groupBy(statDefinitions.rows, ({ story_id }) => story_id);
+    const itemDefinitionsByStory = groupBy(itemDefinitions.rows, ({ story_id }) => story_id);
     const charactersByInteraction = groupBy(
       interactionCharacters.rows,
       ({ interaction_id }) => interaction_id,
     );
     const statsByCharacter = groupBy(characterStats.rows, ({ character_id }) => character_id);
+    const itemsByCharacter = groupBy(characterItems.rows, ({ character_id }) => character_id);
     const effectsByInteraction = groupBy(statEffects.rows, ({ interaction_id }) => interaction_id);
 
     return storyRows.map((row) => ({
@@ -255,10 +277,19 @@ export class StoriesRepository {
           statDefinitionId: stat.stat_definition_id,
           initialValue: stat.initial_value,
         })),
+        items: (itemsByCharacter.get(character.id) ?? []).map((item) => ({
+          id: item.id,
+          itemDefinitionId: item.item_definition_id,
+        })),
       })),
       statDefinitions: (statDefinitionsByStory.get(row.id) ?? []).map((definition) => ({
         id: definition.id,
         name: definition.name,
+      })),
+      itemDefinitions: (itemDefinitionsByStory.get(row.id) ?? []).map((definition) => ({
+        id: definition.id,
+        name: definition.name,
+        description: definition.description,
       })),
       interactions: (interactionsByStory.get(row.id) ?? []).map((interaction) => ({
         id: interaction.id,

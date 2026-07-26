@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { Character, StatDefinition } from '@paralleax/shared';
+import type { Character, ItemDefinition, StatDefinition } from '@paralleax/shared';
 
 export function CharacterInspector({
   character,
@@ -8,9 +8,12 @@ export function CharacterInspector({
   onCreateStat,
   onPatchStat,
   statDefinitions,
+  itemDefinitions,
+  onCreateItem,
 }: {
   character: Character;
   statDefinitions: StatDefinition[];
+  itemDefinitions: ItemDefinition[];
   onChange: (patch: Partial<Character>) => void;
   onPatch: (id: string, patch: Partial<Pick<Character, 'name' | 'description'>>) => Promise<void>;
   onCreateStat: (characterId: string, statDefinitionId: string) => Promise<void>;
@@ -19,17 +22,20 @@ export function CharacterInspector({
     statId: string,
     patch: { initialValue?: number },
   ) => Promise<void>;
+  onCreateItem: (characterId: string, itemDefinitionId: string) => Promise<void>;
 }) {
   const availableDefinitions = statDefinitions.filter(
     (definition) =>
-      !(character.stats ?? []).some(
-        ({ statDefinitionId }) => statDefinitionId === definition.id,
-      ),
+      !(character.stats ?? []).some(({ statDefinitionId }) => statDefinitionId === definition.id),
   );
   const [selectedDefinitionId, setSelectedDefinitionId] = useState('');
+  const [selectedItemDefinitionId, setSelectedItemDefinitionId] = useState('');
   const definitionId = availableDefinitions.some(({ id }) => id === selectedDefinitionId)
     ? selectedDefinitionId
     : (availableDefinitions[0]?.id ?? '');
+  const itemDefinitionId = itemDefinitions.some(({ id }) => id === selectedItemDefinitionId)
+    ? selectedItemDefinitionId
+    : (itemDefinitions[0]?.id ?? '');
 
   return (
     <div>
@@ -102,6 +108,46 @@ export function CharacterInspector({
           </label>
         </div>
       ))}
+      <div className="inspector-section-header">
+        <h3>Items</h3>
+      </div>
+      {itemDefinitions.length > 0 ? (
+        <div className="stat-assignment">
+          <select
+            aria-label="Item to add"
+            value={itemDefinitionId}
+            onChange={(event) => setSelectedItemDefinitionId(event.target.value)}
+          >
+            {itemDefinitions.map((definition) => (
+              <option key={definition.id} value={definition.id}>
+                {definition.name}
+              </option>
+            ))}
+          </select>
+          <button
+            className="secondary"
+            type="button"
+            aria-label="Add item"
+            onClick={() => void onCreateItem(character.id, itemDefinitionId)}
+          >
+            Add
+          </button>
+        </div>
+      ) : (
+        <p className="hint">Create an item in the story context first.</p>
+      )}
+      {(character.items ?? []).length === 0 ? (
+        <p className="hint">No items owned yet.</p>
+      ) : (
+        <ul className="character-items">
+          {(character.items ?? []).map((item) => (
+            <li key={item.id}>
+              {itemDefinitions.find(({ id }) => id === item.itemDefinitionId)?.name ??
+                'Unknown item'}
+            </li>
+          ))}
+        </ul>
+      )}
       <label>
         Description
         <textarea

@@ -15,6 +15,7 @@ import type { Position } from '@paralleax/shared';
 import { CharacterInspector } from '../components/CharacterInspector';
 import { InteractionInspector } from '../components/InteractionInspector';
 import { InteractionNode } from '../components/InteractionNode';
+import { ItemDefinitionInspector } from '../components/ItemDefinitionInspector';
 import { LocationInspector } from '../components/LocationInspector';
 import { StatDefinitionInspector } from '../components/StatDefinitionInspector';
 import { TriggerEdge } from '../components/TriggerEdge';
@@ -65,19 +66,24 @@ export function StoryEditor() {
     updateCharacter,
     createStatDefinition,
     updateStatDefinition,
+    createItemDefinition,
+    updateItemDefinition,
     createCharacterStat,
     updateCharacterStat,
+    createCharacterItem,
   } = useStoryEditorPersistence(storyId);
   const [selectedId, setSelectedId] = useState<string>();
   const [selectedTrigger, setSelectedTrigger] = useState<SelectedTrigger>();
   const [selectedLocationId, setSelectedLocationId] = useState<string>();
   const [selectedCharacterId, setSelectedCharacterId] = useState<string>();
   const [selectedStatDefinitionId, setSelectedStatDefinitionId] = useState<string>();
+  const [selectedItemDefinitionId, setSelectedItemDefinitionId] = useState<string>();
   const [isLocationPanelOpen, setIsLocationPanelOpen] = useState(true);
   const [openContextSections, setOpenContextSections] = useState({
     locations: true,
     characters: true,
     stats: true,
+    items: true,
   });
   const [isConnecting, setIsConnecting] = useState(false);
   const [pendingConnection, setPendingConnection] = useState<Connection>();
@@ -95,12 +101,16 @@ export function StoryEditor() {
   const selectedStatDefinition = story?.statDefinitions?.find(
     ({ id }) => id === selectedStatDefinitionId,
   );
+  const selectedItemDefinition = story?.itemDefinitions?.find(
+    ({ id }) => id === selectedItemDefinitionId,
+  );
   const hasInspectorSelection = Boolean(
     selected ||
-      selectedTriggerTarget ||
-      selectedLocation ||
-      selectedCharacter ||
-      selectedStatDefinition,
+    selectedTriggerTarget ||
+    selectedLocation ||
+    selectedCharacter ||
+    selectedStatDefinition ||
+    selectedItemDefinition,
   );
 
   const closeInspector = useCallback(() => {
@@ -109,6 +119,7 @@ export function StoryEditor() {
     setSelectedLocationId(undefined);
     setSelectedCharacterId(undefined);
     setSelectedStatDefinitionId(undefined);
+    setSelectedItemDefinitionId(undefined);
   }, []);
 
   const storyNodes = useMemo(
@@ -283,12 +294,28 @@ export function StoryEditor() {
     setOpenContextSections((sections) => ({ ...sections, stats: true }));
   }
 
-  function updateLocalStatDefinition(
-    nextDefinition: NonNullable<typeof selectedStatDefinition>,
-  ) {
+  function updateLocalStatDefinition(nextDefinition: NonNullable<typeof selectedStatDefinition>) {
     setStory({
       ...story!,
       statDefinitions: (story?.statDefinitions ?? []).map((definition) =>
+        definition.id === nextDefinition.id ? nextDefinition : definition,
+      ),
+    });
+  }
+
+  async function addItemDefinition() {
+    const itemDefinitionId = await createItemDefinition();
+    if (!itemDefinitionId) return;
+    closeInspector();
+    setSelectedItemDefinitionId(itemDefinitionId);
+    setIsLocationPanelOpen(true);
+    setOpenContextSections((sections) => ({ ...sections, items: true }));
+  }
+
+  function updateLocalItemDefinition(nextDefinition: NonNullable<typeof selectedItemDefinition>) {
+    setStory({
+      ...story!,
+      itemDefinitions: (story?.itemDefinitions ?? []).map((definition) =>
         definition.id === nextDefinition.id ? nextDefinition : definition,
       ),
     });
@@ -401,105 +428,154 @@ export function StoryEditor() {
           </button>
           {isLocationPanelOpen ? (
             <div className="location-panel-content">
-            <div className="location-panel-header">
-              <button
-                className="ghost context-heading"
-                type="button"
-                aria-expanded={openContextSections.locations}
-                onClick={() => toggleContextSection('locations')}
-              >
-                <span>{openContextSections.locations ? '▾' : '▸'}</span> Locations
-              </button>
-              <button aria-label="Add location" type="button" onClick={() => void addLocation()}>
-                Add
-              </button>
-            </div>
-            {!openContextSections.locations ? null : (story.locations?.length ?? 0) === 0 ? (
-              <p className="hint">No locations yet.</p>
-            ) : (
-              <ul>
-                {(story.locations ?? []).map((location) => (
-                  <li key={location.id}>
-                    <button
-                      type="button"
-                      className={location.id === selectedLocationId ? 'selected' : 'ghost'}
-                      onClick={() => {
-                        closeInspector();
-                        setSelectedLocationId(location.id);
-                      }}
-                    >
-                      {location.name}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-            <div className="location-panel-header context-section">
-              <button
-                className="ghost context-heading"
-                type="button"
-                aria-expanded={openContextSections.characters}
-                onClick={() => toggleContextSection('characters')}
-              >
-                <span>{openContextSections.characters ? '▾' : '▸'}</span> Characters
-              </button>
-              <button aria-label="Add character" type="button" onClick={() => void addCharacter()}>
-                Add
-              </button>
-            </div>
-            {!openContextSections.characters ? null : (story.characters?.length ?? 0) === 0 ? (
-              <p className="hint">No characters yet.</p>
-            ) : (
-              <ul>
-                {(story.characters ?? []).map((character) => (
-                  <li key={character.id}>
-                    <button
-                      type="button"
-                      className={character.id === selectedCharacterId ? 'selected' : 'ghost'}
-                      onClick={() => {
-                        closeInspector();
-                        setSelectedCharacterId(character.id);
-                      }}
-                    >
-                      {character.name}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-            <div className="location-panel-header context-section">
-              <button
-                className="ghost context-heading"
-                type="button"
-                aria-expanded={openContextSections.stats}
-                onClick={() => toggleContextSection('stats')}
-              >
-                <span>{openContextSections.stats ? '▾' : '▸'}</span> Stats
-              </button>
-              <button aria-label="Add stat definition" type="button" onClick={() => void addStatDefinition()}>
-                Add
-              </button>
-            </div>
-            {!openContextSections.stats ? null : (story.statDefinitions?.length ?? 0) === 0 ? (
-              <p className="hint">No stats yet.</p>
-            ) : (
-              <ul>
-                {(story.statDefinitions ?? []).map((definition) => (
-                  <li key={definition.id}>
-                    <button
-                      type="button"
-                      className={definition.id === selectedStatDefinitionId ? 'selected' : 'ghost'}
-                      onClick={() => {
-                        closeInspector();
-                        setSelectedStatDefinitionId(definition.id);
-                      }}
-                    >
-                      {definition.name}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
+              <div className="location-panel-header">
+                <button
+                  className="ghost context-heading"
+                  type="button"
+                  aria-expanded={openContextSections.locations}
+                  onClick={() => toggleContextSection('locations')}
+                >
+                  <span>{openContextSections.locations ? '▾' : '▸'}</span> Locations
+                </button>
+                <button aria-label="Add location" type="button" onClick={() => void addLocation()}>
+                  Add
+                </button>
+              </div>
+              {!openContextSections.locations ? null : (story.locations?.length ?? 0) === 0 ? (
+                <p className="hint">No locations yet.</p>
+              ) : (
+                <ul>
+                  {(story.locations ?? []).map((location) => (
+                    <li key={location.id}>
+                      <button
+                        type="button"
+                        className={location.id === selectedLocationId ? 'selected' : 'ghost'}
+                        onClick={() => {
+                          closeInspector();
+                          setSelectedLocationId(location.id);
+                        }}
+                      >
+                        {location.name}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <div className="location-panel-header context-section">
+                <button
+                  className="ghost context-heading"
+                  type="button"
+                  aria-expanded={openContextSections.characters}
+                  onClick={() => toggleContextSection('characters')}
+                >
+                  <span>{openContextSections.characters ? '▾' : '▸'}</span> Characters
+                </button>
+                <button
+                  aria-label="Add character"
+                  type="button"
+                  onClick={() => void addCharacter()}
+                >
+                  Add
+                </button>
+              </div>
+              {!openContextSections.characters ? null : (story.characters?.length ?? 0) === 0 ? (
+                <p className="hint">No characters yet.</p>
+              ) : (
+                <ul>
+                  {(story.characters ?? []).map((character) => (
+                    <li key={character.id}>
+                      <button
+                        type="button"
+                        className={character.id === selectedCharacterId ? 'selected' : 'ghost'}
+                        onClick={() => {
+                          closeInspector();
+                          setSelectedCharacterId(character.id);
+                        }}
+                      >
+                        {character.name}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <div className="location-panel-header context-section">
+                <button
+                  className="ghost context-heading"
+                  type="button"
+                  aria-expanded={openContextSections.stats}
+                  onClick={() => toggleContextSection('stats')}
+                >
+                  <span>{openContextSections.stats ? '▾' : '▸'}</span> Stats
+                </button>
+                <button
+                  aria-label="Add stat definition"
+                  type="button"
+                  onClick={() => void addStatDefinition()}
+                >
+                  Add
+                </button>
+              </div>
+              {!openContextSections.stats ? null : (story.statDefinitions?.length ?? 0) === 0 ? (
+                <p className="hint">No stats yet.</p>
+              ) : (
+                <ul>
+                  {(story.statDefinitions ?? []).map((definition) => (
+                    <li key={definition.id}>
+                      <button
+                        type="button"
+                        className={
+                          definition.id === selectedStatDefinitionId ? 'selected' : 'ghost'
+                        }
+                        onClick={() => {
+                          closeInspector();
+                          setSelectedStatDefinitionId(definition.id);
+                        }}
+                      >
+                        {definition.name}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <div className="location-panel-header context-section">
+                <button
+                  className="ghost context-heading"
+                  type="button"
+                  aria-expanded={openContextSections.items}
+                  onClick={() => toggleContextSection('items')}
+                >
+                  <span>{openContextSections.items ? '▾' : '▸'}</span> Items
+                </button>
+                <button
+                  aria-label="Add item definition"
+                  type="button"
+                  onClick={() => void addItemDefinition()}
+                >
+                  Add
+                </button>
+              </div>
+              {!openContextSections.items ? null : (story.itemDefinitions?.length ?? 0) === 0 ? (
+                <p className="hint">No items yet.</p>
+              ) : (
+                <ul>
+                  {(story.itemDefinitions ?? []).map((definition) => (
+                    <li key={definition.id}>
+                      <button
+                        type="button"
+                        className={
+                          definition.id === selectedItemDefinitionId ? 'selected' : 'ghost'
+                        }
+                        onClick={() => {
+                          closeInspector();
+                          setSelectedItemDefinitionId(definition.id);
+                        }}
+                      >
+                        {definition.name}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           ) : null}
         </nav>
@@ -571,16 +647,24 @@ export function StoryEditor() {
               <CharacterInspector
                 character={selectedCharacter}
                 statDefinitions={story.statDefinitions ?? []}
+                itemDefinitions={story.itemDefinitions ?? []}
                 onChange={updateLocalCharacter}
                 onPatch={updateCharacter}
                 onCreateStat={createCharacterStat}
                 onPatchStat={updateCharacterStat}
+                onCreateItem={createCharacterItem}
               />
             ) : selectedStatDefinition ? (
               <StatDefinitionInspector
                 statDefinition={selectedStatDefinition}
                 onChange={updateLocalStatDefinition}
                 onPatch={updateStatDefinition}
+              />
+            ) : selectedItemDefinition ? (
+              <ItemDefinitionInspector
+                itemDefinition={selectedItemDefinition}
+                onChange={updateLocalItemDefinition}
+                onPatch={updateItemDefinition}
               />
             ) : null}
           </aside>

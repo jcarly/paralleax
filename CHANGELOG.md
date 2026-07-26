@@ -2,6 +2,13 @@
 
 ## 2026-07-26
 
+- Added reusable story-level item definitions and separate character-owned item
+  instances, including support for owning several copies of the same item.
+- Added item definition editing, character item assignment, relational
+  persistence, same-story validation, and editor/API regression coverage.
+- Added focused character and item inspector tests and completed stat definition
+  API client coverage, restoring all configured web coverage thresholds.
+- Added a collapsible Items list to the editor context menu.
 - Added story-level reusable stat definitions that can be assigned to multiple
   characters with independent initial values.
 - Added collapsible Locations, Characters, and Stats lists to the editor context

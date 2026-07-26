@@ -190,6 +190,25 @@ export class UpdateStatDefinitionDto {
   @MaxLength(200)
   name?: string;
 }
+export class CreateItemDefinitionDto {
+  @IsString() @IsNotEmpty() @MaxLength(200) name!: string;
+  @ValidateIf((_, value) => value !== undefined)
+  @IsString()
+  description?: string;
+}
+export class UpdateItemDefinitionDto {
+  @ValidateIf((_, value) => value !== undefined)
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(200)
+  name?: string;
+  @ValidateIf((_, value) => value !== undefined)
+  @IsString()
+  description?: string;
+}
+export class CreateCharacterItemDto {
+  @IsString() @IsNotEmpty() itemDefinitionId!: string;
+}
 export class CreateTriggerDto {
   @ValidateIf((_, value) => value !== undefined)
   @IsArray()

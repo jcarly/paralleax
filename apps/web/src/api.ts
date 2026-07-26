@@ -1,17 +1,22 @@
 import type {
   CharacterMutationResult,
+  CharacterItemMutationResult,
   CharacterStatMutationResult,
   CreateCharacterInput,
+  CreateCharacterItemInput,
   CreateCharacterStatInput,
   CreateInteractionInput,
+  CreateItemDefinitionInput,
   CreateLocationInput,
   CreateStatDefinitionInput,
   InteractionMutationResult,
+  ItemDefinitionMutationResult,
   LocationMutationResult,
   StatDefinitionMutationResult,
   Story,
   TriggerMutationResult,
   UpdateInteractionInput,
+  UpdateItemDefinitionInput,
   UpdateCharacterInput,
   UpdateCharacterStatInput,
   UpdateLocationInput,
@@ -115,6 +120,20 @@ export const api = {
       `/stories/${storyId}/stat-definitions/${statDefinitionId}`,
       { method: 'PATCH', body: JSON.stringify(input) },
     ),
+  createItemDefinition: (storyId: string, input: CreateItemDefinitionInput) =>
+    request<ItemDefinitionMutationResult>(`/stories/${storyId}/item-definitions`, {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
+  updateItemDefinition: (
+    storyId: string,
+    itemDefinitionId: string,
+    input: UpdateItemDefinitionInput,
+  ) =>
+    request<ItemDefinitionMutationResult>(
+      `/stories/${storyId}/item-definitions/${itemDefinitionId}`,
+      { method: 'PATCH', body: JSON.stringify(input) },
+    ),
   createCharacterStat: (storyId: string, characterId: string, input: CreateCharacterStatInput) =>
     request<CharacterStatMutationResult>(`/stories/${storyId}/characters/${characterId}/stats`, {
       method: 'POST',
@@ -133,6 +152,11 @@ export const api = {
         body: JSON.stringify(input),
       },
     ),
+  createCharacterItem: (storyId: string, characterId: string, input: CreateCharacterItemInput) =>
+    request<CharacterItemMutationResult>(`/stories/${storyId}/characters/${characterId}/items`, {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
   addTrigger: (
     storyId: string,
     interactionId: string,

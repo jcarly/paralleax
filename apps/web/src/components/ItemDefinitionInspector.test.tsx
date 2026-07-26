@@ -1,0 +1,48 @@
+import { fireEvent, render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
+import { ItemDefinitionInspector } from './ItemDefinitionInspector';
+
+describe('ItemDefinitionInspector', () => {
+  it('locally edits and persists the item name and description', () => {
+    const onChange = vi.fn();
+    const onPatch = vi.fn().mockResolvedValue(undefined);
+
+    render(
+      <ItemDefinitionInspector
+        itemDefinition={{
+          id: 'item-definition-1',
+          name: 'Key',
+          description: 'A brass key.',
+        }}
+        onChange={onChange}
+        onPatch={onPatch}
+      />,
+    );
+
+    const name = screen.getByLabelText('Name');
+    fireEvent.change(name, { target: { value: 'Archive key' } });
+    expect(onChange).toHaveBeenLastCalledWith({
+      id: 'item-definition-1',
+      name: 'Archive key',
+      description: 'A brass key.',
+    });
+    (name as HTMLInputElement).value = 'Archive key';
+    fireEvent.blur(name);
+    expect(onPatch).toHaveBeenLastCalledWith('item-definition-1', {
+      name: 'Archive key',
+    });
+
+    const description = screen.getByLabelText('Description');
+    fireEvent.change(description, { target: { value: 'Opens the archive.' } });
+    expect(onChange).toHaveBeenLastCalledWith({
+      id: 'item-definition-1',
+      name: 'Key',
+      description: 'Opens the archive.',
+    });
+    (description as HTMLTextAreaElement).value = 'Opens the archive.';
+    fireEvent.blur(description);
+    expect(onPatch).toHaveBeenLastCalledWith('item-definition-1', {
+      description: 'Opens the archive.',
+    });
+  });
+});

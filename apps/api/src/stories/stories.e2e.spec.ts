@@ -4,8 +4,10 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import * as request from 'supertest';
 import type {
   CharacterMutationResult,
+  CharacterItemMutationResult,
   CharacterStatMutationResult,
   InteractionMutationResult,
+  ItemDefinitionMutationResult,
   LocationMutationResult,
   StatDefinitionMutationResult,
   Story,
@@ -526,6 +528,62 @@ describe('Stories API', () => {
     ]);
   });
 
+  it('creates reusable item definitions and several owned instances of the same item', async () => {
+    const story = await createStory();
+    const characterResponse = await request(httpServer)
+      .post(`/api/stories/${story.id}/characters`)
+      .send({ name: 'Mira' })
+      .expect(201);
+    const character = (characterResponse.body as CharacterMutationResult).character;
+
+    const definitionResponse = await request(httpServer)
+      .post(`/api/stories/${story.id}/item-definitions`)
+      .send({ name: 'Key', description: 'A brass key.' })
+      .expect(201);
+    const definition = (definitionResponse.body as ItemDefinitionMutationResult).itemDefinition;
+    expect(definition).toMatchObject({ name: 'Key', description: 'A brass key.' });
+
+    const updatedDefinition = await request(httpServer)
+      .patch(`/api/stories/${story.id}/item-definitions/${definition.id}`)
+      .send({ name: 'Archive key' })
+      .expect(200);
+    expect((updatedDefinition.body as ItemDefinitionMutationResult).itemDefinition.name).toBe(
+      'Archive key',
+    );
+
+    const first = await request(httpServer)
+      .post(`/api/stories/${story.id}/characters/${character.id}/items`)
+      .send({ itemDefinitionId: definition.id })
+      .expect(201);
+    const second = await request(httpServer)
+      .post(`/api/stories/${story.id}/characters/${character.id}/items`)
+      .send({ itemDefinitionId: definition.id })
+      .expect(201);
+    const firstItem = (first.body as CharacterItemMutationResult).item;
+    const secondItem = (second.body as CharacterItemMutationResult).item;
+
+    expect(firstItem.itemDefinitionId).toBe(definition.id);
+    expect(secondItem.itemDefinitionId).toBe(definition.id);
+    expect(secondItem.id).not.toBe(firstItem.id);
+
+    const loaded = await request(httpServer).get(`/api/stories/${story.id}`).expect(200);
+    expect((loaded.body as Story).characters?.find(({ id }) => id === character.id)?.items).toEqual(
+      [firstItem, secondItem],
+    );
+
+    const otherStory = await createStory('Other story');
+    const foreignDefinitionResponse = await request(httpServer)
+      .post(`/api/stories/${otherStory.id}/item-definitions`)
+      .send({ name: 'Foreign key' })
+      .expect(201);
+    const foreignDefinition = (foreignDefinitionResponse.body as ItemDefinitionMutationResult)
+      .itemDefinition;
+    await request(httpServer)
+      .post(`/api/stories/${story.id}/characters/${character.id}/items`)
+      .send({ itemDefinitionId: foreignDefinition.id })
+      .expect(404);
+  });
+
   it('rejects foreign stat references and duplicate effects', async () => {
     const first = await createStory('First story');
     const firstGraph = await createInteraction(first.id);
@@ -539,9 +597,8 @@ describe('Stories API', () => {
       .post(`/api/stories/${first.id}/stat-definitions`)
       .send({ name: 'Trust' })
       .expect(201);
-    const localDefinition = (
-      localDefinitionResponse.body as StatDefinitionMutationResult
-    ).statDefinition;
+    const localDefinition = (localDefinitionResponse.body as StatDefinitionMutationResult)
+      .statDefinition;
     const localStatResponse = await request(httpServer)
       .post(`/api/stories/${first.id}/characters/${localCharacter.id}/stats`)
       .send({ statDefinitionId: localDefinition.id, initialValue: 0 })

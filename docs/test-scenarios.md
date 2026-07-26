@@ -150,6 +150,10 @@ The character-stat vertical keeps these regressions covered:
 - Reader engine: an interaction without input is available at startup.
 - Reader engine: an interaction with input is only available after the source interaction.
 - Reader engine: visited / not visited conditions filter choices correctly.
+- Editor/API: item definitions are created once at story level and can be edited.
+- Editor/API: adding the same item definition several times to one character
+  creates separate owned instances with distinct ids.
+- API: a character cannot receive an item definition from another story.
 - Simulation: the editor test action opens Simulation Mode instead of the player
   reader.
 - Simulation: interactions reachable by trigger input logic are listed,
@@ -170,12 +174,20 @@ The character-stat vertical keeps these regressions covered:
   parent option has no stored canvas position yet.
 - Simulation: root and output options created from simulation receive graph
   positions compatible with returning to the Story Canvas.
+- Character inspector: editing character fields, assigning reusable stats and
+  items, updating stat values, unknown item definitions, and empty definition
+  lists remain covered directly at the component boundary.
+- Item definition inspector: local name and description edits persist on blur.
+- Web API client: reusable stat definition creation and updates keep their
+  expected HTTP methods, paths, and JSON bodies.
 
 ## Playwright Functional Tests
 
 - Editor: open a story, select an interaction, rename its title, and verify that the canvas and inspector stay visible.
 - Editor: move an interaction and verify that title and content remain visible after saving.
 - Editor: edit root trigger path conditions from the root trigger marker.
+- Editor: create one reusable item definition and give a character two separate
+  owned instances of it.
 - Editor: create a root interaction and verify that it appears on the canvas.
 - Editor: create a child interaction from the selected interaction, then verify the trigger input link and absence of overlap with other outputs.
 - Editor: configure several inputs on the same trigger and verify that graph links share the trigger marker.

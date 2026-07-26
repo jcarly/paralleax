@@ -1,6 +1,7 @@
 import type {
   Character,
   Interaction,
+  ItemDefinition,
   Location,
   StatDefinition,
   Story,
@@ -11,6 +12,7 @@ import type { Queryable } from './stories.persistence.types';
 export async function replaceStoryGraph(client: Queryable, story: Story) {
   await client.query('DELETE FROM interactions WHERE story_id = $1', [story.id]);
   await client.query('DELETE FROM characters WHERE story_id = $1', [story.id]);
+  await client.query('DELETE FROM item_definitions WHERE story_id = $1', [story.id]);
   await client.query('DELETE FROM stat_definitions WHERE story_id = $1', [story.id]);
   await client.query('DELETE FROM locations WHERE story_id = $1', [story.id]);
   for (const [locationIndex, location] of (story.locations ?? []).entries()) {
@@ -19,10 +21,16 @@ export async function replaceStoryGraph(client: Queryable, story: Story) {
   for (const [index, definition] of (story.statDefinitions ?? []).entries()) {
     await insertStatDefinition(client, story.id, definition, index);
   }
+  for (const [index, definition] of (story.itemDefinitions ?? []).entries()) {
+    await insertItemDefinition(client, story.id, definition, index);
+  }
   for (const [characterIndex, character] of (story.characters ?? []).entries()) {
     await insertCharacter(client, story.id, character, characterIndex);
     for (const [statIndex, stat] of (character.stats ?? []).entries()) {
       await insertCharacterStat(client, story.id, character.id, stat, statIndex);
+    }
+    for (const [itemIndex, item] of (character.items ?? []).entries()) {
+      await insertCharacterItem(client, story.id, character.id, item, itemIndex);
     }
   }
   for (const [interactionIndex, interaction] of story.interactions.entries()) {
@@ -49,6 +57,7 @@ export async function persistStoryDifference(client: Queryable, before: Story, a
 
   await persistLocationDifference(client, before, after);
   await persistStatDefinitionDifference(client, before, after);
+  await persistItemDefinitionDifference(client, before, after);
   await persistCharacterDifference(client, before, after);
 
   const beforeInteractions = new Map(before.interactions.map((item) => [item.id, item]));
@@ -291,6 +300,34 @@ async function insertStatDefinition(
   );
 }
 
+async function insertItemDefinition(
+  client: Queryable,
+  storyId: string,
+  definition: ItemDefinition,
+  sortOrder: number,
+) {
+  await client.query(
+    `INSERT INTO item_definitions (id, story_id, name, description, sort_order)
+     VALUES ($1, $2, $3, $4, $5)`,
+    [definition.id, storyId, definition.name, definition.description, sortOrder],
+  );
+}
+
+async function insertCharacterItem(
+  client: Queryable,
+  storyId: string,
+  characterId: string,
+  item: NonNullable<Character['items']>[number],
+  sortOrder: number,
+) {
+  await client.query(
+    `INSERT INTO character_items
+     (id, story_id, character_id, item_definition_id, sort_order)
+     VALUES ($1, $2, $3, $4, $5)`,
+    [item.id, storyId, characterId, item.itemDefinitionId, sortOrder],
+  );
+}
+
 async function persistStatDefinitionDifference(client: Queryable, before: Story, after: Story) {
   const beforeDefinitions = new Map(
     (before.statDefinitions ?? []).map((definition) => [definition.id, definition]),
@@ -328,6 +365,44 @@ async function persistStatDefinitionDifference(client: Queryable, before: Story,
   }
 }
 
+async function persistItemDefinitionDifference(client: Queryable, before: Story, after: Story) {
+  const beforeDefinitions = new Map(
+    (before.itemDefinitions ?? []).map((definition) => [definition.id, definition]),
+  );
+  const afterDefinitions = new Map(
+    (after.itemDefinitions ?? []).map((definition) => [definition.id, definition]),
+  );
+  for (const definition of before.itemDefinitions ?? []) {
+    if (!afterDefinitions.has(definition.id)) {
+      await client.query('DELETE FROM item_definitions WHERE id = $1 AND story_id = $2', [
+        definition.id,
+        after.id,
+      ]);
+    }
+  }
+  for (const [index, definition] of (after.itemDefinitions ?? []).entries()) {
+    const previous = beforeDefinitions.get(definition.id);
+    if (!previous) {
+      await insertItemDefinition(client, after.id, definition, index);
+      continue;
+    }
+    const changes: string[] = [];
+    const values: unknown[] = [definition.id];
+    addChange(changes, values, 'name', previous.name, definition.name);
+    addChange(changes, values, 'description', previous.description, definition.description);
+    addChange(
+      changes,
+      values,
+      'sort_order',
+      (before.itemDefinitions ?? []).findIndex(({ id }) => id === definition.id),
+      index,
+    );
+    if (changes.length > 0) {
+      await client.query(`UPDATE item_definitions SET ${changes.join(', ')} WHERE id = $1`, values);
+    }
+  }
+}
+
 async function persistCharacterDifference(client: Queryable, before: Story, after: Story) {
   const beforeCharacters = new Map(
     (before.characters ?? []).map((character) => [character.id, character]),
@@ -350,6 +425,9 @@ async function persistCharacterDifference(client: Queryable, before: Story, afte
       for (const [statIndex, stat] of (character.stats ?? []).entries()) {
         await insertCharacterStat(client, after.id, character.id, stat, statIndex);
       }
+      for (const [itemIndex, item] of (character.items ?? []).entries()) {
+        await insertCharacterItem(client, after.id, character.id, item, itemIndex);
+      }
       continue;
     }
     const changes: string[] = [];
@@ -367,6 +445,51 @@ async function persistCharacterDifference(client: Queryable, before: Story, afte
       await client.query(`UPDATE characters SET ${changes.join(', ')} WHERE id = $1`, values);
     }
     await persistStatDifference(client, after.id, previous, character);
+    await persistCharacterItemDifference(client, after.id, previous, character);
+  }
+}
+
+async function persistCharacterItemDifference(
+  client: Queryable,
+  storyId: string,
+  before: Character,
+  after: Character,
+) {
+  const beforeItems = new Map((before.items ?? []).map((item) => [item.id, item]));
+  const afterItems = new Map((after.items ?? []).map((item) => [item.id, item]));
+  for (const item of before.items ?? []) {
+    if (!afterItems.has(item.id)) {
+      await client.query('DELETE FROM character_items WHERE id = $1 AND story_id = $2', [
+        item.id,
+        storyId,
+      ]);
+    }
+  }
+  for (const [index, item] of (after.items ?? []).entries()) {
+    const previous = beforeItems.get(item.id);
+    if (!previous) {
+      await insertCharacterItem(client, storyId, after.id, item, index);
+      continue;
+    }
+    const changes: string[] = [];
+    const values: unknown[] = [item.id];
+    addChange(
+      changes,
+      values,
+      'item_definition_id',
+      previous.itemDefinitionId,
+      item.itemDefinitionId,
+    );
+    addChange(
+      changes,
+      values,
+      'sort_order',
+      (before.items ?? []).findIndex(({ id }) => id === item.id),
+      index,
+    );
+    if (changes.length > 0) {
+      await client.query(`UPDATE character_items SET ${changes.join(', ')} WHERE id = $1`, values);
+    }
   }
 }
 

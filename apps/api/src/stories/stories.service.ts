@@ -8,8 +8,10 @@ import {
   normalizeTriggerInputIds,
   updateTriggerInStory,
   type CharacterMutationResult,
+  type CharacterItemMutationResult,
   type CharacterStatMutationResult,
   type InteractionMutationResult,
+  type ItemDefinitionMutationResult,
   type LocationMutationResult,
   type StatDefinitionMutationResult,
   type Story,
@@ -19,8 +21,10 @@ import {
 import {
   CreateInteractionDto,
   CreateCharacterDto,
+  CreateCharacterItemDto,
   CreateCharacterStatDto,
   CreateLocationDto,
+  CreateItemDefinitionDto,
   CreateStatDefinitionDto,
   CreateStoryDto,
   CreateTriggerDto,
@@ -28,6 +32,7 @@ import {
   UpdateCharacterDto,
   UpdateCharacterStatDto,
   UpdateLocationDto,
+  UpdateItemDefinitionDto,
   UpdateStatDefinitionDto,
   UpdateTriggerDto,
   TriggerConditionDto,
@@ -313,6 +318,44 @@ export class StoriesService {
     );
     return this.statDefinitionResult(story, statDefinitionId);
   }
+  async createItemDefinition(
+    storyId: string,
+    input: CreateItemDefinitionDto,
+    userId: string,
+  ): Promise<ItemDefinitionMutationResult> {
+    const itemDefinitionId = randomUUID();
+    const story = await this.update(
+      storyId,
+      (story) => {
+        (story.itemDefinitions ??= []).push({
+          id: itemDefinitionId,
+          name: input.name.trim(),
+          description: input.description ?? '',
+        });
+        return story;
+      },
+      userId,
+    );
+    return this.itemDefinitionResult(story, itemDefinitionId);
+  }
+  async updateItemDefinition(
+    storyId: string,
+    itemDefinitionId: string,
+    input: UpdateItemDefinitionDto,
+    userId: string,
+  ): Promise<ItemDefinitionMutationResult> {
+    const story = await this.update(
+      storyId,
+      (story) => {
+        const definition = this.itemDefinition(story, itemDefinitionId);
+        if (input.name !== undefined) definition.name = input.name.trim();
+        if (input.description !== undefined) definition.description = input.description;
+        return story;
+      },
+      userId,
+    );
+    return this.itemDefinitionResult(story, itemDefinitionId);
+  }
   async updateStatDefinition(
     storyId: string,
     statDefinitionId: string,
@@ -378,6 +421,28 @@ export class StoriesService {
     );
     return this.statResult(story, characterId, statId);
   }
+  async createCharacterItem(
+    storyId: string,
+    characterId: string,
+    input: CreateCharacterItemDto,
+    userId: string,
+  ): Promise<CharacterItemMutationResult> {
+    const itemId = randomUUID();
+    const story = await this.update(
+      storyId,
+      (story) => {
+        const character = this.character(story, characterId);
+        this.itemDefinition(story, input.itemDefinitionId);
+        (character.items ??= []).push({
+          id: itemId,
+          itemDefinitionId: input.itemDefinitionId,
+        });
+        return story;
+      },
+      userId,
+    );
+    return this.itemResult(story, characterId, itemId);
+  }
   async updateCharacterStat(
     storyId: string,
     characterId: string,
@@ -420,6 +485,16 @@ export class StoriesService {
     const definition = (story.statDefinitions ?? []).find((item) => item.id === id);
     if (!definition) throw new NotFoundException('Stat definition not found');
     return definition;
+  }
+  private itemDefinition(story: Story, id: string) {
+    const definition = (story.itemDefinitions ?? []).find((item) => item.id === id);
+    if (!definition) throw new NotFoundException('Item definition not found');
+    return definition;
+  }
+  private item(story: Story, characterId: string, itemId: string) {
+    const item = this.character(story, characterId).items?.find(({ id }) => id === itemId);
+    if (!item) throw new NotFoundException('Character item not found');
+    return item;
   }
   private statIds(story: Story) {
     return new Set(
@@ -539,6 +614,28 @@ export class StoriesService {
   ): StatDefinitionMutationResult {
     return {
       statDefinition: structuredClone(this.statDefinition(story, statDefinitionId)),
+      revision: story.revision ?? 1,
+      updatedAt: story.updatedAt,
+    };
+  }
+  private itemDefinitionResult(
+    story: Story,
+    itemDefinitionId: string,
+  ): ItemDefinitionMutationResult {
+    return {
+      itemDefinition: structuredClone(this.itemDefinition(story, itemDefinitionId)),
+      revision: story.revision ?? 1,
+      updatedAt: story.updatedAt,
+    };
+  }
+  private itemResult(
+    story: Story,
+    characterId: string,
+    itemId: string,
+  ): CharacterItemMutationResult {
+    return {
+      characterId,
+      item: structuredClone(this.item(story, characterId, itemId)),
       revision: story.revision ?? 1,
       updatedAt: story.updatedAt,
     };

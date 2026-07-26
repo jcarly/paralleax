@@ -291,7 +291,8 @@ and merge semantics.
 
 The current PostgreSQL schema stores Story, Location, Character, reusable Stat
 Definition, Character Stat Assignment,
-Interaction, Interaction Stat Effect, Trigger, and trigger input state in
+Item Definition, Character Item Instance, Interaction, Interaction Stat Effect,
+Trigger, and trigger input state in
 relational tables. Interaction-to-location, interaction-character, and stat
 effect references use same-story composite foreign keys. Ordered typed trigger conditions are
 stored as JSONB on their owning trigger and their references are validated by
