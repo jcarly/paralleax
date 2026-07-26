@@ -80,15 +80,17 @@ and replay rules.
 
 ### Location
 
-A location is an authored story entity with an id, name, and description.
+A location is an authored story entity with an id, name, description, and
+optional image URL.
 Interactions may move the reader to a location, and triggers may test whether it
 is or is not current. Locations are definitions in the story; the current
 location is runtime reader state.
 
 ### Character
 
-A character is a story-owned authored entity with an id, name, description, and
-zero or more assigned numeric stats. Stat definitions belong to the story and
+A character is a story-owned authored entity with an id, name, description,
+optional portrait image URL, and zero or more assigned numeric stats. Stat
+definitions belong to the story, may have a pictogram image URL, and
 can be assigned to several characters without being recreated. Each assignment
 has its own id and initial value.
 An interaction can involve several characters. Presence conditions inspect the
@@ -98,8 +100,8 @@ conditions compare its current runtime value.
 
 ### Item Definition
 
-An item definition is a reusable story-owned description with an id, name, and
-description. It describes a kind of object and is not itself owned by a
+An item definition is a reusable story-owned description with an id, name,
+description, and optional image URL. It describes a kind of object and is not itself owned by a
 character.
 
 ### Item Instance

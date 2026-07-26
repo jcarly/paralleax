@@ -1,4 +1,5 @@
 import type { Location } from '@paralleax/shared';
+import { ImageUrlField } from './ImageUrlField';
 
 export function LocationInspector({
   location,
@@ -9,7 +10,7 @@ export function LocationInspector({
   onLocalChange: (location: Location) => void;
   onPatch: (
     locationId: string,
-    patch: Partial<Pick<Location, 'name' | 'description'>>,
+    patch: Partial<Pick<Location, 'name' | 'description' | 'imageUrl'>>,
   ) => Promise<void>;
 }) {
   return (
@@ -23,6 +24,11 @@ export function LocationInspector({
           onBlur={(event) => void onPatch(location.id, { name: event.target.value })}
         />
       </label>
+      <ImageUrlField
+        imageUrl={location.imageUrl}
+        onChange={(imageUrl) => onLocalChange({ ...location, imageUrl })}
+        onBlur={(imageUrl) => void onPatch(location.id, { imageUrl })}
+      />
       <label>
         Description
         <textarea

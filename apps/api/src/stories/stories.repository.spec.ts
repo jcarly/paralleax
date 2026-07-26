@@ -309,6 +309,7 @@ describe('StoriesRepository', () => {
       saved.id,
       'Harbor',
       'A quiet harbor.',
+      '',
       0,
     ]);
     expect(mockClientQuery).toHaveBeenCalledWith(
@@ -317,7 +318,7 @@ describe('StoriesRepository', () => {
     );
     expect(mockClientQuery).toHaveBeenCalledWith(
       expect.stringContaining('INSERT INTO characters'),
-      ['character-1', saved.id, 'Mira', 'An investigator.', 0],
+      ['character-1', saved.id, 'Mira', 'An investigator.', '', 0],
     );
     expect(mockClientQuery).toHaveBeenCalledWith(
       expect.stringContaining('INSERT INTO interaction_characters'),
@@ -325,11 +326,11 @@ describe('StoriesRepository', () => {
     );
     expect(mockClientQuery).toHaveBeenCalledWith(
       expect.stringContaining('INSERT INTO stat_definitions'),
-      ['definition-1', saved.id, 'Trust', 0],
+      ['definition-1', saved.id, 'Trust', '', 0],
     );
     expect(mockClientQuery).toHaveBeenCalledWith(
       expect.stringContaining('INSERT INTO item_definitions'),
-      ['item-definition-1', saved.id, 'Key', 'A brass key.', 0],
+      ['item-definition-1', saved.id, 'Key', 'A brass key.', '', 0],
     );
     expect(mockClientQuery).toHaveBeenCalledWith(
       expect.stringContaining('INSERT INTO character_stats'),

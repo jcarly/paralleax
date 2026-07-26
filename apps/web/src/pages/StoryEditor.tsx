@@ -466,6 +466,9 @@ export function StoryEditor() {
                           setSelectedLocationId(location.id);
                         }}
                       >
+                        {location.imageUrl ? (
+                          <img className="context-picto" src={location.imageUrl} alt="" />
+                        ) : null}
                         {location.name}
                       </button>
                     </li>
@@ -503,6 +506,9 @@ export function StoryEditor() {
                           setSelectedCharacterId(character.id);
                         }}
                       >
+                        {character.imageUrl ? (
+                          <img className="context-picto" src={character.imageUrl} alt="" />
+                        ) : null}
                         {character.name}
                       </button>
                     </li>
@@ -542,6 +548,9 @@ export function StoryEditor() {
                           setSelectedStatDefinitionId(definition.id);
                         }}
                       >
+                        {definition.imageUrl ? (
+                          <img className="context-picto" src={definition.imageUrl} alt="" />
+                        ) : null}
                         {definition.name}
                       </button>
                     </li>
@@ -581,6 +590,9 @@ export function StoryEditor() {
                           setSelectedItemDefinitionId(definition.id);
                         }}
                       >
+                        {definition.imageUrl ? (
+                          <img className="context-picto" src={definition.imageUrl} alt="" />
+                        ) : null}
                         {definition.name}
                       </button>
                     </li>

@@ -226,6 +226,10 @@ export class CreateLocationDto {
   @ValidateIf((_, value) => value !== undefined)
   @IsString()
   description?: string;
+  @ValidateIf((_, value) => value !== undefined)
+  @IsString()
+  @MaxLength(2048)
+  imageUrl?: string;
 }
 export class UpdateLocationDto {
   @ValidateIf((_, value) => value !== undefined)
@@ -236,12 +240,20 @@ export class UpdateLocationDto {
   @ValidateIf((_, value) => value !== undefined)
   @IsString()
   description?: string;
+  @ValidateIf((_, value) => value !== undefined)
+  @IsString()
+  @MaxLength(2048)
+  imageUrl?: string;
 }
 export class CreateCharacterDto {
   @IsString() @IsNotEmpty() @MaxLength(200) name!: string;
   @ValidateIf((_, value) => value !== undefined)
   @IsString()
   description?: string;
+  @ValidateIf((_, value) => value !== undefined)
+  @IsString()
+  @MaxLength(2048)
+  imageUrl?: string;
 }
 export class UpdateCharacterDto {
   @ValidateIf((_, value) => value !== undefined)
@@ -252,6 +264,10 @@ export class UpdateCharacterDto {
   @ValidateIf((_, value) => value !== undefined)
   @IsString()
   description?: string;
+  @ValidateIf((_, value) => value !== undefined)
+  @IsString()
+  @MaxLength(2048)
+  imageUrl?: string;
 }
 export class CreateCharacterStatDto {
   @IsString() @IsNotEmpty() statDefinitionId!: string;
@@ -264,6 +280,10 @@ export class UpdateCharacterStatDto {
 }
 export class CreateStatDefinitionDto {
   @IsString() @IsNotEmpty() @MaxLength(200) name!: string;
+  @ValidateIf((_, value) => value !== undefined)
+  @IsString()
+  @MaxLength(2048)
+  imageUrl?: string;
 }
 export class UpdateStatDefinitionDto {
   @ValidateIf((_, value) => value !== undefined)
@@ -271,12 +291,20 @@ export class UpdateStatDefinitionDto {
   @IsNotEmpty()
   @MaxLength(200)
   name?: string;
+  @ValidateIf((_, value) => value !== undefined)
+  @IsString()
+  @MaxLength(2048)
+  imageUrl?: string;
 }
 export class CreateItemDefinitionDto {
   @IsString() @IsNotEmpty() @MaxLength(200) name!: string;
   @ValidateIf((_, value) => value !== undefined)
   @IsString()
   description?: string;
+  @ValidateIf((_, value) => value !== undefined)
+  @IsString()
+  @MaxLength(2048)
+  imageUrl?: string;
 }
 export class UpdateItemDefinitionDto {
   @ValidateIf((_, value) => value !== undefined)
@@ -287,6 +315,10 @@ export class UpdateItemDefinitionDto {
   @ValidateIf((_, value) => value !== undefined)
   @IsString()
   description?: string;
+  @ValidateIf((_, value) => value !== undefined)
+  @IsString()
+  @MaxLength(2048)
+  imageUrl?: string;
 }
 export class CreateCharacterItemDto {
   @IsString() @IsNotEmpty() itemDefinitionId!: string;

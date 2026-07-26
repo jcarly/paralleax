@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { Character, ItemDefinition, StatDefinition } from '@paralleax/shared';
+import { ImageUrlField } from './ImageUrlField';
 
 export function CharacterInspector({
   character,
@@ -15,7 +16,10 @@ export function CharacterInspector({
   statDefinitions: StatDefinition[];
   itemDefinitions: ItemDefinition[];
   onChange: (patch: Partial<Character>) => void;
-  onPatch: (id: string, patch: Partial<Pick<Character, 'name' | 'description'>>) => Promise<void>;
+  onPatch: (
+    id: string,
+    patch: Partial<Pick<Character, 'name' | 'description' | 'imageUrl'>>,
+  ) => Promise<void>;
   onCreateStat: (characterId: string, statDefinitionId: string) => Promise<void>;
   onPatchStat: (
     characterId: string,
@@ -48,6 +52,11 @@ export function CharacterInspector({
           onBlur={(event) => void onPatch(character.id, { name: event.target.value })}
         />
       </label>
+      <ImageUrlField
+        imageUrl={character.imageUrl}
+        onChange={(imageUrl) => onChange({ imageUrl })}
+        onBlur={(imageUrl) => void onPatch(character.id, { imageUrl })}
+      />
       <div className="inspector-section-header">
         <h3>Stats</h3>
       </div>
@@ -83,6 +92,13 @@ export function CharacterInspector({
       {(character.stats ?? []).map((stat) => (
         <div className="stat-row" key={stat.id}>
           <span className="stat-name">
+            {statDefinitions.find(({ id }) => id === stat.statDefinitionId)?.imageUrl ? (
+              <img
+                className="context-picto"
+                src={statDefinitions.find(({ id }) => id === stat.statDefinitionId)?.imageUrl}
+                alt=""
+              />
+            ) : null}
             {statDefinitions.find(({ id }) => id === stat.statDefinitionId)?.name ?? 'Unknown stat'}
           </span>
           <label>
@@ -142,6 +158,13 @@ export function CharacterInspector({
         <ul className="character-items">
           {(character.items ?? []).map((item) => (
             <li key={item.id}>
+              {itemDefinitions.find(({ id }) => id === item.itemDefinitionId)?.imageUrl ? (
+                <img
+                  className="context-picto"
+                  src={itemDefinitions.find(({ id }) => id === item.itemDefinitionId)?.imageUrl}
+                  alt=""
+                />
+              ) : null}
               {itemDefinitions.find(({ id }) => id === item.itemDefinitionId)?.name ??
                 'Unknown item'}
             </li>

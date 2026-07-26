@@ -51,6 +51,10 @@ The character-stat vertical keeps these regressions covered:
 
 ## Unit / Component Tests
 
+- Context images: create and update image URLs for a location, character,
+  reusable stat, and reusable item, then confirm previews and persisted values.
+- Context images: clear an image URL and keep the entity valid without an image.
+
 - Shared: story operations delete only the intended trigger and preserve valid inputs.
 - Shared: stale server merges cannot restore locally deleted triggers.
 - Shared/API/Web: demo story generation creates roots, branches, multi-input triggers, and conditions.

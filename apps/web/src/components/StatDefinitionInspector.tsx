@@ -1,4 +1,5 @@
 import type { StatDefinition } from '@paralleax/shared';
+import { ImageUrlField } from './ImageUrlField';
 
 export function StatDefinitionInspector({
   statDefinition,
@@ -7,7 +8,7 @@ export function StatDefinitionInspector({
 }: {
   statDefinition: StatDefinition;
   onChange: (next: StatDefinition) => void;
-  onPatch: (id: string, patch: { name?: string }) => Promise<void>;
+  onPatch: (id: string, patch: { name?: string; imageUrl?: string }) => Promise<void>;
 }) {
   return (
     <div>
@@ -20,6 +21,12 @@ export function StatDefinitionInspector({
           onBlur={(event) => void onPatch(statDefinition.id, { name: event.target.value })}
         />
       </label>
+      <ImageUrlField
+        label="Pictogram URL"
+        imageUrl={statDefinition.imageUrl}
+        onChange={(imageUrl) => onChange({ ...statDefinition, imageUrl })}
+        onBlur={(imageUrl) => void onPatch(statDefinition.id, { imageUrl })}
+      />
       <p className="hint">
         Add this reusable stat to any character, then set that character&apos;s initial value.
       </p>

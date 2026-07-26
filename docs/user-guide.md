@@ -113,6 +113,11 @@ The **Locations**, **Characters**, **Stats**, and **Items** lists can be collaps
 independently. Collapse or expand the whole story context menu from the control
 in its top-right corner.
 
+Locations, characters, reusable items, and reusable stats accept an optional
+image URL in their inspector. The editor previews the image and displays a
+thumbnail in the context lists. Stat images are intended to work as compact
+pictograms.
+
 Select a trigger marker and use **Add stat condition** to compare the current
 value with a threshold. The reader applies an interaction's effects before it
 evaluates the next available interactions.

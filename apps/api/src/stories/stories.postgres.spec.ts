@@ -45,14 +45,31 @@ describePostgres('StoriesRepository PostgreSQL integration', () => {
       startDateTime: '2026-07-27T09:30',
       createdAt: now,
       updatedAt: now,
-      locations: [{ id: 'location-1', name: 'Harbor', description: 'A quiet harbor.' }],
-      statDefinitions: [{ id: 'definition-1', name: 'Trust' }],
-      itemDefinitions: [{ id: 'item-definition-1', name: 'Key', description: 'A brass key.' }],
+      locations: [
+        {
+          id: 'location-1',
+          name: 'Harbor',
+          description: 'A quiet harbor.',
+          imageUrl: 'https://images.example/harbor.png',
+        },
+      ],
+      statDefinitions: [
+        { id: 'definition-1', name: 'Trust', imageUrl: 'https://images.example/trust.svg' },
+      ],
+      itemDefinitions: [
+        {
+          id: 'item-definition-1',
+          name: 'Key',
+          description: 'A brass key.',
+          imageUrl: 'https://images.example/key.png',
+        },
+      ],
       characters: [
         {
           id: 'character-1',
           name: 'Mira',
           description: 'An investigator.',
+          imageUrl: 'https://images.example/mira.png',
           stats: [{ id: 'stat-1', statDefinitionId: 'definition-1', initialValue: 2 }],
           items: [
             { id: 'item-1', itemDefinitionId: 'item-definition-1' },
@@ -128,8 +145,16 @@ describePostgres('StoriesRepository PostgreSQL integration', () => {
       durationMinutes: 45,
     });
     expect(reloaded?.locations).toEqual([
-      { id: 'location-1', name: 'Harbor', description: 'A quiet harbor.' },
+      {
+        id: 'location-1',
+        name: 'Harbor',
+        description: 'A quiet harbor.',
+        imageUrl: 'https://images.example/harbor.png',
+      },
     ]);
+    expect(reloaded?.characters?.[0].imageUrl).toBe('https://images.example/mira.png');
+    expect(reloaded?.statDefinitions?.[0].imageUrl).toBe('https://images.example/trust.svg');
+    expect(reloaded?.itemDefinitions?.[0].imageUrl).toBe('https://images.example/key.png');
     expect(reloaded?.interactions[1].triggers[0]).toEqual({
       id: 'trigger-2',
       inputInteractionIds: ['interaction-1'],

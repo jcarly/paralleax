@@ -333,6 +333,8 @@ effect references use same-story composite foreign keys. Ordered typed trigger c
 stored as JSONB on their owning trigger and their references are validated by
 the application service. Story-local start time and interaction durations are
 relational fields; temporal alternatives remain typed trigger-condition JSONB.
+Context entity image references use relational text columns. Image binaries and
+their upload lifecycle are not stored by the application.
 The repository reconstructs
 the existing domain `Story`, so persistence normalization does not leak into the
 shared engine or the HTTP contract. JSON remains a future versioned import/export

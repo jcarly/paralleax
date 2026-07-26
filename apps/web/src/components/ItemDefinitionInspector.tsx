@@ -1,4 +1,5 @@
 import type { ItemDefinition } from '@paralleax/shared';
+import { ImageUrlField } from './ImageUrlField';
 
 export function ItemDefinitionInspector({
   itemDefinition,
@@ -9,7 +10,7 @@ export function ItemDefinitionInspector({
   onChange: (next: ItemDefinition) => void;
   onPatch: (
     id: string,
-    patch: Partial<Pick<ItemDefinition, 'name' | 'description'>>,
+    patch: Partial<Pick<ItemDefinition, 'name' | 'description' | 'imageUrl'>>,
   ) => Promise<void>;
 }) {
   return (
@@ -23,6 +24,11 @@ export function ItemDefinitionInspector({
           onBlur={(event) => void onPatch(itemDefinition.id, { name: event.target.value })}
         />
       </label>
+      <ImageUrlField
+        imageUrl={itemDefinition.imageUrl}
+        onChange={(imageUrl) => onChange({ ...itemDefinition, imageUrl })}
+        onBlur={(imageUrl) => void onPatch(itemDefinition.id, { imageUrl })}
+      />
       <label>
         Description
         <textarea

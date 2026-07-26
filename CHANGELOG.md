@@ -2,6 +2,10 @@
 
 ## 2026-07-26
 
+- Added optional image URLs for locations, characters, reusable items, and
+  reusable stats, including stat pictograms, inspector previews, list
+  thumbnails, relational persistence, validation, and regression coverage.
+
 - Added one authenticated reader-progress save per user and story, using
   relational ownership/timestamps and a versioned JSONB runtime snapshot.
 - Added automatic reader resume, serialized progress saves after each choice,

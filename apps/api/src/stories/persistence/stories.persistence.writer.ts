@@ -229,9 +229,9 @@ async function insertLocation(
   sortOrder: number,
 ) {
   await client.query(
-    `INSERT INTO locations (id, story_id, name, description, sort_order)
-     VALUES ($1, $2, $3, $4, $5)`,
-    [location.id, storyId, location.name, location.description, sortOrder],
+    `INSERT INTO locations (id, story_id, name, description, image_url, sort_order)
+     VALUES ($1, $2, $3, $4, $5, $6)`,
+    [location.id, storyId, location.name, location.description, location.imageUrl ?? '', sortOrder],
   );
 }
 
@@ -261,6 +261,7 @@ async function persistLocationDifference(client: Queryable, before: Story, after
     const values: unknown[] = [location.id];
     addChange(changes, values, 'name', previous.name, location.name);
     addChange(changes, values, 'description', previous.description, location.description);
+    addChange(changes, values, 'image_url', previous.imageUrl ?? '', location.imageUrl ?? '');
     addChange(
       changes,
       values,
@@ -281,9 +282,16 @@ async function insertCharacter(
   sortOrder: number,
 ) {
   await client.query(
-    `INSERT INTO characters (id, story_id, name, description, sort_order)
-     VALUES ($1, $2, $3, $4, $5)`,
-    [character.id, storyId, character.name, character.description, sortOrder],
+    `INSERT INTO characters (id, story_id, name, description, image_url, sort_order)
+     VALUES ($1, $2, $3, $4, $5, $6)`,
+    [
+      character.id,
+      storyId,
+      character.name,
+      character.description,
+      character.imageUrl ?? '',
+      sortOrder,
+    ],
   );
 }
 
@@ -309,9 +317,9 @@ async function insertStatDefinition(
   sortOrder: number,
 ) {
   await client.query(
-    `INSERT INTO stat_definitions (id, story_id, name, sort_order)
-     VALUES ($1, $2, $3, $4)`,
-    [definition.id, storyId, definition.name, sortOrder],
+    `INSERT INTO stat_definitions (id, story_id, name, image_url, sort_order)
+     VALUES ($1, $2, $3, $4, $5)`,
+    [definition.id, storyId, definition.name, definition.imageUrl ?? '', sortOrder],
   );
 }
 
@@ -322,9 +330,16 @@ async function insertItemDefinition(
   sortOrder: number,
 ) {
   await client.query(
-    `INSERT INTO item_definitions (id, story_id, name, description, sort_order)
-     VALUES ($1, $2, $3, $4, $5)`,
-    [definition.id, storyId, definition.name, definition.description, sortOrder],
+    `INSERT INTO item_definitions (id, story_id, name, description, image_url, sort_order)
+     VALUES ($1, $2, $3, $4, $5, $6)`,
+    [
+      definition.id,
+      storyId,
+      definition.name,
+      definition.description,
+      definition.imageUrl ?? '',
+      sortOrder,
+    ],
   );
 }
 
@@ -367,6 +382,7 @@ async function persistStatDefinitionDifference(client: Queryable, before: Story,
     const changes: string[] = [];
     const values: unknown[] = [definition.id];
     addChange(changes, values, 'name', previous.name, definition.name);
+    addChange(changes, values, 'image_url', previous.imageUrl ?? '', definition.imageUrl ?? '');
     addChange(
       changes,
       values,
@@ -405,6 +421,7 @@ async function persistItemDefinitionDifference(client: Queryable, before: Story,
     const values: unknown[] = [definition.id];
     addChange(changes, values, 'name', previous.name, definition.name);
     addChange(changes, values, 'description', previous.description, definition.description);
+    addChange(changes, values, 'image_url', previous.imageUrl ?? '', definition.imageUrl ?? '');
     addChange(
       changes,
       values,
@@ -449,6 +466,7 @@ async function persistCharacterDifference(client: Queryable, before: Story, afte
     const values: unknown[] = [character.id];
     addChange(changes, values, 'name', previous.name, character.name);
     addChange(changes, values, 'description', previous.description, character.description);
+    addChange(changes, values, 'image_url', previous.imageUrl ?? '', character.imageUrl ?? '');
     addChange(
       changes,
       values,

@@ -509,4 +509,13 @@ export const databaseMigrations: DatabaseMigration[] = [
         ON story_reader_progress(story_id);
     `,
   },
+  {
+    id: '202607260014_context_images',
+    sql: `
+      ALTER TABLE locations ADD COLUMN image_url text NOT NULL DEFAULT '';
+      ALTER TABLE characters ADD COLUMN image_url text NOT NULL DEFAULT '';
+      ALTER TABLE stat_definitions ADD COLUMN image_url text NOT NULL DEFAULT '';
+      ALTER TABLE item_definitions ADD COLUMN image_url text NOT NULL DEFAULT '';
+    `,
+  },
 ];

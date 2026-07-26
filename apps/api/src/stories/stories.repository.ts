@@ -38,6 +38,7 @@ type LocationRow = {
   story_id: string;
   name: string;
   description: string;
+  image_url: string;
   sort_order: number;
 };
 type CharacterRow = LocationRow;
@@ -45,6 +46,7 @@ type StatDefinitionRow = {
   id: string;
   story_id: string;
   name: string;
+  image_url: string;
   sort_order: number;
 };
 type ItemDefinitionRow = LocationRow;
@@ -226,25 +228,25 @@ export class StoriesRepository {
       [storyIds],
     );
     const locations = await queryable.query<LocationRow>(
-      `SELECT id, story_id, name, description, sort_order
+      `SELECT id, story_id, name, description, image_url, sort_order
          FROM locations WHERE story_id = ANY($1::text[])
          ORDER BY story_id, sort_order`,
       [storyIds],
     );
     const characters = await queryable.query<CharacterRow>(
-      `SELECT id, story_id, name, description, sort_order
+      `SELECT id, story_id, name, description, image_url, sort_order
          FROM characters WHERE story_id = ANY($1::text[])
          ORDER BY story_id, sort_order`,
       [storyIds],
     );
     const statDefinitions = await queryable.query<StatDefinitionRow>(
-      `SELECT id, story_id, name, sort_order
+      `SELECT id, story_id, name, image_url, sort_order
          FROM stat_definitions WHERE story_id = ANY($1::text[])
          ORDER BY story_id, sort_order`,
       [storyIds],
     );
     const itemDefinitions = await queryable.query<ItemDefinitionRow>(
-      `SELECT id, story_id, name, description, sort_order
+      `SELECT id, story_id, name, description, image_url, sort_order
          FROM item_definitions WHERE story_id = ANY($1::text[])
          ORDER BY story_id, sort_order`,
       [storyIds],
@@ -321,11 +323,13 @@ export class StoriesRepository {
         id: location.id,
         name: location.name,
         description: location.description,
+        ...(location.image_url ? { imageUrl: location.image_url } : {}),
       })),
       characters: (charactersByStory.get(row.id) ?? []).map((character) => ({
         id: character.id,
         name: character.name,
         description: character.description,
+        ...(character.image_url ? { imageUrl: character.image_url } : {}),
         stats: (statsByCharacter.get(character.id) ?? []).map((stat) => ({
           id: stat.id,
           statDefinitionId: stat.stat_definition_id,
@@ -339,11 +343,13 @@ export class StoriesRepository {
       statDefinitions: (statDefinitionsByStory.get(row.id) ?? []).map((definition) => ({
         id: definition.id,
         name: definition.name,
+        ...(definition.image_url ? { imageUrl: definition.image_url } : {}),
       })),
       itemDefinitions: (itemDefinitionsByStory.get(row.id) ?? []).map((definition) => ({
         id: definition.id,
         name: definition.name,
         description: definition.description,
+        ...(definition.image_url ? { imageUrl: definition.image_url } : {}),
       })),
       interactions: (interactionsByStory.get(row.id) ?? []).map((interaction) => ({
         id: interaction.id,

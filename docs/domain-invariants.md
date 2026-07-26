@@ -50,6 +50,8 @@ details. They should stay covered by tests as the editor grows.
   be referenced inside that story.
 - A character cannot receive the same stat definition twice.
 - An item definition belongs to exactly one story.
+- Locations, characters, stat definitions, and item definitions may reference
+  an optional image URL. An empty value means that no image is configured.
 - A character item instance belongs to exactly one character and references one
   item definition from the same story.
 - Several item instances owned by one character may reference the same item

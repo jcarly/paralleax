@@ -302,6 +302,7 @@ export class StoriesService {
           id: locationId,
           name: input.name.trim(),
           description: input.description ?? '',
+          imageUrl: input.imageUrl?.trim() ?? '',
         });
         return story;
       },
@@ -321,6 +322,7 @@ export class StoriesService {
         const location = this.location(story, locationId);
         if (input.name !== undefined) location.name = input.name.trim();
         if (input.description !== undefined) location.description = input.description;
+        if (input.imageUrl !== undefined) location.imageUrl = input.imageUrl.trim();
         return story;
       },
       userId,
@@ -340,6 +342,7 @@ export class StoriesService {
           id: characterId,
           name: input.name.trim(),
           description: input.description ?? '',
+          imageUrl: input.imageUrl?.trim() ?? '',
           stats: [],
         });
         return story;
@@ -360,6 +363,7 @@ export class StoriesService {
         (story.statDefinitions ??= []).push({
           id: statDefinitionId,
           name: input.name.trim(),
+          imageUrl: input.imageUrl?.trim() ?? '',
         });
         return story;
       },
@@ -380,6 +384,7 @@ export class StoriesService {
           id: itemDefinitionId,
           name: input.name.trim(),
           description: input.description ?? '',
+          imageUrl: input.imageUrl?.trim() ?? '',
         });
         return story;
       },
@@ -399,6 +404,7 @@ export class StoriesService {
         const definition = this.itemDefinition(story, itemDefinitionId);
         if (input.name !== undefined) definition.name = input.name.trim();
         if (input.description !== undefined) definition.description = input.description;
+        if (input.imageUrl !== undefined) definition.imageUrl = input.imageUrl.trim();
         return story;
       },
       userId,
@@ -416,6 +422,7 @@ export class StoriesService {
       (story) => {
         const definition = this.statDefinition(story, statDefinitionId);
         if (input.name !== undefined) definition.name = input.name.trim();
+        if (input.imageUrl !== undefined) definition.imageUrl = input.imageUrl.trim();
         return story;
       },
       userId,
@@ -434,6 +441,7 @@ export class StoriesService {
         const character = this.character(story, characterId);
         if (input.name !== undefined) character.name = input.name.trim();
         if (input.description !== undefined) character.description = input.description;
+        if (input.imageUrl !== undefined) character.imageUrl = input.imageUrl.trim();
         return story;
       },
       userId,

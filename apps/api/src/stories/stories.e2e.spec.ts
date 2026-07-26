@@ -544,6 +544,48 @@ describe('Stories API', () => {
     expect((assigned.body as InteractionMutationResult).interaction.locationId).toBe(location.id);
   });
 
+  it('stores optional images for locations, characters, stats, and items', async () => {
+    const story = await createStory();
+    const resources = [
+      {
+        path: 'locations',
+        create: { name: 'Harbor', imageUrl: 'https://images.example/harbor.png' },
+        resultKey: 'location',
+      },
+      {
+        path: 'characters',
+        create: { name: 'Mira', imageUrl: 'https://images.example/mira.png' },
+        resultKey: 'character',
+      },
+      {
+        path: 'stat-definitions',
+        create: { name: 'Trust', imageUrl: 'https://images.example/trust.svg' },
+        resultKey: 'statDefinition',
+      },
+      {
+        path: 'item-definitions',
+        create: { name: 'Key', imageUrl: 'https://images.example/key.png' },
+        resultKey: 'itemDefinition',
+      },
+    ] as const;
+
+    for (const resource of resources) {
+      const created = await request(httpServer)
+        .post(`/api/stories/${story.id}/${resource.path}`)
+        .send(resource.create)
+        .expect(201);
+      const entity = created.body[resource.resultKey] as { id: string; imageUrl: string };
+      expect(entity.imageUrl).toBe(resource.create.imageUrl);
+
+      const imageUrl = `${resource.create.imageUrl}?version=2`;
+      const updated = await request(httpServer)
+        .patch(`/api/stories/${story.id}/${resource.path}/${entity.id}`)
+        .send({ imageUrl })
+        .expect(200);
+      expect(updated.body[resource.resultKey].imageUrl).toBe(imageUrl);
+    }
+  });
+
   it('validates location references in interactions and trigger conditions', async () => {
     const first = await createStory('First story');
     const firstGraph = await createInteraction(first.id);

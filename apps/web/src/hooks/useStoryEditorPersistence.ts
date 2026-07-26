@@ -362,7 +362,7 @@ export function useStoryEditorPersistence(storyId: string) {
 
   async function updateLocation(
     locationId: string,
-    patch: Partial<Pick<LocationMutationResult['location'], 'name' | 'description'>>,
+    patch: Partial<Pick<LocationMutationResult['location'], 'name' | 'description' | 'imageUrl'>>,
   ) {
     setStory((current) =>
       current
@@ -392,7 +392,7 @@ export function useStoryEditorPersistence(storyId: string) {
 
   async function updateCharacter(
     characterId: string,
-    patch: Partial<Pick<CharacterMutationResult['character'], 'name' | 'description'>>,
+    patch: Partial<Pick<CharacterMutationResult['character'], 'name' | 'description' | 'imageUrl'>>,
   ) {
     setStory((current) =>
       current
@@ -503,7 +503,9 @@ export function useStoryEditorPersistence(storyId: string) {
 
   async function updateItemDefinition(
     itemDefinitionId: string,
-    patch: Partial<Pick<ItemDefinitionMutationResult['itemDefinition'], 'name' | 'description'>>,
+    patch: Partial<
+      Pick<ItemDefinitionMutationResult['itemDefinition'], 'name' | 'description' | 'imageUrl'>
+    >,
   ) {
     setStory((current) =>
       current

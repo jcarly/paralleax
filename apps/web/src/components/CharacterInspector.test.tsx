@@ -12,12 +12,13 @@ describe('CharacterInspector', () => {
     const onPatchStat = vi.fn().mockResolvedValue(undefined);
     const onCreateItem = vi.fn().mockResolvedValue(undefined);
 
-    render(
+    const { container } = render(
       <CharacterInspector
         character={{
           id: 'character-1',
           name: 'Mira',
           description: 'An archivist.',
+          imageUrl: 'https://images.example/mira.png',
           stats: [
             {
               id: 'stat-1',
@@ -31,12 +32,21 @@ describe('CharacterInspector', () => {
           ],
         }}
         statDefinitions={[
-          { id: 'stat-definition-1', name: 'Trust' },
+          {
+            id: 'stat-definition-1',
+            name: 'Trust',
+            imageUrl: 'https://images.example/trust.png',
+          },
           { id: 'stat-definition-2', name: 'Courage' },
           { id: 'stat-definition-3', name: 'Insight' },
         ]}
         itemDefinitions={[
-          { id: 'item-definition-1', name: 'Key', description: '' },
+          {
+            id: 'item-definition-1',
+            name: 'Key',
+            description: '',
+            imageUrl: 'https://images.example/key.png',
+          },
           { id: 'item-definition-2', name: 'Map', description: '' },
         ]}
         onChange={onChange}
@@ -52,6 +62,14 @@ describe('CharacterInspector', () => {
     (name as HTMLInputElement).value = 'Mira Vale';
     fireEvent.blur(name);
     expect(onPatch).toHaveBeenLastCalledWith('character-1', { name: 'Mira Vale' });
+    expect(container.querySelectorAll('img')).toHaveLength(3);
+
+    const image = screen.getByLabelText('Image URL');
+    fireEvent.change(image, { target: { value: 'https://images.example/mira-new.png' } });
+    fireEvent.blur(image, { target: { value: 'https://images.example/mira-new.png' } });
+    expect(onPatch).toHaveBeenLastCalledWith('character-1', {
+      imageUrl: 'https://images.example/mira-new.png',
+    });
 
     await user.selectOptions(screen.getByLabelText('Stat to add'), 'stat-definition-3');
     await user.click(screen.getByRole('button', { name: 'Add stat' }));

@@ -48,17 +48,20 @@ export interface Location {
   id: string;
   name: string;
   description: string;
+  imageUrl?: string;
 }
 export interface Character {
   id: string;
   name: string;
   description: string;
+  imageUrl?: string;
   stats?: CharacterStat[];
   items?: ItemInstance[];
 }
 export interface StatDefinition {
   id: string;
   name: string;
+  imageUrl?: string;
 }
 export interface CharacterStat {
   id: string;
@@ -69,6 +72,7 @@ export interface ItemDefinition {
   id: string;
   name: string;
   description: string;
+  imageUrl?: string;
 }
 export interface ItemInstance {
   id: string;
@@ -180,18 +184,22 @@ export interface UpdateInteractionInput {
 export interface CreateLocationInput {
   name: string;
   description?: string;
+  imageUrl?: string;
 }
 export interface UpdateLocationInput {
   name?: string;
   description?: string;
+  imageUrl?: string;
 }
 export interface CreateCharacterInput {
   name: string;
   description?: string;
+  imageUrl?: string;
 }
 export interface UpdateCharacterInput {
   name?: string;
   description?: string;
+  imageUrl?: string;
 }
 export interface CreateCharacterStatInput {
   statDefinitionId: string;
@@ -202,17 +210,21 @@ export interface UpdateCharacterStatInput {
 }
 export interface CreateStatDefinitionInput {
   name: string;
+  imageUrl?: string;
 }
 export interface UpdateStatDefinitionInput {
   name?: string;
+  imageUrl?: string;
 }
 export interface CreateItemDefinitionInput {
   name: string;
   description?: string;
+  imageUrl?: string;
 }
 export interface UpdateItemDefinitionInput {
   name?: string;
   description?: string;
+  imageUrl?: string;
 }
 export interface CreateCharacterItemInput {
   itemDefinitionId: string;
