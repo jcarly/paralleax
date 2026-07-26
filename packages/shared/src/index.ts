@@ -83,6 +83,10 @@ export interface StatEffect {
   operation: 'add' | 'set';
   value: number;
 }
+export interface ItemEffect {
+  itemId: string;
+  operation: 'obtain' | 'lose';
+}
 export interface Trigger {
   id: string;
   inputInteractionIds: string[];
@@ -96,6 +100,7 @@ export interface Interaction {
   locationId?: string | null;
   characterIds?: string[];
   statEffects?: StatEffect[];
+  itemEffects?: ItemEffect[];
   durationMinutes?: number;
   triggers: Trigger[];
 }
@@ -179,6 +184,7 @@ export interface UpdateInteractionInput {
   locationId?: string | null;
   characterIds?: string[];
   statEffects?: StatEffect[];
+  itemEffects?: ItemEffect[];
   durationMinutes?: number;
 }
 export interface CreateLocationInput {
@@ -246,6 +252,7 @@ export type InteractionContentPatch = Partial<
     | 'locationId'
     | 'characterIds'
     | 'statEffects'
+    | 'itemEffects'
     | 'durationMinutes'
   >
 >;
@@ -515,6 +522,9 @@ export function mergeServerStory(
         statEffects: hasOwn(patch ?? {}, 'statEffects')
           ? (patch?.statEffects ?? [])
           : currentItem.statEffects,
+        itemEffects: hasOwn(patch ?? {}, 'itemEffects')
+          ? (patch?.itemEffects ?? [])
+          : currentItem.itemEffects,
         durationMinutes: hasOwn(patch ?? {}, 'durationMinutes')
           ? (patch?.durationMinutes ?? 0)
           : currentItem.durationMinutes,
@@ -913,6 +923,26 @@ export function getJourneyStatValues(story: Story, journey: string[]): Record<st
   }, getInitialStatValues(story));
 }
 
+export function applyInteractionItemEffects(
+  ownedItemIds: readonly string[],
+  interaction: Interaction,
+): string[] {
+  const next = [...ownedItemIds];
+  for (const effect of interaction.itemEffects ?? []) {
+    const index = next.indexOf(effect.itemId);
+    if (effect.operation === 'obtain' && index === -1) next.push(effect.itemId);
+    if (effect.operation === 'lose' && index !== -1) next.splice(index, 1);
+  }
+  return next;
+}
+
+export function getJourneyOwnedItemIds(story: Story, journey: string[]): string[] {
+  return journey.reduce((ownedItemIds, interactionId) => {
+    const interaction = story.interactions.find(({ id }) => id === interactionId);
+    return interaction ? applyInteractionItemEffects(ownedItemIds, interaction) : ownedItemIds;
+  }, [] as string[]);
+}
+
 export function getJourneyLocation(story: Story, journey: string[]): string | null {
   for (let index = journey.length - 1; index >= 0; index -= 1) {
     const interaction = story.interactions.find(({ id }) => id === journey[index]);
@@ -924,14 +954,14 @@ export function getJourneyLocation(story: Story, journey: string[]): string | nu
 export function buildReaderProgressState(
   story: Story,
   journeyInteractionIds: string[],
-  ownedItemIds: string[] = [],
+  _ownedItemIds: string[] = [],
 ): ReaderProgressState {
   const interactionIds = new Set(story.interactions.map(({ id }) => id));
   const itemIds = new Set(
     (story.characters ?? []).flatMap((character) => (character.items ?? []).map(({ id }) => id)),
   );
   const journey = journeyInteractionIds.filter((id) => interactionIds.has(id));
-  const items = [...new Set(ownedItemIds.filter((id) => itemIds.has(id)))];
+  const items = getJourneyOwnedItemIds(story, journey).filter((id) => itemIds.has(id));
   return {
     version: 1,
     journeyInteractionIds: journey,

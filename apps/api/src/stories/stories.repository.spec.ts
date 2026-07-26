@@ -45,6 +45,7 @@ function graphStory(): Story {
       locationId: 'location-1',
       characterIds: ['character-1'],
       statEffects: [{ statId: 'stat-1', operation: 'add', value: 1 }],
+      itemEffects: [{ itemId: 'item-1', operation: 'obtain' }],
       durationMinutes: 15,
       triggers: [{ id: 'trigger-1', inputInteractionIds: [], conditions: [] }],
     },
@@ -133,6 +134,19 @@ function relationalRead(query: jest.Mock, saved = story()) {
             stat_id: effect.statId,
             operation: effect.operation,
             value: effect.value,
+            sort_order: index,
+          })),
+        ),
+      });
+    }
+    if (sql.includes('FROM interaction_item_effects')) {
+      return Promise.resolve({
+        rows: saved.interactions.flatMap((interaction) =>
+          (interaction.itemEffects ?? []).map((effect, index) => ({
+            story_id: saved.id,
+            interaction_id: interaction.id,
+            item_id: effect.itemId,
+            operation: effect.operation,
             sort_order: index,
           })),
         ),
@@ -262,6 +276,7 @@ describe('StoriesRepository', () => {
         locationId: interaction.locationId ?? null,
         characterIds: interaction.characterIds ?? [],
         statEffects: interaction.statEffects ?? [],
+        itemEffects: interaction.itemEffects ?? [],
       })),
     });
     expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining('WHERE id = $1'), [
@@ -347,6 +362,10 @@ describe('StoriesRepository', () => {
     expect(mockClientQuery).toHaveBeenCalledWith(
       expect.stringContaining('INSERT INTO interaction_stat_effects'),
       [saved.id, 'interaction-1', 'stat-1', 'add', 1, 0],
+    );
+    expect(mockClientQuery).toHaveBeenCalledWith(
+      expect.stringContaining('INSERT INTO interaction_item_effects'),
+      [saved.id, 'interaction-1', 'item-1', 'obtain', 0],
     );
     expect(mockClientQuery).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO triggers'), [
       'trigger-2',

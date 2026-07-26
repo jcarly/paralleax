@@ -57,8 +57,8 @@ details. They should stay covered by tests as the editor grows.
   item definition from the same story.
 - Several item instances owned by one character may reference the same item
   definition; every instance keeps a distinct id.
-- Authored item ownership does not participate in reader state, trigger
-  conditions, or interaction effects yet.
+- Authored character item instances form the finite set of objects that
+  interaction inventory effects may reference.
 - An interaction has at most one effect per stat. An effect either adds a finite
   value to the current value or replaces it.
 - Stat effects apply when their interaction is selected, before the next choices
@@ -69,8 +69,10 @@ details. They should stay covered by tests as the editor grows.
   visits, plus a materialized runtime snapshot.
 - Current interaction, unique visits, story time, location, and stats are
   reconstructed from the ordered journey before persistence.
-- Saved owned item ids must reference distinct item instances from the same
-  story. Interactions do not change runtime item ownership yet.
+- Saved owned item ids reference distinct item instances from the same story and
+  are reconstructed by replaying interaction item effects.
+- An interaction has at most one effect per item instance. Obtaining an already
+  owned instance or losing an absent instance is an idempotent no-op.
 - Author Simulation Mode never loads, updates, or deletes player progress.
 
 ## Editor Projection Invariants

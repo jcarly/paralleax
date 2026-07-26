@@ -86,6 +86,7 @@ describePostgres('StoriesRepository PostgreSQL integration', () => {
           locationId: 'location-1',
           characterIds: ['character-1'],
           statEffects: [{ statId: 'stat-1', operation: 'add', value: 1 }],
+          itemEffects: [{ itemId: 'item-1', operation: 'obtain' }],
           durationMinutes: 45,
           triggers: [{ id: 'trigger-1', inputInteractionIds: [], conditions: [] }],
         },
@@ -142,6 +143,7 @@ describePostgres('StoriesRepository PostgreSQL integration', () => {
       locationId: 'location-1',
       characterIds: ['character-1'],
       statEffects: [{ statId: 'stat-1', operation: 'add', value: 1 }],
+      itemEffects: [{ itemId: 'item-1', operation: 'obtain' }],
       durationMinutes: 45,
     });
     expect(reloaded?.locations).toEqual([
@@ -242,6 +244,8 @@ describePostgres('StoriesRepository PostgreSQL integration', () => {
            AS character_stats,
          (SELECT count(*)::int FROM interaction_stat_effects WHERE story_id = $1)
            AS interaction_stat_effects,
+         (SELECT count(*)::int FROM interaction_item_effects WHERE story_id = $1)
+           AS interaction_item_effects,
          (SELECT count(*)::int FROM triggers
           JOIN interactions ON interactions.id = triggers.output_interaction_id
           WHERE interactions.story_id = $1) AS triggers,
@@ -261,6 +265,7 @@ describePostgres('StoriesRepository PostgreSQL integration', () => {
       interaction_characters: 1,
       character_stats: 1,
       interaction_stat_effects: 1,
+      interaction_item_effects: 1,
       triggers: 2,
       inputs: 1,
       conditions: 5,

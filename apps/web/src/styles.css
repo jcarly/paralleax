@@ -985,6 +985,35 @@ header span {
   line-height: 1.7;
   white-space: pre-wrap;
 }
+
+.player-inventory {
+  width: min(100%, 48rem);
+  margin: 1rem auto 0;
+  padding: 1rem 1.25rem;
+  border: 1px solid #d9dde7;
+  border-radius: 0.75rem;
+  background: white;
+}
+
+.player-inventory h2 {
+  margin: 0 0 0.65rem;
+  font-size: 1rem;
+}
+
+.player-inventory ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.player-inventory li {
+  padding: 0.4rem 0.65rem;
+  border-radius: 999px;
+  background: #f0eefb;
+}
 .simulation-title-input,
 .simulation-body-input {
   width: 100%;

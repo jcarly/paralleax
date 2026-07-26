@@ -518,4 +518,26 @@ export const databaseMigrations: DatabaseMigration[] = [
       ALTER TABLE item_definitions ADD COLUMN image_url text NOT NULL DEFAULT '';
     `,
   },
+  {
+    id: '202607260015_interaction_item_effects',
+    sql: `
+      CREATE TABLE interaction_item_effects (
+        story_id text NOT NULL,
+        interaction_id text NOT NULL,
+        item_id text NOT NULL,
+        operation text NOT NULL CHECK (operation IN ('obtain', 'lose')),
+        sort_order integer NOT NULL,
+        PRIMARY KEY (interaction_id, item_id),
+        CONSTRAINT interaction_item_effects_interaction_fkey
+          FOREIGN KEY (story_id, interaction_id)
+          REFERENCES interactions(story_id, id) ON DELETE CASCADE,
+        CONSTRAINT interaction_item_effects_item_fkey
+          FOREIGN KEY (story_id, item_id)
+          REFERENCES character_items(story_id, id) ON DELETE CASCADE
+      );
+
+      CREATE INDEX interaction_item_effects_item_id_idx
+        ON interaction_item_effects(item_id);
+    `,
+  },
 ];

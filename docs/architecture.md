@@ -102,8 +102,9 @@ shared domain rules.
 Authenticated player progress uses one `story_reader_progress` row per user and
 story. Its keys and update timestamp are relational; its versioned JSONB state
 contains the ordered journey and materialized runtime values. `StoriesService`
-validates same-story references and rebuilds time, location, visits, and stats
-before saving. Simulation Mode stays isolated from this persistence flow.
+validates same-story references and rebuilds time, location, visits, stats, and
+character item inventory before saving. Simulation Mode stays isolated from
+this persistence flow.
 
 `HealthModule` exposes an unauthenticated process liveness check at
 `GET /api/health` and a readiness check at `GET /api/ready`. Readiness requires

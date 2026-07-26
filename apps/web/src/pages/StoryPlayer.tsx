@@ -3,12 +3,14 @@ import { Link, useParams, useSearchParams } from 'react-router-dom';
 import type { Interaction, InteractionMutationResult, Story } from '@paralleax/shared';
 import {
   applyInteractionStatEffects,
+  applyInteractionItemEffects,
   buildReaderProgressState,
   ensureStoryInteractionPositions,
   getAvailableInteractions,
   getInitialStatValues,
   getInputReachableInteractions,
   getJourneyStatValues,
+  getJourneyOwnedItemIds,
   getJourneyDateTime,
   getNextChildPosition,
   getNextRootPosition,
@@ -224,12 +226,14 @@ export function StoryPlayer() {
 
   function choose(interaction: Interaction) {
     const nextJourney = [...journey, interaction.id];
+    const nextOwnedItemIds = applyInteractionItemEffects(ownedItemIds, interaction);
     setCurrentId(interaction.id);
     setJourney(nextJourney);
     setVisited((ids) => (ids.includes(interaction.id) ? ids : [...ids, interaction.id]));
     if (interaction.locationId) setCurrentLocationId(interaction.locationId);
     setStatValues((values) => applyInteractionStatEffects(values, interaction));
-    if (!isSimulationMode) queueProgressSave(nextJourney, ownedItemIds);
+    setOwnedItemIds(nextOwnedItemIds);
+    if (!isSimulationMode) queueProgressSave(nextJourney, nextOwnedItemIds);
   }
 
   function restart() {
@@ -258,6 +262,7 @@ export function StoryPlayer() {
     setVisited(uniqueJourneyIds(nextJourney));
     setCurrentLocationId(getJourneyLocation(story, nextJourney));
     if (story) setStatValues(getJourneyStatValues(story, nextJourney));
+    if (story) setOwnedItemIds(getJourneyOwnedItemIds(story, nextJourney));
   }
 
   async function saveCurrentInteraction(patch: Partial<Pick<Interaction, 'title' | 'body'>>) {
@@ -458,6 +463,33 @@ export function StoryPlayer() {
           ) : null}
         </div>
       </article>
+      <aside className="player-inventory" aria-label="Inventory">
+        <h2>Inventory</h2>
+        {ownedItemIds.length === 0 ? (
+          <p className="hint">No items.</p>
+        ) : (
+          <ul>
+            {ownedItemIds.map((itemId) => {
+              const owner = (story.characters ?? []).find((character) =>
+                (character.items ?? []).some(({ id }) => id === itemId),
+              );
+              const instance = owner?.items?.find(({ id }) => id === itemId);
+              const definition = story.itemDefinitions?.find(
+                ({ id }) => id === instance?.itemDefinitionId,
+              );
+              return (
+                <li key={itemId}>
+                  {definition?.imageUrl ? (
+                    <img className="context-picto" src={definition.imageUrl} alt="" />
+                  ) : null}
+                  {definition?.name ?? 'Unknown item'}
+                  {owner ? <small> — {owner.name}</small> : null}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </aside>
       <details className="debug">
         <summary>{isSimulationMode ? 'Simulation history' : 'Reading history'}</summary>
         <ol>

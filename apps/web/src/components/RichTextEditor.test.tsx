@@ -30,6 +30,17 @@ describe('RichTextEditor', () => {
     expect(onChange).toHaveBeenLastCalledWith('<p><strong>Changed</strong></p>');
     expect(onBlur).toHaveBeenLastCalledWith('<p><strong>Changed</strong></p>');
 
+    for (const [label, commandName, commandValue] of [
+      ['Bold', 'bold', undefined],
+      ['Italic', 'italic', undefined],
+      ['Underline', 'underline', undefined],
+      ['Heading', 'formatBlock', 'h2'],
+      ['Bulleted list', 'insertUnorderedList', undefined],
+    ] as const) {
+      await user.click(screen.getByRole('button', { name: label }));
+      expect(execCommand).toHaveBeenCalledWith(commandName, false, commandValue);
+    }
+
     await user.click(screen.getByRole('button', { name: 'Add image or GIF' }));
     expect(execCommand).toHaveBeenCalledWith(
       'insertImage',

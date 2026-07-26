@@ -503,6 +503,7 @@ describe('reader progress', () => {
       },
     ];
     story.interactions[0].statEffects = [{ statId: 'trust', operation: 'add', value: 2 }];
+    story.interactions[0].itemEffects = [{ itemId: 'key-1', operation: 'obtain' }];
 
     expect(buildReaderProgressState(story, ['root', 'middle', 'root'], ['key-1'])).toEqual({
       version: 1,
@@ -526,6 +527,7 @@ describe('reader progress', () => {
         items: [{ id: 'key-1', itemDefinitionId: 'key-definition' }],
       },
     ];
+    story.interactions[0].itemEffects = [{ itemId: 'key-1', operation: 'obtain' }];
 
     expect(
       buildReaderProgressState(story, ['root', 'deleted', 'middle'], ['key-1', 'unknown', 'key-1']),
@@ -535,5 +537,29 @@ describe('reader progress', () => {
       visitedInteractionIds: ['root', 'middle'],
       ownedItemIds: ['key-1'],
     });
+  });
+
+  it('obtains and loses distinct item instances deterministically', () => {
+    const story = storyFixture();
+    story.characters = [
+      {
+        id: 'mira',
+        name: 'Mira',
+        description: '',
+        items: [
+          { id: 'key-1', itemDefinitionId: 'key-definition' },
+          { id: 'key-2', itemDefinitionId: 'key-definition' },
+        ],
+      },
+    ];
+    story.interactions[0].itemEffects = [
+      { itemId: 'key-1', operation: 'obtain' },
+      { itemId: 'key-2', operation: 'obtain' },
+    ];
+    story.interactions[1].itemEffects = [{ itemId: 'key-1', operation: 'lose' }];
+
+    expect(buildReaderProgressState(story, ['root', 'root', 'middle']).ownedItemIds).toEqual([
+      'key-2',
+    ]);
   });
 });

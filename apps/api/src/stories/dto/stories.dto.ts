@@ -82,6 +82,12 @@ export class UpdateInteractionDto {
   @Type(() => StatEffectDto)
   statEffects?: StatEffectDto[];
   @ValidateIf((_, value) => value !== undefined)
+  @IsArray()
+  @ArrayMaxSize(500)
+  @ValidateNested({ each: true })
+  @Type(() => ItemEffectDto)
+  itemEffects?: ItemEffectDto[];
+  @ValidateIf((_, value) => value !== undefined)
   @IsInt()
   @Min(0)
   durationMinutes?: number;
@@ -90,6 +96,10 @@ export class StatEffectDto {
   @IsString() statId!: string;
   @IsIn(['add', 'set']) operation!: 'add' | 'set';
   @IsNumber() value!: number;
+}
+export class ItemEffectDto {
+  @IsString() itemId!: string;
+  @IsIn(['obtain', 'lose']) operation!: 'obtain' | 'lose';
 }
 export class DateRangeDto {
   @IsString() @Matches(/^\d{4}-\d{2}-\d{2}$/) startDate!: string;

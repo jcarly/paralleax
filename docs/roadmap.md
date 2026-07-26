@@ -132,6 +132,8 @@ not optional cleanup after launch:
   effects, and trigger comparisons.
 - Item definitions and authored character-owned item instances are implemented;
   several instances may reference the same definition.
+- Interactions can deterministically obtain or lose exact character-owned item
+  instances; reader inventory is replayed from the journey.
 - Deterministic story-local time, interaction durations, and trigger schedules
   using dates, weekdays, and multiple time slots are implemented.
 - Establish typed world-state conditions and interaction effects incrementally;
@@ -149,8 +151,8 @@ not optional cleanup after launch:
 - World-based conditions beyond location, character presence, and character stats.
 - Contextual inputless triggers based on broader world state.
 - Final interactions and explicit story completion.
-- A first playable item vertical with item instances in play-session state, one
-  inventory, basic equipment, tags, and typed item conditions/effects.
+- Extend the first playable item vertical with possession conditions, basic
+  equipment, tags, and quantity-aware effects.
 - Later item increments: multiple containers, consumables, durability,
   modifiers, shops, economy, and advanced clothing layers or coverage.
 

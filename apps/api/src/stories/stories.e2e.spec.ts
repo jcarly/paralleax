@@ -207,6 +207,7 @@ describe('Stories API', () => {
       .send({
         durationMinutes: 15,
         statEffects: [{ statId: stat.body.stat.id, operation: 'add', value: 2 }],
+        itemEffects: [{ itemId: item.body.item.id, operation: 'obtain' }],
       })
       .expect(200);
 
@@ -784,6 +785,45 @@ describe('Stories API', () => {
       .post(`/api/stories/${story.id}/characters/${character.id}/items`)
       .send({ itemDefinitionId: foreignDefinition.id })
       .expect(404);
+  });
+
+  it('validates and stores interaction item effects', async () => {
+    const story = await createStory();
+    const interaction = (await createInteraction(story.id)).interactions[0];
+    const character = await request(httpServer)
+      .post(`/api/stories/${story.id}/characters`)
+      .send({ name: 'Mira' })
+      .expect(201);
+    const definition = await request(httpServer)
+      .post(`/api/stories/${story.id}/item-definitions`)
+      .send({ name: 'Key' })
+      .expect(201);
+    const item = await request(httpServer)
+      .post(`/api/stories/${story.id}/characters/${character.body.character.id}/items`)
+      .send({ itemDefinitionId: definition.body.itemDefinition.id })
+      .expect(201);
+
+    const updated = await request(httpServer)
+      .patch(`/api/stories/${story.id}/interactions/${interaction.id}`)
+      .send({ itemEffects: [{ itemId: item.body.item.id, operation: 'obtain' }] })
+      .expect(200);
+    expect(updated.body.interaction.itemEffects).toEqual([
+      { itemId: item.body.item.id, operation: 'obtain' },
+    ]);
+
+    await request(httpServer)
+      .patch(`/api/stories/${story.id}/interactions/${interaction.id}`)
+      .send({
+        itemEffects: [
+          { itemId: item.body.item.id, operation: 'obtain' },
+          { itemId: item.body.item.id, operation: 'lose' },
+        ],
+      })
+      .expect(400);
+    await request(httpServer)
+      .patch(`/api/stories/${story.id}/interactions/${interaction.id}`)
+      .send({ itemEffects: [{ itemId: 'foreign-item', operation: 'obtain' }] })
+      .expect(400);
   });
 
   it('rejects foreign stat references and duplicate effects', async () => {

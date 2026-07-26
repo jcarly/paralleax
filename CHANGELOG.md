@@ -2,6 +2,10 @@
 
 ## 2026-07-26
 
+- Added per-interaction obtain/lose effects for exact character item instances,
+  deterministic inventory replay, persisted relational effects, reader
+  inventory display, and progress reconstruction.
+
 - Replaced the interaction body textarea with a WYSIWYG editor supporting rich
   text, images, GIFs, direct videos, and controlled YouTube/Vimeo embeds.
 - Added server- and browser-side rich HTML sanitization and reader media styles.

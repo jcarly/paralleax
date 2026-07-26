@@ -23,6 +23,22 @@ export function InteractionInspector({
       }`,
     })),
   );
+  const items = (story.characters ?? []).flatMap((character) =>
+    (character.items ?? []).map((item) => {
+      const definition = story.itemDefinitions?.find(({ id }) => id === item.itemDefinitionId);
+      const sameDefinitionItems = (character.items ?? []).filter(
+        ({ itemDefinitionId }) => itemDefinitionId === item.itemDefinitionId,
+      );
+      const copyNumber =
+        sameDefinitionItems.length > 1
+          ? ` #${sameDefinitionItems.findIndex(({ id }) => id === item.id) + 1}`
+          : '';
+      return {
+        ...item,
+        label: `${character.name} — ${definition?.name ?? 'Unknown item'}${copyNumber}`,
+      };
+    }),
+  );
   function updateLocalInteraction(patch: Partial<Interaction>) {
     onChange(updateInteractionInStory(story, interaction.id, patch));
   }
@@ -187,6 +203,84 @@ export function InteractionInspector({
               );
               updateLocalInteraction({ statEffects });
               void onPatch(interaction.id, { statEffects });
+            }}
+          >
+            x
+          </button>
+        </div>
+      ))}
+      <div className="inspector-section-header">
+        <h3>Item effects</h3>
+        <button
+          className="secondary"
+          type="button"
+          disabled={items.length === 0}
+          onClick={() => {
+            const candidate = items.find(
+              (item) => !(interaction.itemEffects ?? []).some(({ itemId }) => itemId === item.id),
+            );
+            if (!candidate) return;
+            const itemEffects = [
+              ...(interaction.itemEffects ?? []),
+              { itemId: candidate.id, operation: 'obtain' as const },
+            ];
+            updateLocalInteraction({ itemEffects });
+            void onPatch(interaction.id, { itemEffects });
+          }}
+        >
+          Add item effect
+        </button>
+      </div>
+      {(interaction.itemEffects ?? []).map((effect, index) => (
+        <div className="stat-effect-row" key={effect.itemId}>
+          <select
+            aria-label="Affected item"
+            value={effect.itemId}
+            onChange={(event) => {
+              const itemEffects = [...(interaction.itemEffects ?? [])];
+              itemEffects[index] = { ...effect, itemId: event.target.value };
+              updateLocalInteraction({ itemEffects });
+              void onPatch(interaction.id, { itemEffects });
+            }}
+          >
+            {items.map((item) => (
+              <option
+                disabled={(interaction.itemEffects ?? []).some(
+                  (candidate, itemIndex) => itemIndex !== index && candidate.itemId === item.id,
+                )}
+                key={item.id}
+                value={item.id}
+              >
+                {item.label}
+              </option>
+            ))}
+          </select>
+          <select
+            aria-label="Item effect operation"
+            value={effect.operation}
+            onChange={(event) => {
+              const itemEffects = [...(interaction.itemEffects ?? [])];
+              itemEffects[index] = {
+                ...effect,
+                operation: event.target.value as 'obtain' | 'lose',
+              };
+              updateLocalInteraction({ itemEffects });
+              void onPatch(interaction.id, { itemEffects });
+            }}
+          >
+            <option value="obtain">obtain</option>
+            <option value="lose">lose</option>
+          </select>
+          <button
+            aria-label="Delete item effect"
+            className="ghost danger"
+            type="button"
+            onClick={() => {
+              const itemEffects = (interaction.itemEffects ?? []).filter(
+                (_, itemIndex) => itemIndex !== index,
+              );
+              updateLocalInteraction({ itemEffects });
+              void onPatch(interaction.id, { itemEffects });
             }}
           >
             x

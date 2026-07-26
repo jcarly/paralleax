@@ -108,8 +108,9 @@ character.
 
 An item instance belongs to exactly one character and references one item
 definition from the same story. Adding the same definition several times creates
-separate instances with distinct ids. Items do not affect reader state,
-conditions, effects, equipment, or stats yet.
+separate instances with distinct ids. Interactions can obtain or lose one exact
+item instance, allowing repeated definitions to remain distinct. Items do not
+have conditions, equipment behavior, or stats yet.
 
 See [Trigger semantics](triggers.md) for deletion rules and editor behavior.
 

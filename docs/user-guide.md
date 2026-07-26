@@ -134,8 +134,13 @@ Create a reusable item definition from the collapsible **Items** list in
 
 Open a character, choose a definition under **Items**, and use **Add item**.
 Every addition creates a separate owned instance, so the same character can own
-several copies of the same item. Items do not have stats, effects, conditions,
-equipment behavior, or reader state yet.
+several copies of the same item.
+
+In an interaction inspector, use **Add item effect** to select one exact item
+instance and choose **obtain** or **lose**. If a character has several copies,
+the editor numbers them so the intended copy is explicit. The reader displays
+the resulting inventory and saves it with progress. Items do not have stats,
+conditions, or equipment behavior yet.
 
 ## Delete Trigger Links
 

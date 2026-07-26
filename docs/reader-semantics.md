@@ -182,8 +182,9 @@ The ordered journey is authoritative for state that can currently be replayed.
 The API derives current interaction, visited ids, story time, location, and stats
 from that journey before writing JSON; clients cannot provide trusted derived
 values. Owned item ids are validated against item instances in the same story.
-The current engine has no item acquisition or removal effects yet, so this field
-is persisted and ready for that vertical but remains unchanged by interactions.
+Interaction item effects obtain or lose an exact story item instance. Replaying
+the ordered journey reconstructs the inventory from an empty starting state.
+Obtaining an already owned instance or losing an absent instance is a no-op.
 
 The reader reconciles loaded progress with the authored story it fetched:
 interaction and item ids that no longer exist are removed, and replayable

@@ -159,7 +159,8 @@ not sufficient. Additional typed rules are needed for:
 - random probability and weighted selection;
 - mutually exclusive routes and event priorities;
 - reusable predicates and compound boolean expressions;
-- item give, remove, consume, equip, and modify effects;
+- quantity-aware item transfer, consume, equip, and modify effects (exact item
+  instance obtain/lose effects are implemented);
 - movement, money transfer, time advancement, and quest updates;
 - conditional effects and reusable effect sequences.
 

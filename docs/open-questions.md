@@ -55,10 +55,12 @@ changes`, and whether every non-read permission implies `read`.
   entities depend on them. Keep their payloads validated and versionable.
 - Decide which values are authored definitions, persisted play-session state, or
   deterministic derived values.
-- Define item-definition deletion behavior when authored effects, conditions, or
-  existing play-session item instances reference it.
-- Define the initial inventory owner, item transfer rules, stack identity, and
-  equipment-slot conflict behavior for the first playable item vertical.
+- Define item-definition deletion behavior when authored conditions or existing
+  play-session item instances reference it. Authored item effects currently
+  cascade with deletion of their exact item instance.
+- Define item transfer rules, stack identity, quantities, and equipment-slot
+  conflict behavior. The current reader starts with an empty inventory and
+  tracks exact authored item instances.
 - Decide whether extension properties are schema-backed per item type or limited
   to validated plugin-owned namespaces; avoid unrestricted business logic in
   arbitrary JSON.

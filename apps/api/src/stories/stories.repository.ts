@@ -79,6 +79,13 @@ type StatEffectRow = {
   value: number;
   sort_order: number;
 };
+type ItemEffectRow = {
+  story_id: string;
+  interaction_id: string;
+  item_id: string;
+  operation: 'obtain' | 'lose';
+  sort_order: number;
+};
 type TriggerRow = {
   id: string;
   story_id: string;
@@ -275,6 +282,12 @@ export class StoriesRepository {
          ORDER BY story_id, interaction_id, sort_order`,
       [storyIds],
     );
+    const itemEffects = await queryable.query<ItemEffectRow>(
+      `SELECT story_id, interaction_id, item_id, operation, sort_order
+         FROM interaction_item_effects WHERE story_id = ANY($1::text[])
+         ORDER BY story_id, interaction_id, sort_order`,
+      [storyIds],
+    );
     const triggers = await queryable.query<TriggerRow>(
       `SELECT triggers.id, interactions.story_id, triggers.output_interaction_id,
                 triggers.sort_order, triggers.conditions
@@ -311,6 +324,10 @@ export class StoriesRepository {
     const statsByCharacter = groupBy(characterStats.rows, ({ character_id }) => character_id);
     const itemsByCharacter = groupBy(characterItems.rows, ({ character_id }) => character_id);
     const effectsByInteraction = groupBy(statEffects.rows, ({ interaction_id }) => interaction_id);
+    const itemEffectsByInteraction = groupBy(
+      itemEffects.rows,
+      ({ interaction_id }) => interaction_id,
+    );
 
     return storyRows.map((row) => ({
       id: row.id,
@@ -365,6 +382,10 @@ export class StoriesRepository {
           statId: effect.stat_id,
           operation: effect.operation,
           value: effect.value,
+        })),
+        itemEffects: (itemEffectsByInteraction.get(interaction.id) ?? []).map((effect) => ({
+          itemId: effect.item_id,
+          operation: effect.operation,
         })),
         triggers: (triggersByInteraction.get(interaction.id) ?? []).map((trigger) => ({
           id: trigger.id,

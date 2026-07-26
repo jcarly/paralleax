@@ -207,6 +207,18 @@ export class StoriesService {
           }
           interaction.statEffects = input.statEffects;
         }
+        if (input.itemEffects !== undefined) {
+          const itemIds = this.itemIds(story);
+          if (input.itemEffects.some(({ itemId }) => !itemIds.has(itemId))) {
+            throw new BadRequestException('Item effects must belong to the same story');
+          }
+          if (
+            new Set(input.itemEffects.map(({ itemId }) => itemId)).size !== input.itemEffects.length
+          ) {
+            throw new BadRequestException('An interaction can only affect an item once');
+          }
+          interaction.itemEffects = input.itemEffects;
+        }
         if (input.durationMinutes !== undefined) {
           interaction.durationMinutes = input.durationMinutes;
         }
@@ -557,6 +569,11 @@ export class StoriesService {
   private statIds(story: Story) {
     return new Set(
       (story.characters ?? []).flatMap((character) => (character.stats ?? []).map(({ id }) => id)),
+    );
+  }
+  private itemIds(story: Story) {
+    return new Set(
+      (story.characters ?? []).flatMap((character) => (character.items ?? []).map(({ id }) => id)),
     );
   }
   private assertInteractionReferences(story: Story, inputInteractionIds: string[]) {

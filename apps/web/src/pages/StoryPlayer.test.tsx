@@ -256,6 +256,39 @@ describe('StoryPlayer', () => {
     expect(screen.getByRole('button', { name: 'Next' })).toBeInTheDocument();
   });
 
+  it('obtains and loses item instances while saving the derived inventory', async () => {
+    const user = userEvent.setup();
+    const itemStory = structuredClone(story);
+    itemStory.itemDefinitions = [{ id: 'key-definition', name: 'Key', description: '' }];
+    itemStory.characters = [
+      {
+        id: 'mira',
+        name: 'Mira',
+        description: '',
+        items: [{ id: 'key-1', itemDefinitionId: 'key-definition' }],
+      },
+    ];
+    itemStory.interactions[0].itemEffects = [{ itemId: 'key-1', operation: 'obtain' }];
+    itemStory.interactions[1].itemEffects = [{ itemId: 'key-1', operation: 'lose' }];
+
+    await renderPlayer('/stories/story-1/play', itemStory);
+    await user.click(screen.getByRole('button', { name: 'Start' }));
+    expect(screen.getByRole('complementary', { name: 'Inventory' })).toHaveTextContent(
+      'Key — Mira',
+    );
+    expect(api.saveReaderProgress).toHaveBeenLastCalledWith('story-1', {
+      journeyInteractionIds: ['start'],
+      ownedItemIds: ['key-1'],
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Next' }));
+    expect(screen.getByRole('complementary', { name: 'Inventory' })).toHaveTextContent('No items.');
+    expect(api.saveReaderProgress).toHaveBeenLastCalledWith('story-1', {
+      journeyInteractionIds: ['start', 'next'],
+      ownedItemIds: [],
+    });
+  });
+
   it('shows an ending and can restart', async () => {
     const user = userEvent.setup();
     await renderPlayer();

@@ -180,6 +180,10 @@ The character-stat vertical keeps these regressions covered:
 - Editor/API: adding the same item definition several times to one character
   creates separate owned instances with distinct ids.
 - API: a character cannot receive an item definition from another story.
+- Editor/API: an interaction obtains or loses one exact item instance and
+  rejects duplicate or cross-story item effects.
+- Reader: repeated obtain/lose effects are idempotent, update the displayed
+  inventory, and survive progress replay.
 - Simulation: the editor test action opens Simulation Mode instead of the player
   reader.
 - Simulation: interactions reachable by trigger input logic are listed,

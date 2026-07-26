@@ -39,6 +39,7 @@ export async function replaceStoryGraph(client: Queryable, story: Story) {
   for (const interaction of story.interactions) {
     await replaceInteractionCharacters(client, story.id, interaction);
     await replaceInteractionStatEffects(client, story.id, interaction);
+    await replaceInteractionItemEffects(client, story.id, interaction);
     for (const [triggerIndex, trigger] of interaction.triggers.entries()) {
       await insertTrigger(client, story.id, interaction.id, trigger, triggerIndex);
     }
@@ -83,6 +84,7 @@ export async function persistStoryDifference(client: Queryable, before: Story, a
       await insertInteraction(client, after.id, interaction, index);
       await replaceInteractionCharacters(client, after.id, interaction);
       await replaceInteractionStatEffects(client, after.id, interaction);
+      await replaceInteractionItemEffects(client, after.id, interaction);
       for (const [triggerIndex, trigger] of interaction.triggers.entries()) {
         await insertTrigger(client, after.id, interaction.id, trigger, triggerIndex);
       }
@@ -104,6 +106,11 @@ export async function persistStoryDifference(client: Queryable, before: Story, a
       JSON.stringify(previous.statEffects ?? []) !== JSON.stringify(interaction.statEffects ?? [])
     ) {
       await replaceInteractionStatEffects(client, after.id, interaction);
+    }
+    if (
+      JSON.stringify(previous.itemEffects ?? []) !== JSON.stringify(interaction.itemEffects ?? [])
+    ) {
+      await replaceInteractionItemEffects(client, after.id, interaction);
     }
     await persistTriggerDifference(client, after.id, previous, interaction);
   }
@@ -141,6 +148,24 @@ async function replaceInteractionStatEffects(
        (story_id, interaction_id, stat_id, operation, value, sort_order)
        VALUES ($1, $2, $3, $4, $5, $6)`,
       [storyId, interaction.id, effect.statId, effect.operation, effect.value, index],
+    );
+  }
+}
+
+async function replaceInteractionItemEffects(
+  client: Queryable,
+  storyId: string,
+  interaction: Interaction,
+) {
+  await client.query('DELETE FROM interaction_item_effects WHERE interaction_id = $1', [
+    interaction.id,
+  ]);
+  for (const [index, effect] of (interaction.itemEffects ?? []).entries()) {
+    await client.query(
+      `INSERT INTO interaction_item_effects
+       (story_id, interaction_id, item_id, operation, sort_order)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [storyId, interaction.id, effect.itemId, effect.operation, index],
     );
   }
 }
