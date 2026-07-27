@@ -107,6 +107,19 @@ time-based change and effects. Restart rebuilds the initial state, and stepping
 backward replays the remaining journey so changes are reversible without
 maintaining an inverse log.
 
+## Item Stats
+
+Every item instance starts with an independent copy of the initial values
+assigned by its item definition. Reusing one definition for several instances
+does not share their runtime values. The reusable stat definition's hourly rate
+is applied to every matching instance as story time advances, then the selected
+interaction applies its ordered item-stat `add` or `set` effects.
+
+Item stat effects target an exact item instance and one stat exposed by that
+instance's definition. The values are replayed for the complete authored set of
+instances; the inventory only decides which instances are currently displayed
+to the player.
+
 ## Story Time
 
 Every story has an authored `startDateTime` in `YYYY-MM-DDTHH:mm` form. It is a
@@ -192,6 +205,8 @@ Version 1 stores:
 - current location;
 - current character-stat values;
 - owned item-instance ids.
+- current item-stat values, keyed independently by item instance and stat
+  definition.
 
 The ordered journey is authoritative for state that can currently be replayed.
 The API derives current interaction, visited ids, story time, location, and stats
@@ -200,6 +215,8 @@ values. Owned item ids are validated against item instances in the same story.
 Interaction item effects obtain or lose an exact story item instance. Replaying
 the ordered journey reconstructs the inventory from an empty starting state.
 Obtaining an already owned instance or losing an absent instance is a no-op.
+The same replay reconstructs item stat values from their definition defaults,
+time-based rates, and explicit interaction effects.
 
 The reader reconciles loaded progress with the authored story it fetched:
 interaction and item ids that no longer exist are removed, and replayable

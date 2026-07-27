@@ -219,6 +219,38 @@ export class StoriesService {
           }
           interaction.itemEffects = input.itemEffects;
         }
+        if (input.itemStatEffects !== undefined) {
+          const items = new Map(
+            (story.characters ?? []).flatMap((character) =>
+              (character.items ?? []).map((item) => [item.id, item]),
+            ),
+          );
+          const definitions = new Map(
+            (story.itemDefinitions ?? []).map((definition) => [definition.id, definition]),
+          );
+          if (
+            input.itemStatEffects.some((effect) => {
+              const item = items.get(effect.itemId);
+              return (
+                !item ||
+                !(definitions.get(item.itemDefinitionId)?.stats ?? []).some(
+                  ({ statDefinitionId }) => statDefinitionId === effect.statDefinitionId,
+                )
+              );
+            })
+          ) {
+            throw new BadRequestException(
+              'Item stat effects must reference a stat assigned to the same-story item',
+            );
+          }
+          const effectKeys = input.itemStatEffects.map(
+            ({ itemId, statDefinitionId }) => `${itemId}:${statDefinitionId}`,
+          );
+          if (new Set(effectKeys).size !== effectKeys.length) {
+            throw new BadRequestException('An interaction can only affect an item stat once');
+          }
+          interaction.itemStatEffects = input.itemStatEffects;
+        }
         if (input.durationMinutes !== undefined) {
           interaction.durationMinutes = input.durationMinutes;
         }
@@ -399,6 +431,7 @@ export class StoriesService {
           name: input.name.trim(),
           description: input.description ?? '',
           imageUrl: input.imageUrl?.trim() ?? '',
+          stats: this.itemDefinitionStats(story, input.stats ?? []),
         });
         return story;
       },
@@ -419,6 +452,25 @@ export class StoriesService {
         if (input.name !== undefined) definition.name = input.name.trim();
         if (input.description !== undefined) definition.description = input.description;
         if (input.imageUrl !== undefined) definition.imageUrl = input.imageUrl.trim();
+        if (input.stats !== undefined) {
+          definition.stats = this.itemDefinitionStats(story, input.stats);
+          const assignedStatIds = new Set(
+            definition.stats.map(({ statDefinitionId }) => statDefinitionId),
+          );
+          const affectedItemIds = new Set(
+            (story.characters ?? []).flatMap((character) =>
+              (character.items ?? [])
+                .filter(({ itemDefinitionId }) => itemDefinitionId === definition.id)
+                .map(({ id }) => id),
+            ),
+          );
+          for (const interaction of story.interactions) {
+            interaction.itemStatEffects = (interaction.itemStatEffects ?? []).filter(
+              ({ itemId, statDefinitionId }) =>
+                !affectedItemIds.has(itemId) || assignedStatIds.has(statDefinitionId),
+            );
+          }
+        }
         return story;
       },
       userId,
@@ -577,6 +629,19 @@ export class StoriesService {
     return new Set(
       (story.characters ?? []).flatMap((character) => (character.items ?? []).map(({ id }) => id)),
     );
+  }
+  private itemDefinitionStats(
+    story: Story,
+    stats: Array<{ statDefinitionId: string; initialValue: number }>,
+  ) {
+    const definitionIds = new Set((story.statDefinitions ?? []).map(({ id }) => id));
+    if (stats.some(({ statDefinitionId }) => !definitionIds.has(statDefinitionId))) {
+      throw new BadRequestException('Item stats must belong to the same story');
+    }
+    if (new Set(stats.map(({ statDefinitionId }) => statDefinitionId)).size !== stats.length) {
+      throw new BadRequestException('An item definition can only assign a stat once');
+    }
+    return stats;
   }
   private assertInteractionReferences(story: Story, inputInteractionIds: string[]) {
     const interactionIds = new Set(story.interactions.map(({ id }) => id));

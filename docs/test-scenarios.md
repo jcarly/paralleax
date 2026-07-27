@@ -232,6 +232,11 @@ The character-stat vertical keeps these regressions covered:
   story, validates interaction/item references, and cascades with its owners.
 - Reader: normal play resumes and serializes progress saves, exposes save
   failures, and restart deletes the snapshot; Simulation Mode never persists it.
+- Item stats: a definition assigns reusable initial stats, two instances evolve
+  independently, interaction effects target one exact instance/stat pair, and
+  reader progress deterministically reconstructs their values.
+- API/editor: reject foreign, unassigned, and duplicate item-stat references;
+  persist definition assignments and interaction effects through reloads.
 
 ## Operations Regression Tests
 

@@ -9,13 +9,16 @@ import type {
 import {
   applyInteractionStatChanges,
   applyInteractionItemEffects,
+  applyInteractionItemStatChanges,
   buildReaderProgressState,
   ensureStoryInteractionPositions,
   getAvailableInteractions,
   getInitialStatValues,
+  getInitialItemStatValues,
   getInputReachableInteractions,
   getJourneyStatValues,
   getJourneyOwnedItemIds,
+  getJourneyItemStatValues,
   getJourneyDateTime,
   getNextChildPosition,
   getNextRootPosition,
@@ -185,6 +188,7 @@ export function StoryPlayer() {
   const [currentLocationId, setCurrentLocationId] = useState<string | null>(null);
   const [statValues, setStatValues] = useState<Record<string, number>>({});
   const [ownedItemIds, setOwnedItemIds] = useState<string[]>([]);
+  const [itemStatValues, setItemStatValues] = useState<Record<string, Record<string, number>>>({});
   const [progressStatus, setProgressStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>(
     'idle',
   );
@@ -218,6 +222,9 @@ export function StoryPlayer() {
       setCurrentLocationId(getJourneyLocation(positioned, nextJourney));
       setStatValues(getJourneyStatValues(positioned, nextJourney));
       setOwnedItemIds(reconciledProgress?.ownedItemIds ?? []);
+      setItemStatValues(
+        reconciledProgress?.itemStatValues ?? getJourneyItemStatValues(positioned, nextJourney),
+      );
       setProgressStatus(progress ? 'saved' : 'idle');
     });
   }, [isSimulationMode, startInteractionId, storyId]);
@@ -351,6 +358,7 @@ export function StoryPlayer() {
     setVisited((ids) => (ids.includes(interaction.id) ? ids : [...ids, interaction.id]));
     if (interaction.locationId) setCurrentLocationId(interaction.locationId);
     setStatValues((values) => applyInteractionStatChanges(story, values, interaction));
+    setItemStatValues((values) => applyInteractionItemStatChanges(story, values, interaction));
     setOwnedItemIds(nextOwnedItemIds);
     if (!isSimulationMode) queueProgressSave(nextJourney, nextOwnedItemIds);
   }
@@ -370,6 +378,13 @@ export function StoryPlayer() {
         : {},
     );
     setOwnedItemIds([]);
+    setItemStatValues(
+      story
+        ? startInteractionId
+          ? getJourneyItemStatValues(story, [startInteractionId])
+          : getInitialItemStatValues(story)
+        : {},
+    );
     if (!isSimulationMode) queueProgressReset();
   }
 
@@ -382,6 +397,7 @@ export function StoryPlayer() {
     setCurrentLocationId(getJourneyLocation(story, nextJourney));
     if (story) setStatValues(getJourneyStatValues(story, nextJourney));
     if (story) setOwnedItemIds(getJourneyOwnedItemIds(story, nextJourney));
+    if (story) setItemStatValues(getJourneyItemStatValues(story, nextJourney));
   }
 
   async function saveCurrentInteraction(patch: Partial<Pick<Interaction, 'title' | 'body'>>) {
@@ -612,6 +628,17 @@ export function StoryPlayer() {
                     <img className="context-picto" src={definition.imageUrl} alt="" />
                   ) : null}
                   {definition?.name ?? 'Unknown item'}
+                  {(definition?.stats ?? []).length > 0 ? (
+                    <ul className="item-stat-list">
+                      {(definition?.stats ?? []).map((stat) => (
+                        <li key={stat.statDefinitionId}>
+                          {story.statDefinitions?.find(({ id }) => id === stat.statDefinitionId)
+                            ?.name ?? 'Unknown stat'}
+                          : {itemStatValues[itemId]?.[stat.statDefinitionId] ?? stat.initialValue}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
                   {owner ? <small> — {owner.name}</small> : null}
                 </li>
               );

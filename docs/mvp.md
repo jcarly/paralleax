@@ -11,7 +11,9 @@ exports. Locations and characters are the first post-MVP context verticals.
 - Reader: execute a story through successive choices.
 - Reader progress: resume one authenticated playthrough per user and story.
 - Character item inventory: interactions obtain or lose exact authored item
-  instances, and progress reconstructs inventory from the journey.
+  instances, reusable item definitions assign initial stats, interactions modify
+  one exact instance's stats, and progress reconstructs inventory and values
+  from the journey.
 - Story persistence: save authored stories in PostgreSQL.
 - Story-local calendar time: authored start date/time, interaction durations,
   and trigger schedules based on dates, weekdays, and time slots.

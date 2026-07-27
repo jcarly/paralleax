@@ -46,6 +46,7 @@ describe('CharacterInspector', () => {
             name: 'Key',
             description: '',
             imageUrl: 'https://images.example/key.png',
+            stats: [{ statDefinitionId: 'stat-definition-1', initialValue: 7 }],
           },
           { id: 'item-definition-2', name: 'Map', description: '' },
         ]}
@@ -96,6 +97,7 @@ describe('CharacterInspector', () => {
     await user.click(screen.getByRole('button', { name: 'Add item' }));
     expect(onCreateItem).toHaveBeenCalledWith('character-1', 'item-definition-2');
     expect(screen.getAllByText('Key')).toHaveLength(2);
+    expect(screen.getByText(/Trust: 7/)).toBeInTheDocument();
     expect(screen.getByText('Unknown item')).toBeInTheDocument();
 
     const description = screen.getByLabelText('Description');

@@ -74,6 +74,11 @@ export interface ItemDefinition {
   name: string;
   description: string;
   imageUrl?: string;
+  stats?: ItemDefinitionStat[];
+}
+export interface ItemDefinitionStat {
+  statDefinitionId: string;
+  initialValue: number;
 }
 export interface ItemInstance {
   id: string;
@@ -87,6 +92,12 @@ export interface StatEffect {
 export interface ItemEffect {
   itemId: string;
   operation: 'obtain' | 'lose';
+}
+export interface ItemStatEffect {
+  itemId: string;
+  statDefinitionId: string;
+  operation: 'add' | 'set';
+  value: number;
 }
 export interface Trigger {
   id: string;
@@ -102,6 +113,7 @@ export interface Interaction {
   characterIds?: string[];
   statEffects?: StatEffect[];
   itemEffects?: ItemEffect[];
+  itemStatEffects?: ItemStatEffect[];
   durationMinutes?: number;
   triggers: Trigger[];
 }
@@ -158,6 +170,7 @@ export interface ReaderProgressState {
   currentLocationId: string | null;
   statValues: Record<string, number>;
   ownedItemIds: string[];
+  itemStatValues?: Record<string, Record<string, number>>;
 }
 export interface ReaderProgress {
   state: ReaderProgressState;
@@ -186,6 +199,7 @@ export interface UpdateInteractionInput {
   characterIds?: string[];
   statEffects?: StatEffect[];
   itemEffects?: ItemEffect[];
+  itemStatEffects?: ItemStatEffect[];
   durationMinutes?: number;
 }
 export interface CreateLocationInput {
@@ -229,11 +243,13 @@ export interface CreateItemDefinitionInput {
   name: string;
   description?: string;
   imageUrl?: string;
+  stats?: ItemDefinitionStat[];
 }
 export interface UpdateItemDefinitionInput {
   name?: string;
   description?: string;
   imageUrl?: string;
+  stats?: ItemDefinitionStat[];
 }
 export interface CreateCharacterItemInput {
   itemDefinitionId: string;
@@ -256,6 +272,7 @@ export type InteractionContentPatch = Partial<
     | 'characterIds'
     | 'statEffects'
     | 'itemEffects'
+    | 'itemStatEffects'
     | 'durationMinutes'
   >
 >;
@@ -528,6 +545,9 @@ export function mergeServerStory(
         itemEffects: hasOwn(patch ?? {}, 'itemEffects')
           ? (patch?.itemEffects ?? [])
           : currentItem.itemEffects,
+        itemStatEffects: hasOwn(patch ?? {}, 'itemStatEffects')
+          ? (patch?.itemStatEffects ?? [])
+          : currentItem.itemStatEffects,
         durationMinutes: hasOwn(patch ?? {}, 'durationMinutes')
           ? (patch?.durationMinutes ?? 0)
           : currentItem.durationMinutes,
@@ -982,6 +1002,77 @@ export function getJourneyOwnedItemIds(story: Story, journey: string[]): string[
   }, [] as string[]);
 }
 
+export function getInitialItemStatValues(story: Story): Record<string, Record<string, number>> {
+  const definitions = new Map(
+    (story.itemDefinitions ?? []).map((definition) => [definition.id, definition]),
+  );
+  return Object.fromEntries(
+    (story.characters ?? []).flatMap((character) =>
+      (character.items ?? []).map((item) => [
+        item.id,
+        Object.fromEntries(
+          (definitions.get(item.itemDefinitionId)?.stats ?? []).map((stat) => [
+            stat.statDefinitionId,
+            stat.initialValue,
+          ]),
+        ),
+      ]),
+    ),
+  );
+}
+
+export function applyInteractionItemStatChanges(
+  story: Story,
+  values: Readonly<Record<string, Readonly<Record<string, number>>>>,
+  interaction: Interaction,
+): Record<string, Record<string, number>> {
+  const next = Object.fromEntries(
+    Object.entries(values).map(([itemId, stats]) => [itemId, { ...stats }]),
+  );
+  const definitions = new Map(
+    (story.itemDefinitions ?? []).map((definition) => [definition.id, definition]),
+  );
+  const rates = new Map(
+    (story.statDefinitions ?? []).map((definition) => [
+      definition.id,
+      definition.changePerHour ?? 0,
+    ]),
+  );
+  if (interaction.durationMinutes) {
+    for (const character of story.characters ?? []) {
+      for (const item of character.items ?? []) {
+        for (const stat of definitions.get(item.itemDefinitionId)?.stats ?? []) {
+          const rate = rates.get(stat.statDefinitionId) ?? 0;
+          if (rate !== 0) {
+            next[item.id] ??= {};
+            next[item.id][stat.statDefinitionId] =
+              (next[item.id][stat.statDefinitionId] ?? stat.initialValue) +
+              (rate * interaction.durationMinutes) / 60;
+          }
+        }
+      }
+    }
+  }
+  for (const effect of interaction.itemStatEffects ?? []) {
+    next[effect.itemId] ??= {};
+    next[effect.itemId][effect.statDefinitionId] =
+      effect.operation === 'set'
+        ? effect.value
+        : (next[effect.itemId][effect.statDefinitionId] ?? 0) + effect.value;
+  }
+  return next;
+}
+
+export function getJourneyItemStatValues(
+  story: Story,
+  journey: string[],
+): Record<string, Record<string, number>> {
+  return journey.reduce((values, interactionId) => {
+    const interaction = story.interactions.find(({ id }) => id === interactionId);
+    return interaction ? applyInteractionItemStatChanges(story, values, interaction) : values;
+  }, getInitialItemStatValues(story));
+}
+
 export function getJourneyLocation(story: Story, journey: string[]): string | null {
   for (let index = journey.length - 1; index >= 0; index -= 1) {
     const interaction = story.interactions.find(({ id }) => id === journey[index]);
@@ -1010,5 +1101,6 @@ export function buildReaderProgressState(
     currentLocationId: getJourneyLocation(story, journey),
     statValues: getJourneyStatValues(story, journey),
     ownedItemIds: items,
+    itemStatValues: getJourneyItemStatValues(story, journey),
   };
 }

@@ -58,6 +58,8 @@ details. They should stay covered by tests as the editor grows.
   be referenced inside that story.
 - A character cannot receive the same stat definition twice.
 - An item definition belongs to exactly one story.
+- An item definition may assign each same-story stat definition at most once,
+  with a finite numeric initial value inherited by every item instance.
 - Locations, characters, stat definitions, and item definitions may reference
   an optional image URL. An empty value means that no image is configured.
 - A character item instance belongs to exactly one character and references one
@@ -66,6 +68,13 @@ details. They should stay covered by tests as the editor grows.
   definition; every instance keeps a distinct id.
 - Authored character item instances form the finite set of objects that
   interaction inventory effects may reference.
+- Runtime item stat values are independent per item instance, even when several
+  instances share one item definition.
+- An item stat effect references one exact item instance and one stat assigned
+  by that instance's definition. An interaction can affect that pair at most
+  once, using finite `add` or `set` semantics.
+- Removing a stat assignment from an item definition removes interaction
+  item-stat effects that would otherwise reference that unassigned stat.
 - An interaction has at most one effect per stat. An effect either adds a finite
   value to the current value or replaces it.
 - Selecting an interaction first applies time-based stat changes for its
@@ -79,6 +88,8 @@ details. They should stay covered by tests as the editor grows.
   reconstructed from the ordered journey before persistence.
 - Saved owned item ids reference distinct item instances from the same story and
   are reconstructed by replaying interaction item effects.
+- Saved item stat values are reconstructed from definition defaults, elapsed
+  story time, and ordered interaction effects rather than trusted from clients.
 - An interaction has at most one effect per item instance. Obtaining an already
   owned instance or losing an absent instance is an idempotent no-op.
 - Author Simulation Mode never loads, updates, or deletes player progress.

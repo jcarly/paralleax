@@ -23,7 +23,14 @@ function graphStory(): Story {
   const saved = story();
   saved.locations = [{ id: 'location-1', name: 'Harbor', description: 'A quiet harbor.' }];
   saved.statDefinitions = [{ id: 'definition-1', name: 'Trust', changePerHour: -0.5 }];
-  saved.itemDefinitions = [{ id: 'item-definition-1', name: 'Key', description: 'A brass key.' }];
+  saved.itemDefinitions = [
+    {
+      id: 'item-definition-1',
+      name: 'Key',
+      description: 'A brass key.',
+      stats: [{ statDefinitionId: 'definition-1', initialValue: 8 }],
+    },
+  ];
   saved.characters = [
     {
       id: 'character-1',
@@ -46,6 +53,14 @@ function graphStory(): Story {
       characterIds: ['character-1'],
       statEffects: [{ statId: 'stat-1', operation: 'add', value: 1 }],
       itemEffects: [{ itemId: 'item-1', operation: 'obtain' }],
+      itemStatEffects: [
+        {
+          itemId: 'item-1',
+          statDefinitionId: 'definition-1',
+          operation: 'add',
+          value: -1,
+        },
+      ],
       durationMinutes: 15,
       triggers: [{ id: 'trigger-1', inputInteractionIds: [], conditions: [] }],
     },
@@ -55,6 +70,7 @@ function graphStory(): Story {
       body: 'Continue here',
       position: { x: 30, y: 40 },
       durationMinutes: 0,
+      itemStatEffects: [],
       triggers: [
         {
           id: 'trigger-2',
@@ -185,6 +201,8 @@ function relationalRead(query: jest.Mock, saved = story()) {
           story_id: saved.id,
           name: definition.name,
           description: definition.description,
+          image_url: definition.imageUrl ?? '',
+          stats: definition.stats ?? [],
           sort_order: index,
         })),
       });
@@ -237,6 +255,7 @@ function relationalRead(query: jest.Mock, saved = story()) {
           position_y: interaction.position.y,
           location_id: interaction.locationId ?? null,
           duration_minutes: interaction.durationMinutes ?? 0,
+          item_stat_effects: interaction.itemStatEffects ?? [],
           sort_order: index,
         })),
       });
@@ -331,7 +350,18 @@ describe('StoriesRepository', () => {
     ]);
     expect(mockClientQuery).toHaveBeenCalledWith(
       expect.stringContaining('INSERT INTO interactions'),
-      ['interaction-1', saved.id, 'Start', 'Begin here', 10, 20, 'location-1', 15, 0],
+      [
+        'interaction-1',
+        saved.id,
+        'Start',
+        'Begin here',
+        10,
+        20,
+        'location-1',
+        15,
+        JSON.stringify(saved.interactions[0].itemStatEffects),
+        0,
+      ],
     );
     expect(mockClientQuery).toHaveBeenCalledWith(
       expect.stringContaining('INSERT INTO characters'),
@@ -347,7 +377,15 @@ describe('StoriesRepository', () => {
     );
     expect(mockClientQuery).toHaveBeenCalledWith(
       expect.stringContaining('INSERT INTO item_definitions'),
-      ['item-definition-1', saved.id, 'Key', 'A brass key.', '', 0],
+      [
+        'item-definition-1',
+        saved.id,
+        'Key',
+        'A brass key.',
+        '',
+        JSON.stringify(saved.itemDefinitions?.[0].stats),
+        0,
+      ],
     );
     expect(mockClientQuery).toHaveBeenCalledWith(
       expect.stringContaining('INSERT INTO character_stats'),

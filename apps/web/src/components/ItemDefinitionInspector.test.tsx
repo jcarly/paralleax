@@ -1,14 +1,16 @@
-import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ItemDefinitionInspector } from './ItemDefinitionInspector';
 
 describe('ItemDefinitionInspector', () => {
+  afterEach(cleanup);
   it('locally edits and persists the item name, image, and description', () => {
     const onChange = vi.fn();
     const onPatch = vi.fn().mockResolvedValue(undefined);
 
     render(
       <ItemDefinitionInspector
+        statDefinitions={[]}
         itemDefinition={{
           id: 'item-definition-1',
           name: 'Key',
@@ -57,5 +59,84 @@ describe('ItemDefinitionInspector', () => {
     expect(onPatch).toHaveBeenLastCalledWith('item-definition-1', {
       description: 'Opens the archive.',
     });
+  });
+
+  it('assigns a reusable stat and persists its initial value', () => {
+    const onChange = vi.fn();
+    const onPatch = vi.fn().mockResolvedValue(undefined);
+    const itemDefinition = {
+      id: 'item-definition-1',
+      name: 'Key',
+      description: '',
+    };
+    const { rerender } = render(
+      <ItemDefinitionInspector
+        statDefinitions={[
+          { id: 'durability', name: 'Durability' },
+          { id: 'quality', name: 'Quality' },
+        ]}
+        itemDefinition={itemDefinition}
+        onChange={onChange}
+        onPatch={onPatch}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add stat' }));
+    expect(onPatch).toHaveBeenLastCalledWith('item-definition-1', {
+      stats: [{ statDefinitionId: 'durability', initialValue: 0 }],
+    });
+
+    const withStat = {
+      ...itemDefinition,
+      stats: [{ statDefinitionId: 'durability', initialValue: 0 }],
+    };
+    rerender(
+      <ItemDefinitionInspector
+        statDefinitions={[
+          { id: 'durability', name: 'Durability' },
+          { id: 'quality', name: 'Quality' },
+        ]}
+        itemDefinition={withStat}
+        onChange={onChange}
+        onPatch={onPatch}
+      />,
+    );
+    fireEvent.change(screen.getByLabelText('Item stat'), {
+      target: { value: 'quality' },
+    });
+    expect(onPatch).toHaveBeenLastCalledWith('item-definition-1', {
+      stats: [{ statDefinitionId: 'quality', initialValue: 0 }],
+    });
+    fireEvent.change(screen.getByLabelText('Item stat initial value'), {
+      target: { value: '12' },
+    });
+    fireEvent.blur(screen.getByLabelText('Item stat initial value'), {
+      target: { value: '12' },
+    });
+    expect(onPatch).toHaveBeenLastCalledWith('item-definition-1', {
+      stats: [{ statDefinitionId: 'durability', initialValue: 12 }],
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Delete item stat' }));
+    expect(onPatch).toHaveBeenLastCalledWith('item-definition-1', { stats: [] });
+
+    rerender(
+      <ItemDefinitionInspector
+        statDefinitions={[
+          { id: 'durability', name: 'Durability' },
+          { id: 'quality', name: 'Quality' },
+        ]}
+        itemDefinition={{
+          ...itemDefinition,
+          stats: [
+            { statDefinitionId: 'durability', initialValue: 10 },
+            { statDefinitionId: 'quality', initialValue: 5 },
+          ],
+        }}
+        onChange={onChange}
+        onPatch={onPatch}
+      />,
+    );
+    expect(screen.getAllByRole('option', { name: 'Quality' })[0]).toBeDisabled();
+    expect(screen.getAllByRole('option', { name: 'Durability' })[1]).toBeDisabled();
   });
 });

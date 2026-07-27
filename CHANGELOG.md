@@ -161,6 +161,10 @@ This project follows a lightweight [Keep a Changelog](https://keepachangelog.com
 
 ### Added
 
+- Reusable stats on item definitions, independent per-instance runtime values,
+  time-based evolution, exact item-stat interaction effects, reader-progress
+  reconstruction, inventory display, API validation, and editor controls.
+
 - Conditional rich-text frames linked to outgoing interactions. Reader
   visibility follows the existing target triggers, disconnected content remains
   preserved, and Simulation Mode displays unavailable frames with diagnostics.

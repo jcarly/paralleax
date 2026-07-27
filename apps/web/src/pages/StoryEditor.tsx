@@ -690,6 +690,7 @@ export function StoryEditor() {
             ) : selectedItemDefinition ? (
               <ItemDefinitionInspector
                 itemDefinition={selectedItemDefinition}
+                statDefinitions={story.statDefinitions ?? []}
                 onChange={updateLocalItemDefinition}
                 onPatch={updateItemDefinition}
               />

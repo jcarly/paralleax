@@ -107,16 +107,20 @@ conditions compare its current runtime value.
 ### Item Definition
 
 An item definition is a reusable story-owned description with an id, name,
-description, and optional image URL. It describes a kind of object and is not itself owned by a
-character.
+description, optional image URL, and zero or more assignments to the story's
+reusable stat definitions. Each assignment defines the initial value inherited
+by every concrete instance. The definition describes a kind of object and is
+not itself owned by a character.
 
 ### Item Instance
 
 An item instance belongs to exactly one character and references one item
 definition from the same story. Adding the same definition several times creates
 separate instances with distinct ids. Interactions can obtain or lose one exact
-item instance, allowing repeated definitions to remain distinct. Items do not
-have conditions, equipment behavior, or stats yet.
+item instance, allowing repeated definitions to remain distinct. Each instance
+has independent runtime values for the stats assigned by its definition.
+Interaction effects can add to or set one exact instance stat. Items do not have
+conditions or equipment behavior yet.
 
 See [Trigger semantics](triggers.md) for deletion rules and editor behavior.
 
@@ -126,7 +130,8 @@ Reader progress belongs to one authenticated user and one story. Relational
 columns enforce ownership, uniqueness, timestamps, and cascading deletion. A
 versioned JSON state stores the ordered journey, current interaction, unique
 visits, story-local date/time, current location, stat values, and owned item
-instances. Replayable values are derived from the ordered journey by the API.
+instances, including per-instance item stat values. Replayable values are
+derived from the ordered journey by the API.
 
 ## Target Model
 

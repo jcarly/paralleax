@@ -88,6 +88,12 @@ export class UpdateInteractionDto {
   @Type(() => ItemEffectDto)
   itemEffects?: ItemEffectDto[];
   @ValidateIf((_, value) => value !== undefined)
+  @IsArray()
+  @ArrayMaxSize(500)
+  @ValidateNested({ each: true })
+  @Type(() => ItemStatEffectDto)
+  itemStatEffects?: ItemStatEffectDto[];
+  @ValidateIf((_, value) => value !== undefined)
   @IsInt()
   @Min(0)
   durationMinutes?: number;
@@ -100,6 +106,12 @@ export class StatEffectDto {
 export class ItemEffectDto {
   @IsString() itemId!: string;
   @IsIn(['obtain', 'lose']) operation!: 'obtain' | 'lose';
+}
+export class ItemStatEffectDto {
+  @IsString() itemId!: string;
+  @IsString() statDefinitionId!: string;
+  @IsIn(['add', 'set']) operation!: 'add' | 'set';
+  @IsNumber() value!: number;
 }
 export class DateRangeDto {
   @IsString() @Matches(/^\d{4}-\d{2}-\d{2}$/) startDate!: string;
@@ -321,6 +333,12 @@ export class CreateItemDefinitionDto {
   @IsString()
   @MaxLength(2048)
   imageUrl?: string;
+  @ValidateIf((_, value) => value !== undefined)
+  @IsArray()
+  @ArrayMaxSize(500)
+  @ValidateNested({ each: true })
+  @Type(() => ItemDefinitionStatDto)
+  stats?: ItemDefinitionStatDto[];
 }
 export class UpdateItemDefinitionDto {
   @ValidateIf((_, value) => value !== undefined)
@@ -335,6 +353,16 @@ export class UpdateItemDefinitionDto {
   @IsString()
   @MaxLength(2048)
   imageUrl?: string;
+  @ValidateIf((_, value) => value !== undefined)
+  @IsArray()
+  @ArrayMaxSize(500)
+  @ValidateNested({ each: true })
+  @Type(() => ItemDefinitionStatDto)
+  stats?: ItemDefinitionStatDto[];
+}
+export class ItemDefinitionStatDto {
+  @IsString() @IsNotEmpty() statDefinitionId!: string;
+  @IsNumber() initialValue!: number;
 }
 export class CreateCharacterItemDto {
   @IsString() @IsNotEmpty() itemDefinitionId!: string;

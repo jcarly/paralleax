@@ -145,8 +145,18 @@ several copies of the same item.
 In an interaction inspector, use **Add item effect** to select one exact item
 instance and choose **obtain** or **lose**. If a character has several copies,
 the editor numbers them so the intended copy is explicit. The reader displays
-the resulting inventory and saves it with progress. Items do not have stats,
-conditions, or equipment behavior yet.
+the resulting inventory and saves it with progress. Items do not have trigger
+conditions or equipment behavior yet.
+
+### Item stats
+
+Open an item definition and use **Add stat** to assign any reusable story stat
+with an initial value. Every copy of that item starts from the definition value
+but evolves independently during reading.
+
+Open an interaction and use **Add item stat effect** to select one exact item
+copy and one of its assigned stats. The effect can add a value or set the value
+directly. The player inventory displays the current values for owned items.
 
 ## Delete Trigger Links
 

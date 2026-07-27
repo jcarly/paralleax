@@ -504,7 +504,10 @@ export function useStoryEditorPersistence(storyId: string) {
   async function updateItemDefinition(
     itemDefinitionId: string,
     patch: Partial<
-      Pick<ItemDefinitionMutationResult['itemDefinition'], 'name' | 'description' | 'imageUrl'>
+      Pick<
+        ItemDefinitionMutationResult['itemDefinition'],
+        'name' | 'description' | 'imageUrl' | 'stats'
+      >
     >,
   ) {
     setStory((current) =>

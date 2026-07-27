@@ -178,8 +178,9 @@ async function insertInteraction(
 ) {
   await client.query(
     `INSERT INTO interactions
-     (id, story_id, title, body, position_x, position_y, location_id, duration_minutes, sort_order)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+     (id, story_id, title, body, position_x, position_y, location_id, duration_minutes,
+      item_stat_effects, sort_order)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
     [
       interaction.id,
       storyId,
@@ -189,6 +190,7 @@ async function insertInteraction(
       interaction.position.y,
       interaction.locationId ?? null,
       interaction.durationMinutes ?? 0,
+      JSON.stringify(interaction.itemStatEffects ?? []),
       sortOrder,
     ],
   );
@@ -240,6 +242,13 @@ async function updateInteractionDifference(
     'duration_minutes',
     before.durationMinutes ?? 0,
     after.durationMinutes ?? 0,
+  );
+  addChange(
+    changes,
+    values,
+    'item_stat_effects',
+    JSON.stringify(before.itemStatEffects ?? []),
+    JSON.stringify(after.itemStatEffects ?? []),
   );
   addChange(changes, values, 'sort_order', beforeSortOrder, sortOrder);
   if (changes.length > 0) {
@@ -363,14 +372,15 @@ async function insertItemDefinition(
   sortOrder: number,
 ) {
   await client.query(
-    `INSERT INTO item_definitions (id, story_id, name, description, image_url, sort_order)
-     VALUES ($1, $2, $3, $4, $5, $6)`,
+    `INSERT INTO item_definitions (id, story_id, name, description, image_url, stats, sort_order)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)`,
     [
       definition.id,
       storyId,
       definition.name,
       definition.description,
       definition.imageUrl ?? '',
+      JSON.stringify(definition.stats ?? []),
       sortOrder,
     ],
   );
@@ -462,6 +472,13 @@ async function persistItemDefinitionDifference(client: Queryable, before: Story,
     addChange(changes, values, 'name', previous.name, definition.name);
     addChange(changes, values, 'description', previous.description, definition.description);
     addChange(changes, values, 'image_url', previous.imageUrl ?? '', definition.imageUrl ?? '');
+    addChange(
+      changes,
+      values,
+      'stats',
+      JSON.stringify(previous.stats ?? []),
+      JSON.stringify(definition.stats ?? []),
+    );
     addChange(
       changes,
       values,

@@ -156,19 +156,33 @@ export function CharacterInspector({
         <p className="hint">No items owned yet.</p>
       ) : (
         <ul className="character-items">
-          {(character.items ?? []).map((item) => (
-            <li key={item.id}>
-              {itemDefinitions.find(({ id }) => id === item.itemDefinitionId)?.imageUrl ? (
-                <img
-                  className="context-picto"
-                  src={itemDefinitions.find(({ id }) => id === item.itemDefinitionId)?.imageUrl}
-                  alt=""
-                />
-              ) : null}
-              {itemDefinitions.find(({ id }) => id === item.itemDefinitionId)?.name ??
-                'Unknown item'}
-            </li>
-          ))}
+          {(character.items ?? []).map((item) => {
+            const definition = itemDefinitions.find(({ id }) => id === item.itemDefinitionId);
+            return (
+              <li key={item.id}>
+                {itemDefinitions.find(({ id }) => id === item.itemDefinitionId)?.imageUrl ? (
+                  <img
+                    className="context-picto"
+                    src={itemDefinitions.find(({ id }) => id === item.itemDefinitionId)?.imageUrl}
+                    alt=""
+                  />
+                ) : null}
+                {itemDefinitions.find(({ id }) => id === item.itemDefinitionId)?.name ??
+                  'Unknown item'}
+                {(definition?.stats ?? []).length > 0 ? (
+                  <ul className="item-stat-list">
+                    {(definition?.stats ?? []).map((stat) => (
+                      <li key={stat.statDefinitionId}>
+                        {statDefinitions.find(({ id }) => id === stat.statDefinitionId)?.name ??
+                          'Unknown stat'}
+                        : {stat.initialValue}
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+              </li>
+            );
+          })}
         </ul>
       )}
       <label>

@@ -547,4 +547,26 @@ export const databaseMigrations: DatabaseMigration[] = [
       ADD COLUMN change_per_hour double precision NOT NULL DEFAULT 0;
     `,
   },
+  {
+    id: '202607270017_item_stats',
+    sql: `
+      ALTER TABLE item_definitions
+      ADD COLUMN stats jsonb NOT NULL DEFAULT '[]'::jsonb,
+      ADD CONSTRAINT item_definitions_stats_array
+        CHECK (jsonb_typeof(stats) = 'array');
+
+      ALTER TABLE interactions
+      ADD COLUMN item_stat_effects jsonb NOT NULL DEFAULT '[]'::jsonb,
+      ADD CONSTRAINT interactions_item_stat_effects_array
+        CHECK (jsonb_typeof(item_stat_effects) = 'array');
+
+      UPDATE story_reader_progress
+      SET state = jsonb_set(
+        state,
+        '{itemStatValues}',
+        '{}'::jsonb,
+        true
+      );
+    `,
+  },
 ];

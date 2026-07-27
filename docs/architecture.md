@@ -346,6 +346,10 @@ stored as runtime events. Ordered typed trigger conditions are
 stored as JSONB on their owning trigger and their references are validated by
 the application service. Story-local start time and interaction durations are
 relational fields; temporal alternatives remain typed trigger-condition JSONB.
+Item-definition stat assignments and interaction item-stat effects are ordered
+typed JSONB value objects whose same-story and definition membership references
+are validated by `StoriesService`. Reader-progress JSON contains the replayed
+per-instance values.
 Context entity image references use relational text columns. Image binaries and
 their upload lifecycle are not stored by the application.
 The repository reconstructs

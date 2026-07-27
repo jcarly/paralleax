@@ -44,6 +44,25 @@ export function InteractionInspector({
       };
     }),
   );
+  const itemStats = items.flatMap((item) => {
+    const definition = story.itemDefinitions?.find(({ id }) => id === item.itemDefinitionId);
+    return (definition?.stats ?? []).map((stat) => ({
+      itemId: item.id,
+      statDefinitionId: stat.statDefinitionId,
+      label: `${item.label} — ${
+        story.statDefinitions?.find(({ id }) => id === stat.statDefinitionId)?.name ??
+        'Unknown stat'
+      }`,
+    }));
+  });
+  const itemStatEffects = interaction.itemStatEffects ?? [];
+  const availableItemStat = itemStats.find(
+    (itemStat) =>
+      !itemStatEffects.some(
+        ({ itemId, statDefinitionId }) =>
+          itemId === itemStat.itemId && statDefinitionId === itemStat.statDefinitionId,
+      ),
+  );
   function updateLocalInteraction(patch: Partial<Interaction>) {
     onChange(updateInteractionInStory(story, interaction.id, patch));
   }
@@ -288,6 +307,113 @@ export function InteractionInspector({
               );
               updateLocalInteraction({ itemEffects });
               void onPatch(interaction.id, { itemEffects });
+            }}
+          >
+            x
+          </button>
+        </div>
+      ))}
+      <div className="inspector-section-header">
+        <h3>Item stat effects</h3>
+        <button
+          className="secondary"
+          type="button"
+          disabled={!availableItemStat}
+          onClick={() => {
+            const nextEffects = [
+              ...itemStatEffects,
+              {
+                itemId: availableItemStat!.itemId,
+                statDefinitionId: availableItemStat!.statDefinitionId,
+                operation: 'add' as const,
+                value: 1,
+              },
+            ];
+            updateLocalInteraction({ itemStatEffects: nextEffects });
+            void onPatch(interaction.id, { itemStatEffects: nextEffects });
+          }}
+        >
+          Add item stat effect
+        </button>
+      </div>
+      {itemStatEffects.map((effect, index) => (
+        <div className="stat-effect-row" key={`${effect.itemId}:${effect.statDefinitionId}`}>
+          <select
+            aria-label="Affected item stat"
+            value={`${effect.itemId}:${effect.statDefinitionId}`}
+            onChange={(event) => {
+              const [itemId, statDefinitionId] = event.target.value.split(':');
+              const nextEffects = [...itemStatEffects];
+              nextEffects[index] = { ...effect, itemId, statDefinitionId };
+              updateLocalInteraction({ itemStatEffects: nextEffects });
+              void onPatch(interaction.id, { itemStatEffects: nextEffects });
+            }}
+          >
+            {itemStats.map((itemStat) => {
+              const value = `${itemStat.itemId}:${itemStat.statDefinitionId}`;
+              return (
+                <option
+                  key={value}
+                  value={value}
+                  disabled={itemStatEffects.some(
+                    (candidate, candidateIndex) =>
+                      candidateIndex !== index &&
+                      candidate.itemId === itemStat.itemId &&
+                      candidate.statDefinitionId === itemStat.statDefinitionId,
+                  )}
+                >
+                  {itemStat.label}
+                </option>
+              );
+            })}
+          </select>
+          <select
+            aria-label="Item stat effect operation"
+            value={effect.operation}
+            onChange={(event) => {
+              const nextEffects = [...itemStatEffects];
+              nextEffects[index] = {
+                ...effect,
+                operation: event.target.value as 'add' | 'set',
+              };
+              updateLocalInteraction({ itemStatEffects: nextEffects });
+              void onPatch(interaction.id, { itemStatEffects: nextEffects });
+            }}
+          >
+            <option value="add">add</option>
+            <option value="set">set to</option>
+          </select>
+          <input
+            aria-label="Item stat effect value"
+            type="number"
+            value={effect.value}
+            onChange={(event) => {
+              const nextEffects = [...itemStatEffects];
+              nextEffects[index] = {
+                ...effect,
+                value: Number(event.target.value),
+              };
+              updateLocalInteraction({ itemStatEffects: nextEffects });
+            }}
+            onBlur={(event) => {
+              const nextEffects = [...itemStatEffects];
+              nextEffects[index] = {
+                ...effect,
+                value: Number(event.target.value),
+              };
+              void onPatch(interaction.id, { itemStatEffects: nextEffects });
+            }}
+          />
+          <button
+            aria-label="Delete item stat effect"
+            className="ghost danger"
+            type="button"
+            onClick={() => {
+              const nextEffects = itemStatEffects.filter(
+                (_, candidateIndex) => candidateIndex !== index,
+              );
+              updateLocalInteraction({ itemStatEffects: nextEffects });
+              void onPatch(interaction.id, { itemStatEffects: nextEffects });
             }}
           >
             x

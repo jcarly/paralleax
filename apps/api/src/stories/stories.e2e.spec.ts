@@ -755,13 +755,27 @@ describe('Stories API', () => {
       .send({ name: 'Mira' })
       .expect(201);
     const character = (characterResponse.body as CharacterMutationResult).character;
+    const statDefinitionResponse = await request(httpServer)
+      .post(`/api/stories/${story.id}/stat-definitions`)
+      .send({ name: 'Durability' })
+      .expect(201);
+    const statDefinition = (statDefinitionResponse.body as StatDefinitionMutationResult)
+      .statDefinition;
 
     const definitionResponse = await request(httpServer)
       .post(`/api/stories/${story.id}/item-definitions`)
-      .send({ name: 'Key', description: 'A brass key.' })
+      .send({
+        name: 'Key',
+        description: 'A brass key.',
+        stats: [{ statDefinitionId: statDefinition.id, initialValue: 10 }],
+      })
       .expect(201);
     const definition = (definitionResponse.body as ItemDefinitionMutationResult).itemDefinition;
-    expect(definition).toMatchObject({ name: 'Key', description: 'A brass key.' });
+    expect(definition).toMatchObject({
+      name: 'Key',
+      description: 'A brass key.',
+      stats: [{ statDefinitionId: statDefinition.id, initialValue: 10 }],
+    });
 
     const updatedDefinition = await request(httpServer)
       .patch(`/api/stories/${story.id}/item-definitions/${definition.id}`)
@@ -802,6 +816,67 @@ describe('Stories API', () => {
       .post(`/api/stories/${story.id}/characters/${character.id}/items`)
       .send({ itemDefinitionId: foreignDefinition.id })
       .expect(404);
+  });
+
+  it('validates and stores interaction item stat effects', async () => {
+    const story = await createStory();
+    const interaction = (await createInteraction(story.id)).interactions[0];
+    const character = await request(httpServer)
+      .post(`/api/stories/${story.id}/characters`)
+      .send({ name: 'Mira' })
+      .expect(201);
+    const statDefinition = await request(httpServer)
+      .post(`/api/stories/${story.id}/stat-definitions`)
+      .send({ name: 'Durability' })
+      .expect(201);
+    const itemDefinition = await request(httpServer)
+      .post(`/api/stories/${story.id}/item-definitions`)
+      .send({
+        name: 'Key',
+        stats: [
+          {
+            statDefinitionId: statDefinition.body.statDefinition.id,
+            initialValue: 10,
+          },
+        ],
+      })
+      .expect(201);
+    const item = await request(httpServer)
+      .post(`/api/stories/${story.id}/characters/${character.body.character.id}/items`)
+      .send({ itemDefinitionId: itemDefinition.body.itemDefinition.id })
+      .expect(201);
+    const effect = {
+      itemId: item.body.item.id,
+      statDefinitionId: statDefinition.body.statDefinition.id,
+      operation: 'add',
+      value: -2,
+    };
+
+    const updated = await request(httpServer)
+      .patch(`/api/stories/${story.id}/interactions/${interaction.id}`)
+      .send({ itemStatEffects: [effect] })
+      .expect(200);
+    expect(updated.body.interaction.itemStatEffects).toEqual([effect]);
+
+    await request(httpServer)
+      .patch(`/api/stories/${story.id}/interactions/${interaction.id}`)
+      .send({ itemStatEffects: [effect, { ...effect, value: 1 }] })
+      .expect(400);
+    await request(httpServer)
+      .patch(`/api/stories/${story.id}/interactions/${interaction.id}`)
+      .send({
+        itemStatEffects: [{ ...effect, statDefinitionId: 'unassigned-stat-definition' }],
+      })
+      .expect(400);
+
+    await request(httpServer)
+      .patch(`/api/stories/${story.id}/item-definitions/${itemDefinition.body.itemDefinition.id}`)
+      .send({ stats: [] })
+      .expect(200);
+    const loaded = await request(httpServer).get(`/api/stories/${story.id}`).expect(200);
+    expect(
+      (loaded.body as Story).interactions.find(({ id }) => id === interaction.id)?.itemStatEffects,
+    ).toEqual([]);
   });
 
   it('validates and stores interaction item effects', async () => {

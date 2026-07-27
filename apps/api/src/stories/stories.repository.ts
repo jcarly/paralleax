@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import {
   DEFAULT_STORY_DATE_TIME,
+  type ItemDefinitionStat,
+  type ItemStatEffect,
   type ReaderProgress,
   type ReaderProgressState,
   type Story,
@@ -31,6 +33,7 @@ type InteractionRow = {
   position_y: number;
   location_id: string | null;
   duration_minutes: number;
+  item_stat_effects: ItemStatEffect[];
   sort_order: number;
 };
 type LocationRow = {
@@ -50,7 +53,9 @@ type StatDefinitionRow = {
   change_per_hour: number;
   sort_order: number;
 };
-type ItemDefinitionRow = LocationRow;
+type ItemDefinitionRow = LocationRow & {
+  stats: ItemDefinitionStat[];
+};
 type InteractionCharacterRow = {
   story_id: string;
   interaction_id: string;
@@ -230,13 +235,13 @@ export class StoriesRepository {
     const storyIds = storyRows.map(({ id }) => id);
     const interactions = await queryable.query<InteractionRow>(
       `SELECT id, story_id, title, body, position_x, position_y, location_id,
-              duration_minutes, sort_order
+              duration_minutes, item_stat_effects, sort_order
          FROM interactions WHERE story_id = ANY($1::text[])
          ORDER BY story_id, sort_order`,
       [storyIds],
     );
     const locations = await queryable.query<LocationRow>(
-      `SELECT id, story_id, name, description, image_url, sort_order
+      `SELECT id, story_id, name, description, image_url, stats, sort_order
          FROM locations WHERE story_id = ANY($1::text[])
          ORDER BY story_id, sort_order`,
       [storyIds],
@@ -369,6 +374,7 @@ export class StoriesRepository {
         name: definition.name,
         description: definition.description,
         ...(definition.image_url ? { imageUrl: definition.image_url } : {}),
+        stats: definition.stats ?? [],
       })),
       interactions: (interactionsByStory.get(row.id) ?? []).map((interaction) => ({
         id: interaction.id,
@@ -389,6 +395,7 @@ export class StoriesRepository {
           itemId: effect.item_id,
           operation: effect.operation,
         })),
+        itemStatEffects: interaction.item_stat_effects ?? [],
         triggers: (triggersByInteraction.get(interaction.id) ?? []).map((trigger) => ({
           id: trigger.id,
           inputInteractionIds: (inputsByTrigger.get(trigger.id) ?? []).map(

@@ -315,7 +315,15 @@ describe('StoryPlayer', () => {
   it('obtains and loses item instances while saving the derived inventory', async () => {
     const user = userEvent.setup();
     const itemStory = structuredClone(story);
-    itemStory.itemDefinitions = [{ id: 'key-definition', name: 'Key', description: '' }];
+    itemStory.statDefinitions = [{ id: 'durability', name: 'Durability' }];
+    itemStory.itemDefinitions = [
+      {
+        id: 'key-definition',
+        name: 'Key',
+        description: '',
+        stats: [{ statDefinitionId: 'durability', initialValue: 10 }],
+      },
+    ];
     itemStory.characters = [
       {
         id: 'mira',
@@ -325,17 +333,27 @@ describe('StoryPlayer', () => {
       },
     ];
     itemStory.interactions[0].itemEffects = [{ itemId: 'key-1', operation: 'obtain' }];
+    itemStory.interactions[0].itemStatEffects = [
+      {
+        itemId: 'key-1',
+        statDefinitionId: 'durability',
+        operation: 'add',
+        value: -2,
+      },
+    ];
     itemStory.interactions[1].itemEffects = [{ itemId: 'key-1', operation: 'lose' }];
 
     await renderPlayer('/stories/story-1/play', itemStory);
     await user.click(screen.getByRole('button', { name: 'Start' }));
-    expect(screen.getByRole('complementary', { name: 'Inventory' })).toHaveTextContent(
-      'Key — Mira',
-    );
+    expect(screen.getByRole('complementary', { name: 'Inventory' })).toHaveTextContent('Key');
+    expect(screen.getByRole('complementary', { name: 'Inventory' })).toHaveTextContent('Mira');
     expect(api.saveReaderProgress).toHaveBeenLastCalledWith('story-1', {
       journeyInteractionIds: ['start'],
       ownedItemIds: ['key-1'],
     });
+    expect(screen.getByRole('complementary', { name: 'Inventory' })).toHaveTextContent(
+      'Durability: 8',
+    );
 
     await user.click(screen.getByRole('button', { name: 'Next' }));
     expect(screen.getByRole('complementary', { name: 'Inventory' })).toHaveTextContent('No items.');
