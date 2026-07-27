@@ -10,6 +10,7 @@ import {
   getJourneyDateTime,
   getAvailableInteractions,
   getInputReachableInteractions,
+  getItemOwnerIdForInstance,
   getNextChildPosition,
   getNextParentPosition,
   getNextRootPosition,
@@ -614,11 +615,12 @@ describe('reader progress', () => {
       { id: 'key-definition', name: 'Key', description: '' },
       { id: 'map-definition', name: 'Map', description: '' },
     ];
+    story.characters = [{ id: 'mira', name: 'Mira', description: '' }];
     story.interactions[0].itemEffects = [
-      { itemDefinitionId: 'key-definition', operation: 'obtain' },
+      { itemDefinitionId: 'key-definition', characterId: 'mira', operation: 'obtain' },
     ];
     story.interactions[1].itemEffects = [
-      { itemDefinitionId: 'key-definition', operation: 'obtain' },
+      { itemDefinitionId: 'key-definition', characterId: 'mira', operation: 'obtain' },
     ];
     story.interactions[2].triggers[0].conditions = [
       { itemDefinitionId: 'key-definition', isOwned: true },
@@ -628,6 +630,7 @@ describe('reader progress', () => {
     const progress = buildReaderProgressState(story, ['root', 'middle']);
     expect(progress.ownedItemIds).toHaveLength(2);
     expect(new Set(progress.ownedItemIds).size).toBe(2);
+    expect(getItemOwnerIdForInstance(story, progress.ownedItemIds[0])).toBe('mira');
     expect(
       getAvailableInteractions(
         story,

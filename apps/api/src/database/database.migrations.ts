@@ -588,4 +588,17 @@ export const databaseMigrations: DatabaseMigration[] = [
         ON interaction_item_effects(item_definition_id);
     `,
   },
+  {
+    id: '202607270019_item_effect_characters',
+    sql: `
+      ALTER TABLE interaction_item_effects
+      ADD COLUMN character_id text,
+      ADD CONSTRAINT interaction_item_effects_character_fkey
+        FOREIGN KEY (story_id, character_id)
+        REFERENCES characters(story_id, id) ON DELETE CASCADE;
+
+      CREATE INDEX interaction_item_effects_character_id_idx
+        ON interaction_item_effects(character_id);
+    `,
+  },
 ];

@@ -2,6 +2,9 @@
 
 ## 2026-07-26
 
+- Item obtain/lose effects now select a target character, and deterministic
+  runtime instances preserve that owner through reading and progress replay.
+
 - Added reusable row removal controls for character stats, character items, and
   item-definition stats, with cleanup of exact-assignment references.
 

@@ -90,6 +90,7 @@ type ItemEffectRow = {
   interaction_id: string;
   item_id: string | null;
   item_definition_id: string | null;
+  character_id: string | null;
   operation: 'obtain' | 'lose';
   sort_order: number;
 };
@@ -290,7 +291,8 @@ export class StoriesRepository {
       [storyIds],
     );
     const itemEffects = await queryable.query<ItemEffectRow>(
-      `SELECT story_id, interaction_id, item_id, item_definition_id, operation, sort_order
+      `SELECT story_id, interaction_id, item_id, item_definition_id, character_id,
+              operation, sort_order
          FROM interaction_item_effects WHERE story_id = ANY($1::text[])
          ORDER BY story_id, interaction_id, sort_order`,
       [storyIds],
@@ -395,6 +397,7 @@ export class StoriesRepository {
         itemEffects: (itemEffectsByInteraction.get(interaction.id) ?? []).map((effect) => ({
           ...(effect.item_id ? { itemId: effect.item_id } : {}),
           ...(effect.item_definition_id ? { itemDefinitionId: effect.item_definition_id } : {}),
+          ...(effect.character_id ? { characterId: effect.character_id } : {}),
           operation: effect.operation,
         })),
         itemStatEffects: interaction.item_stat_effects ?? [],

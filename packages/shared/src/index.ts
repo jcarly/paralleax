@@ -97,6 +97,7 @@ export interface StatEffect {
 export interface ItemEffect {
   itemId?: string;
   itemDefinitionId?: string;
+  characterId?: string;
   operation: 'obtain' | 'lose';
 }
 export interface ItemStatEffect {
@@ -1011,11 +1012,16 @@ export function applyInteractionItemEffects(
     if (effect.itemDefinitionId) {
       if (effect.operation === 'obtain') {
         next.push(
-          `runtime-item:${journeyIndex}:${effectIndex}:${encodeURIComponent(effect.itemDefinitionId)}`,
+          `runtime-item:${journeyIndex}:${effectIndex}:${encodeURIComponent(
+            effect.characterId ?? '',
+          )}:${encodeURIComponent(effect.itemDefinitionId)}`,
         );
       } else {
         const index = next.findIndex(
-          (itemId) => getItemDefinitionIdForInstance(story, itemId) === effect.itemDefinitionId,
+          (itemId) =>
+            getItemDefinitionIdForInstance(story, itemId) === effect.itemDefinitionId &&
+            (!effect.characterId ||
+              getItemOwnerIdForInstance(story, itemId) === effect.characterId),
         );
         if (index !== -1) next.splice(index, 1);
       }
@@ -1043,8 +1049,19 @@ export function getItemDefinitionIdForInstance(story: Story, itemId: string): st
     .flatMap((character) => character.items ?? [])
     .find(({ id }) => id === itemId);
   if (authored) return authored.itemDefinitionId;
-  const match = /^runtime-item:\d+:\d+:(.+)$/.exec(itemId);
-  return match ? decodeURIComponent(match[1]) : undefined;
+  const ownedRuntimeMatch = /^runtime-item:\d+:\d+:[^:]*:(.+)$/.exec(itemId);
+  if (ownedRuntimeMatch) return decodeURIComponent(ownedRuntimeMatch[1]);
+  const legacyRuntimeMatch = /^runtime-item:\d+:\d+:(.+)$/.exec(itemId);
+  return legacyRuntimeMatch ? decodeURIComponent(legacyRuntimeMatch[1]) : undefined;
+}
+
+export function getItemOwnerIdForInstance(story: Story, itemId: string): string | undefined {
+  const authoredOwner = (story.characters ?? []).find((character) =>
+    (character.items ?? []).some(({ id }) => id === itemId),
+  );
+  if (authoredOwner) return authoredOwner.id;
+  const match = /^runtime-item:\d+:\d+:([^:]*):/.exec(itemId);
+  return match?.[1] ? decodeURIComponent(match[1]) : undefined;
 }
 
 export function getJourneyOwnedItemDefinitionIds(story: Story, journey: string[]): string[] {

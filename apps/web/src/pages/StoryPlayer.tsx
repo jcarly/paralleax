@@ -19,6 +19,7 @@ import {
   getJourneyStatValues,
   getJourneyOwnedItemIds,
   getItemDefinitionIdForInstance,
+  getItemOwnerIdForInstance,
   getJourneyItemStatValues,
   getJourneyDateTime,
   getNextChildPosition,
@@ -660,9 +661,8 @@ export function StoryPlayer() {
         ) : (
           <ul>
             {ownedItemIds.map((itemId) => {
-              const owner = (story.characters ?? []).find((character) =>
-                (character.items ?? []).some(({ id }) => id === itemId),
-              );
+              const ownerId = getItemOwnerIdForInstance(story, itemId);
+              const owner = (story.characters ?? []).find((character) => character.id === ownerId);
               const itemDefinitionId = getItemDefinitionIdForInstance(story, itemId);
               const definition = story.itemDefinitions?.find(({ id }) => id === itemDefinitionId);
               return (

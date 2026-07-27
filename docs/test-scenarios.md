@@ -238,8 +238,9 @@ The character-stat vertical keeps these regressions covered:
 - API/editor: reject foreign, unassigned, and duplicate item-stat references;
   persist definition assignments and interaction effects through reloads.
 - Items: obtain any reusable definition without a character assignment, retain
-  multiple runtime copies, lose one copy, and evaluate owned/not-owned trigger
-  conditions from replayed inventory.
+  multiple runtime copies with their target character owner, lose one copy from
+  that character, and evaluate owned/not-owned trigger conditions from replayed
+  inventory.
 - Character assignments: removing a stat or item updates the character and
   cleans effects or trigger conditions that reference the removed assignment.
 

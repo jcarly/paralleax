@@ -162,8 +162,9 @@ directly. The player inventory displays the current values for owned items.
 
 Open an interaction and use **Add item effect** to obtain or lose any reusable
 item definition in the story. The item does not need to be preassigned to a
-character. Repeating an obtain effect creates another copy; a lose effect
-removes one owned copy.
+character. Select the character who obtains or loses it. Repeating an obtain
+effect creates another copy for that character; a lose effect removes one copy
+owned by the selected character.
 
 In the trigger editor, use **Add item condition** to require that the reader
 owns, or does not own, at least one copy of an item definition.

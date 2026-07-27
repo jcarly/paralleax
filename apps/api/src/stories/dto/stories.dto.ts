@@ -110,6 +110,9 @@ export class ItemEffectDto {
   @ValidateIf((_, value) => value !== undefined)
   @IsString()
   itemDefinitionId?: string;
+  @ValidateIf((_, value) => value !== undefined)
+  @IsString()
+  characterId?: string;
   @IsIn(['obtain', 'lose']) operation!: 'obtain' | 'lose';
 }
 export class ItemStatEffectDto {

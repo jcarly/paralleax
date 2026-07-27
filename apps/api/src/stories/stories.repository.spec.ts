@@ -417,7 +417,7 @@ describe('StoriesRepository', () => {
     );
     expect(mockClientQuery).toHaveBeenCalledWith(
       expect.stringContaining('INSERT INTO interaction_item_effects'),
-      [saved.id, 'interaction-1', 'item-1', null, 'obtain', 0],
+      [saved.id, 'interaction-1', 'item-1', null, null, 'obtain', 0],
     );
     expect(mockClientQuery).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO triggers'), [
       'trigger-2',

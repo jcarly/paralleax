@@ -213,11 +213,12 @@ The API derives current interaction, visited ids, story time, location, and stat
 from that journey before writing JSON; clients cannot provide trusted derived
 values. Owned item ids are validated against item instances in the same story.
 Interaction item effects target a reusable item definition. Obtaining creates a
-new instance, so the same definition can be obtained several times. Losing
-removes one currently owned instance of that definition; losing an absent item
-is a no-op. Legacy exact-instance effects remain replayable. Deterministic
-runtime ids make replay, backward navigation, and saved progress converge on the
-same inventory.
+new instance owned by the effect's target character, so the same definition can
+be obtained several times by one or several characters. Losing removes one
+instance of that definition owned by the target character; losing an absent
+item is a no-op. Legacy exact-instance and unassigned effects remain replayable.
+Deterministic runtime ids preserve both instance and owner across replay,
+backward navigation, and saved progress.
 The same replay reconstructs item stat values from their definition defaults,
 time-based rates, and explicit interaction effects.
 

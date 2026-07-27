@@ -906,11 +906,21 @@ describe('Stories API', () => {
     const reusableUpdated = await request(httpServer)
       .patch(`/api/stories/${story.id}/interactions/${interaction.id}`)
       .send({
-        itemEffects: [{ itemDefinitionId: definition.body.itemDefinition.id, operation: 'obtain' }],
+        itemEffects: [
+          {
+            itemDefinitionId: definition.body.itemDefinition.id,
+            characterId: character.body.character.id,
+            operation: 'obtain',
+          },
+        ],
       })
       .expect(200);
     expect(reusableUpdated.body.interaction.itemEffects).toEqual([
-      { itemDefinitionId: definition.body.itemDefinition.id, operation: 'obtain' },
+      {
+        itemDefinitionId: definition.body.itemDefinition.id,
+        characterId: character.body.character.id,
+        operation: 'obtain',
+      },
     ]);
 
     const conditioned = await request(httpServer)

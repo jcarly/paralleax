@@ -210,18 +210,21 @@ export class StoriesService {
         if (input.itemEffects !== undefined) {
           const itemIds = this.itemIds(story);
           const itemDefinitionIds = new Set((story.itemDefinitions ?? []).map(({ id }) => id));
+          const characterIds = new Set((story.characters ?? []).map(({ id }) => id));
           if (
             input.itemEffects.some(
-              ({ itemId, itemDefinitionId }) =>
+              ({ itemId, itemDefinitionId, characterId }) =>
                 Number(itemId !== undefined) + Number(itemDefinitionId !== undefined) !== 1 ||
                 (itemId !== undefined && !itemIds.has(itemId)) ||
-                (itemDefinitionId !== undefined && !itemDefinitionIds.has(itemDefinitionId)),
+                (itemDefinitionId !== undefined && !itemDefinitionIds.has(itemDefinitionId)) ||
+                (characterId !== undefined && !characterIds.has(characterId)),
             )
           ) {
             throw new BadRequestException('Item effects must belong to the same story');
           }
           const effectTargets = input.itemEffects.map(
-            ({ itemId, itemDefinitionId }) => itemId ?? `definition:${itemDefinitionId}`,
+            ({ itemId, itemDefinitionId, characterId }) =>
+              `${characterId ?? ''}:${itemId ?? `definition:${itemDefinitionId}`}`,
           );
           if (new Set(effectTargets).size !== input.itemEffects.length) {
             throw new BadRequestException('An interaction can only affect an item once');

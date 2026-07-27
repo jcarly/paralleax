@@ -71,9 +71,9 @@ details. They should stay covered by tests as the editor grows.
 - Removing an authored character item instance also removes legacy
   exact-instance inventory effects and item-stat effects that reference it.
 - Interaction inventory effects normally reference any same-story item
-  definition; obtaining creates a new runtime instance and losing removes one
-  owned instance of that definition. Legacy exact-instance effects remain
-  readable.
+  definition and may target one same-story character; obtaining creates a new
+  runtime instance owned by that character and losing removes one of that
+  character's instances. Legacy effects without a character remain readable.
 - Runtime item stat values are independent per item instance, even when several
   instances share one item definition.
 - An item stat effect references one exact item instance and one stat assigned
