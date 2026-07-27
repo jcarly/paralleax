@@ -56,7 +56,7 @@ services:
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173}
       LEGACY_STORY_OWNER_EMAIL: ${LEGACY_STORY_OWNER_EMAIL:-}
     ports:
-      - '3000:3000'
+      - '${API_PORT:-3300}:3000'
     volumes:
       - .:/workspace
       - node-modules:/workspace/node_modules

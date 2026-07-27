@@ -2,6 +2,15 @@
 
 ## 2026-07-26
 
+- Fixed relational story loading so item stats are selected from item
+  definitions instead of the locations table.
+
+- Changed the default Docker Compose API host port from Windows-reserved port
+  3000 to configurable `API_PORT` (3300 by default).
+
+- Pinned the root TypeScript toolchain to 5.9.3 so Nest's webpack builder uses
+  the same supported compiler version as the API, web, and shared workspaces.
+
 - Added per-interaction obtain/lose effects for exact character item instances,
   deterministic inventory replay, persisted relational effects, reader
   inventory display, and progress reconstruction.

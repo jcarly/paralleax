@@ -241,7 +241,7 @@ export class StoriesRepository {
       [storyIds],
     );
     const locations = await queryable.query<LocationRow>(
-      `SELECT id, story_id, name, description, image_url, stats, sort_order
+      `SELECT id, story_id, name, description, image_url, sort_order
          FROM locations WHERE story_id = ANY($1::text[])
          ORDER BY story_id, sort_order`,
       [storyIds],
@@ -259,7 +259,7 @@ export class StoriesRepository {
       [storyIds],
     );
     const itemDefinitions = await queryable.query<ItemDefinitionRow>(
-      `SELECT id, story_id, name, description, image_url, sort_order
+      `SELECT id, story_id, name, description, image_url, stats, sort_order
          FROM item_definitions WHERE story_id = ANY($1::text[])
          ORDER BY story_id, sort_order`,
       [storyIds],

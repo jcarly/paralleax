@@ -281,6 +281,18 @@ describe('StoriesRepository', () => {
     expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining('FROM interactions'), [
       [saved.id],
     ]);
+    expect(mockQuery).toHaveBeenCalledWith(
+      expect.stringMatching(
+        /SELECT id, story_id, name, description, image_url, sort_order\s+FROM locations/,
+      ),
+      [[saved.id]],
+    );
+    expect(mockQuery).toHaveBeenCalledWith(
+      expect.stringMatching(
+        /SELECT id, story_id, name, description, image_url, stats, sort_order\s+FROM item_definitions/,
+      ),
+      [[saved.id]],
+    );
     expect(saved.title).toBe('Repository story');
   });
 

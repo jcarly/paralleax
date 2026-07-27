@@ -80,7 +80,7 @@ npm run dev
 Local URLs:
 
 - Web: http://localhost:5173
-- API: http://localhost:3000/api
+- API: http://localhost:3300/api
 
 The API expects PostgreSQL. By default it uses:
 
@@ -90,7 +90,7 @@ DATABASE_URL=postgres://paralleax:paralleax@localhost:5432/paralleax
 
 The API also validates `PORT`, `POSTGRES_SSL`, `POSTGRES_SSL_CA`, `CORS_ORIGIN`,
 and `NODE_ENV` at startup. `DATABASE_URL` and `CORS_ORIGIN` must be explicit in
-production. OpenAPI documentation is available at http://localhost:3000/api/docs.
+production. OpenAPI documentation is available at http://localhost:3300/api/docs.
 
 Using Docker Compose is the easiest way to start the API, web app, and local
 database together.
@@ -216,7 +216,9 @@ Copy-Item .env.example .env
 docker compose up
 ```
 
-Then open http://localhost:5173. The API is exposed at http://localhost:3000/api.
+Then open http://localhost:5173. The API is exposed at http://localhost:3300/api.
+Set `API_PORT` before starting Compose if port 3300 is unavailable, for example
+`$env:API_PORT = 3301` in PowerShell.
 PostgreSQL is exposed at `localhost:5432` and stores data in the
 `postgres-data` Docker volume.
 
