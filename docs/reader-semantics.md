@@ -212,9 +212,12 @@ The ordered journey is authoritative for state that can currently be replayed.
 The API derives current interaction, visited ids, story time, location, and stats
 from that journey before writing JSON; clients cannot provide trusted derived
 values. Owned item ids are validated against item instances in the same story.
-Interaction item effects obtain or lose an exact story item instance. Replaying
-the ordered journey reconstructs the inventory from an empty starting state.
-Obtaining an already owned instance or losing an absent instance is a no-op.
+Interaction item effects target a reusable item definition. Obtaining creates a
+new instance, so the same definition can be obtained several times. Losing
+removes one currently owned instance of that definition; losing an absent item
+is a no-op. Legacy exact-instance effects remain replayable. Deterministic
+runtime ids make replay, backward navigation, and saved progress converge on the
+same inventory.
 The same replay reconstructs item stat values from their definition defaults,
 time-based rates, and explicit interaction effects.
 

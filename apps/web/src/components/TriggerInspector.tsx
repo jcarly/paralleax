@@ -71,9 +71,11 @@ export function TriggerInspector({
                       ? condition.locationId
                       : 'characterId' in condition
                         ? condition.characterId
-                        : 'statId' in condition
-                          ? condition.statId
-                          : 'time'
+                        : 'itemDefinitionId' in condition
+                          ? condition.itemDefinitionId
+                          : 'statId' in condition
+                            ? condition.statId
+                            : 'time'
                 }-${index}`}
               >
                 {'interactionId' in condition ? (
@@ -175,6 +177,42 @@ export function TriggerInspector({
                     >
                       <option value="present">is present</option>
                       <option value="absent">is absent</option>
+                    </select>
+                  </>
+                ) : 'itemDefinitionId' in condition ? (
+                  <>
+                    <select
+                      aria-label="Condition item"
+                      value={condition.itemDefinitionId}
+                      onChange={(event) => {
+                        const next = [...variant.conditions];
+                        next[index] = {
+                          ...condition,
+                          itemDefinitionId: event.target.value,
+                        };
+                        void updateTrigger(variant, variant.inputInteractionIds, next);
+                      }}
+                    >
+                      {(story.itemDefinitions ?? []).map((definition) => (
+                        <option key={definition.id} value={definition.id}>
+                          {definition.name}
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      aria-label="Item condition operator"
+                      value={condition.isOwned ? 'owned' : 'not-owned'}
+                      onChange={(event) => {
+                        const next = [...variant.conditions];
+                        next[index] = {
+                          ...condition,
+                          isOwned: event.target.value === 'owned',
+                        };
+                        void updateTrigger(variant, variant.inputInteractionIds, next);
+                      }}
+                    >
+                      <option value="owned">is owned</option>
+                      <option value="not-owned">is not owned</option>
                     </select>
                   </>
                 ) : 'temporal' in condition ? (
@@ -308,6 +346,21 @@ export function TriggerInspector({
             }}
           >
             Add stat condition
+          </button>
+          <button
+            className="secondary"
+            disabled={(story.itemDefinitions?.length ?? 0) === 0}
+            onClick={() => {
+              const definition = story.itemDefinitions?.[0];
+              if (definition) {
+                void updateTrigger(variant, variant.inputInteractionIds, [
+                  ...variant.conditions,
+                  { itemDefinitionId: definition.id, isOwned: true },
+                ]);
+              }
+            }}
+          >
+            Add item condition
           </button>
           <button
             className="secondary"

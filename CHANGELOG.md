@@ -2,6 +2,13 @@
 
 ## 2026-07-26
 
+- Added reusable row removal controls for character stats, character items, and
+  item-definition stats, with cleanup of exact-assignment references.
+
+- Added owned/not-owned item trigger conditions and reusable-definition item
+  effects that can obtain or lose any story item without preassigning it to a
+  character, including deterministic multiple runtime instances.
+
 - Fixed relational story loading so item stats are selected from item
   definitions instead of the locations table.
 

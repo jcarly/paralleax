@@ -71,7 +71,9 @@ export function StoryEditor() {
     updateItemDefinition,
     createCharacterStat,
     updateCharacterStat,
+    deleteCharacterStat,
     createCharacterItem,
+    deleteCharacterItem,
   } = useStoryEditorPersistence(storyId);
   const [selectedId, setSelectedId] = useState<string>();
   const [selectedTrigger, setSelectedTrigger] = useState<SelectedTrigger>();
@@ -679,7 +681,9 @@ export function StoryEditor() {
                 onPatch={updateCharacter}
                 onCreateStat={createCharacterStat}
                 onPatchStat={updateCharacterStat}
+                onDeleteStat={deleteCharacterStat}
                 onCreateItem={createCharacterItem}
+                onDeleteItem={deleteCharacterItem}
               />
             ) : selectedStatDefinition ? (
               <StatDefinitionInspector

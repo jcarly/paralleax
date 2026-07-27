@@ -18,6 +18,7 @@ import {
   getInputReachableInteractions,
   getJourneyStatValues,
   getJourneyOwnedItemIds,
+  getItemDefinitionIdForInstance,
   getJourneyItemStatValues,
   getJourneyDateTime,
   getNextChildPosition,
@@ -71,6 +72,12 @@ function describeCondition(story: Story, condition: TriggerCondition) {
     };
     return `"${stat?.label ?? condition.statId}" ${operatorLabels[condition.operator]} ${condition.value}`;
   }
+  if ('itemDefinitionId' in condition) {
+    const name =
+      story.itemDefinitions?.find(({ id }) => id === condition.itemDefinitionId)?.name ??
+      condition.itemDefinitionId;
+    return condition.isOwned ? `Owns "${name}"` : `Does not own "${name}"`;
+  }
   if ('temporal' in condition) return 'Story date and time match the configured schedule';
   const name =
     story.characters?.find((character) => character.id === condition.characterId)?.name ??
@@ -104,6 +111,7 @@ function getUnavailableReason(
   currentCharacterIds: string[],
   statValues: Readonly<Record<string, number>>,
   currentDateTime: string,
+  ownedItemDefinitionIds: readonly string[],
 ) {
   const failures = getTriggerConditionFailures(
     interaction,
@@ -113,6 +121,7 @@ function getUnavailableReason(
     currentCharacterIds,
     statValues,
     currentDateTime,
+    ownedItemDefinitionIds,
   );
   if (failures.length === 0) return undefined;
 
@@ -151,6 +160,12 @@ function getUnavailableReason(
       gte: 'at least',
     };
     return `Requires "${stat?.label ?? firstFailure.statId}" to be ${operatorLabels[firstFailure.operator]} ${firstFailure.value}.`;
+  }
+  if ('itemDefinitionId' in firstFailure) {
+    const name =
+      story.itemDefinitions?.find(({ id }) => id === firstFailure.itemDefinitionId)?.name ??
+      firstFailure.itemDefinitionId;
+    return firstFailure.isOwned ? `Requires owning "${name}".` : `Requires not owning "${name}".`;
   }
   if ('temporal' in firstFailure) {
     return `Requires a different story date or time. Current time: ${currentDateTime.replace('T', ' ')}.`;
@@ -237,6 +252,16 @@ export function StoryPlayer() {
     () => (story ? getJourneyDateTime(story, journey) : '2000-01-03T08:00'),
     [journey, story],
   );
+  const ownedItemDefinitionIds = useMemo(
+    () =>
+      story
+        ? ownedItemIds.flatMap((itemId) => {
+            const definitionId = getItemDefinitionIdForInstance(story, itemId);
+            return definitionId ? [definitionId] : [];
+          })
+        : [],
+    [ownedItemIds, story],
+  );
 
   const choices = useMemo(
     () =>
@@ -249,9 +274,18 @@ export function StoryPlayer() {
             current?.characterIds ?? [],
             statValues,
             currentDateTime,
+            ownedItemDefinitionIds,
           )
         : [],
-    [story, current, visited, currentLocationId, statValues, currentDateTime],
+    [
+      story,
+      current,
+      visited,
+      currentLocationId,
+      statValues,
+      currentDateTime,
+      ownedItemDefinitionIds,
+    ],
   );
   const availableChoiceIds = useMemo(() => new Set(choices.map((choice) => choice.id)), [choices]);
   const visibleChoices = useMemo(
@@ -271,6 +305,7 @@ export function StoryPlayer() {
                   current?.characterIds ?? [],
                   statValues,
                   currentDateTime,
+                  ownedItemDefinitionIds,
                 ),
           }))
         : choices.map((interaction) => ({
@@ -288,6 +323,7 @@ export function StoryPlayer() {
       statValues,
       story,
       visited,
+      ownedItemDefinitionIds,
     ],
   );
   const conditionalTextState = useMemo(() => {
@@ -311,6 +347,7 @@ export function StoryPlayer() {
                 current.characterIds ?? [],
                 statValues,
                 currentDateTime,
+                ownedItemDefinitionIds,
               );
         return [
           interaction.id,
@@ -328,6 +365,7 @@ export function StoryPlayer() {
     currentDateTime,
     currentLocationId,
     isSimulationMode,
+    ownedItemDefinitionIds,
     statValues,
     story,
     visited,
@@ -352,13 +390,20 @@ export function StoryPlayer() {
   function choose(interaction: Interaction) {
     if (!story) return;
     const nextJourney = [...journey, interaction.id];
-    const nextOwnedItemIds = applyInteractionItemEffects(ownedItemIds, interaction);
+    const nextOwnedItemIds = applyInteractionItemEffects(
+      story,
+      ownedItemIds,
+      interaction,
+      journey.length,
+    );
     setCurrentId(interaction.id);
     setJourney(nextJourney);
     setVisited((ids) => (ids.includes(interaction.id) ? ids : [...ids, interaction.id]));
     if (interaction.locationId) setCurrentLocationId(interaction.locationId);
     setStatValues((values) => applyInteractionStatChanges(story, values, interaction));
-    setItemStatValues((values) => applyInteractionItemStatChanges(story, values, interaction));
+    setItemStatValues((values) =>
+      applyInteractionItemStatChanges(story, values, interaction, nextOwnedItemIds),
+    );
     setOwnedItemIds(nextOwnedItemIds);
     if (!isSimulationMode) queueProgressSave(nextJourney, nextOwnedItemIds);
   }
@@ -618,10 +663,8 @@ export function StoryPlayer() {
               const owner = (story.characters ?? []).find((character) =>
                 (character.items ?? []).some(({ id }) => id === itemId),
               );
-              const instance = owner?.items?.find(({ id }) => id === itemId);
-              const definition = story.itemDefinitions?.find(
-                ({ id }) => id === instance?.itemDefinitionId,
-              );
+              const itemDefinitionId = getItemDefinitionIdForInstance(story, itemId);
+              const definition = story.itemDefinitions?.find(({ id }) => id === itemDefinitionId);
               return (
                 <li key={itemId}>
                   {definition?.imageUrl ? (

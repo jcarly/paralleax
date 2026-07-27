@@ -104,7 +104,12 @@ export class StatEffectDto {
   @IsNumber() value!: number;
 }
 export class ItemEffectDto {
-  @IsString() itemId!: string;
+  @ValidateIf((_, value) => value !== undefined)
+  @IsString()
+  itemId?: string;
+  @ValidateIf((_, value) => value !== undefined)
+  @IsString()
+  itemDefinitionId?: string;
   @IsIn(['obtain', 'lose']) operation!: 'obtain' | 'lose';
 }
 export class ItemStatEffectDto {
@@ -155,6 +160,7 @@ export class TriggerConditionDto {
       condition.locationId === undefined &&
       condition.characterId === undefined &&
       condition.statId === undefined &&
+      condition.itemDefinitionId === undefined &&
       condition.temporal === undefined,
   )
   @IsString()
@@ -164,6 +170,7 @@ export class TriggerConditionDto {
       condition.locationId === undefined &&
       condition.characterId === undefined &&
       condition.statId === undefined &&
+      condition.itemDefinitionId === undefined &&
       condition.temporal === undefined,
   )
   @IsBoolean()
@@ -173,6 +180,7 @@ export class TriggerConditionDto {
       condition.interactionId === undefined &&
       condition.characterId === undefined &&
       condition.statId === undefined &&
+      condition.itemDefinitionId === undefined &&
       condition.temporal === undefined,
   )
   @IsString()
@@ -182,6 +190,7 @@ export class TriggerConditionDto {
       condition.interactionId === undefined &&
       condition.characterId === undefined &&
       condition.statId === undefined &&
+      condition.itemDefinitionId === undefined &&
       condition.temporal === undefined,
   )
   @IsBoolean()
@@ -191,6 +200,7 @@ export class TriggerConditionDto {
       condition.interactionId === undefined &&
       condition.locationId === undefined &&
       condition.statId === undefined &&
+      condition.itemDefinitionId === undefined &&
       condition.temporal === undefined,
   )
   @IsString()
@@ -200,6 +210,7 @@ export class TriggerConditionDto {
       condition.interactionId === undefined &&
       condition.locationId === undefined &&
       condition.statId === undefined &&
+      condition.itemDefinitionId === undefined &&
       condition.temporal === undefined,
   )
   @IsBoolean()
@@ -209,6 +220,7 @@ export class TriggerConditionDto {
       condition.interactionId === undefined &&
       condition.locationId === undefined &&
       condition.characterId === undefined &&
+      condition.itemDefinitionId === undefined &&
       condition.temporal === undefined,
   )
   @IsString()
@@ -218,6 +230,7 @@ export class TriggerConditionDto {
       condition.interactionId === undefined &&
       condition.locationId === undefined &&
       condition.characterId === undefined &&
+      condition.itemDefinitionId === undefined &&
       condition.temporal === undefined,
   )
   @IsIn(['eq', 'lt', 'lte', 'gt', 'gte'])
@@ -227,6 +240,7 @@ export class TriggerConditionDto {
       condition.interactionId === undefined &&
       condition.locationId === undefined &&
       condition.characterId === undefined &&
+      condition.itemDefinitionId === undefined &&
       condition.temporal === undefined,
   )
   @IsNumber()
@@ -236,7 +250,28 @@ export class TriggerConditionDto {
       condition.interactionId === undefined &&
       condition.locationId === undefined &&
       condition.characterId === undefined &&
-      condition.statId === undefined,
+      condition.statId === undefined &&
+      condition.temporal === undefined,
+  )
+  @IsString()
+  itemDefinitionId?: string;
+  @ValidateIf(
+    (condition) =>
+      condition.interactionId === undefined &&
+      condition.locationId === undefined &&
+      condition.characterId === undefined &&
+      condition.statId === undefined &&
+      condition.temporal === undefined,
+  )
+  @IsBoolean()
+  isOwned?: boolean;
+  @ValidateIf(
+    (condition) =>
+      condition.interactionId === undefined &&
+      condition.locationId === undefined &&
+      condition.characterId === undefined &&
+      condition.statId === undefined &&
+      condition.itemDefinitionId === undefined,
   )
   @IsObject()
   @ValidateNested()

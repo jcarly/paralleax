@@ -1,8 +1,10 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Story } from '@paralleax/shared';
 import { TriggerInspector } from './TriggerInspector';
+
+afterEach(cleanup);
 
 function storyWithConditions(
   conditions: Story['interactions'][number]['triggers'][number]['conditions'],
@@ -42,6 +44,24 @@ function renderInspector(story: Story, onSaveTrigger = vi.fn().mockResolvedValue
 }
 
 describe('TriggerInspector temporal conditions', () => {
+  it('adds an item ownership condition', async () => {
+    const story: Story = storyWithConditions([]);
+    story.itemDefinitions = [
+      { id: 'key', name: 'Key', description: '' },
+      { id: 'map', name: 'Map', description: '' },
+    ];
+    const onSaveTrigger = renderInspector(story);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Add item condition' }));
+
+    expect(onSaveTrigger).toHaveBeenLastCalledWith(
+      'interaction-1',
+      'trigger-1',
+      [],
+      [{ itemDefinitionId: 'key', isOwned: true }],
+    );
+  });
+
   it('adds a date and time condition', async () => {
     const onSaveTrigger = renderInspector(storyWithConditions([]));
 

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { Character, ItemDefinition, StatDefinition } from '@paralleax/shared';
 import { ImageUrlField } from './ImageUrlField';
+import { RemoveRowButton } from './RemoveRowButton';
 
 export function CharacterInspector({
   character,
@@ -8,9 +9,11 @@ export function CharacterInspector({
   onPatch,
   onCreateStat,
   onPatchStat,
+  onDeleteStat,
   statDefinitions,
   itemDefinitions,
   onCreateItem,
+  onDeleteItem,
 }: {
   character: Character;
   statDefinitions: StatDefinition[];
@@ -26,7 +29,9 @@ export function CharacterInspector({
     statId: string,
     patch: { initialValue?: number },
   ) => Promise<void>;
+  onDeleteStat: (characterId: string, statId: string) => Promise<void>;
   onCreateItem: (characterId: string, itemDefinitionId: string) => Promise<void>;
+  onDeleteItem: (characterId: string, itemId: string) => Promise<void>;
 }) {
   const availableDefinitions = statDefinitions.filter(
     (definition) =>
@@ -122,6 +127,10 @@ export function CharacterInspector({
               }
             />
           </label>
+          <RemoveRowButton
+            label="Delete character stat"
+            onRemove={() => void onDeleteStat(character.id, stat.id)}
+          />
         </div>
       ))}
       <div className="inspector-section-header">
@@ -180,6 +189,10 @@ export function CharacterInspector({
                     ))}
                   </ul>
                 ) : null}
+                <RemoveRowButton
+                  label="Delete character item"
+                  onRemove={() => void onDeleteItem(character.id, item.id)}
+                />
               </li>
             );
           })}

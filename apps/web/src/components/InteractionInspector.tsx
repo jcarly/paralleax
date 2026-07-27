@@ -56,6 +56,7 @@ export function InteractionInspector({
     }));
   });
   const itemStatEffects = interaction.itemStatEffects ?? [];
+  const itemDefinitions = story.itemDefinitions ?? [];
   const availableItemStat = itemStats.find(
     (itemStat) =>
       !itemStatEffects.some(
@@ -240,15 +241,18 @@ export function InteractionInspector({
         <button
           className="secondary"
           type="button"
-          disabled={items.length === 0}
+          disabled={itemDefinitions.length === 0}
           onClick={() => {
-            const candidate = items.find(
-              (item) => !(interaction.itemEffects ?? []).some(({ itemId }) => itemId === item.id),
+            const candidate = itemDefinitions.find(
+              (definition) =>
+                !(interaction.itemEffects ?? []).some(
+                  ({ itemDefinitionId }) => itemDefinitionId === definition.id,
+                ),
             );
             if (!candidate) return;
             const itemEffects = [
               ...(interaction.itemEffects ?? []),
-              { itemId: candidate.id, operation: 'obtain' as const },
+              { itemDefinitionId: candidate.id, operation: 'obtain' as const },
             ];
             updateLocalInteraction({ itemEffects });
             void onPatch(interaction.id, { itemEffects });
@@ -258,26 +262,31 @@ export function InteractionInspector({
         </button>
       </div>
       {(interaction.itemEffects ?? []).map((effect, index) => (
-        <div className="stat-effect-row" key={effect.itemId}>
+        <div className="stat-effect-row" key={effect.itemDefinitionId ?? effect.itemId ?? index}>
           <select
             aria-label="Affected item"
-            value={effect.itemId}
+            value={effect.itemDefinitionId ?? ''}
             onChange={(event) => {
               const itemEffects = [...(interaction.itemEffects ?? [])];
-              itemEffects[index] = { ...effect, itemId: event.target.value };
+              itemEffects[index] = {
+                itemDefinitionId: event.target.value,
+                operation: effect.operation,
+              };
               updateLocalInteraction({ itemEffects });
               void onPatch(interaction.id, { itemEffects });
             }}
           >
-            {items.map((item) => (
+            {effect.itemId ? <option value="">Legacy assigned instance</option> : null}
+            {itemDefinitions.map((definition) => (
               <option
                 disabled={(interaction.itemEffects ?? []).some(
-                  (candidate, itemIndex) => itemIndex !== index && candidate.itemId === item.id,
+                  (candidate, itemIndex) =>
+                    itemIndex !== index && candidate.itemDefinitionId === definition.id,
                 )}
-                key={item.id}
-                value={item.id}
+                key={definition.id}
+                value={definition.id}
               >
-                {item.label}
+                {definition.name}
               </option>
             ))}
           </select>

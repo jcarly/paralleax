@@ -903,6 +903,29 @@ describe('Stories API', () => {
       { itemId: item.body.item.id, operation: 'obtain' },
     ]);
 
+    const reusableUpdated = await request(httpServer)
+      .patch(`/api/stories/${story.id}/interactions/${interaction.id}`)
+      .send({
+        itemEffects: [{ itemDefinitionId: definition.body.itemDefinition.id, operation: 'obtain' }],
+      })
+      .expect(200);
+    expect(reusableUpdated.body.interaction.itemEffects).toEqual([
+      { itemDefinitionId: definition.body.itemDefinition.id, operation: 'obtain' },
+    ]);
+
+    const conditioned = await request(httpServer)
+      .patch(
+        `/api/stories/${story.id}/interactions/${interaction.id}/triggers/${interaction.triggers[0].id}`,
+      )
+      .send({
+        inputInteractionIds: [],
+        conditions: [{ itemDefinitionId: definition.body.itemDefinition.id, isOwned: true }],
+      })
+      .expect(200);
+    expect(conditioned.body.trigger.conditions).toEqual([
+      { itemDefinitionId: definition.body.itemDefinition.id, isOwned: true },
+    ]);
+
     await request(httpServer)
       .patch(`/api/stories/${story.id}/interactions/${interaction.id}`)
       .send({
@@ -916,6 +939,89 @@ describe('Stories API', () => {
       .patch(`/api/stories/${story.id}/interactions/${interaction.id}`)
       .send({ itemEffects: [{ itemId: 'foreign-item', operation: 'obtain' }] })
       .expect(400);
+    await request(httpServer)
+      .patch(`/api/stories/${story.id}/interactions/${interaction.id}`)
+      .send({
+        itemEffects: [
+          {
+            itemId: item.body.item.id,
+            itemDefinitionId: definition.body.itemDefinition.id,
+            operation: 'obtain',
+          },
+        ],
+      })
+      .expect(400);
+  });
+
+  it('removes character stats and items with their exact-instance references', async () => {
+    const story = await createStory();
+    const interaction = (await createInteraction(story.id)).interactions[0];
+    const character = await request(httpServer)
+      .post(`/api/stories/${story.id}/characters`)
+      .send({ name: 'Mira' })
+      .expect(201);
+    const statDefinition = await request(httpServer)
+      .post(`/api/stories/${story.id}/stat-definitions`)
+      .send({ name: 'Trust' })
+      .expect(201);
+    const stat = await request(httpServer)
+      .post(`/api/stories/${story.id}/characters/${character.body.character.id}/stats`)
+      .send({ statDefinitionId: statDefinition.body.statDefinition.id, initialValue: 2 })
+      .expect(201);
+    const itemDefinition = await request(httpServer)
+      .post(`/api/stories/${story.id}/item-definitions`)
+      .send({
+        name: 'Key',
+        stats: [{ statDefinitionId: statDefinition.body.statDefinition.id, initialValue: 10 }],
+      })
+      .expect(201);
+    const item = await request(httpServer)
+      .post(`/api/stories/${story.id}/characters/${character.body.character.id}/items`)
+      .send({ itemDefinitionId: itemDefinition.body.itemDefinition.id })
+      .expect(201);
+
+    await request(httpServer)
+      .patch(`/api/stories/${story.id}/interactions/${interaction.id}`)
+      .send({
+        statEffects: [{ statId: stat.body.stat.id, operation: 'add', value: 1 }],
+        itemEffects: [{ itemId: item.body.item.id, operation: 'obtain' }],
+        itemStatEffects: [
+          {
+            itemId: item.body.item.id,
+            statDefinitionId: statDefinition.body.statDefinition.id,
+            operation: 'add',
+            value: -1,
+          },
+        ],
+      })
+      .expect(200);
+    await request(httpServer)
+      .patch(
+        `/api/stories/${story.id}/interactions/${interaction.id}/triggers/${interaction.triggers[0].id}`,
+      )
+      .send({
+        inputInteractionIds: [],
+        conditions: [{ statId: stat.body.stat.id, operator: 'gte', value: 2 }],
+      })
+      .expect(200);
+
+    const withoutStat = await request(httpServer)
+      .delete(
+        `/api/stories/${story.id}/characters/${character.body.character.id}/stats/${stat.body.stat.id}`,
+      )
+      .expect(200);
+    expect(withoutStat.body.characters[0].stats).toEqual([]);
+    expect(withoutStat.body.interactions[0].statEffects).toEqual([]);
+    expect(withoutStat.body.interactions[0].triggers[0].conditions).toEqual([]);
+
+    const withoutItem = await request(httpServer)
+      .delete(
+        `/api/stories/${story.id}/characters/${character.body.character.id}/items/${item.body.item.id}`,
+      )
+      .expect(200);
+    expect(withoutItem.body.characters[0].items).toEqual([]);
+    expect(withoutItem.body.interactions[0].itemEffects).toEqual([]);
+    expect(withoutItem.body.interactions[0].itemStatEffects).toEqual([]);
   });
 
   it('rejects foreign stat references and duplicate effects', async () => {

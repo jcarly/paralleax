@@ -189,10 +189,18 @@ export const api = {
         body: JSON.stringify(input),
       },
     ),
+  deleteCharacterStat: (storyId: string, characterId: string, statId: string) =>
+    request<Story>(`/stories/${storyId}/characters/${characterId}/stats/${statId}`, {
+      method: 'DELETE',
+    }),
   createCharacterItem: (storyId: string, characterId: string, input: CreateCharacterItemInput) =>
     request<CharacterItemMutationResult>(`/stories/${storyId}/characters/${characterId}/items`, {
       method: 'POST',
       body: JSON.stringify(input),
+    }),
+  deleteCharacterItem: (storyId: string, characterId: string, itemId: string) =>
+    request<Story>(`/stories/${storyId}/characters/${characterId}/items/${itemId}`, {
+      method: 'DELETE',
     }),
   addTrigger: (
     storyId: string,

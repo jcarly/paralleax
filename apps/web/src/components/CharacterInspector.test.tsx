@@ -10,7 +10,9 @@ describe('CharacterInspector', () => {
     const onPatch = vi.fn().mockResolvedValue(undefined);
     const onCreateStat = vi.fn().mockResolvedValue(undefined);
     const onPatchStat = vi.fn().mockResolvedValue(undefined);
+    const onDeleteStat = vi.fn().mockResolvedValue(undefined);
     const onCreateItem = vi.fn().mockResolvedValue(undefined);
+    const onDeleteItem = vi.fn().mockResolvedValue(undefined);
 
     const { container } = render(
       <CharacterInspector
@@ -54,7 +56,9 @@ describe('CharacterInspector', () => {
         onPatch={onPatch}
         onCreateStat={onCreateStat}
         onPatchStat={onPatchStat}
+        onDeleteStat={onDeleteStat}
         onCreateItem={onCreateItem}
+        onDeleteItem={onDeleteItem}
       />,
     );
 
@@ -92,6 +96,8 @@ describe('CharacterInspector', () => {
     expect(onPatchStat).toHaveBeenLastCalledWith('character-1', 'stat-1', {
       initialValue: 5,
     });
+    await user.click(screen.getByRole('button', { name: 'Delete character stat' }));
+    expect(onDeleteStat).toHaveBeenCalledWith('character-1', 'stat-1');
 
     await user.selectOptions(screen.getByLabelText('Item to add'), 'item-definition-2');
     await user.click(screen.getByRole('button', { name: 'Add item' }));
@@ -99,6 +105,8 @@ describe('CharacterInspector', () => {
     expect(screen.getAllByText('Key')).toHaveLength(2);
     expect(screen.getByText(/Trust: 7/)).toBeInTheDocument();
     expect(screen.getByText('Unknown item')).toBeInTheDocument();
+    await user.click(screen.getAllByRole('button', { name: 'Delete character item' })[0]);
+    expect(onDeleteItem).toHaveBeenCalledWith('character-1', 'item-1');
 
     const description = screen.getByLabelText('Description');
     fireEvent.change(description, { target: { value: 'Keeper of the archive.' } });
@@ -123,7 +131,9 @@ describe('CharacterInspector', () => {
         onPatch={vi.fn()}
         onCreateStat={vi.fn()}
         onPatchStat={vi.fn()}
+        onDeleteStat={vi.fn()}
         onCreateItem={vi.fn()}
+        onDeleteItem={vi.fn()}
       />,
     );
 

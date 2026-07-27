@@ -608,6 +608,52 @@ describe('reader progress', () => {
     ]);
   });
 
+  it('obtains reusable item definitions and evaluates item ownership conditions', () => {
+    const story = storyFixture();
+    story.itemDefinitions = [
+      { id: 'key-definition', name: 'Key', description: '' },
+      { id: 'map-definition', name: 'Map', description: '' },
+    ];
+    story.interactions[0].itemEffects = [
+      { itemDefinitionId: 'key-definition', operation: 'obtain' },
+    ];
+    story.interactions[1].itemEffects = [
+      { itemDefinitionId: 'key-definition', operation: 'obtain' },
+    ];
+    story.interactions[2].triggers[0].conditions = [
+      { itemDefinitionId: 'key-definition', isOwned: true },
+      { itemDefinitionId: 'map-definition', isOwned: false },
+    ];
+
+    const progress = buildReaderProgressState(story, ['root', 'middle']);
+    expect(progress.ownedItemIds).toHaveLength(2);
+    expect(new Set(progress.ownedItemIds).size).toBe(2);
+    expect(
+      getAvailableInteractions(
+        story,
+        'middle',
+        ['root', 'middle'],
+        null,
+        [],
+        {},
+        story.startDateTime,
+        ['key-definition', 'key-definition'],
+      ).map(({ id }) => id),
+    ).toContain('end');
+    expect(
+      getTriggerConditionFailures(
+        story.interactions[2],
+        'middle',
+        ['root', 'middle'],
+        null,
+        [],
+        {},
+        story.startDateTime,
+        [],
+      ),
+    ).toHaveLength(1);
+  });
+
   it('keeps independent runtime stat values for instances of one item definition', () => {
     const story = storyFixture();
     story.statDefinitions = [{ id: 'durability', name: 'Durability' }];

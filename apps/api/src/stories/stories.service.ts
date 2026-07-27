@@ -209,12 +209,21 @@ export class StoriesService {
         }
         if (input.itemEffects !== undefined) {
           const itemIds = this.itemIds(story);
-          if (input.itemEffects.some(({ itemId }) => !itemIds.has(itemId))) {
+          const itemDefinitionIds = new Set((story.itemDefinitions ?? []).map(({ id }) => id));
+          if (
+            input.itemEffects.some(
+              ({ itemId, itemDefinitionId }) =>
+                Number(itemId !== undefined) + Number(itemDefinitionId !== undefined) !== 1 ||
+                (itemId !== undefined && !itemIds.has(itemId)) ||
+                (itemDefinitionId !== undefined && !itemDefinitionIds.has(itemDefinitionId)),
+            )
+          ) {
             throw new BadRequestException('Item effects must belong to the same story');
           }
-          if (
-            new Set(input.itemEffects.map(({ itemId }) => itemId)).size !== input.itemEffects.length
-          ) {
+          const effectTargets = input.itemEffects.map(
+            ({ itemId, itemDefinitionId }) => itemId ?? `definition:${itemDefinitionId}`,
+          );
+          if (new Set(effectTargets).size !== input.itemEffects.length) {
             throw new BadRequestException('An interaction can only affect an item once');
           }
           interaction.itemEffects = input.itemEffects;
@@ -585,6 +594,58 @@ export class StoriesService {
     );
     return this.statResult(story, characterId, statId);
   }
+  async deleteCharacterStat(
+    storyId: string,
+    characterId: string,
+    statId: string,
+    userId: string,
+  ): Promise<Story> {
+    return this.update(
+      storyId,
+      (story) => {
+        const character = this.character(story, characterId);
+        this.stat(story, characterId, statId);
+        character.stats = (character.stats ?? []).filter(({ id }) => id !== statId);
+        for (const interaction of story.interactions) {
+          interaction.statEffects = (interaction.statEffects ?? []).filter(
+            ({ statId: affectedStatId }) => affectedStatId !== statId,
+          );
+          for (const trigger of interaction.triggers) {
+            trigger.conditions = trigger.conditions.filter(
+              (condition) => !('statId' in condition) || condition.statId !== statId,
+            );
+          }
+        }
+        return story;
+      },
+      userId,
+    );
+  }
+  async deleteCharacterItem(
+    storyId: string,
+    characterId: string,
+    itemId: string,
+    userId: string,
+  ): Promise<Story> {
+    return this.update(
+      storyId,
+      (story) => {
+        const character = this.character(story, characterId);
+        this.item(story, characterId, itemId);
+        character.items = (character.items ?? []).filter(({ id }) => id !== itemId);
+        for (const interaction of story.interactions) {
+          interaction.itemEffects = (interaction.itemEffects ?? []).filter(
+            ({ itemId: affectedItemId }) => affectedItemId !== itemId,
+          );
+          interaction.itemStatEffects = (interaction.itemStatEffects ?? []).filter(
+            ({ itemId: affectedItemId }) => affectedItemId !== itemId,
+          );
+        }
+        return story;
+      },
+      userId,
+    );
+  }
   private interaction(story: Story, id: string) {
     const item = story.interactions.find((interaction) => interaction.id === id);
     if (!item) throw new NotFoundException('Interaction not found');
@@ -654,6 +715,7 @@ export class StoriesService {
     const locationIds = new Set((story.locations ?? []).map(({ id }) => id));
     const characterIds = new Set((story.characters ?? []).map(({ id }) => id));
     const statIds = this.statIds(story);
+    const itemDefinitionIds = new Set((story.itemDefinitions ?? []).map(({ id }) => id));
     return conditions.map((condition) => {
       const isInteractionCondition =
         condition.interactionId !== undefined && condition.hasBeenVisited !== undefined;
@@ -665,12 +727,15 @@ export class StoriesService {
         condition.statId !== undefined &&
         condition.operator !== undefined &&
         condition.value !== undefined;
+      const isItemCondition =
+        condition.itemDefinitionId !== undefined && condition.isOwned !== undefined;
       const isTemporalCondition = condition.temporal !== undefined;
       if (
         Number(isInteractionCondition) +
           Number(isLocationCondition) +
           Number(isCharacterCondition) +
           Number(isStatCondition) +
+          Number(isItemCondition) +
           Number(isTemporalCondition) !==
         1
       ) {
@@ -703,6 +768,15 @@ export class StoriesService {
         return {
           characterId: condition.characterId!,
           isPresent: condition.isPresent!,
+        };
+      }
+      if (isItemCondition) {
+        if (!itemDefinitionIds.has(condition.itemDefinitionId!)) {
+          throw new BadRequestException('Trigger references must belong to the same story');
+        }
+        return {
+          itemDefinitionId: condition.itemDefinitionId!,
+          isOwned: condition.isOwned!,
         };
       }
       if (isTemporalCondition) {

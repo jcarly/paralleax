@@ -158,6 +158,20 @@ Open an interaction and use **Add item stat effect** to select one exact item
 copy and one of its assigned stats. The effect can add a value or set the value
 directly. The player inventory displays the current values for owned items.
 
+### Item effects and conditions
+
+Open an interaction and use **Add item effect** to obtain or lose any reusable
+item definition in the story. The item does not need to be preassigned to a
+character. Repeating an obtain effect creates another copy; a lose effect
+removes one owned copy.
+
+In the trigger editor, use **Add item condition** to require that the reader
+owns, or does not own, at least one copy of an item definition.
+
+In a character inspector, use the `x` button beside an assigned stat or item to
+remove it. Removing an assignment also cleans interaction effects and conditions
+that referenced that exact character stat or item instance.
+
 ## Delete Trigger Links
 
 Use the `x` control that appears on the link between an input interaction and

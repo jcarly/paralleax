@@ -88,12 +88,12 @@ describe('InteractionInspector time', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Add item effect' }));
     expect(onPatch).toHaveBeenLastCalledWith('interaction-1', {
-      itemEffects: [{ itemId: 'key-1', operation: 'obtain' }],
+      itemEffects: [{ itemDefinitionId: 'key-definition', operation: 'obtain' }],
     });
 
     const withEffect = {
       ...interaction,
-      itemEffects: [{ itemId: 'key-1', operation: 'obtain' as const }],
+      itemEffects: [{ itemDefinitionId: 'key-definition', operation: 'obtain' as const }],
     };
     rerender(
       <InteractionInspector
@@ -104,19 +104,12 @@ describe('InteractionInspector time', () => {
         onDelete={vi.fn()}
       />,
     );
-    expect(screen.getByRole('option', { name: 'Mira — Key #1' })).toBeInTheDocument();
-    expect(screen.getByRole('option', { name: 'Mira — Key #2' })).toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText('Affected item'), {
-      target: { value: 'key-2' },
-    });
-    expect(onPatch).toHaveBeenLastCalledWith('interaction-1', {
-      itemEffects: [{ itemId: 'key-2', operation: 'obtain' }],
-    });
+    expect(screen.getByRole('option', { name: 'Key' })).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText('Item effect operation'), {
       target: { value: 'lose' },
     });
     expect(onPatch).toHaveBeenLastCalledWith('interaction-1', {
-      itemEffects: [{ itemId: 'key-1', operation: 'lose' }],
+      itemEffects: [{ itemDefinitionId: 'key-definition', operation: 'lose' }],
     });
     fireEvent.click(screen.getByRole('button', { name: 'Delete item effect' }));
     expect(onPatch).toHaveBeenLastCalledWith('interaction-1', { itemEffects: [] });

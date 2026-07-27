@@ -569,4 +569,23 @@ export const databaseMigrations: DatabaseMigration[] = [
       );
     `,
   },
+  {
+    id: '202607270018_item_definition_effects',
+    sql: `
+      ALTER TABLE interaction_item_effects
+      DROP CONSTRAINT interaction_item_effects_pkey,
+      ALTER COLUMN item_id DROP NOT NULL,
+      ADD COLUMN id bigserial,
+      ADD COLUMN item_definition_id text,
+      ADD CONSTRAINT interaction_item_effects_pkey PRIMARY KEY (id),
+      ADD CONSTRAINT interaction_item_effects_one_target
+        CHECK (num_nonnulls(item_id, item_definition_id) = 1),
+      ADD CONSTRAINT interaction_item_effects_definition_fkey
+        FOREIGN KEY (story_id, item_definition_id)
+        REFERENCES item_definitions(story_id, id) ON DELETE CASCADE;
+
+      CREATE INDEX interaction_item_effects_definition_id_idx
+        ON interaction_item_effects(item_definition_id);
+    `,
+  },
 ];

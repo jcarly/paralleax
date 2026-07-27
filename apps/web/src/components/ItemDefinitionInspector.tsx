@@ -1,5 +1,6 @@
 import type { ItemDefinition, StatDefinition } from '@paralleax/shared';
 import { ImageUrlField } from './ImageUrlField';
+import { RemoveRowButton } from './RemoveRowButton';
 
 export function ItemDefinitionInspector({
   itemDefinition,
@@ -102,18 +103,14 @@ export function ItemDefinitionInspector({
               void onPatch(itemDefinition.id, { stats });
             }}
           />
-          <button
-            aria-label="Delete item stat"
-            className="ghost danger"
-            type="button"
-            onClick={() => {
+          <RemoveRowButton
+            label="Delete item stat"
+            onRemove={() => {
               const stats = itemStats.filter((_, candidateIndex) => candidateIndex !== index);
               onChange({ ...itemDefinition, stats });
               void onPatch(itemDefinition.id, { stats });
             }}
-          >
-            x
-          </button>
+          />
         </div>
       ))}
     </div>

@@ -57,6 +57,8 @@ details. They should stay covered by tests as the editor grows.
   same-story stat definition, has a finite numeric initial value, and may only
   be referenced inside that story.
 - A character cannot receive the same stat definition twice.
+- Removing a character stat also removes interaction stat effects and trigger
+  conditions that reference that assignment.
 - An item definition belongs to exactly one story.
 - An item definition may assign each same-story stat definition at most once,
   with a finite numeric initial value inherited by every item instance.
@@ -66,8 +68,12 @@ details. They should stay covered by tests as the editor grows.
   item definition from the same story.
 - Several item instances owned by one character may reference the same item
   definition; every instance keeps a distinct id.
-- Authored character item instances form the finite set of objects that
-  interaction inventory effects may reference.
+- Removing an authored character item instance also removes legacy
+  exact-instance inventory effects and item-stat effects that reference it.
+- Interaction inventory effects normally reference any same-story item
+  definition; obtaining creates a new runtime instance and losing removes one
+  owned instance of that definition. Legacy exact-instance effects remain
+  readable.
 - Runtime item stat values are independent per item instance, even when several
   instances share one item definition.
 - An item stat effect references one exact item instance and one stat assigned
@@ -86,12 +92,14 @@ details. They should stay covered by tests as the editor grows.
   visits, plus a materialized runtime snapshot.
 - Current interaction, unique visits, story time, location, and stats are
   reconstructed from the ordered journey before persistence.
-- Saved owned item ids reference distinct item instances from the same story and
-  are reconstructed by replaying interaction item effects.
+- Saved owned item ids reference distinct authored or deterministic runtime item
+  instances and are reconstructed by replaying interaction item effects.
 - Saved item stat values are reconstructed from definition defaults, elapsed
   story time, and ordered interaction effects rather than trusted from clients.
-- An interaction has at most one effect per item instance. Obtaining an already
-  owned instance or losing an absent instance is an idempotent no-op.
+- An interaction has at most one inventory effect per item definition. Every
+  obtain creates another instance; losing an absent definition is a no-op.
+- An item trigger condition references one same-story item definition and tests
+  whether at least one instance is currently owned.
 - Author Simulation Mode never loads, updates, or deletes player progress.
 
 ## Editor Projection Invariants

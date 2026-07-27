@@ -381,8 +381,8 @@ attribute modification, giving or removing an item, changing equipment,
 movement, time advancement, and relationship modification.
 
 The authoring foundation contains definitions and character-owned instances.
-The first playable item vertical should add one runtime inventory, basic
-equipment, and a few typed conditions and effects. Durability, multiple
+The playable item vertical includes a runtime inventory, reusable-definition
+obtain/lose effects, and item-ownership trigger conditions. Durability, multiple
 containers, procedural properties, layered clothing, shops, and economy remain
 later increments.
 

@@ -444,6 +444,12 @@ export function useStoryEditorPersistence(storyId: string) {
     );
   }
 
+  async function deleteCharacterStat(characterId: string, statId: string) {
+    const result = await trackSave(() => api.deleteCharacterStat(storyId, characterId, statId));
+    if (!result) return;
+    setStory((current) => (current ? mergeServerStory(current, result) : current));
+  }
+
   async function createStatDefinition() {
     const result = await trackSave(() => api.createStatDefinition(storyId, { name: 'New stat' }));
     if (!result) return undefined;
@@ -535,6 +541,12 @@ export function useStoryEditorPersistence(storyId: string) {
     setStory((current) => (current ? applyCharacterItemResult(current, result) : current));
   }
 
+  async function deleteCharacterItem(characterId: string, itemId: string) {
+    const result = await trackSave(() => api.deleteCharacterItem(storyId, characterId, itemId));
+    if (!result) return;
+    setStory((current) => (current ? mergeServerStory(current, result) : current));
+  }
+
   return {
     story,
     setStory,
@@ -566,7 +578,9 @@ export function useStoryEditorPersistence(storyId: string) {
     updateItemDefinition,
     createCharacterStat,
     updateCharacterStat,
+    deleteCharacterStat,
     createCharacterItem,
+    deleteCharacterItem,
   };
 }
 

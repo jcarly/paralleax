@@ -163,9 +163,16 @@ async function replaceInteractionItemEffects(
   for (const [index, effect] of (interaction.itemEffects ?? []).entries()) {
     await client.query(
       `INSERT INTO interaction_item_effects
-       (story_id, interaction_id, item_id, operation, sort_order)
-       VALUES ($1, $2, $3, $4, $5)`,
-      [storyId, interaction.id, effect.itemId, effect.operation, index],
+       (story_id, interaction_id, item_id, item_definition_id, operation, sort_order)
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [
+        storyId,
+        interaction.id,
+        effect.itemId ?? null,
+        effect.itemDefinitionId ?? null,
+        effect.operation,
+        index,
+      ],
     );
   }
 }

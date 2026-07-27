@@ -197,6 +197,24 @@ export class StoriesController {
     return this.stories.updateCharacterStat(storyId, characterId, statId, input, user.id);
   }
 
+  @Delete(':storyId/characters/:characterId/stats/:statId') deleteCharacterStat(
+    @Param('storyId') storyId: string,
+    @Param('characterId') characterId: string,
+    @Param('statId') statId: string,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.stories.deleteCharacterStat(storyId, characterId, statId, user.id);
+  }
+
+  @Delete(':storyId/characters/:characterId/items/:itemId') deleteCharacterItem(
+    @Param('storyId') storyId: string,
+    @Param('characterId') characterId: string,
+    @Param('itemId') itemId: string,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.stories.deleteCharacterItem(storyId, characterId, itemId, user.id);
+  }
+
   @Post(':storyId/interactions/:interactionId/triggers') addTrigger(
     @Param('storyId') storyId: string,
     @Param('interactionId') interactionId: string,

@@ -20,6 +20,10 @@ export interface CharacterStatCondition {
   operator: StatComparisonOperator;
   value: number;
 }
+export interface ItemCondition {
+  itemDefinitionId: string;
+  isOwned: boolean;
+}
 export type Weekday =
   'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
 export interface DateRange {
@@ -43,6 +47,7 @@ export type TriggerCondition =
   | LocationCondition
   | CharacterCondition
   | CharacterStatCondition
+  | ItemCondition
   | TemporalCondition;
 export interface Location {
   id: string;
@@ -90,7 +95,8 @@ export interface StatEffect {
   value: number;
 }
 export interface ItemEffect {
-  itemId: string;
+  itemId?: string;
+  itemDefinitionId?: string;
   operation: 'obtain' | 'lose';
 }
 export interface ItemStatEffect {
@@ -780,6 +786,7 @@ export function isTriggerEligible(
   currentCharacterIds: string[] = [],
   statValues: Readonly<Record<string, number>> = {},
   currentDateTime = DEFAULT_STORY_DATE_TIME,
+  ownedItemDefinitionIds: readonly string[] = [],
 ): boolean {
   return (
     doesTriggerInputMatch(trigger, currentInteractionId) &&
@@ -791,6 +798,7 @@ export function isTriggerEligible(
         currentCharacterIds,
         statValues,
         currentDateTime,
+        ownedItemDefinitionIds,
       ),
     )
   );
@@ -815,6 +823,7 @@ export function getAvailableInteractions(
   currentCharacterIds: string[] = [],
   statValues: Readonly<Record<string, number>> = {},
   currentDateTime = story.startDateTime ?? DEFAULT_STORY_DATE_TIME,
+  ownedItemDefinitionIds: readonly string[] = [],
 ): Interaction[] {
   const visited = new Set(visitedIds);
   return story.interactions.filter((interaction) =>
@@ -827,6 +836,7 @@ export function getAvailableInteractions(
         currentCharacterIds,
         statValues,
         currentDateTime,
+        ownedItemDefinitionIds,
       ),
     ),
   );
@@ -849,6 +859,7 @@ export function getTriggerConditionFailures(
   currentCharacterIds: string[] = [],
   statValues: Readonly<Record<string, number>> = {},
   currentDateTime = DEFAULT_STORY_DATE_TIME,
+  ownedItemDefinitionIds: readonly string[] = [],
 ): TriggerConditionFailure[] {
   const visited = new Set(visitedIds);
   const inputMatchingTriggers = interaction.triggers.filter((trigger) =>
@@ -865,6 +876,7 @@ export function getTriggerConditionFailures(
           currentCharacterIds,
           statValues,
           currentDateTime,
+          ownedItemDefinitionIds,
         ),
       ),
     )
@@ -883,6 +895,7 @@ export function getTriggerConditionFailures(
             currentCharacterIds,
             statValues,
             currentDateTime,
+            ownedItemDefinitionIds,
           ),
       )
       .map((condition) => ({ triggerId: trigger.id, condition })),
@@ -896,6 +909,7 @@ function conditionMatches(
   currentCharacterIds: string[],
   statValues: Readonly<Record<string, number>>,
   currentDateTime: string,
+  ownedItemDefinitionIds: readonly string[],
 ) {
   if ('interactionId' in condition) {
     return condition.hasBeenVisited
@@ -909,6 +923,10 @@ function conditionMatches(
   if ('characterId' in condition) {
     const isPresent = currentCharacterIds.includes(condition.characterId);
     return condition.isPresent ? isPresent : !isPresent;
+  }
+  if ('itemDefinitionId' in condition) {
+    const isOwned = ownedItemDefinitionIds.includes(condition.itemDefinitionId);
+    return condition.isOwned ? isOwned : !isOwned;
   }
   if ('temporal' in condition) return temporalConditionMatches(condition, currentDateTime);
   const currentValue = statValues[condition.statId] ?? 0;
@@ -983,11 +1001,27 @@ export function getJourneyStatValues(story: Story, journey: string[]): Record<st
 }
 
 export function applyInteractionItemEffects(
+  story: Story,
   ownedItemIds: readonly string[],
   interaction: Interaction,
+  journeyIndex = 0,
 ): string[] {
   const next = [...ownedItemIds];
-  for (const effect of interaction.itemEffects ?? []) {
+  for (const [effectIndex, effect] of (interaction.itemEffects ?? []).entries()) {
+    if (effect.itemDefinitionId) {
+      if (effect.operation === 'obtain') {
+        next.push(
+          `runtime-item:${journeyIndex}:${effectIndex}:${encodeURIComponent(effect.itemDefinitionId)}`,
+        );
+      } else {
+        const index = next.findIndex(
+          (itemId) => getItemDefinitionIdForInstance(story, itemId) === effect.itemDefinitionId,
+        );
+        if (index !== -1) next.splice(index, 1);
+      }
+      continue;
+    }
+    if (!effect.itemId) continue;
     const index = next.indexOf(effect.itemId);
     if (effect.operation === 'obtain' && index === -1) next.push(effect.itemId);
     if (effect.operation === 'lose' && index !== -1) next.splice(index, 1);
@@ -996,10 +1030,28 @@ export function applyInteractionItemEffects(
 }
 
 export function getJourneyOwnedItemIds(story: Story, journey: string[]): string[] {
-  return journey.reduce((ownedItemIds, interactionId) => {
+  return journey.reduce((ownedItemIds, interactionId, journeyIndex) => {
     const interaction = story.interactions.find(({ id }) => id === interactionId);
-    return interaction ? applyInteractionItemEffects(ownedItemIds, interaction) : ownedItemIds;
+    return interaction
+      ? applyInteractionItemEffects(story, ownedItemIds, interaction, journeyIndex)
+      : ownedItemIds;
   }, [] as string[]);
+}
+
+export function getItemDefinitionIdForInstance(story: Story, itemId: string): string | undefined {
+  const authored = (story.characters ?? [])
+    .flatMap((character) => character.items ?? [])
+    .find(({ id }) => id === itemId);
+  if (authored) return authored.itemDefinitionId;
+  const match = /^runtime-item:\d+:\d+:(.+)$/.exec(itemId);
+  return match ? decodeURIComponent(match[1]) : undefined;
+}
+
+export function getJourneyOwnedItemDefinitionIds(story: Story, journey: string[]): string[] {
+  return getJourneyOwnedItemIds(story, journey).flatMap((itemId) => {
+    const definitionId = getItemDefinitionIdForInstance(story, itemId);
+    return definitionId ? [definitionId] : [];
+  });
 }
 
 export function getInitialItemStatValues(story: Story): Record<string, Record<string, number>> {
@@ -1025,6 +1077,7 @@ export function applyInteractionItemStatChanges(
   story: Story,
   values: Readonly<Record<string, Readonly<Record<string, number>>>>,
   interaction: Interaction,
+  ownedItemIds: readonly string[] = [],
 ): Record<string, Record<string, number>> {
   const next = Object.fromEntries(
     Object.entries(values).map(([itemId, stats]) => [itemId, { ...stats }]),
@@ -1038,17 +1091,22 @@ export function applyInteractionItemStatChanges(
       definition.changePerHour ?? 0,
     ]),
   );
+  for (const itemId of ownedItemIds) {
+    const itemDefinitionId = getItemDefinitionIdForInstance(story, itemId);
+    const definition = definitions.get(itemDefinitionId ?? '');
+    next[itemId] ??= Object.fromEntries(
+      (definition?.stats ?? []).map((stat) => [stat.statDefinitionId, stat.initialValue]),
+    );
+  }
   if (interaction.durationMinutes) {
-    for (const character of story.characters ?? []) {
-      for (const item of character.items ?? []) {
-        for (const stat of definitions.get(item.itemDefinitionId)?.stats ?? []) {
-          const rate = rates.get(stat.statDefinitionId) ?? 0;
-          if (rate !== 0) {
-            next[item.id] ??= {};
-            next[item.id][stat.statDefinitionId] =
-              (next[item.id][stat.statDefinitionId] ?? stat.initialValue) +
-              (rate * interaction.durationMinutes) / 60;
-          }
+    for (const [itemId, itemValues] of Object.entries(next)) {
+      const itemDefinitionId = getItemDefinitionIdForInstance(story, itemId);
+      for (const stat of definitions.get(itemDefinitionId ?? '')?.stats ?? []) {
+        const rate = rates.get(stat.statDefinitionId) ?? 0;
+        if (rate !== 0) {
+          itemValues[stat.statDefinitionId] =
+            (itemValues[stat.statDefinitionId] ?? stat.initialValue) +
+            (rate * interaction.durationMinutes) / 60;
         }
       }
     }
@@ -1067,10 +1125,23 @@ export function getJourneyItemStatValues(
   story: Story,
   journey: string[],
 ): Record<string, Record<string, number>> {
-  return journey.reduce((values, interactionId) => {
-    const interaction = story.interactions.find(({ id }) => id === interactionId);
-    return interaction ? applyInteractionItemStatChanges(story, values, interaction) : values;
-  }, getInitialItemStatValues(story));
+  return journey.reduce(
+    (state, interactionId, journeyIndex) => {
+      const interaction = story.interactions.find(({ id }) => id === interactionId);
+      if (!interaction) return state;
+      const ownedItemIds = applyInteractionItemEffects(
+        story,
+        state.ownedItemIds,
+        interaction,
+        journeyIndex,
+      );
+      return {
+        ownedItemIds,
+        values: applyInteractionItemStatChanges(story, state.values, interaction, ownedItemIds),
+      };
+    },
+    { ownedItemIds: [] as string[], values: getInitialItemStatValues(story) },
+  ).values;
 }
 
 export function getJourneyLocation(story: Story, journey: string[]): string | null {
@@ -1087,11 +1158,8 @@ export function buildReaderProgressState(
   _ownedItemIds: string[] = [],
 ): ReaderProgressState {
   const interactionIds = new Set(story.interactions.map(({ id }) => id));
-  const itemIds = new Set(
-    (story.characters ?? []).flatMap((character) => (character.items ?? []).map(({ id }) => id)),
-  );
   const journey = journeyInteractionIds.filter((id) => interactionIds.has(id));
-  const items = getJourneyOwnedItemIds(story, journey).filter((id) => itemIds.has(id));
+  const items = getJourneyOwnedItemIds(story, journey);
   return {
     version: 1,
     journeyInteractionIds: journey,

@@ -76,6 +76,13 @@ Every interaction should keep at least one trigger. A starting interaction is no
 a special interaction type; it is an interaction whose availability comes from an
 inputless trigger without conditions.
 
+## Item Ownership Conditions
+
+An item condition references a reusable item definition in the same story. It
+can require that at least one instance is owned or that no instance is owned.
+The condition uses the replayed inventory, including items obtained dynamically
+without being preassigned to a character.
+
 ## Deleting Interactions
 
 When an interaction is deleted, cleanup must preserve narrative meaning.
