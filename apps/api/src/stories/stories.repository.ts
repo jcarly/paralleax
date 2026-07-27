@@ -47,6 +47,7 @@ type StatDefinitionRow = {
   story_id: string;
   name: string;
   image_url: string;
+  change_per_hour: number;
   sort_order: number;
 };
 type ItemDefinitionRow = LocationRow;
@@ -247,7 +248,7 @@ export class StoriesRepository {
       [storyIds],
     );
     const statDefinitions = await queryable.query<StatDefinitionRow>(
-      `SELECT id, story_id, name, image_url, sort_order
+      `SELECT id, story_id, name, image_url, change_per_hour, sort_order
          FROM stat_definitions WHERE story_id = ANY($1::text[])
          ORDER BY story_id, sort_order`,
       [storyIds],
@@ -361,6 +362,7 @@ export class StoriesRepository {
         id: definition.id,
         name: definition.name,
         ...(definition.image_url ? { imageUrl: definition.image_url } : {}),
+        changePerHour: definition.change_per_hour,
       })),
       itemDefinitions: (itemDefinitionsByStory.get(row.id) ?? []).map((definition) => ({
         id: definition.id,

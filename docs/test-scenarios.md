@@ -273,3 +273,6 @@ The character-stat vertical keeps these regressions covered:
 11. Trigger deletion and stale-save stability.
 12. Trigger cleanup when deleting interactions.
 13. Reader non-regression.
+
+- Stat replay prorates positive and negative hourly definition changes over
+  interaction durations and applies them before explicit stat effects.

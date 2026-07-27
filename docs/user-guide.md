@@ -169,3 +169,10 @@ The status beside the reader controls reports saving, success, or failure.
 Use `Restart` to clear the reading history, delete that story's saved progress,
 and start again. Author Simulation Mode is separate and never loads or changes
 reader progress.
+
+### Time-based stat changes
+
+Open a stat from the **Stats** section and set **Change per story hour**. Use a
+positive value for growth, a negative value for decay, or `0` to disable the
+automatic change. The rate applies to every character using that reusable stat
+and is prorated over each interaction's duration.

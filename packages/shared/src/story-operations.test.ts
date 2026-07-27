@@ -425,6 +425,30 @@ describe('character stats', () => {
     );
     expect(getJourneyStatValues(story, ['root', 'middle'])).toEqual({ trust: 10 });
   });
+
+  it('applies positive and negative hourly changes before explicit interaction effects', () => {
+    const story = storyFixture();
+    story.characters = [
+      {
+        id: 'mira',
+        name: 'Mira',
+        description: '',
+        stats: [
+          { id: 'energy', statDefinitionId: 'energy-definition', initialValue: 10 },
+          { id: 'trust', statDefinitionId: 'trust-definition', initialValue: 2 },
+        ],
+      },
+    ];
+    story.statDefinitions = [
+      { id: 'energy-definition', name: 'Energy', changePerHour: -2 },
+      { id: 'trust-definition', name: 'Trust', changePerHour: 1 },
+    ];
+    story.interactions[0].durationMinutes = 90;
+    story.interactions[0].statEffects = [{ statId: 'energy', operation: 'add', value: 1 }];
+
+    expect(getJourneyStatValues(story, ['root'])).toEqual({ energy: 8, trust: 3.5 });
+    expect(getJourneyStatValues(story, ['root', 'root'])).toEqual({ energy: 6, trust: 5 });
+  });
 });
 
 describe('story time', () => {

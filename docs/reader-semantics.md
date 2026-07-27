@@ -96,13 +96,16 @@ current cast is empty.
 ## Character Stats
 
 Reader stat state starts from every authored stat's `initialValue`. Selecting an
-interaction applies its effects in authored order: `add` increments the current
-value and `set` replaces it. The next choices are evaluated against the resulting
-values.
+interaction applies each stat definition's positive or negative hourly change
+for the interaction duration. It then applies explicit effects in authored
+order: `add` increments the current value and `set` replaces it. The next choices
+are evaluated against the resulting values. A rate is prorated by minutes, so
+`-2` per hour changes a stat by `-0.5` during a 15-minute interaction.
 
 Starting simulation from a specific interaction applies that interaction's
-effects. Restart rebuilds the initial state, and stepping backward replays the
-remaining journey so effects are reversible without maintaining an inverse log.
+time-based change and effects. Restart rebuilds the initial state, and stepping
+backward replays the remaining journey so changes are reversible without
+maintaining an inverse log.
 
 ## Story Time
 

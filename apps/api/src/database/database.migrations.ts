@@ -540,4 +540,11 @@ export const databaseMigrations: DatabaseMigration[] = [
         ON interaction_item_effects(item_id);
     `,
   },
+  {
+    id: '202607270016_time_based_stat_changes',
+    sql: `
+      ALTER TABLE stat_definitions
+      ADD COLUMN change_per_hour double precision NOT NULL DEFAULT 0;
+    `,
+  },
 ];

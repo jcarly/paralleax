@@ -294,6 +294,9 @@ export class CreateStatDefinitionDto {
   @IsString()
   @MaxLength(2048)
   imageUrl?: string;
+  @ValidateIf((_, value) => value !== undefined)
+  @IsNumber()
+  changePerHour?: number;
 }
 export class UpdateStatDefinitionDto {
   @ValidateIf((_, value) => value !== undefined)
@@ -305,6 +308,9 @@ export class UpdateStatDefinitionDto {
   @IsString()
   @MaxLength(2048)
   imageUrl?: string;
+  @ValidateIf((_, value) => value !== undefined)
+  @IsNumber()
+  changePerHour?: number;
 }
 export class CreateItemDefinitionDto {
   @IsString() @IsNotEmpty() @MaxLength(200) name!: string;

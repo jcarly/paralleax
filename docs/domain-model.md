@@ -93,6 +93,9 @@ optional portrait image URL, and zero or more assigned numeric stats. Stat
 definitions belong to the story, may have a pictogram image URL, and
 can be assigned to several characters without being recreated. Each assignment
 has its own id and initial value.
+Each reusable definition may also declare a positive or negative change per
+story hour. Time-based changes apply to every character assignment of that
+definition as interaction durations advance the narrative clock.
 An interaction can involve several characters. Presence conditions inspect the
 cast of the current interaction; presence is scene context, not persistent
 play-session state. Interaction effects can add to or set a stat, while trigger

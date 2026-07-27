@@ -695,6 +695,17 @@ describe('Stories API', () => {
       .send({ name: 'Trust' })
       .expect(201);
     const definition = (definitionResponse.body as StatDefinitionMutationResult).statDefinition;
+    const changedDefinition = await request(httpServer)
+      .patch(`/api/stories/${story.id}/stat-definitions/${definition.id}`)
+      .send({ changePerHour: -1.5 })
+      .expect(200);
+    expect(
+      (changedDefinition.body as StatDefinitionMutationResult).statDefinition.changePerHour,
+    ).toBe(-1.5);
+    await request(httpServer)
+      .patch(`/api/stories/${story.id}/stat-definitions/${definition.id}`)
+      .send({ changePerHour: 'fast' })
+      .expect(400);
 
     const created = await request(httpServer)
       .post(`/api/stories/${story.id}/characters/${character.id}/stats`)

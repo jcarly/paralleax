@@ -62,6 +62,7 @@ export interface StatDefinition {
   id: string;
   name: string;
   imageUrl?: string;
+  changePerHour?: number;
 }
 export interface CharacterStat {
   id: string;
@@ -217,10 +218,12 @@ export interface UpdateCharacterStatInput {
 export interface CreateStatDefinitionInput {
   name: string;
   imageUrl?: string;
+  changePerHour?: number;
 }
 export interface UpdateStatDefinitionInput {
   name?: string;
   imageUrl?: string;
+  changePerHour?: number;
 }
 export interface CreateItemDefinitionInput {
   name: string;
@@ -916,10 +919,46 @@ export function applyInteractionStatEffects(
   return next;
 }
 
+export function applyInteractionTimeStatChanges(
+  story: Story,
+  values: Readonly<Record<string, number>>,
+  interaction: Interaction,
+): Record<string, number> {
+  if (!interaction.durationMinutes) return { ...values };
+  const ratesByDefinition = new Map(
+    (story.statDefinitions ?? []).map((definition) => [
+      definition.id,
+      definition.changePerHour ?? 0,
+    ]),
+  );
+  const next = { ...values };
+  for (const character of story.characters ?? []) {
+    for (const stat of character.stats ?? []) {
+      const changePerHour = ratesByDefinition.get(stat.statDefinitionId) ?? 0;
+      if (changePerHour !== 0) {
+        next[stat.id] =
+          (next[stat.id] ?? stat.initialValue) + (changePerHour * interaction.durationMinutes) / 60;
+      }
+    }
+  }
+  return next;
+}
+
+export function applyInteractionStatChanges(
+  story: Story,
+  values: Readonly<Record<string, number>>,
+  interaction: Interaction,
+): Record<string, number> {
+  return applyInteractionStatEffects(
+    applyInteractionTimeStatChanges(story, values, interaction),
+    interaction,
+  );
+}
+
 export function getJourneyStatValues(story: Story, journey: string[]): Record<string, number> {
   return journey.reduce((values, interactionId) => {
     const interaction = story.interactions.find(({ id }) => id === interactionId);
-    return interaction ? applyInteractionStatEffects(values, interaction) : values;
+    return interaction ? applyInteractionStatChanges(story, values, interaction) : values;
   }, getInitialStatValues(story));
 }
 

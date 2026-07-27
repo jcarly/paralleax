@@ -342,9 +342,17 @@ async function insertStatDefinition(
   sortOrder: number,
 ) {
   await client.query(
-    `INSERT INTO stat_definitions (id, story_id, name, image_url, sort_order)
-     VALUES ($1, $2, $3, $4, $5)`,
-    [definition.id, storyId, definition.name, definition.imageUrl ?? '', sortOrder],
+    `INSERT INTO stat_definitions
+     (id, story_id, name, image_url, change_per_hour, sort_order)
+     VALUES ($1, $2, $3, $4, $5, $6)`,
+    [
+      definition.id,
+      storyId,
+      definition.name,
+      definition.imageUrl ?? '',
+      definition.changePerHour ?? 0,
+      sortOrder,
+    ],
   );
 }
 
@@ -408,6 +416,13 @@ async function persistStatDefinitionDifference(client: Queryable, before: Story,
     const values: unknown[] = [definition.id];
     addChange(changes, values, 'name', previous.name, definition.name);
     addChange(changes, values, 'image_url', previous.imageUrl ?? '', definition.imageUrl ?? '');
+    addChange(
+      changes,
+      values,
+      'change_per_hour',
+      previous.changePerHour ?? 0,
+      definition.changePerHour ?? 0,
+    );
     addChange(
       changes,
       values,

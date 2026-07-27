@@ -22,7 +22,7 @@ function story(id = 'story-1'): Story {
 function graphStory(): Story {
   const saved = story();
   saved.locations = [{ id: 'location-1', name: 'Harbor', description: 'A quiet harbor.' }];
-  saved.statDefinitions = [{ id: 'definition-1', name: 'Trust' }];
+  saved.statDefinitions = [{ id: 'definition-1', name: 'Trust', changePerHour: -0.5 }];
   saved.itemDefinitions = [{ id: 'item-definition-1', name: 'Key', description: 'A brass key.' }];
   saved.characters = [
     {
@@ -172,6 +172,8 @@ function relationalRead(query: jest.Mock, saved = story()) {
           id: definition.id,
           story_id: saved.id,
           name: definition.name,
+          image_url: definition.imageUrl ?? '',
+          change_per_hour: definition.changePerHour ?? 0,
           sort_order: index,
         })),
       });
@@ -341,7 +343,7 @@ describe('StoriesRepository', () => {
     );
     expect(mockClientQuery).toHaveBeenCalledWith(
       expect.stringContaining('INSERT INTO stat_definitions'),
-      ['definition-1', saved.id, 'Trust', '', 0],
+      ['definition-1', saved.id, 'Trust', '', -0.5, 0],
     );
     expect(mockClientQuery).toHaveBeenCalledWith(
       expect.stringContaining('INSERT INTO item_definitions'),

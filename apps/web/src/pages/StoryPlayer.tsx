@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import type { Interaction, InteractionMutationResult, Story } from '@paralleax/shared';
 import {
-  applyInteractionStatEffects,
+  applyInteractionStatChanges,
   applyInteractionItemEffects,
   buildReaderProgressState,
   ensureStoryInteractionPositions,
@@ -225,13 +225,14 @@ export function StoryPlayer() {
   }, [editingChoiceId]);
 
   function choose(interaction: Interaction) {
+    if (!story) return;
     const nextJourney = [...journey, interaction.id];
     const nextOwnedItemIds = applyInteractionItemEffects(ownedItemIds, interaction);
     setCurrentId(interaction.id);
     setJourney(nextJourney);
     setVisited((ids) => (ids.includes(interaction.id) ? ids : [...ids, interaction.id]));
     if (interaction.locationId) setCurrentLocationId(interaction.locationId);
-    setStatValues((values) => applyInteractionStatEffects(values, interaction));
+    setStatValues((values) => applyInteractionStatChanges(story, values, interaction));
     setOwnedItemIds(nextOwnedItemIds);
     if (!isSimulationMode) queueProgressSave(nextJourney, nextOwnedItemIds);
   }

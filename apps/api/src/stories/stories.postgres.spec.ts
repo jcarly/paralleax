@@ -54,7 +54,12 @@ describePostgres('StoriesRepository PostgreSQL integration', () => {
         },
       ],
       statDefinitions: [
-        { id: 'definition-1', name: 'Trust', imageUrl: 'https://images.example/trust.svg' },
+        {
+          id: 'definition-1',
+          name: 'Trust',
+          imageUrl: 'https://images.example/trust.svg',
+          changePerHour: -0.5,
+        },
       ],
       itemDefinitions: [
         {
@@ -156,6 +161,7 @@ describePostgres('StoriesRepository PostgreSQL integration', () => {
     ]);
     expect(reloaded?.characters?.[0].imageUrl).toBe('https://images.example/mira.png');
     expect(reloaded?.statDefinitions?.[0].imageUrl).toBe('https://images.example/trust.svg');
+    expect(reloaded?.statDefinitions?.[0].changePerHour).toBe(-0.5);
     expect(reloaded?.itemDefinitions?.[0].imageUrl).toBe('https://images.example/key.png');
     expect(reloaded?.interactions[1].triggers[0]).toEqual({
       id: 'trigger-2',

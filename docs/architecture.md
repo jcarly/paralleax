@@ -332,11 +332,13 @@ while shared story operations own trigger cleanup, normalization, reader rules,
 and merge semantics.
 
 The current PostgreSQL schema stores Story, Location, Character, reusable Stat
-Definition, Character Stat Assignment,
+Definition (including its hourly change rate), Character Stat Assignment,
 Item Definition, Character Item Instance, Interaction, Interaction Stat Effect,
 Trigger, and trigger input state in
 relational tables. Interaction-to-location, interaction-character, and stat
-effect references use same-story composite foreign keys. Ordered typed trigger conditions are
+effect references use same-story composite foreign keys. Time-based stat changes
+are calculated in the shared engine from interaction durations rather than
+stored as runtime events. Ordered typed trigger conditions are
 stored as JSONB on their owning trigger and their references are validated by
 the application service. Story-local start time and interaction durations are
 relational fields; temporal alternatives remain typed trigger-condition JSONB.

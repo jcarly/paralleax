@@ -153,6 +153,10 @@ This project follows a lightweight [Keep a Changelog](https://keepachangelog.com
 
 ## Unreleased
 
+- Added reusable stat hourly change rates, including positive or negative
+  time-based evolution, deterministic journey replay, editor controls,
+  PostgreSQL persistence, and reader-progress reconstruction.
+
 ### Added
 
 - Feature-focused NestJS modules for authentication, stories, database lifecycle,

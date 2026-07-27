@@ -377,6 +377,7 @@ export class StoriesService {
           id: statDefinitionId,
           name: input.name.trim(),
           imageUrl: input.imageUrl?.trim() ?? '',
+          changePerHour: input.changePerHour ?? 0,
         });
         return story;
       },
@@ -436,6 +437,7 @@ export class StoriesService {
         const definition = this.statDefinition(story, statDefinitionId);
         if (input.name !== undefined) definition.name = input.name.trim();
         if (input.imageUrl !== undefined) definition.imageUrl = input.imageUrl.trim();
+        if (input.changePerHour !== undefined) definition.changePerHour = input.changePerHour;
         return story;
       },
       userId,

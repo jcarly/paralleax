@@ -234,7 +234,7 @@ describe('StoryPlayer', () => {
     expect(screen.getByRole('button', { name: 'Next' })).toBeInTheDocument();
   });
 
-  it('applies interaction stat effects before evaluating the next choices', async () => {
+  it('applies time-based and explicit stat changes before evaluating choices', async () => {
     const user = userEvent.setup();
     const statStory = structuredClone(story);
     statStory.characters = [
@@ -245,7 +245,9 @@ describe('StoryPlayer', () => {
         stats: [{ id: 'trust', statDefinitionId: 'trust-definition', initialValue: 1 }],
       },
     ];
-    statStory.interactions[0].statEffects = [{ statId: 'trust', operation: 'add', value: 2 }];
+    statStory.statDefinitions = [{ id: 'trust-definition', name: 'Trust', changePerHour: 1 }];
+    statStory.interactions[0].durationMinutes = 60;
+    statStory.interactions[0].statEffects = [{ statId: 'trust', operation: 'add', value: 1 }];
     statStory.interactions[1].triggers[0].conditions = [
       { statId: 'trust', operator: 'gte', value: 3 },
     ];
