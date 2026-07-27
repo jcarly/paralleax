@@ -153,6 +153,8 @@ This project follows a lightweight [Keep a Changelog](https://keepachangelog.com
 
 ## Unreleased
 
+- Fixed PostgreSQL integration CI by installing the PostgreSQL 17 client instead
+  of Debian Bookworm's PostgreSQL 15 client before backup/restore verification.
 - Added reusable stat hourly change rates, including positive or negative
   time-based evolution, deterministic journey replay, editor controls,
   PostgreSQL persistence, and reader-progress reconstruction.

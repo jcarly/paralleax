@@ -29,7 +29,8 @@ small test stories. It is not yet ready for an open public production service.
   and verifies rows and foreign keys after every migration.
 - Implemented foundation: repository backup/restore commands validate archives,
   require an explicit restore target, and CI restores into a temporary database
-  and compares migrations and core row counts.
+  and compares migrations and core row counts. The integration job installs the
+  PostgreSQL 17 client explicitly so `pg_dump` matches its PostgreSQL 17 service.
 - Configure monitored, encrypted, off-host PostgreSQL backup scheduling and
   complete a recorded restoration drill in the selected production provider.
 - Add staging, production secret management, exact CORS origins, and verified
