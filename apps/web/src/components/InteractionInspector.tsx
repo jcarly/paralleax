@@ -7,13 +7,18 @@ export function InteractionInspector({
   onChange,
   onPatch,
   onDelete,
+  onSelectInteraction,
 }: {
   story: Story;
   interaction: Interaction;
   onChange: (story: Story) => void;
   onPatch: (id: string, patch: Partial<Interaction>) => Promise<void>;
   onDelete: () => Promise<void>;
+  onSelectInteraction?: (interactionId: string) => void;
 }) {
+  const outgoingInteractions = story.interactions.filter((candidate) =>
+    candidate.triggers.some((trigger) => trigger.inputInteractionIds.includes(interaction.id)),
+  );
   const stats = (story.characters ?? []).flatMap((character) =>
     (character.stats ?? []).map((stat) => ({
       ...stat,
@@ -57,6 +62,8 @@ export function InteractionInspector({
         value={interaction.body}
         onChange={(body) => updateLocalInteraction({ body })}
         onBlur={(body) => void onPatch(interaction.id, { body })}
+        conditionalTargets={outgoingInteractions}
+        onConditionalTargetClick={onSelectInteraction}
       />
       <label>
         Duration (minutes)

@@ -1,6 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
-import type { Interaction, InteractionMutationResult, Story } from '@paralleax/shared';
+import type {
+  Interaction,
+  InteractionMutationResult,
+  Story,
+  TriggerCondition,
+} from '@paralleax/shared';
 import {
   applyInteractionStatChanges,
   applyInteractionItemEffects,
@@ -25,6 +30,66 @@ function getInteractionTitle(story: Story, interactionId: string) {
     story.interactions.find((interaction) => interaction.id === interactionId)?.title ??
     interactionId
   );
+}
+
+function describeCondition(story: Story, condition: TriggerCondition) {
+  if ('locationId' in condition) {
+    const name =
+      story.locations?.find((location) => location.id === condition.locationId)?.name ??
+      condition.locationId;
+    return condition.isCurrentLocation
+      ? `Current location is "${name}"`
+      : `Current location is not "${name}"`;
+  }
+  if ('interactionId' in condition) {
+    const title = getInteractionTitle(story, condition.interactionId);
+    return condition.hasBeenVisited
+      ? `"${title}" has been visited`
+      : `"${title}" has not been visited`;
+  }
+  if ('statId' in condition) {
+    const stat = (story.characters ?? [])
+      .flatMap((character) =>
+        (character.stats ?? []).map((item) => ({
+          ...item,
+          label: `${character.name} â€” ${
+            story.statDefinitions?.find(({ id }) => id === item.statDefinitionId)?.name ??
+            'Unknown stat'
+          }`,
+        })),
+      )
+      .find(({ id }) => id === condition.statId);
+    const operatorLabels = {
+      eq: 'equals',
+      lt: 'is less than',
+      lte: 'is at most',
+      gt: 'is greater than',
+      gte: 'is at least',
+    };
+    return `"${stat?.label ?? condition.statId}" ${operatorLabels[condition.operator]} ${condition.value}`;
+  }
+  if ('temporal' in condition) return 'Story date and time match the configured schedule';
+  const name =
+    story.characters?.find((character) => character.id === condition.characterId)?.name ??
+    condition.characterId;
+  return condition.isPresent ? `"${name}" is present` : `"${name}" is absent`;
+}
+
+function getConditionSummary(story: Story, interaction: Interaction, currentId: string | null) {
+  const triggers = interaction.triggers.filter((trigger) =>
+    currentId
+      ? trigger.inputInteractionIds.includes(currentId) ||
+        (trigger.inputInteractionIds.length === 0 && trigger.conditions.length > 0)
+      : trigger.inputInteractionIds.length === 0,
+  );
+  const variants = triggers.map((trigger) =>
+    trigger.conditions.length === 0
+      ? 'No conditions'
+      : trigger.conditions.map((condition) => describeCondition(story, condition)).join(' and '),
+  );
+  return variants.length > 1
+    ? variants.join(' or ')
+    : (variants[0] ?? 'No matching outgoing trigger');
 }
 
 function getUnavailableReason(
@@ -218,6 +283,59 @@ export function StoryPlayer() {
       visited,
     ],
   );
+  const conditionalTextState = useMemo(() => {
+    if (!story || !current) return {};
+    return Object.fromEntries(
+      story.interactions.map((interaction) => {
+        const connected = interaction.triggers.some((trigger) =>
+          trigger.inputInteractionIds.includes(current.id),
+        );
+        const available = connected && availableChoiceIds.has(interaction.id);
+        const reason = !connected
+          ? 'The target interaction is no longer connected by an outgoing trigger.'
+          : available
+            ? getConditionSummary(story, interaction, current.id)
+            : getUnavailableReason(
+                story,
+                interaction,
+                current.id,
+                visited,
+                currentLocationId,
+                current.characterIds ?? [],
+                statValues,
+                currentDateTime,
+              );
+        return [
+          interaction.id,
+          {
+            visible: isSimulationMode || available,
+            available,
+            reason,
+          },
+        ];
+      }),
+    );
+  }, [
+    availableChoiceIds,
+    current,
+    currentDateTime,
+    currentLocationId,
+    isSimulationMode,
+    statValues,
+    story,
+    visited,
+  ]);
+  const outgoingInteractions = useMemo(
+    () =>
+      !story || !current
+        ? []
+        : story.interactions.filter((interaction) =>
+            interaction.triggers.some((trigger) =>
+              trigger.inputInteractionIds.includes(current.id),
+            ),
+          ),
+    [current, story],
+  );
 
   useEffect(() => {
     editingChoiceInputRef.current?.focus();
@@ -401,12 +519,22 @@ export function StoryPlayer() {
                   value={current.body}
                   onChange={(body) => patchCurrentInteraction({ body })}
                   onBlur={(body) => void saveCurrentInteraction({ body })}
+                  conditionalTargets={outgoingInteractions}
+                  conditionalTextState={conditionalTextState}
+                  onConditionalTargetClick={(interactionId) => {
+                    const target = story.interactions.find(({ id }) => id === interactionId);
+                    if (target) choose(target);
+                  }}
                 />
               </>
             ) : (
               <>
                 <h1>{current.title}</h1>
-                <RichTextContent className="story-body" html={current.body} />
+                <RichTextContent
+                  className="story-body"
+                  html={current.body}
+                  conditionalTextState={conditionalTextState}
+                />
               </>
             )}
           </>
@@ -442,7 +570,7 @@ export function StoryPlayer() {
                   onClick={() => choose(interaction)}
                   title={
                     available
-                      ? 'Available'
+                      ? getConditionSummary(story, interaction, current?.id ?? null)
                       : (unavailableReason ?? 'Unavailable in the current simulation state')
                   }
                 >

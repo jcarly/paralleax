@@ -1,4 +1,5 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import type { ConditionalTextState } from './RichTextContent';
 
 function embedMarkup(url: string): string | undefined {
   let parsed: URL;
@@ -32,13 +33,30 @@ export function RichTextEditor({
   onChange,
   onBlur,
   ariaLabel = 'Content',
+  conditionalTargets = [],
+  conditionalTextState,
+  onConditionalTargetClick,
 }: {
   value: string;
   onChange: (html: string) => void;
   onBlur: (html: string) => void;
   ariaLabel?: string;
+  conditionalTargets?: { id: string; title: string }[];
+  conditionalTextState?: ConditionalTextState;
+  onConditionalTargetClick?: (interactionId: string) => void;
 }) {
   const editorRef = useRef<HTMLDivElement>(null);
+  const [showConditionalTargets, setShowConditionalTargets] = useState(false);
+
+  function editorHtml() {
+    const clone = editorRef.current?.cloneNode(true) as HTMLDivElement | undefined;
+    clone?.querySelectorAll<HTMLElement>('[data-conditional-text-target]').forEach((frame) => {
+      frame.classList.remove('conditional-text', 'conditional-text-unavailable');
+      frame.removeAttribute('title');
+      frame.querySelector('.conditional-text-reason')?.remove();
+    });
+    return clone?.innerHTML ?? '';
+  }
 
   useEffect(() => {
     const editor = editorRef.current;
@@ -47,10 +65,22 @@ export function RichTextEditor({
     }
   }, [value]);
 
+  useEffect(() => {
+    const editor = editorRef.current;
+    if (!editor) return;
+    editor.querySelectorAll<HTMLElement>('[data-conditional-text-target]').forEach((frame) => {
+      const state = conditionalTextState?.[frame.dataset.conditionalTextTarget ?? ''];
+      frame.classList.add('conditional-text');
+      frame.classList.toggle('conditional-text-unavailable', Boolean(state && !state.available));
+      if (state && !state.available) frame.title = state.reason ?? 'Unavailable';
+      else frame.removeAttribute('title');
+    });
+  }, [conditionalTextState, value]);
+
   function command(name: string, commandValue?: string) {
     editorRef.current?.focus();
     document.execCommand(name, false, commandValue);
-    if (editorRef.current) onChange(editorRef.current.innerHTML);
+    if (editorRef.current) onChange(editorHtml());
   }
 
   function insertImage() {
@@ -62,6 +92,21 @@ export function RichTextEditor({
     const url = window.prompt('Video, YouTube, or Vimeo URL');
     const markup = url ? embedMarkup(url) : undefined;
     if (markup) command('insertHTML', markup);
+  }
+
+  function insertConditionalText(targetId: string) {
+    const target = conditionalTargets.find(({ id }) => id === targetId);
+    if (!target) return;
+    const escapedId = target.id.replaceAll('&', '&amp;').replaceAll('"', '&quot;');
+    const escapedTitle = target.title
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;');
+    command(
+      'insertHTML',
+      `<div data-conditional-text-target="${escapedId}"><button type="button" contenteditable="false" aria-label="Open target interaction: ${escapedTitle}" data-conditional-text-link="${escapedId}">↗ ${escapedTitle}</button><p>Conditional text</p></div><p><br></p>`,
+    );
+    setShowConditionalTargets(false);
   }
 
   return (
@@ -123,6 +168,35 @@ export function RichTextEditor({
         >
           Video
         </button>
+        <button
+          type="button"
+          aria-label="Add conditional text"
+          title="Add conditional text"
+          disabled={conditionalTargets.length === 0}
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={() => setShowConditionalTargets((visible) => !visible)}
+        >
+          🔗
+        </button>
+        {showConditionalTargets ? (
+          <label className="conditional-target-picker">
+            Target interaction
+            <select
+              aria-label="Conditional text target"
+              defaultValue=""
+              onChange={(event) => insertConditionalText(event.target.value)}
+            >
+              <option value="" disabled>
+                Choose an outgoing interaction
+              </option>
+              {conditionalTargets.map((target) => (
+                <option key={target.id} value={target.id}>
+                  {target.title}
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : null}
       </div>
       <div
         ref={editorRef}
@@ -132,8 +206,18 @@ export function RichTextEditor({
         aria-label={ariaLabel}
         aria-multiline="true"
         suppressContentEditableWarning
-        onInput={(event) => onChange(event.currentTarget.innerHTML)}
-        onBlur={(event) => onBlur(event.currentTarget.innerHTML)}
+        onClick={(event) => {
+          const button = (event.target as HTMLElement).closest<HTMLElement>(
+            '[data-conditional-text-link]',
+          );
+          const targetId = button?.dataset.conditionalTextLink;
+          if (targetId) {
+            event.preventDefault();
+            onConditionalTargetClick?.(targetId);
+          }
+        }}
+        onInput={() => onChange(editorHtml())}
+        onBlur={() => onBlur(editorHtml())}
       />
     </div>
   );

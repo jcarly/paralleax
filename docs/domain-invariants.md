@@ -13,6 +13,11 @@ details. They should stay covered by tests as the editor grows.
   stored as sanitized rich HTML strings; an API body value of `null` is
   normalized to an empty string. Scripts, event handlers, unsafe protocols, and
   non-allowlisted iframe hosts are removed before persistence.
+- A conditional body block stores only its target interaction id. Its visibility
+  is derived from outgoing triggers and it cannot define independent conditions.
+- Disconnecting its target preserves the conditional body content but hides it
+  from readers. Simulation Mode keeps it visible with unavailable styling and an
+  explanation.
 - A trigger belongs to exactly one output interaction.
 - Trigger inputs, outputs, and all condition references must belong to the same
   story as their trigger.

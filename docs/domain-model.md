@@ -36,6 +36,9 @@ Main MVP fields:
 - `durationMinutes`
 
 The title is used for choices and editor display. The body is used by the reader.
+The sanitized body may contain conditional text blocks that reference one target
+interaction by id. A block does not store conditions: it projects the outgoing
+trigger availability between its owning interaction and that target.
 
 ### Trigger
 

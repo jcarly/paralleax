@@ -20,6 +20,8 @@ export function sanitizeRichTextForDisplay(value: string): string {
       'video',
       'source',
       'iframe',
+      'div',
+      'button',
     ],
     ALLOWED_ATTR: [
       'href',
@@ -33,6 +35,11 @@ export function sanitizeRichTextForDisplay(value: string): string {
       'title',
       'allow',
       'allowfullscreen',
+      'type',
+      'contenteditable',
+      'aria-label',
+      'data-conditional-text-target',
+      'data-conditional-text-link',
     ],
     ALLOWED_URI_REGEXP: /^https?:\/\//i,
   });

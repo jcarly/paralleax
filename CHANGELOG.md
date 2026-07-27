@@ -161,6 +161,12 @@ This project follows a lightweight [Keep a Changelog](https://keepachangelog.com
 
 ### Added
 
+- Conditional rich-text frames linked to outgoing interactions. Reader
+  visibility follows the existing target triggers, disconnected content remains
+  preserved, and Simulation Mode displays unavailable frames with diagnostics.
+- Simulation option tooltips now describe conditions for available as well as
+  unavailable choices.
+
 - Feature-focused NestJS modules for authentication, stories, database lifecycle,
   and validated runtime configuration.
 - Startup validation for database URL, PostgreSQL SSL, port, CORS origin,

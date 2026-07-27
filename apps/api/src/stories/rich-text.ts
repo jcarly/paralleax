@@ -22,6 +22,8 @@ export function sanitizeRichText(value: string): string {
       'video',
       'source',
       'iframe',
+      'div',
+      'button',
     ],
     allowedAttributes: {
       a: ['href', 'target', 'rel'],
@@ -29,6 +31,8 @@ export function sanitizeRichText(value: string): string {
       video: ['src', 'controls', 'poster'],
       source: ['src', 'type'],
       iframe: ['src', 'title', 'allow', 'allowfullscreen'],
+      div: ['data-conditional-text-target'],
+      button: ['type', 'contenteditable', 'aria-label', 'data-conditional-text-link'],
     },
     allowedSchemes: ['http', 'https'],
     allowedSchemesByTag: {

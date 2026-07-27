@@ -986,6 +986,57 @@ header span {
   white-space: pre-wrap;
 }
 
+.conditional-text {
+  margin: 1rem 0;
+  padding: 1rem;
+  border: 1px solid var(--color-primary-focus);
+  border-left-width: 4px;
+  border-radius: 10px;
+  background: var(--color-primary-soft);
+  white-space: normal;
+}
+
+.conditional-text > button[data-conditional-text-link] {
+  margin-bottom: 0.65rem;
+  padding: 0.3rem 0.55rem;
+  border: 1px solid var(--color-primary-focus);
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-primary-strong);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.story-body .conditional-text > button[data-conditional-text-link] {
+  pointer-events: none;
+}
+
+.conditional-text-unavailable {
+  opacity: 0.52;
+  border-color: var(--color-border);
+  background: var(--color-surface-secondary);
+}
+
+.conditional-text-reason {
+  display: block;
+  margin-top: 0.65rem;
+  color: var(--color-subtle);
+  font-size: 0.76rem;
+  font-weight: 650;
+}
+
+.conditional-target-picker {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+  font-size: 0.75rem;
+}
+
+.conditional-target-picker select {
+  min-width: 12rem;
+}
+
 .player-inventory {
   width: min(100%, 48rem);
   margin: 1rem auto 0;

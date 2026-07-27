@@ -156,6 +156,18 @@ The order of available interactions follows the order of `story.interactions`.
 There is no separate ordering, priority, sorting, or randomization rule in the
 MVP.
 
+## Conditional Body Text
+
+An interaction body can contain a conditional block linked to one outgoing
+target interaction. In player reading, the block is rendered only when that
+target is connected from the current interaction and is currently available
+under the target's trigger conditions.
+
+Simulation Mode always renders stored conditional blocks. A disconnected or
+condition-blocked block is dimmed and exposes the reason. Simulation choice
+buttons expose their condition summary on hover whether they are available or
+blocked.
+
 ## History
 
 The current web reader stores visited interaction ids in first-visit order and

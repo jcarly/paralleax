@@ -649,6 +649,10 @@ export function StoryEditor() {
                 onChange={(next) => setStory(next)}
                 onPatch={patchInteraction}
                 onDelete={remove}
+                onSelectInteraction={(interactionId) => {
+                  closeInspector();
+                  setSelectedId(interactionId);
+                }}
               />
             ) : selectedTriggerTarget ? (
               <TriggerInspector

@@ -113,6 +113,60 @@ describe('StoryPlayer', () => {
     expect(screen.getByText('Start')).toBeInTheDocument();
   });
 
+  it('projects conditional body text from outgoing trigger availability', async () => {
+    const user = userEvent.setup();
+    const conditionalStory = structuredClone(story);
+    conditionalStory.interactions[0].body =
+      '<p>Always shown</p>' +
+      '<div data-conditional-text-target="next"><button data-conditional-text-link="next">Next</button><p>Available clue</p></div>' +
+      '<div data-conditional-text-target="hidden"><button data-conditional-text-link="hidden">Secret</button><p>Disconnected clue</p></div>';
+
+    await renderPlayer('/stories/story-1/play', conditionalStory);
+    await user.click(screen.getByRole('button', { name: 'Start' }));
+
+    expect(screen.getByText('Available clue')).toBeInTheDocument();
+    expect(screen.queryByText('Disconnected clue')).not.toBeInTheDocument();
+  });
+
+  it('keeps unavailable conditional text visible with an explanation in simulation', async () => {
+    const user = userEvent.setup();
+    const conditionalStory = structuredClone(story);
+    conditionalStory.interactions[1].triggers[0].conditions = [
+      { interactionId: 'hidden', hasBeenVisited: true },
+    ];
+    conditionalStory.interactions[0].body =
+      '<div data-conditional-text-target="next"><button aria-label="Open target interaction: Next" data-conditional-text-link="next">Next</button><p>Unavailable clue</p></div>';
+
+    await renderPlayer('/stories/story-1/play?mode=simulation', conditionalStory);
+    await user.click(screen.getByRole('button', { name: 'Start' }));
+
+    expect(screen.getByText('Unavailable clue').closest('.conditional-text')).toHaveClass(
+      'conditional-text-unavailable',
+    );
+    expect(screen.getByText(/Requires "Secret" to be visited/)).toBeInTheDocument();
+    const unavailableOption = screen.getByRole('button', {
+      name: /^NextRequires "Secret" to be visited\./,
+    });
+    expect(unavailableOption).toHaveClass('choice', 'unavailable');
+    expect(unavailableOption).toHaveAttribute('title', 'Requires "Secret" to be visited.');
+  });
+
+  it('shows conditions on hover for available simulation options', async () => {
+    const user = userEvent.setup();
+    const conditionedStory = structuredClone(story);
+    conditionedStory.interactions[1].triggers[0].conditions = [
+      { interactionId: 'start', hasBeenVisited: true },
+    ];
+
+    await renderPlayer('/stories/story-1/play?mode=simulation', conditionedStory);
+    await user.click(screen.getByRole('button', { name: 'Start' }));
+
+    expect(screen.getByRole('button', { name: 'Next' })).toHaveAttribute(
+      'title',
+      '"Start" has been visited',
+    );
+  });
+
   it('renders sanitized rich text and media in the reader', async () => {
     const user = userEvent.setup();
     const richStory = structuredClone(story);

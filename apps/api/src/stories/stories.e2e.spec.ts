@@ -377,6 +377,9 @@ describe('Stories API', () => {
       '<h2>Arrival</h2><p><strong>Hello</strong></p>' +
       '<img src="https://media.example/scene.gif" onerror="alert(1)">' +
       '<video src="https://media.example/scene.mp4"></video>' +
+      '<div data-conditional-text-target="next" onclick="alert(1)">' +
+      '<button type="button" contenteditable="false" data-conditional-text-link="next">Next</button>' +
+      '<p>Conditional clue</p></div>' +
       '<iframe src="https://www.youtube-nocookie.com/embed/video-1"></iframe>' +
       '<iframe src="https://evil.example/embed"></iframe><script>alert(1)</script>';
 
@@ -389,6 +392,9 @@ describe('Stories API', () => {
     expect(sanitized).toContain('<h2>Arrival</h2>');
     expect(sanitized).toContain('https://media.example/scene.gif');
     expect(sanitized).toContain('https://media.example/scene.mp4');
+    expect(sanitized).toContain('data-conditional-text-target="next"');
+    expect(sanitized).toContain('data-conditional-text-link="next"');
+    expect(sanitized).not.toContain('onclick');
     expect(sanitized).toContain('https://www.youtube-nocookie.com/embed/video-1');
     expect(sanitized).not.toContain('onerror');
     expect(sanitized).not.toContain('evil.example');

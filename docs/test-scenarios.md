@@ -191,6 +191,11 @@ The character-stat vertical keeps these regressions covered:
   current simulation journey.
 - Simulation: condition-blocked interactions explain the first failed visited /
   not visited condition.
+- Editor/reader: insert conditional body text for an outgoing interaction,
+  preserve but hide it after disconnection, and show it only when its target
+  trigger is available.
+- Simulation: conditional body text remains visible when unavailable, is dimmed
+  with a reason, and every option exposes its conditions on hover.
 - Simulation: authors can step back to the previous interaction in the current
   simulation journey.
 - Simulation: authors can edit the current interaction title and content inline

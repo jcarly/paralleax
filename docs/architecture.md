@@ -170,7 +170,8 @@ component:
 - `storyTriggerInput.ts`: deletion planning for one trigger input link.
 - `components/InteractionInspector.tsx`: interaction content editing.
 - `components/RichTextEditor.tsx` and `RichTextContent.tsx`: rich-body authoring
-  and defense-in-depth sanitized rendering.
+  and defense-in-depth sanitized rendering, including conditional body blocks
+  projected from outgoing trigger availability.
 - `components/TriggerInspector.tsx`: trigger condition and OR variant editing.
 - `components/InteractionNode.tsx`, `TriggerNode.tsx`, and `TriggerEdge.tsx`:
   React Flow rendering surfaces.
@@ -250,6 +251,9 @@ stale story merge regressions covered.
 Interaction bodies are HTML. The API sanitizes them before persistence with a
 strict element, attribute, protocol, and iframe-host allowlist. The web renderer
 sanitizes the stored HTML again before using `dangerouslySetInnerHTML`.
+Conditional blocks persist only a target interaction id in allowed data
+attributes. `StoryPlayer` derives connection, availability, and diagnostics
+from the current story graph instead of persisting duplicate rules.
 
 ### Editing Trigger Links
 

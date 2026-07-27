@@ -100,6 +100,12 @@ If the deleted interaction appears in trigger conditions:
 
 ## Editing UX
 
+Conditional text embedded in an interaction body references an interaction
+reachable through an outgoing trigger. It reuses that trigger's complete input
+and condition semantics; the body block never owns another condition set. If all
+outgoing trigger connections to the referenced target are removed, the stored
+block remains editable but is no longer rendered to readers.
+
 Triggers should be edited from their visible graph marker, not primarily from the
 interaction inspector.
 

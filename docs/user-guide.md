@@ -65,6 +65,12 @@ headings, and lists, and inserts images or animated GIFs by URL. **Video**
 accepts direct video URLs plus YouTube and Vimeo links. Media is referenced
 externally; Paralleax does not upload or host the file yet.
 
+Use the link icon labelled **Add conditional text** to choose an interaction
+connected by an outgoing trigger and insert an editable conditional frame. The
+frame follows that trigger's conditions automatically. Removing the graph
+connection keeps the authored text in the editor but hides it from players.
+Simulation Mode still shows unavailable frames with reduced opacity and a reason.
+
 1. Select an interaction block on the canvas.
 2. Edit `Title` and `Content` in the inspector.
 3. Set `Duration (minutes)` to define how much story time passes when it is selected.
