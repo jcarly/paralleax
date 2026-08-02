@@ -173,6 +173,15 @@ In a character inspector, use the `x` button beside an assigned stat or item to
 remove it. Removing an assignment also cleans interaction effects and conditions
 that referenced that exact character stat or item instance.
 
+Enable **Playable character** in a character inspector to make that character
+the story protagonist. The current version supports one playable character; a
+new selection replaces the previous one.
+
+At the start of reading, select the playable character card. The reader then
+shows that character's image, current stats, and inventory on the left. Other
+characters present in the current interaction appear as encounter cards on the
+right.
+
 ## Delete Trigger Links
 
 Use the `x` control that appears on the link between an input interaction and

@@ -288,6 +288,56 @@ describe('StoryPlayer', () => {
     expect(screen.getByRole('button', { name: 'Next' })).toBeInTheDocument();
   });
 
+  it('selects the playable character and shows player and encounter panels', async () => {
+    const user = userEvent.setup();
+    const characterStory = structuredClone(story);
+    characterStory.statDefinitions = [{ id: 'trust-definition', name: 'Trust' }];
+    characterStory.characters = [
+      {
+        id: 'player',
+        name: 'Ari',
+        description: 'The protagonist.',
+        imageUrl: 'https://images.example/ari.png',
+        isPlayable: true,
+        stats: [{ id: 'trust', statDefinitionId: 'trust-definition', initialValue: 4 }],
+      },
+      {
+        id: 'mira',
+        name: 'Mira',
+        description: 'A new acquaintance.',
+        imageUrl: 'https://images.example/mira.png',
+      },
+    ];
+    characterStory.interactions[0].characterIds = ['mira'];
+
+    await renderPlayer('/stories/story-1/play', characterStory);
+    expect(screen.getByRole('heading', { name: 'Choose your character' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Start' })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /Ari/ }));
+    expect(screen.getByRole('complementary', { name: 'Played character' })).toHaveTextContent(
+      'Trust: 4',
+    );
+    await user.click(screen.getByRole('button', { name: 'Start' }));
+    expect(screen.getByRole('complementary', { name: 'Encountered characters' })).toHaveTextContent(
+      'Mira',
+    );
+  });
+
+  it('hides location-blocked options in simulation mode', async () => {
+    const user = userEvent.setup();
+    const locatedStory = structuredClone(story);
+    locatedStory.locations = [{ id: 'harbor', name: 'Harbor', description: '' }];
+    locatedStory.interactions[1].triggers[0].conditions = [
+      { locationId: 'harbor', isCurrentLocation: true },
+    ];
+
+    await renderPlayer('/stories/story-1/play?mode=simulation', locatedStory);
+    await user.click(screen.getByRole('button', { name: 'Start' }));
+
+    expect(screen.queryByRole('button', { name: 'Next' })).not.toBeInTheDocument();
+  });
+
   it('applies time-based and explicit stat changes before evaluating choices', async () => {
     const user = userEvent.setup();
     const statStory = structuredClone(story);

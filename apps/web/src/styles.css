@@ -948,12 +948,16 @@ header span {
 /* Reader */
 
 .player-page {
-  max-width: 760px;
+  display: grid;
+  grid-template-columns: minmax(220px, 280px) minmax(0, 760px) minmax(220px, 280px);
+  gap: 1rem;
+  max-width: 1360px;
   margin: 0 auto;
   padding: 2rem;
   background: var(--color-page);
 }
 .player-top {
+  grid-column: 1 / -1;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -971,6 +975,7 @@ header span {
   font-weight: 750;
 }
 .player-card {
+  grid-column: 2;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: 16px;
@@ -1049,8 +1054,10 @@ header span {
 }
 
 .player-inventory {
-  width: min(100%, 48rem);
-  margin: 1rem auto 0;
+  grid-column: 1;
+  grid-row: 2;
+  align-self: start;
+  margin: 0;
   padding: 1rem 1.25rem;
   border: 1px solid #d9dde7;
   border-radius: 0.75rem;
@@ -1060,6 +1067,15 @@ header span {
 .player-inventory h2 {
   margin: 0 0 0.65rem;
   font-size: 1rem;
+}
+
+.player-character-image,
+.encounter-card img,
+.character-choice-card img {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  border-radius: 0.65rem;
+  object-fit: cover;
 }
 
 .player-inventory ul {
@@ -1075,6 +1091,76 @@ header span {
   padding: 0.4rem 0.65rem;
   border-radius: 999px;
   background: #f0eefb;
+}
+
+.encounter-panel {
+  grid-column: 3;
+  grid-row: 2;
+  align-self: start;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.encounter-panel > h2 {
+  margin: 0;
+}
+
+.encounter-card {
+  padding: 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.75rem;
+  background: var(--color-surface);
+}
+
+.encounter-card h3 {
+  margin-bottom: 0.35rem;
+}
+
+.character-selection {
+  display: grid;
+  gap: 1rem;
+}
+
+.character-choice-card {
+  display: grid;
+  gap: 0.65rem;
+  padding: 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.75rem;
+  background: var(--color-surface-secondary);
+  color: var(--color-text);
+  text-align: left;
+}
+
+.debug {
+  grid-column: 2;
+}
+
+@media (max-width: 980px) {
+  .player-page {
+    grid-template-columns: 1fr;
+  }
+
+  .player-top,
+  .player-card,
+  .player-inventory,
+  .encounter-panel,
+  .debug {
+    grid-column: 1;
+    grid-row: auto;
+  }
+
+  .player-inventory {
+    order: 1;
+  }
+
+  .player-card {
+    order: 2;
+  }
+
+  .encounter-panel {
+    order: 3;
+  }
 }
 .simulation-title-input,
 .simulation-body-input {

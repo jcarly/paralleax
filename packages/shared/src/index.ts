@@ -60,6 +60,7 @@ export interface Character {
   name: string;
   description: string;
   imageUrl?: string;
+  isPlayable?: boolean;
   stats?: CharacterStat[];
   items?: ItemInstance[];
 }
@@ -223,11 +224,13 @@ export interface CreateCharacterInput {
   name: string;
   description?: string;
   imageUrl?: string;
+  isPlayable?: boolean;
 }
 export interface UpdateCharacterInput {
   name?: string;
   description?: string;
   imageUrl?: string;
+  isPlayable?: boolean;
 }
 export interface CreateCharacterStatInput {
   statDefinitionId: string;

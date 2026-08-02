@@ -324,14 +324,16 @@ async function insertCharacter(
   sortOrder: number,
 ) {
   await client.query(
-    `INSERT INTO characters (id, story_id, name, description, image_url, sort_order)
-     VALUES ($1, $2, $3, $4, $5, $6)`,
+    `INSERT INTO characters
+     (id, story_id, name, description, image_url, is_playable, sort_order)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)`,
     [
       character.id,
       storyId,
       character.name,
       character.description,
       character.imageUrl ?? '',
+      character.isPlayable ?? false,
       sortOrder,
     ],
   );
@@ -501,6 +503,11 @@ async function persistItemDefinitionDifference(client: Queryable, before: Story,
 }
 
 async function persistCharacterDifference(client: Queryable, before: Story, after: Story) {
+  const previousPlayableId = (before.characters ?? []).find(({ isPlayable }) => isPlayable)?.id;
+  const nextPlayableId = (after.characters ?? []).find(({ isPlayable }) => isPlayable)?.id;
+  if (previousPlayableId !== nextPlayableId && previousPlayableId) {
+    await client.query('UPDATE characters SET is_playable = false WHERE story_id = $1', [after.id]);
+  }
   const beforeCharacters = new Map(
     (before.characters ?? []).map((character) => [character.id, character]),
   );
@@ -532,6 +539,13 @@ async function persistCharacterDifference(client: Queryable, before: Story, afte
     addChange(changes, values, 'name', previous.name, character.name);
     addChange(changes, values, 'description', previous.description, character.description);
     addChange(changes, values, 'image_url', previous.imageUrl ?? '', character.imageUrl ?? '');
+    addChange(
+      changes,
+      values,
+      'is_playable',
+      previous.isPlayable ?? false,
+      character.isPlayable ?? false,
+    );
     addChange(
       changes,
       values,

@@ -21,7 +21,7 @@ export function CharacterInspector({
   onChange: (patch: Partial<Character>) => void;
   onPatch: (
     id: string,
-    patch: Partial<Pick<Character, 'name' | 'description' | 'imageUrl'>>,
+    patch: Partial<Pick<Character, 'name' | 'description' | 'imageUrl' | 'isPlayable'>>,
   ) => Promise<void>;
   onCreateStat: (characterId: string, statDefinitionId: string) => Promise<void>;
   onPatchStat: (
@@ -62,6 +62,18 @@ export function CharacterInspector({
         onChange={(imageUrl) => onChange({ imageUrl })}
         onBlur={(imageUrl) => void onPatch(character.id, { imageUrl })}
       />
+      <label>
+        <input
+          type="checkbox"
+          checked={character.isPlayable ?? false}
+          onChange={(event) => {
+            const isPlayable = event.target.checked;
+            onChange({ isPlayable });
+            void onPatch(character.id, { isPlayable });
+          }}
+        />
+        Playable character
+      </label>
       <div className="inspector-section-header">
         <h3>Stats</h3>
       </div>

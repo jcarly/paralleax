@@ -314,6 +314,9 @@ export class CreateCharacterDto {
   @IsString()
   @MaxLength(2048)
   imageUrl?: string;
+  @ValidateIf((_, value) => value !== undefined)
+  @IsBoolean()
+  isPlayable?: boolean;
 }
 export class UpdateCharacterDto {
   @ValidateIf((_, value) => value !== undefined)
@@ -328,6 +331,9 @@ export class UpdateCharacterDto {
   @IsString()
   @MaxLength(2048)
   imageUrl?: string;
+  @ValidateIf((_, value) => value !== undefined)
+  @IsBoolean()
+  isPlayable?: boolean;
 }
 export class CreateCharacterStatDto {
   @IsString() @IsNotEmpty() statDefinitionId!: string;

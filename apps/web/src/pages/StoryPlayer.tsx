@@ -205,6 +205,7 @@ export function StoryPlayer() {
   const [statValues, setStatValues] = useState<Record<string, number>>({});
   const [ownedItemIds, setOwnedItemIds] = useState<string[]>([]);
   const [itemStatValues, setItemStatValues] = useState<Record<string, Record<string, number>>>({});
+  const [playableCharacterId, setPlayableCharacterId] = useState<string>();
   const [progressStatus, setProgressStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>(
     'idle',
   );
@@ -241,6 +242,9 @@ export function StoryPlayer() {
       setItemStatValues(
         reconciledProgress?.itemStatValues ?? getJourneyItemStatValues(positioned, nextJourney),
       );
+      if (nextJourney.length > 0) {
+        setPlayableCharacterId(positioned.characters?.find(({ isPlayable }) => isPlayable)?.id);
+      }
       setProgressStatus(progress ? 'saved' : 'idle');
     });
   }, [isSimulationMode, startInteractionId, storyId]);
@@ -263,6 +267,11 @@ export function StoryPlayer() {
         : [],
     [ownedItemIds, story],
   );
+  const playableCharacters = useMemo(
+    () => (story?.characters ?? []).filter(({ isPlayable }) => isPlayable),
+    [story],
+  );
+  const playedCharacter = playableCharacters.find(({ id }) => id === playableCharacterId);
 
   const choices = useMemo(
     () =>
@@ -292,13 +301,11 @@ export function StoryPlayer() {
   const visibleChoices = useMemo(
     () =>
       isSimulationMode && story
-        ? getInputReachableInteractions(story, current?.id ?? null).map((interaction) => ({
-            interaction,
-            available: availableChoiceIds.has(interaction.id),
-            unavailableReason: availableChoiceIds.has(interaction.id)
-              ? undefined
-              : getUnavailableReason(
-                  story,
+        ? getInputReachableInteractions(story, current?.id ?? null).flatMap((interaction) => {
+            const available = availableChoiceIds.has(interaction.id);
+            const failures = available
+              ? []
+              : getTriggerConditionFailures(
                   interaction,
                   current?.id ?? null,
                   visited,
@@ -307,8 +314,28 @@ export function StoryPlayer() {
                   statValues,
                   currentDateTime,
                   ownedItemDefinitionIds,
-                ),
-          }))
+                );
+            if (failures.some(({ condition }) => 'locationId' in condition)) return [];
+            return [
+              {
+                interaction,
+                available,
+                unavailableReason: available
+                  ? undefined
+                  : getUnavailableReason(
+                      story,
+                      interaction,
+                      current?.id ?? null,
+                      visited,
+                      currentLocationId,
+                      current?.characterIds ?? [],
+                      statValues,
+                      currentDateTime,
+                      ownedItemDefinitionIds,
+                    ),
+              },
+            ];
+          })
         : choices.map((interaction) => ({
             interaction,
             available: true,
@@ -431,6 +458,7 @@ export function StoryPlayer() {
           : getInitialItemStatValues(story)
         : {},
     );
+    setPlayableCharacterId(undefined);
     if (!isSimulationMode) queueProgressReset();
   }
 
@@ -565,7 +593,23 @@ export function StoryPlayer() {
         <time className="story-clock" dateTime={currentDateTime}>
           {currentDateTime.replace('T', ' ')}
         </time>
-        {current ? (
+        {playableCharacters.length > 0 && !playedCharacter ? (
+          <section className="character-selection" aria-label="Choose your character">
+            <h1>Choose your character</h1>
+            {playableCharacters.map((character) => (
+              <button
+                className="character-choice-card"
+                key={character.id}
+                type="button"
+                onClick={() => setPlayableCharacterId(character.id)}
+              >
+                {character.imageUrl ? <img src={character.imageUrl} alt="" /> : null}
+                <strong>{character.name}</strong>
+                {character.description ? <span>{character.description}</span> : null}
+              </button>
+            ))}
+          </section>
+        ) : current ? (
           <>
             {isSimulationMode ? (
               <>
@@ -606,89 +650,158 @@ export function StoryPlayer() {
             <p>Choose a starting interaction.</p>
           </>
         )}
-        <div className="choices">
-          {visibleChoices.map(({ interaction, available, unavailableReason }) => (
-            <div className="choice-row" key={interaction.id}>
-              {editingChoiceId === interaction.id ? (
-                <input
-                  ref={editingChoiceInputRef}
-                  className="choice-title-input"
-                  aria-label="New option title"
-                  value={interaction.title}
-                  onChange={(event) =>
-                    patchInteraction(interaction.id, { title: event.target.value })
-                  }
-                  onBlur={(event) => void saveChoiceTitle(interaction, event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter') {
-                      event.preventDefault();
-                      event.currentTarget.blur();
+        {playableCharacters.length === 0 || playedCharacter ? (
+          <div className="choices">
+            {visibleChoices.map(({ interaction, available, unavailableReason }) => (
+              <div className="choice-row" key={interaction.id}>
+                {editingChoiceId === interaction.id ? (
+                  <input
+                    ref={editingChoiceInputRef}
+                    className="choice-title-input"
+                    aria-label="New option title"
+                    value={interaction.title}
+                    onChange={(event) =>
+                      patchInteraction(interaction.id, { title: event.target.value })
                     }
-                  }}
-                />
-              ) : (
-                <button
-                  className={`choice ${available ? 'available' : 'unavailable'}`}
-                  onClick={() => choose(interaction)}
-                  title={
-                    available
-                      ? getConditionSummary(story, interaction, current?.id ?? null)
-                      : (unavailableReason ?? 'Unavailable in the current simulation state')
-                  }
-                >
-                  <span>{interaction.title}</span>
-                  {isSimulationMode && !available ? (
-                    <small>{unavailableReason ?? 'Unavailable - force for test'}</small>
-                  ) : null}
-                </button>
-              )}
-            </div>
-          ))}
-          {isSimulationMode ? (
-            <button className="choice add-option" onClick={() => void addOption()}>
-              Add option
-            </button>
-          ) : null}
-          {choices.length === 0 && current && !isSimulationMode ? (
-            <p className="ending">End of this branch.</p>
-          ) : null}
-        </div>
+                    onBlur={(event) => void saveChoiceTitle(interaction, event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') {
+                        event.preventDefault();
+                        event.currentTarget.blur();
+                      }
+                    }}
+                  />
+                ) : (
+                  <button
+                    className={`choice ${available ? 'available' : 'unavailable'}`}
+                    onClick={() => choose(interaction)}
+                    title={
+                      available
+                        ? getConditionSummary(story, interaction, current?.id ?? null)
+                        : (unavailableReason ?? 'Unavailable in the current simulation state')
+                    }
+                  >
+                    <span>{interaction.title}</span>
+                    {isSimulationMode && !available ? (
+                      <small>{unavailableReason ?? 'Unavailable - force for test'}</small>
+                    ) : null}
+                  </button>
+                )}
+              </div>
+            ))}
+            {isSimulationMode ? (
+              <button className="choice add-option" onClick={() => void addOption()}>
+                Add option
+              </button>
+            ) : null}
+            {choices.length === 0 && current && !isSimulationMode ? (
+              <p className="ending">End of this branch.</p>
+            ) : null}
+          </div>
+        ) : null}
       </article>
-      <aside className="player-inventory" aria-label="Inventory">
-        <h2>Inventory</h2>
-        {ownedItemIds.length === 0 ? (
-          <p className="hint">No items.</p>
-        ) : (
-          <ul>
-            {ownedItemIds.map((itemId) => {
-              const ownerId = getItemOwnerIdForInstance(story, itemId);
-              const owner = (story.characters ?? []).find((character) => character.id === ownerId);
-              const itemDefinitionId = getItemDefinitionIdForInstance(story, itemId);
-              const definition = story.itemDefinitions?.find(({ id }) => id === itemDefinitionId);
-              return (
-                <li key={itemId}>
-                  {definition?.imageUrl ? (
-                    <img className="context-picto" src={definition.imageUrl} alt="" />
+      {playedCharacter || playableCharacters.length === 0 ? (
+        <aside
+          className="player-inventory"
+          aria-label={playedCharacter ? 'Played character' : 'Inventory'}
+        >
+          {playedCharacter ? (
+            <>
+              {playedCharacter.imageUrl ? (
+                <img
+                  className="player-character-image"
+                  src={playedCharacter.imageUrl}
+                  alt={playedCharacter.name}
+                />
+              ) : null}
+              <h2>{playedCharacter.name}</h2>
+              {playedCharacter.description ? <p>{playedCharacter.description}</p> : null}
+              <h3>Stats</h3>
+              {(playedCharacter.stats ?? []).length === 0 ? (
+                <p className="hint">No stats.</p>
+              ) : (
+                <ul>
+                  {(playedCharacter.stats ?? []).map((stat) => (
+                    <li key={stat.id}>
+                      {story.statDefinitions?.find(({ id }) => id === stat.statDefinitionId)
+                        ?.name ?? 'Unknown stat'}
+                      : {statValues[stat.id] ?? stat.initialValue}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </>
+          ) : null}
+          <h2>Inventory</h2>
+          {ownedItemIds.filter(
+            (itemId) =>
+              !playedCharacter || getItemOwnerIdForInstance(story, itemId) === playedCharacter.id,
+          ).length === 0 ? (
+            <p className="hint">No items.</p>
+          ) : (
+            <ul>
+              {ownedItemIds
+                .filter(
+                  (itemId) =>
+                    !playedCharacter ||
+                    getItemOwnerIdForInstance(story, itemId) === playedCharacter.id,
+                )
+                .map((itemId) => {
+                  const ownerId = getItemOwnerIdForInstance(story, itemId);
+                  const owner = (story.characters ?? []).find(
+                    (character) => character.id === ownerId,
+                  );
+                  const itemDefinitionId = getItemDefinitionIdForInstance(story, itemId);
+                  const definition = story.itemDefinitions?.find(
+                    ({ id }) => id === itemDefinitionId,
+                  );
+                  return (
+                    <li key={itemId}>
+                      {definition?.imageUrl ? (
+                        <img className="context-picto" src={definition.imageUrl} alt="" />
+                      ) : null}
+                      {definition?.name ?? 'Unknown item'}
+                      {(definition?.stats ?? []).length > 0 ? (
+                        <ul className="item-stat-list">
+                          {(definition?.stats ?? []).map((stat) => (
+                            <li key={stat.statDefinitionId}>
+                              {story.statDefinitions?.find(({ id }) => id === stat.statDefinitionId)
+                                ?.name ?? 'Unknown stat'}
+                              :{' '}
+                              {itemStatValues[itemId]?.[stat.statDefinitionId] ?? stat.initialValue}
+                            </li>
+                          ))}
+                        </ul>
+                      ) : null}
+                      {owner ? <small> — {owner.name}</small> : null}
+                    </li>
+                  );
+                })}
+            </ul>
+          )}
+        </aside>
+      ) : null}
+      {playedCharacter &&
+      current &&
+      (current.characterIds ?? []).some((id) => id !== playedCharacter.id) ? (
+        <aside className="encounter-panel" aria-label="Encountered characters">
+          <h2>Encounter</h2>
+          {(current.characterIds ?? [])
+            .filter((id) => id !== playedCharacter?.id)
+            .map((characterId) => {
+              const character = story.characters?.find(({ id }) => id === characterId);
+              return character ? (
+                <section className="encounter-card" key={character.id}>
+                  {character.imageUrl ? (
+                    <img src={character.imageUrl} alt={character.name} />
                   ) : null}
-                  {definition?.name ?? 'Unknown item'}
-                  {(definition?.stats ?? []).length > 0 ? (
-                    <ul className="item-stat-list">
-                      {(definition?.stats ?? []).map((stat) => (
-                        <li key={stat.statDefinitionId}>
-                          {story.statDefinitions?.find(({ id }) => id === stat.statDefinitionId)
-                            ?.name ?? 'Unknown stat'}
-                          : {itemStatValues[itemId]?.[stat.statDefinitionId] ?? stat.initialValue}
-                        </li>
-                      ))}
-                    </ul>
-                  ) : null}
-                  {owner ? <small> — {owner.name}</small> : null}
-                </li>
-              );
+                  <h3>{character.name}</h3>
+                  {character.description ? <p>{character.description}</p> : null}
+                </section>
+              ) : null;
             })}
-          </ul>
-        )}
-      </aside>
+        </aside>
+      ) : null}
       <details className="debug">
         <summary>{isSimulationMode ? 'Simulation history' : 'Reading history'}</summary>
         <ol>

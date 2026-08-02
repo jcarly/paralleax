@@ -57,6 +57,8 @@ details. They should stay covered by tests as the editor grows.
   same-story stat definition, has a finite numeric initial value, and may only
   be referenced inside that story.
 - A character cannot receive the same stat definition twice.
+- A story has at most one playable character in the current reader vertical.
+  Selecting a new playable character clears the previous selection.
 - Removing a character stat also removes interaction stat effects and trigger
   conditions that reference that assignment.
 - An item definition belongs to exactly one story.

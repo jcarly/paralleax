@@ -377,7 +377,7 @@ describe('StoriesRepository', () => {
     );
     expect(mockClientQuery).toHaveBeenCalledWith(
       expect.stringContaining('INSERT INTO characters'),
-      ['character-1', saved.id, 'Mira', 'An investigator.', '', 0],
+      ['character-1', saved.id, 'Mira', 'An investigator.', '', false, 0],
     );
     expect(mockClientQuery).toHaveBeenCalledWith(
       expect.stringContaining('INSERT INTO interaction_characters'),

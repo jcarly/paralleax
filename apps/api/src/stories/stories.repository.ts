@@ -44,7 +44,9 @@ type LocationRow = {
   image_url: string;
   sort_order: number;
 };
-type CharacterRow = LocationRow;
+type CharacterRow = LocationRow & {
+  is_playable: boolean;
+};
 type StatDefinitionRow = {
   id: string;
   story_id: string;
@@ -249,7 +251,7 @@ export class StoriesRepository {
       [storyIds],
     );
     const characters = await queryable.query<CharacterRow>(
-      `SELECT id, story_id, name, description, image_url, sort_order
+      `SELECT id, story_id, name, description, image_url, is_playable, sort_order
          FROM characters WHERE story_id = ANY($1::text[])
          ORDER BY story_id, sort_order`,
       [storyIds],
@@ -356,6 +358,7 @@ export class StoriesRepository {
         name: character.name,
         description: character.description,
         ...(character.image_url ? { imageUrl: character.image_url } : {}),
+        ...(character.is_playable ? { isPlayable: true } : {}),
         stats: (statsByCharacter.get(character.id) ?? []).map((stat) => ({
           id: stat.id,
           statDefinitionId: stat.stat_definition_id,

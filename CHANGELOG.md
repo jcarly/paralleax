@@ -2,6 +2,10 @@
 
 ## 2026-07-26
 
+- Added one playable character per story, initial character selection, a
+  left-side player sheet, right-side encounter cards, and simulation filtering
+  for location-blocked options.
+
 - Item obtain/lose effects now select a target character, and deterministic
   runtime instances preserve that owner through reading and progress replay.
 

@@ -243,6 +243,10 @@ The character-stat vertical keeps these regressions covered:
   inventory.
 - Character assignments: removing a stat or item updates the character and
   cleans effects or trigger conditions that reference the removed assignment.
+- Reader layout: select the unique playable character before starting, render
+  its stats and inventory on the left, and render encountered NPCs on the right.
+- Simulation: hide outgoing options whose matching route fails a location
+  condition while retaining other unavailable options for forced testing.
 
 ## Operations Regression Tests
 

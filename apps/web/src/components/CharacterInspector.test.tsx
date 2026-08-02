@@ -75,6 +75,8 @@ describe('CharacterInspector', () => {
     expect(onPatch).toHaveBeenLastCalledWith('character-1', {
       imageUrl: 'https://images.example/mira-new.png',
     });
+    await user.click(screen.getByRole('checkbox', { name: 'Playable character' }));
+    expect(onPatch).toHaveBeenLastCalledWith('character-1', { isPlayable: true });
 
     await user.selectOptions(screen.getByLabelText('Stat to add'), 'stat-definition-3');
     await user.click(screen.getByRole('button', { name: 'Add stat' }));

@@ -678,6 +678,21 @@ describe('Stories API', () => {
       description: 'An investigator.',
     });
 
+    const second = await request(httpServer)
+      .post(`/api/stories/${story.id}/characters`)
+      .send({ name: 'Luc', isPlayable: true })
+      .expect(201);
+    expect(second.body.character.isPlayable).toBe(true);
+    const selected = await request(httpServer)
+      .patch(`/api/stories/${story.id}/characters/${character.id}`)
+      .send({ isPlayable: true })
+      .expect(200);
+    expect(selected.body.character.isPlayable).toBe(true);
+    const reloaded = await request(httpServer).get(`/api/stories/${story.id}`).expect(200);
+    expect(
+      reloaded.body.characters.filter(({ isPlayable }: { isPlayable?: boolean }) => isPlayable),
+    ).toEqual([expect.objectContaining({ id: character.id })]);
+
     const assigned = await request(httpServer)
       .patch(`/api/stories/${story.id}/interactions/${interaction.id}`)
       .send({ characterIds: [character.id, character.id] })

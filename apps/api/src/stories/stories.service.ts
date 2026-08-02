@@ -395,11 +395,15 @@ export class StoriesService {
     const story = await this.update(
       storyId,
       (story) => {
+        if (input.isPlayable) {
+          for (const character of story.characters ?? []) character.isPlayable = false;
+        }
         (story.characters ??= []).push({
           id: characterId,
           name: input.name.trim(),
           description: input.description ?? '',
           imageUrl: input.imageUrl?.trim() ?? '',
+          isPlayable: input.isPlayable ?? false,
           stats: [],
         });
         return story;
@@ -521,6 +525,12 @@ export class StoriesService {
         if (input.name !== undefined) character.name = input.name.trim();
         if (input.description !== undefined) character.description = input.description;
         if (input.imageUrl !== undefined) character.imageUrl = input.imageUrl.trim();
+        if (input.isPlayable !== undefined) {
+          if (input.isPlayable) {
+            for (const candidate of story.characters ?? []) candidate.isPlayable = false;
+          }
+          character.isPlayable = input.isPlayable;
+        }
         return story;
       },
       userId,

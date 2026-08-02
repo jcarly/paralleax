@@ -392,14 +392,20 @@ export function useStoryEditorPersistence(storyId: string) {
 
   async function updateCharacter(
     characterId: string,
-    patch: Partial<Pick<CharacterMutationResult['character'], 'name' | 'description' | 'imageUrl'>>,
+    patch: Partial<
+      Pick<CharacterMutationResult['character'], 'name' | 'description' | 'imageUrl' | 'isPlayable'>
+    >,
   ) {
     setStory((current) =>
       current
         ? {
             ...current,
             characters: (current.characters ?? []).map((character) =>
-              character.id === characterId ? { ...character, ...patch } : character,
+              character.id === characterId
+                ? { ...character, ...patch }
+                : patch.isPlayable
+                  ? { ...character, isPlayable: false }
+                  : character,
             ),
           }
         : current,
@@ -635,7 +641,9 @@ function applyCharacterPatchResult(
   story: Story,
   result: CharacterMutationResult,
   characterId: string,
-  patch: Partial<Pick<CharacterMutationResult['character'], 'name' | 'description'>>,
+  patch: Partial<
+    Pick<CharacterMutationResult['character'], 'name' | 'description' | 'imageUrl' | 'isPlayable'>
+  >,
 ): Story {
   return applyMutationMetadata(
     {

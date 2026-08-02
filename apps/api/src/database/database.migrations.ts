@@ -601,4 +601,15 @@ export const databaseMigrations: DatabaseMigration[] = [
         ON interaction_item_effects(character_id);
     `,
   },
+  {
+    id: '202607270020_playable_character',
+    sql: `
+      ALTER TABLE characters
+      ADD COLUMN is_playable boolean NOT NULL DEFAULT false;
+
+      CREATE UNIQUE INDEX characters_one_playable_per_story_idx
+        ON characters(story_id)
+        WHERE is_playable;
+    `,
+  },
 ];

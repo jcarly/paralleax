@@ -249,6 +249,18 @@ between a branch that currently has no available interaction and an explicit
 story ending, likely represented by a final interaction or a play-session
 completion state.
 
+## Player and Encounter Presentation
+
+When a playable character is configured, a new reading session asks the reader
+to select it before showing root interactions. The current vertical allows at
+most one playable character. Its image, current stats, and owned inventory are
+shown in a left panel. Other characters assigned to the current interaction are
+shown as encounter cards in a right panel.
+
+Simulation keeps unavailable choices visible for inspection except when their
+matched route fails a location condition; location-blocked choices are hidden to
+avoid presenting impossible movement from the simulated scene.
+
 ## Out of Scope
 
 The MVP reader does not support:
