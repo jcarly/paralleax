@@ -124,6 +124,17 @@ The **Locations**, **Characters**, **Stats**, and **Items** lists can be collaps
 independently. Collapse or expand the whole story context menu from the control
 in its top-right corner.
 
+Use the search field at the top of **Story context** to filter all four lists
+and find matching text in interaction titles and bodies. Each matching graph
+card shows its number of text occurrences beside the title. The arrow buttons
+move cyclically through matching interactions and center the selected card.
+
+Selecting a location, character, stat, or item changes the same arrows to move
+through interactions that reference that entity, including trigger conditions
+and effects. Selecting a location or character also lowers the opacity of
+unrelated interaction cards. The graph controls allow zooming out to 5% for
+large stories.
+
 Locations, characters, reusable items, and reusable stats accept an optional
 image URL in their inspector. The editor previews the image and displays a
 thumbnail in the context lists. Stat images are intended to work as compact

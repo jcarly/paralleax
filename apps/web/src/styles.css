@@ -316,6 +316,29 @@ header span {
 .location-panel-content {
   padding-top: 2.5rem;
 }
+.context-search {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 30px 30px;
+  gap: 0.35rem;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+.context-search input {
+  min-width: 0;
+  margin: 0;
+}
+.context-search button {
+  width: 30px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid var(--color-border);
+}
+.context-search-count {
+  grid-column: 1 / -1;
+  color: var(--color-muted);
+  font-size: 0.75rem;
+  text-align: right;
+}
 .navigation-toggle {
   position: absolute;
   top: 0.55rem;
@@ -737,7 +760,11 @@ header span {
   transition:
     border-color 150ms ease,
     box-shadow 150ms ease,
-    transform 150ms ease;
+    transform 150ms ease,
+    opacity 150ms ease;
+}
+.interaction-node.dimmed {
+  opacity: 0.24;
 }
 .interaction-node:hover {
   border-color: #cfc7bc;
@@ -756,6 +783,21 @@ header span {
 .interaction-node strong {
   font-size: 0.9rem;
   line-height: 1.25;
+}
+.interaction-node strong .interaction-occurrence-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.35rem;
+  height: 1.35rem;
+  margin: 0 0 0 0.45rem;
+  padding: 0 0.32rem;
+  border-radius: 999px;
+  background: var(--color-primary-halo);
+  color: var(--color-primary);
+  font-size: 0.72rem;
+  line-height: 1;
+  vertical-align: middle;
 }
 .interaction-node span {
   font-size: 0.8rem;

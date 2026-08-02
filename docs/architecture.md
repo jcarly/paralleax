@@ -168,6 +168,8 @@ component:
 - `storySelection.ts`: selected interaction and trigger lookup helpers.
 - `storyConnection.ts`: canvas connection validation and created-trigger lookup.
 - `storyTriggerInput.ts`: deletion planning for one trigger input link.
+- `storyNavigation.ts`: interaction text occurrence counting and context-reference
+  navigation for locations, characters, stat definitions, and item definitions.
 - `components/InteractionInspector.tsx`: interaction content editing.
 - `components/RichTextEditor.tsx` and `RichTextContent.tsx`: rich-body authoring
   and defense-in-depth sanitized rendering, including conditional body blocks

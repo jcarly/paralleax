@@ -247,6 +247,11 @@ The character-stat vertical keeps these regressions covered:
   its stats and inventory on the left, and render encountered NPCs on the right.
 - Simulation: hide outgoing options whose matching route fails a location
   condition while retaining other unavailable options for forced testing.
+- Editor navigation: filter every context list with one search field, count
+  title/body matches per interaction, and cycle through matching graph cards.
+- Context references: cycle through interactions that reference a selected
+  location, character, stat, or item; dim unrelated cards for location and
+  character focus; retain graph zoom down to 5%.
 
 ## Operations Regression Tests
 

@@ -4,6 +4,8 @@ export interface InteractionNodeData extends Record<string, unknown> {
   title: string;
   body: string;
   selected: boolean;
+  occurrenceCount?: number;
+  dimmed?: boolean;
   rootTriggerId?: string;
   rootTriggerSelected?: boolean;
   showNewTriggerInput?: boolean;
@@ -41,7 +43,7 @@ export function InteractionNode({ id, data }: NodeProps) {
 
   return (
     <div
-      className={`interaction-node ${d.selected ? 'selected' : ''}`}
+      className={`interaction-node ${d.selected ? 'selected' : ''} ${d.dimmed ? 'dimmed' : ''}`}
       data-testid="interaction-node"
     >
       {d.rootTriggerId ? (
@@ -87,7 +89,17 @@ export function InteractionNode({ id, data }: NodeProps) {
         aria-label="Create new trigger input"
         title="Create new trigger"
       />
-      <strong>{d.title}</strong>
+      <strong>
+        {d.title}
+        {d.occurrenceCount ? (
+          <span
+            className="interaction-occurrence-count"
+            aria-label={`${d.occurrenceCount} occurrences`}
+          >
+            {d.occurrenceCount}
+          </span>
+        ) : null}
+      </strong>
       <span>
         {d.body
           .replace(/<[^>]*>/g, ' ')

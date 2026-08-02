@@ -32,6 +32,11 @@ import {
 } from '../storyGraph';
 import { findInteraction, findSelectedTrigger } from '../storySelection';
 import { getPendingConnection } from '../storyConnection';
+import {
+  getInteractionTextOccurrenceCounts,
+  getReferencedInteractionIds,
+  type StoryContextReference,
+} from '../storyNavigation';
 
 const nodeTypes = { interaction: InteractionNode, trigger: TriggerNode };
 const edgeTypes = { trigger: TriggerEdge };
@@ -81,6 +86,7 @@ export function StoryEditor() {
   const [selectedCharacterId, setSelectedCharacterId] = useState<string>();
   const [selectedStatDefinitionId, setSelectedStatDefinitionId] = useState<string>();
   const [selectedItemDefinitionId, setSelectedItemDefinitionId] = useState<string>();
+  const [searchQuery, setSearchQuery] = useState('');
   const [isLocationPanelOpen, setIsLocationPanelOpen] = useState(true);
   const [openContextSections, setOpenContextSections] = useState({
     locations: true,
@@ -106,6 +112,53 @@ export function StoryEditor() {
   );
   const selectedItemDefinition = story?.itemDefinitions?.find(
     ({ id }) => id === selectedItemDefinitionId,
+  );
+  const normalizedSearchQuery = searchQuery.trim().toLocaleLowerCase();
+  const occurrenceCounts = useMemo(
+    () => getInteractionTextOccurrenceCounts(story, searchQuery),
+    [searchQuery, story],
+  );
+  const selectedContextReference: StoryContextReference | undefined = useMemo(
+    () =>
+      selectedLocationId
+        ? { type: 'location', id: selectedLocationId }
+        : selectedCharacterId
+          ? { type: 'character', id: selectedCharacterId }
+          : selectedStatDefinitionId
+            ? { type: 'stat', id: selectedStatDefinitionId }
+            : selectedItemDefinitionId
+              ? { type: 'item', id: selectedItemDefinitionId }
+              : undefined,
+    [selectedCharacterId, selectedItemDefinitionId, selectedLocationId, selectedStatDefinitionId],
+  );
+  const referencedInteractionIds = useMemo(
+    () => getReferencedInteractionIds(story, selectedContextReference),
+    [selectedContextReference, story],
+  );
+  const navigationInteractionIds = useMemo(
+    () => (normalizedSearchQuery ? [...occurrenceCounts.keys()] : referencedInteractionIds),
+    [normalizedSearchQuery, occurrenceCounts, referencedInteractionIds],
+  );
+  const currentNavigationIndex = selectedId ? navigationInteractionIds.indexOf(selectedId) : -1;
+  const emphasizedInteractionIds = useMemo(
+    () =>
+      selectedContextReference?.type === 'location' ||
+      selectedContextReference?.type === 'character'
+        ? new Set(referencedInteractionIds)
+        : undefined,
+    [referencedInteractionIds, selectedContextReference?.type],
+  );
+  const filteredLocations = (story?.locations ?? []).filter((location) =>
+    location.name.toLocaleLowerCase().includes(normalizedSearchQuery),
+  );
+  const filteredCharacters = (story?.characters ?? []).filter((character) =>
+    character.name.toLocaleLowerCase().includes(normalizedSearchQuery),
+  );
+  const filteredStatDefinitions = (story?.statDefinitions ?? []).filter((definition) =>
+    definition.name.toLocaleLowerCase().includes(normalizedSearchQuery),
+  );
+  const filteredItemDefinitions = (story?.itemDefinitions ?? []).filter((definition) =>
+    definition.name.toLocaleLowerCase().includes(normalizedSearchQuery),
   );
   const hasInspectorSelection = Boolean(
     selected ||
@@ -135,12 +188,16 @@ export function StoryEditor() {
           closeInspector();
           setSelectedTrigger({ interactionId, triggerId });
         },
+        occurrenceCounts,
+        emphasizedInteractionIds,
       }),
     [
       closeInspector,
       createChildFromInteraction,
       createParentForInteraction,
       isConnecting,
+      occurrenceCounts,
+      emphasizedInteractionIds,
       selectedId,
       selectedTrigger,
       story,
@@ -187,6 +244,32 @@ export function StoryEditor() {
     if (node.type !== 'interaction') return;
     closeInspector();
     setSelectedId(node.id);
+  };
+
+  const navigateInteractions = (direction: -1 | 1) => {
+    if (navigationInteractionIds.length === 0) return;
+    const nextIndex =
+      currentNavigationIndex < 0
+        ? direction > 0
+          ? 0
+          : navigationInteractionIds.length - 1
+        : (currentNavigationIndex + direction + navigationInteractionIds.length) %
+          navigationInteractionIds.length;
+    const interactionId = navigationInteractionIds[nextIndex];
+    if (normalizedSearchQuery) closeInspector();
+    else {
+      setSelectedTrigger(undefined);
+      setSelectedId(undefined);
+    }
+    setSelectedId(interactionId);
+    window.requestAnimationFrame(() => {
+      void flowInstance.current?.fitView({
+        nodes: [{ id: interactionId }],
+        duration: 250,
+        padding: 0.7,
+        maxZoom: 1,
+      });
+    });
   };
 
   const startCanvasConnection: OnConnectStart = (_, params) => {
@@ -441,6 +524,40 @@ export function StoryEditor() {
           </button>
           {isLocationPanelOpen ? (
             <div className="location-panel-content">
+              <div className="context-search">
+                <input
+                  type="search"
+                  aria-label="Search story context and interactions"
+                  placeholder="Search…"
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                />
+                <button
+                  className="ghost"
+                  type="button"
+                  aria-label="Previous interaction occurrence"
+                  title="Previous interaction occurrence"
+                  disabled={navigationInteractionIds.length === 0}
+                  onClick={() => navigateInteractions(-1)}
+                >
+                  ↑
+                </button>
+                <button
+                  className="ghost"
+                  type="button"
+                  aria-label="Next interaction occurrence"
+                  title="Next interaction occurrence"
+                  disabled={navigationInteractionIds.length === 0}
+                  onClick={() => navigateInteractions(1)}
+                >
+                  ↓
+                </button>
+                <span className="context-search-count" aria-live="polite">
+                  {navigationInteractionIds.length === 0
+                    ? '0 / 0'
+                    : `${currentNavigationIndex + 1} / ${navigationInteractionIds.length}`}
+                </span>
+              </div>
               <div className="location-panel-header">
                 <button
                   className="ghost context-heading"
@@ -458,13 +575,14 @@ export function StoryEditor() {
                 <p className="hint">No locations yet.</p>
               ) : (
                 <ul>
-                  {(story.locations ?? []).map((location) => (
+                  {filteredLocations.map((location) => (
                     <li key={location.id}>
                       <button
                         type="button"
                         className={location.id === selectedLocationId ? 'selected' : 'ghost'}
                         onClick={() => {
                           closeInspector();
+                          setSearchQuery('');
                           setSelectedLocationId(location.id);
                         }}
                       >
@@ -498,13 +616,14 @@ export function StoryEditor() {
                 <p className="hint">No characters yet.</p>
               ) : (
                 <ul>
-                  {(story.characters ?? []).map((character) => (
+                  {filteredCharacters.map((character) => (
                     <li key={character.id}>
                       <button
                         type="button"
                         className={character.id === selectedCharacterId ? 'selected' : 'ghost'}
                         onClick={() => {
                           closeInspector();
+                          setSearchQuery('');
                           setSelectedCharacterId(character.id);
                         }}
                       >
@@ -538,7 +657,7 @@ export function StoryEditor() {
                 <p className="hint">No stats yet.</p>
               ) : (
                 <ul>
-                  {(story.statDefinitions ?? []).map((definition) => (
+                  {filteredStatDefinitions.map((definition) => (
                     <li key={definition.id}>
                       <button
                         type="button"
@@ -547,6 +666,7 @@ export function StoryEditor() {
                         }
                         onClick={() => {
                           closeInspector();
+                          setSearchQuery('');
                           setSelectedStatDefinitionId(definition.id);
                         }}
                       >
@@ -580,7 +700,7 @@ export function StoryEditor() {
                 <p className="hint">No items yet.</p>
               ) : (
                 <ul>
-                  {(story.itemDefinitions ?? []).map((definition) => (
+                  {filteredItemDefinitions.map((definition) => (
                     <li key={definition.id}>
                       <button
                         type="button"
@@ -589,6 +709,7 @@ export function StoryEditor() {
                         }
                         onClick={() => {
                           closeInspector();
+                          setSearchQuery('');
                           setSelectedItemDefinitionId(definition.id);
                         }}
                       >
@@ -627,6 +748,7 @@ export function StoryEditor() {
             }
             fitView
             fitViewOptions={fitViewOptions}
+            minZoom={0.05}
           >
             <Background />
             <Controls />

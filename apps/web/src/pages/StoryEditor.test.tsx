@@ -56,17 +56,19 @@ vi.mock('@xyflow/react', async () => {
       onNodeClick,
       onPaneClick,
       onNodeDragStop,
+      minZoom,
       children,
     }: any) => {
       const onInitRef = React.useRef(onInit);
       React.useEffect(() => {
         onInitRef.current?.({
           screenToFlowPosition: ({ x, y }: { x: number; y: number }) => ({ x: x - 50, y: y - 40 }),
+          fitView: vi.fn(),
         });
       }, []);
 
       return (
-        <div data-testid="react-flow">
+        <div data-testid="react-flow" data-min-zoom={minZoom}>
           <button data-testid="flow-pane" onClick={(event) => onPaneClick?.(event)} />
           {nodes.map((node: any) => {
             const NodeComponent = nodeTypes[node.type];
@@ -670,6 +672,63 @@ describe('StoryEditor', () => {
     expect(screen.getByRole('button', { name: 'Expand story context' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Expand story context' }));
     expect(screen.getByRole('button', { name: 'Collapse story context' })).toBeInTheDocument();
+  });
+
+  it('filters context lists, counts text matches, navigates occurrences, and allows deeper zoom', async () => {
+    const user = userEvent.setup();
+    const story = storyWithTwoInteractions();
+    story.locations = [
+      { id: 'original-hall', name: 'Original Hall', description: '' },
+      { id: 'harbor', name: 'Harbor', description: '' },
+    ];
+    story.characters = [
+      { id: 'original-guide', name: 'Original Guide', description: '' },
+      { id: 'mira', name: 'Mira', description: '' },
+    ];
+
+    await renderEditor(story);
+    expect(screen.getByTestId('react-flow')).toHaveAttribute('data-min-zoom', '0.05');
+
+    await user.type(
+      screen.getByRole('searchbox', { name: 'Search story context and interactions' }),
+      'Original',
+    );
+
+    expect(screen.getByRole('button', { name: 'Original Hall' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Harbor' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Original Guide' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Mira' })).not.toBeInTheDocument();
+    expect(screen.getByLabelText('2 occurrences')).toBeInTheDocument();
+    expect(screen.getByText('0 / 1')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Next interaction occurrence' }));
+    expect(screen.getByText('1 / 1')).toBeInTheDocument();
+    expect(screen.getByRole('complementary', { name: 'Inspector' })).toBeInTheDocument();
+  });
+
+  it('dims unrelated interactions and navigates references for a selected context entity', async () => {
+    const user = userEvent.setup();
+    const story = storyWithTwoInteractions();
+    story.locations = [
+      { id: 'harbor', name: 'Harbor', description: '' },
+      { id: 'library', name: 'Library', description: '' },
+    ];
+    story.interactions[0].locationId = 'harbor';
+
+    await renderEditor(story);
+    await user.click(screen.getByRole('button', { name: 'Harbor' }));
+
+    expect(
+      within(screen.getByTestId('flow-node-interaction-1')).getByTestId('interaction-node'),
+    ).not.toHaveClass('dimmed');
+    expect(
+      within(screen.getByTestId('flow-node-interaction-2')).getByTestId('interaction-node'),
+    ).toHaveClass('dimmed');
+    expect(screen.getByText('0 / 1')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Next interaction occurrence' }));
+    expect(screen.getByText('1 / 1')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Harbor' })).toHaveClass('selected');
   });
 
   it('creates root and child interactions', async () => {

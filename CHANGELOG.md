@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-08-02
+
+- Added context-menu search across locations, characters, stats, and items,
+  per-interaction title/body occurrence badges, and cyclic graph navigation.
+- Added reference navigation for selected context entities, location/character
+  focus dimming, and a lower 5% graph zoom limit for large stories.
+
 ## 2026-07-26
 
 - Added one playable character per story, initial character selection, a

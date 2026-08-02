@@ -32,6 +32,8 @@ export interface InteractionNodeActions {
   onCreateChild?: (interactionId: string) => void;
   onCreateParent?: (interactionId: string) => void;
   onSelectRootTrigger?: (interactionId: string, triggerId: string) => void;
+  occurrenceCounts?: ReadonlyMap<string, number>;
+  emphasizedInteractionIds?: ReadonlySet<string>;
 }
 
 export interface TriggerNodeActions {
@@ -63,6 +65,12 @@ export function buildInteractionNodes(
           title: item.title,
           body: item.body,
           selected: item.id === selectedId,
+          ...(actions.occurrenceCounts?.get(item.id)
+            ? { occurrenceCount: actions.occurrenceCounts.get(item.id) }
+            : {}),
+          ...(actions.emphasizedInteractionIds
+            ? { dimmed: !actions.emphasizedInteractionIds.has(item.id) }
+            : {}),
           showNewTriggerInput: actions.showNewTriggerInput ?? false,
           ...(rootTrigger
             ? {
