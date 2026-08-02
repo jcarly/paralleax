@@ -79,6 +79,7 @@ export function StoryEditor() {
     deleteCharacterStat,
     createCharacterItem,
     deleteCharacterItem,
+    moveItemInstance,
   } = useStoryEditorPersistence(storyId);
   const [selectedId, setSelectedId] = useState<string>();
   const [selectedTrigger, setSelectedTrigger] = useState<SelectedTrigger>();
@@ -793,6 +794,9 @@ export function StoryEditor() {
                 location={selectedLocation}
                 onLocalChange={updateLocalLocation}
                 onPatch={updateLocation}
+                itemDefinitions={story.itemDefinitions ?? []}
+                statDefinitions={story.statDefinitions ?? []}
+                onMoveItem={moveItemInstance}
               />
             ) : selectedCharacter ? (
               <CharacterInspector
@@ -806,6 +810,7 @@ export function StoryEditor() {
                 onDeleteStat={deleteCharacterStat}
                 onCreateItem={createCharacterItem}
                 onDeleteItem={deleteCharacterItem}
+                onMoveItem={moveItemInstance}
               />
             ) : selectedStatDefinition ? (
               <StatDefinitionInspector

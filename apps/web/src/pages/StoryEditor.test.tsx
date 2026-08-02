@@ -653,8 +653,10 @@ describe('StoryEditor', () => {
       itemDefinitionId: 'item-definition-1',
     });
     expect(
-      within(screen.getByRole('complementary', { name: 'Inspector' })).getAllByText('Archive key'),
-    ).toHaveLength(3);
+      within(screen.getByRole('complementary', { name: 'Inspector' })).getAllByText('Archive key', {
+        selector: 'strong',
+      }),
+    ).toHaveLength(2);
   });
 
   it('collapses each story context section and the whole navigation', async () => {

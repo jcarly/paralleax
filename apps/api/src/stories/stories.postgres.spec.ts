@@ -18,13 +18,18 @@ describePostgres('StoriesRepository PostgreSQL integration', () => {
 
   beforeAll(async () => {
     await waitForPostgres(pool);
+    // Always start from a clean dedicated test schema. A previous interrupted
+    // migration scenario may otherwise leave historical tables without matching
+    // schema_migrations rows.
+    await pool.query('DROP SCHEMA public CASCADE');
+    await pool.query('CREATE SCHEMA public');
     await migrator.run();
     await pool.query(
       `INSERT INTO users (id, email, password_hash, created_at)
        VALUES ($1, $2, 'test-only', now())`,
       [ownerId, `${ownerId}@example.test`],
     );
-  });
+  }, 30_000);
 
   afterEach(async () => {
     await Promise.all(storyIds.splice(0).map((id) => repository.delete(id, ownerId)));

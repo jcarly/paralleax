@@ -61,6 +61,10 @@ changes`, and whether every non-read permission implies `read`.
 - Define item transfer rules, stack identity, quantities, and equipment-slot
   conflict behavior. The current reader starts with an empty inventory and
   tracks exact authored item instances.
+- ADR-013 settles the recursive instance and relationship direction. Remaining
+  choices are slot schema/versioning, capacity units, quantity stacks versus
+  exact-instance identity, deletion policies for non-empty subtrees, and the
+  maximum tree depth shown by the authoring UI.
 - Decide whether extension properties are schema-backed per item type or limited
   to validated plugin-owned namespaces; avoid unrestricted business logic in
   arbitrary JSON.

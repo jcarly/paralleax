@@ -360,6 +360,19 @@ between a character, an item instance, and one or more allowed slots. Equipment
 definitions may expose modifiers, coverage, or layers, but advanced clothing
 simulation remains a later vertical.
 
+The accepted target model is a recursive story-local item graph. Exact
+instances can be rooted at a character or location, or linked beneath another
+instance through a typed structural relationship such as `contained`,
+`equipped`, `attached`, `part_of`, `installed`, `worn`, or `held`. Body parts,
+containers, clothing, implants, and composite objects share this engine rather
+than introducing parallel ownership systems. See
+[ADR-013](decisions/ADR-013-recursive-item-instance-graph.md).
+
+The current implementation still projects authored instances through
+`Character.items`. Moving to the recursive graph must follow the compatibility
+migration in ADR-013 and preserve existing instance ids, effects, stats, and
+reader progress.
+
 Items do not replace attributes. Equipment and item behavior contribute
 modifiers to an effective value calculated from base, permanent, equipment,
 temporary, and contextual modifiers. Derived values should not be persisted

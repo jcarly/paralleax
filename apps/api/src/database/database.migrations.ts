@@ -612,4 +612,135 @@ export const databaseMigrations: DatabaseMigration[] = [
         WHERE is_playable;
     `,
   },
+  {
+    id: '202608020021_item_instances',
+    sql: `
+      CREATE TABLE item_instances (
+        id text PRIMARY KEY,
+        story_id text NOT NULL,
+        item_definition_id text NOT NULL,
+        owner_character_id text,
+        owner_location_id text,
+        quantity integer NOT NULL DEFAULT 1 CHECK (quantity > 0),
+        sort_order integer NOT NULL,
+        CONSTRAINT item_instances_story_id_id_unique UNIQUE (story_id, id),
+        CONSTRAINT item_instances_one_root_owner
+          CHECK (num_nonnulls(owner_character_id, owner_location_id) = 1),
+        CONSTRAINT item_instances_character_fkey
+          FOREIGN KEY (story_id, owner_character_id)
+          REFERENCES characters(story_id, id) ON DELETE CASCADE,
+        CONSTRAINT item_instances_location_fkey
+          FOREIGN KEY (story_id, owner_location_id)
+          REFERENCES locations(story_id, id) ON DELETE CASCADE,
+        CONSTRAINT item_instances_definition_fkey
+          FOREIGN KEY (story_id, item_definition_id)
+          REFERENCES item_definitions(story_id, id) ON DELETE CASCADE
+      );
+
+      INSERT INTO item_instances
+        (id, story_id, item_definition_id, owner_character_id, sort_order)
+      SELECT id, story_id, item_definition_id, character_id, sort_order
+      FROM character_items;
+
+      CREATE INDEX item_instances_story_id_idx ON item_instances(story_id);
+      CREATE INDEX item_instances_character_id_idx ON item_instances(owner_character_id);
+      CREATE INDEX item_instances_location_id_idx ON item_instances(owner_location_id);
+      CREATE INDEX item_instances_definition_id_idx ON item_instances(item_definition_id);
+
+      ALTER TABLE interaction_item_effects
+      DROP CONSTRAINT interaction_item_effects_item_fkey,
+      ADD CONSTRAINT interaction_item_effects_item_fkey
+        FOREIGN KEY (story_id, item_id)
+        REFERENCES item_instances(story_id, id) ON DELETE CASCADE;
+
+      ALTER TABLE character_items RENAME TO character_items_legacy;
+    `,
+  },
+  {
+    id: '202608020022_item_instance_relationships',
+    sql: `
+      ALTER TABLE item_instances
+      DROP CONSTRAINT item_instances_one_root_owner,
+      ADD CONSTRAINT item_instances_at_most_one_root_owner
+        CHECK (num_nonnulls(owner_character_id, owner_location_id) <= 1);
+
+      CREATE TABLE item_instance_relationships (
+        id bigserial PRIMARY KEY,
+        story_id text NOT NULL,
+        parent_item_id text NOT NULL,
+        child_item_id text NOT NULL,
+        relationship_type text NOT NULL CHECK (
+          relationship_type IN
+            ('contained', 'equipped', 'attached', 'part_of', 'installed', 'worn', 'held')
+        ),
+        slot_key text,
+        sort_order integer NOT NULL,
+        CONSTRAINT item_instance_relationships_distinct_items
+          CHECK (parent_item_id <> child_item_id),
+        CONSTRAINT item_instance_relationships_one_parent UNIQUE (story_id, child_item_id),
+        CONSTRAINT item_instance_relationships_parent_fkey
+          FOREIGN KEY (story_id, parent_item_id)
+          REFERENCES item_instances(story_id, id) ON DELETE CASCADE,
+        CONSTRAINT item_instance_relationships_child_fkey
+          FOREIGN KEY (story_id, child_item_id)
+          REFERENCES item_instances(story_id, id) ON DELETE CASCADE
+      );
+
+      CREATE INDEX item_instance_relationships_parent_id_idx
+        ON item_instance_relationships(story_id, parent_item_id, sort_order);
+
+      CREATE FUNCTION validate_item_instance_relationship() RETURNS trigger AS $$
+      DECLARE
+        child_has_root boolean;
+        creates_cycle boolean;
+      BEGIN
+        SELECT num_nonnulls(owner_character_id, owner_location_id) > 0
+        INTO child_has_root
+        FROM item_instances
+        WHERE story_id = NEW.story_id AND id = NEW.child_item_id;
+        IF child_has_root THEN
+          RAISE EXCEPTION 'A related item cannot also have a root owner';
+        END IF;
+
+        WITH RECURSIVE ancestors(id) AS (
+          SELECT NEW.parent_item_id
+          UNION
+          SELECT relationship.parent_item_id
+          FROM item_instance_relationships AS relationship
+          JOIN ancestors ON ancestors.id = relationship.child_item_id
+          WHERE relationship.story_id = NEW.story_id
+            AND relationship.child_item_id <> NEW.child_item_id
+        )
+        SELECT EXISTS (SELECT 1 FROM ancestors WHERE id = NEW.child_item_id)
+        INTO creates_cycle;
+        IF creates_cycle THEN
+          RAISE EXCEPTION 'Item relationships cannot contain a cycle';
+        END IF;
+        RETURN NEW;
+      END;
+      $$ LANGUAGE plpgsql;
+
+      CREATE TRIGGER item_instance_relationships_validate
+      BEFORE INSERT OR UPDATE ON item_instance_relationships
+      FOR EACH ROW EXECUTE FUNCTION validate_item_instance_relationship();
+
+      CREATE FUNCTION validate_item_instance_root_owner() RETURNS trigger AS $$
+      BEGIN
+        IF num_nonnulls(NEW.owner_character_id, NEW.owner_location_id) > 0
+          AND EXISTS (
+            SELECT 1 FROM item_instance_relationships
+            WHERE story_id = NEW.story_id AND child_item_id = NEW.id
+          )
+        THEN
+          RAISE EXCEPTION 'A rooted item cannot also have a structural parent';
+        END IF;
+        RETURN NEW;
+      END;
+      $$ LANGUAGE plpgsql;
+
+      CREATE TRIGGER item_instances_validate_root_owner
+      BEFORE INSERT OR UPDATE OF owner_character_id, owner_location_id ON item_instances
+      FOR EACH ROW EXECUTE FUNCTION validate_item_instance_root_owner();
+    `,
+  },
 ];

@@ -81,6 +81,16 @@ details. They should stay covered by tests as the editor grows.
 - An item stat effect references one exact item instance and one stat assigned
   by that instance's definition. An interaction can affect that pair at most
   once, using finite `add` or `set` semantics.
+- Accepted recursive-item target invariants are documented in ADR-013. An item
+  will have one structural placement, relationships will stay within one story,
+  cycles will be rejected, and moving a container will preserve its descendant
+  subtree. These are target constraints, not claims that the current flat
+  `Character.items` implementation already supports nesting.
+- Implemented relationship foundation: a projected item has at most one parent,
+  parent and child are distinct same-story instances, and relationship types are
+  limited to the ADR-013 set. The service rejects ancestor cycles. Moving a root
+  between characters moves its complete projected subtree without changing ids;
+  deleting a non-empty container is rejected.
 - Removing a stat assignment from an item definition removes interaction
   item-stat effects that would otherwise reference that unassigned stat.
 - An interaction has at most one effect per stat. An effect either adds a finite

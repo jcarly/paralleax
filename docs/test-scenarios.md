@@ -68,6 +68,8 @@ The character-stat vertical keeps these regressions covered:
 - PostgreSQL migration: a legacy JSON story keeps its title, interactions,
   positions, triggers, inputs, conditions, timestamps, and disabled owner after
   the complete relational upgrade.
+- PostgreSQL integration suites use a dedicated database, and migration tests
+  restore its current schema so repository tests are independent of file order.
 - Migration policy: no migration may delete, truncate, or drop the stories table
   wholesale.
 - API: repositories never execute migrations as part of an authentication or
@@ -252,6 +254,13 @@ The character-stat vertical keeps these regressions covered:
 - Context references: cycle through interactions that reference a selected
   location, character, stat, or item; dim unrelated cards for location and
   character focus; retain graph zoom down to 5%.
+- Item-instance migration: copy every legacy character item to `item_instances`
+  without changing ids, owners, definitions, order, or quantity defaults;
+  preserve exact item effects and permit a same-story location root.
+- Item relationships: nest an exact instance under another with a typed relation
+  and optional slot, reject self/ancestor cycles, reject deletion of a non-empty
+  container, and transfer a complete subtree between characters without
+  deleting ids or exact-effect references.
 
 ## Operations Regression Tests
 

@@ -6,6 +6,7 @@ import {
   CreateCharacterStatDto,
   CreateItemDefinitionDto,
   CreateLocationDto,
+  MoveItemInstanceDto,
   CreateStatDefinitionDto,
   CreateStoryDto,
   CreateTriggerDto,
@@ -213,6 +214,15 @@ export class StoriesController {
     @CurrentUser() user: RequestUser,
   ) {
     return this.stories.deleteCharacterItem(storyId, characterId, itemId, user.id);
+  }
+
+  @Patch(':storyId/items/:itemId/placement') moveItemInstance(
+    @Param('storyId') storyId: string,
+    @Param('itemId') itemId: string,
+    @Body() input: MoveItemInstanceDto,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.stories.moveItemInstance(storyId, itemId, input, user.id);
   }
 
   @Post(':storyId/interactions/:interactionId/triggers') addTrigger(

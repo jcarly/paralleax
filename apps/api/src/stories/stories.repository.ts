@@ -75,8 +75,18 @@ type CharacterStatRow = {
 type CharacterItemRow = {
   id: string;
   story_id: string;
-  character_id: string;
+  character_id: string | null;
+  location_id: string | null;
   item_definition_id: string;
+  sort_order: number;
+};
+type ItemRelationshipRow = {
+  story_id: string;
+  parent_item_id: string;
+  child_item_id: string;
+  relationship_type:
+    'contained' | 'equipped' | 'attached' | 'part_of' | 'installed' | 'worn' | 'held';
+  slot_key: string | null;
   sort_order: number;
 };
 type StatEffectRow = {
@@ -281,9 +291,17 @@ export class StoriesRepository {
       [storyIds],
     );
     const characterItems = await queryable.query<CharacterItemRow>(
-      `SELECT id, story_id, character_id, item_definition_id, sort_order
-         FROM character_items WHERE story_id = ANY($1::text[])
-         ORDER BY story_id, character_id, sort_order`,
+      `SELECT id, story_id, owner_character_id AS character_id,
+              owner_location_id AS location_id, item_definition_id, sort_order
+         FROM item_instances
+         WHERE story_id = ANY($1::text[])
+         ORDER BY story_id, owner_character_id, owner_location_id, sort_order`,
+      [storyIds],
+    );
+    const itemRelationships = await queryable.query<ItemRelationshipRow>(
+      `SELECT story_id, parent_item_id, child_item_id, relationship_type, slot_key, sort_order
+         FROM item_instance_relationships WHERE story_id = ANY($1::text[])
+         ORDER BY story_id, parent_item_id, sort_order`,
       [storyIds],
     );
     const statEffects = await queryable.query<StatEffectRow>(
@@ -333,7 +351,16 @@ export class StoriesRepository {
       ({ interaction_id }) => interaction_id,
     );
     const statsByCharacter = groupBy(characterStats.rows, ({ character_id }) => character_id);
-    const itemsByCharacter = groupBy(characterItems.rows, ({ character_id }) => character_id);
+    const itemRowsById = new Map(characterItems.rows.map((item) => [item.id, item]));
+    const relationshipByChild = new Map(
+      itemRelationships.rows.map((relationship) => [relationship.child_item_id, relationship]),
+    );
+    const itemsByCharacter = groupBy(characterItems.rows, (item) =>
+      resolveItemCharacterOwner(item, itemRowsById, relationshipByChild),
+    );
+    const itemsByLocation = groupBy(characterItems.rows, (item) =>
+      resolveItemLocationOwner(item, itemRowsById, relationshipByChild),
+    );
     const effectsByInteraction = groupBy(statEffects.rows, ({ interaction_id }) => interaction_id);
     const itemEffectsByInteraction = groupBy(
       itemEffects.rows,
@@ -352,6 +379,13 @@ export class StoriesRepository {
         name: location.name,
         description: location.description,
         ...(location.image_url ? { imageUrl: location.image_url } : {}),
+        ...(itemsByLocation.get(location.id)?.length
+          ? {
+              items: itemsByLocation
+                .get(location.id)!
+                .map((item) => projectItemInstance(item, relationshipByChild)),
+            }
+          : {}),
       })),
       characters: (charactersByStory.get(row.id) ?? []).map((character) => ({
         id: character.id,
@@ -364,10 +398,9 @@ export class StoriesRepository {
           statDefinitionId: stat.stat_definition_id,
           initialValue: stat.initial_value,
         })),
-        items: (itemsByCharacter.get(character.id) ?? []).map((item) => ({
-          id: item.id,
-          itemDefinitionId: item.item_definition_id,
-        })),
+        items: (itemsByCharacter.get(character.id) ?? []).map((item) =>
+          projectItemInstance(item, relationshipByChild),
+        ),
       })),
       statDefinitions: (statDefinitionsByStory.get(row.id) ?? []).map((definition) => ({
         id: definition.id,
@@ -435,6 +468,56 @@ function groupBy<T>(items: T[], key: (item: T) => string) {
   const grouped = new Map<string, T[]>();
   for (const item of items) grouped.set(key(item), [...(grouped.get(key(item)) ?? []), item]);
   return grouped;
+}
+
+function resolveItemCharacterOwner(
+  item: CharacterItemRow,
+  itemsById: ReadonlyMap<string, CharacterItemRow>,
+  relationshipsByChild: ReadonlyMap<string, ItemRelationshipRow>,
+) {
+  const visited = new Set<string>();
+  let current: CharacterItemRow | undefined = item;
+  while (current && !visited.has(current.id)) {
+    visited.add(current.id);
+    if (current.character_id) return current.character_id;
+    const parentId: string | undefined = relationshipsByChild.get(current.id)?.parent_item_id;
+    current = parentId ? itemsById.get(parentId) : undefined;
+  }
+  return '';
+}
+
+function resolveItemLocationOwner(
+  item: CharacterItemRow,
+  itemsById: ReadonlyMap<string, CharacterItemRow>,
+  relationshipsByChild: ReadonlyMap<string, ItemRelationshipRow>,
+) {
+  const visited = new Set<string>();
+  let current: CharacterItemRow | undefined = item;
+  while (current && !visited.has(current.id)) {
+    visited.add(current.id);
+    if (current.location_id) return current.location_id;
+    const parentId: string | undefined = relationshipsByChild.get(current.id)?.parent_item_id;
+    current = parentId ? itemsById.get(parentId) : undefined;
+  }
+  return '';
+}
+
+function projectItemInstance(
+  item: CharacterItemRow,
+  relationshipsByChild: ReadonlyMap<string, ItemRelationshipRow>,
+) {
+  const relationship = relationshipsByChild.get(item.id);
+  return {
+    id: item.id,
+    itemDefinitionId: item.item_definition_id,
+    ...(relationship
+      ? {
+          parentItemId: relationship.parent_item_id,
+          relationshipType: relationship.relationship_type,
+          ...(relationship.slot_key ? { slotKey: relationship.slot_key } : {}),
+        }
+      : {}),
+  };
 }
 
 function iso(value: Date | string) {

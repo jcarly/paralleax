@@ -155,6 +155,12 @@ not optional cleanup after launch:
   equipment, tags, and quantity-aware effects.
 - Later item increments: multiple containers, consumables, durability,
   modifiers, shops, economy, and advanced clothing layers or coverage.
+- Recursive item graph (ADR-013): implemented persistence foundation migrates
+  flat character items to story-local instances without changing ids and allows
+  character/location roots. Typed parent relationships and cycle-safe subtree
+  transfers between characters are implemented. Next add location moves,
+  authoring UI, reader persistence, simple relationship conditions/effects, and
+  finally definition kinds and slots.
 
 ## V0.5 - Timing and Probabilities
 

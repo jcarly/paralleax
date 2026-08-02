@@ -114,8 +114,16 @@ npm run test -w @paralleax/shared
 Run the API integration tests against the Docker PostgreSQL service:
 
 ```powershell
-docker compose exec -T -e POSTGRES_TEST_DATABASE_URL=postgres://paralleax:paralleax@db:5432/paralleax api npm run test:postgres -w @paralleax/api
+docker compose exec -T db createdb -U paralleax paralleax_test
+$env:POSTGRES_TEST_DATABASE_URL='postgres://paralleax:paralleax@localhost:5432/paralleax_test'
+npm run test:postgres -w @paralleax/api
 ```
+
+Create `paralleax_test` only once; `createdb` reports that it already exists on
+later runs. Never point `POSTGRES_TEST_DATABASE_URL` at the development database:
+the migration suite deliberately rebuilds the tested `public` schema. The suite
+restores the latest schema before exiting so all PostgreSQL files remain
+independent of Jest's execution order.
 
 These commands cover:
 

@@ -29,8 +29,14 @@ export async function replaceStoryGraph(client: Queryable, story: Story) {
     for (const [statIndex, stat] of (character.stats ?? []).entries()) {
       await insertCharacterStat(client, story.id, character.id, stat, statIndex);
     }
-    for (const [itemIndex, item] of (character.items ?? []).entries()) {
-      await insertCharacterItem(client, story.id, character.id, item, itemIndex);
+  }
+  const authoredItems = itemEntries(story);
+  for (const entry of authoredItems) {
+    await insertItemInstance(client, story.id, entry);
+  }
+  for (const { item, sortOrder } of authoredItems) {
+    if (item.parentItemId && item.relationshipType) {
+      await insertItemRelationship(client, story.id, item, sortOrder);
     }
   }
   for (const [interactionIndex, interaction] of story.interactions.entries()) {
@@ -396,18 +402,38 @@ async function insertItemDefinition(
   );
 }
 
-async function insertCharacterItem(
+async function insertItemInstance(
   client: Queryable,
   storyId: string,
-  characterId: string,
+  entry: ReturnType<typeof itemEntries>[number],
+) {
+  const { ownerCharacterId, ownerLocationId, item, sortOrder } = entry;
+  await client.query(
+    `INSERT INTO item_instances
+     (id, story_id, owner_character_id, owner_location_id, item_definition_id, sort_order)
+     VALUES ($1, $2, $3, $4, $5, $6)`,
+    [
+      item.id,
+      storyId,
+      item.parentItemId ? null : ownerCharacterId,
+      item.parentItemId ? null : ownerLocationId,
+      item.itemDefinitionId,
+      sortOrder,
+    ],
+  );
+}
+
+async function insertItemRelationship(
+  client: Queryable,
+  storyId: string,
   item: NonNullable<Character['items']>[number],
   sortOrder: number,
 ) {
   await client.query(
-    `INSERT INTO character_items
-     (id, story_id, character_id, item_definition_id, sort_order)
-     VALUES ($1, $2, $3, $4, $5)`,
-    [item.id, storyId, characterId, item.itemDefinitionId, sortOrder],
+    `INSERT INTO item_instance_relationships
+     (story_id, parent_item_id, child_item_id, relationship_type, slot_key, sort_order)
+     VALUES ($1, $2, $3, $4, $5, $6)`,
+    [storyId, item.parentItemId, item.id, item.relationshipType, item.slotKey ?? null, sortOrder],
   );
 }
 
@@ -529,9 +555,6 @@ async function persistCharacterDifference(client: Queryable, before: Story, afte
       for (const [statIndex, stat] of (character.stats ?? []).entries()) {
         await insertCharacterStat(client, after.id, character.id, stat, statIndex);
       }
-      for (const [itemIndex, item] of (character.items ?? []).entries()) {
-        await insertCharacterItem(client, after.id, character.id, item, itemIndex);
-      }
       continue;
     }
     const changes: string[] = [];
@@ -557,30 +580,39 @@ async function persistCharacterDifference(client: Queryable, before: Story, afte
       await client.query(`UPDATE characters SET ${changes.join(', ')} WHERE id = $1`, values);
     }
     await persistStatDifference(client, after.id, previous, character);
-    await persistCharacterItemDifference(client, after.id, previous, character);
   }
+  await persistItemInstanceDifference(client, before, after);
 }
 
-async function persistCharacterItemDifference(
-  client: Queryable,
-  storyId: string,
-  before: Character,
-  after: Character,
-) {
-  const beforeItems = new Map((before.items ?? []).map((item) => [item.id, item]));
-  const afterItems = new Map((after.items ?? []).map((item) => [item.id, item]));
-  for (const item of before.items ?? []) {
+async function persistItemInstanceDifference(client: Queryable, before: Story, after: Story) {
+  const beforeEntries = itemEntries(before);
+  const afterEntries = itemEntries(after);
+  const beforeItems = new Map(beforeEntries.map((entry) => [entry.item.id, entry]));
+  const afterItems = new Map(afterEntries.map((entry) => [entry.item.id, entry]));
+  const relationshipsChanged =
+    itemRelationshipSignature(beforeEntries) !== itemRelationshipSignature(afterEntries);
+  if (relationshipsChanged) {
+    const childIds = new Set([...beforeItems.keys(), ...afterItems.keys()]);
+    for (const childId of childIds) {
+      await client.query(
+        'DELETE FROM item_instance_relationships WHERE story_id = $1 AND child_item_id = $2',
+        [after.id, childId],
+      );
+    }
+  }
+  for (const { item } of beforeEntries) {
     if (!afterItems.has(item.id)) {
-      await client.query('DELETE FROM character_items WHERE id = $1 AND story_id = $2', [
+      await client.query('DELETE FROM item_instances WHERE id = $1 AND story_id = $2', [
         item.id,
-        storyId,
+        after.id,
       ]);
     }
   }
-  for (const [index, item] of (after.items ?? []).entries()) {
+  for (const entry of afterEntries) {
+    const { ownerCharacterId, ownerLocationId, item, sortOrder } = entry;
     const previous = beforeItems.get(item.id);
     if (!previous) {
-      await insertCharacterItem(client, storyId, after.id, item, index);
+      await insertItemInstance(client, after.id, entry);
       continue;
     }
     const changes: string[] = [];
@@ -589,20 +621,67 @@ async function persistCharacterItemDifference(
       changes,
       values,
       'item_definition_id',
-      previous.itemDefinitionId,
+      previous.item.itemDefinitionId,
       item.itemDefinitionId,
     );
     addChange(
       changes,
       values,
-      'sort_order',
-      (before.items ?? []).findIndex(({ id }) => id === item.id),
-      index,
+      'owner_character_id',
+      previous.item.parentItemId ? null : previous.ownerCharacterId,
+      item.parentItemId ? null : ownerCharacterId,
     );
+    addChange(
+      changes,
+      values,
+      'owner_location_id',
+      previous.item.parentItemId ? null : previous.ownerLocationId,
+      item.parentItemId ? null : ownerLocationId,
+    );
+    addChange(changes, values, 'sort_order', previous.sortOrder, sortOrder);
     if (changes.length > 0) {
-      await client.query(`UPDATE character_items SET ${changes.join(', ')} WHERE id = $1`, values);
+      await client.query(`UPDATE item_instances SET ${changes.join(', ')} WHERE id = $1`, values);
     }
   }
+  if (relationshipsChanged) {
+    for (const { item, sortOrder } of afterEntries) {
+      if (item.parentItemId && item.relationshipType) {
+        await insertItemRelationship(client, after.id, item, sortOrder);
+      }
+    }
+  }
+}
+
+function itemEntries(story: Story) {
+  return [
+    ...(story.characters ?? []).flatMap((character) =>
+      (character.items ?? []).map((item, sortOrder) => ({
+        ownerCharacterId: character.id as string | null,
+        ownerLocationId: null as string | null,
+        item,
+        sortOrder,
+      })),
+    ),
+    ...(story.locations ?? []).flatMap((location) =>
+      (location.items ?? []).map((item, sortOrder) => ({
+        ownerCharacterId: null as string | null,
+        ownerLocationId: location.id as string | null,
+        item,
+        sortOrder,
+      })),
+    ),
+  ];
+}
+
+function itemRelationshipSignature(entries: ReturnType<typeof itemEntries>) {
+  return JSON.stringify(
+    entries.map(({ item: { id, parentItemId, relationshipType, slotKey } }) => ({
+      id,
+      parentItemId,
+      relationshipType,
+      slotKey,
+    })),
+  );
 }
 
 async function persistStatDifference(

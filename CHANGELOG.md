@@ -2,6 +2,20 @@
 
 ## 2026-08-02
 
+- Isolated local PostgreSQL integration tests in `paralleax_test` and made the
+  migration suite restore a current schema before other test files reuse it.
+- Accepted ADR-013 for a cycle-safe recursive item-instance graph covering
+  character/location ownership, containers, equipment, body parts, slots, and
+  a data-preserving migration from flat character inventories.
+- Added the first ADR-013 persistence increment: migrated exact items to
+  `item_instances`, preserved legacy ids and character ownership, allowed
+  location roots, moved exact-effect foreign keys, and retained the existing
+  `Character.items` API projection.
+- Added typed item-instance parent relationships and slots, cycle-safe subtree
+  transfers between characters, controlled non-empty container deletion, and a
+  global instance-id persistence diff that preserves exact effects on transfer.
+- Added reusable tree authoring for character inventories and location items,
+  including character/location/container moves, relationship types, and slots.
 - Added context-menu search across locations, characters, stats, and items,
   per-interaction title/body occurrence badges, and cyclic graph navigation.
 - Added reference navigation for selected context entities, location/character

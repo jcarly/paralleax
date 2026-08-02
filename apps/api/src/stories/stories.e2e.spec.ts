@@ -833,6 +833,103 @@ describe('Stories API', () => {
       .expect(404);
   });
 
+  it('moves item subtrees between characters and rejects cycles or non-empty deletion', async () => {
+    const story = await createStory();
+    const mira = await request(httpServer)
+      .post(`/api/stories/${story.id}/characters`)
+      .send({ name: 'Mira' })
+      .expect(201);
+    const luc = await request(httpServer)
+      .post(`/api/stories/${story.id}/characters`)
+      .send({ name: 'Luc' })
+      .expect(201);
+    const backpackDefinition = await request(httpServer)
+      .post(`/api/stories/${story.id}/item-definitions`)
+      .send({ name: 'Backpack' })
+      .expect(201);
+    const keyDefinition = await request(httpServer)
+      .post(`/api/stories/${story.id}/item-definitions`)
+      .send({ name: 'Key' })
+      .expect(201);
+    const backpack = await request(httpServer)
+      .post(`/api/stories/${story.id}/characters/${mira.body.character.id}/items`)
+      .send({ itemDefinitionId: backpackDefinition.body.itemDefinition.id })
+      .expect(201);
+    const key = await request(httpServer)
+      .post(`/api/stories/${story.id}/characters/${mira.body.character.id}/items`)
+      .send({ itemDefinitionId: keyDefinition.body.itemDefinition.id })
+      .expect(201);
+
+    const nested = await request(httpServer)
+      .patch(`/api/stories/${story.id}/items/${key.body.item.id}/placement`)
+      .send({
+        parentItemId: backpack.body.item.id,
+        relationshipType: 'contained',
+        slotKey: 'main-compartment',
+      })
+      .expect(200);
+    expect(
+      (nested.body as Story).characters
+        ?.find(({ id }) => id === mira.body.character.id)
+        ?.items?.find(({ id }) => id === key.body.item.id),
+    ).toMatchObject({
+      parentItemId: backpack.body.item.id,
+      relationshipType: 'contained',
+      slotKey: 'main-compartment',
+    });
+
+    await request(httpServer)
+      .patch(`/api/stories/${story.id}/items/${backpack.body.item.id}/placement`)
+      .send({ parentItemId: key.body.item.id, relationshipType: 'contained' })
+      .expect(400);
+    await request(httpServer)
+      .delete(
+        `/api/stories/${story.id}/characters/${mira.body.character.id}/items/${backpack.body.item.id}`,
+      )
+      .expect(400);
+
+    const transferred = await request(httpServer)
+      .patch(`/api/stories/${story.id}/items/${backpack.body.item.id}/placement`)
+      .send({ characterId: luc.body.character.id })
+      .expect(200);
+    expect(
+      (transferred.body as Story).characters?.find(({ id }) => id === mira.body.character.id)
+        ?.items,
+    ).toEqual([]);
+    expect(
+      (transferred.body as Story).characters?.find(({ id }) => id === luc.body.character.id)?.items,
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: backpack.body.item.id }),
+        expect.objectContaining({
+          id: key.body.item.id,
+          parentItemId: backpack.body.item.id,
+          relationshipType: 'contained',
+        }),
+      ]),
+    );
+
+    const park = await request(httpServer)
+      .post(`/api/stories/${story.id}/locations`)
+      .send({ name: 'Park' })
+      .expect(201);
+    const placed = await request(httpServer)
+      .patch(`/api/stories/${story.id}/items/${backpack.body.item.id}/placement`)
+      .send({ locationId: park.body.location.id })
+      .expect(200);
+    expect(
+      (placed.body as Story).characters?.find(({ id }) => id === luc.body.character.id)?.items,
+    ).toEqual([]);
+    expect(
+      (placed.body as Story).locations?.find(({ id }) => id === park.body.location.id)?.items,
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: backpack.body.item.id }),
+        expect.objectContaining({ id: key.body.item.id, parentItemId: backpack.body.item.id }),
+      ]),
+    );
+  });
+
   it('validates and stores interaction item stat effects', async () => {
     const story = await createStory();
     const interaction = (await createInteraction(story.id)).interactions[0];

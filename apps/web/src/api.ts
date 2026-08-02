@@ -12,6 +12,7 @@ import type {
   InteractionMutationResult,
   ItemDefinitionMutationResult,
   LocationMutationResult,
+  MoveItemInstanceInput,
   ReaderProgress,
   SaveReaderProgressInput,
   StatDefinitionMutationResult,
@@ -201,6 +202,11 @@ export const api = {
   deleteCharacterItem: (storyId: string, characterId: string, itemId: string) =>
     request<Story>(`/stories/${storyId}/characters/${characterId}/items/${itemId}`, {
       method: 'DELETE',
+    }),
+  moveItemInstance: (storyId: string, itemId: string, input: MoveItemInstanceInput) =>
+    request<Story>(`/stories/${storyId}/items/${itemId}/placement`, {
+      method: 'PATCH',
+      body: JSON.stringify(input),
     }),
   addTrigger: (
     storyId: string,

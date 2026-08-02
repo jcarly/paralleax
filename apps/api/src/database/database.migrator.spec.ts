@@ -84,4 +84,26 @@ describe('DatabaseMigrator', () => {
       expect(migration.sql).not.toMatch(/\bDROP\s+TABLE\s+(?:IF\s+EXISTS\s+)?stories\b/i);
     }
   });
+
+  it('copies legacy character items before retiring their write table', () => {
+    const migration = databaseMigrations.find(({ id }) => id === '202608020021_item_instances');
+
+    expect(migration?.sql).toMatch(/INSERT INTO item_instances[\s\S]+FROM character_items/i);
+    expect(migration?.sql).toMatch(/REFERENCES item_instances\(story_id, id\) ON DELETE CASCADE/i);
+    expect(migration?.sql).toMatch(/ALTER TABLE character_items RENAME TO character_items_legacy/i);
+    expect(migration?.sql).not.toMatch(/DROP TABLE\s+character_items/i);
+  });
+
+  it('constrains typed item relationships to one distinct parent per child', () => {
+    const migration = databaseMigrations.find(
+      ({ id }) => id === '202608020022_item_instance_relationships',
+    );
+
+    expect(migration?.sql).toMatch(/UNIQUE \(story_id, child_item_id\)/i);
+    expect(migration?.sql).toMatch(/CHECK \(parent_item_id <> child_item_id\)/i);
+    expect(migration?.sql).toMatch(/'contained'[\s\S]+'held'/i);
+    expect(migration?.sql).toMatch(/REFERENCES item_instances\(story_id, id\)/i);
+    expect(migration?.sql).toMatch(/WITH RECURSIVE ancestors/i);
+    expect(migration?.sql).toMatch(/A related item cannot also have a root owner/i);
+  });
 });

@@ -723,6 +723,44 @@ header span {
   background: var(--color-surface-secondary);
   font-size: 0.88rem;
 }
+
+.item-instance-tree,
+.item-instance-tree ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.item-instance-tree ul {
+  border-left: 2px solid var(--border);
+  margin: 0.45rem 0 0 0.8rem;
+  padding-left: 0.8rem;
+}
+
+.item-instance-tree > li + li,
+.item-instance-tree ul > li + li {
+  margin-top: 0.45rem;
+}
+
+.item-tree-card {
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: 0.6rem;
+  display: grid;
+  gap: 0.45rem;
+  padding: 0.6rem;
+}
+
+.item-tree-title {
+  align-items: center;
+  display: flex;
+  gap: 0.45rem;
+}
+
+.item-tree-title small {
+  color: var(--muted);
+  margin-left: auto;
+}
 .item-stat-list {
   margin: 0.3rem 0 0;
   padding-left: 1.2rem;

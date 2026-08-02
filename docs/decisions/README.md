@@ -16,6 +16,7 @@ This folder records accepted architecture and product-shaping decisions.
 - [ADR-010 - Character Stats as Reconstructable Reader State](ADR-010-character-stats.md)
 - [ADR-011 - PostgreSQL Logical Recovery Baseline](ADR-011-postgresql-recovery.md)
 - [ADR-012 - Versioned Reader Progress JSON](ADR-012-versioned-reader-progress-json.md)
+- [ADR-013 - Recursive Item Instance Graph](ADR-013-recursive-item-instance-graph.md)
 
 ## Maintenance
 

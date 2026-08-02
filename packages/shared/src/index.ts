@@ -54,6 +54,7 @@ export interface Location {
   name: string;
   description: string;
   imageUrl?: string;
+  items?: ItemInstance[];
 }
 export interface Character {
   id: string;
@@ -89,7 +90,12 @@ export interface ItemDefinitionStat {
 export interface ItemInstance {
   id: string;
   itemDefinitionId: string;
+  parentItemId?: string;
+  relationshipType?: ItemRelationshipType;
+  slotKey?: string;
 }
+export type ItemRelationshipType =
+  'contained' | 'equipped' | 'attached' | 'part_of' | 'installed' | 'worn' | 'held';
 export interface StatEffect {
   statId: string;
   operation: 'add' | 'set';
@@ -263,6 +269,13 @@ export interface UpdateItemDefinitionInput {
 }
 export interface CreateCharacterItemInput {
   itemDefinitionId: string;
+}
+export interface MoveItemInstanceInput {
+  characterId?: string;
+  locationId?: string;
+  parentItemId?: string;
+  relationshipType?: ItemRelationshipType;
+  slotKey?: string;
 }
 export interface UpdateTriggerInput {
   inputInteractionIds: string[];

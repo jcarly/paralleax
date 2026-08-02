@@ -268,6 +268,16 @@ describe('api client', () => {
         body: JSON.stringify({ itemDefinitionId: 'item-definition-1' }),
       },
     );
+
+    await api.moveItemInstance('story-1', 'item-1', {
+      parentItemId: 'bag-1',
+      relationshipType: 'contained',
+    });
+    expect(fetchMock).toHaveBeenLastCalledWith('/api/stories/story-1/items/item-1/placement', {
+      headers: { 'Content-Type': 'application/json' },
+      method: 'PATCH',
+      body: JSON.stringify({ parentItemId: 'bag-1', relationshipType: 'contained' }),
+    });
   });
 
   it('returns undefined for 204 responses', async () => {

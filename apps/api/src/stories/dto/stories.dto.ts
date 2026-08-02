@@ -411,6 +411,28 @@ export class ItemDefinitionStatDto {
 export class CreateCharacterItemDto {
   @IsString() @IsNotEmpty() itemDefinitionId!: string;
 }
+export class MoveItemInstanceDto {
+  @ValidateIf((_, value) => value !== undefined)
+  @IsString()
+  @IsNotEmpty()
+  characterId?: string;
+  @ValidateIf((_, value) => value !== undefined)
+  @IsString()
+  @IsNotEmpty()
+  locationId?: string;
+  @ValidateIf((_, value) => value !== undefined)
+  @IsString()
+  @IsNotEmpty()
+  parentItemId?: string;
+  @ValidateIf((_, value) => value !== undefined)
+  @IsIn(['contained', 'equipped', 'attached', 'part_of', 'installed', 'worn', 'held'])
+  relationshipType?:
+    'contained' | 'equipped' | 'attached' | 'part_of' | 'installed' | 'worn' | 'held';
+  @ValidateIf((_, value) => value !== undefined)
+  @IsString()
+  @MaxLength(100)
+  slotKey?: string;
+}
 export class CreateTriggerDto {
   @ValidateIf((_, value) => value !== undefined)
   @IsArray()

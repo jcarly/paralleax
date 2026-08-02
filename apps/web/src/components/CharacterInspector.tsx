@@ -1,6 +1,12 @@
 import { useState } from 'react';
-import type { Character, ItemDefinition, StatDefinition } from '@paralleax/shared';
+import type {
+  Character,
+  ItemDefinition,
+  MoveItemInstanceInput,
+  StatDefinition,
+} from '@paralleax/shared';
 import { ImageUrlField } from './ImageUrlField';
+import { ItemInstanceTree } from './ItemInstanceTree';
 import { RemoveRowButton } from './RemoveRowButton';
 
 export function CharacterInspector({
@@ -14,6 +20,7 @@ export function CharacterInspector({
   itemDefinitions,
   onCreateItem,
   onDeleteItem,
+  onMoveItem,
 }: {
   character: Character;
   statDefinitions: StatDefinition[];
@@ -32,6 +39,7 @@ export function CharacterInspector({
   onDeleteStat: (characterId: string, statId: string) => Promise<void>;
   onCreateItem: (characterId: string, itemDefinitionId: string) => Promise<void>;
   onDeleteItem: (characterId: string, itemId: string) => Promise<void>;
+  onMoveItem: (itemId: string, placement: MoveItemInstanceInput) => Promise<void>;
 }) {
   const availableDefinitions = statDefinitions.filter(
     (definition) =>
@@ -176,39 +184,14 @@ export function CharacterInspector({
       {(character.items ?? []).length === 0 ? (
         <p className="hint">No items owned yet.</p>
       ) : (
-        <ul className="character-items">
-          {(character.items ?? []).map((item) => {
-            const definition = itemDefinitions.find(({ id }) => id === item.itemDefinitionId);
-            return (
-              <li key={item.id}>
-                {itemDefinitions.find(({ id }) => id === item.itemDefinitionId)?.imageUrl ? (
-                  <img
-                    className="context-picto"
-                    src={itemDefinitions.find(({ id }) => id === item.itemDefinitionId)?.imageUrl}
-                    alt=""
-                  />
-                ) : null}
-                {itemDefinitions.find(({ id }) => id === item.itemDefinitionId)?.name ??
-                  'Unknown item'}
-                {(definition?.stats ?? []).length > 0 ? (
-                  <ul className="item-stat-list">
-                    {(definition?.stats ?? []).map((stat) => (
-                      <li key={stat.statDefinitionId}>
-                        {statDefinitions.find(({ id }) => id === stat.statDefinitionId)?.name ??
-                          'Unknown stat'}
-                        : {stat.initialValue}
-                      </li>
-                    ))}
-                  </ul>
-                ) : null}
-                <RemoveRowButton
-                  label="Delete character item"
-                  onRemove={() => void onDeleteItem(character.id, item.id)}
-                />
-              </li>
-            );
-          })}
-        </ul>
+        <ItemInstanceTree
+          items={character.items ?? []}
+          itemDefinitions={itemDefinitions}
+          statDefinitions={statDefinitions}
+          rootPlacement={{ characterId: character.id }}
+          onMove={onMoveItem}
+          onDelete={(itemId) => onDeleteItem(character.id, itemId)}
+        />
       )}
       <label>
         Description

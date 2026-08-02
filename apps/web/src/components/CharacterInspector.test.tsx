@@ -59,6 +59,7 @@ describe('CharacterInspector', () => {
         onDeleteStat={onDeleteStat}
         onCreateItem={onCreateItem}
         onDeleteItem={onDeleteItem}
+        onMoveItem={vi.fn().mockResolvedValue(undefined)}
       />,
     );
 
@@ -104,10 +105,11 @@ describe('CharacterInspector', () => {
     await user.selectOptions(screen.getByLabelText('Item to add'), 'item-definition-2');
     await user.click(screen.getByRole('button', { name: 'Add item' }));
     expect(onCreateItem).toHaveBeenCalledWith('character-1', 'item-definition-2');
-    expect(screen.getAllByText('Key')).toHaveLength(2);
+    expect(screen.getByText('Key', { selector: 'strong' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Item to add')).toHaveDisplayValue('Map');
     expect(screen.getByText(/Trust: 7/)).toBeInTheDocument();
-    expect(screen.getByText('Unknown item')).toBeInTheDocument();
-    await user.click(screen.getAllByRole('button', { name: 'Delete character item' })[0]);
+    expect(screen.getByText('Unknown item', { selector: 'strong' })).toBeInTheDocument();
+    await user.click(screen.getAllByRole('button', { name: 'Delete item instance' })[0]);
     expect(onDeleteItem).toHaveBeenCalledWith('character-1', 'item-1');
 
     const description = screen.getByLabelText('Description');
@@ -136,6 +138,7 @@ describe('CharacterInspector', () => {
         onDeleteStat={vi.fn()}
         onCreateItem={vi.fn()}
         onDeleteItem={vi.fn()}
+        onMoveItem={vi.fn()}
       />,
     );
 

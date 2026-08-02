@@ -16,6 +16,7 @@ import {
   type InteractionMutationResult,
   type ItemDefinitionMutationResult,
   type LocationMutationResult,
+  type MoveItemInstanceInput,
   type StatDefinitionMutationResult,
   type Position,
   type Story,
@@ -553,6 +554,12 @@ export function useStoryEditorPersistence(storyId: string) {
     setStory((current) => (current ? mergeServerStory(current, result) : current));
   }
 
+  async function moveItemInstance(itemId: string, placement: MoveItemInstanceInput) {
+    const result = await trackSave(() => api.moveItemInstance(storyId, itemId, placement));
+    if (!result) return;
+    setStory((current) => (current ? mergeServerStory(current, result) : current));
+  }
+
   return {
     story,
     setStory,
@@ -587,6 +594,7 @@ export function useStoryEditorPersistence(storyId: string) {
     deleteCharacterStat,
     createCharacterItem,
     deleteCharacterItem,
+    moveItemInstance,
   };
 }
 

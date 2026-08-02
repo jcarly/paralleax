@@ -339,7 +339,7 @@ and merge semantics.
 
 The current PostgreSQL schema stores Story, Location, Character, reusable Stat
 Definition (including its hourly change rate), Character Stat Assignment,
-Item Definition, Character Item Instance, Interaction, Interaction Stat Effect,
+Item Definition, story-local Item Instance, Interaction, Interaction Stat Effect,
 Trigger, and trigger input state in
 relational tables. Interaction-to-location, interaction-character, and stat
 effect references use same-story composite foreign keys. Time-based stat changes
@@ -354,6 +354,16 @@ are validated by `StoriesService`. Reader-progress JSON contains the replayed
 per-instance values.
 Context entity image references use relational text columns. Image binaries and
 their upload lifecycle are not stored by the application.
+
+`item_instances` is now the persistence source of truth for exact authored
+items. It supports a character or location root and preserves the existing
+`Character.items` API projection for character-owned roots. The migration keeps
+the former `character_items` data as `character_items_legacy` for parity and
+rollback inspection; repositories and new writes no longer use it. Typed
+parent/child relationships are stored in `item_instance_relationships` and
+projected into effective character inventories. Transfers are diffed globally
+by instance id so moving a subtree does not delete its instances or cascade its
+exact effects.
 The repository reconstructs
 the existing domain `Story`, so persistence normalization does not leak into the
 shared engine or the HTTP contract. JSON remains a future versioned import/export
