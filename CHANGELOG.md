@@ -2,6 +2,11 @@
 
 ## 2026-08-02
 
+- Added reproducible 1,000-interaction PostgreSQL and 2,000-interaction editor
+  graph stress tests with configurable budgets and recorded baselines.
+- Batched complete-story interaction, association, trigger, and trigger-input
+  inserts, reducing the measured 1,000-interaction initial save from 68.7 s to
+  3.19 s while retaining targeted mutation persistence.
 - Isolated local PostgreSQL integration tests in `paralleax_test` and made the
   migration suite restore a current schema before other test files reuse it.
 - Accepted ADR-013 for a cycle-safe recursive item-instance graph covering

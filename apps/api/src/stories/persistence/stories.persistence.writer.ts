@@ -39,17 +39,132 @@ export async function replaceStoryGraph(client: Queryable, story: Story) {
       await insertItemRelationship(client, story.id, item, sortOrder);
     }
   }
-  for (const [interactionIndex, interaction] of story.interactions.entries()) {
-    await insertInteraction(client, story.id, interaction, interactionIndex);
-  }
-  for (const interaction of story.interactions) {
-    await replaceInteractionCharacters(client, story.id, interaction);
-    await replaceInteractionStatEffects(client, story.id, interaction);
-    await replaceInteractionItemEffects(client, story.id, interaction);
-    for (const [triggerIndex, trigger] of interaction.triggers.entries()) {
-      await insertTrigger(client, story.id, interaction.id, trigger, triggerIndex);
-    }
-  }
+  await insertInteractionGraph(client, story);
+}
+
+async function insertInteractionGraph(client: Queryable, story: Story) {
+  await insertJsonRows(
+    client,
+    `INSERT INTO interactions
+     (id, story_id, title, body, position_x, position_y, location_id, duration_minutes,
+      item_stat_effects, sort_order)
+     SELECT id, story_id, title, body, position_x, position_y, location_id, duration_minutes,
+            item_stat_effects, sort_order
+     FROM jsonb_to_recordset($1::jsonb) AS row(
+       id text, story_id text, title text, body text, position_x double precision,
+       position_y double precision, location_id text, duration_minutes integer,
+       item_stat_effects jsonb, sort_order integer
+     )`,
+    story.interactions.map((interaction, sortOrder) => ({
+      id: interaction.id,
+      story_id: story.id,
+      title: interaction.title,
+      body: interaction.body,
+      position_x: interaction.position.x,
+      position_y: interaction.position.y,
+      location_id: interaction.locationId ?? null,
+      duration_minutes: interaction.durationMinutes ?? 0,
+      item_stat_effects: interaction.itemStatEffects ?? [],
+      sort_order: sortOrder,
+    })),
+  );
+  await insertJsonRows(
+    client,
+    `INSERT INTO interaction_characters (story_id, interaction_id, character_id, sort_order)
+     SELECT story_id, interaction_id, character_id, sort_order
+     FROM jsonb_to_recordset($1::jsonb) AS row(
+       story_id text, interaction_id text, character_id text, sort_order integer
+     )`,
+    story.interactions.flatMap((interaction) =>
+      (interaction.characterIds ?? []).map((characterId, sortOrder) => ({
+        story_id: story.id,
+        interaction_id: interaction.id,
+        character_id: characterId,
+        sort_order: sortOrder,
+      })),
+    ),
+  );
+  await insertJsonRows(
+    client,
+    `INSERT INTO interaction_stat_effects
+     (story_id, interaction_id, stat_id, operation, value, sort_order)
+     SELECT story_id, interaction_id, stat_id, operation, value, sort_order
+     FROM jsonb_to_recordset($1::jsonb) AS row(
+       story_id text, interaction_id text, stat_id text, operation text,
+       value double precision, sort_order integer
+     )`,
+    story.interactions.flatMap((interaction) =>
+      (interaction.statEffects ?? []).map((effect, sortOrder) => ({
+        story_id: story.id,
+        interaction_id: interaction.id,
+        stat_id: effect.statId,
+        operation: effect.operation,
+        value: effect.value,
+        sort_order: sortOrder,
+      })),
+    ),
+  );
+  await insertJsonRows(
+    client,
+    `INSERT INTO interaction_item_effects
+     (story_id, interaction_id, item_id, item_definition_id, character_id, operation, sort_order)
+     SELECT story_id, interaction_id, item_id, item_definition_id, character_id, operation,
+            sort_order
+     FROM jsonb_to_recordset($1::jsonb) AS row(
+       story_id text, interaction_id text, item_id text, item_definition_id text,
+       character_id text, operation text, sort_order integer
+     )`,
+    story.interactions.flatMap((interaction) =>
+      (interaction.itemEffects ?? []).map((effect, sortOrder) => ({
+        story_id: story.id,
+        interaction_id: interaction.id,
+        item_id: effect.itemId ?? null,
+        item_definition_id: effect.itemDefinitionId ?? null,
+        character_id: effect.characterId ?? null,
+        operation: effect.operation,
+        sort_order: sortOrder,
+      })),
+    ),
+  );
+  const triggers = story.interactions.flatMap((interaction) =>
+    interaction.triggers.map((trigger, sortOrder) => ({ interaction, trigger, sortOrder })),
+  );
+  await insertJsonRows(
+    client,
+    `INSERT INTO triggers (id, story_id, output_interaction_id, conditions, sort_order)
+     SELECT id, story_id, output_interaction_id, conditions, sort_order
+     FROM jsonb_to_recordset($1::jsonb) AS row(
+       id text, story_id text, output_interaction_id text, conditions jsonb, sort_order integer
+     )`,
+    triggers.map(({ interaction, trigger, sortOrder }) => ({
+      id: trigger.id,
+      story_id: story.id,
+      output_interaction_id: interaction.id,
+      conditions: trigger.conditions,
+      sort_order: sortOrder,
+    })),
+  );
+  await insertJsonRows(
+    client,
+    `INSERT INTO trigger_inputs (story_id, trigger_id, input_interaction_id, sort_order)
+     SELECT story_id, trigger_id, input_interaction_id, sort_order
+     FROM jsonb_to_recordset($1::jsonb) AS row(
+       story_id text, trigger_id text, input_interaction_id text, sort_order integer
+     )`,
+    triggers.flatMap(({ trigger }) =>
+      trigger.inputInteractionIds.map((inputInteractionId, sortOrder) => ({
+        story_id: story.id,
+        trigger_id: trigger.id,
+        input_interaction_id: inputInteractionId,
+        sort_order: sortOrder,
+      })),
+    ),
+  );
+}
+
+async function insertJsonRows(client: Queryable, sql: string, rows: object[]) {
+  if (rows.length === 0) return;
+  await client.query(sql, [JSON.stringify(rows)]);
 }
 
 export async function persistStoryDifference(client: Queryable, before: Story, after: Story) {

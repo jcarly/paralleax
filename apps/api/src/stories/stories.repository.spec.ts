@@ -395,18 +395,7 @@ describe('StoriesRepository', () => {
     ]);
     expect(mockClientQuery).toHaveBeenCalledWith(
       expect.stringContaining('INSERT INTO interactions'),
-      [
-        'interaction-1',
-        saved.id,
-        'Start',
-        'Begin here',
-        10,
-        20,
-        'location-1',
-        15,
-        JSON.stringify(saved.interactions[0].itemStatEffects),
-        0,
-      ],
+      [expect.stringContaining('"id":"interaction-1"')],
     );
     expect(mockClientQuery).toHaveBeenCalledWith(
       expect.stringContaining('INSERT INTO characters'),
@@ -414,7 +403,7 @@ describe('StoriesRepository', () => {
     );
     expect(mockClientQuery).toHaveBeenCalledWith(
       expect.stringContaining('INSERT INTO interaction_characters'),
-      [saved.id, 'interaction-1', 'character-1', 0],
+      [expect.stringContaining('"character_id":"character-1"')],
     );
     expect(mockClientQuery).toHaveBeenCalledWith(
       expect.stringContaining('INSERT INTO stat_definitions'),
@@ -446,22 +435,18 @@ describe('StoriesRepository', () => {
     );
     expect(mockClientQuery).toHaveBeenCalledWith(
       expect.stringContaining('INSERT INTO interaction_stat_effects'),
-      [saved.id, 'interaction-1', 'stat-1', 'add', 1, 0],
+      [expect.stringContaining('"stat_id":"stat-1"')],
     );
     expect(mockClientQuery).toHaveBeenCalledWith(
       expect.stringContaining('INSERT INTO interaction_item_effects'),
-      [saved.id, 'interaction-1', 'item-1', null, null, 'obtain', 0],
+      [expect.stringContaining('"item_id":"item-1"')],
     );
     expect(mockClientQuery).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO triggers'), [
-      'trigger-2',
-      saved.id,
-      'interaction-2',
-      JSON.stringify([{ interactionId: 'interaction-1', hasBeenVisited: true }]),
-      0,
+      expect.stringContaining('"id":"trigger-2"'),
     ]);
     expect(mockClientQuery).toHaveBeenCalledWith(
       expect.stringContaining('INSERT INTO trigger_inputs'),
-      [saved.id, 'trigger-2', 'interaction-1', 0],
+      [expect.stringContaining('"trigger_id":"trigger-2"')],
     );
   });
 

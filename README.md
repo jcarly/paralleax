@@ -125,6 +125,19 @@ the migration suite deliberately rebuilds the tested `public` schema. The suite
 restores the latest schema before exiting so all PostgreSQL files remain
 independent of Jest's execution order.
 
+Run the opt-in large-story stress test against the same isolated database:
+
+```powershell
+$env:POSTGRES_TEST_DATABASE_URL='postgres://paralleax:paralleax@localhost:5432/paralleax_test'
+$env:RUN_POSTGRES_STRESS_TESTS='true'
+npm run test:stress:postgres -w @paralleax/api
+```
+
+`STRESS_INTERACTION_COUNT`, `STRESS_SAVE_BUDGET_MS`, `STRESS_LOAD_BUDGET_MS`,
+and `STRESS_MUTATION_BUDGET_MS` can override the default 1,000-interaction
+fixture and its budgets. The test prints a machine-readable `POSTGRES_STRESS`
+measurement line.
+
 These commands cover:
 
 - Shared: Vitest tests for narrative rules, story operations, trigger cleanup, stale-response merge behavior, and graph placement helpers.

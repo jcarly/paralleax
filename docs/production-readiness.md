@@ -131,6 +131,22 @@ Replace repeated order searches with identifier maps where profiling confirms
 quadratic behavior. Use batched insert or PostgreSQL `COPY` for large imports
 and templates.
 
+### Large-story baseline (2026-08-02)
+
+On the local Docker PostgreSQL 17 development environment, the reproducible
+1,000-interaction fixture (approximately 759 kB of story JSON, 20 locations, 20
+characters, 100 item instances, 1,000 triggers, and linked conditions) measured:
+
+- complete initial relational save: 3.19 s;
+- complete relational load: 316 ms;
+- one node-position mutation, including repository read/diff/write: 688 ms;
+- React Flow projection of 2,000 linked interactions: 647 ms in Vitest/jsdom.
+
+Before batched graph insertion, the same initial save took 68.7 s. These are
+developer-machine regression baselines, not production p95/p99 claims. Run the
+opt-in PostgreSQL stress suite in a controlled CI job and retain measurements
+before setting provider-specific service objectives.
+
 ## Security and Abuse Baseline
 
 - Validate `Origin` for mutative cookie-authenticated requests once the final

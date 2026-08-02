@@ -70,6 +70,11 @@ The character-stat vertical keeps these regressions covered:
   the complete relational upgrade.
 - PostgreSQL integration suites use a dedicated database, and migration tests
   restore its current schema so repository tests are independent of file order.
+- PostgreSQL stress: round-trip a configurable 1,000-interaction story and
+  enforce explicit budgets for initial save, complete load, and a common node
+  mutation; emit the measured payload size and durations.
+- Editor stress: project 2,000 linked interactions into React Flow interaction
+  nodes, trigger nodes, and edges within the documented local budget.
 - Migration policy: no migration may delete, truncate, or drop the stories table
   wholesale.
 - API: repositories never execute migrations as part of an authentication or
