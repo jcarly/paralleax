@@ -994,7 +994,7 @@ describe('StoryEditor', () => {
     fireEvent.blur(content);
 
     await waitFor(() => expect(api.updateInteraction).toHaveBeenCalledTimes(1));
-    expect(screen.getByRole('status')).toHaveTextContent('Saving…');
+    expect(screen.getByRole('status', { name: 'Story save status' })).toHaveTextContent('Saving…');
     expect(api.updateInteraction).toHaveBeenNthCalledWith(1, 'story-1', 'interaction-1', {
       title: 'Saved title',
     });
@@ -1029,7 +1029,9 @@ describe('StoryEditor', () => {
     await user.tab();
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Database unavailable');
-    expect(screen.getByRole('status')).toHaveTextContent('Save failed');
+    expect(screen.getByRole('status', { name: 'Story save status' })).toHaveTextContent(
+      'Save failed',
+    );
 
     await user.click(screen.getByRole('button', { name: 'Reload story' }));
     await waitFor(() => expect(api.getStory).toHaveBeenCalledTimes(2));

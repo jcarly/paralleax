@@ -99,6 +99,12 @@ schema changes. The service does not depend on the physical relational shape,
 so storage and query projections can evolve without moving endpoint behavior or
 shared domain rules.
 
+Story listing uses a separate lightweight `StorySummary` projection. Its
+aggregate query returns metadata and an interaction count without loading
+interactions, triggers, context entities, or item graphs. Creation endpoints
+still return the created complete story; the web list converts that one result
+to a summary locally.
+
 Authenticated player progress uses one `story_reader_progress` row per user and
 story. Its keys and update timestamp are relational; its versioned JSONB state
 contains the ordered journey and materialized runtime values. `StoriesService`
@@ -131,6 +137,14 @@ Known operational errors may provide a more specific code. Unexpected errors
 return a generic message and never expose exception, stack, or SQL details.
 Production Nest logs use JSON output. The web client preserves status, code, and
 request id on `ApiError` for future support and recovery workflows.
+
+The global throttler defaults to 100 requests per minute. Story reads retain
+that limit, while story mutation routes use a stricter 60-per-minute policy.
+Authentication registration and login keep their separate lower limits.
+Interaction HTML is rejected above 64,000 characters before sanitization and
+persistence. Express JSON and form parsing is configured explicitly at 128 KiB.
+Parser rejections pass through the API exception filter as a stable
+`413 PAYLOAD_TOO_LARGE` envelope without exposing parser details.
 
 `AppConfigService` is the only runtime boundary for application environment
 values. It validates database and browser origins, port, verified SSL settings,
@@ -284,6 +298,12 @@ Every editor mutation passes through the persistence hook's save tracker. The
 toolbar exposes saving, saved, and failed states. A failed mutation leaves a
 visible error with an action that reloads the persisted story, which also
 recovers from optimistic local state that the server did not accept.
+
+While that tracker reports a pending or failed save, `usePendingSaveGuard`
+protects browser closing/reloading and internal anchor navigation with native
+confirmation. Declarative `BrowserRouter` does not provide transactional
+back/forward blocking; covering browser history requires the planned migration
+to a React Router data router rather than fragile `popstate` reversal.
 
 ### Running the Reader
 

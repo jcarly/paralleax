@@ -3,7 +3,7 @@ import { cleanup, render, screen, waitFor, within } from '@testing-library/react
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Story } from '@paralleax/shared';
+import type { Story, StorySummary } from '@paralleax/shared';
 import { StoryList } from './StoryList';
 import { api } from '../api';
 import { loadStoryEditor, loadStoryPlayer } from './storyRouteLoaders';
@@ -22,22 +22,20 @@ vi.mock('./storyRouteLoaders', () => ({
   loadStoryPlayer: vi.fn(() => Promise.resolve()),
 }));
 
-const stories: Story[] = [
+const stories: StorySummary[] = [
   {
     id: 'story-1',
     title: 'First story',
     createdAt: '2026-07-14T08:00:00.000Z',
     updatedAt: '2026-07-14T08:00:00.000Z',
-    interactions: [],
+    interactionCount: 0,
   },
   {
     id: 'story-2',
     title: 'Second story',
     createdAt: '2026-07-14T08:00:00.000Z',
     updatedAt: '2026-07-14T08:00:00.000Z',
-    interactions: [
-      { id: 'interaction-1', title: 'Start', body: '', position: { x: 0, y: 0 }, triggers: [] },
-    ],
+    interactionCount: 1,
   },
 ];
 

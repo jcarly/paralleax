@@ -53,7 +53,7 @@ import { StoriesRepository } from './stories.repository';
 export class StoriesService {
   constructor(private readonly repository: StoriesRepository) {}
 
-  async list(userId: string): Promise<Story[]> {
+  async list(userId: string) {
     return this.repository.list(userId);
   }
   async get(id: string, userId: string): Promise<Story> {

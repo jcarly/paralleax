@@ -13,11 +13,16 @@ import type {
   Story,
   TriggerMutationResult,
 } from '@paralleax/shared';
+import { MAX_INTERACTION_BODY_LENGTH } from '@paralleax/shared';
 import { AppModule } from '../app.module';
 import { AuthService } from '../auth/auth.service';
 import { DatabaseMigrator } from '../database/database.migrator';
 import { InMemoryStoriesRepository } from './stories.repository.memory';
 import { StoriesRepository } from './stories.repository';
+import { STORY_MUTATION_RATE_LIMIT } from './stories.controller';
+import { ApiExceptionFilter } from '../operations/api-exception.filter';
+import { configureRequestBodyParsing } from '../operations/request-body';
+import { requestContextMiddleware } from '../operations/request-context';
 
 describe('Stories API', () => {
   let app: INestApplication;
@@ -43,10 +48,13 @@ describe('Stories API', () => {
       })
       .compile();
 
-    app = moduleFixture.createNestApplication();
+    app = moduleFixture.createNestApplication({ bodyParser: false });
+    configureRequestBodyParsing(app);
+    app.use(requestContextMiddleware);
     app.useGlobalPipes(
       new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }),
     );
+    app.useGlobalFilters(new ApiExceptionFilter());
     app.setGlobalPrefix('api');
     await app.init();
     httpServer = app.getHttpServer();
@@ -77,6 +85,22 @@ describe('Stories API', () => {
 
     expect(Array.isArray(response.body)).toBe(true);
     expect(response.body).toEqual([]);
+  });
+
+  it('rate-limits story mutations independently from reads', async () => {
+    const responses = await Promise.all(
+      Array.from({ length: STORY_MUTATION_RATE_LIMIT + 1 }, (_, index) =>
+        request(httpServer)
+          .post('/api/stories')
+          .send({ title: `Story ${index}` }),
+      ),
+    );
+
+    expect(responses.filter(({ status }) => status === 201)).toHaveLength(
+      STORY_MUTATION_RATE_LIMIT,
+    );
+    expect(responses.filter(({ status }) => status === 429)).toHaveLength(1);
+    await request(httpServer).get('/api/stories').expect(200);
   });
 
   it('POST /api/stories creates a story', async () => {
@@ -123,7 +147,11 @@ describe('Stories API', () => {
     ).toBe(true);
 
     const listResponse = await request(httpServer).get('/api/stories').expect(200);
-    expect((listResponse.body as Story[]).some((item) => item.id === story.id)).toBe(true);
+    expect(listResponse.body).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: story.id, interactionCount: story.interactions.length }),
+      ]),
+    );
   });
 
   it('GET /api/stories/:storyId returns a story', async () => {
@@ -366,6 +394,30 @@ describe('Stories API', () => {
       title: interaction.title,
       body: '',
       position: interaction.position,
+    });
+  });
+
+  it('rejects interaction bodies above the authored content limit', async () => {
+    const story = await createStory();
+    const withInteraction = await createInteraction(story.id);
+    const interaction = withInteraction.interactions[0];
+
+    await request(httpServer)
+      .patch(`/api/stories/${story.id}/interactions/${interaction.id}`)
+      .send({ body: 'x'.repeat(MAX_INTERACTION_BODY_LENGTH + 1) })
+      .expect(400);
+  });
+
+  it('rejects raw request bodies above the global HTTP limit', async () => {
+    const response = await request(httpServer)
+      .post('/api/stories')
+      .send({ title: 'x'.repeat(140_000) })
+      .expect(413);
+
+    expect(response.body).toMatchObject({
+      status: 413,
+      code: 'PAYLOAD_TOO_LARGE',
+      message: 'Request body is too large.',
     });
   });
 

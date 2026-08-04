@@ -90,6 +90,27 @@ describe('StoryPlayer', () => {
     vi.resetAllMocks();
   });
 
+  it('shows a recoverable error when the story cannot be loaded', async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.getStory)
+      .mockRejectedValueOnce(new Error('API unavailable'))
+      .mockResolvedValueOnce(structuredClone(story));
+    vi.mocked(api.getReaderProgress).mockResolvedValue(null);
+
+    render(
+      <MemoryRouter initialEntries={['/stories/story-1/play']}>
+        <Routes>
+          <Route path="/stories/:storyId/play" element={<StoryPlayer />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('API unavailable');
+    await user.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(await screen.findByText('Playable story')).toBeInTheDocument();
+    expect(api.getStory).toHaveBeenCalledTimes(2);
+  });
+
   it('loads a story and follows available choices', async () => {
     const user = userEvent.setup();
     await renderPlayer();
@@ -232,6 +253,19 @@ describe('StoryPlayer', () => {
     expect(api.getReaderProgress).not.toHaveBeenCalled();
     expect(api.saveReaderProgress).not.toHaveBeenCalled();
     expect(api.deleteReaderProgress).not.toHaveBeenCalled();
+  });
+
+  it('replays item effects when simulation starts from an interaction', async () => {
+    const itemStory = structuredClone(story);
+    itemStory.characters = [{ id: 'mira', name: 'Mira', description: '', isPlayable: true }];
+    itemStory.itemDefinitions = [{ id: 'key', name: 'Key', description: '' }];
+    itemStory.interactions[1].itemEffects = [
+      { itemDefinitionId: 'key', characterId: 'mira', operation: 'obtain' },
+    ];
+
+    await renderPlayer('/stories/story-1/play?mode=simulation&startInteractionId=next', itemStory);
+
+    expect(screen.getByText('Key')).toBeInTheDocument();
   });
 
   it('advances the story clock before evaluating temporal choices', async () => {

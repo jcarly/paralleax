@@ -69,6 +69,23 @@ describe('ApiExceptionFilter', () => {
     });
   });
 
+  it('normalizes parser payload limits without exposing parser details', () => {
+    const response = host();
+    const error = Object.assign(new Error('entity.too.large: raw parser detail'), {
+      status: HttpStatus.PAYLOAD_TOO_LARGE,
+    });
+
+    new ApiExceptionFilter().catch(error, response.host);
+
+    expect(response.status).toHaveBeenCalledWith(HttpStatus.PAYLOAD_TOO_LARGE);
+    expect(response.json).toHaveBeenCalledWith({
+      status: HttpStatus.PAYLOAD_TOO_LARGE,
+      code: 'PAYLOAD_TOO_LARGE',
+      message: 'Request body is too large.',
+      requestId: 'request-1',
+    });
+  });
+
   it('hides unexpected error details and logs only safe request metadata', () => {
     const response = host();
     const error = jest.spyOn(Logger.prototype, 'error').mockImplementation();

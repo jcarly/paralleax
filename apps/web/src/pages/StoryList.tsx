@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import type { Story } from '@paralleax/shared';
+import type { Story, StorySummary } from '@paralleax/shared';
 import { api } from '../api';
 import { loadStoryEditor, loadStoryPlayer } from './storyRouteLoaders';
 
 export function StoryList() {
-  const [stories, setStories] = useState<Story[]>([]);
+  const [stories, setStories] = useState<StorySummary[]>([]);
   const [error, setError] = useState('');
   const load = () =>
     api
@@ -21,7 +21,7 @@ export function StoryList() {
     try {
       setError('');
       const story = await api.createStory('New story');
-      setStories((items) => [...items, story]);
+      setStories((items) => [...items, summarizeStory(story)]);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not create story');
     }
@@ -31,7 +31,7 @@ export function StoryList() {
     try {
       setError('');
       const story = await api.createDemoStory();
-      setStories((items) => [...items, story]);
+      setStories((items) => [...items, summarizeStory(story)]);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not generate demo story');
     }
@@ -66,7 +66,7 @@ export function StoryList() {
         {stories.map((story) => (
           <article className="story-card" key={story.id}>
             <h2>{story.title}</h2>
-            <p>{story.interactions.length} interaction(s)</p>
+            <p>{story.interactionCount} interaction(s)</p>
             <div className="actions">
               <Link
                 className="button"
@@ -93,4 +93,16 @@ export function StoryList() {
       </div>
     </main>
   );
+}
+
+function summarizeStory(story: Story): StorySummary {
+  return {
+    id: story.id,
+    revision: story.revision,
+    title: story.title,
+    interactionCount: story.interactions.length,
+    startDateTime: story.startDateTime,
+    createdAt: story.createdAt,
+    updatedAt: story.updatedAt,
+  };
 }

@@ -7,12 +7,14 @@ import { DatabaseMigrator } from './database/database.migrator';
 import { MigrationModule } from './database/migration.module';
 import { ApiExceptionFilter } from './operations/api-exception.filter';
 import { requestContextMiddleware } from './operations/request-context';
+import { configureRequestBodyParsing } from './operations/request-body';
 import helmet from 'helmet';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, { bodyParser: false });
   const config = app.get(AppConfigService);
+  configureRequestBodyParsing(app);
   app.useLogger(new ConsoleLogger({ json: config.nodeEnvironment === 'production' }));
   app.use(requestContextMiddleware);
   app.use(helmet(config.nodeEnvironment === 'production' ? {} : { contentSecurityPolicy: false }));

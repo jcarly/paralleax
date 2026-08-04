@@ -43,6 +43,12 @@ Use the title field at the top of the editor. The title is saved when the field 
 Use **Story starts** beside it to choose the initial narrative date and time.
 This is story-local time and does not change with the reader's device timezone.
 
+The editor toolbar reports whether a save is pending, complete, or failed. If a
+save is pending or failed, closing/reloading the browser or following an
+internal application link asks for confirmation before discarding the local
+state. Use the retry action after a failed save when you want to reload the last
+persisted story.
+
 ## Create Interactions
 
 - `Add root` on the canvas creates a starting interaction.
@@ -64,6 +70,10 @@ The interaction **Content** field is a WYSIWYG editor. Its toolbar formats text,
 headings, and lists, and inserts images or animated GIFs by URL. **Video**
 accepts direct video URLs plus YouTube and Vimeo links. Media is referenced
 externally; Paralleax does not upload or host the file yet.
+
+The character indicator below the editor measures the stored HTML. It warns in
+the final 10% of the 64,000-character allowance and reports when content is over
+the limit and cannot be saved.
 
 Use the link icon labelled **Add conditional text** to choose an interaction
 connected by an outgoing trigger and insert an editable conditional frame. The

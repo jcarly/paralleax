@@ -1,5 +1,24 @@
 # Changelog
 
+## 2026-08-04
+
+- Replaced complete-graph story listing with a shared `StorySummary` contract
+  and one PostgreSQL aggregate query returning interaction counts.
+- Added recoverable reader loading errors, retry behavior, and stale-load guards
+  for reader and editor route changes.
+- Replayed direct-start inventory effects in Simulation Mode and resolved exact
+  authored item instances rooted at locations as well as characters.
+- Added focused API, shared-engine, and web regression tests for these changes.
+- Added a prioritized code-quality backlog covering the remaining review work.
+- Added a 64,000-character interaction-body limit and separate per-minute story
+  mutation and read throttles, with API regression coverage.
+- Upgraded `sanitize-html` to 2.17.5 and refreshed safe transitive dependencies,
+  reducing the npm audit result from seven findings to four contextual findings.
+- Protected browser closing/reloading and internal link navigation while editor
+  saves are pending or failed, with cleanup after a successful save.
+- Added rich-text character usage and near-limit feedback, an explicit 128 KiB
+  HTTP request-body limit, and stable `413 PAYLOAD_TOO_LARGE` responses.
+
 ## 2026-08-02
 
 - Added reproducible 1,000-interaction PostgreSQL and 2,000-interaction editor

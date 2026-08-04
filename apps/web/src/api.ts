@@ -17,6 +17,7 @@ import type {
   SaveReaderProgressInput,
   StatDefinitionMutationResult,
   Story,
+  StorySummary,
   TriggerMutationResult,
   UpdateInteractionInput,
   UpdateItemDefinitionInput,
@@ -90,7 +91,7 @@ export const api = {
       body: JSON.stringify({ email, password }),
     }),
   logout: () => request<void>('/auth/logout', { method: 'POST' }),
-  listStories: () => request<Story[]>('/stories'),
+  listStories: () => request<StorySummary[]>('/stories'),
   getStory: (id: string) => request<Story>(`/stories/${id}`),
   getReaderProgress: (storyId: string) =>
     request<{ progress: ReaderProgress | null }>(`/stories/${storyId}/progress`).then(

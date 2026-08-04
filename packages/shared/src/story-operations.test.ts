@@ -10,6 +10,7 @@ import {
   getJourneyDateTime,
   getAvailableInteractions,
   getInputReachableInteractions,
+  getItemDefinitionIdForInstance,
   getItemOwnerIdForInstance,
   getNextChildPosition,
   getNextParentPosition,
@@ -607,6 +608,36 @@ describe('reader progress', () => {
     expect(buildReaderProgressState(story, ['root', 'root', 'middle']).ownedItemIds).toEqual([
       'key-2',
     ]);
+  });
+
+  it('resolves authored item instances rooted at locations during replay', () => {
+    const story = storyFixture();
+    story.locations = [
+      {
+        id: 'harbor',
+        name: 'Harbor',
+        description: '',
+        items: [{ id: 'key-1', itemDefinitionId: 'key-definition' }],
+      },
+    ];
+    story.itemDefinitions = [
+      {
+        id: 'key-definition',
+        name: 'Key',
+        description: '',
+        stats: [{ statDefinitionId: 'durability-definition', initialValue: 10 }],
+      },
+    ];
+    story.interactions[0].itemEffects = [{ itemId: 'key-1', operation: 'obtain' }];
+
+    const progress = buildReaderProgressState(story, ['root']);
+
+    expect(getItemDefinitionIdForInstance(story, 'key-1')).toBe('key-definition');
+    expect(getItemOwnerIdForInstance(story, 'key-1')).toBe('harbor');
+    expect(progress.ownedItemIds).toEqual(['key-1']);
+    expect(progress.itemStatValues).toEqual({
+      'key-1': { 'durability-definition': 10 },
+    });
   });
 
   it('obtains reusable item definitions and evaluates item ownership conditions', () => {

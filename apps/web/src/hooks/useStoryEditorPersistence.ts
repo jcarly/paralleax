@@ -35,6 +35,7 @@ export function useStoryEditorPersistence(storyId: string) {
   const deletedTriggerIds = useRef(new Set<string>());
   const deletedTriggerInputKeys = useRef(new Set<string>());
   const interactionSaveQueue = useRef<Promise<void>>(Promise.resolve());
+  const loadAttempt = useRef(0);
 
   const trackSave = useCallback(async <T>(operation: () => Promise<T>): Promise<T | undefined> => {
     const attempt = ++saveAttempt.current;
@@ -68,26 +69,30 @@ export function useStoryEditorPersistence(storyId: string) {
     [],
   );
 
-  const load = useCallback(
-    () =>
-      api
-        .getStory(storyId)
-        .then((next) => {
-          deletedTriggerIds.current.clear();
-          deletedTriggerInputKeys.current.clear();
-          setStory(next);
-          setError('');
-          setSaveStatus('idle');
-        })
-        .catch((e: Error) => {
-          setError(e.message);
-          setSaveStatus('error');
-        }),
-    [storyId],
-  );
+  const load = useCallback(() => {
+    const attempt = ++loadAttempt.current;
+    return api
+      .getStory(storyId)
+      .then((next) => {
+        if (attempt !== loadAttempt.current) return;
+        deletedTriggerIds.current.clear();
+        deletedTriggerInputKeys.current.clear();
+        setStory(next);
+        setError('');
+        setSaveStatus('idle');
+      })
+      .catch((e: Error) => {
+        if (attempt !== loadAttempt.current) return;
+        setError(e.message);
+        setSaveStatus('error');
+      });
+  }, [storyId]);
 
   useEffect(() => {
     void load();
+    return () => {
+      loadAttempt.current += 1;
+    };
   }, [load]);
 
   async function renameStory(title: string) {

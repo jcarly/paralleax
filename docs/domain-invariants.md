@@ -11,8 +11,9 @@ details. They should stay covered by tests as the editor grows.
   data with a missing position is normalized with a stable default position.
 - Story and interaction titles are required strings. Interaction bodies are
   stored as sanitized rich HTML strings; an API body value of `null` is
-  normalized to an empty string. Scripts, event handlers, unsafe protocols, and
-  non-allowlisted iframe hosts are removed before persistence.
+  normalized to an empty string and authored HTML is limited to 64,000
+  characters. Scripts, event handlers, unsafe protocols, and non-allowlisted
+  iframe hosts are removed before persistence.
 - A conditional body block stores only its target interaction id. Its visibility
   is derived from outgoing triggers and it cannot define independent conditions.
 - Disconnecting its target preserves the conditional body content but hides it
@@ -66,8 +67,10 @@ details. They should stay covered by tests as the editor grows.
   with a finite numeric initial value inherited by every item instance.
 - Locations, characters, stat definitions, and item definitions may reference
   an optional image URL. An empty value means that no image is configured.
-- A character item instance belongs to exactly one character and references one
-  item definition from the same story.
+- An authored item instance has one structural placement, may be rooted at one
+  character or location, and references one item definition from the same story.
+- Reader replay resolves the definition and authored root owner of both
+  character- and location-rooted item instances.
 - Several item instances owned by one character may reference the same item
   definition; every instance keeps a distinct id.
 - Removing an authored character item instance also removes legacy

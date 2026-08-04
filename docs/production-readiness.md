@@ -40,7 +40,10 @@ small test stories. It is not yet ready for an open public production service.
 - Implemented foundation: structured production logs, request identifiers,
   request completion logs, and stable API error envelopes that hide unexpected
   internal details.
-- Add request, field-length, story-size, and write-rate limits.
+- Implemented foundation: interaction bodies are capped at 64,000 characters
+  with editor feedback, HTTP request bodies at 128 KiB, and story mutations at
+  60 requests per minute. Add aggregate story-size quotas and provider-level
+  abuse controls.
 - Document incident communication, rollback, privacy, account export, and
   account deletion.
 
@@ -48,11 +51,14 @@ small test stories. It is not yet ready for an open public production service.
 
 - Add email verification, password reset, password change, and session
   revocation.
-- Make story listing a lightweight summary query rather than assembling every
-  complete graph.
+- Implemented foundation: story listing uses a lightweight `StorySummary`
+  aggregate query rather than assembling every complete graph. Retain measured
+  query-count, payload, and latency budgets before the open creator alpha.
 - Introduce targeted persistence commands for common field and position edits;
   reserve complete graph mutation for structural operations.
-- Add protection against navigating away or closing during unresolved saves.
+- Implemented foundation: pending or failed editor saves protect browser
+  closing/reloading and internal link navigation. Add data-router blocking for
+  browser back/forward navigation and retain real-browser coverage.
 - Add accessibility tests and a manual keyboard/focus audit.
 - Add dependency, secret, and container scanning.
 - Provide a production Docker image, deployment pipeline, and tested rollback.
@@ -152,7 +158,9 @@ before setting provider-specific service objectives.
 - Validate `Origin` for mutative cookie-authenticated requests once the final
   frontend/API topology is known; add a CSRF token if topology requires it.
 - Keep exact credentialed CORS origins and secure production cookies.
-- Enforce input lengths, story quotas, write-rate limits, and import limits.
+- Implemented foundation: enforce DTO input lengths and application-level story
+  mutation throttling. Add aggregate story quotas, provider-level rate controls,
+  and import limits.
 - Clean expired sessions with scheduled maintenance rather than a global cleanup
   on every authenticated request.
 - Support account recovery, session revocation, export, and deletion before open

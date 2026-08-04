@@ -63,15 +63,15 @@ procedure.
 
 ### Full-Graph Reads and Mutations
 
-The story list and mutation workflow still assemble large portions of a complete
-story graph. A mutation can lock the story, load and clone the graph, calculate
-differences, persist them, and reload the graph. This is robust for small
-stories, but work grows with story size and the story-level lock serializes
-otherwise independent edits.
+Story listing now uses a lightweight aggregate summary query, but mutation
+workflows still assemble large portions of a complete story graph. A mutation
+can lock the story, load and clone the graph, calculate differences, persist
+them, and reload the graph. This is robust for small stories, but work grows with
+story size and the story-level lock serializes otherwise independent edits.
 
 Before importing thousands of interactions:
 
-- introduce a lightweight `StorySummary` projection for story lists;
+- retain measured budgets for the implemented `StorySummary` list projection;
 - separate graph summaries from full interaction details;
 - add targeted update commands for text, positions, locations, and stat values;
 - reserve full-graph mutation for structural operations;

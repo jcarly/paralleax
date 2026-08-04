@@ -30,7 +30,8 @@ This folder is the product and technical source of truth for the project.
 24. [Test scenarios](test-scenarios.md): test scenarios to maintain.
 25. [Roadmap](roadmap.md): planned progression after the MVP.
 26. [Open questions](open-questions.md): postponed product and architecture questions.
-27. [Changelog](../CHANGELOG.md): notable implementation, test, and documentation changes.
+27. [Code quality backlog](code-quality-backlog.md): prioritized implementation debt from code reviews.
+28. [Changelog](../CHANGELOG.md): notable implementation, test, and documentation changes.
 
 ## Documentation Map
 
@@ -63,6 +64,7 @@ docs/
   test-scenarios.md         Regression scenarios
   roadmap.md                Product progression
   open-questions.md         Postponed product and architecture questions
+  code-quality-backlog.md   Prioritized code-review follow-up work
   decisions/                Architecture decision records and ADR index
   uml/                      MVP and vision diagrams
 ../CHANGELOG.md             Change tracking and maintenance rules

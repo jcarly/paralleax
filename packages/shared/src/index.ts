@@ -2,6 +2,7 @@ export interface Position {
   x: number;
   y: number;
 }
+export const MAX_INTERACTION_BODY_LENGTH = 64_000;
 export interface InteractionVisitedCondition {
   interactionId: string;
   hasBeenVisited: boolean;
@@ -140,6 +141,15 @@ export interface Story {
   statDefinitions?: StatDefinition[];
   itemDefinitions?: ItemDefinition[];
   interactions: Interaction[];
+  startDateTime?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+export interface StorySummary {
+  id: string;
+  revision?: number;
+  title: string;
+  interactionCount: number;
   startDateTime?: string;
   createdAt: string;
   updatedAt: string;
@@ -1061,8 +1071,8 @@ export function getJourneyOwnedItemIds(story: Story, journey: string[]): string[
 }
 
 export function getItemDefinitionIdForInstance(story: Story, itemId: string): string | undefined {
-  const authored = (story.characters ?? [])
-    .flatMap((character) => character.items ?? [])
+  const authored = [...(story.characters ?? []), ...(story.locations ?? [])]
+    .flatMap((owner) => owner.items ?? [])
     .find(({ id }) => id === itemId);
   if (authored) return authored.itemDefinitionId;
   const ownedRuntimeMatch = /^runtime-item:\d+:\d+:[^:]*:(.+)$/.exec(itemId);
@@ -1072,8 +1082,8 @@ export function getItemDefinitionIdForInstance(story: Story, itemId: string): st
 }
 
 export function getItemOwnerIdForInstance(story: Story, itemId: string): string | undefined {
-  const authoredOwner = (story.characters ?? []).find((character) =>
-    (character.items ?? []).some(({ id }) => id === itemId),
+  const authoredOwner = [...(story.characters ?? []), ...(story.locations ?? [])].find((owner) =>
+    (owner.items ?? []).some(({ id }) => id === itemId),
   );
   if (authoredOwner) return authoredOwner.id;
   const match = /^runtime-item:\d+:\d+:([^:]*):/.exec(itemId);

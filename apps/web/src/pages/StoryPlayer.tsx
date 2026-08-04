@@ -197,7 +197,11 @@ export function StoryPlayer() {
   const [searchParams] = useSearchParams();
   const isSimulationMode = searchParams.get('mode') === 'simulation';
   const startInteractionId = searchParams.get('startInteractionId');
+  const loadKey = `${storyId}:${isSimulationMode ? 'simulation' : 'reader'}:${startInteractionId ?? ''}`;
   const [story, setStory] = useState<Story>();
+  const [loadedKey, setLoadedKey] = useState('');
+  const [loadError, setLoadError] = useState<{ key: string; message: string }>();
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const [currentId, setCurrentId] = useState<string | null>(startInteractionId);
   const [journey, setJourney] = useState<string[]>(startInteractionId ? [startInteractionId] : []);
   const [visited, setVisited] = useState<string[]>(startInteractionId ? [startInteractionId] : []);
@@ -215,39 +219,55 @@ export function StoryPlayer() {
   const progressAttempt = useRef(0);
 
   useEffect(() => {
+    let cancelled = false;
     void Promise.all([
       api.getStory(storyId),
       isSimulationMode || startInteractionId
         ? Promise.resolve(null)
         : api.getReaderProgress(storyId),
-    ]).then(([nextStory, progress]) => {
-      const positioned = ensureStoryInteractionPositions(nextStory);
-      const reconciledProgress = progress
-        ? buildReaderProgressState(
-            positioned,
-            progress.state.journeyInteractionIds,
-            progress.state.ownedItemIds,
-          )
-        : undefined;
-      const nextJourney =
-        reconciledProgress?.journeyInteractionIds ??
-        (startInteractionId ? [startInteractionId] : []);
-      setStory(positioned);
-      setJourney(nextJourney);
-      setVisited(uniqueJourneyIds(nextJourney));
-      setCurrentId(nextJourney.at(-1) ?? null);
-      setCurrentLocationId(getJourneyLocation(positioned, nextJourney));
-      setStatValues(getJourneyStatValues(positioned, nextJourney));
-      setOwnedItemIds(reconciledProgress?.ownedItemIds ?? []);
-      setItemStatValues(
-        reconciledProgress?.itemStatValues ?? getJourneyItemStatValues(positioned, nextJourney),
-      );
-      if (nextJourney.length > 0) {
-        setPlayableCharacterId(positioned.characters?.find(({ isPlayable }) => isPlayable)?.id);
-      }
-      setProgressStatus(progress ? 'saved' : 'idle');
-    });
-  }, [isSimulationMode, startInteractionId, storyId]);
+    ])
+      .then(([nextStory, progress]) => {
+        if (cancelled) return;
+        const positioned = ensureStoryInteractionPositions(nextStory);
+        const reconciledProgress = progress
+          ? buildReaderProgressState(
+              positioned,
+              progress.state.journeyInteractionIds,
+              progress.state.ownedItemIds,
+            )
+          : undefined;
+        const nextJourney =
+          reconciledProgress?.journeyInteractionIds ??
+          (startInteractionId ? [startInteractionId] : []);
+        setStory(positioned);
+        setLoadedKey(loadKey);
+        setJourney(nextJourney);
+        setVisited(uniqueJourneyIds(nextJourney));
+        setCurrentId(nextJourney.at(-1) ?? null);
+        setCurrentLocationId(getJourneyLocation(positioned, nextJourney));
+        setStatValues(getJourneyStatValues(positioned, nextJourney));
+        setOwnedItemIds(
+          reconciledProgress?.ownedItemIds ?? getJourneyOwnedItemIds(positioned, nextJourney),
+        );
+        setItemStatValues(
+          reconciledProgress?.itemStatValues ?? getJourneyItemStatValues(positioned, nextJourney),
+        );
+        if (nextJourney.length > 0) {
+          setPlayableCharacterId(positioned.characters?.find(({ isPlayable }) => isPlayable)?.id);
+        }
+        setProgressStatus(progress ? 'saved' : 'idle');
+      })
+      .catch((caught: unknown) => {
+        if (cancelled) return;
+        setLoadError({
+          key: loadKey,
+          message: caught instanceof Error ? caught.message : 'The story could not be loaded.',
+        });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isSimulationMode, loadAttempt, loadKey, startInteractionId, storyId]);
 
   const current = useMemo(
     () => story?.interactions.find((item) => item.id === currentId),
@@ -450,7 +470,9 @@ export function StoryPlayer() {
           : getInitialStatValues(story)
         : {},
     );
-    setOwnedItemIds([]);
+    setOwnedItemIds(
+      story && startInteractionId ? getJourneyOwnedItemIds(story, [startInteractionId]) : [],
+    );
     setItemStatValues(
       story
         ? startInteractionId
@@ -561,7 +583,30 @@ export function StoryPlayer() {
     );
   }
 
-  if (!story) return <main className="page">Loading...</main>;
+  if (!story || loadedKey !== loadKey) {
+    const activeLoadError = loadError?.key === loadKey ? loadError.message : '';
+    return (
+      <main className="page">
+        {activeLoadError ? (
+          <>
+            <p className="error" role="alert">
+              {activeLoadError}
+            </p>
+            <button
+              onClick={() => {
+                setLoadError(undefined);
+                setLoadAttempt((attempt) => attempt + 1);
+              }}
+            >
+              Retry
+            </button>
+          </>
+        ) : (
+          <p>Loading...</p>
+        )}
+      </main>
+    );
+  }
 
   return (
     <main className="player-page">

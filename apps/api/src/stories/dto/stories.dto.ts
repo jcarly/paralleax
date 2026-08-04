@@ -1,4 +1,5 @@
 import { Type } from 'class-transformer';
+import { MAX_INTERACTION_BODY_LENGTH } from '@paralleax/shared';
 import {
   IsArray,
   IsBoolean,
@@ -61,6 +62,7 @@ export class UpdateInteractionDto {
   title?: string;
   @ValidateIf((_, value) => value !== undefined && value !== null)
   @IsString()
+  @MaxLength(MAX_INTERACTION_BODY_LENGTH)
   body?: string | null;
   @ValidateIf((_, value) => value !== undefined)
   @IsObject()

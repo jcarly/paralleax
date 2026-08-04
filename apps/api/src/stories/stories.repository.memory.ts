@@ -1,4 +1,4 @@
-import type { ReaderProgress, ReaderProgressState, Story } from '@paralleax/shared';
+import type { ReaderProgress, ReaderProgressState, Story, StorySummary } from '@paralleax/shared';
 
 export class InMemoryStoriesRepository {
   private readonly stories = new Map<string, Story>();
@@ -6,10 +6,18 @@ export class InMemoryStoriesRepository {
   private readonly mutationQueues = new Map<string, Promise<void>>();
   private readonly progress = new Map<string, ReaderProgress>();
 
-  async list(ownerId: string): Promise<Story[]> {
+  async list(ownerId: string): Promise<StorySummary[]> {
     return [...this.stories.entries()]
       .filter(([id]) => this.owners.get(id) === ownerId)
-      .map(([, story]) => structuredClone(story));
+      .map(([, story]) => ({
+        id: story.id,
+        revision: story.revision,
+        title: story.title,
+        interactionCount: story.interactions.length,
+        startDateTime: story.startDateTime,
+        createdAt: story.createdAt,
+        updatedAt: story.updatedAt,
+      }));
   }
 
   async find(id: string, ownerId: string): Promise<Story | undefined> {

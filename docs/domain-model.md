@@ -114,13 +114,16 @@ not itself owned by a character.
 
 ### Item Instance
 
-An item instance belongs to exactly one character and references one item
-definition from the same story. Adding the same definition several times creates
-separate instances with distinct ids. Interactions can obtain or lose one exact
-item instance, allowing repeated definitions to remain distinct. Each instance
-has independent runtime values for the stats assigned by its definition.
-Interaction effects can add to or set one exact instance stat. Items do not have
-conditions or equipment behavior yet.
+An authored item instance has exactly one structural placement and references
+one item definition from the same story. A root instance may belong to a
+character or location; nested instances keep their typed parent relationship.
+Adding the same definition several times creates separate instances with
+distinct ids. Interactions can obtain or lose one exact item instance, allowing
+repeated definitions to remain distinct. Reader replay resolves definitions for
+both character- and location-rooted authored instances. Each instance has
+independent runtime values for the stats assigned by its definition. Interaction
+effects can add to or set one exact instance stat. Items do not have conditions
+or equipment behavior yet.
 
 See [Trigger semantics](triggers.md) for deletion rules and editor behavior.
 

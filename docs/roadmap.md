@@ -28,7 +28,9 @@
 - P0 operations: health/readiness checks, structured production logs, request
   IDs, and stable error envelopes are implemented; next add staging, error
   reporting, metrics, and a production rollback path.
-- Add a lightweight `StorySummary` list projection without graph assembly.
+- Implemented foundation: story lists use a lightweight `StorySummary`
+  projection without graph assembly; next retain measured latency and payload
+  budgets for large creator accounts.
 - Introduce targeted commands for common interaction, location, character, and
   stat updates while retaining full-graph mutation for structural operations.
 - Replace avoidable quadratic order lookups and add a dedicated bulk persistence

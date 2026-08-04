@@ -22,6 +22,7 @@ import { TriggerEdge } from '../components/TriggerEdge';
 import { TriggerInspector } from '../components/TriggerInspector';
 import { TriggerNode } from '../components/TriggerNode';
 import { useStoryEditorPersistence } from '../hooks/useStoryEditorPersistence';
+import { usePendingSaveGuard } from '../hooks/usePendingSaveGuard';
 import {
   buildInteractionNodes,
   buildTriggerNodes,
@@ -81,6 +82,7 @@ export function StoryEditor() {
     deleteCharacterItem,
     moveItemInstance,
   } = useStoryEditorPersistence(storyId);
+  usePendingSaveGuard(Boolean(story) && (saveStatus === 'saving' || saveStatus === 'error'));
   const [selectedId, setSelectedId] = useState<string>();
   const [selectedTrigger, setSelectedTrigger] = useState<SelectedTrigger>();
   const [selectedLocationId, setSelectedLocationId] = useState<string>();
@@ -480,7 +482,12 @@ export function StoryEditor() {
           />
         </label>
         <div className="actions">
-          <span className={`save-status ${saveStatus}`} role="status" aria-live="polite">
+          <span
+            className={`save-status ${saveStatus}`}
+            role="status"
+            aria-label="Story save status"
+            aria-live="polite"
+          >
             {saveStatus === 'saving'
               ? 'Saving…'
               : saveStatus === 'saved'

@@ -303,30 +303,39 @@ describe('StoriesRepository', () => {
     mockConnect.mockResolvedValue({ query: mockClientQuery, release: mockRelease });
   });
 
-  it('assembles stories from relational rows', async () => {
+  it('lists lightweight story summaries without assembling graphs', async () => {
     const saved = story();
-    relationalRead(mockQuery, saved);
+    mockQuery.mockResolvedValueOnce({
+      rows: [
+        {
+          id: saved.id,
+          revision: 1,
+          title: saved.title,
+          start_date_time: saved.startDateTime,
+          created_at: saved.createdAt,
+          updated_at: saved.updatedAt,
+          interaction_count: '3',
+        },
+      ],
+    });
 
     const listed = await repository().list(ownerId);
-    listed[0].title = 'Mutated outside repository';
 
-    expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining('FROM stories'), [ownerId]);
-    expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining('FROM interactions'), [
-      [saved.id],
+    expect(listed).toEqual([
+      {
+        id: saved.id,
+        revision: 1,
+        title: saved.title,
+        interactionCount: 3,
+        startDateTime: saved.startDateTime,
+        createdAt: saved.createdAt,
+        updatedAt: saved.updatedAt,
+      },
     ]);
-    expect(mockQuery).toHaveBeenCalledWith(
-      expect.stringMatching(
-        /SELECT id, story_id, name, description, image_url, sort_order\s+FROM locations/,
-      ),
-      [[saved.id]],
-    );
-    expect(mockQuery).toHaveBeenCalledWith(
-      expect.stringMatching(
-        /SELECT id, story_id, name, description, image_url, stats, sort_order\s+FROM item_definitions/,
-      ),
-      [[saved.id]],
-    );
-    expect(saved.title).toBe('Repository story');
+    expect(mockQuery).toHaveBeenCalledTimes(1);
+    expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining('COUNT(interactions.id)'), [
+      ownerId,
+    ]);
   });
 
   it('finds and assembles a story by id', async () => {

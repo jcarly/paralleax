@@ -281,6 +281,25 @@ The character-stat vertical keeps these regressions covered:
 
 ## Playwright Functional Tests
 
+Component and domain regressions supporting these flows also cover:
+
+- a failed initial reader load showing an actionable error and recovering on
+  retry without remounting the route;
+- exact authored items rooted at locations retaining their definition, owner,
+  and initial item-stat values during replay;
+- story listing performing one summary query without assembling complete story
+  graphs.
+- interaction bodies above 64,000 characters being rejected at the API boundary;
+- raw HTTP request bodies above 128 KiB returning the stable
+  `PAYLOAD_TOO_LARGE` error envelope;
+- rich-text authoring showing character usage, a near-limit warning, and an
+  over-limit save warning;
+- the 61st story mutation in one minute being throttled while story reads remain
+  available.
+- pending or failed editor saves registering a browser-unload guard and asking
+  for confirmation before internal link navigation, then removing both guards
+  when saving completes.
+
 - Reader: resume a saved journey and persist the next selected interaction.
 - Editor: update the story-local starting date/time and an interaction duration.
 - Editor: open a story, select an interaction, rename its title, and verify that the canvas and inspector stay visible.

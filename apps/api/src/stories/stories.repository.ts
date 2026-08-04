@@ -6,6 +6,7 @@ import {
   type ReaderProgress,
   type ReaderProgressState,
   type Story,
+  type StorySummary,
   type TriggerCondition,
 } from '@paralleax/shared';
 import type { PoolClient } from 'pg';
@@ -23,6 +24,9 @@ type StoryRow = {
   start_date_time: string;
   created_at: Date | string;
   updated_at: Date | string;
+};
+type StorySummaryRow = StoryRow & {
+  interaction_count: number | string;
 };
 type InteractionRow = {
   id: string;
@@ -128,15 +132,26 @@ type ReaderProgressRow = {
 export class StoriesRepository {
   constructor(private readonly database: DatabaseConnection) {}
 
-  async list(ownerId: string): Promise<Story[]> {
-    const result = await this.database.pool.query<StoryRow>(
-      `SELECT id, revision, title, start_date_time, created_at, updated_at
+  async list(ownerId: string): Promise<StorySummary[]> {
+    const result = await this.database.pool.query<StorySummaryRow>(
+      `SELECT stories.id, stories.revision, stories.title, stories.start_date_time,
+              stories.created_at, stories.updated_at, COUNT(interactions.id) AS interaction_count
        FROM stories
-       WHERE creator_user_id = $1
-       ORDER BY updated_at DESC, created_at DESC`,
+       LEFT JOIN interactions ON interactions.story_id = stories.id
+       WHERE stories.creator_user_id = $1
+       GROUP BY stories.id
+       ORDER BY stories.updated_at DESC, stories.created_at DESC`,
       [ownerId],
     );
-    return this.assemble(this.database.pool, result.rows);
+    return result.rows.map((row) => ({
+      id: row.id,
+      revision: row.revision,
+      title: row.title,
+      interactionCount: Number(row.interaction_count),
+      startDateTime: row.start_date_time,
+      createdAt: iso(row.created_at),
+      updatedAt: iso(row.updated_at),
+    }));
   }
 
   async find(id: string, ownerId: string): Promise<Story | undefined> {

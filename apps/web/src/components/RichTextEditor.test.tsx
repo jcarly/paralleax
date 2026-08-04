@@ -73,6 +73,37 @@ describe('RichTextEditor', () => {
     expect(container.querySelector('iframe')).toBeNull();
   });
 
+  it('warns before the authored HTML limit and reports content over the limit', () => {
+    const { container, rerender } = render(
+      <RichTextEditor
+        value="123456789012345678"
+        onChange={vi.fn()}
+        onBlur={vi.fn()}
+        maxLength={20}
+      />,
+    );
+
+    expect(within(container).getByRole('status', { name: 'Content length' })).toHaveTextContent(
+      '2 characters remaining.',
+    );
+    expect(within(container).getByRole('status', { name: 'Content length' })).toHaveClass(
+      'warning',
+    );
+
+    rerender(
+      <RichTextEditor
+        value="123456789012345678901"
+        onChange={vi.fn()}
+        onBlur={vi.fn()}
+        maxLength={20}
+      />,
+    );
+    expect(within(container).getByRole('status', { name: 'Content length' })).toHaveTextContent(
+      '1 character over limit. This content cannot be saved.',
+    );
+    expect(within(container).getByRole('status', { name: 'Content length' })).toHaveClass('error');
+  });
+
   it('inserts a conditional text frame for an outgoing interaction', async () => {
     const user = userEvent.setup();
     const execCommand = vi.fn().mockReturnValue(true);

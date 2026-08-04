@@ -22,11 +22,19 @@ import {
 } from './dto/stories.dto';
 import { StoriesService } from './stories.service';
 import { CurrentUser, type RequestUser } from '../auth/auth.decorators';
+import { Throttle } from '@nestjs/throttler';
+
+export const STORY_MUTATION_RATE_LIMIT = 60;
+export const STORY_READ_RATE_LIMIT = 100;
+
+@Throttle({ default: { limit: STORY_MUTATION_RATE_LIMIT, ttl: 60_000 } })
 @Controller('stories')
 export class StoriesController {
   constructor(private readonly stories: StoriesService) {}
 
-  @Get() list(@CurrentUser() user: RequestUser) {
+  @Get()
+  @Throttle({ default: { limit: STORY_READ_RATE_LIMIT, ttl: 60_000 } })
+  list(@CurrentUser() user: RequestUser) {
     return this.stories.list(user.id);
   }
 
@@ -39,11 +47,14 @@ export class StoriesController {
     return this.stories.createDemo(user.id);
   }
 
-  @Get(':storyId') get(@Param('storyId') id: string, @CurrentUser() user: RequestUser) {
+  @Get(':storyId')
+  @Throttle({ default: { limit: STORY_READ_RATE_LIMIT, ttl: 60_000 } })
+  get(@Param('storyId') id: string, @CurrentUser() user: RequestUser) {
     return this.stories.get(id, user.id);
   }
 
   @Get(':storyId/progress')
+  @Throttle({ default: { limit: STORY_READ_RATE_LIMIT, ttl: 60_000 } })
   async getProgress(@Param('storyId') id: string, @CurrentUser() user: RequestUser) {
     return { progress: await this.stories.getProgress(id, user.id) };
   }

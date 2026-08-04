@@ -103,9 +103,9 @@ are evaluated against the resulting values. A rate is prorated by minutes, so
 `-2` per hour changes a stat by `-0.5` during a 15-minute interaction.
 
 Starting simulation from a specific interaction applies that interaction's
-time-based change and effects. Restart rebuilds the initial state, and stepping
-backward replays the remaining journey so changes are reversible without
-maintaining an inverse log.
+time-based change, stat effects, and inventory effects. Restart rebuilds the
+same direct-start state, and stepping backward replays the remaining journey so
+changes are reversible without maintaining an inverse log.
 
 ## Item Stats
 
@@ -118,7 +118,9 @@ interaction applies its ordered item-stat `add` or `set` effects.
 Item stat effects target an exact item instance and one stat exposed by that
 instance's definition. The values are replayed for the complete authored set of
 instances; the inventory only decides which instances are currently displayed
-to the player.
+to the player. Authored instances are resolved from either a character or
+location root, so moving an instance does not detach it from its definition or
+runtime stat defaults.
 
 ## Story Time
 

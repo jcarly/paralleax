@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { MAX_INTERACTION_BODY_LENGTH } from '@paralleax/shared';
 import type { ConditionalTextState } from './RichTextContent';
 
 function embedMarkup(url: string): string | undefined {
@@ -28,6 +29,10 @@ function embedMarkup(url: string): string | undefined {
   return `<video src="${url.replaceAll('"', '&quot;')}" controls></video>`;
 }
 
+function characterCount(value: number) {
+  return `${value.toLocaleString('en-US')} ${value === 1 ? 'character' : 'characters'}`;
+}
+
 export function RichTextEditor({
   value,
   onChange,
@@ -36,6 +41,7 @@ export function RichTextEditor({
   conditionalTargets = [],
   conditionalTextState,
   onConditionalTargetClick,
+  maxLength = MAX_INTERACTION_BODY_LENGTH,
 }: {
   value: string;
   onChange: (html: string) => void;
@@ -44,9 +50,18 @@ export function RichTextEditor({
   conditionalTargets?: { id: string; title: string }[];
   conditionalTextState?: ConditionalTextState;
   onConditionalTargetClick?: (interactionId: string) => void;
+  maxLength?: number;
 }) {
   const editorRef = useRef<HTMLDivElement>(null);
   const [showConditionalTargets, setShowConditionalTargets] = useState(false);
+  const remainingCharacters = maxLength - value.length;
+  const isNearLimit = remainingCharacters <= Math.ceil(maxLength * 0.1);
+  const limitMessage =
+    remainingCharacters < 0
+      ? `${characterCount(Math.abs(remainingCharacters))} over limit. This content cannot be saved.`
+      : isNearLimit
+        ? `${characterCount(remainingCharacters)} remaining.`
+        : `${value.length.toLocaleString('en-US')} / ${maxLength.toLocaleString('en-US')} characters`;
 
   function editorHtml() {
     const clone = editorRef.current?.cloneNode(true) as HTMLDivElement | undefined;
@@ -219,6 +234,14 @@ export function RichTextEditor({
         onInput={() => onChange(editorHtml())}
         onBlur={() => onBlur(editorHtml())}
       />
+      <p
+        className={`rich-text-limit ${remainingCharacters < 0 ? 'error' : isNearLimit ? 'warning' : ''}`}
+        role="status"
+        aria-label="Content length"
+        aria-live="polite"
+      >
+        {limitMessage}
+      </p>
     </div>
   );
 }
