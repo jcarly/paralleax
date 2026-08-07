@@ -1,183 +1,162 @@
 # Roadmap
 
-## V0.1 - MVP
+This roadmap describes future and incremental work while preserving implemented
+milestones where that history is useful.
+
+For the authoritative implemented baseline, see [Current scope](current-scope.md).
+The original narrative-core milestone is documented in [MVP](mvp.md).
+
+## Current Direction
+
+Near-term priorities are:
+
+- production robustness and operational readiness;
+- scalable authoring and graph navigation;
+- explicit story revisions and conflict handling before collaborative editing;
+- continued typed world-state expansion without a universal unvalidated variable bag;
+- import/export foundations and compatibility tooling;
+- progressive decomposition of large orchestration files as features touch them.
+
+## V0.1 - Narrative Core — Implemented
 
 - Story, Interaction, Trigger, and Reader.
 - Graph editor.
-- Title/content editing.
-- Interaction movement without data loss.
-- Output creation without overlap.
-- Triggers with several inputs.
-- Connection UX for choosing between adding an input to an existing trigger and
-  creating a new trigger.
-- Visible saving, saved, and failed states with story reload recovery.
-- Confirmations before deleting interactions and triggers.
-- Contextual inputless triggers with visited / not visited conditions.
-- OR condition groups through several triggers between the same interactions.
-- Trigger editing from graph markers.
-- Trigger cleanup when deleting interactions.
-- Visited / not visited conditions.
-- PostgreSQL persistence for authored MVP stories.
-- API, web, Playwright, and coverage tests in CI.
+- Interaction editing and movement without data loss.
+- Trigger inputs, contextual triggers, OR variants, and cleanup.
+- Visible save-state and deletion protections.
+- PostgreSQL persistence.
+- API, web, Playwright, and coverage tests.
 
-## V0.2 - Persistence and Robustness
+## V0.2 - Persistence, Robustness, and Authoring Scale — In Progress
 
-- P0 data safety: migration execution is explicit and the historical JSON graph
-  upgrade is data-preserving with representative PostgreSQL coverage; next
-  establish automated backups and verify restoration.
-- P0 operations: health/readiness checks, structured production logs, request
-  IDs, and stable error envelopes are implemented; next add staging, error
-  reporting, metrics, and a production rollback path.
-- Implemented foundation: story lists use a lightweight `StorySummary`
-  projection without graph assembly; next retain measured latency and payload
-  budgets for large creator accounts.
-- Introduce targeted commands for common interaction, location, character, and
-  stat updates while retaining full-graph mutation for structural operations.
-- Replace avoidable quadratic order lookups and add a dedicated bulk persistence
-  path for imports, templates, and large demo stories.
-- Implemented foundation: `StoryEditor`, React Flow, and `StoryPlayer` are loaded
-  as route chunks after measuring the previous monolithic production bundle.
-- Implemented foundation: trigger creation accepts its initial inputs and
-  conditions atomically, removing the create-then-patch editor waterfall.
-- Add representative large-story profiling before changing graph projection,
-  memoization, or React Flow synchronization for performance.
-- JSON export/import for stories.
-- Story Canvas UX exploration: keep the current graph semantics, but refine the
-  editor toward a story-first canvas with denser default spacing, adaptive edge
-  routing, cleaner trigger marker placement, left-side navigation/filtering, a
-  contextual right inspector, and representative canvas examples.
-- Navigation foundation: quick search, recentering, recent selections, and
-  model/story navigation patterns for larger graphs.
-- Story Canvas focus mode that emphasizes the active interaction and its direct
-  narrative neighborhood without hiding the surrounding graph.
-- Instructional empty-story state, contextual canvas actions, and a small
-  conflict-safe keyboard shortcut foundation.
-- Whole-graph auto-layout command with a vertical flow, immediate application,
-  and undo support.
-- Simulation Mode for authors: reader-like interface, start from any
-  interaction, show available interactions, dim unavailable interactions when
-  useful, explain unavailability on hover, support forced interactions,
-  lightweight title/content/option editing, and link test results back to graph
-  editing.
-- Evaluate Tailwind CSS for broader UI styling while keeping React Flow-specific graph styles isolated.
-- Interface internationalization foundation with UI copy extracted into translation keys or variables.
-- Initial locale structure so additional languages can be added without rewriting components.
-- Persisted reader sessions and player saves after story persistence is stable.
-- Explicit migrations for future schema changes.
-- Reproducible demo data.
-- UI wording pass for author-facing trigger vocabulary.
-- Visual identity and design-system foundation for palette, typography, spacing,
-  graph controls, interaction nodes, trigger markers, selection states,
-  accessibility, and desktop-first editing.
+Implemented foundations include PostgreSQL migrations, health/readiness, stable
+API errors, lightweight story summaries, targeted mutation persistence,
+lazy-loaded route chunks, atomic trigger creation, large-story stress tests,
+batched complete-story persistence, editor save protections, Story Canvas and
+Simulation Mode foundations, and authenticated reader progress.
 
-## V0.3 - Users, Permissions, and Review
+Remaining work includes:
 
-- Implemented foundation: local user accounts, opaque cookie sessions, and
-  creator-only story ownership.
-- Before shared editing, require story revisions on mutations and return a
-  conflict when a client writes from an obsolete revision. Define the editor's
-  merge or retry behavior before enforcing this precondition.
-- Introduce a centralized `StoryAccessPolicy` with explicit `read`, `edit`,
-  `manage`, and `delete` capabilities before adding permission checks to feature
-  code.
-- Account recovery, email verification, and external identity providers remain
-  future deployment concerns.
-- Story default access settings for private stories, public reading, and public suggestions.
-- Per-user story permissions for reading, suggesting edits, reviewing suggestions, direct editing, and managing settings.
-- Permission hierarchy and inheritance rules to define before implementation.
-- Review rights that let authorized users see all pending suggestions for a story.
-- Review workflow for proposed story changes.
-- Contribution workflow for proposing interactions or branches before they are
-  accepted into the canonical story.
-- Approval rules that can require creator or authorized reviewer validation before suggested changes affect the story.
-- Event-log-based change history for accepted, rejected, and pending story modifications.
+- automated backups and verified restoration;
+- staging, metrics, error reporting, and rollback;
+- measured latency and payload budgets for large creator accounts;
+- further targeted persistence commands;
+- continued profiling before graph-performance changes;
+- stable JSON/public import-export;
+- Story Canvas and focus-mode refinement;
+- stronger empty-state and keyboard guidance;
+- whole-graph auto-layout with undo;
+- broader interface internationalization;
+- design-system and accessibility consolidation.
 
-## Deployment Readiness Backlog
+## V0.3 - Users, Permissions, Review, and Collaboration — Partial Foundation
 
-The complete gates live in [Production readiness](production-readiness.md).
-These items are required before the corresponding public deployment milestone,
-not optional cleanup after launch:
+Implemented:
 
-- Describe response DTOs, cookie authentication, and `401`, `403`, `404`, and
-  `409` responses in the existing OpenAPI document as the permission contract
-  stabilizes.
-- Introduce a stable machine-readable API error envelope before several clients
-  or permission/conflict errors depend on error parsing.
-- Add an API and PostgreSQL health endpoint, graceful pool shutdown, structured
-  request logs, and request correlation identifiers before operating a hosted
-  environment.
-- Re-evaluate CSRF protection against the final frontend/API domain topology;
-  add explicit Origin checks or CSRF tokens if cookie and SameSite boundaries do
-  not provide the intended protection.
-- Move SQL migrations to one ordered file per migration when the migration list
-  becomes difficult to review; keep the current lightweight runner and do not
-  introduce an ORM only for migration organization.
-- Split story read projections from write persistence only when permissions,
-  lightweight story lists, or progressive loading make the current repository
-  materially harder to maintain.
+- local user accounts;
+- cookie sessions;
+- creator-only story ownership.
+
+Next:
+
+- story revisions and explicit conflicts;
+- editor merge/retry semantics;
+- centralized access policy;
+- account recovery and external identity;
+- private/unlisted/public visibility;
+- delegated rights;
+- suggestions and review;
+- event-log history;
+- real-time collaboration only after conflict semantics are reliable.
 
 ## Publication Readiness
 
-- Separate mutable drafts from immutable published story versions.
-- Add validation before publication and stable public reader URLs.
-- Add private, unlisted, and public visibility.
-- Separate author simulation tools from the public reader.
-- Define reporting, moderation, ownership, and content licensing rules.
+Before public publishing:
 
-## V0.4 - Advanced Narrative Model
+- separate mutable drafts from immutable published versions;
+- validate stories before publication;
+- add stable public reader URLs;
+- define visibility;
+- separate simulation tools from public reading;
+- define reporting, moderation, ownership, and content licensing.
 
-- Locations are implemented as the first world-state vertical: story-owned
-  definitions, interaction movement, and current-location trigger conditions.
-- Characters are implemented as story-owned definitions, interaction casts, and
-  present/absent trigger conditions.
-- Numeric character stats are implemented with initial values, typed interaction
-  effects, and trigger comparisons.
-- Item definitions and authored character-owned item instances are implemented;
-  several instances may reference the same definition.
-- Interactions can deterministically obtain or lose exact character-owned item
-  instances; reader inventory is replayed from the journey.
-- Deterministic story-local time, interaction durations, and trigger schedules
-  using dates, weekdays, and multiple time slots are implemented.
-- Establish typed world-state conditions and interaction effects incrementally;
-  do not introduce an unvalidated universal parameter bag.
-- Typed variables: stable attributes, changing resources, skills, flags, traits,
-  and temporary statuses.
-- Extend locations with deletion/reference-resolution UX and persisted session
-  state only when those workflows are introduced.
-- Extend characters with playable points of view and directional relationships.
-- Neutral grouping concept for quests, chapters, arcs, or scene sequences.
-- Author annotations that do not affect story execution.
-- Story Canvas filters/focal points for future groups, characters, and places.
-- General attributes beyond character stats.
-- Interaction impacts on general attributes.
-- World-based conditions beyond location, character presence, and character stats.
-- Contextual inputless triggers based on broader world state.
-- Final interactions and explicit story completion.
-- Extend the first playable item vertical with possession conditions, basic
-  equipment, tags, and quantity-aware effects.
-- Later item increments: multiple containers, consumables, durability,
-  modifiers, shops, economy, and advanced clothing layers or coverage.
-- Recursive item graph (ADR-013): implemented persistence foundation migrates
-  flat character items to story-local instances without changing ids and allows
-  character/location roots. Typed parent relationships and cycle-safe subtree
-  transfers between characters are implemented. Next add location moves,
-  authoring UI, reader persistence, simple relationship conditions/effects, and
-  finally definition kinds and slots.
+See [Production readiness](production-readiness.md).
 
-## V0.5 - Timing and Probabilities
+## V0.4 - Typed World State — Partially Implemented
 
-- Implemented: interaction durations and calendar-based trigger availability.
-- Real-time choice countdowns and delayed automatic choices.
-- Appearance probability.
-- Probabilistic automatic choices.
+Implemented:
 
-## V1.0 - Exports and Integrations
+- locations and current-location conditions;
+- characters, casts, and presence conditions;
+- numeric character stats, effects, and comparisons;
+- item definitions and exact item instances;
+- deterministic inventory replay;
+- recursive item-instance persistence and authoring;
+- character/location roots and cycle-safe transfers;
+- deterministic story-local time, durations, and scheduled trigger conditions.
 
-- Embeddable reader.
-- Hosted platform publishing and story sharing.
-- Web app or executable exports.
-- Media support.
-- Unity exploration.
-- AI experiments.
-- Progressive loading for large stories when measured story sizes justify
-  lightweight canvas summaries and on-demand details.
+Future increments:
+
+- typed stable attributes, resources, skills, flags, traits, and temporary statuses;
+- broader world-state conditions and effects;
+- location reference-resolution UX;
+- additional persisted runtime world state;
+- playable points of view and directional relationships;
+- neutral grouping for quests/chapters/arcs;
+- author annotations;
+- graph filters/focal points;
+- explicit final interactions and story completion;
+- equipment, possession conditions, tags, quantities, consumables, durability,
+  modifiers, shops/economy, and advanced clothing semantics.
+
+## V0.5 - Timing, Automatic Choices, and Probability — Partial Foundation
+
+Implemented:
+
+- interaction durations;
+- calendar-based trigger availability.
+
+Future:
+
+- real-time choice countdowns;
+- delayed automatic choices;
+- appearance probability;
+- probabilistic automatic choices.
+
+## V0.6 - Import / Export Compatibility
+
+Imports must remain adapters rather than specifications for the Paralleax core.
+
+Preferred pipeline:
+
+```text
+source inventory
+  -> parser
+  -> source-neutral intermediate representation
+  -> compatibility / unsupported-feature report
+  -> Paralleax mapping
+  -> validation
+  -> import
+```
+
+Priorities:
+
+- source-neutral intermediate representation;
+- validation and compatibility reports;
+- stable internal import APIs;
+- representative adapters for complex external story systems;
+- stable public import/export only after internal compatibility requirements are understood.
+
+## V1.0 - Publishing, Exports, and Integrations
+
+Potential directions:
+
+- embeddable reader;
+- hosted publishing and story sharing;
+- web app or executable exports;
+- managed media support;
+- Unity exploration;
+- AI experiments;
+- progressive loading for large stories when measured sizes justify it.
+
+These are product directions, not commitments to one implementation order.

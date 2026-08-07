@@ -1,31 +1,46 @@
 # Paralleax
 
-Paralleax is an editor and engine for interactive scenarios.
+Paralleax is an editor and runtime engine for complex interactive scenarios.
 
-This repository contains the TypeScript refactor of the prototype, with a deliberately small MVP scope so the core product can be stabilized before advanced concepts are added.
+The project started from a deliberately small narrative MVP and has since expanded
+into a broader authoring and execution platform with persisted world context,
+reader state, simulation tools, and production-oriented foundations.
 
-## MVP Scope
+## Current Product Scope
 
-The MVP only covers:
+The authoritative description of what is implemented today lives in
+[Current scope](docs/current-scope.md).
 
-- `Story`: an interactive scenario.
-- `Interaction`: a narrative block displayed in the editor and reader.
-- `Trigger`: the rule that makes an interaction available from one or more input interactions.
-- `Reader`: story execution through successive choices.
+The current baseline includes:
 
-Characters, places, variables, AI, real-time collaboration, delegated permissions, and
-player save persistence are intentionally out of scope until the MVP is
-validated.
+- Story authoring and PostgreSQL persistence.
+- Interactions with rich content, graph positions, context, effects, and duration.
+- Triggers with multiple input interactions and typed conditions.
+- Reader execution and persisted authenticated reader progress.
+- Deterministic story-local calendar time.
+- Locations and characters.
+- Reusable character stats and stat effects.
+- Reusable item definitions and exact authored item instances.
+- Recursive item-instance relationships rooted at characters or locations.
+- React Flow graph authoring and simulation-oriented diagnostics.
+- Authentication, sessions, creator ownership, migrations, health/readiness, and
+  production-oriented API error handling.
+- Unit, integration, PostgreSQL, component, and Playwright testing.
+
+The original MVP remains documented as a historical milestone in
+[MVP](docs/mvp.md). Future work belongs in the [Roadmap](docs/roadmap.md).
 
 ## Architecture
 
 - `apps/web`: React + Vite + React Flow application.
-- `apps/api`: NestJS API backed by PostgreSQL story persistence.
-- `packages/shared`: shared MVP model, reader rules, story operations, trigger cleanup rules, merge rules, and graph placement helpers used by both the web app and API.
-- `docs`: product, architecture, ADR, UML, and test scenario documentation.
+- `apps/api`: NestJS API backed by PostgreSQL.
+- `packages/shared`: framework-independent domain model, deterministic reader
+  semantics, story operations, trigger rules, time/state logic, and graph helpers.
+- `docs`: product, architecture, ADR, UX, testing, operations, and workflow documentation.
 
-The API persists stories, interactions, triggers, and trigger inputs relationally
-in PostgreSQL. Trigger conditions remain an ordered JSONB value owned by their trigger.
+The API persists authored story state relationally in PostgreSQL. Reader progress
+is persisted separately from authored state. React Flow is a projection of the
+Paralleax model and is never the canonical story representation.
 
 ## Documentation
 
@@ -33,30 +48,34 @@ Start with the documentation index: [docs/README.md](docs/README.md).
 
 Recommended reading order:
 
-1. [Vision](docs/vision.md): product intent and long-term direction.
-2. [MVP scope](docs/mvp.md): what is intentionally included or excluded right now.
-3. [Domain model](docs/domain-model.md): Story, Interaction, Trigger, Reader, and future concepts.
-4. [Glossary](docs/glossary.md): shared vocabulary for product, code, tests, and UI copy.
-5. [Domain invariants](docs/domain-invariants.md): rules the model and editor projection must preserve.
-6. [Reader semantics](docs/reader-semantics.md): current execution rules for available interactions.
-7. [Trigger semantics](docs/triggers.md): input rules, deletion behavior, and trigger editing UX.
-8. [User guide](docs/user-guide.md): current authoring workflow.
-9. [Architecture](docs/architecture.md): monorepo structure and runtime flow.
-10. [Design principles](docs/design-principles.md): UX and technical principles.
-11. [UI direction](docs/ui-direction.md): target Story Canvas, filters, and inspector model.
-12. [Non-goals](docs/non-goals.md): product boundaries and non-objectives.
-13. [Test scenarios](docs/test-scenarios.md): critical regression scenarios.
-14. [Roadmap](docs/roadmap.md): planned progression after the MVP.
-15. [Open questions](docs/open-questions.md): postponed product and architecture questions.
-16. [Changelog](CHANGELOG.md): notable implementation, test, and documentation changes.
+1. [Vision](docs/vision.md)
+2. [Current scope](docs/current-scope.md)
+3. [Domain model](docs/domain-model.md)
+4. [Domain invariants](docs/domain-invariants.md)
+5. [Reader semantics](docs/reader-semantics.md)
+6. [Trigger semantics](docs/triggers.md)
+7. [Architecture](docs/architecture.md)
+8. [AI development workflow](docs/ai-workflow.md)
+9. [User guide](docs/user-guide.md)
+10. [Roadmap](docs/roadmap.md)
+11. [MVP](docs/mvp.md)
+12. [Changelog](CHANGELOG.md)
 
 Supporting references:
 
-- [ADR index](docs/decisions/README.md): architecture decision records.
-- [UML diagrams](docs/uml/README.md): MVP and long-term model diagrams.
-- [Meteor prototype refactor notes](MIGRATION.md): mapping from the original prototype to this refactor.
-- [Project changelog](CHANGELOG.md): chronological implementation notes and maintenance rules.
-- [Hosting and scale](docs/hosting-and-scale.md): durable deployment and growth principles.
+- [Glossary](docs/glossary.md)
+- [Design principles](docs/design-principles.md)
+- [UX principles](docs/ux-principles.md)
+- [UI direction](docs/ui-direction.md)
+- [Story Canvas](docs/story-canvas.md)
+- [Simulation](docs/simulation.md)
+- [Non-goals](docs/non-goals.md)
+- [Test scenarios](docs/test-scenarios.md)
+- [Production readiness](docs/production-readiness.md)
+- [ADR index](docs/decisions/README.md)
+- [UML diagrams](docs/uml/README.md)
+- [Hosting and scale](docs/hosting-and-scale.md)
+- [Meteor prototype refactor notes](MIGRATION.md)
 
 ## Requirements
 
@@ -121,9 +140,7 @@ npm run test:postgres -w @paralleax/api
 
 Create `paralleax_test` only once; `createdb` reports that it already exists on
 later runs. Never point `POSTGRES_TEST_DATABASE_URL` at the development database:
-the migration suite deliberately rebuilds the tested `public` schema. The suite
-restores the latest schema before exiting so all PostgreSQL files remain
-independent of Jest's execution order.
+the migration suite deliberately rebuilds the tested `public` schema.
 
 Run the opt-in large-story stress test against the same isolated database:
 
@@ -132,17 +149,6 @@ $env:POSTGRES_TEST_DATABASE_URL='postgres://paralleax:paralleax@localhost:5432/p
 $env:RUN_POSTGRES_STRESS_TESTS='true'
 npm run test:stress:postgres -w @paralleax/api
 ```
-
-`STRESS_INTERACTION_COUNT`, `STRESS_SAVE_BUDGET_MS`, `STRESS_LOAD_BUDGET_MS`,
-and `STRESS_MUTATION_BUDGET_MS` can override the default 1,000-interaction
-fixture and its budgets. The test prints a machine-readable `POSTGRES_STRESS`
-measurement line.
-
-These commands cover:
-
-- Shared: Vitest tests for narrative rules, story operations, trigger cleanup, stale-response merge behavior, and graph placement helpers.
-- API: Jest/Supertest tests for the NestJS endpoints.
-- Web: Vitest/Testing Library tests for pages, components, and API calls.
 
 ## Playwright Functional Tests
 
@@ -158,26 +164,10 @@ Run the functional scenarios:
 npm run test:e2e -w @paralleax/web
 ```
 
-Playwright automatically starts the `apps/web` Vite server during the tests.
-
 ## Test Coverage
 
 ```bash
 npm run coverage
-```
-
-Generated HTML reports:
-
-- `apps/api/coverage/index.html`
-- `apps/web/coverage/index.html`
-- `packages/shared/coverage/index.html`
-
-Run one workspace only:
-
-```bash
-npm run coverage -w @paralleax/api
-npm run coverage -w @paralleax/web
-npm run coverage -w @paralleax/shared
 ```
 
 ## Typecheck and Build
@@ -201,27 +191,28 @@ npm run coverage
 npm run build
 ```
 
-## GitLab CI
+## Continuous Integration
 
-CI is defined in `.gitlab-ci.yml`.
-
-It runs on every commit pushed to GitLab and on merge requests. It executes:
+CI configuration may evolve as the project settles on its GitHub workflow.
+Whatever provider is used, the expected verification baseline is:
 
 - ESLint;
 - Prettier format check;
 - TypeScript typecheck;
-- shared, API, and web coverage;
+- shared, API, and web test/coverage suites;
 - full monorepo build;
 - Playwright functional tests.
 
-Coverage reports and the Playwright HTML report are kept as GitLab artifacts.
+Keep repository documentation aligned with the actual CI configuration rather
+than treating historical GitLab configuration as authoritative.
 
 ## Docker
 
 The Docker setup pins the environment to Node.js 24 and starts a local
-PostgreSQL database for persisted MVP stories.
+PostgreSQL database for persisted Paralleax stories and reader progress.
 
-In development, the repository is mounted inside the container. Source changes are picked up by Vite and Nest watch mode without rebuilding the Docker image.
+In development, the repository is mounted inside the container. Source changes
+are picked up by Vite and Nest watch mode without rebuilding the Docker image.
 
 Start the stack:
 
@@ -238,46 +229,5 @@ docker compose up
 ```
 
 Then open http://localhost:5173. The API is exposed at http://localhost:3300/api.
-Set `API_PORT` before starting Compose if port 3300 is unavailable, for example
-`$env:API_PORT = 3301` in PowerShell.
 PostgreSQL is exposed at `localhost:5432` and stores data in the
 `postgres-data` Docker volume.
-
-Useful commands:
-
-```bash
-npm run docker:up
-npm run docker:logs
-npm run docker:down
-```
-
-If dependencies change, restart the stack. Compose runs one shared `npm ci`
-before starting the API and web services:
-
-```bash
-docker compose down
-docker compose up
-```
-
-Container dependencies live in a dedicated `node-modules` volume. This keeps
-Linux dependencies separate from the host and prevents the API and web services
-from installing into the same directory concurrently.
-
-Refresh everything from a clean container state:
-
-```bash
-docker compose down -v
-docker compose up
-```
-
-If the machine is behind a proxy, fill `.env`:
-
-```dotenv
-HTTP_PROXY=http://proxy.example:8080
-HTTPS_PROXY=http://proxy.example:8080
-NO_PROXY=localhost,127.0.0.1,api,web
-```
-
-Credentials that may appear in proxy URLs must never be committed. The `.env` file is ignored by Git.
-
-Docker does not bypass a proxy or firewall: the build must still be able to reach `registry.npmjs.org`.

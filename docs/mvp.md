@@ -1,79 +1,79 @@
 # MVP
 
-The MVP validated the narrative core before adding variables, AI, or advanced
-exports. Locations and characters are the first post-MVP context verticals.
+The original MVP validated Paralleax's narrative core around Story, Interaction,
+Trigger, and Reader. It is now a historical product milestone rather than the
+boundary of the current implementation.
 
-## Included
+For the authoritative description of what exists today, see
+[Current scope](current-scope.md). For future work, see [Roadmap](roadmap.md).
+
+## Validated Narrative Core
+
+The MVP established these foundations:
 
 - Story: create, read, edit, and delete a scenario.
-- Interaction: create, edit title and content, move in the editor, delete.
-- Trigger: define input interactions and simple conditions.
-- Reader: execute a story through successive choices.
-- Reader progress: resume one authenticated playthrough per user and story.
-- Character item inventory: interactions obtain or lose exact authored item
-  instances, reusable item definitions assign initial stats, interactions modify
-  one exact instance's stats, and progress reconstructs inventory and values
-  from the journey.
-- Story persistence: save authored stories in PostgreSQL.
-- Story-local calendar time: authored start date/time, interaction durations,
-  and trigger schedules based on dates, weekdays, and time slots.
-- Authoring reliability: expose save progress and failures, confirm structural
-  deletions, and make ambiguous trigger connections explicit.
+- Interaction: create and edit narrative content, move it in the editor, and delete it safely.
+- Trigger: define one output interaction, zero or more alternative input
+  interactions, and conditions.
+- Reader: execute a story through successive available interactions.
+- PostgreSQL persistence for authored stories.
+- Authoring reliability around save state, structural deletion, and trigger connections.
+- Automated unit, component, API, PostgreSQL, and Playwright coverage for critical flows.
 
-Local accounts, sessions, and creator-only ownership were implemented as an
-early supporting foundation. They are present in the product but are not part of
-the narrative-core validation criteria.
+## Capabilities Added Since the Minimal MVP
 
-## Out of Scope for Now
+The current implementation now includes:
 
-- Attributes and variables.
-- Probabilities, automatic timing, and real-time choice countdowns.
-- Automatic choices.
-- Managed media uploads. Rich interaction bodies and context entities may
-  reference externally hosted media by URL.
-- Final interactions.
-- Multiple save slots and anonymous reader saves.
-- AI.
-- Real-time collaboration.
-- Story sharing and delegated permissions.
-- Unity, executable, embeddable web app, or video exports.
+- authenticated reader progress;
+- local accounts, sessions, and creator ownership;
+- locations and current-location conditions;
+- characters, interaction casts, and presence conditions;
+- reusable numeric character stats, effects, and comparisons;
+- reusable item definitions and exact authored item instances;
+- recursive item-instance relationships with character/location roots;
+- deterministic inventory and item-stat replay from the reader journey;
+- story-local calendar time, interaction durations, and date/weekday/time-slot conditions;
+- simulation-oriented reader diagnostics;
+- production-oriented persistence, migration, health, and API error foundations.
 
-Story permissions and collaboration remain post-MVP directions. The existing
-local identity foundation does not imply that sharing or permission semantics
-have been validated.
+These capabilities must not be treated as out of scope merely because they were
+not part of the original MVP.
 
-## MVP Rules
+## Still Outside the Stable Product Contract
 
-- An inputless trigger without conditions is a starting trigger.
-- An inputless trigger with conditions is a contextual trigger evaluated during
-  reading.
-- An interaction should keep at least one trigger, including root interactions.
-- An interaction can have one or more input interactions through its trigger.
-- Selecting an interaction advances the story-local clock by its authored
-  duration before the next triggers are evaluated.
-- Several interactions can share the same input interaction: this creates a choice.
-- Several triggers can connect the same input interaction to the same output
-  interaction to represent OR condition groups.
-- MVP conditions only check whether an interaction has been visited or not.
-- If no interaction is available in the reader, the current branch stops. In the
-  MVP, this is the only ending signal; later versions may distinguish a stopped
-  branch from an explicitly completed story.
+Unless explicitly introduced and validated, the following remain future or incomplete:
 
-## Stability Criteria
+- generic story variables/attributes beyond the current typed stat model;
+- probabilities and probabilistic automatic choices;
+- real-time choice countdowns and delayed automatic choices;
+- explicit final interactions and completed-story semantics;
+- multiple player save slots and anonymous saves;
+- managed media upload/storage;
+- real-time collaboration;
+- public story sharing, delegated permissions, and suggestion/review workflows;
+- stable public import/export formats;
+- executable, Unity, or video exports;
+- AI-driven narrative or runtime behavior.
 
-The MVP is considered stable when:
+## Core Rules Established by the MVP
 
-- the editor does not lose data while editing or moving interactions;
-- automatically created outputs do not overlap;
-- triggers accept several inputs;
-- inputless triggers can be either starting triggers or contextual triggers based
-  on whether they have conditions;
-- authors can express OR condition groups through several triggers between the
-  same interactions;
-- authors explicitly choose between extending an existing trigger and creating a
-  separate trigger when both are possible;
-- saves expose in-progress, successful, and failed states, and a failed save can
-  be recovered by reloading the persisted story;
-- deleting an interaction or trigger requires confirmation;
-- the reader respects inputs and conditions;
-- unit, component, API, and Playwright tests pass in CI.
+- A Trigger belongs to exactly one output Interaction.
+- A Trigger may have several input Interactions; they are alternative reachability sources.
+- An inputless Trigger without conditions can expose a starting Interaction.
+- An inputless Trigger with conditions is contextual and evaluated against reader state.
+- Multiple Triggers may target the same Interaction to represent alternative condition variants.
+- Authored story state and reader/runtime state remain separate.
+- React Flow graph data is a projection of story state, never the canonical story format.
+
+The exact current semantics live in [Domain invariants](domain-invariants.md),
+[Reader semantics](reader-semantics.md), and [Trigger semantics](triggers.md).
+
+## Historical Stability Criteria
+
+The original MVP was considered stable when editor changes did not lose data,
+trigger connections remained predictable, save failures were recoverable,
+structural deletions were explicit, reader availability respected trigger rules,
+and the critical automated test suites passed.
+
+Those criteria remain useful regression expectations, but they are no longer a
+complete description of Paralleax's current feature set.

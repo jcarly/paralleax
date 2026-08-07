@@ -1,95 +1,67 @@
 # Documentation
 
-This folder is the product and technical source of truth for the project.
+This folder is the product and technical source of truth for Paralleax.
+
+The documentation distinguishes four kinds of information:
+
+- **Vision**: where the product is going.
+- **Current scope**: what is implemented and supported today.
+- **Historical milestones**: what earlier MVP/version goals established.
+- **Roadmap**: what is planned, incomplete, or intentionally deferred.
+
+When documents disagree, follow the precedence documented in the repository
+`AGENTS.md`.
 
 ## Recommended Reading Order
 
-1. [Vision](vision.md): problem, product direction, inspirations, and target uses.
-2. [MVP scope](mvp.md): strict scope of the current version.
-3. [Domain model](domain-model.md): MVP model and target model.
-4. [Glossary](glossary.md): shared vocabulary for product, code, tests, and UI copy.
-5. [Domain invariants](domain-invariants.md): rules the model and editor projection must preserve.
-6. [Reader semantics](reader-semantics.md): current execution rules for available interactions.
-7. [Trigger semantics](triggers.md): trigger inputs, deletion behavior, and editing UX.
-8. [User guide](user-guide.md): current authoring workflow.
-9. [Architecture](architecture.md): technical organization of the monorepo.
-10. [Design principles](design-principles.md): UX and technical principles.
-11. [UX principles](ux-principles.md): product UX rules that keep views aligned.
-12. [UI direction](ui-direction.md): target Story Canvas, filters, and inspector model.
-13. [Story Canvas](story-canvas.md): current canvas UX rules and open tuning points.
-14. [Auto layout](auto-layout.md): whole-graph reorganization direction.
-15. [Navigation](navigation.md): model and story navigation direction.
-16. [Simulation](simulation.md): author-facing test and debugging direction.
-17. [Annotations](annotations.md): target authoring notes concept.
-18. [Design system](design-system.md): visual identity and reusable UI rules to define.
-19. [Mockups](mockups/README.md): static UX references for canvas and simulation design.
-20. [Business model](business-model.md): open source core and platform philosophy.
-21. [Hosting and scale](hosting-and-scale.md): durable deployment and growth principles.
-22. [React best practices](react-best-practices.md): performance rules adapted to React, Vite, and React Flow.
-23. [Non-goals](non-goals.md): boundaries that protect the product direction.
-24. [Test scenarios](test-scenarios.md): test scenarios to maintain.
-25. [Roadmap](roadmap.md): planned progression after the MVP.
-26. [Open questions](open-questions.md): postponed product and architecture questions.
-27. [Code quality backlog](code-quality-backlog.md): prioritized implementation debt from code reviews.
-28. [Changelog](../CHANGELOG.md): notable implementation, test, and documentation changes.
+1. [Vision](vision.md)
+2. [Current scope](current-scope.md)
+3. [Domain model](domain-model.md)
+4. [Glossary](glossary.md)
+5. [Domain invariants](domain-invariants.md)
+6. [Reader semantics](reader-semantics.md)
+7. [Trigger semantics](triggers.md)
+8. [Architecture](architecture.md)
+9. [AI development workflow](ai-workflow.md)
+10. [AI architecture map](architecture-map-ai.md)
+11. [Agent roles](agent-roles.md)
+12. [User guide](user-guide.md)
+13. [Design principles](design-principles.md)
+14. [UX principles](ux-principles.md)
+15. [UI direction](ui-direction.md)
+16. [Story Canvas](story-canvas.md)
+17. [Auto layout](auto-layout.md)
+18. [Navigation](navigation.md)
+19. [Simulation](simulation.md)
+20. [Annotations](annotations.md)
+21. [Design system](design-system.md)
+22. [Mockups](mockups/README.md)
+23. [Business model](business-model.md)
+24. [Hosting and scale](hosting-and-scale.md)
+25. [Production readiness](production-readiness.md)
+26. [React best practices](react-best-practices.md)
+27. [Non-goals](non-goals.md)
+28. [Test scenarios](test-scenarios.md)
+29. [Roadmap](roadmap.md)
+30. [MVP](mvp.md)
+31. [Open questions](open-questions.md)
+32. [Code quality backlog](code-quality-backlog.md)
+33. [Changelog](../CHANGELOG.md)
 
-## Documentation Map
+## Important Rules
 
-```text
-docs/
-  README.md                 Documentation index
-  vision.md                 Product intent and long-term direction
-  mvp.md                    Current MVP boundaries
-  domain-model.md           Domain model and target model
-  glossary.md               Shared product and technical vocabulary
-  domain-invariants.md      Domain and editor projection rules
-  reader-semantics.md       Reader execution rules
-  triggers.md               Trigger semantics and editor rules
-  user-guide.md             Current authoring workflow
-  architecture.md           Technical architecture
-  design-principles.md      UX and engineering principles
-  ux-principles.md          Product UX principles
-  ui-direction.md           Target Story Canvas and filtering direction
-  story-canvas.md           Current Story Canvas UX rules
-  auto-layout.md            Whole-graph reorganization direction
-  navigation.md             Model and story navigation direction
-  simulation.md             Author-facing simulation direction
-  annotations.md            Target authoring annotation concept
-  design-system.md          Visual identity and reusable UI rules
-  mockups/                  Static UX mockups
-  business-model.md         Open source and platform philosophy
-  hosting-and-scale.md      Deployment and scalability direction
-  react-best-practices.md   React, Vite, and React Flow performance rules
-  non-goals.md              Product boundaries and non-objectives
-  test-scenarios.md         Regression scenarios
-  roadmap.md                Product progression
-  open-questions.md         Postponed product and architecture questions
-  code-quality-backlog.md   Prioritized code-review follow-up work
-  decisions/                Architecture decision records and ADR index
-  uml/                      MVP and vision diagrams
-../CHANGELOG.md             Change tracking and maintenance rules
-```
-
-## Decision Records
-
-- [ADR index](decisions/README.md)
-- [ADR-001 - Minimal MVP](decisions/ADR-001-minimal-mvp.md)
-- [ADR-002 - React, NestJS, and TypeScript](decisions/ADR-002-stack.md)
-- [ADR-003 - Engine First](decisions/ADR-003-engine-first.md)
-- [ADR-004 - React Flow Boundary](decisions/ADR-004-react-flow-boundary.md)
-- [ADR-005 - PostgreSQL Story Persistence](decisions/ADR-005-postgresql-story-persistence.md)
-- [ADR-006 - Users, Sessions, and Story Ownership](decisions/ADR-006-users-and-sessions.md)
-
-## Diagrams
-
-- [UML overview](uml/README.md)
-
-## Important Rule
-
-The target model can be documented, but the code must stay limited to the MVP until it is validated.
+- `current-scope.md` is the authoritative summary of what exists today.
+- `mvp.md` is historical and must not be used to remove or forbid already
+  implemented post-MVP capabilities.
+- `roadmap.md` contains future, incomplete, and incremental work.
+- Domain behavior must remain aligned with `domain-invariants.md`,
+  `reader-semantics.md`, accepted ADRs, and current tests.
+- React Flow is a projection of the story model, not a second canonical model.
 
 ## Maintenance
 
-- Update [the changelog](../CHANGELOG.md) for every user-visible, architectural, testing, or documentation change.
+- Update [the changelog](../CHANGELOG.md) for notable changes.
+- Update [current scope](current-scope.md) when the implemented baseline changes materially.
 - Update this index when documentation pages are added, renamed, or moved.
-- Update [test scenarios](test-scenarios.md) when a new regression test captures important author-facing behavior.
+- Prefer marking old roadmap items as implemented or historical rather than
+  rewriting history.

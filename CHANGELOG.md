@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-08-07
+
+- Clarified `docs/mvp.md` as a historical narrative-core milestone rather than
+  the boundary of the current implementation.
+- Made `docs/current-scope.md` the authoritative summary of implemented product scope.
+- Reorganized `docs/roadmap.md` around implemented, partial, and future work,
+  including a dedicated import/export compatibility direction.
+- Updated the root and documentation README files to remove stale MVP-only and
+  GitLab-specific guidance and document the AI-assisted development references.
+
 ## 2026-08-04
 
 - Replaced complete-graph story listing with a shared `StorySummary` contract
