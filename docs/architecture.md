@@ -32,7 +32,10 @@ and temporary persistence belong in `apps/api`.
 
 ### `packages/shared`
 
-`packages/shared/src/index.ts` is the current MVP domain module. It exports:
+`packages/shared/src/model/` owns the framework-independent model types, grouped
+by domain responsibility. `packages/shared/src/index.ts` remains the stable
+public facade and re-exports those types alongside the current domain behavior,
+so consumers continue importing from `@paralleax/shared`. The package exports:
 
 - story model types: `Story`, `Interaction`, `Trigger`, `TriggerCondition`, and
   shared input/update shapes;
@@ -47,6 +50,26 @@ and temporary persistence belong in `apps/api`.
   deterministic story-calendar reconstruction;
 - `createDemoStory`, the deterministic local story used for manual testing and
   regression-friendly sample data.
+
+Story-local calendar types, validation, arithmetic, journey reconstruction, and
+temporal-condition matching live in `packages/shared/src/time/`. Reader and
+trigger logic consume this module instead of owning duplicate calendar rules.
+
+Trigger condition types and deterministic evaluation live in
+`packages/shared/src/triggers/`. This module owns input matching, condition
+matching, available-interaction selection, and failure diagnostics while
+preserving story interaction order and the documented trigger OR/AND semantics.
+
+Pure authored-story mutations live in `packages/shared/src/operations/`, split
+between interaction cleanup, trigger mutation, and stale-response merge rules.
+API and web orchestration call these operations instead of redefining domain
+cleanup or optimistic persistence behavior.
+
+Deterministic runtime reconstruction lives in `packages/shared/src/reader/`.
+Its replay pipeline derives progress, location, character stats, owned item
+instances, and item stats from the authored story plus ordered journey. Item and
+stat replay helpers currently remain colocated there pending their incremental
+extraction into dedicated domain modules.
 
 Shared code must not import React, React Flow, NestJS, browser APIs, or server
 storage. It should be deterministic and unit-testable.
@@ -75,6 +98,11 @@ directly. Feature modules export only providers required by another module.
 - delegates trigger cleanup and story mutation rules to `packages/shared`;
 - normalizes missing interaction positions before returning stories;
 - updates timestamps before saving modified stories.
+
+The API Webpack build maps emitted `.js` module specifiers back to TypeScript
+sources when it follows workspace aliases. This keeps the shared package's
+NodeNext-compatible internal imports valid in both its emitted package and the
+API source build.
 
 `AuthController` exposes registration, login, logout, and current-user endpoints.
 `AuthService` derives password hashes with scrypt and issues random opaque session

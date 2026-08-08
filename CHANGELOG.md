@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-08-08
+
+- Extracted shared domain types into focused `packages/shared/src/model/`
+  modules while preserving the complete `@paralleax/shared` public API.
+- Extracted story-calendar types, validation, arithmetic, journey time, and
+  temporal-condition matching into focused `packages/shared/src/time/` modules.
+- Extracted trigger condition types, eligibility evaluation, available
+  interaction selection, and failure diagnostics into
+  `packages/shared/src/triggers/`.
+- Extracted pure interaction and trigger mutations plus stale-response story
+  merging into focused `packages/shared/src/operations/` modules.
+- Extracted deterministic reader replay and progress reconstruction into
+  `packages/shared/src/reader/`, preserving journey-derived runtime state.
+
 ## 2026-08-07
 
 - Clarified `docs/mvp.md` as a historical narrative-core milestone rather than
