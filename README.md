@@ -193,8 +193,8 @@ npm run build
 
 ## Continuous Integration
 
-CI configuration may evolve as the project settles on its GitHub workflow.
-Whatever provider is used, the expected verification baseline is:
+GitHub Actions runs the following verification baseline on pushes and pull
+requests, and can also be started manually:
 
 - ESLint;
 - Prettier format check;
@@ -203,8 +203,9 @@ Whatever provider is used, the expected verification baseline is:
 - full monorepo build;
 - Playwright functional tests.
 
-Keep repository documentation aligned with the actual CI configuration rather
-than treating historical GitLab configuration as authoritative.
+Coverage and Playwright reports are retained as workflow artifacts for seven
+days. PostgreSQL integration runs against PostgreSQL 17 and verifies backup
+restoration with the matching version of `pg_dump`.
 
 ## Docker
 

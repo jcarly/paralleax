@@ -1,0 +1,153 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    name: Quality
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Set up npm
+        run: npm install --global npm@12.0.1
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Check formatting
+        run: npm run format
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test operational scripts
+        run: npm run test:operations
+
+      - name: Run coverage suites
+        run: npm run coverage
+
+      - name: Build
+        run: npm run build
+
+      - name: Upload coverage reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage-reports
+          path: |
+            apps/api/coverage/
+            apps/web/coverage/
+            packages/shared/coverage/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  postgres-integration:
+    name: PostgreSQL integration
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: paralleax
+          POSTGRES_PASSWORD: paralleax
+          POSTGRES_DB: paralleax_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U paralleax -d paralleax_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      POSTGRES_TEST_DATABASE_URL: postgres://paralleax:paralleax@localhost:5432/paralleax_test
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install PostgreSQL 17 client
+        run: |
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl --fail --show-error --silent \
+            https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+            --output /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc
+          . /etc/os-release
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt ${VERSION_CODENAME}-pgdg main" \
+            | sudo tee /etc/apt/sources.list.d/pgdg.list
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends postgresql-client-17
+          pg_dump --version | grep -E ' 17([.]|$)'
+
+      - name: Set up npm
+        run: npm install --global npm@12.0.1
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline
+
+      - name: Run PostgreSQL integration tests
+        run: npm run test:postgres -w @paralleax/api
+
+      - name: Verify backup restoration
+        run: npm run test:restore
+
+  e2e:
+    name: End-to-end
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Set up npm
+        run: npm install --global npm@12.0.1
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline
+
+      - name: Install Playwright browsers
+        run: npm run playwright:install -w @paralleax/web -- --with-deps
+
+      - name: Run Playwright tests
+        run: npm run test:e2e -w @paralleax/web
+
+      - name: Upload Playwright reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-reports
+          path: |
+            apps/web/playwright-report/
+            apps/web/test-results/
+          if-no-files-found: ignore
+          retention-days: 7

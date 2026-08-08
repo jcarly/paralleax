@@ -7,6 +7,7 @@ These are task roles, not permanent autonomous services.
 Owns clarification of behavior before code.
 
 Best for:
+
 - domain-model changes;
 - deciding whether a concept belongs in core or import adapter;
 - ADRs;
@@ -14,14 +15,17 @@ Best for:
 - reviewing architectural consistency.
 
 Should not:
+
 - make broad code edits merely because it identified cleanup opportunities.
 
 ## 2. Domain Engine Agent
 
 Primary scope:
+
 - `packages/shared`.
 
 Best for:
+
 - reader semantics;
 - conditions;
 - effects;
@@ -31,6 +35,7 @@ Best for:
 - pure import mapping.
 
 Required checks:
+
 - no framework dependency;
 - deterministic tests;
 - domain invariants.
@@ -38,9 +43,11 @@ Required checks:
 ## 3. API / Persistence Agent
 
 Primary scope:
+
 - `apps/api`.
 
 Best for:
+
 - NestJS endpoints;
 - DTO validation;
 - ownership;
@@ -50,6 +57,7 @@ Best for:
 - reader-progress persistence.
 
 Required checks:
+
 - same-story references;
 - creator scoping;
 - forward-only migration;
@@ -59,9 +67,11 @@ Required checks:
 ## 4. Editor Agent
 
 Primary scope:
+
 - `apps/web`.
 
 Best for:
+
 - React Flow projection;
 - selection/navigation;
 - inspectors;
@@ -69,6 +79,7 @@ Best for:
 - authoring ergonomics.
 
 Required checks:
+
 - graph remains a projection;
 - stale responses cannot restore deleted state;
 - domain rules are not duplicated in UI;
@@ -79,6 +90,7 @@ Required checks:
 Can span shared + web, but should start from shared semantics.
 
 Best for:
+
 - availability;
 - diagnostics;
 - timeline replay;
@@ -88,9 +100,11 @@ Best for:
 ## 6. Import Adapter Agent
 
 Primary scope:
+
 - importer-specific packages/folders.
 
 Best for:
+
 - Girl Life / Lilith's Throne source analysis;
 - source-neutral intermediate representation;
 - mapping reports;
@@ -104,6 +118,7 @@ Must not redefine Paralleax core solely for source parity.
 Read-mostly role.
 
 Checks:
+
 - architecture boundary violations;
 - missing migrations;
 - missing regression coverage;

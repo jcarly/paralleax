@@ -73,18 +73,23 @@ An agent should not combine unrelated cleanup into a feature branch.
 
 ```markdown
 ## Goal
+
 What outcome should exist after this change?
 
 ## Product behavior
+
 Describe observable behavior.
 
 ## Non-goals
+
 What should explicitly remain unchanged?
 
 ## Invariants
+
 Which domain rules must remain true?
 
 ## Layers
+
 - [ ] shared domain
 - [ ] API
 - [ ] persistence/migration
@@ -93,12 +98,15 @@ Which domain rules must remain true?
 - [ ] docs
 
 ## Acceptance tests
+
 Concrete scenarios that prove the feature.
 
 ## Compatibility
+
 Persisted stories / reader progress / API compatibility constraints.
 
 ## References
+
 Relevant docs, ADRs, issues, or imports.
 ```
 

@@ -13,6 +13,8 @@
   merging into focused `packages/shared/src/operations/` modules.
 - Extracted deterministic reader replay and progress reconstruction into
   `packages/shared/src/reader/`, preserving journey-derived runtime state.
+- Replaced GitLab CI with GitHub Actions jobs for quality checks, PostgreSQL 17
+  integration and recovery, and Playwright, with seven-day report artifacts.
 
 ## 2026-08-07
 
