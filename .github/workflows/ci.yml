@@ -102,7 +102,12 @@ jobs:
             | sudo tee /etc/apt/sources.list.d/pgdg.list
           sudo apt-get update
           sudo apt-get install --yes --no-install-recommends postgresql-client-17
-          pg_dump --version | grep -E ' 17([.]|$)'
+          PG17_BIN=/usr/lib/postgresql/17/bin
+          echo "$PG17_BIN" >> "$GITHUB_PATH"
+          "$PG17_BIN/pg_dump" --version
+          "$PG17_BIN/pg_restore" --version
+          "$PG17_BIN/pg_dump" --version | grep -E ' 17([.]|$)'
+          "$PG17_BIN/pg_restore" --version | grep -E ' 17([.]|$)'
 
       - name: Set up npm
         run: npm install --global npm@12.0.1
