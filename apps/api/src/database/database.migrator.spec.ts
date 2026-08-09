@@ -106,4 +106,18 @@ describe('DatabaseMigrator', () => {
     expect(migration?.sql).toMatch(/WITH RECURSIVE ancestors/i);
     expect(migration?.sql).toMatch(/A related item cannot also have a root owner/i);
   });
+
+  it('removes location-rooted item trees and keeps character or parent placements', () => {
+    const migration = databaseMigrations.find(
+      ({ id }) => id === '202608090023_remove_location_item_roots',
+    );
+
+    expect(migration?.sql).toMatch(/WITH RECURSIVE location_item_tree/i);
+    expect(migration?.sql).toMatch(/DELETE FROM item_instances/i);
+    expect(migration?.sql).toMatch(/DROP COLUMN owner_location_id/i);
+    expect(migration?.sql).toMatch(/DROP INDEX item_instances_location_id_idx/i);
+    expect(migration?.sql).toMatch(/ownedItemIds/i);
+    expect(migration?.sql).toMatch(/itemStatValues/i);
+    expect(migration?.sql).toMatch(/An item must belong to exactly one character or parent item/i);
+  });
 });

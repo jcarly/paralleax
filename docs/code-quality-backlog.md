@@ -13,6 +13,8 @@ during the August 2026 code review. Production gates remain authoritative in
 - [x] Ignore obsolete reader and editor loads after route changes or cleanup.
 - [x] Reconstruct direct-start inventory effects in Simulation Mode.
 - [x] Resolve authored item instances rooted at locations and characters.
+      Historical note: ADR-014 later removed location-owned roots from the
+      product model.
 - [x] Add regression tests for these behaviors.
 
 ## P0 — Reliability And Safety

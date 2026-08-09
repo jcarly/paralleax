@@ -188,7 +188,7 @@ export function CharacterInspector({
           items={character.items ?? []}
           itemDefinitions={itemDefinitions}
           statDefinitions={statDefinitions}
-          rootPlacement={{ characterId: character.id }}
+          rootCharacterId={character.id}
           onMove={onMoveItem}
           onDelete={(itemId) => onDeleteItem(character.id, itemId)}
         />

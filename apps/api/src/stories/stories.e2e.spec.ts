@@ -961,25 +961,10 @@ describe('Stories API', () => {
       ]),
     );
 
-    const park = await request(httpServer)
-      .post(`/api/stories/${story.id}/locations`)
-      .send({ name: 'Park' })
-      .expect(201);
-    const placed = await request(httpServer)
+    await request(httpServer)
       .patch(`/api/stories/${story.id}/items/${backpack.body.item.id}/placement`)
-      .send({ locationId: park.body.location.id })
-      .expect(200);
-    expect(
-      (placed.body as Story).characters?.find(({ id }) => id === luc.body.character.id)?.items,
-    ).toEqual([]);
-    expect(
-      (placed.body as Story).locations?.find(({ id }) => id === park.body.location.id)?.items,
-    ).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ id: backpack.body.item.id }),
-        expect.objectContaining({ id: key.body.item.id, parentItemId: backpack.body.item.id }),
-      ]),
-    );
+      .send({ locationId: 'park' })
+      .expect(400);
   });
 
   it('validates and stores interaction item stat effects', async () => {

@@ -604,19 +604,13 @@ export class StoriesService {
           ...(story.characters ?? []).flatMap((character) =>
             (character.items ?? []).map((item) => ({ owner: character, item })),
           ),
-          ...(story.locations ?? []).flatMap((location) =>
-            (location.items ?? []).map((item) => ({ owner: location, item })),
-          ),
         ];
         const moving = entries.find(({ item }) => item.id === itemId);
         if (!moving) throw new NotFoundException('Item instance not found');
-        const targets =
-          Number(Boolean(input.characterId)) +
-          Number(Boolean(input.locationId)) +
-          Number(Boolean(input.parentItemId));
+        const targets = Number(Boolean(input.characterId)) + Number(Boolean(input.parentItemId));
         if (targets !== 1) {
           throw new BadRequestException(
-            'An item placement must target exactly one character, location, or parent item',
+            'An item placement must target exactly one character or parent item',
           );
         }
 
@@ -638,9 +632,7 @@ export class StoriesService {
 
         let targetOwner: { items?: ItemInstance[] } | undefined = input.characterId
           ? this.character(story, input.characterId)
-          : input.locationId
-            ? this.location(story, input.locationId)
-            : undefined;
+          : undefined;
         if (input.parentItemId) {
           if (!input.relationshipType) {
             throw new BadRequestException('A parent item placement requires a relationship type');
@@ -662,9 +654,6 @@ export class StoriesService {
           .map(({ item }) => item);
         for (const character of story.characters ?? []) {
           character.items = (character.items ?? []).filter(({ id }) => !descendants.has(id));
-        }
-        for (const location of story.locations ?? []) {
-          location.items = (location.items ?? []).filter(({ id }) => !descendants.has(id));
         }
         if (input.parentItemId) {
           moving.item.parentItemId = input.parentItemId;
@@ -739,7 +728,7 @@ export class StoriesService {
         const character = this.character(story, characterId);
         this.item(story, characterId, itemId);
         if (
-          [...(story.characters ?? []), ...(story.locations ?? [])].some((candidate) =>
+          (story.characters ?? []).some((candidate) =>
             (candidate.items ?? []).some(({ parentItemId }) => parentItemId === itemId),
           )
         ) {
@@ -803,9 +792,7 @@ export class StoriesService {
   }
   private itemIds(story: Story) {
     return new Set(
-      [...(story.characters ?? []), ...(story.locations ?? [])].flatMap((owner) =>
-        (owner.items ?? []).map(({ id }) => id),
-      ),
+      (story.characters ?? []).flatMap((character) => (character.items ?? []).map(({ id }) => id)),
     );
   }
   private itemDefinitionStats(

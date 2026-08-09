@@ -610,22 +610,60 @@ describe('reader progress', () => {
     ]);
   });
 
-  it('resolves authored item instances rooted at locations during replay', () => {
+  it('resolves character-rooted item trees and ignores disconnected instances', () => {
     const story = storyFixture();
-    story.locations = [
+    story.characters = [
       {
-        id: 'harbor',
-        name: 'Harbor',
+        id: 'mira',
+        name: 'Mira',
         description: '',
-        items: [{ id: 'key-1', itemDefinitionId: 'key-definition' }],
+        items: [
+          { id: 'backpack-1', itemDefinitionId: 'backpack-definition' },
+          {
+            id: 'key-1',
+            itemDefinitionId: 'key-definition',
+            parentItemId: 'backpack-1',
+            relationshipType: 'contained',
+          },
+          {
+            id: 'charm-1',
+            itemDefinitionId: 'charm-definition',
+            parentItemId: 'key-1',
+            relationshipType: 'attached',
+          },
+          {
+            id: 'orphan-1',
+            itemDefinitionId: 'orphan-definition',
+            parentItemId: 'missing-parent',
+            relationshipType: 'contained',
+          },
+        ],
       },
     ];
     story.itemDefinitions = [
+      {
+        id: 'backpack-definition',
+        name: 'Backpack',
+        description: '',
+        stats: [{ statDefinitionId: 'durability-definition', initialValue: 20 }],
+      },
       {
         id: 'key-definition',
         name: 'Key',
         description: '',
         stats: [{ statDefinitionId: 'durability-definition', initialValue: 10 }],
+      },
+      {
+        id: 'charm-definition',
+        name: 'Charm',
+        description: '',
+        stats: [{ statDefinitionId: 'durability-definition', initialValue: 5 }],
+      },
+      {
+        id: 'orphan-definition',
+        name: 'Orphan',
+        description: '',
+        stats: [{ statDefinitionId: 'durability-definition', initialValue: 1 }],
       },
     ];
     story.interactions[0].itemEffects = [{ itemId: 'key-1', operation: 'obtain' }];
@@ -633,10 +671,16 @@ describe('reader progress', () => {
     const progress = buildReaderProgressState(story, ['root']);
 
     expect(getItemDefinitionIdForInstance(story, 'key-1')).toBe('key-definition');
-    expect(getItemOwnerIdForInstance(story, 'key-1')).toBe('harbor');
+    expect(getItemDefinitionIdForInstance(story, 'charm-1')).toBe('charm-definition');
+    expect(getItemDefinitionIdForInstance(story, 'orphan-1')).toBeUndefined();
+    expect(getItemOwnerIdForInstance(story, 'key-1')).toBe('mira');
+    expect(getItemOwnerIdForInstance(story, 'charm-1')).toBe('mira');
+    expect(getItemOwnerIdForInstance(story, 'orphan-1')).toBeUndefined();
     expect(progress.ownedItemIds).toEqual(['key-1']);
     expect(progress.itemStatValues).toEqual({
+      'backpack-1': { 'durability-definition': 20 },
       'key-1': { 'durability-definition': 10 },
+      'charm-1': { 'durability-definition': 5 },
     });
   });
 

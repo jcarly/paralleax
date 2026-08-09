@@ -238,6 +238,205 @@ describePostgres('Database migrations PostgreSQL upgrade', () => {
       rowCount: 1,
     });
   }, 30_000);
+
+  it('removes location item trees while preserving character item trees and valid references', async () => {
+    await pool.query('DROP SCHEMA public CASCADE');
+    await pool.query('CREATE SCHEMA public');
+
+    const removalMigrationIndex = databaseMigrations.findIndex(
+      ({ id }) => id === '202608090023_remove_location_item_roots',
+    );
+    for (const migration of databaseMigrations.slice(0, removalMigrationIndex)) {
+      await pool.query(migration.sql);
+    }
+
+    await pool.query(
+      `INSERT INTO users (id, email, password_hash, created_at)
+       VALUES ('tree-owner', 'trees@paralleax.invalid', 'disabled', now())`,
+    );
+    await pool.query(
+      `INSERT INTO stories
+       (id, revision, title, start_date_time, created_at, updated_at, creator_user_id)
+       VALUES ('tree-story', 1, 'Item trees', '2000-01-03T08:00', now(), now(), 'tree-owner')`,
+    );
+    await pool.query(
+      `INSERT INTO characters
+       (id, story_id, name, description, image_url, is_playable, sort_order)
+       VALUES ('character-1', 'tree-story', 'Camille', '', '', true, 0)`,
+    );
+    await pool.query(
+      `INSERT INTO locations
+       (id, story_id, name, description, image_url, sort_order)
+       VALUES ('park', 'tree-story', 'Park', '', '', 0)`,
+    );
+    await pool.query(
+      `INSERT INTO item_definitions
+       (id, story_id, name, description, image_url, stats, sort_order)
+       VALUES ('bag', 'tree-story', 'Bag', '', '', '[]'::jsonb, 0)`,
+    );
+    await pool.query(
+      `INSERT INTO interactions
+       (id, story_id, title, body, position_x, position_y, location_id,
+        duration_minutes, item_stat_effects, sort_order)
+       VALUES (
+         'inspect-items', 'tree-story', 'Inspect items', '', 0, 0, NULL, 0,
+         '[
+           {"itemId":"character-child","statDefinitionId":"condition","operation":"add","value":1},
+           {"itemId":"location-child","statDefinitionId":"condition","operation":"add","value":1}
+         ]'::jsonb,
+         0
+       )`,
+    );
+    await pool.query(
+      `INSERT INTO item_instances
+       (id, story_id, item_definition_id, owner_character_id, owner_location_id, sort_order)
+       VALUES
+         ('character-root', 'tree-story', 'bag', 'character-1', NULL, 0),
+         ('character-child', 'tree-story', 'bag', NULL, NULL, 1),
+         ('location-root', 'tree-story', 'bag', NULL, 'park', 2),
+         ('location-child', 'tree-story', 'bag', NULL, NULL, 3),
+         ('location-grandchild', 'tree-story', 'bag', NULL, NULL, 4)`,
+    );
+    await pool.query(
+      `INSERT INTO item_instance_relationships
+       (story_id, parent_item_id, child_item_id, relationship_type, sort_order)
+       VALUES
+         ('tree-story', 'character-root', 'character-child', 'contained', 0),
+         ('tree-story', 'location-root', 'location-child', 'contained', 0),
+         ('tree-story', 'location-child', 'location-grandchild', 'contained', 0)`,
+    );
+    await pool.query(
+      `INSERT INTO interaction_item_effects
+       (story_id, interaction_id, item_id, item_definition_id, character_id, operation, sort_order)
+       VALUES
+         ('tree-story', 'inspect-items', 'character-child', NULL, 'character-1', 'lose', 0),
+         ('tree-story', 'inspect-items', 'location-child', NULL, 'character-1', 'lose', 1)`,
+    );
+    await pool.query(
+      `INSERT INTO story_reader_progress (user_id, story_id, state, updated_at)
+       VALUES (
+         'tree-owner',
+         'tree-story',
+         '{
+           "version":1,
+           "journeyInteractionIds":[],
+           "currentInteractionId":null,
+           "visitedInteractionIds":[],
+           "currentDateTime":"2000-01-03T08:00",
+           "currentLocationId":null,
+           "statValues":{},
+           "ownedItemIds":["character-child","location-child"],
+           "itemStatValues":{
+             "character-child":{"condition":1},
+             "location-child":{"condition":2}
+           }
+         }'::jsonb,
+         now()
+       )`,
+    );
+
+    await pool.query(databaseMigrations[removalMigrationIndex].sql);
+
+    await expect(
+      pool.query(`SELECT id FROM item_instances WHERE story_id = 'tree-story' ORDER BY id`),
+    ).resolves.toMatchObject({
+      rows: [{ id: 'character-child' }, { id: 'character-root' }],
+      rowCount: 2,
+    });
+    await expect(
+      pool.query(
+        `SELECT item_id FROM interaction_item_effects
+         WHERE story_id = 'tree-story' ORDER BY item_id`,
+      ),
+    ).resolves.toMatchObject({ rows: [{ item_id: 'character-child' }], rowCount: 1 });
+    await expect(
+      pool.query(
+        `SELECT item_stat_effects FROM interactions
+         WHERE story_id = 'tree-story' AND id = 'inspect-items'`,
+      ),
+    ).resolves.toMatchObject({
+      rows: [
+        {
+          item_stat_effects: [
+            {
+              itemId: 'character-child',
+              statDefinitionId: 'condition',
+              operation: 'add',
+              value: 1,
+            },
+          ],
+        },
+      ],
+      rowCount: 1,
+    });
+    await expect(
+      pool.query(
+        `SELECT state->'ownedItemIds' AS owned_item_ids,
+                state->'itemStatValues' AS item_stat_values
+         FROM story_reader_progress
+         WHERE story_id = 'tree-story' AND user_id = 'tree-owner'`,
+      ),
+    ).resolves.toMatchObject({
+      rows: [
+        {
+          owned_item_ids: ['character-child'],
+          item_stat_values: { 'character-child': { condition: 1 } },
+        },
+      ],
+      rowCount: 1,
+    });
+    await expect(
+      pool.query(
+        `SELECT column_name
+         FROM information_schema.columns
+         WHERE table_schema = 'public'
+           AND table_name = 'item_instances'
+           AND column_name = 'owner_location_id'`,
+      ),
+    ).resolves.toMatchObject({ rows: [], rowCount: 0 });
+    await expect(
+      pool.query(
+        `INSERT INTO item_instance_relationships
+         (story_id, parent_item_id, child_item_id, relationship_type, sort_order)
+         VALUES ('tree-story', 'character-child', 'character-root', 'contained', 1)`,
+      ),
+    ).rejects.toThrow(/root owner/i);
+    await expect(
+      pool.query(
+        `INSERT INTO item_instances
+         (id, story_id, item_definition_id, owner_character_id, sort_order)
+         VALUES ('orphan', 'tree-story', 'bag', NULL, 2)`,
+      ),
+    ).rejects.toThrow(/exactly one character or parent item/i);
+
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query(
+        `INSERT INTO item_instances
+         (id, story_id, item_definition_id, owner_character_id, sort_order)
+         VALUES ('nested-after-migration', 'tree-story', 'bag', NULL, 2)`,
+      );
+      await client.query(
+        `INSERT INTO item_instance_relationships
+         (story_id, parent_item_id, child_item_id, relationship_type, sort_order)
+         VALUES ('tree-story', 'character-root', 'nested-after-migration', 'contained', 1)`,
+      );
+      await client.query('COMMIT');
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+    await expect(
+      pool.query(
+        `SELECT owner_character_id
+         FROM item_instances
+         WHERE story_id = 'tree-story' AND id = 'nested-after-migration'`,
+      ),
+    ).resolves.toMatchObject({ rows: [{ owner_character_id: null }], rowCount: 1 });
+  }, 30_000);
 });
 
 async function waitForPostgres(pool: Pool) {

@@ -522,16 +522,15 @@ async function insertItemInstance(
   storyId: string,
   entry: ReturnType<typeof itemEntries>[number],
 ) {
-  const { ownerCharacterId, ownerLocationId, item, sortOrder } = entry;
+  const { ownerCharacterId, item, sortOrder } = entry;
   await client.query(
     `INSERT INTO item_instances
-     (id, story_id, owner_character_id, owner_location_id, item_definition_id, sort_order)
-     VALUES ($1, $2, $3, $4, $5, $6)`,
+     (id, story_id, owner_character_id, item_definition_id, sort_order)
+     VALUES ($1, $2, $3, $4, $5)`,
     [
       item.id,
       storyId,
       item.parentItemId ? null : ownerCharacterId,
-      item.parentItemId ? null : ownerLocationId,
       item.itemDefinitionId,
       sortOrder,
     ],
@@ -724,7 +723,7 @@ async function persistItemInstanceDifference(client: Queryable, before: Story, a
     }
   }
   for (const entry of afterEntries) {
-    const { ownerCharacterId, ownerLocationId, item, sortOrder } = entry;
+    const { ownerCharacterId, item, sortOrder } = entry;
     const previous = beforeItems.get(item.id);
     if (!previous) {
       await insertItemInstance(client, after.id, entry);
@@ -746,13 +745,6 @@ async function persistItemInstanceDifference(client: Queryable, before: Story, a
       previous.item.parentItemId ? null : previous.ownerCharacterId,
       item.parentItemId ? null : ownerCharacterId,
     );
-    addChange(
-      changes,
-      values,
-      'owner_location_id',
-      previous.item.parentItemId ? null : previous.ownerLocationId,
-      item.parentItemId ? null : ownerLocationId,
-    );
     addChange(changes, values, 'sort_order', previous.sortOrder, sortOrder);
     if (changes.length > 0) {
       await client.query(`UPDATE item_instances SET ${changes.join(', ')} WHERE id = $1`, values);
@@ -768,24 +760,13 @@ async function persistItemInstanceDifference(client: Queryable, before: Story, a
 }
 
 function itemEntries(story: Story) {
-  return [
-    ...(story.characters ?? []).flatMap((character) =>
-      (character.items ?? []).map((item, sortOrder) => ({
-        ownerCharacterId: character.id as string | null,
-        ownerLocationId: null as string | null,
-        item,
-        sortOrder,
-      })),
-    ),
-    ...(story.locations ?? []).flatMap((location) =>
-      (location.items ?? []).map((item, sortOrder) => ({
-        ownerCharacterId: null as string | null,
-        ownerLocationId: location.id as string | null,
-        item,
-        sortOrder,
-      })),
-    ),
-  ];
+  return (story.characters ?? []).flatMap((character) =>
+    (character.items ?? []).map((item, sortOrder) => ({
+      ownerCharacterId: character.id as string | null,
+      item,
+      sortOrder,
+    })),
+  );
 }
 
 function itemRelationshipSignature(entries: ReturnType<typeof itemEntries>) {

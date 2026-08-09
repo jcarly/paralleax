@@ -175,8 +175,9 @@ Authors can model persistent world state beyond visited interactions while the e
 - Item definitions and exact authored item instances.
 - Deterministic inventory replay.
 - Recursive item-instance persistence and authoring.
-- Character/location item roots.
-- Typed parent relationships and cycle-safe subtree transfers.
+- Character-owned item roots.
+- Typed parent relationships and cycle-safe subtree transfers between characters
+  and item containers.
 - Story-local deterministic time.
 - Interaction durations and calendar-based Trigger conditions.
 
@@ -222,7 +223,7 @@ First decide whether groups are authoring/navigation metadata only, or executabl
 
 ```text
 recursive item graph
-  -> possession and containers
+  -> character possession and nested item containers
   -> equipment and slots
   -> quantities and consumables
   -> modifiers and durability

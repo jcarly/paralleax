@@ -404,14 +404,18 @@ Context entity image references use relational text columns. Image binaries and
 their upload lifecycle are not stored by the application.
 
 `item_instances` is now the persistence source of truth for exact authored
-items. It supports a character or location root and preserves the existing
-`Character.items` API projection for character-owned roots. The migration keeps
-the former `character_items` data as `character_items_legacy` for parity and
-rollback inspection; repositories and new writes no longer use it. Typed
-parent/child relationships are stored in `item_instance_relationships` and
-projected into effective character inventories. Transfers are diffed globally
-by instance id so moving a subtree does not delete its instances or cascade its
-exact effects.
+items. A root belongs to a character; nested instances use typed parent/child
+relationships in `item_instance_relationships`. Locations are narrative context
+and do not own persistent item instances. The API projects each character root
+and its descendants through `Character.items`.
+
+The former `character_items` data remains archived as
+`character_items_legacy` for parity and rollback inspection; repositories and
+new writes no longer use it. Transfers are diffed globally by instance id so
+moving a subtree between characters or item containers does not delete its
+instances or cascade its exact effects. Reader state reconstructs character
+inventories and recursive relationships rather than a persistent world map of
+location-owned objects.
 The repository reconstructs
 the existing domain `Story`, so persistence normalization does not leak into the
 shared engine or the HTTP contract. JSON remains a future versioned import/export

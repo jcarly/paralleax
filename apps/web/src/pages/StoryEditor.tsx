@@ -801,9 +801,6 @@ export function StoryEditor() {
                 location={selectedLocation}
                 onLocalChange={updateLocalLocation}
                 onPatch={updateLocation}
-                itemDefinitions={story.itemDefinitions ?? []}
-                statDefinitions={story.statDefinitions ?? []}
-                onMoveItem={moveItemInstance}
               />
             ) : selectedCharacter ? (
               <CharacterInspector

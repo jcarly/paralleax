@@ -743,4 +743,232 @@ export const databaseMigrations: DatabaseMigration[] = [
       FOR EACH ROW EXECUTE FUNCTION validate_item_instance_root_owner();
     `,
   },
+  {
+    id: '202608090023_remove_location_item_roots',
+    sql: `
+      CREATE TEMP TABLE removed_location_item_instances (
+        story_id text NOT NULL,
+        id text NOT NULL,
+        PRIMARY KEY (story_id, id)
+      ) ON COMMIT DROP;
+
+      INSERT INTO removed_location_item_instances (story_id, id)
+      WITH RECURSIVE location_item_tree(story_id, id) AS (
+        SELECT story_id, id
+        FROM item_instances
+        WHERE owner_location_id IS NOT NULL
+        UNION
+        SELECT relationship.story_id, relationship.child_item_id
+        FROM item_instance_relationships AS relationship
+        JOIN location_item_tree AS parent
+          ON parent.story_id = relationship.story_id
+         AND parent.id = relationship.parent_item_id
+      )
+      SELECT story_id, id FROM location_item_tree;
+
+      UPDATE interactions AS interaction
+      SET item_stat_effects = COALESCE(
+        (
+          SELECT jsonb_agg(effect.value ORDER BY effect.ordinality)
+          FROM jsonb_array_elements(interaction.item_stat_effects)
+            WITH ORDINALITY AS effect(value, ordinality)
+          WHERE NOT EXISTS (
+            SELECT 1
+            FROM removed_location_item_instances AS removed
+            WHERE removed.story_id = interaction.story_id
+              AND removed.id = effect.value->>'itemId'
+          )
+        ),
+        '[]'::jsonb
+      )
+      WHERE EXISTS (
+        SELECT 1
+        FROM removed_location_item_instances AS removed
+        WHERE removed.story_id = interaction.story_id
+      );
+
+      UPDATE story_reader_progress AS progress
+      SET state = jsonb_set(
+        jsonb_set(
+          progress.state,
+          '{ownedItemIds}',
+          COALESCE(
+            (
+              SELECT jsonb_agg(owned.value ORDER BY owned.ordinality)
+              FROM jsonb_array_elements(
+                CASE
+                  WHEN jsonb_typeof(progress.state->'ownedItemIds') = 'array'
+                  THEN progress.state->'ownedItemIds'
+                  ELSE '[]'::jsonb
+                END
+              ) WITH ORDINALITY AS owned(value, ordinality)
+              WHERE NOT EXISTS (
+                SELECT 1
+                FROM removed_location_item_instances AS removed
+                WHERE removed.story_id = progress.story_id
+                  AND removed.id = owned.value #>> '{}'
+              )
+            ),
+            '[]'::jsonb
+          ),
+          true
+        ),
+        '{itemStatValues}',
+        COALESCE(
+          (
+            SELECT jsonb_object_agg(item_stat.key, item_stat.value)
+            FROM jsonb_each(
+              CASE
+                WHEN jsonb_typeof(progress.state->'itemStatValues') = 'object'
+                THEN progress.state->'itemStatValues'
+                ELSE '{}'::jsonb
+              END
+            ) AS item_stat(key, value)
+            WHERE NOT EXISTS (
+              SELECT 1
+              FROM removed_location_item_instances AS removed
+              WHERE removed.story_id = progress.story_id
+                AND removed.id = item_stat.key
+            )
+          ),
+          '{}'::jsonb
+        ),
+        true
+      )
+      WHERE EXISTS (
+        SELECT 1
+        FROM removed_location_item_instances AS removed
+        WHERE removed.story_id = progress.story_id
+      );
+
+      DELETE FROM item_instances AS item
+      USING removed_location_item_instances AS removed
+      WHERE item.story_id = removed.story_id
+        AND item.id = removed.id;
+
+      DROP TRIGGER item_instances_validate_root_owner ON item_instances;
+      DROP FUNCTION validate_item_instance_root_owner();
+      DROP TRIGGER item_instance_relationships_validate ON item_instance_relationships;
+      DROP FUNCTION validate_item_instance_relationship();
+
+      DROP INDEX item_instances_location_id_idx;
+
+      ALTER TABLE item_instances
+      DROP CONSTRAINT item_instances_location_fkey,
+      DROP CONSTRAINT item_instances_at_most_one_root_owner,
+      DROP COLUMN owner_location_id;
+
+      CREATE FUNCTION validate_item_instance_relationship() RETURNS trigger AS $$
+      DECLARE
+        child_has_root boolean;
+        creates_cycle boolean;
+      BEGIN
+        SELECT owner_character_id IS NOT NULL
+        INTO child_has_root
+        FROM item_instances
+        WHERE story_id = NEW.story_id AND id = NEW.child_item_id;
+        IF child_has_root THEN
+          RAISE EXCEPTION 'A related item cannot also have a root owner';
+        END IF;
+
+        WITH RECURSIVE ancestors(id) AS (
+          SELECT NEW.parent_item_id
+          UNION
+          SELECT relationship.parent_item_id
+          FROM item_instance_relationships AS relationship
+          JOIN ancestors ON ancestors.id = relationship.child_item_id
+          WHERE relationship.story_id = NEW.story_id
+            AND relationship.child_item_id <> NEW.child_item_id
+        )
+        SELECT EXISTS (SELECT 1 FROM ancestors WHERE id = NEW.child_item_id)
+        INTO creates_cycle;
+        IF creates_cycle THEN
+          RAISE EXCEPTION 'Item relationships cannot contain a cycle';
+        END IF;
+        RETURN NEW;
+      END;
+      $$ LANGUAGE plpgsql;
+
+      CREATE TRIGGER item_instance_relationships_validate
+      BEFORE INSERT OR UPDATE ON item_instance_relationships
+      FOR EACH ROW EXECUTE FUNCTION validate_item_instance_relationship();
+
+      CREATE FUNCTION validate_item_instance_root_owner() RETURNS trigger AS $$
+      BEGIN
+        IF NEW.owner_character_id IS NOT NULL
+          AND EXISTS (
+            SELECT 1 FROM item_instance_relationships
+            WHERE story_id = NEW.story_id AND child_item_id = NEW.id
+          )
+        THEN
+          RAISE EXCEPTION 'A rooted item cannot also have a structural parent';
+        END IF;
+        RETURN NEW;
+      END;
+      $$ LANGUAGE plpgsql;
+
+      CREATE TRIGGER item_instances_validate_root_owner
+      BEFORE INSERT OR UPDATE OF owner_character_id ON item_instances
+      FOR EACH ROW EXECUTE FUNCTION validate_item_instance_root_owner();
+
+      CREATE FUNCTION assert_item_instance_placement(
+        target_story_id text,
+        target_item_id text
+      ) RETURNS void AS $$
+      DECLARE
+        root_owner_count integer;
+        parent_count integer;
+      BEGIN
+        SELECT CASE WHEN owner_character_id IS NULL THEN 0 ELSE 1 END
+        INTO root_owner_count
+        FROM item_instances
+        WHERE story_id = target_story_id AND id = target_item_id;
+        IF NOT FOUND THEN
+          RETURN;
+        END IF;
+
+        SELECT COUNT(*)::integer
+        INTO parent_count
+        FROM item_instance_relationships
+        WHERE story_id = target_story_id AND child_item_id = target_item_id;
+
+        IF root_owner_count + parent_count <> 1 THEN
+          RAISE EXCEPTION 'An item must belong to exactly one character or parent item';
+        END IF;
+      END;
+      $$ LANGUAGE plpgsql;
+
+      CREATE FUNCTION validate_item_instance_placement() RETURNS trigger AS $$
+      BEGIN
+        PERFORM assert_item_instance_placement(NEW.story_id, NEW.id);
+        RETURN NEW;
+      END;
+      $$ LANGUAGE plpgsql;
+
+      CREATE CONSTRAINT TRIGGER item_instances_validate_placement
+      AFTER INSERT OR UPDATE OF owner_character_id ON item_instances
+      DEFERRABLE INITIALLY DEFERRED
+      FOR EACH ROW EXECUTE FUNCTION validate_item_instance_placement();
+
+      CREATE FUNCTION validate_item_relationship_placement() RETURNS trigger AS $$
+      BEGIN
+        IF TG_OP <> 'INSERT' THEN
+          PERFORM assert_item_instance_placement(OLD.story_id, OLD.child_item_id);
+        END IF;
+        IF TG_OP <> 'DELETE' THEN
+          PERFORM assert_item_instance_placement(NEW.story_id, NEW.child_item_id);
+        END IF;
+        IF TG_OP = 'DELETE' THEN
+          RETURN OLD;
+        END IF;
+        RETURN NEW;
+      END;
+      $$ LANGUAGE plpgsql;
+
+      CREATE CONSTRAINT TRIGGER item_relationships_validate_placement
+      AFTER INSERT OR UPDATE OR DELETE ON item_instance_relationships
+      DEFERRABLE INITIALLY DEFERRED
+      FOR EACH ROW EXECUTE FUNCTION validate_item_relationship_placement();
+    `,
+  },
 ];

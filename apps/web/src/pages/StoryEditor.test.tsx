@@ -391,6 +391,7 @@ describe('StoryEditor', () => {
     await user.click(screen.getByRole('button', { name: 'Add location' }));
 
     const inspector = screen.getByRole('complementary', { name: 'Inspector' });
+    expect(within(inspector).queryByRole('heading', { name: 'Items' })).not.toBeInTheDocument();
     const name = within(inspector).getByLabelText('Name');
     await user.clear(name);
     await user.type(name, 'Harbor');

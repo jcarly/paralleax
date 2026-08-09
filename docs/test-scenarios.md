@@ -259,9 +259,12 @@ The character-stat vertical keeps these regressions covered:
 - Context references: cycle through interactions that reference a selected
   location, character, stat, or item; dim unrelated cards for location and
   character focus; retain graph zoom down to 5%.
-- Item-instance migration: copy every legacy character item to `item_instances`
-  without changing ids, owners, definitions, order, or quantity defaults;
-  preserve exact item effects and permit a same-story location root.
+- Item-instance migration: preserve character-rooted instances and their
+  descendants while deleting every location-rooted subtree, then remove location
+  ownership from persistence.
+- Location item ownership: reject location placement payloads, expose no item
+  tree in the location inspector, and author location-based acquisition through
+  trigger context plus character-targeted item effects.
 - Item relationships: nest an exact instance under another with a typed relation
   and optional slot, reject self/ancestor cycles, reject deletion of a non-empty
   container, and transfer a complete subtree between characters without
@@ -285,8 +288,8 @@ Component and domain regressions supporting these flows also cover:
 
 - a failed initial reader load showing an actionable error and recovering on
   retry without remounting the route;
-- exact authored items rooted at locations retaining their definition, owner,
-  and initial item-stat values during replay;
+- character-rooted and nested authored items retaining their definition, root
+  owner, relationships, and initial item-stat values during replay;
 - story listing performing one summary query without assembling complete story
   graphs.
 - interaction bodies above 64,000 characters being rejected at the API boundary;

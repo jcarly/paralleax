@@ -158,6 +158,25 @@ test.describe('Story editor', () => {
     await expect(page.getByLabel('Duration (minutes)')).toHaveValue('45');
   });
 
+  test('does not expose an item inventory on locations', async ({ page }) => {
+    const locatedStory = cloneStory();
+    locatedStory.locations = [
+      {
+        id: 'location-1',
+        name: 'Harbor',
+        description: 'A narrative location without persistent items.',
+      },
+    ];
+    await mockStory(page, locatedStory);
+
+    await page.goto('/stories/story-1/edit');
+    await page.getByRole('button', { name: 'Harbor', exact: true }).click();
+
+    const inspector = page.getByRole('complementary', { name: 'Inspector' });
+    await expect(inspector.getByRole('heading', { name: 'Location' })).toBeVisible();
+    await expect(inspector.getByRole('heading', { name: 'Items' })).toHaveCount(0);
+  });
+
   test('keeps title and body visible after dragging an interaction', async ({ page }) => {
     const moved = cloneStory();
     moved.interactions[0].position = { x: 240, y: 180 };
@@ -311,8 +330,9 @@ test.describe('Story editor', () => {
     await page.getByRole('button', { name: 'Add item', exact: true }).click();
     await page.getByRole('button', { name: 'Add item', exact: true }).click();
 
-    await expect(page.locator('.character-items li')).toHaveCount(2);
-    await expect(page.locator('.character-items li').first()).toHaveText('Archive key');
-    await expect(page.locator('.character-items li').last()).toHaveText('Archive key');
+    const itemRows = page.locator('.item-instance-tree > li');
+    await expect(itemRows).toHaveCount(2);
+    await expect(itemRows.first()).toContainText('Archive key');
+    await expect(itemRows.last()).toContainText('Archive key');
   });
 });

@@ -18,6 +18,46 @@ describe('api client', () => {
     vi.stubGlobal('fetch', fetchMock);
   });
 
+  it('calls authentication and character resource removal endpoints', async () => {
+    fetchMock.mockResolvedValue(jsonResponse({ id: 'user-1', email: 'author@example.com' }));
+
+    await api.me();
+    expect(fetchMock).toHaveBeenLastCalledWith('/api/auth/me', {
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    await api.register('author@example.com', 'secret-password');
+    expect(fetchMock).toHaveBeenLastCalledWith('/api/auth/register', {
+      headers: { 'Content-Type': 'application/json' },
+      method: 'POST',
+      body: JSON.stringify({ email: 'author@example.com', password: 'secret-password' }),
+    });
+
+    await api.logout();
+    expect(fetchMock).toHaveBeenLastCalledWith('/api/auth/logout', {
+      headers: { 'Content-Type': 'application/json' },
+      method: 'POST',
+    });
+
+    await api.deleteCharacterStat('story-1', 'character-1', 'stat-1');
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      '/api/stories/story-1/characters/character-1/stats/stat-1',
+      {
+        headers: { 'Content-Type': 'application/json' },
+        method: 'DELETE',
+      },
+    );
+
+    await api.deleteCharacterItem('story-1', 'character-1', 'item-1');
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      '/api/stories/story-1/characters/character-1/items/item-1',
+      {
+        headers: { 'Content-Type': 'application/json' },
+        method: 'DELETE',
+      },
+    );
+  });
+
   it('calls story endpoints with JSON headers and bodies', async () => {
     const story = {
       id: 'story-1',

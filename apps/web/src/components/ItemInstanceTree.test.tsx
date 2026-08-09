@@ -18,7 +18,7 @@ describe('ItemInstanceTree', () => {
           { id: 'bag-definition', name: 'Bag', description: '' },
           { id: 'key-definition', name: 'Key', description: '' },
         ]}
-        rootPlacement={{ characterId: 'character-1' }}
+        rootCharacterId="character-1"
         onMove={onMove}
       />,
     );
@@ -44,7 +44,7 @@ describe('ItemInstanceTree', () => {
           { id: 'bag-definition', name: 'Bag', description: '' },
           { id: 'key-definition', name: 'Key', description: '' },
         ]}
-        rootPlacement={{ characterId: 'character-1' }}
+        rootCharacterId="character-1"
         onMove={onMove}
       />,
     );
@@ -82,7 +82,7 @@ describe('ItemInstanceTree', () => {
           { id: 'bag-definition', name: 'Bag', description: '' },
           { id: 'key-definition', name: 'Key', description: '' },
         ]}
-        rootPlacement={{ locationId: 'location-1' }}
+        rootCharacterId="character-1"
         onMove={vi.fn()}
       />,
     );

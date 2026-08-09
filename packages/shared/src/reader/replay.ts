@@ -1,6 +1,33 @@
 import type { Interaction, ReaderProgressState, Story } from '../model/index.js';
 import { getJourneyDateTime } from '../time/index.js';
 
+function getCharacterRootedItemInstances(story: Story) {
+  return (story.characters ?? []).flatMap((character) => {
+    const items = character.items ?? [];
+    const childrenByParentId = new Map<string, typeof items>();
+    for (const item of items) {
+      if (!item.parentItemId) continue;
+      childrenByParentId.set(item.parentItemId, [
+        ...(childrenByParentId.get(item.parentItemId) ?? []),
+        item,
+      ]);
+    }
+
+    const reachableIds = new Set<string>();
+    const pending = items.filter((item) => !item.parentItemId);
+    while (pending.length > 0) {
+      const item = pending.pop();
+      if (!item || reachableIds.has(item.id)) continue;
+      reachableIds.add(item.id);
+      pending.push(...(childrenByParentId.get(item.id) ?? []));
+    }
+
+    return items
+      .filter((item) => reachableIds.has(item.id))
+      .map((item) => ({ characterId: character.id, item }));
+  });
+}
+
 export function getInitialStatValues(story: Story): Record<string, number> {
   return Object.fromEntries(
     (story.characters ?? []).flatMap((character) =>
@@ -108,10 +135,8 @@ export function getJourneyOwnedItemIds(story: Story, journey: string[]): string[
 }
 
 export function getItemDefinitionIdForInstance(story: Story, itemId: string): string | undefined {
-  const authored = [...(story.characters ?? []), ...(story.locations ?? [])]
-    .flatMap((owner) => owner.items ?? [])
-    .find(({ id }) => id === itemId);
-  if (authored) return authored.itemDefinitionId;
+  const authored = getCharacterRootedItemInstances(story).find(({ item }) => item.id === itemId);
+  if (authored) return authored.item.itemDefinitionId;
   const ownedRuntimeMatch = /^runtime-item:\d+:\d+:[^:]*:(.+)$/.exec(itemId);
   if (ownedRuntimeMatch) return decodeURIComponent(ownedRuntimeMatch[1]);
   const legacyRuntimeMatch = /^runtime-item:\d+:\d+:(.+)$/.exec(itemId);
@@ -119,10 +144,8 @@ export function getItemDefinitionIdForInstance(story: Story, itemId: string): st
 }
 
 export function getItemOwnerIdForInstance(story: Story, itemId: string): string | undefined {
-  const authoredOwner = [...(story.characters ?? []), ...(story.locations ?? [])].find((owner) =>
-    (owner.items ?? []).some(({ id }) => id === itemId),
-  );
-  if (authoredOwner) return authoredOwner.id;
+  const authored = getCharacterRootedItemInstances(story).find(({ item }) => item.id === itemId);
+  if (authored) return authored.characterId;
   const match = /^runtime-item:\d+:\d+:([^:]*):/.exec(itemId);
   return match?.[1] ? decodeURIComponent(match[1]) : undefined;
 }
@@ -139,17 +162,15 @@ export function getInitialItemStatValues(story: Story): Record<string, Record<st
     (story.itemDefinitions ?? []).map((definition) => [definition.id, definition]),
   );
   return Object.fromEntries(
-    (story.characters ?? []).flatMap((character) =>
-      (character.items ?? []).map((item) => [
-        item.id,
-        Object.fromEntries(
-          (definitions.get(item.itemDefinitionId)?.stats ?? []).map((stat) => [
-            stat.statDefinitionId,
-            stat.initialValue,
-          ]),
-        ),
-      ]),
-    ),
+    getCharacterRootedItemInstances(story).map(({ item }) => [
+      item.id,
+      Object.fromEntries(
+        (definitions.get(item.itemDefinitionId)?.stats ?? []).map((stat) => [
+          stat.statDefinitionId,
+          stat.initialValue,
+        ]),
+      ),
+    ]),
   );
 }
 

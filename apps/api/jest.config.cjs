@@ -19,5 +19,6 @@ module.exports = {
   },
   moduleNameMapper: {
     '^@paralleax/shared$': '<rootDir>/../../packages/shared/src/index.ts',
+    '^(\\.{1,2}/.*)\\.js$': '$1',
   },
 };

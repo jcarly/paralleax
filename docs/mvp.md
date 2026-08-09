@@ -30,7 +30,8 @@ The current implementation now includes:
 - characters, interaction casts, and presence conditions;
 - reusable numeric character stats, effects, and comparisons;
 - reusable item definitions and exact authored item instances;
-- recursive item-instance relationships with character/location roots;
+- recursive item-instance relationships with character roots and nested item
+  containers;
 - deterministic inventory and item-stat replay from the reader journey;
 - story-local calendar time, interaction durations, and date/weekday/time-slot conditions;
 - simulation-oriented reader diagnostics;

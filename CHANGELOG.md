@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-08-09
+
+- Removed location-owned item instances from the accepted domain model, reader,
+  API, persistence, and editor. The forward migration intentionally deletes
+  existing location-rooted item subtrees before removing `owner_location_id`;
+  character inventories and nested item relationships remain supported.
+- Added ADR-014 and updated ADR-013, domain semantics, architecture, roadmap,
+  regression scenarios, and author guidance for location-conditioned item
+  acquisition.
+- Restored API Jest resolution for the shared package's ESM-style relative
+  imports after its focused-module extraction.
+- Excluded the standalone UI prototype from web unit-test discovery and coverage
+  gates so experimental screens do not affect production verification.
+
 ## 2026-08-08
 
 - Extracted shared domain types into focused `packages/shared/src/model/`

@@ -67,10 +67,14 @@ details. They should stay covered by tests as the editor grows.
   with a finite numeric initial value inherited by every item instance.
 - Locations, characters, stat definitions, and item definitions may reference
   an optional image URL. An empty value means that no image is configured.
-- An authored item instance has one structural placement, may be rooted at one
-  character or location, and references one item definition from the same story.
-- Reader replay resolves the definition and authored root owner of both
-  character- and location-rooted item instances.
+- An authored item instance has one structural placement and references one item
+  definition from the same story. A root belongs to one character; a nested
+  instance has one structural parent item.
+- Locations never own item instances. Location-based acquisition is represented
+  by interaction location context, trigger conditions, and item obtain/lose
+  effects.
+- Reader replay resolves each definition and character root through the authored
+  item relationship tree.
 - Several item instances owned by one character may reference the same item
   definition; every instance keeps a distinct id.
 - Removing an authored character item instance also removes legacy
@@ -92,8 +96,9 @@ details. They should stay covered by tests as the editor grows.
 - Implemented relationship foundation: a projected item has at most one parent,
   parent and child are distinct same-story instances, and relationship types are
   limited to the ADR-013 set. The service rejects ancestor cycles. Moving a root
-  between characters moves its complete projected subtree without changing ids;
-  deleting a non-empty container is rejected.
+  between characters or moving an item beneath a container preserves its
+  complete projected subtree without changing ids; deleting a non-empty
+  container is rejected.
 - Removing a stat assignment from an item definition removes interaction
   item-stat effects that would otherwise reference that unassigned stat.
 - An interaction has at most one effect per stat. An effect either adds a finite

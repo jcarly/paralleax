@@ -7,6 +7,7 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     include: ['src/**/*.test.{ts,tsx}'],
+    exclude: ['src/pages/ParalleaxPrototype*.test.{ts,tsx}'],
     setupFiles: './src/test/setup.ts',
     testTimeout: 20_000,
     coverage: {
@@ -14,7 +15,12 @@ export default defineConfig({
       reporter: ['text', 'html', 'lcov'],
       reportsDirectory: './coverage',
       include: ['src/**/*.{ts,tsx}'],
-      exclude: ['src/main.tsx', 'src/**/*.test.{ts,tsx}', 'src/test/**'],
+      exclude: [
+        'src/main.tsx',
+        'src/pages/ParalleaxPrototype*',
+        'src/**/*.test.{ts,tsx}',
+        'src/test/**',
+      ],
       thresholds: {
         branches: 80,
         functions: 90,
