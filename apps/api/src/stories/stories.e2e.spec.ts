@@ -88,6 +88,8 @@ describe('Stories API', () => {
   });
 
   it('rate-limits story mutations independently from reads', async () => {
+    // Keep Supertest from owning and closing the shared server while concurrent requests are active.
+    await app.listen(0);
     const responses = await Promise.all(
       Array.from({ length: STORY_MUTATION_RATE_LIMIT + 1 }, (_, index) =>
         request(httpServer)
