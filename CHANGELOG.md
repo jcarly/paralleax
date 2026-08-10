@@ -13,6 +13,8 @@
   preserving the existing story mutations and duration semantics.
 - Separated effect targets from their affected stat or item fields, with searchable character and
   exact item-instance targets shared across stat, inventory, and item-stat effect cards.
+- Extended the isolated UX prototype with sign-in, registration, searchable story-library, and
+  design-system reference screens, all navigable without an API session.
 
 ## 2026-08-09
 

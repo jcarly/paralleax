@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
-import { Link, Route, Routes } from 'react-router-dom';
+import { Link, Route, Routes, useLocation } from 'react-router-dom';
 import { api, type AuthUser } from './api';
 import { AuthPage } from './pages/AuthPage';
 import { StoryList } from './pages/StoryList';
@@ -14,26 +14,32 @@ const StoryPlayer = lazy(() =>
 );
 
 export function App() {
+  const location = useLocation();
+  const isPrototype =
+    location.pathname === '/prototype/paralleax' ||
+    location.pathname.startsWith('/prototype/paralleax/');
   const [user, setUser] = useState<AuthUser | null>();
   const [authNotice, setAuthNotice] = useState('');
 
   useEffect(() => {
+    if (isPrototype) return;
     api
       .me()
       .then(setUser)
       .catch(() => setUser(null));
-  }, []);
+  }, [isPrototype]);
 
   useEffect(() => {
+    if (isPrototype) return;
     const expireSession = () => {
       setAuthNotice('Your session expired. Sign in again to continue.');
       setUser(null);
     };
     window.addEventListener('paralleax:session-expired', expireSession);
     return () => window.removeEventListener('paralleax:session-expired', expireSession);
-  }, []);
+  }, [isPrototype]);
 
-  if (window.location.pathname === '/prototype/paralleax') return <ParalleaxPrototype />;
+  if (isPrototype) return <ParalleaxPrototype />;
   if (user === undefined) return <main className="page">Loading...</main>;
   if (user === null)
     return (

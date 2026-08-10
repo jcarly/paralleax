@@ -15,16 +15,31 @@ vi.mock('./api', () => ({
 vi.mock('./pages/StoryList', () => ({ StoryList: () => <div>Liste mock</div> }));
 vi.mock('./pages/StoryEditor', () => ({ StoryEditor: () => <div>Editeur mock</div> }));
 vi.mock('./pages/StoryPlayer', () => ({ StoryPlayer: () => <div>Lecteur mock</div> }));
+vi.mock('./pages/ParalleaxPrototype', () => ({
+  ParalleaxPrototype: () => <div>Prototype mock</div>,
+}));
 
 describe('App', () => {
   afterEach(() => cleanup());
 
   beforeEach(() => {
+    vi.clearAllMocks();
     vi.mocked(api.me).mockResolvedValue({
       id: 'user-1',
       email: 'author@example.com',
       createdAt: '2026-01-01T00:00:00.000Z',
     });
+  });
+
+  it('opens every prototype sub-route without checking the real account session', () => {
+    render(
+      <MemoryRouter initialEntries={['/prototype/paralleax/design-system']}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText('Prototype mock')).toBeInTheDocument();
+    expect(api.me).not.toHaveBeenCalled();
   });
 
   it('renders the shell and list route', async () => {

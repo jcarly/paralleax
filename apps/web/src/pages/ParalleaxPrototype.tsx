@@ -11,6 +11,13 @@ import {
   type Connection,
   type NodeProps,
 } from '@xyflow/react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import {
+  PrototypeAuthPage,
+  PrototypeDesignSystem,
+  PrototypeStoryList,
+} from './ParalleaxPrototypePages';
+import { prototypeRoutes, type PrototypeRoute } from './ParalleaxPrototypeRoutes';
 import './ParalleaxPrototype.css';
 
 type InspectorKind = 'interaction' | 'trigger' | 'character' | 'location' | 'stat' | 'item';
@@ -266,7 +273,7 @@ function Player({ onExit }: { onExit: () => void }) {
   </div>;
 }
 
-export function ParalleaxPrototype() {
+function PrototypeStoryEditor({ onNavigate }: { onNavigate: (route: PrototypeRoute) => void }) {
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem('paralleax-prototype-sidebar') === 'collapsed');
   const [selected, setSelected] = useState<InspectorKind | null>('interaction');
   const [selectedEntityId, setSelectedEntityId] = useState<string>();
@@ -275,7 +282,7 @@ export function ParalleaxPrototype() {
   useEffect(() => localStorage.setItem('paralleax-prototype-sidebar', collapsed ? 'collapsed' : 'open'), [collapsed]);
   if (playing) return <Player onExit={() => setPlaying(false)}/>;
   return <div className={`pp-shell ${collapsed ? 'is-collapsed' : ''}`}>
-    <header className="pp-topbar"><div className="pp-logo">P</div><b>Paralleax</b><span>/</span><strong>The Archive Below</strong><nav><button className="active">Story</button><button>Graph</button></nav><div className="pp-spacer"/><span className="pp-saved">● Saved</span><button>Share</button><button className="pp-play" onClick={() => setPlaying(true)}>▶ Simulate</button></header>
+    <header className="pp-topbar"><button className="pp-editor-brand" type="button" onClick={() => onNavigate(prototypeRoutes.stories)}><span className="pp-logo">P</span><b>Paralleax</b></button><span>/</span><strong>The Archive Below</strong><nav><button className="active">Story</button><button>Graph</button></nav><div className="pp-spacer"/><span className="pp-saved">● Saved</span><button type="button" onClick={() => onNavigate(prototypeRoutes.designSystem)}>Design system</button><button>Share</button><button className="pp-play" onClick={() => setPlaying(true)}>▶ Simulate</button></header>
     <aside className="pp-sidebar"><button className="pp-collapse" onClick={() => setCollapsed(!collapsed)} title="Toggle sidebar">{collapsed ? '›' : '‹'}</button><div className="pp-side-content"><div className="pp-search">⌕ <input placeholder="Search story…"/><kbd>⌘K</kbd></div>
       <div className="pp-context-lists">
         <details className="pp-side-group" open><summary><span>Characters</span><b>3</b></summary>
@@ -310,4 +317,24 @@ export function ParalleaxPrototype() {
     <main className="pp-workspace"><div className="pp-crumb"><span>Story</span><b>Graph overview</b><div/><button>Undo</button><button>Redo</button><button>•••</button></div><StoryGraph select={(kind) => openEntity(kind)}/></main>
     {selected && <Inspector key={`${selected}-${selectedEntityId ?? 'new'}`} kind={selected} entityId={selectedEntityId} onClose={() => { setSelected(null); setSelectedEntityId(undefined); }}/>} 
   </div>;
+}
+
+export function ParalleaxPrototype() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const onNavigate = (route: PrototypeRoute) => void navigate(route);
+
+  if (location.pathname === prototypeRoutes.login) {
+    return <PrototypeAuthPage mode="login" onNavigate={onNavigate} />;
+  }
+  if (location.pathname === prototypeRoutes.register) {
+    return <PrototypeAuthPage mode="register" onNavigate={onNavigate} />;
+  }
+  if (location.pathname === prototypeRoutes.stories) {
+    return <PrototypeStoryList onNavigate={onNavigate} />;
+  }
+  if (location.pathname === prototypeRoutes.designSystem) {
+    return <PrototypeDesignSystem onNavigate={onNavigate} />;
+  }
+  return <PrototypeStoryEditor onNavigate={onNavigate} />;
 }
