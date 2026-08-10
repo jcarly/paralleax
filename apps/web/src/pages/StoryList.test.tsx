@@ -58,8 +58,16 @@ describe('StoryList', () => {
 
     expect(await screen.findByRole('heading', { name: 'First story' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Second story' })).toBeInTheDocument();
-    expect(screen.getByText('0 interaction(s)')).toBeInTheDocument();
-    expect(screen.getByText('1 interaction(s)')).toBeInTheDocument();
+    expect(
+      within(screen.getByRole('heading', { name: 'First story' }).closest('article')!).getByText(
+        '0',
+      ),
+    ).toBeInTheDocument();
+    expect(
+      within(screen.getByRole('heading', { name: 'Second story' }).closest('article')!).getByText(
+        '1',
+      ),
+    ).toBeInTheDocument();
 
     const firstCard = screen.getByRole('heading', { name: 'First story' }).closest('article')!;
     expect(within(firstCard).getByRole('link', { name: 'Edit' })).toHaveAttribute(
@@ -98,7 +106,10 @@ describe('StoryList', () => {
     await screen.findByRole('heading', { name: 'First story' });
 
     await user.click(screen.getByRole('button', { name: 'New story' }));
+    await user.type(screen.getByLabelText('Story title'), 'New story');
+    await user.click(screen.getByRole('button', { name: 'Create story' }));
     expect(await screen.findByRole('heading', { name: 'New story' })).toBeInTheDocument();
+    expect(api.createStory).toHaveBeenCalledWith('New story');
 
     const firstCard = screen.getByRole('heading', { name: 'First story' }).closest('article')!;
     await user.click(within(firstCard).getByRole('button', { name: 'Delete' }));
@@ -143,8 +154,35 @@ describe('StoryList', () => {
         name: 'Demo: branching investigation',
       })
     ).closest('article')!;
-    expect(within(demoCard).getByText('1 interaction(s)')).toBeInTheDocument();
+    expect(within(demoCard).getByText('1')).toBeInTheDocument();
     expect(api.createDemoStory).toHaveBeenCalledOnce();
+  });
+
+  it('searches, filters, and switches the story layout locally', async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.listStories).mockResolvedValue(structuredClone(stories));
+
+    render(
+      <MemoryRouter>
+        <StoryList />
+      </MemoryRouter>,
+    );
+    await screen.findByRole('heading', { name: 'First story' });
+
+    await user.type(screen.getByRole('searchbox', { name: 'Search stories' }), 'Second');
+    expect(screen.queryByRole('heading', { name: 'First story' })).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Second story' })).toBeInTheDocument();
+
+    await user.clear(screen.getByRole('searchbox', { name: 'Search stories' }));
+    await user.click(screen.getByRole('button', { name: 'Empty' }));
+    expect(screen.getByRole('heading', { name: 'First story' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Second story' })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'List view' }));
+    expect(screen.getByRole('button', { name: 'List view' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
   });
 
   it('shows a loading error', async () => {

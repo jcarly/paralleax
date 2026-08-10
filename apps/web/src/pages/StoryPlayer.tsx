@@ -57,7 +57,7 @@ function describeCondition(story: Story, condition: TriggerCondition) {
       .flatMap((character) =>
         (character.stats ?? []).map((item) => ({
           ...item,
-          label: `${character.name} â€” ${
+          label: `${character.name} — ${
             story.statDefinitions?.find(({ id }) => id === item.statDefinitionId)?.name ??
             'Unknown stat'
           }`,
@@ -213,6 +213,7 @@ export function StoryPlayer() {
   const [progressStatus, setProgressStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>(
     'idle',
   );
+  const [forceUnavailableOptions, setForceUnavailableOptions] = useState(false);
   const [editingChoiceId, setEditingChoiceId] = useState<string>();
   const editingChoiceInputRef = useRef<HTMLInputElement>(null);
   const progressSaveQueue = useRef<Promise<void>>(Promise.resolve());
@@ -292,6 +293,17 @@ export function StoryPlayer() {
     [story],
   );
   const playedCharacter = playableCharacters.find(({ id }) => id === playableCharacterId);
+  const currentLocation = story?.locations?.find(
+    ({ id }) => id === (current?.locationId ?? currentLocationId),
+  );
+  const presentCharacters = useMemo(
+    () =>
+      (current?.characterIds ?? []).flatMap((characterId) => {
+        const character = story?.characters?.find(({ id }) => id === characterId);
+        return character ? [character] : [];
+      }),
+    [current?.characterIds, story?.characters],
+  );
 
   const choices = useMemo(
     () =>
@@ -481,6 +493,7 @@ export function StoryPlayer() {
         : {},
     );
     setPlayableCharacterId(undefined);
+    setForceUnavailableOptions(false);
     if (!isSimulationMode) queueProgressReset();
   }
 
@@ -609,9 +622,17 @@ export function StoryPlayer() {
   }
 
   return (
-    <main className="player-page">
+    <main className={`player-page ${isSimulationMode ? 'simulation-mode' : 'reader-mode'}`}>
       <div className="player-top">
-        <Link to={`/stories/${story.id}/edit`}>Back to editor</Link>
+        <div className="player-context">
+          <span className="player-mark" aria-hidden="true">
+            P
+          </span>
+          <span>
+            <small>{isSimulationMode ? 'Paralleax Preview' : 'Paralleax Reader'}</small>
+            <b>{story.title}</b>
+          </span>
+        </div>
         {isSimulationMode ? <span className="mode-pill">Simulation</span> : null}
         {!isSimulationMode ? (
           <span className={`save-status ${progressStatus}`} role="status" aria-live="polite">
@@ -625,125 +646,206 @@ export function StoryPlayer() {
           </span>
         ) : null}
         {isSimulationMode ? (
-          <button className="secondary" disabled={journey.length <= 1} onClick={stepBack}>
-            Back
+          <button
+            className="player-toolbar-button"
+            disabled={journey.length <= 1}
+            onClick={stepBack}
+          >
+            <span aria-hidden="true">←</span> Back
           </button>
         ) : null}
-        <button className="secondary" onClick={restart}>
-          Restart
+        <button className="player-toolbar-button" onClick={restart}>
+          <span aria-hidden="true">↻</span> Restart
         </button>
+        <Link className="player-exit" to={`/stories/${story.id}/edit`}>
+          {isSimulationMode ? 'Exit simulation' : 'Back to editor'}
+        </Link>
       </div>
       <article className="player-card">
-        <p className="eyebrow">{story.title}</p>
-        <time className="story-clock" dateTime={currentDateTime}>
-          {currentDateTime.replace('T', ' ')}
-        </time>
-        {playableCharacters.length > 0 && !playedCharacter ? (
-          <section className="character-selection" aria-label="Choose your character">
-            <h1>Choose your character</h1>
-            {playableCharacters.map((character) => (
-              <button
-                className="character-choice-card"
-                key={character.id}
-                type="button"
-                onClick={() => setPlayableCharacterId(character.id)}
-              >
-                {character.imageUrl ? <img src={character.imageUrl} alt="" /> : null}
-                <strong>{character.name}</strong>
-                {character.description ? <span>{character.description}</span> : null}
-              </button>
-            ))}
-          </section>
-        ) : current ? (
-          <>
-            {isSimulationMode ? (
-              <>
-                <input
-                  className="simulation-title-input"
-                  aria-label="Current interaction title"
-                  value={current.title}
-                  onChange={(event) => patchCurrentInteraction({ title: event.target.value })}
-                  onBlur={(event) => void saveCurrentInteraction({ title: event.target.value })}
-                />
-                <RichTextEditor
-                  ariaLabel="Current interaction content"
-                  value={current.body}
-                  onChange={(body) => patchCurrentInteraction({ body })}
-                  onBlur={(body) => void saveCurrentInteraction({ body })}
-                  conditionalTargets={outgoingInteractions}
-                  conditionalTextState={conditionalTextState}
-                  onConditionalTargetClick={(interactionId) => {
-                    const target = story.interactions.find(({ id }) => id === interactionId);
-                    if (target) choose(target);
-                  }}
-                />
-              </>
-            ) : (
-              <>
-                <h1>{current.title}</h1>
-                <RichTextContent
-                  className="story-body"
-                  html={current.body}
-                  conditionalTextState={conditionalTextState}
-                />
-              </>
-            )}
-          </>
-        ) : (
-          <>
-            <h1>Start the story</h1>
-            <p>Choose a starting interaction.</p>
-          </>
-        )}
-        {playableCharacters.length === 0 || playedCharacter ? (
-          <div className="choices">
-            {visibleChoices.map(({ interaction, available, unavailableReason }) => (
-              <div className="choice-row" key={interaction.id}>
-                {editingChoiceId === interaction.id ? (
+        <div className={`player-scene-visual ${currentLocation?.imageUrl ? 'with-image' : ''}`}>
+          {currentLocation?.imageUrl ? (
+            <img src={currentLocation.imageUrl} alt={currentLocation.name} />
+          ) : (
+            <div className="player-scene-placeholder" aria-hidden="true">
+              <span />
+              <span />
+              <i />
+            </div>
+          )}
+          <div className="player-scene-meta">
+            <span>
+              <small>Location</small>
+              <b>{currentLocation?.name ?? 'Unknown location'}</b>
+            </span>
+            <time dateTime={currentDateTime}>{currentDateTime.replace('T', ' ')}</time>
+            {presentCharacters.length > 0 ? (
+              <span className="scene-character-list" aria-label="Characters present">
+                {presentCharacters.map((character) =>
+                  character.imageUrl ? (
+                    <img key={character.id} src={character.imageUrl} alt={character.name} />
+                  ) : (
+                    <i key={character.id} title={character.name}>
+                      {character.name.slice(0, 2).toUpperCase()}
+                    </i>
+                  ),
+                )}
+              </span>
+            ) : null}
+          </div>
+        </div>
+        <div className="player-story-content">
+          <p className="eyebrow">{story.title}</p>
+          {playableCharacters.length > 0 && !playedCharacter ? (
+            <section className="character-selection" aria-label="Choose your character">
+              <span className="product-eyebrow">Before the story begins</span>
+              <h1>Choose your character</h1>
+              <p>Select the character whose stats and inventory you will follow.</p>
+              <div>
+                {playableCharacters.map((character) => (
+                  <button
+                    className="character-choice-card"
+                    key={character.id}
+                    type="button"
+                    onClick={() => setPlayableCharacterId(character.id)}
+                  >
+                    {character.imageUrl ? (
+                      <img src={character.imageUrl} alt="" />
+                    ) : (
+                      <span aria-hidden="true">{character.name.slice(0, 2).toUpperCase()}</span>
+                    )}
+                    <strong>{character.name}</strong>
+                    {character.description ? <small>{character.description}</small> : null}
+                    <i aria-hidden="true">→</i>
+                  </button>
+                ))}
+              </div>
+            </section>
+          ) : current ? (
+            <>
+              {isSimulationMode ? (
+                <>
+                  <div className="simulation-edit-label">
+                    <span className="product-badge accent">Live editing</span>
+                    <small>Changes save when a field loses focus.</small>
+                  </div>
                   <input
-                    ref={editingChoiceInputRef}
-                    className="choice-title-input"
-                    aria-label="New option title"
-                    value={interaction.title}
-                    onChange={(event) =>
-                      patchInteraction(interaction.id, { title: event.target.value })
-                    }
-                    onBlur={(event) => void saveChoiceTitle(interaction, event.target.value)}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Enter') {
-                        event.preventDefault();
-                        event.currentTarget.blur();
+                    className="simulation-title-input"
+                    aria-label="Current interaction title"
+                    value={current.title}
+                    onChange={(event) => patchCurrentInteraction({ title: event.target.value })}
+                    onBlur={(event) => void saveCurrentInteraction({ title: event.target.value })}
+                  />
+                  <RichTextEditor
+                    ariaLabel="Current interaction content"
+                    value={current.body}
+                    onChange={(body) => patchCurrentInteraction({ body })}
+                    onBlur={(body) => void saveCurrentInteraction({ body })}
+                    conditionalTargets={outgoingInteractions}
+                    conditionalTextState={conditionalTextState}
+                    onConditionalTargetClick={(interactionId) => {
+                      const target = story.interactions.find(({ id }) => id === interactionId);
+                      if (
+                        target &&
+                        (availableChoiceIds.has(interactionId) || forceUnavailableOptions)
+                      ) {
+                        choose(target);
                       }
                     }}
                   />
-                ) : (
-                  <button
-                    className={`choice ${available ? 'available' : 'unavailable'}`}
-                    onClick={() => choose(interaction)}
-                    title={
-                      available
-                        ? getConditionSummary(story, interaction, current?.id ?? null)
-                        : (unavailableReason ?? 'Unavailable in the current simulation state')
-                    }
-                  >
-                    <span>{interaction.title}</span>
-                    {isSimulationMode && !available ? (
-                      <small>{unavailableReason ?? 'Unavailable - force for test'}</small>
-                    ) : null}
-                  </button>
-                )}
-              </div>
-            ))}
-            {isSimulationMode ? (
-              <button className="choice add-option" onClick={() => void addOption()}>
-                Add option
-              </button>
-            ) : null}
-            {choices.length === 0 && current && !isSimulationMode ? (
-              <p className="ending">End of this branch.</p>
-            ) : null}
-          </div>
-        ) : null}
+                </>
+              ) : (
+                <>
+                  <h1>{current.title}</h1>
+                  <RichTextContent
+                    className="story-body"
+                    html={current.body}
+                    conditionalTextState={conditionalTextState}
+                  />
+                </>
+              )}
+            </>
+          ) : (
+            <>
+              <span className="product-eyebrow">Ready when you are</span>
+              <h1>Start the story</h1>
+              <p>Choose a starting interaction.</p>
+            </>
+          )}
+          {playableCharacters.length === 0 || playedCharacter ? (
+            <div className="choices">
+              {visibleChoices.map(({ interaction, available, unavailableReason }) => (
+                <div className="choice-row" key={interaction.id}>
+                  {editingChoiceId === interaction.id ? (
+                    <input
+                      ref={editingChoiceInputRef}
+                      className="choice-title-input"
+                      aria-label="New option title"
+                      value={interaction.title}
+                      onChange={(event) =>
+                        patchInteraction(interaction.id, { title: event.target.value })
+                      }
+                      onBlur={(event) => void saveChoiceTitle(interaction, event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter') {
+                          event.preventDefault();
+                          event.currentTarget.blur();
+                        }
+                      }}
+                    />
+                  ) : (
+                    <button
+                      className={`choice ${available ? 'available' : 'unavailable'} ${isSimulationMode && !available && forceUnavailableOptions ? 'forced' : ''}`}
+                      disabled={isSimulationMode && !available && !forceUnavailableOptions}
+                      onClick={() => choose(interaction)}
+                      title={
+                        available
+                          ? getConditionSummary(story, interaction, current?.id ?? null)
+                          : (unavailableReason ?? 'Unavailable in the current simulation state')
+                      }
+                    >
+                      <span className="choice-copy">
+                        <strong>{interaction.title}</strong>
+                        {isSimulationMode && !available ? (
+                          <small>
+                            {unavailableReason ?? 'Unavailable in the current simulation state'}
+                            {forceUnavailableOptions ? ' Forced for this test.' : ''}
+                          </small>
+                        ) : null}
+                      </span>
+                      <span className="choice-arrow" aria-hidden="true">
+                        →
+                      </span>
+                    </button>
+                  )}
+                </div>
+              ))}
+              {isSimulationMode ? (
+                <button
+                  className="choice add-option"
+                  aria-label="Add option"
+                  onClick={() => void addOption()}
+                >
+                  <span className="choice-copy">
+                    <strong>Add option</strong>
+                    <small>Create a connected interaction from this point.</small>
+                  </span>
+                  <span className="choice-arrow" aria-hidden="true">
+                    ＋
+                  </span>
+                </button>
+              ) : null}
+              {choices.length === 0 && current && !isSimulationMode ? (
+                <div className="ending">
+                  <span aria-hidden="true">◇</span>
+                  <div>
+                    <b>End of this branch.</b>
+                    <p>You can restart the story to explore another path.</p>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
       </article>
       {playedCharacter || playableCharacters.length === 0 ? (
         <aside
@@ -752,30 +854,57 @@ export function StoryPlayer() {
         >
           {playedCharacter ? (
             <>
-              {playedCharacter.imageUrl ? (
-                <img
-                  className="player-character-image"
-                  src={playedCharacter.imageUrl}
-                  alt={playedCharacter.name}
-                />
-              ) : null}
-              <h2>{playedCharacter.name}</h2>
-              {playedCharacter.description ? <p>{playedCharacter.description}</p> : null}
+              <div className="player-character-profile">
+                {playedCharacter.imageUrl ? (
+                  <img
+                    className="player-character-image"
+                    src={playedCharacter.imageUrl}
+                    alt={playedCharacter.name}
+                  />
+                ) : (
+                  <span className="player-character-placeholder" aria-hidden="true">
+                    {playedCharacter.name.slice(0, 2).toUpperCase()}
+                  </span>
+                )}
+                <h2>{playedCharacter.name}</h2>
+                {playedCharacter.description ? <p>{playedCharacter.description}</p> : null}
+              </div>
               <h3>Stats</h3>
               {(playedCharacter.stats ?? []).length === 0 ? (
                 <p className="hint">No stats.</p>
               ) : (
-                <ul>
+                <ul className="player-stat-list">
                   {(playedCharacter.stats ?? []).map((stat) => (
                     <li key={stat.id}>
-                      {story.statDefinitions?.find(({ id }) => id === stat.statDefinitionId)
-                        ?.name ?? 'Unknown stat'}
-                      : {statValues[stat.id] ?? stat.initialValue}
+                      <span className="player-stat-icon" aria-hidden="true">
+                        ◇
+                      </span>
+                      <span>
+                        {story.statDefinitions?.find(({ id }) => id === stat.statDefinitionId)
+                          ?.name ?? 'Unknown stat'}
+                      </span>
+                      <strong>: {statValues[stat.id] ?? stat.initialValue}</strong>
                     </li>
                   ))}
                 </ul>
               )}
             </>
+          ) : null}
+          {isSimulationMode ? (
+            <section className="simulation-controls">
+              <span className="product-eyebrow">Author tools</span>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={forceUnavailableOptions}
+                  onChange={(event) => setForceUnavailableOptions(event.target.checked)}
+                />
+                <span>
+                  <b>Force unavailable options</b>
+                  <small>Bypass conditions while testing this path.</small>
+                </span>
+              </label>
+            </section>
           ) : null}
           <h2>Inventory</h2>
           {ownedItemIds.filter(
@@ -784,7 +913,7 @@ export function StoryPlayer() {
           ).length === 0 ? (
             <p className="hint">No items.</p>
           ) : (
-            <ul>
+            <ul className="player-item-list">
               {ownedItemIds
                 .filter(
                   (itemId) =>
@@ -830,6 +959,7 @@ export function StoryPlayer() {
       current &&
       (current.characterIds ?? []).some((id) => id !== playedCharacter.id) ? (
         <aside className="encounter-panel" aria-label="Encountered characters">
+          <span className="product-eyebrow">Current scene</span>
           <h2>Encounter</h2>
           {(current.characterIds ?? [])
             .filter((id) => id !== playedCharacter?.id)
@@ -839,7 +969,11 @@ export function StoryPlayer() {
                 <section className="encounter-card" key={character.id}>
                   {character.imageUrl ? (
                     <img src={character.imageUrl} alt={character.name} />
-                  ) : null}
+                  ) : (
+                    <span className="encounter-placeholder" aria-hidden="true">
+                      {character.name.slice(0, 2).toUpperCase()}
+                    </span>
+                  )}
                   <h3>{character.name}</h3>
                   {character.description ? <p>{character.description}</p> : null}
                 </section>
@@ -847,7 +981,7 @@ export function StoryPlayer() {
             })}
         </aside>
       ) : null}
-      <details className="debug">
+      <details className="debug player-history">
         <summary>{isSimulationMode ? 'Simulation history' : 'Reading history'}</summary>
         <ol>
           {visited.map((id) => (

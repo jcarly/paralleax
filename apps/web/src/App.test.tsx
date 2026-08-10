@@ -13,6 +13,9 @@ vi.mock('./api', () => ({
 }));
 
 vi.mock('./pages/StoryList', () => ({ StoryList: () => <div>Liste mock</div> }));
+vi.mock('./pages/DesignSystemPage', () => ({
+  DesignSystemPage: () => <div>Design system mock</div>,
+}));
 vi.mock('./pages/StoryEditor', () => ({ StoryEditor: () => <div>Editeur mock</div> }));
 vi.mock('./pages/StoryPlayer', () => ({ StoryPlayer: () => <div>Lecteur mock</div> }));
 vi.mock('./pages/ParalleaxPrototype', () => ({
@@ -50,8 +53,22 @@ describe('App', () => {
     );
 
     expect(await screen.findByRole('link', { name: 'Paralleax' })).toHaveAttribute('href', '/');
-    expect(screen.getByText('Interactive story editor')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Stories' })).toHaveAttribute('href', '/');
+    expect(screen.getByRole('link', { name: 'Design system' })).toHaveAttribute(
+      'href',
+      '/design-system',
+    );
     expect(screen.getByText('Liste mock')).toBeInTheDocument();
+  });
+
+  it('routes to the authenticated design system', async () => {
+    render(
+      <MemoryRouter initialEntries={['/design-system']}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText('Design system mock')).toBeInTheDocument();
   });
 
   it('routes to editor and player pages', async () => {
@@ -78,7 +95,20 @@ describe('App', () => {
         <App />
       </MemoryRouter>,
     );
-    expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: 'Sign in to Paralleax' }),
+    ).toBeInTheDocument();
+  });
+
+  it('opens registration directly from its public route', async () => {
+    vi.mocked(api.me).mockRejectedValue(new Error('Unauthorized'));
+    render(
+      <MemoryRouter initialEntries={['/register']}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole('heading', { name: 'Create your account' })).toBeInTheDocument();
   });
 
   it('returns to sign in with a clear notice when the session expires', async () => {
@@ -91,7 +121,7 @@ describe('App', () => {
 
     act(() => window.dispatchEvent(new Event('paralleax:session-expired')));
 
-    expect(screen.getByRole('heading', { name: 'Sign in' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Sign in to Paralleax' })).toBeInTheDocument();
     expect(
       screen.getByText('Your session expired. Sign in again to continue.'),
     ).toBeInTheDocument();

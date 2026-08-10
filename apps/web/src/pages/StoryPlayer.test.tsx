@@ -80,7 +80,7 @@ async function renderPlayer(initialEntry = '/stories/story-1/play', storyFixture
     </MemoryRouter>,
   );
 
-  await screen.findByText('Playable story');
+  await screen.findByText(/Paralleax (Reader|Preview)/);
 }
 
 describe('StoryPlayer', () => {
@@ -107,7 +107,7 @@ describe('StoryPlayer', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('API unavailable');
     await user.click(screen.getByRole('button', { name: 'Retry' }));
-    expect(await screen.findByText('Playable story')).toBeInTheDocument();
+    expect(await screen.findByText('Paralleax Reader')).toBeInTheDocument();
     expect(api.getStory).toHaveBeenCalledTimes(2);
   });
 
@@ -118,6 +118,9 @@ describe('StoryPlayer', () => {
     expect(screen.getByRole('heading', { name: /Start the story/ })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Start' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Next' })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('checkbox', { name: /Force unavailable options/ }),
+    ).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Start' }));
     expect(screen.getByRole('heading', { name: 'Start' })).toBeInTheDocument();
@@ -302,6 +305,7 @@ describe('StoryPlayer', () => {
 
     await renderPlayer('/stories/story-1/play', locatedStory);
     await user.click(screen.getByRole('button', { name: 'Start' }));
+    expect(screen.getByText('Harbor')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Next' }));
 
     expect(screen.getByRole('button', { name: 'Secret' })).toBeInTheDocument();
@@ -488,10 +492,15 @@ describe('StoryPlayer', () => {
     expect(screen.getByLabelText('Current interaction title')).toHaveValue('Next');
     expect(screen.getByRole('button', { name: 'Back' })).toBeDisabled();
     expect(screen.queryByRole('button', { name: 'Start' })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Secret/ })).toHaveClass('unavailable');
-    expect(screen.getByText('Requires "Start" to be visited.')).toBeInTheDocument();
+    const unavailableOption = screen.getByRole('button', { name: /Secret/ });
+    expect(unavailableOption).toHaveClass('unavailable');
+    expect(unavailableOption).toBeDisabled();
+    expect(screen.getByText(/Requires "Start" to be visited/)).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: /Secret/ }));
+    await user.click(screen.getByRole('checkbox', { name: /Force unavailable options/ }));
+    expect(unavailableOption).toBeEnabled();
+    expect(unavailableOption).toHaveClass('forced');
+    await user.click(unavailableOption);
 
     expect(screen.getByLabelText('Current interaction title')).toHaveValue('Secret');
     expect(screen.queryByRole('button', { name: 'Start' })).not.toBeInTheDocument();
@@ -502,7 +511,7 @@ describe('StoryPlayer', () => {
 
     expect(screen.getByLabelText('Current interaction title')).toHaveValue('Next');
     expect(screen.getByRole('button', { name: /Secret/ })).toHaveClass('unavailable');
-    expect(screen.getByText('Requires "Start" to be visited.')).toBeInTheDocument();
+    expect(screen.getByText(/Requires "Start" to be visited/)).toBeInTheDocument();
   });
 
   it('edits the current title and content inline in simulation mode', async () => {
