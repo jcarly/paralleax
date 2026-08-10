@@ -26,7 +26,12 @@ list, open, edit, or delete them.
 
 1. Open the story list.
 2. Select `New story`.
-3. Open the story with `Edit`.
+3. Enter a title and select `Create story`.
+4. Open the story with `Edit`.
+
+Use the library search, `Recently edited` / `Empty` filters, title or last-edited
+sorting, and the grid/list controls to find stories without changing their
+stored content.
 
 Use `Generate demo` to create a populated local demo story with roots, branches,
 multi-input triggers, and simple visited / not visited conditions. This is useful
@@ -35,6 +40,14 @@ for testing the editor and reader without manually building a graph.
 Stories are persisted in PostgreSQL. Restarting the API keeps the
 authored story data as long as the configured database or Docker volume remains
 available.
+
+## Consult the Design System
+
+Select `Design system` in the main navigation or open
+http://localhost:5173/design-system while signed in. This living reference
+documents the product foundations, controls, forms, navigation rows, narrative
+cards, empty trigger marker, effect layout, and feedback states used by the
+application.
 
 ## Edit the Story Title
 
@@ -134,8 +147,14 @@ The **Locations**, **Characters**, **Stats**, and **Items** lists can be collaps
 independently. Collapse or expand the whole story context menu from the control
 in its top-right corner.
 
-Use the search field at the top of **Story context** to filter all four lists
-and find matching text in interaction titles and bodies. Each matching graph
+Open any location, character, reusable stat, or reusable item and fill in
+**Category** to organize it. The field suggests categories already used for the
+same entity type, while still accepting a new name. The four context lists group
+their rows by category and place entries without a category under
+**Uncategorized**.
+
+Use the search field at the top of **Story context** to filter all four lists by
+entity name or category and find matching text in interaction titles and bodies. Each matching graph
 card shows its number of text occurrences beside the title. The arrow buttons
 move cyclically through matching interactions and center the selected card.
 
@@ -222,9 +241,22 @@ left without an availability rule.
 
 ## Test the Story
 
-Select `Test` from the editor to open the reader.
+Select `Read` from the story library to open the player reader. Select `Test`
+from the editor to open author Simulation Mode, either from the beginning or
+from the currently selected interaction.
 
-The reader starts with interactions that have root triggers. After each choice, it shows the interactions made available by matching trigger inputs and conditions.
+The reader starts with interactions that have root triggers. After each choice,
+it shows the interactions made available by matching trigger inputs and
+conditions. The scene header shows the current location, story time, and present
+characters. When the story has a playable character, the left character sheet
+shows that character's stats and inventory; the right panel shows the
+other characters present in the current interaction.
+
+The reader presents the options currently available to the player. Simulation
+Mode additionally keeps unavailable options visible with reduced opacity and
+their condition diagnostics. Enable **Force unavailable options** in the author
+tools to test a blocked path deliberately; disabling the control restores normal
+condition enforcement.
 
 Authenticated reading automatically saves progress after every selected
 interaction. Returning to the same story resumes the ordered journey, including
@@ -233,7 +265,8 @@ The status beside the reader controls reports saving, success, or failure.
 
 Use `Restart` to clear the reading history, delete that story's saved progress,
 and start again. Author Simulation Mode is separate and never loads or changes
-reader progress.
+reader progress. Simulation also provides `Back`, inline interaction editing,
+and option creation without changing the reader's saved journey.
 
 ### Time-based stat changes
 

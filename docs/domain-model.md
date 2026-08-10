@@ -83,8 +83,8 @@ and replay rules.
 
 ### Location
 
-A location is an authored story entity with an id, name, description, and
-optional image URL.
+A location is an authored story entity with an id, name, description, optional
+category, and optional image URL.
 Interactions may move the reader to a location, and triggers may test whether it
 is or is not current. Locations are definitions in the story; the current
 location is runtime reader state.
@@ -92,8 +92,9 @@ location is runtime reader state.
 ### Character
 
 A character is a story-owned authored entity with an id, name, description,
-optional portrait image URL, and zero or more assigned numeric stats. Stat
-definitions belong to the story, may have a pictogram image URL, and
+optional category, optional portrait image URL, and zero or more assigned
+numeric stats. Stat definitions belong to the story, may have a category and a
+pictogram image URL, and
 can be assigned to several characters without being recreated. Each assignment
 has its own id and initial value.
 Each reusable definition may also declare a positive or negative change per
@@ -107,10 +108,14 @@ conditions compare its current runtime value.
 ### Item Definition
 
 An item definition is a reusable story-owned description with an id, name,
-description, optional image URL, and zero or more assignments to the story's
-reusable stat definitions. Each assignment defines the initial value inherited
-by every concrete instance. The definition describes a kind of object and is
-not itself owned by a character.
+description, optional category, optional image URL, and zero or more assignments
+to the story's reusable stat definitions. Each assignment defines the initial
+value inherited by every concrete instance. The definition describes a kind of
+object and is not itself owned by a character.
+
+Categories are story-local, type-scoped organizational labels. They group
+locations, characters, stat definitions, or item definitions in the editor but
+have no reader, trigger, ownership, or simulation semantics.
 
 ### Item Instance
 

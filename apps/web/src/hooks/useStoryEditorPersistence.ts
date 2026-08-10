@@ -368,7 +368,9 @@ export function useStoryEditorPersistence(storyId: string) {
 
   async function updateLocation(
     locationId: string,
-    patch: Partial<Pick<LocationMutationResult['location'], 'name' | 'description' | 'imageUrl'>>,
+    patch: Partial<
+      Pick<LocationMutationResult['location'], 'name' | 'description' | 'category' | 'imageUrl'>
+    >,
   ) {
     setStory((current) =>
       current
@@ -399,7 +401,10 @@ export function useStoryEditorPersistence(storyId: string) {
   async function updateCharacter(
     characterId: string,
     patch: Partial<
-      Pick<CharacterMutationResult['character'], 'name' | 'description' | 'imageUrl' | 'isPlayable'>
+      Pick<
+        CharacterMutationResult['character'],
+        'name' | 'description' | 'category' | 'imageUrl' | 'isPlayable'
+      >
     >,
   ) {
     setStory((current) =>
@@ -524,7 +529,7 @@ export function useStoryEditorPersistence(storyId: string) {
     patch: Partial<
       Pick<
         ItemDefinitionMutationResult['itemDefinition'],
-        'name' | 'description' | 'imageUrl' | 'stats'
+        'name' | 'description' | 'category' | 'imageUrl' | 'stats'
       >
     >,
   ) {
@@ -622,7 +627,9 @@ function applyLocationPatchResult(
   story: Story,
   result: LocationMutationResult,
   locationId: string,
-  patch: Partial<Pick<LocationMutationResult['location'], 'name' | 'description'>>,
+  patch: Partial<
+    Pick<LocationMutationResult['location'], 'name' | 'description' | 'category' | 'imageUrl'>
+  >,
 ): Story {
   return applyMutationMetadata(
     {
@@ -655,7 +662,10 @@ function applyCharacterPatchResult(
   result: CharacterMutationResult,
   characterId: string,
   patch: Partial<
-    Pick<CharacterMutationResult['character'], 'name' | 'description' | 'imageUrl' | 'isPlayable'>
+    Pick<
+      CharacterMutationResult['character'],
+      'name' | 'description' | 'category' | 'imageUrl' | 'isPlayable'
+    >
   >,
 ): Story {
   return applyMutationMetadata(

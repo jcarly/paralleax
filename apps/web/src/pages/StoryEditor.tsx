@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
   Background,
   Controls,
@@ -75,6 +75,55 @@ function getInitials(name: string) {
 
 function formatCount(count: number, singular: string, plural = `${singular}s`) {
   return `${count} ${count === 1 ? singular : plural}`;
+}
+
+function getCategorySuggestions(items: Array<{ category?: string }>) {
+  return [
+    ...new Set(items.map(({ category }) => category?.trim()).filter(Boolean) as string[]),
+  ].sort((left, right) => left.localeCompare(right));
+}
+
+function matchesContextSearch(entity: { name: string; category?: string }, query: string) {
+  return [entity.name, entity.category ?? ''].some((value) =>
+    value.toLocaleLowerCase().includes(query),
+  );
+}
+
+function groupContextEntities<T extends { id: string; category?: string }>(items: T[]) {
+  const groups = new Map<string, T[]>();
+  for (const item of items) {
+    const category = item.category?.trim() || 'Uncategorized';
+    groups.set(category, [...(groups.get(category) ?? []), item]);
+  }
+  return [...groups.entries()]
+    .sort(([left], [right]) => {
+      if (left === 'Uncategorized') return 1;
+      if (right === 'Uncategorized') return -1;
+      return left.localeCompare(right);
+    })
+    .map(([category, groupedItems]) => ({ category, items: groupedItems }));
+}
+
+function CategorizedContextList<T extends { id: string; category?: string }>({
+  items,
+  renderItem,
+}: {
+  items: T[];
+  renderItem: (item: T) => ReactNode;
+}) {
+  return (
+    <div className="context-category-list">
+      {groupContextEntities(items).map(({ category, items: groupedItems }) => (
+        <section className="context-category-group" key={category}>
+          <div className="context-category-heading">
+            <span>{category}</span>
+            <small>{groupedItems.length}</small>
+          </div>
+          <ul>{groupedItems.map(renderItem)}</ul>
+        </section>
+      ))}
+    </div>
+  );
 }
 
 export function StoryEditor() {
@@ -185,17 +234,21 @@ export function StoryEditor() {
     [referencedInteractionIds, selectedContextReference?.type],
   );
   const filteredLocations = (story?.locations ?? []).filter((location) =>
-    location.name.toLocaleLowerCase().includes(normalizedSearchQuery),
+    matchesContextSearch(location, normalizedSearchQuery),
   );
   const filteredCharacters = (story?.characters ?? []).filter((character) =>
-    character.name.toLocaleLowerCase().includes(normalizedSearchQuery),
+    matchesContextSearch(character, normalizedSearchQuery),
   );
   const filteredStatDefinitions = (story?.statDefinitions ?? []).filter((definition) =>
-    definition.name.toLocaleLowerCase().includes(normalizedSearchQuery),
+    matchesContextSearch(definition, normalizedSearchQuery),
   );
   const filteredItemDefinitions = (story?.itemDefinitions ?? []).filter((definition) =>
-    definition.name.toLocaleLowerCase().includes(normalizedSearchQuery),
+    matchesContextSearch(definition, normalizedSearchQuery),
   );
+  const locationCategories = getCategorySuggestions(story?.locations ?? []);
+  const characterCategories = getCategorySuggestions(story?.characters ?? []);
+  const statCategories = getCategorySuggestions(story?.statDefinitions ?? []);
+  const itemCategories = getCategorySuggestions(story?.itemDefinitions ?? []);
   const contextReferenceCounts = useMemo(() => {
     const locations = new Map<string, number>();
     const characters = new Map<string, number>();
@@ -658,8 +711,9 @@ export function StoryEditor() {
               {!openContextSections.locations ? null : (story.locations?.length ?? 0) === 0 ? (
                 <p className="hint">No locations yet.</p>
               ) : (
-                <ul>
-                  {filteredLocations.map((location) => (
+                <CategorizedContextList
+                  items={filteredLocations}
+                  renderItem={(location) => (
                     <li key={location.id}>
                       <button
                         type="button"
@@ -683,8 +737,8 @@ export function StoryEditor() {
                         </span>
                       </button>
                     </li>
-                  ))}
-                </ul>
+                  )}
+                />
               )}
               <div className="location-panel-header context-section">
                 <button
@@ -712,8 +766,9 @@ export function StoryEditor() {
               {!openContextSections.characters ? null : (story.characters?.length ?? 0) === 0 ? (
                 <p className="hint">No characters yet.</p>
               ) : (
-                <ul>
-                  {filteredCharacters.map((character) => (
+                <CategorizedContextList
+                  items={filteredCharacters}
+                  renderItem={(character) => (
                     <li key={character.id}>
                       <button
                         type="button"
@@ -741,8 +796,8 @@ export function StoryEditor() {
                         </span>
                       </button>
                     </li>
-                  ))}
-                </ul>
+                  )}
+                />
               )}
               <div className="location-panel-header context-section">
                 <button
@@ -770,8 +825,9 @@ export function StoryEditor() {
               {!openContextSections.stats ? null : (story.statDefinitions?.length ?? 0) === 0 ? (
                 <p className="hint">No stats yet.</p>
               ) : (
-                <ul>
-                  {filteredStatDefinitions.map((definition) => (
+                <CategorizedContextList
+                  items={filteredStatDefinitions}
+                  renderItem={(definition) => (
                     <li key={definition.id}>
                       <button
                         type="button"
@@ -797,8 +853,8 @@ export function StoryEditor() {
                         </span>
                       </button>
                     </li>
-                  ))}
-                </ul>
+                  )}
+                />
               )}
               <div className="location-panel-header context-section">
                 <button
@@ -826,8 +882,9 @@ export function StoryEditor() {
               {!openContextSections.items ? null : (story.itemDefinitions?.length ?? 0) === 0 ? (
                 <p className="hint">No items yet.</p>
               ) : (
-                <ul>
-                  {filteredItemDefinitions.map((definition) => (
+                <CategorizedContextList
+                  items={filteredItemDefinitions}
+                  renderItem={(definition) => (
                     <li key={definition.id}>
                       <button
                         type="button"
@@ -853,8 +910,8 @@ export function StoryEditor() {
                         </span>
                       </button>
                     </li>
-                  ))}
-                </ul>
+                  )}
+                />
               )}
             </div>
           ) : null}
@@ -925,12 +982,14 @@ export function StoryEditor() {
             ) : selectedLocation ? (
               <LocationInspector
                 location={selectedLocation}
+                categorySuggestions={locationCategories}
                 onLocalChange={updateLocalLocation}
                 onPatch={updateLocation}
               />
             ) : selectedCharacter ? (
               <CharacterInspector
                 character={selectedCharacter}
+                categorySuggestions={characterCategories}
                 statDefinitions={story.statDefinitions ?? []}
                 itemDefinitions={story.itemDefinitions ?? []}
                 onChange={updateLocalCharacter}
@@ -945,12 +1004,14 @@ export function StoryEditor() {
             ) : selectedStatDefinition ? (
               <StatDefinitionInspector
                 statDefinition={selectedStatDefinition}
+                categorySuggestions={statCategories}
                 onChange={updateLocalStatDefinition}
                 onPatch={updateStatDefinition}
               />
             ) : selectedItemDefinition ? (
               <ItemDefinitionInspector
                 itemDefinition={selectedItemDefinition}
+                categorySuggestions={itemCategories}
                 statDefinitions={story.statDefinitions ?? []}
                 onChange={updateLocalItemDefinition}
                 onPatch={updateItemDefinition}

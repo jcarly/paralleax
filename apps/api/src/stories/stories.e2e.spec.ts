@@ -631,27 +631,43 @@ describe('Stories API', () => {
     expect((assigned.body as InteractionMutationResult).interaction.locationId).toBe(location.id);
   });
 
-  it('stores optional images for locations, characters, stats, and items', async () => {
+  it('stores optional images and categories for locations, characters, stats, and items', async () => {
     const story = await createStory();
     const resources = [
       {
         path: 'locations',
-        create: { name: 'Harbor', imageUrl: 'https://images.example/harbor.png' },
+        create: {
+          name: 'Harbor',
+          category: 'Places',
+          imageUrl: 'https://images.example/harbor.png',
+        },
         resultKey: 'location',
       },
       {
         path: 'characters',
-        create: { name: 'Mira', imageUrl: 'https://images.example/mira.png' },
+        create: {
+          name: 'Mira',
+          category: 'Allies',
+          imageUrl: 'https://images.example/mira.png',
+        },
         resultKey: 'character',
       },
       {
         path: 'stat-definitions',
-        create: { name: 'Trust', imageUrl: 'https://images.example/trust.svg' },
+        create: {
+          name: 'Trust',
+          category: 'Relationships',
+          imageUrl: 'https://images.example/trust.svg',
+        },
         resultKey: 'statDefinition',
       },
       {
         path: 'item-definitions',
-        create: { name: 'Key', imageUrl: 'https://images.example/key.png' },
+        create: {
+          name: 'Key',
+          category: 'Quest items',
+          imageUrl: 'https://images.example/key.png',
+        },
         resultKey: 'itemDefinition',
       },
     ] as const;
@@ -661,16 +677,28 @@ describe('Stories API', () => {
         .post(`/api/stories/${story.id}/${resource.path}`)
         .send(resource.create)
         .expect(201);
-      const entity = created.body[resource.resultKey] as { id: string; imageUrl: string };
+      const entity = created.body[resource.resultKey] as {
+        id: string;
+        category: string;
+        imageUrl: string;
+      };
       expect(entity.imageUrl).toBe(resource.create.imageUrl);
+      expect(entity.category).toBe(resource.create.category);
 
       const imageUrl = `${resource.create.imageUrl}?version=2`;
+      const category = `${resource.create.category} updated`;
       const updated = await request(httpServer)
         .patch(`/api/stories/${story.id}/${resource.path}/${entity.id}`)
-        .send({ imageUrl })
+        .send({ category, imageUrl })
         .expect(200);
       expect(updated.body[resource.resultKey].imageUrl).toBe(imageUrl);
+      expect(updated.body[resource.resultKey].category).toBe(category);
     }
+
+    await request(httpServer)
+      .post(`/api/stories/${story.id}/locations`)
+      .send({ name: 'Invalid category', category: 'x'.repeat(101) })
+      .expect(400);
   });
 
   it('validates location references in interactions and trigger conditions', async () => {

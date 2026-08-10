@@ -290,6 +290,10 @@ export class CreateLocationDto {
   description?: string;
   @ValidateIf((_, value) => value !== undefined)
   @IsString()
+  @MaxLength(100)
+  category?: string;
+  @ValidateIf((_, value) => value !== undefined)
+  @IsString()
   @MaxLength(2048)
   imageUrl?: string;
 }
@@ -304,6 +308,10 @@ export class UpdateLocationDto {
   description?: string;
   @ValidateIf((_, value) => value !== undefined)
   @IsString()
+  @MaxLength(100)
+  category?: string;
+  @ValidateIf((_, value) => value !== undefined)
+  @IsString()
   @MaxLength(2048)
   imageUrl?: string;
 }
@@ -312,6 +320,10 @@ export class CreateCharacterDto {
   @ValidateIf((_, value) => value !== undefined)
   @IsString()
   description?: string;
+  @ValidateIf((_, value) => value !== undefined)
+  @IsString()
+  @MaxLength(100)
+  category?: string;
   @ValidateIf((_, value) => value !== undefined)
   @IsString()
   @MaxLength(2048)
@@ -329,6 +341,10 @@ export class UpdateCharacterDto {
   @ValidateIf((_, value) => value !== undefined)
   @IsString()
   description?: string;
+  @ValidateIf((_, value) => value !== undefined)
+  @IsString()
+  @MaxLength(100)
+  category?: string;
   @ValidateIf((_, value) => value !== undefined)
   @IsString()
   @MaxLength(2048)
@@ -350,6 +366,10 @@ export class CreateStatDefinitionDto {
   @IsString() @IsNotEmpty() @MaxLength(200) name!: string;
   @ValidateIf((_, value) => value !== undefined)
   @IsString()
+  @MaxLength(100)
+  category?: string;
+  @ValidateIf((_, value) => value !== undefined)
+  @IsString()
   @MaxLength(2048)
   imageUrl?: string;
   @ValidateIf((_, value) => value !== undefined)
@@ -364,6 +384,10 @@ export class UpdateStatDefinitionDto {
   name?: string;
   @ValidateIf((_, value) => value !== undefined)
   @IsString()
+  @MaxLength(100)
+  category?: string;
+  @ValidateIf((_, value) => value !== undefined)
+  @IsString()
   @MaxLength(2048)
   imageUrl?: string;
   @ValidateIf((_, value) => value !== undefined)
@@ -375,6 +399,10 @@ export class CreateItemDefinitionDto {
   @ValidateIf((_, value) => value !== undefined)
   @IsString()
   description?: string;
+  @ValidateIf((_, value) => value !== undefined)
+  @IsString()
+  @MaxLength(100)
+  category?: string;
   @ValidateIf((_, value) => value !== undefined)
   @IsString()
   @MaxLength(2048)
@@ -395,6 +423,10 @@ export class UpdateItemDefinitionDto {
   @ValidateIf((_, value) => value !== undefined)
   @IsString()
   description?: string;
+  @ValidateIf((_, value) => value !== undefined)
+  @IsString()
+  @MaxLength(100)
+  category?: string;
   @ValidateIf((_, value) => value !== undefined)
   @IsString()
   @MaxLength(2048)

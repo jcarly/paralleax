@@ -5,12 +5,14 @@ import type {
   MoveItemInstanceInput,
   StatDefinition,
 } from '@paralleax/shared';
+import { CategoryField } from './CategoryField';
 import { ImageUrlField } from './ImageUrlField';
 import { ItemInstanceTree } from './ItemInstanceTree';
 import { RemoveRowButton } from './RemoveRowButton';
 
 export function CharacterInspector({
   character,
+  categorySuggestions = [],
   onChange,
   onPatch,
   onCreateStat,
@@ -23,12 +25,15 @@ export function CharacterInspector({
   onMoveItem,
 }: {
   character: Character;
+  categorySuggestions?: string[];
   statDefinitions: StatDefinition[];
   itemDefinitions: ItemDefinition[];
   onChange: (patch: Partial<Character>) => void;
   onPatch: (
     id: string,
-    patch: Partial<Pick<Character, 'name' | 'description' | 'imageUrl' | 'isPlayable'>>,
+    patch: Partial<
+      Pick<Character, 'name' | 'description' | 'category' | 'imageUrl' | 'isPlayable'>
+    >,
   ) => Promise<void>;
   onCreateStat: (characterId: string, statDefinitionId: string) => Promise<void>;
   onPatchStat: (
@@ -65,6 +70,12 @@ export function CharacterInspector({
           onBlur={(event) => void onPatch(character.id, { name: event.target.value })}
         />
       </label>
+      <CategoryField
+        category={character.category}
+        suggestions={categorySuggestions}
+        onChange={(category) => onChange({ category })}
+        onBlur={(category) => void onPatch(character.id, { category })}
+      />
       <ImageUrlField
         imageUrl={character.imageUrl}
         onChange={(imageUrl) => onChange({ imageUrl })}

@@ -83,18 +83,21 @@ export interface UpdateInteractionInput {
 export interface CreateLocationInput {
   name: string;
   description?: string;
+  category?: string;
   imageUrl?: string;
 }
 
 export interface UpdateLocationInput {
   name?: string;
   description?: string;
+  category?: string;
   imageUrl?: string;
 }
 
 export interface CreateCharacterInput {
   name: string;
   description?: string;
+  category?: string;
   imageUrl?: string;
   isPlayable?: boolean;
 }
@@ -102,6 +105,7 @@ export interface CreateCharacterInput {
 export interface UpdateCharacterInput {
   name?: string;
   description?: string;
+  category?: string;
   imageUrl?: string;
   isPlayable?: boolean;
 }
@@ -117,12 +121,14 @@ export interface UpdateCharacterStatInput {
 
 export interface CreateStatDefinitionInput {
   name: string;
+  category?: string;
   imageUrl?: string;
   changePerHour?: number;
 }
 
 export interface UpdateStatDefinitionInput {
   name?: string;
+  category?: string;
   imageUrl?: string;
   changePerHour?: number;
 }
@@ -130,6 +136,7 @@ export interface UpdateStatDefinitionInput {
 export interface CreateItemDefinitionInput {
   name: string;
   description?: string;
+  category?: string;
   imageUrl?: string;
   stats?: ItemDefinitionStat[];
 }
@@ -137,6 +144,7 @@ export interface CreateItemDefinitionInput {
 export interface UpdateItemDefinitionInput {
   name?: string;
   description?: string;
+  category?: string;
   imageUrl?: string;
   stats?: ItemDefinitionStat[];
 }

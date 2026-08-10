@@ -120,4 +120,14 @@ describe('DatabaseMigrator', () => {
     expect(migration?.sql).toMatch(/itemStatValues/i);
     expect(migration?.sql).toMatch(/An item must belong to exactly one character or parent item/i);
   });
+
+  it('adds sortable categories to every reusable story-context entity', () => {
+    const migration = databaseMigrations.find(({ id }) => id === '202608100024_content_categories');
+
+    for (const table of ['locations', 'characters', 'stat_definitions', 'item_definitions']) {
+      expect(migration?.sql).toContain(
+        `ALTER TABLE ${table} ADD COLUMN category text NOT NULL DEFAULT '';`,
+      );
+    }
+  });
 });

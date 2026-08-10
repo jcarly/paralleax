@@ -21,13 +21,18 @@ function story(id = 'story-1'): Story {
 
 function graphStory(): Story {
   const saved = story();
-  saved.locations = [{ id: 'location-1', name: 'Harbor', description: 'A quiet harbor.' }];
-  saved.statDefinitions = [{ id: 'definition-1', name: 'Trust', changePerHour: -0.5 }];
+  saved.locations = [
+    { id: 'location-1', name: 'Harbor', description: 'A quiet harbor.', category: 'Coast' },
+  ];
+  saved.statDefinitions = [
+    { id: 'definition-1', name: 'Trust', category: 'Relationships', changePerHour: -0.5 },
+  ];
   saved.itemDefinitions = [
     {
       id: 'item-definition-1',
       name: 'Key',
       description: 'A brass key.',
+      category: 'Quest items',
       stats: [{ statDefinitionId: 'definition-1', initialValue: 8 }],
     },
   ];
@@ -36,6 +41,7 @@ function graphStory(): Story {
       id: 'character-1',
       name: 'Mira',
       description: 'An investigator.',
+      category: 'Allies',
       stats: [{ id: 'stat-1', statDefinitionId: 'definition-1', initialValue: 2 }],
       items: [
         { id: 'item-1', itemDefinitionId: 'item-definition-1' },
@@ -125,6 +131,7 @@ function relationalRead(query: jest.Mock, saved = story()) {
           story_id: saved.id,
           name: location.name,
           description: location.description,
+          category: location.category ?? '',
           sort_order: index,
         })),
       });
@@ -188,6 +195,7 @@ function relationalRead(query: jest.Mock, saved = story()) {
           id: definition.id,
           story_id: saved.id,
           name: definition.name,
+          category: definition.category ?? '',
           image_url: definition.imageUrl ?? '',
           change_per_hour: definition.changePerHour ?? 0,
           sort_order: index,
@@ -201,6 +209,7 @@ function relationalRead(query: jest.Mock, saved = story()) {
           story_id: saved.id,
           name: definition.name,
           description: definition.description,
+          category: definition.category ?? '',
           image_url: definition.imageUrl ?? '',
           stats: definition.stats ?? [],
           sort_order: index,
@@ -247,6 +256,7 @@ function relationalRead(query: jest.Mock, saved = story()) {
           story_id: saved.id,
           name: character.name,
           description: character.description,
+          category: character.category ?? '',
           sort_order: index,
         })),
       });
@@ -386,6 +396,7 @@ describe('StoriesRepository', () => {
       saved.id,
       'Harbor',
       'A quiet harbor.',
+      'Coast',
       '',
       0,
     ]);
@@ -395,7 +406,7 @@ describe('StoriesRepository', () => {
     );
     expect(mockClientQuery).toHaveBeenCalledWith(
       expect.stringContaining('INSERT INTO characters'),
-      ['character-1', saved.id, 'Mira', 'An investigator.', '', false, 0],
+      ['character-1', saved.id, 'Mira', 'An investigator.', 'Allies', '', false, 0],
     );
     expect(mockClientQuery).toHaveBeenCalledWith(
       expect.stringContaining('INSERT INTO interaction_characters'),
@@ -403,7 +414,7 @@ describe('StoriesRepository', () => {
     );
     expect(mockClientQuery).toHaveBeenCalledWith(
       expect.stringContaining('INSERT INTO stat_definitions'),
-      ['definition-1', saved.id, 'Trust', '', -0.5, 0],
+      ['definition-1', saved.id, 'Trust', 'Relationships', '', -0.5, 0],
     );
     expect(mockClientQuery).toHaveBeenCalledWith(
       expect.stringContaining('INSERT INTO item_definitions'),
@@ -412,6 +423,7 @@ describe('StoriesRepository', () => {
         saved.id,
         'Key',
         'A brass key.',
+        'Quest items',
         '',
         JSON.stringify(saved.itemDefinitions?.[0].stats),
         0,

@@ -1,6 +1,7 @@
 export interface StatDefinition {
   id: string;
   name: string;
+  category?: string;
   imageUrl?: string;
   changePerHour?: number;
 }

@@ -1,16 +1,19 @@
 import type { StatDefinition } from '@paralleax/shared';
+import { CategoryField } from './CategoryField';
 import { ImageUrlField } from './ImageUrlField';
 
 export function StatDefinitionInspector({
   statDefinition,
+  categorySuggestions = [],
   onChange,
   onPatch,
 }: {
   statDefinition: StatDefinition;
+  categorySuggestions?: string[];
   onChange: (next: StatDefinition) => void;
   onPatch: (
     id: string,
-    patch: { name?: string; imageUrl?: string; changePerHour?: number },
+    patch: { name?: string; category?: string; imageUrl?: string; changePerHour?: number },
   ) => Promise<void>;
 }) {
   return (
@@ -24,6 +27,12 @@ export function StatDefinitionInspector({
           onBlur={(event) => void onPatch(statDefinition.id, { name: event.target.value })}
         />
       </label>
+      <CategoryField
+        category={statDefinition.category}
+        suggestions={categorySuggestions}
+        onChange={(category) => onChange({ ...statDefinition, category })}
+        onBlur={(category) => void onPatch(statDefinition.id, { category })}
+      />
       <ImageUrlField
         label="Pictogram URL"
         imageUrl={statDefinition.imageUrl}

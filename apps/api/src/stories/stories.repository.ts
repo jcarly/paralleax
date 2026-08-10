@@ -45,6 +45,7 @@ type LocationRow = {
   story_id: string;
   name: string;
   description: string;
+  category: string;
   image_url: string;
   sort_order: number;
 };
@@ -55,6 +56,7 @@ type StatDefinitionRow = {
   id: string;
   story_id: string;
   name: string;
+  category: string;
   image_url: string;
   change_per_hour: number;
   sort_order: number;
@@ -269,25 +271,25 @@ export class StoriesRepository {
       [storyIds],
     );
     const locations = await queryable.query<LocationRow>(
-      `SELECT id, story_id, name, description, image_url, sort_order
+      `SELECT id, story_id, name, description, category, image_url, sort_order
          FROM locations WHERE story_id = ANY($1::text[])
          ORDER BY story_id, sort_order`,
       [storyIds],
     );
     const characters = await queryable.query<CharacterRow>(
-      `SELECT id, story_id, name, description, image_url, is_playable, sort_order
+      `SELECT id, story_id, name, description, category, image_url, is_playable, sort_order
          FROM characters WHERE story_id = ANY($1::text[])
          ORDER BY story_id, sort_order`,
       [storyIds],
     );
     const statDefinitions = await queryable.query<StatDefinitionRow>(
-      `SELECT id, story_id, name, image_url, change_per_hour, sort_order
+      `SELECT id, story_id, name, category, image_url, change_per_hour, sort_order
          FROM stat_definitions WHERE story_id = ANY($1::text[])
          ORDER BY story_id, sort_order`,
       [storyIds],
     );
     const itemDefinitions = await queryable.query<ItemDefinitionRow>(
-      `SELECT id, story_id, name, description, image_url, stats, sort_order
+      `SELECT id, story_id, name, description, category, image_url, stats, sort_order
          FROM item_definitions WHERE story_id = ANY($1::text[])
          ORDER BY story_id, sort_order`,
       [storyIds],
@@ -389,12 +391,14 @@ export class StoriesRepository {
         id: location.id,
         name: location.name,
         description: location.description,
+        ...(location.category ? { category: location.category } : {}),
         ...(location.image_url ? { imageUrl: location.image_url } : {}),
       })),
       characters: (charactersByStory.get(row.id) ?? []).map((character) => ({
         id: character.id,
         name: character.name,
         description: character.description,
+        ...(character.category ? { category: character.category } : {}),
         ...(character.image_url ? { imageUrl: character.image_url } : {}),
         ...(character.is_playable ? { isPlayable: true } : {}),
         stats: (statsByCharacter.get(character.id) ?? []).map((stat) => ({
@@ -409,6 +413,7 @@ export class StoriesRepository {
       statDefinitions: (statDefinitionsByStory.get(row.id) ?? []).map((definition) => ({
         id: definition.id,
         name: definition.name,
+        ...(definition.category ? { category: definition.category } : {}),
         ...(definition.image_url ? { imageUrl: definition.image_url } : {}),
         changePerHour: definition.change_per_hour,
       })),
@@ -416,6 +421,7 @@ export class StoriesRepository {
         id: definition.id,
         name: definition.name,
         description: definition.description,
+        ...(definition.category ? { category: definition.category } : {}),
         ...(definition.image_url ? { imageUrl: definition.image_url } : {}),
         stats: definition.stats ?? [],
       })),

@@ -971,4 +971,13 @@ export const databaseMigrations: DatabaseMigration[] = [
       FOR EACH ROW EXECUTE FUNCTION validate_item_relationship_placement();
     `,
   },
+  {
+    id: '202608100024_content_categories',
+    sql: `
+      ALTER TABLE locations ADD COLUMN category text NOT NULL DEFAULT '';
+      ALTER TABLE characters ADD COLUMN category text NOT NULL DEFAULT '';
+      ALTER TABLE stat_definitions ADD COLUMN category text NOT NULL DEFAULT '';
+      ALTER TABLE item_definitions ADD COLUMN category text NOT NULL DEFAULT '';
+    `,
+  },
 ];

@@ -400,8 +400,9 @@ Item-definition stat assignments and interaction item-stat effects are ordered
 typed JSONB value objects whose same-story and definition membership references
 are validated by `StoriesService`. Reader-progress JSON contains the replayed
 per-instance values.
-Context entity image references use relational text columns. Image binaries and
-their upload lifecycle are not stored by the application.
+Context entity categories and image references use relational text columns.
+Categories are organizational metadata only. Image binaries and their upload
+lifecycle are not stored by the application.
 
 `item_instances` is now the persistence source of truth for exact authored
 items. A root belongs to a character; nested instances use typed parent/child

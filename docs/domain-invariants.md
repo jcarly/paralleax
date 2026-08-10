@@ -67,6 +67,9 @@ details. They should stay covered by tests as the editor grows.
   with a finite numeric initial value inherited by every item instance.
 - Locations, characters, stat definitions, and item definitions may reference
   an optional image URL. An empty value means that no image is configured.
+- Locations, characters, stat definitions, and item definitions may have one
+  optional category label. Categories organize entities of the same type and do
+  not affect reader evaluation or ownership.
 - An authored item instance has one structural placement and references one item
   definition from the same story. A root belongs to one character; a nested
   instance has one structural parent item.

@@ -397,6 +397,14 @@ describe('StoryEditor', () => {
     await user.clear(name);
     await user.type(name, 'Harbor');
     fireEvent.blur(name);
+    const category = within(inspector).getByLabelText('Category');
+    await user.type(category, 'Coastal places');
+    fireEvent.blur(category);
+    await waitFor(() =>
+      expect(api.updateLocation).toHaveBeenCalledWith('story-1', 'location-1', {
+        category: 'Coastal places',
+      }),
+    );
     const description = within(inspector).getByLabelText('Description');
     await user.clear(description);
     await user.type(description, 'A quiet harbor.');
@@ -462,6 +470,14 @@ describe('StoryEditor', () => {
     await user.clear(name);
     await user.type(name, 'Mira');
     fireEvent.blur(name);
+    const category = within(inspector).getByLabelText('Category');
+    await user.type(category, 'Allies');
+    fireEvent.blur(category);
+    await waitFor(() =>
+      expect(api.updateCharacter).toHaveBeenCalledWith('story-1', 'character-1', {
+        category: 'Allies',
+      }),
+    );
     const description = within(inspector).getByLabelText('Description');
     await user.type(description, 'An investigator.');
     fireEvent.blur(description);
@@ -531,6 +547,14 @@ describe('StoryEditor', () => {
 
     await renderEditor();
     await user.click(screen.getByRole('button', { name: 'Add stat definition' }));
+    const category = screen.getByLabelText('Category');
+    await user.type(category, 'Relationships');
+    fireEvent.blur(category);
+    await waitFor(() =>
+      expect(api.updateStatDefinition).toHaveBeenCalledWith('story-1', 'definition-1', {
+        category: 'Relationships',
+      }),
+    );
     await user.click(screen.getByRole('button', { name: 'Add character' }));
     await user.click(screen.getByRole('button', { name: 'Add stat' }));
     expect(api.createCharacterStat).toHaveBeenCalledWith('story-1', 'character-1', {
@@ -635,6 +659,14 @@ describe('StoryEditor', () => {
     expect(api.updateItemDefinition).toHaveBeenCalledWith('story-1', 'item-definition-1', {
       name: 'Archive key',
     });
+    const category = screen.getByLabelText('Category');
+    await user.type(category, 'Quest items');
+    fireEvent.blur(category);
+    await waitFor(() =>
+      expect(api.updateItemDefinition).toHaveBeenCalledWith('story-1', 'item-definition-1', {
+        category: 'Quest items',
+      }),
+    );
     const itemDescription = screen.getByLabelText('Description');
     await user.clear(itemDescription);
     await user.type(itemDescription, 'Opens the archive.');
@@ -703,14 +735,20 @@ describe('StoryEditor', () => {
 
   it('summarizes real story references in compact context entity rows', async () => {
     const story = cloneStory();
-    story.locations = [{ id: 'harbor', name: 'Harbor', description: '' }];
-    story.statDefinitions = [{ id: 'trust', name: 'Trust' }];
-    story.itemDefinitions = [{ id: 'key', name: 'Archive key', description: '' }];
+    story.locations = [
+      { id: 'harbor', name: 'Harbor', description: '', category: 'Coast' },
+      { id: 'crossroads', name: 'Crossroads', description: '' },
+    ];
+    story.statDefinitions = [{ id: 'trust', name: 'Trust', category: 'Relationships' }];
+    story.itemDefinitions = [
+      { id: 'key', name: 'Archive key', description: '', category: 'Quest items' },
+    ];
     story.characters = [
       {
         id: 'mira',
         name: 'Mira Vale',
         description: '',
+        category: 'Allies',
         isPlayable: true,
         stats: [{ id: 'mira-trust', statDefinitionId: 'trust', initialValue: 3 }],
         items: [{ id: 'mira-key', itemDefinitionId: 'key' }],
@@ -722,6 +760,9 @@ describe('StoryEditor', () => {
     await renderEditor(story);
 
     const context = screen.getByRole('navigation', { name: 'Story context' });
+    for (const category of ['Coast', 'Allies', 'Relationships', 'Quest items', 'Uncategorized']) {
+      expect(within(context).getByText(category)).toBeInTheDocument();
+    }
     expect(
       within(within(context).getByRole('button', { name: 'Harbor' })).getByText('1 interaction'),
     ).toBeInTheDocument();
@@ -751,7 +792,7 @@ describe('StoryEditor', () => {
     const story = storyWithTwoInteractions();
     story.locations = [
       { id: 'original-hall', name: 'Original Hall', description: '' },
-      { id: 'harbor', name: 'Harbor', description: '' },
+      { id: 'harbor', name: 'Harbor', description: '', category: 'Coastal places' },
     ];
     story.characters = [
       { id: 'original-guide', name: 'Original Guide', description: '' },
@@ -761,10 +802,10 @@ describe('StoryEditor', () => {
     await renderEditor(story);
     expect(screen.getByTestId('react-flow')).toHaveAttribute('data-min-zoom', '0.05');
 
-    await user.type(
-      screen.getByRole('searchbox', { name: 'Search story context and interactions' }),
-      'Original',
-    );
+    const search = screen.getByRole('searchbox', {
+      name: 'Search story context and interactions',
+    });
+    await user.type(search, 'Original');
 
     expect(screen.getByRole('button', { name: 'Original Hall' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Harbor' })).not.toBeInTheDocument();
@@ -776,6 +817,11 @@ describe('StoryEditor', () => {
     await user.click(screen.getByRole('button', { name: 'Next interaction occurrence' }));
     expect(screen.getByText('1 / 1')).toBeInTheDocument();
     expect(screen.getByRole('complementary', { name: 'Inspector' })).toBeInTheDocument();
+
+    await user.clear(search);
+    await user.type(search, 'Coastal');
+    expect(screen.getByRole('button', { name: 'Harbor' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Original Hall' })).not.toBeInTheDocument();
   });
 
   it('dims unrelated interactions and navigates references for a selected context entity', async () => {

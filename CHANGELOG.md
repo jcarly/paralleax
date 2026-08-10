@@ -15,6 +15,16 @@
   exact item-instance targets shared across stat, inventory, and item-stat effect cards.
 - Extended the isolated UX prototype with sign-in, registration, searchable story-library, and
   design-system reference screens, all navigable without an API session.
+- Integrated those screens into the authenticated product: real sign-in and registration now use
+  the split narrative layout, the persisted story library supports search, filters, sorting, and
+  grid/list views, and `/design-system` provides a responsive living UI reference.
+- Integrated the validated reader and author-simulation layouts into the real story player, with
+  scene context, current location and time, present-character portraits, a left character sheet
+  for stats and inventory, a responsive encounter panel, and explicit forcing of unavailable
+  options that is available only in Simulation Mode.
+- Added optional, persisted categories for locations, characters, reusable stats, and item
+  definitions, with same-type suggestions, category-aware search, and grouped context lists that
+  keep uncategorized entries together.
 
 ## 2026-08-09
 

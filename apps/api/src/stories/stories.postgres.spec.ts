@@ -55,6 +55,7 @@ describePostgres('StoriesRepository PostgreSQL integration', () => {
           id: 'location-1',
           name: 'Harbor',
           description: 'A quiet harbor.',
+          category: 'Coast',
           imageUrl: 'https://images.example/harbor.png',
         },
       ],
@@ -62,6 +63,7 @@ describePostgres('StoriesRepository PostgreSQL integration', () => {
         {
           id: 'definition-1',
           name: 'Trust',
+          category: 'Relationships',
           imageUrl: 'https://images.example/trust.svg',
           changePerHour: -0.5,
         },
@@ -71,6 +73,7 @@ describePostgres('StoriesRepository PostgreSQL integration', () => {
           id: 'item-definition-1',
           name: 'Key',
           description: 'A brass key.',
+          category: 'Quest items',
           imageUrl: 'https://images.example/key.png',
         },
       ],
@@ -79,6 +82,7 @@ describePostgres('StoriesRepository PostgreSQL integration', () => {
           id: 'character-1',
           name: 'Mira',
           description: 'An investigator.',
+          category: 'Allies',
           imageUrl: 'https://images.example/mira.png',
           stats: [{ id: 'stat-1', statDefinitionId: 'definition-1', initialValue: 2 }],
           items: [
@@ -161,13 +165,17 @@ describePostgres('StoriesRepository PostgreSQL integration', () => {
         id: 'location-1',
         name: 'Harbor',
         description: 'A quiet harbor.',
+        category: 'Coast',
         imageUrl: 'https://images.example/harbor.png',
       },
     ]);
     expect(reloaded?.characters?.[0].imageUrl).toBe('https://images.example/mira.png');
+    expect(reloaded?.characters?.[0].category).toBe('Allies');
     expect(reloaded?.statDefinitions?.[0].imageUrl).toBe('https://images.example/trust.svg');
+    expect(reloaded?.statDefinitions?.[0].category).toBe('Relationships');
     expect(reloaded?.statDefinitions?.[0].changePerHour).toBe(-0.5);
     expect(reloaded?.itemDefinitions?.[0].imageUrl).toBe('https://images.example/key.png');
+    expect(reloaded?.itemDefinitions?.[0].category).toBe('Quest items');
     expect(reloaded?.interactions[1].triggers[0]).toEqual({
       id: 'trigger-2',
       inputInteractionIds: ['interaction-1'],

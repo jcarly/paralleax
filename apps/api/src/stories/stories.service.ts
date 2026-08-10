@@ -361,6 +361,7 @@ export class StoriesService {
           id: locationId,
           name: input.name.trim(),
           description: input.description ?? '',
+          ...(input.category?.trim() ? { category: input.category.trim() } : {}),
           imageUrl: input.imageUrl?.trim() ?? '',
         });
         return story;
@@ -381,6 +382,11 @@ export class StoriesService {
         const location = this.location(story, locationId);
         if (input.name !== undefined) location.name = input.name.trim();
         if (input.description !== undefined) location.description = input.description;
+        if (input.category !== undefined) {
+          const category = input.category.trim();
+          if (category) location.category = category;
+          else delete location.category;
+        }
         if (input.imageUrl !== undefined) location.imageUrl = input.imageUrl.trim();
         return story;
       },
@@ -404,6 +410,7 @@ export class StoriesService {
           id: characterId,
           name: input.name.trim(),
           description: input.description ?? '',
+          ...(input.category?.trim() ? { category: input.category.trim() } : {}),
           imageUrl: input.imageUrl?.trim() ?? '',
           isPlayable: input.isPlayable ?? false,
           stats: [],
@@ -426,6 +433,7 @@ export class StoriesService {
         (story.statDefinitions ??= []).push({
           id: statDefinitionId,
           name: input.name.trim(),
+          ...(input.category?.trim() ? { category: input.category.trim() } : {}),
           imageUrl: input.imageUrl?.trim() ?? '',
           changePerHour: input.changePerHour ?? 0,
         });
@@ -448,6 +456,7 @@ export class StoriesService {
           id: itemDefinitionId,
           name: input.name.trim(),
           description: input.description ?? '',
+          ...(input.category?.trim() ? { category: input.category.trim() } : {}),
           imageUrl: input.imageUrl?.trim() ?? '',
           stats: this.itemDefinitionStats(story, input.stats ?? []),
         });
@@ -469,6 +478,11 @@ export class StoriesService {
         const definition = this.itemDefinition(story, itemDefinitionId);
         if (input.name !== undefined) definition.name = input.name.trim();
         if (input.description !== undefined) definition.description = input.description;
+        if (input.category !== undefined) {
+          const category = input.category.trim();
+          if (category) definition.category = category;
+          else delete definition.category;
+        }
         if (input.imageUrl !== undefined) definition.imageUrl = input.imageUrl.trim();
         if (input.stats !== undefined) {
           definition.stats = this.itemDefinitionStats(story, input.stats);
@@ -506,6 +520,11 @@ export class StoriesService {
       (story) => {
         const definition = this.statDefinition(story, statDefinitionId);
         if (input.name !== undefined) definition.name = input.name.trim();
+        if (input.category !== undefined) {
+          const category = input.category.trim();
+          if (category) definition.category = category;
+          else delete definition.category;
+        }
         if (input.imageUrl !== undefined) definition.imageUrl = input.imageUrl.trim();
         if (input.changePerHour !== undefined) definition.changePerHour = input.changePerHour;
         return story;
@@ -526,6 +545,11 @@ export class StoriesService {
         const character = this.character(story, characterId);
         if (input.name !== undefined) character.name = input.name.trim();
         if (input.description !== undefined) character.description = input.description;
+        if (input.category !== undefined) {
+          const category = input.category.trim();
+          if (category) character.category = category;
+          else delete character.category;
+        }
         if (input.imageUrl !== undefined) character.imageUrl = input.imageUrl.trim();
         if (input.isPlayable !== undefined) {
           if (input.isPlayable) {

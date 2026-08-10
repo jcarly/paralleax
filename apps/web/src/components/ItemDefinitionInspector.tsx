@@ -1,19 +1,24 @@
 import type { ItemDefinition, StatDefinition } from '@paralleax/shared';
+import { CategoryField } from './CategoryField';
 import { ImageUrlField } from './ImageUrlField';
 import { RemoveRowButton } from './RemoveRowButton';
 
 export function ItemDefinitionInspector({
   itemDefinition,
+  categorySuggestions = [],
   statDefinitions,
   onChange,
   onPatch,
 }: {
   itemDefinition: ItemDefinition;
+  categorySuggestions?: string[];
   statDefinitions: StatDefinition[];
   onChange: (next: ItemDefinition) => void;
   onPatch: (
     id: string,
-    patch: Partial<Pick<ItemDefinition, 'name' | 'description' | 'imageUrl' | 'stats'>>,
+    patch: Partial<
+      Pick<ItemDefinition, 'name' | 'description' | 'category' | 'imageUrl' | 'stats'>
+    >,
   ) => Promise<void>;
 }) {
   const itemStats = itemDefinition.stats ?? [];
@@ -28,6 +33,12 @@ export function ItemDefinitionInspector({
           onBlur={(event) => void onPatch(itemDefinition.id, { name: event.target.value })}
         />
       </label>
+      <CategoryField
+        category={itemDefinition.category}
+        suggestions={categorySuggestions}
+        onChange={(category) => onChange({ ...itemDefinition, category })}
+        onBlur={(category) => void onPatch(itemDefinition.id, { category })}
+      />
       <ImageUrlField
         imageUrl={itemDefinition.imageUrl}
         onChange={(imageUrl) => onChange({ ...itemDefinition, imageUrl })}
