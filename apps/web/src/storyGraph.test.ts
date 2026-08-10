@@ -77,6 +77,30 @@ describe('story graph mapping', () => {
     ]);
   });
 
+  it('projects the real location and ordered cast onto interaction cards', () => {
+    const contextualStory = structuredClone(story);
+    contextualStory.locations = [{ id: 'archive', name: 'Lower archive', description: '' }];
+    contextualStory.characters = [
+      {
+        id: 'mara',
+        name: 'Mara Venn',
+        description: '',
+        imageUrl: 'https://example.com/mara.png',
+      },
+      { id: 'ivo', name: 'Ivo Hale', description: '' },
+    ];
+    contextualStory.interactions[1].locationId = 'archive';
+    contextualStory.interactions[1].characterIds = ['ivo', 'mara', 'missing-character'];
+
+    expect(buildInteractionNodes(contextualStory, undefined)[1].data).toMatchObject({
+      location: { id: 'archive', name: 'Lower archive' },
+      characters: [
+        { id: 'ivo', name: 'Ivo Hale' },
+        { id: 'mara', name: 'Mara Venn', imageUrl: 'https://example.com/mara.png' },
+      ],
+    });
+  });
+
   it('marks new-trigger input handles as visible while a connection is active', () => {
     expect(
       buildInteractionNodes(story, undefined, undefined, { showNewTriggerInput: true }).map(
@@ -172,7 +196,7 @@ describe('story graph mapping', () => {
       {
         id: 'trigger:interaction-2:trigger-linked',
         type: 'trigger',
-        position: { x: 235, y: 346 },
+        position: { x: 235, y: 356 },
         draggable: false,
         selectable: false,
         data: {

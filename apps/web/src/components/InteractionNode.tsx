@@ -6,6 +6,8 @@ export interface InteractionNodeData extends Record<string, unknown> {
   selected: boolean;
   occurrenceCount?: number;
   dimmed?: boolean;
+  location?: { id: string; name: string };
+  characters?: Array<{ id: string; name: string; imageUrl?: string }>;
   rootTriggerId?: string;
   rootTriggerSelected?: boolean;
   showNewTriggerInput?: boolean;
@@ -16,8 +18,20 @@ export interface InteractionNodeData extends Record<string, unknown> {
 
 const routingHandles = [Position.Top, Position.Right, Position.Bottom, Position.Left];
 
+function getInitials(name: string) {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join('')
+    .toLocaleUpperCase();
+}
+
 export function InteractionNode({ id, data }: NodeProps) {
   const d = data as InteractionNodeData;
+  const characters = d.characters ?? [];
+  const visibleCharacters = characters.slice(0, 3);
   const createParent = (event: MouseEvent<HTMLDivElement>) => {
     event.preventDefault();
     event.stopPropagation();
@@ -100,12 +114,52 @@ export function InteractionNode({ id, data }: NodeProps) {
           </span>
         ) : null}
       </strong>
-      <span>
+      <span className="interaction-excerpt">
         {d.body
           .replace(/<[^>]*>/g, ' ')
           .replace(/\s+/g, ' ')
           .trim()}
       </span>
+      {d.location || characters.length > 0 ? (
+        <div className="interaction-node-context">
+          {d.location ? (
+            <span className="interaction-node-location" title={d.location.name}>
+              <span aria-hidden="true">⌖</span>
+              {d.location.name}
+            </span>
+          ) : null}
+          {characters.length > 0 ? (
+            <div
+              className="interaction-node-characters"
+              aria-label={`Characters present: ${characters.map(({ name }) => name).join(', ')}`}
+            >
+              {visibleCharacters.map((character) => (
+                <span
+                  className="interaction-node-character"
+                  title={character.name}
+                  aria-hidden="true"
+                  key={character.id}
+                >
+                  {character.imageUrl ? (
+                    <img src={character.imageUrl} alt="" />
+                  ) : (
+                    getInitials(character.name)
+                  )}
+                </span>
+              ))}
+              {characters.length > visibleCharacters.length ? (
+                <span
+                  className="interaction-node-character interaction-node-character-overflow"
+                  title={`${characters.length - visibleCharacters.length} more characters`}
+                  aria-hidden="true"
+                >
+                  +{characters.length - visibleCharacters.length}
+                </span>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
       <Handle
         type="source"
         id="interaction-output"

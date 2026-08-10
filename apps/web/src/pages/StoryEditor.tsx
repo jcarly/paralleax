@@ -43,6 +43,39 @@ const nodeTypes = { interaction: InteractionNode, trigger: TriggerNode };
 const edgeTypes = { trigger: TriggerEdge };
 const droppedNodeOffset = { x: 105, y: 48 };
 const fitViewOptions = { padding: 0.18, maxZoom: 1 };
+const storyContextPanelStorageKey = 'paralleax-story-context-panel';
+
+function getInitialStoryContextPanelOpen() {
+  try {
+    return window.localStorage.getItem(storyContextPanelStorageKey) !== 'collapsed';
+  } catch {
+    return true;
+  }
+}
+
+function ContextThumbnail({ imageUrl, fallback }: { imageUrl?: string; fallback: string }) {
+  return imageUrl ? (
+    <img className="context-picto" src={imageUrl} alt="" />
+  ) : (
+    <span className="context-picto context-picto-placeholder" aria-hidden="true">
+      {fallback}
+    </span>
+  );
+}
+
+function getInitials(name: string) {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join('')
+    .toLocaleUpperCase();
+}
+
+function formatCount(count: number, singular: string, plural = `${singular}s`) {
+  return `${count} ${count === 1 ? singular : plural}`;
+}
 
 export function StoryEditor() {
   const { storyId = '' } = useParams();
@@ -90,7 +123,7 @@ export function StoryEditor() {
   const [selectedStatDefinitionId, setSelectedStatDefinitionId] = useState<string>();
   const [selectedItemDefinitionId, setSelectedItemDefinitionId] = useState<string>();
   const [searchQuery, setSearchQuery] = useState('');
-  const [isLocationPanelOpen, setIsLocationPanelOpen] = useState(true);
+  const [isLocationPanelOpen, setIsLocationPanelOpen] = useState(getInitialStoryContextPanelOpen);
   const [openContextSections, setOpenContextSections] = useState({
     locations: true,
     characters: true,
@@ -163,6 +196,31 @@ export function StoryEditor() {
   const filteredItemDefinitions = (story?.itemDefinitions ?? []).filter((definition) =>
     definition.name.toLocaleLowerCase().includes(normalizedSearchQuery),
   );
+  const contextReferenceCounts = useMemo(() => {
+    const locations = new Map<string, number>();
+    const characters = new Map<string, number>();
+    const stats = new Map<string, number>();
+    const items = new Map<string, number>();
+
+    for (const interaction of story?.interactions ?? []) {
+      if (interaction.locationId) {
+        locations.set(interaction.locationId, (locations.get(interaction.locationId) ?? 0) + 1);
+      }
+      for (const characterId of interaction.characterIds ?? []) {
+        characters.set(characterId, (characters.get(characterId) ?? 0) + 1);
+      }
+    }
+    for (const character of story?.characters ?? []) {
+      for (const stat of character.stats ?? []) {
+        stats.set(stat.statDefinitionId, (stats.get(stat.statDefinitionId) ?? 0) + 1);
+      }
+      for (const item of character.items ?? []) {
+        items.set(item.itemDefinitionId, (items.get(item.itemDefinitionId) ?? 0) + 1);
+      }
+    }
+
+    return { locations, characters, stats, items };
+  }, [story]);
   const hasInspectorSelection = Boolean(
     selected ||
     selectedTriggerTarget ||
@@ -220,6 +278,17 @@ export function StoryEditor() {
   useEffect(() => {
     setNodes([...storyNodes, ...triggerNodes]);
   }, [setNodes, storyNodes, triggerNodes]);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(
+        storyContextPanelStorageKey,
+        isLocationPanelOpen ? 'open' : 'collapsed',
+      );
+    } catch {
+      // The editor remains usable when browser storage is unavailable.
+    }
+  }, [isLocationPanelOpen]);
 
   const selectTriggerData = useCallback(
     (trigger: SelectedTrigger) => {
@@ -526,12 +595,13 @@ export function StoryEditor() {
             type="button"
             aria-label={isLocationPanelOpen ? 'Collapse story context' : 'Expand story context'}
             aria-expanded={isLocationPanelOpen}
+            aria-controls="story-context-panel-content"
             onClick={() => setIsLocationPanelOpen((open) => !open)}
           >
             {isLocationPanelOpen ? '‹' : '›'}
           </button>
           {isLocationPanelOpen ? (
-            <div className="location-panel-content">
+            <div className="location-panel-content" id="story-context-panel-content">
               <div className="context-search">
                 <input
                   type="search"
@@ -573,7 +643,13 @@ export function StoryEditor() {
                   aria-expanded={openContextSections.locations}
                   onClick={() => toggleContextSection('locations')}
                 >
-                  <span>{openContextSections.locations ? '▾' : '▸'}</span> Locations
+                  <span className="context-heading-label">
+                    <span aria-hidden="true">{openContextSections.locations ? '▾' : '▸'}</span>
+                    Locations
+                  </span>
+                  <small aria-label={formatCount(story.locations?.length ?? 0, 'location')}>
+                    {story.locations?.length ?? 0}
+                  </small>
                 </button>
                 <button aria-label="Add location" type="button" onClick={() => void addLocation()}>
                   Add
@@ -587,6 +663,7 @@ export function StoryEditor() {
                     <li key={location.id}>
                       <button
                         type="button"
+                        aria-label={location.name}
                         className={location.id === selectedLocationId ? 'selected' : 'ghost'}
                         onClick={() => {
                           closeInspector();
@@ -594,10 +671,16 @@ export function StoryEditor() {
                           setSelectedLocationId(location.id);
                         }}
                       >
-                        {location.imageUrl ? (
-                          <img className="context-picto" src={location.imageUrl} alt="" />
-                        ) : null}
-                        {location.name}
+                        <ContextThumbnail imageUrl={location.imageUrl} fallback="⌖" />
+                        <span className="context-row-copy">
+                          <strong>{location.name}</strong>
+                          <small>
+                            {formatCount(
+                              contextReferenceCounts.locations.get(location.id) ?? 0,
+                              'interaction',
+                            )}
+                          </small>
+                        </span>
                       </button>
                     </li>
                   ))}
@@ -610,7 +693,13 @@ export function StoryEditor() {
                   aria-expanded={openContextSections.characters}
                   onClick={() => toggleContextSection('characters')}
                 >
-                  <span>{openContextSections.characters ? '▾' : '▸'}</span> Characters
+                  <span className="context-heading-label">
+                    <span aria-hidden="true">{openContextSections.characters ? '▾' : '▸'}</span>
+                    Characters
+                  </span>
+                  <small aria-label={formatCount(story.characters?.length ?? 0, 'character')}>
+                    {story.characters?.length ?? 0}
+                  </small>
                 </button>
                 <button
                   aria-label="Add character"
@@ -628,6 +717,7 @@ export function StoryEditor() {
                     <li key={character.id}>
                       <button
                         type="button"
+                        aria-label={character.name}
                         className={character.id === selectedCharacterId ? 'selected' : 'ghost'}
                         onClick={() => {
                           closeInspector();
@@ -635,10 +725,20 @@ export function StoryEditor() {
                           setSelectedCharacterId(character.id);
                         }}
                       >
-                        {character.imageUrl ? (
-                          <img className="context-picto" src={character.imageUrl} alt="" />
-                        ) : null}
-                        {character.name}
+                        <ContextThumbnail
+                          imageUrl={character.imageUrl}
+                          fallback={getInitials(character.name)}
+                        />
+                        <span className="context-row-copy">
+                          <strong>{character.name}</strong>
+                          <small>
+                            {character.isPlayable ? 'Playable · ' : ''}
+                            {formatCount(
+                              contextReferenceCounts.characters.get(character.id) ?? 0,
+                              'interaction',
+                            )}
+                          </small>
+                        </span>
                       </button>
                     </li>
                   ))}
@@ -651,7 +751,13 @@ export function StoryEditor() {
                   aria-expanded={openContextSections.stats}
                   onClick={() => toggleContextSection('stats')}
                 >
-                  <span>{openContextSections.stats ? '▾' : '▸'}</span> Stats
+                  <span className="context-heading-label">
+                    <span aria-hidden="true">{openContextSections.stats ? '▾' : '▸'}</span>
+                    Stats
+                  </span>
+                  <small aria-label={formatCount(story.statDefinitions?.length ?? 0, 'stat')}>
+                    {story.statDefinitions?.length ?? 0}
+                  </small>
                 </button>
                 <button
                   aria-label="Add stat definition"
@@ -669,6 +775,7 @@ export function StoryEditor() {
                     <li key={definition.id}>
                       <button
                         type="button"
+                        aria-label={definition.name}
                         className={
                           definition.id === selectedStatDefinitionId ? 'selected' : 'ghost'
                         }
@@ -678,10 +785,16 @@ export function StoryEditor() {
                           setSelectedStatDefinitionId(definition.id);
                         }}
                       >
-                        {definition.imageUrl ? (
-                          <img className="context-picto" src={definition.imageUrl} alt="" />
-                        ) : null}
-                        {definition.name}
+                        <ContextThumbnail imageUrl={definition.imageUrl} fallback="↗" />
+                        <span className="context-row-copy">
+                          <strong>{definition.name}</strong>
+                          <small>
+                            {formatCount(
+                              contextReferenceCounts.stats.get(definition.id) ?? 0,
+                              'assignment',
+                            )}
+                          </small>
+                        </span>
                       </button>
                     </li>
                   ))}
@@ -694,7 +807,13 @@ export function StoryEditor() {
                   aria-expanded={openContextSections.items}
                   onClick={() => toggleContextSection('items')}
                 >
-                  <span>{openContextSections.items ? '▾' : '▸'}</span> Items
+                  <span className="context-heading-label">
+                    <span aria-hidden="true">{openContextSections.items ? '▾' : '▸'}</span>
+                    Items
+                  </span>
+                  <small aria-label={formatCount(story.itemDefinitions?.length ?? 0, 'item')}>
+                    {story.itemDefinitions?.length ?? 0}
+                  </small>
                 </button>
                 <button
                   aria-label="Add item definition"
@@ -712,6 +831,7 @@ export function StoryEditor() {
                     <li key={definition.id}>
                       <button
                         type="button"
+                        aria-label={definition.name}
                         className={
                           definition.id === selectedItemDefinitionId ? 'selected' : 'ghost'
                         }
@@ -721,10 +841,16 @@ export function StoryEditor() {
                           setSelectedItemDefinitionId(definition.id);
                         }}
                       >
-                        {definition.imageUrl ? (
-                          <img className="context-picto" src={definition.imageUrl} alt="" />
-                        ) : null}
-                        {definition.name}
+                        <ContextThumbnail imageUrl={definition.imageUrl} fallback="▣" />
+                        <span className="context-row-copy">
+                          <strong>{definition.name}</strong>
+                          <small>
+                            {formatCount(
+                              contextReferenceCounts.items.get(definition.id) ?? 0,
+                              'instance',
+                            )}
+                          </small>
+                        </span>
                       </button>
                     </li>
                   ))}

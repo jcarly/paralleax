@@ -41,7 +41,7 @@ export interface TriggerNodeActions {
 }
 
 export const interactionNodeWidth = 210;
-const interactionNodeHeight = 96;
+const interactionNodeHeight = 116;
 const triggerNodeSize = 20;
 const fallbackInteractionX = 80;
 const fallbackInteractionY = 120;
@@ -54,41 +54,60 @@ export function buildInteractionNodes(
   selectedTrigger?: SelectedTrigger,
   actions: InteractionNodeActions = {},
 ): InteractionFlowNode[] {
-  return (
-    story?.interactions.map((item, index) => {
-      const rootTrigger = item.triggers.find((trigger) => trigger.inputInteractionIds.length === 0);
-      return {
-        id: item.id,
-        type: 'interaction',
-        position: getInteractionPosition(item, index),
-        data: {
-          title: item.title,
-          body: item.body,
-          selected: item.id === selectedId,
-          ...(actions.occurrenceCounts?.get(item.id)
-            ? { occurrenceCount: actions.occurrenceCounts.get(item.id) }
-            : {}),
-          ...(actions.emphasizedInteractionIds
-            ? { dimmed: !actions.emphasizedInteractionIds.has(item.id) }
-            : {}),
-          showNewTriggerInput: actions.showNewTriggerInput ?? false,
-          ...(rootTrigger
-            ? {
-                rootTriggerId: rootTrigger.id,
-                rootTriggerSelected:
-                  selectedTrigger?.interactionId === item.id &&
-                  selectedTrigger.triggerId === rootTrigger.id,
-              }
-            : {}),
-          ...(actions.onCreateChild ? { onCreateChild: actions.onCreateChild } : {}),
-          ...(actions.onCreateParent ? { onCreateParent: actions.onCreateParent } : {}),
-          ...(actions.onSelectRootTrigger
-            ? { onSelectRootTrigger: actions.onSelectRootTrigger }
-            : {}),
-        },
-      };
-    }) ?? []
+  if (!story) return [];
+  const locationsById = new Map((story.locations ?? []).map((location) => [location.id, location]));
+  const charactersById = new Map(
+    (story.characters ?? []).map((character) => [character.id, character]),
   );
+
+  return story.interactions.map((item, index) => {
+    const rootTrigger = item.triggers.find((trigger) => trigger.inputInteractionIds.length === 0);
+    const location = item.locationId ? locationsById.get(item.locationId) : undefined;
+    const characters = (item.characterIds ?? []).flatMap((characterId) => {
+      const character = charactersById.get(characterId);
+      return character
+        ? [
+            {
+              id: character.id,
+              name: character.name,
+              ...(character.imageUrl ? { imageUrl: character.imageUrl } : {}),
+            },
+          ]
+        : [];
+    });
+    return {
+      id: item.id,
+      type: 'interaction',
+      position: getInteractionPosition(item, index),
+      data: {
+        title: item.title,
+        body: item.body,
+        selected: item.id === selectedId,
+        ...(location ? { location: { id: location.id, name: location.name } } : {}),
+        ...(characters.length > 0 ? { characters } : {}),
+        ...(actions.occurrenceCounts?.get(item.id)
+          ? { occurrenceCount: actions.occurrenceCounts.get(item.id) }
+          : {}),
+        ...(actions.emphasizedInteractionIds
+          ? { dimmed: !actions.emphasizedInteractionIds.has(item.id) }
+          : {}),
+        showNewTriggerInput: actions.showNewTriggerInput ?? false,
+        ...(rootTrigger
+          ? {
+              rootTriggerId: rootTrigger.id,
+              rootTriggerSelected:
+                selectedTrigger?.interactionId === item.id &&
+                selectedTrigger.triggerId === rootTrigger.id,
+            }
+          : {}),
+        ...(actions.onCreateChild ? { onCreateChild: actions.onCreateChild } : {}),
+        ...(actions.onCreateParent ? { onCreateParent: actions.onCreateParent } : {}),
+        ...(actions.onSelectRootTrigger
+          ? { onSelectRootTrigger: actions.onSelectRootTrigger }
+          : {}),
+      },
+    };
+  });
 }
 
 export function buildTriggerNodes(

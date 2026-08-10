@@ -317,6 +317,7 @@ describe('StoryEditor', () => {
 
   beforeEach(() => {
     vi.resetAllMocks();
+    window.localStorage.clear();
     vi.spyOn(window, 'confirm').mockReturnValue(true);
   });
 
@@ -675,6 +676,74 @@ describe('StoryEditor', () => {
     expect(screen.getByRole('button', { name: 'Expand story context' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Expand story context' }));
     expect(screen.getByRole('button', { name: 'Collapse story context' })).toBeInTheDocument();
+  });
+
+  it('remembers the collapsed story context navigation across editor mounts', async () => {
+    const user = userEvent.setup();
+    await renderEditor();
+
+    await user.click(screen.getByRole('button', { name: 'Collapse story context' }));
+    await waitFor(() => {
+      expect(window.localStorage.getItem('paralleax-story-context-panel')).toBe('collapsed');
+    });
+
+    cleanup();
+    await renderEditor();
+
+    expect(screen.getByRole('button', { name: 'Expand story context' })).toBeInTheDocument();
+    expect(
+      screen.queryByRole('searchbox', { name: 'Search story context and interactions' }),
+    ).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Expand story context' }));
+    await waitFor(() => {
+      expect(window.localStorage.getItem('paralleax-story-context-panel')).toBe('open');
+    });
+  });
+
+  it('summarizes real story references in compact context entity rows', async () => {
+    const story = cloneStory();
+    story.locations = [{ id: 'harbor', name: 'Harbor', description: '' }];
+    story.statDefinitions = [{ id: 'trust', name: 'Trust' }];
+    story.itemDefinitions = [{ id: 'key', name: 'Archive key', description: '' }];
+    story.characters = [
+      {
+        id: 'mira',
+        name: 'Mira Vale',
+        description: '',
+        isPlayable: true,
+        stats: [{ id: 'mira-trust', statDefinitionId: 'trust', initialValue: 3 }],
+        items: [{ id: 'mira-key', itemDefinitionId: 'key' }],
+      },
+    ];
+    story.interactions[0].locationId = 'harbor';
+    story.interactions[0].characterIds = ['mira'];
+
+    await renderEditor(story);
+
+    const context = screen.getByRole('navigation', { name: 'Story context' });
+    expect(
+      within(within(context).getByRole('button', { name: 'Harbor' })).getByText('1 interaction'),
+    ).toBeInTheDocument();
+    expect(
+      within(within(context).getByRole('button', { name: 'Mira Vale' })).getByText(
+        'Playable · 1 interaction',
+      ),
+    ).toBeInTheDocument();
+    expect(
+      within(within(context).getByRole('button', { name: 'Trust' })).getByText('1 assignment'),
+    ).toBeInTheDocument();
+    expect(
+      within(within(context).getByRole('button', { name: 'Archive key' })).getByText('1 instance'),
+    ).toBeInTheDocument();
+
+    const interactionCard = within(screen.getByTestId('flow-node-interaction-1')).getByTestId(
+      'interaction-node',
+    );
+    expect(within(interactionCard).getByText('Harbor')).toBeInTheDocument();
+    expect(
+      within(interactionCard).getByLabelText('Characters present: Mira Vale'),
+    ).toBeInTheDocument();
   });
 
   it('filters context lists, counts text matches, navigates occurrences, and allows deeper zoom', async () => {

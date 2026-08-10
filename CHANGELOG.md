@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-08-10
+
+- Began integrating the validated UI prototype into the production Story Editor by making the
+  real story-context navigation independently scrollable, remembering its collapsed state, and
+  presenting locations, characters, stats, and item definitions as compact rows with thumbnails
+  and live reference counts.
+- Enriched production interaction cards with their real location and present-character avatars
+  while keeping React Flow metadata as a projection of the canonical story.
+- Reorganized the production Interaction inspector into consistent content, context/timing, stat,
+  inventory, and item-stat sections with character thumbnails and matching effect cards, while
+  preserving the existing story mutations and duration semantics.
+- Separated effect targets from their affected stat or item fields, with searchable character and
+  exact item-instance targets shared across stat, inventory, and item-stat effect cards.
+
 ## 2026-08-09
 
 - Removed location-owned item instances from the accepted domain model, reader,
