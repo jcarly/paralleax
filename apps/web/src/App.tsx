@@ -3,6 +3,7 @@ import { Link, Route, Routes } from 'react-router-dom';
 import { api, type AuthUser } from './api';
 import { AuthPage } from './pages/AuthPage';
 import { StoryList } from './pages/StoryList';
+import { ParalleaxPrototype } from './pages/ParalleaxPrototype';
 import { loadStoryEditor, loadStoryPlayer } from './pages/storyRouteLoaders';
 
 const StoryEditor = lazy(() =>
@@ -32,6 +33,7 @@ export function App() {
     return () => window.removeEventListener('paralleax:session-expired', expireSession);
   }, []);
 
+  if (window.location.pathname === '/prototype/paralleax') return <ParalleaxPrototype />;
   if (user === undefined) return <main className="page">Loading...</main>;
   if (user === null)
     return (
