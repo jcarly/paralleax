@@ -47,8 +47,16 @@ CMD ["node", "apps/api/dist/main.js"]
 
 FROM nginx:alpine AS web
 
-COPY deploy/nginx.conf /etc/nginx/nginx.conf
+COPY deploy/nginx.conf.template /etc/nginx/templates/nginx.conf.template
 COPY --from=build /workspace/apps/web/dist /usr/share/nginx/html
+
+ENV API_HOST=api
+ENV API_PORT=3000
+
+ENV NGINX_ENVSUBST_OUTPUT_DIR=/tmp/nginx
+
+RUN mkdir -p /tmp/nginx && chown nginx:nginx /tmp/nginx
+
 
 USER nginx
 EXPOSE 8080
@@ -56,4 +64,4 @@ EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
   CMD wget --quiet --tries=1 --spider http://127.0.0.1:8080/healthz || exit 1
 
-ENTRYPOINT ["nginx", "-g", "daemon off;"]
+CMD ["nginx", "-c", "/tmp/nginx/nginx.conf", "-g", "daemon off;"]
