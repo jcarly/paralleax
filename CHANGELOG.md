@@ -6,6 +6,8 @@
   Docker runtime targets, migration/readiness gates, and private-network setup
   guidance so the web proxy resolves the API through `railway.internal` instead
   of the Docker Compose-only `api` hostname.
+- Made the Nginx listener and both container healthchecks follow their runtime
+  `PORT` value so Railway probes the same port as the running service.
 
 ## 2026-08-10
 

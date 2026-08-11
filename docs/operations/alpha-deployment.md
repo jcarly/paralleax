@@ -132,6 +132,10 @@ API_HOST=${{api.RAILWAY_PRIVATE_DOMAIN}}
 API_PORT=3000
 ```
 
+Nginx listens on `PORT`, and both image and Railway healthchecks use that same
+value. Keep the public-domain target port and `PORT` aligned; `8080` is the
+documented default.
+
 `API_HOST=api` is only the Docker Compose default. Railway private DNS uses a
 name under `railway.internal`; leaving the Compose default in Railway makes
 Nginx exit with `host not found in upstream "api"`. Deploy the API successfully
