@@ -95,6 +95,48 @@ The Compose file runs the migration container first, then the API, then the web
 container after API health succeeds. It intentionally does not create a
 PostgreSQL service because real alpha data must use the selected managed service.
 
+### Railway
+
+Railway does not run this Compose topology as one container. Create three
+services in the same project and environment: Railway PostgreSQL, `api`, and
+`web`. Connect both application services to this repository with the repository
+root as their root directory.
+
+Configure the `api` service with Config File Path
+`/deploy/railway.api.json` and these variables:
+
+```dotenv
+RUNTIME_TARGET=api
+PORT=3000
+NODE_ENV=production
+DATABASE_URL=${{Postgres.DATABASE_URL}}
+POSTGRES_SSL=true
+CORS_ORIGIN=https://${{web.RAILWAY_PUBLIC_DOMAIN}}
+REGISTRATION_MODE=access-code
+REGISTRATION_ACCESS_CODE=<at-least-16-random-characters>
+```
+
+The `Postgres` and `web` names in reference variables are case-sensitive and
+must match the Railway service names. A custom public domain may replace the
+generated web domain in `CORS_ORIGIN`. Do not generate a public domain for the
+API service. The API configuration runs migrations as a Railway pre-deploy
+command and admits traffic only when `/api/ready` succeeds.
+
+Configure the `web` service with Config File Path
+`/deploy/railway.web.json`, generate its public domain on container port `8080`,
+and set:
+
+```dotenv
+PORT=8080
+API_HOST=${{api.RAILWAY_PRIVATE_DOMAIN}}
+API_PORT=3000
+```
+
+`API_HOST=api` is only the Docker Compose default. Railway private DNS uses a
+name under `railway.internal`; leaving the Compose default in Railway makes
+Nginx exit with `host not found in upstream "api"`. Deploy the API successfully
+before the web service, then run the release verification below.
+
 ## Release Verification
 
 After every deployment:

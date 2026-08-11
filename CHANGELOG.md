@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-08-11
+
+- Added Railway-specific API and web deployment configurations, selectable
+  Docker runtime targets, migration/readiness gates, and private-network setup
+  guidance so the web proxy resolves the API through `railway.internal` instead
+  of the Docker Compose-only `api` hostname.
+
 ## 2026-08-10
 
 - Added a provider-neutral private-alpha deployment foundation with separate

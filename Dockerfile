@@ -1,5 +1,9 @@
 # syntax=docker/dockerfile:1.7
 
+# The default remains the web image. Platforms that build only the final stage,
+# such as Railway, can set RUNTIME_TARGET=api for the API service.
+ARG RUNTIME_TARGET=web
+
 FROM node:24-alpine AS build
 
 WORKDIR /workspace
@@ -65,3 +69,5 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
   CMD wget --quiet --tries=1 --spider http://127.0.0.1:8080/healthz || exit 1
 
 CMD ["nginx", "-c", "/tmp/nginx/nginx.conf", "-g", "daemon off;"]
+
+FROM ${RUNTIME_TARGET} AS runtime

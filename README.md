@@ -254,6 +254,11 @@ provider's secret manager. Production account creation must explicitly use
 `open`, `access-code`, or `closed`; `access-code` is recommended for a private
 alpha.
 
+For Railway, deploy the API and web targets as separate services and use the
+service-specific config files in `deploy/`. The exact private-network variables
+and setup order are documented in the
+[Railway runbook](docs/operations/alpha-deployment.md#railway).
+
 After deployment, verify the public web path, API process, database connection,
 and migration state:
 
