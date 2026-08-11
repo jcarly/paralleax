@@ -4,7 +4,9 @@ coverage
 playwright-report
 test-results
 *.tsbuildinfo
-.env
+.env*
+!.env.example
+!.env.production.example
 .DS_Store
 *.log
 *.dump

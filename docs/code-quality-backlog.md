@@ -33,14 +33,11 @@ during the August 2026 code review. Production gates remain authoritative in
 - [ ] Migrate from declarative `BrowserRouter` to a data router before blocking
       browser back/forward navigation; do not emulate this by mutating history after
       `popstate`.
-- [x] Upgrade `sanitize-html` to 2.17.5 and refresh safe transitive packages,
-      reducing the audit result from seven findings to four high findings.
-- [ ] Recheck the React Router RSC advisory when a fixed SPA-compatible release
-      is available. Paralleax does not use RSC actions; do not apply npm's suggested
-      downgrade to 7.11.0.
-- [ ] Recheck the `@nestjs/swagger` / `js-yaml` advisory when an upstream fixed
-      release is available. Swagger is disabled in production and only consumes the
-      application-generated OpenAPI document.
+- [x] Upgrade `sanitize-html`, DOMPurify, React Router, Nano ID, and safe
+      transitive packages. Pin the fixed `js-yaml` patch beneath Swagger with an
+      npm override; the production dependency audit reports no known findings.
+- [ ] Remove the targeted Swagger `js-yaml` override once Swagger declares the
+      fixed patch directly, retaining the high-severity CI audit.
 - [ ] Verify with an automated test that a late response from a previous story
       cannot overwrite the active editor or reader route.
 

@@ -96,6 +96,12 @@ npm run migrate:prod -w @paralleax/api
 npm run start -w @paralleax/api
 ```
 
+The provider-neutral production image runs the same built entry point directly,
+and `compose.production.yaml` models the migration as a one-shot service that
+must complete before API health can admit the web service. See the
+[private-alpha deployment runbook](operations/alpha-deployment.md) for image,
+secret, smoke, and rollback requirements.
+
 Operational probes:
 
 - `GET /api/health` verifies that the API process can answer HTTP;

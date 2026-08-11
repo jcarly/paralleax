@@ -9,6 +9,7 @@ describe('AppConfigService', () => {
       port: 3000,
       corsOrigin: 'http://localhost:5173',
       nodeEnvironment: 'development',
+      registrationMode: 'open',
     });
     expect(config.nodeEnvironment).toBe('development');
   });
@@ -21,11 +22,15 @@ describe('AppConfigService', () => {
       CORS_ORIGIN: 'https://app.example.com',
       NODE_ENV: 'production',
       POSTGRES_SSL_CA: 'certificate\\nline',
+      REGISTRATION_MODE: 'access-code',
+      REGISTRATION_ACCESS_CODE: 'correct-alpha-code',
     });
     expect(config).toMatchObject({
       postgresSsl: true,
       port: 8080,
       postgresSslCa: 'certificate\nline',
+      corsOrigin: 'https://app.example.com',
+      registrationMode: 'access-code',
     });
     expect(config.nodeEnvironment).toBe('production');
   });
@@ -34,9 +39,15 @@ describe('AppConfigService', () => {
     [{ DATABASE_URL: 'invalid' }, 'DATABASE_URL must be a valid URL'],
     [{ DATABASE_URL: 'https://example.com' }, 'DATABASE_URL must use postgres: or postgresql:'],
     [{ CORS_ORIGIN: 'ftp://example.com' }, 'CORS_ORIGIN must use http: or https:'],
+    [{ CORS_ORIGIN: 'https://example.com/app' }, 'CORS_ORIGIN must contain only an http(s) origin'],
     [{ PORT: '70000' }, 'PORT must be an integer between 1 and 65535'],
     [{ POSTGRES_SSL: 'yes' }, 'POSTGRES_SSL must be true or false'],
     [{ NODE_ENV: 'staging' }, 'NODE_ENV must be one of'],
+    [{ REGISTRATION_MODE: 'invite' }, 'REGISTRATION_MODE must be one of'],
+    [
+      { REGISTRATION_MODE: 'access-code', REGISTRATION_ACCESS_CODE: 'short' },
+      'REGISTRATION_ACCESS_CODE must contain at least 16 characters',
+    ],
   ])('rejects invalid environment values', (environment, message) => {
     expect(() => loadAppConfig(environment)).toThrow(message);
   });
@@ -48,5 +59,12 @@ describe('AppConfigService', () => {
     expect(() =>
       loadAppConfig({ NODE_ENV: 'production', DATABASE_URL: 'postgres://db/app' }),
     ).toThrow('CORS_ORIGIN is required in production');
+    expect(() =>
+      loadAppConfig({
+        NODE_ENV: 'production',
+        DATABASE_URL: 'postgres://db/app',
+        CORS_ORIGIN: 'https://app.example.com',
+      }),
+    ).toThrow('REGISTRATION_MODE is required in production');
   });
 });

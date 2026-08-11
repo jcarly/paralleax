@@ -6,5 +6,5 @@ node_modules
 **/dist
 **/.vite
 **/*.tsbuildinfo
-.env
+.env*
 npm-debug.log*

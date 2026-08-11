@@ -39,6 +39,10 @@ The character-stat vertical keeps these regressions covered:
   server-side session.
 - Authentication: concurrent registration for one normalized email creates one
   account and returns one conflict.
+- Authentication: access-code registration rejects missing and incorrect codes,
+  accepts the configured code, and closed registration creates no account.
+- Production security: safe requests remain available, while every mutative
+  request without the exact configured `Origin` is rejected.
 - Authentication: an expired session during a protected request returns the UI
   to sign-in with a clear explanation.
 - Authentication: expired database sessions are purged during authentication
@@ -90,7 +94,8 @@ The character-stat vertical keeps these regressions covered:
 - Operations: the explicit migration command completes before the API process
   starts in Docker Compose.
 - API configuration: valid local defaults are typed, while malformed database
-  URLs, origins, ports, SSL flags, environments, and missing production endpoints fail fast.
+  URLs, origins, ports, SSL flags, registration modes, environments, and missing
+  production endpoints fail fast.
 - API/database: trigger inputs, outputs, and condition references cannot cross
   story boundaries; relational references cascade when their owner is deleted.
 - API: story repository assembles, stores, reads, lists, and deletes relational
@@ -271,6 +276,9 @@ The character-stat vertical keeps these regressions covered:
   deleting ids or exact-effect references.
 
 ## Operations Regression Tests
+
+- Deployment smoke checks require the public web marker, API liveness, and
+  database/schema readiness, and refuse insecure non-local URLs.
 
 - A PostgreSQL backup is written through a partial path and accepted only after
   `pg_restore --list` validates the archive.

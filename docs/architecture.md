@@ -110,6 +110,10 @@ tokens; only token hashes are stored. `SessionGuard` resolves the HTTP-only sess
 cookie and protects every route unless it is explicitly public. Expired sessions
 are deleted opportunistically during session creation and resolution. User
 creation relies on an atomic unique-email insert rather than a prior lookup alone.
+Production chooses an explicit registration mode; private alpha registration can
+require a server-validated invitation code before user creation. A global origin
+guard rejects mutative production requests unless their `Origin` exactly matches
+the configured public origin, while safe and local/test requests remain unchanged.
 
 `StoriesRepository` owns PostgreSQL reads and writes. Every query, including a
 transactional mutation, is scoped by the authenticated creator id so knowledge
@@ -460,7 +464,8 @@ graph classes directly.
   with per-workspace thresholds enforced by the coverage commands.
 - Code style: ESLint and Prettier.
 - GitHub Actions: lint, format, typecheck, coverage, build, PostgreSQL 17
-  integration and recovery, and Playwright on pushes and pull requests.
+  integration and recovery, Playwright, production dependency audit, and
+  production image builds on pushes and pull requests.
 
 ## Verification Commands
 

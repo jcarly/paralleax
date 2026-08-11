@@ -222,7 +222,7 @@ test.describe('Story editor', () => {
 
     await page.goto('/stories/story-1/edit');
     const edgeId = 'trigger:interaction-2:trigger-2-output';
-    await expect(page.locator(`[data-id="${edgeId}"]`)).toBeVisible();
+    await expect(page.locator(`[data-id="${edgeId}"] .react-flow__edge-path`)).toBeAttached();
     await expect.poll(async () => (await getEdgeEndDirection(page, edgeId)).dx).toBeGreaterThan(0);
 
     const target = page.getByTestId('interaction-node').filter({ hasText: 'Linked scene' });

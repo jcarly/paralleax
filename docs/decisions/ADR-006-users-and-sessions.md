@@ -46,3 +46,12 @@ permission hierarchies, OAuth providers, or player profiles.
 The original decision treated all pre-user stories as disposable test data.
 Production-readiness requirements now prohibit migrations from deleting user
 stories. The ownership rule above supersedes that destructive migration choice.
+
+## Amendment — 2026-08-10
+
+Production must explicitly choose `open`, `access-code`, or `closed`
+registration. The private-alpha default is `access-code`; the configured secret
+is checked server-side before password hashing or account creation and is never
+returned to the browser. Production mutations also require an exact match
+between the request `Origin` and the configured public origin. This supplements
+`SameSite=Lax` cookies for the documented same-origin deployment topology.

@@ -26,6 +26,9 @@ Paralleax currently includes:
 - React Flow graph authoring.
 - Simulation-oriented reader diagnostics.
 - Unit, integration, PostgreSQL, component, and Playwright testing.
+- Provider-neutral production API/web images, a migration-first Compose shape,
+  exact production-origin enforcement, invitation-code registration, deployment
+  smoke checks, and operator runbooks for a private alpha.
 
 ## Not yet a stable product contract
 

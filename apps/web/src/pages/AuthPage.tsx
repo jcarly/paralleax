@@ -59,6 +59,7 @@ export function AuthPage({
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmation, setConfirmation] = useState('');
+  const [accessCode, setAccessCode] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState('');
@@ -74,7 +75,7 @@ export function AuthPage({
       setError('');
       setPending(true);
       const user = isRegister
-        ? await api.register(email, password)
+        ? await api.register(email, password, accessCode || undefined)
         : await api.login(email, password);
       onAuthenticated(user);
     } catch (caught) {
@@ -88,6 +89,7 @@ export function AuthPage({
     const nextMode = isRegister ? 'login' : 'register';
     if (!onModeChange) setLocalMode(nextMode);
     setConfirmation('');
+    setAccessCode('');
     setError('');
     onModeChange?.(nextMode);
   }
@@ -143,6 +145,7 @@ export function AuthPage({
               <span>Password</span>
               <span className="password-field">
                 <input
+                  aria-label="Password"
                   autoComplete={isRegister ? 'new-password' : 'current-password'}
                   type={showPassword ? 'text' : 'password'}
                   placeholder={isRegister ? 'At least 8 characters' : 'Enter your password'}
@@ -157,20 +160,37 @@ export function AuthPage({
               </span>
             </label>
             {isRegister ? (
-              <label className="product-field">
-                <span>Confirm password</span>
-                <input
-                  autoComplete="new-password"
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder="Repeat your password"
-                  value={confirmation}
-                  onChange={(event) => setConfirmation(event.target.value)}
-                  required
-                />
-                {confirmation && !passwordsMatch ? (
-                  <small className="field-error">Passwords do not match.</small>
-                ) : null}
-              </label>
+              <>
+                <label className="product-field">
+                  <span>Confirm password</span>
+                  <input
+                    autoComplete="new-password"
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="Repeat your password"
+                    value={confirmation}
+                    onChange={(event) => setConfirmation(event.target.value)}
+                    required
+                  />
+                  {confirmation && !passwordsMatch ? (
+                    <small className="field-error">Passwords do not match.</small>
+                  ) : null}
+                </label>
+                <label className="product-field">
+                  <span>Invitation code (if required)</span>
+                  <input
+                    aria-label="Invitation code (if required)"
+                    autoComplete="off"
+                    type="password"
+                    placeholder="Private alpha invitation"
+                    value={accessCode}
+                    onChange={(event) => setAccessCode(event.target.value)}
+                    maxLength={128}
+                  />
+                  <small>
+                    Private alpha deployments require the code supplied by the operator.
+                  </small>
+                </label>
+              </>
             ) : null}
             {error ? (
               <p className="form-error" role="alert">

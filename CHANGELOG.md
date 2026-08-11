@@ -2,6 +2,17 @@
 
 ## 2026-08-10
 
+- Added a provider-neutral private-alpha deployment foundation with separate
+  production API/web images, same-origin reverse proxying and security headers,
+  migration-first Compose orchestration, health-based startup, smoke checks, CI
+  image builds, rollback/monitoring guidance, and an operator privacy template.
+- Added explicit production registration modes with an invitation-code option,
+  exact `Origin` validation for production mutations, and fail-fast environment
+  validation while preserving open local development.
+- Updated compatible production dependencies and pinned the fixed transitive
+  `js-yaml` release; the production dependency audit now reports no known
+  vulnerabilities.
+
 - Began integrating the validated UI prototype into the production Story Editor by making the
   real story-context navigation independently scrollable, remembering its collapsed state, and
   presenting locations, characters, stats, and item definitions as compact rows with thumbnails

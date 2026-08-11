@@ -17,6 +17,7 @@
     "db:restore": "node scripts/restore-postgres.mjs",
     "test:operations": "node --test scripts/*.test.mjs",
     "test:restore": "node scripts/verify-postgres-restore.mjs",
+    "smoke:deployment": "node scripts/deployment-smoke.mjs",
     "lint": "eslint .",
     "format": "prettier . --check",
     "format:write": "prettier . --write",
@@ -41,5 +42,10 @@
   },
   "allowScripts": {
     "esbuild@0.28.1": true
+  },
+  "overrides": {
+    "@nestjs/swagger": {
+      "js-yaml": "5.2.3"
+    }
   }
 }

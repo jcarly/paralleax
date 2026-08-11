@@ -1,0 +1,67 @@
+name: paralleax-production
+
+x-api-environment: &api-environment
+  NODE_ENV: production
+  PORT: 3000
+  DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+  POSTGRES_SSL: ${POSTGRES_SSL:-true}
+  POSTGRES_SSL_CA: ${POSTGRES_SSL_CA:-}
+  CORS_ORIGIN: ${CORS_ORIGIN:?CORS_ORIGIN is required}
+  REGISTRATION_MODE: ${REGISTRATION_MODE:?REGISTRATION_MODE is required}
+  REGISTRATION_ACCESS_CODE: ${REGISTRATION_ACCESS_CODE:-}
+
+x-api-image: &api-image
+  image: ${PARALLEAX_API_IMAGE:-paralleax-api:local}
+  build:
+    context: .
+    dockerfile: Dockerfile
+    target: api
+
+services:
+  migrate:
+    <<: *api-image
+    command: ['node', 'apps/api/dist/main.js', '--migrate']
+    environment: *api-environment
+    restart: 'no'
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+  api:
+    <<: *api-image
+    environment: *api-environment
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  web:
+    image: ${PARALLEAX_WEB_IMAGE:-paralleax-web:local}
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: web
+    ports:
+      - '${WEB_PORT:-8080}:8080'
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    depends_on:
+      api:
+        condition: service_healthy

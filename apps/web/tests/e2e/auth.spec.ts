@@ -46,20 +46,23 @@ test('registers, creates a story, signs out, and signs back in', async ({ page }
   });
 
   await page.goto('/');
-  await page.getByRole('button', { name: 'Need an account?' }).click();
-  await page.getByLabel('Email').fill('author@example.com');
-  await page.getByLabel('Password').fill('correct horse battery staple');
+  await page.getByRole('button', { name: 'Create an account' }).click();
+  await page.getByLabel('Email address').fill('author@example.com');
+  await page.getByLabel('Password', { exact: true }).fill('correct horse battery staple');
+  await page.getByLabel('Confirm password').fill('correct horse battery staple');
   await page.getByRole('button', { name: 'Create account' }).click();
 
-  await expect(page.getByRole('heading', { name: 'Stories' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Stories', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'New story' }).click();
-  await expect(page.getByRole('heading', { name: 'New story' })).toBeVisible();
+  await page.getByLabel('Story title').fill('New story');
+  await page.getByRole('button', { name: 'Create story' }).click();
+  await expect(page.getByRole('heading', { name: 'New story', exact: true })).toBeVisible();
 
   await page.getByRole('button', { name: 'Sign out' }).click();
-  await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible();
-  await page.getByLabel('Email').fill('author@example.com');
-  await page.getByLabel('Password').fill('correct horse battery staple');
+  await expect(page.getByRole('heading', { name: 'Sign in to Paralleax' })).toBeVisible();
+  await page.getByLabel('Email address').fill('author@example.com');
+  await page.getByLabel('Password', { exact: true }).fill('correct horse battery staple');
   await page.getByRole('button', { name: 'Sign in' }).click();
 
-  await expect(page.getByRole('heading', { name: 'New story' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'New story', exact: true })).toBeVisible();
 });

@@ -3,9 +3,10 @@ import type { Request, Response } from 'express';
 import { AppConfigService } from '../config/app-config.service';
 import { CurrentUser, Public, type RequestUser } from './auth.decorators';
 import { AuthService } from './auth.service';
-import { CredentialsDto } from './dto/credentials.dto';
+import { CredentialsDto, RegisterDto } from './dto/credentials.dto';
 import { readSessionCookie, sessionCookieName } from './session-cookie';
 import { Throttle } from '@nestjs/throttler';
+import { assertRegistrationAllowed } from './registration-policy';
 
 @Controller('auth')
 export class AuthController {
@@ -17,7 +18,12 @@ export class AuthController {
   @Public()
   @Post('register')
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
-  async register(@Body() input: CredentialsDto, @Res({ passthrough: true }) response: Response) {
+  async register(@Body() input: RegisterDto, @Res({ passthrough: true }) response: Response) {
+    assertRegistrationAllowed(
+      this.config.registrationMode,
+      this.config.registrationAccessCode,
+      input.accessCode,
+    );
     const result = await this.auth.register(input.email, input.password);
     this.setSessionCookie(response, result.token);
     return result.user;

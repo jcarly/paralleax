@@ -13,10 +13,14 @@ const browserGlobals = {
 };
 
 const nodeGlobals = {
+  AbortSignal: 'readonly',
   console: 'readonly',
+  fetch: 'readonly',
   module: 'readonly',
   process: 'readonly',
+  Response: 'readonly',
   structuredClone: 'readonly',
+  URL: 'readonly',
 };
 
 export default tseslint.config(

@@ -80,10 +80,10 @@ type InteractionSaveResponse = InteractionMutationResult | Story;
 type TriggerSaveResponse = TriggerMutationResult | Story;
 export const api = {
   me: () => request<AuthUser>('/auth/me'),
-  register: (email: string, password: string) =>
+  register: (email: string, password: string, accessCode?: string) =>
     request<AuthUser>('/auth/register', {
       method: 'POST',
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email, password, ...(accessCode ? { accessCode } : {}) }),
     }),
   login: (email: string, password: string) =>
     request<AuthUser>('/auth/login', {

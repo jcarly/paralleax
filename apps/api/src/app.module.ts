@@ -4,8 +4,9 @@ import { ConfigModule } from './config/config.module';
 import { DatabaseModule } from './database/database.module';
 import { HealthModule } from './health/health.module';
 import { StoriesModule } from './stories/stories.module';
+import { SecurityModule } from './security/security.module';
 
 @Module({
-  imports: [ConfigModule, DatabaseModule, HealthModule, AuthModule, StoriesModule],
+  imports: [ConfigModule, DatabaseModule, HealthModule, SecurityModule, AuthModule, StoriesModule],
 })
 export class AppModule {}

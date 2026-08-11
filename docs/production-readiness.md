@@ -2,7 +2,7 @@
 
 Status: Current
 
-Last reviewed: 2026-07-26
+Last reviewed: 2026-08-10
 
 Implemented: Partial
 
@@ -33,8 +33,10 @@ small test stories. It is not yet ready for an open public production service.
   PostgreSQL 17 client explicitly so `pg_dump` matches its PostgreSQL 17 service.
 - Configure monitored, encrypted, off-host PostgreSQL backup scheduling and
   complete a recorded restoration drill in the selected production provider.
-- Add staging, production secret management, exact CORS origins, and verified
-  secure-cookie behavior behind the production proxy.
+- Implemented foundation: production requires an exact CORS origin, secure
+  cookies, an explicit registration mode, and matching `Origin` headers for
+  mutations. Add provider-managed staging/secrets and verify the complete HTTPS
+  proxy path in the selected environment.
 - Implemented foundation: process health and PostgreSQL/schema readiness
   endpoints.
 - Implemented foundation: structured production logs, request identifiers,
@@ -44,8 +46,10 @@ small test stories. It is not yet ready for an open public production service.
   with editor feedback, HTTP request bodies at 128 KiB, and story mutations at
   60 requests per minute. Add aggregate story-size quotas and provider-level
   abuse controls.
-- Document incident communication, rollback, privacy, account export, and
-  account deletion.
+- Implemented foundation: the private-alpha runbook documents monitoring,
+  rollback, recovery, and operator evidence, and a privacy-notice template lists
+  export/deletion requirements. Complete the operator identity, provider facts,
+  communication channels, and actual request procedure before inviting users.
 
 ### P1 — Before an Open Creator Alpha
 
@@ -60,8 +64,11 @@ small test stories. It is not yet ready for an open public production service.
   closing/reloading and internal link navigation. Add data-router blocking for
   browser back/forward navigation and retain real-browser coverage.
 - Add accessibility tests and a manual keyboard/focus audit.
-- Add dependency, secret, and container scanning.
-- Provide a production Docker image, deployment pipeline, and tested rollback.
+- Implemented foundation: CI runs a high-severity production dependency audit.
+  Add repository secret scanning and production-container vulnerability scans.
+- Implemented foundation: separate production API/web images, a migration-first
+  Compose shape, smoke checks, and CI image builds are available. Connect them to
+  the selected provider and complete a recorded rollback drill.
 - Add quotas and scheduled expired-session cleanup.
 
 ### P2 — Before Public Story Reading
@@ -155,8 +162,9 @@ before setting provider-specific service objectives.
 
 ## Security and Abuse Baseline
 
-- Validate `Origin` for mutative cookie-authenticated requests once the final
-  frontend/API topology is known; add a CSRF token if topology requires it.
+- Implemented for the documented same-origin topology: production mutations
+  require an exact `Origin` match. Reassess CSRF tokens if the final topology
+  separates the frontend and API origins.
 - Keep exact credentialed CORS origins and secure production cookies.
 - Implemented foundation: enforce DTO input lengths and application-level story
   mutation throttling. Add aggregate story quotas, provider-level rate controls,

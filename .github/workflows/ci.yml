@@ -32,6 +32,9 @@ jobs:
       - name: Install dependencies
         run: npm ci --prefer-offline
 
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=high
+
       - name: Lint
         run: npm run lint
 
@@ -61,6 +64,27 @@ jobs:
             packages/shared/coverage/
           if-no-files-found: ignore
           retention-days: 7
+
+  production-images:
+    name: Production images
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Validate production Compose configuration
+        env:
+          DATABASE_URL: postgresql://paralleax:ci-only@db.example:5432/paralleax
+          CORS_ORIGIN: https://alpha.example.com
+          REGISTRATION_MODE: access-code
+          REGISTRATION_ACCESS_CODE: ci-only-access-code
+        run: docker compose -f compose.production.yaml config --quiet
+
+      - name: Build production API image
+        run: docker build --target api --tag paralleax-api:ci .
+
+      - name: Build production web image
+        run: docker build --target web --tag paralleax-web:ci .
 
   postgres-integration:
     name: PostgreSQL integration

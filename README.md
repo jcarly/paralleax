@@ -72,6 +72,7 @@ Supporting references:
 - [Non-goals](docs/non-goals.md)
 - [Test scenarios](docs/test-scenarios.md)
 - [Production readiness](docs/production-readiness.md)
+- [Private alpha deployment](docs/operations/alpha-deployment.md)
 - [ADR index](docs/decisions/README.md)
 - [UML diagrams](docs/uml/README.md)
 - [Hosting and scale](docs/hosting-and-scale.md)
@@ -108,8 +109,9 @@ DATABASE_URL=postgres://paralleax:paralleax@localhost:5432/paralleax
 ```
 
 The API also validates `PORT`, `POSTGRES_SSL`, `POSTGRES_SSL_CA`, `CORS_ORIGIN`,
-and `NODE_ENV` at startup. `DATABASE_URL` and `CORS_ORIGIN` must be explicit in
-production. OpenAPI documentation is available at http://localhost:3300/api/docs.
+`REGISTRATION_MODE`, and `NODE_ENV` at startup. `DATABASE_URL`, `CORS_ORIGIN`,
+and `REGISTRATION_MODE` must be explicit in production. OpenAPI documentation is
+available at http://localhost:3300/api/docs outside production.
 
 Using Docker Compose is the easiest way to start the API, web app, and local
 database together.
@@ -199,9 +201,11 @@ requests, and can also be started manually:
 - ESLint;
 - Prettier format check;
 - TypeScript typecheck;
+- high-severity production dependency audit;
 - shared, API, and web test/coverage suites;
 - full monorepo build;
-- Playwright functional tests.
+- Playwright functional tests;
+- production Compose validation and API/web image builds.
 
 Coverage and Playwright reports are retained as workflow artifacts for seven
 days. PostgreSQL integration runs against PostgreSQL 17 and verifies backup
@@ -232,3 +236,30 @@ docker compose up
 Then open http://localhost:5173. The API is exposed at http://localhost:3300/api.
 PostgreSQL is exposed at `localhost:5432` and stores data in the
 `postgres-data` Docker volume.
+
+## Private Alpha Deployment
+
+The repository includes separate production targets for the API and web app,
+plus a migration-first Compose topology connected to an external managed
+PostgreSQL database:
+
+```bash
+docker build --target api --tag paralleax-api:local .
+docker build --target web --tag paralleax-web:local .
+docker compose --env-file .env.production -f compose.production.yaml up
+```
+
+Start from `.env.production.example`, but store real values in the deployment
+provider's secret manager. Production account creation must explicitly use
+`open`, `access-code`, or `closed`; `access-code` is recommended for a private
+alpha.
+
+After deployment, verify the public web path, API process, database connection,
+and migration state:
+
+```bash
+npm run smoke:deployment -- https://alpha.example.com
+```
+
+Do not invite users until the provider-specific gates in the
+[private alpha runbook](docs/operations/alpha-deployment.md) are complete.

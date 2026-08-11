@@ -61,9 +61,14 @@ describe('AuthPage', () => {
       screen.getByPlaceholderText('Repeat your password'),
       'correct horse battery staple',
     );
+    await user.type(screen.getByLabelText('Invitation code (if required)'), 'correct-alpha-code');
     await user.click(screen.getByRole('button', { name: 'Create account' }));
 
-    expect(api.register).toHaveBeenCalledWith('new@example.com', 'correct horse battery staple');
+    expect(api.register).toHaveBeenCalledWith(
+      'new@example.com',
+      'correct horse battery staple',
+      'correct-alpha-code',
+    );
     expect(onAuthenticated).toHaveBeenCalledWith(authenticated);
   });
 
