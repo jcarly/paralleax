@@ -33,7 +33,7 @@ async function bootstrap() {
       .build();
     SwaggerModule.setup('api/docs', app, SwaggerModule.createDocument(app, openApi));
   }
-  await app.listen(config.port);
+  await app.listen(config.port, '::');
 }
 
 async function migrate() {
