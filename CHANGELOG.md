@@ -5,6 +5,9 @@
 - Restored the API's runtime-selected all-interface listener and separated the
   Railway process healthcheck (`/api/health`) from the PostgreSQL/schema release
   check (`/api/ready`), while retaining migration-first deployment.
+- Deferred Nginx API hostname resolution until `/api` request time so transient
+  Railway private-DNS availability no longer prevents `/healthz` or the static
+  web application from starting.
 
 ## 2026-08-11
 

@@ -141,8 +141,11 @@ documented default.
 
 `API_HOST=api` is only the Docker Compose default. Railway private DNS uses a
 name under `railway.internal`; leaving the Compose default in Railway makes
-Nginx exit with `host not found in upstream "api"`. Deploy the API successfully
-before the web service, then run the release verification below.
+the `/api` proxy target invalid. Nginx resolves that target at request time so
+the web process and `/healthz` can start while the API service or its private DNS
+is still converging. API requests remain unavailable until the target resolves.
+Deploy the API successfully before the web service, then run the release
+verification below.
 
 ## Release Verification
 
