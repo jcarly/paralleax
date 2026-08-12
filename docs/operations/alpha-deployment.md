@@ -143,9 +143,11 @@ documented default.
 name under `railway.internal`; leaving the Compose default in Railway makes
 the `/api` proxy target invalid. Nginx resolves that target at request time so
 the web process and `/healthz` can start while the API service or its private DNS
-is still converging. API requests remain unavailable until the target resolves.
-Deploy the API successfully before the web service, then run the release
-verification below.
+is still converging. The web image explicitly enables the official Nginx
+entrypoint's local-resolver discovery so this runtime resolution uses Railway's
+container DNS. API requests remain unavailable until the target resolves. Deploy
+the API successfully before the web service, then run the release verification
+below.
 
 ## Release Verification
 

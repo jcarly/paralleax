@@ -59,6 +59,7 @@ ENV API_PORT=3000
 ENV PORT=8080
 
 ENV NGINX_ENVSUBST_OUTPUT_DIR=/tmp/nginx
+ENV NGINX_ENTRYPOINT_LOCAL_RESOLVERS=1
 
 RUN mkdir -p /tmp/nginx && chown nginx:nginx /tmp/nginx
 

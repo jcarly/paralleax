@@ -7,7 +7,8 @@
   check (`/api/ready`), while retaining migration-first deployment.
 - Deferred Nginx API hostname resolution until `/api` request time so transient
   Railway private-DNS availability no longer prevents `/healthz` or the static
-  web application from starting.
+  web application from starting, and enabled the official image's local DNS
+  resolver discovery required by that runtime lookup.
 
 ## 2026-08-11
 

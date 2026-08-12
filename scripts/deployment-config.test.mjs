@@ -28,10 +28,12 @@ test('Railway API deployment migrates first and probes process health', async ()
 test('Railway web deployment probes the public reverse proxy', async () => {
   const configuration = JSON.parse(await readRepositoryFile('deploy/railway.web.json'));
   const nginxConfiguration = await readRepositoryFile('deploy/nginx.conf.template');
+  const dockerfile = await readRepositoryFile('Dockerfile');
 
   assert.equal(configuration.build.builder, 'DOCKERFILE');
   assert.equal(configuration.build.dockerfilePath, 'Dockerfile');
   assert.equal(configuration.deploy.healthcheckPath, '/healthz');
+  assert.match(dockerfile, /^ENV NGINX_ENTRYPOINT_LOCAL_RESOLVERS=1$/m);
   assert.match(nginxConfiguration, /^\s*listen \$\{PORT\};$/m);
   assert.match(nginxConfiguration, /^\s*resolver \$\{NGINX_LOCAL_RESOLVERS\} valid=10s;$/m);
   assert.match(nginxConfiguration, /^\s*set \$api_upstream "\$\{API_HOST\}:\$\{API_PORT\}";$/m);
