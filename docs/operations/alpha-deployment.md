@@ -120,7 +120,10 @@ The `Postgres` and `web` names in reference variables are case-sensitive and
 must match the Railway service names. A custom public domain may replace the
 generated web domain in `CORS_ORIGIN`. Do not generate a public domain for the
 API service. The API configuration runs migrations as a Railway pre-deploy
-command and admits traffic only when `/api/ready` succeeds.
+command, then uses `/api/health` to verify that the HTTP process is listening.
+Database and schema readiness remain mandatory release checks through
+`/api/ready`; Railway's deployment healthcheck should not conflate an HTTP
+listener failure with a PostgreSQL readiness failure.
 
 Configure the `web` service with Config File Path
 `/deploy/railway.web.json`, generate its public domain on container port `8080`,

@@ -2,9 +2,9 @@
 
 ## 2026-08-12
 
-- Restored the API's runtime-selected all-interface listener after an explicit
-  IPv6 host caused the Railway deployment healthcheck to regress, while keeping
-  the existing dynamic `PORT` and readiness probe behavior.
+- Restored the API's runtime-selected all-interface listener and separated the
+  Railway process healthcheck (`/api/health`) from the PostgreSQL/schema release
+  check (`/api/ready`), while retaining migration-first deployment.
 
 ## 2026-08-11
 

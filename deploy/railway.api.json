@@ -6,7 +6,7 @@
   },
   "deploy": {
     "preDeployCommand": "node apps/api/dist/main.js --migrate",
-    "healthcheckPath": "/api/ready",
+    "healthcheckPath": "/api/health",
     "healthcheckTimeout": 300,
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 10
