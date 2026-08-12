@@ -15,11 +15,14 @@ test('the Dockerfile exposes a Railway-selectable runtime while defaulting to we
 
 test('Railway API deployment migrates first and probes readiness', async () => {
   const configuration = JSON.parse(await readRepositoryFile('deploy/railway.api.json'));
+  const apiEntrypoint = await readRepositoryFile('apps/api/src/main.ts');
 
   assert.equal(configuration.build.builder, 'DOCKERFILE');
   assert.equal(configuration.build.dockerfilePath, 'Dockerfile');
   assert.equal(configuration.deploy.preDeployCommand, 'node apps/api/dist/main.js --migrate');
   assert.equal(configuration.deploy.healthcheckPath, '/api/ready');
+  assert.match(apiEntrypoint, /await app\.listen\(config\.port\);/);
+  assert.doesNotMatch(apiEntrypoint, /await app\.listen\(config\.port,\s*['"]::['"]\);/);
 });
 
 test('Railway web deployment probes the public reverse proxy', async () => {

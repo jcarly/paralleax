@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-08-12
+
+- Restored the API's runtime-selected all-interface listener after an explicit
+  IPv6 host caused the Railway deployment healthcheck to regress, while keeping
+  the existing dynamic `PORT` and readiness probe behavior.
+
 ## 2026-08-11
 
 - Added Railway-specific API and web deployment configurations, selectable
