@@ -41,6 +41,7 @@ type StoryRow = {
 type StorySummaryRow = StoryRow & {
   interaction_count: number | string;
 };
+type PublicStorySummaryRow = Omit<StorySummaryRow, 'owner_email'>;
 type InteractionRow = {
   id: string;
   story_id: string;
@@ -189,6 +190,32 @@ export class StoriesRepository {
       access: accessSettings(row),
       capabilities: capabilities(row, userId),
       owner: { id: row.creator_user_id, email: row.owner_email },
+      createdAt: iso(row.created_at),
+      updatedAt: iso(row.updated_at),
+    }));
+  }
+
+  async listPublic(): Promise<StorySummary[]> {
+    const result = await this.database.pool.query<PublicStorySummaryRow>(
+      `SELECT stories.id, stories.revision, stories.title, stories.creator_user_id,
+              stories.visibility, stories.edit_policy, stories.comment_policy,
+              NULL::text AS actor_id, NULL::text AS actor_role,
+              NULL::text AS collaborator_role, stories.start_date_time,
+              stories.created_at, stories.updated_at, COUNT(interactions.id) AS interaction_count
+       FROM stories
+       LEFT JOIN interactions ON interactions.story_id = stories.id
+       WHERE stories.visibility = 'public'
+       GROUP BY stories.id
+       ORDER BY stories.updated_at DESC, stories.created_at DESC`,
+    );
+    return result.rows.map((row) => ({
+      id: row.id,
+      revision: row.revision,
+      title: row.title,
+      interactionCount: Number(row.interaction_count),
+      startDateTime: row.start_date_time,
+      access: accessSettings(row),
+      capabilities: capabilities(row),
       createdAt: iso(row.created_at),
       updatedAt: iso(row.updated_at),
     }));
@@ -713,7 +740,9 @@ function iso(value: Date | string) {
   return value instanceof Date ? value.toISOString() : new Date(value).toISOString();
 }
 
-function accessSettings(row: StoryRow): StoryAccessSettings {
+function accessSettings(
+  row: Pick<StoryRow, 'visibility' | 'edit_policy' | 'comment_policy'>,
+): StoryAccessSettings {
   return {
     visibility: row.visibility,
     editPolicy: row.edit_policy,
@@ -721,7 +750,19 @@ function accessSettings(row: StoryRow): StoryAccessSettings {
   };
 }
 
-function capabilities(row: StoryRow, actorId?: string) {
+function capabilities(
+  row: Pick<
+    StoryRow,
+    | 'visibility'
+    | 'edit_policy'
+    | 'comment_policy'
+    | 'actor_id'
+    | 'actor_role'
+    | 'creator_user_id'
+    | 'collaborator_role'
+  >,
+  actorId?: string,
+) {
   return resolveStoryAccess(accessSettings(row), {
     authenticated: row.actor_id !== null,
     role: row.actor_role ?? undefined,

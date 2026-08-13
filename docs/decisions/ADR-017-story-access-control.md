@@ -49,6 +49,8 @@ increment.
 - Story ids and direct URLs do not bypass access checks.
 - Public stories can be read without an account, while progress remains tied to
   authenticated users.
+- The product home uses a dedicated anonymous summary projection and cannot leak
+  private, authenticated-only, or invitation-only story metadata.
 - Owners can preserve grants while temporarily returning a story to private.
 - Opening editing to all signed-in users is an explicit high-trust choice.
 - Future comments must use the stored effective capability; a comment UI alone

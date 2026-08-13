@@ -12,12 +12,18 @@ npm run dev
 
 Then open http://localhost:5173.
 
-On first use, select `Create account` and register with an email address and a
-password of at least eight characters. Later visits restore the session from an
-HTTP-only cookie. Use `Sign out` in the header to end the current session.
-If a session expires while the app is open, Paralleax returns to the sign-in
-screen with an explanation instead of leaving an editor action in an ambiguous
-error state.
+The home page lists stories their authors have made public. Anyone can browse
+this catalogue and open a public story without an account. Select `Sign in` or
+`Create account` when you want to access an authenticated feature. After a
+successful sign-in or registration, Paralleax returns to the page you were
+viewing; external return destinations are not accepted.
+
+On first use, register with an email address and a password of at least eight
+characters. Later visits restore the session from an HTTP-only cookie. Select
+`My stories` to open your authenticated workspace and use `Sign out` in the
+header to end the current session. If a session expires on a protected page,
+Paralleax returns to the sign-in screen with an explanation and restores that
+page after authentication.
 
 New stories are private to the account that creates them. The creator can later
 share them explicitly. The first account created on a new installation is its
@@ -58,7 +64,7 @@ the author wrote them.
 
 ## Create a Story
 
-1. Open the story list.
+1. Sign in and open `My stories`.
 2. Select `New story`.
 3. Enter a title and select `Create story`.
 4. Open the story with `Edit`.
@@ -74,14 +80,6 @@ for testing the editor and reader without manually building a graph.
 Stories are persisted in PostgreSQL. Restarting the API keeps the
 authored story data as long as the configured database or Docker volume remains
 available.
-
-## Consult the Design System
-
-Select `Design system` in the main navigation or open
-http://localhost:5173/design-system while signed in. This living reference
-documents the product foundations, controls, forms, navigation rows, narrative
-cards, empty trigger marker, effect layout, and feedback states used by the
-application.
 
 ## Edit the Story Title
 

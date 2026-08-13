@@ -1443,4 +1443,36 @@ describe('Stories API', () => {
       .expect(200);
     expect(response.body.capabilities).toMatchObject({ canRead: true, canEdit: false });
   });
+
+  it('lists only public stories without authentication', async () => {
+    const privateStory = await request(httpServer)
+      .post('/api/stories')
+      .set('Cookie', 'paralleax_session=user-one')
+      .send({ title: 'Private story' })
+      .expect(201);
+    const publicStory = await request(httpServer)
+      .post('/api/stories')
+      .set('Cookie', 'paralleax_session=user-one')
+      .send({ title: 'Public catalogue story' })
+      .expect(201);
+    await request(httpServer)
+      .patch(`/api/stories/${publicStory.body.id}/access`)
+      .set('Cookie', 'paralleax_session=user-one')
+      .send({ visibility: 'public', editPolicy: 'owner', commentPolicy: 'disabled' })
+      .expect(200);
+
+    const response = await request(httpServer).get('/api/stories/public').expect(200);
+
+    expect(response.body).toEqual([
+      expect.objectContaining({
+        id: publicStory.body.id,
+        title: 'Public catalogue story',
+        capabilities: expect.objectContaining({ canRead: true, canEdit: false, canManage: false }),
+      }),
+    ]);
+    expect(response.body[0]).not.toHaveProperty('owner');
+    expect(response.body).not.toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: privateStory.body.id })]),
+    );
+  });
 });

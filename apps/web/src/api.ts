@@ -109,6 +109,7 @@ export const api = {
       body: JSON.stringify({ role }),
     }),
   listStories: () => request<StorySummary[]>('/stories'),
+  listPublicStories: () => request<StorySummary[]>('/stories/public'),
   getStory: (id: string) => request<Story>(`/stories/${id}`),
   getStoryAccess: (id: string) => request<StoryAccessConfiguration>(`/stories/${id}/access`),
   updateStoryAccess: (id: string, settings: StoryAccessSettings) =>

@@ -312,6 +312,12 @@ describePostgres('StoriesRepository PostgreSQL integration', () => {
     await expect(repository.find(story.id)).resolves.toMatchObject({
       capabilities: { canRead: true, canEdit: false, canManage: false },
     });
+    await expect(repository.listPublic()).resolves.toEqual([
+      expect.objectContaining({
+        id: story.id,
+        capabilities: { canRead: true, canEdit: false, canManage: false, canComment: false },
+      }),
+    ]);
   });
 
   it('stores the story graph in relational tables', async () => {

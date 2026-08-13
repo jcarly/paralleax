@@ -134,12 +134,15 @@ so storage and query projections can evolve without moving endpoint behavior or
 shared domain rules.
 
 Story listing uses a separate lightweight `StorySummary` projection. Its
-aggregate query returns metadata and an interaction count without loading
-interactions, triggers, context entities, or item graphs. Creation endpoints
-still return the created complete story; the web list converts that one result
-to a summary locally. Both story and summary projections include resolved
-capabilities so the interface can hide unavailable actions without becoming the
-security boundary.
+aggregate queries return metadata and an interaction count without loading
+interactions, triggers, context entities, or item graphs. The authenticated
+`GET /api/stories` projection resolves every story accessible to the requesting
+account; the anonymous `GET /api/stories/public` projection filters to public
+visibility, omits owner account identifiers, and resolves capabilities as a
+signed-out reader. Creation endpoints still return the created complete story;
+the web workspace converts that one result to a summary locally. Both story and
+summary projections include resolved capabilities so the interface can hide
+unavailable actions without becoming the security boundary.
 
 The first account becomes the first administrator through a serialized database
 transaction. Administrator role updates use the same lock, and the final
@@ -213,6 +216,13 @@ interactions and triggers.
 `StoryEditor` is the page-level orchestration component for the editor. It wires
 React Flow, selection state, inspectors, and persistence actions together.
 
+The root route renders the anonymous public-story catalogue. Authenticated users
+reach their full accessible-story workspace at `/stories`; editor, access, and
+administration routes redirect signed-out visitors to authentication. Sign-in
+and registration carry a validated same-origin `returnTo` path, including its
+query and fragment, and replace the authentication history entry after success.
+The product navigation does not expose the internal design-system reference.
+
 `apps/web/src/i18n/` owns interface localization through `i18next` and
 `react-i18next`. English and French resources are bundled with the web build,
 so rendering does not depend on a translation request. Startup selects a saved
@@ -253,12 +263,12 @@ The web app may map a story into React Flow nodes and edges, but it must not
 store story semantics as React Flow data. React Flow data is a projection of the
 domain model.
 
-Vite loads the editor and reader as separate route chunks. The authenticated
-shell and story list therefore do not download React Flow until an author opens
-the editor. Route imports remain literal so Vite can analyze and split them
-deterministically. Edit and reader links preload their corresponding chunk on
-hover or keyboard focus so explicit navigation intent hides most of the added
-route-loading latency.
+Vite loads the editor and reader as separate route chunks. The public catalogue,
+application shell, and story workspace therefore do not download React Flow
+until an author opens the editor. Route imports remain literal so Vite can
+analyze and split them deterministically. Edit and reader links preload their
+corresponding chunk on hover or keyboard focus so explicit navigation intent
+hides most of the added route-loading latency.
 
 ## React Flow Boundary
 

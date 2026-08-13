@@ -1845,10 +1845,6 @@
     flex: 1;
   }
 
-  .product-app-header nav a:nth-child(2) {
-    display: none;
-  }
-
   .design-hero dl,
   .form-reference,
   .feedback-grid {

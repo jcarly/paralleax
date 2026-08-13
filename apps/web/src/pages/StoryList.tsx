@@ -12,8 +12,9 @@ type StoryView = 'grid' | 'list';
 
 const recentThresholdMs = 7 * 24 * 60 * 60 * 1000;
 
-export function StoryList() {
+export function StoryList({ mode = 'workspace' }: { mode?: 'public' | 'workspace' }) {
   const { t } = useTranslation();
+  const isPublicCatalog = mode === 'public';
   const [stories, setStories] = useState<StorySummary[]>([]);
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<StoryFilter>('all');
@@ -26,12 +27,11 @@ export function StoryList() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    api
-      .listStories()
+    api[isPublicCatalog ? 'listPublicStories' : 'listStories']()
       .then(setStories)
       .catch((caught: Error) => setError(caught.message))
       .finally(() => setLoading(false));
-  }, []);
+  }, [isPublicCatalog]);
 
   const visibleStories = useMemo(() => {
     const normalizedQuery = query.trim().toLocaleLowerCase();
@@ -101,23 +101,27 @@ export function StoryList() {
     <main className="product-page library-main">
       <section className="library-heading">
         <div>
-          <span className="product-eyebrow">{t('library.eyebrow')}</span>
-          <h1>{t('library.title')}</h1>
-          <p>{t('library.description')}</p>
+          <span className="product-eyebrow">
+            {t(isPublicCatalog ? 'library.public.eyebrow' : 'library.eyebrow')}
+          </span>
+          <h1>{t(isPublicCatalog ? 'library.public.title' : 'library.title')}</h1>
+          <p>{t(isPublicCatalog ? 'library.public.description' : 'library.description')}</p>
         </div>
-        <div className="library-heading-actions">
-          <button
-            className="product-secondary"
-            type="button"
-            disabled={Boolean(pending)}
-            onClick={() => void createDemo()}
-          >
-            {t(pending === 'demo' ? 'library.generating' : 'library.generateDemo')}
-          </button>
-          <button className="product-primary" type="button" onClick={() => setCreating(true)}>
-            <span aria-hidden="true">＋</span> {t('library.newStory')}
-          </button>
-        </div>
+        {!isPublicCatalog ? (
+          <div className="library-heading-actions">
+            <button
+              className="product-secondary"
+              type="button"
+              disabled={Boolean(pending)}
+              onClick={() => void createDemo()}
+            >
+              {t(pending === 'demo' ? 'library.generating' : 'library.generateDemo')}
+            </button>
+            <button className="product-primary" type="button" onClick={() => setCreating(true)}>
+              <span aria-hidden="true">＋</span> {t('library.newStory')}
+            </button>
+          </div>
+        ) : null}
       </section>
 
       <section className="library-toolbar" aria-label={t('library.filtersLabel')}>
@@ -202,6 +206,7 @@ export function StoryList() {
               story={story}
               tone={storyTone(story.id, index)}
               remove={remove}
+              publicCatalog={isPublicCatalog}
             />
           ))}
         </section>
@@ -209,7 +214,15 @@ export function StoryList() {
         <section className="library-empty">
           <span aria-hidden="true">◇</span>
           <h2>{t('library.emptyTitle')}</h2>
-          <p>{t(stories.length ? 'library.emptyFiltered' : 'library.emptyWorkspace')}</p>
+          <p>
+            {t(
+              stories.length
+                ? 'library.emptyFiltered'
+                : isPublicCatalog
+                  ? 'library.public.empty'
+                  : 'library.emptyWorkspace',
+            )}
+          </p>
           {query || filter !== 'all' ? (
             <button
               className="product-secondary"
@@ -221,15 +234,15 @@ export function StoryList() {
             >
               {t('library.clearFilters')}
             </button>
-          ) : (
+          ) : !isPublicCatalog ? (
             <button className="product-secondary" type="button" onClick={() => setCreating(true)}>
               {t('library.createStory')}
             </button>
-          )}
+          ) : null}
         </section>
       )}
 
-      {creating ? (
+      {creating && !isPublicCatalog ? (
         <div className="modal-backdrop" role="presentation">
           <section
             className="new-story-dialog"
@@ -282,10 +295,12 @@ function StoryCard({
   story,
   tone,
   remove,
+  publicCatalog,
 }: {
   story: StorySummary;
   tone: number;
   remove: (id: string) => Promise<void>;
+  publicCatalog: boolean;
 }) {
   const { t, i18n } = useTranslation();
   const locale = i18n.resolvedLanguage ?? i18n.language;
@@ -340,7 +355,7 @@ function StoryCard({
           >
             {t('library.card.read')}
           </Link>
-          {story.capabilities?.canEdit !== false ? (
+          {!publicCatalog && story.capabilities?.canEdit !== false ? (
             <Link
               className="product-primary compact"
               to={`/stories/${story.id}/edit`}
@@ -350,7 +365,7 @@ function StoryCard({
               {t('library.card.edit')} <span aria-hidden="true">→</span>
             </Link>
           ) : null}
-          {story.capabilities?.canManage !== false ? (
+          {!publicCatalog && story.capabilities?.canManage !== false ? (
             <>
               <Link className="product-ghost compact" to={`/stories/${story.id}/access`}>
                 {t('library.card.access')}

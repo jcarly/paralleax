@@ -34,6 +34,24 @@ export class InMemoryStoriesRepository {
       }));
   }
 
+  async listPublic(): Promise<StorySummary[]> {
+    return [...this.stories.entries()]
+      .filter(([, story]) => (story.access ?? defaultStoryAccess).visibility === 'public')
+      .map(([, story]) => ({
+        id: story.id,
+        revision: story.revision,
+        title: story.title,
+        interactionCount: story.interactions.length,
+        startDateTime: story.startDateTime,
+        access: story.access ?? defaultStoryAccess,
+        capabilities: resolveStoryAccess(story.access ?? defaultStoryAccess, {
+          authenticated: false,
+        }),
+        createdAt: story.createdAt,
+        updatedAt: story.updatedAt,
+      }));
+  }
+
   async find(id: string, ownerId?: string): Promise<Story | undefined> {
     const story = this.stories.get(id);
     if (!story || !this.can(story, id, ownerId).canRead) return undefined;

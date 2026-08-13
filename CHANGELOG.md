@@ -2,6 +2,10 @@
 
 ## 2026-08-13
 
+- Made the public-story catalogue the product home, moved the full accessible
+  story workspace to `My stories`, preserved validated local destinations across
+  sign-in and registration, and removed the design-system route from product
+  navigation.
 - Added deny-by-default authorization with global user/admin roles, serialized
   first-admin assignment, last-admin protection, per-story visibility/edit/comment
   policies, viewer/editor invitations, anonymous public reading, capability-aware

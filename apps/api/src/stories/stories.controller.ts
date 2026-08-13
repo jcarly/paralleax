@@ -23,7 +23,7 @@ import {
   SetStoryCollaboratorDto,
 } from './dto/stories.dto';
 import { StoriesService } from './stories.service';
-import { CurrentUser, OptionalAuth, type RequestUser } from '../auth/auth.decorators';
+import { CurrentUser, OptionalAuth, Public, type RequestUser } from '../auth/auth.decorators';
 import { Throttle } from '@nestjs/throttler';
 
 export const STORY_MUTATION_RATE_LIMIT = 60;
@@ -38,6 +38,13 @@ export class StoriesController {
   @Throttle({ default: { limit: STORY_READ_RATE_LIMIT, ttl: 60_000 } })
   list(@CurrentUser() user: RequestUser) {
     return this.stories.list(user.id);
+  }
+
+  @Public()
+  @Get('public')
+  @Throttle({ default: { limit: STORY_READ_RATE_LIMIT, ttl: 60_000 } })
+  listPublic() {
+    return this.stories.listPublic();
   }
 
   @Post() create(@Body() input: CreateStoryDto, @CurrentUser() user: RequestUser) {

@@ -12,6 +12,7 @@ import { i18n } from '../i18n';
 vi.mock('../api', () => ({
   api: {
     listStories: vi.fn(),
+    listPublicStories: vi.fn(),
     createStory: vi.fn(),
     createDemoStory: vi.fn(),
     deleteStory: vi.fn(),
@@ -84,6 +85,33 @@ describe('StoryList', () => {
     expect(loadStoryEditor).toHaveBeenCalledOnce();
     await user.hover(within(firstCard).getByRole('link', { name: 'Read' }));
     expect(loadStoryPlayer).toHaveBeenCalledOnce();
+  });
+
+  it('loads the public catalogue without authoring actions', async () => {
+    vi.mocked(api.listPublicStories).mockResolvedValue([
+      {
+        ...structuredClone(stories[0]),
+        access: { visibility: 'public', editPolicy: 'owner', commentPolicy: 'disabled' },
+        capabilities: { canRead: true, canEdit: false, canManage: false, canComment: false },
+      },
+    ]);
+
+    render(
+      <MemoryRouter>
+        <StoryList mode="public" />
+      </MemoryRouter>,
+    );
+
+    const card = (await screen.findByRole('heading', { name: 'First story' })).closest('article')!;
+    expect(screen.getByRole('heading', { name: 'Public stories' })).toBeInTheDocument();
+    expect(api.listPublicStories).toHaveBeenCalledOnce();
+    expect(api.listStories).not.toHaveBeenCalled();
+    expect(within(card).getByRole('link', { name: 'Read' })).toBeInTheDocument();
+    expect(within(card).queryByRole('link', { name: 'Edit' })).not.toBeInTheDocument();
+    expect(within(card).queryByRole('link', { name: 'Access' })).not.toBeInTheDocument();
+    expect(within(card).queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'New story' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Generate demo' })).not.toBeInTheDocument();
   });
 
   it('creates and deletes a story from the list', async () => {

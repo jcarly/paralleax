@@ -24,6 +24,9 @@ Paralleax currently includes:
   visibility and editing policies, reader/editor invitations, a persisted future
   comment policy, health/readiness, migrations, and production-oriented API error
   handling.
+- A public home catalogue limited to publicly visible stories, a separate
+  authenticated story workspace, and local return-to-page navigation through
+  sign-in and registration.
 - React Flow graph authoring.
 - Simulation-oriented reader diagnostics.
 - English and French interface localization with browser detection, a persisted

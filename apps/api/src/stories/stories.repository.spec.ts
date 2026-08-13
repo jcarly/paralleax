@@ -367,6 +367,37 @@ describe('StoriesRepository', () => {
     ]);
   });
 
+  it('lists only public story summaries with anonymous capabilities', async () => {
+    const saved = story();
+    mockQuery.mockResolvedValueOnce({
+      rows: [
+        {
+          ...storyRow(saved),
+          visibility: 'public',
+          actor_id: null,
+          actor_role: null,
+          interaction_count: '2',
+        },
+      ],
+    });
+
+    await expect(repository().listPublic()).resolves.toEqual([
+      {
+        id: saved.id,
+        revision: 1,
+        title: saved.title,
+        interactionCount: 2,
+        startDateTime: saved.startDateTime,
+        access: { visibility: 'public', editPolicy: 'owner', commentPolicy: 'disabled' },
+        capabilities: { canRead: true, canEdit: false, canManage: false, canComment: false },
+        createdAt: saved.createdAt,
+        updatedAt: saved.updatedAt,
+      },
+    ]);
+    expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining("visibility = 'public'"));
+    expect(mockQuery).toHaveBeenCalledWith(expect.not.stringContaining('owner.email'));
+  });
+
   it('finds and assembles a story by id', async () => {
     const saved = graphStory();
     relationalRead(mockQuery, saved);

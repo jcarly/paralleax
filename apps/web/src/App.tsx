@@ -2,9 +2,9 @@ import { lazy, Suspense, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, Navigate, NavLink, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { api, type AuthUser } from './api';
+import { authenticationPath, safeReturnTo } from './authNavigation';
 import { LanguageSwitcher } from './components/LanguageSwitcher';
 import { AuthPage } from './pages/AuthPage';
-import { DesignSystemPage } from './pages/DesignSystemPage';
 import { StoryList } from './pages/StoryList';
 import { StoryAccessPage } from './pages/StoryAccessPage';
 import { AdminUsersPage } from './pages/AdminUsersPage';
@@ -48,42 +48,26 @@ export function App() {
 
   if (isPrototype) return <ParalleaxPrototype />;
   if (user === undefined) return <main className="page">{t('shell.loading')}</main>;
-  const isPublicReaderRoute = /^\/stories\/[^/]+\/play\/?$/.test(location.pathname);
-  if (user === null && isPublicReaderRoute) {
-    return (
-      <div className="app">
-        <header className="product-app-header">
-          <Link to="/" className="product-app-brand">
-            <span aria-hidden="true">P</span>
-            <b>Paralleax</b>
-          </Link>
-          <span className="product-app-spacer" />
-          <LanguageSwitcher className="language-switcher-header" />
-          <Link className="product-secondary compact" to="/login">
-            {t('shell.signIn')}
-          </Link>
-        </header>
-        <Suspense fallback={<main className="page">{t('shell.loadingWorkspace')}</main>}>
-          <Routes>
-            <Route path="/stories/:storyId/play" element={<StoryPlayer authenticated={false} />} />
-          </Routes>
-        </Suspense>
-      </div>
-    );
-  }
-  if (user === null)
+  const currentDestination = `${location.pathname}${location.search}${location.hash}`;
+  const returnTo = safeReturnTo(new URLSearchParams(location.search).get('returnTo'));
+  const isAuthenticationRoute = location.pathname === '/login' || location.pathname === '/register';
+
+  if (user === null && isAuthenticationRoute)
     return (
       <AuthPage
         initialMode={location.pathname === '/register' ? 'register' : 'login'}
         notice={sessionExpired ? t('shell.sessionExpired') : ''}
-        onModeChange={(mode) => navigate(mode === 'register' ? '/register' : '/login')}
+        onModeChange={(mode) => navigate(authenticationPath(mode, returnTo), { replace: true })}
         onAuthenticated={(authenticatedUser) => {
           setSessionExpired(false);
           setUser(authenticatedUser);
-          navigate('/');
+          navigate(returnTo, { replace: true });
         }}
       />
     );
+
+  const signInPath = authenticationPath('login', currentDestination);
+  const registerPath = authenticationPath('register', currentDestination);
 
   return (
     <div className="app">
@@ -94,38 +78,69 @@ export function App() {
         </Link>
         <nav aria-label={t('shell.mainNavigation')}>
           <NavLink to="/" end>
-            {t('shell.stories')}
+            {t('shell.publicStories')}
           </NavLink>
-          <NavLink to="/design-system">{t('shell.designSystem')}</NavLink>
-          {user.role === 'admin' ? (
+          {user ? <NavLink to="/stories">{t('shell.myStories')}</NavLink> : null}
+          {user?.role === 'admin' ? (
             <NavLink to="/admin/users">{t('shell.administration')}</NavLink>
           ) : null}
         </nav>
         <span className="product-app-spacer" />
         <LanguageSwitcher className="language-switcher-header" />
-        <span className="product-user">
-          <span aria-hidden="true">{user.email.slice(0, 2).toUpperCase()}</span>
-          <span>{user.email}</span>
-        </span>
-        <button
-          className="product-signout"
-          onClick={() => void api.logout().finally(() => setUser(null))}
-        >
-          {t('shell.signOut')}
-        </button>
+        {user ? (
+          <>
+            <span className="product-user">
+              <span aria-hidden="true">{user.email.slice(0, 2).toUpperCase()}</span>
+              <span>{user.email}</span>
+            </span>
+            <button
+              className="product-signout"
+              onClick={() => void api.logout().finally(() => setUser(null))}
+            >
+              {t('shell.signOut')}
+            </button>
+          </>
+        ) : (
+          <>
+            <Link className="product-secondary compact" to={signInPath}>
+              {t('shell.signIn')}
+            </Link>
+            <Link className="product-primary compact" to={registerPath}>
+              {t('shell.register')}
+            </Link>
+          </>
+        )}
       </header>
       <Suspense fallback={<main className="page">{t('shell.loadingWorkspace')}</main>}>
         <Routes>
-          <Route path="/" element={<StoryList />} />
-          <Route path="/login" element={<Navigate to="/" replace />} />
-          <Route path="/register" element={<Navigate to="/" replace />} />
-          <Route path="/design-system" element={<DesignSystemPage />} />
-          <Route path="/stories/:storyId/edit" element={<StoryEditor />} />
-          <Route path="/stories/:storyId/access" element={<StoryAccessPage />} />
-          <Route path="/stories/:storyId/play" element={<StoryPlayer authenticated />} />
-          {user.role === 'admin' ? (
+          <Route path="/" element={<StoryList mode="public" />} />
+          <Route path="/login" element={<Navigate to={returnTo} replace />} />
+          <Route path="/register" element={<Navigate to={returnTo} replace />} />
+          <Route
+            path="/stories"
+            element={user ? <StoryList /> : <Navigate to={signInPath} replace />}
+          />
+          <Route
+            path="/stories/:storyId/edit"
+            element={user ? <StoryEditor /> : <Navigate to={signInPath} replace />}
+          />
+          <Route
+            path="/stories/:storyId/access"
+            element={user ? <StoryAccessPage /> : <Navigate to={signInPath} replace />}
+          />
+          <Route
+            path="/stories/:storyId/play"
+            element={<StoryPlayer authenticated={Boolean(user)} />}
+          />
+          {user?.role === 'admin' ? (
             <Route path="/admin/users" element={<AdminUsersPage />} />
-          ) : null}
+          ) : (
+            <Route
+              path="/admin/users"
+              element={<Navigate to={user ? '/' : signInPath} replace />}
+            />
+          )}
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>
     </div>

@@ -60,6 +60,9 @@ export class StoriesService {
   async list(userId: string) {
     return this.repository.list(userId);
   }
+  async listPublic() {
+    return this.repository.listPublic();
+  }
   async get(id: string, userId?: string): Promise<Story> {
     const story = await this.repository.find(id, userId);
     if (!story) throw new NotFoundException('Story not found');

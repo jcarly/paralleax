@@ -122,6 +122,11 @@ describe('api client', () => {
       headers: { 'Content-Type': 'application/json' },
     });
 
+    await api.listPublicStories();
+    expect(fetchMock).toHaveBeenLastCalledWith('/api/stories/public', {
+      headers: { 'Content-Type': 'application/json' },
+    });
+
     await api.getStory('story-1');
     expect(fetchMock).toHaveBeenLastCalledWith('/api/stories/story-1', {
       headers: { 'Content-Type': 'application/json' },
