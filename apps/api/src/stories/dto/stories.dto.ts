@@ -1,5 +1,11 @@
 import { Type } from 'class-transformer';
 import { MAX_INTERACTION_BODY_LENGTH } from '@paralleax/shared';
+import type {
+  StoryCommentPolicy,
+  StoryCollaboratorRole,
+  StoryEditPolicy,
+  StoryVisibility,
+} from '@paralleax/shared';
 import {
   IsArray,
   IsBoolean,
@@ -34,6 +40,18 @@ export class UpdateStoryDto {
   @IsString()
   @Matches(/^\d{4}-\d{2}-\d{2}T(?:[01]\d|2[0-3]):[0-5]\d$/)
   startDateTime?: string;
+}
+export class UpdateStoryAccessDto {
+  @IsIn(['private', 'authenticated', 'public', 'invitation'])
+  visibility!: StoryVisibility;
+  @IsIn(['owner', 'collaborators', 'authenticated'])
+  editPolicy!: StoryEditPolicy;
+  @IsIn(['disabled', 'readers', 'editors', 'authenticated'])
+  commentPolicy!: StoryCommentPolicy;
+}
+export class SetStoryCollaboratorDto {
+  @IsString() @IsNotEmpty() @MaxLength(320) email!: string;
+  @IsIn(['viewer', 'editor']) role!: StoryCollaboratorRole;
 }
 export class SaveReaderProgressDto {
   @IsArray()

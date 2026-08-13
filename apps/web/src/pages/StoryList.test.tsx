@@ -198,6 +198,28 @@ describe('StoryList', () => {
     expect(await screen.findByText('API unavailable')).toBeInTheDocument();
   });
 
+  it('only shows actions allowed by resolved story capabilities', async () => {
+    vi.mocked(api.listStories).mockResolvedValue([
+      {
+        ...stories[0],
+        access: { visibility: 'public', editPolicy: 'owner', commentPolicy: 'disabled' },
+        capabilities: { canRead: true, canEdit: false, canManage: false, canComment: false },
+      },
+    ]);
+
+    render(
+      <MemoryRouter>
+        <StoryList />
+      </MemoryRouter>,
+    );
+    const card = (await screen.findByRole('heading', { name: 'First story' })).closest('article')!;
+    expect(within(card).getByText('Public')).toBeInTheDocument();
+    expect(within(card).getByRole('link', { name: 'Read' })).toBeInTheDocument();
+    expect(within(card).queryByRole('link', { name: 'Edit' })).not.toBeInTheDocument();
+    expect(within(card).queryByRole('link', { name: 'Access' })).not.toBeInTheDocument();
+    expect(within(card).queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument();
+  });
+
   it('translates product copy without changing authored story titles', async () => {
     await i18n.changeLanguage('fr');
     vi.mocked(api.listStories).mockResolvedValue([structuredClone(stories[0])]);

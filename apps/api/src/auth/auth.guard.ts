@@ -21,10 +21,17 @@ export class SessionGuard implements CanActivate {
     ) {
       return true;
     }
+    const optional = this.reflector.getAllAndOverride<boolean>('optionalAuth', [
+      context.getHandler(),
+      context.getClass(),
+    ]);
     const request = context.switchToHttp().getRequest<Request & { user?: RequestUser }>();
     const user = await this.auth.userForToken(readSessionCookie(request.headers.cookie));
-    if (!user) throw new UnauthorizedException('Authentication required');
-    request.user = { id: user.id, email: user.email, createdAt: user.createdAt };
+    if (!user) {
+      if (optional) return true;
+      throw new UnauthorizedException('Authentication required');
+    }
+    request.user = { id: user.id, email: user.email, role: user.role, createdAt: user.createdAt };
     return true;
   }
 }

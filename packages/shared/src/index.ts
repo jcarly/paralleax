@@ -1,6 +1,7 @@
 import type { Interaction, Position, Story } from './model/index.js';
 import { DEFAULT_STORY_DATE_TIME } from './time/index.js';
 
+export * from './access-control.js';
 export * from './model/index.js';
 export * from './operations/index.js';
 export * from './reader/index.js';

@@ -94,6 +94,14 @@ function storyRow(value = story()) {
     id: value.id,
     revision: value.revision ?? 1,
     title: value.title,
+    creator_user_id: ownerId,
+    owner_email: 'owner@example.com',
+    visibility: 'private',
+    edit_policy: 'owner',
+    comment_policy: 'disabled',
+    actor_id: ownerId,
+    actor_role: 'user',
+    collaborator_role: null,
     start_date_time: value.startDateTime,
     created_at: new Date(value.createdAt),
     updated_at: new Date(value.updatedAt),
@@ -321,6 +329,14 @@ describe('StoriesRepository', () => {
           id: saved.id,
           revision: 1,
           title: saved.title,
+          creator_user_id: ownerId,
+          owner_email: 'owner@example.com',
+          visibility: 'private',
+          edit_policy: 'owner',
+          comment_policy: 'disabled',
+          actor_id: ownerId,
+          actor_role: 'user',
+          collaborator_role: null,
           start_date_time: saved.startDateTime,
           created_at: saved.createdAt,
           updated_at: saved.updatedAt,
@@ -338,6 +354,9 @@ describe('StoriesRepository', () => {
         title: saved.title,
         interactionCount: 3,
         startDateTime: saved.startDateTime,
+        access: { visibility: 'private', editPolicy: 'owner', commentPolicy: 'disabled' },
+        capabilities: { canRead: true, canEdit: true, canManage: true, canComment: false },
+        owner: { id: ownerId, email: 'owner@example.com' },
         createdAt: saved.createdAt,
         updatedAt: saved.updatedAt,
       },
@@ -355,6 +374,9 @@ describe('StoriesRepository', () => {
     await expect(repository().find(saved.id, ownerId)).resolves.toEqual({
       ...saved,
       revision: 1,
+      access: { visibility: 'private', editPolicy: 'owner', commentPolicy: 'disabled' },
+      capabilities: { canRead: true, canEdit: true, canManage: true, canComment: false },
+      owner: { id: ownerId, email: 'owner@example.com' },
       characters: saved.characters,
       interactions: saved.interactions.map((interaction) => ({
         ...interaction,
@@ -364,7 +386,7 @@ describe('StoriesRepository', () => {
         itemEffects: interaction.itemEffects ?? [],
       })),
     });
-    expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining('WHERE id = $1'), [
+    expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining('WHERE stories.id = $1'), [
       saved.id,
       ownerId,
     ]);
@@ -391,6 +413,9 @@ describe('StoriesRepository', () => {
       saved.createdAt,
       saved.updatedAt,
       ownerId,
+      'private',
+      'owner',
+      'disabled',
     ]);
     expect(mockClientQuery).toHaveBeenCalledWith('DELETE FROM interactions WHERE story_id = $1', [
       saved.id,
@@ -474,10 +499,10 @@ describe('StoriesRepository', () => {
   it('deletes stories by owner and id', async () => {
     mockQuery.mockResolvedValue({ rowCount: 1 });
     await expect(repository().delete('story-1', ownerId)).resolves.toBe(true);
-    expect(mockQuery).toHaveBeenCalledWith(
-      'DELETE FROM stories WHERE id = $1 AND creator_user_id = $2',
-      ['story-1', ownerId],
-    );
+    expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining('DELETE FROM stories'), [
+      'story-1',
+      ownerId,
+    ]);
   });
 
   it('writes only changed story fields during a mutation', async () => {

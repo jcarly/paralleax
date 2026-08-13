@@ -1,29 +1,48 @@
-import type { ReaderProgress, ReaderProgressState, Story, StorySummary } from '@paralleax/shared';
+import {
+  defaultStoryAccess,
+  resolveStoryAccess,
+  type ReaderProgress,
+  type ReaderProgressState,
+  type Story,
+  type StoryAccessConfiguration,
+  type StoryAccessSettings,
+  type StoryCollaboratorRole,
+  type StorySummary,
+} from '@paralleax/shared';
 
 export class InMemoryStoriesRepository {
   private readonly stories = new Map<string, Story>();
   private readonly owners = new Map<string, string>();
   private readonly mutationQueues = new Map<string, Promise<void>>();
   private readonly progress = new Map<string, ReaderProgress>();
+  private readonly permissions = new Map<string, Map<string, StoryCollaboratorRole>>();
 
   async list(ownerId: string): Promise<StorySummary[]> {
     return [...this.stories.entries()]
-      .filter(([id]) => this.owners.get(id) === ownerId)
-      .map(([, story]) => ({
+      .filter(([id, story]) => this.can(story, id, ownerId).canRead)
+      .map(([id, story]) => ({
         id: story.id,
         revision: story.revision,
         title: story.title,
         interactionCount: story.interactions.length,
         startDateTime: story.startDateTime,
+        access: story.access ?? defaultStoryAccess,
+        capabilities: this.can(story, id, ownerId),
+        owner: { id: this.owners.get(id)!, email: emailForUser(this.owners.get(id)!) },
         createdAt: story.createdAt,
         updatedAt: story.updatedAt,
       }));
   }
 
-  async find(id: string, ownerId: string): Promise<Story | undefined> {
-    if (this.owners.get(id) !== ownerId) return undefined;
+  async find(id: string, ownerId?: string): Promise<Story | undefined> {
     const story = this.stories.get(id);
-    return story ? structuredClone(story) : undefined;
+    if (!story || !this.can(story, id, ownerId).canRead) return undefined;
+    return structuredClone({
+      ...story,
+      access: story.access ?? defaultStoryAccess,
+      capabilities: this.can(story, id, ownerId),
+      owner: { id: this.owners.get(id)!, email: emailForUser(this.owners.get(id)!) },
+    });
   }
 
   async save(story: Story, ownerId: string): Promise<void> {
@@ -44,7 +63,8 @@ export class InMemoryStoriesRepository {
     await previous;
 
     try {
-      const story = this.owners.get(id) === ownerId ? this.stories.get(id) : undefined;
+      const candidate = this.stories.get(id);
+      const story = candidate && this.can(candidate, id, ownerId).canEdit ? candidate : undefined;
       if (!story) return undefined;
       const updated = await mutation(structuredClone(story));
       this.stories.set(id, structuredClone(updated));
@@ -56,14 +76,16 @@ export class InMemoryStoriesRepository {
   }
 
   async delete(id: string, ownerId: string): Promise<boolean> {
-    if (this.owners.get(id) !== ownerId) return false;
+    const story = this.stories.get(id);
+    if (!story || !this.can(story, id, ownerId).canManage) return false;
     this.owners.delete(id);
     this.progress.delete(`${ownerId}:${id}`);
     return this.stories.delete(id);
   }
 
   async findProgress(storyId: string, userId: string): Promise<ReaderProgress | undefined> {
-    if (this.owners.get(storyId) !== userId) return undefined;
+    const story = this.stories.get(storyId);
+    if (!story || !this.can(story, storyId, userId).canRead) return undefined;
     const progress = this.progress.get(`${userId}:${storyId}`);
     return progress ? structuredClone(progress) : undefined;
   }
@@ -74,7 +96,8 @@ export class InMemoryStoriesRepository {
     state: ReaderProgressState,
     updatedAt: string,
   ): Promise<boolean> {
-    if (this.owners.get(storyId) !== userId) return false;
+    const story = this.stories.get(storyId);
+    if (!story || !this.can(story, storyId, userId).canRead) return false;
     this.progress.set(`${userId}:${storyId}`, {
       state: structuredClone(state),
       updatedAt,
@@ -85,4 +108,65 @@ export class InMemoryStoriesRepository {
   async deleteProgress(storyId: string, userId: string): Promise<void> {
     this.progress.delete(`${userId}:${storyId}`);
   }
+
+  async getAccess(id: string, userId: string): Promise<StoryAccessConfiguration | undefined> {
+    const story = this.stories.get(id);
+    if (!story || !this.can(story, id, userId).canManage) return undefined;
+    return {
+      ...(story.access ?? defaultStoryAccess),
+      owner: { id: this.owners.get(id)!, email: emailForUser(this.owners.get(id)!) },
+      collaborators: [...(this.permissions.get(id) ?? new Map()).entries()].map(
+        ([collaboratorId, role]) => ({
+          userId: collaboratorId,
+          email: emailForUser(collaboratorId),
+          role,
+        }),
+      ),
+    };
+  }
+
+  async updateAccess(id: string, userId: string, settings: StoryAccessSettings) {
+    const story = this.stories.get(id);
+    if (!story || !this.can(story, id, userId).canManage) return false;
+    story.access = structuredClone(settings);
+    return true;
+  }
+
+  async setCollaborator(id: string, userId: string, email: string, role: StoryCollaboratorRole) {
+    const story = this.stories.get(id);
+    if (!story || !this.can(story, id, userId).canManage) return false;
+    const collaboratorId = userForEmail(email);
+    if (!collaboratorId || collaboratorId === this.owners.get(id)) return false;
+    const permissions = this.permissions.get(id) ?? new Map<string, StoryCollaboratorRole>();
+    permissions.set(collaboratorId, role);
+    this.permissions.set(id, permissions);
+    return true;
+  }
+
+  async removeCollaborator(id: string, userId: string, collaboratorId: string) {
+    const story = this.stories.get(id);
+    if (!story || !this.can(story, id, userId).canManage) return false;
+    return this.permissions.get(id)?.delete(collaboratorId) ?? false;
+  }
+
+  private can(story: Story, id: string, userId?: string) {
+    return resolveStoryAccess(story.access ?? defaultStoryAccess, {
+      authenticated: userId !== undefined,
+      role: 'user',
+      isOwner: this.owners.get(id) === userId,
+      collaboratorRole: userId ? this.permissions.get(id)?.get(userId) : undefined,
+    });
+  }
+}
+
+function emailForUser(userId: string) {
+  if (userId === 'user-1') return 'user-one@paralleax.invalid';
+  if (userId === 'user-2') return 'user-two@paralleax.invalid';
+  return `${userId}@paralleax.invalid`;
+}
+
+function userForEmail(email: string) {
+  if (email === 'user-one@paralleax.invalid') return 'user-1';
+  if (email === 'user-two@paralleax.invalid') return 'user-2';
+  return email.endsWith('@paralleax.invalid') ? email.slice(0, -'@paralleax.invalid'.length) : '';
 }

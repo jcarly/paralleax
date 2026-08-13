@@ -8,6 +8,7 @@ describe('AuthController registration policy', () => {
     user: {
       id: 'user-1',
       email: 'author@example.com',
+      role: 'admin' as const,
       createdAt: '2026-08-10T00:00:00.000Z',
     },
     token: 'session-token',

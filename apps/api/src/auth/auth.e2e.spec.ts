@@ -17,10 +17,11 @@ describe('Auth API', () => {
     const sessions = new Map<string, { userId: string; expiresAt: string }>();
     const authRepository = {
       findUserByEmail: (email: string) => Promise.resolve(users.get(email)),
-      createUser: (user: AuthUser) => {
-        if (users.has(user.email)) return Promise.resolve(false);
-        users.set(user.email, user);
-        return Promise.resolve(true);
+      createUser: (user: Omit<AuthUser, 'role'>) => {
+        if (users.has(user.email)) return Promise.resolve(undefined);
+        const created: AuthUser = { ...user, role: users.size === 0 ? 'admin' : 'user' };
+        users.set(created.email, created);
+        return Promise.resolve(created);
       },
       createSession: (session: { tokenHash: string; userId: string; expiresAt: string }) => {
         sessions.set(session.tokenHash, session);

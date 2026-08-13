@@ -1,4 +1,12 @@
-import { ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
+import type { UserRole } from '@paralleax/shared';
 import { createHash, randomBytes, randomUUID, scrypt as nodeScrypt, timingSafeEqual } from 'crypto';
 import { promisify } from 'util';
 import { AuthRepository, type AuthUser } from './auth.repository';
@@ -16,13 +24,14 @@ export class AuthService {
       throw new ConflictException('Email already registered');
     }
     const now = new Date().toISOString();
-    const user: AuthUser = {
+    const candidate: Omit<AuthUser, 'role'> = {
       id: randomUUID(),
       email: normalizedEmail,
       passwordHash: await hashPassword(password),
       createdAt: now,
     };
-    if (!(await this.repository.createUser(user))) {
+    const user = await this.repository.createUser(candidate);
+    if (!user) {
       throw new ConflictException('Email already registered');
     }
     return this.createSession(user);
@@ -46,6 +55,26 @@ export class AuthService {
     if (token) await this.repository.deleteSession(hashToken(token));
   }
 
+  async listUsers(actorRole: UserRole) {
+    this.assertAdmin(actorRole);
+    return this.repository.listUsers();
+  }
+
+  async updateUserRole(actorRole: UserRole, userId: string, role: UserRole) {
+    this.assertAdmin(actorRole);
+    const updated = await this.repository.updateUserRole(userId, role);
+    if (!updated) {
+      const users = await this.repository.listUsers();
+      if (!users.some(({ id }) => id === userId)) throw new NotFoundException('User not found');
+      throw new BadRequestException('The last administrator cannot be demoted');
+    }
+    return updated;
+  }
+
+  private assertAdmin(role: UserRole) {
+    if (role !== 'admin') throw new ForbiddenException('Administrator access required');
+  }
+
   private async createSession(user: AuthUser) {
     await this.repository.deleteExpiredSessions();
     const token = randomBytes(32).toString('base64url');
@@ -62,7 +91,7 @@ export class AuthService {
 }
 
 function publicUser(user: AuthUser) {
-  return { id: user.id, email: user.email, createdAt: user.createdAt };
+  return { id: user.id, email: user.email, role: user.role, createdAt: user.createdAt };
 }
 
 function hashToken(token: string) {

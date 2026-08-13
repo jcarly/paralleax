@@ -212,14 +212,15 @@ function getJourneyLocation(story: Story | undefined, journey: string[]) {
   return null;
 }
 
-export function StoryPlayer() {
+export function StoryPlayer({ authenticated = true }: { authenticated?: boolean }) {
   const { t } = useTranslation();
   const { storyId = '' } = useParams();
   const [searchParams] = useSearchParams();
-  const isSimulationMode = searchParams.get('mode') === 'simulation';
-  const startInteractionId = searchParams.get('startInteractionId');
-  const loadKey = `${storyId}:${isSimulationMode ? 'simulation' : 'reader'}:${startInteractionId ?? ''}`;
+  const simulationRequested = authenticated && searchParams.get('mode') === 'simulation';
+  const startInteractionId = authenticated ? searchParams.get('startInteractionId') : null;
   const [story, setStory] = useState<Story>();
+  const isSimulationMode = simulationRequested && story?.capabilities?.canEdit !== false;
+  const loadKey = `${storyId}:${isSimulationMode ? 'simulation' : 'reader'}:${startInteractionId ?? ''}`;
   const [loadedKey, setLoadedKey] = useState('');
   const [loadError, setLoadError] = useState<{ key: string; message: string }>();
   const [loadAttempt, setLoadAttempt] = useState(0);
@@ -244,7 +245,7 @@ export function StoryPlayer() {
     let cancelled = false;
     void Promise.all([
       api.getStory(storyId),
-      isSimulationMode || startInteractionId
+      !authenticated || isSimulationMode || startInteractionId
         ? Promise.resolve(null)
         : api.getReaderProgress(storyId),
     ])
@@ -289,7 +290,7 @@ export function StoryPlayer() {
     return () => {
       cancelled = true;
     };
-  }, [isSimulationMode, loadAttempt, loadKey, startInteractionId, storyId, t]);
+  }, [authenticated, isSimulationMode, loadAttempt, loadKey, startInteractionId, storyId, t]);
 
   const current = useMemo(
     () => story?.interactions.find((item) => item.id === currentId),
@@ -543,6 +544,7 @@ export function StoryPlayer() {
   }
 
   function queueProgressSave(nextJourney: string[], nextOwnedItemIds: string[]) {
+    if (!authenticated) return;
     const attempt = ++progressAttempt.current;
     setProgressStatus('saving');
     const operation = progressSaveQueue.current
@@ -562,6 +564,7 @@ export function StoryPlayer() {
   }
 
   function queueProgressReset() {
+    if (!authenticated) return;
     const attempt = ++progressAttempt.current;
     setProgressStatus('saving');
     const operation = progressSaveQueue.current
@@ -659,7 +662,7 @@ export function StoryPlayer() {
           </span>
         </div>
         {isSimulationMode ? <span className="mode-pill">{t('player.simulation')}</span> : null}
-        {!isSimulationMode ? (
+        {!isSimulationMode && authenticated ? (
           <span className={`save-status ${progressStatus}`} role="status" aria-live="polite">
             {progressStatus === 'saving'
               ? t('player.savingProgress')
@@ -669,6 +672,8 @@ export function StoryPlayer() {
                   ? t('player.progressSaveFailed')
                   : ''}
           </span>
+        ) : !isSimulationMode ? (
+          <span className="save-status">{t('player.signInToSave')}</span>
         ) : null}
         {isSimulationMode ? (
           <button
@@ -682,9 +687,11 @@ export function StoryPlayer() {
         <button className="player-toolbar-button" onClick={restart}>
           <span aria-hidden="true">↻</span> {t('player.restart')}
         </button>
-        <Link className="player-exit" to={`/stories/${story.id}/edit`}>
-          {t(isSimulationMode ? 'player.exitSimulation' : 'player.backToEditor')}
-        </Link>
+        {authenticated ? (
+          <Link className="player-exit" to={`/stories/${story.id}/edit`}>
+            {t(isSimulationMode ? 'player.exitSimulation' : 'player.backToEditor')}
+          </Link>
+        ) : null}
       </div>
       <article className="player-card">
         <div className={`player-scene-visual ${currentLocation?.imageUrl ? 'with-image' : ''}`}>

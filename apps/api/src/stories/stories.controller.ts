@@ -19,9 +19,11 @@ import {
   UpdateStatDefinitionDto,
   UpdateStoryDto,
   UpdateTriggerDto,
+  UpdateStoryAccessDto,
+  SetStoryCollaboratorDto,
 } from './dto/stories.dto';
 import { StoriesService } from './stories.service';
-import { CurrentUser, type RequestUser } from '../auth/auth.decorators';
+import { CurrentUser, OptionalAuth, type RequestUser } from '../auth/auth.decorators';
 import { Throttle } from '@nestjs/throttler';
 
 export const STORY_MUTATION_RATE_LIMIT = 60;
@@ -48,9 +50,43 @@ export class StoriesController {
   }
 
   @Get(':storyId')
+  @OptionalAuth()
   @Throttle({ default: { limit: STORY_READ_RATE_LIMIT, ttl: 60_000 } })
-  get(@Param('storyId') id: string, @CurrentUser() user: RequestUser) {
-    return this.stories.get(id, user.id);
+  get(@Param('storyId') id: string, @CurrentUser() user?: RequestUser) {
+    return this.stories.get(id, user?.id);
+  }
+
+  @Get(':storyId/access')
+  getAccess(@Param('storyId') id: string, @CurrentUser() user: RequestUser) {
+    return this.stories.getAccess(id, user.id);
+  }
+
+  @Patch(':storyId/access')
+  updateAccess(
+    @Param('storyId') id: string,
+    @Body() input: UpdateStoryAccessDto,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.stories.updateAccess(id, input, user.id);
+  }
+
+  @Post(':storyId/access/collaborators')
+  setCollaborator(
+    @Param('storyId') id: string,
+    @Body() input: SetStoryCollaboratorDto,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.stories.setCollaborator(id, input, user.id);
+  }
+
+  @Delete(':storyId/access/collaborators/:userId')
+  @HttpCode(204)
+  removeCollaborator(
+    @Param('storyId') id: string,
+    @Param('userId') collaboratorId: string,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.stories.removeCollaborator(id, collaboratorId, user.id);
   }
 
   @Get(':storyId/progress')

@@ -10,6 +10,8 @@ const describePostgres = connectionString ? describe : describe.skip;
 
 describePostgres('StoriesRepository PostgreSQL integration', () => {
   const ownerId = `postgres-user-${randomUUID()}`;
+  const collaboratorId = `postgres-collaborator-${randomUUID()}`;
+  const adminId = `postgres-admin-${randomUUID()}`;
   const pool = new Pool({ connectionString });
   const database = { pool } as DatabaseConnection;
   const migrator = new DatabaseMigrator(database);
@@ -25,9 +27,19 @@ describePostgres('StoriesRepository PostgreSQL integration', () => {
     await pool.query('CREATE SCHEMA public');
     await migrator.run();
     await pool.query(
-      `INSERT INTO users (id, email, password_hash, created_at)
-       VALUES ($1, $2, 'test-only', now())`,
-      [ownerId, `${ownerId}@example.test`],
+      `INSERT INTO users (id, email, password_hash, role, created_at)
+       VALUES
+         ($1, $2, 'test-only', 'user', now()),
+         ($3, $4, 'test-only', 'user', now()),
+         ($5, $6, 'test-only', 'admin', now())`,
+      [
+        ownerId,
+        `${ownerId}@example.test`,
+        collaboratorId,
+        `${collaboratorId}@example.test`,
+        adminId,
+        `${adminId}@example.test`,
+      ],
     );
   }, 30_000);
 
@@ -36,7 +48,9 @@ describePostgres('StoriesRepository PostgreSQL integration', () => {
   });
 
   afterAll(async () => {
-    await pool.query('DELETE FROM users WHERE id = $1', [ownerId]);
+    await pool.query('DELETE FROM users WHERE id = ANY($1::text[])', [
+      [ownerId, collaboratorId, adminId],
+    ]);
     await pool.end();
   });
 
@@ -246,6 +260,58 @@ describePostgres('StoriesRepository PostgreSQL integration', () => {
 
     await repository.deleteProgress(story.id, ownerId);
     await expect(repository.findProgress(story.id, ownerId)).resolves.toBeUndefined();
+  });
+
+  it('enforces private, invitation, editor, public, and administrator access in SQL', async () => {
+    const story = persistedStory();
+    await repository.save(story, ownerId);
+
+    await expect(repository.find(story.id)).resolves.toBeUndefined();
+    await expect(repository.find(story.id, collaboratorId)).resolves.toBeUndefined();
+    await expect(repository.find(story.id, adminId)).resolves.toMatchObject({
+      capabilities: { canRead: true, canEdit: true, canManage: true },
+    });
+
+    await expect(
+      repository.updateAccess(story.id, ownerId, {
+        visibility: 'invitation',
+        editPolicy: 'collaborators',
+        commentPolicy: 'readers',
+      }),
+    ).resolves.toBe(true);
+    await expect(
+      repository.setCollaborator(story.id, ownerId, `${collaboratorId}@example.test`, 'viewer'),
+    ).resolves.toBe(true);
+    await expect(repository.find(story.id, collaboratorId)).resolves.toMatchObject({
+      capabilities: { canRead: true, canEdit: false, canManage: false, canComment: true },
+    });
+    await expect(
+      repository.mutate(story.id, (current) => current, collaboratorId),
+    ).resolves.toBeUndefined();
+
+    await repository.setCollaborator(story.id, ownerId, `${collaboratorId}@example.test`, 'editor');
+    await expect(
+      repository.mutate(
+        story.id,
+        (current) => ({ ...current, title: 'Edited by collaborator' }),
+        collaboratorId,
+      ),
+    ).resolves.toMatchObject({ title: 'Edited by collaborator' });
+
+    await repository.updateAccess(story.id, ownerId, {
+      visibility: 'private',
+      editPolicy: 'collaborators',
+      commentPolicy: 'disabled',
+    });
+    await expect(repository.find(story.id, collaboratorId)).resolves.toBeUndefined();
+    await repository.updateAccess(story.id, ownerId, {
+      visibility: 'public',
+      editPolicy: 'owner',
+      commentPolicy: 'disabled',
+    });
+    await expect(repository.find(story.id)).resolves.toMatchObject({
+      capabilities: { canRead: true, canEdit: false, canManage: false },
+    });
   });
 
   it('stores the story graph in relational tables', async () => {

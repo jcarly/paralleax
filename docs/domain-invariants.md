@@ -152,15 +152,37 @@ details. They should stay covered by tests as the editor grows.
 - Removing the last input from a trigger turns it into a root trigger instead of
   deleting the interaction's last availability rule.
 
-## Post-MVP Invariants To Preserve
+## Access Control Invariants
 
 - Authentication uses opaque, revocable server-side sessions. Raw session tokens
   and passwords must never be persisted.
-- Every story has exactly one creator, and all story reads and mutations are
-  scoped to the authenticated creator until sharing permissions are introduced.
-- Story permissions are story-level capabilities, not global user types.
-- The creator owns the story and story-specific permission overrides refine
-  default access.
+- Every story has exactly one creator. Its creator and a global administrator can
+  always read, edit, manage, and delete it.
+- Global roles are limited to operational account roles (`user` and `admin`).
+  Ordinary reading, editing, management, and future comment capabilities are
+  resolved per story.
+- A story is denied by default: new and legacy stories resolve to private,
+  owner-only editing with comments disabled unless explicit settings say otherwise.
+- Public visibility permits anonymous reading. Authenticated visibility permits
+  any signed-in user to read. Invitation visibility requires a story-specific
+  viewer or editor grant.
+- A private story ignores collaborator grants until its visibility changes. A
+  stale grant must never bypass private visibility.
+- An editor grant implies reading only when the story is not private. The
+  authenticated edit policy implies reading and editing for signed-in users.
+- Only the story creator or a global administrator can manage access settings,
+  collaborators, or deletion. An ordinary editor cannot grant itself management.
+- Every API read and mutation checks effective access; knowledge of an entity or
+  story id never grants access.
+- Reader progress remains owned by one authenticated user and is available only
+  while that user can read the corresponding story.
+- The last global administrator cannot be demoted, and first-administrator
+  selection is serialized with administrator-role changes.
+- The comment policy is persisted before comments exist. A later comment API must
+  enforce it server-side rather than infer permission from interface visibility.
+
+## Post-MVP Invariants To Preserve
+
 - Pending suggestions are visible to users who can review or approve suggestions
   for that story.
 - Direct edits and pending suggestions should share an event-log foundation.

@@ -20,8 +20,10 @@ Paralleax currently includes:
 - Reusable item definitions.
 - Exact authored item instances, including nested item relationships.
 - Character- or location-rooted item placement and nested item relationships.
-- Authentication, sessions, creator ownership, health/readiness, migrations, and
-  production-oriented API error handling.
+- Authentication, sessions, creator ownership, global user/admin roles, per-story
+  visibility and editing policies, reader/editor invitations, a persisted future
+  comment policy, health/readiness, migrations, and production-oriented API error
+  handling.
 - React Flow graph authoring.
 - Simulation-oriented reader diagnostics.
 - English and French interface localization with browser detection, a persisted
@@ -43,7 +45,7 @@ The following remain future or incomplete unless a task explicitly implements th
 - multiple player save slots and anonymous saves;
 - managed media upload/storage;
 - real-time collaboration;
-- suggestion/review workflow and delegated story permissions;
+- suggestion/review workflow and actual comment threads;
 - stable public import/export format;
 - executable/Unity/video exports;
 - AI-driven narrative/runtime behavior.

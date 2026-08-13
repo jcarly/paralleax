@@ -6,6 +6,8 @@ import { LanguageSwitcher } from './components/LanguageSwitcher';
 import { AuthPage } from './pages/AuthPage';
 import { DesignSystemPage } from './pages/DesignSystemPage';
 import { StoryList } from './pages/StoryList';
+import { StoryAccessPage } from './pages/StoryAccessPage';
+import { AdminUsersPage } from './pages/AdminUsersPage';
 import { ParalleaxPrototype } from './pages/ParalleaxPrototype';
 import { loadStoryEditor, loadStoryPlayer } from './pages/storyRouteLoaders';
 
@@ -46,6 +48,29 @@ export function App() {
 
   if (isPrototype) return <ParalleaxPrototype />;
   if (user === undefined) return <main className="page">{t('shell.loading')}</main>;
+  const isPublicReaderRoute = /^\/stories\/[^/]+\/play\/?$/.test(location.pathname);
+  if (user === null && isPublicReaderRoute) {
+    return (
+      <div className="app">
+        <header className="product-app-header">
+          <Link to="/" className="product-app-brand">
+            <span aria-hidden="true">P</span>
+            <b>Paralleax</b>
+          </Link>
+          <span className="product-app-spacer" />
+          <LanguageSwitcher className="language-switcher-header" />
+          <Link className="product-secondary compact" to="/login">
+            {t('shell.signIn')}
+          </Link>
+        </header>
+        <Suspense fallback={<main className="page">{t('shell.loadingWorkspace')}</main>}>
+          <Routes>
+            <Route path="/stories/:storyId/play" element={<StoryPlayer authenticated={false} />} />
+          </Routes>
+        </Suspense>
+      </div>
+    );
+  }
   if (user === null)
     return (
       <AuthPage
@@ -72,6 +97,9 @@ export function App() {
             {t('shell.stories')}
           </NavLink>
           <NavLink to="/design-system">{t('shell.designSystem')}</NavLink>
+          {user.role === 'admin' ? (
+            <NavLink to="/admin/users">{t('shell.administration')}</NavLink>
+          ) : null}
         </nav>
         <span className="product-app-spacer" />
         <LanguageSwitcher className="language-switcher-header" />
@@ -93,7 +121,11 @@ export function App() {
           <Route path="/register" element={<Navigate to="/" replace />} />
           <Route path="/design-system" element={<DesignSystemPage />} />
           <Route path="/stories/:storyId/edit" element={<StoryEditor />} />
-          <Route path="/stories/:storyId/play" element={<StoryPlayer />} />
+          <Route path="/stories/:storyId/access" element={<StoryAccessPage />} />
+          <Route path="/stories/:storyId/play" element={<StoryPlayer authenticated />} />
+          {user.role === 'admin' ? (
+            <Route path="/admin/users" element={<AdminUsersPage />} />
+          ) : null}
         </Routes>
       </Suspense>
     </div>

@@ -19,8 +19,30 @@ If a session expires while the app is open, Paralleax returns to the sign-in
 screen with an explanation instead of leaving an editor action in an ambiguous
 error state.
 
-Stories are private to the account that creates them. Another account cannot
-list, open, edit, or delete them.
+New stories are private to the account that creates them. The creator can later
+share them explicitly. The first account created on a new installation is its
+administrator.
+
+## Manage Story Access
+
+Select `Access` from a story card or its editor toolbar. The creator or an
+administrator can choose who may read the story: only the owner, every signed-in
+user, anyone with the public link, or invited accounts. Editing can remain with
+the owner, be granted to invited editors, or be opened to every signed-in user.
+
+Invitations target an existing Paralleax account by email and grant either
+reader or editor access. They do not send email or create a secret invitation
+link. Reverting a story to private temporarily disables all collaborator grants
+without deleting them.
+
+The same screen stores who will be allowed to comment. Comments themselves are
+not implemented yet; this setting establishes the policy they must enforce.
+Public readers can follow a direct `/stories/{id}/play` link without signing in,
+but anonymous progress is not saved.
+
+Administrators can open `Administration` to promote or demote accounts. An
+administrator can read, edit, manage, and delete every story. Paralleax prevents
+the last administrator from being demoted.
 
 ## Choose the Interface Language
 

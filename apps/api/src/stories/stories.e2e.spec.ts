@@ -39,11 +39,17 @@ describe('Stories API', () => {
       .overrideProvider(AuthService)
       .useValue({
         userForToken: jest.fn((token?: string) =>
-          Promise.resolve({
-            id: token === 'user-two' ? 'user-2' : token === 'user-one' ? 'user-1' : 'test-user',
-            email: `${token ?? 'test'}@paralleax.invalid`,
-            createdAt: '2026-01-01T00:00:00.000Z',
-          }),
+          Promise.resolve(
+            token === 'anonymous'
+              ? undefined
+              : {
+                  id:
+                    token === 'user-two' ? 'user-2' : token === 'user-one' ? 'user-1' : 'test-user',
+                  email: `${token ?? 'test'}@paralleax.invalid`,
+                  role: 'user',
+                  createdAt: '2026-01-01T00:00:00.000Z',
+                },
+          ),
         ),
       })
       .compile();
@@ -1366,5 +1372,75 @@ describe('Stories API', () => {
       .get(`/api/stories/${created.body.id}`)
       .set('Cookie', 'paralleax_session=user-two')
       .expect(404);
+  });
+
+  it('enforces invited reader and editor permissions on existing story endpoints', async () => {
+    const ownerCookie = 'paralleax_session=user-one';
+    const collaboratorCookie = 'paralleax_session=user-two';
+    const created = await request(httpServer)
+      .post('/api/stories')
+      .set('Cookie', ownerCookie)
+      .send({ title: 'Shared story' })
+      .expect(201);
+    const storyId = created.body.id as string;
+
+    await request(httpServer)
+      .patch(`/api/stories/${storyId}/access`)
+      .set('Cookie', ownerCookie)
+      .send({ visibility: 'invitation', editPolicy: 'collaborators', commentPolicy: 'readers' })
+      .expect(200);
+    const invitation = await request(httpServer)
+      .post(`/api/stories/${storyId}/access/collaborators`)
+      .set('Cookie', ownerCookie)
+      .send({ email: 'user-two@paralleax.invalid', role: 'viewer' })
+      .expect(201);
+    expect(invitation.body.collaborators).toEqual([
+      expect.objectContaining({ userId: 'user-2', role: 'viewer' }),
+    ]);
+
+    const readable = await request(httpServer)
+      .get(`/api/stories/${storyId}`)
+      .set('Cookie', collaboratorCookie)
+      .expect(200);
+    expect(readable.body.capabilities).toMatchObject({ canRead: true, canEdit: false });
+    await request(httpServer)
+      .patch(`/api/stories/${storyId}`)
+      .set('Cookie', collaboratorCookie)
+      .send({ title: 'Forbidden rename' })
+      .expect(404);
+    await request(httpServer)
+      .get(`/api/stories/${storyId}/access`)
+      .set('Cookie', collaboratorCookie)
+      .expect(404);
+
+    await request(httpServer)
+      .post(`/api/stories/${storyId}/access/collaborators`)
+      .set('Cookie', ownerCookie)
+      .send({ email: 'user-two@paralleax.invalid', role: 'editor' })
+      .expect(201);
+    await request(httpServer)
+      .patch(`/api/stories/${storyId}`)
+      .set('Cookie', collaboratorCookie)
+      .send({ title: 'Collaborative rename' })
+      .expect(200);
+  });
+
+  it('exposes public stories to other users without granting modification', async () => {
+    const created = await request(httpServer)
+      .post('/api/stories')
+      .set('Cookie', 'paralleax_session=user-one')
+      .send({ title: 'Public story' })
+      .expect(201);
+    await request(httpServer)
+      .patch(`/api/stories/${created.body.id}/access`)
+      .set('Cookie', 'paralleax_session=user-one')
+      .send({ visibility: 'public', editPolicy: 'owner', commentPolicy: 'disabled' })
+      .expect(200);
+
+    const response = await request(httpServer)
+      .get(`/api/stories/${created.body.id}`)
+      .set('Cookie', 'paralleax_session=anonymous')
+      .expect(200);
+    expect(response.body.capabilities).toMatchObject({ canRead: true, canEdit: false });
   });
 });

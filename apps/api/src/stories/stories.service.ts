@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { randomUUID } from 'node:crypto';
 import {
   createDemoStory,
+  defaultStoryAccess,
   buildReaderProgressState,
   isStoryDate,
   isStoryDateTime,
@@ -23,6 +24,7 @@ import {
   type Story,
   type TriggerCondition,
   type TriggerMutationResult,
+  type StoryAccessSettings,
 } from '@paralleax/shared';
 import {
   CreateInteractionDto,
@@ -45,6 +47,8 @@ import {
   UpdateTriggerDto,
   UpdateStoryDto,
   TriggerConditionDto,
+  UpdateStoryAccessDto,
+  SetStoryCollaboratorDto,
 } from './dto/stories.dto';
 import { sanitizeRichText } from './rich-text';
 import { StoriesRepository } from './stories.repository';
@@ -56,7 +60,7 @@ export class StoriesService {
   async list(userId: string) {
     return this.repository.list(userId);
   }
-  async get(id: string, userId: string): Promise<Story> {
+  async get(id: string, userId?: string): Promise<Story> {
     const story = await this.repository.find(id, userId);
     if (!story) throw new NotFoundException('Story not found');
     return structuredClone(ensureStoryInteractionPositions(story));
@@ -71,6 +75,7 @@ export class StoriesService {
       locations: [],
       characters: [],
       interactions: [],
+      access: { ...defaultStoryAccess },
       createdAt: now,
       updatedAt: now,
     };
@@ -80,6 +85,7 @@ export class StoriesService {
   async createDemo(userId: string): Promise<Story> {
     const now = new Date().toISOString();
     const story = createDemoStory(randomUUID(), now);
+    story.access = { ...defaultStoryAccess };
     await this.repository.save(story, userId);
     return structuredClone(story);
   }
@@ -103,8 +109,37 @@ export class StoriesService {
     if (!(await this.repository.delete(id, userId))) throw new NotFoundException('Story not found');
   }
   async getProgress(storyId: string, userId: string): Promise<ReaderProgress | null> {
+    await this.get(storyId, userId);
     const progress = await this.repository.findProgress(storyId, userId);
     return progress ?? null;
+  }
+  async getAccess(storyId: string, userId: string) {
+    const access = await this.repository.getAccess(storyId, userId);
+    if (!access) throw new NotFoundException('Story not found');
+    return access;
+  }
+  async updateAccess(storyId: string, input: UpdateStoryAccessDto, userId: string) {
+    const settings: StoryAccessSettings = {
+      visibility: input.visibility,
+      editPolicy: input.editPolicy,
+      commentPolicy: input.commentPolicy,
+    };
+    if (!(await this.repository.updateAccess(storyId, userId, settings))) {
+      throw new NotFoundException('Story not found');
+    }
+    return this.getAccess(storyId, userId);
+  }
+  async setCollaborator(storyId: string, input: SetStoryCollaboratorDto, userId: string) {
+    await this.getAccess(storyId, userId);
+    const email = input.email.trim().toLowerCase();
+    if (!(await this.repository.setCollaborator(storyId, userId, email, input.role))) {
+      throw new BadRequestException('The collaborator must be an existing non-owner account');
+    }
+    return this.getAccess(storyId, userId);
+  }
+  async removeCollaborator(storyId: string, collaboratorId: string, userId: string) {
+    await this.getAccess(storyId, userId);
+    await this.repository.removeCollaborator(storyId, userId, collaboratorId);
   }
   async saveProgress(
     storyId: string,

@@ -564,6 +564,17 @@ export function StoryEditor() {
   }
 
   if (!story) return <main className="page">{error || t('editor.loading')}</main>;
+  if (story.capabilities?.canEdit === false) {
+    return (
+      <main className="page">
+        <h1>{t('editor.readOnlyTitle')}</h1>
+        <p>{t('editor.readOnlyDescription')}</p>
+        <Link className="button secondary" to={`/stories/${storyId}/play`}>
+          {t('editor.openReader')}
+        </Link>
+      </main>
+    );
+  }
   const simulationPath = selected
     ? `/stories/${storyId}/play?mode=simulation&startInteractionId=${encodeURIComponent(
         selected.id,
@@ -621,6 +632,11 @@ export function StoryEditor() {
           />
         </label>
         <div className="actions">
+          {story.capabilities?.canManage ? (
+            <Link className="button secondary" to={`/stories/${storyId}/access`}>
+              {t('editor.access')}
+            </Link>
+          ) : null}
           <span
             className={`save-status ${saveStatus}`}
             role="status"

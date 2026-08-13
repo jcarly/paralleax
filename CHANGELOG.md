@@ -2,6 +2,10 @@
 
 ## 2026-08-13
 
+- Added deny-by-default authorization with global user/admin roles, serialized
+  first-admin assignment, last-admin protection, per-story visibility/edit/comment
+  policies, viewer/editor invitations, anonymous public reading, capability-aware
+  story listings, and administration/access settings screens.
 - Added English/French interface internationalization across authentication,
   story library, editor, reader, graph, and inspectors, with browser detection,
   a persistent selector, English fallback, localized plurals/dates/diagnostics,

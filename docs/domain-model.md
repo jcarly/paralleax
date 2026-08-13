@@ -156,61 +156,60 @@ direction does not move any of them into the MVP implementation.
 
 A user represents an account identity. Users do not have global author, reader,
 reviewer, or editor types in the domain model. Those capabilities are story-level
-permissions.
+permissions. The global `admin` role is an operational exception that grants
+installation-wide account and story management.
 
 Current elements:
 
 - unique normalized email address;
 - password credentials stored only as a derived hash;
 - owned stories through `Story.creatorUserId`;
+- a global `user` or `admin` role;
+- story-specific viewer/editor grants;
 
 Later elements:
 
 - profile information;
-- story-specific permission overrides;
 - authored changes and suggestions.
 
-The first post-MVP identity slice provides local accounts, server-side sessions,
-and private story ownership. Collaboration and delegated permissions remain later
-work because they require a durable identity foundation first.
+Local accounts, server-side sessions, administration, story visibility, and
+delegated reading/editing are implemented. Suggestions and review remain later
+work.
 
 ### Story Permissions
 
-Later, a story may define a default access level and optional per-user permission
-overrides.
+Stories define default access policies and optional per-user permission overrides.
 
 The story keeps the creator user id and a global access setting. The global
 setting answers what users can do by default when they are not the creator and do
 not have a specific permission entry.
 
-Possible global access settings:
+Implemented visibility settings:
 
-- private: users cannot read the story unless explicitly allowed;
-- public read: users can read the story by default;
-- public suggestions: users can read and suggest changes by default.
+- private: only the creator and administrators can read;
+- authenticated: every signed-in user can read;
+- public: anonymous and authenticated users can read;
+- invitation: explicitly granted users can read.
 
-Specific user permissions can be represented by a join model such as
-`UserStoryPermission`, with a `userId`, a `storyId`, and the permission granted
-for that story.
+Specific permissions are stored in `story_user_permissions`, with a `userId`, a
+`storyId`, and a `viewer` or `editor` role.
 
-Possible story-level permissions:
+Resolved story capabilities are:
 
 - read;
-- suggest changes;
-- review suggestions;
 - edit directly;
-- manage story settings.
+- manage story settings;
+- comment, using the persisted policy once comments exist.
 
-The exact permission hierarchy is still to be defined. For example, the project
-must decide whether `edit directly` includes `suggest changes` and `read`, and
-whether `manage story settings` includes every other permission or only access
-configuration rights.
+The creator and administrators receive all capabilities. An editor can read and
+edit but cannot manage settings or delete. Private visibility ignores collaborator
+grants. The explicit authenticated-edit policy implies read and edit for every
+signed-in account.
 
-The effective permission is resolved by checking story ownership first, then any
-specific `UserStoryPermission`, then the story default access setting. For
-example, a private story can still grant read access to selected users, and a
-public-read story can still grant suggestion or direct editing rights only to
-selected users.
+The effective permission is resolved from administrator status, story ownership,
+story policies, authentication, and the direct grant. All API object operations
+apply that resolution. New stories default to private owner-only editing with
+comments disabled.
 
 Pending suggestions are not visible through a per-suggestion setting. Any user
 with review or approval rights on a story can see all pending suggestions for

@@ -1,4 +1,9 @@
-import { ConflictException, UnauthorizedException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import type { AuthUser } from './auth.repository';
 import { AuthService } from './auth.service';
 
@@ -7,10 +12,11 @@ describe('AuthService', () => {
   const sessions = new Map<string, string>();
   const repository = {
     findUserByEmail: jest.fn((email: string) => Promise.resolve(users.get(email))),
-    createUser: jest.fn((user: AuthUser) => {
-      if (users.has(user.email)) return Promise.resolve(false);
-      users.set(user.email, user);
-      return Promise.resolve(true);
+    createUser: jest.fn((user: Omit<AuthUser, 'role'>) => {
+      if (users.has(user.email)) return Promise.resolve(undefined);
+      const created: AuthUser = { ...user, role: users.size === 0 ? 'admin' : 'user' };
+      users.set(created.email, created);
+      return Promise.resolve(created);
     }),
     createSession: jest.fn((session: { tokenHash: string; userId: string }) => {
       sessions.set(session.tokenHash, session.userId);
@@ -25,6 +31,27 @@ describe('AuthService', () => {
       return Promise.resolve();
     }),
     deleteExpiredSessions: jest.fn(() => Promise.resolve()),
+    listUsers: jest.fn(() =>
+      Promise.resolve(
+        [...users.values()].map((user) => ({
+          id: user.id,
+          email: user.email,
+          role: user.role,
+          createdAt: user.createdAt,
+        })),
+      ),
+    ),
+    updateUserRole: jest.fn((id: string, role: AuthUser['role']) => {
+      const user = [...users.values()].find((candidate) => candidate.id === id);
+      if (!user) return Promise.resolve(undefined);
+      user.role = role;
+      return Promise.resolve({
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        createdAt: user.createdAt,
+      });
+    }),
   };
 
   beforeEach(() => {
@@ -37,6 +64,7 @@ describe('AuthService', () => {
     const auth = new AuthService(repository as never);
     const registered = await auth.register('Author@Example.com', 'correct horse battery staple');
     expect(registered.user.email).toBe('author@example.com');
+    expect(registered.user.role).toBe('admin');
     expect(users.get('author@example.com')?.passwordHash).not.toContain('correct horse');
 
     const loggedIn = await auth.login('author@example.com', 'correct horse battery staple');
@@ -60,10 +88,32 @@ describe('AuthService', () => {
 
   it('handles a concurrent duplicate insert as a conflict', async () => {
     const auth = new AuthService(repository as never);
-    repository.createUser.mockResolvedValueOnce(false);
+    repository.createUser.mockResolvedValueOnce(undefined);
 
     await expect(
       auth.register('author@example.com', 'correct horse battery staple'),
     ).rejects.toBeInstanceOf(ConflictException);
+  });
+
+  it('reserves user administration for administrators', async () => {
+    const auth = new AuthService(repository as never);
+    await auth.register('admin@example.com', 'correct horse battery staple');
+    const member = await auth.register('member@example.com', 'correct horse battery staple');
+
+    await expect(auth.listUsers('user')).rejects.toBeInstanceOf(ForbiddenException);
+    await expect(auth.updateUserRole('admin', member.user.id, 'admin')).resolves.toMatchObject({
+      id: member.user.id,
+      role: 'admin',
+    });
+  });
+
+  it('reports attempts to demote the last administrator', async () => {
+    const auth = new AuthService(repository as never);
+    const admin = await auth.register('admin@example.com', 'correct horse battery staple');
+    repository.updateUserRole.mockResolvedValueOnce(undefined);
+
+    await expect(auth.updateUserRole('admin', admin.user.id, 'user')).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
   });
 });

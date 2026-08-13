@@ -1,11 +1,16 @@
 import { Injectable } from '@nestjs/common';
 import {
   DEFAULT_STORY_DATE_TIME,
+  defaultStoryAccess,
+  resolveStoryAccess,
   type ItemDefinitionStat,
   type ItemStatEffect,
   type ReaderProgress,
   type ReaderProgressState,
   type Story,
+  type StoryAccessConfiguration,
+  type StoryAccessSettings,
+  type StoryCollaboratorRole,
   type StorySummary,
   type TriggerCondition,
 } from '@paralleax/shared';
@@ -21,6 +26,14 @@ type StoryRow = {
   id: string;
   revision: number;
   title: string;
+  creator_user_id: string;
+  owner_email: string;
+  visibility: StoryAccessSettings['visibility'];
+  edit_policy: StoryAccessSettings['editPolicy'];
+  comment_policy: StoryAccessSettings['commentPolicy'];
+  actor_id: string | null;
+  actor_role: 'user' | 'admin' | null;
+  collaborator_role: StoryCollaboratorRole | null;
   start_date_time: string;
   created_at: Date | string;
   updated_at: Date | string;
@@ -130,20 +143,42 @@ type ReaderProgressRow = {
   updated_at: Date | string;
 };
 
+const storyAccessSelect = `SELECT stories.id, stories.revision, stories.title,
+  stories.creator_user_id, owner.email AS owner_email,
+  stories.visibility, stories.edit_policy, stories.comment_policy,
+  actor.id AS actor_id, actor.role AS actor_role, permission.role AS collaborator_role,
+  stories.start_date_time, stories.created_at, stories.updated_at
+  FROM stories
+  JOIN users AS owner ON owner.id = stories.creator_user_id
+  LEFT JOIN users AS actor ON actor.id = $2
+  LEFT JOIN story_user_permissions AS permission
+    ON permission.story_id = stories.id AND permission.user_id = actor.id`;
+
 @Injectable()
 export class StoriesRepository {
   constructor(private readonly database: DatabaseConnection) {}
 
-  async list(ownerId: string): Promise<StorySummary[]> {
+  async list(userId: string): Promise<StorySummary[]> {
     const result = await this.database.pool.query<StorySummaryRow>(
-      `SELECT stories.id, stories.revision, stories.title, stories.start_date_time,
+      `SELECT stories.id, stories.revision, stories.title, stories.creator_user_id,
+              owner.email AS owner_email, stories.visibility, stories.edit_policy,
+              stories.comment_policy, actor.id AS actor_id, actor.role AS actor_role,
+              permission.role AS collaborator_role, stories.start_date_time,
               stories.created_at, stories.updated_at, COUNT(interactions.id) AS interaction_count
        FROM stories
+       JOIN users AS owner ON owner.id = stories.creator_user_id
+       JOIN users AS actor ON actor.id = $1
+       LEFT JOIN story_user_permissions AS permission
+         ON permission.story_id = stories.id AND permission.user_id = $1
        LEFT JOIN interactions ON interactions.story_id = stories.id
-       WHERE stories.creator_user_id = $1
-       GROUP BY stories.id
+       WHERE actor.role = 'admin'
+          OR stories.creator_user_id = $1
+          OR stories.visibility IN ('public', 'authenticated')
+          OR stories.edit_policy = 'authenticated'
+          OR (stories.visibility = 'invitation' AND permission.user_id IS NOT NULL)
+       GROUP BY stories.id, owner.id, actor.id, permission.role
        ORDER BY stories.updated_at DESC, stories.created_at DESC`,
-      [ownerId],
+      [userId],
     );
     return result.rows.map((row) => ({
       id: row.id,
@@ -151,24 +186,31 @@ export class StoriesRepository {
       title: row.title,
       interactionCount: Number(row.interaction_count),
       startDateTime: row.start_date_time,
+      access: accessSettings(row),
+      capabilities: capabilities(row, userId),
+      owner: { id: row.creator_user_id, email: row.owner_email },
       createdAt: iso(row.created_at),
       updatedAt: iso(row.updated_at),
     }));
   }
 
-  async find(id: string, ownerId: string): Promise<Story | undefined> {
-    return this.findWith(this.database.pool, id, ownerId);
+  async find(id: string, userId?: string): Promise<Story | undefined> {
+    return this.findWith(this.database.pool, id, userId);
   }
 
   async save(story: Story, ownerId: string): Promise<void> {
     await this.transaction(async (client) => {
       await client.query(
         `INSERT INTO stories
-         (id, revision, title, start_date_time, created_at, updated_at, creator_user_id)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)
+         (id, revision, title, start_date_time, created_at, updated_at, creator_user_id,
+          visibility, edit_policy, comment_policy)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
          ON CONFLICT (id) DO UPDATE
          SET title = EXCLUDED.title,
              start_date_time = EXCLUDED.start_date_time,
+             visibility = EXCLUDED.visibility,
+             edit_policy = EXCLUDED.edit_policy,
+             comment_policy = EXCLUDED.comment_policy,
              created_at = EXCLUDED.created_at,
              updated_at = EXCLUDED.updated_at`,
         [
@@ -179,6 +221,9 @@ export class StoriesRepository {
           story.createdAt,
           story.updatedAt,
           ownerId,
+          story.access?.visibility ?? defaultStoryAccess.visibility,
+          story.access?.editPolicy ?? defaultStoryAccess.editPolicy,
+          story.access?.commentPolicy ?? defaultStoryAccess.commentPolicy,
         ],
       );
       await replaceStoryGraph(client, story);
@@ -192,7 +237,19 @@ export class StoriesRepository {
   ): Promise<Story | undefined> {
     return this.transaction(async (client) => {
       const lock = await client.query(
-        'SELECT id FROM stories WHERE id = $1 AND creator_user_id = $2 FOR UPDATE',
+        `SELECT stories.id
+         FROM stories
+         JOIN users AS actor ON actor.id = $2
+         LEFT JOIN story_user_permissions AS permission
+           ON permission.story_id = stories.id AND permission.user_id = $2
+         WHERE stories.id = $1
+           AND (
+             actor.role = 'admin'
+             OR stories.creator_user_id = $2
+             OR stories.edit_policy = 'authenticated'
+             OR (stories.visibility <> 'private' AND permission.role = 'editor')
+           )
+         FOR UPDATE OF stories`,
         [id, ownerId],
       );
       if (!lock.rowCount) return undefined;
@@ -206,7 +263,10 @@ export class StoriesRepository {
 
   async delete(id: string, ownerId: string): Promise<boolean> {
     const result = await this.database.pool.query(
-      'DELETE FROM stories WHERE id = $1 AND creator_user_id = $2',
+      `DELETE FROM stories
+       USING users AS actor
+       WHERE stories.id = $1 AND actor.id = $2
+         AND (stories.creator_user_id = $2 OR actor.role = 'admin')`,
       [id, ownerId],
     );
     return (result.rowCount ?? 0) > 0;
@@ -217,9 +277,17 @@ export class StoriesRepository {
       `SELECT progress.state, progress.updated_at
        FROM story_reader_progress AS progress
        JOIN stories ON stories.id = progress.story_id
+       JOIN users AS actor ON actor.id = $2
+       LEFT JOIN story_user_permissions AS permission
+         ON permission.story_id = stories.id AND permission.user_id = $2
        WHERE progress.story_id = $1
          AND progress.user_id = $2
-         AND stories.creator_user_id = $2`,
+         AND (
+           actor.role = 'admin' OR stories.creator_user_id = $2
+           OR stories.visibility IN ('public', 'authenticated')
+           OR stories.edit_policy = 'authenticated'
+           OR (stories.visibility = 'invitation' AND permission.user_id IS NOT NULL)
+         )`,
       [storyId, userId],
     );
     const row = result.rows[0];
@@ -236,7 +304,16 @@ export class StoriesRepository {
       `INSERT INTO story_reader_progress (user_id, story_id, state, updated_at)
        SELECT $2, $1, $3::jsonb, $4
        FROM stories
-       WHERE id = $1 AND creator_user_id = $2
+       JOIN users AS actor ON actor.id = $2
+       LEFT JOIN story_user_permissions AS permission
+         ON permission.story_id = stories.id AND permission.user_id = $2
+       WHERE stories.id = $1
+         AND (
+           actor.role = 'admin' OR stories.creator_user_id = $2
+           OR stories.visibility IN ('public', 'authenticated')
+           OR stories.edit_policy = 'authenticated'
+           OR (stories.visibility = 'invitation' AND permission.user_id IS NOT NULL)
+         )
        ON CONFLICT (user_id, story_id) DO UPDATE
        SET state = EXCLUDED.state, updated_at = EXCLUDED.updated_at`,
       [storyId, userId, JSON.stringify(state), updatedAt],
@@ -251,12 +328,100 @@ export class StoriesRepository {
     );
   }
 
-  private async findWith(queryable: Queryable, id: string, ownerId: string) {
-    const result = await queryable.query<StoryRow>(
-      `SELECT id, revision, title, start_date_time, created_at, updated_at
+  async getAccess(id: string, userId: string): Promise<StoryAccessConfiguration | undefined> {
+    const story = await this.database.pool.query<StoryRow>(
+      `${storyAccessSelect}
+       WHERE stories.id = $1
+         AND (stories.creator_user_id = $2 OR actor.role = 'admin')`,
+      [id, userId],
+    );
+    const row = story.rows[0];
+    if (!row) return undefined;
+    const collaborators = await this.database.pool.query<{
+      user_id: string;
+      email: string;
+      role: StoryCollaboratorRole;
+    }>(
+      `SELECT permission.user_id, users.email, permission.role
+       FROM story_user_permissions AS permission
+       JOIN users ON users.id = permission.user_id
+       WHERE permission.story_id = $1
+       ORDER BY users.email`,
+      [id],
+    );
+    return {
+      ...accessSettings(row),
+      owner: { id: row.creator_user_id, email: row.owner_email },
+      collaborators: collaborators.rows.map((item) => ({
+        userId: item.user_id,
+        email: item.email,
+        role: item.role,
+      })),
+    };
+  }
+
+  async updateAccess(id: string, userId: string, settings: StoryAccessSettings): Promise<boolean> {
+    const result = await this.database.pool.query(
+      `UPDATE stories
+       SET visibility = $3, edit_policy = $4, comment_policy = $5, updated_at = now()
+       FROM users AS actor
+       WHERE stories.id = $1 AND actor.id = $2
+         AND (stories.creator_user_id = $2 OR actor.role = 'admin')`,
+      [id, userId, settings.visibility, settings.editPolicy, settings.commentPolicy],
+    );
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  async setCollaborator(
+    id: string,
+    userId: string,
+    email: string,
+    role: StoryCollaboratorRole,
+  ): Promise<boolean> {
+    const result = await this.database.pool.query(
+      `INSERT INTO story_user_permissions (story_id, user_id, role, updated_at)
+       SELECT stories.id, invited.id, $4, now()
        FROM stories
-       WHERE id = $1 AND creator_user_id = $2`,
-      [id, ownerId],
+       JOIN users AS actor ON actor.id = $2
+       JOIN users AS invited ON invited.email = $3
+       WHERE stories.id = $1
+         AND invited.id <> stories.creator_user_id
+         AND (stories.creator_user_id = $2 OR actor.role = 'admin')
+       ON CONFLICT (story_id, user_id) DO UPDATE
+       SET role = EXCLUDED.role, updated_at = now()`,
+      [id, userId, email, role],
+    );
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  async removeCollaborator(id: string, userId: string, collaboratorId: string): Promise<boolean> {
+    const result = await this.database.pool.query(
+      `DELETE FROM story_user_permissions AS permission
+       USING stories, users AS actor
+       WHERE permission.story_id = $1 AND permission.user_id = $3
+         AND stories.id = permission.story_id AND actor.id = $2
+         AND (stories.creator_user_id = $2 OR actor.role = 'admin')`,
+      [id, userId, collaboratorId],
+    );
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  private async findWith(queryable: Queryable, id: string, userId?: string) {
+    const result = await queryable.query<StoryRow>(
+      `${storyAccessSelect}
+       WHERE stories.id = $1
+         AND (
+           actor.role = 'admin' OR stories.creator_user_id = $2
+           OR stories.visibility = 'public'
+           OR (
+             actor.id IS NOT NULL AND (
+               stories.visibility = 'authenticated'
+               OR stories.edit_policy = 'authenticated'
+               OR (stories.visibility = 'invitation' AND permission.user_id IS NOT NULL)
+             )
+           )
+         )`,
+      [id, userId ?? null],
     );
     return (await this.assemble(queryable, result.rows))[0];
   }
@@ -388,6 +553,9 @@ export class StoriesRepository {
       id: row.id,
       revision: row.revision,
       title: row.title,
+      access: accessSettings(row),
+      capabilities: capabilities(row),
+      owner: { id: row.creator_user_id, email: row.owner_email },
       startDateTime: row.start_date_time,
       createdAt: iso(row.created_at),
       updatedAt: iso(row.updated_at),
@@ -543,4 +711,21 @@ function projectItemInstance(
 
 function iso(value: Date | string) {
   return value instanceof Date ? value.toISOString() : new Date(value).toISOString();
+}
+
+function accessSettings(row: StoryRow): StoryAccessSettings {
+  return {
+    visibility: row.visibility,
+    editPolicy: row.edit_policy,
+    commentPolicy: row.comment_policy,
+  };
+}
+
+function capabilities(row: StoryRow, actorId?: string) {
+  return resolveStoryAccess(accessSettings(row), {
+    authenticated: row.actor_id !== null,
+    role: row.actor_role ?? undefined,
+    isOwner: (actorId ?? row.actor_id) === row.creator_user_id,
+    collaboratorRole: row.collaborator_role ?? undefined,
+  });
 }

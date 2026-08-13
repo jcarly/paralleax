@@ -141,4 +141,16 @@ describe('DatabaseMigrator', () => {
     expect(migration?.sql).toMatch(/num_nonnulls\(owner_character_id, owner_location_id\)/i);
     expect(migration?.sql).toMatch(/exactly one character, location, or parent item/i);
   });
+
+  it('adds constrained global and story access control storage', () => {
+    const migration = databaseMigrations.find(({ id }) => id === '202608130026_access_control');
+
+    expect(migration?.sql).toMatch(/ADD COLUMN role text NOT NULL DEFAULT 'user'/i);
+    expect(migration?.sql).toMatch(/role IN \('user', 'admin'\)/i);
+    expect(migration?.sql).toMatch(/ADD COLUMN visibility text NOT NULL DEFAULT 'private'/i);
+    expect(migration?.sql).toMatch(/ADD COLUMN edit_policy text NOT NULL DEFAULT 'owner'/i);
+    expect(migration?.sql).toMatch(/ADD COLUMN comment_policy text NOT NULL DEFAULT 'disabled'/i);
+    expect(migration?.sql).toMatch(/CREATE TABLE story_user_permissions/i);
+    expect(migration?.sql).toMatch(/role IN \('viewer', 'editor'\)/i);
+  });
 });

@@ -27,6 +27,10 @@ import type {
   UpdateStatDefinitionInput,
   UpdateTriggerInput,
   UpdateStoryInput,
+  StoryAccessConfiguration,
+  StoryAccessSettings,
+  StoryCollaboratorRole,
+  UserRole,
 } from '@paralleax/shared';
 
 export class ApiError extends Error {
@@ -74,6 +78,13 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 export interface AuthUser {
   id: string;
   email: string;
+  role: UserRole;
+  createdAt: string;
+}
+export interface ManagedUser {
+  id: string;
+  email: string;
+  role: UserRole;
   createdAt: string;
 }
 type InteractionSaveResponse = InteractionMutationResult | Story;
@@ -91,8 +102,31 @@ export const api = {
       body: JSON.stringify({ email, password }),
     }),
   logout: () => request<void>('/auth/logout', { method: 'POST' }),
+  listUsers: () => request<ManagedUser[]>('/admin/users'),
+  updateUserRole: (id: string, role: UserRole) =>
+    request<ManagedUser>(`/admin/users/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ role }),
+    }),
   listStories: () => request<StorySummary[]>('/stories'),
   getStory: (id: string) => request<Story>(`/stories/${id}`),
+  getStoryAccess: (id: string) => request<StoryAccessConfiguration>(`/stories/${id}/access`),
+  updateStoryAccess: (id: string, settings: StoryAccessSettings) =>
+    request<StoryAccessConfiguration>(`/stories/${id}/access`, {
+      method: 'PATCH',
+      body: JSON.stringify({
+        visibility: settings.visibility,
+        editPolicy: settings.editPolicy,
+        commentPolicy: settings.commentPolicy,
+      }),
+    }),
+  setStoryCollaborator: (id: string, email: string, role: StoryCollaboratorRole) =>
+    request<StoryAccessConfiguration>(`/stories/${id}/access/collaborators`, {
+      method: 'POST',
+      body: JSON.stringify({ email, role }),
+    }),
+  removeStoryCollaborator: (id: string, userId: string) =>
+    request<void>(`/stories/${id}/access/collaborators/${userId}`, { method: 'DELETE' }),
   getReaderProgress: (storyId: string) =>
     request<{ progress: ReaderProgress | null }>(`/stories/${storyId}/progress`).then(
       ({ progress }) => progress,

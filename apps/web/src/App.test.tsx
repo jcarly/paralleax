@@ -30,6 +30,7 @@ describe('App', () => {
     vi.mocked(api.me).mockResolvedValue({
       id: 'user-1',
       email: 'author@example.com',
+      role: 'user',
       createdAt: '2026-01-01T00:00:00.000Z',
     });
   });
@@ -98,6 +99,18 @@ describe('App', () => {
     expect(
       await screen.findByRole('heading', { name: 'Sign in to Paralleax' }),
     ).toBeInTheDocument();
+  });
+
+  it('opens a public reader route without an active session', async () => {
+    vi.mocked(api.me).mockRejectedValue(new Error('Unauthorized'));
+    render(
+      <MemoryRouter initialEntries={['/stories/public-story/play']}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText('Lecteur mock')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Sign in' })).toHaveAttribute('href', '/login');
   });
 
   it('opens registration directly from its public route', async () => {

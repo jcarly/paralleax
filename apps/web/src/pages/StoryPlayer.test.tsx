@@ -111,6 +111,24 @@ describe('StoryPlayer', () => {
     expect(api.getStory).toHaveBeenCalledTimes(2);
   });
 
+  it('reads publicly without loading or saving authenticated progress', async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.getStory).mockResolvedValue(structuredClone(story));
+    render(
+      <MemoryRouter initialEntries={['/stories/story-1/play']}>
+        <Routes>
+          <Route path="/stories/:storyId/play" element={<StoryPlayer authenticated={false} />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText('Sign in to save progress')).toBeInTheDocument();
+    expect(api.getReaderProgress).not.toHaveBeenCalled();
+    expect(screen.queryByRole('link', { name: 'Back to editor' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Start' }));
+    expect(api.saveReaderProgress).not.toHaveBeenCalled();
+  });
+
   it('loads a story and follows available choices', async () => {
     const user = userEvent.setup();
     await renderPlayer();

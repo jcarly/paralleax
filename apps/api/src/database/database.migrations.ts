@@ -1077,4 +1077,47 @@ export const databaseMigrations: DatabaseMigration[] = [
       FOR EACH ROW EXECUTE FUNCTION validate_item_instance_placement();
     `,
   },
+  {
+    id: '202608130026_access_control',
+    sql: `
+      ALTER TABLE users
+      ADD COLUMN role text NOT NULL DEFAULT 'user',
+      ADD CONSTRAINT users_role_allowed CHECK (role IN ('user', 'admin'));
+
+      UPDATE users
+      SET role = 'admin'
+      WHERE id = (
+        SELECT id
+        FROM users
+        WHERE email <> 'migration@paralleax.invalid'
+        ORDER BY created_at, id
+        LIMIT 1
+      );
+
+      ALTER TABLE stories
+      ADD COLUMN visibility text NOT NULL DEFAULT 'private',
+      ADD COLUMN edit_policy text NOT NULL DEFAULT 'owner',
+      ADD COLUMN comment_policy text NOT NULL DEFAULT 'disabled',
+      ADD CONSTRAINT stories_visibility_allowed
+        CHECK (visibility IN ('private', 'authenticated', 'public', 'invitation')),
+      ADD CONSTRAINT stories_edit_policy_allowed
+        CHECK (edit_policy IN ('owner', 'collaborators', 'authenticated')),
+      ADD CONSTRAINT stories_comment_policy_allowed
+        CHECK (comment_policy IN ('disabled', 'readers', 'editors', 'authenticated'));
+
+      CREATE TABLE story_user_permissions (
+        story_id text NOT NULL REFERENCES stories(id) ON DELETE CASCADE,
+        user_id text NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        role text NOT NULL,
+        created_at timestamptz NOT NULL DEFAULT now(),
+        updated_at timestamptz NOT NULL DEFAULT now(),
+        PRIMARY KEY (story_id, user_id),
+        CONSTRAINT story_user_permissions_role_allowed CHECK (role IN ('viewer', 'editor'))
+      );
+
+      CREATE INDEX story_user_permissions_user_id_idx
+        ON story_user_permissions(user_id);
+      CREATE INDEX stories_visibility_idx ON stories(visibility);
+    `,
+  },
 ];

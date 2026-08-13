@@ -17,6 +17,7 @@ describe('AuthPage', () => {
     const authenticated = {
       id: 'user-1',
       email: 'author@example.com',
+      role: 'user' as const,
       createdAt: '2026-01-01T00:00:00.000Z',
     };
     vi.mocked(api.login).mockResolvedValue(authenticated);
@@ -44,6 +45,7 @@ describe('AuthPage', () => {
     const authenticated = {
       id: 'user-2',
       email: 'new@example.com',
+      role: 'user' as const,
       createdAt: '2026-01-01T00:00:00.000Z',
     };
     vi.mocked(api.register).mockResolvedValue(authenticated);

@@ -303,7 +303,9 @@ function StoryCard({
         <small>{String(tone + 1).padStart(2, '0')}</small>
       </div>
       <div className="library-card-body">
-        <span className="product-badge neutral">{t('library.card.private')}</span>
+        <span className="product-badge neutral">
+          {t(`library.card.visibility.${story.access?.visibility ?? 'private'}`)}
+        </span>
         <h2>{story.title}</h2>
         <p>
           {t(
@@ -338,21 +340,30 @@ function StoryCard({
           >
             {t('library.card.read')}
           </Link>
-          <Link
-            className="product-primary compact"
-            to={`/stories/${story.id}/edit`}
-            onMouseEnter={() => void loadStoryEditor()}
-            onFocus={() => void loadStoryEditor()}
-          >
-            {t('library.card.edit')} <span aria-hidden="true">→</span>
-          </Link>
-          <button
-            className="product-ghost danger-text compact"
-            type="button"
-            onClick={() => void remove(story.id)}
-          >
-            {t('library.card.delete')}
-          </button>
+          {story.capabilities?.canEdit !== false ? (
+            <Link
+              className="product-primary compact"
+              to={`/stories/${story.id}/edit`}
+              onMouseEnter={() => void loadStoryEditor()}
+              onFocus={() => void loadStoryEditor()}
+            >
+              {t('library.card.edit')} <span aria-hidden="true">→</span>
+            </Link>
+          ) : null}
+          {story.capabilities?.canManage !== false ? (
+            <>
+              <Link className="product-ghost compact" to={`/stories/${story.id}/access`}>
+                {t('library.card.access')}
+              </Link>
+              <button
+                className="product-ghost danger-text compact"
+                type="button"
+                onClick={() => void remove(story.id)}
+              >
+                {t('library.card.delete')}
+              </button>
+            </>
+          ) : null}
         </div>
       </footer>
     </article>
@@ -380,6 +391,14 @@ function summarizeStory(story: Story): StorySummary {
     title: story.title,
     interactionCount: story.interactions.length,
     startDateTime: story.startDateTime,
+    access: story.access,
+    capabilities: story.capabilities ?? {
+      canRead: true,
+      canEdit: true,
+      canManage: true,
+      canComment: false,
+    },
+    owner: story.owner,
     createdAt: story.createdAt,
     updatedAt: story.updatedAt,
   };

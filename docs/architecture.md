@@ -116,8 +116,10 @@ guard rejects mutative production requests unless their `Origin` exactly matches
 the configured public origin, while safe and local/test requests remain unchanged.
 
 `StoriesRepository` owns PostgreSQL reads and writes. Every query, including a
-transactional mutation, is scoped by the authenticated creator id so knowledge
-of a story id cannot bypass ownership. It assembles relational story,
+transactional mutation, resolves creator ownership, global administrator status,
+story defaults, and any per-user grant in SQL so knowledge of a story id cannot
+bypass authorization. Public reads use optional authentication; all mutation
+routes still require a session. It assembles relational story,
 interaction, trigger, and input rows plus trigger condition JSONB into the domain `Story` expected
 by the service and writes field-level differences for mutations.
 `stories/persistence/stories.persistence.writer.ts` owns the relational write plan: full graph
@@ -135,7 +137,15 @@ Story listing uses a separate lightweight `StorySummary` projection. Its
 aggregate query returns metadata and an interaction count without loading
 interactions, triggers, context entities, or item graphs. Creation endpoints
 still return the created complete story; the web list converts that one result
-to a summary locally.
+to a summary locally. Both story and summary projections include resolved
+capabilities so the interface can hide unavailable actions without becoming the
+security boundary.
+
+The first account becomes the first administrator through a serialized database
+transaction. Administrator role updates use the same lock, and the final
+administrator cannot be demoted. Story access settings live on `stories`; direct
+viewer/editor grants live in `story_user_permissions` and target existing local
+accounts. See ADR-017.
 
 Authenticated player progress uses one `story_reader_progress` row per user and
 story. Its keys and update timestamp are relational; its versioned JSONB state
