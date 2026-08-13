@@ -7,6 +7,7 @@ import type { Story, StorySummary } from '@paralleax/shared';
 import { StoryList } from './StoryList';
 import { api } from '../api';
 import { loadStoryEditor, loadStoryPlayer } from './storyRouteLoaders';
+import { i18n } from '../i18n';
 
 vi.mock('../api', () => ({
   api: {
@@ -195,5 +196,20 @@ describe('StoryList', () => {
     );
 
     expect(await screen.findByText('API unavailable')).toBeInTheDocument();
+  });
+
+  it('translates product copy without changing authored story titles', async () => {
+    await i18n.changeLanguage('fr');
+    vi.mocked(api.listStories).mockResolvedValue([structuredClone(stories[0])]);
+
+    render(
+      <MemoryRouter>
+        <StoryList />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole('heading', { name: 'First story' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Histoires' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Nouvelle histoire' })).toBeInTheDocument();
   });
 });

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import type { Story, StorySummary } from '@paralleax/shared';
 import { api } from '../api';
@@ -12,6 +13,7 @@ type StoryView = 'grid' | 'list';
 const recentThresholdMs = 7 * 24 * 60 * 60 * 1000;
 
 export function StoryList() {
+  const { t } = useTranslation();
   const [stories, setStories] = useState<StorySummary[]>([]);
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<StoryFilter>('all');
@@ -65,7 +67,7 @@ export function StoryList() {
       setCreating(false);
       setFilter('all');
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Could not create story');
+      setError(caught instanceof Error ? caught.message : t('library.createFailed'));
     } finally {
       setPending('');
     }
@@ -79,7 +81,7 @@ export function StoryList() {
       const story = await api.createDemoStory();
       setStories((items) => [summarizeStory(story), ...items]);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Could not generate demo story');
+      setError(caught instanceof Error ? caught.message : t('library.demoFailed'));
     } finally {
       setPending('');
     }
@@ -91,7 +93,7 @@ export function StoryList() {
       await api.deleteStory(id);
       setStories((items) => items.filter((item) => item.id !== id));
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Could not delete story');
+      setError(caught instanceof Error ? caught.message : t('library.deleteFailed'));
     }
   }
 
@@ -99,9 +101,9 @@ export function StoryList() {
     <main className="product-page library-main">
       <section className="library-heading">
         <div>
-          <span className="product-eyebrow">Your workspace</span>
-          <h1>Stories</h1>
-          <p>Create, organize, and return to every interactive narrative.</p>
+          <span className="product-eyebrow">{t('library.eyebrow')}</span>
+          <h1>{t('library.title')}</h1>
+          <p>{t('library.description')}</p>
         </div>
         <div className="library-heading-actions">
           <button
@@ -110,22 +112,22 @@ export function StoryList() {
             disabled={Boolean(pending)}
             onClick={() => void createDemo()}
           >
-            {pending === 'demo' ? 'Generating…' : 'Generate demo'}
+            {t(pending === 'demo' ? 'library.generating' : 'library.generateDemo')}
           </button>
           <button className="product-primary" type="button" onClick={() => setCreating(true)}>
-            <span aria-hidden="true">＋</span> New story
+            <span aria-hidden="true">＋</span> {t('library.newStory')}
           </button>
         </div>
       </section>
 
-      <section className="library-toolbar" aria-label="Story filters">
+      <section className="library-toolbar" aria-label={t('library.filtersLabel')}>
         <label className="library-search">
           <span aria-hidden="true">⌕</span>
-          <span className="sr-only">Search stories</span>
+          <span className="sr-only">{t('library.search')}</span>
           <input
-            aria-label="Search stories"
+            aria-label={t('library.search')}
             type="search"
-            placeholder="Search stories…"
+            placeholder={t('library.searchPlaceholder')}
             value={query}
             onChange={(event) => setQuery(event.target.value)}
           />
@@ -133,9 +135,9 @@ export function StoryList() {
         <div className="library-filters">
           {(
             [
-              ['all', 'All stories'],
-              ['recent', 'Recently edited'],
-              ['empty', 'Empty'],
+              ['all', 'library.filters.all'],
+              ['recent', 'library.filters.recent'],
+              ['empty', 'library.filters.empty'],
             ] as const
           ).map(([value, label]) => (
             <button
@@ -145,20 +147,20 @@ export function StoryList() {
               type="button"
               onClick={() => setFilter(value)}
             >
-              {label}
+              {t(label)}
             </button>
           ))}
         </div>
         <label className="library-sort">
-          <span>Sort by</span>
+          <span>{t('library.sortBy')}</span>
           <select value={sort} onChange={(event) => setSort(event.target.value as StorySort)}>
-            <option value="updated">Last edited</option>
-            <option value="title">Title</option>
+            <option value="updated">{t('library.lastEdited')}</option>
+            <option value="title">{t('library.sortTitle')}</option>
           </select>
         </label>
-        <div className="view-toggle" aria-label="Story layout">
+        <div className="view-toggle" aria-label={t('library.layout')}>
           <button
-            aria-label="Grid view"
+            aria-label={t('library.gridView')}
             aria-pressed={view === 'grid'}
             className={view === 'grid' ? 'active' : ''}
             type="button"
@@ -167,7 +169,7 @@ export function StoryList() {
             ▦
           </button>
           <button
-            aria-label="List view"
+            aria-label={t('library.listView')}
             aria-pressed={view === 'list'}
             className={view === 'list' ? 'active' : ''}
             type="button"
@@ -184,13 +186,13 @@ export function StoryList() {
         </p>
       ) : null}
       <div className="library-count" aria-live="polite">
-        <b>{visibleStories.length}</b> {visibleStories.length === 1 ? 'story' : 'stories'}
+        <b>{visibleStories.length}</b> {t('library.count', { count: visibleStories.length })}
       </div>
 
       {loading ? (
-        <section className="library-empty" aria-label="Loading stories">
+        <section className="library-empty" aria-label={t('library.loadingLabel')}>
           <span className="loading-ring" aria-hidden="true" />
-          <h2>Loading stories</h2>
+          <h2>{t('library.loading')}</h2>
         </section>
       ) : visibleStories.length ? (
         <section className={`library-grid ${view === 'list' ? 'list' : ''}`}>
@@ -206,8 +208,8 @@ export function StoryList() {
       ) : (
         <section className="library-empty">
           <span aria-hidden="true">◇</span>
-          <h2>No stories found</h2>
-          <p>{stories.length ? 'Try another search or filter.' : 'Create your first story.'}</p>
+          <h2>{t('library.emptyTitle')}</h2>
+          <p>{t(stories.length ? 'library.emptyFiltered' : 'library.emptyWorkspace')}</p>
           {query || filter !== 'all' ? (
             <button
               className="product-secondary"
@@ -217,11 +219,11 @@ export function StoryList() {
                 setFilter('all');
               }}
             >
-              Clear filters
+              {t('library.clearFilters')}
             </button>
           ) : (
             <button className="product-secondary" type="button" onClick={() => setCreating(true)}>
-              Create a story
+              {t('library.createStory')}
             </button>
           )}
         </section>
@@ -238,15 +240,15 @@ export function StoryList() {
             <div className="dialog-icon" aria-hidden="true">
               ◇
             </div>
-            <span className="product-eyebrow">New narrative</span>
-            <h2 id="new-story-title">Create a story</h2>
-            <p>Start with a private, empty story. Add its first interaction in the editor.</p>
+            <span className="product-eyebrow">{t('library.dialog.eyebrow')}</span>
+            <h2 id="new-story-title">{t('library.dialog.title')}</h2>
+            <p>{t('library.dialog.description')}</p>
             <form onSubmit={(event) => void create(event)}>
               <label className="product-field">
-                <span>Story title</span>
+                <span>{t('library.dialog.storyTitle')}</span>
                 <input
                   autoFocus
-                  placeholder="Untitled story"
+                  placeholder={t('library.dialog.placeholder')}
                   value={newTitle}
                   onChange={(event) => setNewTitle(event.target.value)}
                 />
@@ -258,14 +260,14 @@ export function StoryList() {
                   disabled={pending === 'story'}
                   onClick={() => setCreating(false)}
                 >
-                  Cancel
+                  {t('library.dialog.cancel')}
                 </button>
                 <button
                   className="product-primary"
                   type="submit"
                   disabled={!newTitle.trim() || pending === 'story'}
                 >
-                  {pending === 'story' ? 'Creating…' : 'Create story'}
+                  {t(pending === 'story' ? 'library.dialog.creating' : 'library.dialog.submit')}
                 </button>
               </div>
             </form>
@@ -285,12 +287,14 @@ function StoryCard({
   tone: number;
   remove: (id: string) => Promise<void>;
 }) {
+  const { t, i18n } = useTranslation();
+  const locale = i18n.resolvedLanguage ?? i18n.language;
   return (
     <article className="library-card">
       <div
         className={`story-cover tone-${tone}`}
         role="img"
-        aria-label={`Abstract cover for ${story.title}`}
+        aria-label={t('library.card.cover', { title: story.title })}
       >
         <div className="cover-path" />
         <span className="cover-node one" />
@@ -299,26 +303,32 @@ function StoryCard({
         <small>{String(tone + 1).padStart(2, '0')}</small>
       </div>
       <div className="library-card-body">
-        <span className="product-badge neutral">Private</span>
+        <span className="product-badge neutral">{t('library.card.private')}</span>
         <h2>{story.title}</h2>
         <p>
-          {story.interactionCount
-            ? 'Continue shaping this interactive narrative.'
-            : 'A new story waiting for its first interaction.'}
+          {t(
+            story.interactionCount
+              ? 'library.card.continueDescription'
+              : 'library.card.emptyDescription',
+          )}
         </p>
         <dl>
           <div>
-            <dt>Interactions</dt>
+            <dt>{t('library.card.interactions')}</dt>
             <dd>{story.interactionCount}</dd>
           </div>
           <div>
-            <dt>Created</dt>
-            <dd>{formatDate(story.createdAt)}</dd>
+            <dt>{t('library.card.created')}</dt>
+            <dd>{formatDate(story.createdAt, locale, t('library.card.unknownDate'))}</dd>
           </div>
         </dl>
       </div>
       <footer>
-        <span>Edited {formatDate(story.updatedAt)}</span>
+        <span>
+          {t('library.card.edited', {
+            date: formatDate(story.updatedAt, locale, t('library.card.unknownDate')),
+          })}
+        </span>
         <div>
           <Link
             className="product-secondary compact"
@@ -326,7 +336,7 @@ function StoryCard({
             onMouseEnter={() => void loadStoryPlayer()}
             onFocus={() => void loadStoryPlayer()}
           >
-            Read
+            {t('library.card.read')}
           </Link>
           <Link
             className="product-primary compact"
@@ -334,14 +344,14 @@ function StoryCard({
             onMouseEnter={() => void loadStoryEditor()}
             onFocus={() => void loadStoryEditor()}
           >
-            Edit <span aria-hidden="true">→</span>
+            {t('library.card.edit')} <span aria-hidden="true">→</span>
           </Link>
           <button
             className="product-ghost danger-text compact"
             type="button"
             onClick={() => void remove(story.id)}
           >
-            Delete
+            {t('library.card.delete')}
           </button>
         </div>
       </footer>
@@ -353,12 +363,14 @@ function storyTone(id: string, index: number) {
   return [...id].reduce((total, character) => total + character.charCodeAt(0), index) % 4;
 }
 
-function formatDate(value: string) {
+function formatDate(value: string, locale: string, unknownDate: string) {
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return 'unknown';
-  return new Intl.DateTimeFormat('en', { day: 'numeric', month: 'short', year: 'numeric' }).format(
-    date,
-  );
+  if (Number.isNaN(date.getTime())) return unknownDate;
+  return new Intl.DateTimeFormat(locale, {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  }).format(date);
 }
 
 function summarizeStory(story: Story): StorySummary {

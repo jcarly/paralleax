@@ -24,6 +24,9 @@ Paralleax currently includes:
   production-oriented API error handling.
 - React Flow graph authoring.
 - Simulation-oriented reader diagnostics.
+- English and French interface localization with browser detection, a persisted
+  user preference, and English fallback. Authored story content is never
+  translated by the interface layer.
 - Unit, integration, PostgreSQL, component, and Playwright testing.
 - Provider-neutral production API/web images, a migration-first Compose shape,
   exact production-origin enforcement, invitation-code registration, deployment

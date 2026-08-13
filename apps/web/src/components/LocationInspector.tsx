@@ -4,6 +4,7 @@ import type {
   MoveItemInstanceInput,
   StatDefinition,
 } from '@paralleax/shared';
+import { useTranslation } from 'react-i18next';
 import { CategoryField } from './CategoryField';
 import { ImageUrlField } from './ImageUrlField';
 import { ItemInstanceTree } from './ItemInstanceTree';
@@ -28,11 +29,12 @@ export function LocationInspector({
   statDefinitions: StatDefinition[];
   onMoveItem: (itemId: string, placement: MoveItemInstanceInput) => Promise<void>;
 }) {
+  const { t } = useTranslation();
   return (
     <div>
-      <h3>Location</h3>
+      <h3>{t('inspector.location')}</h3>
       <label>
-        Name
+        {t('inspector.name')}
         <input
           value={location.name}
           onChange={(event) => onLocalChange({ ...location, name: event.target.value })}
@@ -50,9 +52,9 @@ export function LocationInspector({
         onChange={(imageUrl) => onLocalChange({ ...location, imageUrl })}
         onBlur={(imageUrl) => void onPatch(location.id, { imageUrl })}
       />
-      <h3>Items</h3>
+      <h3>{t('inspector.items')}</h3>
       {(location.items ?? []).length === 0 ? (
-        <p className="hint">No items at this location.</p>
+        <p className="hint">{t('inspector.noLocationItems')}</p>
       ) : (
         <ItemInstanceTree
           items={location.items ?? []}
@@ -63,7 +65,7 @@ export function LocationInspector({
         />
       )}
       <label>
-        Description
+        {t('inspector.description')}
         <textarea
           rows={7}
           value={location.description}

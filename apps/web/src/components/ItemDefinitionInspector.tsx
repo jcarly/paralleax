@@ -1,4 +1,5 @@
 import type { ItemDefinition, StatDefinition } from '@paralleax/shared';
+import { useTranslation } from 'react-i18next';
 import { CategoryField } from './CategoryField';
 import { ImageUrlField } from './ImageUrlField';
 import { RemoveRowButton } from './RemoveRowButton';
@@ -21,12 +22,13 @@ export function ItemDefinitionInspector({
     >,
   ) => Promise<void>;
 }) {
+  const { t } = useTranslation();
   const itemStats = itemDefinition.stats ?? [];
   return (
     <div>
-      <h3>Item</h3>
+      <h3>{t('inspector.item')}</h3>
       <label>
-        Name
+        {t('inspector.name')}
         <input
           value={itemDefinition.name}
           onChange={(event) => onChange({ ...itemDefinition, name: event.target.value })}
@@ -45,7 +47,7 @@ export function ItemDefinitionInspector({
         onBlur={(imageUrl) => void onPatch(itemDefinition.id, { imageUrl })}
       />
       <label>
-        Description
+        {t('inspector.description')}
         <textarea
           rows={7}
           value={itemDefinition.description}
@@ -53,11 +55,9 @@ export function ItemDefinitionInspector({
           onBlur={(event) => void onPatch(itemDefinition.id, { description: event.target.value })}
         />
       </label>
-      <p className="hint">
-        Each time this item is added to a character, a separate owned instance is created.
-      </p>
+      <p className="hint">{t('inspector.itemInstanceHelp')}</p>
       <div className="inspector-section-header">
-        <h3>Item stats</h3>
+        <h3>{t('inspector.itemStats')}</h3>
         <button
           className="secondary"
           type="button"
@@ -71,13 +71,13 @@ export function ItemDefinitionInspector({
             void onPatch(itemDefinition.id, { stats });
           }}
         >
-          Add stat
+          {t('inspector.addStat')}
         </button>
       </div>
       {itemStats.map((stat, index) => (
         <div className="stat-effect-row" key={stat.statDefinitionId}>
           <select
-            aria-label="Item stat"
+            aria-label={t('inspector.itemStat')}
             value={stat.statDefinitionId}
             onChange={(event) => {
               const stats = [...itemStats];
@@ -100,7 +100,7 @@ export function ItemDefinitionInspector({
             ))}
           </select>
           <input
-            aria-label="Item stat initial value"
+            aria-label={t('inspector.itemStatInitialValue')}
             type="number"
             value={stat.initialValue}
             onChange={(event) => {
@@ -115,7 +115,7 @@ export function ItemDefinitionInspector({
             }}
           />
           <RemoveRowButton
-            label="Delete item stat"
+            label={t('inspector.deleteItemStat')}
             onRemove={() => {
               const stats = itemStats.filter((_, candidateIndex) => candidateIndex !== index);
               onChange({ ...itemDefinition, stats });

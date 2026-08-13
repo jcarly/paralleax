@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import type { TFunction } from 'i18next';
+import { useTranslation } from 'react-i18next';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import type {
   Interaction,
@@ -37,20 +39,26 @@ function getInteractionTitle(story: Story, interactionId: string) {
   );
 }
 
-function describeCondition(story: Story, condition: TriggerCondition) {
+function describeCondition(story: Story, condition: TriggerCondition, t: TFunction) {
   if ('locationId' in condition) {
     const name =
       story.locations?.find((location) => location.id === condition.locationId)?.name ??
       condition.locationId;
-    return condition.isCurrentLocation
-      ? `Current location is "${name}"`
-      : `Current location is not "${name}"`;
+    return t(
+      condition.isCurrentLocation
+        ? 'player.condition.locationIs'
+        : 'player.condition.locationIsNot',
+      { name },
+    );
   }
   if ('interactionId' in condition) {
     const title = getInteractionTitle(story, condition.interactionId);
-    return condition.hasBeenVisited
-      ? `"${title}" has been visited`
-      : `"${title}" has not been visited`;
+    return t(
+      condition.hasBeenVisited ? 'player.condition.visited' : 'player.condition.notVisited',
+      {
+        title,
+      },
+    );
   }
   if ('statId' in condition) {
     const stat = (story.characters ?? [])
@@ -59,34 +67,40 @@ function describeCondition(story: Story, condition: TriggerCondition) {
           ...item,
           label: `${character.name} — ${
             story.statDefinitions?.find(({ id }) => id === item.statDefinitionId)?.name ??
-            'Unknown stat'
+            t('player.unknownStat')
           }`,
         })),
       )
       .find(({ id }) => id === condition.statId);
-    const operatorLabels = {
-      eq: 'equals',
-      lt: 'is less than',
-      lte: 'is at most',
-      gt: 'is greater than',
-      gte: 'is at least',
-    };
-    return `"${stat?.label ?? condition.statId}" ${operatorLabels[condition.operator]} ${condition.value}`;
+    return t('player.condition.stat', {
+      label: stat?.label ?? condition.statId,
+      operator: t(`player.condition.operator.${condition.operator}`),
+      value: condition.value,
+    });
   }
   if ('itemDefinitionId' in condition) {
     const name =
       story.itemDefinitions?.find(({ id }) => id === condition.itemDefinitionId)?.name ??
       condition.itemDefinitionId;
-    return condition.isOwned ? `Owns "${name}"` : `Does not own "${name}"`;
+    return t(condition.isOwned ? 'player.condition.owns' : 'player.condition.doesNotOwn', {
+      name,
+    });
   }
-  if ('temporal' in condition) return 'Story date and time match the configured schedule';
+  if ('temporal' in condition) return t('player.condition.temporal');
   const name =
     story.characters?.find((character) => character.id === condition.characterId)?.name ??
     condition.characterId;
-  return condition.isPresent ? `"${name}" is present` : `"${name}" is absent`;
+  return t(condition.isPresent ? 'player.condition.present' : 'player.condition.absent', {
+    name,
+  });
 }
 
-function getConditionSummary(story: Story, interaction: Interaction, currentId: string | null) {
+function getConditionSummary(
+  story: Story,
+  interaction: Interaction,
+  currentId: string | null,
+  t: TFunction,
+) {
   const triggers = interaction.triggers.filter((trigger) =>
     currentId
       ? trigger.inputInteractionIds.includes(currentId) ||
@@ -95,12 +109,14 @@ function getConditionSummary(story: Story, interaction: Interaction, currentId: 
   );
   const variants = triggers.map((trigger) =>
     trigger.conditions.length === 0
-      ? 'No conditions'
-      : trigger.conditions.map((condition) => describeCondition(story, condition)).join(' and '),
+      ? t('player.condition.noConditions')
+      : trigger.conditions
+          .map((condition) => describeCondition(story, condition, t))
+          .join(` ${t('player.condition.and')} `),
   );
   return variants.length > 1
-    ? variants.join(' or ')
-    : (variants[0] ?? 'No matching outgoing trigger');
+    ? variants.join(` ${t('player.condition.or')} `)
+    : (variants[0] ?? t('player.condition.noMatching'));
 }
 
 function getUnavailableReason(
@@ -113,6 +129,7 @@ function getUnavailableReason(
   statValues: Readonly<Record<string, number>>,
   currentDateTime: string,
   ownedItemDefinitionIds: readonly string[],
+  t: TFunction,
 ) {
   const failures = getTriggerConditionFailures(
     interaction,
@@ -131,15 +148,19 @@ function getUnavailableReason(
     const name =
       story.locations?.find((location) => location.id === firstFailure.locationId)?.name ??
       firstFailure.locationId;
-    return firstFailure.isCurrentLocation
-      ? `Requires the current location to be "${name}".`
-      : `Requires the current location not to be "${name}".`;
+    return t(
+      firstFailure.isCurrentLocation
+        ? 'player.requirement.locationIs'
+        : 'player.requirement.locationIsNot',
+      { name },
+    );
   }
   if ('interactionId' in firstFailure) {
     const title = getInteractionTitle(story, firstFailure.interactionId);
-    return firstFailure.hasBeenVisited
-      ? `Requires "${title}" to be visited.`
-      : `Requires "${title}" not to be visited.`;
+    return t(
+      firstFailure.hasBeenVisited ? 'player.requirement.visited' : 'player.requirement.notVisited',
+      { title },
+    );
   }
   if ('statId' in firstFailure) {
     const stat = (story.characters ?? [])
@@ -148,35 +169,34 @@ function getUnavailableReason(
           ...item,
           label: `${character.name} — ${
             story.statDefinitions?.find(({ id }) => id === item.statDefinitionId)?.name ??
-            'Unknown stat'
+            t('player.unknownStat')
           }`,
         })),
       )
       .find(({ id }) => id === firstFailure.statId);
-    const operatorLabels = {
-      eq: 'equal to',
-      lt: 'less than',
-      lte: 'at most',
-      gt: 'greater than',
-      gte: 'at least',
-    };
-    return `Requires "${stat?.label ?? firstFailure.statId}" to be ${operatorLabels[firstFailure.operator]} ${firstFailure.value}.`;
+    return t('player.requirement.stat', {
+      label: stat?.label ?? firstFailure.statId,
+      operator: t(`player.requirement.operator.${firstFailure.operator}`),
+      value: firstFailure.value,
+    });
   }
   if ('itemDefinitionId' in firstFailure) {
     const name =
       story.itemDefinitions?.find(({ id }) => id === firstFailure.itemDefinitionId)?.name ??
       firstFailure.itemDefinitionId;
-    return firstFailure.isOwned ? `Requires owning "${name}".` : `Requires not owning "${name}".`;
+    return t(firstFailure.isOwned ? 'player.requirement.owns' : 'player.requirement.doesNotOwn', {
+      name,
+    });
   }
   if ('temporal' in firstFailure) {
-    return `Requires a different story date or time. Current time: ${currentDateTime.replace('T', ' ')}.`;
+    return t('player.requirement.temporal', { time: currentDateTime.replace('T', ' ') });
   }
   const name =
     story.characters?.find((character) => character.id === firstFailure.characterId)?.name ??
     firstFailure.characterId;
-  return firstFailure.isPresent
-    ? `Requires "${name}" to be present.`
-    : `Requires "${name}" to be absent.`;
+  return t(firstFailure.isPresent ? 'player.requirement.present' : 'player.requirement.absent', {
+    name,
+  });
 }
 
 function uniqueJourneyIds(journey: string[]) {
@@ -193,6 +213,7 @@ function getJourneyLocation(story: Story | undefined, journey: string[]) {
 }
 
 export function StoryPlayer() {
+  const { t } = useTranslation();
   const { storyId = '' } = useParams();
   const [searchParams] = useSearchParams();
   const isSimulationMode = searchParams.get('mode') === 'simulation';
@@ -262,13 +283,13 @@ export function StoryPlayer() {
         if (cancelled) return;
         setLoadError({
           key: loadKey,
-          message: caught instanceof Error ? caught.message : 'The story could not be loaded.',
+          message: caught instanceof Error ? caught.message : t('player.loadFailed'),
         });
       });
     return () => {
       cancelled = true;
     };
-  }, [isSimulationMode, loadAttempt, loadKey, startInteractionId, storyId]);
+  }, [isSimulationMode, loadAttempt, loadKey, startInteractionId, storyId, t]);
 
   const current = useMemo(
     () => story?.interactions.find((item) => item.id === currentId),
@@ -364,6 +385,7 @@ export function StoryPlayer() {
                       statValues,
                       currentDateTime,
                       ownedItemDefinitionIds,
+                      t,
                     ),
               },
             ];
@@ -384,6 +406,7 @@ export function StoryPlayer() {
       story,
       visited,
       ownedItemDefinitionIds,
+      t,
     ],
   );
   const conditionalTextState = useMemo(() => {
@@ -395,9 +418,9 @@ export function StoryPlayer() {
         );
         const available = connected && availableChoiceIds.has(interaction.id);
         const reason = !connected
-          ? 'The target interaction is no longer connected by an outgoing trigger.'
+          ? t('player.disconnectedTarget')
           : available
-            ? getConditionSummary(story, interaction, current.id)
+            ? getConditionSummary(story, interaction, current.id, t)
             : getUnavailableReason(
                 story,
                 interaction,
@@ -408,6 +431,7 @@ export function StoryPlayer() {
                 statValues,
                 currentDateTime,
                 ownedItemDefinitionIds,
+                t,
               );
         return [
           interaction.id,
@@ -428,6 +452,7 @@ export function StoryPlayer() {
     ownedItemDefinitionIds,
     statValues,
     story,
+    t,
     visited,
   ]);
   const outgoingInteractions = useMemo(
@@ -611,11 +636,11 @@ export function StoryPlayer() {
                 setLoadAttempt((attempt) => attempt + 1);
               }}
             >
-              Retry
+              {t('player.retry')}
             </button>
           </>
         ) : (
-          <p>Loading...</p>
+          <p>{t('player.loading')}</p>
         )}
       </main>
     );
@@ -629,19 +654,19 @@ export function StoryPlayer() {
             P
           </span>
           <span>
-            <small>{isSimulationMode ? 'Paralleax Preview' : 'Paralleax Reader'}</small>
+            <small>{t(isSimulationMode ? 'player.preview' : 'player.reader')}</small>
             <b>{story.title}</b>
           </span>
         </div>
-        {isSimulationMode ? <span className="mode-pill">Simulation</span> : null}
+        {isSimulationMode ? <span className="mode-pill">{t('player.simulation')}</span> : null}
         {!isSimulationMode ? (
           <span className={`save-status ${progressStatus}`} role="status" aria-live="polite">
             {progressStatus === 'saving'
-              ? 'Saving progress…'
+              ? t('player.savingProgress')
               : progressStatus === 'saved'
-                ? 'Progress saved'
+                ? t('player.progressSaved')
                 : progressStatus === 'error'
-                  ? 'Progress save failed'
+                  ? t('player.progressSaveFailed')
                   : ''}
           </span>
         ) : null}
@@ -651,14 +676,14 @@ export function StoryPlayer() {
             disabled={journey.length <= 1}
             onClick={stepBack}
           >
-            <span aria-hidden="true">←</span> Back
+            <span aria-hidden="true">←</span> {t('player.back')}
           </button>
         ) : null}
         <button className="player-toolbar-button" onClick={restart}>
-          <span aria-hidden="true">↻</span> Restart
+          <span aria-hidden="true">↻</span> {t('player.restart')}
         </button>
         <Link className="player-exit" to={`/stories/${story.id}/edit`}>
-          {isSimulationMode ? 'Exit simulation' : 'Back to editor'}
+          {t(isSimulationMode ? 'player.exitSimulation' : 'player.backToEditor')}
         </Link>
       </div>
       <article className="player-card">
@@ -674,12 +699,12 @@ export function StoryPlayer() {
           )}
           <div className="player-scene-meta">
             <span>
-              <small>Location</small>
-              <b>{currentLocation?.name ?? 'Unknown location'}</b>
+              <small>{t('player.location')}</small>
+              <b>{currentLocation?.name ?? t('player.unknownLocation')}</b>
             </span>
             <time dateTime={currentDateTime}>{currentDateTime.replace('T', ' ')}</time>
             {presentCharacters.length > 0 ? (
-              <span className="scene-character-list" aria-label="Characters present">
+              <span className="scene-character-list" aria-label={t('player.charactersPresent')}>
                 {presentCharacters.map((character) =>
                   character.imageUrl ? (
                     <img key={character.id} src={character.imageUrl} alt={character.name} />
@@ -696,10 +721,10 @@ export function StoryPlayer() {
         <div className="player-story-content">
           <p className="eyebrow">{story.title}</p>
           {playableCharacters.length > 0 && !playedCharacter ? (
-            <section className="character-selection" aria-label="Choose your character">
-              <span className="product-eyebrow">Before the story begins</span>
-              <h1>Choose your character</h1>
-              <p>Select the character whose stats and inventory you will follow.</p>
+            <section className="character-selection" aria-label={t('player.chooseCharacter')}>
+              <span className="product-eyebrow">{t('player.beforeStory')}</span>
+              <h1>{t('player.chooseCharacter')}</h1>
+              <p>{t('player.chooseCharacterDescription')}</p>
               <div>
                 {playableCharacters.map((character) => (
                   <button
@@ -725,18 +750,18 @@ export function StoryPlayer() {
               {isSimulationMode ? (
                 <>
                   <div className="simulation-edit-label">
-                    <span className="product-badge accent">Live editing</span>
-                    <small>Changes save when a field loses focus.</small>
+                    <span className="product-badge accent">{t('player.liveEditing')}</span>
+                    <small>{t('player.liveEditingHelp')}</small>
                   </div>
                   <input
                     className="simulation-title-input"
-                    aria-label="Current interaction title"
+                    aria-label={t('player.currentInteractionTitle')}
                     value={current.title}
                     onChange={(event) => patchCurrentInteraction({ title: event.target.value })}
                     onBlur={(event) => void saveCurrentInteraction({ title: event.target.value })}
                   />
                   <RichTextEditor
-                    ariaLabel="Current interaction content"
+                    ariaLabel={t('player.currentInteractionContent')}
                     value={current.body}
                     onChange={(body) => patchCurrentInteraction({ body })}
                     onBlur={(body) => void saveCurrentInteraction({ body })}
@@ -766,9 +791,9 @@ export function StoryPlayer() {
             </>
           ) : (
             <>
-              <span className="product-eyebrow">Ready when you are</span>
-              <h1>Start the story</h1>
-              <p>Choose a starting interaction.</p>
+              <span className="product-eyebrow">{t('player.ready')}</span>
+              <h1>{t('player.startStory')}</h1>
+              <p>{t('player.chooseStartingInteraction')}</p>
             </>
           )}
           {playableCharacters.length === 0 || playedCharacter ? (
@@ -779,7 +804,7 @@ export function StoryPlayer() {
                     <input
                       ref={editingChoiceInputRef}
                       className="choice-title-input"
-                      aria-label="New option title"
+                      aria-label={t('player.newOptionTitle')}
                       value={interaction.title}
                       onChange={(event) =>
                         patchInteraction(interaction.id, { title: event.target.value })
@@ -799,16 +824,16 @@ export function StoryPlayer() {
                       onClick={() => choose(interaction)}
                       title={
                         available
-                          ? getConditionSummary(story, interaction, current?.id ?? null)
-                          : (unavailableReason ?? 'Unavailable in the current simulation state')
+                          ? getConditionSummary(story, interaction, current?.id ?? null, t)
+                          : (unavailableReason ?? t('player.unavailable'))
                       }
                     >
                       <span className="choice-copy">
                         <strong>{interaction.title}</strong>
                         {isSimulationMode && !available ? (
                           <small>
-                            {unavailableReason ?? 'Unavailable in the current simulation state'}
-                            {forceUnavailableOptions ? ' Forced for this test.' : ''}
+                            {unavailableReason ?? t('player.unavailable')}
+                            {forceUnavailableOptions ? t('player.forced') : ''}
                           </small>
                         ) : null}
                       </span>
@@ -822,12 +847,12 @@ export function StoryPlayer() {
               {isSimulationMode ? (
                 <button
                   className="choice add-option"
-                  aria-label="Add option"
+                  aria-label={t('player.addOption')}
                   onClick={() => void addOption()}
                 >
                   <span className="choice-copy">
-                    <strong>Add option</strong>
-                    <small>Create a connected interaction from this point.</small>
+                    <strong>{t('player.addOption')}</strong>
+                    <small>{t('player.addOptionHelp')}</small>
                   </span>
                   <span className="choice-arrow" aria-hidden="true">
                     ＋
@@ -838,8 +863,8 @@ export function StoryPlayer() {
                 <div className="ending">
                   <span aria-hidden="true">◇</span>
                   <div>
-                    <b>End of this branch.</b>
-                    <p>You can restart the story to explore another path.</p>
+                    <b>{t('player.branchEnd')}</b>
+                    <p>{t('player.branchEndHelp')}</p>
                   </div>
                 </div>
               ) : null}
@@ -850,7 +875,7 @@ export function StoryPlayer() {
       {playedCharacter || playableCharacters.length === 0 ? (
         <aside
           className="player-inventory"
-          aria-label={playedCharacter ? 'Played character' : 'Inventory'}
+          aria-label={t(playedCharacter ? 'player.playedCharacter' : 'player.inventory')}
         >
           {playedCharacter ? (
             <>
@@ -869,9 +894,9 @@ export function StoryPlayer() {
                 <h2>{playedCharacter.name}</h2>
                 {playedCharacter.description ? <p>{playedCharacter.description}</p> : null}
               </div>
-              <h3>Stats</h3>
+              <h3>{t('player.stats')}</h3>
               {(playedCharacter.stats ?? []).length === 0 ? (
-                <p className="hint">No stats.</p>
+                <p className="hint">{t('player.noStats')}</p>
               ) : (
                 <ul className="player-stat-list">
                   {(playedCharacter.stats ?? []).map((stat) => (
@@ -881,7 +906,7 @@ export function StoryPlayer() {
                       </span>
                       <span>
                         {story.statDefinitions?.find(({ id }) => id === stat.statDefinitionId)
-                          ?.name ?? 'Unknown stat'}
+                          ?.name ?? t('player.unknownStat')}
                       </span>
                       <strong>: {statValues[stat.id] ?? stat.initialValue}</strong>
                     </li>
@@ -892,7 +917,7 @@ export function StoryPlayer() {
           ) : null}
           {isSimulationMode ? (
             <section className="simulation-controls">
-              <span className="product-eyebrow">Author tools</span>
+              <span className="product-eyebrow">{t('player.authorTools')}</span>
               <label>
                 <input
                   type="checkbox"
@@ -900,18 +925,18 @@ export function StoryPlayer() {
                   onChange={(event) => setForceUnavailableOptions(event.target.checked)}
                 />
                 <span>
-                  <b>Force unavailable options</b>
-                  <small>Bypass conditions while testing this path.</small>
+                  <b>{t('player.forceUnavailable')}</b>
+                  <small>{t('player.forceUnavailableHelp')}</small>
                 </span>
               </label>
             </section>
           ) : null}
-          <h2>Inventory</h2>
+          <h2>{t('player.inventory')}</h2>
           {ownedItemIds.filter(
             (itemId) =>
               !playedCharacter || getItemOwnerIdForInstance(story, itemId) === playedCharacter.id,
           ).length === 0 ? (
-            <p className="hint">No items.</p>
+            <p className="hint">{t('player.noItems')}</p>
           ) : (
             <ul className="player-item-list">
               {ownedItemIds
@@ -934,13 +959,13 @@ export function StoryPlayer() {
                       {definition?.imageUrl ? (
                         <img className="context-picto" src={definition.imageUrl} alt="" />
                       ) : null}
-                      {definition?.name ?? 'Unknown item'}
+                      {definition?.name ?? t('player.unknownItem')}
                       {(definition?.stats ?? []).length > 0 ? (
                         <ul className="item-stat-list">
                           {(definition?.stats ?? []).map((stat) => (
                             <li key={stat.statDefinitionId}>
                               {story.statDefinitions?.find(({ id }) => id === stat.statDefinitionId)
-                                ?.name ?? 'Unknown stat'}
+                                ?.name ?? t('player.unknownStat')}
                               :{' '}
                               {itemStatValues[itemId]?.[stat.statDefinitionId] ?? stat.initialValue}
                             </li>
@@ -958,9 +983,9 @@ export function StoryPlayer() {
       {playedCharacter &&
       current &&
       (current.characterIds ?? []).some((id) => id !== playedCharacter.id) ? (
-        <aside className="encounter-panel" aria-label="Encountered characters">
-          <span className="product-eyebrow">Current scene</span>
-          <h2>Encounter</h2>
+        <aside className="encounter-panel" aria-label={t('player.encounteredCharacters')}>
+          <span className="product-eyebrow">{t('player.currentScene')}</span>
+          <h2>{t('player.encounter')}</h2>
           {(current.characterIds ?? [])
             .filter((id) => id !== playedCharacter?.id)
             .map((characterId) => {
@@ -982,7 +1007,9 @@ export function StoryPlayer() {
         </aside>
       ) : null}
       <details className="debug player-history">
-        <summary>{isSimulationMode ? 'Simulation history' : 'Reading history'}</summary>
+        <summary>
+          {t(isSimulationMode ? 'player.simulationHistory' : 'player.readingHistory')}
+        </summary>
         <ol>
           {visited.map((id) => (
             <li key={id}>{story.interactions.find((item) => item.id === id)?.title ?? id}</li>

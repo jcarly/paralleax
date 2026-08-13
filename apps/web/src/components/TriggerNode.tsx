@@ -1,4 +1,5 @@
 import { Handle, Position, type NodeProps } from '@xyflow/react';
+import { useTranslation } from 'react-i18next';
 
 export interface TriggerNodeData extends Record<string, unknown> {
   interactionId: string;
@@ -14,11 +15,13 @@ export interface TriggerNodeData extends Record<string, unknown> {
 const routingHandles = [Position.Top, Position.Right, Position.Bottom, Position.Left];
 
 export function TriggerNode({ data }: NodeProps) {
+  const { t } = useTranslation();
   const d = data as TriggerNodeData;
-  const conditionLabel = d.conditionCount ? `${d.conditionCount} condition(s)` : 'No conditions';
-  const inputLabel = `${d.inputCount} input${d.inputCount === 1 ? '' : 's'}`;
-  const orLabel =
-    d.orGroupCount > 1 ? `${d.orGroupCount} OR variants` : `${d.orGroupCount} trigger variant`;
+  const conditionLabel = d.conditionCount
+    ? t('graph.conditions', { count: d.conditionCount })
+    : t('graph.noConditions');
+  const inputLabel = t('graph.inputs', { count: d.inputCount });
+  const orLabel = t('graph.variants', { count: d.orGroupCount });
 
   return (
     <div className="trigger-node">
@@ -44,7 +47,11 @@ export function TriggerNode({ data }: NodeProps) {
         data-interaction-id={d.interactionId}
         data-trigger-id={d.triggerId}
         data-testid={`flow-trigger-${d.interactionId}-${d.triggerId}`}
-        aria-label={`Trigger, ${inputLabel}, ${conditionLabel}, ${orLabel}`}
+        aria-label={t('graph.trigger', {
+          input: inputLabel,
+          condition: conditionLabel,
+          variant: orLabel,
+        })}
         title={`${inputLabel}, ${conditionLabel}, ${orLabel}`}
         onClick={(event) => {
           event.preventDefault();

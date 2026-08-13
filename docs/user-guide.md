@@ -22,6 +22,18 @@ error state.
 Stories are private to the account that creates them. Another account cannot
 list, open, edit, or delete them.
 
+## Choose the Interface Language
+
+Use the language selector on the sign-in screen or in the authenticated header
+to switch between English and French. Paralleax initially follows a supported
+browser language and remembers an explicit selection in that browser. English
+is used when the detected language is unsupported or a translation is missing.
+
+This setting changes only the Paralleax interface: labels, actions, statuses,
+accessibility text, and condition explanations. Story titles, interaction
+content, and authored names and descriptions remain in the language in which
+the author wrote them.
+
 ## Create a Story
 
 1. Open the story list.

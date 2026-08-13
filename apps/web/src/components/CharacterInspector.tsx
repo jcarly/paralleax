@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type {
   Character,
   ItemDefinition,
@@ -46,6 +47,7 @@ export function CharacterInspector({
   onDeleteItem: (characterId: string, itemId: string) => Promise<void>;
   onMoveItem: (itemId: string, placement: MoveItemInstanceInput) => Promise<void>;
 }) {
+  const { t } = useTranslation();
   const availableDefinitions = statDefinitions.filter(
     (definition) =>
       !(character.stats ?? []).some(({ statDefinitionId }) => statDefinitionId === definition.id),
@@ -61,9 +63,9 @@ export function CharacterInspector({
 
   return (
     <div>
-      <h3>Character</h3>
+      <h3>{t('inspector.character')}</h3>
       <label>
-        Name
+        {t('inspector.name')}
         <input
           value={character.name}
           onChange={(event) => onChange({ name: event.target.value })}
@@ -91,15 +93,15 @@ export function CharacterInspector({
             void onPatch(character.id, { isPlayable });
           }}
         />
-        Playable character
+        {t('inspector.playableCharacter')}
       </label>
       <div className="inspector-section-header">
-        <h3>Stats</h3>
+        <h3>{t('inspector.stats')}</h3>
       </div>
       {availableDefinitions.length > 0 ? (
         <div className="stat-assignment">
           <select
-            aria-label="Stat to add"
+            aria-label={t('inspector.statToAdd')}
             value={definitionId}
             onChange={(event) => setSelectedDefinitionId(event.target.value)}
           >
@@ -112,17 +114,17 @@ export function CharacterInspector({
           <button
             className="secondary"
             type="button"
-            aria-label="Add stat"
+            aria-label={t('inspector.addStat')}
             onClick={() => void onCreateStat(character.id, definitionId)}
           >
-            Add
+            {t('inspector.add')}
           </button>
         </div>
       ) : (
         <p className="hint">
           {statDefinitions.length === 0
-            ? 'Create a stat in the story context first.'
-            : 'All available stats are already assigned.'}
+            ? t('inspector.createStatFirst')
+            : t('inspector.allStatsAssigned')}
         </p>
       )}
       {(character.stats ?? []).map((stat) => (
@@ -135,10 +137,11 @@ export function CharacterInspector({
                 alt=""
               />
             ) : null}
-            {statDefinitions.find(({ id }) => id === stat.statDefinitionId)?.name ?? 'Unknown stat'}
+            {statDefinitions.find(({ id }) => id === stat.statDefinitionId)?.name ??
+              t('inspector.unknownStat')}
           </span>
           <label>
-            Initial value
+            {t('inspector.initialValue')}
             <input
               type="number"
               value={stat.initialValue}
@@ -159,18 +162,18 @@ export function CharacterInspector({
             />
           </label>
           <RemoveRowButton
-            label="Delete character stat"
+            label={t('inspector.deleteCharacterStat')}
             onRemove={() => void onDeleteStat(character.id, stat.id)}
           />
         </div>
       ))}
       <div className="inspector-section-header">
-        <h3>Items</h3>
+        <h3>{t('inspector.items')}</h3>
       </div>
       {itemDefinitions.length > 0 ? (
         <div className="stat-assignment">
           <select
-            aria-label="Item to add"
+            aria-label={t('inspector.itemToAdd')}
             value={itemDefinitionId}
             onChange={(event) => setSelectedItemDefinitionId(event.target.value)}
           >
@@ -183,17 +186,17 @@ export function CharacterInspector({
           <button
             className="secondary"
             type="button"
-            aria-label="Add item"
+            aria-label={t('inspector.addItem')}
             onClick={() => void onCreateItem(character.id, itemDefinitionId)}
           >
-            Add
+            {t('inspector.add')}
           </button>
         </div>
       ) : (
-        <p className="hint">Create an item in the story context first.</p>
+        <p className="hint">{t('inspector.createItemFirst')}</p>
       )}
       {(character.items ?? []).length === 0 ? (
-        <p className="hint">No items owned yet.</p>
+        <p className="hint">{t('inspector.noOwnedItems')}</p>
       ) : (
         <ItemInstanceTree
           items={character.items ?? []}
@@ -205,7 +208,7 @@ export function CharacterInspector({
         />
       )}
       <label>
-        Description
+        {t('inspector.description')}
         <textarea
           rows={7}
           value={character.description}

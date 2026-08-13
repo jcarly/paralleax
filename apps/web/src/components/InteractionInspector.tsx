@@ -1,5 +1,6 @@
 import { updateInteractionInStory, type Interaction, type Story } from '@paralleax/shared';
 import { useId } from 'react';
+import { useTranslation } from 'react-i18next';
 import { RichTextEditor } from './RichTextEditor';
 
 function getInitials(name: string) {
@@ -29,12 +30,13 @@ function SearchableTargetField({
   options: SearchableTargetOption[];
   onSelect: (id: string) => void;
 }) {
+  const { t } = useTranslation();
   const datalistId = `effect-target-${useId().replace(/:/g, '')}`;
   const selectedLabel = options.find((option) => option.id === value)?.label ?? '';
 
   return (
     <label>
-      Target
+      {t('interactionInspector.target')}
       <input
         aria-label={ariaLabel}
         autoComplete="off"
@@ -82,6 +84,7 @@ export function InteractionInspector({
   onDelete: () => Promise<void>;
   onSelectInteraction?: (interactionId: string) => void;
 }) {
+  const { t } = useTranslation();
   const characters = story.characters ?? [];
   const outgoingInteractions = story.interactions.filter((candidate) =>
     candidate.triggers.some((trigger) => trigger.inputInteractionIds.includes(interaction.id)),
@@ -90,7 +93,7 @@ export function InteractionInspector({
     (character.stats ?? []).map((stat) => {
       const statName =
         story.statDefinitions?.find(({ id }) => id === stat.statDefinitionId)?.name ??
-        'Unknown stat';
+        t('inspector.unknownStat');
       return {
         ...stat,
         characterId: character.id,
@@ -116,7 +119,7 @@ export function InteractionInspector({
           : '';
       return {
         ...item,
-        label: `${owner.name} — ${definition?.name ?? 'Unknown item'}${copyNumber}`,
+        label: `${owner.name} — ${definition?.name ?? t('inspector.unknownItem')}${copyNumber}`,
       };
     }),
   );
@@ -125,7 +128,7 @@ export function InteractionInspector({
     return (definition?.stats ?? []).map((stat) => {
       const statName =
         story.statDefinitions?.find(({ id }) => id === stat.statDefinitionId)?.name ??
-        'Unknown stat';
+        t('inspector.unknownStat');
       return {
         itemId: item.id,
         statDefinitionId: stat.statDefinitionId,
@@ -150,9 +153,9 @@ export function InteractionInspector({
   return (
     <div className="interaction-inspector">
       <section className="interaction-inspector-content">
-        <h3>Content</h3>
+        <h3>{t('interactionInspector.content')}</h3>
         <label>
-          Title
+          {t('interactionInspector.title')}
           <input
             value={interaction.title}
             onChange={(e) => updateLocalInteraction({ title: e.target.value })}
@@ -169,18 +172,20 @@ export function InteractionInspector({
       </section>
       <details className="inspector-accordion" open>
         <summary>
-          <span>Context and timing</span>
-          <small>{interaction.characterIds?.length ?? 0} present</small>
+          <span>{t('interactionInspector.contextAndTiming')}</span>
+          <small>
+            {t('interactionInspector.present', { count: interaction.characterIds?.length ?? 0 })}
+          </small>
         </summary>
         <div className="inspector-accordion-content">
           <div className="interaction-timing-block">
-            <strong>Interaction duration</strong>
-            <p className="hint">Advance the story clock when this interaction is selected.</p>
+            <strong>{t('interactionInspector.durationTitle')}</strong>
+            <p className="hint">{t('interactionInspector.durationHelp')}</p>
             <label>
-              Duration
+              {t('interactionInspector.duration')}
               <span className="interaction-duration-input">
                 <input
-                  aria-label="Duration (minutes)"
+                  aria-label={t('interactionInspector.durationMinutes')}
                   type="number"
                   min="0"
                   step="1"
@@ -200,12 +205,12 @@ export function InteractionInspector({
                     void onPatch(interaction.id, { durationMinutes });
                   }}
                 />
-                <small>minutes</small>
+                <small>{t('interactionInspector.minutes')}</small>
               </span>
             </label>
           </div>
           <label>
-            Location
+            {t('interactionInspector.location')}
             <select
               value={interaction.locationId ?? ''}
               onChange={(event) => {
@@ -214,7 +219,7 @@ export function InteractionInspector({
                 void onPatch(interaction.id, { locationId });
               }}
             >
-              <option value="">No location change</option>
+              <option value="">{t('interactionInspector.noLocationChange')}</option>
               {(story.locations ?? []).map((location) => (
                 <option key={location.id} value={location.id}>
                   {location.name}
@@ -223,9 +228,9 @@ export function InteractionInspector({
             </select>
           </label>
           <fieldset className="character-presence-fieldset">
-            <legend>Characters present</legend>
+            <legend>{t('interactionInspector.charactersPresent')}</legend>
             {(story.characters?.length ?? 0) === 0 ? (
-              <p className="hint">No characters yet.</p>
+              <p className="hint">{t('interactionInspector.noCharacters')}</p>
             ) : (
               (story.characters ?? []).map((character) => (
                 <label className="character-presence-option" key={character.id}>
@@ -256,7 +261,7 @@ export function InteractionInspector({
       </details>
       <details className="inspector-accordion" open>
         <summary>
-          <span>Stat effects</span>
+          <span>{t('interactionInspector.statEffects')}</span>
           <small>{interaction.statEffects?.length ?? 0}</small>
         </summary>
         <div className="inspector-accordion-content">
@@ -279,7 +284,7 @@ export function InteractionInspector({
                 void onPatch(interaction.id, { statEffects });
               }}
             >
-              Add effect
+              {t('interactionInspector.addEffect')}
             </button>
           </div>
           {(interaction.statEffects ?? []).map((effect, index) => {
@@ -300,9 +305,11 @@ export function InteractionInspector({
             }));
             return (
               <div className="interaction-effect-card" key={effect.statId}>
-                <strong className="interaction-effect-title">Stat change {index + 1}</strong>
+                <strong className="interaction-effect-title">
+                  {t('interactionInspector.statChange', { number: index + 1 })}
+                </strong>
                 <button
-                  aria-label="Delete stat effect"
+                  aria-label={t('interactionInspector.deleteStatEffect')}
                   className="ghost danger interaction-effect-remove"
                   type="button"
                   onClick={() => {
@@ -317,7 +324,7 @@ export function InteractionInspector({
                 </button>
                 <div className="interaction-effect-fields">
                   <SearchableTargetField
-                    ariaLabel="Stat effect target"
+                    ariaLabel={t('interactionInspector.statEffectTarget')}
                     value={selectedStat?.characterId ?? ''}
                     options={targetOptions}
                     onSelect={(characterId) => {
@@ -343,9 +350,9 @@ export function InteractionInspector({
                     }}
                   />
                   <label>
-                    Stat
+                    {t('interactionInspector.stat')}
                     <select
-                      aria-label="Affected stat"
+                      aria-label={t('interactionInspector.affectedStat')}
                       value={selectedStat?.statDefinitionId ?? ''}
                       onChange={(event) => {
                         const candidate = targetStats.find(
@@ -373,9 +380,9 @@ export function InteractionInspector({
                     </select>
                   </label>
                   <label>
-                    Operation
+                    {t('interactionInspector.operation')}
                     <select
-                      aria-label="Stat effect operation"
+                      aria-label={t('interactionInspector.statEffectOperation')}
                       value={effect.operation}
                       onChange={(event) => {
                         const statEffects = [...(interaction.statEffects ?? [])];
@@ -387,14 +394,14 @@ export function InteractionInspector({
                         void onPatch(interaction.id, { statEffects });
                       }}
                     >
-                      <option value="add">add</option>
-                      <option value="set">set to</option>
+                      <option value="add">{t('interactionInspector.addOperation')}</option>
+                      <option value="set">{t('interactionInspector.setOperation')}</option>
                     </select>
                   </label>
                   <label>
-                    Value
+                    {t('interactionInspector.value')}
                     <input
-                      aria-label="Stat effect value"
+                      aria-label={t('interactionInspector.statEffectValue')}
                       type="number"
                       value={effect.value}
                       onChange={(event) => {
@@ -414,13 +421,13 @@ export function InteractionInspector({
             );
           })}
           {(interaction.statEffects?.length ?? 0) === 0 ? (
-            <p className="inspector-empty-effect">No stat effects yet.</p>
+            <p className="inspector-empty-effect">{t('interactionInspector.noStatEffects')}</p>
           ) : null}
         </div>
       </details>
       <details className="inspector-accordion" open>
         <summary>
-          <span>Item effects</span>
+          <span>{t('interactionInspector.itemEffects')}</span>
           <small>{interaction.itemEffects?.length ?? 0}</small>
         </summary>
         <div className="inspector-accordion-content">
@@ -451,7 +458,7 @@ export function InteractionInspector({
                 void onPatch(interaction.id, { itemEffects });
               }}
             >
-              Add item effect
+              {t('interactionInspector.addItemEffect')}
             </button>
           </div>
           {(interaction.itemEffects ?? []).map((effect, index) => (
@@ -459,9 +466,11 @@ export function InteractionInspector({
               className="interaction-effect-card"
               key={`${effect.characterId ?? ''}:${effect.itemDefinitionId ?? effect.itemId ?? index}`}
             >
-              <strong className="interaction-effect-title">Inventory change {index + 1}</strong>
+              <strong className="interaction-effect-title">
+                {t('interactionInspector.inventoryChange', { number: index + 1 })}
+              </strong>
               <button
-                aria-label="Delete item effect"
+                aria-label={t('interactionInspector.deleteItemEffect')}
                 className="ghost danger interaction-effect-remove"
                 type="button"
                 onClick={() => {
@@ -476,7 +485,7 @@ export function InteractionInspector({
               </button>
               <div className="interaction-effect-fields">
                 <SearchableTargetField
-                  ariaLabel="Item effect target"
+                  ariaLabel={t('interactionInspector.itemEffectTarget')}
                   value={effect.characterId ?? ''}
                   options={characters.map((character) => ({
                     id: character.id,
@@ -496,9 +505,9 @@ export function InteractionInspector({
                   }}
                 />
                 <label>
-                  Item
+                  {t('interactionInspector.item')}
                   <select
-                    aria-label="Affected item"
+                    aria-label={t('interactionInspector.affectedItem')}
                     value={effect.itemDefinitionId ?? ''}
                     onChange={(event) => {
                       const itemEffects = [...(interaction.itemEffects ?? [])];
@@ -511,7 +520,9 @@ export function InteractionInspector({
                       void onPatch(interaction.id, { itemEffects });
                     }}
                   >
-                    {effect.itemId ? <option value="">Legacy assigned instance</option> : null}
+                    {effect.itemId ? (
+                      <option value="">{t('interactionInspector.legacyItem')}</option>
+                    ) : null}
                     {itemDefinitions.map((definition) => (
                       <option
                         disabled={(interaction.itemEffects ?? []).some(
@@ -529,9 +540,9 @@ export function InteractionInspector({
                   </select>
                 </label>
                 <label>
-                  Operation
+                  {t('interactionInspector.operation')}
                   <select
-                    aria-label="Item effect operation"
+                    aria-label={t('interactionInspector.itemEffectOperation')}
                     value={effect.operation}
                     onChange={(event) => {
                       const itemEffects = [...(interaction.itemEffects ?? [])];
@@ -543,21 +554,21 @@ export function InteractionInspector({
                       void onPatch(interaction.id, { itemEffects });
                     }}
                   >
-                    <option value="obtain">obtain</option>
-                    <option value="lose">lose</option>
+                    <option value="obtain">{t('interactionInspector.obtainOperation')}</option>
+                    <option value="lose">{t('interactionInspector.loseOperation')}</option>
                   </select>
                 </label>
               </div>
             </div>
           ))}
           {(interaction.itemEffects?.length ?? 0) === 0 ? (
-            <p className="inspector-empty-effect">No item effects yet.</p>
+            <p className="inspector-empty-effect">{t('interactionInspector.noItemEffects')}</p>
           ) : null}
         </div>
       </details>
       <details className="inspector-accordion" open>
         <summary>
-          <span>Item stat effects</span>
+          <span>{t('interactionInspector.itemStatEffects')}</span>
           <small>{itemStatEffects.length}</small>
         </summary>
         <div className="inspector-accordion-content">
@@ -580,7 +591,7 @@ export function InteractionInspector({
                 void onPatch(interaction.id, { itemStatEffects: nextEffects });
               }}
             >
-              Add item stat effect
+              {t('interactionInspector.addItemStatEffect')}
             </button>
           </div>
           {itemStatEffects.map((effect, index) => (
@@ -588,9 +599,11 @@ export function InteractionInspector({
               className="interaction-effect-card"
               key={`${effect.itemId}:${effect.statDefinitionId}`}
             >
-              <strong className="interaction-effect-title">Item stat change {index + 1}</strong>
+              <strong className="interaction-effect-title">
+                {t('interactionInspector.itemStatChange', { number: index + 1 })}
+              </strong>
               <button
-                aria-label="Delete item stat effect"
+                aria-label={t('interactionInspector.deleteItemStatEffect')}
                 className="ghost danger interaction-effect-remove"
                 type="button"
                 onClick={() => {
@@ -605,7 +618,7 @@ export function InteractionInspector({
               </button>
               <div className="interaction-effect-fields">
                 <SearchableTargetField
-                  ariaLabel="Item stat effect target"
+                  ariaLabel={t('interactionInspector.itemStatEffectTarget')}
                   value={effect.itemId}
                   options={items.map((item) => ({
                     id: item.id,
@@ -653,9 +666,9 @@ export function InteractionInspector({
                   }}
                 />
                 <label>
-                  Stat
+                  {t('interactionInspector.stat')}
                   <select
-                    aria-label="Affected item stat"
+                    aria-label={t('interactionInspector.affectedItemStat')}
                     value={effect.statDefinitionId}
                     onChange={(event) => {
                       const nextEffects = [...itemStatEffects];
@@ -686,9 +699,9 @@ export function InteractionInspector({
                   </select>
                 </label>
                 <label>
-                  Operation
+                  {t('interactionInspector.operation')}
                   <select
-                    aria-label="Item stat effect operation"
+                    aria-label={t('interactionInspector.itemStatEffectOperation')}
                     value={effect.operation}
                     onChange={(event) => {
                       const nextEffects = [...itemStatEffects];
@@ -700,14 +713,14 @@ export function InteractionInspector({
                       void onPatch(interaction.id, { itemStatEffects: nextEffects });
                     }}
                   >
-                    <option value="add">add</option>
-                    <option value="set">set to</option>
+                    <option value="add">{t('interactionInspector.addOperation')}</option>
+                    <option value="set">{t('interactionInspector.setOperation')}</option>
                   </select>
                 </label>
                 <label>
-                  Value
+                  {t('interactionInspector.value')}
                   <input
-                    aria-label="Item stat effect value"
+                    aria-label={t('interactionInspector.itemStatEffectValue')}
                     type="number"
                     value={effect.value}
                     onChange={(event) => {
@@ -732,13 +745,13 @@ export function InteractionInspector({
             </div>
           ))}
           {itemStatEffects.length === 0 ? (
-            <p className="inspector-empty-effect">No item stat effects yet.</p>
+            <p className="inspector-empty-effect">{t('interactionInspector.noItemStatEffects')}</p>
           ) : null}
         </div>
       </details>
       <hr />
       <button className="danger" onClick={() => void onDelete()}>
-        Delete interaction
+        {t('interactionInspector.deleteInteraction')}
       </button>
     </div>
   );

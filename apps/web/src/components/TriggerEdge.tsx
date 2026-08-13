@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { BaseEdge, EdgeLabelRenderer, getSmoothStepPath, type EdgeProps } from '@xyflow/react';
 import type { TriggerFlowEdge } from '../storyGraph';
 
@@ -15,6 +16,7 @@ export function TriggerEdge({
   markerEnd,
   data,
 }: TriggerEdgeProps) {
+  const { t } = useTranslation();
   const [isHovered, setIsHovered] = useState(false);
   const [edgePath, labelX, labelY] = getSmoothStepPath({
     sourceX,
@@ -48,8 +50,8 @@ export function TriggerEdge({
             type="button"
             className={`trigger-link-delete nodrag nopan ${isHovered ? 'visible' : ''}`}
             style={{ transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)` }}
-            aria-label="Remove trigger input"
-            title="Remove link"
+            aria-label={t('graph.removeTriggerInput')}
+            title={t('graph.removeLink')}
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
             onClick={(event) => {

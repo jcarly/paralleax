@@ -255,6 +255,21 @@
 
 /* Authenticated shell */
 
+.language-switcher select {
+  min-height: 34px;
+  padding: 0.35rem 1.8rem 0.35rem 0.55rem;
+  border: 1px solid var(--product-line);
+  border-radius: 6px;
+  background-color: #fff;
+  color: var(--product-ink);
+  font: inherit;
+  font-size: 0.72rem;
+}
+
+.language-switcher-header {
+  display: flex;
+}
+
 .product-app-header {
   position: relative;
   z-index: 30;
@@ -505,6 +520,12 @@
 
 .auth-card {
   width: min(100%, 430px);
+}
+
+.language-switcher-auth {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 1.25rem;
 }
 
 .auth-mobile-brand {

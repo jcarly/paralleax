@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { MAX_INTERACTION_BODY_LENGTH } from '@paralleax/shared';
+import { useTranslation } from 'react-i18next';
 import type { ConditionalTextState } from './RichTextContent';
 
-function embedMarkup(url: string): string | undefined {
+function embedMarkup(url: string, youtubeTitle: string, vimeoTitle: string): string | undefined {
   let parsed: URL;
   try {
     parsed = new URL(url);
@@ -18,26 +19,22 @@ function embedMarkup(url: string): string | undefined {
         ? parsed.searchParams.get('v')
         : undefined;
   if (youtubeId && /^[\w-]+$/.test(youtubeId)) {
-    return `<iframe src="https://www.youtube-nocookie.com/embed/${youtubeId}" title="YouTube video" allow="accelerometer; autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>`;
+    return `<iframe src="https://www.youtube-nocookie.com/embed/${youtubeId}" title="${youtubeTitle}" allow="accelerometer; autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>`;
   }
   if (['vimeo.com', 'www.vimeo.com'].includes(parsed.hostname)) {
     const vimeoId = parsed.pathname.split('/').filter(Boolean).at(-1);
     if (vimeoId && /^\d+$/.test(vimeoId)) {
-      return `<iframe src="https://player.vimeo.com/video/${vimeoId}" title="Vimeo video" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe>`;
+      return `<iframe src="https://player.vimeo.com/video/${vimeoId}" title="${vimeoTitle}" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe>`;
     }
   }
   return `<video src="${url.replaceAll('"', '&quot;')}" controls></video>`;
-}
-
-function characterCount(value: number) {
-  return `${value.toLocaleString('en-US')} ${value === 1 ? 'character' : 'characters'}`;
 }
 
 export function RichTextEditor({
   value,
   onChange,
   onBlur,
-  ariaLabel = 'Content',
+  ariaLabel,
   conditionalTargets = [],
   conditionalTextState,
   onConditionalTargetClick,
@@ -52,16 +49,22 @@ export function RichTextEditor({
   onConditionalTargetClick?: (interactionId: string) => void;
   maxLength?: number;
 }) {
+  const { t, i18n } = useTranslation();
   const editorRef = useRef<HTMLDivElement>(null);
   const [showConditionalTargets, setShowConditionalTargets] = useState(false);
   const remainingCharacters = maxLength - value.length;
   const isNearLimit = remainingCharacters <= Math.ceil(maxLength * 0.1);
+  const formatCount = (count: number) => t('richText.characters', { count });
+  const numberFormatter = new Intl.NumberFormat(i18n.resolvedLanguage ?? i18n.language);
   const limitMessage =
     remainingCharacters < 0
-      ? `${characterCount(Math.abs(remainingCharacters))} over limit. This content cannot be saved.`
+      ? t('richText.overLimit', { characters: formatCount(Math.abs(remainingCharacters)) })
       : isNearLimit
-        ? `${characterCount(remainingCharacters)} remaining.`
-        : `${value.length.toLocaleString('en-US')} / ${maxLength.toLocaleString('en-US')} characters`;
+        ? t('richText.remaining', { characters: formatCount(remainingCharacters) })
+        : t('richText.length', {
+            current: numberFormatter.format(value.length),
+            maximum: numberFormatter.format(maxLength),
+          });
 
   function editorHtml() {
     const clone = editorRef.current?.cloneNode(true) as HTMLDivElement | undefined;
@@ -87,10 +90,10 @@ export function RichTextEditor({
       const state = conditionalTextState?.[frame.dataset.conditionalTextTarget ?? ''];
       frame.classList.add('conditional-text');
       frame.classList.toggle('conditional-text-unavailable', Boolean(state && !state.available));
-      if (state && !state.available) frame.title = state.reason ?? 'Unavailable';
+      if (state && !state.available) frame.title = state.reason ?? t('richText.unavailable');
       else frame.removeAttribute('title');
     });
-  }, [conditionalTextState, value]);
+  }, [conditionalTextState, t, value]);
 
   function command(name: string, commandValue?: string) {
     editorRef.current?.focus();
@@ -99,13 +102,15 @@ export function RichTextEditor({
   }
 
   function insertImage() {
-    const url = window.prompt('Image or GIF URL');
+    const url = window.prompt(t('richText.imagePrompt'));
     if (url && /^https?:\/\//i.test(url)) command('insertImage', url);
   }
 
   function insertVideo() {
-    const url = window.prompt('Video, YouTube, or Vimeo URL');
-    const markup = url ? embedMarkup(url) : undefined;
+    const url = window.prompt(t('richText.videoPrompt'));
+    const markup = url
+      ? embedMarkup(url, t('richText.youtubeVideo'), t('richText.vimeoVideo'))
+      : undefined;
     if (markup) command('insertHTML', markup);
   }
 
@@ -117,19 +122,28 @@ export function RichTextEditor({
       .replaceAll('&', '&amp;')
       .replaceAll('<', '&lt;')
       .replaceAll('>', '&gt;');
+    const escapedAriaLabel = t('richText.openTarget', { title: target.title })
+      .replaceAll('&', '&amp;')
+      .replaceAll('"', '&quot;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;');
+    const escapedPlaceholder = t('richText.conditionalTextPlaceholder')
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;');
     command(
       'insertHTML',
-      `<div data-conditional-text-target="${escapedId}"><button type="button" contenteditable="false" aria-label="Open target interaction: ${escapedTitle}" data-conditional-text-link="${escapedId}">↗ ${escapedTitle}</button><p>Conditional text</p></div><p><br></p>`,
+      `<div data-conditional-text-target="${escapedId}"><button type="button" contenteditable="false" aria-label="${escapedAriaLabel}" data-conditional-text-link="${escapedId}">↗ ${escapedTitle}</button><p>${escapedPlaceholder}</p></div><p><br></p>`,
     );
     setShowConditionalTargets(false);
   }
 
   return (
     <div className="rich-text-editor">
-      <div className="rich-text-toolbar" role="toolbar" aria-label="Content formatting">
+      <div className="rich-text-toolbar" role="toolbar" aria-label={t('richText.formatting')}>
         <button
           type="button"
-          aria-label="Bold"
+          aria-label={t('richText.bold')}
           onMouseDown={(e) => e.preventDefault()}
           onClick={() => command('bold')}
         >
@@ -137,7 +151,7 @@ export function RichTextEditor({
         </button>
         <button
           type="button"
-          aria-label="Italic"
+          aria-label={t('richText.italic')}
           onMouseDown={(e) => e.preventDefault()}
           onClick={() => command('italic')}
         >
@@ -145,7 +159,7 @@ export function RichTextEditor({
         </button>
         <button
           type="button"
-          aria-label="Underline"
+          aria-label={t('richText.underline')}
           onMouseDown={(e) => e.preventDefault()}
           onClick={() => command('underline')}
         >
@@ -153,7 +167,7 @@ export function RichTextEditor({
         </button>
         <button
           type="button"
-          aria-label="Heading"
+          aria-label={t('richText.heading')}
           onMouseDown={(e) => e.preventDefault()}
           onClick={() => command('formatBlock', 'h2')}
         >
@@ -161,32 +175,32 @@ export function RichTextEditor({
         </button>
         <button
           type="button"
-          aria-label="Bulleted list"
+          aria-label={t('richText.bulletedList')}
           onMouseDown={(e) => e.preventDefault()}
           onClick={() => command('insertUnorderedList')}
         >
-          List
+          {t('richText.list')}
         </button>
         <button
           type="button"
-          aria-label="Add image or GIF"
+          aria-label={t('richText.addImage')}
           onMouseDown={(e) => e.preventDefault()}
           onClick={insertImage}
         >
-          Image/GIF
+          {t('richText.image')}
         </button>
         <button
           type="button"
-          aria-label="Add video"
+          aria-label={t('richText.addVideo')}
           onMouseDown={(e) => e.preventDefault()}
           onClick={insertVideo}
         >
-          Video
+          {t('richText.video')}
         </button>
         <button
           type="button"
-          aria-label="Add conditional text"
-          title="Add conditional text"
+          aria-label={t('richText.addConditionalText')}
+          title={t('richText.addConditionalText')}
           disabled={conditionalTargets.length === 0}
           onMouseDown={(event) => event.preventDefault()}
           onClick={() => setShowConditionalTargets((visible) => !visible)}
@@ -195,14 +209,14 @@ export function RichTextEditor({
         </button>
         {showConditionalTargets ? (
           <label className="conditional-target-picker">
-            Target interaction
+            {t('richText.targetInteraction')}
             <select
-              aria-label="Conditional text target"
+              aria-label={t('richText.conditionalTarget')}
               defaultValue=""
               onChange={(event) => insertConditionalText(event.target.value)}
             >
               <option value="" disabled>
-                Choose an outgoing interaction
+                {t('richText.chooseOutgoing')}
               </option>
               {conditionalTargets.map((target) => (
                 <option key={target.id} value={target.id}>
@@ -218,7 +232,7 @@ export function RichTextEditor({
         className="rich-text-surface"
         contentEditable
         role="textbox"
-        aria-label={ariaLabel}
+        aria-label={ariaLabel ?? t('richText.content')}
         aria-multiline="true"
         suppressContentEditableWarning
         onClick={(event) => {
@@ -237,7 +251,7 @@ export function RichTextEditor({
       <p
         className={`rich-text-limit ${remainingCharacters < 0 ? 'error' : isNearLimit ? 'warning' : ''}`}
         role="status"
-        aria-label="Content length"
+        aria-label={t('richText.contentLength')}
         aria-live="polite"
       >
         {limitMessage}

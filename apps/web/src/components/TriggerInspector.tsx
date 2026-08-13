@@ -5,6 +5,7 @@ import type {
   TriggerCondition,
   Weekday,
 } from '@paralleax/shared';
+import { useTranslation } from 'react-i18next';
 import { getRelatedTriggerVariantIds } from '../storyGraph';
 
 export function TriggerInspector({
@@ -29,6 +30,7 @@ export function TriggerInspector({
   onDeleteTrigger: (interactionId: string, triggerId: string) => Promise<void>;
   onDeleteTriggerVariants: (interactionId: string, triggerIds: string[]) => Promise<void>;
 }) {
+  const { t } = useTranslation();
   const variantIds = getRelatedTriggerVariantIds(interaction, trigger);
   const variants = interaction.triggers.filter((item) => variantIds.includes(item.id));
   const hasOrVariants = variants.length > 1;
@@ -37,7 +39,7 @@ export function TriggerInspector({
       ...stat,
       label: `${character.name} — ${
         story.statDefinitions?.find(({ id }) => id === stat.statDefinitionId)?.name ??
-        'Unknown stat'
+        t('triggerInspector.unknownStat')
       }`,
     })),
   );
@@ -52,14 +54,14 @@ export function TriggerInspector({
 
   return (
     <div>
-      <h3>Path conditions</h3>
-      {hasOrVariants ? (
-        <p className="hint">This visual trigger contains alternative condition groups.</p>
-      ) : null}
+      <h3>{t('triggerInspector.title')}</h3>
+      {hasOrVariants ? <p className="hint">{t('triggerInspector.variantsHelp')}</p> : null}
       {variants.map((variant, variantIndex) => (
         <div className="trigger-variant" key={variant.id}>
-          {variantIndex > 0 ? <div className="or-divider">OR</div> : null}
-          {hasOrVariants ? <h4>Condition group {variantIndex + 1}</h4> : null}
+          {variantIndex > 0 ? <div className="or-divider">{t('triggerInspector.or')}</div> : null}
+          {hasOrVariants ? (
+            <h4>{t('triggerInspector.group', { number: variantIndex + 1 })}</h4>
+          ) : null}
           <div className="conditions">
             {variant.conditions.map((condition, index) => (
               <div
@@ -81,7 +83,7 @@ export function TriggerInspector({
                 {'interactionId' in condition ? (
                   <>
                     <select
-                      aria-label="Condition interaction"
+                      aria-label={t('triggerInspector.conditionInteraction')}
                       value={condition.interactionId}
                       onChange={(e) => {
                         const next = [...variant.conditions];
@@ -98,7 +100,7 @@ export function TriggerInspector({
                         ))}
                     </select>
                     <select
-                      aria-label="Interaction condition operator"
+                      aria-label={t('triggerInspector.interactionOperator')}
                       value={condition.hasBeenVisited ? 'visited' : 'not-visited'}
                       onChange={(e) => {
                         const next = [...variant.conditions];
@@ -109,14 +111,14 @@ export function TriggerInspector({
                         void updateTrigger(variant, variant.inputInteractionIds, next);
                       }}
                     >
-                      <option value="visited">has been visited</option>
-                      <option value="not-visited">has not been visited</option>
+                      <option value="visited">{t('triggerInspector.visited')}</option>
+                      <option value="not-visited">{t('triggerInspector.notVisited')}</option>
                     </select>
                   </>
                 ) : 'locationId' in condition ? (
                   <>
                     <select
-                      aria-label="Condition location"
+                      aria-label={t('triggerInspector.conditionLocation')}
                       value={condition.locationId}
                       onChange={(event) => {
                         const next = [...variant.conditions];
@@ -131,7 +133,7 @@ export function TriggerInspector({
                       ))}
                     </select>
                     <select
-                      aria-label="Location condition operator"
+                      aria-label={t('triggerInspector.locationOperator')}
                       value={condition.isCurrentLocation ? 'current' : 'not-current'}
                       onChange={(event) => {
                         const next = [...variant.conditions];
@@ -142,14 +144,16 @@ export function TriggerInspector({
                         void updateTrigger(variant, variant.inputInteractionIds, next);
                       }}
                     >
-                      <option value="current">is the current location</option>
-                      <option value="not-current">is not the current location</option>
+                      <option value="current">{t('triggerInspector.currentLocation')}</option>
+                      <option value="not-current">
+                        {t('triggerInspector.notCurrentLocation')}
+                      </option>
                     </select>
                   </>
                 ) : 'characterId' in condition ? (
                   <>
                     <select
-                      aria-label="Condition character"
+                      aria-label={t('triggerInspector.conditionCharacter')}
                       value={condition.characterId}
                       onChange={(event) => {
                         const next = [...variant.conditions];
@@ -164,7 +168,7 @@ export function TriggerInspector({
                       ))}
                     </select>
                     <select
-                      aria-label="Character condition operator"
+                      aria-label={t('triggerInspector.characterOperator')}
                       value={condition.isPresent ? 'present' : 'absent'}
                       onChange={(event) => {
                         const next = [...variant.conditions];
@@ -175,14 +179,14 @@ export function TriggerInspector({
                         void updateTrigger(variant, variant.inputInteractionIds, next);
                       }}
                     >
-                      <option value="present">is present</option>
-                      <option value="absent">is absent</option>
+                      <option value="present">{t('triggerInspector.present')}</option>
+                      <option value="absent">{t('triggerInspector.absent')}</option>
                     </select>
                   </>
                 ) : 'itemDefinitionId' in condition ? (
                   <>
                     <select
-                      aria-label="Condition item"
+                      aria-label={t('triggerInspector.conditionItem')}
                       value={condition.itemDefinitionId}
                       onChange={(event) => {
                         const next = [...variant.conditions];
@@ -200,7 +204,7 @@ export function TriggerInspector({
                       ))}
                     </select>
                     <select
-                      aria-label="Item condition operator"
+                      aria-label={t('triggerInspector.itemOperator')}
                       value={condition.isOwned ? 'owned' : 'not-owned'}
                       onChange={(event) => {
                         const next = [...variant.conditions];
@@ -211,8 +215,8 @@ export function TriggerInspector({
                         void updateTrigger(variant, variant.inputInteractionIds, next);
                       }}
                     >
-                      <option value="owned">is owned</option>
-                      <option value="not-owned">is not owned</option>
+                      <option value="owned">{t('triggerInspector.owned')}</option>
+                      <option value="not-owned">{t('triggerInspector.notOwned')}</option>
                     </select>
                   </>
                 ) : 'temporal' in condition ? (
@@ -228,7 +232,7 @@ export function TriggerInspector({
                 ) : (
                   <>
                     <select
-                      aria-label="Condition stat"
+                      aria-label={t('triggerInspector.conditionStat')}
                       value={condition.statId}
                       onChange={(event) => {
                         const next = [...variant.conditions];
@@ -243,7 +247,7 @@ export function TriggerInspector({
                       ))}
                     </select>
                     <select
-                      aria-label="Stat condition operator"
+                      aria-label={t('triggerInspector.statOperator')}
                       value={condition.operator}
                       onChange={(event) => {
                         const next = [...variant.conditions];
@@ -254,14 +258,14 @@ export function TriggerInspector({
                         void updateTrigger(variant, variant.inputInteractionIds, next);
                       }}
                     >
-                      <option value="eq">equals</option>
-                      <option value="lt">is less than</option>
-                      <option value="lte">is at most</option>
-                      <option value="gt">is greater than</option>
-                      <option value="gte">is at least</option>
+                      <option value="eq">{t('triggerInspector.equals')}</option>
+                      <option value="lt">{t('triggerInspector.lessThan')}</option>
+                      <option value="lte">{t('triggerInspector.atMost')}</option>
+                      <option value="gt">{t('triggerInspector.greaterThan')}</option>
+                      <option value="gte">{t('triggerInspector.atLeast')}</option>
                     </select>
                     <input
-                      aria-label="Stat condition value"
+                      aria-label={t('triggerInspector.statValue')}
                       type="number"
                       value={condition.value}
                       onChange={(event) => {
@@ -300,7 +304,7 @@ export function TriggerInspector({
               }
             }}
           >
-            Add interaction condition
+            {t('triggerInspector.addInteraction')}
           </button>
           <button
             className="secondary"
@@ -315,7 +319,7 @@ export function TriggerInspector({
               }
             }}
           >
-            Add location condition
+            {t('triggerInspector.addLocation')}
           </button>
           <button
             className="secondary"
@@ -330,7 +334,7 @@ export function TriggerInspector({
               }
             }}
           >
-            Add character condition
+            {t('triggerInspector.addCharacter')}
           </button>
           <button
             className="secondary"
@@ -345,7 +349,7 @@ export function TriggerInspector({
               }
             }}
           >
-            Add stat condition
+            {t('triggerInspector.addStat')}
           </button>
           <button
             className="secondary"
@@ -360,7 +364,7 @@ export function TriggerInspector({
               }
             }}
           >
-            Add item condition
+            {t('triggerInspector.addItem')}
           </button>
           <button
             className="secondary"
@@ -371,14 +375,14 @@ export function TriggerInspector({
               ]);
             }}
           >
-            Add date/time condition
+            {t('triggerInspector.addDateTime')}
           </button>
           {hasOrVariants ? (
             <button
               className="ghost danger"
               onClick={() => void onDeleteTrigger(interaction.id, variant.id)}
             >
-              Delete this OR group
+              {t('triggerInspector.deleteGroup')}
             </button>
           ) : null}
         </div>
@@ -388,7 +392,7 @@ export function TriggerInspector({
         disabled={trigger.inputInteractionIds.length === 0 || story.interactions.length < 2}
         onClick={() => void onCreateTriggerVariant(interaction.id, trigger.id)}
       >
-        Add OR condition group
+        {t('triggerInspector.addGroup')}
       </button>
       <hr />
       {hasOrVariants ? (
@@ -396,25 +400,25 @@ export function TriggerInspector({
           className="danger"
           onClick={() => void onDeleteTriggerVariants(interaction.id, variantIds)}
         >
-          Delete all OR groups
+          {t('triggerInspector.deleteAllGroups')}
         </button>
       ) : (
         <button className="danger" onClick={() => void onDeleteTrigger(interaction.id, trigger.id)}>
-          Delete trigger
+          {t('triggerInspector.deleteTrigger')}
         </button>
       )}
     </div>
   );
 }
 
-const weekdayOptions: Array<{ value: Weekday; label: string }> = [
-  { value: 'monday', label: 'Mon' },
-  { value: 'tuesday', label: 'Tue' },
-  { value: 'wednesday', label: 'Wed' },
-  { value: 'thursday', label: 'Thu' },
-  { value: 'friday', label: 'Fri' },
-  { value: 'saturday', label: 'Sat' },
-  { value: 'sunday', label: 'Sun' },
+const weekdayOptions: Weekday[] = [
+  'monday',
+  'tuesday',
+  'wednesday',
+  'thursday',
+  'friday',
+  'saturday',
+  'sunday',
 ];
 
 function TemporalConditionFields({
@@ -426,15 +430,16 @@ function TemporalConditionFields({
   defaultDate: string;
   onChange: (condition: TemporalCondition) => void;
 }) {
+  const { t } = useTranslation();
   const temporal = condition.temporal;
   const update = (patch: Partial<TemporalCondition['temporal']>) =>
     onChange({ temporal: { ...temporal, ...patch } });
 
   return (
     <fieldset className="temporal-condition">
-      <legend>Date and time</legend>
+      <legend>{t('triggerInspector.dateTime')}</legend>
       <div className="weekday-options">
-        {weekdayOptions.map(({ value, label }) => (
+        {weekdayOptions.map((value) => (
           <label key={value}>
             <input
               type="checkbox"
@@ -447,14 +452,14 @@ function TemporalConditionFields({
                 })
               }
             />
-            {label}
+            {t(`triggerInspector.weekday.${value}`)}
           </label>
         ))}
       </div>
       {(temporal.dates ?? []).map((date, index) => (
         <div className="temporal-row" key={`date-${index}`}>
           <input
-            aria-label={`Allowed date ${index + 1}`}
+            aria-label={t('triggerInspector.allowedDate', { number: index + 1 })}
             type="date"
             value={date}
             onChange={(event) => {
@@ -464,7 +469,7 @@ function TemporalConditionFields({
             }}
           />
           <button
-            aria-label={`Delete allowed date ${index + 1}`}
+            aria-label={t('triggerInspector.deleteAllowedDate', { number: index + 1 })}
             className="ghost danger"
             type="button"
             onClick={() => update({ dates: temporal.dates?.filter((_, item) => item !== index) })}
@@ -476,7 +481,7 @@ function TemporalConditionFields({
       {(temporal.dateRanges ?? []).map((range, index) => (
         <div className="temporal-row" key={`range-${index}`}>
           <input
-            aria-label={`Date range ${index + 1} start`}
+            aria-label={t('triggerInspector.dateRangeStart', { number: index + 1 })}
             type="date"
             value={range.startDate}
             onChange={(event) => {
@@ -485,9 +490,9 @@ function TemporalConditionFields({
               update({ dateRanges });
             }}
           />
-          <span>to</span>
+          <span>{t('triggerInspector.to')}</span>
           <input
-            aria-label={`Date range ${index + 1} end`}
+            aria-label={t('triggerInspector.dateRangeEnd', { number: index + 1 })}
             type="date"
             value={range.endDate}
             onChange={(event) => {
@@ -497,7 +502,7 @@ function TemporalConditionFields({
             }}
           />
           <button
-            aria-label={`Delete date range ${index + 1}`}
+            aria-label={t('triggerInspector.deleteDateRange', { number: index + 1 })}
             className="ghost danger"
             type="button"
             onClick={() =>
@@ -511,7 +516,7 @@ function TemporalConditionFields({
       {(temporal.timeSlots ?? []).map((slot, index) => (
         <div className="temporal-row" key={`slot-${index}`}>
           <input
-            aria-label={`Time slot ${index + 1} start`}
+            aria-label={t('triggerInspector.timeSlotStart', { number: index + 1 })}
             type="time"
             value={slot.startTime}
             onChange={(event) => {
@@ -520,9 +525,9 @@ function TemporalConditionFields({
               update({ timeSlots });
             }}
           />
-          <span>to</span>
+          <span>{t('triggerInspector.to')}</span>
           <input
-            aria-label={`Time slot ${index + 1} end`}
+            aria-label={t('triggerInspector.timeSlotEnd', { number: index + 1 })}
             type="time"
             value={slot.endTime}
             onChange={(event) => {
@@ -532,7 +537,7 @@ function TemporalConditionFields({
             }}
           />
           <button
-            aria-label={`Delete time slot ${index + 1}`}
+            aria-label={t('triggerInspector.deleteTimeSlot', { number: index + 1 })}
             className="ghost danger"
             type="button"
             onClick={() =>
@@ -549,7 +554,7 @@ function TemporalConditionFields({
           type="button"
           onClick={() => update({ dates: [...(temporal.dates ?? []), defaultDate] })}
         >
-          Add date
+          {t('triggerInspector.addDate')}
         </button>
         <button
           className="secondary"
@@ -563,7 +568,7 @@ function TemporalConditionFields({
             })
           }
         >
-          Add date range
+          {t('triggerInspector.addDateRange')}
         </button>
         <button
           className="secondary"
@@ -574,7 +579,7 @@ function TemporalConditionFields({
             })
           }
         >
-          Add time slot
+          {t('triggerInspector.addTimeSlot')}
         </button>
       </div>
     </fieldset>

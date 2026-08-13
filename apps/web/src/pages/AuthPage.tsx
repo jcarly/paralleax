@@ -1,5 +1,7 @@
 import { useState, type FormEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api, type AuthUser } from '../api';
+import { LanguageSwitcher } from '../components/LanguageSwitcher';
 import './ProductPages.css';
 
 export type AuthMode = 'login' | 'register';
@@ -14,6 +16,7 @@ function ProductBrand() {
 }
 
 function MiniStoryGraph() {
+  const { t } = useTranslation();
   return (
     <div className="auth-graph" aria-hidden="true">
       <svg viewBox="0 0 560 360" preserveAspectRatio="none">
@@ -23,22 +26,22 @@ function MiniStoryGraph() {
         <path d="M280 158 V207 H416 V245" />
       </svg>
       <div className="auth-graph-node root">
-        <small>START</small>
-        <b>A room full of echoes</b>
-        <span>The Glasshouse</span>
+        <small>{t('auth.showcase.graph.start')}</small>
+        <b>{t('auth.showcase.graph.root')}</b>
+        <span>{t('auth.showcase.graph.glasshouse')}</span>
       </div>
       <span className="auth-graph-trigger" />
       <div className="auth-graph-node left">
-        <b>A quiet warning</b>
-        <span>Old quarter</span>
+        <b>{t('auth.showcase.graph.warning')}</b>
+        <span>{t('auth.showcase.graph.oldQuarter')}</span>
       </div>
       <div className="auth-graph-node center">
-        <b>The hidden passage</b>
-        <span>Lower archive</span>
+        <b>{t('auth.showcase.graph.passage')}</b>
+        <span>{t('auth.showcase.graph.archive')}</span>
       </div>
       <div className="auth-graph-node right">
-        <b>A voice in the dark</b>
-        <span>Lower archive</span>
+        <b>{t('auth.showcase.graph.voice')}</b>
+        <span>{t('auth.showcase.graph.archive')}</span>
       </div>
     </div>
   );
@@ -55,6 +58,7 @@ export function AuthPage({
   initialMode?: AuthMode;
   onModeChange?: (mode: AuthMode) => void;
 }) {
+  const { t } = useTranslation();
   const [localMode, setLocalMode] = useState<AuthMode>(initialMode);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -79,7 +83,7 @@ export function AuthPage({
         : await api.login(email, password);
       onAuthenticated(user);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Authentication failed');
+      setError(caught instanceof Error ? caught.message : t('auth.failed'));
     } finally {
       setPending(false);
     }
@@ -99,31 +103,25 @@ export function AuthPage({
       <section className="auth-showcase">
         <ProductBrand />
         <div className="auth-message">
-          <span className="product-eyebrow">Interactive narrative design</span>
-          <h1>Every path stays visible.</h1>
-          <p>
-            Shape branching stories, test their rules, and keep characters, places, items, and time
-            in one coherent workspace.
-          </p>
+          <span className="product-eyebrow">{t('auth.showcase.eyebrow')}</span>
+          <h1>{t('auth.showcase.title')}</h1>
+          <p>{t('auth.showcase.description')}</p>
         </div>
         <MiniStoryGraph />
-        <p className="auth-quote">
-          The graph helps you see the story. The model keeps every path reliable.
-        </p>
+        <p className="auth-quote">{t('auth.showcase.quote')}</p>
       </section>
 
       <section className="auth-panel">
         <div className="auth-card">
+          <LanguageSwitcher className="language-switcher-auth" />
           <div className="auth-mobile-brand">
             <ProductBrand />
           </div>
-          <span className="product-eyebrow">{isRegister ? 'Start creating' : 'Welcome back'}</span>
-          <h2>{isRegister ? 'Create your account' : 'Sign in to Paralleax'}</h2>
-          <p>
-            {isRegister
-              ? 'Create a private workspace for your interactive stories.'
-              : 'Continue working on your stories and simulations.'}
-          </p>
+          <span className="product-eyebrow">
+            {t(isRegister ? 'auth.register.eyebrow' : 'auth.login.eyebrow')}
+          </span>
+          <h2>{t(isRegister ? 'auth.register.title' : 'auth.login.title')}</h2>
+          <p>{t(isRegister ? 'auth.register.description' : 'auth.login.description')}</p>
           {notice ? (
             <p className="auth-notice" role="status">
               {notice}
@@ -131,64 +129,64 @@ export function AuthPage({
           ) : null}
           <form onSubmit={(event) => void submit(event)}>
             <label className="product-field">
-              <span>Email address</span>
+              <span>{t('auth.email')}</span>
               <input
                 autoComplete="email"
                 type="email"
-                placeholder="you@example.com"
+                placeholder={t('auth.emailPlaceholder')}
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
                 required
               />
             </label>
             <label className="product-field">
-              <span>Password</span>
+              <span>{t('auth.password')}</span>
               <span className="password-field">
                 <input
-                  aria-label="Password"
+                  aria-label={t('auth.password')}
                   autoComplete={isRegister ? 'new-password' : 'current-password'}
                   type={showPassword ? 'text' : 'password'}
-                  placeholder={isRegister ? 'At least 8 characters' : 'Enter your password'}
+                  placeholder={t(
+                    isRegister ? 'auth.newPasswordPlaceholder' : 'auth.passwordPlaceholder',
+                  )}
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
                   minLength={8}
                   required
                 />
                 <button type="button" onClick={() => setShowPassword((current) => !current)}>
-                  {showPassword ? 'Hide' : 'Show'}
+                  {t(showPassword ? 'auth.hidePassword' : 'auth.showPassword')}
                 </button>
               </span>
             </label>
             {isRegister ? (
               <>
                 <label className="product-field">
-                  <span>Confirm password</span>
+                  <span>{t('auth.confirmPassword')}</span>
                   <input
                     autoComplete="new-password"
                     type={showPassword ? 'text' : 'password'}
-                    placeholder="Repeat your password"
+                    placeholder={t('auth.confirmPasswordPlaceholder')}
                     value={confirmation}
                     onChange={(event) => setConfirmation(event.target.value)}
                     required
                   />
                   {confirmation && !passwordsMatch ? (
-                    <small className="field-error">Passwords do not match.</small>
+                    <small className="field-error">{t('auth.passwordsDoNotMatch')}</small>
                   ) : null}
                 </label>
                 <label className="product-field">
-                  <span>Invitation code (if required)</span>
+                  <span>{t('auth.invitationCode')}</span>
                   <input
-                    aria-label="Invitation code (if required)"
+                    aria-label={t('auth.invitationCode')}
                     autoComplete="off"
                     type="password"
-                    placeholder="Private alpha invitation"
+                    placeholder={t('auth.invitationPlaceholder')}
                     value={accessCode}
                     onChange={(event) => setAccessCode(event.target.value)}
                     maxLength={128}
                   />
-                  <small>
-                    Private alpha deployments require the code supplied by the operator.
-                  </small>
+                  <small>{t('auth.invitationHelp')}</small>
                 </label>
               </>
             ) : null}
@@ -198,14 +196,16 @@ export function AuthPage({
               </p>
             ) : null}
             <button className="product-primary auth-submit" type="submit" disabled={!canSubmit}>
-              {pending ? 'Please wait…' : isRegister ? 'Create account' : 'Sign in'}
+              {pending
+                ? t('auth.pending')
+                : t(isRegister ? 'auth.register.submit' : 'auth.login.submit')}
               {!pending ? <span aria-hidden="true">→</span> : null}
             </button>
           </form>
           <div className="auth-switch">
-            <span>{isRegister ? 'Already have an account?' : 'New to Paralleax?'}</span>
+            <span>{t(isRegister ? 'auth.register.switchPrompt' : 'auth.login.switchPrompt')}</span>
             <button type="button" onClick={switchMode}>
-              {isRegister ? 'Sign in' : 'Create an account'}
+              {t(isRegister ? 'auth.register.switchAction' : 'auth.login.switchAction')}
             </button>
           </div>
         </div>

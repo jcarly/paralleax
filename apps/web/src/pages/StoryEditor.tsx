@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Background,
   Controls,
@@ -73,10 +74,6 @@ function getInitials(name: string) {
     .toLocaleUpperCase();
 }
 
-function formatCount(count: number, singular: string, plural = `${singular}s`) {
-  return `${count} ${count === 1 ? singular : plural}`;
-}
-
 function getCategorySuggestions(items: Array<{ category?: string }>) {
   return [
     ...new Set(items.map(({ category }) => category?.trim()).filter(Boolean) as string[]),
@@ -89,16 +86,19 @@ function matchesContextSearch(entity: { name: string; category?: string }, query
   );
 }
 
-function groupContextEntities<T extends { id: string; category?: string }>(items: T[]) {
+function groupContextEntities<T extends { id: string; category?: string }>(
+  items: T[],
+  uncategorizedLabel: string,
+) {
   const groups = new Map<string, T[]>();
   for (const item of items) {
-    const category = item.category?.trim() || 'Uncategorized';
+    const category = item.category?.trim() || uncategorizedLabel;
     groups.set(category, [...(groups.get(category) ?? []), item]);
   }
   return [...groups.entries()]
     .sort(([left], [right]) => {
-      if (left === 'Uncategorized') return 1;
-      if (right === 'Uncategorized') return -1;
+      if (left === uncategorizedLabel) return 1;
+      if (right === uncategorizedLabel) return -1;
       return left.localeCompare(right);
     })
     .map(([category, groupedItems]) => ({ category, items: groupedItems }));
@@ -111,22 +111,26 @@ function CategorizedContextList<T extends { id: string; category?: string }>({
   items: T[];
   renderItem: (item: T) => ReactNode;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="context-category-list">
-      {groupContextEntities(items).map(({ category, items: groupedItems }) => (
-        <section className="context-category-group" key={category}>
-          <div className="context-category-heading">
-            <span>{category}</span>
-            <small>{groupedItems.length}</small>
-          </div>
-          <ul>{groupedItems.map(renderItem)}</ul>
-        </section>
-      ))}
+      {groupContextEntities(items, t('editor.uncategorized')).map(
+        ({ category, items: groupedItems }) => (
+          <section className="context-category-group" key={category}>
+            <div className="context-category-heading">
+              <span>{category}</span>
+              <small>{groupedItems.length}</small>
+            </div>
+            <ul>{groupedItems.map(renderItem)}</ul>
+          </section>
+        ),
+      )}
     </div>
   );
 }
 
 export function StoryEditor() {
+  const { t } = useTranslation();
   const { storyId = '' } = useParams();
   const {
     story,
@@ -165,6 +169,14 @@ export function StoryEditor() {
     moveItemInstance,
   } = useStoryEditorPersistence(storyId);
   usePendingSaveGuard(Boolean(story) && (saveStatus === 'saving' || saveStatus === 'error'));
+  const formatCount = useCallback(
+    (
+      count: number,
+      entity:
+        'location' | 'character' | 'stat' | 'item' | 'interaction' | 'assignment' | 'instance',
+    ) => t(`editor.count.${entity}`, { count }),
+    [t],
+  );
   const [selectedId, setSelectedId] = useState<string>();
   const [selectedTrigger, setSelectedTrigger] = useState<SelectedTrigger>();
   const [selectedLocationId, setSelectedLocationId] = useState<string>();
@@ -445,7 +457,7 @@ export function StoryEditor() {
   };
 
   async function deleteSelectedTrigger(interactionId: string, triggerId: string) {
-    if (!window.confirm('Delete this trigger?')) return;
+    if (!window.confirm(t('editor.confirmDeleteTrigger'))) return;
     await deleteTrigger(interactionId, triggerId);
     setSelectedTrigger(undefined);
   }
@@ -458,7 +470,7 @@ export function StoryEditor() {
   }
 
   async function deleteSelectedTriggerVariants(interactionId: string, triggerIds: string[]) {
-    if (!window.confirm('Delete all condition groups on this route?')) return;
+    if (!window.confirm(t('editor.confirmDeleteTriggerVariants'))) return;
     await deleteTriggerVariants(interactionId, triggerIds);
     setSelectedTrigger(undefined);
   }
@@ -551,7 +563,7 @@ export function StoryEditor() {
     });
   }
 
-  if (!story) return <main className="page">{error || 'Loading...'}</main>;
+  if (!story) return <main className="page">{error || t('editor.loading')}</main>;
   const simulationPath = selected
     ? `/stories/${storyId}/play?mode=simulation&startInteractionId=${encodeURIComponent(
         selected.id,
@@ -599,9 +611,9 @@ export function StoryEditor() {
           onBlur={(e) => void renameStory(e.target.value)}
         />
         <label className="story-time-field">
-          Story starts
+          {t('editor.storyStarts')}
           <input
-            aria-label="Story start date and time"
+            aria-label={t('editor.storyStartDateTime')}
             type="datetime-local"
             value={story.startDateTime ?? '2000-01-03T08:00'}
             onChange={(event) => setStory({ ...story, startDateTime: event.target.value })}
@@ -612,22 +624,22 @@ export function StoryEditor() {
           <span
             className={`save-status ${saveStatus}`}
             role="status"
-            aria-label="Story save status"
+            aria-label={t('editor.saveStatus')}
             aria-live="polite"
           >
             {saveStatus === 'saving'
-              ? 'Saving…'
+              ? t('editor.saving')
               : saveStatus === 'saved'
-                ? 'Saved'
+                ? t('editor.saved')
                 : saveStatus === 'error'
-                  ? 'Save failed'
+                  ? t('editor.saveFailed')
                   : ''}
           </span>
           <button disabled={!selected} onClick={() => void createSelectedChild()}>
-            Add child
+            {t('editor.addChild')}
           </button>
           <Link className="button secondary" to={simulationPath}>
-            {selected ? 'Test from current interaction' : 'Test'}
+            {t(selected ? 'editor.testFromCurrent' : 'editor.test')}
           </Link>
         </div>
       </div>
@@ -635,7 +647,7 @@ export function StoryEditor() {
         <div className="save-error" role="alert">
           <span>{error}</span>
           <button className="secondary" type="button" onClick={() => void retry()}>
-            Reload story
+            {t('editor.reloadStory')}
           </button>
         </div>
       ) : null}
@@ -646,12 +658,12 @@ export function StoryEditor() {
       >
         <nav
           className={`location-panel ${isLocationPanelOpen ? '' : 'collapsed'}`}
-          aria-label="Story context"
+          aria-label={t('editor.context')}
         >
           <button
             className="ghost navigation-toggle"
             type="button"
-            aria-label={isLocationPanelOpen ? 'Collapse story context' : 'Expand story context'}
+            aria-label={t(isLocationPanelOpen ? 'editor.collapseContext' : 'editor.expandContext')}
             aria-expanded={isLocationPanelOpen}
             aria-controls="story-context-panel-content"
             onClick={() => setIsLocationPanelOpen((open) => !open)}
@@ -663,16 +675,16 @@ export function StoryEditor() {
               <div className="context-search">
                 <input
                   type="search"
-                  aria-label="Search story context and interactions"
-                  placeholder="Search…"
+                  aria-label={t('editor.search')}
+                  placeholder={t('editor.searchPlaceholder')}
                   value={searchQuery}
                   onChange={(event) => setSearchQuery(event.target.value)}
                 />
                 <button
                   className="ghost"
                   type="button"
-                  aria-label="Previous interaction occurrence"
-                  title="Previous interaction occurrence"
+                  aria-label={t('editor.previousOccurrence')}
+                  title={t('editor.previousOccurrence')}
                   disabled={navigationInteractionIds.length === 0}
                   onClick={() => navigateInteractions(-1)}
                 >
@@ -681,8 +693,8 @@ export function StoryEditor() {
                 <button
                   className="ghost"
                   type="button"
-                  aria-label="Next interaction occurrence"
-                  title="Next interaction occurrence"
+                  aria-label={t('editor.nextOccurrence')}
+                  title={t('editor.nextOccurrence')}
                   disabled={navigationInteractionIds.length === 0}
                   onClick={() => navigateInteractions(1)}
                 >
@@ -703,18 +715,22 @@ export function StoryEditor() {
                 >
                   <span className="context-heading-label">
                     <span aria-hidden="true">{openContextSections.locations ? '▾' : '▸'}</span>
-                    Locations
+                    {t('editor.locations')}
                   </span>
                   <small aria-label={formatCount(story.locations?.length ?? 0, 'location')}>
                     {story.locations?.length ?? 0}
                   </small>
                 </button>
-                <button aria-label="Add location" type="button" onClick={() => void addLocation()}>
-                  Add
+                <button
+                  aria-label={t('editor.addLocation')}
+                  type="button"
+                  onClick={() => void addLocation()}
+                >
+                  {t('editor.add')}
                 </button>
               </div>
               {!openContextSections.locations ? null : (story.locations?.length ?? 0) === 0 ? (
-                <p className="hint">No locations yet.</p>
+                <p className="hint">{t('editor.noLocations')}</p>
               ) : (
                 <CategorizedContextList
                   items={filteredLocations}
@@ -754,22 +770,22 @@ export function StoryEditor() {
                 >
                   <span className="context-heading-label">
                     <span aria-hidden="true">{openContextSections.characters ? '▾' : '▸'}</span>
-                    Characters
+                    {t('editor.characters')}
                   </span>
                   <small aria-label={formatCount(story.characters?.length ?? 0, 'character')}>
                     {story.characters?.length ?? 0}
                   </small>
                 </button>
                 <button
-                  aria-label="Add character"
+                  aria-label={t('editor.addCharacter')}
                   type="button"
                   onClick={() => void addCharacter()}
                 >
-                  Add
+                  {t('editor.add')}
                 </button>
               </div>
               {!openContextSections.characters ? null : (story.characters?.length ?? 0) === 0 ? (
-                <p className="hint">No characters yet.</p>
+                <p className="hint">{t('editor.noCharacters')}</p>
               ) : (
                 <CategorizedContextList
                   items={filteredCharacters}
@@ -792,7 +808,7 @@ export function StoryEditor() {
                         <span className="context-row-copy">
                           <strong>{character.name}</strong>
                           <small>
-                            {character.isPlayable ? 'Playable · ' : ''}
+                            {character.isPlayable ? `${t('editor.playable')} · ` : ''}
                             {formatCount(
                               contextReferenceCounts.characters.get(character.id) ?? 0,
                               'interaction',
@@ -813,22 +829,22 @@ export function StoryEditor() {
                 >
                   <span className="context-heading-label">
                     <span aria-hidden="true">{openContextSections.stats ? '▾' : '▸'}</span>
-                    Stats
+                    {t('editor.stats')}
                   </span>
                   <small aria-label={formatCount(story.statDefinitions?.length ?? 0, 'stat')}>
                     {story.statDefinitions?.length ?? 0}
                   </small>
                 </button>
                 <button
-                  aria-label="Add stat definition"
+                  aria-label={t('editor.addStatDefinition')}
                   type="button"
                   onClick={() => void addStatDefinition()}
                 >
-                  Add
+                  {t('editor.add')}
                 </button>
               </div>
               {!openContextSections.stats ? null : (story.statDefinitions?.length ?? 0) === 0 ? (
-                <p className="hint">No stats yet.</p>
+                <p className="hint">{t('editor.noStats')}</p>
               ) : (
                 <CategorizedContextList
                   items={filteredStatDefinitions}
@@ -870,22 +886,22 @@ export function StoryEditor() {
                 >
                   <span className="context-heading-label">
                     <span aria-hidden="true">{openContextSections.items ? '▾' : '▸'}</span>
-                    Items
+                    {t('editor.items')}
                   </span>
                   <small aria-label={formatCount(story.itemDefinitions?.length ?? 0, 'item')}>
                     {story.itemDefinitions?.length ?? 0}
                   </small>
                 </button>
                 <button
-                  aria-label="Add item definition"
+                  aria-label={t('editor.addItemDefinition')}
                   type="button"
                   onClick={() => void addItemDefinition()}
                 >
-                  Add
+                  {t('editor.add')}
                 </button>
               </div>
               {!openContextSections.items ? null : (story.itemDefinitions?.length ?? 0) === 0 ? (
-                <p className="hint">No items yet.</p>
+                <p className="hint">{t('editor.noItems')}</p>
               ) : (
                 <CategorizedContextList
                   items={filteredItemDefinitions}
@@ -923,7 +939,7 @@ export function StoryEditor() {
         </nav>
         <section className="canvas">
           <button className="canvas-action" onClick={() => void createRoot()}>
-            Add root
+            {t('editor.addRoot')}
           </button>
           <ReactFlow
             nodes={nodes}
@@ -951,12 +967,12 @@ export function StoryEditor() {
           </ReactFlow>
         </section>
         {hasInspectorSelection ? (
-          <aside className="inspector" aria-label="Inspector">
+          <aside className="inspector" aria-label={t('editor.inspector')}>
             <div className="inspector-header">
               <button
                 className="ghost inspector-close"
                 type="button"
-                aria-label="Close inspector"
+                aria-label={t('editor.closeInspector')}
                 onClick={closeInspector}
               >
                 x
@@ -1036,8 +1052,8 @@ export function StoryEditor() {
             aria-modal="true"
             aria-labelledby="connection-dialog-title"
           >
-            <h2 id="connection-dialog-title">Connect interactions</h2>
-            <p>Should this route share an existing trigger’s conditions?</p>
+            <h2 id="connection-dialog-title">{t('editor.connection.title')}</h2>
+            <p>{t('editor.connection.description')}</p>
             <div className="connection-dialog-actions">
               {existingTriggerChoices.map((trigger, index) => (
                 <button
@@ -1046,18 +1062,18 @@ export function StoryEditor() {
                   key={trigger.id}
                   onClick={() => extendPendingTrigger(trigger.id)}
                 >
-                  Add to condition group {index + 1}
+                  {t('editor.connection.addToGroup', { number: index + 1 })}
                 </button>
               ))}
               <button type="button" onClick={createPendingTrigger}>
-                Create a new trigger
+                {t('editor.connection.createTrigger')}
               </button>
               <button
                 className="ghost"
                 type="button"
                 onClick={() => setPendingConnection(undefined)}
               >
-                Cancel
+                {t('editor.connection.cancel')}
               </button>
             </div>
           </section>

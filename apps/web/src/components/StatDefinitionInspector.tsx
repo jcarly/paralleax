@@ -1,4 +1,5 @@
 import type { StatDefinition } from '@paralleax/shared';
+import { useTranslation } from 'react-i18next';
 import { CategoryField } from './CategoryField';
 import { ImageUrlField } from './ImageUrlField';
 
@@ -16,11 +17,12 @@ export function StatDefinitionInspector({
     patch: { name?: string; category?: string; imageUrl?: string; changePerHour?: number },
   ) => Promise<void>;
 }) {
+  const { t } = useTranslation();
   return (
     <div>
-      <h3>Stat</h3>
+      <h3>{t('inspector.stat')}</h3>
       <label>
-        Name
+        {t('inspector.name')}
         <input
           value={statDefinition.name}
           onChange={(event) => onChange({ ...statDefinition, name: event.target.value })}
@@ -34,13 +36,13 @@ export function StatDefinitionInspector({
         onBlur={(category) => void onPatch(statDefinition.id, { category })}
       />
       <ImageUrlField
-        label="Pictogram URL"
+        label={t('inspector.pictogramUrl')}
         imageUrl={statDefinition.imageUrl}
         onChange={(imageUrl) => onChange({ ...statDefinition, imageUrl })}
         onBlur={(imageUrl) => void onPatch(statDefinition.id, { imageUrl })}
       />
       <label>
-        Change per story hour
+        {t('inspector.changePerHour')}
         <input
           type="number"
           step="any"
@@ -53,10 +55,7 @@ export function StatDefinitionInspector({
           }
         />
       </label>
-      <p className="hint">
-        Add this reusable stat to any character, then set that character&apos;s initial value. A
-        positive or negative hourly change is applied when story time advances.
-      </p>
+      <p className="hint">{t('inspector.statHelp')}</p>
     </div>
   );
 }

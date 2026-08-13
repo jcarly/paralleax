@@ -2,6 +2,10 @@
 
 ## 2026-08-13
 
+- Added English/French interface internationalization across authentication,
+  story library, editor, reader, graph, and inspectors, with browser detection,
+  a persistent selector, English fallback, localized plurals/dates/diagnostics,
+  and an explicit boundary that preserves authored story content unchanged.
 - Restored character- or location-rooted authored item instances across the
   shared model, reader replay, API, PostgreSQL persistence, and location
   inspector, including subtree-preserving placement moves.

@@ -6,6 +6,7 @@ import type {
   StatDefinition,
 } from '@paralleax/shared';
 import type { CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { RemoveRowButton } from './RemoveRowButton';
 
 const relationshipTypes: ItemRelationshipType[] = [
@@ -33,6 +34,7 @@ export function ItemInstanceTree({
   onMove: (itemId: string, placement: MoveItemInstanceInput) => Promise<void>;
   onDelete?: (itemId: string) => Promise<void>;
 }) {
+  const { t } = useTranslation();
   const childrenByParent = new Map<string, ItemInstance[]>();
   for (const item of items) {
     if (!item.parentItemId) continue;
@@ -55,24 +57,26 @@ export function ItemInstanceTree({
             {definition?.imageUrl ? (
               <img className="context-picto" src={definition.imageUrl} alt="" />
             ) : null}
-            <strong>{definition?.name ?? 'Unknown item'}</strong>
-            {item.relationshipType ? <small>{item.relationshipType}</small> : null}
+            <strong>{definition?.name ?? t('inspector.unknownItem')}</strong>
+            {item.relationshipType ? (
+              <small>{t(`inspector.relationshipType.${item.relationshipType}`)}</small>
+            ) : null}
           </div>
           {(definition?.stats ?? []).length > 0 ? (
             <ul className="item-stat-list">
               {definition!.stats!.map((stat) => (
                 <li key={stat.statDefinitionId}>
                   {statDefinitions?.find(({ id }) => id === stat.statDefinitionId)?.name ??
-                    'Unknown stat'}
+                    t('inspector.unknownStat')}
                   : {stat.initialValue}
                 </li>
               ))}
             </ul>
           ) : null}
           <label>
-            Parent
+            {t('inspector.parent')}
             <select
-              aria-label={`Parent for ${definition?.name ?? item.id}`}
+              aria-label={t('inspector.parentFor', { name: definition?.name ?? item.id })}
               value={item.parentItemId ?? ''}
               onChange={(event) =>
                 void onMove(
@@ -87,13 +91,13 @@ export function ItemInstanceTree({
                 )
               }
             >
-              <option value="">Root</option>
+              <option value="">{t('inspector.root')}</option>
               {items
                 .filter(({ id }) => id !== item.id && !descendants.has(id))
                 .map((candidate) => (
                   <option key={candidate.id} value={candidate.id}>
                     {itemDefinitions.find(({ id }) => id === candidate.itemDefinitionId)?.name ??
-                      'Unknown item'}
+                      t('inspector.unknownItem')}
                   </option>
                 ))}
             </select>
@@ -101,9 +105,11 @@ export function ItemInstanceTree({
           {item.parentItemId ? (
             <>
               <label>
-                Relationship
+                {t('inspector.relationship')}
                 <select
-                  aria-label={`Relationship for ${definition?.name ?? item.id}`}
+                  aria-label={t('inspector.relationshipFor', {
+                    name: definition?.name ?? item.id,
+                  })}
                   value={item.relationshipType ?? 'contained'}
                   onChange={(event) =>
                     void onMove(item.id, {
@@ -115,15 +121,15 @@ export function ItemInstanceTree({
                 >
                   {relationshipTypes.map((type) => (
                     <option key={type} value={type}>
-                      {type}
+                      {t(`inspector.relationshipType.${type}`)}
                     </option>
                   ))}
                 </select>
               </label>
               <label>
-                Slot
+                {t('inspector.slot')}
                 <input
-                  aria-label={`Slot for ${definition?.name ?? item.id}`}
+                  aria-label={t('inspector.slotFor', { name: definition?.name ?? item.id })}
                   defaultValue={item.slotKey ?? ''}
                   onBlur={(event) =>
                     void onMove(item.id, {
@@ -137,7 +143,10 @@ export function ItemInstanceTree({
             </>
           ) : null}
           {onDelete ? (
-            <RemoveRowButton label="Delete item instance" onRemove={() => void onDelete(item.id)} />
+            <RemoveRowButton
+              label={t('inspector.deleteItemInstance')}
+              onRemove={() => void onDelete(item.id)}
+            />
           ) : null}
         </div>
         {depth < 12 && (childrenByParent.get(item.id)?.length ?? 0) > 0 ? (

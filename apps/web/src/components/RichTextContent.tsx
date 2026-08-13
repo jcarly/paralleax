@@ -1,4 +1,5 @@
 import { sanitizeRichTextForDisplay } from '../rich-text';
+import { useTranslation } from 'react-i18next';
 
 export type ConditionalTextState = Readonly<
   Record<
@@ -11,7 +12,11 @@ export type ConditionalTextState = Readonly<
   >
 >;
 
-function renderRichText(html: string, conditionalTextState?: ConditionalTextState) {
+function renderRichText(
+  html: string,
+  conditionalTextState: ConditionalTextState | undefined,
+  unavailableMessage: string,
+) {
   const sanitized = sanitizeRichTextForDisplay(html);
   if (!conditionalTextState) return sanitized;
   const template = document.createElement('template');
@@ -28,7 +33,7 @@ function renderRichText(html: string, conditionalTextState?: ConditionalTextStat
       frame.classList.add('conditional-text');
       if (!state.available) {
         frame.classList.add('conditional-text-unavailable');
-        frame.title = state.reason ?? 'Unavailable in the current simulation state';
+        frame.title = state.reason ?? unavailableMessage;
         const explanation = document.createElement('small');
         explanation.className = 'conditional-text-reason';
         explanation.textContent = frame.title;
@@ -47,11 +52,14 @@ export function RichTextContent({
   className?: string;
   conditionalTextState?: ConditionalTextState;
 }) {
+  const { t } = useTranslation();
   return (
     <div
       className={className}
       // Content is sanitized immediately above and again by the API before persistence.
-      dangerouslySetInnerHTML={{ __html: renderRichText(html, conditionalTextState) }}
+      dangerouslySetInnerHTML={{
+        __html: renderRichText(html, conditionalTextState, t('player.unavailable')),
+      }}
     />
   );
 }

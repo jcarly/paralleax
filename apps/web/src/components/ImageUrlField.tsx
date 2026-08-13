@@ -1,6 +1,8 @@
+import { useTranslation } from 'react-i18next';
+
 export function ImageUrlField({
   imageUrl,
-  label = 'Image URL',
+  label,
   onChange,
   onBlur,
 }: {
@@ -9,10 +11,11 @@ export function ImageUrlField({
   onChange: (imageUrl: string) => void;
   onBlur: (imageUrl: string) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <>
       <label>
-        {label}
+        {label ?? t('inspector.imageUrl')}
         <input
           type="url"
           value={imageUrl ?? ''}

@@ -203,6 +203,21 @@ interactions and triggers.
 `StoryEditor` is the page-level orchestration component for the editor. It wires
 React Flow, selection state, inspectors, and persistence actions together.
 
+`apps/web/src/i18n/` owns interface localization through `i18next` and
+`react-i18next`. English and French resources are bundled with the web build,
+so rendering does not depend on a translation request. Startup selects a saved
+interface language first, then a supported browser language, and finally the
+English fallback. The selection is stored only in browser local storage and
+updates the document language for accessibility; it is not story state and is
+never sent to the API.
+
+Translation applies to product copy, including labels, controls, status text,
+accessibility names, and reader condition diagnostics. Story titles,
+interaction titles and bodies, and the names and descriptions of authored
+locations, characters, stats, and items remain exactly as written. Components
+compose translated diagnostic phrases around those authored values without
+mutating them.
+
 Supporting editor modules keep pure or focused behavior outside the page
 component:
 

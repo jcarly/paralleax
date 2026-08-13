@@ -19,6 +19,7 @@ This folder records accepted architecture and product-shaping decisions.
 - [ADR-013 - Recursive Item Instance Graph](ADR-013-recursive-item-instance-graph.md)
 - [ADR-014 - Items Are Not Owned by Locations](ADR-014-items-are-not-owned-by-locations.md)
 - [ADR-015 - Restore Location-Owned Item Roots](ADR-015-location-owned-item-roots.md)
+- [ADR-016 - Client-Side Interface Internationalization](ADR-016-interface-internationalization.md)
 
 ## Maintenance
 

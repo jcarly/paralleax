@@ -1,5 +1,6 @@
 import type { KeyboardEvent, MouseEvent } from 'react';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
+import { useTranslation } from 'react-i18next';
 export interface InteractionNodeData extends Record<string, unknown> {
   title: string;
   body: string;
@@ -29,6 +30,7 @@ function getInitials(name: string) {
 }
 
 export function InteractionNode({ id, data }: NodeProps) {
+  const { t } = useTranslation();
   const d = data as InteractionNodeData;
   const characters = d.characters ?? [];
   const visibleCharacters = characters.slice(0, 3);
@@ -67,8 +69,8 @@ export function InteractionNode({ id, data }: NodeProps) {
           data-trigger-drop-target="true"
           data-interaction-id={id}
           data-trigger-id={d.rootTriggerId}
-          aria-label="Select root trigger"
-          title="Root trigger"
+          aria-label={t('graph.selectRootTrigger')}
+          title={t('graph.rootTrigger')}
           onClick={selectRootTrigger}
         />
       ) : null}
@@ -79,8 +81,8 @@ export function InteractionNode({ id, data }: NodeProps) {
         className="node-create node-create-parent nodrag nopan"
         role="button"
         tabIndex={0}
-        aria-label="Create source interaction"
-        title="Create source interaction"
+        aria-label={t('graph.createSource')}
+        title={t('graph.createSource')}
         onClick={createParent}
         onKeyDown={triggerKeyboardAction(createParent)}
       >
@@ -100,15 +102,15 @@ export function InteractionNode({ id, data }: NodeProps) {
         id="new-trigger-input"
         position={Position.Top}
         className={`node-trigger-input nodrag nopan ${d.showNewTriggerInput ? 'is-visible' : ''}`}
-        aria-label="Create new trigger input"
-        title="Create new trigger"
+        aria-label={t('graph.createTriggerInput')}
+        title={t('graph.createTrigger')}
       />
       <strong>
         {d.title}
         {d.occurrenceCount ? (
           <span
             className="interaction-occurrence-count"
-            aria-label={`${d.occurrenceCount} occurrences`}
+            aria-label={t('graph.occurrences', { count: d.occurrenceCount })}
           >
             {d.occurrenceCount}
           </span>
@@ -131,7 +133,9 @@ export function InteractionNode({ id, data }: NodeProps) {
           {characters.length > 0 ? (
             <div
               className="interaction-node-characters"
-              aria-label={`Characters present: ${characters.map(({ name }) => name).join(', ')}`}
+              aria-label={t('graph.charactersPresent', {
+                names: characters.map(({ name }) => name).join(', '),
+              })}
             >
               {visibleCharacters.map((character) => (
                 <span
@@ -150,7 +154,9 @@ export function InteractionNode({ id, data }: NodeProps) {
               {characters.length > visibleCharacters.length ? (
                 <span
                   className="interaction-node-character interaction-node-character-overflow"
-                  title={`${characters.length - visibleCharacters.length} more characters`}
+                  title={t('graph.moreCharacters', {
+                    count: characters.length - visibleCharacters.length,
+                  })}
                   aria-hidden="true"
                 >
                   +{characters.length - visibleCharacters.length}
@@ -167,8 +173,8 @@ export function InteractionNode({ id, data }: NodeProps) {
         className="node-create node-create-child nodrag nopan"
         role="button"
         tabIndex={0}
-        aria-label="Create child interaction"
-        title="Create child interaction"
+        aria-label={t('graph.createChild')}
+        title={t('graph.createChild')}
         onClick={createChild}
         onKeyDown={triggerKeyboardAction(createChild)}
       >

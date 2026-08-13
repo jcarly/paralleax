@@ -1,6 +1,8 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link, Navigate, NavLink, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { api, type AuthUser } from './api';
+import { LanguageSwitcher } from './components/LanguageSwitcher';
 import { AuthPage } from './pages/AuthPage';
 import { DesignSystemPage } from './pages/DesignSystemPage';
 import { StoryList } from './pages/StoryList';
@@ -15,13 +17,14 @@ const StoryPlayer = lazy(() =>
 );
 
 export function App() {
+  const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
   const isPrototype =
     location.pathname === '/prototype/paralleax' ||
     location.pathname.startsWith('/prototype/paralleax/');
   const [user, setUser] = useState<AuthUser | null>();
-  const [authNotice, setAuthNotice] = useState('');
+  const [sessionExpired, setSessionExpired] = useState(false);
 
   useEffect(() => {
     if (isPrototype) return;
@@ -34,7 +37,7 @@ export function App() {
   useEffect(() => {
     if (isPrototype) return;
     const expireSession = () => {
-      setAuthNotice('Your session expired. Sign in again to continue.');
+      setSessionExpired(true);
       setUser(null);
     };
     window.addEventListener('paralleax:session-expired', expireSession);
@@ -42,15 +45,15 @@ export function App() {
   }, [isPrototype]);
 
   if (isPrototype) return <ParalleaxPrototype />;
-  if (user === undefined) return <main className="page">Loading...</main>;
+  if (user === undefined) return <main className="page">{t('shell.loading')}</main>;
   if (user === null)
     return (
       <AuthPage
         initialMode={location.pathname === '/register' ? 'register' : 'login'}
-        notice={authNotice}
+        notice={sessionExpired ? t('shell.sessionExpired') : ''}
         onModeChange={(mode) => navigate(mode === 'register' ? '/register' : '/login')}
         onAuthenticated={(authenticatedUser) => {
-          setAuthNotice('');
+          setSessionExpired(false);
           setUser(authenticatedUser);
           navigate('/');
         }}
@@ -64,13 +67,14 @@ export function App() {
           <span aria-hidden="true">P</span>
           <b>Paralleax</b>
         </Link>
-        <nav aria-label="Main navigation">
+        <nav aria-label={t('shell.mainNavigation')}>
           <NavLink to="/" end>
-            Stories
+            {t('shell.stories')}
           </NavLink>
-          <NavLink to="/design-system">Design system</NavLink>
+          <NavLink to="/design-system">{t('shell.designSystem')}</NavLink>
         </nav>
         <span className="product-app-spacer" />
+        <LanguageSwitcher className="language-switcher-header" />
         <span className="product-user">
           <span aria-hidden="true">{user.email.slice(0, 2).toUpperCase()}</span>
           <span>{user.email}</span>
@@ -79,10 +83,10 @@ export function App() {
           className="product-signout"
           onClick={() => void api.logout().finally(() => setUser(null))}
         >
-          Sign out
+          {t('shell.signOut')}
         </button>
       </header>
-      <Suspense fallback={<main className="page">Loading workspace...</main>}>
+      <Suspense fallback={<main className="page">{t('shell.loadingWorkspace')}</main>}>
         <Routes>
           <Route path="/" element={<StoryList />} />
           <Route path="/login" element={<Navigate to="/" replace />} />
