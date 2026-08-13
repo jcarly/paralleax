@@ -453,6 +453,10 @@ export class MoveItemInstanceDto {
   @ValidateIf((_, value) => value !== undefined)
   @IsString()
   @IsNotEmpty()
+  locationId?: string;
+  @ValidateIf((_, value) => value !== undefined)
+  @IsString()
+  @IsNotEmpty()
   parentItemId?: string;
   @ValidateIf((_, value) => value !== undefined)
   @IsIn(['contained', 'equipped', 'attached', 'part_of', 'installed', 'worn', 'held'])

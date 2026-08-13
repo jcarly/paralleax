@@ -1,16 +1,22 @@
 # ADR-013: Recursive Item Instance Graph
 
-Status: Accepted. Location-root portions superseded by
-[ADR-014](ADR-014-items-are-not-owned-by-locations.md).
+Status: Accepted
 
 Date: 2026-08-02
 
-## Amendment (2026-08-09)
+## Amendment (2026-08-13)
 
-ADR-014 removes location-owned roots from the accepted model. A root item
+[ADR-015](ADR-015-location-owned-item-roots.md) supersedes ADR-014 and restores
+the original location-root decision below. Character roots, location roots,
+typed relationships, cycle prevention, stable instance ids, item stats, and
+subtree-preserving moves are normative again.
+
+## Historical Amendment (2026-08-09)
+
+ADR-014 temporarily removed location-owned roots from the accepted model. A root item
 belongs to a character, while a nested item belongs beneath another item through
 a typed structural relationship. References to location roots below record the
-original decision and are no longer normative. The recursive graph, typed
+original decision and were not normative until ADR-015. The recursive graph, typed
 relationships, cycle prevention, stable instance ids, item stats, and
 subtree-preserving character/container moves remain accepted.
 

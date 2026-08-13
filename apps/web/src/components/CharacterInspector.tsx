@@ -199,7 +199,7 @@ export function CharacterInspector({
           items={character.items ?? []}
           itemDefinitions={itemDefinitions}
           statDefinitions={statDefinitions}
-          rootCharacterId={character.id}
+          rootPlacement={{ characterId: character.id }}
           onMove={onMoveItem}
           onDelete={(itemId) => onDeleteItem(character.id, itemId)}
         />

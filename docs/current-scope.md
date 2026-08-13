@@ -19,8 +19,7 @@ Paralleax currently includes:
 - Reusable stat definitions and character stat assignments.
 - Reusable item definitions.
 - Exact authored item instances, including nested item relationships.
-- Character-rooted item placement and nested item relationships. Locations do
-  not own item instances.
+- Character- or location-rooted item placement and nested item relationships.
 - Authentication, sessions, creator ownership, health/readiness, migrations, and
   production-oriented API error handling.
 - React Flow graph authoring.

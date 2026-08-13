@@ -103,10 +103,11 @@ export function InteractionInspector({
   const statEffectTargetOptions = characters
     .filter((character) => stats.some((stat) => stat.characterId === character.id))
     .map((character) => ({ id: character.id, label: character.name }));
-  const items = characters.flatMap((character) =>
-    (character.items ?? []).map((item) => {
+  const itemOwners = [...characters, ...(story.locations ?? [])];
+  const items = itemOwners.flatMap((owner) =>
+    (owner.items ?? []).map((item) => {
       const definition = story.itemDefinitions?.find(({ id }) => id === item.itemDefinitionId);
-      const sameDefinitionItems = (character.items ?? []).filter(
+      const sameDefinitionItems = (owner.items ?? []).filter(
         ({ itemDefinitionId }) => itemDefinitionId === item.itemDefinitionId,
       );
       const copyNumber =
@@ -115,7 +116,7 @@ export function InteractionInspector({
           : '';
       return {
         ...item,
-        label: `${character.name} — ${definition?.name ?? 'Unknown item'}${copyNumber}`,
+        label: `${owner.name} — ${definition?.name ?? 'Unknown item'}${copyNumber}`,
       };
     }),
   );

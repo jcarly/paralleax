@@ -158,14 +158,18 @@ test.describe('Story editor', () => {
     await expect(page.getByLabel('Duration (minutes)')).toHaveValue('45');
   });
 
-  test('does not expose an item inventory on locations', async ({ page }) => {
+  test('exposes location-owned item instances', async ({ page }) => {
     const locatedStory = cloneStory();
     locatedStory.locations = [
       {
         id: 'location-1',
         name: 'Harbor',
-        description: 'A narrative location without persistent items.',
+        description: 'A home with persistent supplies.',
+        items: [{ id: 'supply-1', itemDefinitionId: 'supply-definition' }],
       },
+    ];
+    locatedStory.itemDefinitions = [
+      { id: 'supply-definition', name: 'Household supplies', description: '' },
     ];
     await mockStory(page, locatedStory);
 
@@ -174,7 +178,8 @@ test.describe('Story editor', () => {
 
     const inspector = page.getByRole('complementary', { name: 'Inspector' });
     await expect(inspector.getByRole('heading', { name: 'Location' })).toBeVisible();
-    await expect(inspector.getByRole('heading', { name: 'Items' })).toHaveCount(0);
+    await expect(inspector.getByRole('heading', { name: 'Items' })).toBeVisible();
+    await expect(inspector.getByText('Household supplies')).toBeVisible();
   });
 
   test('keeps title and body visible after dragging an interaction', async ({ page }) => {

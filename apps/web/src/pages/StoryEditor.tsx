@@ -271,6 +271,11 @@ export function StoryEditor() {
         items.set(item.itemDefinitionId, (items.get(item.itemDefinitionId) ?? 0) + 1);
       }
     }
+    for (const location of story?.locations ?? []) {
+      for (const item of location.items ?? []) {
+        items.set(item.itemDefinitionId, (items.get(item.itemDefinitionId) ?? 0) + 1);
+      }
+    }
 
     return { locations, characters, stats, items };
   }, [story]);
@@ -985,6 +990,9 @@ export function StoryEditor() {
                 categorySuggestions={locationCategories}
                 onLocalChange={updateLocalLocation}
                 onPatch={updateLocation}
+                itemDefinitions={story.itemDefinitions ?? []}
+                statDefinitions={story.statDefinitions ?? []}
+                onMoveItem={moveItemInstance}
               />
             ) : selectedCharacter ? (
               <CharacterInspector

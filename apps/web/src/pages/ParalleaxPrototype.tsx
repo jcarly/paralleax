@@ -688,8 +688,8 @@ function Inspector({
             />
           </Field>
           <div className="pp-callout">
-            Locations describe story context. Items are owned by characters or nested inside item
-            instances—not by locations.
+            Locations can own item instances and nested item trees, such as household supplies or
+            furniture.
           </div>
           <div className="pp-section-title">
             <b>Used in 3 interactions</b>

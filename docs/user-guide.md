@@ -182,9 +182,11 @@ Open a character, choose a definition under **Items**, and use **Add item**.
 Every addition creates a separate owned instance, so the same character can own
 several copies of the same item.
 
-Locations do not own item instances. To make an object available in a place,
-create an interaction with the relevant location condition and an item obtain
-effect for the target character.
+Locations may own exact item instances and nested item trees. Their inspector
+shows the items rooted there; item placement can move a complete subtree between
+a character, a location, or another item without changing its instance ids.
+Location roots are authored world state and are not automatically part of a
+reader character's inventory.
 
 In an interaction inspector, use **Add item effect** to select one exact item
 instance and choose **obtain** or **lose**. If a character has several copies,

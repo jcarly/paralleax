@@ -1,6 +1,6 @@
 # ADR-014: Items Are Not Owned by Locations
 
-Status: Accepted
+Status: Superseded by [ADR-015](ADR-015-location-owned-item-roots.md)
 
 Date: 2026-08-09
 

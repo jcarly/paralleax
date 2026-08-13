@@ -155,6 +155,7 @@ export interface CreateCharacterItemInput {
 
 export interface MoveItemInstanceInput {
   characterId?: string;
+  locationId?: string;
   parentItemId?: string;
   relationshipType?: ItemRelationshipType;
   slotKey?: string;

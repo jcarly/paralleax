@@ -71,12 +71,9 @@ details. They should stay covered by tests as the editor grows.
   optional category label. Categories organize entities of the same type and do
   not affect reader evaluation or ownership.
 - An authored item instance has one structural placement and references one item
-  definition from the same story. A root belongs to one character; a nested
-  instance has one structural parent item.
-- Locations never own item instances. Location-based acquisition is represented
-  by interaction location context, trigger conditions, and item obtain/lose
-  effects.
-- Reader replay resolves each definition and character root through the authored
+  definition from the same story. A root belongs to one character or one
+  location; a nested instance has one structural parent item.
+- Reader replay resolves each definition and character or location root through the authored
   item relationship tree.
 - Several item instances owned by one character may reference the same item
   definition; every instance keeps a distinct id.
@@ -99,7 +96,7 @@ details. They should stay covered by tests as the editor grows.
 - Implemented relationship foundation: a projected item has at most one parent,
   parent and child are distinct same-story instances, and relationship types are
   limited to the ADR-013 set. The service rejects ancestor cycles. Moving a root
-  between characters or moving an item beneath a container preserves its
+  between characters, locations, or item containers preserves its
   complete projected subtree without changing ids; deleting a non-empty
   container is rejected.
 - Removing a stat assignment from an item definition removes interaction

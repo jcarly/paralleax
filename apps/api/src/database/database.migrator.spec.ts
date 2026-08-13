@@ -130,4 +130,15 @@ describe('DatabaseMigrator', () => {
       );
     }
   });
+
+  it('restores location-rooted item placement without rewriting migration history', () => {
+    const migration = databaseMigrations.find(
+      ({ id }) => id === '202608130025_restore_location_item_roots',
+    );
+
+    expect(migration?.sql).toMatch(/ADD COLUMN owner_location_id text/i);
+    expect(migration?.sql).toMatch(/REFERENCES locations\(story_id, id\) ON DELETE CASCADE/i);
+    expect(migration?.sql).toMatch(/num_nonnulls\(owner_character_id, owner_location_id\)/i);
+    expect(migration?.sql).toMatch(/exactly one character, location, or parent item/i);
+  });
 });

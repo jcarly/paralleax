@@ -82,6 +82,7 @@ type CharacterItemRow = {
   id: string;
   story_id: string;
   character_id: string | null;
+  location_id: string | null;
   item_definition_id: string;
   sort_order: number;
 };
@@ -308,10 +309,10 @@ export class StoriesRepository {
     );
     const characterItems = await queryable.query<CharacterItemRow>(
       `SELECT id, story_id, owner_character_id AS character_id,
-              item_definition_id, sort_order
+              owner_location_id AS location_id, item_definition_id, sort_order
          FROM item_instances
          WHERE story_id = ANY($1::text[])
-         ORDER BY story_id, owner_character_id, sort_order`,
+         ORDER BY story_id, owner_character_id, owner_location_id, sort_order`,
       [storyIds],
     );
     const itemRelationships = await queryable.query<ItemRelationshipRow>(
@@ -374,6 +375,9 @@ export class StoriesRepository {
     const itemsByCharacter = groupBy(characterItems.rows, (item) =>
       resolveItemCharacterOwner(item, itemRowsById, relationshipByChild),
     );
+    const itemsByLocation = groupBy(characterItems.rows, (item) =>
+      resolveItemLocationOwner(item, itemRowsById, relationshipByChild),
+    );
     const effectsByInteraction = groupBy(statEffects.rows, ({ interaction_id }) => interaction_id);
     const itemEffectsByInteraction = groupBy(
       itemEffects.rows,
@@ -393,6 +397,13 @@ export class StoriesRepository {
         description: location.description,
         ...(location.category ? { category: location.category } : {}),
         ...(location.image_url ? { imageUrl: location.image_url } : {}),
+        ...(itemsByLocation.get(location.id)?.length
+          ? {
+              items: itemsByLocation
+                .get(location.id)!
+                .map((item) => projectItemInstance(item, relationshipByChild)),
+            }
+          : {}),
       })),
       characters: (charactersByStory.get(row.id) ?? []).map((character) => ({
         id: character.id,
@@ -490,6 +501,22 @@ function resolveItemCharacterOwner(
   while (current && !visited.has(current.id)) {
     visited.add(current.id);
     if (current.character_id) return current.character_id;
+    const parentId: string | undefined = relationshipsByChild.get(current.id)?.parent_item_id;
+    current = parentId ? itemsById.get(parentId) : undefined;
+  }
+  return '';
+}
+
+function resolveItemLocationOwner(
+  item: CharacterItemRow,
+  itemsById: ReadonlyMap<string, CharacterItemRow>,
+  relationshipsByChild: ReadonlyMap<string, ItemRelationshipRow>,
+) {
+  const visited = new Set<string>();
+  let current: CharacterItemRow | undefined = item;
+  while (current && !visited.has(current.id)) {
+    visited.add(current.id);
+    if (current.location_id) return current.location_id;
     const parentId: string | undefined = relationshipsByChild.get(current.id)?.parent_item_id;
     current = parentId ? itemsById.get(parentId) : undefined;
   }

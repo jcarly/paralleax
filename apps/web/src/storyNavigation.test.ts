@@ -11,7 +11,14 @@ const story: Story = {
   title: 'Story',
   createdAt: '2026-08-02T00:00:00.000Z',
   updatedAt: '2026-08-02T00:00:00.000Z',
-  locations: [{ id: 'harbor', name: 'Harbor', description: '' }],
+  locations: [
+    {
+      id: 'harbor',
+      name: 'Harbor',
+      description: '',
+      items: [{ id: 'harbor-key', itemDefinitionId: 'key' }],
+    },
+  ],
   statDefinitions: [{ id: 'trust', name: 'Trust' }],
   itemDefinitions: [{ id: 'key', name: 'Key', description: '' }],
   characters: [
@@ -56,6 +63,16 @@ const story: Story = {
         },
       ],
     },
+    {
+      id: 'inspect-location-item',
+      title: 'Inspect location item',
+      body: '',
+      position: { x: 0, y: 264 },
+      itemStatEffects: [
+        { itemId: 'harbor-key', statDefinitionId: 'trust', operation: 'add', value: 1 },
+      ],
+      triggers: [{ id: 'inspect-linked', inputInteractionIds: ['locked'], conditions: [] }],
+    },
   ],
 };
 
@@ -70,6 +87,7 @@ describe('story navigation', () => {
     expect(getReferencedInteractionIds(story, { type: 'location', id: 'harbor' })).toEqual([
       'start',
       'locked',
+      'inspect-location-item',
     ]);
     expect(getReferencedInteractionIds(story, { type: 'character', id: 'mira' })).toEqual([
       'start',
@@ -78,10 +96,12 @@ describe('story navigation', () => {
     expect(getReferencedInteractionIds(story, { type: 'stat', id: 'trust' })).toEqual([
       'start',
       'locked',
+      'inspect-location-item',
     ]);
     expect(getReferencedInteractionIds(story, { type: 'item', id: 'key' })).toEqual([
       'start',
       'locked',
+      'inspect-location-item',
     ]);
   });
 });

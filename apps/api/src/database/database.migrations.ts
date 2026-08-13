@@ -980,4 +980,101 @@ export const databaseMigrations: DatabaseMigration[] = [
       ALTER TABLE item_definitions ADD COLUMN category text NOT NULL DEFAULT '';
     `,
   },
+  {
+    id: '202608130025_restore_location_item_roots',
+    sql: `
+      ALTER TABLE item_instances
+      ADD COLUMN owner_location_id text,
+      ADD CONSTRAINT item_instances_at_most_one_root_owner
+        CHECK (num_nonnulls(owner_character_id, owner_location_id) <= 1),
+      ADD CONSTRAINT item_instances_location_fkey
+        FOREIGN KEY (story_id, owner_location_id)
+        REFERENCES locations(story_id, id) ON DELETE CASCADE;
+
+      CREATE INDEX item_instances_location_id_idx ON item_instances(owner_location_id);
+
+      CREATE OR REPLACE FUNCTION validate_item_instance_relationship() RETURNS trigger AS $$
+      DECLARE
+        child_has_root boolean;
+        creates_cycle boolean;
+      BEGIN
+        SELECT num_nonnulls(owner_character_id, owner_location_id) > 0
+        INTO child_has_root
+        FROM item_instances
+        WHERE story_id = NEW.story_id AND id = NEW.child_item_id;
+        IF child_has_root THEN
+          RAISE EXCEPTION 'A related item cannot also have a root owner';
+        END IF;
+
+        WITH RECURSIVE ancestors(id) AS (
+          SELECT NEW.parent_item_id
+          UNION
+          SELECT relationship.parent_item_id
+          FROM item_instance_relationships AS relationship
+          JOIN ancestors ON ancestors.id = relationship.child_item_id
+          WHERE relationship.story_id = NEW.story_id
+            AND relationship.child_item_id <> NEW.child_item_id
+        )
+        SELECT EXISTS (SELECT 1 FROM ancestors WHERE id = NEW.child_item_id)
+        INTO creates_cycle;
+        IF creates_cycle THEN
+          RAISE EXCEPTION 'Item relationships cannot contain a cycle';
+        END IF;
+        RETURN NEW;
+      END;
+      $$ LANGUAGE plpgsql;
+
+      CREATE OR REPLACE FUNCTION validate_item_instance_root_owner() RETURNS trigger AS $$
+      BEGIN
+        IF num_nonnulls(NEW.owner_character_id, NEW.owner_location_id) > 0
+          AND EXISTS (
+            SELECT 1 FROM item_instance_relationships
+            WHERE story_id = NEW.story_id AND child_item_id = NEW.id
+          )
+        THEN
+          RAISE EXCEPTION 'A rooted item cannot also have a structural parent';
+        END IF;
+        RETURN NEW;
+      END;
+      $$ LANGUAGE plpgsql;
+
+      DROP TRIGGER item_instances_validate_root_owner ON item_instances;
+      CREATE TRIGGER item_instances_validate_root_owner
+      BEFORE INSERT OR UPDATE OF owner_character_id, owner_location_id ON item_instances
+      FOR EACH ROW EXECUTE FUNCTION validate_item_instance_root_owner();
+
+      CREATE OR REPLACE FUNCTION assert_item_instance_placement(
+        target_story_id text,
+        target_item_id text
+      ) RETURNS void AS $$
+      DECLARE
+        root_owner_count integer;
+        parent_count integer;
+      BEGIN
+        SELECT num_nonnulls(owner_character_id, owner_location_id)
+        INTO root_owner_count
+        FROM item_instances
+        WHERE story_id = target_story_id AND id = target_item_id;
+        IF NOT FOUND THEN
+          RETURN;
+        END IF;
+
+        SELECT COUNT(*)::integer
+        INTO parent_count
+        FROM item_instance_relationships
+        WHERE story_id = target_story_id AND child_item_id = target_item_id;
+
+        IF root_owner_count + parent_count <> 1 THEN
+          RAISE EXCEPTION 'An item must belong to exactly one character, location, or parent item';
+        END IF;
+      END;
+      $$ LANGUAGE plpgsql;
+
+      DROP TRIGGER item_instances_validate_placement ON item_instances;
+      CREATE CONSTRAINT TRIGGER item_instances_validate_placement
+      AFTER INSERT OR UPDATE OF owner_character_id, owner_location_id ON item_instances
+      DEFERRABLE INITIALLY DEFERRED
+      FOR EACH ROW EXECUTE FUNCTION validate_item_instance_placement();
+    `,
+  },
 ];

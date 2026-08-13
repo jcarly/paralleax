@@ -409,18 +409,16 @@ Categories are organizational metadata only. Image binaries and their upload
 lifecycle are not stored by the application.
 
 `item_instances` is now the persistence source of truth for exact authored
-items. A root belongs to a character; nested instances use typed parent/child
-relationships in `item_instance_relationships`. Locations are narrative context
-and do not own persistent item instances. The API projects each character root
-and its descendants through `Character.items`.
+items. A root belongs to a character or location; nested instances use typed
+parent/child relationships in `item_instance_relationships`. The API projects
+each root and its descendants through `Character.items` or `Location.items`.
 
 The former `character_items` data remains archived as
 `character_items_legacy` for parity and rollback inspection; repositories and
 new writes no longer use it. Transfers are diffed globally by instance id so
-moving a subtree between characters or item containers does not delete its
-instances or cascade its exact effects. Reader state reconstructs character
-inventories and recursive relationships rather than a persistent world map of
-location-owned objects.
+moving a subtree between characters, locations, or item containers does not
+delete its instances or cascade its exact effects. Reader state reconstructs
+inventories and recursive relationships deterministically.
 The repository reconstructs
 the existing domain `Story`, so persistence normalization does not leak into the
 shared engine or the HTTP contract. JSON remains a future versioned import/export

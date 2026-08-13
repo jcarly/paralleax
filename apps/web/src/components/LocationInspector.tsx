@@ -1,12 +1,21 @@
-import type { Location } from '@paralleax/shared';
+import type {
+  ItemDefinition,
+  Location,
+  MoveItemInstanceInput,
+  StatDefinition,
+} from '@paralleax/shared';
 import { CategoryField } from './CategoryField';
 import { ImageUrlField } from './ImageUrlField';
+import { ItemInstanceTree } from './ItemInstanceTree';
 
 export function LocationInspector({
   location,
   categorySuggestions = [],
   onLocalChange,
   onPatch,
+  itemDefinitions,
+  statDefinitions,
+  onMoveItem,
 }: {
   location: Location;
   categorySuggestions?: string[];
@@ -15,6 +24,9 @@ export function LocationInspector({
     locationId: string,
     patch: Partial<Pick<Location, 'name' | 'description' | 'category' | 'imageUrl'>>,
   ) => Promise<void>;
+  itemDefinitions: ItemDefinition[];
+  statDefinitions: StatDefinition[];
+  onMoveItem: (itemId: string, placement: MoveItemInstanceInput) => Promise<void>;
 }) {
   return (
     <div>
@@ -38,6 +50,18 @@ export function LocationInspector({
         onChange={(imageUrl) => onLocalChange({ ...location, imageUrl })}
         onBlur={(imageUrl) => void onPatch(location.id, { imageUrl })}
       />
+      <h3>Items</h3>
+      {(location.items ?? []).length === 0 ? (
+        <p className="hint">No items at this location.</p>
+      ) : (
+        <ItemInstanceTree
+          items={location.items ?? []}
+          itemDefinitions={itemDefinitions}
+          statDefinitions={statDefinitions}
+          rootPlacement={{ locationId: location.id }}
+          onMove={onMoveItem}
+        />
+      )}
       <label>
         Description
         <textarea

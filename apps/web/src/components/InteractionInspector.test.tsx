@@ -286,12 +286,20 @@ describe('InteractionInspector time', () => {
           ],
         },
       ],
+      locations: [
+        {
+          id: 'home',
+          name: 'Home',
+          description: '',
+          items: [{ id: 'key-at-home', itemDefinitionId: 'key-definition' }],
+        },
+      ],
       interactions: [interaction],
       createdAt: '2026-07-26T00:00:00.000Z',
       updatedAt: '2026-07-26T00:00:00.000Z',
     };
     const onPatch = vi.fn().mockResolvedValue(undefined);
-    const { rerender } = render(
+    const { container, rerender } = render(
       <InteractionInspector
         story={story}
         interaction={interaction}
@@ -337,6 +345,11 @@ describe('InteractionInspector time', () => {
     const target = screen.getByLabelText('Item stat effect target');
     expect(target).toHaveValue('Mira — Key #1');
     expect(screen.getByLabelText('Affected item stat')).toHaveValue('durability');
+    expect(screen.getByLabelText('Item stat effect target')).toHaveAttribute(
+      'list',
+      expect.any(String),
+    );
+    expect(container.querySelector('datalist option[value="Home — Key"]')).toBeInTheDocument();
     fireEvent.change(target, {
       target: { value: 'Mira — Key #2' },
     });

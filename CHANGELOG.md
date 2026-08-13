@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-08-13
+
+- Restored character- or location-rooted authored item instances across the
+  shared model, reader replay, API, PostgreSQL persistence, and location
+  inspector, including subtree-preserving placement moves.
+- Added a forward-only migration that reintroduces constrained location roots
+  after the historical removal migration, plus ADR-015 and cross-layer
+  regression coverage. Location-rooted data deleted on 2026-08-09 cannot be
+  reconstructed automatically.
+
 ## 2026-08-12
 
 - Restored the API's runtime-selected all-interface listener and separated the

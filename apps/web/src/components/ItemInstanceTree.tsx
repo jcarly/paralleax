@@ -22,14 +22,14 @@ export function ItemInstanceTree({
   items,
   itemDefinitions,
   statDefinitions,
-  rootCharacterId,
+  rootPlacement,
   onMove,
   onDelete,
 }: {
   items: ItemInstance[];
   itemDefinitions: ItemDefinition[];
   statDefinitions?: StatDefinition[];
-  rootCharacterId: string;
+  rootPlacement: Pick<MoveItemInstanceInput, 'characterId' | 'locationId'>;
   onMove: (itemId: string, placement: MoveItemInstanceInput) => Promise<void>;
   onDelete?: (itemId: string) => Promise<void>;
 }) {
@@ -83,7 +83,7 @@ export function ItemInstanceTree({
                         relationshipType: item.relationshipType ?? 'contained',
                         ...(item.slotKey ? { slotKey: item.slotKey } : {}),
                       }
-                    : { characterId: rootCharacterId },
+                    : rootPlacement,
                 )
               }
             >

@@ -178,9 +178,8 @@ needs:
 - shops, buying, selling, and service transactions;
 - currency as a first-class or consistently typed resource.
 
-ADR-013 and ADR-014 define the target for these gaps: one recursive item-instance
-graph with character roots and typed item-to-item relationships. Locations are
-narrative acquisition context, not inventories. The remaining gap covers
+ADR-013 and ADR-015 define the target for these gaps: one recursive item-instance
+graph with character or location roots and typed item-to-item relationships. The remaining gap covers
 relationship conditions/effects and the reader snapshot upgrade.
 
 ### Character and Relationship Simulation

@@ -915,7 +915,7 @@ describe('Stories API', () => {
       .expect(404);
   });
 
-  it('moves item subtrees between characters and rejects cycles or non-empty deletion', async () => {
+  it('moves item subtrees between characters and locations and rejects invalid trees', async () => {
     const story = await createStory();
     const mira = await request(httpServer)
       .post(`/api/stories/${story.id}/characters`)
@@ -991,10 +991,25 @@ describe('Stories API', () => {
       ]),
     );
 
-    await request(httpServer)
+    const park = await request(httpServer)
+      .post(`/api/stories/${story.id}/locations`)
+      .send({ name: 'Park' })
+      .expect(201);
+    const placed = await request(httpServer)
       .patch(`/api/stories/${story.id}/items/${backpack.body.item.id}/placement`)
-      .send({ locationId: 'park' })
-      .expect(400);
+      .send({ locationId: park.body.location.id })
+      .expect(200);
+    expect(
+      (placed.body as Story).characters?.find(({ id }) => id === luc.body.character.id)?.items,
+    ).toEqual([]);
+    expect(
+      (placed.body as Story).locations?.find(({ id }) => id === park.body.location.id)?.items,
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: backpack.body.item.id }),
+        expect.objectContaining({ id: key.body.item.id, parentItemId: backpack.body.item.id }),
+      ]),
+    );
   });
 
   it('validates and stores interaction item stat effects', async () => {

@@ -18,6 +18,7 @@ This folder records accepted architecture and product-shaping decisions.
 - [ADR-012 - Versioned Reader Progress JSON](ADR-012-versioned-reader-progress-json.md)
 - [ADR-013 - Recursive Item Instance Graph](ADR-013-recursive-item-instance-graph.md)
 - [ADR-014 - Items Are Not Owned by Locations](ADR-014-items-are-not-owned-by-locations.md)
+- [ADR-015 - Restore Location-Owned Item Roots](ADR-015-location-owned-item-roots.md)
 
 ## Maintenance
 

@@ -218,21 +218,34 @@ function relationalRead(query: jest.Mock, saved = story()) {
     }
     if (sql.includes('FROM item_instances')) {
       return Promise.resolve({
-        rows: (saved.characters ?? []).flatMap((character) =>
-          (character.items ?? []).map((item, index) => ({
-            id: item.id,
-            story_id: saved.id,
-            character_id: item.parentItemId ? null : character.id,
-            item_definition_id: item.itemDefinitionId,
-            sort_order: index,
-          })),
-        ),
+        rows: [
+          ...(saved.characters ?? []).flatMap((character) =>
+            (character.items ?? []).map((item, index) => ({
+              id: item.id,
+              story_id: saved.id,
+              character_id: item.parentItemId ? null : character.id,
+              location_id: null,
+              item_definition_id: item.itemDefinitionId,
+              sort_order: index,
+            })),
+          ),
+          ...(saved.locations ?? []).flatMap((location) =>
+            (location.items ?? []).map((item, index) => ({
+              id: item.id,
+              story_id: saved.id,
+              character_id: null,
+              location_id: item.parentItemId ? null : location.id,
+              item_definition_id: item.itemDefinitionId,
+              sort_order: index,
+            })),
+          ),
+        ],
       });
     }
     if (sql.includes('FROM item_instance_relationships')) {
       return Promise.resolve({
-        rows: (saved.characters ?? []).flatMap((character) =>
-          (character.items ?? []).flatMap((item, index) =>
+        rows: [...(saved.characters ?? []), ...(saved.locations ?? [])].flatMap((owner) =>
+          (owner.items ?? []).flatMap((item, index) =>
             item.parentItemId && item.relationshipType
               ? [
                   {
@@ -435,11 +448,11 @@ describe('StoriesRepository', () => {
     );
     expect(mockClientQuery).toHaveBeenCalledWith(
       expect.stringContaining('INSERT INTO item_instances'),
-      ['item-1', saved.id, 'character-1', 'item-definition-1', 0],
+      ['item-1', saved.id, 'character-1', null, 'item-definition-1', 0],
     );
     expect(mockClientQuery).toHaveBeenCalledWith(
       expect.stringContaining('INSERT INTO item_instances'),
-      ['item-2', saved.id, 'character-1', 'item-definition-1', 1],
+      ['item-2', saved.id, 'character-1', null, 'item-definition-1', 1],
     );
     expect(mockClientQuery).toHaveBeenCalledWith(
       expect.stringContaining('INSERT INTO interaction_stat_effects'),
@@ -591,6 +604,32 @@ describe('StoriesRepository', () => {
     expect(mockClientQuery).toHaveBeenCalledWith(
       expect.stringContaining('UPDATE item_instances SET owner_character_id = $2'),
       ['item-1', 'character-2'],
+    );
+  });
+
+  it('transfers an item from a character root to a location root', async () => {
+    const saved = graphStory();
+    relationalRead(mockClientQuery, saved);
+
+    await repository().mutate(
+      saved.id,
+      (value) => {
+        const item = value.characters![0].items!.shift()!;
+        value.locations![0].items = [item];
+        return value;
+      },
+      ownerId,
+    );
+
+    expect(mockClientQuery).not.toHaveBeenCalledWith(
+      'DELETE FROM item_instances WHERE id = $1 AND story_id = $2',
+      expect.anything(),
+    );
+    expect(mockClientQuery).toHaveBeenCalledWith(
+      expect.stringContaining(
+        'UPDATE item_instances SET owner_character_id = $2, owner_location_id = $3',
+      ),
+      ['item-1', null, 'location-1'],
     );
   });
 

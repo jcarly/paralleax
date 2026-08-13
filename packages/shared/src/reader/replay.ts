@@ -1,9 +1,9 @@
 import type { Interaction, ReaderProgressState, Story } from '../model/index.js';
 import { getJourneyDateTime } from '../time/index.js';
 
-function getCharacterRootedItemInstances(story: Story) {
-  return (story.characters ?? []).flatMap((character) => {
-    const items = character.items ?? [];
+function getStructurallyPlacedItemInstances(story: Story) {
+  return [...(story.characters ?? []), ...(story.locations ?? [])].flatMap((owner) => {
+    const items = owner.items ?? [];
     const childrenByParentId = new Map<string, typeof items>();
     for (const item of items) {
       if (!item.parentItemId) continue;
@@ -24,7 +24,7 @@ function getCharacterRootedItemInstances(story: Story) {
 
     return items
       .filter((item) => reachableIds.has(item.id))
-      .map((item) => ({ characterId: character.id, item }));
+      .map((item) => ({ ownerId: owner.id, item }));
   });
 }
 
@@ -135,7 +135,7 @@ export function getJourneyOwnedItemIds(story: Story, journey: string[]): string[
 }
 
 export function getItemDefinitionIdForInstance(story: Story, itemId: string): string | undefined {
-  const authored = getCharacterRootedItemInstances(story).find(({ item }) => item.id === itemId);
+  const authored = getStructurallyPlacedItemInstances(story).find(({ item }) => item.id === itemId);
   if (authored) return authored.item.itemDefinitionId;
   const ownedRuntimeMatch = /^runtime-item:\d+:\d+:[^:]*:(.+)$/.exec(itemId);
   if (ownedRuntimeMatch) return decodeURIComponent(ownedRuntimeMatch[1]);
@@ -144,8 +144,8 @@ export function getItemDefinitionIdForInstance(story: Story, itemId: string): st
 }
 
 export function getItemOwnerIdForInstance(story: Story, itemId: string): string | undefined {
-  const authored = getCharacterRootedItemInstances(story).find(({ item }) => item.id === itemId);
-  if (authored) return authored.characterId;
+  const authored = getStructurallyPlacedItemInstances(story).find(({ item }) => item.id === itemId);
+  if (authored) return authored.ownerId;
   const match = /^runtime-item:\d+:\d+:([^:]*):/.exec(itemId);
   return match?.[1] ? decodeURIComponent(match[1]) : undefined;
 }
@@ -162,7 +162,7 @@ export function getInitialItemStatValues(story: Story): Record<string, Record<st
     (story.itemDefinitions ?? []).map((definition) => [definition.id, definition]),
   );
   return Object.fromEntries(
-    getCharacterRootedItemInstances(story).map(({ item }) => [
+    getStructurallyPlacedItemInstances(story).map(({ item }) => [
       item.id,
       Object.fromEntries(
         (definitions.get(item.itemDefinitionId)?.stats ?? []).map((stat) => [

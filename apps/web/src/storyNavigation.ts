@@ -52,8 +52,8 @@ export function getReferencedInteractionIds(
     }),
   );
   const itemIds = new Set(
-    (story.characters ?? []).flatMap((character) =>
-      (character.items ?? [])
+    [...(story.characters ?? []), ...(story.locations ?? [])].flatMap((owner) =>
+      (owner.items ?? [])
         .filter((item) => reference.type === 'item' && item.itemDefinitionId === reference.id)
         .map((item) => item.id),
     ),
@@ -63,6 +63,11 @@ export function getReferencedInteractionIds(
       .filter((character) => reference.type === 'character' && character.id === reference.id)
       .flatMap((character) => (character.items ?? []).map((item) => item.id)),
   );
+  const locationItemIds = new Set(
+    (story.locations ?? [])
+      .filter((location) => reference.type === 'location' && location.id === reference.id)
+      .flatMap((location) => (location.items ?? []).map((item) => item.id)),
+  );
 
   return story.interactions
     .filter((interaction) => {
@@ -70,6 +75,12 @@ export function getReferencedInteractionIds(
       if (reference.type === 'location') {
         return (
           interaction.locationId === reference.id ||
+          (interaction.itemEffects ?? []).some((effect) =>
+            effect.itemId ? locationItemIds.has(effect.itemId) : false,
+          ) ||
+          (interaction.itemStatEffects ?? []).some((effect) =>
+            locationItemIds.has(effect.itemId),
+          ) ||
           conditions.some(
             (condition) => 'locationId' in condition && condition.locationId === reference.id,
           )

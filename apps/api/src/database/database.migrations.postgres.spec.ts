@@ -437,6 +437,77 @@ describePostgres('Database migrations PostgreSQL upgrade', () => {
       ),
     ).resolves.toMatchObject({ rows: [{ owner_character_id: null }], rowCount: 1 });
   }, 30_000);
+
+  it('restores constrained location roots in a forward migration', async () => {
+    await pool.query('DROP SCHEMA public CASCADE');
+    await pool.query('CREATE SCHEMA public');
+
+    for (const migration of databaseMigrations) await pool.query(migration.sql);
+
+    await pool.query(
+      `INSERT INTO users (id, email, password_hash, created_at)
+       VALUES ('restored-owner', 'restored@paralleax.invalid', 'disabled', now())`,
+    );
+    await pool.query(
+      `INSERT INTO stories
+       (id, revision, title, start_date_time, created_at, updated_at, creator_user_id)
+       VALUES ('restored-story', 1, 'Restored roots', '2000-01-03T08:00', now(), now(), 'restored-owner')`,
+    );
+    await pool.query(
+      `INSERT INTO locations
+       (id, story_id, name, description, image_url, sort_order)
+       VALUES ('home', 'restored-story', 'Home', '', '', 0)`,
+    );
+    await pool.query(
+      `INSERT INTO item_definitions
+       (id, story_id, name, description, image_url, stats, sort_order)
+       VALUES ('supply', 'restored-story', 'Supply', '', '', '[]'::jsonb, 0)`,
+    );
+
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query(
+        `INSERT INTO item_instances
+         (id, story_id, item_definition_id, owner_location_id, sort_order)
+         VALUES ('cabinet', 'restored-story', 'supply', 'home', 0),
+                ('nested-supply', 'restored-story', 'supply', NULL, 1)`,
+      );
+      await client.query(
+        `INSERT INTO item_instance_relationships
+         (story_id, parent_item_id, child_item_id, relationship_type, sort_order)
+         VALUES ('restored-story', 'cabinet', 'nested-supply', 'contained', 0)`,
+      );
+      await client.query('COMMIT');
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+
+    await expect(
+      pool.query(
+        `SELECT id, owner_location_id
+         FROM item_instances
+         WHERE story_id = 'restored-story'
+         ORDER BY sort_order`,
+      ),
+    ).resolves.toMatchObject({
+      rows: [
+        { id: 'cabinet', owner_location_id: 'home' },
+        { id: 'nested-supply', owner_location_id: null },
+      ],
+      rowCount: 2,
+    });
+    await expect(
+      pool.query(
+        `INSERT INTO item_instances
+         (id, story_id, item_definition_id, owner_location_id, sort_order)
+         VALUES ('foreign-root', 'restored-story', 'supply', 'missing-location', 2)`,
+      ),
+    ).rejects.toThrow();
+  }, 30_000);
 });
 
 async function waitForPostgres(pool: Pool) {

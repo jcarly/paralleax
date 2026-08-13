@@ -120,16 +120,14 @@ have no reader, trigger, ownership, or simulation semantics.
 ### Item Instance
 
 An authored item instance has exactly one structural placement and references
-one item definition from the same story. A root instance belongs to a character;
-a nested instance belongs beneath another item through a typed structural
-relationship. Locations do not own item instances. Objects that can be found or
-acquired in a place are represented through interactions, location conditions,
-and item obtain/lose effects.
+one item definition from the same story. A root instance belongs to a character
+or a location; a nested instance belongs beneath another item through a typed
+structural relationship.
 
 Adding the same definition several times creates separate instances with
 distinct ids. Interactions can obtain or lose one exact item instance, allowing
 repeated definitions to remain distinct. Reader replay resolves definitions
-from character-rooted authored instances and their descendants. Each instance
+from character- and location-rooted authored instances and their descendants. Each instance
 has independent runtime values for the stats assigned by its definition.
 Interaction effects can add to or set one exact instance stat. Items do not have
 equipment behavior yet.
@@ -374,18 +372,18 @@ slots. Equipment definitions may expose modifiers, coverage, or layers, but
 advanced clothing simulation remains a later vertical.
 
 The accepted target model is a recursive story-local item graph. Exact
-instances can be rooted at a character or linked beneath another instance
+instances can be rooted at a character or location, or linked beneath another instance
 through a typed structural relationship such as `contained`, `equipped`,
 `attached`, `part_of`, `installed`, `worn`, or `held`. Body parts, containers,
 clothing, implants, and composite objects share this engine rather than
-introducing parallel ownership systems. Locations provide narrative context for
-acquisition rather than item ownership. See
+introducing parallel ownership systems. See
 [ADR-013](decisions/ADR-013-recursive-item-instance-graph.md) and
-[ADR-014](decisions/ADR-014-items-are-not-owned-by-locations.md).
+[ADR-015](decisions/ADR-015-location-owned-item-roots.md).
 
-The implementation projects character-rooted authored instances and their
-descendants through `Character.items`. PostgreSQL stores exact instances and
-their typed parent relationships without introducing location inventories.
+The implementation projects authored instances and their descendants through
+`Character.items` or `Location.items` according to their effective root owner.
+PostgreSQL stores exact instances, character/location roots, and typed parent
+relationships.
 
 Items do not replace attributes. Equipment and item behavior contribute
 modifiers to an effective value calculated from base, permanent, equipment,

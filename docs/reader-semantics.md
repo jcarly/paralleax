@@ -118,10 +118,10 @@ interaction applies its ordered item-stat `add` or `set` effects.
 Item stat effects target an exact item instance and one stat exposed by that
 instance's definition. The values are replayed for the complete authored set of
 instances; the inventory only decides which instances are currently displayed
-to the player. Authored instances are resolved from character roots and their
-descendants, so moving an instance within that graph does not detach it from its
-definition or runtime stat defaults. Locations never contribute an item
-inventory to reader state.
+to the player. Authored instances are resolved from character or location roots
+and their descendants, so moving an instance within that graph does not detach
+it from its definition or runtime stat defaults. A location root is not
+automatically treated as reader-owned inventory.
 
 ## Story Time
 

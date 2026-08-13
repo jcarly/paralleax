@@ -392,7 +392,7 @@ describe('StoryEditor', () => {
     await user.click(screen.getByRole('button', { name: 'Add location' }));
 
     const inspector = screen.getByRole('complementary', { name: 'Inspector' });
-    expect(within(inspector).queryByRole('heading', { name: 'Items' })).not.toBeInTheDocument();
+    expect(within(inspector).getByRole('heading', { name: 'Items' })).toBeInTheDocument();
     const name = within(inspector).getByLabelText('Name');
     await user.clear(name);
     await user.type(name, 'Harbor');
@@ -736,7 +736,13 @@ describe('StoryEditor', () => {
   it('summarizes real story references in compact context entity rows', async () => {
     const story = cloneStory();
     story.locations = [
-      { id: 'harbor', name: 'Harbor', description: '', category: 'Coast' },
+      {
+        id: 'harbor',
+        name: 'Harbor',
+        description: '',
+        category: 'Coast',
+        items: [{ id: 'harbor-key', itemDefinitionId: 'key' }],
+      },
       { id: 'crossroads', name: 'Crossroads', description: '' },
     ];
     story.statDefinitions = [{ id: 'trust', name: 'Trust', category: 'Relationships' }];
@@ -775,7 +781,7 @@ describe('StoryEditor', () => {
       within(within(context).getByRole('button', { name: 'Trust' })).getByText('1 assignment'),
     ).toBeInTheDocument();
     expect(
-      within(within(context).getByRole('button', { name: 'Archive key' })).getByText('1 instance'),
+      within(within(context).getByRole('button', { name: 'Archive key' })).getByText('2 instances'),
     ).toBeInTheDocument();
 
     const interactionCard = within(screen.getByTestId('flow-node-interaction-1')).getByTestId(

@@ -684,6 +684,43 @@ describe('reader progress', () => {
     });
   });
 
+  it('resolves location-rooted item trees during replay', () => {
+    const story = storyFixture();
+    story.locations = [
+      {
+        id: 'home',
+        name: 'Home',
+        description: '',
+        items: [
+          { id: 'cabinet-1', itemDefinitionId: 'cabinet-definition' },
+          {
+            id: 'supply-1',
+            itemDefinitionId: 'supply-definition',
+            parentItemId: 'cabinet-1',
+            relationshipType: 'contained',
+          },
+        ],
+      },
+    ];
+    story.itemDefinitions = [
+      { id: 'cabinet-definition', name: 'Cabinet', description: '' },
+      {
+        id: 'supply-definition',
+        name: 'Supply',
+        description: '',
+        stats: [{ statDefinitionId: 'durability-definition', initialValue: 10 }],
+      },
+    ];
+    story.interactions[0].itemEffects = [{ itemId: 'supply-1', operation: 'obtain' }];
+
+    const progress = buildReaderProgressState(story, ['root']);
+
+    expect(getItemDefinitionIdForInstance(story, 'supply-1')).toBe('supply-definition');
+    expect(getItemOwnerIdForInstance(story, 'supply-1')).toBe('home');
+    expect(progress.ownedItemIds).toEqual(['supply-1']);
+    expect(progress.itemStatValues['supply-1']).toEqual({ 'durability-definition': 10 });
+  });
+
   it('obtains reusable item definitions and evaluates item ownership conditions', () => {
     const story = storyFixture();
     story.itemDefinitions = [
