@@ -1948,11 +1948,232 @@
   color: var(--product-muted);
 }
 
+.admin-overview {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.admin-overview article {
+  display: grid;
+  gap: 0.2rem;
+  padding: 1.25rem 1.4rem;
+  border: 1px solid var(--product-line);
+  border-radius: 1rem;
+  background: var(--product-surface, #fff);
+}
+
+.admin-overview strong {
+  color: var(--product-ink);
+  font-family: var(--product-serif);
+  font-size: 2rem;
+  font-weight: 500;
+}
+
+.admin-overview span,
+.admin-management-heading p,
+.admin-rights-reference p {
+  color: var(--product-muted);
+  font-size: 0.88rem;
+}
+
+.admin-rights-reference {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0;
+  margin-bottom: 2rem;
+  padding: 0;
+}
+
+.admin-rights-reference > div {
+  padding: 1.25rem 1.4rem;
+}
+
+.admin-rights-reference > div + div {
+  border-left: 1px solid var(--product-line);
+}
+
+.admin-rights-reference p {
+  margin: 0.65rem 0 0;
+  line-height: 1.55;
+}
+
+.admin-user-management {
+  margin-top: 2rem;
+}
+
+.admin-management-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1.5rem;
+}
+
+.admin-management-heading h2 {
+  margin: 0;
+  font-family: var(--product-serif);
+  font-size: 1.65rem;
+  font-weight: 500;
+}
+
+.admin-management-heading p {
+  margin: 0.35rem 0 0;
+}
+
+.admin-user-toolbar {
+  display: flex;
+  gap: 0.65rem;
+}
+
+.admin-user-toolbar .library-search {
+  width: min(19rem, 42vw);
+}
+
+.admin-role-filter select,
+.admin-role-control select {
+  min-height: 42px;
+  border: 1px solid var(--product-line-strong);
+  border-radius: 7px;
+  background: #fff;
+  color: var(--product-ink);
+  font: inherit;
+  font-size: 0.78rem;
+}
+
+.admin-role-filter select {
+  height: 100%;
+  padding: 0 2.2rem 0 0.8rem;
+}
+
+.admin-notice {
+  margin: 1rem 0 0;
+  padding: 0.75rem 1rem;
+  border: 1px solid #bdd2c2;
+  border-radius: 0.6rem;
+  background: #edf5ef;
+  color: #28583c;
+  font-size: 0.85rem;
+}
+
+.admin-user-list {
+  overflow: hidden;
+  padding: 0 1.5rem;
+}
+
+.admin-user-list > div:first-child {
+  border-top: 0;
+}
+
+.admin-user-list > div {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) minmax(10rem, 13rem);
+  min-height: 76px;
+}
+
+.admin-user-avatar {
+  display: grid !important;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--product-accent-soft);
+  color: var(--product-accent);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.admin-user-identity,
+.admin-role-control {
+  min-width: 0;
+}
+
+.admin-user-name {
+  display: flex !important;
+  grid-auto-flow: column;
+  justify-content: start;
+  align-items: center;
+  gap: 0.55rem !important;
+}
+
+.admin-user-name b {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.admin-user-name .product-badge {
+  display: inline-flex;
+  padding: 0.18rem 0.45rem;
+}
+
+.admin-protected-role {
+  color: #8a6421 !important;
+}
+
+.admin-role-control {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.admin-role-control > span {
+  color: var(--product-muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.admin-role-control select {
+  width: 100%;
+  padding: 0 0.75rem;
+}
+
+.admin-user-state {
+  display: grid;
+  min-height: 9rem;
+  margin-top: 1.5rem;
+  place-items: center;
+  color: var(--product-muted);
+  text-align: center;
+}
+
+.admin-user-state .loading-ring {
+  align-self: end;
+}
+
+.admin-user-state .loading-ring + p {
+  align-self: start;
+  margin-top: 0;
+}
+
 @media (max-width: 760px) {
   .settings-grid {
     grid-template-columns: 1fr;
   }
   .collaborator-form {
     grid-template-columns: 1fr;
+  }
+  .admin-overview,
+  .admin-rights-reference {
+    grid-template-columns: 1fr;
+  }
+  .admin-rights-reference > div + div {
+    border-top: 1px solid var(--product-line);
+    border-left: 0;
+  }
+  .admin-management-heading,
+  .admin-user-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .admin-user-toolbar .library-search {
+    width: 100%;
+  }
+  .admin-user-list > div {
+    grid-template-columns: 38px minmax(0, 1fr);
+  }
+  .admin-role-control {
+    grid-column: 2;
+    width: 100%;
   }
 }

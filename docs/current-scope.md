@@ -24,6 +24,8 @@ Paralleax currently includes:
   visibility and editing policies, reader/editor invitations, a persisted future
   comment policy, health/readiness, migrations, and production-oriented API error
   handling.
+- An administrator-only account interface with role summaries, account search and
+  filtering, global user/admin assignment, and visible last-administrator protection.
 - A public home catalogue limited to publicly visible stories, a separate
   authenticated story workspace, and local return-to-page navigation through
   sign-in and registration.

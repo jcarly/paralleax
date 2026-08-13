@@ -133,7 +133,7 @@ export function App() {
             element={<StoryPlayer authenticated={Boolean(user)} />}
           />
           {user?.role === 'admin' ? (
-            <Route path="/admin/users" element={<AdminUsersPage />} />
+            <Route path="/admin/users" element={<AdminUsersPage currentUserId={user.id} />} />
           ) : (
             <Route
               path="/admin/users"

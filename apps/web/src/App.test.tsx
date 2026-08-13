@@ -23,6 +23,11 @@ vi.mock('./pages/StoryList', () => ({
 }));
 vi.mock('./pages/StoryEditor', () => ({ StoryEditor: () => <div>Editeur mock</div> }));
 vi.mock('./pages/StoryPlayer', () => ({ StoryPlayer: () => <div>Lecteur mock</div> }));
+vi.mock('./pages/AdminUsersPage', () => ({
+  AdminUsersPage: ({ currentUserId }: { currentUserId: string }) => (
+    <div>Administration mock for {currentUserId}</div>
+  ),
+}));
 vi.mock('./pages/ParalleaxPrototype', () => ({
   ParalleaxPrototype: () => <div>Prototype mock</div>,
 }));
@@ -76,6 +81,42 @@ describe('App', () => {
     );
 
     expect(await screen.findByText('Liste mock')).toBeInTheDocument();
+  });
+
+  it('exposes user administration only to administrators', async () => {
+    vi.mocked(api.me).mockResolvedValue({
+      id: 'admin-1',
+      email: 'admin@example.com',
+      role: 'admin',
+      createdAt: '2026-01-01T00:00:00.000Z',
+    });
+    render(
+      <MemoryRouter initialEntries={['/admin/users']}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText('Administration mock for admin-1')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Administration' })).toHaveAttribute(
+      'href',
+      '/admin/users',
+    );
+
+    cleanup();
+    vi.mocked(api.me).mockResolvedValue({
+      id: 'user-1',
+      email: 'member@example.com',
+      role: 'user',
+      createdAt: '2026-01-01T00:00:00.000Z',
+    });
+    render(
+      <MemoryRouter initialEntries={['/admin/users']}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText('Catalogue mock')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Administration' })).not.toBeInTheDocument();
   });
 
   it('does not expose the internal design-system route', async () => {

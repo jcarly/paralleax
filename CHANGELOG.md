@@ -2,6 +2,9 @@
 
 ## 2026-08-13
 
+- Expanded the administrator-only account interface with role summaries,
+  searchable/filterable users, localized role guidance, current-account and
+  last-administrator indicators, and inline role-update feedback.
 - Made the public-story catalogue the product home, moved the full accessible
   story workspace to `My stories`, preserved validated local destinations across
   sign-in and registration, and removed the design-system route from product

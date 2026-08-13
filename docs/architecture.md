@@ -223,6 +223,12 @@ and registration carry a validated same-origin `returnTo` path, including its
 query and fragment, and replace the authentication history entry after success.
 The product navigation does not expose the internal design-system reference.
 
+Administrators receive an `Administration` navigation entry backed by the
+protected `/admin/users` route. Its account list, summary, search, role filter,
+and last-administrator affordance are client projections of the API state. Role
+changes always use the administrator endpoints; hiding or disabling a control is
+not treated as authorization or concurrency protection.
+
 `apps/web/src/i18n/` owns interface localization through `i18next` and
 `react-i18next`. English and French resources are bundled with the web build,
 so rendering does not depend on a translation request. Startup selects a saved

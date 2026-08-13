@@ -46,9 +46,12 @@ not implemented yet; this setting establishes the policy they must enforce.
 Public readers can follow a direct `/stories/{id}/play` link without signing in,
 but anonymous progress is not saved.
 
-Administrators can open `Administration` to promote or demote accounts. An
-administrator can read, edit, manage, and delete every story. Paralleax prevents
-the last administrator from being demoted.
+Administrators can open `Administration` to view account totals, search or filter
+accounts, and promote or demote them between the global `User` and
+`Administrator` roles. A standard user's effective story rights still come from
+each story's access settings. An administrator can manage accounts and read,
+edit, configure, or delete every story. Paralleax marks the final administrator
+as protected in the interface and also prevents its demotion in the API.
 
 ## Choose the Interface Language
 
