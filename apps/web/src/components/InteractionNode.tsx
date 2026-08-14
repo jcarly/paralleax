@@ -11,10 +11,13 @@ export interface InteractionNodeData extends Record<string, unknown> {
   characters?: Array<{ id: string; name: string; imageUrl?: string }>;
   rootTriggerId?: string;
   rootTriggerSelected?: boolean;
+  rootTriggerCommentCount?: number;
   showNewTriggerInput?: boolean;
   onCreateChild?: (interactionId: string) => void;
   onCreateParent?: (interactionId: string) => void;
   onSelectRootTrigger?: (interactionId: string, triggerId: string) => void;
+  commentCount?: number;
+  onOpenComments?: (targetType: 'interaction' | 'trigger', targetId: string) => void;
 }
 
 const routingHandles = [Position.Top, Position.Right, Position.Bottom, Position.Left];
@@ -74,20 +77,51 @@ export function InteractionNode({ id, data }: NodeProps) {
           onClick={selectRootTrigger}
         />
       ) : null}
-      <Handle
-        type="target"
-        id="create-source-input"
-        position={Position.Top}
-        className="node-create node-create-parent nodrag nopan"
-        role="button"
-        tabIndex={0}
-        aria-label={t('graph.createSource')}
-        title={t('graph.createSource')}
-        onClick={createParent}
-        onKeyDown={triggerKeyboardAction(createParent)}
-      >
-        +
-      </Handle>
+      {d.rootTriggerId && d.rootTriggerCommentCount ? (
+        <button
+          className="root-trigger-comment-badge nodrag nopan"
+          type="button"
+          aria-label={t('comments.openForTrigger', { count: d.rootTriggerCommentCount })}
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            d.onOpenComments?.('trigger', d.rootTriggerId!);
+          }}
+        >
+          {d.rootTriggerCommentCount}
+        </button>
+      ) : null}
+      {d.commentCount ? (
+        <button
+          className="node-comment-badge nodrag nopan"
+          type="button"
+          aria-label={t('comments.openForEntity', { count: d.commentCount, entity: d.title })}
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            d.onOpenComments?.('interaction', id);
+          }}
+        >
+          <span aria-hidden="true">◆</span>
+          {d.commentCount}
+        </button>
+      ) : null}
+      {d.onCreateParent ? (
+        <Handle
+          type="target"
+          id="create-source-input"
+          position={Position.Top}
+          className="node-create node-create-parent nodrag nopan"
+          role="button"
+          tabIndex={0}
+          aria-label={t('graph.createSource')}
+          title={t('graph.createSource')}
+          onClick={createParent}
+          onKeyDown={triggerKeyboardAction(createParent)}
+        >
+          +
+        </Handle>
+      ) : null}
       {routingHandles.map((position) => (
         <Handle
           key={`input-${position}`}
@@ -166,20 +200,22 @@ export function InteractionNode({ id, data }: NodeProps) {
           ) : null}
         </div>
       ) : null}
-      <Handle
-        type="source"
-        id="interaction-output"
-        position={Position.Bottom}
-        className="node-create node-create-child nodrag nopan"
-        role="button"
-        tabIndex={0}
-        aria-label={t('graph.createChild')}
-        title={t('graph.createChild')}
-        onClick={createChild}
-        onKeyDown={triggerKeyboardAction(createChild)}
-      >
-        +
-      </Handle>
+      {d.onCreateChild ? (
+        <Handle
+          type="source"
+          id="interaction-output"
+          position={Position.Bottom}
+          className="node-create node-create-child nodrag nopan"
+          role="button"
+          tabIndex={0}
+          aria-label={t('graph.createChild')}
+          title={t('graph.createChild')}
+          onClick={createChild}
+          onKeyDown={triggerKeyboardAction(createChild)}
+        >
+          +
+        </Handle>
+      ) : null}
       {routingHandles.map((position) => (
         <Handle
           key={`output-${position}`}

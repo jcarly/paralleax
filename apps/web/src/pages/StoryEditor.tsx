@@ -1,4 +1,12 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type MouseEvent as ReactMouseEvent,
+  type ReactNode,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Background,
@@ -12,7 +20,17 @@ import {
   type ReactFlowInstance,
 } from '@xyflow/react';
 import { Link, useParams } from 'react-router-dom';
-import type { Position } from '@paralleax/shared';
+import {
+  isCommentAnchorDetached,
+  type Character,
+  type CommentTargetType,
+  type Interaction,
+  type ItemDefinition,
+  type Location,
+  type Position,
+  type StatDefinition,
+  type Trigger,
+} from '@paralleax/shared';
 import { CharacterInspector } from '../components/CharacterInspector';
 import { InteractionInspector } from '../components/InteractionInspector';
 import { InteractionNode } from '../components/InteractionNode';
@@ -22,6 +40,11 @@ import { StatDefinitionInspector } from '../components/StatDefinitionInspector';
 import { TriggerEdge } from '../components/TriggerEdge';
 import { TriggerInspector } from '../components/TriggerInspector';
 import { TriggerNode } from '../components/TriggerNode';
+import { RichTextContent } from '../components/RichTextContent';
+import { CommentPinNode, type CommentPinFlowNode } from '../features/comments/CommentPinNode';
+import { StoryCommentsPanel } from '../features/comments/StoryCommentsPanel';
+import { captureActiveTextSelection } from '../features/comments/textAnchors';
+import { useStoryComments } from '../features/comments/useStoryComments';
 import { useStoryEditorPersistence } from '../hooks/useStoryEditorPersistence';
 import { usePendingSaveGuard } from '../hooks/usePendingSaveGuard';
 import {
@@ -40,7 +63,11 @@ import {
   type StoryContextReference,
 } from '../storyNavigation';
 
-const nodeTypes = { interaction: InteractionNode, trigger: TriggerNode };
+const nodeTypes = {
+  interaction: InteractionNode,
+  trigger: TriggerNode,
+  commentPin: CommentPinNode,
+};
 const edgeTypes = { trigger: TriggerEdge };
 const droppedNodeOffset = { x: 105, y: 48 };
 const fitViewOptions = { padding: 0.18, maxZoom: 1 };
@@ -129,7 +156,7 @@ function CategorizedContextList<T extends { id: string; category?: string }>({
   );
 }
 
-export function StoryEditor() {
+export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
   const { t } = useTranslation();
   const { storyId = '' } = useParams();
   const {
@@ -193,12 +220,37 @@ export function StoryEditor() {
   });
   const [isConnecting, setIsConnecting] = useState(false);
   const [pendingConnection, setPendingConnection] = useState<Connection>();
+  const [commentsOpen, setCommentsOpen] = useState(false);
+  const [placingComment, setPlacingComment] = useState(false);
   const [nodes, setNodes, onNodesChange] = useNodesState<StoryFlowNode>([]);
   const pendingConnectionStart = useRef<{
     nodeId: string;
     handleType: 'source' | 'target';
   } | null>(null);
   const flowInstance = useRef<ReactFlowInstance<StoryFlowNode, TriggerFlowEdge> | null>(null);
+
+  const commentAccess = Boolean(
+    story?.capabilities?.canManage ||
+    story?.capabilities?.canEdit ||
+    story?.capabilities?.canComment,
+  );
+  const reviewOnly = story?.capabilities?.canEdit === false;
+  const comments = useStoryComments(storyId, commentAccess);
+  const commentThreads = comments.threads;
+  const selectCommentThread = comments.selectThread;
+  const projectedCommentThreads = useMemo(
+    () =>
+      story
+        ? commentThreads.map((thread) => ({
+            ...thread,
+            detached: isCommentAnchorDetached(story, thread.anchor),
+          }))
+        : commentThreads,
+    [commentThreads, story],
+  );
+  const selectedCommentThread = projectedCommentThreads.find(
+    ({ id }) => id === comments.selectedThreadId,
+  );
 
   const selected = findInteraction(story, selectedId);
   const selectedTriggerTarget = findSelectedTrigger(story, selectedTrigger);
@@ -210,6 +262,36 @@ export function StoryEditor() {
   const selectedItemDefinition = story?.itemDefinitions?.find(
     ({ id }) => id === selectedItemDefinitionId,
   );
+  const selectedCommentTarget: { targetType: CommentTargetType; targetId: string } | undefined =
+    selected
+      ? { targetType: 'interaction', targetId: selected.id }
+      : selectedTriggerTarget
+        ? { targetType: 'trigger', targetId: selectedTriggerTarget.trigger.id }
+        : selectedLocation
+          ? { targetType: 'location', targetId: selectedLocation.id }
+          : selectedCharacter
+            ? { targetType: 'character', targetId: selectedCharacter.id }
+            : selectedStatDefinition
+              ? { targetType: 'statDefinition', targetId: selectedStatDefinition.id }
+              : selectedItemDefinition
+                ? { targetType: 'itemDefinition', targetId: selectedItemDefinition.id }
+                : undefined;
+  const selectedTargetThreads = selectedCommentTarget
+    ? projectedCommentThreads.filter(
+        (thread) =>
+          thread.anchor.kind !== 'canvas' &&
+          thread.anchor.targetType === selectedCommentTarget.targetType &&
+          thread.anchor.targetId === selectedCommentTarget.targetId,
+      )
+    : [];
+  const openCommentCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const thread of projectedCommentThreads) {
+      if (thread.status !== 'open' || thread.anchor.kind === 'canvas') continue;
+      counts.set(thread.anchor.targetId, (counts.get(thread.anchor.targetId) ?? 0) + 1);
+    }
+    return counts;
+  }, [projectedCommentThreads]);
   const normalizedSearchQuery = searchQuery.trim().toLocaleLowerCase();
   const occurrenceCounts = useMemo(
     () => getInteractionTextOccurrenceCounts(story, searchQuery),
@@ -309,18 +391,38 @@ export function StoryEditor() {
     setSelectedItemDefinitionId(undefined);
   }, []);
 
+  const openCommentsForTarget = useCallback(
+    (_targetType: CommentTargetType, targetId: string) => {
+      const thread = projectedCommentThreads.find(
+        (candidate) =>
+          candidate.status === 'open' &&
+          candidate.anchor.kind !== 'canvas' &&
+          candidate.anchor.targetId === targetId,
+      );
+      if (thread) selectCommentThread(thread.id);
+      setCommentsOpen(true);
+    },
+    [projectedCommentThreads, selectCommentThread],
+  );
+
   const storyNodes = useMemo(
     () =>
       buildInteractionNodes(story, selectedId, selectedTrigger, {
-        showNewTriggerInput: isConnecting,
-        onCreateChild: (interactionId) => void createChildFromInteraction(interactionId),
-        onCreateParent: (interactionId) => void createParentForInteraction(interactionId),
+        showNewTriggerInput: !reviewOnly && isConnecting,
+        onCreateChild: reviewOnly
+          ? undefined
+          : (interactionId) => void createChildFromInteraction(interactionId),
+        onCreateParent: reviewOnly
+          ? undefined
+          : (interactionId) => void createParentForInteraction(interactionId),
         onSelectRootTrigger: (interactionId, triggerId) => {
           closeInspector();
           setSelectedTrigger({ interactionId, triggerId });
         },
         occurrenceCounts,
         emphasizedInteractionIds,
+        commentCounts: openCommentCounts,
+        onOpenComments: openCommentsForTarget,
       }),
     [
       closeInspector,
@@ -329,6 +431,9 @@ export function StoryEditor() {
       isConnecting,
       occurrenceCounts,
       emphasizedInteractionIds,
+      openCommentCounts,
+      openCommentsForTarget,
+      reviewOnly,
       selectedId,
       selectedTrigger,
       story,
@@ -341,13 +446,47 @@ export function StoryEditor() {
           closeInspector();
           setSelectedTrigger({ interactionId, triggerId });
         },
+        commentCounts: openCommentCounts,
+        onOpenComments: openCommentsForTarget,
       }),
-    [closeInspector, selectedTrigger, story],
+    [closeInspector, openCommentCounts, openCommentsForTarget, selectedTrigger, story],
+  );
+
+  const commentNodes = useMemo<CommentPinFlowNode[]>(
+    () =>
+      projectedCommentThreads.flatMap((thread) =>
+        thread.anchor.kind === 'canvas'
+          ? [
+              {
+                id: `comment:${thread.id}`,
+                type: 'commentPin' as const,
+                position: thread.anchor.position,
+                draggable: false,
+                selectable: false,
+                data: {
+                  threadId: thread.id,
+                  messageCount: thread.messages.length,
+                  resolved: thread.status === 'resolved',
+                  detached: thread.detached,
+                  onOpen: (threadId: string) => {
+                    selectCommentThread(threadId);
+                    setCommentsOpen(true);
+                  },
+                },
+              },
+            ]
+          : [],
+      ),
+    [projectedCommentThreads, selectCommentThread],
   );
 
   useEffect(() => {
-    setNodes([...storyNodes, ...triggerNodes]);
-  }, [setNodes, storyNodes, triggerNodes]);
+    setNodes([
+      ...storyNodes.map((node) => (reviewOnly ? { ...node, draggable: false } : node)),
+      ...triggerNodes,
+      ...commentNodes,
+    ]);
+  }, [commentNodes, reviewOnly, setNodes, storyNodes, triggerNodes]);
 
   useEffect(() => {
     try {
@@ -387,6 +526,60 @@ export function StoryEditor() {
     closeInspector();
     setSelectedId(node.id);
   };
+
+  function startEntityComment() {
+    if (!selectedCommentTarget || !story?.capabilities?.canComment) return;
+    comments.startThread({ kind: 'entity', ...selectedCommentTarget });
+    comments.selectThread(undefined);
+    setCommentsOpen(true);
+  }
+
+  function startTextComment() {
+    if (!selectedCommentTarget || !story?.capabilities?.canComment) return;
+    const selection = captureActiveTextSelection();
+    if (!selection) return;
+    comments.startThread({
+      kind: 'text',
+      ...selectedCommentTarget,
+      field: selection.field,
+      selector: selection.selector,
+    });
+    comments.selectThread(undefined);
+    setCommentsOpen(true);
+  }
+
+  async function reattachSelectedThread(threadId: string) {
+    if (!selectedCommentTarget) return;
+    const selection = captureActiveTextSelection();
+    await comments.reanchor(
+      threadId,
+      selection
+        ? {
+            kind: 'text',
+            ...selectedCommentTarget,
+            field: selection.field,
+            selector: selection.selector,
+          }
+        : { kind: 'entity', ...selectedCommentTarget },
+    );
+  }
+
+  function handlePaneClick(event: ReactMouseEvent) {
+    if (placingComment && story?.capabilities?.canComment) {
+      const position = flowInstance.current?.screenToFlowPosition({
+        x: event.clientX,
+        y: event.clientY,
+      });
+      if (position) {
+        comments.startThread({ kind: 'canvas', position });
+        comments.selectThread(undefined);
+        setCommentsOpen(true);
+      }
+      setPlacingComment(false);
+      return;
+    }
+    closeInspector();
+  }
 
   const navigateInteractions = (direction: -1 | 1) => {
     if (navigationInteractionIds.length === 0) return;
@@ -564,7 +757,7 @@ export function StoryEditor() {
   }
 
   if (!story) return <main className="page">{error || t('editor.loading')}</main>;
-  if (story.capabilities?.canEdit === false) {
+  if (story.capabilities?.canEdit === false && !commentAccess) {
     return (
       <main className="page">
         <h1>{t('editor.readOnlyTitle')}</h1>
@@ -618,8 +811,13 @@ export function StoryEditor() {
         <input
           className="story-title-input"
           value={story.title}
-          onChange={(e) => setStory({ ...story, title: e.target.value })}
-          onBlur={(e) => void renameStory(e.target.value)}
+          readOnly={reviewOnly}
+          onChange={(e) => {
+            if (!reviewOnly) setStory({ ...story, title: e.target.value });
+          }}
+          onBlur={(e) => {
+            if (!reviewOnly) void renameStory(e.target.value);
+          }}
         />
         <label className="story-time-field">
           {t('editor.storyStarts')}
@@ -627,6 +825,7 @@ export function StoryEditor() {
             aria-label={t('editor.storyStartDateTime')}
             type="datetime-local"
             value={story.startDateTime ?? '2000-01-03T08:00'}
+            disabled={reviewOnly}
             onChange={(event) => setStory({ ...story, startDateTime: event.target.value })}
             onBlur={(event) => void updateStoryStartDateTime(event.target.value)}
           />
@@ -637,25 +836,50 @@ export function StoryEditor() {
               {t('editor.access')}
             </Link>
           ) : null}
-          <span
-            className={`save-status ${saveStatus}`}
-            role="status"
-            aria-label={t('editor.saveStatus')}
-            aria-live="polite"
+          {commentAccess ? (
+            <button
+              className={`secondary comments-toolbar-button ${commentsOpen ? 'active' : ''}`}
+              type="button"
+              onClick={() => setCommentsOpen((open) => !open)}
+            >
+              {t('comments.title')}
+              {comments.threads.filter(({ status }) => status === 'open').length ? (
+                <small>{comments.threads.filter(({ status }) => status === 'open').length}</small>
+              ) : null}
+            </button>
+          ) : null}
+          {!reviewOnly ? (
+            <span
+              className={`save-status ${saveStatus}`}
+              role="status"
+              aria-label={t('editor.saveStatus')}
+              aria-live="polite"
+            >
+              {saveStatus === 'saving'
+                ? t('editor.saving')
+                : saveStatus === 'saved'
+                  ? t('editor.saved')
+                  : saveStatus === 'error'
+                    ? t('editor.saveFailed')
+                    : ''}
+            </span>
+          ) : null}
+          {!reviewOnly ? (
+            <button disabled={!selected} onClick={() => void createSelectedChild()}>
+              {t('editor.addChild')}
+            </button>
+          ) : null}
+          <Link
+            className="button secondary"
+            to={reviewOnly ? `/stories/${storyId}/play` : simulationPath}
           >
-            {saveStatus === 'saving'
-              ? t('editor.saving')
-              : saveStatus === 'saved'
-                ? t('editor.saved')
-                : saveStatus === 'error'
-                  ? t('editor.saveFailed')
-                  : ''}
-          </span>
-          <button disabled={!selected} onClick={() => void createSelectedChild()}>
-            {t('editor.addChild')}
-          </button>
-          <Link className="button secondary" to={simulationPath}>
-            {t(selected ? 'editor.testFromCurrent' : 'editor.test')}
+            {t(
+              reviewOnly
+                ? 'editor.openReader'
+                : selected
+                  ? 'editor.testFromCurrent'
+                  : 'editor.test',
+            )}
           </Link>
         </div>
       </div>
@@ -737,13 +961,15 @@ export function StoryEditor() {
                     {story.locations?.length ?? 0}
                   </small>
                 </button>
-                <button
-                  aria-label={t('editor.addLocation')}
-                  type="button"
-                  onClick={() => void addLocation()}
-                >
-                  {t('editor.add')}
-                </button>
+                {!reviewOnly ? (
+                  <button
+                    aria-label={t('editor.addLocation')}
+                    type="button"
+                    onClick={() => void addLocation()}
+                  >
+                    {t('editor.add')}
+                  </button>
+                ) : null}
               </div>
               {!openContextSections.locations ? null : (story.locations?.length ?? 0) === 0 ? (
                 <p className="hint">{t('editor.noLocations')}</p>
@@ -792,13 +1018,15 @@ export function StoryEditor() {
                     {story.characters?.length ?? 0}
                   </small>
                 </button>
-                <button
-                  aria-label={t('editor.addCharacter')}
-                  type="button"
-                  onClick={() => void addCharacter()}
-                >
-                  {t('editor.add')}
-                </button>
+                {!reviewOnly ? (
+                  <button
+                    aria-label={t('editor.addCharacter')}
+                    type="button"
+                    onClick={() => void addCharacter()}
+                  >
+                    {t('editor.add')}
+                  </button>
+                ) : null}
               </div>
               {!openContextSections.characters ? null : (story.characters?.length ?? 0) === 0 ? (
                 <p className="hint">{t('editor.noCharacters')}</p>
@@ -851,13 +1079,15 @@ export function StoryEditor() {
                     {story.statDefinitions?.length ?? 0}
                   </small>
                 </button>
-                <button
-                  aria-label={t('editor.addStatDefinition')}
-                  type="button"
-                  onClick={() => void addStatDefinition()}
-                >
-                  {t('editor.add')}
-                </button>
+                {!reviewOnly ? (
+                  <button
+                    aria-label={t('editor.addStatDefinition')}
+                    type="button"
+                    onClick={() => void addStatDefinition()}
+                  >
+                    {t('editor.add')}
+                  </button>
+                ) : null}
               </div>
               {!openContextSections.stats ? null : (story.statDefinitions?.length ?? 0) === 0 ? (
                 <p className="hint">{t('editor.noStats')}</p>
@@ -908,13 +1138,15 @@ export function StoryEditor() {
                     {story.itemDefinitions?.length ?? 0}
                   </small>
                 </button>
-                <button
-                  aria-label={t('editor.addItemDefinition')}
-                  type="button"
-                  onClick={() => void addItemDefinition()}
-                >
-                  {t('editor.add')}
-                </button>
+                {!reviewOnly ? (
+                  <button
+                    aria-label={t('editor.addItemDefinition')}
+                    type="button"
+                    onClick={() => void addItemDefinition()}
+                  >
+                    {t('editor.add')}
+                  </button>
+                ) : null}
               </div>
               {!openContextSections.items ? null : (story.itemDefinitions?.length ?? 0) === 0 ? (
                 <p className="hint">{t('editor.noItems')}</p>
@@ -954,9 +1186,21 @@ export function StoryEditor() {
           ) : null}
         </nav>
         <section className="canvas">
-          <button className="canvas-action" onClick={() => void createRoot()}>
-            {t('editor.addRoot')}
-          </button>
+          {!reviewOnly ? (
+            <button className="canvas-action" onClick={() => void createRoot()}>
+              {t('editor.addRoot')}
+            </button>
+          ) : null}
+          {story.capabilities?.canComment ? (
+            <button
+              className={`canvas-comment-action secondary ${placingComment ? 'active' : ''}`}
+              type="button"
+              aria-pressed={placingComment}
+              onClick={() => setPlacingComment((placing) => !placing)}
+            >
+              {t(placingComment ? 'comments.clickCanvas' : 'comments.placeOnCanvas')}
+            </button>
+          ) : null}
           <ReactFlow
             nodes={nodes}
             edges={edges}
@@ -966,14 +1210,16 @@ export function StoryEditor() {
               flowInstance.current = instance;
             }}
             onNodesChange={onNodesChange}
-            onConnect={requestConnection}
-            onConnectStart={startCanvasConnection}
-            onConnectEnd={endCanvasConnection}
+            onConnect={reviewOnly ? undefined : requestConnection}
+            onConnectStart={reviewOnly ? undefined : startCanvasConnection}
+            onConnectEnd={reviewOnly ? undefined : endCanvasConnection}
             onNodeClick={select}
-            onPaneClick={closeInspector}
-            onNodeDragStop={(_, node) =>
-              void patchInteraction(node.id, { position: node.position })
-            }
+            onPaneClick={handlePaneClick}
+            onNodeDragStop={(_, node) => {
+              if (!reviewOnly && node.type === 'interaction') {
+                void patchInteraction(node.id, { position: node.position });
+              }
+            }}
             fitView
             fitViewOptions={fitViewOptions}
             minZoom={0.05}
@@ -985,6 +1231,24 @@ export function StoryEditor() {
         {hasInspectorSelection ? (
           <aside className="inspector" aria-label={t('editor.inspector')}>
             <div className="inspector-header">
+              {selectedCommentTarget && story.capabilities?.canComment ? (
+                <div className="inspector-comment-actions">
+                  <button className="secondary" type="button" onClick={startEntityComment}>
+                    {t('comments.commentEntity')}
+                  </button>
+                  <button
+                    className="ghost"
+                    type="button"
+                    title={t('comments.selectTextHelp')}
+                    onMouseDown={(event) => {
+                      event.preventDefault();
+                      startTextComment();
+                    }}
+                  >
+                    {t('comments.commentSelection')}
+                  </button>
+                </div>
+              ) : null}
               <button
                 className="ghost inspector-close"
                 type="button"
@@ -994,7 +1258,40 @@ export function StoryEditor() {
                 x
               </button>
             </div>
-            {selected ? (
+            {selectedTargetThreads.length ? (
+              <div className="inspector-comment-markers">
+                {selectedTargetThreads.map((thread) => (
+                  <button
+                    className={thread.status === 'resolved' ? 'resolved' : ''}
+                    type="button"
+                    key={thread.id}
+                    aria-label={t('comments.openThread', { label: thread.anchorLabel })}
+                    onClick={() => {
+                      selectCommentThread(thread.id);
+                      setCommentsOpen(true);
+                    }}
+                  >
+                    <span aria-hidden="true">◆</span>
+                    <span>
+                      {thread.anchor.kind === 'text'
+                        ? `“${thread.anchor.selector.exact}”`
+                        : (thread.messages.at(-1)?.body ?? thread.anchorLabel)}
+                    </span>
+                    <small>{thread.messages.length}</small>
+                  </button>
+                ))}
+              </div>
+            ) : null}
+            {reviewOnly ? (
+              <ReviewTargetInspector
+                interaction={selected}
+                trigger={selectedTriggerTarget?.trigger}
+                location={selectedLocation}
+                character={selectedCharacter}
+                statDefinition={selectedStatDefinition}
+                itemDefinition={selectedItemDefinition}
+              />
+            ) : selected ? (
               <InteractionInspector
                 story={story}
                 interaction={selected}
@@ -1060,6 +1357,36 @@ export function StoryEditor() {
           </aside>
         ) : null}
       </div>
+      <StoryCommentsPanel
+        open={commentsOpen}
+        loading={comments.loading}
+        error={comments.error}
+        threads={projectedCommentThreads}
+        selectedThread={selectedCommentThread}
+        draftAnchor={comments.draftAnchor}
+        canComment={story.capabilities?.canComment === true}
+        realtimeStatus={comments.realtimeStatus}
+        canManageThread={Boolean(
+          story.capabilities?.canManage ||
+          story.capabilities?.canEdit ||
+          (currentUserId && selectedCommentThread?.createdBy.id === currentUserId),
+        )}
+        onClose={() => setCommentsOpen(false)}
+        onSelect={comments.selectThread}
+        onCancelDraft={comments.cancelDraft}
+        onCreate={comments.create}
+        onReply={comments.reply}
+        onStatus={comments.setStatus}
+        onReattach={
+          selectedCommentTarget &&
+          (story.capabilities?.canManage ||
+            story.capabilities?.canEdit ||
+            selectedCommentThread?.createdBy.id === currentUserId) &&
+          selectedCommentThread?.detached
+            ? reattachSelectedThread
+            : undefined
+        }
+      />
       {pending && existingTriggerChoices.length > 0 ? (
         <div className="connection-dialog-backdrop">
           <section
@@ -1107,6 +1434,55 @@ function getTriggerDropTarget(event: MouseEvent | TouchEvent) {
     interactionId: marker.dataset.interactionId,
     triggerId: marker.dataset.triggerId,
   };
+}
+
+function ReviewTargetInspector({
+  interaction,
+  trigger,
+  location,
+  character,
+  statDefinition,
+  itemDefinition,
+}: {
+  interaction?: Interaction;
+  trigger?: Trigger;
+  location?: Location;
+  character?: Character;
+  statDefinition?: StatDefinition;
+  itemDefinition?: ItemDefinition;
+}) {
+  const { t } = useTranslation();
+  if (interaction) {
+    return (
+      <div className="review-target-inspector">
+        <h3>{t('inspector.interaction')}</h3>
+        <h2 data-comment-field="title">{interaction.title}</h2>
+        <div data-comment-field="body">
+          <RichTextContent html={interaction.body} />
+        </div>
+      </div>
+    );
+  }
+  if (trigger) {
+    return (
+      <div className="review-target-inspector">
+        <h3>{t('inspector.trigger')}</h3>
+        <p>{t('comments.triggerSummary', { count: trigger.conditions.length })}</p>
+      </div>
+    );
+  }
+  const target = location ?? character ?? itemDefinition ?? statDefinition;
+  if (!target) return null;
+  const type = location ? 'location' : character ? 'character' : itemDefinition ? 'item' : 'stat';
+  return (
+    <div className="review-target-inspector">
+      <h3>{t(`inspector.${type}`)}</h3>
+      <h2 data-comment-field="name">{target.name}</h2>
+      {'description' in target && target.description ? (
+        <p data-comment-field="description">{target.description}</p>
+      ) : null}
+    </div>
+  );
 }
 
 function getDroppedInteractionPosition(

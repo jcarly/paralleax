@@ -28,6 +28,11 @@ vi.mock('../api', () => ({
     createCharacterStat: vi.fn(),
     updateCharacterStat: vi.fn(),
     createCharacterItem: vi.fn(),
+    listCommentThreads: vi.fn(),
+    createCommentThread: vi.fn(),
+    addCommentMessage: vi.fn(),
+    updateCommentThreadStatus: vi.fn(),
+    updateCommentThreadAnchor: vi.fn(),
   },
 }));
 
@@ -319,6 +324,63 @@ describe('StoryEditor', () => {
     vi.resetAllMocks();
     window.localStorage.clear();
     vi.spyOn(window, 'confirm').mockReturnValue(true);
+    vi.mocked(api.listCommentThreads).mockResolvedValue([]);
+  });
+
+  it('opens a read-only review workspace and creates an entity comment', async () => {
+    const user = userEvent.setup();
+    const reviewStory = cloneStory();
+    reviewStory.capabilities = {
+      canRead: true,
+      canEdit: false,
+      canManage: false,
+      canComment: true,
+    };
+    vi.mocked(api.createCommentThread).mockResolvedValue({
+      id: 'thread-1',
+      storyId: reviewStory.id,
+      anchor: { kind: 'entity', targetType: 'interaction', targetId: 'interaction-1' },
+      anchorLabel: 'Original title',
+      status: 'open',
+      createdBy: { id: 'reviewer-1', email: 'reviewer@example.com' },
+      createdAt: '2026-08-13T09:00:00.000Z',
+      updatedAt: '2026-08-13T09:00:00.000Z',
+      messages: [
+        {
+          id: 'message-1',
+          threadId: 'thread-1',
+          author: { id: 'reviewer-1', email: 'reviewer@example.com' },
+          body: 'Clarify this opening.',
+          createdAt: '2026-08-13T09:00:00.000Z',
+        },
+      ],
+    });
+
+    await renderEditor(reviewStory);
+    expect(screen.getByDisplayValue('Test story')).toHaveAttribute('readonly');
+    expect(screen.queryByRole('button', { name: 'Add root' })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Create child interaction')).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Open reader' })).toHaveAttribute(
+      'href',
+      '/stories/story-1/play',
+    );
+
+    await user.click(screen.getByTestId('flow-node-interaction-1'));
+    await user.click(screen.getByRole('button', { name: 'Comment on this element' }));
+    await user.type(
+      within(screen.getByLabelText('Story comments')).getByRole('textbox'),
+      'Clarify this opening.',
+    );
+    await user.click(screen.getByRole('button', { name: 'Send' }));
+
+    expect(api.createCommentThread).toHaveBeenCalledWith(
+      'story-1',
+      { kind: 'entity', targetType: 'interaction', targetId: 'interaction-1' },
+      'Clarify this opening.',
+    );
+    expect(
+      await screen.findByRole('button', { name: 'Open comment: Original title' }),
+    ).toBeInTheDocument();
   });
 
   it('shows a loading error when the story cannot be loaded', async () => {

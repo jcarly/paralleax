@@ -30,6 +30,7 @@ export function ItemDefinitionInspector({
       <label>
         {t('inspector.name')}
         <input
+          data-comment-field="name"
           value={itemDefinition.name}
           onChange={(event) => onChange({ ...itemDefinition, name: event.target.value })}
           onBlur={(event) => void onPatch(itemDefinition.id, { name: event.target.value })}
@@ -49,6 +50,7 @@ export function ItemDefinitionInspector({
       <label>
         {t('inspector.description')}
         <textarea
+          data-comment-field="description"
           rows={7}
           value={itemDefinition.description}
           onChange={(event) => onChange({ ...itemDefinition, description: event.target.value })}

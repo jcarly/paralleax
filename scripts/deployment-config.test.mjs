@@ -38,5 +38,11 @@ test('Railway web deployment probes the public reverse proxy', async () => {
   assert.match(nginxConfiguration, /^\s*resolver \$\{NGINX_LOCAL_RESOLVERS\} valid=10s;$/m);
   assert.match(nginxConfiguration, /^\s*set \$api_upstream "\$\{API_HOST\}:\$\{API_PORT\}";$/m);
   assert.match(nginxConfiguration, /^\s*proxy_pass http:\/\/\$api_upstream\$request_uri;$/m);
+  assert.match(
+    nginxConfiguration,
+    /^\s*location ~ \^\/api\/stories\/\[\^\/\]\+\/comment-threads\/events\$ \{$/m,
+  );
+  assert.match(nginxConfiguration, /^\s*proxy_buffering off;$/m);
+  assert.match(nginxConfiguration, /^\s*proxy_read_timeout 1h;$/m);
   assert.doesNotMatch(nginxConfiguration, /proxy_pass http:\/\/\$\{API_HOST\}/);
 });

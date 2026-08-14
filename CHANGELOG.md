@@ -2,6 +2,15 @@
 
 ## 2026-08-13
 
+- Added private, permission-aware story review discussions with graph post-its,
+  entity and robust text-selection anchors, replies, open/resolved state,
+  detached-anchor detection, a read-only reviewer workspace, relational
+  persistence, and English/French interface copy. Review comments remain
+  outside authored stories and never appear in the public reader.
+- Added authenticated Server-Sent Events for live comment creation, replies,
+  resolution, reopening, and anchor moves, including automatic browser
+  reconnection, missed-change reload, connection status, heartbeat traffic, and
+  unbuffered production proxying.
 - Expanded the administrator-only account interface with role summaries,
   searchable/filterable users, localized role guidance, current-account and
   last-administrator indicators, and inline role-update feedback.

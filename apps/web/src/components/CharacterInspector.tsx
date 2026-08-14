@@ -67,6 +67,7 @@ export function CharacterInspector({
       <label>
         {t('inspector.name')}
         <input
+          data-comment-field="name"
           value={character.name}
           onChange={(event) => onChange({ name: event.target.value })}
           onBlur={(event) => void onPatch(character.id, { name: event.target.value })}
@@ -210,6 +211,7 @@ export function CharacterInspector({
       <label>
         {t('inspector.description')}
         <textarea
+          data-comment-field="description"
           rows={7}
           value={character.description}
           onChange={(event) => onChange({ description: event.target.value })}

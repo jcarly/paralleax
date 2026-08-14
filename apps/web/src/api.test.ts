@@ -107,6 +107,57 @@ describe('api client', () => {
     });
   });
 
+  it('calls anchored comment thread endpoints', async () => {
+    fetchMock.mockResolvedValue(jsonResponse([]));
+    await api.listCommentThreads('story-1');
+    expect(fetchMock).toHaveBeenLastCalledWith('/api/stories/story-1/comment-threads', {
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    const anchor = {
+      kind: 'entity' as const,
+      targetType: 'interaction' as const,
+      targetId: 'interaction-1',
+    };
+    await api.createCommentThread('story-1', anchor, 'Review note');
+    expect(fetchMock).toHaveBeenLastCalledWith('/api/stories/story-1/comment-threads', {
+      headers: { 'Content-Type': 'application/json' },
+      method: 'POST',
+      body: JSON.stringify({ anchor, body: 'Review note' }),
+    });
+
+    await api.addCommentMessage('story-1', 'thread-1', 'Reply');
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      '/api/stories/story-1/comment-threads/thread-1/messages',
+      {
+        headers: { 'Content-Type': 'application/json' },
+        method: 'POST',
+        body: JSON.stringify({ body: 'Reply' }),
+      },
+    );
+
+    await api.updateCommentThreadStatus('story-1', 'thread-1', 'resolved');
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      '/api/stories/story-1/comment-threads/thread-1/status',
+      {
+        headers: { 'Content-Type': 'application/json' },
+        method: 'PATCH',
+        body: JSON.stringify({ status: 'resolved' }),
+      },
+    );
+
+    const canvasAnchor = { kind: 'canvas' as const, position: { x: 10, y: 20 } };
+    await api.updateCommentThreadAnchor('story-1', 'thread-1', canvasAnchor);
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      '/api/stories/story-1/comment-threads/thread-1/anchor',
+      {
+        headers: { 'Content-Type': 'application/json' },
+        method: 'PATCH',
+        body: JSON.stringify({ anchor: canvasAnchor }),
+      },
+    );
+  });
+
   it('calls interaction and trigger endpoints', async () => {
     const story = {
       id: 'story-1',

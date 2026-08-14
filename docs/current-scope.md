@@ -21,9 +21,13 @@ Paralleax currently includes:
 - Exact authored item instances, including nested item relationships.
 - Character- or location-rooted item placement and nested item relationships.
 - Authentication, sessions, creator ownership, global user/admin roles, per-story
-  visibility and editing policies, reader/editor invitations, a persisted future
-  comment policy, health/readiness, migrations, and production-oriented API error
+  visibility, editing, and comment policies, reader/editor invitations, authenticated
+  anchored review discussions, health/readiness, migrations, and production-oriented API error
   handling.
+- Story review post-its on the graph, interactions, triggers, characters, locations,
+  item/stat definitions, and selected title/body/name/description text, with replies,
+  open/resolved state, durable quote context, detached-anchor detection, and live
+  SSE invalidation/reload for reviewers connected to the same API process.
 - An administrator-only account interface with role summaries, account search and
   filtering, global user/admin assignment, and visible last-administrator protection.
 - A public home catalogue limited to publicly visible stories, a separate
@@ -50,7 +54,8 @@ The following remain future or incomplete unless a task explicitly implements th
 - multiple player save slots and anonymous saves;
 - managed media upload/storage;
 - real-time collaboration;
-- suggestion/review workflow and actual comment threads;
+- suggestion workflow, message editing, mentions, notifications, horizontally
+  distributed comment events, and simultaneous story editing;
 - stable public import/export format;
 - executable/Unity/video exports;
 - AI-driven narrative/runtime behavior.

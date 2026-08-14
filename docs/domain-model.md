@@ -389,6 +389,28 @@ modifiers to an effective value calculated from base, permanent, equipment,
 temporary, and contextual modifiers. Derived values should not be persisted
 when they can be recomputed deterministically.
 
+### Review Comments
+
+Review comments are story-scoped collaboration resources stored separately from
+the authored `Story`. A thread has an immutable identity, an anchor, an author,
+ordered messages, timestamps, and an open or resolved status. Resolving a thread
+preserves its messages.
+
+An anchor targets one of:
+
+- a position on the story graph;
+- a same-story Interaction, Trigger, Character, Location, Item Definition, or
+  Stat Definition;
+- a supported title, body, name, or description selection on one of those
+  entities.
+
+Text anchors preserve the selected quote, surrounding prefix/suffix, original
+offsets, and a source hash. The quote and context allow a thread to follow nearby
+text edits. When the target or quote can no longer be located unambiguously, the
+thread becomes detached instead of being deleted. Comments are authoring/review
+metadata: the reader engine, reader progress, and future story exports do not
+consume them.
+
 ### Conditions and Effects
 
 Future conditions inspect narrative, world, and play-session state. Future

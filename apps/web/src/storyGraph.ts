@@ -2,10 +2,11 @@ import { MarkerType, Position, type Edge, type Node } from '@xyflow/react';
 import type { Story } from '@paralleax/shared';
 import type { InteractionNodeData } from './components/InteractionNode';
 import type { TriggerNodeData } from './components/TriggerNode';
+import type { CommentPinFlowNode } from './features/comments/CommentPinNode';
 
 export type InteractionFlowNode = Node<InteractionNodeData, 'interaction'>;
 export type TriggerFlowNode = Node<TriggerNodeData, 'trigger'>;
-export type StoryFlowNode = InteractionFlowNode | TriggerFlowNode;
+export type StoryFlowNode = InteractionFlowNode | TriggerFlowNode | CommentPinFlowNode;
 
 export interface SelectedTrigger extends Record<string, unknown> {
   interactionId: string;
@@ -34,10 +35,14 @@ export interface InteractionNodeActions {
   onSelectRootTrigger?: (interactionId: string, triggerId: string) => void;
   occurrenceCounts?: ReadonlyMap<string, number>;
   emphasizedInteractionIds?: ReadonlySet<string>;
+  commentCounts?: ReadonlyMap<string, number>;
+  onOpenComments?: (targetType: 'interaction' | 'trigger', targetId: string) => void;
 }
 
 export interface TriggerNodeActions {
   onSelectTrigger?: (interactionId: string, triggerId: string) => void;
+  commentCounts?: ReadonlyMap<string, number>;
+  onOpenComments?: (targetType: 'trigger', targetId: string) => void;
 }
 
 export const interactionNodeWidth = 210;
@@ -95,6 +100,9 @@ export function buildInteractionNodes(
         ...(rootTrigger
           ? {
               rootTriggerId: rootTrigger.id,
+              ...(actions.commentCounts?.get(rootTrigger.id)
+                ? { rootTriggerCommentCount: actions.commentCounts.get(rootTrigger.id) }
+                : {}),
               rootTriggerSelected:
                 selectedTrigger?.interactionId === item.id &&
                 selectedTrigger.triggerId === rootTrigger.id,
@@ -105,6 +113,10 @@ export function buildInteractionNodes(
         ...(actions.onSelectRootTrigger
           ? { onSelectRootTrigger: actions.onSelectRootTrigger }
           : {}),
+        ...(actions.commentCounts?.get(item.id)
+          ? { commentCount: actions.commentCounts.get(item.id) }
+          : {}),
+        ...(actions.onOpenComments ? { onOpenComments: actions.onOpenComments } : {}),
       },
     };
   });
@@ -138,7 +150,26 @@ export function buildTriggerNodes(
             conditionCount: getTotalConditionCount(group.triggers),
             inputCount: group.inputInteractionIds.length,
             orGroupCount: group.triggers.length,
+            ...(triggerIds.reduce(
+              (total, triggerId) => total + (actions.commentCounts?.get(triggerId) ?? 0),
+              0,
+            ) > 0
+              ? {
+                  commentCount: triggerIds.reduce(
+                    (total, triggerId) => total + (actions.commentCounts?.get(triggerId) ?? 0),
+                    0,
+                  ),
+                }
+              : {}),
+            ...(triggerIds.find((triggerId) => (actions.commentCounts?.get(triggerId) ?? 0) > 0)
+              ? {
+                  commentTargetId: triggerIds.find(
+                    (triggerId) => (actions.commentCounts?.get(triggerId) ?? 0) > 0,
+                  ),
+                }
+              : {}),
             ...(actions.onSelectTrigger ? { onSelectTrigger: actions.onSelectTrigger } : {}),
+            ...(actions.onOpenComments ? { onOpenComments: actions.onOpenComments } : {}),
           },
         };
       }),

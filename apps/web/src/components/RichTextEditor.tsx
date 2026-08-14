@@ -230,6 +230,7 @@ export function RichTextEditor({
       <div
         ref={editorRef}
         className="rich-text-surface"
+        data-comment-field="body"
         contentEditable
         role="textbox"
         aria-label={ariaLabel ?? t('richText.content')}

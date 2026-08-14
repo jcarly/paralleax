@@ -8,8 +8,8 @@ Date: 2026-08-13
 
 Creator-only story ownership no longer covers public reading, account-scoped
 sharing, collaborative editing, or installation administration. Authorization
-must be enforced by the API on every object operation and remain useful when
-comments and review workflows arrive later.
+must be enforced by the API on every object operation, including review
+discussions.
 
 ## Decision
 
@@ -25,7 +25,8 @@ Every story keeps three policies:
 - commenting: `disabled`, `readers`, `editors`, or `authenticated`.
 
 Direct story grants target an existing user and are either `viewer` or `editor`.
-The creator and administrators always have all capabilities. A private story
+The creator and administrators always retain reading, editing, and management
+capabilities; a disabled comment policy disables comment authorship for everyone. A private story
 ignores grants, public visibility permits anonymous reading, and authenticated
 editing implies authenticated reading. Only creators and administrators manage
 settings, grants, and deletion.
@@ -40,9 +41,9 @@ Repository queries enforce object-level access. The shared package contains the
 pure capability resolver used by projections and tests, but client-side
 capabilities only adapt the interface and are never the security boundary.
 
-The comment policy is stored now even though comment entities and endpoints do
-not yet exist. Invitations do not send mail or create bearer links in this
-increment.
+Comment reads and writes use the resolved capability. Anonymous readers never
+receive comment authorship even when a story is public. Invitations do not send
+mail or create bearer links in this increment.
 
 ## Consequences
 
@@ -53,7 +54,7 @@ increment.
   private, authenticated-only, or invitation-only story metadata.
 - Owners can preserve grants while temporarily returning a story to private.
 - Opening editing to all signed-in users is an explicit high-trust choice.
-- Future comments must use the stored effective capability; a comment UI alone
-  cannot authorize writes.
+- Comment endpoints use the stored effective capability; a comment UI alone
+  cannot authorize reads or writes.
 - Suggestion/review permissions, outbound invitations, account deletion, and
   anonymous saves remain future work.

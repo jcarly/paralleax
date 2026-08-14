@@ -1120,4 +1120,45 @@ export const databaseMigrations: DatabaseMigration[] = [
       CREATE INDEX stories_visibility_idx ON stories(visibility);
     `,
   },
+  {
+    id: '202608130027_story_comments',
+    sql: `
+      CREATE TABLE story_comment_threads (
+        id text PRIMARY KEY,
+        story_id text NOT NULL REFERENCES stories(id) ON DELETE CASCADE,
+        anchor jsonb NOT NULL,
+        anchor_label text NOT NULL,
+        status text NOT NULL DEFAULT 'open',
+        created_by text NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+        created_at timestamptz NOT NULL,
+        updated_at timestamptz NOT NULL,
+        resolved_by text REFERENCES users(id) ON DELETE SET NULL,
+        resolved_at timestamptz,
+        revision integer NOT NULL DEFAULT 1,
+        CONSTRAINT story_comment_threads_status_allowed
+          CHECK (status IN ('open', 'resolved')),
+        CONSTRAINT story_comment_threads_resolution_consistent
+          CHECK (
+            (status = 'open' AND resolved_at IS NULL)
+            OR (status = 'resolved' AND resolved_at IS NOT NULL)
+          )
+      );
+
+      CREATE TABLE story_comment_messages (
+        id text PRIMARY KEY,
+        thread_id text NOT NULL REFERENCES story_comment_threads(id) ON DELETE CASCADE,
+        author_user_id text NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+        body text NOT NULL,
+        created_at timestamptz NOT NULL,
+        edited_at timestamptz,
+        CONSTRAINT story_comment_messages_body_length
+          CHECK (char_length(body) BETWEEN 1 AND 4000)
+      );
+
+      CREATE INDEX story_comment_threads_story_status_idx
+        ON story_comment_threads(story_id, status, updated_at DESC);
+      CREATE INDEX story_comment_messages_thread_created_idx
+        ON story_comment_messages(thread_id, created_at);
+    `,
+  },
 ];

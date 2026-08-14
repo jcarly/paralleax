@@ -21,6 +21,7 @@ This folder records accepted architecture and product-shaping decisions.
 - [ADR-015 - Restore Location-Owned Item Roots](ADR-015-location-owned-item-roots.md)
 - [ADR-016 - Client-Side Interface Internationalization](ADR-016-interface-internationalization.md)
 - [ADR-017 - Global Administration and Story Access Control](ADR-017-story-access-control.md)
+- [ADR-018 - Anchored Review Comments](ADR-018-anchored-review-comments.md)
 
 ## Maintenance
 

@@ -1,5 +1,6 @@
 import type {
   CharacterMutationResult,
+  CommentAnchor,
   CharacterItemMutationResult,
   CharacterStatMutationResult,
   CreateCharacterInput,
@@ -17,6 +18,7 @@ import type {
   SaveReaderProgressInput,
   StatDefinitionMutationResult,
   Story,
+  StoryCommentThread,
   StorySummary,
   TriggerMutationResult,
   UpdateInteractionInput,
@@ -148,6 +150,32 @@ export const api = {
   updateStory: (id: string, input: UpdateStoryInput) =>
     request<Story>(`/stories/${id}`, { method: 'PATCH', body: JSON.stringify(input) }),
   deleteStory: (id: string) => request<void>(`/stories/${id}`, { method: 'DELETE' }),
+  listCommentThreads: (storyId: string) =>
+    request<StoryCommentThread[]>(`/stories/${storyId}/comment-threads`),
+  createCommentThread: (storyId: string, anchor: CommentAnchor, body: string) =>
+    request<StoryCommentThread>(`/stories/${storyId}/comment-threads`, {
+      method: 'POST',
+      body: JSON.stringify({ anchor, body }),
+    }),
+  addCommentMessage: (storyId: string, threadId: string, body: string) =>
+    request<StoryCommentThread>(`/stories/${storyId}/comment-threads/${threadId}/messages`, {
+      method: 'POST',
+      body: JSON.stringify({ body }),
+    }),
+  updateCommentThreadStatus: (
+    storyId: string,
+    threadId: string,
+    status: StoryCommentThread['status'],
+  ) =>
+    request<StoryCommentThread>(`/stories/${storyId}/comment-threads/${threadId}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    }),
+  updateCommentThreadAnchor: (storyId: string, threadId: string, anchor: CommentAnchor) =>
+    request<StoryCommentThread>(`/stories/${storyId}/comment-threads/${threadId}/anchor`, {
+      method: 'PATCH',
+      body: JSON.stringify({ anchor }),
+    }),
   createInteraction: (storyId: string, input: CreateInteractionInput) =>
     request<InteractionSaveResponse>(`/stories/${storyId}/interactions`, {
       method: 'POST',

@@ -41,8 +41,9 @@ reader or editor access. They do not send email or create a secret invitation
 link. Reverting a story to private temporarily disables all collaborator grants
 without deleting them.
 
-The same screen stores who will be allowed to comment. Comments themselves are
-not implemented yet; this setting establishes the policy they must enforce.
+The same screen chooses who may comment: nobody, signed-in readers, editors, or
+any signed-in account that can read the story. Comments are a private review
+layer and never appear in the public reader.
 Public readers can follow a direct `/stories/{id}/play` link without signing in,
 but anonymous progress is not saved.
 
@@ -52,6 +53,29 @@ accounts, and promote or demote them between the global `User` and
 each story's access settings. An administrator can manage accounts and read,
 edit, configure, or delete every story. Paralleax marks the final administrator
 as protected in the interface and also prevents its demotion in the API.
+
+## Review a Story with Post-its
+
+When a story permits your account to comment, `My stories` shows `Review` if you
+cannot edit it. The review workspace displays the graph and inspectors in
+read-only mode while keeping the comment tools available.
+
+Use `Place a post-it`, then click the graph to start a discussion at that canvas
+position. Select an interaction, trigger, character, location, item, or stat and
+use `Comment on this element` to attach the thread to that exact entity. To target
+part of a title, body, name, or description, select the text before choosing
+`Selected text`.
+
+The Comments panel lists open and resolved discussions. Open a thread to read its
+ordered replies, add a reply, resolve it, or reopen it. Graph and trigger badges
+show unresolved discussion counts. If later edits remove an entity or make a
+selected quote impossible to locate unambiguously, Paralleax marks the anchor as
+detached but preserves the quote and every message.
+
+While the panel reports `Live` / `En direct`, new threads, replies, resolutions,
+and moved anchors made by another reviewer appear automatically. A temporary
+connection failure changes the indicator to `Reconnecting`; the browser reconnects
+and reloads the complete authorized discussion list so missed events are recovered.
 
 ## Choose the Interface Language
 

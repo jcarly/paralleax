@@ -212,6 +212,17 @@ describe('story graph mapping', () => {
     ]);
   });
 
+  it('projects open comments for an interaction and its root trigger independently', () => {
+    expect(
+      buildInteractionNodes(story, undefined, undefined, {
+        commentCounts: new Map([
+          ['interaction-1', 1],
+          ['trigger-root', 2],
+        ]),
+      })[0].data,
+    ).toMatchObject({ commentCount: 1, rootTriggerCommentCount: 2 });
+  });
+
   it('falls back to stable canvas positions when loaded interactions have no position', () => {
     const storyWithMissingPositions = structuredClone(story);
     delete (
@@ -253,6 +264,21 @@ describe('story graph mapping', () => {
       orGroupCount: 2,
     });
     expect(buildTriggerEdges(groupedStory)).toHaveLength(3);
+  });
+
+  it('points a grouped trigger badge at a variant that has an open comment', () => {
+    const groupedStory = structuredClone(story);
+    groupedStory.interactions[1].triggers.push({
+      id: 'trigger-alternative',
+      inputInteractionIds: ['interaction-3', 'interaction-1'],
+      conditions: [],
+    });
+
+    expect(
+      buildTriggerNodes(groupedStory, undefined, {
+        commentCounts: new Map([['trigger-alternative', 2]]),
+      })[0].data,
+    ).toMatchObject({ commentCount: 2, commentTargetId: 'trigger-alternative' });
   });
 
   it('keeps triggers with different input sets in separate visual groups', () => {

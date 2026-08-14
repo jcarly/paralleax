@@ -122,7 +122,9 @@ export function App() {
           />
           <Route
             path="/stories/:storyId/edit"
-            element={user ? <StoryEditor /> : <Navigate to={signInPath} replace />}
+            element={
+              user ? <StoryEditor currentUserId={user.id} /> : <Navigate to={signInPath} replace />
+            }
           />
           <Route
             path="/stories/:storyId/access"

@@ -61,6 +61,7 @@ export function resolveStoryAccess(
         (settings.visibility === 'invitation' && subject.collaboratorRole !== undefined)));
   const canManage = privileged;
   const canComment =
+    subject.authenticated &&
     canRead &&
     settings.commentPolicy !== 'disabled' &&
     (settings.commentPolicy === 'readers' ||

@@ -248,6 +248,28 @@ describe('StoryList', () => {
     expect(within(card).queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument();
   });
 
+  it('offers the review workspace to commenters without edit permission', async () => {
+    vi.mocked(api.listStories).mockResolvedValue([
+      {
+        ...stories[0],
+        access: { visibility: 'authenticated', editPolicy: 'owner', commentPolicy: 'readers' },
+        capabilities: { canRead: true, canEdit: false, canManage: false, canComment: true },
+      },
+    ]);
+
+    render(
+      <MemoryRouter>
+        <StoryList />
+      </MemoryRouter>,
+    );
+    const card = (await screen.findByRole('heading', { name: 'First story' })).closest('article')!;
+    expect(within(card).getByRole('link', { name: 'Review' })).toHaveAttribute(
+      'href',
+      '/stories/story-1/edit',
+    );
+    expect(within(card).queryByRole('link', { name: 'Edit' })).not.toBeInTheDocument();
+  });
+
   it('translates product copy without changing authored story titles', async () => {
     await i18n.changeLanguage('fr');
     vi.mocked(api.listStories).mockResolvedValue([structuredClone(stories[0])]);

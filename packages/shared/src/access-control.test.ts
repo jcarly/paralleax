@@ -23,6 +23,15 @@ describe('story access control', () => {
     ).toMatchObject({ canRead: true, canEdit: true, canManage: true });
   });
 
+  it('never grants anonymous comment authorship even on a public story', () => {
+    expect(
+      resolveStoryAccess(
+        { visibility: 'public', editPolicy: 'owner', commentPolicy: 'readers' },
+        { authenticated: false },
+      ),
+    ).toMatchObject({ canRead: true, canComment: false });
+  });
+
   it('distinguishes invited viewers and editors', () => {
     expect(
       resolveStoryAccess(invitation, {

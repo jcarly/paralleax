@@ -10,6 +10,9 @@ export interface TriggerNodeData extends Record<string, unknown> {
   orGroupCount: number;
   selected: boolean;
   onSelectTrigger?: (interactionId: string, triggerId: string) => void;
+  commentCount?: number;
+  commentTargetId?: string;
+  onOpenComments?: (targetType: 'trigger', targetId: string) => void;
 }
 
 const routingHandles = [Position.Top, Position.Right, Position.Bottom, Position.Left];
@@ -59,6 +62,20 @@ export function TriggerNode({ data }: NodeProps) {
           d.onSelectTrigger?.(d.interactionId, d.triggerId);
         }}
       />
+      {d.commentCount ? (
+        <button
+          className="trigger-comment-badge nodrag nopan"
+          type="button"
+          aria-label={t('comments.openForTrigger', { count: d.commentCount })}
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            d.onOpenComments?.('trigger', d.commentTargetId ?? d.triggerId);
+          }}
+        >
+          {d.commentCount}
+        </button>
+      ) : null}
       <Handle
         type="source"
         id="trigger-output"

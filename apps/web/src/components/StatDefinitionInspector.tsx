@@ -24,6 +24,7 @@ export function StatDefinitionInspector({
       <label>
         {t('inspector.name')}
         <input
+          data-comment-field="name"
           value={statDefinition.name}
           onChange={(event) => onChange({ ...statDefinition, name: event.target.value })}
           onBlur={(event) => void onPatch(statDefinition.id, { name: event.target.value })}

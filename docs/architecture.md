@@ -82,6 +82,8 @@ The NestJS application is organized by feature rather than technical layer:
 
 - `auth/` owns credentials, sessions, guards, decorators, and auth endpoints;
 - `stories/` owns story DTOs, application behavior, persistence, and endpoints;
+- `comments/` owns anchored review-thread endpoints, authorization orchestration,
+  and comment persistence without extending the canonical story aggregate;
 - `database/` owns the shared PostgreSQL connection and migration lifecycle;
 - `config/` validates environment configuration and exposes typed runtime values.
 
@@ -464,6 +466,26 @@ The repository reconstructs
 the existing domain `Story`, so persistence normalization does not leak into the
 shared engine or the HTTP contract. JSON remains a future versioned import/export
 format rather than the database source of truth.
+
+Review discussions use `story_comment_threads` and `story_comment_messages`.
+Their JSONB anchor is validated against the current same-story target by the
+application service; it is not inserted into `Story` or React Flow's canonical
+data. The web editor projects canvas anchors as comment nodes and entity/text
+anchors as badges and discussion context. The public reader never requests or
+renders this private review resource.
+
+Authenticated editor clients also keep one Server-Sent Events connection to the
+story's comment event endpoint. Successful thread mutations publish a story-local
+invalidation containing only the thread id, mutation type, and timestamp. Clients
+then reload the authorized HTTP projection, so SSE never becomes a second source
+of comment data or a way around object-level authorization. A heartbeat keeps the
+connection alive through the production reverse proxy, and the browser reconnects
+automatically before reloading to recover events missed while disconnected.
+
+The current event broker is process-local. A deployment with several API replicas
+must add a shared fan-out transport, such as PostgreSQL `LISTEN`/`NOTIFY`, before
+it can guarantee that clients connected to different replicas receive the same
+invalidation immediately.
 
 Schema changes must always go through migrations. Do not create, alter, or drop
 tables from repositories or services. Add a new migration to the migration list,

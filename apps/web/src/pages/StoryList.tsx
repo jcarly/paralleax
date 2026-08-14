@@ -365,6 +365,18 @@ function StoryCard({
               {t('library.card.edit')} <span aria-hidden="true">→</span>
             </Link>
           ) : null}
+          {!publicCatalog &&
+          story.capabilities?.canEdit === false &&
+          story.capabilities.canComment ? (
+            <Link
+              className="product-primary compact"
+              to={`/stories/${story.id}/edit`}
+              onMouseEnter={() => void loadStoryEditor()}
+              onFocus={() => void loadStoryEditor()}
+            >
+              {t('library.card.review')} <span aria-hidden="true">→</span>
+            </Link>
+          ) : null}
           {!publicCatalog && story.capabilities?.canManage !== false ? (
             <>
               <Link className="product-ghost compact" to={`/stories/${story.id}/access`}>

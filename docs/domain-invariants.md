@@ -6,6 +6,11 @@ details. They should stay covered by tests as the editor grows.
 ## MVP Invariants
 
 - A story contains zero or more interactions.
+- Review comment threads are story-scoped collaboration metadata, not authored
+  story state. They never change reader evaluation, progress, or exports.
+- A comment anchor is either a graph position, a same-story target entity, or a
+  supported text field on a same-story target. Missing or changed text detaches
+  the anchor without deleting its preserved quote or discussion.
 - An interaction should keep at least one trigger.
 - An interaction should always have a canvas position. Loaded or incoming story
   data with a missing position is normalized with a stable default position.

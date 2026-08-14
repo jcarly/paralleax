@@ -157,6 +157,7 @@ export function InteractionInspector({
         <label>
           {t('interactionInspector.title')}
           <input
+            data-comment-field="title"
             value={interaction.title}
             onChange={(e) => updateLocalInteraction({ title: e.target.value })}
             onBlur={(e) => void onPatch(interaction.id, { title: e.target.value })}

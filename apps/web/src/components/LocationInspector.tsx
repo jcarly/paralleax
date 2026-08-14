@@ -36,6 +36,7 @@ export function LocationInspector({
       <label>
         {t('inspector.name')}
         <input
+          data-comment-field="name"
           value={location.name}
           onChange={(event) => onLocalChange({ ...location, name: event.target.value })}
           onBlur={(event) => void onPatch(location.id, { name: event.target.value })}
@@ -67,6 +68,7 @@ export function LocationInspector({
       <label>
         {t('inspector.description')}
         <textarea
+          data-comment-field="description"
           rows={7}
           value={location.description}
           onChange={(event) => onLocalChange({ ...location, description: event.target.value })}

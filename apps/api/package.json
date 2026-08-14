@@ -10,7 +10,7 @@
     "migrate:prod": "node dist/main.js --migrate",
     "typecheck": "tsc --noEmit",
     "test": "jest --runInBand",
-    "test:postgres": "jest --runInBand stories.postgres.spec.ts database.migrations.postgres.spec.ts",
+    "test:postgres": "jest --runInBand stories.postgres.spec.ts comments.postgres.spec.ts database.migrations.postgres.spec.ts",
     "test:stress:postgres": "jest --runInBand stories.stress.postgres.spec.ts",
     "coverage": "jest --runInBand --coverage"
   },
