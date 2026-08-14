@@ -140,7 +140,7 @@ export function buildTriggerNodes(
           id: getTriggerNodeId(target.id, group.primaryTrigger.id),
           type: 'trigger',
           position,
-          draggable: false,
+          draggable: true,
           selectable: false,
           data: {
             interactionId: target.id,
@@ -289,6 +289,15 @@ function getTriggerNodePosition(
   group: LinkedTriggerGroup,
   triggerIndex: number,
 ) {
+  const savedPosition = group.triggers.find(
+    (trigger) =>
+      typeof trigger.position?.x === 'number' &&
+      Number.isFinite(trigger.position.x) &&
+      typeof trigger.position?.y === 'number' &&
+      Number.isFinite(trigger.position.y),
+  )?.position;
+  if (savedPosition) return savedPosition;
+
   const inputCenters = group.inputInteractionIds.flatMap((inputId) => {
     const inputIndex = story.interactions.findIndex((item) => item.id === inputId);
     const input = story.interactions[inputIndex];

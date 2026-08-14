@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-08-14
+
+- Made linked trigger markers draggable on the story graph, with optimistic and
+  relational position persistence, grouped OR-variant movement, and automatic
+  placement compatibility for existing stories.
+
 ## 2026-08-13
 
 - Added private, permission-aware story review discussions with graph post-its,

@@ -1161,4 +1161,14 @@ export const databaseMigrations: DatabaseMigration[] = [
         ON story_comment_messages(thread_id, created_at);
     `,
   },
+  {
+    id: '202608140028_trigger_positions',
+    sql: `
+      ALTER TABLE triggers
+      ADD COLUMN position_x double precision,
+      ADD COLUMN position_y double precision,
+      ADD CONSTRAINT triggers_position_pair
+        CHECK ((position_x IS NULL) = (position_y IS NULL));
+    `,
+  },
 ];

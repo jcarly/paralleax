@@ -1720,6 +1720,12 @@ header span {
   position: absolute;
   inset: 0;
 }
+.react-flow__node-trigger.draggable .trigger-node .trigger-marker {
+  cursor: grab;
+}
+.react-flow__node-trigger.dragging .trigger-node .trigger-marker {
+  cursor: grabbing;
+}
 .trigger-node-handle {
   width: 8px;
   height: 8px;

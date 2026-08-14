@@ -212,6 +212,49 @@ test.describe('Story editor', () => {
     ).toBeVisible();
   });
 
+  test('drags and saves a linked trigger marker', async ({ page }) => {
+    const current = storyWithHorizontalLink();
+    await mockStory(page, current);
+    let savedPosition: { x: number; y: number } | undefined;
+
+    await page.route(
+      '**/api/stories/story-1/interactions/interaction-2/triggers/trigger-2',
+      async (route) => {
+        expect(route.request().method()).toBe('PATCH');
+        const patch = route.request().postDataJSON() as {
+          position: { x: number; y: number };
+        };
+        expect(Object.keys(patch)).toEqual(['position']);
+        savedPosition = patch.position;
+        const trigger = structuredClone(current.interactions[1].triggers[0]);
+        trigger.position = patch.position;
+        await route.fulfill({
+          json: {
+            interactionId: 'interaction-2',
+            trigger,
+            revision: 2,
+            updatedAt: current.updatedAt,
+          },
+        });
+      },
+    );
+
+    await page.goto('/stories/story-1/edit');
+    const marker = page.getByTestId('flow-trigger-interaction-2-trigger-2');
+    const box = await marker.boundingBox();
+    expect(box).not.toBeNull();
+
+    await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box!.x + box!.width / 2 + 100, box!.y + box!.height / 2 + 60, {
+      steps: 8,
+    });
+    await page.mouse.up();
+
+    await expect.poll(() => savedPosition?.x).toBeGreaterThan(495);
+    await expect(marker).toBeVisible();
+  });
+
   test('reorients the output arrow when its target moves across the trigger', async ({ page }) => {
     let current = storyWithHorizontalLink();
     await mockStory(page, current);

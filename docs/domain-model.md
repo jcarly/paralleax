@@ -49,10 +49,15 @@ Main MVP fields:
 - `id`
 - `inputInteractionIds`
 - `conditions`
+- optional `position` for the linked editor marker
 
 `inputInteractionIds` can contain several interactions. An interaction is therefore not limited to a single input.
 
 A trigger has exactly one output interaction: the interaction that owns the trigger. Its inputs are alternative sources. In other words, several input interactions on the same trigger represent an OR: any one of them can make the output interaction reachable, as long as the trigger conditions also match.
+
+The optional position is authoring projection metadata. It changes only where a
+linked trigger marker appears on the canvas and never affects reachability or
+reader evaluation. A missing position uses a deterministic automatic placement.
 
 Every interaction should keep at least one trigger.
 

@@ -1266,6 +1266,55 @@ describe('StoryEditor', () => {
     expect(within(otherInteractionNode).getByText('Next content')).toBeInTheDocument();
   });
 
+  it('saves a linked trigger position when its graph marker is moved', async () => {
+    const story = storyWithTwoInteractions();
+    story.interactions[1].triggers[0].position = { x: 400, y: 300 };
+    const movedStory = structuredClone(story);
+    movedStory.interactions[1].triggers[0].position = { x: 425, y: 315 };
+    vi.mocked(api.updateTrigger).mockResolvedValue(
+      triggerMutation(movedStory, 'interaction-2', 'trigger-2'),
+    );
+
+    await renderEditor(story);
+    expect(screen.getByTestId('flow-trigger-interaction-2-trigger-2')).not.toHaveClass('nodrag');
+    await userEvent.click(screen.getByTestId('drag-node-trigger:interaction-2:trigger-2'));
+
+    await waitFor(() => {
+      expect(api.updateTrigger).toHaveBeenCalledWith('story-1', 'interaction-2', 'trigger-2', {
+        position: { x: 425, y: 315 },
+      });
+    });
+  });
+
+  it('moves every trigger variant represented by one grouped marker', async () => {
+    const story = storyWithTwoInteractions();
+    story.interactions[1].triggers[0].position = { x: 400, y: 300 };
+    story.interactions[1].triggers.push({
+      id: 'trigger-variant',
+      inputInteractionIds: ['interaction-1'],
+      conditions: [{ interactionId: 'interaction-1', hasBeenVisited: true }],
+      position: { x: 400, y: 300 },
+    });
+    const movedStory = structuredClone(story);
+    movedStory.interactions[1].triggers.forEach((trigger) => {
+      trigger.position = { x: 425, y: 315 };
+    });
+    vi.mocked(api.updateTrigger).mockImplementation(async (_storyId, interactionId, triggerId) =>
+      triggerMutation(movedStory, interactionId, triggerId),
+    );
+
+    await renderEditor(story);
+    await userEvent.click(screen.getByTestId('drag-node-trigger:interaction-2:trigger-2'));
+
+    await waitFor(() => expect(api.updateTrigger).toHaveBeenCalledTimes(2));
+    expect(api.updateTrigger).toHaveBeenCalledWith('story-1', 'interaction-2', 'trigger-2', {
+      position: { x: 425, y: 315 },
+    });
+    expect(api.updateTrigger).toHaveBeenCalledWith('story-1', 'interaction-2', 'trigger-variant', {
+      position: { x: 425, y: 315 },
+    });
+  });
+
   it('deletes the selected interaction', async () => {
     const user = userEvent.setup();
     const afterDelete = cloneStory();

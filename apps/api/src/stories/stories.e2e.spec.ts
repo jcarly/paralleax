@@ -562,6 +562,39 @@ describe('Stories API', () => {
     expect(result.trigger.conditions).toEqual([{ interactionId: parent.id, hasBeenVisited: true }]);
   });
 
+  it('updates only a trigger canvas position without changing its narrative rules', async () => {
+    const story = await createStory();
+    const withParent = await createInteraction(story.id);
+    const parent = withParent.interactions[0];
+    const withChild = await createInteraction(story.id, { parentId: parent.id });
+    const child = withChild.interactions.find((item) => item.id !== parent.id)!;
+    const trigger = child.triggers[0];
+
+    const response = await request(httpServer)
+      .patch(`/api/stories/${story.id}/interactions/${child.id}/triggers/${trigger.id}`)
+      .send({ position: { x: 245, y: 180 } })
+      .expect(200);
+
+    const result = response.body as TriggerMutationResult;
+    expect(result.trigger).toEqual({
+      ...trigger,
+      position: { x: 245, y: 180 },
+    });
+  });
+
+  it('rejects an invalid trigger canvas position', async () => {
+    const story = await createStory();
+    const graph = await createInteraction(story.id);
+    const interaction = graph.interactions[0];
+
+    await request(httpServer)
+      .patch(
+        `/api/stories/${story.id}/interactions/${interaction.id}/triggers/${interaction.triggers[0].id}`,
+      )
+      .send({ position: { x: null, y: 180 } })
+      .expect(400);
+  });
+
   it('stores several temporal dates, weekdays, and time slots on a trigger', async () => {
     const story = await createStory();
     const graph = await createInteraction(story.id);

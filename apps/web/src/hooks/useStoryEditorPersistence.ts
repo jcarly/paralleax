@@ -128,6 +128,34 @@ export function useStoryEditorPersistence(storyId: string) {
     );
   }
 
+  async function moveTrigger(interactionId: string, triggerIds: string[], position: Position) {
+    if (!story || triggerIds.length === 0) return;
+    const interaction = story.interactions.find((item) => item.id === interactionId);
+    const triggers = triggerIds.flatMap((triggerId) => {
+      const trigger = interaction?.triggers.find((item) => item.id === triggerId);
+      return trigger ? [trigger] : [];
+    });
+    if (triggers.length === 0) return;
+
+    setStory((current) =>
+      triggers.reduce(
+        (nextStory, trigger) =>
+          updateTriggerInStory(nextStory, interactionId, trigger.id, { position }),
+        current ?? story,
+      ),
+    );
+
+    for (const trigger of triggers) {
+      const next = await trackSave(() =>
+        api.updateTrigger(storyId, interactionId, trigger.id, { position }),
+      );
+      if (!next) return;
+      setStory((current) =>
+        current ? applyTriggerResult(current, next, interactionId, trigger.id) : current,
+      );
+    }
+  }
+
   async function createTriggerVariant(interactionId: string, baseTriggerId: string) {
     if (!story) return undefined;
     const interaction = story.interactions.find((item) => item.id === interactionId);
@@ -140,6 +168,7 @@ export function useStoryEditorPersistence(storyId: string) {
     const patch = {
       inputInteractionIds: baseTrigger.inputInteractionIds,
       conditions: [{ interactionId: candidate.id, hasBeenVisited: true }],
+      ...(baseTrigger.position ? { position: baseTrigger.position } : {}),
     };
     const created = await trackSave(() => api.addTrigger(storyId, interactionId, patch));
     if (!created) return undefined;
@@ -579,6 +608,7 @@ export function useStoryEditorPersistence(storyId: string) {
     renameStory,
     updateStoryStartDateTime,
     saveTrigger,
+    moveTrigger,
     createTriggerVariant,
     deleteTrigger,
     deleteTriggerVariants,

@@ -168,6 +168,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
     renameStory,
     updateStoryStartDateTime,
     saveTrigger,
+    moveTrigger,
     createTriggerVariant,
     deleteTrigger,
     deleteTriggerVariants,
@@ -482,8 +483,9 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
 
   useEffect(() => {
     setNodes([
-      ...storyNodes.map((node) => (reviewOnly ? { ...node, draggable: false } : node)),
-      ...triggerNodes,
+      ...[...storyNodes, ...triggerNodes].map((node) =>
+        reviewOnly ? { ...node, draggable: false } : node,
+      ),
       ...commentNodes,
     ]);
   }, [commentNodes, reviewOnly, setNodes, storyNodes, triggerNodes]);
@@ -1218,6 +1220,9 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
             onNodeDragStop={(_, node) => {
               if (!reviewOnly && node.type === 'interaction') {
                 void patchInteraction(node.id, { position: node.position });
+              }
+              if (!reviewOnly && node.type === 'trigger') {
+                void moveTrigger(node.data.interactionId, node.data.triggerIds, node.position);
               }
             }}
             fitView

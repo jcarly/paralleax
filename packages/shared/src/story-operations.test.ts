@@ -98,6 +98,19 @@ describe('shared story operations', () => {
     expect(updated.interactions[2].triggers[0].inputInteractionIds).toEqual(['root', 'middle']);
   });
 
+  it('updates only a trigger canvas position when given a position patch', () => {
+    const updated = updateTriggerInStory(storyFixture(), 'middle', 'trigger-middle', {
+      position: { x: 240, y: 315 },
+    });
+
+    expect(updated.interactions[1].triggers[0]).toEqual({
+      id: 'trigger-middle',
+      inputInteractionIds: ['root'],
+      conditions: [],
+      position: { x: 240, y: 315 },
+    });
+  });
+
   it('removes only the requested trigger from its output interaction', () => {
     const story = storyFixture();
     story.interactions[2].triggers.push({

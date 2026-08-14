@@ -134,9 +134,14 @@ details. They should stay covered by tests as the editor grows.
 - A graph edge represents one trigger input, not necessarily the whole trigger.
 - A trigger with several inputs appears as several graph edges that share the same
   trigger id.
+- A linked trigger position is optional authoring projection metadata and never
+  changes trigger or reader semantics. Missing positions use stable automatic
+  placement.
 - Several triggers between the same source and target should be displayed as a
   grouped edge with several route variants, while remaining distinct triggers in
   the domain model.
+- Moving a grouped trigger marker saves the same position on every represented
+  trigger variant so deleting one variant does not unexpectedly move the group.
 - Editing a linked trigger should happen from the graph trigger marker
   representing the relationship.
 - Editing a root trigger should happen from a visible root trigger marker rather

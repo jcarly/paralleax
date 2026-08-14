@@ -497,15 +497,27 @@ export class CreateTriggerDto {
   @ValidateNested({ each: true })
   @Type(() => TriggerConditionDto)
   conditions?: TriggerConditionDto[];
+  @ValidateIf((_, value) => value !== undefined)
+  @IsObject()
+  @ValidateNested()
+  @Type(() => PositionDto)
+  position?: PositionDto;
 }
 export class UpdateTriggerDto {
+  @ValidateIf((_, value) => value !== undefined)
   @IsArray()
   @ArrayMaxSize(500)
   @IsString({ each: true })
-  inputInteractionIds!: string[];
+  inputInteractionIds?: string[];
+  @ValidateIf((_, value) => value !== undefined)
   @IsArray()
   @ArrayMaxSize(500)
   @ValidateNested({ each: true })
   @Type(() => TriggerConditionDto)
-  conditions!: TriggerConditionDto[];
+  conditions?: TriggerConditionDto[];
+  @ValidateIf((_, value) => value !== undefined)
+  @IsObject()
+  @ValidateNested()
+  @Type(() => PositionDto)
+  position?: PositionDto;
 }

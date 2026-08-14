@@ -45,7 +45,7 @@ export function TriggerNode({ data }: NodeProps) {
       ))}
       <button
         type="button"
-        className={`trigger-marker nodrag nopan ${d.selected ? 'selected' : ''}`}
+        className={`trigger-marker nopan ${d.selected ? 'selected' : ''}`}
         data-trigger-drop-target="true"
         data-interaction-id={d.interactionId}
         data-trigger-id={d.triggerId}

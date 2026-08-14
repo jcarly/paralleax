@@ -20,8 +20,13 @@ export function updateTriggerInStory(
               trigger.id === triggerId
                 ? {
                     ...trigger,
-                    inputInteractionIds: normalizeTriggerInputIds(patch.inputInteractionIds),
-                    conditions: patch.conditions,
+                    ...(patch.inputInteractionIds === undefined
+                      ? {}
+                      : {
+                          inputInteractionIds: normalizeTriggerInputIds(patch.inputInteractionIds),
+                        }),
+                    ...(patch.conditions === undefined ? {} : { conditions: patch.conditions }),
+                    ...(patch.position === undefined ? {} : { position: patch.position }),
                   }
                 : trigger,
             ),

@@ -197,7 +197,7 @@ describe('story graph mapping', () => {
         id: 'trigger:interaction-2:trigger-linked',
         type: 'trigger',
         position: { x: 235, y: 356 },
-        draggable: false,
+        draggable: true,
         selectable: false,
         data: {
           interactionId: 'interaction-2',
@@ -210,6 +210,17 @@ describe('story graph mapping', () => {
         },
       },
     ]);
+  });
+
+  it('uses a saved trigger position instead of recalculating the marker placement', () => {
+    const positionedStory = structuredClone(story);
+    positionedStory.interactions[1].triggers[0].position = { x: 420, y: 468 };
+
+    expect(buildTriggerNodes(positionedStory)[0].position).toEqual({ x: 420, y: 468 });
+    expect(buildTriggerEdges(positionedStory)[2]).toMatchObject({
+      sourceHandle: 'routing-output-left',
+      targetHandle: 'routing-input-right',
+    });
   });
 
   it('projects open comments for an interaction and its root trigger independently', () => {

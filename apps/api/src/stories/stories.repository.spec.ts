@@ -82,6 +82,7 @@ function graphStory(): Story {
           id: 'trigger-2',
           inputInteractionIds: ['interaction-1'],
           conditions: [{ interactionId: 'interaction-1', hasBeenVisited: true }],
+          position: { x: 220, y: 160 },
         },
       ],
     },
@@ -289,6 +290,8 @@ function relationalRead(query: jest.Mock, saved = story()) {
             id: trigger.id,
             story_id: saved.id,
             output_interaction_id: interaction.id,
+            position_x: trigger.position?.x ?? null,
+            position_y: trigger.position?.y ?? null,
             sort_order: index,
             conditions: trigger.conditions,
           })),
@@ -578,6 +581,7 @@ describe('StoriesRepository', () => {
         value.interactions[0].triggers[0].conditions = [
           { interactionId: 'interaction-1', hasBeenVisited: false },
         ];
+        value.interactions[0].triggers[0].position = { x: 210, y: 175 };
         value.interactions[0].triggers.push({
           id: 'trigger-3',
           inputInteractionIds: [],
@@ -603,9 +607,15 @@ describe('StoriesRepository', () => {
       'trigger-3',
       saved.id,
       'interaction-1',
+      null,
+      null,
       JSON.stringify([]),
       1,
     ]);
+    expect(mockClientQuery).toHaveBeenCalledWith(
+      'UPDATE triggers SET position_x = $2, position_y = $3 WHERE id = $1',
+      ['trigger-1', 210, 175],
+    );
     expect(mockClientQuery).toHaveBeenCalledWith(
       'UPDATE triggers SET conditions = $2 WHERE id = $1',
       ['trigger-1', JSON.stringify([{ interactionId: 'interaction-1', hasBeenVisited: false }])],

@@ -130,6 +130,8 @@ type TriggerRow = {
   id: string;
   story_id: string;
   output_interaction_id: string;
+  position_x: number | null;
+  position_y: number | null;
   sort_order: number;
   conditions: TriggerCondition[];
 };
@@ -528,7 +530,8 @@ export class StoriesRepository {
     );
     const triggers = await queryable.query<TriggerRow>(
       `SELECT triggers.id, interactions.story_id, triggers.output_interaction_id,
-                triggers.sort_order, triggers.conditions
+                triggers.position_x, triggers.position_y, triggers.sort_order,
+                triggers.conditions
          FROM triggers
          JOIN interactions ON interactions.id = triggers.output_interaction_id
          WHERE interactions.story_id = ANY($1::text[])
@@ -659,6 +662,9 @@ export class StoriesRepository {
             ({ input_interaction_id }) => input_interaction_id,
           ),
           conditions: trigger.conditions,
+          ...(typeof trigger.position_x === 'number' && typeof trigger.position_y === 'number'
+            ? { position: { x: trigger.position_x, y: trigger.position_y } }
+            : {}),
         })),
       })),
     }));

@@ -149,13 +149,14 @@ describePostgres('StoriesRepository PostgreSQL integration', () => {
     };
   }
 
-  it('persists an interaction move across repository instances', async () => {
+  it('persists interaction and trigger moves across repository instances', async () => {
     const story = persistedStory();
     await repository.save(story, ownerId);
     await repository.mutate(
       story.id,
       (current) => {
         current.interactions[0].position = { x: 420, y: 360 };
+        current.interactions[1].triggers[0].position = { x: 280, y: 240 };
         current.updatedAt = new Date().toISOString();
         return current;
       },
@@ -173,6 +174,11 @@ describePostgres('StoriesRepository PostgreSQL integration', () => {
       statEffects: [{ statId: 'stat-1', operation: 'add', value: 1 }],
       itemEffects: [{ itemId: 'item-1', operation: 'obtain' }],
       durationMinutes: 45,
+    });
+    expect(reloaded?.interactions[1].triggers[0]).toMatchObject({
+      id: 'trigger-2',
+      inputInteractionIds: ['interaction-1'],
+      position: { x: 280, y: 240 },
     });
     expect(reloaded?.locations).toEqual([
       {

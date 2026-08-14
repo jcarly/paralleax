@@ -11,7 +11,8 @@ Paralleax currently includes:
 - Story authoring and PostgreSQL persistence.
 - Interactions with rich content, graph positions, location context, character cast,
   stat effects, item effects, item-stat effects, and duration.
-- Triggers with multiple input interactions and typed conditions.
+- Triggers with multiple input interactions, typed conditions, and optional saved
+  positions for linked graph markers.
 - Reader execution and persisted authenticated reader progress.
 - Story-local deterministic calendar time.
 - Locations.

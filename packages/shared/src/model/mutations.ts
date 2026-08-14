@@ -1,6 +1,5 @@
 import type { Character } from './characters.js';
 import type { Position } from './common.js';
-import type { TriggerCondition } from '../triggers/conditions.js';
 import type { Interaction } from './interactions.js';
 import type {
   ItemDefinition,
@@ -161,10 +160,9 @@ export interface MoveItemInstanceInput {
   slotKey?: string;
 }
 
-export interface UpdateTriggerInput {
-  inputInteractionIds: string[];
-  conditions: TriggerCondition[];
-}
+export type UpdateTriggerInput = Partial<
+  Pick<Trigger, 'inputInteractionIds' | 'conditions' | 'position'>
+>;
 
 export type InteractionContentPatch = Partial<
   Pick<
@@ -181,4 +179,6 @@ export type InteractionContentPatch = Partial<
   >
 >;
 
-export type TriggerPatch = Pick<Trigger, 'inputInteractionIds' | 'conditions'>;
+export type TriggerPatch = Partial<
+  Pick<Trigger, 'inputInteractionIds' | 'conditions' | 'position'>
+>;

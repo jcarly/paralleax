@@ -364,6 +364,12 @@ to the same trigger marker when one trigger has several inputs. Several triggers
 with the exact same input set are grouped visually as OR condition variants, but
 they remain distinct domain triggers.
 
+Linked trigger markers are draggable. Their optional saved position belongs to
+the authored graph projection, is persisted on each represented trigger variant,
+and has no reader semantics. Triggers without a saved position retain the stable
+automatic placement derived from their inputs and output interaction. Root
+trigger markers remain attached to their interaction cards.
+
 When a normal canvas connection can either extend an existing trigger or create
 a separate trigger, `StoryEditor` presents that choice before calling the
 persistence hook. Dropping directly on a trigger marker remains the explicit

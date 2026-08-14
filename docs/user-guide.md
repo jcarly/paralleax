@@ -160,9 +160,14 @@ Simulation Mode still shows unavailable frames with reduced opacity and a reason
 
 The title is used as the reader choice label. The content is displayed when the reader reaches that interaction.
 
-## Move Interactions
+## Move Graph Elements
 
 Drag an interaction on the canvas. Its position is saved without changing its title, content, or triggers.
+
+You can also drag a linked trigger marker to make a dense graph easier to read.
+Its position is saved without changing its inputs or conditions. If one marker
+represents several OR condition variants, the variants move together. Root
+trigger markers remain attached to their interaction.
 
 ## Edit Triggers
 

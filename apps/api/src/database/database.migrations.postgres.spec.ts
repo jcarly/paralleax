@@ -123,7 +123,8 @@ describePostgres('Database migrations PostgreSQL upgrade', () => {
     });
     await expect(
       pool.query(
-        `SELECT trigger.conditions, input.input_interaction_id
+        `SELECT trigger.conditions, trigger.position_x, trigger.position_y,
+                input.input_interaction_id
          FROM triggers AS trigger
          JOIN trigger_inputs AS input
            ON input.story_id = trigger.story_id AND input.trigger_id = trigger.id
@@ -133,6 +134,8 @@ describePostgres('Database migrations PostgreSQL upgrade', () => {
       rows: [
         {
           conditions: [{ interactionId: 'legacy-root', hasBeenVisited: true }],
+          position_x: null,
+          position_y: null,
           input_interaction_id: 'legacy-root',
         },
       ],

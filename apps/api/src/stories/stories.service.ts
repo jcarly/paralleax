@@ -333,11 +333,19 @@ export class StoriesService {
         const interaction = this.interaction(story, interactionId);
         const trigger = interaction.triggers.find((item) => item.id === triggerId);
         if (!trigger) throw new NotFoundException('Trigger not found');
-        const conditions = this.triggerConditions(story, input.conditions);
-        this.assertInteractionReferences(story, input.inputInteractionIds);
+        const conditions =
+          input.conditions === undefined
+            ? trigger.conditions
+            : this.triggerConditions(story, input.conditions);
+        const inputInteractionIds =
+          input.inputInteractionIds === undefined
+            ? trigger.inputInteractionIds
+            : normalizeTriggerInputIds(input.inputInteractionIds);
+        this.assertInteractionReferences(story, inputInteractionIds);
         return updateTriggerInStory(story, interactionId, triggerId, {
-          inputInteractionIds: normalizeTriggerInputIds(input.inputInteractionIds),
+          inputInteractionIds,
           conditions,
+          ...(input.position === undefined ? {} : { position: input.position }),
         });
       },
       userId,
@@ -360,6 +368,7 @@ export class StoriesService {
           id: triggerId,
           inputInteractionIds: normalizeTriggerInputIds(input.inputInteractionIds ?? []),
           conditions,
+          ...(input.position === undefined ? {} : { position: input.position }),
         });
         return story;
       },
