@@ -7,10 +7,12 @@ import type {
   CreateCharacterItemInput,
   CreateCharacterStatInput,
   CreateInteractionInput,
+  CreateGraphDecorationInput,
   CreateItemDefinitionInput,
   CreateLocationInput,
   CreateStatDefinitionInput,
   InteractionMutationResult,
+  GraphDecorationMutationResult,
   ItemDefinitionMutationResult,
   LocationMutationResult,
   MoveItemInstanceInput,
@@ -22,6 +24,7 @@ import type {
   StorySummary,
   TriggerMutationResult,
   UpdateInteractionInput,
+  UpdateGraphDecorationInput,
   UpdateItemDefinitionInput,
   UpdateCharacterInput,
   UpdateCharacterStatInput,
@@ -188,6 +191,24 @@ export const api = {
     }),
   deleteInteraction: (storyId: string, interactionId: string) =>
     request<Story>(`/stories/${storyId}/interactions/${interactionId}`, { method: 'DELETE' }),
+  createGraphDecoration: (storyId: string, input: CreateGraphDecorationInput) =>
+    request<GraphDecorationMutationResult>(`/stories/${storyId}/graph-decorations`, {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
+  updateGraphDecoration: (
+    storyId: string,
+    decorationId: string,
+    input: UpdateGraphDecorationInput,
+  ) =>
+    request<GraphDecorationMutationResult>(
+      `/stories/${storyId}/graph-decorations/${decorationId}`,
+      { method: 'PATCH', body: JSON.stringify(input) },
+    ),
+  deleteGraphDecoration: (storyId: string, decorationId: string) =>
+    request<Story>(`/stories/${storyId}/graph-decorations/${decorationId}`, {
+      method: 'DELETE',
+    }),
   createLocation: (storyId: string, input: CreateLocationInput) =>
     request<LocationMutationResult>(`/stories/${storyId}/locations`, {
       method: 'POST',

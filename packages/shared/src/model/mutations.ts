@@ -1,6 +1,7 @@
 import type { Character } from './characters.js';
 import type { Position } from './common.js';
 import type { Interaction } from './interactions.js';
+import type { GraphDecoration } from './graph-decorations.js';
 import type {
   ItemDefinition,
   ItemDefinitionStat,
@@ -25,6 +26,10 @@ export interface InteractionMutationResult extends StoryMutationMetadata {
 export interface TriggerMutationResult extends StoryMutationMetadata {
   interactionId: string;
   trigger: Trigger;
+}
+
+export interface GraphDecorationMutationResult extends StoryMutationMetadata {
+  decoration: GraphDecoration;
 }
 
 export interface LocationMutationResult extends StoryMutationMetadata {

@@ -212,6 +212,38 @@ test.describe('Story editor', () => {
     ).toBeVisible();
   });
 
+  test('pans the graph with the middle button or Space plus primary drag', async ({ page }) => {
+    await page.goto('/stories/story-1/edit');
+    const pane = page.locator('.react-flow__pane');
+    const viewport = page.locator('.react-flow__viewport');
+    const bounds = await pane.boundingBox();
+    expect(bounds).not.toBeNull();
+    const start = { x: bounds!.x + bounds!.width - 90, y: bounds!.y + bounds!.height - 90 };
+    const transform = () => viewport.evaluate((element) => getComputedStyle(element).transform);
+
+    const initial = await transform();
+    await page.mouse.move(start.x, start.y);
+    await page.mouse.down();
+    await page.mouse.move(start.x - 70, start.y - 40, { steps: 5 });
+    await page.mouse.up();
+    expect(await transform()).toBe(initial);
+
+    await page.mouse.move(start.x, start.y);
+    await page.mouse.down({ button: 'middle' });
+    await page.mouse.move(start.x - 70, start.y - 40, { steps: 5 });
+    await page.mouse.up({ button: 'middle' });
+    const afterMiddleDrag = await transform();
+    expect(afterMiddleDrag).not.toBe(initial);
+
+    await page.keyboard.down('Space');
+    await page.mouse.move(start.x, start.y);
+    await page.mouse.down();
+    await page.mouse.move(start.x + 60, start.y + 30, { steps: 5 });
+    await page.mouse.up();
+    await page.keyboard.up('Space');
+    expect(await transform()).not.toBe(afterMiddleDrag);
+  });
+
   test('drags and saves a linked trigger marker', async ({ page }) => {
     const current = storyWithHorizontalLink();
     await mockStory(page, current);
@@ -253,6 +285,110 @@ test.describe('Story editor', () => {
 
     await expect.poll(() => savedPosition?.x).toBeGreaterThan(495);
     await expect(marker).toBeVisible();
+  });
+
+  test('adds and styles visual frames and text behind narrative nodes', async ({ page }) => {
+    const patches: Array<Record<string, unknown>> = [];
+
+    await page.route('**/api/stories/story-1/graph-decorations', async (route) => {
+      expect(route.request().method()).toBe('POST');
+      const input = route.request().postDataJSON() as {
+        kind: 'frame' | 'text';
+        position: { x: number; y: number };
+      };
+      const decoration =
+        input.kind === 'frame'
+          ? {
+              id: 'frame-1',
+              kind: 'frame',
+              position: input.position,
+              color: '#5b6ee1',
+              width: 420,
+              height: 240,
+            }
+          : {
+              id: 'text-1',
+              kind: 'text',
+              position: input.position,
+              color: '#273043',
+              text: 'Aa',
+              fontSize: 32,
+              fontFamily: 'sans',
+              fontWeight: 'normal',
+              fontStyle: 'normal',
+            };
+      await route.fulfill({
+        json: { decoration, revision: 2, updatedAt: story.updatedAt },
+      });
+    });
+    await page.route('**/api/stories/story-1/graph-decorations/*', async (route) => {
+      expect(route.request().method()).toBe('PATCH');
+      const patch = route.request().postDataJSON() as Record<string, unknown>;
+      patches.push(patch);
+      const decorationId = route.request().url().split('/').at(-1);
+      const decoration =
+        decorationId === 'frame-1'
+          ? {
+              id: 'frame-1',
+              kind: 'frame',
+              position: { x: 0, y: 0 },
+              color: '#5b6ee1',
+              width: 420,
+              height: 240,
+              ...patch,
+            }
+          : {
+              id: 'text-1',
+              kind: 'text',
+              position: { x: 0, y: 0 },
+              color: '#273043',
+              text: 'Aa',
+              fontSize: 32,
+              fontFamily: 'sans',
+              fontWeight: 'normal',
+              fontStyle: 'normal',
+              ...patch,
+            };
+      await route.fulfill({
+        json: { decoration, revision: 3, updatedAt: story.updatedAt },
+      });
+    });
+
+    await page.goto('/stories/story-1/edit');
+    await page.getByRole('button', { name: 'Add frame' }).click();
+    const frame = page.getByTestId('graph-frame-frame-1');
+    await expect(frame).toBeVisible();
+    const frameLayer = await page
+      .getByTestId('rf__node-frame-1')
+      .evaluate((element) => Number.parseInt(getComputedStyle(element).zIndex, 10));
+    const interactionLayer = await page
+      .locator('.react-flow__node-interaction')
+      .evaluate((element) => Number.parseInt(getComputedStyle(element).zIndex || '0', 10));
+    expect(frameLayer).toBeLessThan(interactionLayer);
+
+    await frame.click({ position: { x: 5, y: 5 } });
+    await expect(page.getByRole('heading', { name: 'Frame' })).toBeVisible();
+    await page.getByLabel('Width').fill('560');
+    await page.getByLabel('Width').blur();
+
+    await page.getByRole('button', { name: 'Add text' }).click();
+    const text = page.getByTestId('graph-text-text-1');
+    await expect(text).toBeVisible();
+    await text.click();
+    await page.getByLabel('Content').fill('Opening act');
+    await page.getByLabel('Content').blur();
+    await page.getByLabel('Text size').fill('48');
+    await page.getByLabel('Text size').blur();
+    await page.getByLabel('Font').selectOption('serif');
+    await page.getByLabel('Bold').check();
+    await page.getByLabel('Italic').check();
+
+    await expect.poll(() => patches).toContainEqual({ width: 560 });
+    await expect.poll(() => patches).toContainEqual({ text: 'Opening act' });
+    await expect.poll(() => patches).toContainEqual({ fontSize: 48 });
+    await expect.poll(() => patches).toContainEqual({ fontFamily: 'serif' });
+    await expect.poll(() => patches).toContainEqual({ fontWeight: 'bold' });
+    await expect.poll(() => patches).toContainEqual({ fontStyle: 'italic' });
   });
 
   test('reorients the output arrow when its target moves across the trigger', async ({ page }) => {

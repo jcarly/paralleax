@@ -6,6 +6,7 @@ import type {
   CharacterMutationResult,
   CharacterItemMutationResult,
   CharacterStatMutationResult,
+  GraphDecorationMutationResult,
   InteractionMutationResult,
   ItemDefinitionMutationResult,
   LocationMutationResult,
@@ -306,6 +307,81 @@ describe('Stories API', () => {
     });
     expect(result.interaction.triggers[0].inputInteractionIds).toEqual([]);
     expect(result.revision).toBe(2);
+  });
+
+  it('creates, updates, persists, and deletes visual graph decorations', async () => {
+    const story = await createStory();
+    const interactionGraph = await createInteraction(story.id, { position: { x: 10, y: 20 } });
+
+    const createdFrame = await request(httpServer)
+      .post(`/api/stories/${story.id}/graph-decorations`)
+      .send({ kind: 'frame', position: { x: 40, y: 60 }, color: '#123abc' })
+      .expect(201);
+    const frameResult = createdFrame.body as GraphDecorationMutationResult;
+    expect(frameResult.decoration).toMatchObject({
+      kind: 'frame',
+      position: { x: 40, y: 60 },
+      color: '#123abc',
+      width: 420,
+      height: 240,
+    });
+
+    const updatedFrame = await request(httpServer)
+      .patch(`/api/stories/${story.id}/graph-decorations/${frameResult.decoration.id}`)
+      .send({ position: { x: 80, y: 90 }, width: 560, height: 300 })
+      .expect(200);
+    expect((updatedFrame.body as GraphDecorationMutationResult).decoration).toMatchObject({
+      kind: 'frame',
+      position: { x: 80, y: 90 },
+      width: 560,
+      height: 300,
+    });
+
+    const createdText = await request(httpServer)
+      .post(`/api/stories/${story.id}/graph-decorations`)
+      .send({
+        kind: 'text',
+        position: { x: 120, y: 140 },
+        text: 'Act one',
+        color: '#654321',
+        fontSize: 48,
+        fontFamily: 'serif',
+        fontWeight: 'bold',
+        fontStyle: 'italic',
+      })
+      .expect(201);
+    const textResult = createdText.body as GraphDecorationMutationResult;
+    expect(textResult.decoration).toMatchObject({
+      kind: 'text',
+      text: 'Act one',
+      fontSize: 48,
+      fontFamily: 'serif',
+      fontWeight: 'bold',
+      fontStyle: 'italic',
+    });
+
+    const loaded = await request(httpServer).get(`/api/stories/${story.id}`).expect(200);
+    expect(loaded.body.graphDecorations).toHaveLength(2);
+    expect(loaded.body.interactions).toEqual(interactionGraph.interactions);
+
+    await request(httpServer)
+      .delete(`/api/stories/${story.id}/graph-decorations/${frameResult.decoration.id}`)
+      .expect(200);
+    const afterDelete = await request(httpServer).get(`/api/stories/${story.id}`).expect(200);
+    expect(afterDelete.body.graphDecorations).toEqual([textResult.decoration]);
+  });
+
+  it('rejects invalid graph decoration presentation values', async () => {
+    const story = await createStory();
+
+    await request(httpServer)
+      .post(`/api/stories/${story.id}/graph-decorations`)
+      .send({ kind: 'frame', position: { x: 0, y: 0 }, color: 'blue', width: 40 })
+      .expect(400);
+    await request(httpServer)
+      .post(`/api/stories/${story.id}/graph-decorations`)
+      .send({ kind: 'text', position: { x: 0, y: 0 }, fontSize: 120 })
+      .expect(400);
   });
 
   it('POST /api/stories/:storyId/interactions creates a child interaction linked to its parent', async () => {

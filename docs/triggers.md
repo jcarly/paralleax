@@ -76,6 +76,13 @@ Every interaction should keep at least one trigger. A starting interaction is no
 a special interaction type; it is an interaction whose availability comes from an
 inputless trigger without conditions.
 
+## Visual Decorations
+
+Frames and text placed behind triggers and interactions are graph decorations,
+not triggers. Visual overlap with a decoration does not create an input, output,
+condition group, or ownership relationship. Moving, resizing, editing, or deleting
+a decoration therefore cannot change trigger evaluation.
+
 ## Item Ownership Conditions
 
 An item condition references a reusable item definition in the same story. It

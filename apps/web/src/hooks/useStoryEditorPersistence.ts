@@ -2,11 +2,13 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Connection } from '@xyflow/react';
 import {
   deleteTriggerInStory,
+  deleteGraphDecorationFromStory,
   getNextChildPosition,
   getNextParentPosition,
   getNextRootPosition,
   mergeServerStory,
   updateInteractionInStory,
+  updateGraphDecorationInStory,
   updateTriggerInStory,
   type CharacterMutationResult,
   type CharacterItemMutationResult,
@@ -14,6 +16,7 @@ import {
   type Interaction,
   type InteractionContentPatch,
   type InteractionMutationResult,
+  type GraphDecorationMutationResult,
   type ItemDefinitionMutationResult,
   type LocationMutationResult,
   type MoveItemInstanceInput,
@@ -22,6 +25,7 @@ import {
   type Story,
   type TriggerCondition,
   type TriggerMutationResult,
+  type UpdateGraphDecorationInput,
 } from '@paralleax/shared';
 import { api } from '../api';
 import { getPendingConnection, getPendingTriggerInputConnection } from '../storyConnection';
@@ -386,6 +390,40 @@ export function useStoryEditorPersistence(storyId: string) {
     setStory((current) => (current ? mergeIncomingStory(current, next) : next));
   }
 
+  const createGraphDecoration = useCallback(
+    async (kind: 'frame' | 'text', position: Position) => {
+      const result = await trackSave(() => api.createGraphDecoration(storyId, { kind, position }));
+      if (!result) return undefined;
+      setStory((current) => (current ? applyGraphDecorationResult(current, result) : current));
+      return result.decoration.id;
+    },
+    [storyId, trackSave],
+  );
+
+  const updateGraphDecoration = useCallback(
+    async (decorationId: string, patch: UpdateGraphDecorationInput) => {
+      setStory((current) =>
+        current ? updateGraphDecorationInStory(current, decorationId, patch) : current,
+      );
+      const result = await trackSave(() => api.updateGraphDecoration(storyId, decorationId, patch));
+      if (!result) return;
+      setStory((current) => (current ? applyMutationMetadata(current, result) : current));
+    },
+    [storyId, trackSave],
+  );
+
+  const deleteGraphDecoration = useCallback(
+    async (decorationId: string) => {
+      setStory((current) =>
+        current ? deleteGraphDecorationFromStory(current, decorationId) : current,
+      );
+      const result = await trackSave(() => api.deleteGraphDecoration(storyId, decorationId));
+      if (!result) return;
+      setStory((current) => (current ? mergeIncomingStory(current, result) : result));
+    },
+    [mergeIncomingStory, storyId, trackSave],
+  );
+
   async function createLocation() {
     const result = await trackSave(() =>
       api.createLocation(storyId, { name: 'New location', description: '' }),
@@ -621,6 +659,9 @@ export function useStoryEditorPersistence(storyId: string) {
     createParentForInteraction,
     patchInteraction,
     deleteInteraction,
+    createGraphDecoration,
+    updateGraphDecoration,
+    deleteGraphDecoration,
     createLocation,
     updateLocation,
     createCharacter,
@@ -636,6 +677,21 @@ export function useStoryEditorPersistence(storyId: string) {
     deleteCharacterItem,
     moveItemInstance,
   };
+}
+
+function applyGraphDecorationResult(story: Story, result: GraphDecorationMutationResult): Story {
+  const exists = (story.graphDecorations ?? []).some(({ id }) => id === result.decoration.id);
+  return applyMutationMetadata(
+    {
+      ...story,
+      graphDecorations: exists
+        ? (story.graphDecorations ?? []).map((decoration) =>
+            decoration.id === result.decoration.id ? result.decoration : decoration,
+          )
+        : [...(story.graphDecorations ?? []), result.decoration],
+    },
+    result,
+  );
 }
 
 function applyLocationResult(story: Story, result: LocationMutationResult): Story {

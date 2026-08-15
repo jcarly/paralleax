@@ -164,10 +164,29 @@ The title is used as the reader choice label. The content is displayed when the 
 
 Drag an interaction on the canvas. Its position is saved without changing its title, content, or triggers.
 
+To move around the graph without moving an element, drag the canvas with the
+middle mouse button. You can also hold **Space** and drag with the primary mouse
+button. A primary-button drag without **Space** does not pan the canvas.
+
 You can also drag a linked trigger marker to make a dense graph easier to read.
 Its position is saved without changing its inputs or conditions. If one marker
 represents several OR condition variants, the variants move together. Root
 trigger markers remain attached to their interaction.
+
+## Add Visual Structure to the Graph
+
+Use **Add frame** to place a colored frame around a visual area of the canvas.
+Select its border to choose a color or edit its width and height in the inspector.
+You can also drag its resize handles. Moving or resizing a frame never moves the
+interactions or triggers inside it.
+
+Use **Add text** to place a free text label. Select it to edit its content, color,
+text size, font family, bold weight, or italic style. Drag either kind of
+decoration to reposition it, and use **Delete decoration** in the inspector to
+remove it.
+
+Frames and text always stay behind interactions and trigger markers. They are
+authoring aids only and never appear in the reader or affect story rules.
 
 ## Edit Triggers
 

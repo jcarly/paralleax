@@ -1,4 +1,5 @@
 import type { Character } from './characters.js';
+import type { GraphDecoration } from './graph-decorations.js';
 import type { Interaction } from './interactions.js';
 import type { ItemDefinition } from './items.js';
 import type { Location } from './locations.js';
@@ -13,6 +14,7 @@ export interface Story {
   characters?: Character[];
   statDefinitions?: StatDefinition[];
   itemDefinitions?: ItemDefinition[];
+  graphDecorations?: GraphDecoration[];
   interactions: Interaction[];
   startDateTime?: string;
   access?: StoryAccessSettings;

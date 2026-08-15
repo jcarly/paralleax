@@ -1,6 +1,7 @@
 import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post } from '@nestjs/common';
 import {
   CreateInteractionDto,
+  CreateGraphDecorationDto,
   CreateCharacterDto,
   CreateCharacterItemDto,
   CreateCharacterStatDto,
@@ -12,6 +13,7 @@ import {
   CreateTriggerDto,
   SaveReaderProgressDto,
   UpdateInteractionDto,
+  UpdateGraphDecorationDto,
   UpdateCharacterDto,
   UpdateCharacterStatDto,
   UpdateItemDefinitionDto,
@@ -154,6 +156,31 @@ export class StoriesController {
     @CurrentUser() user: RequestUser,
   ) {
     return this.stories.deleteInteraction(storyId, interactionId, user.id);
+  }
+
+  @Post(':storyId/graph-decorations') createGraphDecoration(
+    @Param('storyId') storyId: string,
+    @Body() input: CreateGraphDecorationDto,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.stories.createGraphDecoration(storyId, input, user.id);
+  }
+
+  @Patch(':storyId/graph-decorations/:decorationId') updateGraphDecoration(
+    @Param('storyId') storyId: string,
+    @Param('decorationId') decorationId: string,
+    @Body() input: UpdateGraphDecorationDto,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.stories.updateGraphDecoration(storyId, decorationId, input, user.id);
+  }
+
+  @Delete(':storyId/graph-decorations/:decorationId') deleteGraphDecoration(
+    @Param('storyId') storyId: string,
+    @Param('decorationId') decorationId: string,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.stories.deleteGraphDecoration(storyId, decorationId, user.id);
   }
 
   @Post(':storyId/locations') createLocation(

@@ -24,6 +24,7 @@ import {
   isCommentAnchorDetached,
   type Character,
   type CommentTargetType,
+  type GraphDecoration,
   type Interaction,
   type ItemDefinition,
   type Location,
@@ -45,6 +46,9 @@ import { CommentPinNode, type CommentPinFlowNode } from '../features/comments/Co
 import { StoryCommentsPanel } from '../features/comments/StoryCommentsPanel';
 import { captureActiveTextSelection } from '../features/comments/textAnchors';
 import { useStoryComments } from '../features/comments/useStoryComments';
+import { GraphDecorationInspector } from '../features/graph-decorations/GraphDecorationInspector';
+import { GraphDecorationNode } from '../features/graph-decorations/GraphDecorationNode';
+import { buildGraphDecorationNodes } from '../features/graph-decorations/graphDecorationNodes';
 import { useStoryEditorPersistence } from '../hooks/useStoryEditorPersistence';
 import { usePendingSaveGuard } from '../hooks/usePendingSaveGuard';
 import {
@@ -66,11 +70,13 @@ import {
 const nodeTypes = {
   interaction: InteractionNode,
   trigger: TriggerNode,
+  graphDecoration: GraphDecorationNode,
   commentPin: CommentPinNode,
 };
 const edgeTypes = { trigger: TriggerEdge };
 const droppedNodeOffset = { x: 105, y: 48 };
 const fitViewOptions = { padding: 0.18, maxZoom: 1 };
+const canvasPanMouseButtons = [1];
 const storyContextPanelStorageKey = 'paralleax-story-context-panel';
 
 function getInitialStoryContextPanelOpen() {
@@ -181,6 +187,9 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
     createParentForInteraction,
     patchInteraction,
     deleteInteraction,
+    createGraphDecoration,
+    updateGraphDecoration,
+    deleteGraphDecoration,
     createLocation,
     updateLocation,
     createCharacter,
@@ -207,6 +216,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
   );
   const [selectedId, setSelectedId] = useState<string>();
   const [selectedTrigger, setSelectedTrigger] = useState<SelectedTrigger>();
+  const [selectedGraphDecorationId, setSelectedGraphDecorationId] = useState<string>();
   const [selectedLocationId, setSelectedLocationId] = useState<string>();
   const [selectedCharacterId, setSelectedCharacterId] = useState<string>();
   const [selectedStatDefinitionId, setSelectedStatDefinitionId] = useState<string>();
@@ -229,6 +239,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
     handleType: 'source' | 'target';
   } | null>(null);
   const flowInstance = useRef<ReactFlowInstance<StoryFlowNode, TriggerFlowEdge> | null>(null);
+  const canvasRef = useRef<HTMLElement | null>(null);
 
   const commentAccess = Boolean(
     story?.capabilities?.canManage ||
@@ -255,6 +266,9 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
 
   const selected = findInteraction(story, selectedId);
   const selectedTriggerTarget = findSelectedTrigger(story, selectedTrigger);
+  const selectedGraphDecoration = story?.graphDecorations?.find(
+    ({ id }) => id === selectedGraphDecorationId,
+  );
   const selectedLocation = story?.locations?.find(({ id }) => id === selectedLocationId);
   const selectedCharacter = story?.characters?.find(({ id }) => id === selectedCharacterId);
   const selectedStatDefinition = story?.statDefinitions?.find(
@@ -377,6 +391,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
   const hasInspectorSelection = Boolean(
     selected ||
     selectedTriggerTarget ||
+    selectedGraphDecoration ||
     selectedLocation ||
     selectedCharacter ||
     selectedStatDefinition ||
@@ -386,6 +401,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
   const closeInspector = useCallback(() => {
     setSelectedId(undefined);
     setSelectedTrigger(undefined);
+    setSelectedGraphDecorationId(undefined);
     setSelectedLocationId(undefined);
     setSelectedCharacterId(undefined);
     setSelectedStatDefinitionId(undefined);
@@ -440,6 +456,16 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
       story,
     ],
   );
+  const decorationNodes = useMemo(
+    () =>
+      buildGraphDecorationNodes(
+        story,
+        selectedGraphDecorationId,
+        !reviewOnly,
+        (decorationId, patch) => void updateGraphDecoration(decorationId, patch),
+      ),
+    [reviewOnly, selectedGraphDecorationId, story, updateGraphDecoration],
+  );
   const triggerNodes = useMemo(
     () =>
       buildTriggerNodes(story, selectedTrigger, {
@@ -483,12 +509,13 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
 
   useEffect(() => {
     setNodes([
+      ...decorationNodes,
       ...[...storyNodes, ...triggerNodes].map((node) =>
         reviewOnly ? { ...node, draggable: false } : node,
       ),
       ...commentNodes,
     ]);
-  }, [commentNodes, reviewOnly, setNodes, storyNodes, triggerNodes]);
+  }, [commentNodes, decorationNodes, reviewOnly, setNodes, storyNodes, triggerNodes]);
 
   useEffect(() => {
     try {
@@ -524,10 +551,33 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
   );
 
   const select: NodeMouseHandler = (_, node) => {
+    if (node.type === 'graphDecoration') {
+      if (reviewOnly) return;
+      closeInspector();
+      setSelectedGraphDecorationId(node.id);
+      return;
+    }
     if (node.type !== 'interaction') return;
     closeInspector();
     setSelectedId(node.id);
   };
+
+  async function addGraphDecoration(kind: GraphDecoration['kind']) {
+    const bounds = canvasRef.current?.getBoundingClientRect();
+    const center = flowInstance.current?.screenToFlowPosition({
+      x: bounds ? bounds.left + bounds.width / 2 : window.innerWidth / 2,
+      y: bounds ? bounds.top + bounds.height / 2 : window.innerHeight / 2,
+    });
+    const position = center
+      ? kind === 'frame'
+        ? { x: center.x - 210, y: center.y - 120 }
+        : center
+      : { x: 80, y: 80 };
+    const decorationId = await createGraphDecoration(kind, position);
+    if (!decorationId) return;
+    closeInspector();
+    setSelectedGraphDecorationId(decorationId);
+  }
 
   function startEntityComment() {
     if (!selectedCommentTarget || !story?.capabilities?.canComment) return;
@@ -1187,11 +1237,29 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
             </div>
           ) : null}
         </nav>
-        <section className="canvas">
+        <section className="canvas" ref={canvasRef}>
           {!reviewOnly ? (
             <button className="canvas-action" onClick={() => void createRoot()}>
               {t('editor.addRoot')}
             </button>
+          ) : null}
+          {!reviewOnly ? (
+            <div className="canvas-decoration-actions">
+              <button
+                className="secondary"
+                type="button"
+                onClick={() => void addGraphDecoration('frame')}
+              >
+                {t('decoration.addFrame')}
+              </button>
+              <button
+                className="secondary"
+                type="button"
+                onClick={() => void addGraphDecoration('text')}
+              >
+                {t('decoration.addText')}
+              </button>
+            </div>
           ) : null}
           {story.capabilities?.canComment ? (
             <button
@@ -1224,10 +1292,15 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
               if (!reviewOnly && node.type === 'trigger') {
                 void moveTrigger(node.data.interactionId, node.data.triggerIds, node.position);
               }
+              if (!reviewOnly && node.type === 'graphDecoration') {
+                void updateGraphDecoration(node.id, { position: node.position });
+              }
             }}
             fitView
             fitViewOptions={fitViewOptions}
             minZoom={0.05}
+            panOnDrag={canvasPanMouseButtons}
+            panActivationKeyCode="Space"
           >
             <Background />
             <Controls />
@@ -1287,7 +1360,17 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
                 ))}
               </div>
             ) : null}
-            {reviewOnly ? (
+            {selectedGraphDecoration ? (
+              <GraphDecorationInspector
+                decoration={selectedGraphDecoration}
+                onPatch={(patch) => void updateGraphDecoration(selectedGraphDecoration.id, patch)}
+                onDelete={() => {
+                  const decorationId = selectedGraphDecoration.id;
+                  closeInspector();
+                  void deleteGraphDecoration(decorationId);
+                }}
+              />
+            ) : reviewOnly ? (
               <ReviewTargetInspector
                 interaction={selected}
                 trigger={selectedTriggerTarget?.trigger}

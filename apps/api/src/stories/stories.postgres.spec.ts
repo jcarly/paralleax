@@ -105,6 +105,27 @@ describePostgres('StoriesRepository PostgreSQL integration', () => {
           ],
         },
       ],
+      graphDecorations: [
+        {
+          id: 'frame-1',
+          kind: 'frame',
+          position: { x: 20, y: 30 },
+          color: '#5b6ee1',
+          width: 420,
+          height: 240,
+        },
+        {
+          id: 'text-1',
+          kind: 'text',
+          position: { x: 40, y: 50 },
+          color: '#273043',
+          text: 'Act one',
+          fontSize: 32,
+          fontFamily: 'sans',
+          fontWeight: 'normal',
+          fontStyle: 'normal',
+        },
+      ],
       interactions: [
         {
           id: 'interaction-1',
@@ -157,6 +178,18 @@ describePostgres('StoriesRepository PostgreSQL integration', () => {
       (current) => {
         current.interactions[0].position = { x: 420, y: 360 };
         current.interactions[1].triggers[0].position = { x: 280, y: 240 };
+        const frame = current.graphDecorations?.find(({ id }) => id === 'frame-1');
+        if (frame?.kind === 'frame') {
+          frame.position = { x: 60, y: 70 };
+          frame.width = 560;
+          frame.height = 300;
+        }
+        const text = current.graphDecorations?.find(({ id }) => id === 'text-1');
+        if (text?.kind === 'text') {
+          text.text = 'Opening act';
+          text.fontFamily = 'serif';
+          text.fontWeight = 'bold';
+        }
         current.updatedAt = new Date().toISOString();
         return current;
       },
@@ -180,6 +213,27 @@ describePostgres('StoriesRepository PostgreSQL integration', () => {
       inputInteractionIds: ['interaction-1'],
       position: { x: 280, y: 240 },
     });
+    expect(reloaded?.graphDecorations).toEqual([
+      {
+        id: 'frame-1',
+        kind: 'frame',
+        position: { x: 60, y: 70 },
+        color: '#5b6ee1',
+        width: 560,
+        height: 300,
+      },
+      {
+        id: 'text-1',
+        kind: 'text',
+        position: { x: 40, y: 50 },
+        color: '#273043',
+        text: 'Opening act',
+        fontSize: 32,
+        fontFamily: 'serif',
+        fontWeight: 'bold',
+        fontStyle: 'normal',
+      },
+    ]);
     expect(reloaded?.locations).toEqual([
       {
         id: 'location-1',

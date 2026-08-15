@@ -131,6 +131,13 @@ details. They should stay covered by tests as the editor grows.
 
 - The narrative model is the source of truth; React Flow is only a canvas
   projection.
+- Graph decorations are authored presentation metadata only. They never affect
+  trigger eligibility, interaction ownership, reader output, or progress replay.
+- A decoration frame is not a semantic group. Moving or resizing it never moves
+  or mutates interactions and triggers that visually overlap it.
+- Decoration nodes render behind interaction and trigger nodes. Their persisted
+  position, frame dimensions, color, text, and typography remain independent from
+  React Flow's transient node state.
 - A graph edge represents one trigger input, not necessarily the whole trigger.
 - A trigger with several inputs appears as several graph edges that share the same
   trigger id.

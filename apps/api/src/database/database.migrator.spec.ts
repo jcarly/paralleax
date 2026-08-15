@@ -153,4 +153,14 @@ describe('DatabaseMigrator', () => {
     expect(migration?.sql).toMatch(/CREATE TABLE story_user_permissions/i);
     expect(migration?.sql).toMatch(/role IN \('viewer', 'editor'\)/i);
   });
+
+  it('adds constrained story-local graph decoration storage', () => {
+    const migration = databaseMigrations.find(({ id }) => id === '202608140029_graph_decorations');
+
+    expect(migration?.sql).toMatch(/CREATE TABLE graph_decorations/i);
+    expect(migration?.sql).toMatch(/REFERENCES stories\(id\) ON DELETE CASCADE/i);
+    expect(migration?.sql).toMatch(/kind IN \('frame', 'text'\)/i);
+    expect(migration?.sql).toMatch(/width >= 120 AND height >= 80/i);
+    expect(migration?.sql).toMatch(/font_size BETWEEN 10 AND 96/i);
+  });
 });

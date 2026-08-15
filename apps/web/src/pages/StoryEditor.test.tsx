@@ -2,7 +2,13 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testi
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { InteractionMutationResult, Story, TriggerMutationResult } from '@paralleax/shared';
+import {
+  updateGraphDecorationInStory,
+  type GraphDecorationMutationResult,
+  type InteractionMutationResult,
+  type Story,
+  type TriggerMutationResult,
+} from '@paralleax/shared';
 import { StoryEditor } from './StoryEditor';
 import { api } from '../api';
 
@@ -12,6 +18,9 @@ vi.mock('../api', () => ({
     createInteraction: vi.fn(),
     updateInteraction: vi.fn(),
     deleteInteraction: vi.fn(),
+    createGraphDecoration: vi.fn(),
+    updateGraphDecoration: vi.fn(),
+    deleteGraphDecoration: vi.fn(),
     renameStory: vi.fn(),
     updateStory: vi.fn(),
     addTrigger: vi.fn(),
@@ -49,6 +58,13 @@ vi.mock('@xyflow/react', async () => {
     ),
     MarkerType: { ArrowClosed: 'arrowclosed' },
     MiniMap: () => <div data-testid="flow-minimap" />,
+    NodeResizer: ({ isVisible, onResizeEnd }: any) =>
+      isVisible ? (
+        <button
+          data-testid="resize-decoration"
+          onClick={(event) => onResizeEnd?.(event, { width: 500, height: 320 })}
+        />
+      ) : null,
     Position: { Bottom: 'bottom', Left: 'left', Right: 'right', Top: 'top' },
     ReactFlow: ({
       nodes,
@@ -61,6 +77,8 @@ vi.mock('@xyflow/react', async () => {
       onNodeClick,
       onPaneClick,
       onNodeDragStop,
+      panOnDrag,
+      panActivationKeyCode,
       minZoom,
       children,
     }: any) => {
@@ -73,7 +91,12 @@ vi.mock('@xyflow/react', async () => {
       }, []);
 
       return (
-        <div data-testid="react-flow" data-min-zoom={minZoom}>
+        <div
+          data-testid="react-flow"
+          data-min-zoom={minZoom}
+          data-pan-on-drag={JSON.stringify(panOnDrag)}
+          data-pan-activation-key={panActivationKeyCode}
+        >
           <button data-testid="flow-pane" onClick={(event) => onPaneClick?.(event)} />
           {nodes.map((node: any) => {
             const NodeComponent = nodeTypes[node.type];
@@ -81,6 +104,8 @@ vi.mock('@xyflow/react', async () => {
               <div
                 key={node.id}
                 data-testid={`flow-node-${node.id}`}
+                data-z-index={node.zIndex}
+                style={node.style}
                 onClick={(event) => onNodeClick?.(event, node)}
                 role="button"
                 tabIndex={0}
@@ -273,6 +298,19 @@ function triggerMutation(
   };
 }
 
+function graphDecorationMutation(
+  story: Story,
+  decorationId: string,
+): GraphDecorationMutationResult {
+  const decoration = story.graphDecorations?.find(({ id }) => id === decorationId);
+  if (!decoration) throw new Error(`Missing graph decoration ${decorationId} in test fixture`);
+  return {
+    decoration: structuredClone(decoration),
+    revision: story.revision ?? 2,
+    updatedAt: story.updatedAt,
+  };
+}
+
 function storyWithTwoInteractions(): Story {
   return {
     ...cloneStory(),
@@ -325,6 +363,121 @@ describe('StoryEditor', () => {
     window.localStorage.clear();
     vi.spyOn(window, 'confirm').mockReturnValue(true);
     vi.mocked(api.listCommentThreads).mockResolvedValue([]);
+  });
+
+  it('reserves canvas panning for the middle button or Space plus drag', async () => {
+    await renderEditor();
+
+    expect(screen.getByTestId('react-flow')).toHaveAttribute('data-pan-on-drag', '[1]');
+    expect(screen.getByTestId('react-flow')).toHaveAttribute('data-pan-activation-key', 'Space');
+  });
+
+  it('adds, moves, and resizes a frame behind narrative nodes', async () => {
+    const user = userEvent.setup();
+    const saved = cloneStory();
+    saved.graphDecorations = [
+      {
+        id: 'frame-1',
+        kind: 'frame',
+        position: { x: -260, y: -160 },
+        color: '#5b6ee1',
+        width: 420,
+        height: 240,
+      },
+    ];
+    vi.mocked(api.createGraphDecoration).mockResolvedValue(
+      graphDecorationMutation(saved, 'frame-1'),
+    );
+    vi.mocked(api.updateGraphDecoration).mockImplementation(
+      async (_storyId, decorationId, patch) => {
+        const updated = updateGraphDecorationInStory(saved, decorationId, patch);
+        saved.graphDecorations = updated.graphDecorations;
+        return graphDecorationMutation(saved, decorationId);
+      },
+    );
+
+    await renderEditor();
+    await user.click(screen.getByRole('button', { name: 'Add frame' }));
+
+    const frame = await screen.findByTestId('flow-node-frame-1');
+    expect(frame).toHaveAttribute('data-z-index', '-1000');
+    expect(frame).toHaveStyle({ width: '420px', height: '240px' });
+
+    await user.click(frame);
+    await user.click(screen.getByTestId('resize-decoration'));
+    expect(api.updateGraphDecoration).toHaveBeenCalledWith('story-1', 'frame-1', {
+      width: 500,
+      height: 320,
+    });
+
+    await user.click(screen.getByTestId('drag-node-frame-1'));
+    expect(api.updateGraphDecoration).toHaveBeenCalledWith('story-1', 'frame-1', {
+      position: { x: -235, y: -145 },
+    });
+  });
+
+  it('edits text decoration typography and deletes the decoration', async () => {
+    const user = userEvent.setup();
+    const decoratedStory = cloneStory();
+    decoratedStory.graphDecorations = [
+      {
+        id: 'text-1',
+        kind: 'text',
+        position: { x: 30, y: 40 },
+        color: '#273043',
+        text: 'Act one',
+        fontSize: 32,
+        fontFamily: 'sans',
+        fontWeight: 'normal',
+        fontStyle: 'normal',
+      },
+    ];
+    vi.mocked(api.updateGraphDecoration).mockImplementation(
+      async (_storyId, decorationId, patch) => {
+        const updated = updateGraphDecorationInStory(decoratedStory, decorationId, patch);
+        decoratedStory.graphDecorations = updated.graphDecorations;
+        return graphDecorationMutation(decoratedStory, decorationId);
+      },
+    );
+    vi.mocked(api.deleteGraphDecoration).mockImplementation(async () => {
+      decoratedStory.graphDecorations = [];
+      return structuredClone(decoratedStory);
+    });
+
+    await renderEditor(decoratedStory);
+    await user.click(screen.getByTestId('flow-node-text-1'));
+
+    const content = screen.getByRole('textbox', { name: 'Content' });
+    await user.clear(content);
+    await user.type(content, 'Opening act');
+    fireEvent.blur(content);
+    fireEvent.change(screen.getByLabelText('Text size'), { target: { value: '48' } });
+    fireEvent.blur(screen.getByLabelText('Text size'));
+    await user.selectOptions(screen.getByLabelText('Font'), 'serif');
+    await user.click(screen.getByRole('checkbox', { name: 'Bold' }));
+    await user.click(screen.getByRole('checkbox', { name: 'Italic' }));
+
+    await waitFor(() => {
+      expect(api.updateGraphDecoration).toHaveBeenCalledWith('story-1', 'text-1', {
+        text: 'Opening act',
+      });
+      expect(api.updateGraphDecoration).toHaveBeenCalledWith('story-1', 'text-1', {
+        fontSize: 48,
+      });
+      expect(api.updateGraphDecoration).toHaveBeenCalledWith('story-1', 'text-1', {
+        fontFamily: 'serif',
+      });
+      expect(api.updateGraphDecoration).toHaveBeenCalledWith('story-1', 'text-1', {
+        fontWeight: 'bold',
+      });
+      expect(api.updateGraphDecoration).toHaveBeenCalledWith('story-1', 'text-1', {
+        fontStyle: 'italic',
+      });
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Delete decoration' }));
+    expect(api.deleteGraphDecoration).toHaveBeenCalledWith('story-1', 'text-1');
+    await waitFor(() => expect(screen.queryByTestId('flow-node-text-1')).not.toBeInTheDocument());
   });
 
   it('opens a read-only review workspace and creates an entity comment', async () => {

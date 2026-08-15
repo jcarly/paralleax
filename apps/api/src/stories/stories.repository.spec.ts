@@ -21,6 +21,27 @@ function story(id = 'story-1'): Story {
 
 function graphStory(): Story {
   const saved = story();
+  saved.graphDecorations = [
+    {
+      id: 'frame-1',
+      kind: 'frame',
+      position: { x: 5, y: 15 },
+      color: '#5b6ee1',
+      width: 420,
+      height: 240,
+    },
+    {
+      id: 'text-1',
+      kind: 'text',
+      position: { x: 25, y: 35 },
+      color: '#273043',
+      text: 'Act one',
+      fontSize: 32,
+      fontFamily: 'sans',
+      fontWeight: 'bold',
+      fontStyle: 'italic',
+    },
+  ];
   saved.locations = [
     { id: 'location-1', name: 'Harbor', description: 'A quiet harbor.', category: 'Coast' },
   ];
@@ -141,6 +162,26 @@ function relationalRead(query: jest.Mock, saved = story()) {
           name: location.name,
           description: location.description,
           category: location.category ?? '',
+          sort_order: index,
+        })),
+      });
+    }
+    if (sql.includes('FROM graph_decorations')) {
+      return Promise.resolve({
+        rows: (saved.graphDecorations ?? []).map((decoration, index) => ({
+          id: decoration.id,
+          story_id: saved.id,
+          kind: decoration.kind,
+          position_x: decoration.position.x,
+          position_y: decoration.position.y,
+          width: decoration.kind === 'frame' ? decoration.width : null,
+          height: decoration.kind === 'frame' ? decoration.height : null,
+          text_content: decoration.kind === 'text' ? decoration.text : null,
+          color: decoration.color,
+          font_size: decoration.kind === 'text' ? decoration.fontSize : null,
+          font_family: decoration.kind === 'text' ? decoration.fontFamily : null,
+          font_weight: decoration.kind === 'text' ? decoration.fontWeight : null,
+          font_style: decoration.kind === 'text' ? decoration.fontStyle : null,
           sort_order: index,
         })),
       });
@@ -477,6 +518,29 @@ describe('StoriesRepository', () => {
       [expect.stringContaining('"id":"interaction-1"')],
     );
     expect(mockClientQuery).toHaveBeenCalledWith(
+      expect.stringContaining('INSERT INTO graph_decorations'),
+      ['frame-1', saved.id, 'frame', 5, 15, 420, 240, null, '#5b6ee1', null, null, null, null, 0],
+    );
+    expect(mockClientQuery).toHaveBeenCalledWith(
+      expect.stringContaining('INSERT INTO graph_decorations'),
+      [
+        'text-1',
+        saved.id,
+        'text',
+        25,
+        35,
+        null,
+        null,
+        'Act one',
+        '#273043',
+        32,
+        'sans',
+        'bold',
+        'italic',
+        1,
+      ],
+    );
+    expect(mockClientQuery).toHaveBeenCalledWith(
       expect.stringContaining('INSERT INTO characters'),
       ['character-1', saved.id, 'Mira', 'An investigator.', 'Allies', '', false, 0],
     );
@@ -588,6 +652,25 @@ describe('StoriesRepository', () => {
           conditions: [],
         });
         value.interactions.splice(1, 1);
+        const frame = value.graphDecorations?.find(({ id }) => id === 'frame-1');
+        if (frame?.kind === 'frame') {
+          frame.position = { x: 15, y: 25 };
+          frame.width = 500;
+        }
+        value.graphDecorations = [
+          frame!,
+          {
+            id: 'text-2',
+            kind: 'text',
+            position: { x: 70, y: 80 },
+            color: '#123456',
+            text: 'New label',
+            fontSize: 24,
+            fontFamily: 'serif',
+            fontWeight: 'normal',
+            fontStyle: 'italic',
+          },
+        ];
         return value;
       },
       ownerId,
@@ -619,6 +702,35 @@ describe('StoriesRepository', () => {
     expect(mockClientQuery).toHaveBeenCalledWith(
       'UPDATE triggers SET conditions = $2 WHERE id = $1',
       ['trigger-1', JSON.stringify([{ interactionId: 'interaction-1', hasBeenVisited: false }])],
+    );
+    expect(mockClientQuery).toHaveBeenCalledWith(
+      'DELETE FROM graph_decorations WHERE id = $1 AND story_id = $2',
+      ['text-1', saved.id],
+    );
+    expect(mockClientQuery).toHaveBeenCalledWith(
+      expect.stringContaining(
+        'UPDATE graph_decorations SET position_x = $2, position_y = $3, width = $4',
+      ),
+      ['frame-1', 15, 25, 500],
+    );
+    expect(mockClientQuery).toHaveBeenCalledWith(
+      expect.stringContaining('INSERT INTO graph_decorations'),
+      [
+        'text-2',
+        saved.id,
+        'text',
+        70,
+        80,
+        null,
+        null,
+        'New label',
+        '#123456',
+        24,
+        'serif',
+        'normal',
+        'italic',
+        1,
+      ],
     );
   });
 

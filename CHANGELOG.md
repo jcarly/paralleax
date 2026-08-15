@@ -1,7 +1,16 @@
 # Changelog
 
+## 2026-08-15
+
+- Changed story graph panning to use middle-button dragging or Space plus
+  primary-button dragging, preserving primary drag for authored graph elements.
+
 ## 2026-08-14
 
+- Added persisted visual graph decorations with movable/resizable colored frames,
+  configurable text labels, inspector editing, English/French UI copy, and a
+  dedicated relational migration. Decorations render behind narrative nodes and
+  remain excluded from reader and trigger semantics.
 - Made linked trigger markers draggable on the story graph, with optimistic and
   relational position persistence, grouped OR-variant movement, and automatic
   placement compatibility for existing stories.

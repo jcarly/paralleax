@@ -5,6 +5,7 @@ import {
   resolveStoryAccess,
   type ItemDefinitionStat,
   type ItemStatEffect,
+  type GraphDecoration,
   type ReaderProgress,
   type ReaderProgressState,
   type Story,
@@ -52,6 +53,22 @@ type InteractionRow = {
   location_id: string | null;
   duration_minutes: number;
   item_stat_effects: ItemStatEffect[];
+  sort_order: number;
+};
+type GraphDecorationRow = {
+  id: string;
+  story_id: string;
+  kind: GraphDecoration['kind'];
+  position_x: number;
+  position_y: number;
+  width: number | null;
+  height: number | null;
+  text_content: string | null;
+  color: string;
+  font_size: number | null;
+  font_family: 'sans' | 'serif' | 'monospace' | 'display' | null;
+  font_weight: 'normal' | 'bold' | null;
+  font_style: 'normal' | 'italic' | null;
   sort_order: number;
 };
 type LocationRow = {
@@ -465,6 +482,13 @@ export class StoriesRepository {
          ORDER BY story_id, sort_order`,
       [storyIds],
     );
+    const graphDecorations = await queryable.query<GraphDecorationRow>(
+      `SELECT id, story_id, kind, position_x, position_y, width, height,
+              text_content, color, font_size, font_family, font_weight, font_style, sort_order
+         FROM graph_decorations WHERE story_id = ANY($1::text[])
+         ORDER BY story_id, sort_order`,
+      [storyIds],
+    );
     const locations = await queryable.query<LocationRow>(
       `SELECT id, story_id, name, description, category, image_url, sort_order
          FROM locations WHERE story_id = ANY($1::text[])
@@ -554,6 +578,7 @@ export class StoriesRepository {
       ({ output_interaction_id }) => output_interaction_id,
     );
     const interactionsByStory = groupBy(interactions.rows, ({ story_id }) => story_id);
+    const graphDecorationsByStory = groupBy(graphDecorations.rows, ({ story_id }) => story_id);
     const locationsByStory = groupBy(locations.rows, ({ story_id }) => story_id);
     const charactersByStory = groupBy(characters.rows, ({ story_id }) => story_id);
     const statDefinitionsByStory = groupBy(statDefinitions.rows, ({ story_id }) => story_id);
@@ -589,6 +614,28 @@ export class StoriesRepository {
       startDateTime: row.start_date_time,
       createdAt: iso(row.created_at),
       updatedAt: iso(row.updated_at),
+      graphDecorations: (graphDecorationsByStory.get(row.id) ?? []).map((decoration) =>
+        decoration.kind === 'frame'
+          ? {
+              id: decoration.id,
+              kind: 'frame',
+              position: { x: decoration.position_x, y: decoration.position_y },
+              color: decoration.color,
+              width: decoration.width!,
+              height: decoration.height!,
+            }
+          : {
+              id: decoration.id,
+              kind: 'text',
+              position: { x: decoration.position_x, y: decoration.position_y },
+              color: decoration.color,
+              text: decoration.text_content!,
+              fontSize: decoration.font_size!,
+              fontFamily: decoration.font_family!,
+              fontWeight: decoration.font_weight!,
+              fontStyle: decoration.font_style!,
+            },
+      ),
       locations: (locationsByStory.get(row.id) ?? []).map((location) => ({
         id: location.id,
         name: location.name,

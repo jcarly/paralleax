@@ -308,6 +308,18 @@ Possible elements:
 
 Groups are not part of the MVP implementation.
 
+### Graph Decoration
+
+A graph decoration is authored visual layout metadata stored with a story. It is
+either a colored frame with a position and dimensions, or a text label with a
+position, color, size, font family, weight, and style.
+
+Decorations are deliberately independent from interactions and triggers. A frame
+does not group, own, target, or change the reachability of elements inside it, and
+a text decoration is not narrative content shown to readers. Both kinds are
+projected behind narrative graph elements and never participate in reader
+execution, trigger evaluation, or progress replay.
+
 ### Annotation
 
 An annotation is authoring metadata.

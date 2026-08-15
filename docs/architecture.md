@@ -254,6 +254,8 @@ component:
   workflows.
 - `storyGraph.ts`: projection from the domain story model to React Flow
   interaction nodes, trigger nodes, and trigger edges.
+- `features/graph-decorations/`: focused projection, rendering, resizing, and
+  inspector UI for authored frame and text decorations.
 - `storySelection.ts`: selected interaction and trigger lookup helpers.
 - `storyConnection.ts`: canvas connection validation and created-trigger lookup.
 - `storyTriggerInput.ts`: deletion planning for one trigger input link.
@@ -285,6 +287,11 @@ interaction nodes, graph edges, dragging, zooming, panning, and connection
 gestures. These needs match React Flow's native primitives without forcing the
 narrative model into a UI-specific shape.
 
+Canvas panning uses the middle mouse button directly, or the primary button while
+the Space key is held. Primary dragging remains available for authored graph
+elements and does not pan an empty canvas by itself. This is web interaction
+configuration only and is never persisted in the story model.
+
 The important boundary is that React Flow must remain a canvas interaction and
 rendering layer. Stories, interactions, triggers, and reader rules must stay in
 the Paralleax domain model and shared packages. The application may map domain
@@ -302,6 +309,14 @@ interaction. Each input edge connects an interaction to that trigger node, and
 the trigger node connects to the output interaction. Root triggers remain markers
 on the interaction itself. The underlying domain model still owns trigger
 semantics; React Flow nodes only make the relationships easier to manipulate.
+
+Graph decorations cross the same boundary as authored graph positions but do not
+carry narrative meaning. The shared `GraphDecoration` union and pure update/delete
+operations are framework-independent; the API persists them in the relational
+`graph_decorations` table; and the web app projects them as React Flow nodes with
+a negative layer beneath interactions and trigger markers. Frame dimensions are
+saved when React Flow resizing ends. React Flow node data remains a projection,
+not the persistence source of truth.
 
 A warning sign would be changing trigger semantics only to match React Flow
 constraints. In that case, the integration should be revisited before the UI
@@ -441,7 +456,7 @@ and merge semantics.
 The current PostgreSQL schema stores Story, Location, Character, reusable Stat
 Definition (including its hourly change rate), Character Stat Assignment,
 Item Definition, story-local Item Instance, Interaction, Interaction Stat Effect,
-Trigger, and trigger input state in
+Trigger, trigger input, and Graph Decoration state in
 relational tables. Interaction-to-location, interaction-character, and stat
 effect references use same-story composite foreign keys. Time-based stat changes
 are calculated in the shared engine from interaction durations rather than

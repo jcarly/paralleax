@@ -1171,4 +1171,48 @@ export const databaseMigrations: DatabaseMigration[] = [
         CHECK ((position_x IS NULL) = (position_y IS NULL));
     `,
   },
+  {
+    id: '202608140029_graph_decorations',
+    sql: `
+      CREATE TABLE graph_decorations (
+        id text PRIMARY KEY,
+        story_id text NOT NULL REFERENCES stories(id) ON DELETE CASCADE,
+        kind text NOT NULL,
+        position_x double precision NOT NULL,
+        position_y double precision NOT NULL,
+        width double precision,
+        height double precision,
+        text_content text,
+        color text NOT NULL,
+        font_size integer,
+        font_family text,
+        font_weight text,
+        font_style text,
+        sort_order integer NOT NULL,
+        CONSTRAINT graph_decorations_kind_allowed CHECK (kind IN ('frame', 'text')),
+        CONSTRAINT graph_decorations_color_hex CHECK (color ~ '^#[0-9A-Fa-f]{6}$'),
+        CONSTRAINT graph_decorations_shape CHECK (
+          (
+            kind = 'frame'
+            AND width >= 120 AND height >= 80
+            AND text_content IS NULL AND font_size IS NULL AND font_family IS NULL
+            AND font_weight IS NULL AND font_style IS NULL
+          )
+          OR
+          (
+            kind = 'text'
+            AND width IS NULL AND height IS NULL
+            AND text_content IS NOT NULL AND char_length(text_content) <= 2000
+            AND font_size BETWEEN 10 AND 96
+            AND font_family IN ('sans', 'serif', 'monospace', 'display')
+            AND font_weight IN ('normal', 'bold')
+            AND font_style IN ('normal', 'italic')
+          )
+        )
+      );
+
+      CREATE INDEX graph_decorations_story_order_idx
+        ON graph_decorations(story_id, sort_order);
+    `,
+  },
 ];

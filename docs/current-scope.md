@@ -13,6 +13,9 @@ Paralleax currently includes:
   stat effects, item effects, item-stat effects, and duration.
 - Triggers with multiple input interactions, typed conditions, and optional saved
   positions for linked graph markers.
+- Persisted visual graph decorations: movable, resizable colored frames and movable
+  text with configurable color, size, family, weight, and style. Decorations stay
+  behind interactions and trigger markers and have no reader semantics.
 - Reader execution and persisted authenticated reader progress.
 - Story-local deterministic calendar time.
 - Locations.

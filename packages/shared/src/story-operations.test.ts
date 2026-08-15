@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   deleteInteractionFromStory,
+  deleteGraphDecorationFromStory,
   deleteTriggerInStory,
   createDemoStory,
   ensureStoryInteractionPositions,
@@ -19,6 +20,7 @@ import {
   mergeServerStory,
   normalizeTriggerInputIds,
   updateTriggerInStory,
+  updateGraphDecorationInStory,
   type Story,
 } from './index';
 
@@ -61,6 +63,78 @@ function storyFixture(): Story {
 }
 
 describe('shared story operations', () => {
+  it('updates and deletes graph decorations without changing narrative interactions', () => {
+    const story = storyFixture();
+    story.graphDecorations = [
+      {
+        id: 'frame-1',
+        kind: 'frame',
+        position: { x: 20, y: 30 },
+        color: '#5b6ee1',
+        width: 420,
+        height: 240,
+      },
+      {
+        id: 'text-1',
+        kind: 'text',
+        position: { x: 40, y: 50 },
+        color: '#273043',
+        text: 'Act one',
+        fontSize: 32,
+        fontFamily: 'sans',
+        fontWeight: 'normal',
+        fontStyle: 'normal',
+      },
+    ];
+    const interactions = structuredClone(story.interactions);
+
+    const updated = updateGraphDecorationInStory(story, 'text-1', {
+      text: 'Opening act',
+      fontSize: 44,
+      fontWeight: 'bold',
+      position: { x: 90, y: 110 },
+      width: 999,
+    });
+    const deleted = deleteGraphDecorationFromStory(updated, 'frame-1');
+
+    expect(deleted.graphDecorations).toEqual([
+      {
+        id: 'text-1',
+        kind: 'text',
+        position: { x: 90, y: 110 },
+        color: '#273043',
+        text: 'Opening act',
+        fontSize: 44,
+        fontFamily: 'sans',
+        fontWeight: 'bold',
+        fontStyle: 'normal',
+      },
+    ]);
+    expect(deleted.interactions).toEqual(interactions);
+  });
+
+  it('keeps graph decorations out of reader availability and replay state', () => {
+    const plain = storyFixture();
+    const decorated = structuredClone(plain);
+    decorated.graphDecorations = [
+      {
+        id: 'frame-1',
+        kind: 'frame',
+        position: { x: 0, y: 0 },
+        color: '#5b6ee1',
+        width: 420,
+        height: 240,
+      },
+    ];
+
+    expect(getAvailableInteractions(decorated, 'root', ['root'])).toEqual(
+      getAvailableInteractions(plain, 'root', ['root']),
+    );
+    expect(buildReaderProgressState(decorated, ['root', 'middle'])).toEqual(
+      buildReaderProgressState(plain, ['root', 'middle']),
+    );
+  });
+
   it('creates a demo story covering roots, branches, multi-input triggers, and conditions', () => {
     const story = createDemoStory('demo-story', '2026-07-14T08:00:00.000Z');
 

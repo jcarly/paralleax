@@ -8,14 +8,17 @@ import {
   isStoryDateTime,
   isStoryTime,
   deleteInteractionFromStory,
+  deleteGraphDecorationFromStory,
   deleteTriggerInStory,
   ensureStoryInteractionPositions,
   normalizeTriggerInputIds,
   updateTriggerInStory,
+  updateGraphDecorationInStory,
   type CharacterMutationResult,
   type CharacterItemMutationResult,
   type CharacterStatMutationResult,
   type InteractionMutationResult,
+  type GraphDecorationMutationResult,
   type ItemDefinitionMutationResult,
   type ItemInstance,
   type LocationMutationResult,
@@ -28,6 +31,7 @@ import {
 } from '@paralleax/shared';
 import {
   CreateInteractionDto,
+  CreateGraphDecorationDto,
   CreateCharacterDto,
   CreateCharacterItemDto,
   CreateCharacterStatDto,
@@ -39,6 +43,7 @@ import {
   CreateTriggerDto,
   SaveReaderProgressDto,
   UpdateInteractionDto,
+  UpdateGraphDecorationDto,
   UpdateCharacterDto,
   UpdateCharacterStatDto,
   UpdateLocationDto,
@@ -52,6 +57,7 @@ import {
 } from './dto/stories.dto';
 import { sanitizeRichText } from './rich-text';
 import { StoriesRepository } from './stories.repository';
+import { buildGraphDecoration } from './application/graph-decorations';
 
 @Injectable()
 export class StoriesService {
@@ -316,6 +322,52 @@ export class StoriesService {
       (story) => {
         this.interaction(story, interactionId);
         return deleteInteractionFromStory(story, interactionId);
+      },
+      userId,
+    );
+  }
+  async createGraphDecoration(
+    storyId: string,
+    input: CreateGraphDecorationDto,
+    userId: string,
+  ): Promise<GraphDecorationMutationResult> {
+    const decorationId = randomUUID();
+    const story = await this.update(
+      storyId,
+      (story) => {
+        (story.graphDecorations ??= []).push(buildGraphDecoration(decorationId, input));
+        return story;
+      },
+      userId,
+    );
+    return this.graphDecorationResult(story, decorationId);
+  }
+  async updateGraphDecoration(
+    storyId: string,
+    decorationId: string,
+    input: UpdateGraphDecorationDto,
+    userId: string,
+  ): Promise<GraphDecorationMutationResult> {
+    const story = await this.update(
+      storyId,
+      (story) => {
+        this.graphDecoration(story, decorationId);
+        return updateGraphDecorationInStory(story, decorationId, input);
+      },
+      userId,
+    );
+    return this.graphDecorationResult(story, decorationId);
+  }
+  async deleteGraphDecoration(
+    storyId: string,
+    decorationId: string,
+    userId: string,
+  ): Promise<Story> {
+    return this.update(
+      storyId,
+      (story) => {
+        this.graphDecoration(story, decorationId);
+        return deleteGraphDecorationFromStory(story, decorationId);
       },
       userId,
     );
@@ -835,6 +887,11 @@ export class StoriesService {
     if (!item) throw new NotFoundException('Interaction not found');
     return item;
   }
+  private graphDecoration(story: Story, id: string) {
+    const decoration = (story.graphDecorations ?? []).find((item) => item.id === id);
+    if (!decoration) throw new NotFoundException('Graph decoration not found');
+    return decoration;
+  }
   private location(story: Story, id: string) {
     const location = (story.locations ?? []).find((item) => item.id === id);
     if (!location) throw new NotFoundException('Location not found');
@@ -1007,6 +1064,13 @@ export class StoriesService {
   private interactionResult(story: Story, interactionId: string): InteractionMutationResult {
     return {
       interaction: structuredClone(this.interaction(story, interactionId)),
+      revision: story.revision ?? 1,
+      updatedAt: story.updatedAt,
+    };
+  }
+  private graphDecorationResult(story: Story, decorationId: string): GraphDecorationMutationResult {
+    return {
+      decoration: structuredClone(this.graphDecoration(story, decorationId)),
       revision: story.revision ?? 1,
       updatedAt: story.updatedAt,
     };

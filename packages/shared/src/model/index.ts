@@ -1,5 +1,6 @@
 export * from './characters.js';
 export * from './common.js';
+export * from './graph-decorations.js';
 export * from './interactions.js';
 export * from './items.js';
 export * from './locations.js';

@@ -1,5 +1,6 @@
 import type {
   Character,
+  GraphDecoration,
   Interaction,
   ItemDefinition,
   Location,
@@ -10,6 +11,7 @@ import type {
 import type { Queryable } from './stories.persistence.types';
 
 export async function replaceStoryGraph(client: Queryable, story: Story) {
+  await client.query('DELETE FROM graph_decorations WHERE story_id = $1', [story.id]);
   await client.query('DELETE FROM interactions WHERE story_id = $1', [story.id]);
   await client.query('DELETE FROM characters WHERE story_id = $1', [story.id]);
   await client.query('DELETE FROM item_definitions WHERE story_id = $1', [story.id]);
@@ -38,6 +40,9 @@ export async function replaceStoryGraph(client: Queryable, story: Story) {
     if (item.parentItemId && item.relationshipType) {
       await insertItemRelationship(client, story.id, item, sortOrder);
     }
+  }
+  for (const [index, decoration] of (story.graphDecorations ?? []).entries()) {
+    await insertGraphDecoration(client, story.id, decoration, index);
   }
   await insertInteractionGraph(client, story);
 }
@@ -192,6 +197,7 @@ export async function persistStoryDifference(client: Queryable, before: Story, a
   await persistStatDefinitionDifference(client, before, after);
   await persistItemDefinitionDifference(client, before, after);
   await persistCharacterDifference(client, before, after);
+  await persistGraphDecorationDifference(client, before, after);
 
   const beforeInteractions = new Map(before.interactions.map((item) => [item.id, item]));
   const afterInteractions = new Map(after.interactions.map((item) => [item.id, item]));
@@ -238,6 +244,130 @@ export async function persistStoryDifference(client: Queryable, before: Story, a
       await replaceInteractionItemEffects(client, after.id, interaction);
     }
     await persistTriggerDifference(client, after.id, previous, interaction);
+  }
+}
+
+async function insertGraphDecoration(
+  client: Queryable,
+  storyId: string,
+  decoration: GraphDecoration,
+  sortOrder: number,
+) {
+  await client.query(
+    `INSERT INTO graph_decorations
+     (id, story_id, kind, position_x, position_y, width, height, text_content, color,
+      font_size, font_family, font_weight, font_style, sort_order)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
+    [
+      decoration.id,
+      storyId,
+      decoration.kind,
+      decoration.position.x,
+      decoration.position.y,
+      decoration.kind === 'frame' ? decoration.width : null,
+      decoration.kind === 'frame' ? decoration.height : null,
+      decoration.kind === 'text' ? decoration.text : null,
+      decoration.color,
+      decoration.kind === 'text' ? decoration.fontSize : null,
+      decoration.kind === 'text' ? decoration.fontFamily : null,
+      decoration.kind === 'text' ? decoration.fontWeight : null,
+      decoration.kind === 'text' ? decoration.fontStyle : null,
+      sortOrder,
+    ],
+  );
+}
+
+async function persistGraphDecorationDifference(client: Queryable, before: Story, after: Story) {
+  const beforeDecorations = new Map(
+    (before.graphDecorations ?? []).map((decoration) => [decoration.id, decoration]),
+  );
+  const afterDecorations = new Map(
+    (after.graphDecorations ?? []).map((decoration) => [decoration.id, decoration]),
+  );
+
+  for (const decoration of before.graphDecorations ?? []) {
+    if (!afterDecorations.has(decoration.id)) {
+      await client.query('DELETE FROM graph_decorations WHERE id = $1 AND story_id = $2', [
+        decoration.id,
+        after.id,
+      ]);
+    }
+  }
+
+  for (const [index, decoration] of (after.graphDecorations ?? []).entries()) {
+    const previous = beforeDecorations.get(decoration.id);
+    if (!previous) {
+      await insertGraphDecoration(client, after.id, decoration, index);
+      continue;
+    }
+
+    const changes: string[] = [];
+    const values: unknown[] = [decoration.id];
+    addChange(changes, values, 'position_x', previous.position.x, decoration.position.x);
+    addChange(changes, values, 'position_y', previous.position.y, decoration.position.y);
+    addChange(changes, values, 'color', previous.color, decoration.color);
+    addChange(
+      changes,
+      values,
+      'width',
+      previous.kind === 'frame' ? previous.width : null,
+      decoration.kind === 'frame' ? decoration.width : null,
+    );
+    addChange(
+      changes,
+      values,
+      'height',
+      previous.kind === 'frame' ? previous.height : null,
+      decoration.kind === 'frame' ? decoration.height : null,
+    );
+    addChange(
+      changes,
+      values,
+      'text_content',
+      previous.kind === 'text' ? previous.text : null,
+      decoration.kind === 'text' ? decoration.text : null,
+    );
+    addChange(
+      changes,
+      values,
+      'font_size',
+      previous.kind === 'text' ? previous.fontSize : null,
+      decoration.kind === 'text' ? decoration.fontSize : null,
+    );
+    addChange(
+      changes,
+      values,
+      'font_family',
+      previous.kind === 'text' ? previous.fontFamily : null,
+      decoration.kind === 'text' ? decoration.fontFamily : null,
+    );
+    addChange(
+      changes,
+      values,
+      'font_weight',
+      previous.kind === 'text' ? previous.fontWeight : null,
+      decoration.kind === 'text' ? decoration.fontWeight : null,
+    );
+    addChange(
+      changes,
+      values,
+      'font_style',
+      previous.kind === 'text' ? previous.fontStyle : null,
+      decoration.kind === 'text' ? decoration.fontStyle : null,
+    );
+    addChange(
+      changes,
+      values,
+      'sort_order',
+      (before.graphDecorations ?? []).findIndex(({ id }) => id === decoration.id),
+      index,
+    );
+    if (changes.length > 0) {
+      await client.query(
+        `UPDATE graph_decorations SET ${changes.join(', ')} WHERE id = $1`,
+        values,
+      );
+    }
   }
 }
 

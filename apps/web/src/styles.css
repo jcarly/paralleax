@@ -541,6 +541,17 @@ header span {
   z-index: 4;
   box-shadow: var(--shadow-card);
 }
+.canvas-decoration-actions {
+  position: absolute;
+  z-index: 4;
+  top: 0.8rem;
+  left: 7.7rem;
+  display: flex;
+  gap: 0.45rem;
+}
+.canvas-decoration-actions button {
+  box-shadow: var(--shadow-card);
+}
 .canvas-comment-action {
   position: absolute;
   top: 0.8rem;
@@ -942,6 +953,30 @@ header span {
 .inspector textarea {
   line-height: 1.55;
   resize: vertical;
+}
+.graph-decoration-inspector input[type='color'] {
+  display: block;
+  width: 100%;
+  height: 2.6rem;
+  margin-top: 0.35rem;
+  border: 1px solid var(--color-control-border);
+  border-radius: 8px;
+  background: var(--color-surface-secondary);
+  cursor: pointer;
+}
+.graph-decoration-size-fields,
+.graph-decoration-style-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+.graph-decoration-style-fields label {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+.graph-decoration-style-fields input {
+  margin: 0;
 }
 
 .rich-text-editor {
@@ -1724,6 +1759,39 @@ header span {
   cursor: grab;
 }
 .react-flow__node-trigger.dragging .trigger-node .trigger-marker {
+  cursor: grabbing;
+}
+.react-flow__node-graphDecoration {
+  z-index: -1000 !important;
+}
+.graph-frame-decoration {
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  border: 2px dashed;
+  border-radius: 12px;
+}
+.graph-frame-decoration.selected {
+  border-style: solid;
+  box-shadow: 0 0 0 3px var(--color-primary-halo);
+}
+.graph-text-decoration {
+  max-width: 520px;
+  padding: 0.2rem 0.35rem;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  line-height: 1.15;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.graph-text-decoration.selected {
+  border-color: currentColor;
+  box-shadow: 0 0 0 3px var(--color-primary-halo);
+}
+.react-flow__node-graphDecoration.draggable {
+  cursor: grab;
+}
+.react-flow__node-graphDecoration.dragging {
   cursor: grabbing;
 }
 .trigger-node-handle {

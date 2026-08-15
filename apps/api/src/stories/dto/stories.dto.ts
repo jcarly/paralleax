@@ -1,5 +1,12 @@
 import { Type } from 'class-transformer';
-import { MAX_INTERACTION_BODY_LENGTH } from '@paralleax/shared';
+import {
+  MAX_GRAPH_DECORATION_TEXT_LENGTH,
+  MAX_GRAPH_TEXT_SIZE,
+  MAX_INTERACTION_BODY_LENGTH,
+  MIN_GRAPH_FRAME_HEIGHT,
+  MIN_GRAPH_FRAME_WIDTH,
+  MIN_GRAPH_TEXT_SIZE,
+} from '@paralleax/shared';
 import type {
   StoryCommentPolicy,
   StoryCollaboratorRole,
@@ -17,6 +24,7 @@ import {
   IsString,
   Matches,
   Min,
+  Max,
   ArrayMaxSize,
   MaxLength,
   ValidateIf,
@@ -71,6 +79,80 @@ export class CreateInteractionDto {
   @ValidateNested()
   @Type(() => PositionDto)
   position?: PositionDto;
+}
+export class CreateGraphDecorationDto {
+  @IsIn(['frame', 'text']) kind!: 'frame' | 'text';
+  @IsObject()
+  @ValidateNested()
+  @Type(() => PositionDto)
+  position!: PositionDto;
+  @ValidateIf((_, value) => value !== undefined)
+  @IsString()
+  @Matches(/^#[0-9a-fA-F]{6}$/)
+  color?: string;
+  @ValidateIf((_, value) => value !== undefined)
+  @IsNumber()
+  @Min(MIN_GRAPH_FRAME_WIDTH)
+  width?: number;
+  @ValidateIf((_, value) => value !== undefined)
+  @IsNumber()
+  @Min(MIN_GRAPH_FRAME_HEIGHT)
+  height?: number;
+  @ValidateIf((_, value) => value !== undefined)
+  @IsString()
+  @MaxLength(MAX_GRAPH_DECORATION_TEXT_LENGTH)
+  text?: string;
+  @ValidateIf((_, value) => value !== undefined)
+  @IsInt()
+  @Min(MIN_GRAPH_TEXT_SIZE)
+  @Max(MAX_GRAPH_TEXT_SIZE)
+  fontSize?: number;
+  @ValidateIf((_, value) => value !== undefined)
+  @IsIn(['sans', 'serif', 'monospace', 'display'])
+  fontFamily?: 'sans' | 'serif' | 'monospace' | 'display';
+  @ValidateIf((_, value) => value !== undefined)
+  @IsIn(['normal', 'bold'])
+  fontWeight?: 'normal' | 'bold';
+  @ValidateIf((_, value) => value !== undefined)
+  @IsIn(['normal', 'italic'])
+  fontStyle?: 'normal' | 'italic';
+}
+export class UpdateGraphDecorationDto {
+  @ValidateIf((_, value) => value !== undefined)
+  @IsObject()
+  @ValidateNested()
+  @Type(() => PositionDto)
+  position?: PositionDto;
+  @ValidateIf((_, value) => value !== undefined)
+  @IsString()
+  @Matches(/^#[0-9a-fA-F]{6}$/)
+  color?: string;
+  @ValidateIf((_, value) => value !== undefined)
+  @IsNumber()
+  @Min(MIN_GRAPH_FRAME_WIDTH)
+  width?: number;
+  @ValidateIf((_, value) => value !== undefined)
+  @IsNumber()
+  @Min(MIN_GRAPH_FRAME_HEIGHT)
+  height?: number;
+  @ValidateIf((_, value) => value !== undefined)
+  @IsString()
+  @MaxLength(MAX_GRAPH_DECORATION_TEXT_LENGTH)
+  text?: string;
+  @ValidateIf((_, value) => value !== undefined)
+  @IsInt()
+  @Min(MIN_GRAPH_TEXT_SIZE)
+  @Max(MAX_GRAPH_TEXT_SIZE)
+  fontSize?: number;
+  @ValidateIf((_, value) => value !== undefined)
+  @IsIn(['sans', 'serif', 'monospace', 'display'])
+  fontFamily?: 'sans' | 'serif' | 'monospace' | 'display';
+  @ValidateIf((_, value) => value !== undefined)
+  @IsIn(['normal', 'bold'])
+  fontWeight?: 'normal' | 'bold';
+  @ValidateIf((_, value) => value !== undefined)
+  @IsIn(['normal', 'italic'])
+  fontStyle?: 'normal' | 'italic';
 }
 export class UpdateInteractionDto {
   @ValidateIf((_, value) => value !== undefined)

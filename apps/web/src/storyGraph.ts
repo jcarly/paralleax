@@ -3,10 +3,12 @@ import type { Story } from '@paralleax/shared';
 import type { InteractionNodeData } from './components/InteractionNode';
 import type { TriggerNodeData } from './components/TriggerNode';
 import type { CommentPinFlowNode } from './features/comments/CommentPinNode';
+import type { GraphDecorationFlowNode } from './features/graph-decorations/GraphDecorationNode';
 
 export type InteractionFlowNode = Node<InteractionNodeData, 'interaction'>;
 export type TriggerFlowNode = Node<TriggerNodeData, 'trigger'>;
-export type StoryFlowNode = InteractionFlowNode | TriggerFlowNode | CommentPinFlowNode;
+export type StoryFlowNode =
+  InteractionFlowNode | TriggerFlowNode | GraphDecorationFlowNode | CommentPinFlowNode;
 
 export interface SelectedTrigger extends Record<string, unknown> {
   interactionId: string;
