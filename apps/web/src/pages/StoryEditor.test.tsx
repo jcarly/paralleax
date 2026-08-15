@@ -261,6 +261,10 @@ vi.mock('@xyflow/react', async () => {
       const [nodes, setNodes] = React.useState(initialNodes);
       return [nodes, setNodes, vi.fn()];
     },
+    useEdgesState: (initialEdges: any[]) => {
+      const [edges, setEdges] = React.useState(initialEdges);
+      return [edges, setEdges, vi.fn()];
+    },
   };
 });
 

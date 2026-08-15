@@ -252,8 +252,20 @@ test.describe('Story editor', () => {
       })
       .not.toEqual({ x: Math.round(markerBefore!.x), y: Math.round(markerBefore!.y) });
     await expect.poll(() => outputPath.getAttribute('d')).not.toBe(pathBefore);
+    const markerDuring = await marker.boundingBox();
+    const pathDuring = await outputPath.getAttribute('d');
+    expect(markerDuring).not.toBeNull();
+    expect(pathDuring).not.toBeNull();
 
     await page.mouse.up();
+
+    await expect
+      .poll(async () => {
+        const currentBox = await marker.boundingBox();
+        return currentBox ? { x: Math.round(currentBox.x), y: Math.round(currentBox.y) } : null;
+      })
+      .toEqual({ x: Math.round(markerDuring!.x), y: Math.round(markerDuring!.y) });
+    await expect.poll(() => outputPath.getAttribute('d')).toBe(pathDuring);
   });
 
   test('pans the graph with the middle button or Space plus primary drag', async ({ page }) => {

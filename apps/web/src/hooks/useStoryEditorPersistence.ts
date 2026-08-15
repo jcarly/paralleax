@@ -111,26 +111,31 @@ export function useStoryEditorPersistence(storyId: string) {
     setStory((current) => (current ? mergeIncomingStory(current, next) : next));
   }
 
-  async function saveTrigger(
-    interactionId: string,
-    triggerId: string,
-    inputInteractionIds: string[],
-    conditions: TriggerCondition[],
-  ) {
-    const nextInputs = [...new Set(inputInteractionIds)];
-    nextInputs.forEach((inputId) =>
-      deletedTriggerInputKeys.current.delete(`${triggerId}:${inputId}`),
-    );
-    const patch = { inputInteractionIds: nextInputs, conditions };
-    setStory((current) =>
-      current ? updateTriggerInStory(current, interactionId, triggerId, patch) : current,
-    );
-    const next = await trackSave(() => api.updateTrigger(storyId, interactionId, triggerId, patch));
-    if (!next) return;
-    setStory((current) =>
-      current ? applyTriggerResult(current, next, interactionId, triggerId) : current,
-    );
-  }
+  const saveTrigger = useCallback(
+    async (
+      interactionId: string,
+      triggerId: string,
+      inputInteractionIds: string[],
+      conditions: TriggerCondition[],
+    ) => {
+      const nextInputs = [...new Set(inputInteractionIds)];
+      nextInputs.forEach((inputId) =>
+        deletedTriggerInputKeys.current.delete(`${triggerId}:${inputId}`),
+      );
+      const patch = { inputInteractionIds: nextInputs, conditions };
+      setStory((current) =>
+        current ? updateTriggerInStory(current, interactionId, triggerId, patch) : current,
+      );
+      const next = await trackSave(() =>
+        api.updateTrigger(storyId, interactionId, triggerId, patch),
+      );
+      if (!next) return;
+      setStory((current) =>
+        current ? applyTriggerResult(current, next, interactionId, triggerId) : current,
+      );
+    },
+    [storyId, trackSave],
+  );
 
   async function moveTrigger(interactionId: string, triggerIds: string[], position: Position) {
     if (!story || triggerIds.length === 0) return;
@@ -221,17 +226,16 @@ export function useStoryEditorPersistence(storyId: string) {
     setStory((current) => (current ? mergeIncomingStory(current, nextStory) : nextStory));
   }
 
-  async function deleteTriggerInput(
-    interactionId: string,
-    triggerId: string,
-    inputInteractionId: string,
-  ) {
-    const plan = planTriggerInputDeletion(story, interactionId, triggerId, inputInteractionId);
-    if (!plan) return;
+  const deleteTriggerInput = useCallback(
+    async (interactionId: string, triggerId: string, inputInteractionId: string) => {
+      const plan = planTriggerInputDeletion(story, interactionId, triggerId, inputInteractionId);
+      if (!plan) return;
 
-    deletedTriggerInputKeys.current.add(`${triggerId}:${inputInteractionId}`);
-    await saveTrigger(interactionId, triggerId, plan.inputInteractionIds, plan.conditions);
-  }
+      deletedTriggerInputKeys.current.add(`${triggerId}:${inputInteractionId}`);
+      await saveTrigger(interactionId, triggerId, plan.inputInteractionIds, plan.conditions);
+    },
+    [saveTrigger, story],
+  );
 
   const connectInteractions = useCallback(
     async (connection: Connection) => {

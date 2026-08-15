@@ -310,11 +310,15 @@ the trigger node connects to the output interaction. Root triggers remain marker
 on the interaction itself. The underlying domain model still owns trigger
 semantics; React Flow nodes only make the relationships easier to manipulate.
 
-While an interaction is dragged, `StoryEditor` creates an in-memory story
-projection with the transient interaction position. Trigger nodes and edges are
-rebuilt from that projection so automatic marker placement and routing remain
-visible throughout the gesture. The persistence hook still receives only the
-final position when the drag ends.
+While an interaction is dragged, `StoryEditor` leaves the canonical Story and
+the complete React Flow projection unchanged. A focused graph helper replaces
+only connected automatic trigger nodes whose positions actually change; the
+dragged interaction and React Flow then keep their existing node identities.
+Connected edge handles are projected from the same transient position so their
+routing matches the canonical projection before the mouse is released. Manually
+positioned and unrelated nodes and edges keep their existing references. The
+persistence hook still receives only the final interaction position when the
+drag ends.
 
 Graph decorations cross the same boundary as authored graph positions but do not
 carry narrative meaning. The shared `GraphDecoration` union and pure update/delete

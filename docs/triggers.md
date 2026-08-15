@@ -192,7 +192,12 @@ When an interaction moves, automatically placed linked trigger markers and their
 edge paths are projected from the transient drag position. This live preview does
 not write authored state; the interaction position is persisted only when the
 drag ends. A trigger with an explicitly saved position remains fixed while its
-connected arrows follow the moving interaction.
+connected arrows follow the moving interaction. The preview updates only the
+connected automatic marker nodes; unrelated interactions, decorations, comments,
+trigger markers, and edges retain their existing graph projection during the
+gesture. Connected edge handles use the same transient position as the marker,
+and the final drag frame is applied before persistence, so releasing the
+interaction does not change marker or arrow routing.
 
 Dropping a connection on empty canvas is a creation shortcut:
 

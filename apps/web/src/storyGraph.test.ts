@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { MarkerType } from '@xyflow/react';
 import type { Story } from '@paralleax/shared';
 import {
+  applyInteractionDragEdgePreview,
+  applyInteractionDragTriggerPreview,
   buildInteractionNodes,
   buildTriggerEdges,
   buildTriggerNodes,
@@ -221,6 +223,97 @@ describe('story graph mapping', () => {
       sourceHandle: 'routing-output-left',
       targetHandle: 'routing-input-right',
     });
+  });
+
+  it('updates only connected automatic trigger nodes during an interaction drag', () => {
+    const previewStory = structuredClone(story);
+    previewStory.interactions[1].triggers.push({
+      id: 'trigger-unrelated',
+      inputInteractionIds: ['interaction-3'],
+      conditions: [],
+    });
+    const nodes = [
+      ...buildInteractionNodes(previewStory, undefined),
+      ...buildTriggerNodes(previewStory),
+    ];
+    const affectedId = getTriggerNodeId('interaction-2', 'trigger-linked');
+    const unrelatedId = getTriggerNodeId('interaction-2', 'trigger-unrelated');
+    const affectedBefore = nodes.find((node) => node.id === affectedId);
+    const unrelatedBefore = nodes.find((node) => node.id === unrelatedId);
+
+    const preview = applyInteractionDragTriggerPreview(nodes, previewStory, 'interaction-1', {
+      x: 180,
+      y: 220,
+    });
+
+    expect(preview).not.toBe(nodes);
+    expect(preview.find((node) => node.id === affectedId)).not.toBe(affectedBefore);
+    expect(preview.find((node) => node.id === affectedId)?.position).not.toEqual(
+      affectedBefore?.position,
+    );
+    expect(preview.find((node) => node.id === unrelatedId)).toBe(unrelatedBefore);
+    nodes
+      .filter((node) => node.type === 'interaction')
+      .forEach((node) => expect(preview.find((candidate) => candidate.id === node.id)).toBe(node));
+  });
+
+  it('does not replace graph nodes when every affected trigger has a saved position', () => {
+    const positionedStory = structuredClone(story);
+    positionedStory.interactions[1].triggers[0].position = { x: 420, y: 468 };
+    const nodes = [
+      ...buildInteractionNodes(positionedStory, undefined),
+      ...buildTriggerNodes(positionedStory),
+    ];
+
+    expect(
+      applyInteractionDragTriggerPreview(nodes, positionedStory, 'interaction-1', {
+        x: 180,
+        y: 220,
+      }),
+    ).toBe(nodes);
+  });
+
+  it('previews the same edge handles that will be used after the drag is saved', () => {
+    const previewStory = structuredClone(story);
+    previewStory.interactions[1].triggers.push({
+      id: 'trigger-unrelated',
+      inputInteractionIds: ['interaction-3'],
+      conditions: [],
+    });
+    const edges = buildTriggerEdges(previewStory);
+    const finalPosition = { x: 700, y: 500 };
+    const preview = applyInteractionDragEdgePreview(
+      edges,
+      previewStory,
+      'interaction-1',
+      finalPosition,
+    );
+    const savedStory = structuredClone(previewStory);
+    savedStory.interactions[0].position = finalPosition;
+    const savedEdges = buildTriggerEdges(savedStory);
+    const unrelatedEdgeId = `${getTriggerNodeId(
+      'interaction-2',
+      'trigger-unrelated',
+    )}-interaction-3`;
+
+    expect(preview).not.toBe(edges);
+    expect(
+      preview.some(
+        (edge, index) =>
+          edge.sourceHandle !== edges[index].sourceHandle ||
+          edge.targetHandle !== edges[index].targetHandle,
+      ),
+    ).toBe(true);
+    preview.forEach((edge) => {
+      const savedEdge = savedEdges.find((candidate) => candidate.id === edge.id);
+      expect({ sourceHandle: edge.sourceHandle, targetHandle: edge.targetHandle }).toEqual({
+        sourceHandle: savedEdge?.sourceHandle,
+        targetHandle: savedEdge?.targetHandle,
+      });
+    });
+    expect(preview.find((edge) => edge.id === unrelatedEdgeId)).toBe(
+      edges.find((edge) => edge.id === unrelatedEdgeId),
+    );
   });
 
   it('projects open comments for an interaction and its root trigger independently', () => {

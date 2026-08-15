@@ -7,7 +7,9 @@
   empty with their selector open, display an explicit separator, and can be
   deleted without confirmation while the inspector remains open.
 - Added live trigger-marker and arrow projection while interactions are dragged,
-  without increasing persistence writes during the gesture.
+  without increasing persistence writes during the gesture, and limited preview
+  updates to connected automatic markers and edge handles to prevent whole-graph
+  flicker and post-drop routing jumps.
 - Changed story graph panning to use middle-button dragging or Space plus
   primary-button dragging, preserving primary drag for authored graph elements.
 
