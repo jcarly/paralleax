@@ -312,13 +312,17 @@ semantics; React Flow nodes only make the relationships easier to manipulate.
 
 While an interaction is dragged, `StoryEditor` leaves the canonical Story and
 the complete React Flow projection unchanged. A focused graph helper replaces
-only connected automatic trigger nodes whose positions actually change; the
-dragged interaction and React Flow then keep their existing node identities.
-Connected edge handles are projected from the same transient position so their
-routing matches the canonical projection before the mouse is released. Manually
-positioned and unrelated nodes and edges keep their existing references. The
-persistence hook still receives only the final interaction position when the
-drag ends.
+only connected trigger nodes whose positions actually change; the dragged
+interaction and React Flow then keep their existing node identities. Automatic
+markers use their transient geometric midpoint. A marker with a saved position
+follows the displacement of that midpoint through a distance-sensitive elastic
+ratio: nearby markers follow more closely, while deliberately distant markers
+retain more of their manual placement. Connected edge handles are projected from
+the same transient positions so their routing matches the canonical projection
+before the mouse is released. Unrelated nodes and edges keep their existing
+references. When the drag ends, the final interaction position and any adjusted
+saved trigger positions are optimistically persisted; automatic placement is not
+converted into authored trigger positions.
 
 Graph decorations cross the same boundary as authored graph positions but do not
 carry narrative meaning. The shared `GraphDecoration` union and pure update/delete
@@ -393,7 +397,10 @@ Linked trigger markers are draggable. Their optional saved position belongs to
 the authored graph projection, is persisted on each represented trigger variant,
 and has no reader semantics. Triggers without a saved position retain the stable
 automatic placement derived from their inputs and output interaction. Root
-trigger markers remain attached to their interaction cards.
+trigger markers remain attached to their interaction cards. Moving a connected
+interaction can elastically adjust an existing saved marker position, using the
+automatic midpoint movement as its reference without discarding the author's
+manual offset.
 
 When a normal canvas connection can either extend an existing trigger or create
 a separate trigger, `StoryEditor` presents that choice before calling the

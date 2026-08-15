@@ -54,6 +54,15 @@ const fallbackInteractionX = 80;
 const fallbackInteractionY = 120;
 const fallbackInteractionVerticalGap = 132;
 const triggerOutputMarker = { type: MarkerType.ArrowClosed, color: '#8d918f' } as const;
+const minimumSavedTriggerFollowRatio = 0.25;
+const savedTriggerFollowRatioRange = 0.5;
+const savedTriggerFollowDistanceScale = 240;
+
+export interface TriggerPositionUpdate {
+  interactionId: string;
+  triggerIds: string[];
+  position: { x: number; y: number };
+}
 
 export function buildInteractionNodes(
   story: Story | undefined,
@@ -299,6 +308,48 @@ export function applyInteractionDragEdgePreview(
   return changed ? nextEdges : edges;
 }
 
+export function getInteractionDragTriggerPositionUpdates(
+  story: Story | undefined,
+  interactionId: string,
+  position: { x: number; y: number },
+): TriggerPositionUpdate[] {
+  if (!story || !story.interactions.some((interaction) => interaction.id === interactionId)) {
+    return [];
+  }
+
+  const positionOverrides = new Map([[interactionId, position]]);
+  const updates: TriggerPositionUpdate[] = [];
+
+  story.interactions.forEach((target, targetIndex) => {
+    const affectsTarget =
+      target.id === interactionId ||
+      target.triggers.some((trigger) => trigger.inputInteractionIds.includes(interactionId));
+    if (!affectsTarget) return;
+
+    getLinkedTriggerGroups(target).forEach((group, triggerIndex) => {
+      if (target.id !== interactionId && !group.inputInteractionIds.includes(interactionId)) return;
+      const savedPosition = getSavedTriggerNodePosition(group);
+      if (!savedPosition) return;
+      const nextPosition = getTriggerNodePosition(
+        story,
+        target,
+        targetIndex,
+        group,
+        triggerIndex,
+        positionOverrides,
+      );
+      if (nextPosition.x === savedPosition.x && nextPosition.y === savedPosition.y) return;
+      updates.push({
+        interactionId: target.id,
+        triggerIds: group.triggers.map((trigger) => trigger.id),
+        position: nextPosition,
+      });
+    });
+  });
+
+  return updates;
+}
+
 function getInteractionPosition(interaction: Story['interactions'][number], index: number) {
   if (
     typeof interaction.position?.x === 'number' &&
@@ -416,15 +467,65 @@ function getTriggerNodePosition(
   triggerIndex: number,
   interactionPositionOverrides?: ReadonlyMap<string, { x: number; y: number }>,
 ) {
-  const savedPosition = group.triggers.find(
+  const savedPosition = getSavedTriggerNodePosition(group);
+  const automaticPosition = getAutomaticTriggerNodePosition(
+    story,
+    target,
+    targetIndex,
+    group,
+    triggerIndex,
+    interactionPositionOverrides,
+  );
+  if (!savedPosition) return automaticPosition;
+  if (!interactionPositionOverrides || interactionPositionOverrides.size === 0) {
+    return savedPosition;
+  }
+
+  const originalAutomaticPosition = getAutomaticTriggerNodePosition(
+    story,
+    target,
+    targetIndex,
+    group,
+    triggerIndex,
+  );
+  const automaticDelta = {
+    x: automaticPosition.x - originalAutomaticPosition.x,
+    y: automaticPosition.y - originalAutomaticPosition.y,
+  };
+  if (automaticDelta.x === 0 && automaticDelta.y === 0) return savedPosition;
+
+  const manualOffsetDistance = Math.hypot(
+    savedPosition.x - originalAutomaticPosition.x,
+    savedPosition.y - originalAutomaticPosition.y,
+  );
+  const followRatio =
+    minimumSavedTriggerFollowRatio +
+    savedTriggerFollowRatioRange / (1 + manualOffsetDistance / savedTriggerFollowDistanceScale);
+
+  return {
+    x: Math.round(savedPosition.x + automaticDelta.x * followRatio),
+    y: Math.round(savedPosition.y + automaticDelta.y * followRatio),
+  };
+}
+
+function getSavedTriggerNodePosition(group: LinkedTriggerGroup) {
+  return group.triggers.find(
     (trigger) =>
       typeof trigger.position?.x === 'number' &&
       Number.isFinite(trigger.position.x) &&
       typeof trigger.position?.y === 'number' &&
       Number.isFinite(trigger.position.y),
   )?.position;
-  if (savedPosition) return savedPosition;
+}
 
+function getAutomaticTriggerNodePosition(
+  story: Story,
+  target: Story['interactions'][number],
+  targetIndex: number,
+  group: LinkedTriggerGroup,
+  triggerIndex: number,
+  interactionPositionOverrides?: ReadonlyMap<string, { x: number; y: number }>,
+) {
   const inputCenters = group.inputInteractionIds.flatMap((inputId) => {
     const inputIndex = story.interactions.findIndex((item) => item.id === inputId);
     const input = story.interactions[inputIndex];

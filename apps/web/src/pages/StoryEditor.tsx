@@ -58,6 +58,7 @@ import {
   buildInteractionNodes,
   buildTriggerNodes,
   buildTriggerEdges,
+  getInteractionDragTriggerPositionUpdates,
   type SelectedTrigger,
   type StoryFlowNode,
   type TriggerFlowEdge,
@@ -1319,8 +1320,16 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
             }
             onNodeDragStop={(_, node) => {
               if (!reviewOnly && node.type === 'interaction') {
+                const triggerPositionUpdates = getInteractionDragTriggerPositionUpdates(
+                  story,
+                  node.id,
+                  node.position,
+                );
                 previewInteractionDrag(node.id, node.position);
                 void patchInteraction(node.id, { position: node.position });
+                triggerPositionUpdates.forEach((update) => {
+                  void moveTrigger(update.interactionId, update.triggerIds, update.position);
+                });
               }
               if (!reviewOnly && node.type === 'trigger') {
                 void moveTrigger(node.data.interactionId, node.data.triggerIds, node.position);

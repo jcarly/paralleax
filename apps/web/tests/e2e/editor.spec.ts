@@ -214,6 +214,8 @@ test.describe('Story editor', () => {
 
   test('previews trigger and arrow placement while an interaction is dragged', async ({ page }) => {
     const current = storyWithHorizontalLink();
+    current.interactions[1].triggers[0].position = { x: 540, y: 240 };
+    let savedTriggerPosition: { x: number; y: number } | undefined;
     await mockStory(page, current);
     await page.route('**/api/stories/story-1/interactions/interaction-2', async (route) => {
       const patch = route.request().postDataJSON() as { position: { x: number; y: number } };
@@ -221,6 +223,21 @@ test.describe('Story editor', () => {
       moved.interactions[1].position = patch.position;
       await route.fulfill({ json: moved });
     });
+    await page.route(
+      '**/api/stories/story-1/interactions/interaction-2/triggers/trigger-2',
+      async (route) => {
+        const patch = route.request().postDataJSON() as { position: { x: number; y: number } };
+        savedTriggerPosition = patch.position;
+        await route.fulfill({
+          json: {
+            interactionId: 'interaction-2',
+            trigger: { ...current.interactions[1].triggers[0], position: patch.position },
+            revision: 2,
+            updatedAt: current.updatedAt,
+          },
+        });
+      },
+    );
 
     await page.goto('/stories/story-1/edit');
     const interaction = page.getByTestId('interaction-node').filter({ hasText: 'Linked scene' });
@@ -259,6 +276,7 @@ test.describe('Story editor', () => {
 
     await page.mouse.up();
 
+    await expect.poll(() => savedTriggerPosition).toBeDefined();
     await expect
       .poll(async () => {
         const currentBox = await marker.boundingBox();

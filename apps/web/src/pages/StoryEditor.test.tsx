@@ -11,6 +11,7 @@ import {
 } from '@paralleax/shared';
 import { StoryEditor } from './StoryEditor';
 import { api } from '../api';
+import { getInteractionDragTriggerPositionUpdates } from '../storyGraph';
 
 vi.mock('../api', () => ({
   api: {
@@ -411,6 +412,38 @@ describe('StoryEditor', () => {
       expect(triggerNode).not.toHaveAttribute('data-node-y', initialY);
     });
     expect(api.updateInteraction).not.toHaveBeenCalled();
+  });
+
+  it('previews and persists an elastic movement for a positioned trigger', async () => {
+    const linkedStory = storyWithTwoInteractions();
+    linkedStory.interactions[1].triggers[0].position = { x: 400, y: 300 };
+    const finalInteractionPosition = { x: 105, y: 135 };
+    const expectedUpdate = getInteractionDragTriggerPositionUpdates(
+      linkedStory,
+      'interaction-1',
+      finalInteractionPosition,
+    )[0];
+    await renderEditor(linkedStory);
+    const triggerNodeId = 'flow-node-trigger:interaction-2:trigger-2';
+
+    await userEvent.click(screen.getByTestId('drag-node-interaction-1'));
+
+    await waitFor(() => {
+      expect(api.updateInteraction).toHaveBeenCalledWith('story-1', 'interaction-1', {
+        position: finalInteractionPosition,
+      });
+      expect(api.updateTrigger).toHaveBeenCalledWith('story-1', 'interaction-2', 'trigger-2', {
+        position: expectedUpdate.position,
+      });
+    });
+    expect(screen.getByTestId(triggerNodeId)).toHaveAttribute(
+      'data-node-x',
+      String(expectedUpdate.position.x),
+    );
+    expect(screen.getByTestId(triggerNodeId)).toHaveAttribute(
+      'data-node-y',
+      String(expectedUpdate.position.y),
+    );
   });
 
   it('adds, moves, and resizes a frame behind narrative nodes', async () => {

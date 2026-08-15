@@ -190,14 +190,19 @@ handle of an interaction creates a separate trigger for that output interaction.
 
 When an interaction moves, automatically placed linked trigger markers and their
 edge paths are projected from the transient drag position. This live preview does
-not write authored state; the interaction position is persisted only when the
-drag ends. A trigger with an explicitly saved position remains fixed while its
-connected arrows follow the moving interaction. The preview updates only the
-connected automatic marker nodes; unrelated interactions, decorations, comments,
-trigger markers, and edges retain their existing graph projection during the
-gesture. Connected edge handles use the same transient position as the marker,
-and the final drag frame is applied before persistence, so releasing the
-interaction does not change marker or arrow routing.
+not write authored state during the gesture. A trigger with an explicitly saved
+position follows the movement through an elastic attachment to its automatic
+midpoint. The editor compares the old and transient midpoints, then applies part
+of that displacement to the saved position. Markers close to their midpoint
+follow more strongly; markers placed farther away follow more lightly, preserving
+deliberate manual layouts. With several inputs, the midpoint uses their average,
+so moving one source has a proportionally smaller effect. The preview updates
+only connected marker nodes and edge handles; unrelated interactions,
+decorations, comments, trigger markers, and edges retain their existing graph
+projection during the gesture. The final drag frame, interaction position, and
+adjusted saved marker positions are applied before persistence, so releasing the
+interaction does not change marker or arrow routing. Automatic markers remain
+automatic and do not gain a saved position from this behavior.
 
 Dropping a connection on empty canvas is a creation shortcut:
 

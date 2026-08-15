@@ -58,6 +58,8 @@ A trigger has exactly one output interaction: the interaction that owns the trig
 The optional position is authoring projection metadata. It changes only where a
 linked trigger marker appears on the canvas and never affects reachability or
 reader evaluation. A missing position uses a deterministic automatic placement.
+When a connected interaction moves, the editor may elastically adjust an existing
+saved position relative to that automatic placement; this remains visual metadata.
 
 Every interaction should keep at least one trigger.
 

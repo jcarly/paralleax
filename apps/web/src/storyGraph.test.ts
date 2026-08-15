@@ -7,6 +7,7 @@ import {
   buildInteractionNodes,
   buildTriggerEdges,
   buildTriggerNodes,
+  getInteractionDragTriggerPositionUpdates,
   getRelatedTriggerVariantIds,
   getRoutingHandleIds,
   getTriggerNodeId,
@@ -255,22 +256,90 @@ describe('story graph mapping', () => {
     nodes
       .filter((node) => node.type === 'interaction')
       .forEach((node) => expect(preview.find((candidate) => candidate.id === node.id)).toBe(node));
+    expect(
+      getInteractionDragTriggerPositionUpdates(previewStory, 'interaction-1', {
+        x: 180,
+        y: 220,
+      }),
+    ).toEqual([]);
   });
 
-  it('does not replace graph nodes when every affected trigger has a saved position', () => {
+  it('moves a saved trigger marker by less than its automatic anchor during interaction drag', () => {
     const positionedStory = structuredClone(story);
     positionedStory.interactions[1].triggers[0].position = { x: 420, y: 468 };
+    positionedStory.interactions[1].triggers.push({
+      id: 'trigger-linked-variant',
+      inputInteractionIds: ['interaction-3', 'interaction-1'],
+      conditions: [],
+      position: { x: 420, y: 468 },
+    });
     const nodes = [
       ...buildInteractionNodes(positionedStory, undefined),
       ...buildTriggerNodes(positionedStory),
     ];
+    const automaticNodes = [
+      ...buildInteractionNodes(story, undefined),
+      ...buildTriggerNodes(story),
+    ];
+    const finalInteractionPosition = { x: 180, y: 220 };
+    const triggerNodeId = getTriggerNodeId('interaction-2', 'trigger-linked');
+    const automaticBefore = automaticNodes.find((node) => node.id === triggerNodeId)!;
+    const automaticAfter = applyInteractionDragTriggerPreview(
+      automaticNodes,
+      story,
+      'interaction-1',
+      finalInteractionPosition,
+    ).find((node) => node.id === triggerNodeId)!;
 
+    const preview = applyInteractionDragTriggerPreview(
+      nodes,
+      positionedStory,
+      'interaction-1',
+      finalInteractionPosition,
+    );
+    const savedBefore = nodes.find((node) => node.id === triggerNodeId)!;
+    const savedAfter = preview.find((node) => node.id === triggerNodeId)!;
+    const automaticMovement = automaticAfter.position.x - automaticBefore.position.x;
+    const savedMovement = savedAfter.position.x - savedBefore.position.x;
+
+    expect(preview).not.toBe(nodes);
+    expect(savedMovement).toBeGreaterThan(0);
+    expect(savedMovement).toBeLessThan(automaticMovement);
+    expect(savedAfter.position.y - savedBefore.position.y).toBe(savedMovement);
     expect(
-      applyInteractionDragTriggerPreview(nodes, positionedStory, 'interaction-1', {
-        x: 180,
-        y: 220,
-      }),
-    ).toBe(nodes);
+      getInteractionDragTriggerPositionUpdates(
+        positionedStory,
+        'interaction-1',
+        finalInteractionPosition,
+      ),
+    ).toEqual([
+      {
+        interactionId: 'interaction-2',
+        triggerIds: ['trigger-linked', 'trigger-linked-variant'],
+        position: savedAfter.position,
+      },
+    ]);
+  });
+
+  it('makes saved trigger markers nearer their automatic anchor follow more closely', () => {
+    const nearStory = structuredClone(story);
+    nearStory.interactions[1].triggers[0].position = { x: 235, y: 356 };
+    const farStory = structuredClone(story);
+    farStory.interactions[1].triggers[0].position = { x: 700, y: 700 };
+    const finalInteractionPosition = { x: 180, y: 220 };
+    const nearUpdate = getInteractionDragTriggerPositionUpdates(
+      nearStory,
+      'interaction-1',
+      finalInteractionPosition,
+    )[0];
+    const farUpdate = getInteractionDragTriggerPositionUpdates(
+      farStory,
+      'interaction-1',
+      finalInteractionPosition,
+    )[0];
+
+    expect(nearUpdate.position.x - 235).toBeGreaterThan(farUpdate.position.x - 700);
+    expect(nearUpdate.position.y - 356).toBeGreaterThan(farUpdate.position.y - 700);
   });
 
   it('previews the same edge handles that will be used after the drag is saved', () => {
