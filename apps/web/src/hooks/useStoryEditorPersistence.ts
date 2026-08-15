@@ -166,12 +166,9 @@ export function useStoryEditorPersistence(storyId: string) {
     const baseTrigger = interaction?.triggers.find((trigger) => trigger.id === baseTriggerId);
     if (!interaction || !baseTrigger) return undefined;
 
-    const candidate = story.interactions.find((item) => item.id !== interaction.id);
-    if (!candidate) return undefined;
-
     const patch = {
       inputInteractionIds: baseTrigger.inputInteractionIds,
-      conditions: [{ interactionId: candidate.id, hasBeenVisited: true }],
+      conditions: [],
       ...(baseTrigger.position ? { position: baseTrigger.position } : {}),
     };
     const created = await trackSave(() => api.addTrigger(storyId, interactionId, patch));

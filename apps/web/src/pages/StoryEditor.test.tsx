@@ -75,6 +75,7 @@ vi.mock('@xyflow/react', async () => {
       onConnectStart,
       onConnectEnd,
       onNodeClick,
+      onNodeDrag,
       onPaneClick,
       onNodeDragStop,
       panOnDrag,
@@ -105,12 +106,24 @@ vi.mock('@xyflow/react', async () => {
                 key={node.id}
                 data-testid={`flow-node-${node.id}`}
                 data-z-index={node.zIndex}
+                data-node-x={node.position.x}
+                data-node-y={node.position.y}
                 style={node.style}
                 onClick={(event) => onNodeClick?.(event, node)}
                 role="button"
                 tabIndex={0}
               >
                 <NodeComponent id={node.id} data={node.data} />
+                <span
+                  data-testid={`preview-drag-node-${node.id}`}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onNodeDrag?.(event, {
+                      ...node,
+                      position: { x: node.position.x + 100, y: node.position.y + 80 },
+                    });
+                  }}
+                />
                 <span
                   data-testid={`drag-node-${node.id}`}
                   onClick={(event) => {
@@ -353,6 +366,14 @@ async function renderEditor(story: Story = baseStory) {
   await screen.findByText('Original title');
 }
 
+async function chooseTriggerConditionType(
+  user: ReturnType<typeof userEvent.setup>,
+  typeName: string,
+) {
+  const picker = screen.getByRole('group', { name: 'Condition type' });
+  await user.click(within(picker).getByRole('button', { name: typeName }));
+}
+
 describe('StoryEditor', () => {
   afterEach(() => {
     cleanup();
@@ -370,6 +391,22 @@ describe('StoryEditor', () => {
 
     expect(screen.getByTestId('react-flow')).toHaveAttribute('data-pan-on-drag', '[1]');
     expect(screen.getByTestId('react-flow')).toHaveAttribute('data-pan-activation-key', 'Space');
+  });
+
+  it('previews automatic trigger placement while an interaction is moving', async () => {
+    const linkedStory = storyWithTwoInteractions();
+    await renderEditor(linkedStory);
+    const triggerNode = screen.getByTestId('flow-node-trigger:interaction-2:trigger-2');
+    const initialX = triggerNode.getAttribute('data-node-x');
+    const initialY = triggerNode.getAttribute('data-node-y');
+
+    await userEvent.click(screen.getByTestId('preview-drag-node-interaction-2'));
+
+    await waitFor(() => {
+      expect(triggerNode).not.toHaveAttribute('data-node-x', initialX);
+      expect(triggerNode).not.toHaveAttribute('data-node-y', initialY);
+    });
+    expect(api.updateInteraction).not.toHaveBeenCalled();
   });
 
   it('adds, moves, and resizes a frame behind narrative nodes', async () => {
@@ -658,7 +695,8 @@ describe('StoryEditor', () => {
     });
 
     await user.click(screen.getByRole('button', { name: 'Select root trigger' }));
-    await user.click(screen.getByRole('button', { name: 'Add location condition' }));
+    await user.click(screen.getByRole('button', { name: 'Add condition' }));
+    await chooseTriggerConditionType(user, 'Location');
     expect(api.updateTrigger).toHaveBeenCalledWith('story-1', 'interaction-1', 'trigger-1', {
       inputInteractionIds: [],
       conditions: [{ locationId: 'location-1', isCurrentLocation: true }],
@@ -723,7 +761,8 @@ describe('StoryEditor', () => {
       triggerMutation(conditionedStory, 'interaction-1', 'trigger-1'),
     );
     await user.click(screen.getByRole('button', { name: 'Select root trigger' }));
-    await user.click(screen.getByRole('button', { name: 'Add character condition' }));
+    await user.click(screen.getByRole('button', { name: 'Add condition' }));
+    await chooseTriggerConditionType(user, 'Character');
     expect(api.updateTrigger).toHaveBeenCalledWith('story-1', 'interaction-1', 'trigger-1', {
       inputInteractionIds: [],
       conditions: [{ characterId: 'character-1', isPresent: true }],
@@ -818,7 +857,8 @@ describe('StoryEditor', () => {
       triggerMutation(conditioned, 'interaction-1', 'trigger-1'),
     );
     await user.click(screen.getByRole('button', { name: 'Select root trigger' }));
-    await user.click(screen.getByRole('button', { name: 'Add stat condition' }));
+    await user.click(screen.getByRole('button', { name: 'Add condition' }));
+    await chooseTriggerConditionType(user, 'Character stat');
     expect(api.updateTrigger).toHaveBeenCalledWith('story-1', 'interaction-1', 'trigger-1', {
       inputInteractionIds: [],
       conditions: [{ statId: 'stat-1', operator: 'gte', value: 2 }],
@@ -1711,7 +1751,8 @@ describe('StoryEditor', () => {
     expect(screen.getByTestId('flow-trigger-interaction-3-trigger-edge')).toHaveClass('selected');
     expect(screen.getByRole('heading', { name: 'Path conditions' })).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Add interaction condition' }));
+    await user.click(screen.getByRole('button', { name: 'Add condition' }));
+    await chooseTriggerConditionType(user, 'Interaction');
 
     await waitFor(() => {
       expect(api.updateTrigger).toHaveBeenCalledWith('story-1', 'interaction-3', 'trigger-edge', {
@@ -1738,7 +1779,8 @@ describe('StoryEditor', () => {
 
     await renderEditor(story);
     await user.click(screen.getByTestId('flow-trigger-interaction-2-trigger-2'));
-    await user.click(screen.getByRole('button', { name: 'Add interaction condition' }));
+    await user.click(screen.getByRole('button', { name: 'Add condition' }));
+    await chooseTriggerConditionType(user, 'Interaction');
 
     await waitFor(() => {
       expect(api.updateTrigger).toHaveBeenCalledWith('story-1', 'interaction-2', 'trigger-2', {
@@ -1771,7 +1813,8 @@ describe('StoryEditor', () => {
 
     await renderEditor(story);
     await user.click(screen.getByTestId('flow-trigger-interaction-2-trigger-2'));
-    await user.click(screen.getByRole('button', { name: 'Add interaction condition' }));
+    await user.click(screen.getByRole('button', { name: 'Add condition' }));
+    await chooseTriggerConditionType(user, 'Interaction');
     await waitFor(() => {
       expect(api.updateTrigger).toHaveBeenCalledWith('story-1', 'interaction-2', 'trigger-2', {
         inputInteractionIds: ['interaction-1'],
@@ -1836,9 +1879,13 @@ describe('StoryEditor', () => {
 
     expect(screen.getByText('Condition group 1')).toBeInTheDocument();
     expect(screen.getByText('Condition group 2')).toBeInTheDocument();
-    expect(screen.getByText('OR')).toBeInTheDocument();
-    expect(screen.getAllByRole('button', { name: 'Delete this OR group' })).toHaveLength(2);
-    expect(screen.getByRole('button', { name: 'Delete all OR groups' })).toBeInTheDocument();
+    expect(screen.getByText('OR')).toHaveClass('or-divider');
+    const deleteGroupButtons = screen.getAllByRole('button', { name: 'Delete this OR group' });
+    expect(deleteGroupButtons).toHaveLength(2);
+    expect(deleteGroupButtons[0]).toHaveTextContent('×');
+    expect(screen.getByRole('button', { name: 'Delete all OR groups' })).toHaveClass(
+      'trigger-delete-action',
+    );
   });
 
   it('deletes one OR condition group from the trigger inspector', async () => {
@@ -1867,7 +1914,10 @@ describe('StoryEditor', () => {
     await waitFor(() => {
       expect(api.deleteTrigger).toHaveBeenCalledWith('story-1', 'interaction-2', 'trigger-a');
     });
-    expect(screen.queryByRole('complementary', { name: 'Inspector' })).not.toBeInTheDocument();
+    expect(window.confirm).not.toHaveBeenCalled();
+    expect(screen.getByRole('complementary', { name: 'Inspector' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Path conditions' })).toBeInTheDocument();
+    expect(screen.getByTestId('flow-trigger-interaction-2-trigger-b')).toHaveClass('selected');
   });
 
   it('deletes all OR condition groups from the trigger inspector', async () => {
@@ -1951,32 +2001,32 @@ describe('StoryEditor', () => {
   it('adds an OR condition group from the trigger inspector', async () => {
     const user = userEvent.setup();
     const story = storyWithThreeInteractions();
-    const withNewTrigger = structuredClone(story);
-    withNewTrigger.interactions[1].triggers.push({
+    const withOrGroup = structuredClone(story);
+    withOrGroup.interactions[1].triggers.push({
       id: 'trigger-or',
-      inputInteractionIds: [],
+      inputInteractionIds: ['interaction-1'],
       conditions: [],
     });
-    const withOrGroup = structuredClone(withNewTrigger);
-    withOrGroup.interactions[1].triggers[1].inputInteractionIds = ['interaction-1'];
-    withOrGroup.interactions[1].triggers[1].conditions = [
-      { interactionId: 'interaction-1', hasBeenVisited: true },
-    ];
     vi.mocked(api.addTrigger).mockResolvedValue(withOrGroup);
 
     await renderEditor(story);
     await user.click(screen.getByTestId('flow-trigger-interaction-2-trigger-2'));
-    await user.click(screen.getByRole('button', { name: 'Add OR condition group' }));
+    const addGroupButton = screen.getByRole('button', { name: 'Add OR condition group' });
+    expect(addGroupButton).toHaveTextContent('+');
+    expect(addGroupButton).toHaveClass('trigger-add-group');
+    await user.click(addGroupButton);
 
     await waitFor(() => {
       expect(api.addTrigger).toHaveBeenCalledWith('story-1', 'interaction-2', {
         inputInteractionIds: ['interaction-1'],
-        conditions: [{ interactionId: 'interaction-1', hasBeenVisited: true }],
+        conditions: [],
       });
       expect(api.updateTrigger).not.toHaveBeenCalled();
     });
-    expect(await screen.findByText('OR')).toBeInTheDocument();
+    expect(await screen.findByText('OR')).toHaveClass('or-divider');
     expect(screen.getByText('Condition group 2')).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Condition type' })).toBeInTheDocument();
+    expect(screen.queryByLabelText('Condition interaction')).not.toBeInTheDocument();
   });
 
   it('does not allow adding an OR condition group to a root trigger', async () => {
@@ -2016,7 +2066,8 @@ describe('StoryEditor', () => {
         name: 'Select root trigger',
       }),
     );
-    await user.click(screen.getByRole('button', { name: 'Add interaction condition' }));
+    await user.click(screen.getByRole('button', { name: 'Add condition' }));
+    await chooseTriggerConditionType(user, 'Interaction');
 
     await waitFor(() => {
       expect(api.updateTrigger).toHaveBeenLastCalledWith('story-1', 'interaction-1', 'trigger-1', {
@@ -2085,7 +2136,9 @@ describe('StoryEditor', () => {
     );
 
     expect(screen.getByRole('heading', { name: 'Path conditions' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Delete trigger' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Delete trigger' })).toHaveClass(
+      'trigger-delete-action',
+    );
   });
 
   it('turns the last linked trigger into a root trigger when deleting the trigger', async () => {

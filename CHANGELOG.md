@@ -2,6 +2,12 @@
 
 ## 2026-08-15
 
+- Simplified trigger condition authoring to one add action followed by a typed
+  selector with explanations for unavailable types. New OR groups now start
+  empty with their selector open, display an explicit separator, and can be
+  deleted without confirmation while the inspector remains open.
+- Added live trigger-marker and arrow projection while interactions are dragged,
+  without increasing persistence writes during the gesture.
 - Changed story graph panning to use middle-button dragging or Space plus
   primary-button dragging, preserving primary drag for authored graph elements.
 

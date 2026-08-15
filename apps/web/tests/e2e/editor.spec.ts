@@ -212,6 +212,50 @@ test.describe('Story editor', () => {
     ).toBeVisible();
   });
 
+  test('previews trigger and arrow placement while an interaction is dragged', async ({ page }) => {
+    const current = storyWithHorizontalLink();
+    await mockStory(page, current);
+    await page.route('**/api/stories/story-1/interactions/interaction-2', async (route) => {
+      const patch = route.request().postDataJSON() as { position: { x: number; y: number } };
+      const moved = structuredClone(current);
+      moved.interactions[1].position = patch.position;
+      await route.fulfill({ json: moved });
+    });
+
+    await page.goto('/stories/story-1/edit');
+    const interaction = page.getByTestId('interaction-node').filter({ hasText: 'Linked scene' });
+    const marker = page.getByTestId('flow-trigger-interaction-2-trigger-2');
+    const outputPath = page.locator(
+      '[data-id="trigger:interaction-2:trigger-2-output"] .react-flow__edge-path',
+    );
+    const interactionBox = await interaction.boundingBox();
+    const markerBefore = await marker.boundingBox();
+    const pathBefore = await outputPath.getAttribute('d');
+    expect(interactionBox).not.toBeNull();
+    expect(markerBefore).not.toBeNull();
+
+    await page.mouse.move(
+      interactionBox!.x + interactionBox!.width / 2,
+      interactionBox!.y + interactionBox!.height / 2,
+    );
+    await page.mouse.down();
+    await page.mouse.move(
+      interactionBox!.x + interactionBox!.width / 2 + 120,
+      interactionBox!.y + interactionBox!.height / 2 + 100,
+      { steps: 8 },
+    );
+
+    await expect
+      .poll(async () => {
+        const currentBox = await marker.boundingBox();
+        return currentBox ? { x: Math.round(currentBox.x), y: Math.round(currentBox.y) } : null;
+      })
+      .not.toEqual({ x: Math.round(markerBefore!.x), y: Math.round(markerBefore!.y) });
+    await expect.poll(() => outputPath.getAttribute('d')).not.toBe(pathBefore);
+
+    await page.mouse.up();
+  });
+
   test('pans the graph with the middle button or Space plus primary drag', async ({ page }) => {
     await page.goto('/stories/story-1/edit');
     const pane = page.locator('.react-flow__pane');
@@ -450,11 +494,61 @@ test.describe('Story editor', () => {
       .filter({ hasText: 'Original title' })
       .getByRole('button', { name: 'Select root trigger' })
       .click();
-    await page.getByRole('button', { name: 'Add interaction condition' }).click();
+    await page.getByRole('button', { name: 'Add condition' }).click();
+    const conditionTypePicker = page.getByRole('group', { name: 'Condition type' });
+    await conditionTypePicker.getByRole('button', { name: 'Location' }).hover();
+    await expect(
+      page.getByRole('tooltip', {
+        name: 'Create a location before using this condition type.',
+      }),
+    ).toBeVisible();
+    await conditionTypePicker.getByRole('button', { name: 'Interaction' }).click();
 
     await expect(page.getByRole('heading', { name: 'Path conditions' })).toBeVisible();
-    await expect(page.getByRole('combobox').first()).toHaveValue('interaction-2');
-    await expect(page.getByRole('combobox').nth(1)).toHaveValue('visited');
+    await expect(page.getByLabel('Condition interaction')).toHaveValue('interaction-2');
+    await expect(page.getByLabel('Interaction condition operator')).toHaveValue('visited');
+  });
+
+  test('deletes one OR group without confirmation and keeps the inspector open', async ({
+    page,
+  }) => {
+    const initialStory = storyWithConditionCandidate();
+    initialStory.interactions[1].triggers = [
+      {
+        id: 'trigger-a',
+        inputInteractionIds: ['interaction-1'],
+        conditions: [{ interactionId: 'interaction-1', hasBeenVisited: true }],
+      },
+      {
+        id: 'trigger-b',
+        inputInteractionIds: ['interaction-1'],
+        conditions: [{ interactionId: 'interaction-1', hasBeenVisited: false }],
+      },
+    ];
+    await mockStory(page, initialStory);
+    const afterDelete = structuredClone(initialStory);
+    afterDelete.interactions[1].triggers = [afterDelete.interactions[1].triggers[1]];
+    await page.route(
+      '**/api/stories/story-1/interactions/interaction-2/triggers/trigger-a',
+      async (route) => {
+        expect(route.request().method()).toBe('DELETE');
+        await route.fulfill({ json: afterDelete });
+      },
+    );
+    let dialogCount = 0;
+    page.on('dialog', async (dialog) => {
+      dialogCount += 1;
+      await dialog.dismiss();
+    });
+
+    await page.goto('/stories/story-1/edit');
+    await page.getByTestId('flow-trigger-interaction-2-trigger-a').click();
+    await expect(page.getByText('OR', { exact: true })).toBeVisible();
+    await page.getByRole('button', { name: 'Delete this OR group' }).first().click();
+
+    await expect(page.getByRole('heading', { name: 'Path conditions' })).toBeVisible();
+    await expect(page.getByTestId('flow-trigger-interaction-2-trigger-b')).toHaveClass(/selected/);
+    expect(dialogCount).toBe(0);
   });
 
   test('gives a character two separate copies of one reusable item', async ({ page }) => {

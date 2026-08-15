@@ -22,6 +22,7 @@ import {
 import { Link, useParams } from 'react-router-dom';
 import {
   isCommentAnchorDetached,
+  updateInteractionInStory,
   type Character,
   type CommentTargetType,
   type GraphDecoration,
@@ -233,6 +234,10 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
   const [pendingConnection, setPendingConnection] = useState<Connection>();
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [placingComment, setPlacingComment] = useState(false);
+  const [interactionDragPreview, setInteractionDragPreview] = useState<{
+    interactionId: string;
+    position: Position;
+  }>();
   const [nodes, setNodes, onNodesChange] = useNodesState<StoryFlowNode>([]);
   const pendingConnectionStart = useRef<{
     nodeId: string;
@@ -262,6 +267,15 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
   );
   const selectedCommentThread = projectedCommentThreads.find(
     ({ id }) => id === comments.selectedThreadId,
+  );
+  const projectedGraphStory = useMemo(
+    () =>
+      story && interactionDragPreview
+        ? updateInteractionInStory(story, interactionDragPreview.interactionId, {
+            position: interactionDragPreview.position,
+          })
+        : story,
+    [interactionDragPreview, story],
   );
 
   const selected = findInteraction(story, selectedId);
@@ -424,7 +438,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
 
   const storyNodes = useMemo(
     () =>
-      buildInteractionNodes(story, selectedId, selectedTrigger, {
+      buildInteractionNodes(projectedGraphStory, selectedId, selectedTrigger, {
         showNewTriggerInput: !reviewOnly && isConnecting,
         onCreateChild: reviewOnly
           ? undefined
@@ -453,7 +467,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
       reviewOnly,
       selectedId,
       selectedTrigger,
-      story,
+      projectedGraphStory,
     ],
   );
   const decorationNodes = useMemo(
@@ -468,7 +482,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
   );
   const triggerNodes = useMemo(
     () =>
-      buildTriggerNodes(story, selectedTrigger, {
+      buildTriggerNodes(projectedGraphStory, selectedTrigger, {
         onSelectTrigger: (interactionId, triggerId) => {
           closeInspector();
           setSelectedTrigger({ interactionId, triggerId });
@@ -476,7 +490,13 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
         commentCounts: openCommentCounts,
         onOpenComments: openCommentsForTarget,
       }),
-    [closeInspector, openCommentCounts, openCommentsForTarget, selectedTrigger, story],
+    [
+      closeInspector,
+      openCommentCounts,
+      openCommentsForTarget,
+      projectedGraphStory,
+      selectedTrigger,
+    ],
   );
 
   const commentNodes = useMemo<CommentPinFlowNode[]>(
@@ -544,10 +564,14 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
   );
   const edges = useMemo(
     () =>
-      buildTriggerEdges(story, selectTriggerData, (interactionId, triggerId, inputId) => {
-        void deleteSelectedTriggerInput(interactionId, triggerId, inputId);
-      }),
-    [deleteSelectedTriggerInput, selectTriggerData, story],
+      buildTriggerEdges(
+        projectedGraphStory,
+        selectTriggerData,
+        (interactionId, triggerId, inputId) => {
+          void deleteSelectedTriggerInput(interactionId, triggerId, inputId);
+        },
+      ),
+    [deleteSelectedTriggerInput, projectedGraphStory, selectTriggerData],
   );
 
   const select: NodeMouseHandler = (_, node) => {
@@ -705,6 +729,15 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
     if (!window.confirm(t('editor.confirmDeleteTrigger'))) return;
     await deleteTrigger(interactionId, triggerId);
     setSelectedTrigger(undefined);
+  }
+
+  async function deleteSelectedTriggerGroup(
+    interactionId: string,
+    triggerId: string,
+    nextTriggerId: string,
+  ) {
+    setSelectedTrigger({ interactionId, triggerId: nextTriggerId });
+    await deleteTrigger(interactionId, triggerId);
   }
 
   async function createSelectedTriggerVariant(interactionId: string, triggerId: string) {
@@ -1285,8 +1318,21 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
             onConnectEnd={reviewOnly ? undefined : endCanvasConnection}
             onNodeClick={select}
             onPaneClick={handlePaneClick}
+            onNodeDrag={
+              reviewOnly
+                ? undefined
+                : (_, node) => {
+                    if (node.type === 'interaction') {
+                      setInteractionDragPreview({
+                        interactionId: node.id,
+                        position: node.position,
+                      });
+                    }
+                  }
+            }
             onNodeDragStop={(_, node) => {
               if (!reviewOnly && node.type === 'interaction') {
+                setInteractionDragPreview(undefined);
                 void patchInteraction(node.id, { position: node.position });
               }
               if (!reviewOnly && node.type === 'trigger') {
@@ -1398,6 +1444,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
                 trigger={selectedTriggerTarget.trigger}
                 onSaveTrigger={saveTrigger}
                 onCreateTriggerVariant={createSelectedTriggerVariant}
+                onDeleteTriggerGroup={deleteSelectedTriggerGroup}
                 onDeleteTrigger={deleteSelectedTrigger}
                 onDeleteTriggerVariants={deleteSelectedTriggerVariants}
               />

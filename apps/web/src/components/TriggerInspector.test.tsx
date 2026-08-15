@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Story } from '@paralleax/shared';
@@ -36,6 +36,7 @@ function renderInspector(story: Story, onSaveTrigger = vi.fn().mockResolvedValue
       trigger={interaction.triggers[0]}
       onSaveTrigger={onSaveTrigger}
       onCreateTriggerVariant={vi.fn()}
+      onDeleteTriggerGroup={vi.fn()}
       onDeleteTrigger={vi.fn()}
       onDeleteTriggerVariants={vi.fn()}
     />,
@@ -52,7 +53,11 @@ describe('TriggerInspector temporal conditions', () => {
     ];
     const onSaveTrigger = renderInspector(story);
 
-    await userEvent.click(screen.getByRole('button', { name: 'Add item condition' }));
+    expect(screen.getAllByRole('button', { name: 'Add condition' })).toHaveLength(1);
+    await userEvent.click(screen.getByRole('button', { name: 'Add condition' }));
+    const picker = screen.getByRole('group', { name: 'Condition type' });
+    expect(within(picker).getByText('Choose a condition type')).toBeInTheDocument();
+    await userEvent.click(within(picker).getByRole('button', { name: 'Item' }));
 
     expect(onSaveTrigger).toHaveBeenLastCalledWith(
       'interaction-1',
@@ -65,7 +70,12 @@ describe('TriggerInspector temporal conditions', () => {
   it('adds a date and time condition', async () => {
     const onSaveTrigger = renderInspector(storyWithConditions([]));
 
-    await userEvent.click(screen.getByRole('button', { name: 'Add date/time condition' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Add condition' }));
+    await userEvent.click(
+      within(screen.getByRole('group', { name: 'Condition type' })).getByRole('button', {
+        name: 'Date and time',
+      }),
+    );
 
     expect(onSaveTrigger).toHaveBeenCalledWith(
       'interaction-1',
@@ -73,6 +83,20 @@ describe('TriggerInspector temporal conditions', () => {
       [],
       [{ temporal: { weekdays: ['monday'] } }],
     );
+  });
+
+  it('explains why condition types are unavailable', async () => {
+    renderInspector(storyWithConditions([]));
+
+    await userEvent.click(screen.getByRole('button', { name: 'Add condition' }));
+    const picker = screen.getByRole('group', { name: 'Condition type' });
+    const location = within(picker).getByRole('button', { name: 'Location' });
+    const reason = 'Create a location before using this condition type.';
+
+    expect(location).toBeDisabled();
+    expect(location).toHaveAttribute('title', reason);
+    expect(within(picker).getByText(reason)).toHaveAttribute('role', 'tooltip');
+    expect(within(picker).getByRole('button', { name: 'Date and time' })).toBeEnabled();
   });
 
   it('edits multiple weekdays, dates, date ranges, and time slots', async () => {

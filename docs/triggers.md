@@ -133,6 +133,15 @@ Expected editor behavior:
    interaction and the trigger marker.
 5. The marker remains attached to the same trigger after editing.
 
+The inspector exposes one **Add condition** action per condition group. It then
+asks for the condition type and renders only the fields relevant to that type.
+Alternative OR groups use a prominent plus action; when several groups exist,
+**OR** appears between them and each group has an accessible delete cross in its
+top-right corner. A new alternative group copies the selected trigger inputs but
+starts without conditions and opens its type chooser. Unavailable types explain
+their missing prerequisite on hover or keyboard focus. Deleting one group is
+immediate, selects a surviving group, and keeps the trigger inspector open.
+
 The interaction inspector should stay focused on interaction content. Trigger
 inputs and outputs are represented by the graph itself, so the trigger inspector
 does not need to repeat input or output lists.
@@ -178,6 +187,12 @@ all meet at the same marker, then one output link goes from that marker to the
 output interaction. Dropping a connection on an existing trigger marker adds the
 source as another input of that trigger. Dropping a connection on the empty input
 handle of an interaction creates a separate trigger for that output interaction.
+
+When an interaction moves, automatically placed linked trigger markers and their
+edge paths are projected from the transient drag position. This live preview does
+not write authored state; the interaction position is persisted only when the
+drag ends. A trigger with an explicitly saved position remains fixed while its
+connected arrows follow the moving interaction.
 
 Dropping a connection on empty canvas is a creation shortcut:
 

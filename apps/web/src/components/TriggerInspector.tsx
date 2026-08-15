@@ -5,8 +5,11 @@ import type {
   TriggerCondition,
   Weekday,
 } from '@paralleax/shared';
+import { useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { getRelatedTriggerVariantIds } from '../storyGraph';
+
+type ConditionType = 'interaction' | 'location' | 'character' | 'stat' | 'item' | 'dateTime';
 
 export function TriggerInspector({
   story,
@@ -14,6 +17,7 @@ export function TriggerInspector({
   trigger,
   onSaveTrigger,
   onCreateTriggerVariant,
+  onDeleteTriggerGroup,
   onDeleteTrigger,
   onDeleteTriggerVariants,
 }: {
@@ -27,6 +31,11 @@ export function TriggerInspector({
     conditions: TriggerCondition[],
   ) => Promise<void>;
   onCreateTriggerVariant: (interactionId: string, triggerId: string) => Promise<void>;
+  onDeleteTriggerGroup: (
+    interactionId: string,
+    triggerId: string,
+    nextTriggerId: string,
+  ) => Promise<void>;
   onDeleteTrigger: (interactionId: string, triggerId: string) => Promise<void>;
   onDeleteTriggerVariants: (interactionId: string, triggerIds: string[]) => Promise<void>;
 }) {
@@ -52,6 +61,33 @@ export function TriggerInspector({
     await onSaveTrigger(interaction.id, targetTrigger.id, inputIds, conditions);
   }
 
+  function createCondition(type: ConditionType): TriggerCondition | undefined {
+    switch (type) {
+      case 'interaction': {
+        const candidate = story.interactions.find((item) => item.id !== interaction.id);
+        return candidate ? { interactionId: candidate.id, hasBeenVisited: true } : undefined;
+      }
+      case 'location': {
+        const location = story.locations?.[0];
+        return location ? { locationId: location.id, isCurrentLocation: true } : undefined;
+      }
+      case 'character': {
+        const character = story.characters?.[0];
+        return character ? { characterId: character.id, isPresent: true } : undefined;
+      }
+      case 'stat': {
+        const stat = stats[0];
+        return stat ? { statId: stat.id, operator: 'gte', value: stat.initialValue } : undefined;
+      }
+      case 'item': {
+        const definition = story.itemDefinitions?.[0];
+        return definition ? { itemDefinitionId: definition.id, isOwned: true } : undefined;
+      }
+      case 'dateTime':
+        return { temporal: { weekdays: ['monday'] } };
+    }
+  }
+
   return (
     <div>
       <h3>{t('triggerInspector.title')}</h3>
@@ -60,7 +96,23 @@ export function TriggerInspector({
         <div className="trigger-variant" key={variant.id}>
           {variantIndex > 0 ? <div className="or-divider">{t('triggerInspector.or')}</div> : null}
           {hasOrVariants ? (
-            <h4>{t('triggerInspector.group', { number: variantIndex + 1 })}</h4>
+            <div className="trigger-variant-header">
+              <h4>{t('triggerInspector.group', { number: variantIndex + 1 })}</h4>
+              <button
+                aria-label={t('triggerInspector.deleteGroup')}
+                className="ghost danger trigger-variant-delete"
+                title={t('triggerInspector.deleteGroup')}
+                type="button"
+                onClick={() => {
+                  const nextVariant = variants[variantIndex + 1] ?? variants[variantIndex - 1];
+                  if (nextVariant) {
+                    void onDeleteTriggerGroup(interaction.id, variant.id, nextVariant.id);
+                  }
+                }}
+              >
+                ×
+              </button>
+            </div>
           ) : null}
           <div className="conditions">
             {variant.conditions.map((condition, index) => (
@@ -291,122 +343,159 @@ export function TriggerInspector({
               </div>
             ))}
           </div>
-          <button
-            className="secondary"
-            disabled={story.interactions.length < 2}
-            onClick={() => {
-              const candidate = story.interactions.find((item) => item.id !== interaction.id);
-              if (candidate) {
+          <AddConditionControl
+            initiallyOpen={
+              hasOrVariants && variant.id === trigger.id && variant.conditions.length === 0
+            }
+            unavailableReasons={{
+              interaction:
+                story.interactions.length < 2
+                  ? t('triggerInspector.conditionUnavailable.interaction')
+                  : undefined,
+              location:
+                (story.locations?.length ?? 0) === 0
+                  ? t('triggerInspector.conditionUnavailable.location')
+                  : undefined,
+              character:
+                (story.characters?.length ?? 0) === 0
+                  ? t('triggerInspector.conditionUnavailable.character')
+                  : undefined,
+              stat:
+                stats.length === 0 ? t('triggerInspector.conditionUnavailable.stat') : undefined,
+              item:
+                (story.itemDefinitions?.length ?? 0) === 0
+                  ? t('triggerInspector.conditionUnavailable.item')
+                  : undefined,
+              dateTime: undefined,
+            }}
+            onAdd={(type) => {
+              const condition = createCondition(type);
+              if (condition) {
                 void updateTrigger(variant, variant.inputInteractionIds, [
                   ...variant.conditions,
-                  { interactionId: candidate.id, hasBeenVisited: true },
+                  condition,
                 ]);
               }
             }}
-          >
-            {t('triggerInspector.addInteraction')}
-          </button>
-          <button
-            className="secondary"
-            disabled={(story.locations?.length ?? 0) === 0}
-            onClick={() => {
-              const location = story.locations?.[0];
-              if (location) {
-                void updateTrigger(variant, variant.inputInteractionIds, [
-                  ...variant.conditions,
-                  { locationId: location.id, isCurrentLocation: true },
-                ]);
-              }
-            }}
-          >
-            {t('triggerInspector.addLocation')}
-          </button>
-          <button
-            className="secondary"
-            disabled={(story.characters?.length ?? 0) === 0}
-            onClick={() => {
-              const character = story.characters?.[0];
-              if (character) {
-                void updateTrigger(variant, variant.inputInteractionIds, [
-                  ...variant.conditions,
-                  { characterId: character.id, isPresent: true },
-                ]);
-              }
-            }}
-          >
-            {t('triggerInspector.addCharacter')}
-          </button>
-          <button
-            className="secondary"
-            disabled={stats.length === 0}
-            onClick={() => {
-              const stat = stats[0];
-              if (stat) {
-                void updateTrigger(variant, variant.inputInteractionIds, [
-                  ...variant.conditions,
-                  { statId: stat.id, operator: 'gte', value: stat.initialValue },
-                ]);
-              }
-            }}
-          >
-            {t('triggerInspector.addStat')}
-          </button>
-          <button
-            className="secondary"
-            disabled={(story.itemDefinitions?.length ?? 0) === 0}
-            onClick={() => {
-              const definition = story.itemDefinitions?.[0];
-              if (definition) {
-                void updateTrigger(variant, variant.inputInteractionIds, [
-                  ...variant.conditions,
-                  { itemDefinitionId: definition.id, isOwned: true },
-                ]);
-              }
-            }}
-          >
-            {t('triggerInspector.addItem')}
-          </button>
-          <button
-            className="secondary"
-            onClick={() => {
-              void updateTrigger(variant, variant.inputInteractionIds, [
-                ...variant.conditions,
-                { temporal: { weekdays: ['monday'] } },
-              ]);
-            }}
-          >
-            {t('triggerInspector.addDateTime')}
-          </button>
-          {hasOrVariants ? (
-            <button
-              className="ghost danger"
-              onClick={() => void onDeleteTrigger(interaction.id, variant.id)}
-            >
-              {t('triggerInspector.deleteGroup')}
-            </button>
-          ) : null}
+          />
         </div>
       ))}
       <button
-        className="secondary"
+        className="trigger-add-group"
         disabled={trigger.inputInteractionIds.length === 0 || story.interactions.length < 2}
+        type="button"
         onClick={() => void onCreateTriggerVariant(interaction.id, trigger.id)}
       >
-        {t('triggerInspector.addGroup')}
+        <span aria-hidden="true" className="trigger-add-group-icon">
+          +
+        </span>
+        <span>{t('triggerInspector.addGroup')}</span>
       </button>
       <hr />
       {hasOrVariants ? (
         <button
-          className="danger"
+          className="danger trigger-delete-action"
           onClick={() => void onDeleteTriggerVariants(interaction.id, variantIds)}
         >
           {t('triggerInspector.deleteAllGroups')}
         </button>
       ) : (
-        <button className="danger" onClick={() => void onDeleteTrigger(interaction.id, trigger.id)}>
+        <button
+          className="danger trigger-delete-action"
+          onClick={() => void onDeleteTrigger(interaction.id, trigger.id)}
+        >
           {t('triggerInspector.deleteTrigger')}
         </button>
       )}
+    </div>
+  );
+}
+
+function AddConditionControl({
+  initiallyOpen = false,
+  unavailableReasons,
+  onAdd,
+}: {
+  initiallyOpen?: boolean;
+  unavailableReasons: Record<ConditionType, string | undefined>;
+  onAdd: (type: ConditionType) => void;
+}) {
+  const { t } = useTranslation();
+  const tooltipIdPrefix = useId();
+  const [isChoosing, setIsChoosing] = useState(initiallyOpen);
+  const conditionTypes: ConditionType[] = [
+    'interaction',
+    'location',
+    'character',
+    'stat',
+    'item',
+    'dateTime',
+  ];
+
+  if (!isChoosing) {
+    return (
+      <button
+        className="secondary trigger-add-condition"
+        type="button"
+        onClick={() => setIsChoosing(true)}
+      >
+        {t('triggerInspector.addCondition')}
+      </button>
+    );
+  }
+
+  return (
+    <div
+      aria-label={t('triggerInspector.conditionType')}
+      className="trigger-condition-picker"
+      role="group"
+    >
+      <div className="trigger-condition-picker-header">
+        <span>{t('triggerInspector.chooseConditionType')}</span>
+        <button
+          aria-label={t('triggerInspector.cancelAddCondition')}
+          className="ghost trigger-condition-picker-cancel"
+          title={t('triggerInspector.cancelAddCondition')}
+          type="button"
+          onClick={() => setIsChoosing(false)}
+        >
+          ×
+        </button>
+      </div>
+      <div className="trigger-condition-type-options">
+        {conditionTypes.map((type) => {
+          const unavailableReason = unavailableReasons[type];
+          const tooltipId = `${tooltipIdPrefix}-${type}`;
+          return (
+            <div
+              aria-describedby={unavailableReason ? tooltipId : undefined}
+              className="trigger-condition-type-option"
+              key={type}
+              tabIndex={unavailableReason ? 0 : undefined}
+              title={unavailableReason}
+            >
+              <button
+                aria-describedby={unavailableReason ? tooltipId : undefined}
+                className="secondary"
+                disabled={Boolean(unavailableReason)}
+                title={unavailableReason}
+                type="button"
+                onClick={() => {
+                  onAdd(type);
+                  setIsChoosing(false);
+                }}
+              >
+                {t(`triggerInspector.conditionTypes.${type}`)}
+              </button>
+              {unavailableReason ? (
+                <span className="trigger-condition-type-tooltip" id={tooltipId} role="tooltip">
+                  {unavailableReason}
+                </span>
+              ) : null}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

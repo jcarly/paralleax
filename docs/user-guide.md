@@ -173,6 +173,10 @@ Its position is saved without changing its inputs or conditions. If one marker
 represents several OR condition variants, the variants move together. Root
 trigger markers remain attached to their interaction.
 
+While an interaction is being dragged, automatically positioned linked trigger
+markers and their arrows update immediately. This preview is visual only; the
+interaction position is saved when the pointer is released.
+
 ## Add Visual Structure to the Graph
 
 Use **Add frame** to place a colored frame around a visual area of the canvas.
@@ -208,9 +212,18 @@ conditions and trigger-level actions.
 
 In the trigger inspector:
 
-1. Select the action for the condition type you need.
-2. Choose the interaction, location, character, assigned character stat, or date/time rule to check.
-3. Choose its operator and, for a stat, the numeric comparison value.
+1. Select **Add condition**.
+2. Choose the condition type. Its relevant fields appear after the selection.
+3. Choose the interaction, location, character, item, assigned character stat,
+   or date/time rule to check.
+4. Choose its operator and, for a stat, the numeric comparison value.
+
+Conditions in one group must all match. For a linked trigger, use the prominent
+**+ Add OR condition group** action to create an empty alternative group. The
+type chooser opens immediately for that new group, and unavailable types explain
+their prerequisite on hover or keyboard focus. **OR** is displayed between
+groups. When several groups are shown, the cross in the top-right corner deletes
+only that group immediately and keeps the inspector open on a surviving group.
 
 Conditions can check reading history, current location, characters present in
 the current interaction, compare a character stat, or filter the story-local
@@ -252,9 +265,9 @@ image URL in their inspector. The editor previews the image and displays a
 thumbnail in the context lists. Stat images are intended to work as compact
 pictograms.
 
-Select a trigger marker and use **Add stat condition** to compare the current
-value with a threshold. The reader applies an interaction's effects before it
-evaluates the next available interactions.
+Select a trigger marker, choose **Add condition**, then select **Character stat**
+to compare the current value with a threshold. The reader applies an
+interaction's effects before it evaluates the next available interactions.
 
 ## Character Items
 
