@@ -218,12 +218,16 @@ interactions and triggers.
 `StoryEditor` is the page-level orchestration component for the editor. It wires
 React Flow, selection state, inspectors, and persistence actions together.
 
-The root route renders the anonymous public-story catalogue. Authenticated users
-reach their full accessible-story workspace at `/stories`; editor, access, and
-administration routes redirect signed-out visitors to authentication. Sign-in
-and registration carry a validated same-origin `returnTo` path, including its
-query and fragment, and replace the authentication history entry after success.
-The product navigation does not expose the internal design-system reference.
+The root route renders the unified story library. Without a session it uses the
+anonymous public-summary endpoint; with a session it uses the authorized list of
+every story that account can read and exposes filters derived from resolved edit,
+comment, and ownership data. Changing sessions clears the previous projection
+before loading the next one. The former `/stories` workspace redirects to the
+root library for compatibility. Editor, access, and administration routes redirect
+signed-out visitors to authentication. Sign-in and registration carry a validated
+same-origin `returnTo` path, including its query and fragment, and replace the
+authentication history entry after success. The product navigation does not
+expose the internal design-system reference.
 
 Administrators receive an `Administration` navigation entry backed by the
 protected `/admin/users` route. Its account list, summary, search, role filter,
@@ -273,12 +277,12 @@ The web app may map a story into React Flow nodes and edges, but it must not
 store story semantics as React Flow data. React Flow data is a projection of the
 domain model.
 
-Vite loads the editor and reader as separate route chunks. The public catalogue,
-application shell, and story workspace therefore do not download React Flow
-until an author opens the editor. Route imports remain literal so Vite can
-analyze and split them deterministically. Edit and reader links preload their
-corresponding chunk on hover or keyboard focus so explicit navigation intent
-hides most of the added route-loading latency.
+Vite loads the editor and reader as separate route chunks. The story library and
+application shell therefore do not download React Flow until an author opens the
+editor. Route imports remain literal so Vite can analyze and split them
+deterministically. Edit and reader links preload their corresponding chunk on
+hover or keyboard focus so explicit navigation intent hides most of the added
+route-loading latency.
 
 ## React Flow Boundary
 
@@ -434,9 +438,11 @@ same change.
 
 ### Creating Demo Data
 
-The story list can request a local demo story from the API. The API calls
-`createDemoStory` from `packages/shared`, stores the generated story in
-`StoriesRepository`, and returns it to the web app.
+An administrator can request a local demo story from the story library. The API
+enforces the administrator role before calling `createDemoStory` from
+`packages/shared`, storing the generated story in `StoriesRepository`, and
+returning it to the web app. Hiding the action for ordinary users is only an
+interface adaptation and is not the authorization boundary.
 
 Demo data should stay deterministic. It is used for manual exploration and as a
 stable source of regression-friendly sample structures.

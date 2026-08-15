@@ -12,18 +12,18 @@ npm run dev
 
 Then open http://localhost:5173.
 
-The home page lists stories their authors have made public. Anyone can browse
-this catalogue and open a public story without an account. Select `Sign in` or
-`Create account` when you want to access an authenticated feature. After a
-successful sign-in or registration, Paralleax returns to the page you were
-viewing; external return destinations are not accepted.
+The home page is the `Stories` library. Without an account, it lists stories
+their authors have made public. Once signed in, the same page lists every story
+the account can read, including owned stories, invitations, authenticated stories,
+and public stories. After a successful sign-in or registration, Paralleax returns
+to the page you were viewing; external return destinations are not accepted.
 
 On first use, register with an email address and a password of at least eight
 characters. Later visits restore the session from an HTTP-only cookie. Select
-`My stories` to open your authenticated workspace and use `Sign out` in the
-header to end the current session. If a session expires on a protected page,
-Paralleax returns to the sign-in screen with an explanation and restores that
-page after authentication.
+`Stories` to return to the unified library and use `Sign out` in the header to
+end the current session. If a session expires on a protected page, Paralleax
+returns to the sign-in screen with an explanation and restores that page after
+authentication. The former `/stories` workspace address redirects to the library.
 
 New stories are private to the account that creates them. The creator can later
 share them explicitly. The first account created on a new installation is its
@@ -56,7 +56,7 @@ as protected in the interface and also prevents its demotion in the API.
 
 ## Review a Story with Post-its
 
-When a story permits your account to comment, `My stories` shows `Review` if you
+When a story permits your account to comment, `Stories` shows `Review` if you
 cannot edit it. The review workspace displays the graph and inspectors in
 read-only mode while keeping the comment tools available.
 
@@ -91,18 +91,18 @@ the author wrote them.
 
 ## Create a Story
 
-1. Sign in and open `My stories`.
+1. Sign in and open `Stories`.
 2. Select `New story`.
 3. Enter a title and select `Create story`.
 4. Open the story with `Edit`.
 
-Use the library search, `Recently edited` / `Empty` filters, title or last-edited
-sorting, and the grid/list controls to find stories without changing their
-stored content.
+Use the library search, `Editable by me` / `Commentable by me` / `Created by me`
+filters, title or last-edited sorting, and the grid/list controls to find stories
+without changing their stored content.
 
-Use `Generate demo` to create a populated local demo story with roots, branches,
-multi-input triggers, and simple visited / not visited conditions. This is useful
-for testing the editor and reader without manually building a graph.
+Administrators can use `Generate demo` to create a populated local demo story
+with roots, branches, multi-input triggers, and simple visited / not visited
+conditions. The action and its API endpoint are unavailable to ordinary users.
 
 Stories are persisted in PostgreSQL. Restarting the API keeps the
 authored story data as long as the configured database or Docker volume remains

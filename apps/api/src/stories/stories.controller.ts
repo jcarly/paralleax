@@ -55,7 +55,7 @@ export class StoriesController {
 
   @Post('demo')
   createDemo(@CurrentUser() user: RequestUser) {
-    return this.stories.createDemo(user.id);
+    return this.stories.createDemo(user.id, user.role);
   }
 
   @Get(':storyId')

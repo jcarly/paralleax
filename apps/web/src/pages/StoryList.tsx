@@ -2,19 +2,18 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import type { Story, StorySummary } from '@paralleax/shared';
-import { api } from '../api';
+import { api, type AuthUser } from '../api';
 import { loadStoryEditor, loadStoryPlayer } from './storyRouteLoaders';
 import './ProductPages.css';
 
-type StoryFilter = 'all' | 'recent' | 'empty';
+type StoryFilter = 'all' | 'editable' | 'commentable' | 'owned';
 type StorySort = 'updated' | 'title';
 type StoryView = 'grid' | 'list';
 
-const recentThresholdMs = 7 * 24 * 60 * 60 * 1000;
-
-export function StoryList({ mode = 'workspace' }: { mode?: 'public' | 'workspace' }) {
+export function StoryList({ user }: { user: AuthUser | null }) {
   const { t } = useTranslation();
-  const isPublicCatalog = mode === 'public';
+  const isAuthenticated = user !== null;
+  const isAdministrator = user?.role === 'admin';
   const [stories, setStories] = useState<StorySummary[]>([]);
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<StoryFilter>('all');
@@ -27,24 +26,29 @@ export function StoryList({ mode = 'workspace' }: { mode?: 'public' | 'workspace
   const [error, setError] = useState('');
 
   useEffect(() => {
-    api[isPublicCatalog ? 'listPublicStories' : 'listStories']()
-      .then(setStories)
-      .catch((caught: Error) => setError(caught.message))
-      .finally(() => setLoading(false));
-  }, [isPublicCatalog]);
+    let active = true;
+    api[isAuthenticated ? 'listStories' : 'listPublicStories']()
+      .then((items) => {
+        if (active) setStories(items);
+      })
+      .catch((caught: Error) => {
+        if (active) setError(caught.message);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [isAuthenticated, user?.id]);
 
   const visibleStories = useMemo(() => {
     const normalizedQuery = query.trim().toLocaleLowerCase();
-    const newestUpdate = stories.reduce(
-      (latest, story) => Math.max(latest, Date.parse(story.updatedAt)),
-      0,
-    );
     return stories
       .filter((story) => {
-        if (filter === 'recent' && newestUpdate - Date.parse(story.updatedAt) > recentThresholdMs) {
-          return false;
-        }
-        if (filter === 'empty' && story.interactionCount !== 0) return false;
+        if (filter === 'editable' && !story.capabilities?.canEdit) return false;
+        if (filter === 'commentable' && !story.capabilities?.canComment) return false;
+        if (filter === 'owned' && story.owner?.id !== user?.id) return false;
         return story.title.toLocaleLowerCase().includes(normalizedQuery);
       })
       .sort((left, right) =>
@@ -52,7 +56,7 @@ export function StoryList({ mode = 'workspace' }: { mode?: 'public' | 'workspace
           ? left.title.localeCompare(right.title)
           : Date.parse(right.updatedAt) - Date.parse(left.updatedAt),
       );
-  }, [filter, query, sort, stories]);
+  }, [filter, query, sort, stories, user?.id]);
 
   async function create(event: FormEvent) {
     event.preventDefault();
@@ -62,7 +66,7 @@ export function StoryList({ mode = 'workspace' }: { mode?: 'public' | 'workspace
       setError('');
       setPending('story');
       const story = await api.createStory(title);
-      setStories((items) => [summarizeStory(story), ...items]);
+      setStories((items) => [summarizeStory(story, user ?? undefined), ...items]);
       setNewTitle('');
       setCreating(false);
       setFilter('all');
@@ -79,7 +83,8 @@ export function StoryList({ mode = 'workspace' }: { mode?: 'public' | 'workspace
       setError('');
       setPending('demo');
       const story = await api.createDemoStory();
-      setStories((items) => [summarizeStory(story), ...items]);
+      setStories((items) => [summarizeStory(story, user ?? undefined), ...items]);
+      setFilter('all');
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : t('library.demoFailed'));
     } finally {
@@ -102,21 +107,23 @@ export function StoryList({ mode = 'workspace' }: { mode?: 'public' | 'workspace
       <section className="library-heading">
         <div>
           <span className="product-eyebrow">
-            {t(isPublicCatalog ? 'library.public.eyebrow' : 'library.eyebrow')}
+            {t(isAuthenticated ? 'library.eyebrow' : 'library.anonymous.eyebrow')}
           </span>
-          <h1>{t(isPublicCatalog ? 'library.public.title' : 'library.title')}</h1>
-          <p>{t(isPublicCatalog ? 'library.public.description' : 'library.description')}</p>
+          <h1>{t('library.title')}</h1>
+          <p>{t(isAuthenticated ? 'library.description' : 'library.anonymous.description')}</p>
         </div>
-        {!isPublicCatalog ? (
+        {isAuthenticated ? (
           <div className="library-heading-actions">
-            <button
-              className="product-secondary"
-              type="button"
-              disabled={Boolean(pending)}
-              onClick={() => void createDemo()}
-            >
-              {t(pending === 'demo' ? 'library.generating' : 'library.generateDemo')}
-            </button>
+            {isAdministrator ? (
+              <button
+                className="product-secondary"
+                type="button"
+                disabled={Boolean(pending)}
+                onClick={() => void createDemo()}
+              >
+                {t(pending === 'demo' ? 'library.generating' : 'library.generateDemo')}
+              </button>
+            ) : null}
             <button className="product-primary" type="button" onClick={() => setCreating(true)}>
               <span aria-hidden="true">＋</span> {t('library.newStory')}
             </button>
@@ -136,25 +143,28 @@ export function StoryList({ mode = 'workspace' }: { mode?: 'public' | 'workspace
             onChange={(event) => setQuery(event.target.value)}
           />
         </label>
-        <div className="library-filters">
-          {(
-            [
-              ['all', 'library.filters.all'],
-              ['recent', 'library.filters.recent'],
-              ['empty', 'library.filters.empty'],
-            ] as const
-          ).map(([value, label]) => (
-            <button
-              aria-pressed={filter === value}
-              className={filter === value ? 'active' : ''}
-              key={value}
-              type="button"
-              onClick={() => setFilter(value)}
-            >
-              {t(label)}
-            </button>
-          ))}
-        </div>
+        {isAuthenticated ? (
+          <div className="library-filters">
+            {(
+              [
+                ['all', 'library.filters.all'],
+                ['editable', 'library.filters.editable'],
+                ['commentable', 'library.filters.commentable'],
+                ['owned', 'library.filters.owned'],
+              ] as const
+            ).map(([value, label]) => (
+              <button
+                aria-pressed={filter === value}
+                className={filter === value ? 'active' : ''}
+                key={value}
+                type="button"
+                onClick={() => setFilter(value)}
+              >
+                {t(label)}
+              </button>
+            ))}
+          </div>
+        ) : null}
         <label className="library-sort">
           <span>{t('library.sortBy')}</span>
           <select value={sort} onChange={(event) => setSort(event.target.value as StorySort)}>
@@ -206,7 +216,6 @@ export function StoryList({ mode = 'workspace' }: { mode?: 'public' | 'workspace
               story={story}
               tone={storyTone(story.id, index)}
               remove={remove}
-              publicCatalog={isPublicCatalog}
             />
           ))}
         </section>
@@ -218,8 +227,8 @@ export function StoryList({ mode = 'workspace' }: { mode?: 'public' | 'workspace
             {t(
               stories.length
                 ? 'library.emptyFiltered'
-                : isPublicCatalog
-                  ? 'library.public.empty'
+                : !isAuthenticated
+                  ? 'library.anonymous.empty'
                   : 'library.emptyWorkspace',
             )}
           </p>
@@ -234,7 +243,7 @@ export function StoryList({ mode = 'workspace' }: { mode?: 'public' | 'workspace
             >
               {t('library.clearFilters')}
             </button>
-          ) : !isPublicCatalog ? (
+          ) : isAuthenticated ? (
             <button className="product-secondary" type="button" onClick={() => setCreating(true)}>
               {t('library.createStory')}
             </button>
@@ -242,7 +251,7 @@ export function StoryList({ mode = 'workspace' }: { mode?: 'public' | 'workspace
         </section>
       )}
 
-      {creating && !isPublicCatalog ? (
+      {creating && isAuthenticated ? (
         <div className="modal-backdrop" role="presentation">
           <section
             className="new-story-dialog"
@@ -295,12 +304,10 @@ function StoryCard({
   story,
   tone,
   remove,
-  publicCatalog,
 }: {
   story: StorySummary;
   tone: number;
   remove: (id: string) => Promise<void>;
-  publicCatalog: boolean;
 }) {
   const { t, i18n } = useTranslation();
   const locale = i18n.resolvedLanguage ?? i18n.language;
@@ -355,7 +362,7 @@ function StoryCard({
           >
             {t('library.card.read')}
           </Link>
-          {!publicCatalog && story.capabilities?.canEdit !== false ? (
+          {story.capabilities?.canEdit ? (
             <Link
               className="product-primary compact"
               to={`/stories/${story.id}/edit`}
@@ -365,9 +372,7 @@ function StoryCard({
               {t('library.card.edit')} <span aria-hidden="true">→</span>
             </Link>
           ) : null}
-          {!publicCatalog &&
-          story.capabilities?.canEdit === false &&
-          story.capabilities.canComment ? (
+          {!story.capabilities?.canEdit && story.capabilities?.canComment ? (
             <Link
               className="product-primary compact"
               to={`/stories/${story.id}/edit`}
@@ -377,7 +382,7 @@ function StoryCard({
               {t('library.card.review')} <span aria-hidden="true">→</span>
             </Link>
           ) : null}
-          {!publicCatalog && story.capabilities?.canManage !== false ? (
+          {story.capabilities?.canManage ? (
             <>
               <Link className="product-ghost compact" to={`/stories/${story.id}/access`}>
                 {t('library.card.access')}
@@ -411,7 +416,7 @@ function formatDate(value: string, locale: string, unknownDate: string) {
   }).format(date);
 }
 
-function summarizeStory(story: Story): StorySummary {
+function summarizeStory(story: Story, user?: AuthUser): StorySummary {
   return {
     id: story.id,
     revision: story.revision,
@@ -425,7 +430,7 @@ function summarizeStory(story: Story): StorySummary {
       canManage: true,
       canComment: false,
     },
-    owner: story.owner,
+    owner: story.owner ?? (user ? { id: user.id, email: user.email } : undefined),
     createdAt: story.createdAt,
     updatedAt: story.updatedAt,
   };

@@ -8,8 +8,7 @@ export const resources = {
       },
       shell: {
         mainNavigation: 'Main navigation',
-        publicStories: 'Public stories',
-        myStories: 'My stories',
+        stories: 'Stories',
         administration: 'Administration',
         signIn: 'Sign in',
         register: 'Create account',
@@ -71,12 +70,11 @@ export const resources = {
       library: {
         eyebrow: 'Your workspace',
         title: 'Stories',
-        description: 'Create, organize, and return to every interactive narrative.',
-        public: {
+        description: 'Create, organize, and return to every interactive narrative you can access.',
+        anonymous: {
           eyebrow: 'Discover',
-          title: 'Public stories',
           description: 'Read stories shared publicly by their authors.',
-          empty: 'No public stories are available yet.',
+          empty: 'No stories are available yet.',
         },
         generateDemo: 'Generate demo',
         generating: 'Generating…',
@@ -86,8 +84,9 @@ export const resources = {
         searchPlaceholder: 'Search stories…',
         filters: {
           all: 'All stories',
-          recent: 'Recently edited',
-          empty: 'Empty',
+          editable: 'Editable by me',
+          commentable: 'Commentable by me',
+          owned: 'Created by me',
         },
         sortBy: 'Sort by',
         lastEdited: 'Last edited',
@@ -699,8 +698,7 @@ export const resources = {
       },
       shell: {
         mainNavigation: 'Navigation principale',
-        publicStories: 'Histoires publiques',
-        myStories: 'Mes histoires',
+        stories: 'Histoires',
         administration: 'Administration',
         signIn: 'Se connecter',
         register: 'Créer un compte',
@@ -762,12 +760,12 @@ export const resources = {
       library: {
         eyebrow: 'Votre espace de travail',
         title: 'Histoires',
-        description: 'Créez, organisez et retrouvez toutes vos narrations interactives.',
-        public: {
+        description:
+          'Créez, organisez et retrouvez toutes les narrations interactives auxquelles vous avez accès.',
+        anonymous: {
           eyebrow: 'Découvrir',
-          title: 'Histoires publiques',
           description: 'Lisez les histoires partagées publiquement par leurs auteurs.',
-          empty: 'Aucune histoire publique n’est disponible pour le moment.',
+          empty: 'Aucune histoire n’est disponible pour le moment.',
         },
         generateDemo: 'Générer une démo',
         generating: 'Génération…',
@@ -777,8 +775,9 @@ export const resources = {
         searchPlaceholder: 'Rechercher des histoires…',
         filters: {
           all: 'Toutes les histoires',
-          recent: 'Modifiées récemment',
-          empty: 'Vides',
+          editable: 'Que je peux modifier',
+          commentable: 'Que je peux commenter',
+          owned: 'Dont je suis le créateur',
         },
         sortBy: 'Trier par',
         lastEdited: 'Dernière modification',

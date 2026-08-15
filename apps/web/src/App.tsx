@@ -78,9 +78,8 @@ export function App() {
         </Link>
         <nav aria-label={t('shell.mainNavigation')}>
           <NavLink to="/" end>
-            {t('shell.publicStories')}
+            {t('shell.stories')}
           </NavLink>
-          {user ? <NavLink to="/stories">{t('shell.myStories')}</NavLink> : null}
           {user?.role === 'admin' ? (
             <NavLink to="/admin/users">{t('shell.administration')}</NavLink>
           ) : null}
@@ -113,12 +112,12 @@ export function App() {
       </header>
       <Suspense fallback={<main className="page">{t('shell.loadingWorkspace')}</main>}>
         <Routes>
-          <Route path="/" element={<StoryList mode="public" />} />
+          <Route path="/" element={<StoryList key={user?.id ?? 'anonymous'} user={user} />} />
           <Route path="/login" element={<Navigate to={returnTo} replace />} />
           <Route path="/register" element={<Navigate to={returnTo} replace />} />
           <Route
             path="/stories"
-            element={user ? <StoryList /> : <Navigate to={signInPath} replace />}
+            element={user ? <Navigate to="/" replace /> : <Navigate to={signInPath} replace />}
           />
           <Route
             path="/stories/:storyId/edit"

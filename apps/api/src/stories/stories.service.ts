@@ -1,4 +1,9 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import {
   createDemoStory,
@@ -28,6 +33,7 @@ import {
   type TriggerCondition,
   type TriggerMutationResult,
   type StoryAccessSettings,
+  type UserRole,
 } from '@paralleax/shared';
 import {
   CreateInteractionDto,
@@ -91,7 +97,10 @@ export class StoriesService {
     await this.repository.save(story, userId);
     return structuredClone(story);
   }
-  async createDemo(userId: string): Promise<Story> {
+  async createDemo(userId: string, actorRole: UserRole): Promise<Story> {
+    if (actorRole !== 'admin') {
+      throw new ForbiddenException('Administrator access required');
+    }
     const now = new Date().toISOString();
     const story = createDemoStory(randomUUID(), now);
     story.access = { ...defaultStoryAccess };

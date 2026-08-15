@@ -17,8 +17,8 @@ vi.mock('./api', () => ({
 }));
 
 vi.mock('./pages/StoryList', () => ({
-  StoryList: ({ mode }: { mode?: string }) => (
-    <div>{mode === 'public' ? 'Catalogue mock' : 'Liste mock'}</div>
+  StoryList: ({ user }: { user: { id: string } | null }) => (
+    <div>{user ? `Stories mock for ${user.id}` : 'Anonymous stories mock'}</div>
   ),
 }));
 vi.mock('./pages/StoryEditor', () => ({ StoryEditor: () => <div>Editeur mock</div> }));
@@ -59,7 +59,7 @@ describe('App', () => {
     expect(api.me).not.toHaveBeenCalled();
   });
 
-  it('renders the public catalogue as the home page', async () => {
+  it('renders the unified accessible-story library as the home page', async () => {
     render(
       <MemoryRouter initialEntries={['/']}>
         <App />
@@ -67,20 +67,19 @@ describe('App', () => {
     );
 
     expect(await screen.findByRole('link', { name: 'Paralleax' })).toHaveAttribute('href', '/');
-    expect(screen.getByRole('link', { name: 'Public stories' })).toHaveAttribute('href', '/');
-    expect(screen.getByRole('link', { name: 'My stories' })).toHaveAttribute('href', '/stories');
+    expect(screen.getByRole('link', { name: 'Stories' })).toHaveAttribute('href', '/');
     expect(screen.queryByRole('link', { name: 'Design system' })).not.toBeInTheDocument();
-    expect(screen.getByText('Catalogue mock')).toBeInTheDocument();
+    expect(screen.getByText('Stories mock for user-1')).toBeInTheDocument();
   });
 
-  it('keeps the authenticated workspace on its own route', async () => {
+  it('redirects the former authenticated workspace route to the unified library', async () => {
     render(
       <MemoryRouter initialEntries={['/stories']}>
         <App />
       </MemoryRouter>,
     );
 
-    expect(await screen.findByText('Liste mock')).toBeInTheDocument();
+    expect(await screen.findByText('Stories mock for user-1')).toBeInTheDocument();
   });
 
   it('exposes user administration only to administrators', async () => {
@@ -115,7 +114,7 @@ describe('App', () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByText('Catalogue mock')).toBeInTheDocument();
+    expect(await screen.findByText('Stories mock for user-1')).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Administration' })).not.toBeInTheDocument();
   });
 
@@ -126,7 +125,7 @@ describe('App', () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByText('Catalogue mock')).toBeInTheDocument();
+    expect(await screen.findByText('Stories mock for user-1')).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Design system' })).not.toBeInTheDocument();
   });
 
@@ -147,7 +146,7 @@ describe('App', () => {
     expect(await screen.findByText('Lecteur mock')).toBeInTheDocument();
   });
 
-  it('shows the public catalogue and authentication actions without a session', async () => {
+  it('shows the anonymous story library and authentication actions without a session', async () => {
     vi.mocked(api.me).mockRejectedValue(new Error('Unauthorized'));
     render(
       <MemoryRouter initialEntries={['/']}>
@@ -155,7 +154,7 @@ describe('App', () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByText('Catalogue mock')).toBeInTheDocument();
+    expect(await screen.findByText('Anonymous stories mock')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Sign in' })).toHaveAttribute(
       'href',
       '/login?returnTo=%2F',
@@ -214,11 +213,11 @@ describe('App', () => {
 
   it('returns to sign in with a clear notice when the session expires', async () => {
     render(
-      <MemoryRouter initialEntries={['/stories']}>
+      <MemoryRouter initialEntries={['/stories/story-1/edit']}>
         <App />
       </MemoryRouter>,
     );
-    expect(await screen.findByText('Liste mock')).toBeInTheDocument();
+    expect(await screen.findByText('Editeur mock')).toBeInTheDocument();
 
     act(() => window.dispatchEvent(new Event('paralleax:session-expired')));
 

@@ -45,9 +45,15 @@ describe('Stories API', () => {
               ? undefined
               : {
                   id:
-                    token === 'user-two' ? 'user-2' : token === 'user-one' ? 'user-1' : 'test-user',
+                    token === 'user-two'
+                      ? 'user-2'
+                      : token === 'user-one'
+                        ? 'user-1'
+                        : token === 'admin'
+                          ? 'admin-1'
+                          : 'test-user',
                   email: `${token ?? 'test'}@paralleax.invalid`,
-                  role: 'user',
+                  role: token === 'admin' ? 'admin' : 'user',
                   createdAt: '2026-01-01T00:00:00.000Z',
                 },
           ),
@@ -135,8 +141,18 @@ describe('Stories API', () => {
       .expect(400);
   });
 
-  it('POST /api/stories/demo creates a populated demo story', async () => {
-    const response = await request(httpServer).post('/api/stories/demo').send({}).expect(201);
+  it('POST /api/stories/demo is admin-only and creates a populated demo story', async () => {
+    await request(httpServer)
+      .post('/api/stories/demo')
+      .set('Cookie', 'paralleax_session=user-one')
+      .send({})
+      .expect(403);
+
+    const response = await request(httpServer)
+      .post('/api/stories/demo')
+      .set('Cookie', 'paralleax_session=admin')
+      .send({})
+      .expect(201);
     const story = response.body as Story;
 
     expect(story).toMatchObject({
@@ -155,7 +171,10 @@ describe('Stories API', () => {
       ),
     ).toBe(true);
 
-    const listResponse = await request(httpServer).get('/api/stories').expect(200);
+    const listResponse = await request(httpServer)
+      .get('/api/stories')
+      .set('Cookie', 'paralleax_session=admin')
+      .expect(200);
     expect(listResponse.body).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ id: story.id, interactionCount: story.interactions.length }),

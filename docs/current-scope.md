@@ -34,9 +34,9 @@ Paralleax currently includes:
   SSE invalidation/reload for reviewers connected to the same API process.
 - An administrator-only account interface with role summaries, account search and
   filtering, global user/admin assignment, and visible last-administrator protection.
-- A public home catalogue limited to publicly visible stories, a separate
-  authenticated story workspace, and local return-to-page navigation through
-  sign-in and registration.
+- A unified story library: anonymous visitors see public stories, while signed-in
+  users see every story they can read with capability and ownership filters. Local
+  return-to-page navigation is preserved through sign-in and registration.
 - React Flow graph authoring.
 - Simulation-oriented reader diagnostics.
 - English and French interface localization with browser detection, a persisted

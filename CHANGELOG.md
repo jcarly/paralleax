@@ -2,6 +2,10 @@
 
 ## 2026-08-15
 
+- Merged the public catalogue and authenticated workspace into one `Stories`
+  library. Signed-in users now see every readable story and can filter by edit,
+  comment, or creator capability; anonymous visitors retain the public-only
+  projection. Demo generation is now administrator-only in both the UI and API.
 - Simplified trigger condition authoring to one add action followed by a typed
   selector with explanations for unavailable types. New OR groups now start
   empty with their selector open, display an explicit separator, and can be

@@ -5,7 +5,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Story, StorySummary } from '@paralleax/shared';
 import { StoryList } from './StoryList';
-import { api } from '../api';
+import { api, type AuthUser } from '../api';
 import { loadStoryEditor, loadStoryPlayer } from './storyRouteLoaders';
 import { i18n } from '../i18n';
 
@@ -24,6 +24,20 @@ vi.mock('./storyRouteLoaders', () => ({
   loadStoryPlayer: vi.fn(() => Promise.resolve()),
 }));
 
+const standardUser: AuthUser = {
+  id: 'user-1',
+  email: 'author@example.com',
+  role: 'user',
+  createdAt: '2026-01-01T00:00:00.000Z',
+};
+
+const administrator: AuthUser = {
+  ...standardUser,
+  id: 'admin-1',
+  email: 'admin@example.com',
+  role: 'admin',
+};
+
 const stories: StorySummary[] = [
   {
     id: 'story-1',
@@ -31,6 +45,9 @@ const stories: StorySummary[] = [
     createdAt: '2026-07-14T08:00:00.000Z',
     updatedAt: '2026-07-14T08:00:00.000Z',
     interactionCount: 0,
+    access: { visibility: 'private', editPolicy: 'owner', commentPolicy: 'disabled' },
+    capabilities: { canRead: true, canEdit: true, canManage: true, canComment: false },
+    owner: { id: standardUser.id, email: standardUser.email },
   },
   {
     id: 'story-2',
@@ -38,6 +55,13 @@ const stories: StorySummary[] = [
     createdAt: '2026-07-14T08:00:00.000Z',
     updatedAt: '2026-07-14T08:00:00.000Z',
     interactionCount: 1,
+    access: {
+      visibility: 'authenticated',
+      editPolicy: 'owner',
+      commentPolicy: 'readers',
+    },
+    capabilities: { canRead: true, canEdit: false, canManage: false, canComment: true },
+    owner: { id: 'user-2', email: 'reviewer@example.com' },
   },
 ];
 
@@ -54,12 +78,14 @@ describe('StoryList', () => {
 
     render(
       <MemoryRouter>
-        <StoryList />
+        <StoryList user={standardUser} />
       </MemoryRouter>,
     );
 
     expect(await screen.findByRole('heading', { name: 'First story' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Second story' })).toBeInTheDocument();
+    expect(api.listStories).toHaveBeenCalledOnce();
+    expect(api.listPublicStories).not.toHaveBeenCalled();
     expect(
       within(screen.getByRole('heading', { name: 'First story' }).closest('article')!).getByText(
         '0',
@@ -80,6 +106,8 @@ describe('StoryList', () => {
       'href',
       '/stories/story-1/play',
     );
+    expect(screen.getByRole('button', { name: 'New story' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Generate demo' })).not.toBeInTheDocument();
 
     await user.hover(within(firstCard).getByRole('link', { name: 'Edit' }));
     expect(loadStoryEditor).toHaveBeenCalledOnce();
@@ -87,7 +115,7 @@ describe('StoryList', () => {
     expect(loadStoryPlayer).toHaveBeenCalledOnce();
   });
 
-  it('loads the public catalogue without authoring actions', async () => {
+  it('loads the anonymous catalogue without authoring actions', async () => {
     vi.mocked(api.listPublicStories).mockResolvedValue([
       {
         ...structuredClone(stories[0]),
@@ -98,12 +126,12 @@ describe('StoryList', () => {
 
     render(
       <MemoryRouter>
-        <StoryList mode="public" />
+        <StoryList user={null} />
       </MemoryRouter>,
     );
 
     const card = (await screen.findByRole('heading', { name: 'First story' })).closest('article')!;
-    expect(screen.getByRole('heading', { name: 'Public stories' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Stories' })).toBeInTheDocument();
     expect(api.listPublicStories).toHaveBeenCalledOnce();
     expect(api.listStories).not.toHaveBeenCalled();
     expect(within(card).getByRole('link', { name: 'Read' })).toBeInTheDocument();
@@ -129,7 +157,7 @@ describe('StoryList', () => {
 
     render(
       <MemoryRouter>
-        <StoryList />
+        <StoryList user={standardUser} />
       </MemoryRouter>,
     );
     await screen.findByRole('heading', { name: 'First story' });
@@ -171,7 +199,7 @@ describe('StoryList', () => {
 
     render(
       <MemoryRouter>
-        <StoryList />
+        <StoryList user={administrator} />
       </MemoryRouter>,
     );
     await screen.findByRole('heading', { name: 'First story' });
@@ -187,13 +215,13 @@ describe('StoryList', () => {
     expect(api.createDemoStory).toHaveBeenCalledOnce();
   });
 
-  it('searches, filters, and switches the story layout locally', async () => {
+  it('searches, filters by resolved capabilities and ownership, and switches layout', async () => {
     const user = userEvent.setup();
     vi.mocked(api.listStories).mockResolvedValue(structuredClone(stories));
 
     render(
       <MemoryRouter>
-        <StoryList />
+        <StoryList user={standardUser} />
       </MemoryRouter>,
     );
     await screen.findByRole('heading', { name: 'First story' });
@@ -203,7 +231,15 @@ describe('StoryList', () => {
     expect(screen.getByRole('heading', { name: 'Second story' })).toBeInTheDocument();
 
     await user.clear(screen.getByRole('searchbox', { name: 'Search stories' }));
-    await user.click(screen.getByRole('button', { name: 'Empty' }));
+    await user.click(screen.getByRole('button', { name: 'Editable by me' }));
+    expect(screen.getByRole('heading', { name: 'First story' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Second story' })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Commentable by me' }));
+    expect(screen.queryByRole('heading', { name: 'First story' })).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Second story' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Created by me' }));
     expect(screen.getByRole('heading', { name: 'First story' })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Second story' })).not.toBeInTheDocument();
 
@@ -219,7 +255,7 @@ describe('StoryList', () => {
 
     render(
       <MemoryRouter>
-        <StoryList />
+        <StoryList user={standardUser} />
       </MemoryRouter>,
     );
 
@@ -237,7 +273,7 @@ describe('StoryList', () => {
 
     render(
       <MemoryRouter>
-        <StoryList />
+        <StoryList user={standardUser} />
       </MemoryRouter>,
     );
     const card = (await screen.findByRole('heading', { name: 'First story' })).closest('article')!;
@@ -259,7 +295,7 @@ describe('StoryList', () => {
 
     render(
       <MemoryRouter>
-        <StoryList />
+        <StoryList user={standardUser} />
       </MemoryRouter>,
     );
     const card = (await screen.findByRole('heading', { name: 'First story' })).closest('article')!;
@@ -276,7 +312,7 @@ describe('StoryList', () => {
 
     render(
       <MemoryRouter>
-        <StoryList />
+        <StoryList user={standardUser} />
       </MemoryRouter>,
     );
 
