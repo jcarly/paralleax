@@ -1,5 +1,5 @@
 import { updateInteractionInStory, type Interaction, type Story } from '@paralleax/shared';
-import { useId } from 'react';
+import { useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { RichTextEditor } from './RichTextEditor';
 
@@ -18,6 +18,8 @@ interface SearchableTargetOption {
   label: string;
   disabled?: boolean;
 }
+
+type EffectType = 'characterStat' | 'inventory' | 'itemStat';
 
 function SearchableTargetField({
   ariaLabel,
@@ -66,6 +68,86 @@ function SearchableTargetField({
         ))}
       </datalist>
     </label>
+  );
+}
+
+function AddEffectControl({
+  unavailableReasons,
+  onAdd,
+}: {
+  unavailableReasons: Record<EffectType, string | undefined>;
+  onAdd: (type: EffectType) => void;
+}) {
+  const { t } = useTranslation();
+  const tooltipIdPrefix = useId();
+  const [isChoosing, setIsChoosing] = useState(false);
+  const effectTypes: EffectType[] = ['characterStat', 'inventory', 'itemStat'];
+
+  if (!isChoosing) {
+    return (
+      <button
+        className="secondary interaction-add-effect"
+        type="button"
+        onClick={() => setIsChoosing(true)}
+      >
+        {t('interactionInspector.addEffect')}
+      </button>
+    );
+  }
+
+  return (
+    <div
+      aria-label={t('interactionInspector.effectType')}
+      className="interaction-effect-picker"
+      role="group"
+    >
+      <div className="interaction-effect-picker-header">
+        <span>{t('interactionInspector.chooseEffectType')}</span>
+        <button
+          aria-label={t('interactionInspector.cancelAddEffect')}
+          className="ghost interaction-effect-picker-cancel"
+          title={t('interactionInspector.cancelAddEffect')}
+          type="button"
+          onClick={() => setIsChoosing(false)}
+        >
+          ×
+        </button>
+      </div>
+      <div className="interaction-effect-type-options">
+        {effectTypes.map((type) => {
+          const unavailableReason = unavailableReasons[type];
+          const tooltipId = `${tooltipIdPrefix}-${type}`;
+          return (
+            <div
+              aria-describedby={unavailableReason ? tooltipId : undefined}
+              className="interaction-effect-type-option"
+              key={type}
+              tabIndex={unavailableReason ? 0 : undefined}
+              title={unavailableReason}
+            >
+              <button
+                aria-describedby={unavailableReason ? tooltipId : undefined}
+                className="secondary"
+                disabled={Boolean(unavailableReason)}
+                title={unavailableReason}
+                type="button"
+                onClick={() => {
+                  onAdd(type);
+                  setIsChoosing(false);
+                }}
+              >
+                {t(`interactionInspector.effectTypes.${type}`)}
+              </button>
+              {unavailableReason ? (
+                <span className="interaction-effect-type-tooltip" id={tooltipId} role="tooltip">
+                  {unavailableReason}
+                </span>
+              ) : null}
+            </div>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 
@@ -139,6 +221,18 @@ export function InteractionInspector({
   });
   const itemStatEffects = interaction.itemStatEffects ?? [];
   const itemDefinitions = story.itemDefinitions ?? [];
+  const availableStat = stats.find(
+    (stat) => !(interaction.statEffects ?? []).some(({ statId }) => statId === stat.id),
+  );
+  const availableItemEffect = characters
+    .flatMap((character) => itemDefinitions.map((definition) => ({ character, definition })))
+    .find(
+      ({ character, definition }) =>
+        !(interaction.itemEffects ?? []).some(
+          ({ itemDefinitionId, characterId }) =>
+            itemDefinitionId === definition.id && characterId === character.id,
+        ),
+    );
   const availableItemStat = itemStats.find(
     (itemStat) =>
       !itemStatEffects.some(
@@ -146,8 +240,69 @@ export function InteractionInspector({
           itemId === itemStat.itemId && statDefinitionId === itemStat.statDefinitionId,
       ),
   );
+  const totalEffectCount =
+    (interaction.statEffects?.length ?? 0) +
+    (interaction.itemEffects?.length ?? 0) +
+    itemStatEffects.length;
+  const effectUnavailableReasons: Record<EffectType, string | undefined> = {
+    characterStat: availableStat
+      ? undefined
+      : stats.length === 0
+        ? t('interactionInspector.effectUnavailable.noCharacterStat')
+        : t('interactionInspector.effectUnavailable.allCharacterStatsUsed'),
+    inventory: availableItemEffect
+      ? undefined
+      : characters.length === 0
+        ? t('interactionInspector.effectUnavailable.noCharacter')
+        : itemDefinitions.length === 0
+          ? t('interactionInspector.effectUnavailable.noItemDefinition')
+          : t('interactionInspector.effectUnavailable.allInventoryEffectsUsed'),
+    itemStat: availableItemStat
+      ? undefined
+      : itemStats.length === 0
+        ? t('interactionInspector.effectUnavailable.noItemStat')
+        : t('interactionInspector.effectUnavailable.allItemStatsUsed'),
+  };
   function updateLocalInteraction(patch: Partial<Interaction>) {
     onChange(updateInteractionInStory(story, interaction.id, patch));
+  }
+
+  function addEffect(type: EffectType) {
+    if (type === 'characterStat' && availableStat) {
+      const statEffects = [
+        ...(interaction.statEffects ?? []),
+        { statId: availableStat.id, operation: 'add' as const, value: 1 },
+      ];
+      updateLocalInteraction({ statEffects });
+      void onPatch(interaction.id, { statEffects });
+      return;
+    }
+    if (type === 'inventory' && availableItemEffect) {
+      const itemEffects = [
+        ...(interaction.itemEffects ?? []),
+        {
+          itemDefinitionId: availableItemEffect.definition.id,
+          characterId: availableItemEffect.character.id,
+          operation: 'obtain' as const,
+        },
+      ];
+      updateLocalInteraction({ itemEffects });
+      void onPatch(interaction.id, { itemEffects });
+      return;
+    }
+    if (type === 'itemStat' && availableItemStat) {
+      const nextEffects = [
+        ...itemStatEffects,
+        {
+          itemId: availableItemStat.itemId,
+          statDefinitionId: availableItemStat.statDefinitionId,
+          operation: 'add' as const,
+          value: 1,
+        },
+      ];
+      updateLocalInteraction({ itemStatEffects: nextEffects });
+      void onPatch(interaction.id, { itemStatEffects: nextEffects });
+    }
   }
 
   return (
@@ -262,491 +417,417 @@ export function InteractionInspector({
       </details>
       <details className="inspector-accordion" open>
         <summary>
-          <span>{t('interactionInspector.statEffects')}</span>
-          <small>{interaction.statEffects?.length ?? 0}</small>
+          <span>{t('interactionInspector.effects')}</span>
+          <small>{totalEffectCount}</small>
         </summary>
         <div className="inspector-accordion-content">
-          <div className="inspector-effect-actions">
-            <button
-              className="secondary"
-              type="button"
-              disabled={stats.length === 0}
-              onClick={() => {
-                const candidate = stats.find(
-                  (stat) =>
-                    !(interaction.statEffects ?? []).some(({ statId }) => statId === stat.id),
+          <AddEffectControl unavailableReasons={effectUnavailableReasons} onAdd={addEffect} />
+          {(interaction.statEffects?.length ?? 0) > 0 ? (
+            <section className="interaction-effect-group">
+              <div className="interaction-effect-group-header">
+                <h4>{t('interactionInspector.statEffects')}</h4>
+                <small>{interaction.statEffects?.length ?? 0}</small>
+              </div>
+              {(interaction.statEffects ?? []).map((effect, index) => {
+                const selectedStat = stats.find((stat) => stat.id === effect.statId);
+                const targetStats = stats.filter(
+                  (stat) => stat.characterId === selectedStat?.characterId,
                 );
-                if (!candidate) return;
-                const statEffects = [
-                  ...(interaction.statEffects ?? []),
-                  { statId: candidate.id, operation: 'add' as const, value: 1 },
-                ];
-                updateLocalInteraction({ statEffects });
-                void onPatch(interaction.id, { statEffects });
-              }}
-            >
-              {t('interactionInspector.addEffect')}
-            </button>
-          </div>
-          {(interaction.statEffects ?? []).map((effect, index) => {
-            const selectedStat = stats.find((stat) => stat.id === effect.statId);
-            const targetStats = stats.filter(
-              (stat) => stat.characterId === selectedStat?.characterId,
-            );
-            const targetOptions = statEffectTargetOptions.map((option) => ({
-              ...option,
-              disabled: !stats.some(
-                (stat) =>
-                  stat.characterId === option.id &&
-                  !(interaction.statEffects ?? []).some(
-                    (candidate, candidateIndex) =>
-                      candidateIndex !== index && candidate.statId === stat.id,
+                const targetOptions = statEffectTargetOptions.map((option) => ({
+                  ...option,
+                  disabled: !stats.some(
+                    (stat) =>
+                      stat.characterId === option.id &&
+                      !(interaction.statEffects ?? []).some(
+                        (candidate, candidateIndex) =>
+                          candidateIndex !== index && candidate.statId === stat.id,
+                      ),
                   ),
-              ),
-            }));
-            return (
-              <div className="interaction-effect-card" key={effect.statId}>
-                <strong className="interaction-effect-title">
-                  {t('interactionInspector.statChange', { number: index + 1 })}
-                </strong>
-                <button
-                  aria-label={t('interactionInspector.deleteStatEffect')}
-                  className="ghost danger interaction-effect-remove"
-                  type="button"
-                  onClick={() => {
-                    const statEffects = (interaction.statEffects ?? []).filter(
-                      (_, itemIndex) => itemIndex !== index,
-                    );
-                    updateLocalInteraction({ statEffects });
-                    void onPatch(interaction.id, { statEffects });
-                  }}
-                >
-                  x
-                </button>
-                <div className="interaction-effect-fields">
-                  <SearchableTargetField
-                    ariaLabel={t('interactionInspector.statEffectTarget')}
-                    value={selectedStat?.characterId ?? ''}
-                    options={targetOptions}
-                    onSelect={(characterId) => {
-                      const usedByAnotherEffect = (statId: string) =>
-                        (interaction.statEffects ?? []).some(
-                          (candidate, candidateIndex) =>
-                            candidateIndex !== index && candidate.statId === statId,
+                }));
+                return (
+                  <div className="interaction-effect-card" key={effect.statId}>
+                    <strong className="interaction-effect-title">
+                      {t('interactionInspector.statChange', { number: index + 1 })}
+                    </strong>
+                    <button
+                      aria-label={t('interactionInspector.deleteStatEffect')}
+                      className="ghost danger interaction-effect-remove"
+                      type="button"
+                      onClick={() => {
+                        const statEffects = (interaction.statEffects ?? []).filter(
+                          (_, itemIndex) => itemIndex !== index,
                         );
-                      const candidateStats = stats.filter(
-                        (stat) => stat.characterId === characterId,
-                      );
-                      const candidate =
-                        candidateStats.find(
-                          (stat) =>
-                            stat.statDefinitionId === selectedStat?.statDefinitionId &&
-                            !usedByAnotherEffect(stat.id),
-                        ) ?? candidateStats.find((stat) => !usedByAnotherEffect(stat.id));
-                      if (!candidate) return;
-                      const statEffects = [...(interaction.statEffects ?? [])];
-                      statEffects[index] = { ...effect, statId: candidate.id };
-                      updateLocalInteraction({ statEffects });
-                      void onPatch(interaction.id, { statEffects });
-                    }}
-                  />
-                  <label>
-                    {t('interactionInspector.stat')}
-                    <select
-                      aria-label={t('interactionInspector.affectedStat')}
-                      value={selectedStat?.statDefinitionId ?? ''}
-                      onChange={(event) => {
-                        const candidate = targetStats.find(
-                          (stat) => stat.statDefinitionId === event.target.value,
-                        );
-                        if (!candidate) return;
-                        const statEffects = [...(interaction.statEffects ?? [])];
-                        statEffects[index] = { ...effect, statId: candidate.id };
                         updateLocalInteraction({ statEffects });
                         void onPatch(interaction.id, { statEffects });
                       }}
                     >
-                      {targetStats.map((stat) => (
-                        <option
-                          disabled={(interaction.statEffects ?? []).some(
-                            (candidate, candidateIndex) =>
-                              candidateIndex !== index && candidate.statId === stat.id,
-                          )}
-                          key={stat.id}
-                          value={stat.statDefinitionId}
+                      x
+                    </button>
+                    <div className="interaction-effect-fields">
+                      <SearchableTargetField
+                        ariaLabel={t('interactionInspector.statEffectTarget')}
+                        value={selectedStat?.characterId ?? ''}
+                        options={targetOptions}
+                        onSelect={(characterId) => {
+                          const usedByAnotherEffect = (statId: string) =>
+                            (interaction.statEffects ?? []).some(
+                              (candidate, candidateIndex) =>
+                                candidateIndex !== index && candidate.statId === statId,
+                            );
+                          const candidateStats = stats.filter(
+                            (stat) => stat.characterId === characterId,
+                          );
+                          const candidate =
+                            candidateStats.find(
+                              (stat) =>
+                                stat.statDefinitionId === selectedStat?.statDefinitionId &&
+                                !usedByAnotherEffect(stat.id),
+                            ) ?? candidateStats.find((stat) => !usedByAnotherEffect(stat.id));
+                          if (!candidate) return;
+                          const statEffects = [...(interaction.statEffects ?? [])];
+                          statEffects[index] = { ...effect, statId: candidate.id };
+                          updateLocalInteraction({ statEffects });
+                          void onPatch(interaction.id, { statEffects });
+                        }}
+                      />
+                      <label>
+                        {t('interactionInspector.stat')}
+                        <select
+                          aria-label={t('interactionInspector.affectedStat')}
+                          value={selectedStat?.statDefinitionId ?? ''}
+                          onChange={(event) => {
+                            const candidate = targetStats.find(
+                              (stat) => stat.statDefinitionId === event.target.value,
+                            );
+                            if (!candidate) return;
+                            const statEffects = [...(interaction.statEffects ?? [])];
+                            statEffects[index] = { ...effect, statId: candidate.id };
+                            updateLocalInteraction({ statEffects });
+                            void onPatch(interaction.id, { statEffects });
+                          }}
                         >
-                          {stat.statName}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label>
-                    {t('interactionInspector.operation')}
-                    <select
-                      aria-label={t('interactionInspector.statEffectOperation')}
-                      value={effect.operation}
-                      onChange={(event) => {
-                        const statEffects = [...(interaction.statEffects ?? [])];
-                        statEffects[index] = {
-                          ...effect,
-                          operation: event.target.value as 'add' | 'set',
-                        };
-                        updateLocalInteraction({ statEffects });
-                        void onPatch(interaction.id, { statEffects });
-                      }}
-                    >
-                      <option value="add">{t('interactionInspector.addOperation')}</option>
-                      <option value="set">{t('interactionInspector.setOperation')}</option>
-                    </select>
-                  </label>
-                  <label>
-                    {t('interactionInspector.value')}
-                    <input
-                      aria-label={t('interactionInspector.statEffectValue')}
-                      type="number"
-                      value={effect.value}
-                      onChange={(event) => {
-                        const statEffects = [...(interaction.statEffects ?? [])];
-                        statEffects[index] = { ...effect, value: Number(event.target.value) };
-                        updateLocalInteraction({ statEffects });
-                      }}
-                      onBlur={(event) => {
-                        const statEffects = [...(interaction.statEffects ?? [])];
-                        statEffects[index] = { ...effect, value: Number(event.target.value) };
-                        void onPatch(interaction.id, { statEffects });
-                      }}
-                    />
-                  </label>
-                </div>
-              </div>
-            );
-          })}
-          {(interaction.statEffects?.length ?? 0) === 0 ? (
-            <p className="inspector-empty-effect">{t('interactionInspector.noStatEffects')}</p>
-          ) : null}
-        </div>
-      </details>
-      <details className="inspector-accordion" open>
-        <summary>
-          <span>{t('interactionInspector.itemEffects')}</span>
-          <small>{interaction.itemEffects?.length ?? 0}</small>
-        </summary>
-        <div className="inspector-accordion-content">
-          <div className="inspector-effect-actions">
-            <button
-              className="secondary"
-              type="button"
-              disabled={itemDefinitions.length === 0 || characters.length === 0}
-              onClick={() => {
-                const character = characters[0];
-                const candidate = itemDefinitions.find(
-                  (definition) =>
-                    !(interaction.itemEffects ?? []).some(
-                      ({ itemDefinitionId, characterId }) =>
-                        itemDefinitionId === definition.id && characterId === character?.id,
-                    ),
+                          {targetStats.map((stat) => (
+                            <option
+                              disabled={(interaction.statEffects ?? []).some(
+                                (candidate, candidateIndex) =>
+                                  candidateIndex !== index && candidate.statId === stat.id,
+                              )}
+                              key={stat.id}
+                              value={stat.statDefinitionId}
+                            >
+                              {stat.statName}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label>
+                        {t('interactionInspector.operation')}
+                        <select
+                          aria-label={t('interactionInspector.statEffectOperation')}
+                          value={effect.operation}
+                          onChange={(event) => {
+                            const statEffects = [...(interaction.statEffects ?? [])];
+                            statEffects[index] = {
+                              ...effect,
+                              operation: event.target.value as 'add' | 'set',
+                            };
+                            updateLocalInteraction({ statEffects });
+                            void onPatch(interaction.id, { statEffects });
+                          }}
+                        >
+                          <option value="add">{t('interactionInspector.addOperation')}</option>
+                          <option value="set">{t('interactionInspector.setOperation')}</option>
+                        </select>
+                      </label>
+                      <label>
+                        {t('interactionInspector.value')}
+                        <input
+                          aria-label={t('interactionInspector.statEffectValue')}
+                          type="number"
+                          value={effect.value}
+                          onChange={(event) => {
+                            const statEffects = [...(interaction.statEffects ?? [])];
+                            statEffects[index] = { ...effect, value: Number(event.target.value) };
+                            updateLocalInteraction({ statEffects });
+                          }}
+                          onBlur={(event) => {
+                            const statEffects = [...(interaction.statEffects ?? [])];
+                            statEffects[index] = { ...effect, value: Number(event.target.value) };
+                            void onPatch(interaction.id, { statEffects });
+                          }}
+                        />
+                      </label>
+                    </div>
+                  </div>
                 );
-                if (!candidate || !character) return;
-                const itemEffects = [
-                  ...(interaction.itemEffects ?? []),
-                  {
-                    itemDefinitionId: candidate.id,
-                    characterId: character.id,
-                    operation: 'obtain' as const,
-                  },
-                ];
-                updateLocalInteraction({ itemEffects });
-                void onPatch(interaction.id, { itemEffects });
-              }}
-            >
-              {t('interactionInspector.addItemEffect')}
-            </button>
-          </div>
-          {(interaction.itemEffects ?? []).map((effect, index) => (
-            <div
-              className="interaction-effect-card"
-              key={`${effect.characterId ?? ''}:${effect.itemDefinitionId ?? effect.itemId ?? index}`}
-            >
-              <strong className="interaction-effect-title">
-                {t('interactionInspector.inventoryChange', { number: index + 1 })}
-              </strong>
-              <button
-                aria-label={t('interactionInspector.deleteItemEffect')}
-                className="ghost danger interaction-effect-remove"
-                type="button"
-                onClick={() => {
-                  const itemEffects = (interaction.itemEffects ?? []).filter(
-                    (_, itemIndex) => itemIndex !== index,
-                  );
-                  updateLocalInteraction({ itemEffects });
-                  void onPatch(interaction.id, { itemEffects });
-                }}
-              >
-                x
-              </button>
-              <div className="interaction-effect-fields">
-                <SearchableTargetField
-                  ariaLabel={t('interactionInspector.itemEffectTarget')}
-                  value={effect.characterId ?? ''}
-                  options={characters.map((character) => ({
-                    id: character.id,
-                    label: character.name,
-                    disabled: (interaction.itemEffects ?? []).some(
-                      (candidate, candidateIndex) =>
-                        candidateIndex !== index &&
-                        candidate.itemDefinitionId === effect.itemDefinitionId &&
-                        candidate.characterId === character.id,
-                    ),
-                  }))}
-                  onSelect={(characterId) => {
-                    const itemEffects = [...(interaction.itemEffects ?? [])];
-                    itemEffects[index] = { ...effect, characterId };
-                    updateLocalInteraction({ itemEffects });
-                    void onPatch(interaction.id, { itemEffects });
-                  }}
-                />
-                <label>
-                  {t('interactionInspector.item')}
-                  <select
-                    aria-label={t('interactionInspector.affectedItem')}
-                    value={effect.itemDefinitionId ?? ''}
-                    onChange={(event) => {
-                      const itemEffects = [...(interaction.itemEffects ?? [])];
-                      itemEffects[index] = {
-                        itemDefinitionId: event.target.value,
-                        characterId: effect.characterId,
-                        operation: effect.operation,
-                      };
-                      updateLocalInteraction({ itemEffects });
-                      void onPatch(interaction.id, { itemEffects });
-                    }}
-                  >
-                    {effect.itemId ? (
-                      <option value="">{t('interactionInspector.legacyItem')}</option>
-                    ) : null}
-                    {itemDefinitions.map((definition) => (
-                      <option
-                        disabled={(interaction.itemEffects ?? []).some(
-                          (candidate, itemIndex) =>
-                            itemIndex !== index &&
-                            candidate.itemDefinitionId === definition.id &&
-                            candidate.characterId === effect.characterId,
-                        )}
-                        key={definition.id}
-                        value={definition.id}
-                      >
-                        {definition.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  {t('interactionInspector.operation')}
-                  <select
-                    aria-label={t('interactionInspector.itemEffectOperation')}
-                    value={effect.operation}
-                    onChange={(event) => {
-                      const itemEffects = [...(interaction.itemEffects ?? [])];
-                      itemEffects[index] = {
-                        ...effect,
-                        operation: event.target.value as 'obtain' | 'lose',
-                      };
-                      updateLocalInteraction({ itemEffects });
-                      void onPatch(interaction.id, { itemEffects });
-                    }}
-                  >
-                    <option value="obtain">{t('interactionInspector.obtainOperation')}</option>
-                    <option value="lose">{t('interactionInspector.loseOperation')}</option>
-                  </select>
-                </label>
-              </div>
-            </div>
-          ))}
-          {(interaction.itemEffects?.length ?? 0) === 0 ? (
-            <p className="inspector-empty-effect">{t('interactionInspector.noItemEffects')}</p>
+              })}
+            </section>
           ) : null}
-        </div>
-      </details>
-      <details className="inspector-accordion" open>
-        <summary>
-          <span>{t('interactionInspector.itemStatEffects')}</span>
-          <small>{itemStatEffects.length}</small>
-        </summary>
-        <div className="inspector-accordion-content">
-          <div className="inspector-effect-actions">
-            <button
-              className="secondary"
-              type="button"
-              disabled={!availableItemStat}
-              onClick={() => {
-                const nextEffects = [
-                  ...itemStatEffects,
-                  {
-                    itemId: availableItemStat!.itemId,
-                    statDefinitionId: availableItemStat!.statDefinitionId,
-                    operation: 'add' as const,
-                    value: 1,
-                  },
-                ];
-                updateLocalInteraction({ itemStatEffects: nextEffects });
-                void onPatch(interaction.id, { itemStatEffects: nextEffects });
-              }}
-            >
-              {t('interactionInspector.addItemStatEffect')}
-            </button>
-          </div>
-          {itemStatEffects.map((effect, index) => (
-            <div
-              className="interaction-effect-card"
-              key={`${effect.itemId}:${effect.statDefinitionId}`}
-            >
-              <strong className="interaction-effect-title">
-                {t('interactionInspector.itemStatChange', { number: index + 1 })}
-              </strong>
-              <button
-                aria-label={t('interactionInspector.deleteItemStatEffect')}
-                className="ghost danger interaction-effect-remove"
-                type="button"
-                onClick={() => {
-                  const nextEffects = itemStatEffects.filter(
-                    (_, candidateIndex) => candidateIndex !== index,
-                  );
-                  updateLocalInteraction({ itemStatEffects: nextEffects });
-                  void onPatch(interaction.id, { itemStatEffects: nextEffects });
-                }}
-              >
-                x
-              </button>
-              <div className="interaction-effect-fields">
-                <SearchableTargetField
-                  ariaLabel={t('interactionInspector.itemStatEffectTarget')}
-                  value={effect.itemId}
-                  options={items.map((item) => ({
-                    id: item.id,
-                    label: item.label,
-                    disabled: !itemStats.some(
-                      (itemStat) =>
-                        itemStat.itemId === item.id &&
-                        !itemStatEffects.some(
+          {(interaction.itemEffects?.length ?? 0) > 0 ? (
+            <section className="interaction-effect-group">
+              <div className="interaction-effect-group-header">
+                <h4>{t('interactionInspector.itemEffects')}</h4>
+                <small>{interaction.itemEffects?.length ?? 0}</small>
+              </div>
+              {(interaction.itemEffects ?? []).map((effect, index) => (
+                <div
+                  className="interaction-effect-card"
+                  key={`${effect.characterId ?? ''}:${effect.itemDefinitionId ?? effect.itemId ?? index}`}
+                >
+                  <strong className="interaction-effect-title">
+                    {t('interactionInspector.inventoryChange', { number: index + 1 })}
+                  </strong>
+                  <button
+                    aria-label={t('interactionInspector.deleteItemEffect')}
+                    className="ghost danger interaction-effect-remove"
+                    type="button"
+                    onClick={() => {
+                      const itemEffects = (interaction.itemEffects ?? []).filter(
+                        (_, itemIndex) => itemIndex !== index,
+                      );
+                      updateLocalInteraction({ itemEffects });
+                      void onPatch(interaction.id, { itemEffects });
+                    }}
+                  >
+                    x
+                  </button>
+                  <div className="interaction-effect-fields">
+                    <SearchableTargetField
+                      ariaLabel={t('interactionInspector.itemEffectTarget')}
+                      value={effect.characterId ?? ''}
+                      options={characters.map((character) => ({
+                        id: character.id,
+                        label: character.name,
+                        disabled: (interaction.itemEffects ?? []).some(
                           (candidate, candidateIndex) =>
                             candidateIndex !== index &&
-                            candidate.itemId === itemStat.itemId &&
-                            candidate.statDefinitionId === itemStat.statDefinitionId,
+                            candidate.itemDefinitionId === effect.itemDefinitionId &&
+                            candidate.characterId === character.id,
                         ),
-                    ),
-                  }))}
-                  onSelect={(itemId) => {
-                    const usedByAnotherEffect = (statDefinitionId: string) =>
-                      itemStatEffects.some(
-                        (candidate, candidateIndex) =>
-                          candidateIndex !== index &&
-                          candidate.itemId === itemId &&
-                          candidate.statDefinitionId === statDefinitionId,
+                      }))}
+                      onSelect={(characterId) => {
+                        const itemEffects = [...(interaction.itemEffects ?? [])];
+                        itemEffects[index] = { ...effect, characterId };
+                        updateLocalInteraction({ itemEffects });
+                        void onPatch(interaction.id, { itemEffects });
+                      }}
+                    />
+                    <label>
+                      {t('interactionInspector.item')}
+                      <select
+                        aria-label={t('interactionInspector.affectedItem')}
+                        value={effect.itemDefinitionId ?? ''}
+                        onChange={(event) => {
+                          const itemEffects = [...(interaction.itemEffects ?? [])];
+                          itemEffects[index] = {
+                            itemDefinitionId: event.target.value,
+                            characterId: effect.characterId,
+                            operation: effect.operation,
+                          };
+                          updateLocalInteraction({ itemEffects });
+                          void onPatch(interaction.id, { itemEffects });
+                        }}
+                      >
+                        {effect.itemId ? (
+                          <option value="">{t('interactionInspector.legacyItem')}</option>
+                        ) : null}
+                        {itemDefinitions.map((definition) => (
+                          <option
+                            disabled={(interaction.itemEffects ?? []).some(
+                              (candidate, itemIndex) =>
+                                itemIndex !== index &&
+                                candidate.itemDefinitionId === definition.id &&
+                                candidate.characterId === effect.characterId,
+                            )}
+                            key={definition.id}
+                            value={definition.id}
+                          >
+                            {definition.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label>
+                      {t('interactionInspector.operation')}
+                      <select
+                        aria-label={t('interactionInspector.itemEffectOperation')}
+                        value={effect.operation}
+                        onChange={(event) => {
+                          const itemEffects = [...(interaction.itemEffects ?? [])];
+                          itemEffects[index] = {
+                            ...effect,
+                            operation: event.target.value as 'obtain' | 'lose',
+                          };
+                          updateLocalInteraction({ itemEffects });
+                          void onPatch(interaction.id, { itemEffects });
+                        }}
+                      >
+                        <option value="obtain">{t('interactionInspector.obtainOperation')}</option>
+                        <option value="lose">{t('interactionInspector.loseOperation')}</option>
+                      </select>
+                    </label>
+                  </div>
+                </div>
+              ))}
+            </section>
+          ) : null}
+          {itemStatEffects.length > 0 ? (
+            <section className="interaction-effect-group">
+              <div className="interaction-effect-group-header">
+                <h4>{t('interactionInspector.itemStatEffects')}</h4>
+                <small>{itemStatEffects.length}</small>
+              </div>
+              {itemStatEffects.map((effect, index) => (
+                <div
+                  className="interaction-effect-card"
+                  key={`${effect.itemId}:${effect.statDefinitionId}`}
+                >
+                  <strong className="interaction-effect-title">
+                    {t('interactionInspector.itemStatChange', { number: index + 1 })}
+                  </strong>
+                  <button
+                    aria-label={t('interactionInspector.deleteItemStatEffect')}
+                    className="ghost danger interaction-effect-remove"
+                    type="button"
+                    onClick={() => {
+                      const nextEffects = itemStatEffects.filter(
+                        (_, candidateIndex) => candidateIndex !== index,
                       );
-                    const candidateStats = itemStats.filter(
-                      (itemStat) => itemStat.itemId === itemId,
-                    );
-                    const candidate =
-                      candidateStats.find(
-                        (itemStat) =>
-                          itemStat.statDefinitionId === effect.statDefinitionId &&
-                          !usedByAnotherEffect(itemStat.statDefinitionId),
-                      ) ??
-                      candidateStats.find(
-                        (itemStat) => !usedByAnotherEffect(itemStat.statDefinitionId),
-                      );
-                    if (!candidate) return;
-                    const nextEffects = [...itemStatEffects];
-                    nextEffects[index] = {
-                      ...effect,
-                      itemId,
-                      statDefinitionId: candidate.statDefinitionId,
-                    };
-                    updateLocalInteraction({ itemStatEffects: nextEffects });
-                    void onPatch(interaction.id, { itemStatEffects: nextEffects });
-                  }}
-                />
-                <label>
-                  {t('interactionInspector.stat')}
-                  <select
-                    aria-label={t('interactionInspector.affectedItemStat')}
-                    value={effect.statDefinitionId}
-                    onChange={(event) => {
-                      const nextEffects = [...itemStatEffects];
-                      nextEffects[index] = {
-                        ...effect,
-                        statDefinitionId: event.target.value,
-                      };
                       updateLocalInteraction({ itemStatEffects: nextEffects });
                       void onPatch(interaction.id, { itemStatEffects: nextEffects });
                     }}
                   >
-                    {itemStats
-                      .filter((itemStat) => itemStat.itemId === effect.itemId)
-                      .map((itemStat) => (
-                        <option
-                          key={itemStat.statDefinitionId}
-                          value={itemStat.statDefinitionId}
-                          disabled={itemStatEffects.some(
+                    x
+                  </button>
+                  <div className="interaction-effect-fields">
+                    <SearchableTargetField
+                      ariaLabel={t('interactionInspector.itemStatEffectTarget')}
+                      value={effect.itemId}
+                      options={items.map((item) => ({
+                        id: item.id,
+                        label: item.label,
+                        disabled: !itemStats.some(
+                          (itemStat) =>
+                            itemStat.itemId === item.id &&
+                            !itemStatEffects.some(
+                              (candidate, candidateIndex) =>
+                                candidateIndex !== index &&
+                                candidate.itemId === itemStat.itemId &&
+                                candidate.statDefinitionId === itemStat.statDefinitionId,
+                            ),
+                        ),
+                      }))}
+                      onSelect={(itemId) => {
+                        const usedByAnotherEffect = (statDefinitionId: string) =>
+                          itemStatEffects.some(
                             (candidate, candidateIndex) =>
                               candidateIndex !== index &&
-                              candidate.itemId === effect.itemId &&
-                              candidate.statDefinitionId === itemStat.statDefinitionId,
-                          )}
-                        >
-                          {itemStat.statName}
-                        </option>
-                      ))}
-                  </select>
-                </label>
-                <label>
-                  {t('interactionInspector.operation')}
-                  <select
-                    aria-label={t('interactionInspector.itemStatEffectOperation')}
-                    value={effect.operation}
-                    onChange={(event) => {
-                      const nextEffects = [...itemStatEffects];
-                      nextEffects[index] = {
-                        ...effect,
-                        operation: event.target.value as 'add' | 'set',
-                      };
-                      updateLocalInteraction({ itemStatEffects: nextEffects });
-                      void onPatch(interaction.id, { itemStatEffects: nextEffects });
-                    }}
-                  >
-                    <option value="add">{t('interactionInspector.addOperation')}</option>
-                    <option value="set">{t('interactionInspector.setOperation')}</option>
-                  </select>
-                </label>
-                <label>
-                  {t('interactionInspector.value')}
-                  <input
-                    aria-label={t('interactionInspector.itemStatEffectValue')}
-                    type="number"
-                    value={effect.value}
-                    onChange={(event) => {
-                      const nextEffects = [...itemStatEffects];
-                      nextEffects[index] = {
-                        ...effect,
-                        value: Number(event.target.value),
-                      };
-                      updateLocalInteraction({ itemStatEffects: nextEffects });
-                    }}
-                    onBlur={(event) => {
-                      const nextEffects = [...itemStatEffects];
-                      nextEffects[index] = {
-                        ...effect,
-                        value: Number(event.target.value),
-                      };
-                      void onPatch(interaction.id, { itemStatEffects: nextEffects });
-                    }}
-                  />
-                </label>
-              </div>
-            </div>
-          ))}
-          {itemStatEffects.length === 0 ? (
-            <p className="inspector-empty-effect">{t('interactionInspector.noItemStatEffects')}</p>
+                              candidate.itemId === itemId &&
+                              candidate.statDefinitionId === statDefinitionId,
+                          );
+                        const candidateStats = itemStats.filter(
+                          (itemStat) => itemStat.itemId === itemId,
+                        );
+                        const candidate =
+                          candidateStats.find(
+                            (itemStat) =>
+                              itemStat.statDefinitionId === effect.statDefinitionId &&
+                              !usedByAnotherEffect(itemStat.statDefinitionId),
+                          ) ??
+                          candidateStats.find(
+                            (itemStat) => !usedByAnotherEffect(itemStat.statDefinitionId),
+                          );
+                        if (!candidate) return;
+                        const nextEffects = [...itemStatEffects];
+                        nextEffects[index] = {
+                          ...effect,
+                          itemId,
+                          statDefinitionId: candidate.statDefinitionId,
+                        };
+                        updateLocalInteraction({ itemStatEffects: nextEffects });
+                        void onPatch(interaction.id, { itemStatEffects: nextEffects });
+                      }}
+                    />
+                    <label>
+                      {t('interactionInspector.stat')}
+                      <select
+                        aria-label={t('interactionInspector.affectedItemStat')}
+                        value={effect.statDefinitionId}
+                        onChange={(event) => {
+                          const nextEffects = [...itemStatEffects];
+                          nextEffects[index] = {
+                            ...effect,
+                            statDefinitionId: event.target.value,
+                          };
+                          updateLocalInteraction({ itemStatEffects: nextEffects });
+                          void onPatch(interaction.id, { itemStatEffects: nextEffects });
+                        }}
+                      >
+                        {itemStats
+                          .filter((itemStat) => itemStat.itemId === effect.itemId)
+                          .map((itemStat) => (
+                            <option
+                              key={itemStat.statDefinitionId}
+                              value={itemStat.statDefinitionId}
+                              disabled={itemStatEffects.some(
+                                (candidate, candidateIndex) =>
+                                  candidateIndex !== index &&
+                                  candidate.itemId === effect.itemId &&
+                                  candidate.statDefinitionId === itemStat.statDefinitionId,
+                              )}
+                            >
+                              {itemStat.statName}
+                            </option>
+                          ))}
+                      </select>
+                    </label>
+                    <label>
+                      {t('interactionInspector.operation')}
+                      <select
+                        aria-label={t('interactionInspector.itemStatEffectOperation')}
+                        value={effect.operation}
+                        onChange={(event) => {
+                          const nextEffects = [...itemStatEffects];
+                          nextEffects[index] = {
+                            ...effect,
+                            operation: event.target.value as 'add' | 'set',
+                          };
+                          updateLocalInteraction({ itemStatEffects: nextEffects });
+                          void onPatch(interaction.id, { itemStatEffects: nextEffects });
+                        }}
+                      >
+                        <option value="add">{t('interactionInspector.addOperation')}</option>
+                        <option value="set">{t('interactionInspector.setOperation')}</option>
+                      </select>
+                    </label>
+                    <label>
+                      {t('interactionInspector.value')}
+                      <input
+                        aria-label={t('interactionInspector.itemStatEffectValue')}
+                        type="number"
+                        value={effect.value}
+                        onChange={(event) => {
+                          const nextEffects = [...itemStatEffects];
+                          nextEffects[index] = {
+                            ...effect,
+                            value: Number(event.target.value),
+                          };
+                          updateLocalInteraction({ itemStatEffects: nextEffects });
+                        }}
+                        onBlur={(event) => {
+                          const nextEffects = [...itemStatEffects];
+                          nextEffects[index] = {
+                            ...effect,
+                            value: Number(event.target.value),
+                          };
+                          void onPatch(interaction.id, { itemStatEffects: nextEffects });
+                        }}
+                      />
+                    </label>
+                  </div>
+                </div>
+              ))}
+            </section>
           ) : null}
         </div>
       </details>

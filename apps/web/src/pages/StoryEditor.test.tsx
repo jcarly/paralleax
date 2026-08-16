@@ -943,6 +943,11 @@ describe('StoryEditor', () => {
       interactionMutation(withEffect, 'interaction-1'),
     );
     await user.click(screen.getByRole('button', { name: 'Add effect' }));
+    await user.click(
+      within(screen.getByRole('group', { name: 'Effect type' })).getByRole('button', {
+        name: 'Character stat',
+      }),
+    );
     expect(api.updateInteraction).toHaveBeenCalledWith('story-1', 'interaction-1', {
       statEffects: [{ statId: 'stat-1', operation: 'add', value: 1 }],
     });

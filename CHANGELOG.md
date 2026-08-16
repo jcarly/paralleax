@@ -2,6 +2,9 @@
 
 ## 2026-08-16
 
+- Unified interaction effect authoring behind one add action and a typed chooser
+  for character stats, inventories, and item stats, with explanations when an
+  effect type is unavailable and empty effect groups kept hidden.
 - Added authorized live story collaboration across the graph and Simulation Mode.
   Committed changes to interactions, triggers, positions, context entities,
   items/stats, and decorations now refresh other open editors without a page

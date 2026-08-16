@@ -42,14 +42,12 @@ describe('InteractionInspector time', () => {
     expect(screen.getByText('MV')).toBeInTheDocument();
     expect(screen.getByLabelText('Location')).toHaveValue('harbor');
 
-    for (const sectionName of [
-      'Context and timing',
-      'Stat effects',
-      'Item effects',
-      'Item stat effects',
-    ]) {
+    for (const sectionName of ['Context and timing', 'Effects']) {
       const summary = screen.getByText(sectionName).closest('summary');
       expect(summary?.closest('details')).toHaveAttribute('open');
+    }
+    for (const emptyEffectGroup of ['Stat effects', 'Item effects', 'Item stat effects']) {
+      expect(screen.queryByRole('heading', { name: emptyEffectGroup })).not.toBeInTheDocument();
     }
 
     const characterOption = screen.getByText('Mira Vale').closest('label');
@@ -95,6 +93,48 @@ describe('InteractionInspector time', () => {
       }),
     );
     expect(onPatch).toHaveBeenCalledWith('interaction-1', { durationMinutes: 42 });
+  });
+
+  it('opens one effect type picker and explains unavailable choices', () => {
+    const interaction: Story['interactions'][number] = {
+      id: 'interaction-1',
+      title: 'Empty interaction',
+      body: '',
+      position: { x: 0, y: 0 },
+      triggers: [{ id: 'trigger-1', inputInteractionIds: [], conditions: [] }],
+    };
+    const story: Story = {
+      id: 'story-1',
+      title: 'Story',
+      interactions: [interaction],
+      createdAt: '2026-07-26T00:00:00.000Z',
+      updatedAt: '2026-07-26T00:00:00.000Z',
+    };
+
+    render(
+      <InteractionInspector
+        story={story}
+        interaction={interaction}
+        onChange={vi.fn()}
+        onPatch={vi.fn().mockResolvedValue(undefined)}
+        onDelete={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add effect' }));
+
+    const picker = screen.getByRole('group', { name: 'Effect type' });
+    expect(within(picker).getByRole('button', { name: 'Character stat' })).toBeDisabled();
+    expect(within(picker).getByRole('button', { name: 'Item inventory' })).toBeDisabled();
+    expect(within(picker).getByRole('button', { name: 'Item stat' })).toBeDisabled();
+    expect(screen.getByText('Create and assign a stat to a character first.')).toHaveAttribute(
+      'role',
+      'tooltip',
+    );
+    expect(within(picker).getByRole('button', { name: 'Character stat' })).toHaveAttribute(
+      'title',
+      'Create and assign a stat to a character first.',
+    );
   });
 
   it('selects a searchable character target separately from its affected stat', () => {
@@ -147,6 +187,7 @@ describe('InteractionInspector time', () => {
     );
 
     const target = screen.getByLabelText('Stat effect target');
+    expect(screen.getByRole('heading', { name: 'Stat effects' })).toBeInTheDocument();
     expect(target).toHaveValue('Mira');
     expect(screen.getByLabelText('Affected stat')).toHaveValue('trust');
 
@@ -203,7 +244,12 @@ describe('InteractionInspector time', () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: 'Add item effect' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add effect' }));
+    fireEvent.click(
+      within(screen.getByRole('group', { name: 'Effect type' })).getByRole('button', {
+        name: 'Item inventory',
+      }),
+    );
     expect(onPatch).toHaveBeenLastCalledWith('interaction-1', {
       itemEffects: [
         { itemDefinitionId: 'key-definition', characterId: 'mira', operation: 'obtain' },
@@ -309,7 +355,12 @@ describe('InteractionInspector time', () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: 'Add item stat effect' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add effect' }));
+    fireEvent.click(
+      within(screen.getByRole('group', { name: 'Effect type' })).getByRole('button', {
+        name: 'Item stat',
+      }),
+    );
     expect(onPatch).toHaveBeenLastCalledWith('interaction-1', {
       itemStatEffects: [
         {

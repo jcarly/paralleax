@@ -1387,14 +1387,100 @@ header span {
   font-weight: 750;
   object-fit: cover;
 }
-.inspector-effect-actions {
-  display: flex;
-  justify-content: flex-end;
-  margin-bottom: 0.65rem;
+.interaction-add-effect {
+  justify-self: start;
 }
-.inspector-effect-actions button {
-  padding: 0.45rem 0.6rem;
+.interaction-effect-picker {
+  display: grid;
+  gap: 0.55rem;
+  padding: 0.65rem;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface);
+}
+.interaction-effect-picker-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  color: var(--color-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+.interaction-effect-picker-cancel {
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  color: var(--color-danger);
+  font-size: 1.25rem;
+  line-height: 1;
+}
+.interaction-effect-type-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.4rem;
+}
+.interaction-effect-type-option {
+  position: relative;
+  min-width: 0;
+}
+.interaction-effect-type-option > button {
+  width: 100%;
+  margin: 0;
+}
+.interaction-effect-type-option:focus-visible {
+  border-radius: 8px;
+  outline: 3px solid var(--color-primary-halo-strong);
+  outline-offset: 2px;
+}
+.interaction-effect-type-tooltip {
+  position: absolute;
+  z-index: 20;
+  right: 0;
+  bottom: calc(100% + 0.4rem);
+  left: 0;
+  visibility: hidden;
+  padding: 0.45rem 0.55rem;
+  border-radius: 6px;
+  background: var(--color-text);
+  color: var(--color-surface);
+  box-shadow: var(--shadow-card);
   font-size: 0.72rem;
+  line-height: 1.35;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(0.2rem);
+  transition:
+    opacity 120ms ease,
+    transform 120ms ease,
+    visibility 120ms ease;
+}
+.interaction-effect-type-option:hover .interaction-effect-type-tooltip,
+.interaction-effect-type-option:focus .interaction-effect-type-tooltip,
+.interaction-effect-type-option:focus-within .interaction-effect-type-tooltip {
+  visibility: visible;
+  opacity: 1;
+  transform: translateY(0);
+}
+.interaction-effect-group {
+  display: grid;
+  gap: 0.65rem;
+  padding-top: 0.8rem;
+  border-top: 1px solid var(--color-border);
+}
+.interaction-effect-group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+.interaction-effect-group-header h4 {
+  margin: 0;
+  color: var(--color-text);
+  font-size: 0.84rem;
+}
+.interaction-effect-group-header small {
+  color: var(--color-muted);
 }
 .interaction-effect-card {
   display: grid;
@@ -1435,15 +1521,6 @@ header span {
 .interaction-effect-fields select {
   min-width: 0;
   margin-top: 0.35rem;
-}
-.inspector-empty-effect {
-  margin: 0;
-  padding: 0.7rem;
-  border: 1px dashed var(--color-border);
-  border-radius: 8px;
-  color: var(--color-muted);
-  font-size: 0.75rem;
-  text-align: center;
 }
 .stat-row,
 .stat-effect-row {
