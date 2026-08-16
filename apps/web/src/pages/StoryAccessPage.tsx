@@ -137,7 +137,7 @@ export function StoryAccessPage() {
                   })
                 }
               >
-                {(['disabled', 'readers', 'editors', 'authenticated'] as const).map((value) => (
+                {(['editors', 'readers'] as const).map((value) => (
                   <option key={value} value={value}>
                     {t(`access.comments.${value}`)}
                   </option>

@@ -206,7 +206,7 @@ Resolved story capabilities are:
 - read;
 - edit directly;
 - manage story settings;
-- comment, using the persisted policy once comments exist.
+- comment, using either the editor-only or signed-in-reader policy.
 
 The creator and administrators receive all capabilities. An editor can read and
 edit but cannot manage settings or delete. Private visibility ignores collaborator
@@ -216,7 +216,8 @@ signed-in account.
 The effective permission is resolved from administrator status, story ownership,
 story policies, authentication, and the direct grant. All API object operations
 apply that resolution. New stories default to private owner-only editing with
-comments disabled.
+comments enabled for editors. Choosing the reader policy extends comments to
+every signed-in account that can read the story.
 
 Pending suggestions are not visible through a per-suggestion setting. Any user
 with review or approval rights on a story can see all pending suggestions for
@@ -429,6 +430,11 @@ text edits. When the target or quote can no longer be located unambiguously, the
 thread becomes detached instead of being deleted. Comments are authoring/review
 metadata: the reader engine, reader progress, and future story exports do not
 consume them.
+
+Editors use the complete graph-anchored review projection. Authorized signed-in
+readers use a contextual player projection that lists interaction and interaction-
+text threads only for the scene currently being read and creates new threads on
+that interaction. This presentation does not put comments into reader state.
 
 ### Conditions and Effects
 

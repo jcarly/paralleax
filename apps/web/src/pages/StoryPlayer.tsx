@@ -27,10 +27,13 @@ import {
   getNextChildPosition,
   getNextRootPosition,
   getTriggerConditionFailures,
+  isCommentAnchorDetached,
 } from '@paralleax/shared';
 import { api } from '../api';
 import { RichTextContent } from '../components/RichTextContent';
 import { RichTextEditor } from '../components/RichTextEditor';
+import { StoryCommentsPanel } from '../features/comments/StoryCommentsPanel';
+import { useStoryComments } from '../features/comments/useStoryComments';
 
 function getInteractionTitle(story: Story, interactionId: string) {
   return (
@@ -212,21 +215,30 @@ function getJourneyLocation(story: Story | undefined, journey: string[]) {
   return null;
 }
 
-export function StoryPlayer({ authenticated = true }: { authenticated?: boolean }) {
+export function StoryPlayer({
+  authenticated = true,
+  currentUserId,
+}: {
+  authenticated?: boolean;
+  currentUserId?: string;
+}) {
   const { t } = useTranslation();
   const { storyId = '' } = useParams();
   const [searchParams] = useSearchParams();
   const simulationRequested = authenticated && searchParams.get('mode') === 'simulation';
-  const startInteractionId = authenticated ? searchParams.get('startInteractionId') : null;
+  const requestedStartInteractionId = simulationRequested
+    ? searchParams.get('startInteractionId')
+    : null;
   const [story, setStory] = useState<Story>();
-  const isSimulationMode = simulationRequested && story?.capabilities?.canEdit !== false;
-  const loadKey = `${storyId}:${isSimulationMode ? 'simulation' : 'reader'}:${startInteractionId ?? ''}`;
+  const isSimulationMode = simulationRequested && story?.capabilities?.canEdit === true;
+  const startInteractionId = isSimulationMode ? requestedStartInteractionId : null;
+  const loadKey = `${storyId}:${simulationRequested ? 'simulation-request' : 'reader'}:${requestedStartInteractionId ?? ''}`;
   const [loadedKey, setLoadedKey] = useState('');
   const [loadError, setLoadError] = useState<{ key: string; message: string }>();
   const [loadAttempt, setLoadAttempt] = useState(0);
-  const [currentId, setCurrentId] = useState<string | null>(startInteractionId);
-  const [journey, setJourney] = useState<string[]>(startInteractionId ? [startInteractionId] : []);
-  const [visited, setVisited] = useState<string[]>(startInteractionId ? [startInteractionId] : []);
+  const [currentId, setCurrentId] = useState<string | null>(null);
+  const [journey, setJourney] = useState<string[]>([]);
+  const [visited, setVisited] = useState<string[]>([]);
   const [currentLocationId, setCurrentLocationId] = useState<string | null>(null);
   const [statValues, setStatValues] = useState<Record<string, number>>({});
   const [ownedItemIds, setOwnedItemIds] = useState<string[]>([]);
@@ -237,21 +249,28 @@ export function StoryPlayer({ authenticated = true }: { authenticated?: boolean 
   );
   const [forceUnavailableOptions, setForceUnavailableOptions] = useState(false);
   const [editingChoiceId, setEditingChoiceId] = useState<string>();
+  const [commentsOpen, setCommentsOpen] = useState(false);
   const editingChoiceInputRef = useRef<HTMLInputElement>(null);
   const progressSaveQueue = useRef<Promise<void>>(Promise.resolve());
   const progressAttempt = useRef(0);
 
   useEffect(() => {
     let cancelled = false;
-    void Promise.all([
-      api.getStory(storyId),
-      !authenticated || isSimulationMode || startInteractionId
-        ? Promise.resolve(null)
-        : api.getReaderProgress(storyId),
-    ])
-      .then(([nextStory, progress]) => {
-        if (cancelled) return;
+    void api
+      .getStory(storyId)
+      .then(async (nextStory) => {
         const positioned = ensureStoryInteractionPositions(nextStory);
+        const authorizedSimulation =
+          simulationRequested && positioned.capabilities?.canEdit === true;
+        const effectiveStartInteractionId = authorizedSimulation
+          ? requestedStartInteractionId
+          : null;
+        const progress =
+          !authenticated || authorizedSimulation ? null : await api.getReaderProgress(storyId);
+        return { positioned, progress, effectiveStartInteractionId };
+      })
+      .then(({ positioned, progress, effectiveStartInteractionId }) => {
+        if (cancelled) return;
         const reconciledProgress = progress
           ? buildReaderProgressState(
               positioned,
@@ -261,7 +280,7 @@ export function StoryPlayer({ authenticated = true }: { authenticated?: boolean 
           : undefined;
         const nextJourney =
           reconciledProgress?.journeyInteractionIds ??
-          (startInteractionId ? [startInteractionId] : []);
+          (effectiveStartInteractionId ? [effectiveStartInteractionId] : []);
         setStory(positioned);
         setLoadedKey(loadKey);
         setJourney(nextJourney);
@@ -290,11 +309,48 @@ export function StoryPlayer({ authenticated = true }: { authenticated?: boolean 
     return () => {
       cancelled = true;
     };
-  }, [authenticated, isSimulationMode, loadAttempt, loadKey, startInteractionId, storyId, t]);
+  }, [
+    authenticated,
+    loadAttempt,
+    loadKey,
+    requestedStartInteractionId,
+    simulationRequested,
+    storyId,
+    t,
+  ]);
 
   const current = useMemo(
     () => story?.interactions.find((item) => item.id === currentId),
     [currentId, story],
+  );
+  const canUseReaderComments =
+    authenticated && !isSimulationMode && story?.capabilities?.canComment === true;
+  const comments = useStoryComments(storyId, canUseReaderComments);
+  const readerCommentThreads = useMemo(
+    () =>
+      story && current
+        ? comments.threads
+            .filter(
+              ({ anchor }) =>
+                anchor.kind !== 'canvas' &&
+                anchor.targetType === 'interaction' &&
+                anchor.targetId === current.id,
+            )
+            .map((thread) => ({
+              ...thread,
+              detached: isCommentAnchorDetached(story, thread.anchor),
+            }))
+        : [],
+    [comments.threads, current, story],
+  );
+  const selectedReaderCommentThread = readerCommentThreads.find(
+    ({ id }) => id === comments.selectedThreadId,
+  );
+  const canManageSelectedReaderThread = Boolean(
+    selectedReaderCommentThread &&
+    (story?.capabilities?.canManage ||
+      story?.capabilities?.canEdit ||
+      selectedReaderCommentThread.createdBy.id === currentUserId),
   );
   const currentDateTime = useMemo(
     () => (story ? getJourneyDateTime(story, journey) : '2000-01-03T08:00'),
@@ -475,6 +531,8 @@ export function StoryPlayer({ authenticated = true }: { authenticated?: boolean 
 
   function choose(interaction: Interaction) {
     if (!story) return;
+    comments.cancelDraft();
+    comments.selectThread(undefined);
     const nextJourney = [...journey, interaction.id];
     const nextOwnedItemIds = applyInteractionItemEffects(
       story,
@@ -495,6 +553,8 @@ export function StoryPlayer({ authenticated = true }: { authenticated?: boolean 
   }
 
   function restart() {
+    comments.cancelDraft();
+    comments.selectThread(undefined);
     setCurrentId(startInteractionId);
     setJourney(startInteractionId ? [startInteractionId] : []);
     setVisited(startInteractionId ? [startInteractionId] : []);
@@ -616,6 +676,13 @@ export function StoryPlayer({ authenticated = true }: { authenticated?: boolean 
     setEditingChoiceId(created?.id);
   }
 
+  function startReaderComment() {
+    if (!canUseReaderComments || !current) return;
+    comments.selectThread(undefined);
+    comments.startThread({ kind: 'entity', targetType: 'interaction', targetId: current.id });
+    setCommentsOpen(true);
+  }
+
   async function saveChoiceTitle(interaction: Interaction, title: string) {
     setEditingChoiceId(undefined);
     const result = await api.updateInteraction(storyId, interaction.id, { title });
@@ -687,7 +754,19 @@ export function StoryPlayer({ authenticated = true }: { authenticated?: boolean 
         <button className="player-toolbar-button" onClick={restart}>
           <span aria-hidden="true">↻</span> {t('player.restart')}
         </button>
-        {authenticated ? (
+        {canUseReaderComments ? (
+          <button
+            className={`player-toolbar-button comments-toolbar-button ${commentsOpen ? 'active' : ''}`}
+            type="button"
+            onClick={() => setCommentsOpen((open) => !open)}
+          >
+            {t('comments.title')}
+            {readerCommentThreads.filter(({ status }) => status === 'open').length ? (
+              <small>{readerCommentThreads.filter(({ status }) => status === 'open').length}</small>
+            ) : null}
+          </button>
+        ) : null}
+        {story.capabilities?.canEdit ? (
           <Link className="player-exit" to={`/stories/${story.id}/edit`}>
             {t(isSimulationMode ? 'player.exitSimulation' : 'player.backToEditor')}
           </Link>
@@ -793,6 +872,13 @@ export function StoryPlayer({ authenticated = true }: { authenticated?: boolean 
                     html={current.body}
                     conditionalTextState={conditionalTextState}
                   />
+                  {canUseReaderComments ? (
+                    <div className="reader-comment-actions">
+                      <button type="button" onClick={startReaderComment}>
+                        {t('comments.commentScene')}
+                      </button>
+                    </div>
+                  ) : null}
                 </>
               )}
             </>
@@ -1023,6 +1109,23 @@ export function StoryPlayer({ authenticated = true }: { authenticated?: boolean 
           ))}
         </ol>
       </details>
+      <StoryCommentsPanel
+        open={commentsOpen && canUseReaderComments}
+        loading={comments.loading}
+        error={comments.error}
+        threads={readerCommentThreads}
+        selectedThread={selectedReaderCommentThread}
+        draftAnchor={comments.draftAnchor}
+        canComment={canUseReaderComments}
+        canManageThread={canManageSelectedReaderThread}
+        realtimeStatus={comments.realtimeStatus}
+        onClose={() => setCommentsOpen(false)}
+        onSelect={comments.selectThread}
+        onCancelDraft={comments.cancelDraft}
+        onCreate={comments.create}
+        onReply={comments.reply}
+        onStatus={comments.setStatus}
+      />
     </main>
   );
 }

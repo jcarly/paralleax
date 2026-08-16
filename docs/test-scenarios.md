@@ -50,6 +50,14 @@ The character-stat vertical keeps these regressions covered:
 - API ownership: unauthenticated story requests are rejected.
 - API ownership: one account cannot list, read, mutate, or delete another
   account's stories.
+- Shared/API: new stories default comments to editors; access updates accept only
+  `editors` or `readers`, and the migration maps removed policies predictably.
+- Web access: a commenter without edit permission is redirected from the graph
+  to the player and cannot enable Simulation Mode or a direct starting interaction
+  through query parameters.
+- Reader comments: an authorized signed-in reader can create and reply to a
+  thread on the current interaction, while graph-only and other-interaction
+  threads are not projected.
 - Browser: an author can register, create a story, sign out, sign back in, and
   find the story again.
 

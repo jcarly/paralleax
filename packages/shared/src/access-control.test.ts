@@ -8,7 +8,7 @@ const invitation: StoryAccessSettings = {
 };
 
 describe('story access control', () => {
-  it('denies private stories by default and permits their owner or an administrator', () => {
+  it('denies private stories by default and lets their editors comment', () => {
     expect(resolveStoryAccess(defaultStoryAccess, { authenticated: false })).toEqual({
       canRead: false,
       canEdit: false,
@@ -17,10 +17,13 @@ describe('story access control', () => {
     });
     expect(
       resolveStoryAccess(defaultStoryAccess, { authenticated: true, isOwner: true, role: 'user' }),
-    ).toMatchObject({ canRead: true, canEdit: true, canManage: true });
-    expect(
-      resolveStoryAccess(defaultStoryAccess, { authenticated: true, role: 'admin' }),
-    ).toMatchObject({ canRead: true, canEdit: true, canManage: true });
+    ).toEqual({ canRead: true, canEdit: true, canManage: true, canComment: true });
+    expect(resolveStoryAccess(defaultStoryAccess, { authenticated: true, role: 'admin' })).toEqual({
+      canRead: true,
+      canEdit: true,
+      canManage: true,
+      canComment: true,
+    });
   });
 
   it('never grants anonymous comment authorship even on a public story', () => {
@@ -53,7 +56,7 @@ describe('story access control', () => {
     const settings: StoryAccessSettings = {
       visibility: 'public',
       editPolicy: 'authenticated',
-      commentPolicy: 'authenticated',
+      commentPolicy: 'editors',
     };
     expect(resolveStoryAccess(settings, { authenticated: false })).toEqual({
       canRead: true,

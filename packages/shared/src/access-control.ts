@@ -2,7 +2,7 @@ export type UserRole = 'user' | 'admin';
 
 export type StoryVisibility = 'private' | 'authenticated' | 'public' | 'invitation';
 export type StoryEditPolicy = 'owner' | 'collaborators' | 'authenticated';
-export type StoryCommentPolicy = 'disabled' | 'readers' | 'editors' | 'authenticated';
+export type StoryCommentPolicy = 'readers' | 'editors';
 export type StoryCollaboratorRole = 'viewer' | 'editor';
 
 export interface StoryAccessSettings {
@@ -39,7 +39,7 @@ export interface StoryAccessConfiguration extends StoryAccessSettings {
 export const defaultStoryAccess: StoryAccessSettings = {
   visibility: 'private',
   editPolicy: 'owner',
-  commentPolicy: 'disabled',
+  commentPolicy: 'editors',
 };
 
 export function resolveStoryAccess(
@@ -63,10 +63,7 @@ export function resolveStoryAccess(
   const canComment =
     subject.authenticated &&
     canRead &&
-    settings.commentPolicy !== 'disabled' &&
-    (settings.commentPolicy === 'readers' ||
-      (settings.commentPolicy === 'editors' && canEdit) ||
-      (settings.commentPolicy === 'authenticated' && subject.authenticated));
+    (settings.commentPolicy === 'readers' || (settings.commentPolicy === 'editors' && canEdit));
 
   return { canRead, canEdit, canManage, canComment };
 }

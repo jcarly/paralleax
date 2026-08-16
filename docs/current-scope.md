@@ -25,20 +25,22 @@ Paralleax currently includes:
 - Exact authored item instances, including nested item relationships.
 - Character- or location-rooted item placement and nested item relationships.
 - Authentication, sessions, creator ownership, global user/admin roles, per-story
-  visibility, editing, and comment policies, reader/editor invitations, authenticated
-  anchored review discussions, health/readiness, migrations, and production-oriented API error
-  handling.
+  visibility, editing, and editor/reader comment policies, reader/editor invitations,
+  authenticated anchored review discussions, health/readiness, migrations, and
+  production-oriented API error handling.
 - Story review post-its on the graph, interactions, triggers, characters, locations,
   item/stat definitions, and selected title/body/name/description text, with replies,
   open/resolved state, durable quote context, detached-anchor detection, and live
-  SSE invalidation/reload for reviewers connected to the same API process.
+  SSE invalidation/reload for reviewers connected to the same API process. Editors
+  use the complete graph review layer; authorized readers see and create contextual
+  interaction discussions in the player.
 - An administrator-only account interface with role summaries, account search and
   filtering, global user/admin assignment, and visible last-administrator protection.
 - A unified story library: anonymous visitors see public stories, while signed-in
   users see every story they can read with capability and ownership filters. Local
   return-to-page navigation is preserved through sign-in and registration.
-- React Flow graph authoring.
-- Simulation-oriented reader diagnostics.
+- Editor-only React Flow graph authoring.
+- Editor-only Simulation Mode diagnostics.
 - English and French interface localization with browser detection, a persisted
   user preference, and English fallback. Authored story content is never
   translated by the interface layer.

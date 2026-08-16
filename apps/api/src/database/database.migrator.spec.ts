@@ -163,4 +163,13 @@ describe('DatabaseMigrator', () => {
     expect(migration?.sql).toMatch(/width >= 120 AND height >= 80/i);
     expect(migration?.sql).toMatch(/font_size BETWEEN 10 AND 96/i);
   });
+
+  it('defaults comments to editors and maps the removed policies forward', () => {
+    const migration = databaseMigrations.find(({ id }) => id === '202608160030_reader_comments');
+
+    expect(migration?.sql).toMatch(/WHEN 'authenticated' THEN 'readers'/i);
+    expect(migration?.sql).toMatch(/WHEN 'disabled' THEN 'editors'/i);
+    expect(migration?.sql).toMatch(/ALTER COLUMN comment_policy SET DEFAULT 'editors'/i);
+    expect(migration?.sql).toMatch(/comment_policy IN \('editors', 'readers'\)/i);
+  });
 });

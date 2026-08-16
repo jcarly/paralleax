@@ -245,7 +245,7 @@ describe('Comments API', () => {
     ]);
   });
 
-  it('requires authentication, comment permission, and a same-story anchor', async () => {
+  it('requires authentication, effective comment permission, and a same-story anchor', async () => {
     const ownerCookie = 'paralleax_session=user-1';
     const createdStory = await request(httpServer)
       .post('/api/stories')
@@ -265,15 +265,23 @@ describe('Comments API', () => {
       .set('Cookie', ownerCookie)
       .send({
         anchor: { kind: 'canvas', position: { x: 10, y: 20 } },
-        body: 'Comments are disabled.',
+        body: 'Editors can comment by default.',
       })
-      .expect(403);
+      .expect(201);
 
     await request(httpServer)
       .patch(`/api/stories/${storyId}/access`)
       .set('Cookie', ownerCookie)
-      .send({ visibility: 'private', editPolicy: 'owner', commentPolicy: 'editors' })
+      .send({ visibility: 'authenticated', editPolicy: 'owner', commentPolicy: 'editors' })
       .expect(200);
+    await request(httpServer)
+      .post(`/api/stories/${storyId}/comment-threads`)
+      .set('Cookie', 'paralleax_session=user-2')
+      .send({
+        anchor: { kind: 'canvas', position: { x: 10, y: 20 } },
+        body: 'Readers cannot comment under the editor policy.',
+      })
+      .expect(403);
     await request(httpServer)
       .post(`/api/stories/${storyId}/comment-threads`)
       .set('Cookie', ownerCookie)

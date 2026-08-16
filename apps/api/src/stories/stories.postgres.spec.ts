@@ -361,13 +361,13 @@ describePostgres('StoriesRepository PostgreSQL integration', () => {
     await repository.updateAccess(story.id, ownerId, {
       visibility: 'private',
       editPolicy: 'collaborators',
-      commentPolicy: 'disabled',
+      commentPolicy: 'editors',
     });
     await expect(repository.find(story.id, collaboratorId)).resolves.toBeUndefined();
     await repository.updateAccess(story.id, ownerId, {
       visibility: 'public',
       editPolicy: 'owner',
-      commentPolicy: 'disabled',
+      commentPolicy: 'editors',
     });
     await expect(repository.find(story.id)).resolves.toMatchObject({
       capabilities: { canRead: true, canEdit: false, canManage: false },

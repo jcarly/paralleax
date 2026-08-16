@@ -15,6 +15,11 @@ vi.mock('../api', () => ({
     deleteReaderProgress: vi.fn(),
     createInteraction: vi.fn(),
     updateInteraction: vi.fn(),
+    listCommentThreads: vi.fn(),
+    createCommentThread: vi.fn(),
+    addCommentMessage: vi.fn(),
+    updateCommentThreadStatus: vi.fn(),
+    updateCommentThreadAnchor: vi.fn(),
   },
 }));
 
@@ -23,6 +28,8 @@ const story: Story = {
   title: 'Playable story',
   createdAt: '2026-07-14T08:00:00.000Z',
   updatedAt: '2026-07-14T08:00:00.000Z',
+  access: { visibility: 'private', editPolicy: 'owner', commentPolicy: 'editors' },
+  capabilities: { canRead: true, canEdit: true, canManage: true, canComment: true },
   interactions: [
     {
       id: 'start',
@@ -75,7 +82,7 @@ async function renderPlayer(initialEntry = '/stories/story-1/play', storyFixture
   render(
     <MemoryRouter initialEntries={[initialEntry]}>
       <Routes>
-        <Route path="/stories/:storyId/play" element={<StoryPlayer />} />
+        <Route path="/stories/:storyId/play" element={<StoryPlayer currentUserId="owner-1" />} />
       </Routes>
     </MemoryRouter>,
   );
@@ -88,6 +95,7 @@ describe('StoryPlayer', () => {
 
   beforeEach(() => {
     vi.resetAllMocks();
+    vi.mocked(api.listCommentThreads).mockResolvedValue([]);
   });
 
   it('shows a recoverable error when the story cannot be loaded', async () => {
@@ -113,7 +121,15 @@ describe('StoryPlayer', () => {
 
   it('reads publicly without loading or saving authenticated progress', async () => {
     const user = userEvent.setup();
-    vi.mocked(api.getStory).mockResolvedValue(structuredClone(story));
+    const publicStory = structuredClone(story);
+    publicStory.access = { visibility: 'public', editPolicy: 'owner', commentPolicy: 'editors' };
+    publicStory.capabilities = {
+      canRead: true,
+      canEdit: false,
+      canManage: false,
+      canComment: false,
+    };
+    vi.mocked(api.getStory).mockResolvedValue(publicStory);
     render(
       <MemoryRouter initialEntries={['/stories/story-1/play']}>
         <Routes>
@@ -485,21 +501,139 @@ describe('StoryPlayer', () => {
     expect(screen.getByRole('button', { name: 'Start' })).toBeInTheDocument();
   });
 
-  it('can start from a specific interaction', async () => {
+  it('ignores a direct start interaction outside simulation mode', async () => {
     const user = userEvent.setup();
     await renderPlayer('/stories/story-1/play?startInteractionId=next');
 
-    expect(screen.getByRole('heading', { name: 'Next' })).toBeInTheDocument();
-    expect(screen.getByText('You continue.')).toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: /Start the story/ })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Start' })).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Start the story/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Start' })).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Restart' }));
 
-    expect(screen.getByRole('heading', { name: 'Next' })).toBeInTheDocument();
-    expect(screen.getByText('You continue.')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Start the story/ })).toBeInTheDocument();
+  });
+
+  it('ignores simulation controls and direct starts for non-editors', async () => {
+    const readerStory = structuredClone(story);
+    readerStory.access = {
+      visibility: 'authenticated',
+      editPolicy: 'owner',
+      commentPolicy: 'readers',
+    };
+    readerStory.capabilities = {
+      canRead: true,
+      canEdit: false,
+      canManage: false,
+      canComment: true,
+    };
+
+    await renderPlayer(
+      '/stories/story-1/play?mode=simulation&startInteractionId=next',
+      readerStory,
+    );
+
+    expect(screen.getByText('Paralleax Reader')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Start the story/ })).toBeInTheDocument();
+    expect(screen.queryByText('Simulation')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Current interaction title')).not.toBeInTheDocument();
-    expect(screen.queryByLabelText('Current interaction content')).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Back to editor' })).not.toBeInTheDocument();
+    expect(api.getReaderProgress).toHaveBeenCalledWith('story-1');
+  });
+
+  it('lets an authorized reader comment on the current scene from the reader', async () => {
+    const user = userEvent.setup();
+    const readerStory = structuredClone(story);
+    readerStory.access = {
+      visibility: 'authenticated',
+      editPolicy: 'owner',
+      commentPolicy: 'readers',
+    };
+    readerStory.capabilities = {
+      canRead: true,
+      canEdit: false,
+      canManage: false,
+      canComment: true,
+    };
+    vi.mocked(api.listCommentThreads).mockResolvedValue([
+      {
+        id: 'current-thread',
+        storyId: story.id,
+        anchor: { kind: 'entity', targetType: 'interaction', targetId: 'start' },
+        anchorLabel: 'Start',
+        status: 'open',
+        createdBy: { id: 'author-1', email: 'author@example.com' },
+        createdAt: '2026-08-16T08:00:00.000Z',
+        updatedAt: '2026-08-16T08:00:00.000Z',
+        messages: [
+          {
+            id: 'current-message',
+            threadId: 'current-thread',
+            author: { id: 'author-1', email: 'author@example.com' },
+            body: 'Current scene note.',
+            createdAt: '2026-08-16T08:00:00.000Z',
+          },
+        ],
+      },
+      {
+        id: 'future-thread',
+        storyId: story.id,
+        anchor: { kind: 'entity', targetType: 'interaction', targetId: 'next' },
+        anchorLabel: 'Next',
+        status: 'open',
+        createdBy: { id: 'author-1', email: 'author@example.com' },
+        createdAt: '2026-08-16T08:00:00.000Z',
+        updatedAt: '2026-08-16T08:00:00.000Z',
+        messages: [
+          {
+            id: 'future-message',
+            threadId: 'future-thread',
+            author: { id: 'author-1', email: 'author@example.com' },
+            body: 'Future scene note.',
+            createdAt: '2026-08-16T08:00:00.000Z',
+          },
+        ],
+      },
+    ]);
+    vi.mocked(api.createCommentThread).mockResolvedValue({
+      id: 'thread-1',
+      storyId: story.id,
+      anchor: { kind: 'entity', targetType: 'interaction', targetId: 'start' },
+      anchorLabel: 'Start',
+      status: 'open',
+      createdBy: { id: 'reader-1', email: 'reader@example.com' },
+      createdAt: '2026-08-16T09:00:00.000Z',
+      updatedAt: '2026-08-16T09:00:00.000Z',
+      messages: [
+        {
+          id: 'message-1',
+          threadId: 'thread-1',
+          author: { id: 'reader-1', email: 'reader@example.com' },
+          body: 'Could this moment be clearer?',
+          createdAt: '2026-08-16T09:00:00.000Z',
+        },
+      ],
+    });
+
+    await renderPlayer('/stories/story-1/play', readerStory);
+    expect(screen.getByRole('button', { name: 'Comments' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Back to editor' })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Start' }));
+    await user.click(screen.getByRole('button', { name: /^Comments/ }));
+    expect(await screen.findByText('Current scene note.')).toBeInTheDocument();
+    expect(screen.queryByText('Future scene note.')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Comment on this scene' }));
+    await user.type(
+      screen.getByRole('complementary', { name: 'Story comments' }).querySelector('textarea')!,
+      'Could this moment be clearer?',
+    );
+    await user.click(screen.getByRole('button', { name: 'Send' }));
+
+    expect(api.createCommentThread).toHaveBeenCalledWith(
+      'story-1',
+      { kind: 'entity', targetType: 'interaction', targetId: 'start' },
+      'Could this moment be clearer?',
+    );
   });
 
   it('shows unavailable interactions in simulation mode and lets authors force them', async () => {

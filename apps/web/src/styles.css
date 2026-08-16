@@ -2767,6 +2767,20 @@ header span {
   line-height: 1.75;
 }
 
+.reader-comment-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1.25rem;
+}
+
+.reader-comment-actions button {
+  border-color: #2f625055;
+  background: #eef4ef;
+  color: #2f6250;
+  box-shadow: none;
+  font-size: 0.75rem;
+}
+
 .simulation-edit-label {
   display: flex;
   align-items: center;

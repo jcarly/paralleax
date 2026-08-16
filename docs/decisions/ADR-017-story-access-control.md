@@ -2,6 +2,9 @@
 
 Status: Accepted
 
+Comment-policy values and defaults are superseded by
+[ADR-019](ADR-019-editor-graph-reader-comments.md).
+
 Date: 2026-08-13
 
 ## Context

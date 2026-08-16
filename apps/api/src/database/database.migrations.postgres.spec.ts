@@ -146,6 +146,62 @@ describePostgres('Database migrations PostgreSQL upgrade', () => {
     ).resolves.toMatchObject({ rowCount: 1 });
   }, 30_000);
 
+  it('migrates removed comment policies and enforces the editor default', async () => {
+    await pool.query('DROP SCHEMA public CASCADE');
+    await pool.query('CREATE SCHEMA public');
+
+    const readerCommentsMigrationIndex = databaseMigrations.findIndex(
+      ({ id }) => id === '202608160030_reader_comments',
+    );
+    for (const migration of databaseMigrations.slice(0, readerCommentsMigrationIndex)) {
+      await pool.query(migration.sql);
+    }
+
+    await pool.query(`
+      INSERT INTO users (id, email, password_hash, created_at)
+      VALUES ('comments-owner', 'comments@paralleax.invalid', 'disabled', now())
+    `);
+    await pool.query(`
+      INSERT INTO stories
+        (id, revision, title, start_date_time, created_at, updated_at, creator_user_id,
+         visibility, edit_policy, comment_policy)
+      VALUES
+        ('comments-disabled', 1, 'Disabled', '2000-01-03T08:00', now(), now(),
+         'comments-owner', 'private', 'owner', 'disabled'),
+        ('comments-authenticated', 1, 'Authenticated', '2000-01-03T08:00', now(), now(),
+         'comments-owner', 'private', 'owner', 'authenticated'),
+        ('comments-editors', 1, 'Editors', '2000-01-03T08:00', now(), now(),
+         'comments-owner', 'private', 'owner', 'editors'),
+        ('comments-readers', 1, 'Readers', '2000-01-03T08:00', now(), now(),
+         'comments-owner', 'private', 'owner', 'readers')
+    `);
+
+    await pool.query(databaseMigrations[readerCommentsMigrationIndex].sql);
+
+    await expect(
+      pool.query(`SELECT id, comment_policy FROM stories ORDER BY id`),
+    ).resolves.toMatchObject({
+      rows: [
+        { id: 'comments-authenticated', comment_policy: 'readers' },
+        { id: 'comments-disabled', comment_policy: 'editors' },
+        { id: 'comments-editors', comment_policy: 'editors' },
+        { id: 'comments-readers', comment_policy: 'readers' },
+      ],
+    });
+    await pool.query(`
+      INSERT INTO stories
+        (id, revision, title, start_date_time, created_at, updated_at, creator_user_id)
+      VALUES ('comments-default', 1, 'Default', '2000-01-03T08:00', now(), now(),
+        'comments-owner')
+    `);
+    await expect(
+      pool.query(`SELECT comment_policy FROM stories WHERE id = 'comments-default'`),
+    ).resolves.toMatchObject({ rows: [{ comment_policy: 'editors' }] });
+    await expect(
+      pool.query(`UPDATE stories SET comment_policy = 'disabled' WHERE id = 'comments-default'`),
+    ).rejects.toThrow();
+  }, 30_000);
+
   it('moves existing character items and exact effects to item instances without changing ids', async () => {
     await pool.query('DROP SCHEMA public CASCADE');
     await pool.query('CREATE SCHEMA public');

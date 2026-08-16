@@ -8,6 +8,8 @@ details. They should stay covered by tests as the editor grows.
 - A story contains zero or more interactions.
 - Review comment threads are story-scoped collaboration metadata, not authored
   story state. They never change reader evaluation, progress, or exports.
+- Reader-visible discussions are limited to the current interaction. Displaying
+  or writing them never changes the ordered journey or runtime evaluation.
 - A comment anchor is either a graph position, a same-story target entity, or a
   supported text field on a same-story target. Missing or changed text detaches
   the anchor without deleting its preserved quote or discussion.
@@ -178,8 +180,9 @@ details. They should stay covered by tests as the editor grows.
 - Global roles are limited to operational account roles (`user` and `admin`).
   Ordinary reading, editing, management, and future comment capabilities are
   resolved per story.
-- A story is denied by default: new and legacy stories resolve to private,
-  owner-only editing with comments disabled unless explicit settings say otherwise.
+- A story is denied for reading by default: new stories resolve to private,
+  owner-only editing, with commenting enabled for editors. A forward migration
+  maps the removed `disabled` policy to `editors` and `authenticated` to `readers`.
 - Public visibility permits anonymous reading. Authenticated visibility permits
   any signed-in user to read. Invitation visibility requires a story-specific
   viewer or editor grant.
@@ -195,8 +198,12 @@ details. They should stay covered by tests as the editor grows.
   while that user can read the corresponding story.
 - The last global administrator cannot be demoted, and first-administrator
   selection is serialized with administrator-role changes.
-- The comment policy is persisted before comments exist. A later comment API must
-  enforce it server-side rather than infer permission from interface visibility.
+- Comment policy is either `editors` or `readers`. The latter grants commenting
+  only to authenticated users who already have effective read permission.
+- The API enforces comment capability server-side rather than inferring it from
+  interface visibility.
+- The graph editor and Simulation Mode require effective edit permission. A
+  reader-only comment capability never grants either authoring surface.
 
 ## Post-MVP Invariants To Preserve
 

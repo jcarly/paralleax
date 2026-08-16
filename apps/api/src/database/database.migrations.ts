@@ -1215,4 +1215,23 @@ export const databaseMigrations: DatabaseMigration[] = [
         ON graph_decorations(story_id, sort_order);
     `,
   },
+  {
+    id: '202608160030_reader_comments',
+    sql: `
+      ALTER TABLE stories
+      DROP CONSTRAINT stories_comment_policy_allowed;
+
+      UPDATE stories
+      SET comment_policy = CASE comment_policy
+        WHEN 'authenticated' THEN 'readers'
+        WHEN 'disabled' THEN 'editors'
+        ELSE comment_policy
+      END;
+
+      ALTER TABLE stories
+      ALTER COLUMN comment_policy SET DEFAULT 'editors',
+      ADD CONSTRAINT stories_comment_policy_allowed
+        CHECK (comment_policy IN ('editors', 'readers'));
+    `,
+  },
 ];

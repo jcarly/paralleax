@@ -45,8 +45,8 @@ const stories: StorySummary[] = [
     createdAt: '2026-07-14T08:00:00.000Z',
     updatedAt: '2026-07-14T08:00:00.000Z',
     interactionCount: 0,
-    access: { visibility: 'private', editPolicy: 'owner', commentPolicy: 'disabled' },
-    capabilities: { canRead: true, canEdit: true, canManage: true, canComment: false },
+    access: { visibility: 'private', editPolicy: 'owner', commentPolicy: 'editors' },
+    capabilities: { canRead: true, canEdit: true, canManage: true, canComment: true },
     owner: { id: standardUser.id, email: standardUser.email },
   },
   {
@@ -119,7 +119,7 @@ describe('StoryList', () => {
     vi.mocked(api.listPublicStories).mockResolvedValue([
       {
         ...structuredClone(stories[0]),
-        access: { visibility: 'public', editPolicy: 'owner', commentPolicy: 'disabled' },
+        access: { visibility: 'public', editPolicy: 'owner', commentPolicy: 'editors' },
         capabilities: { canRead: true, canEdit: false, canManage: false, canComment: false },
       },
     ]);
@@ -236,7 +236,7 @@ describe('StoryList', () => {
     expect(screen.queryByRole('heading', { name: 'Second story' })).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Commentable by me' }));
-    expect(screen.queryByRole('heading', { name: 'First story' })).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'First story' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Second story' })).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Created by me' }));
@@ -266,7 +266,7 @@ describe('StoryList', () => {
     vi.mocked(api.listStories).mockResolvedValue([
       {
         ...stories[0],
-        access: { visibility: 'public', editPolicy: 'owner', commentPolicy: 'disabled' },
+        access: { visibility: 'public', editPolicy: 'owner', commentPolicy: 'editors' },
         capabilities: { canRead: true, canEdit: false, canManage: false, canComment: false },
       },
     ]);
@@ -284,7 +284,7 @@ describe('StoryList', () => {
     expect(within(card).queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument();
   });
 
-  it('offers the review workspace to commenters without edit permission', async () => {
+  it('keeps commenter-only readers on the player surface', async () => {
     vi.mocked(api.listStories).mockResolvedValue([
       {
         ...stories[0],
@@ -299,11 +299,12 @@ describe('StoryList', () => {
       </MemoryRouter>,
     );
     const card = (await screen.findByRole('heading', { name: 'First story' })).closest('article')!;
-    expect(within(card).getByRole('link', { name: 'Review' })).toHaveAttribute(
+    expect(within(card).getByRole('link', { name: 'Read' })).toHaveAttribute(
       'href',
-      '/stories/story-1/edit',
+      '/stories/story-1/play',
     );
     expect(within(card).queryByRole('link', { name: 'Edit' })).not.toBeInTheDocument();
+    expect(within(card).queryByRole('link', { name: 'Review' })).not.toBeInTheDocument();
   });
 
   it('translates product copy without changing authored story titles', async () => {

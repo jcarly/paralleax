@@ -229,6 +229,12 @@ same-origin `returnTo` path, including its query and fragment, and replace the
 authentication history entry after success. The product navigation does not
 expose the internal design-system reference.
 
+The editor route also checks the loaded story capability and redirects any
+authenticated non-editor to the player. Simulation Mode requires the same
+effective edit capability; player query parameters cannot upgrade a reader to
+author tooling. Comment-capable readers use an interaction-contextual discussion
+panel in `StoryPlayer`, while editors retain the complete graph review layer.
+
 Administrators receive an `Administration` navigation entry backed by the
 protected `/admin/users` route. Its account list, summary, search, role filter,
 and last-administrator affordance are client projections of the API state. Role
@@ -515,16 +521,18 @@ Review discussions use `story_comment_threads` and `story_comment_messages`.
 Their JSONB anchor is validated against the current same-story target by the
 application service; it is not inserted into `Story` or React Flow's canonical
 data. The web editor projects canvas anchors as comment nodes and entity/text
-anchors as badges and discussion context. The public reader never requests or
-renders this private review resource.
+anchors as badges and discussion context. An authorized signed-in player requests
+the same resource but projects only threads on the current interaction; anonymous
+public reading never requests or renders it.
 
-Authenticated editor clients also keep one Server-Sent Events connection to the
-story's comment event endpoint. Successful thread mutations publish a story-local
-invalidation containing only the thread id, mutation type, and timestamp. Clients
-then reload the authorized HTTP projection, so SSE never becomes a second source
-of comment data or a way around object-level authorization. A heartbeat keeps the
-connection alive through the production reverse proxy, and the browser reconnects
-automatically before reloading to recover events missed while disconnected.
+Authenticated editor and authorized reader clients keep one Server-Sent Events
+connection to the story's comment event endpoint. Successful thread mutations
+publish a story-local invalidation containing only the thread id, mutation type,
+and timestamp. Clients then reload the authorized HTTP projection, so SSE never
+becomes a second source of comment data or a way around object-level authorization.
+A heartbeat keeps the connection alive through the production reverse proxy, and
+the browser reconnects automatically before reloading to recover events missed
+while disconnected.
 
 The current event broker is process-local. A deployment with several API replicas
 must add a shared fan-out transport, such as PostgreSQL `LISTEN`/`NOTIFY`, before

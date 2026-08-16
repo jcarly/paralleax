@@ -127,6 +127,7 @@ describe('Stories API', () => {
     expect(response.body).toMatchObject({
       title: 'New API story',
       interactions: [],
+      access: { visibility: 'private', editPolicy: 'owner', commentPolicy: 'editors' },
     });
     expect(response.body.id).toEqual(expect.any(String));
   });
@@ -1553,6 +1554,19 @@ describe('Stories API', () => {
       .expect(200);
   });
 
+  it('rejects removed comment policies at the API boundary', async () => {
+    const story = await createStory('Current comment policies');
+
+    await request(httpServer)
+      .patch(`/api/stories/${story.id}/access`)
+      .send({ visibility: 'private', editPolicy: 'owner', commentPolicy: 'disabled' })
+      .expect(400);
+    await request(httpServer)
+      .patch(`/api/stories/${story.id}/access`)
+      .send({ visibility: 'private', editPolicy: 'owner', commentPolicy: 'authenticated' })
+      .expect(400);
+  });
+
   it('exposes public stories to other users without granting modification', async () => {
     const created = await request(httpServer)
       .post('/api/stories')
@@ -1562,7 +1576,7 @@ describe('Stories API', () => {
     await request(httpServer)
       .patch(`/api/stories/${created.body.id}/access`)
       .set('Cookie', 'paralleax_session=user-one')
-      .send({ visibility: 'public', editPolicy: 'owner', commentPolicy: 'disabled' })
+      .send({ visibility: 'public', editPolicy: 'owner', commentPolicy: 'editors' })
       .expect(200);
 
     const response = await request(httpServer)
@@ -1586,7 +1600,7 @@ describe('Stories API', () => {
     await request(httpServer)
       .patch(`/api/stories/${publicStory.body.id}/access`)
       .set('Cookie', 'paralleax_session=user-one')
-      .send({ visibility: 'public', editPolicy: 'owner', commentPolicy: 'disabled' })
+      .send({ visibility: 'public', editPolicy: 'owner', commentPolicy: 'editors' })
       .expect(200);
 
     const response = await request(httpServer).get('/api/stories/public').expect(200);

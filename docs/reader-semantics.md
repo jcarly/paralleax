@@ -264,6 +264,21 @@ Simulation keeps unavailable choices visible for inspection except when their
 matched route fails a location condition; location-blocked choices are hidden to
 avoid presenting impossible movement from the simulated scene.
 
+## Reader Comments and Author Tools
+
+An authenticated reader receives comment controls only when the story's resolved
+capabilities grant commenting. The player lists discussions anchored to the
+current interaction, including text anchors on that interaction, and creates new
+threads anchored to the current interaction. Canvas, trigger, context-entity, and
+other-interaction threads are not projected in the player. Comments remain
+collaboration metadata and do not affect availability, the journey, saved
+progress, or replay.
+
+The graph editor and Simulation Mode are authoring tools and require effective
+edit permission. A simulation query or requested starting interaction is ignored
+for a reader without that permission, who receives the normal player and saved
+reader progress behavior instead.
+
 ## Out of Scope
 
 The MVP reader does not support:

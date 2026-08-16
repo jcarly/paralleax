@@ -19,7 +19,7 @@ vi.mock('../api', () => ({
 const access: StoryAccessConfiguration = {
   visibility: 'private',
   editPolicy: 'owner',
-  commentPolicy: 'disabled',
+  commentPolicy: 'editors',
   owner: { id: 'owner-1', email: 'owner@example.com' },
   collaborators: [],
 };
@@ -56,6 +56,13 @@ describe('StoryAccessPage', () => {
     expect(
       await screen.findByRole('heading', { name: 'Access and permissions' }),
     ).toBeInTheDocument();
+    expect(screen.getByLabelText('Who may comment?')).toHaveValue('editors');
+    expect(screen.getByRole('option', { name: 'Editors only' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Any signed-in reader' })).toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: 'Comments disabled' })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('option', { name: 'Any signed-in user who can read' }),
+    ).not.toBeInTheDocument();
 
     await user.selectOptions(screen.getByLabelText('Who can read this story?'), 'public');
     await user.selectOptions(screen.getByLabelText('Who may comment?'), 'readers');

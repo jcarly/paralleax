@@ -2,6 +2,9 @@
 
 Status: Accepted
 
+The read-only graph workspace and absence of reader-facing comments are
+superseded by [ADR-019](ADR-019-editor-graph-reader-comments.md).
+
 Date: 2026-08-13
 
 ## Context

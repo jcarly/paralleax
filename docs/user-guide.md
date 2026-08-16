@@ -41,9 +41,9 @@ reader or editor access. They do not send email or create a secret invitation
 link. Reverting a story to private temporarily disables all collaborator grants
 without deleting them.
 
-The same screen chooses who may comment: nobody, signed-in readers, editors, or
-any signed-in account that can read the story. Comments are a private review
-layer and never appear in the public reader.
+The same screen chooses who may comment: editors, which is the default, or every
+signed-in reader who already has access to the story. This setting does not grant
+read access by itself. Anonymous public readers cannot use comments.
 Public readers can follow a direct `/stories/{id}/play` link without signing in,
 but anonymous progress is not saved.
 
@@ -56,15 +56,21 @@ as protected in the interface and also prevents its demotion in the API.
 
 ## Review a Story with Post-its
 
-When a story permits your account to comment, `Stories` shows `Review` if you
-cannot edit it. The review workspace displays the graph and inspectors in
-read-only mode while keeping the comment tools available.
+The graph and Simulation Mode are available only to accounts that can edit the
+story. A reader-only invitation never opens a read-only graph; opening an editor
+URL redirects that account to the player.
 
-Use `Place a post-it`, then click the graph to start a discussion at that canvas
-position. Select an interaction, trigger, character, location, item, or stat and
-use `Comment on this element` to attach the thread to that exact entity. To target
-part of a title, body, name, or description, select the text before choosing
-`Selected text`.
+Editors can use `Place a post-it`, then click the graph to start a discussion at
+that canvas position. Select an interaction, trigger, character, location, item,
+or stat and use `Comment on this element` to attach the thread to that exact
+entity. To target part of a title, body, name, or description, select the text
+before choosing `Selected text`.
+
+When reader comments are enabled, a signed-in reader opens the story with `Read`.
+The Comments control shows discussions attached to the interaction currently on
+screen, and `Comment on this scene` starts a new discussion there. Comments on
+future interactions, graph positions, triggers, or context entities are not shown
+in the player.
 
 The Comments panel lists open and resolved discussions. Open a thread to read its
 ordered replies, add a reply, resolve it, or reopen it. Graph and trigger badges
@@ -342,6 +348,9 @@ left without an availability rule.
 Select `Read` from the story library to open the player reader. Select `Test`
 from the editor to open author Simulation Mode, either from the beginning or
 from the currently selected interaction.
+
+Only editors can enter Simulation Mode. Adding simulation or starting-interaction
+parameters to a player URL does not enable author controls for a reader.
 
 The reader starts with interactions that have root triggers. After each choice,
 it shows the interactions made available by matching trigger inputs and

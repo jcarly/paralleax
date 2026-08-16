@@ -54,7 +54,7 @@ export class UpdateStoryAccessDto {
   visibility!: StoryVisibility;
   @IsIn(['owner', 'collaborators', 'authenticated'])
   editPolicy!: StoryEditPolicy;
-  @IsIn(['disabled', 'readers', 'editors', 'authenticated'])
+  @IsIn(['editors', 'readers'])
   commentPolicy!: StoryCommentPolicy;
 }
 export class SetStoryCollaboratorDto {

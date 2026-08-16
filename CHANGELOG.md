@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-08-16
+
+- Simplified story comment access to `Editors` (the default) or `Readers`, with
+  a forward migration from the removed disabled/authenticated policies.
+- Restricted the graph editor and Simulation Mode to effective editors. Readers
+  with comment permission now discuss the current interaction directly in the
+  player and cannot reach author controls through editor or simulation URLs.
+
 ## 2026-08-15
 
 - Merged the public catalogue and authenticated workspace into one `Stories`

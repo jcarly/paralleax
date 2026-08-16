@@ -372,16 +372,6 @@ function StoryCard({
               {t('library.card.edit')} <span aria-hidden="true">→</span>
             </Link>
           ) : null}
-          {!story.capabilities?.canEdit && story.capabilities?.canComment ? (
-            <Link
-              className="product-primary compact"
-              to={`/stories/${story.id}/edit`}
-              onMouseEnter={() => void loadStoryEditor()}
-              onFocus={() => void loadStoryEditor()}
-            >
-              {t('library.card.review')} <span aria-hidden="true">→</span>
-            </Link>
-          ) : null}
           {story.capabilities?.canManage ? (
             <>
               <Link className="product-ghost compact" to={`/stories/${story.id}/access`}>
@@ -428,7 +418,7 @@ function summarizeStory(story: Story, user?: AuthUser): StorySummary {
       canRead: true,
       canEdit: true,
       canManage: true,
-      canComment: false,
+      canComment: true,
     },
     owner: story.owner ?? (user ? { id: user.id, email: user.email } : undefined),
     createdAt: story.createdAt,

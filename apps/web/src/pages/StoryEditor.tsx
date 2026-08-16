@@ -20,7 +20,7 @@ import {
   type NodeMouseHandler,
   type ReactFlowInstance,
 } from '@xyflow/react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, Navigate, useParams } from 'react-router-dom';
 import {
   isCommentAnchorDetached,
   type Character,
@@ -246,11 +246,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
   const flowInstance = useRef<ReactFlowInstance<StoryFlowNode, TriggerFlowEdge> | null>(null);
   const canvasRef = useRef<HTMLElement | null>(null);
 
-  const commentAccess = Boolean(
-    story?.capabilities?.canManage ||
-    story?.capabilities?.canEdit ||
-    story?.capabilities?.canComment,
-  );
+  const commentAccess = story?.capabilities?.canEdit === true;
   const reviewOnly = story?.capabilities?.canEdit === false;
   const comments = useStoryComments(storyId, commentAccess);
   const commentThreads = comments.threads;
@@ -833,16 +829,8 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
   }
 
   if (!story) return <main className="page">{error || t('editor.loading')}</main>;
-  if (story.capabilities?.canEdit === false && !commentAccess) {
-    return (
-      <main className="page">
-        <h1>{t('editor.readOnlyTitle')}</h1>
-        <p>{t('editor.readOnlyDescription')}</p>
-        <Link className="button secondary" to={`/stories/${storyId}/play`}>
-          {t('editor.openReader')}
-        </Link>
-      </main>
-    );
+  if (story.capabilities?.canEdit !== true) {
+    return <Navigate to={`/stories/${storyId}/play`} replace />;
   }
   const simulationPath = selected
     ? `/stories/${storyId}/play?mode=simulation&startInteractionId=${encodeURIComponent(
