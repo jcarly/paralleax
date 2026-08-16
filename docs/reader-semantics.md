@@ -279,6 +279,13 @@ edit permission. A simulation query or requested starting interaction is ignored
 for a reader without that permission, who receives the normal player and saved
 reader progress behavior instead.
 
+An open Simulation Mode session subscribes to authored-story invalidations. When
+another editor commits a change, the simulation reloads the authorized story and
+replays its current ordered journey. Availability, time, location, stats,
+inventory, item stats, and the current interaction are reconstructed through the
+same deterministic shared operations used for reader progress; simulation still
+does not persist reader progress.
+
 ## Out of Scope
 
 The MVP reader does not support:

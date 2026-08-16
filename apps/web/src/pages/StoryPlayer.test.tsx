@@ -23,6 +23,27 @@ vi.mock('../api', () => ({
   },
 }));
 
+class FakeEventSource {
+  static instances: FakeEventSource[] = [];
+  readonly listeners = new Map<string, Array<() => void>>();
+  onopen: (() => void) | null = null;
+  onerror: (() => void) | null = null;
+
+  constructor(readonly url: string) {
+    FakeEventSource.instances.push(this);
+  }
+
+  addEventListener(type: string, listener: () => void) {
+    this.listeners.set(type, [...(this.listeners.get(type) ?? []), listener]);
+  }
+
+  emit(type: string) {
+    this.listeners.get(type)?.forEach((listener) => listener());
+  }
+
+  close() {}
+}
+
 const story: Story = {
   id: 'story-1',
   title: 'Playable story',
@@ -91,11 +112,36 @@ async function renderPlayer(initialEntry = '/stories/story-1/play', storyFixture
 }
 
 describe('StoryPlayer', () => {
-  afterEach(() => cleanup());
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
+  });
 
   beforeEach(() => {
     vi.resetAllMocks();
+    FakeEventSource.instances = [];
     vi.mocked(api.listCommentThreads).mockResolvedValue([]);
+  });
+
+  it('replays the open simulation when remote story content and triggers change', async () => {
+    vi.stubGlobal('EventSource', FakeEventSource);
+    await renderPlayer('/stories/story-1/play?mode=simulation&startInteractionId=next');
+    expect(screen.getByRole('button', { name: /Secret/ })).toBeDisabled();
+
+    const remote = structuredClone(story);
+    remote.revision = 2;
+    remote.interactions[1].title = 'Remote next';
+    remote.interactions[2].triggers[0].conditions = [];
+    vi.mocked(api.getStory).mockResolvedValue(remote);
+
+    const source = FakeEventSource.instances.find(
+      ({ url }) => url === '/api/stories/story-1/events',
+    );
+    expect(source).toBeDefined();
+    source?.emit('story-changed');
+
+    expect(await screen.findByDisplayValue('Remote next')).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /Secret/ })).toBeEnabled();
   });
 
   it('shows a recoverable error when the story cannot be loaded', async () => {

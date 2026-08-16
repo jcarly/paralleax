@@ -21,6 +21,7 @@ import { DatabaseMigrator } from '../database/database.migrator';
 import { InMemoryStoriesRepository } from './stories.repository.memory';
 import { StoriesRepository } from './stories.repository';
 import { STORY_MUTATION_RATE_LIMIT } from './stories.controller';
+import { StoryEventsService } from './story.events';
 import { ApiExceptionFilter } from '../operations/api-exception.filter';
 import { configureRequestBodyParsing } from '../operations/request-body';
 import { requestContextMiddleware } from '../operations/request-context';
@@ -1552,6 +1553,51 @@ describe('Stories API', () => {
       .set('Cookie', collaboratorCookie)
       .send({ title: 'Collaborative rename' })
       .expect(200);
+  });
+
+  it('publishes story invalidations for authored, access, and deletion mutations', async () => {
+    const events = app.get(StoryEventsService);
+    const publish = jest.spyOn(events, 'publish');
+    const created = await createStory('Live collaboration');
+
+    await request(httpServer)
+      .post(`/api/stories/${created.id}/interactions`)
+      .send({ position: { x: 40, y: 80 } })
+      .expect(201);
+    await request(httpServer)
+      .post(`/api/stories/${created.id}/graph-decorations`)
+      .send({ kind: 'text', position: { x: 20, y: 30 } })
+      .expect(201);
+    await request(httpServer)
+      .patch(`/api/stories/${created.id}/access`)
+      .send({ visibility: 'public', editPolicy: 'owner', commentPolicy: 'editors' })
+      .expect(200);
+    await request(httpServer).delete(`/api/stories/${created.id}`).expect(204);
+
+    expect(publish.mock.calls.map(([event]) => event)).toEqual([
+      expect.objectContaining({ storyId: created.id, change: 'updated', revision: 2 }),
+      expect.objectContaining({ storyId: created.id, change: 'updated', revision: 3 }),
+      expect.objectContaining({ storyId: created.id, change: 'access-updated' }),
+      expect.objectContaining({ storyId: created.id, change: 'deleted' }),
+    ]);
+  });
+
+  it('does not expose the authoring event stream to readers', async () => {
+    const created = await request(httpServer)
+      .post('/api/stories')
+      .set('Cookie', 'paralleax_session=user-one')
+      .send({ title: 'Readable but not editable' })
+      .expect(201);
+    await request(httpServer)
+      .patch(`/api/stories/${created.body.id}/access`)
+      .set('Cookie', 'paralleax_session=user-one')
+      .send({ visibility: 'public', editPolicy: 'owner', commentPolicy: 'editors' })
+      .expect(200);
+
+    await request(httpServer)
+      .get(`/api/stories/${created.body.id}/events`)
+      .set('Cookie', 'paralleax_session=user-two')
+      .expect(403);
   });
 
   it('rejects removed comment policies at the API boundary', async () => {

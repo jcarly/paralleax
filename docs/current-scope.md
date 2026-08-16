@@ -41,6 +41,12 @@ Paralleax currently includes:
   return-to-page navigation is preserved through sign-in and registration.
 - Editor-only React Flow graph authoring.
 - Editor-only Simulation Mode diagnostics.
+- Live simultaneous editing for clients connected to the same API process. Every
+  committed interaction, trigger, position, context entity, item/stat structure,
+  and graph-decoration change invalidates open editor and Simulation Mode clients;
+  editors reload the authoritative story without a page refresh, while simulations
+  deterministically replay their current journey. Active local drafts and drags
+  finish before a remote refresh is applied.
 - English and French interface localization with browser detection, a persisted
   user preference, and English fallback. Authored story content is never
   translated by the interface layer.
@@ -59,9 +65,10 @@ The following remain future or incomplete unless a task explicitly implements th
 - explicit final/completed story semantics;
 - multiple player save slots and anonymous saves;
 - managed media upload/storage;
-- real-time collaboration;
-- suggestion workflow, message editing, mentions, notifications, horizontally
-  distributed comment events, and simultaneous story editing;
+- presence, remote cursors/selections, conflict-free same-field editing, and
+  horizontally distributed story events;
+- suggestion workflow, message editing, mentions, notifications, and horizontally
+  distributed comment events;
 - stable public import/export format;
 - executable/Unity/video exports;
 - AI-driven narrative/runtime behavior.

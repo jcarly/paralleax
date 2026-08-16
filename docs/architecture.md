@@ -202,9 +202,23 @@ Story mutations execute inside a transaction and lock their story row before
 reading the graph. The repository compares the loaded
 domain snapshot with the mutated result, then updates only changed story or
 interaction fields and changed trigger structures. Independent concurrent field
-updates therefore do not rewrite an unrelated story document. A later
-collaboration policy must still define conflicts when two users modify the same
-trigger structure.
+updates therefore do not rewrite an unrelated story document. A later save to
+the same field or trigger structure is authoritative; richer conflict
+presentation remains future work.
+
+Every successful authored-story transaction publishes a process-local SSE
+invalidation after persistence. The editor and Simulation Mode subscribe only
+with effective edit permission, coalesce short mutation bursts, and reload the
+normal authorized `Story` projection. The event contains no authored payload and
+cannot bypass repository authorization. A ready event recovers changes missed
+during reconnection, while a heartbeat keeps the reverse-proxy connection alive.
+
+The web editor defers an incoming projection while a local input, drag, or save
+is active, then applies the authoritative server story. Simulation instead
+rebuilds all runtime values by replaying its current journey against that story
+through shared deterministic operations. This covers interaction and trigger
+content and positions, context entities, items, stats, and graph decorations
+without making React Flow or simulation state canonical. See ADR-020.
 
 Interaction and trigger create/update routes do not return the complete story.
 They return the saved entity plus the owning story revision and update timestamp.
@@ -260,8 +274,10 @@ Supporting editor modules keep pure or focused behavior outside the page
 component:
 
 - `hooks/useStoryEditorPersistence.ts`: loading, optimistic updates, API writes,
-  save status and error recovery, stale-response merging, and create/delete
-  workflows.
+  save status and error recovery, stale-response merging, live invalidation
+  deferral, and create/delete workflows.
+- `hooks/useStoryRealtime.ts`: authorized story SSE lifecycle, reconnect status,
+  and short-burst invalidation coalescing shared by editor and Simulation Mode.
 - `storyGraph.ts`: projection from the domain story model to React Flow
   interaction nodes, trigger nodes, and trigger edges.
 - `features/graph-decorations/`: focused projection, rendering, resizing, and
@@ -534,10 +550,10 @@ A heartbeat keeps the connection alive through the production reverse proxy, and
 the browser reconnects automatically before reloading to recover events missed
 while disconnected.
 
-The current event broker is process-local. A deployment with several API replicas
-must add a shared fan-out transport, such as PostgreSQL `LISTEN`/`NOTIFY`, before
-it can guarantee that clients connected to different replicas receive the same
-invalidation immediately.
+The current story and comment event brokers are process-local. A deployment with
+several API replicas must add a shared fan-out transport, such as PostgreSQL
+`LISTEN`/`NOTIFY`, before it can guarantee that clients connected to different
+replicas receive the same invalidation immediately.
 
 Schema changes must always go through migrations. Do not create, alter, or drop
 tables from repositories or services. Add a new migration to the migration list,

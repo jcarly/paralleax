@@ -46,6 +46,27 @@ vi.mock('../api', () => ({
   },
 }));
 
+class FakeEventSource {
+  static instances: FakeEventSource[] = [];
+  readonly listeners = new Map<string, Array<() => void>>();
+  onopen: (() => void) | null = null;
+  onerror: (() => void) | null = null;
+
+  constructor(readonly url: string) {
+    FakeEventSource.instances.push(this);
+  }
+
+  addEventListener(type: string, listener: () => void) {
+    this.listeners.set(type, [...(this.listeners.get(type) ?? []), listener]);
+  }
+
+  emit(type: string) {
+    this.listeners.get(type)?.forEach((listener) => listener());
+  }
+
+  close() {}
+}
+
 vi.mock('@xyflow/react', async () => {
   const React = await import('react');
 
@@ -384,13 +405,90 @@ async function chooseTriggerConditionType(
 describe('StoryEditor', () => {
   afterEach(() => {
     cleanup();
+    vi.unstubAllGlobals();
   });
 
   beforeEach(() => {
     vi.resetAllMocks();
+    FakeEventSource.instances = [];
     window.localStorage.clear();
     vi.spyOn(window, 'confirm').mockReturnValue(true);
     vi.mocked(api.listCommentThreads).mockResolvedValue([]);
+  });
+
+  it('applies remote story content, positions, context, and decorations without reloading', async () => {
+    vi.stubGlobal('EventSource', FakeEventSource);
+    await renderEditor();
+
+    const remote = cloneStory();
+    remote.revision = 2;
+    remote.title = 'Remote story title';
+    remote.interactions[0].title = 'Remote interaction';
+    remote.interactions[0].position = { x: 420, y: 260 };
+    remote.locations = [
+      { id: 'remote-location', name: 'Remote location', description: 'Created elsewhere' },
+    ];
+    remote.graphDecorations = [
+      {
+        id: 'remote-decoration',
+        kind: 'text',
+        position: { x: 30, y: 40 },
+        text: 'Remote note',
+        color: '#123456',
+        fontSize: 24,
+        fontFamily: 'sans',
+        fontWeight: 'normal',
+        fontStyle: 'normal',
+      },
+    ];
+    vi.mocked(api.getStory).mockResolvedValue(cloneStory(remote));
+
+    const source = FakeEventSource.instances.find(
+      ({ url }) => url === '/api/stories/story-1/events',
+    );
+    expect(source).toBeDefined();
+    act(() => source?.emit('story-changed'));
+
+    expect(await screen.findByDisplayValue('Remote story title')).toBeInTheDocument();
+    expect(await screen.findByText('Remote interaction')).toBeInTheDocument();
+    expect(await screen.findByText('Remote location')).toBeInTheDocument();
+    expect(await screen.findByText('Remote note')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByTestId('flow-node-interaction-1')).toHaveAttribute('data-node-x', '420');
+      expect(screen.getByTestId('flow-node-interaction-1')).toHaveAttribute('data-node-y', '260');
+    });
+  });
+
+  it('keeps an active local draft until it is saved before applying a remote refresh', async () => {
+    vi.stubGlobal('EventSource', FakeEventSource);
+    await renderEditor();
+
+    const combined = cloneStory();
+    combined.revision = 3;
+    combined.title = 'Local draft';
+    combined.locations = [
+      { id: 'remote-location', name: 'Remote location', description: 'Created elsewhere' },
+    ];
+    vi.mocked(api.renameStory).mockResolvedValue(cloneStory(combined));
+    vi.mocked(api.getStory).mockResolvedValue(cloneStory(combined));
+
+    const titleInput = screen.getByDisplayValue('Test story');
+    fireEvent.focus(titleInput);
+    fireEvent.change(titleInput, { target: { value: 'Local draft' } });
+    const source = FakeEventSource.instances.find(
+      ({ url }) => url === '/api/stories/story-1/events',
+    );
+    act(() => source?.emit('story-changed'));
+    await act(() => new Promise((resolve) => setTimeout(resolve, 120)));
+
+    expect(titleInput).toHaveValue('Local draft');
+    expect(api.getStory).toHaveBeenCalledOnce();
+
+    fireEvent.blur(titleInput);
+    expect(await screen.findByText('Remote location')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('Local draft')).toBeInTheDocument();
+    expect(api.renameStory).toHaveBeenCalledWith('story-1', 'Local draft');
+    expect(api.getStory).toHaveBeenCalledTimes(2);
   });
 
   it('reserves canvas panning for the middle button or Space plus drag', async () => {

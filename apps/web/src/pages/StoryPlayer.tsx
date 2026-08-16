@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
@@ -34,6 +34,7 @@ import { RichTextContent } from '../components/RichTextContent';
 import { RichTextEditor } from '../components/RichTextEditor';
 import { StoryCommentsPanel } from '../features/comments/StoryCommentsPanel';
 import { useStoryComments } from '../features/comments/useStoryComments';
+import { useStoryRealtime, type StoryRealtimeInvalidation } from '../hooks/useStoryRealtime';
 
 function getInteractionTitle(story: Story, interactionId: string) {
   return (
@@ -253,6 +254,16 @@ export function StoryPlayer({
   const editingChoiceInputRef = useRef<HTMLInputElement>(null);
   const progressSaveQueue = useRef<Promise<void>>(Promise.resolve());
   const progressAttempt = useRef(0);
+  const journeyRef = useRef<string[]>([]);
+  const realtimeLoadAttempt = useRef(0);
+  const simulationMutationCount = useRef(0);
+  const simulationEditDepth = useRef(0);
+  const pendingRealtimeInvalidation = useRef<StoryRealtimeInvalidation | undefined>(undefined);
+  const realtimeRefresh = useRef<(invalidation: StoryRealtimeInvalidation) => void>(() => {});
+
+  useEffect(() => {
+    journeyRef.current = journey;
+  }, [journey]);
 
   useEffect(() => {
     let cancelled = false;
@@ -318,6 +329,102 @@ export function StoryPlayer({
     storyId,
     t,
   ]);
+
+  const flushPendingRealtimeRefresh = useCallback(() => {
+    if (simulationMutationCount.current > 0 || simulationEditDepth.current > 0) return;
+    const pending = pendingRealtimeInvalidation.current;
+    if (!pending) return;
+    pendingRealtimeInvalidation.current = undefined;
+    realtimeRefresh.current(pending);
+  }, []);
+
+  const refreshFromRealtime = useCallback(
+    (invalidation: StoryRealtimeInvalidation) => {
+      if (simulationMutationCount.current > 0 || simulationEditDepth.current > 0) {
+        pendingRealtimeInvalidation.current = prioritizeRealtimeInvalidation(
+          pendingRealtimeInvalidation.current,
+          invalidation,
+        );
+        return;
+      }
+
+      const attempt = ++realtimeLoadAttempt.current;
+      void api
+        .getStory(storyId)
+        .then((nextStory) => {
+          if (attempt !== realtimeLoadAttempt.current) return;
+          if (simulationMutationCount.current > 0 || simulationEditDepth.current > 0) {
+            pendingRealtimeInvalidation.current = prioritizeRealtimeInvalidation(
+              pendingRealtimeInvalidation.current,
+              invalidation,
+            );
+            return;
+          }
+
+          const positioned = ensureStoryInteractionPositions(nextStory);
+          if (positioned.capabilities?.canEdit !== true) {
+            setStory(undefined);
+            setLoadAttempt((currentAttempt) => currentAttempt + 1);
+            return;
+          }
+          const replayed = buildReaderProgressState(positioned, journeyRef.current);
+          setStory(positioned);
+          setJourney(replayed.journeyInteractionIds);
+          setVisited(replayed.visitedInteractionIds);
+          setCurrentId(replayed.currentInteractionId);
+          setCurrentLocationId(replayed.currentLocationId);
+          setStatValues(replayed.statValues);
+          setOwnedItemIds(replayed.ownedItemIds);
+          setItemStatValues(replayed.itemStatValues ?? {});
+          setEditingChoiceId((choiceId) =>
+            choiceId && positioned.interactions.some(({ id }) => id === choiceId)
+              ? choiceId
+              : undefined,
+          );
+          setPlayableCharacterId((characterId) =>
+            characterId && positioned.characters?.some(({ id }) => id === characterId)
+              ? characterId
+              : undefined,
+          );
+        })
+        .catch((caught: unknown) => {
+          if (attempt !== realtimeLoadAttempt.current) return;
+          if (invalidation === 'deleted' || isApiNotFound(caught)) {
+            setStory(undefined);
+            setLoadError({
+              key: loadKey,
+              message: caught instanceof Error ? caught.message : t('player.loadFailed'),
+            });
+          }
+        });
+    },
+    [loadKey, storyId, t],
+  );
+
+  useEffect(() => {
+    realtimeRefresh.current = refreshFromRealtime;
+  }, [refreshFromRealtime]);
+
+  const storyRealtimeStatus = useStoryRealtime(storyId, isSimulationMode, refreshFromRealtime);
+
+  const beginSimulationEdit = useCallback(() => {
+    simulationEditDepth.current += 1;
+  }, []);
+
+  const endSimulationEdit = useCallback(() => {
+    simulationEditDepth.current = Math.max(0, simulationEditDepth.current - 1);
+    setTimeout(flushPendingRealtimeRefresh, 0);
+  }, [flushPendingRealtimeRefresh]);
+
+  async function trackSimulationMutation<T>(operation: () => Promise<T>): Promise<T> {
+    simulationMutationCount.current += 1;
+    try {
+      return await operation();
+    } finally {
+      simulationMutationCount.current = Math.max(0, simulationMutationCount.current - 1);
+      flushPendingRealtimeRefresh();
+    }
+  }
 
   const current = useMemo(
     () => story?.interactions.find((item) => item.id === currentId),
@@ -597,7 +704,9 @@ export function StoryPlayer({
 
   async function saveCurrentInteraction(patch: Partial<Pick<Interaction, 'title' | 'body'>>) {
     if (!current) return;
-    const result = await api.updateInteraction(storyId, current.id, patch);
+    const result = await trackSimulationMutation(() =>
+      api.updateInteraction(storyId, current.id, patch),
+    );
     setStory((currentStory) =>
       currentStory ? applyInteractionResponse(currentStory, result) : currentStory,
     );
@@ -658,16 +767,18 @@ export function StoryPlayer({
 
   async function addOption() {
     if (!story) return;
-    const result = await api.createInteraction(
-      storyId,
-      current
-        ? {
-            parentId: current.id,
-            position: getNextChildPosition(story, current),
-          }
-        : {
-            position: getNextRootPosition(story),
-          },
+    const result = await trackSimulationMutation(() =>
+      api.createInteraction(
+        storyId,
+        current
+          ? {
+              parentId: current.id,
+              position: getNextChildPosition(story, current),
+            }
+          : {
+              position: getNextRootPosition(story),
+            },
+      ),
     );
     const created = interactionFromResponse(result, story);
     setStory((currentStory) =>
@@ -685,7 +796,9 @@ export function StoryPlayer({
 
   async function saveChoiceTitle(interaction: Interaction, title: string) {
     setEditingChoiceId(undefined);
-    const result = await api.updateInteraction(storyId, interaction.id, { title });
+    const result = await trackSimulationMutation(() =>
+      api.updateInteraction(storyId, interaction.id, { title }),
+    );
     setStory((currentStory) =>
       currentStory ? applyInteractionResponse(currentStory, result) : currentStory,
     );
@@ -717,7 +830,15 @@ export function StoryPlayer({
   }
 
   return (
-    <main className={`player-page ${isSimulationMode ? 'simulation-mode' : 'reader-mode'}`}>
+    <main
+      className={`player-page ${isSimulationMode ? 'simulation-mode' : 'reader-mode'}`}
+      onFocusCapture={(event) => {
+        if (isSimulationMode && isRealtimeEditableTarget(event.target)) beginSimulationEdit();
+      }}
+      onBlurCapture={(event) => {
+        if (isSimulationMode && isRealtimeEditableTarget(event.target)) endSimulationEdit();
+      }}
+    >
       <div className="player-top">
         <div className="player-context">
           <span className="player-mark" aria-hidden="true">
@@ -729,6 +850,16 @@ export function StoryPlayer({
           </span>
         </div>
         {isSimulationMode ? <span className="mode-pill">{t('player.simulation')}</span> : null}
+        {isSimulationMode ? (
+          <span
+            className={`story-realtime-status ${storyRealtimeStatus}`}
+            role="status"
+            aria-live="polite"
+          >
+            <span aria-hidden="true" />
+            {t(`player.realtime.${storyRealtimeStatus}`)}
+          </span>
+        ) : null}
         {!isSimulationMode && authenticated ? (
           <span className={`save-status ${progressStatus}`} role="status" aria-live="polite">
             {progressStatus === 'saving'
@@ -1148,4 +1279,29 @@ function interactionFromResponse(result: InteractionMutationResult | Story, curr
   if (!('interactions' in result)) return result.interaction;
   const currentIds = new Set(current.interactions.map(({ id }) => id));
   return result.interactions.find(({ id }) => !currentIds.has(id));
+}
+
+function prioritizeRealtimeInvalidation(
+  current: StoryRealtimeInvalidation | undefined,
+  incoming: StoryRealtimeInvalidation,
+): StoryRealtimeInvalidation {
+  if (current === 'deleted' || incoming === 'deleted') return 'deleted';
+  if (current === 'changed' || incoming === 'changed') return 'changed';
+  return 'ready';
+}
+
+function isRealtimeEditableTarget(target: EventTarget | null): target is HTMLElement {
+  return (
+    target instanceof HTMLElement &&
+    target.matches('input, textarea, select, [contenteditable="true"]')
+  );
+}
+
+function isApiNotFound(caught: unknown): boolean {
+  return (
+    caught instanceof Error &&
+    'status' in caught &&
+    typeof caught.status === 'number' &&
+    caught.status === 404
+  );
 }

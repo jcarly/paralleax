@@ -30,6 +30,7 @@ import {
 import { api } from '../api';
 import { getPendingConnection, getPendingTriggerInputConnection } from '../storyConnection';
 import { planTriggerInputDeletion } from '../storyTriggerInput';
+import { useStoryRealtime, type StoryRealtimeInvalidation } from './useStoryRealtime';
 
 export function useStoryEditorPersistence(storyId: string) {
   const [story, setStory] = useState<Story>();
@@ -40,23 +41,42 @@ export function useStoryEditorPersistence(storyId: string) {
   const deletedTriggerInputKeys = useRef(new Set<string>());
   const interactionSaveQueue = useRef<Promise<void>>(Promise.resolve());
   const loadAttempt = useRef(0);
+  const activeSaveCount = useRef(0);
+  const localEditDepth = useRef(0);
+  const pendingRealtimeInvalidation = useRef<StoryRealtimeInvalidation | undefined>(undefined);
+  const realtimeRefresh = useRef<(invalidation: StoryRealtimeInvalidation) => void>(() => {});
 
-  const trackSave = useCallback(async <T>(operation: () => Promise<T>): Promise<T | undefined> => {
-    const attempt = ++saveAttempt.current;
-    setError('');
-    setSaveStatus('saving');
-    try {
-      const result = await operation();
-      if (attempt === saveAttempt.current) setSaveStatus('saved');
-      return result;
-    } catch (caught) {
-      if (attempt === saveAttempt.current) {
-        setError(caught instanceof Error ? caught.message : 'The story could not be saved.');
-        setSaveStatus('error');
-      }
-      return undefined;
-    }
+  const flushPendingRealtimeRefresh = useCallback(() => {
+    if (activeSaveCount.current > 0 || localEditDepth.current > 0) return;
+    const pending = pendingRealtimeInvalidation.current;
+    if (!pending) return;
+    pendingRealtimeInvalidation.current = undefined;
+    realtimeRefresh.current(pending);
   }, []);
+
+  const trackSave = useCallback(
+    async <T>(operation: () => Promise<T>): Promise<T | undefined> => {
+      const attempt = ++saveAttempt.current;
+      activeSaveCount.current += 1;
+      setError('');
+      setSaveStatus('saving');
+      try {
+        const result = await operation();
+        if (attempt === saveAttempt.current) setSaveStatus('saved');
+        return result;
+      } catch (caught) {
+        if (attempt === saveAttempt.current) {
+          setError(caught instanceof Error ? caught.message : 'The story could not be saved.');
+          setSaveStatus('error');
+        }
+        return undefined;
+      } finally {
+        activeSaveCount.current = Math.max(0, activeSaveCount.current - 1);
+        flushPendingRealtimeRefresh();
+      }
+    },
+    [flushPendingRealtimeRefresh],
+  );
 
   const mergeIncomingStory = useCallback(
     (
@@ -91,6 +111,64 @@ export function useStoryEditorPersistence(storyId: string) {
         setSaveStatus('error');
       });
   }, [storyId]);
+
+  const refreshFromRealtime = useCallback(
+    (invalidation: StoryRealtimeInvalidation) => {
+      if (activeSaveCount.current > 0 || localEditDepth.current > 0) {
+        pendingRealtimeInvalidation.current = prioritizeInvalidation(
+          pendingRealtimeInvalidation.current,
+          invalidation,
+        );
+        return;
+      }
+
+      const attempt = ++loadAttempt.current;
+      void api
+        .getStory(storyId)
+        .then((next) => {
+          if (attempt !== loadAttempt.current) return;
+          if (activeSaveCount.current > 0 || localEditDepth.current > 0) {
+            pendingRealtimeInvalidation.current = prioritizeInvalidation(
+              pendingRealtimeInvalidation.current,
+              invalidation,
+            );
+            return;
+          }
+          deletedTriggerIds.current.clear();
+          deletedTriggerInputKeys.current.clear();
+          setStory(next);
+          setError('');
+        })
+        .catch((caught: unknown) => {
+          if (attempt !== loadAttempt.current) return;
+          if (invalidation === 'deleted' || isApiNotFound(caught)) {
+            setStory(undefined);
+            setError(caught instanceof Error ? caught.message : 'Story not found');
+            setSaveStatus('error');
+          }
+        });
+    },
+    [storyId],
+  );
+
+  useEffect(() => {
+    realtimeRefresh.current = refreshFromRealtime;
+  }, [refreshFromRealtime]);
+
+  const realtimeStatus = useStoryRealtime(
+    storyId,
+    story?.capabilities?.canEdit === true,
+    refreshFromRealtime,
+  );
+
+  const beginLocalEdit = useCallback(() => {
+    localEditDepth.current += 1;
+  }, []);
+
+  const endLocalEdit = useCallback(() => {
+    localEditDepth.current = Math.max(0, localEditDepth.current - 1);
+    setTimeout(flushPendingRealtimeRefresh, 0);
+  }, [flushPendingRealtimeRefresh]);
 
   useEffect(() => {
     void load();
@@ -643,6 +721,9 @@ export function useStoryEditorPersistence(storyId: string) {
     setStory,
     error,
     saveStatus,
+    realtimeStatus,
+    beginLocalEdit,
+    endLocalEdit,
     retry: load,
     renameStory,
     updateStoryStartDateTime,
@@ -678,6 +759,24 @@ export function useStoryEditorPersistence(storyId: string) {
     deleteCharacterItem,
     moveItemInstance,
   };
+}
+
+function prioritizeInvalidation(
+  current: StoryRealtimeInvalidation | undefined,
+  incoming: StoryRealtimeInvalidation,
+): StoryRealtimeInvalidation {
+  if (current === 'deleted' || incoming === 'deleted') return 'deleted';
+  if (current === 'changed' || incoming === 'changed') return 'changed';
+  return 'ready';
+}
+
+function isApiNotFound(caught: unknown): boolean {
+  return (
+    caught instanceof Error &&
+    'status' in caught &&
+    typeof caught.status === 'number' &&
+    caught.status === 404
+  );
 }
 
 function applyGraphDecorationResult(story: Story, result: GraphDecorationMutationResult): Story {

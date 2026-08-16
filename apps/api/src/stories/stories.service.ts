@@ -64,10 +64,14 @@ import {
 import { sanitizeRichText } from './rich-text';
 import { StoriesRepository } from './stories.repository';
 import { buildGraphDecoration } from './application/graph-decorations';
+import { StoryEventsService, type StoryChangeType } from './story.events';
 
 @Injectable()
 export class StoriesService {
-  constructor(private readonly repository: StoriesRepository) {}
+  constructor(
+    private readonly repository: StoriesRepository,
+    private readonly events: StoryEventsService,
+  ) {}
 
   async list(userId: string) {
     return this.repository.list(userId);
@@ -79,6 +83,13 @@ export class StoriesService {
     const story = await this.repository.find(id, userId);
     if (!story) throw new NotFoundException('Story not found');
     return structuredClone(ensureStoryInteractionPositions(story));
+  }
+  async stream(id: string, userId: string) {
+    const story = await this.get(id, userId);
+    if (!story.capabilities?.canEdit) {
+      throw new ForbiddenException('Story edit access required');
+    }
+    return this.events.stream(id);
   }
   async create(input: CreateStoryDto, userId: string): Promise<Story> {
     const now = new Date().toISOString();
@@ -125,6 +136,7 @@ export class StoriesService {
   }
   async delete(id: string, userId: string): Promise<void> {
     if (!(await this.repository.delete(id, userId))) throw new NotFoundException('Story not found');
+    this.publish(id, 'deleted');
   }
   async getProgress(storyId: string, userId: string): Promise<ReaderProgress | null> {
     await this.get(storyId, userId);
@@ -145,6 +157,7 @@ export class StoriesService {
     if (!(await this.repository.updateAccess(storyId, userId, settings))) {
       throw new NotFoundException('Story not found');
     }
+    this.publish(storyId, 'access-updated');
     return this.getAccess(storyId, userId);
   }
   async setCollaborator(storyId: string, input: SetStoryCollaboratorDto, userId: string) {
@@ -153,11 +166,14 @@ export class StoriesService {
     if (!(await this.repository.setCollaborator(storyId, userId, email, input.role))) {
       throw new BadRequestException('The collaborator must be an existing non-owner account');
     }
+    this.publish(storyId, 'access-updated');
     return this.getAccess(storyId, userId);
   }
   async removeCollaborator(storyId: string, collaboratorId: string, userId: string) {
     await this.getAccess(storyId, userId);
-    await this.repository.removeCollaborator(storyId, userId, collaboratorId);
+    if (await this.repository.removeCollaborator(storyId, userId, collaboratorId)) {
+      this.publish(storyId, 'access-updated');
+    }
   }
   async saveProgress(
     storyId: string,
@@ -1176,6 +1192,16 @@ export class StoriesService {
       userId,
     );
     if (!updated) throw new NotFoundException('Story not found');
+    this.publish(id, 'updated', updated.revision);
     return updated;
+  }
+
+  private publish(id: string, change: StoryChangeType, revision?: number) {
+    this.events.publish({
+      storyId: id,
+      change,
+      revision,
+      occurredAt: new Date().toISOString(),
+    });
   }
 }

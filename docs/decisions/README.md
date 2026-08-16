@@ -23,6 +23,7 @@ This folder records accepted architecture and product-shaping decisions.
 - [ADR-017 - Global Administration and Story Access Control](ADR-017-story-access-control.md)
 - [ADR-018 - Anchored Review Comments](ADR-018-anchored-review-comments.md)
 - [ADR-019 - Editor-only Graph and Reader Comments](ADR-019-editor-graph-reader-comments.md)
+- [ADR-020 - Live Story Collaboration by Authorized Invalidation](ADR-020-live-story-collaboration.md)
 
 ## Maintenance
 

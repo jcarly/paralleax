@@ -174,6 +174,9 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
     setStory,
     error,
     saveStatus,
+    realtimeStatus,
+    beginLocalEdit,
+    endLocalEdit,
     retry,
     renameStory,
     updateStoryStartDateTime,
@@ -870,7 +873,15 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
   }
 
   return (
-    <main className="editor-page">
+    <main
+      className="editor-page"
+      onFocusCapture={(event) => {
+        if (!reviewOnly && isRealtimeEditableTarget(event.target)) beginLocalEdit();
+      }}
+      onBlurCapture={(event) => {
+        if (!reviewOnly && isRealtimeEditableTarget(event.target)) endLocalEdit();
+      }}
+    >
       <div className="editor-toolbar">
         <input
           className="story-title-input"
@@ -911,6 +922,16 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
                 <small>{comments.threads.filter(({ status }) => status === 'open').length}</small>
               ) : null}
             </button>
+          ) : null}
+          {!reviewOnly ? (
+            <span
+              className={`story-realtime-status ${realtimeStatus}`}
+              role="status"
+              aria-live="polite"
+            >
+              <span aria-hidden="true" />
+              {t(`editor.realtime.${realtimeStatus}`)}
+            </span>
           ) : null}
           {!reviewOnly ? (
             <span
@@ -1297,6 +1318,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
             onConnectEnd={reviewOnly ? undefined : endCanvasConnection}
             onNodeClick={select}
             onPaneClick={handlePaneClick}
+            onNodeDragStart={reviewOnly ? undefined : beginLocalEdit}
             onNodeDrag={
               reviewOnly
                 ? undefined
@@ -1325,6 +1347,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
               if (!reviewOnly && node.type === 'graphDecoration') {
                 void updateGraphDecoration(node.id, { position: node.position });
               }
+              if (!reviewOnly) endLocalEdit();
             }}
             fitView
             fitViewOptions={fitViewOptions}
@@ -1542,6 +1565,13 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
         </div>
       ) : null}
     </main>
+  );
+}
+
+function isRealtimeEditableTarget(target: EventTarget | null): target is HTMLElement {
+  return (
+    target instanceof HTMLElement &&
+    target.matches('input, textarea, select, [contenteditable="true"]')
   );
 }
 

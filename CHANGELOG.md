@@ -2,6 +2,11 @@
 
 ## 2026-08-16
 
+- Added authorized live story collaboration across the graph and Simulation Mode.
+  Committed changes to interactions, triggers, positions, context entities,
+  items/stats, and decorations now refresh other open editors without a page
+  reload; active local edits are preserved until save, and simulations replay
+  their current journey against the updated story.
 - Simplified story comment access to `Editors` (the default) or `Readers`, with
   a forward migration from the removed disabled/authenticated policies.
 - Restricted the graph editor and Simulation Mode to effective editors. Readers

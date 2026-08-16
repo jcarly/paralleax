@@ -266,6 +266,28 @@ header span {
 .save-status.error {
   color: var(--color-error);
 }
+.story-realtime-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  align-self: center;
+  color: var(--color-muted);
+  font-size: 0.72rem;
+  white-space: nowrap;
+}
+.story-realtime-status > span {
+  width: 0.48rem;
+  height: 0.48rem;
+  border-radius: 999px;
+  background: var(--color-subtle);
+}
+.story-realtime-status.live > span {
+  background: var(--color-place);
+  box-shadow: 0 0 0 3px #5faf7226;
+}
+.story-realtime-status.reconnecting > span {
+  background: var(--color-trigger);
+}
 .save-error {
   display: flex;
   align-items: center;

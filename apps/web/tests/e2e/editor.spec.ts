@@ -81,6 +81,71 @@ test.describe('Story editor', () => {
     await mockStory(page);
   });
 
+  test('applies a remote story invalidation without reloading the editor', async ({ page }) => {
+    await page.addInitScript(() => {
+      class TestEventSource {
+        readonly listeners = new Map<string, Array<() => void>>();
+        onopen: (() => void) | null = null;
+        onerror: (() => void) | null = null;
+
+        constructor(readonly url: string) {
+          const testWindow = window as typeof window & { storyEvents?: TestEventSource[] };
+          testWindow.storyEvents = [...(testWindow.storyEvents ?? []), this];
+          setTimeout(() => this.onopen?.(), 0);
+        }
+
+        addEventListener(type: string, listener: () => void) {
+          this.listeners.set(type, [...(this.listeners.get(type) ?? []), listener]);
+        }
+
+        emit(type: string) {
+          this.listeners.get(type)?.forEach((listener) => listener());
+        }
+
+        close() {}
+      }
+
+      Object.defineProperty(window, 'EventSource', { configurable: true, value: TestEventSource });
+    });
+
+    let current = cloneStory();
+    current.access = { visibility: 'private', editPolicy: 'owner', commentPolicy: 'editors' };
+    current.capabilities = {
+      canRead: true,
+      canEdit: true,
+      canManage: true,
+      canComment: false,
+    };
+    await page.route('**/api/stories/story-1', (route) =>
+      route.fulfill({ json: structuredClone(current) }),
+    );
+
+    await page.goto('/stories/story-1/edit');
+    await expect(page.getByText('Collaborative editing live')).toBeVisible();
+    await expect(page.getByTestId('interaction-node')).toContainText('Original title');
+
+    current = structuredClone(current);
+    current.revision = 2;
+    current.interactions[0].title = 'Changed by another editor';
+    current.interactions[0].position = { x: 480, y: 320 };
+    current.locations = [
+      { id: 'remote-location', name: 'Remote location', description: 'Created elsewhere' },
+    ];
+    await page.evaluate(() => {
+      (
+        window as typeof window & {
+          storyEvents?: Array<{ url: string; emit: (type: string) => void }>;
+        }
+      ).storyEvents
+        ?.find(({ url }) => url === '/api/stories/story-1/events')
+        ?.emit('story-changed');
+    });
+
+    await expect(page.getByTestId('interaction-node')).toContainText('Changed by another editor');
+    await expect(page.getByText('Remote location')).toBeVisible();
+    await expect(page).toHaveURL('/stories/story-1/edit');
+  });
+
   test('edits an interaction title without blanking the page', async ({ page }) => {
     const updated = cloneStory();
     updated.interactions[0].title = 'New title';

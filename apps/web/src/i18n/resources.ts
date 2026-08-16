@@ -271,6 +271,11 @@ export const resources = {
         saving: 'Saving…',
         saved: 'Saved',
         saveFailed: 'Save failed',
+        realtime: {
+          live: 'Collaborative editing live',
+          reconnecting: 'Collaboration reconnecting…',
+          unavailable: 'Live collaboration unavailable',
+        },
         access: 'Access',
         readOnlyTitle: 'Editing is not permitted',
         readOnlyDescription: 'You can read this story, but your account cannot modify it.',
@@ -358,6 +363,11 @@ export const resources = {
         preview: 'Paralleax Preview',
         reader: 'Paralleax Reader',
         simulation: 'Simulation',
+        realtime: {
+          live: 'Simulation synced live',
+          reconnecting: 'Simulation reconnecting…',
+          unavailable: 'Live simulation updates unavailable',
+        },
         savingProgress: 'Saving progress…',
         progressSaved: 'Progress saved',
         progressSaveFailed: 'Progress save failed',
@@ -964,6 +974,11 @@ export const resources = {
         saving: 'Enregistrement…',
         saved: 'Enregistrée',
         saveFailed: 'Échec de l’enregistrement',
+        realtime: {
+          live: 'Édition collaborative en direct',
+          reconnecting: 'Reconnexion de la collaboration…',
+          unavailable: 'Collaboration en direct indisponible',
+        },
         access: 'Accès',
         readOnlyTitle: 'Modification non autorisée',
         readOnlyDescription:
@@ -1052,6 +1067,11 @@ export const resources = {
         preview: 'Aperçu Paralleax',
         reader: 'Lecteur Paralleax',
         simulation: 'Simulation',
+        realtime: {
+          live: 'Simulation synchronisée en direct',
+          reconnecting: 'Reconnexion de la simulation…',
+          unavailable: 'Mises à jour en direct indisponibles',
+        },
         savingProgress: 'Enregistrement de la progression…',
         progressSaved: 'Progression enregistrée',
         progressSaveFailed: 'Échec de l’enregistrement de la progression',

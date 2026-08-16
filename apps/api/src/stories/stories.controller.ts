@@ -1,4 +1,15 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Header,
+  HttpCode,
+  Param,
+  Patch,
+  Post,
+  Sse,
+} from '@nestjs/common';
 import {
   CreateInteractionDto,
   CreateGraphDecorationDto,
@@ -63,6 +74,13 @@ export class StoriesController {
   @Throttle({ default: { limit: STORY_READ_RATE_LIMIT, ttl: 60_000 } })
   get(@Param('storyId') id: string, @CurrentUser() user?: RequestUser) {
     return this.stories.get(id, user?.id);
+  }
+
+  @Sse(':storyId/events')
+  @Header('X-Accel-Buffering', 'no')
+  @Throttle({ default: { limit: STORY_READ_RATE_LIMIT, ttl: 60_000 } })
+  stream(@Param('storyId') id: string, @CurrentUser() user: RequestUser) {
+    return this.stories.stream(id, user.id);
   }
 
   @Get(':storyId/access')
