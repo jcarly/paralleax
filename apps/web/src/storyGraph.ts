@@ -48,7 +48,7 @@ export interface TriggerNodeActions {
 }
 
 export const interactionNodeWidth = 210;
-const interactionNodeHeight = 116;
+export const interactionNodeHeight = 116;
 const triggerNodeSize = 20;
 const fallbackInteractionX = 80;
 const fallbackInteractionY = 120;

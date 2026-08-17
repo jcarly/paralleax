@@ -65,6 +65,8 @@ import {
   type SelectedTrigger,
   type StoryFlowNode,
   type TriggerFlowEdge,
+  interactionNodeWidth,
+  interactionNodeHeight,
 } from '../storyGraph';
 import { findInteraction, findSelectedTrigger } from '../storySelection';
 import { getPendingConnection } from '../storyConnection';
@@ -867,12 +869,22 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
     }
 
     if (!start || connectionState.isValid === true || connectionState.toNode) return;
-    const position = getDroppedInteractionPosition(connectionState.pointer, flowInstance.current);
-
     if (start.handleType === 'source') {
+      const position = getDroppedInteractionPosition(
+        event,
+        flowInstance.current,
+        'child',
+      );
+
       void createChildFromInteraction(start.nodeId, position);
       return;
     }
+
+    const position = getDroppedInteractionPosition(
+      event,
+      flowInstance.current,
+      'parent',
+    );
 
     void createParentForInteraction(start.nodeId, position);
   };
@@ -1110,11 +1122,6 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
                     ? t('editor.saveFailed')
                     : ''}
             </span>
-          ) : null}
-          {!reviewOnly ? (
-            <button disabled={!selected} onClick={() => void createSelectedChild()}>
-              {t('editor.addChild')}
-            </button>
           ) : null}
           <Link
             className="button secondary"
@@ -1777,13 +1784,27 @@ function ReviewTargetInspector({
 }
 
 function getDroppedInteractionPosition(
-  pointer: Position | null,
+  event: MouseEvent | TouchEvent,
   flow: ReactFlowInstance<StoryFlowNode, TriggerFlowEdge> | null,
+  placement: 'child' | 'parent',
 ): Position | undefined {
-  if (!pointer || !flow) return undefined;
-  const flowPosition = flow.screenToFlowPosition(pointer);
+  if (!flow) return undefined;
+
+  const pointer =
+    'changedTouches' in event
+      ? event.changedTouches[0]
+      : event;
+
+  const drop = flow.screenToFlowPosition({
+    x: pointer.clientX,
+    y: pointer.clientY,
+  });
+
   return {
-    x: Math.round(flowPosition.x - droppedNodeOffset.x),
-    y: Math.round(flowPosition.y - droppedNodeOffset.y),
+    x: Math.round(drop.x - interactionNodeWidth / 2),
+    y:
+      placement === 'child'
+        ? Math.round(drop.y)
+        : Math.round(drop.y - interactionNodeHeight),
   };
 }
