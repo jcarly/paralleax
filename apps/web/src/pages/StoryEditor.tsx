@@ -24,6 +24,7 @@ import { Link, Navigate, useParams } from 'react-router-dom';
 import {
   isCommentAnchorDetached,
   type Character,
+  type CommentAnchor,
   type CommentTargetType,
   type GraphDecoration,
   type Interaction,
@@ -31,6 +32,7 @@ import {
   type Location,
   type Position,
   type StatDefinition,
+  type StoryCommentThread,
   type Trigger,
 } from '@paralleax/shared';
 import { CharacterInspector } from '../components/CharacterInspector';
@@ -44,6 +46,7 @@ import { TriggerInspector } from '../components/TriggerInspector';
 import { TriggerNode } from '../components/TriggerNode';
 import { RichTextContent } from '../components/RichTextContent';
 import { CommentPinNode, type CommentPinFlowNode } from '../features/comments/CommentPinNode';
+import { ContextualCommentsRail } from '../features/comments/ContextualCommentsRail';
 import { StoryCommentsPanel } from '../features/comments/StoryCommentsPanel';
 import { captureActiveTextSelection } from '../features/comments/textAnchors';
 import { useStoryComments } from '../features/comments/useStoryComments';
@@ -264,9 +267,6 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
         : commentThreads,
     [commentThreads, story],
   );
-  const selectedCommentThread = projectedCommentThreads.find(
-    ({ id }) => id === comments.selectedThreadId,
-  );
   const selected = findInteraction(story, selectedId);
   const selectedTriggerTarget = findSelectedTrigger(story, selectedTrigger);
   const selectedGraphDecoration = story?.graphDecorations?.find(
@@ -302,6 +302,23 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
           thread.anchor.targetId === selectedCommentTarget.targetId,
       )
     : [];
+  const contextualDraftAnchor: Exclude<CommentAnchor, { kind: 'canvas' }> | undefined = (() => {
+    const anchor = comments.draftAnchor;
+    const target = selectedCommentTarget;
+    if (!anchor || anchor.kind === 'canvas' || !target) return undefined;
+    return anchor.targetType === target.targetType && anchor.targetId === target.targetId
+      ? anchor
+      : undefined;
+  })();
+  const canManageCommentThread = useCallback(
+    (thread: StoryCommentThread) =>
+      Boolean(
+        story?.capabilities?.canManage ||
+        story?.capabilities?.canEdit ||
+        (currentUserId && thread.createdBy.id === currentUserId),
+      ),
+    [currentUserId, story?.capabilities?.canEdit, story?.capabilities?.canManage],
+  );
   const openCommentCounts = useMemo(() => {
     const counts = new Map<string, number>();
     for (const thread of projectedCommentThreads) {
@@ -400,6 +417,12 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
     selectedStatDefinition ||
     selectedItemDefinition,
   );
+  const showContextualComments = Boolean(
+    !commentsOpen &&
+    selectedCommentTarget &&
+    (selectedTargetThreads.length > 0 || contextualDraftAnchor),
+  );
+  const hasInspector = commentsOpen || hasInspectorSelection;
 
   const closeInspector = useCallback(() => {
     setSelectedId(undefined);
@@ -411,18 +434,101 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
     setSelectedItemDefinitionId(undefined);
   }, []);
 
+  const focusCommentThread = useCallback(
+    (threadId: string) => {
+      const thread = projectedCommentThreads.find(({ id }) => id === threadId);
+      if (!thread) return;
+
+      selectCommentThread(thread.id);
+      setCommentsOpen(false);
+      closeInspector();
+
+      const graphNodeIds: string[] = [];
+      if (thread.anchor.kind === 'canvas') {
+        graphNodeIds.push(`comment:${thread.id}`);
+      } else if (thread.anchor.targetType === 'interaction') {
+        setSelectedId(thread.anchor.targetId);
+        graphNodeIds.push(thread.anchor.targetId);
+      } else if (thread.anchor.targetType === 'trigger') {
+        const triggerId = thread.anchor.targetId;
+        const owner = story?.interactions.find((interaction) =>
+          interaction.triggers.some(({ id }) => id === triggerId),
+        );
+        if (owner) {
+          setSelectedTrigger({ interactionId: owner.id, triggerId });
+          graphNodeIds.push(owner.id);
+        }
+      } else if (thread.anchor.targetType === 'location') {
+        setSelectedLocationId(thread.anchor.targetId);
+        graphNodeIds.push(
+          ...getReferencedInteractionIds(story, {
+            type: 'location',
+            id: thread.anchor.targetId,
+          }),
+        );
+      } else if (thread.anchor.targetType === 'character') {
+        setSelectedCharacterId(thread.anchor.targetId);
+        graphNodeIds.push(
+          ...getReferencedInteractionIds(story, {
+            type: 'character',
+            id: thread.anchor.targetId,
+          }),
+        );
+      } else if (thread.anchor.targetType === 'statDefinition') {
+        setSelectedStatDefinitionId(thread.anchor.targetId);
+        graphNodeIds.push(
+          ...getReferencedInteractionIds(story, {
+            type: 'stat',
+            id: thread.anchor.targetId,
+          }),
+        );
+      } else {
+        setSelectedItemDefinitionId(thread.anchor.targetId);
+        graphNodeIds.push(
+          ...getReferencedInteractionIds(story, {
+            type: 'item',
+            id: thread.anchor.targetId,
+          }),
+        );
+      }
+
+      if (graphNodeIds.length > 0) {
+        window.requestAnimationFrame(() => {
+          void flowInstance.current?.fitView({
+            nodes: graphNodeIds.map((id) => ({ id })),
+            duration: 250,
+            padding: 0.7,
+            maxZoom: 1,
+          });
+        });
+      }
+    },
+    [closeInspector, projectedCommentThreads, selectCommentThread, story],
+  );
+
   const openCommentsForTarget = useCallback(
-    (_targetType: CommentTargetType, targetId: string) => {
+    (targetType: CommentTargetType, targetId: string) => {
       const thread = projectedCommentThreads.find(
         (candidate) =>
           candidate.status === 'open' &&
           candidate.anchor.kind !== 'canvas' &&
+          candidate.anchor.targetType === targetType &&
           candidate.anchor.targetId === targetId,
       );
-      if (thread) selectCommentThread(thread.id);
-      setCommentsOpen(true);
+      if (!thread) return;
+      selectCommentThread(thread.id);
+      setCommentsOpen(false);
+      closeInspector();
+      if (targetType === 'interaction') {
+        setSelectedId(targetId);
+        return;
+      }
+      const owner = story?.interactions.find((interaction) =>
+        interaction.triggers.some(({ id }) => id === targetId),
+      );
+      if (owner) setSelectedTrigger({ interactionId: owner.id, triggerId: targetId });
     },
-    [projectedCommentThreads, selectCommentThread],
+    [closeInspector, projectedCommentThreads, selectCommentThread, story?.interactions],
   );
 
   const storyNodes = useMemo(
@@ -483,8 +589,8 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
   );
 
   const commentNodes = useMemo<CommentPinFlowNode[]>(
-    () =>
-      projectedCommentThreads.flatMap((thread) =>
+    () => [
+      ...projectedCommentThreads.flatMap((thread) =>
         thread.anchor.kind === 'canvas'
           ? [
               {
@@ -493,21 +599,61 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
                 position: thread.anchor.position,
                 draggable: false,
                 selectable: false,
+                zIndex: 1_000,
                 data: {
-                  threadId: thread.id,
-                  messageCount: thread.messages.length,
-                  resolved: thread.status === 'resolved',
-                  detached: thread.detached,
+                  thread,
+                  expanded: thread.id === comments.selectedThreadId,
+                  canComment: story?.capabilities?.canComment === true,
+                  canManageThread: canManageCommentThread(thread),
                   onOpen: (threadId: string) => {
                     selectCommentThread(threadId);
-                    setCommentsOpen(true);
+                    setCommentsOpen(false);
                   },
+                  onCreate: comments.create,
+                  onCancelDraft: comments.cancelDraft,
+                  onReply: comments.reply,
+                  onStatus: comments.setStatus,
                 },
               },
             ]
           : [],
       ),
-    [projectedCommentThreads, selectCommentThread],
+      ...(comments.draftAnchor?.kind === 'canvas'
+        ? [
+            {
+              id: 'comment:draft',
+              type: 'commentPin' as const,
+              position: comments.draftAnchor.position,
+              draggable: false,
+              selectable: false,
+              zIndex: 1_001,
+              data: {
+                draftAnchor: comments.draftAnchor,
+                expanded: true,
+                canComment: story?.capabilities?.canComment === true,
+                canManageThread: false,
+                onOpen: selectCommentThread,
+                onCreate: comments.create,
+                onCancelDraft: comments.cancelDraft,
+                onReply: comments.reply,
+                onStatus: comments.setStatus,
+              },
+            },
+          ]
+        : []),
+    ],
+    [
+      canManageCommentThread,
+      comments.cancelDraft,
+      comments.create,
+      comments.draftAnchor,
+      comments.reply,
+      comments.selectedThreadId,
+      comments.setStatus,
+      projectedCommentThreads,
+      selectCommentThread,
+      story?.capabilities?.canComment,
+    ],
   );
 
   useEffect(() => {
@@ -533,10 +679,11 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
 
   const selectTriggerData = useCallback(
     (trigger: SelectedTrigger) => {
+      selectCommentThread(undefined);
       closeInspector();
       setSelectedTrigger(trigger);
     },
-    [closeInspector],
+    [closeInspector, selectCommentThread],
   );
   const deleteSelectedTriggerInput = useCallback(
     async (interactionId: string, triggerId: string, inputInteractionId: string) => {
@@ -565,13 +712,19 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
   }
 
   const select: NodeMouseHandler = (_, node) => {
+    if (node.type === 'commentPin') return;
+
+    selectCommentThread(undefined);
+
     if (node.type === 'graphDecoration') {
       if (reviewOnly) return;
       closeInspector();
       setSelectedGraphDecorationId(node.id);
       return;
     }
+
     if (node.type !== 'interaction') return;
+
     closeInspector();
     setSelectedId(node.id);
   };
@@ -597,7 +750,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
     if (!selectedCommentTarget || !story?.capabilities?.canComment) return;
     comments.startThread({ kind: 'entity', ...selectedCommentTarget });
     comments.selectThread(undefined);
-    setCommentsOpen(true);
+    setCommentsOpen(false);
   }
 
   function startTextComment() {
@@ -611,7 +764,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
       selector: selection.selector,
     });
     comments.selectThread(undefined);
-    setCommentsOpen(true);
+    setCommentsOpen(false);
   }
 
   async function reattachSelectedThread(threadId: string) {
@@ -631,6 +784,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
   }
 
   function handlePaneClick(event: ReactMouseEvent) {
+    selectCommentThread(undefined);
     if (placingComment && story?.capabilities?.canComment) {
       const position = flowInstance.current?.screenToFlowPosition({
         x: event.clientX,
@@ -639,7 +793,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
       if (position) {
         comments.startThread({ kind: 'canvas', position });
         comments.selectThread(undefined);
-        setCommentsOpen(true);
+        setCommentsOpen(false);
       }
       setPlacingComment(false);
       return;
@@ -672,6 +826,14 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
       });
     });
   };
+
+  function toggleCommentsList() {
+    if (!commentsOpen) {
+      comments.cancelDraft();
+      comments.selectThread(undefined);
+    }
+    setCommentsOpen((open) => !open);
+  }
 
   const startCanvasConnection: OnConnectStart = (_, params) => {
     if (!params.nodeId || !params.handleType) {
@@ -915,7 +1077,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
             <button
               className={`secondary comments-toolbar-button ${commentsOpen ? 'active' : ''}`}
               type="button"
-              onClick={() => setCommentsOpen((open) => !open)}
+              onClick={toggleCommentsList}
             >
               {t('comments.title')}
               {comments.threads.filter(({ status }) => status === 'open').length ? (
@@ -978,8 +1140,8 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
       ) : null}
       <div
         className={`editor-layout with-navigation ${isLocationPanelOpen ? '' : 'with-navigation-collapsed'} ${
-          hasInspectorSelection ? 'with-inspector' : ''
-        }`}
+          hasInspector ? 'with-inspector' : ''
+        } ${showContextualComments ? 'with-comment-rail' : ''}`}
       >
         <nav
           className={`location-panel ${isLocationPanelOpen ? '' : 'collapsed'}`}
@@ -1359,7 +1521,41 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
             <Controls />
           </ReactFlow>
         </section>
-        {hasInspectorSelection ? (
+        {showContextualComments ? (
+          <ContextualCommentsRail
+            threads={selectedTargetThreads}
+            selectedThreadId={comments.selectedThreadId}
+            draftAnchor={contextualDraftAnchor}
+            error={comments.error}
+            canComment={story.capabilities?.canComment === true}
+            canManageThread={canManageCommentThread}
+            onSelect={comments.selectThread}
+            onCreate={comments.create}
+            onCancelDraft={comments.cancelDraft}
+            onReply={comments.reply}
+            onStatus={comments.setStatus}
+            onReattach={reattachSelectedThread}
+          />
+        ) : null}
+        {commentsOpen ? (
+          <StoryCommentsPanel
+            open
+            placement="inspector"
+            loading={comments.loading}
+            error={comments.error}
+            threads={projectedCommentThreads}
+            canComment={story.capabilities?.canComment === true}
+            realtimeStatus={comments.realtimeStatus}
+            onClose={() => setCommentsOpen(false)}
+            onSelect={(threadId) => {
+              if (threadId) focusCommentThread(threadId);
+            }}
+            onCancelDraft={comments.cancelDraft}
+            onCreate={comments.create}
+            onReply={comments.reply}
+            onStatus={comments.setStatus}
+          />
+        ) : hasInspectorSelection ? (
           <aside className="inspector" aria-label={t('editor.inspector')}>
             <div className="inspector-header">
               {selectedCommentTarget && story.capabilities?.canComment ? (
@@ -1389,30 +1585,6 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
                 x
               </button>
             </div>
-            {selectedTargetThreads.length ? (
-              <div className="inspector-comment-markers">
-                {selectedTargetThreads.map((thread) => (
-                  <button
-                    className={thread.status === 'resolved' ? 'resolved' : ''}
-                    type="button"
-                    key={thread.id}
-                    aria-label={t('comments.openThread', { label: thread.anchorLabel })}
-                    onClick={() => {
-                      selectCommentThread(thread.id);
-                      setCommentsOpen(true);
-                    }}
-                  >
-                    <span aria-hidden="true">◆</span>
-                    <span>
-                      {thread.anchor.kind === 'text'
-                        ? `“${thread.anchor.selector.exact}”`
-                        : (thread.messages.at(-1)?.body ?? thread.anchorLabel)}
-                    </span>
-                    <small>{thread.messages.length}</small>
-                  </button>
-                ))}
-              </div>
-            ) : null}
             {selectedGraphDecoration ? (
               <GraphDecorationInspector
                 decoration={selectedGraphDecoration}
@@ -1499,36 +1671,6 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
           </aside>
         ) : null}
       </div>
-      <StoryCommentsPanel
-        open={commentsOpen}
-        loading={comments.loading}
-        error={comments.error}
-        threads={projectedCommentThreads}
-        selectedThread={selectedCommentThread}
-        draftAnchor={comments.draftAnchor}
-        canComment={story.capabilities?.canComment === true}
-        realtimeStatus={comments.realtimeStatus}
-        canManageThread={Boolean(
-          story.capabilities?.canManage ||
-          story.capabilities?.canEdit ||
-          (currentUserId && selectedCommentThread?.createdBy.id === currentUserId),
-        )}
-        onClose={() => setCommentsOpen(false)}
-        onSelect={comments.selectThread}
-        onCancelDraft={comments.cancelDraft}
-        onCreate={comments.create}
-        onReply={comments.reply}
-        onStatus={comments.setStatus}
-        onReattach={
-          selectedCommentTarget &&
-          (story.capabilities?.canManage ||
-            story.capabilities?.canEdit ||
-            selectedCommentThread?.createdBy.id === currentUserId) &&
-          selectedCommentThread?.detached
-            ? reattachSelectedThread
-            : undefined
-        }
-      />
       {pending && existingTriggerChoices.length > 0 ? (
         <div className="connection-dialog-backdrop">
           <section

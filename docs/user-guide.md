@@ -72,11 +72,15 @@ screen, and `Comment on this scene` starts a new discussion there. Comments on
 future interactions, graph positions, triggers, or context entities are not shown
 in the player.
 
-The Comments panel lists open and resolved discussions. Open a thread to read its
-ordered replies, add a reply, resolve it, or reopen it. Graph and trigger badges
-show unresolved discussion counts. If later edits remove an entity or make a
-selected quote impossible to locate unambiguously, Paralleax marks the anchor as
-detached but preserves the quote and every message.
+The Comments control opens the complete open/resolved list in the inspector.
+Selecting a discussion navigates to its anchor, focuses the related graph nodes
+when applicable, and opens the target inspector. Entity and text discussions then
+sit in a contextual rail immediately beside that inspector, where replies and
+resolution stay available without obscuring the edited fields. Canvas discussions
+render as readable post-its directly on the graph and expand in place for replies.
+Graph and trigger badges show unresolved discussion counts. If later edits remove
+an entity or make a selected quote impossible to locate unambiguously, Paralleax
+marks the anchor as detached but preserves the quote and every message.
 
 While the panel reports `Live` / `En direct`, new threads, replies, resolutions,
 and moved anchors made by another reviewer appear automatically. A temporary

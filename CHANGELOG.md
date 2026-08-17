@@ -2,6 +2,9 @@
 
 ## 2026-08-16
 
+- Reworked editor review discussions into an inspector-integrated comment list,
+  a Google Docs-style contextual rail beside selected inspectors, navigable graph
+  and entity anchors, and readable canvas post-its that expand for inline replies.
 - Unified interaction effect authoring behind one add action and a typed chooser
   for character stats, inventories, and item stats, with explanations when an
   effect type is unavailable and empty effect groups kept hidden.

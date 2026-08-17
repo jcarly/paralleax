@@ -32,7 +32,8 @@ Paralleax currently includes:
   item/stat definitions, and selected title/body/name/description text, with replies,
   open/resolved state, durable quote context, detached-anchor detection, and live
   SSE invalidation/reload for reviewers connected to the same API process. Editors
-  use the complete graph review layer; authorized readers see and create contextual
+  use an inspector-integrated list, contextual discussion rail, navigable anchors,
+  and expandable graph post-its; authorized readers see and create contextual
   interaction discussions in the player.
 - An administrator-only account interface with role summaries, account search and
   filtering, global user/admin assignment, and visible last-administrator protection.

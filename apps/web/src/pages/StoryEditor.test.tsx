@@ -7,6 +7,7 @@ import {
   type GraphDecorationMutationResult,
   type InteractionMutationResult,
   type Story,
+  type StoryCommentThread,
   type TriggerMutationResult,
 } from '@paralleax/shared';
 import { StoryEditor } from './StoryEditor';
@@ -414,6 +415,47 @@ describe('StoryEditor', () => {
     window.localStorage.clear();
     vi.spyOn(window, 'confirm').mockReturnValue(true);
     vi.mocked(api.listCommentThreads).mockResolvedValue([]);
+  });
+
+  it('opens the global comment list in the inspector and navigates to a contextual thread', async () => {
+    const user = userEvent.setup();
+    const story = storyWithTwoInteractions();
+    const thread: StoryCommentThread = {
+      id: 'thread-interaction-2',
+      storyId: story.id,
+      anchor: { kind: 'entity', targetType: 'interaction', targetId: 'interaction-2' },
+      anchorLabel: 'Second interaction',
+      status: 'open',
+      createdBy: { id: 'user-1', email: 'author@example.com' },
+      createdAt: '2026-08-16T09:00:00.000Z',
+      updatedAt: '2026-08-16T09:00:00.000Z',
+      messages: [
+        {
+          id: 'message-1',
+          threadId: 'thread-interaction-2',
+          author: { id: 'user-1', email: 'author@example.com' },
+          body: 'Should this choice be clearer?',
+          createdAt: '2026-08-16T09:00:00.000Z',
+        },
+      ],
+    };
+    vi.mocked(api.listCommentThreads).mockResolvedValue([thread]);
+
+    await renderEditor(story);
+    await user.click(await screen.findByRole('button', { name: /^Comments/ }));
+
+    const commentList = screen.getByRole('complementary', { name: 'Story comments' });
+    expect(commentList).toHaveClass('inspector-placement');
+    await user.click(within(commentList).getByRole('button', { name: /Second interaction/ }));
+
+    expect(await screen.findByDisplayValue('Second interaction')).toBeInTheDocument();
+    expect(
+      screen.getByRole('complementary', { name: 'Comments for the selected element' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Should this choice be clearer?')).toBeInTheDocument();
+    expect(
+      screen.getByTestId('flow-node-interaction-2').querySelector('.interaction-node'),
+    ).toHaveClass('selected');
   });
 
   it('applies remote story content, positions, context, and decorations without reloading', async () => {

@@ -76,7 +76,19 @@ export function useStoryComments(storyId: string, enabled: boolean) {
     [selectedThreadId, threads],
   );
 
-  function upsert(thread: StoryCommentThread) {
+  const selectThread = useCallback((threadId: string | undefined) => {
+    setSelectedThreadId(threadId);
+    if (threadId) setDraftAnchor(undefined);
+  }, []);
+
+  const startThread = useCallback((anchor: CommentAnchor) => {
+    setDraftAnchor(anchor);
+    setSelectedThreadId(undefined);
+  }, []);
+
+  const cancelDraft = useCallback(() => setDraftAnchor(undefined), []);
+
+  const upsert = useCallback((thread: StoryCommentThread) => {
     setThreads((items) => {
       const existing = items.some(({ id }) => id === thread.id);
       return existing
@@ -86,44 +98,56 @@ export function useStoryComments(storyId: string, enabled: boolean) {
     setSelectedThreadId(thread.id);
     setDraftAnchor(undefined);
     return thread;
-  }
+  }, []);
 
-  async function create(body: string) {
-    if (!draftAnchor) return;
-    setError('');
-    try {
-      return upsert(await api.createCommentThread(storyId, draftAnchor, body));
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Could not create comment');
-    }
-  }
+  const create = useCallback(
+    async (body: string) => {
+      if (!draftAnchor) return;
+      setError('');
+      try {
+        return upsert(await api.createCommentThread(storyId, draftAnchor, body));
+      } catch (caught) {
+        setError(caught instanceof Error ? caught.message : 'Could not create comment');
+      }
+    },
+    [draftAnchor, storyId, upsert],
+  );
 
-  async function reply(threadId: string, body: string) {
-    setError('');
-    try {
-      return upsert(await api.addCommentMessage(storyId, threadId, body));
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Could not reply');
-    }
-  }
+  const reply = useCallback(
+    async (threadId: string, body: string) => {
+      setError('');
+      try {
+        return upsert(await api.addCommentMessage(storyId, threadId, body));
+      } catch (caught) {
+        setError(caught instanceof Error ? caught.message : 'Could not reply');
+      }
+    },
+    [storyId, upsert],
+  );
 
-  async function setStatus(threadId: string, status: StoryCommentThread['status']) {
-    setError('');
-    try {
-      return upsert(await api.updateCommentThreadStatus(storyId, threadId, status));
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Could not update comment');
-    }
-  }
+  const setStatus = useCallback(
+    async (threadId: string, status: StoryCommentThread['status']) => {
+      setError('');
+      try {
+        return upsert(await api.updateCommentThreadStatus(storyId, threadId, status));
+      } catch (caught) {
+        setError(caught instanceof Error ? caught.message : 'Could not update comment');
+      }
+    },
+    [storyId, upsert],
+  );
 
-  async function reanchor(threadId: string, anchor: CommentAnchor) {
-    setError('');
-    try {
-      return upsert(await api.updateCommentThreadAnchor(storyId, threadId, anchor));
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Could not move comment');
-    }
-  }
+  const reanchor = useCallback(
+    async (threadId: string, anchor: CommentAnchor) => {
+      setError('');
+      try {
+        return upsert(await api.updateCommentThreadAnchor(storyId, threadId, anchor));
+      } catch (caught) {
+        setError(caught instanceof Error ? caught.message : 'Could not move comment');
+      }
+    },
+    [storyId, upsert],
+  );
 
   return {
     threads,
@@ -131,10 +155,10 @@ export function useStoryComments(storyId: string, enabled: boolean) {
     error,
     selectedThread,
     selectedThreadId,
-    selectThread: setSelectedThreadId,
+    selectThread,
     draftAnchor,
-    startThread: setDraftAnchor,
-    cancelDraft: () => setDraftAnchor(undefined),
+    startThread,
+    cancelDraft,
     create,
     reply,
     setStatus,

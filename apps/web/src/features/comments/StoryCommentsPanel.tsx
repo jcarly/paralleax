@@ -13,6 +13,7 @@ export function StoryCommentsPanel({
   canComment,
   canManageThread = false,
   realtimeStatus = 'unavailable',
+  placement = 'overlay',
   onClose,
   onSelect,
   onCancelDraft,
@@ -30,6 +31,7 @@ export function StoryCommentsPanel({
   canComment: boolean;
   canManageThread?: boolean;
   realtimeStatus?: CommentRealtimeStatus;
+  placement?: 'overlay' | 'inspector';
   onClose: () => void;
   onSelect: (threadId: string | undefined) => void;
   onCancelDraft: () => void;
@@ -62,7 +64,10 @@ export function StoryCommentsPanel({
 
   if (!open) return null;
   return (
-    <aside className="comments-panel" aria-label={t('comments.panel')}>
+    <aside
+      className={`comments-panel ${placement === 'inspector' ? 'inspector-placement' : ''}`}
+      aria-label={t('comments.panel')}
+    >
       <header>
         <div>
           <span>{t('comments.eyebrow')}</span>
