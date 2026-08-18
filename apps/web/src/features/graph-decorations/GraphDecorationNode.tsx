@@ -27,14 +27,23 @@ export function GraphDecorationNode({ data }: NodeProps<GraphDecorationFlowNode>
         style={{ borderColor: decoration.color, backgroundColor: `${decoration.color}12` }}
         data-testid={`graph-frame-${decoration.id}`}
       >
+        <div className="graph-frame-hit graph-frame-hit-top" />
+        <div className="graph-frame-hit graph-frame-hit-right" />
+        <div className="graph-frame-hit graph-frame-hit-bottom" />
+        <div className="graph-frame-hit graph-frame-hit-left" />
         <NodeResizer
           isVisible={data.selected && data.editable}
           minWidth={120}
           minHeight={80}
+          lineClassName="graph-frame-resize-line nodrag"
+          handleClassName="graph-frame-resize-handle nodrag"
           lineStyle={{ borderColor: decoration.color }}
           handleStyle={{ borderColor: decoration.color }}
           onResizeEnd={(_, size) =>
-            data.onResize?.(decoration.id, { width: size.width, height: size.height })
+            data.onResize?.(decoration.id, {
+              width: size.width,
+              height: size.height,
+            })
           }
         />
       </div>

@@ -14,8 +14,18 @@ export function buildGraphDecorationNodes(
     draggable: editable,
     selectable: false,
     zIndex: -1_000,
+    className:
+      decoration.kind === 'frame'
+        ? 'graph-frame-flow-node'
+        : 'graph-text-flow-node',
     ...(decoration.kind === 'frame'
-      ? { style: { width: decoration.width, height: decoration.height } }
+      ? {
+          style: {
+            width: decoration.width,
+            height: decoration.height,
+          },
+          dragHandle: '.graph-frame-hit',
+        }
       : {}),
     data: {
       decoration,
