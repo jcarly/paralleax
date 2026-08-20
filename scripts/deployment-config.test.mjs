@@ -46,3 +46,15 @@ test('Railway web deployment probes the public reverse proxy', async () => {
   assert.match(nginxConfiguration, /^\s*proxy_read_timeout 1h;$/m);
   assert.doesNotMatch(nginxConfiguration, /proxy_pass http:\/\/\$\{API_HOST\}/);
 });
+
+test('the optional Formbricks web build and CSP use the same public app URL', async () => {
+  const dockerfile = await readRepositoryFile('Dockerfile');
+  const productionCompose = await readRepositoryFile('compose.production.yaml');
+  const nginxConfiguration = await readRepositoryFile('deploy/nginx.conf.template');
+
+  assert.match(dockerfile, /^ARG VITE_FORMBRICKS_WORKSPACE_ID=$/m);
+  assert.match(dockerfile, /^ARG VITE_FORMBRICKS_APP_URL=$/m);
+  assert.match(productionCompose, /^\s+VITE_FORMBRICKS_APP_URL: \$\{VITE_FORMBRICKS_APP_URL:-\}$/m);
+  assert.match(nginxConfiguration, /connect-src 'self' \$\{VITE_FORMBRICKS_APP_URL\}/);
+  assert.match(nginxConfiguration, /script-src 'self' \$\{VITE_FORMBRICKS_APP_URL\}/);
+});

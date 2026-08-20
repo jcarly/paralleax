@@ -51,6 +51,9 @@ Paralleax currently includes:
 - English and French interface localization with browser detection, a persisted
   user preference, and English fallback. Authored story content is never
   translated by the interface layer.
+- Optional Formbricks-powered contextual feedback from the application header,
+  with localized controls and non-content route, surface, version, viewport, and
+  language context. The integration stays disabled when it is not configured.
 - Unit, integration, PostgreSQL, component, and Playwright testing.
 - Provider-neutral production API/web images, a migration-first Compose shape,
   exact production-origin enforcement, invitation-code registration, deployment

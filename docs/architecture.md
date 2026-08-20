@@ -270,6 +270,15 @@ locations, characters, stats, and items remain exactly as written. Components
 compose translated diagnostic phrases around those authored values without
 mutating them.
 
+`apps/web/src/features/feedback/` owns the optional Formbricks adapter and its
+header control. It initializes only when both public Vite settings are present,
+tracks React Router navigation, and emits the `paralleax_feedback_opened` code
+action with normalized, non-content hidden fields. It deliberately does not
+identify the signed-in account or send authored story content. Formbricks remains
+a browser integration and has no dependency on the shared domain, API, or
+persistence layers. The production Nginx template permits the configured
+Formbricks URL in `script-src` and `connect-src` only when that URL is supplied.
+
 Supporting editor modules keep pure or focused behavior outside the page
 component:
 
@@ -282,6 +291,8 @@ component:
   interaction nodes, trigger nodes, and trigger edges.
 - `features/graph-decorations/`: focused projection, rendering, resizing, and
   inspector UI for authored frame and text decorations.
+- `features/feedback/`: optional Formbricks configuration, route-context
+  normalization, SDK isolation, and the global feedback control.
 - `storySelection.ts`: selected interaction and trigger lookup helpers.
 - `storyConnection.ts`: canvas connection validation and created-trigger lookup.
 - `storyTriggerInput.ts`: deletion planning for one trigger input link.

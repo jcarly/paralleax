@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-08-20
+
+- Added an optional localized Formbricks feedback button across the application
+  shell, with route-aware survey triggering, privacy-limited contextual fields,
+  deployment configuration, production CSP support, and an operator runbook.
+
 ## 2026-08-16
 
 - Reworked editor review discussions into an inspector-integrated comment list,

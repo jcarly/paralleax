@@ -58,6 +58,12 @@ REGISTRATION_ACCESS_CODE=<at-least-16-random-characters>
 POSTGRES_SSL=true
 ```
 
+To enable the optional contextual feedback button, also set
+`VITE_FORMBRICKS_WORKSPACE_ID` and `VITE_FORMBRICKS_APP_URL` before building the
+web image. They are public build inputs, not server secrets. Follow the
+[Formbricks feedback runbook](formbricks-feedback.md) before collecting tester
+responses.
+
 Distribute the invitation code separately from the application URL. Rotate it
 if it is disclosed. Set `REGISTRATION_MODE=closed` when no more accounts should
 be created. `REGISTRATION_MODE=open` is not appropriate for the private alpha.
@@ -134,6 +140,10 @@ PORT=8080
 API_HOST=${{api.RAILWAY_PRIVATE_DOMAIN}}
 API_PORT=3000
 ```
+
+If Formbricks feedback is enabled, add its two `VITE_FORMBRICKS_*` values to the
+web service so Railway makes them available to the Docker build and the runtime
+Content Security Policy.
 
 Nginx listens on `PORT`, and both image and Railway healthchecks use that same
 value. Keep the public-domain target port and `PORT` aligned; `8080` is the

@@ -4,6 +4,7 @@ import { Link, Navigate, NavLink, Route, Routes, useLocation, useNavigate } from
 import { api, type AuthUser } from './api';
 import { authenticationPath, safeReturnTo } from './authNavigation';
 import { LanguageSwitcher } from './components/LanguageSwitcher';
+import { FeedbackButton } from './features/feedback/FeedbackButton';
 import { AuthPage } from './pages/AuthPage';
 import { StoryList } from './pages/StoryList';
 import { StoryAccessPage } from './pages/StoryAccessPage';
@@ -85,6 +86,7 @@ export function App() {
           ) : null}
         </nav>
         <span className="product-app-spacer" />
+        <FeedbackButton />
         <LanguageSwitcher className="language-switcher-header" />
         {user ? (
           <>

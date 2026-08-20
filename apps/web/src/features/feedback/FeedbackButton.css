@@ -1,0 +1,42 @@
+.product-feedback-button {
+  min-height: 34px;
+  gap: 0.4rem;
+  padding: 0.45rem 0.65rem;
+  border: 1px solid #d4d7d0;
+  background: #fff;
+  color: #4f5751;
+  box-shadow: none;
+  font-size: 0.7rem;
+}
+
+.product-feedback-button:hover:not(:disabled) {
+  border-color: #b9c5bd;
+  background: #f1f1ed;
+  box-shadow: none;
+}
+
+.product-feedback-button svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.7;
+}
+
+@media (max-width: 820px) {
+  .product-feedback-button {
+    width: 34px;
+    padding: 0;
+  }
+
+  .product-feedback-button span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+  }
+}

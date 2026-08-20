@@ -102,6 +102,12 @@ Local URLs:
 - Web: http://localhost:5173
 - API: http://localhost:3300/api
 
+Contextual Formbricks feedback is optional and disabled by default. Set both
+`VITE_FORMBRICKS_WORKSPACE_ID` and `VITE_FORMBRICKS_APP_URL` before starting the
+web app to enable it. See the
+[Formbricks feedback runbook](docs/operations/formbricks-feedback.md) for the
+required action, hidden fields, deployment settings, and privacy boundary.
+
 The API expects PostgreSQL. By default it uses:
 
 ```dotenv
