@@ -2,6 +2,10 @@
 
 ## 2026-08-20
 
+- Added deterministic vertical graph auto-layout for the complete story or a
+  selected interaction/linked trigger, including future multi-selection targets,
+  cycle and disconnected-component handling, spaced grouped trigger markers, and
+  fixed bottom-output/top-input interaction arrow routing.
 - Added an optional localized Formbricks feedback button across the application
   shell, with route-aware survey triggering, privacy-limited contextual fields,
   deployment configuration, production CSP support, and an operator runbook.

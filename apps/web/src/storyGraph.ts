@@ -274,18 +274,22 @@ export function applyInteractionDragEdgePreview(
         if (!source) return;
         previewHandles.set(
           `${triggerNodeId}-${sourceId}`,
-          getRoutingHandleIds(
-            getInteractionCenter(source, sourceIndex, positionOverrides.get(source.id)),
-            triggerCenter,
+          constrainInteractionOutputHandle(
+            getRoutingHandleIds(
+              getInteractionCenter(source, sourceIndex, positionOverrides.get(source.id)),
+              triggerCenter,
+            ),
           ),
         );
       });
 
       previewHandles.set(
         `${triggerNodeId}-output`,
-        getRoutingHandleIds(
-          triggerCenter,
-          getInteractionCenter(target, targetIndex, positionOverrides.get(target.id)),
+        constrainInteractionInputHandle(
+          getRoutingHandleIds(
+            triggerCenter,
+            getInteractionCenter(target, targetIndex, positionOverrides.get(target.id)),
+          ),
         ),
       );
     });
@@ -313,21 +317,38 @@ export function getInteractionDragTriggerPositionUpdates(
   interactionId: string,
   position: { x: number; y: number },
 ): TriggerPositionUpdate[] {
-  if (!story || !story.interactions.some((interaction) => interaction.id === interactionId)) {
+  return getInteractionMovesTriggerPositionUpdates(story, new Map([[interactionId, position]]));
+}
+
+export function getInteractionMovesTriggerPositionUpdates(
+  story: Story | undefined,
+  positionOverrides: ReadonlyMap<string, { x: number; y: number }>,
+): TriggerPositionUpdate[] {
+  if (
+    !story ||
+    positionOverrides.size === 0 ||
+    !story.interactions.some((interaction) => positionOverrides.has(interaction.id))
+  ) {
     return [];
   }
 
-  const positionOverrides = new Map([[interactionId, position]]);
   const updates: TriggerPositionUpdate[] = [];
 
   story.interactions.forEach((target, targetIndex) => {
     const affectsTarget =
-      target.id === interactionId ||
-      target.triggers.some((trigger) => trigger.inputInteractionIds.includes(interactionId));
+      positionOverrides.has(target.id) ||
+      target.triggers.some((trigger) =>
+        trigger.inputInteractionIds.some((inputId) => positionOverrides.has(inputId)),
+      );
     if (!affectsTarget) return;
 
     getLinkedTriggerGroups(target).forEach((group, triggerIndex) => {
-      if (target.id !== interactionId && !group.inputInteractionIds.includes(interactionId)) return;
+      if (
+        !positionOverrides.has(target.id) &&
+        !group.inputInteractionIds.some((inputId) => positionOverrides.has(inputId))
+      ) {
+        return;
+      }
       const savedPosition = getSavedTriggerNodePosition(group);
       if (!savedPosition) return;
       const nextPosition = getTriggerNodePosition(
@@ -395,11 +416,13 @@ export function buildTriggerEdges(
         const inputEdges = group.inputInteractionIds.map((source) => {
           const sourceIndex = story.interactions.findIndex((item) => item.id === source);
           const sourceInteraction = story.interactions[sourceIndex];
-          const handles = getRoutingHandleIds(
-            sourceInteraction
-              ? getInteractionCenter(sourceInteraction, sourceIndex)
-              : triggerCenter,
-            triggerCenter,
+          const handles = constrainInteractionOutputHandle(
+            getRoutingHandleIds(
+              sourceInteraction
+                ? getInteractionCenter(sourceInteraction, sourceIndex)
+                : triggerCenter,
+              triggerCenter,
+            ),
           );
           return {
             id: `${triggerNodeId}-${source}`,
@@ -422,7 +445,9 @@ export function buildTriggerEdges(
           };
         });
         const targetCenter = getInteractionCenter(target, targetIndex);
-        const outputHandles = getRoutingHandleIds(triggerCenter, targetCenter);
+        const outputHandles = constrainInteractionInputHandle(
+          getRoutingHandleIds(triggerCenter, targetCenter),
+        );
         const outputEdge: TriggerFlowEdge = {
           id: `${triggerNodeId}-output`,
           type: 'trigger',
@@ -459,7 +484,7 @@ function getInteractionCenter(
   };
 }
 
-function getTriggerNodePosition(
+export function getTriggerNodePosition(
   story: Story,
   target: Story['interactions'][number],
   targetIndex: number,
@@ -518,7 +543,7 @@ function getSavedTriggerNodePosition(group: LinkedTriggerGroup) {
   )?.position;
 }
 
-function getAutomaticTriggerNodePosition(
+export function getAutomaticTriggerNodePosition(
   story: Story,
   target: Story['interactions'][number],
   targetIndex: number,
@@ -575,13 +600,27 @@ export function getRoutingHandleIds(
   };
 }
 
-interface LinkedTriggerGroup {
+function constrainInteractionOutputHandle(
+  handles: ReturnType<typeof getRoutingHandleIds>,
+): ReturnType<typeof getRoutingHandleIds> {
+  return { ...handles, sourceHandle: `routing-output-${Position.Bottom}` };
+}
+
+function constrainInteractionInputHandle(
+  handles: ReturnType<typeof getRoutingHandleIds>,
+): ReturnType<typeof getRoutingHandleIds> {
+  return { ...handles, targetHandle: `routing-input-${Position.Top}` };
+}
+
+export interface LinkedTriggerGroup {
   inputInteractionIds: string[];
   primaryTrigger: Story['interactions'][number]['triggers'][number];
   triggers: Story['interactions'][number]['triggers'];
 }
 
-function getLinkedTriggerGroups(interaction: Story['interactions'][number]): LinkedTriggerGroup[] {
+export function getLinkedTriggerGroups(
+  interaction: Story['interactions'][number],
+): LinkedTriggerGroup[] {
   const groups = new Map<string, LinkedTriggerGroup>();
 
   interaction.triggers

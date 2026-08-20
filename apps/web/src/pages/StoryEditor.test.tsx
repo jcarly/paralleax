@@ -13,6 +13,7 @@ import {
 import { StoryEditor } from './StoryEditor';
 import { api } from '../api';
 import { getInteractionDragTriggerPositionUpdates } from '../storyGraph';
+import { computeStoryGraphLayout } from '../storyGraphLayout';
 
 vi.mock('../api', () => ({
   api: {
@@ -538,6 +539,86 @@ describe('StoryEditor', () => {
 
     expect(screen.getByTestId('react-flow')).toHaveAttribute('data-pan-on-drag', '[1]');
     expect(screen.getByTestId('react-flow')).toHaveAttribute('data-pan-activation-key', 'Space');
+  });
+
+  it('automatically organizes the complete graph and persists interaction and trigger positions', async () => {
+    const user = userEvent.setup();
+    const story = storyWithTwoInteractions();
+    const expected = computeStoryGraphLayout(story, { kind: 'all' });
+    await renderEditor(story);
+
+    await user.click(screen.getByRole('button', { name: 'Organize graph' }));
+
+    await waitFor(() => {
+      expect(api.updateInteraction).toHaveBeenCalledTimes(expected.interactionUpdates.length);
+      expect(api.updateTrigger).toHaveBeenCalledTimes(
+        expected.triggerUpdates.reduce((total, update) => total + update.triggerIds.length, 0),
+      );
+    });
+    expected.interactionUpdates.forEach(({ interactionId, position }) => {
+      expect(api.updateInteraction).toHaveBeenCalledWith('story-1', interactionId, { position });
+      expect(screen.getByTestId(`flow-node-${interactionId}`)).toHaveAttribute(
+        'data-node-y',
+        String(position.y),
+      );
+    });
+    expected.triggerUpdates.forEach(({ interactionId, triggerIds, position }) => {
+      triggerIds.forEach((triggerId) =>
+        expect(api.updateTrigger).toHaveBeenCalledWith('story-1', interactionId, triggerId, {
+          position,
+        }),
+      );
+    });
+  });
+
+  it('automatically organizes only the selected interaction', async () => {
+    const user = userEvent.setup();
+    const story = storyWithThreeInteractions();
+    const expected = computeStoryGraphLayout(story, {
+      kind: 'selection',
+      targets: [{ type: 'interaction', interactionId: 'interaction-2' }],
+    });
+    await renderEditor(story);
+
+    await user.click(screen.getByTestId('flow-node-interaction-2'));
+    await user.click(screen.getByRole('button', { name: 'Organize selected element' }));
+
+    await waitFor(() => {
+      expect(api.updateInteraction).toHaveBeenCalledTimes(expected.interactionUpdates.length);
+    });
+    expect(api.updateInteraction).not.toHaveBeenCalledWith(
+      'story-1',
+      'interaction-1',
+      expect.anything(),
+    );
+    expect(api.updateInteraction).not.toHaveBeenCalledWith(
+      'story-1',
+      'interaction-3',
+      expect.anything(),
+    );
+    expected.interactionUpdates.forEach(({ interactionId, position }) =>
+      expect(api.updateInteraction).toHaveBeenCalledWith('story-1', interactionId, { position }),
+    );
+  });
+
+  it('automatically organizes only the selected linked trigger marker', async () => {
+    const user = userEvent.setup();
+    const story = storyWithTwoInteractions();
+    const expected = computeStoryGraphLayout(story, {
+      kind: 'selection',
+      targets: [{ type: 'trigger', interactionId: 'interaction-2', triggerId: 'trigger-2' }],
+    });
+    await renderEditor(story);
+
+    await user.click(screen.getByTestId('flow-trigger-interaction-2-trigger-2'));
+    await user.click(screen.getByRole('button', { name: 'Organize selected element' }));
+
+    expect(api.updateInteraction).not.toHaveBeenCalled();
+    await waitFor(() => {
+      expect(api.updateTrigger).toHaveBeenCalledWith('story-1', 'interaction-2', 'trigger-2', {
+        position: expected.triggerUpdates[0].position,
+      });
+    });
   });
 
   it('previews automatic trigger placement while an interaction is moving', async () => {

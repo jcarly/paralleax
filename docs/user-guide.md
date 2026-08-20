@@ -187,6 +187,24 @@ While an interaction is being dragged, automatically positioned linked trigger
 markers and their arrows update immediately. This preview is visual only; the
 interaction position is saved when the pointer is released.
 
+Use **Organize graph** with no interaction or trigger selected to arrange every
+narrative element in a spaced vertical hierarchy. The layout separates disconnected
+parts of the story, gives linked trigger markers their own space, handles cycles
+deterministically, and reduces link crossings. Frames, text decorations, and
+review post-its do not move.
+
+Select one interaction or linked trigger first to change the action to **Organize
+selected element**. Only that element is repositioned; neighboring elements stay
+fixed and act as layout anchors and obstacles. A selected root trigger reorganizes
+its interaction because the root marker is attached to that card. The layout
+operation already accepts several targets internally so the same behavior can be
+used by future graph multi-selection.
+
+Existing and newly arranged arrows always leave an interaction from the center of
+its bottom edge and enter an interaction at the center of its top edge. The side
+used on a linked trigger marker remains adaptive so the short marker segments stay
+readable.
+
 ## Add Visual Structure to the Graph
 
 Use **Add frame** to place a colored frame around a visual area of the canvas.

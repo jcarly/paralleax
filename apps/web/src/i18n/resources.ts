@@ -311,6 +311,8 @@ export const resources = {
         playable: 'Playable',
         uncategorized: 'Uncategorized',
         addRoot: 'Add root',
+        organizeGraph: 'Organize graph',
+        organizeSelected: 'Organize selected element',
         inspector: 'Inspector',
         closeInspector: 'Close inspector',
         count: {
@@ -1032,6 +1034,8 @@ export const resources = {
         playable: 'Jouable',
         uncategorized: 'Sans catégorie',
         addRoot: 'Ajouter une racine',
+        organizeGraph: 'Réorganiser le graphe',
+        organizeSelected: 'Réorganiser l’élément sélectionné',
         inspector: 'Inspecteur',
         closeInspector: 'Fermer l’inspecteur',
         count: {

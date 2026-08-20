@@ -1,6 +1,7 @@
 import type { Story } from '@paralleax/shared';
 import { describe, expect, it } from 'vitest';
 import { buildInteractionNodes, buildTriggerEdges, buildTriggerNodes } from './storyGraph';
+import { computeStoryGraphLayout } from './storyGraphLayout';
 
 describe('large story graph projection', () => {
   it('projects 2,000 linked interactions within the editor budget', () => {
@@ -14,6 +15,18 @@ describe('large story graph projection', () => {
     expect(interactionNodes).toHaveLength(2_000);
     expect(triggerNodes).toHaveLength(1_999);
     expect(edges).toHaveLength(3_998);
+    expect(durationMs).toBeLessThan(5_000);
+  });
+
+  it('automatically lays out 2,000 linked interactions within the editor budget', () => {
+    const story = graphStory(2_000);
+    const startedAt = performance.now();
+    const layout = computeStoryGraphLayout(story, { kind: 'all' });
+    const durationMs = performance.now() - startedAt;
+
+    expect(layout.interactionUpdates.length).toBeGreaterThan(1_900);
+    expect(layout.triggerUpdates).toHaveLength(1_999);
+    expect(layout.affectedNodeIds).toHaveLength(3_999);
     expect(durationMs).toBeLessThan(5_000);
   });
 });

@@ -137,7 +137,7 @@ describe('story graph mapping', () => {
         id: 'trigger:interaction-2:trigger-linked-interaction-3',
         type: 'trigger',
         source: 'interaction-3',
-        sourceHandle: 'routing-output-left',
+        sourceHandle: 'routing-output-bottom',
         target: triggerNodeId,
         targetHandle: 'routing-input-right',
         className: 'trigger-edge',
@@ -222,7 +222,7 @@ describe('story graph mapping', () => {
     expect(buildTriggerNodes(positionedStory)[0].position).toEqual({ x: 420, y: 468 });
     expect(buildTriggerEdges(positionedStory)[2]).toMatchObject({
       sourceHandle: 'routing-output-left',
-      targetHandle: 'routing-input-right',
+      targetHandle: 'routing-input-top',
     });
   });
 

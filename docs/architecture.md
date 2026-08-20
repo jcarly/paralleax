@@ -418,6 +418,10 @@ Trigger link behavior crosses the graph projection and the domain model, so it i
 split deliberately:
 
 - `storyGraph.ts` decides how triggers appear as trigger nodes and edges.
+- `storyGraphLayout.ts` computes deterministic, cycle-tolerant vertical placement
+  for interaction and grouped trigger-marker projections. It accepts either the
+  complete graph or an explicit target list so future multi-selection can reuse
+  the same operation without changing persistence semantics.
 - `storyConnection.ts` decides whether a graph connection can become a trigger
   input.
 - `storyTriggerInput.ts` decides the local mutation plan for deleting one input
@@ -438,6 +442,13 @@ trigger markers remain attached to their interaction cards. Moving a connected
 interaction can elastically adjust an existing saved marker position, using the
 automatic midpoint movement as its reference without discarding the author's
 manual offset.
+
+Automatic layout persists only the interaction and linked-trigger positions it
+changes. A complete layout includes disconnected components and reserves separate
+layers for trigger markers; a scoped layout treats non-target graph nodes as fixed
+anchors and obstacles. Decorations and comment pins are excluded. Edges always
+leave an interaction from its bottom-center routing handle and enter an interaction
+through its top-center routing handle; the trigger-marker end remains adaptive.
 
 When a normal canvas connection can either extend an existing trigger or create
 a separate trigger, `StoryEditor` presents that choice before calling the

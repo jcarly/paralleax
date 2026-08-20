@@ -68,6 +68,7 @@ import {
   interactionNodeWidth,
   interactionNodeHeight,
 } from '../storyGraph';
+import { computeStoryGraphLayout, type StoryGraphLayoutScope } from '../storyGraphLayout';
 import { findInteraction, findSelectedTrigger } from '../storySelection';
 import { getPendingConnection } from '../storyConnection';
 import {
@@ -1014,6 +1015,55 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
         selected.id,
       )}`
     : `/stories/${storyId}/play?mode=simulation`;
+
+  async function organizeGraph() {
+    if (!story || story.interactions.length === 0) return;
+    const selectedLayoutTarget = selected
+      ? { type: 'interaction' as const, interactionId: selected.id }
+      : selectedTriggerTarget
+        ? selectedTriggerTarget.trigger.inputInteractionIds.length === 0
+          ? {
+              type: 'interaction' as const,
+              interactionId: selectedTriggerTarget.interaction.id,
+            }
+          : {
+              type: 'trigger' as const,
+              interactionId: selectedTriggerTarget.interaction.id,
+              triggerId: selectedTriggerTarget.trigger.id,
+            }
+        : undefined;
+    const scope: StoryGraphLayoutScope = selectedLayoutTarget
+      ? { kind: 'selection', targets: [selectedLayoutTarget] }
+      : { kind: 'all' };
+    const layout = computeStoryGraphLayout(story, scope);
+    const hasPositionUpdates =
+      layout.interactionUpdates.length > 0 || layout.triggerUpdates.length > 0;
+    if (hasPositionUpdates) beginLocalEdit();
+    const operations = [
+      ...layout.interactionUpdates.map(({ interactionId, position }) =>
+        patchInteraction(interactionId, { position }),
+      ),
+      ...layout.triggerUpdates.map(({ interactionId, triggerIds, position }) =>
+        moveTrigger(interactionId, triggerIds, position),
+      ),
+    ];
+
+    window.requestAnimationFrame(() => {
+      if (layout.affectedNodeIds.length === 0) return;
+      void flowInstance.current?.fitView({
+        nodes: layout.affectedNodeIds.map((id) => ({ id })),
+        duration: 250,
+        padding: scope.kind === 'all' ? 0.18 : 0.7,
+        maxZoom: 1,
+      });
+    });
+    try {
+      await Promise.all(operations);
+    } finally {
+      if (hasPositionUpdates) endLocalEdit();
+    }
+  }
+
   const pending = pendingConnection ? getPendingConnection(story, pendingConnection) : undefined;
   const existingTriggerChoices =
     pending?.target.triggers.filter(
@@ -1460,6 +1510,18 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
                 onClick={() => void addGraphDecoration('text')}
               >
                 {t('decoration.addText')}
+              </button>
+              <button
+                className="secondary"
+                type="button"
+                disabled={story.interactions.length === 0}
+                onClick={() => void organizeGraph()}
+              >
+                {t(
+                  selected || selectedTriggerTarget
+                    ? 'editor.organizeSelected'
+                    : 'editor.organizeGraph',
+                )}
               </button>
             </div>
           ) : null}
