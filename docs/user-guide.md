@@ -190,8 +190,19 @@ interaction position is saved when the pointer is released.
 Use **Organize graph** with no interaction or trigger selected to arrange every
 narrative element in a spaced vertical hierarchy. The layout separates disconnected
 parts of the story, gives linked trigger markers their own space, handles cycles
-deterministically, and reduces link crossings. Frames, text decorations, and
-review post-its do not move.
+deterministically, reduces link crossings, and uses the rendered card dimensions so
+interactions with more content do not overlap neighboring rows. Frames, text
+decorations, and review post-its do not move.
+
+Interactions with several options are kept as visual bundles: each trigger stays
+aligned with its output interaction and the parent is centered over the median of
+its own options. A row is not compacted independently when doing so would introduce
+long crossed links between neighboring bundles. Neighboring options may be inverted
+automatically when that removes a crossing or shortens the links without adding one.
+
+Linked arrows use separate horizontal lanes in the free space immediately around
+each trigger row. They approach triggers vertically, which keeps a link from
+running through neighboring trigger diamonds whenever the hierarchy permits it.
 
 Select one interaction or linked trigger first to change the action to **Organize
 selected element**. Only that element is repositioned; neighboring elements stay
@@ -201,9 +212,7 @@ operation already accepts several targets internally so the same behavior can be
 used by future graph multi-selection.
 
 Existing and newly arranged arrows always leave an interaction from the center of
-its bottom edge and enter an interaction at the center of its top edge. The side
-used on a linked trigger marker remains adaptive so the short marker segments stay
-readable.
+its bottom edge and enter an interaction at the center of its top edge.
 
 ## Add Visual Structure to the Graph
 

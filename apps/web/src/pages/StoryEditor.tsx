@@ -1035,7 +1035,16 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
     const scope: StoryGraphLayoutScope = selectedLayoutTarget
       ? { kind: 'selection', targets: [selectedLayoutTarget] }
       : { kind: 'all' };
-    const layout = computeStoryGraphLayout(story, scope);
+    const interactionSizes = new Map(
+      nodes.flatMap((node) =>
+        node.type === 'interaction' &&
+        typeof node.measured?.width === 'number' &&
+        typeof node.measured.height === 'number'
+          ? [[node.id, { width: node.measured.width, height: node.measured.height }] as const]
+          : [],
+      ),
+    );
+    const layout = computeStoryGraphLayout(story, scope, { interactionSizes });
     const hasPositionUpdates =
       layout.interactionUpdates.length > 0 || layout.triggerUpdates.length > 0;
     if (hasPositionUpdates) beginLocalEdit();

@@ -12,6 +12,7 @@ import {
   getRoutingHandleIds,
   getTriggerNodeId,
 } from './storyGraph';
+import { getTriggerEdgeStepPosition } from './triggerEdgeRouting';
 
 const story: Story = {
   id: 'story-1',
@@ -139,7 +140,7 @@ describe('story graph mapping', () => {
         source: 'interaction-3',
         sourceHandle: 'routing-output-bottom',
         target: triggerNodeId,
-        targetHandle: 'routing-input-right',
+        targetHandle: 'routing-input-top',
         className: 'trigger-edge',
         data: {
           interactionId: 'interaction-2',
@@ -168,6 +169,77 @@ describe('story graph mapping', () => {
         },
       },
     ]);
+  });
+
+  it('uses separate vertical routing lanes for edges sharing the same graph band', () => {
+    const bandStory: Story = {
+      id: 'routing-bands',
+      title: 'Routing bands',
+      createdAt: '2026-08-20T08:00:00.000Z',
+      updatedAt: '2026-08-20T08:00:00.000Z',
+      interactions: [
+        {
+          id: 'source-left',
+          title: 'Left source',
+          body: '',
+          position: { x: 80, y: 120 },
+          triggers: [{ id: 'root-left', inputInteractionIds: [], conditions: [] }],
+        },
+        {
+          id: 'source-right',
+          title: 'Right source',
+          body: '',
+          position: { x: 440, y: 120 },
+          triggers: [{ id: 'root-right', inputInteractionIds: [], conditions: [] }],
+        },
+        {
+          id: 'target-left',
+          title: 'Left target',
+          body: '',
+          position: { x: 80, y: 520 },
+          triggers: [
+            {
+              id: 'trigger-left',
+              inputInteractionIds: ['source-left'],
+              conditions: [],
+              position: { x: 175, y: 330 },
+            },
+          ],
+        },
+        {
+          id: 'target-right',
+          title: 'Right target',
+          body: '',
+          position: { x: 440, y: 520 },
+          triggers: [
+            {
+              id: 'trigger-right',
+              inputInteractionIds: ['source-right'],
+              conditions: [],
+              position: { x: 535, y: 330 },
+            },
+          ],
+        },
+      ],
+    };
+
+    const inputEdges = buildTriggerEdges(bandStory).filter(
+      ({ data }) => data?.inputInteractionId !== undefined,
+    );
+
+    expect(inputEdges.map(({ targetHandle }) => targetHandle)).toEqual([
+      'routing-input-top',
+      'routing-input-top',
+    ]);
+    expect(inputEdges.map(({ data }) => data?.routingLaneIndex).sort()).toEqual([0, 1]);
+    expect(inputEdges.map(({ data }) => data?.routingLaneCount)).toEqual([2, 2]);
+    expect(
+      inputEdges.map(({ data }) =>
+        getTriggerEdgeStepPosition(data?.routingLaneIndex, data?.routingLaneCount, true),
+      ),
+    ).toEqual([0.62, 0.86]);
+    expect(getTriggerEdgeStepPosition(undefined, undefined, true)).toBe(0.74);
+    expect(getTriggerEdgeStepPosition(undefined, undefined, false)).toBe(0.26);
   });
 
   it('routes edges through matching handles for every relative direction', () => {

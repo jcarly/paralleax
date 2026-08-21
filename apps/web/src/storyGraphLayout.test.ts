@@ -110,6 +110,255 @@ describe('story graph automatic layout', () => {
     );
   });
 
+  it('keeps a dense option fan-out separated with the rendered interaction heights', () => {
+    const optionCount = 24;
+    const story: Story = {
+      id: 'dense-layout',
+      title: 'Dense layout',
+      createdAt: '2026-08-20T08:00:00.000Z',
+      updatedAt: '2026-08-20T08:00:00.000Z',
+      interactions: [
+        {
+          id: 'root',
+          title: 'Root with many options',
+          body: '',
+          position: { x: 80, y: 120 },
+          triggers: [{ id: 'trigger-root', inputInteractionIds: [], conditions: [] }],
+        },
+        ...Array.from({ length: optionCount }, (_, index) => ({
+          id: `option-${index}`,
+          title: `Option ${index}`,
+          body: '',
+          position: { x: 80, y: 120 },
+          triggers: [
+            {
+              id: `trigger-option-${index}`,
+              inputInteractionIds: ['root'],
+              conditions: [],
+            },
+          ],
+        })),
+      ],
+    };
+    const interactionSizes = new Map<string, { width: number; height: number }>(
+      story.interactions.map(
+        ({ id }, index) =>
+          [
+            id,
+            {
+              width: interactionNodeWidth,
+              height: index === 0 ? 280 : 140 + (index % 5) * 34,
+            },
+          ] as const,
+      ),
+    );
+
+    const result = computeStoryGraphLayout(story, { kind: 'all' }, { interactionSizes });
+    const positions = applyInteractionUpdates(story, result);
+    const rectangles = story.interactions.map(({ id }) => ({
+      id,
+      ...positions.get(id)!,
+      ...interactionSizes.get(id)!,
+    }));
+
+    rectangles.forEach((left, leftIndex) => {
+      rectangles.slice(leftIndex + 1).forEach((right) => {
+        const overlaps = !(
+          left.x + left.width <= right.x ||
+          right.x + right.width <= left.x ||
+          left.y + left.height <= right.y ||
+          right.y + right.height <= left.y
+        );
+        expect(overlaps, `${left.id} overlaps ${right.id}`).toBe(false);
+      });
+    });
+
+    result.triggerUpdates.forEach(({ triggerIds, position }) => {
+      rectangles.forEach((interaction) => {
+        const overlaps = !(
+          position.x + 20 <= interaction.x ||
+          interaction.x + interaction.width <= position.x ||
+          position.y + 20 <= interaction.y ||
+          interaction.y + interaction.height <= position.y
+        );
+        expect(overlaps, `${triggerIds[0]} overlaps ${interaction.id}`).toBe(false);
+      });
+    });
+
+    expect(result.triggerUpdates).toHaveLength(optionCount);
+    expect(Math.min(...result.triggerUpdates.map(({ position }) => position.y))).toBeGreaterThan(
+      positions.get('root')!.y + interactionSizes.get('root')!.height,
+    );
+  });
+
+  it('keeps crossed branch targets aligned with their own trigger markers', () => {
+    const story: Story = {
+      id: 'crossed-branches',
+      title: 'Crossed branches',
+      createdAt: '2026-08-20T08:00:00.000Z',
+      updatedAt: '2026-08-20T08:00:00.000Z',
+      interactions: [
+        {
+          id: 'root',
+          title: 'Root',
+          body: '',
+          position: { x: 300, y: 100 },
+          triggers: [{ id: 'root-trigger', inputInteractionIds: [], conditions: [] }],
+        },
+        {
+          id: 'branch-left',
+          title: 'Left branch',
+          body: '',
+          position: { x: 80, y: 300 },
+          triggers: [
+            {
+              id: 'branch-left-trigger',
+              inputInteractionIds: ['root'],
+              conditions: [],
+            },
+          ],
+        },
+        {
+          id: 'branch-right',
+          title: 'Right branch',
+          body: '',
+          position: { x: 520, y: 300 },
+          triggers: [
+            {
+              id: 'branch-right-trigger',
+              inputInteractionIds: ['root'],
+              conditions: [],
+            },
+          ],
+        },
+        {
+          id: 'destination-left',
+          title: 'Authored on the left',
+          body: '',
+          position: { x: 80, y: 600 },
+          triggers: [
+            {
+              id: 'destination-left-trigger',
+              inputInteractionIds: ['branch-right'],
+              conditions: [],
+            },
+          ],
+        },
+        {
+          id: 'destination-right',
+          title: 'Authored on the right',
+          body: '',
+          position: { x: 520, y: 600 },
+          triggers: [
+            {
+              id: 'destination-right-trigger',
+              inputInteractionIds: ['branch-left'],
+              conditions: [],
+            },
+          ],
+        },
+      ],
+    };
+
+    const result = computeStoryGraphLayout(story, { kind: 'all' });
+    const interactionPositions = applyInteractionUpdates(story, result);
+    const triggerPositions = new Map(
+      result.triggerUpdates.map(({ triggerIds, position }) => [triggerIds[0], position]),
+    );
+    const sourceDelta =
+      interactionPositions.get('branch-left')!.x - interactionPositions.get('branch-right')!.x;
+    const destinationTriggerDelta =
+      triggerPositions.get('destination-right-trigger')!.x -
+      triggerPositions.get('destination-left-trigger')!.x;
+    const destinationDelta =
+      interactionPositions.get('destination-right')!.x -
+      interactionPositions.get('destination-left')!.x;
+
+    expect(sourceDelta * destinationTriggerDelta).toBeGreaterThan(0);
+    expect(destinationTriggerDelta * destinationDelta).toBeGreaterThan(0);
+  });
+
+  it('centers parents over uneven option bundles instead of compacting each layer globally', () => {
+    const story: Story = {
+      id: 'uneven-option-bundles',
+      title: 'Uneven option bundles',
+      createdAt: '2026-08-20T08:00:00.000Z',
+      updatedAt: '2026-08-20T08:00:00.000Z',
+      interactions: [
+        {
+          id: 'root',
+          title: 'Root',
+          body: '',
+          position: { x: 500, y: 80 },
+          triggers: [{ id: 'root-trigger', inputInteractionIds: [], conditions: [] }],
+        },
+        ...['parent-a', 'parent-b'].map((id, index) => ({
+          id,
+          title: id,
+          body: '',
+          position: { x: 300 + index * 400, y: 300 },
+          triggers: [
+            {
+              id: `${id}-trigger`,
+              inputInteractionIds: ['root'],
+              conditions: [],
+            },
+          ],
+        })),
+        ...Array.from({ length: 4 }, (_, index) => ({
+          id: `child-a-${index}`,
+          title: `A ${index}`,
+          body: '',
+          position: { x: 80 + index * 350, y: 600 },
+          triggers: [
+            {
+              id: `child-a-${index}-trigger`,
+              inputInteractionIds: ['parent-a'],
+              conditions: [],
+            },
+          ],
+        })),
+        {
+          id: 'child-b',
+          title: 'B',
+          body: '',
+          position: { x: 1480, y: 600 },
+          triggers: [
+            {
+              id: 'child-b-trigger',
+              inputInteractionIds: ['parent-b'],
+              conditions: [],
+            },
+          ],
+        },
+      ],
+    };
+
+    const result = computeStoryGraphLayout(story, { kind: 'all' });
+    const interactionPositions = applyInteractionUpdates(story, result);
+    const interactionCenters = new Map(
+      [...interactionPositions].map(([id, position]) => [
+        id,
+        position.x + interactionNodeWidth / 2,
+      ]),
+    );
+    const triggerCenters = new Map(
+      result.triggerUpdates.map(({ triggerIds, position }) => [triggerIds[0], position.x + 10]),
+    );
+    const parentAChildTriggerCenters = Array.from({ length: 4 }, (_, index) =>
+      triggerCenters.get(`child-a-${index}-trigger`),
+    ).sort((left, right) => left! - right!) as number[];
+    const parentAMedian = (parentAChildTriggerCenters[1] + parentAChildTriggerCenters[2]) / 2;
+
+    expect(Math.abs(interactionCenters.get('parent-a')! - parentAMedian)).toBeLessThanOrEqual(1);
+    expect(
+      Math.abs(interactionCenters.get('parent-b')! - triggerCenters.get('child-b-trigger')!),
+    ).toBeLessThanOrEqual(1);
+    expect(
+      Math.abs(interactionCenters.get('child-b')! - triggerCenters.get('child-b-trigger')!),
+    ).toBeLessThanOrEqual(1);
+  });
+
   it('lays out cycles deterministically without stacking their interactions', () => {
     const story = createLayoutStory();
     story.interactions = [

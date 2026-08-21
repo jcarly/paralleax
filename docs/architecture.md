@@ -446,9 +446,23 @@ manual offset.
 Automatic layout persists only the interaction and linked-trigger positions it
 changes. A complete layout includes disconnected components and reserves separate
 layers for trigger markers; a scoped layout treats non-target graph nodes as fixed
-anchors and obstacles. Decorations and comment pins are excluded. Edges always
+anchors and obstacles. The web projection supplies each rendered interaction's
+measured dimensions so variable-height cards remain separated; base card dimensions
+are used until React Flow has measured a card. Decorations and comment pins are
+excluded. Layer sweeps retain the ordering with the fewest measured edge crossings,
+then use total normalized horizontal connection span as a deterministic tie-breaker.
+An adjacent-transposition pass then tests local option inversions that the median
+sweeps can miss, accepting only lexicographic improvements to those same metrics.
+Within that order, a bottom-up horizontal pass aligns each trigger with its output
+interaction and centers each parent interaction on the median of its successor
+triggers. This preserves option bundles instead of centering every layer as an
+independent compact row.
+Edges sharing a vertical interval receive distinct routing lanes immediately above
+or below their trigger row so horizontal segments do not pass through unrelated
+trigger markers. Edges always
 leave an interaction from its bottom-center routing handle and enter an interaction
-through its top-center routing handle; the trigger-marker end remains adaptive.
+through its top-center routing handle. Trigger markers are approached vertically
+when their endpoints are on different rows.
 
 When a normal canvas connection can either extend an existing trigger or create
 a separate trigger, `StoryEditor` presents that choice before calling the

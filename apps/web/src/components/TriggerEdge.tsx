@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { BaseEdge, EdgeLabelRenderer, getSmoothStepPath, type EdgeProps } from '@xyflow/react';
 import type { TriggerFlowEdge } from '../storyGraph';
+import { getTriggerEdgeStepPosition } from '../triggerEdgeRouting';
 
 type TriggerEdgeProps = EdgeProps<TriggerFlowEdge>;
 
@@ -18,6 +19,12 @@ export function TriggerEdge({
 }: TriggerEdgeProps) {
   const { t } = useTranslation();
   const [isHovered, setIsHovered] = useState(false);
+  const inputInteractionId = data?.inputInteractionId;
+  const stepPosition = getTriggerEdgeStepPosition(
+    data?.routingLaneIndex,
+    data?.routingLaneCount,
+    inputInteractionId !== undefined,
+  );
   const [edgePath, labelX, labelY] = getSmoothStepPath({
     sourceX,
     sourceY,
@@ -26,8 +33,8 @@ export function TriggerEdge({
     targetY,
     targetPosition,
     borderRadius: 14,
+    stepPosition,
   });
-  const inputInteractionId = data?.inputInteractionId;
 
   return (
     <>

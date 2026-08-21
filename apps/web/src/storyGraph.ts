@@ -19,6 +19,8 @@ export interface SelectedTrigger extends Record<string, unknown> {
 export interface TriggerEdgeData extends SelectedTrigger {
   selected: boolean;
   conditionCount: number;
+  routingLaneIndex?: number;
+  routingLaneCount?: number;
   triggerIds?: string[];
   onSelectTrigger?: (trigger: SelectedTrigger) => void;
   onDeleteTriggerInput?: (
@@ -50,6 +52,7 @@ export interface TriggerNodeActions {
 export const interactionNodeWidth = 210;
 export const interactionNodeHeight = 116;
 const triggerNodeSize = 20;
+const routingLaneBandSize = 80;
 const fallbackInteractionX = 80;
 const fallbackInteractionY = 120;
 const fallbackInteractionVerticalGap = 132;
@@ -279,6 +282,8 @@ export function applyInteractionDragEdgePreview(
               getInteractionCenter(source, sourceIndex, positionOverrides.get(source.id)),
               triggerCenter,
             ),
+            getInteractionCenter(source, sourceIndex, positionOverrides.get(source.id)),
+            triggerCenter,
           ),
         );
       });
@@ -290,6 +295,8 @@ export function applyInteractionDragEdgePreview(
             triggerCenter,
             getInteractionCenter(target, targetIndex, positionOverrides.get(target.id)),
           ),
+          triggerCenter,
+          getInteractionCenter(target, targetIndex, positionOverrides.get(target.id)),
         ),
       );
     });
@@ -396,7 +403,7 @@ export function buildTriggerEdges(
     inputInteractionId: string,
   ) => void,
 ): TriggerFlowEdge[] {
-  return (
+  const edges =
     story?.interactions.flatMap((target, targetIndex) =>
       getLinkedTriggerGroups(target).flatMap((group, triggerIndex) => {
         const triggerNodeId = getTriggerNodeId(target.id, group.primaryTrigger.id);
@@ -416,13 +423,13 @@ export function buildTriggerEdges(
         const inputEdges = group.inputInteractionIds.map((source) => {
           const sourceIndex = story.interactions.findIndex((item) => item.id === source);
           const sourceInteraction = story.interactions[sourceIndex];
+          const sourceCenter = sourceInteraction
+            ? getInteractionCenter(sourceInteraction, sourceIndex)
+            : triggerCenter;
           const handles = constrainInteractionOutputHandle(
-            getRoutingHandleIds(
-              sourceInteraction
-                ? getInteractionCenter(sourceInteraction, sourceIndex)
-                : triggerCenter,
-              triggerCenter,
-            ),
+            getRoutingHandleIds(sourceCenter, triggerCenter),
+            sourceCenter,
+            triggerCenter,
           );
           return {
             id: `${triggerNodeId}-${source}`,
@@ -447,6 +454,8 @@ export function buildTriggerEdges(
         const targetCenter = getInteractionCenter(target, targetIndex);
         const outputHandles = constrainInteractionInputHandle(
           getRoutingHandleIds(triggerCenter, targetCenter),
+          triggerCenter,
+          targetCenter,
         );
         const outputEdge: TriggerFlowEdge = {
           id: `${triggerNodeId}-output`,
@@ -468,8 +477,71 @@ export function buildTriggerEdges(
         };
         return [...inputEdges, outputEdge];
       }),
-    ) ?? []
-  );
+    ) ?? [];
+  return assignRoutingLanes(story, edges);
+}
+
+function assignRoutingLanes(story: Story | undefined, edges: TriggerFlowEdge[]) {
+  if (!story || edges.length < 2) return edges;
+  const centers = new Map<string, { x: number; y: number }>();
+  story.interactions.forEach((interaction, index) => {
+    centers.set(interaction.id, getInteractionCenter(interaction, index));
+    getLinkedTriggerGroups(interaction).forEach((group, triggerIndex) => {
+      const position = getTriggerNodePosition(story, interaction, index, group, triggerIndex);
+      centers.set(getTriggerNodeId(interaction.id, group.primaryTrigger.id), {
+        x: position.x + triggerNodeSize / 2,
+        y: position.y + triggerNodeSize / 2,
+      });
+    });
+  });
+
+  const groups = new Map<
+    string,
+    Array<{
+      edge: TriggerFlowEdge;
+      source: { x: number; y: number };
+      target: { x: number; y: number };
+    }>
+  >();
+  for (const edge of edges) {
+    const source = centers.get(edge.source);
+    const target = centers.get(edge.target);
+    if (!source || !target) continue;
+    const key = [
+      Math.round(source.y / routingLaneBandSize),
+      Math.round(target.y / routingLaneBandSize),
+      edge.sourceHandle,
+      edge.targetHandle,
+    ].join(':');
+    groups.set(key, [...(groups.get(key) ?? []), { edge, source, target }]);
+  }
+
+  const lanes = new Map<string, { index: number; count: number }>();
+  for (const group of groups.values()) {
+    if (group.length < 2) continue;
+    group.sort(
+      (left, right) =>
+        Math.min(left.source.x, left.target.x) - Math.min(right.source.x, right.target.x) ||
+        Math.max(left.source.x, left.target.x) - Math.max(right.source.x, right.target.x) ||
+        left.edge.id.localeCompare(right.edge.id),
+    );
+    group.forEach(({ edge }, index) => lanes.set(edge.id, { index, count: group.length }));
+  }
+
+  if (lanes.size === 0) return edges;
+  return edges.map((edge) => {
+    const lane = lanes.get(edge.id);
+    return lane && edge.data
+      ? {
+          ...edge,
+          data: {
+            ...edge.data,
+            routingLaneIndex: lane.index,
+            routingLaneCount: lane.count,
+          },
+        }
+      : edge;
+  });
 }
 
 function getInteractionCenter(
@@ -602,14 +674,36 @@ export function getRoutingHandleIds(
 
 function constrainInteractionOutputHandle(
   handles: ReturnType<typeof getRoutingHandleIds>,
+  source: { x: number; y: number },
+  target: { x: number; y: number },
 ): ReturnType<typeof getRoutingHandleIds> {
-  return { ...handles, sourceHandle: `routing-output-${Position.Bottom}` };
+  const verticalDistance = target.y - source.y;
+  return {
+    ...handles,
+    sourceHandle: `routing-output-${Position.Bottom}`,
+    ...(Math.abs(verticalDistance) > 1
+      ? {
+          targetHandle: `routing-input-${verticalDistance > 0 ? Position.Top : Position.Bottom}`,
+        }
+      : {}),
+  };
 }
 
 function constrainInteractionInputHandle(
   handles: ReturnType<typeof getRoutingHandleIds>,
+  source: { x: number; y: number },
+  target: { x: number; y: number },
 ): ReturnType<typeof getRoutingHandleIds> {
-  return { ...handles, targetHandle: `routing-input-${Position.Top}` };
+  const verticalDistance = target.y - source.y;
+  return {
+    ...handles,
+    ...(Math.abs(verticalDistance) > 1
+      ? {
+          sourceHandle: `routing-output-${verticalDistance > 0 ? Position.Bottom : Position.Top}`,
+        }
+      : {}),
+    targetHandle: `routing-input-${Position.Top}`,
+  };
 }
 
 export interface LinkedTriggerGroup {
