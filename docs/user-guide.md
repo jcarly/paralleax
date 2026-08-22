@@ -187,6 +187,11 @@ While an interaction is being dragged, automatically positioned linked trigger
 markers and their arrows update immediately. This preview is visual only; the
 interaction position is saved when the pointer is released.
 
+The canvas actions are grouped in a vertical icon toolbar at the top-left of the
+graph, immediately beside the story-context list. Hover an icon, or focus it
+with the keyboard, to identify **Add root**, **Add frame**, **Add text**,
+**Organize graph**, or **Place a post-it** before activating it.
+
 Use **Organize graph** with no interaction or trigger selected to arrange every
 narrative element in a spaced vertical hierarchy. The layout separates disconnected
 parts of the story, gives linked trigger markers their own space, handles cycles
@@ -213,6 +218,13 @@ used by future graph multi-selection.
 
 Existing and newly arranged arrows always leave an interaction from the center of
 its bottom edge and enter an interaction at the center of its top edge.
+
+Creating a root, child, source, or Simulation Mode option with a click uses the
+same scoped layout before the interaction is saved. The new interaction and its
+linked trigger are placed together around the existing graph, so creation does
+not fall back to the first generic free slot. Dragging a connection onto empty
+canvas remains manual: the new interaction keeps the position chosen by the
+pointer instead of being automatically rearranged.
 
 ## Add Visual Structure to the Graph
 

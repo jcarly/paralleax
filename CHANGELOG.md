@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-08-22
+
+- Grouped root, frame, text, graph-layout, and post-it canvas actions into a
+  left-aligned vertical icon toolbar with accessible labels and hover/focus
+  tooltips.
+
+## 2026-08-21
+
+- Click-created root, child, source, and Simulation Mode interactions now use the
+  scoped graph layout to choose a clear position together with their trigger,
+  while connection drag-and-drop continues to preserve manual placement.
+
 ## 2026-08-20
 
 - Added deterministic vertical graph auto-layout for the complete story or a

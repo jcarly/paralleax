@@ -367,15 +367,20 @@ export function useStoryEditorPersistence(storyId: string) {
     [story, storyId, trackSave],
   );
 
-  const createRoot = useCallback(async () => {
-    const next = await trackSave(() =>
-      api.createInteraction(storyId, {
-        position: story ? getNextRootPosition(story) : getNextRootPosition(emptyStory(storyId)),
-      }),
-    );
-    if (!next) return;
-    setStory((current) => (current ? applyInteractionResult(current, next) : current));
-  }, [story, storyId, trackSave]);
+  const createRoot = useCallback(
+    async (position?: Position) => {
+      const next = await trackSave(() =>
+        api.createInteraction(storyId, {
+          position:
+            position ??
+            (story ? getNextRootPosition(story) : getNextRootPosition(emptyStory(storyId))),
+        }),
+      );
+      if (!next) return;
+      setStory((current) => (current ? applyInteractionResult(current, next) : current));
+    },
+    [story, storyId, trackSave],
+  );
 
   const createChild = useCallback(
     async (parent: Interaction) => {

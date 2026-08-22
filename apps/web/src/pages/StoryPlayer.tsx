@@ -24,8 +24,6 @@ import {
   getItemOwnerIdForInstance,
   getJourneyItemStatValues,
   getJourneyDateTime,
-  getNextChildPosition,
-  getNextRootPosition,
   getTriggerConditionFailures,
   isCommentAnchorDetached,
 } from '@paralleax/shared';
@@ -35,6 +33,7 @@ import { RichTextEditor } from '../components/RichTextEditor';
 import { StoryCommentsPanel } from '../features/comments/StoryCommentsPanel';
 import { useStoryComments } from '../features/comments/useStoryComments';
 import { useStoryRealtime, type StoryRealtimeInvalidation } from '../hooks/useStoryRealtime';
+import { getStoryGraphClickCreationPosition } from '../storyGraphCreationLayout';
 
 function getInteractionTitle(story: Story, interactionId: string) {
   return (
@@ -773,10 +772,13 @@ export function StoryPlayer({
         current
           ? {
               parentId: current.id,
-              position: getNextChildPosition(story, current),
+              position: getStoryGraphClickCreationPosition(story, {
+                kind: 'child',
+                sourceId: current.id,
+              }),
             }
           : {
-              position: getNextRootPosition(story),
+              position: getStoryGraphClickCreationPosition(story, { kind: 'root' }),
             },
       ),
     );

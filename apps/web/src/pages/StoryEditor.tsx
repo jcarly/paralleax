@@ -17,6 +17,7 @@ import {
   type OnConnectEnd,
   type OnConnectStart,
   type Connection,
+  type NodeChange,
   type NodeMouseHandler,
   type ReactFlowInstance,
 } from '@xyflow/react';
@@ -41,6 +42,7 @@ import { InteractionNode } from '../components/InteractionNode';
 import { ItemDefinitionInspector } from '../components/ItemDefinitionInspector';
 import { LocationInspector } from '../components/LocationInspector';
 import { StatDefinitionInspector } from '../components/StatDefinitionInspector';
+import { StoryCanvasToolbar } from '../components/StoryCanvasToolbar';
 import { TriggerEdge } from '../components/TriggerEdge';
 import { TriggerInspector } from '../components/TriggerInspector';
 import { TriggerNode } from '../components/TriggerNode';
@@ -69,6 +71,10 @@ import {
   interactionNodeHeight,
 } from '../storyGraph';
 import { computeStoryGraphLayout, type StoryGraphLayoutScope } from '../storyGraphLayout';
+import {
+  getStoryGraphClickCreationPosition,
+  type StoryGraphClickCreation,
+} from '../storyGraphCreationLayout';
 import { findInteraction, findSelectedTrigger } from '../storySelection';
 import { getPendingConnection } from '../storyConnection';
 import {
@@ -84,7 +90,6 @@ const nodeTypes = {
   commentPin: CommentPinNode,
 };
 const edgeTypes = { trigger: TriggerEdge };
-const droppedNodeOffset = { x: 105, y: 48 };
 const fitViewOptions = { padding: 0.18, maxZoom: 1 };
 const canvasPanMouseButtons = [1];
 const storyContextPanelStorageKey = 'paralleax-story-context-panel';
@@ -195,7 +200,6 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
     connectInteractions,
     connectToExistingTrigger,
     createRoot,
-    createChild,
     createChildFromInteraction,
     createParentForInteraction,
     patchInteraction,
@@ -248,6 +252,19 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
   const [placingComment, setPlacingComment] = useState(false);
   const [nodes, setNodes, onNodesChange] = useNodesState<StoryFlowNode>([]);
   const [edges, setEdges] = useEdgesState<TriggerFlowEdge>([]);
+  const [interactionSizes, setInteractionSizes] = useState<
+    ReadonlyMap<string, { width: number; height: number }>
+  >(() => new Map());
+  const handleNodesChange = useCallback(
+    (changes: NodeChange<StoryFlowNode>[]) => {
+      onNodesChange(changes);
+      const interactionIds = new Set(story?.interactions.map(({ id }) => id) ?? []);
+      setInteractionSizes((current) =>
+        applyInteractionSizeChanges(current, changes, interactionIds),
+      );
+    },
+    [onNodesChange, story?.interactions],
+  );
   const pendingConnectionStart = useRef<{
     nodeId: string;
     handleType: 'source' | 'target';
@@ -534,16 +551,44 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
     [closeInspector, projectedCommentThreads, selectCommentThread, story?.interactions],
   );
 
+  const getClickCreationPosition = useCallback(
+    (creation: StoryGraphClickCreation) =>
+      story
+        ? getStoryGraphClickCreationPosition(story, creation, { interactionSizes })
+        : undefined,
+    [interactionSizes, story],
+  );
+  const createRootFromClick = useCallback(
+    () => createRoot(getClickCreationPosition({ kind: 'root' })),
+    [createRoot, getClickCreationPosition],
+  );
+  const createChildFromClick = useCallback(
+    (sourceId: string) =>
+      createChildFromInteraction(
+        sourceId,
+        getClickCreationPosition({ kind: 'child', sourceId }),
+      ),
+    [createChildFromInteraction, getClickCreationPosition],
+  );
+  const createParentFromClick = useCallback(
+    (targetId: string) =>
+      createParentForInteraction(
+        targetId,
+        getClickCreationPosition({ kind: 'parent', targetId }),
+      ),
+    [createParentForInteraction, getClickCreationPosition],
+  );
+
   const storyNodes = useMemo(
     () =>
       buildInteractionNodes(story, selectedId, selectedTrigger, {
         showNewTriggerInput: !reviewOnly && isConnecting,
         onCreateChild: reviewOnly
           ? undefined
-          : (interactionId) => void createChildFromInteraction(interactionId),
+          : (interactionId) => void createChildFromClick(interactionId),
         onCreateParent: reviewOnly
           ? undefined
-          : (interactionId) => void createParentForInteraction(interactionId),
+          : (interactionId) => void createParentFromClick(interactionId),
         onSelectRootTrigger: (interactionId, triggerId) => {
           closeInspector();
           setSelectedTrigger({ interactionId, triggerId });
@@ -555,8 +600,8 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
       }),
     [
       closeInspector,
-      createChildFromInteraction,
-      createParentForInteraction,
+      createChildFromClick,
+      createParentFromClick,
       isConnecting,
       occurrenceCounts,
       emphasizedInteractionIds,
@@ -918,11 +963,6 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
     setSelectedTrigger(undefined);
   }
 
-  async function createSelectedChild() {
-    if (!story || !selected) return;
-    await createChild(selected);
-  }
-
   async function remove() {
     if (!selected) return;
     if (!window.confirm(`Delete “${selected.title}” and its trigger links?`)) return;
@@ -1015,7 +1055,6 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
         selected.id,
       )}`
     : `/stories/${storyId}/play?mode=simulation`;
-
   async function organizeGraph() {
     if (!story || story.interactions.length === 0) return;
     const selectedLayoutTarget = selected
@@ -1035,15 +1074,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
     const scope: StoryGraphLayoutScope = selectedLayoutTarget
       ? { kind: 'selection', targets: [selectedLayoutTarget] }
       : { kind: 'all' };
-    const interactionSizes = new Map(
-      nodes.flatMap((node) =>
-        node.type === 'interaction' &&
-        typeof node.measured?.width === 'number' &&
-        typeof node.measured.height === 'number'
-          ? [[node.id, { width: node.measured.width, height: node.measured.height }] as const]
-          : [],
-      ),
-    );
+    const interactionSizes = getMeasuredInteractionSizes(nodes);
     const layout = computeStoryGraphLayout(story, scope, { interactionSizes });
     const hasPositionUpdates =
       layout.interactionUpdates.length > 0 || layout.triggerUpdates.length > 0;
@@ -1499,51 +1530,18 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
           ) : null}
         </nav>
         <section className="canvas" ref={canvasRef}>
-          {!reviewOnly ? (
-            <button className="canvas-action" onClick={() => void createRoot()}>
-              {t('editor.addRoot')}
-            </button>
-          ) : null}
-          {!reviewOnly ? (
-            <div className="canvas-decoration-actions">
-              <button
-                className="secondary"
-                type="button"
-                onClick={() => void addGraphDecoration('frame')}
-              >
-                {t('decoration.addFrame')}
-              </button>
-              <button
-                className="secondary"
-                type="button"
-                onClick={() => void addGraphDecoration('text')}
-              >
-                {t('decoration.addText')}
-              </button>
-              <button
-                className="secondary"
-                type="button"
-                disabled={story.interactions.length === 0}
-                onClick={() => void organizeGraph()}
-              >
-                {t(
-                  selected || selectedTriggerTarget
-                    ? 'editor.organizeSelected'
-                    : 'editor.organizeGraph',
-                )}
-              </button>
-            </div>
-          ) : null}
-          {story.capabilities?.canComment ? (
-            <button
-              className={`canvas-comment-action secondary ${placingComment ? 'active' : ''}`}
-              type="button"
-              aria-pressed={placingComment}
-              onClick={() => setPlacingComment((placing) => !placing)}
-            >
-              {t(placingComment ? 'comments.clickCanvas' : 'comments.placeOnCanvas')}
-            </button>
-          ) : null}
+          <StoryCanvasToolbar
+            canEdit={!reviewOnly}
+            canComment={story.capabilities?.canComment === true}
+            canOrganize={story.interactions.length > 0}
+            organizeSelection={Boolean(selected || selectedTriggerTarget)}
+            placingComment={placingComment}
+            onCreateRoot={() => void createRootFromClick()}
+            onAddFrame={() => void addGraphDecoration('frame')}
+            onAddText={() => void addGraphDecoration('text')}
+            onOrganize={() => void organizeGraph()}
+            onToggleCommentPlacement={() => setPlacingComment((placing) => !placing)}
+          />
           <ReactFlow
             nodes={nodes}
             edges={edges}
@@ -1552,7 +1550,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
             onInit={(instance) => {
               flowInstance.current = instance;
             }}
-            onNodesChange={onNodesChange}
+            onNodesChange={handleNodesChange}
             onConnect={reviewOnly ? undefined : requestConnection}
             onConnectStart={reviewOnly ? undefined : startCanvasConnection}
             onConnectEnd={reviewOnly ? undefined : endCanvasConnection}
@@ -1878,4 +1876,43 @@ function getDroppedInteractionPosition(
         ? Math.round(drop.y)
         : Math.round(drop.y - interactionNodeHeight),
   };
+}
+
+function getMeasuredInteractionSizes(nodes: StoryFlowNode[]) {
+  return new Map(
+    nodes.flatMap((node) =>
+      node.type === 'interaction' &&
+      typeof node.measured?.width === 'number' &&
+      typeof node.measured.height === 'number'
+        ? [[node.id, { width: node.measured.width, height: node.measured.height }] as const]
+        : [],
+    ),
+  );
+}
+
+function applyInteractionSizeChanges(
+  current: ReadonlyMap<string, { width: number; height: number }>,
+  changes: NodeChange<StoryFlowNode>[],
+  interactionIds: ReadonlySet<string>,
+) {
+  let next: Map<string, { width: number; height: number }> | undefined;
+  for (const change of changes) {
+    if (
+      change.type !== 'dimensions' ||
+      !change.dimensions ||
+      !interactionIds.has(change.id)
+    ) {
+      continue;
+    }
+    const previous = (next ?? current).get(change.id);
+    if (
+      previous?.width === change.dimensions.width &&
+      previous.height === change.dimensions.height
+    ) {
+      continue;
+    }
+    next ??= new Map(current);
+    next.set(change.id, change.dimensions);
+  }
+  return next ?? current;
 }

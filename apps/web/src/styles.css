@@ -565,34 +565,71 @@ header span {
   background: var(--color-surface);
   color: var(--color-text);
 }
-.canvas-action {
+.canvas-tools {
   position: absolute;
   top: 0.8rem;
   left: 0.8rem;
   z-index: 4;
-  box-shadow: var(--shadow-card);
-}
-.canvas-decoration-actions {
-  position: absolute;
-  z-index: 4;
-  top: 0.8rem;
-  left: 7.7rem;
   display: flex;
-  gap: 0.45rem;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.4rem;
 }
-.canvas-decoration-actions button {
+.canvas-tool-action {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  flex: none;
+  padding: 0;
+  border-color: var(--color-control-border);
+  background: var(--color-surface);
+  color: var(--color-primary-strong);
   box-shadow: var(--shadow-card);
 }
-.canvas-comment-action {
-  position: absolute;
-  top: 0.8rem;
-  right: 0.8rem;
-  z-index: 4;
+.canvas-tool-action svg {
+  width: 21px;
+  height: 21px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
 }
-.canvas-comment-action.active {
+.canvas-tool-action::after {
+  position: absolute;
+  top: 50%;
+  left: calc(100% + 0.45rem);
+  z-index: 8;
+  width: max-content;
+  max-width: 240px;
+  padding: 0.38rem 0.55rem;
+  border-radius: 6px;
+  background: var(--color-text);
+  color: var(--color-surface);
+  content: attr(data-tooltip);
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1.2;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-3px, -50%);
+  transition:
+    opacity 120ms ease,
+    transform 120ms ease;
+  white-space: nowrap;
+}
+.canvas-tool-action:hover::after,
+.canvas-tool-action:focus-visible::after {
+  opacity: 1;
+  transform: translate(0, -50%);
+}
+.canvas-tool-action.active {
   border-color: var(--color-trigger);
   background: var(--color-trigger-soft);
   color: var(--color-trigger-strong);
+}
+.canvas-tool-action:disabled:hover::after {
+  opacity: 1;
 }
 .comments-toolbar-button {
   gap: 0.4rem;

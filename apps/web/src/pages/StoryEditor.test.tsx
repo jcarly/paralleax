@@ -13,6 +13,7 @@ import {
 import { StoryEditor } from './StoryEditor';
 import { api } from '../api';
 import { getInteractionDragTriggerPositionUpdates } from '../storyGraph';
+import { getStoryGraphClickCreationPosition } from '../storyGraphCreationLayout';
 import { computeStoryGraphLayout } from '../storyGraphLayout';
 
 vi.mock('../api', () => ({
@@ -166,7 +167,7 @@ vi.mock('@xyflow/react', async () => {
                     onConnectEnd?.(event, {
                       isValid: null,
                       toNode: null,
-                      pointer: { x: 580, y: 500 },
+                      pointer: { x: 580, y: 452 },
                     });
                   }}
                 />
@@ -185,7 +186,7 @@ vi.mock('@xyflow/react', async () => {
                     onConnectEnd?.(event, {
                       isValid: null,
                       toNode: null,
-                      pointer: { x: 320, y: 260 },
+                      pointer: { x: 320, y: 328 },
                     });
                   }}
                 />
@@ -539,6 +540,28 @@ describe('StoryEditor', () => {
 
     expect(screen.getByTestId('react-flow')).toHaveAttribute('data-pan-on-drag', '[1]');
     expect(screen.getByTestId('react-flow')).toHaveAttribute('data-pan-activation-key', 'Space');
+  });
+
+  it('groups icon-only canvas actions in an accessible toolbar with hover labels', async () => {
+    await renderEditor();
+
+    const toolbar = screen.getByRole('toolbar', { name: 'Canvas tools' });
+    expect(toolbar).toHaveClass('canvas-tools');
+    expect(within(toolbar).getAllByRole('button')).toHaveLength(5);
+
+    for (const label of [
+      'Add root',
+      'Add frame',
+      'Add text',
+      'Organize graph',
+      'Place a post-it',
+    ]) {
+      const button = within(toolbar).getByRole('button', { name: label });
+      expect(button).toHaveClass('canvas-tool-action');
+      expect(button).toHaveAttribute('data-tooltip', label);
+      expect(button.querySelector('svg')).toBeInTheDocument();
+      expect(button.textContent).toBe('');
+    }
   });
 
   it('automatically organizes the complete graph and persists interaction and trigger positions', async () => {
@@ -1344,16 +1367,21 @@ describe('StoryEditor', () => {
 
   it('creates root and child interactions', async () => {
     const user = userEvent.setup();
+    const rootPosition = getStoryGraphClickCreationPosition(baseStory, { kind: 'root' })!;
     const withRoot = cloneStory();
     withRoot.interactions.push({
       id: 'interaction-root',
       title: 'Created root',
       body: 'Root body',
-      position: { x: 80, y: 252 },
+      position: rootPosition,
       triggers: [{ id: 'trigger-root', inputInteractionIds: [], conditions: [] }],
     });
+    const childPosition = getStoryGraphClickCreationPosition(withRoot, {
+      kind: 'child',
+      sourceId: 'interaction-1',
+    })!;
     const withChild = storyWithTwoInteractions();
-    withChild.interactions[1].position = { x: 80, y: 384 };
+    withChild.interactions[1].position = childPosition;
     vi.mocked(api.createInteraction)
       .mockResolvedValueOnce(withRoot)
       .mockResolvedValueOnce(withChild);
@@ -1361,14 +1389,17 @@ describe('StoryEditor', () => {
     await renderEditor();
 
     await user.click(screen.getByRole('button', { name: 'Add root' }));
-    expect(api.createInteraction).toHaveBeenCalledWith('story-1', { position: { x: 80, y: 252 } });
+    expect(api.createInteraction).toHaveBeenCalledWith('story-1', { position: rootPosition });
     expect(await screen.findByText('Created root')).toBeInTheDocument();
 
-    await user.click(screen.getByTestId('flow-node-interaction-1'));
-    await user.click(screen.getByRole('button', { name: 'Add child' }));
+    await user.click(
+      within(screen.getByTestId('flow-node-interaction-1')).getByRole('button', {
+        name: 'Create child interaction',
+      }),
+    );
     expect(api.createInteraction).toHaveBeenLastCalledWith('story-1', {
       parentId: 'interaction-1',
-      position: { x: 80, y: 384 },
+      position: childPosition,
     });
   });
 
@@ -1416,7 +1447,10 @@ describe('StoryEditor', () => {
     vi.mocked(api.createInteraction).mockResolvedValue(withNewChild);
 
     await renderEditor(story);
-    await userEvent.click(screen.getByTestId('drop-source-interaction-1'));
+    fireEvent.click(screen.getByTestId('drop-source-interaction-1'), {
+      clientX: 580,
+      clientY: 452,
+    });
 
     await waitFor(() => {
       expect(api.createInteraction).toHaveBeenCalledWith('story-1', {
@@ -1427,7 +1461,12 @@ describe('StoryEditor', () => {
   });
 
   it('creates a child interaction from the hovered node action', async () => {
+    const position = getStoryGraphClickCreationPosition(baseStory, {
+      kind: 'child',
+      sourceId: 'interaction-1',
+    })!;
     const withNewChild = storyWithTwoInteractions();
+    withNewChild.interactions[1].position = position;
     vi.mocked(api.createInteraction).mockResolvedValue(withNewChild);
 
     await renderEditor();
@@ -1437,7 +1476,7 @@ describe('StoryEditor', () => {
     await waitFor(() => {
       expect(api.createInteraction).toHaveBeenCalledWith('story-1', {
         parentId: 'interaction-1',
-        position: { x: 80, y: 252 },
+        position,
       });
     });
   });
@@ -1464,7 +1503,10 @@ describe('StoryEditor', () => {
     vi.mocked(api.addTrigger).mockResolvedValue(connectedStory);
 
     await renderEditor(story);
-    await userEvent.click(screen.getByTestId('drop-target-interaction-2'));
+    fireEvent.click(screen.getByTestId('drop-target-interaction-2'), {
+      clientX: 320,
+      clientY: 328,
+    });
 
     await waitFor(() => {
       expect(api.createInteraction).toHaveBeenCalledWith('story-1', {
@@ -1480,12 +1522,16 @@ describe('StoryEditor', () => {
 
   it('creates a parent interaction from the hovered node action', async () => {
     const story = storyWithTwoInteractions();
+    const position = getStoryGraphClickCreationPosition(story, {
+      kind: 'parent',
+      targetId: 'interaction-2',
+    })!;
     const withParent = structuredClone(story);
     withParent.interactions.push({
       id: 'interaction-parent',
       title: 'Created source',
       body: 'Source body',
-      position: { x: 80, y: 6 },
+      position,
       triggers: [{ id: 'trigger-parent', inputInteractionIds: [], conditions: [] }],
     });
     const withTrigger = structuredClone(withParent);
@@ -1505,7 +1551,7 @@ describe('StoryEditor', () => {
 
     await waitFor(() => {
       expect(api.createInteraction).toHaveBeenCalledWith('story-1', {
-        position: { x: 80, y: 6 },
+        position,
       });
       expect(api.addTrigger).toHaveBeenCalledWith('story-1', 'interaction-2', {
         inputInteractionIds: ['interaction-parent'],
@@ -1519,23 +1565,30 @@ describe('StoryEditor', () => {
     const user = userEvent.setup();
     const story = storyWithTwoInteractions();
     story.interactions[1].position = { x: 80, y: 270 };
+    const position = getStoryGraphClickCreationPosition(story, {
+      kind: 'child',
+      sourceId: 'interaction-1',
+    })!;
     const withNewChild = structuredClone(story);
     withNewChild.interactions.push({
       id: 'interaction-3',
       title: 'New output',
       body: 'Additional output',
-      position: { x: 80, y: 384 },
+      position,
       triggers: [{ id: 'trigger-3', inputInteractionIds: ['interaction-1'], conditions: [] }],
     });
     vi.mocked(api.createInteraction).mockResolvedValue(withNewChild);
 
     await renderEditor(story);
-    await user.click(screen.getByTestId('flow-node-interaction-1'));
-    await user.click(screen.getByRole('button', { name: 'Add child' }));
+    await user.click(
+      within(screen.getByTestId('flow-node-interaction-1')).getByRole('button', {
+        name: 'Create child interaction',
+      }),
+    );
 
     expect(api.createInteraction).toHaveBeenCalledWith('story-1', {
       parentId: 'interaction-1',
-      position: { x: 80, y: 384 },
+      position,
     });
   });
 

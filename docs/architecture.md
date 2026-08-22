@@ -422,6 +422,10 @@ split deliberately:
   for interaction and grouped trigger-marker projections. It accepts either the
   complete graph or an explicit target list so future multi-selection can reuse
   the same operation without changing persistence semantics.
+- `storyGraphCreationLayout.ts` projects a temporary interaction and its linked
+  trigger, then asks the scoped layout for their creation position. Click-based
+  root, child, parent, and Simulation Mode option creation use this projection;
+  connection drops keep their explicit pointer-derived position.
 - `storyConnection.ts` decides whether a graph connection can become a trigger
   input.
 - `storyTriggerInput.ts` decides the local mutation plan for deleting one input

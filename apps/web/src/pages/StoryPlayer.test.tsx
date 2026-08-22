@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Story } from '@paralleax/shared';
 import { StoryPlayer } from './StoryPlayer';
 import { api } from '../api';
+import { getStoryGraphClickCreationPosition } from '../storyGraphCreationLayout';
 
 vi.mock('../api', () => ({
   api: {
@@ -749,12 +750,16 @@ describe('StoryPlayer', () => {
 
   it('adds an option in simulation mode and focuses its title', async () => {
     const user = userEvent.setup();
+    const position = getStoryGraphClickCreationPosition(story, {
+      kind: 'child',
+      sourceId: 'next',
+    })!;
     const withOption = structuredClone(story);
     withOption.interactions.push({
       id: 'option-1',
       title: 'New option',
       body: '',
-      position: { x: 300, y: 0 },
+      position,
       triggers: [{ id: 'trigger-option-1', inputInteractionIds: ['next'], conditions: [] }],
     });
     const renamedOption = structuredClone(withOption);
@@ -767,7 +772,7 @@ describe('StoryPlayer', () => {
 
     expect(api.createInteraction).toHaveBeenCalledWith('story-1', {
       parentId: 'next',
-      position: { x: 100, y: 132 },
+      position,
     });
     const optionTitleInput = await screen.findByLabelText('New option title');
     expect(optionTitleInput).toHaveFocus();
@@ -817,23 +822,28 @@ describe('StoryPlayer', () => {
     await user.keyboard('{Enter}');
 
     await user.click(await screen.findByRole('button', { name: 'New option' }));
+    const nestedPosition = getStoryGraphClickCreationPosition(withOption, {
+      kind: 'child',
+      sourceId: 'option-1',
+    })!;
     await user.click(screen.getByRole('button', { name: 'Add option' }));
 
     expect(api.createInteraction).toHaveBeenLastCalledWith('story-1', {
       parentId: 'option-1',
-      position: { x: 80, y: 648 },
+      position: nestedPosition,
     });
     expect(await screen.findByLabelText('New option title')).toHaveValue('Nested option');
   });
 
   it('adds a root option at the beginning of simulation mode', async () => {
     const user = userEvent.setup();
+    const position = getStoryGraphClickCreationPosition(story, { kind: 'root' })!;
     const withRoot = structuredClone(story);
     withRoot.interactions.push({
       id: 'root-2',
       title: 'New option',
       body: '',
-      position: { x: 0, y: 132 },
+      position,
       triggers: [{ id: 'trigger-root-2', inputInteractionIds: [], conditions: [] }],
     });
     vi.mocked(api.createInteraction).mockResolvedValue(withRoot);
@@ -852,7 +862,7 @@ describe('StoryPlayer', () => {
     await user.click(screen.getByRole('button', { name: 'Add option' }));
 
     expect(api.createInteraction).toHaveBeenCalledWith('story-1', {
-      position: { x: 0, y: 132 },
+      position,
     });
     const optionTitleInput = await screen.findByLabelText('New option title');
     expect(optionTitleInput).toHaveFocus();
