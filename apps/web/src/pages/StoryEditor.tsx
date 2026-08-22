@@ -12,6 +12,7 @@ import {
   Background,
   Controls,
   ReactFlow,
+  SelectionMode,
   useEdgesState,
   useNodesState,
   type OnConnectEnd,
@@ -19,6 +20,7 @@ import {
   type Connection,
   type NodeChange,
   type NodeMouseHandler,
+  type OnSelectionChangeParams,
   type ReactFlowInstance,
 } from '@xyflow/react';
 import { Link, Navigate, useParams } from 'react-router-dom';
@@ -43,6 +45,7 @@ import { ItemDefinitionInspector } from '../components/ItemDefinitionInspector';
 import { LocationInspector } from '../components/LocationInspector';
 import { StatDefinitionInspector } from '../components/StatDefinitionInspector';
 import { StoryCanvasToolbar } from '../components/StoryCanvasToolbar';
+import { StoryGraphSelectionInspector } from '../components/StoryGraphSelectionInspector';
 import { TriggerEdge } from '../components/TriggerEdge';
 import { TriggerInspector } from '../components/TriggerInspector';
 import { TriggerNode } from '../components/TriggerNode';
@@ -58,12 +61,12 @@ import { buildGraphDecorationNodes } from '../features/graph-decorations/graphDe
 import { useStoryEditorPersistence } from '../hooks/useStoryEditorPersistence';
 import { usePendingSaveGuard } from '../hooks/usePendingSaveGuard';
 import {
-  applyInteractionDragEdgePreview,
-  applyInteractionDragTriggerPreview,
+  applyInteractionMovesEdgePreview,
+  applyInteractionMovesTriggerPreview,
   buildInteractionNodes,
   buildTriggerNodes,
   buildTriggerEdges,
-  getInteractionDragTriggerPositionUpdates,
+  getInteractionMovesTriggerPositionUpdates,
   type SelectedTrigger,
   type StoryFlowNode,
   type TriggerFlowEdge,
@@ -71,6 +74,13 @@ import {
   interactionNodeHeight,
 } from '../storyGraph';
 import { computeStoryGraphLayout, type StoryGraphLayoutScope } from '../storyGraphLayout';
+import {
+  applyStoryGraphSelection,
+  createStoryGraphSelection,
+  getStoryGraphSelectionNodeIds,
+  getStoryGraphSelectionTargets,
+  type StoryGraphSelection,
+} from '../storyGraphSelection';
 import {
   getStoryGraphClickCreationPosition,
   type StoryGraphClickCreation,
@@ -250,6 +260,9 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
   const [pendingConnection, setPendingConnection] = useState<Connection>();
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [placingComment, setPlacingComment] = useState(false);
+  const [graphSelection, setGraphSelection] = useState<StoryGraphSelection | undefined>(
+    undefined,
+  );
   const [nodes, setNodes, onNodesChange] = useNodesState<StoryFlowNode>([]);
   const [edges, setEdges] = useEdgesState<TriggerFlowEdge>([]);
   const [interactionSizes, setInteractionSizes] = useState<
@@ -271,6 +284,8 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
   } | null>(null);
   const flowInstance = useRef<ReactFlowInstance<StoryFlowNode, TriggerFlowEdge> | null>(null);
   const canvasRef = useRef<HTMLElement | null>(null);
+  const graphSelectionGesture = useRef(false);
+  const graphSelectionCandidate = useRef<StoryGraphSelection | undefined>(undefined);
 
   const commentAccess = story?.capabilities?.canEdit === true;
   const reviewOnly = story?.capabilities?.canEdit === false;
@@ -299,6 +314,10 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
   );
   const selectedItemDefinition = story?.itemDefinitions?.find(
     ({ id }) => id === selectedItemDefinitionId,
+  );
+  const selectedGraphNodeIds = useMemo(
+    () => getStoryGraphSelectionNodeIds(graphSelection),
+    [graphSelection],
   );
   const selectedCommentTarget: { targetType: CommentTargetType; targetId: string } | undefined =
     selected
@@ -429,6 +448,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
     return { locations, characters, stats, items };
   }, [story]);
   const hasInspectorSelection = Boolean(
+    graphSelection ||
     selected ||
     selectedTriggerTarget ||
     selectedGraphDecoration ||
@@ -445,6 +465,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
   const hasInspector = commentsOpen || hasInspectorSelection;
 
   const closeInspector = useCallback(() => {
+    setGraphSelection(undefined);
     setSelectedId(undefined);
     setSelectedTrigger(undefined);
     setSelectedGraphDecorationId(undefined);
@@ -635,6 +656,10 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
       }),
     [closeInspector, openCommentCounts, openCommentsForTarget, story, selectedTrigger],
   );
+  const narrativeNodes = useMemo(
+    () => applyStoryGraphSelection([...storyNodes, ...triggerNodes], graphSelection),
+    [graphSelection, storyNodes, triggerNodes],
+  );
 
   const commentNodes = useMemo<CommentPinFlowNode[]>(
     () => [
@@ -707,12 +732,12 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
   useEffect(() => {
     setNodes([
       ...decorationNodes,
-      ...[...storyNodes, ...triggerNodes].map((node) =>
+      ...narrativeNodes.map((node) =>
         reviewOnly ? { ...node, draggable: false } : node,
       ),
       ...commentNodes,
     ]);
-  }, [commentNodes, decorationNodes, reviewOnly, setNodes, storyNodes, triggerNodes]);
+  }, [commentNodes, decorationNodes, narrativeNodes, reviewOnly, setNodes]);
 
   useEffect(() => {
     try {
@@ -752,17 +777,106 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
     setEdges(storyEdges);
   }, [setEdges, storyEdges]);
 
-  function previewInteractionDrag(interactionId: string, position: Position) {
-    setNodes((current) =>
-      applyInteractionDragTriggerPreview(current, story, interactionId, position),
+  function previewInteractionMoves(
+    movedNodes: readonly StoryFlowNode[],
+    interactionPositionOverrides: ReadonlyMap<string, Position>,
+  ) {
+    const directlyMovedTriggerNodeIds = new Set(
+      movedNodes.flatMap((node) => (node.type === 'trigger' ? [node.id] : [])),
     );
-    setEdges((current) => applyInteractionDragEdgePreview(current, story, interactionId, position));
+    setNodes((current) =>
+      applyInteractionMovesTriggerPreview(
+        current,
+        story,
+        interactionPositionOverrides,
+        directlyMovedTriggerNodeIds,
+      ),
+    );
+    setEdges((current) =>
+      applyInteractionMovesEdgePreview(current, story, interactionPositionOverrides),
+    );
+  }
+
+  function getMovedNarrativeNodes(
+    draggedNode: StoryFlowNode,
+    draggedNodes: readonly StoryFlowNode[],
+  ): StoryFlowNode[] {
+    if (!graphSelection || !selectedGraphNodeIds.has(draggedNode.id)) return [draggedNode];
+    const selectedDraggedNodes = draggedNodes.filter(
+      (node) =>
+        selectedGraphNodeIds.has(node.id) &&
+        (node.type === 'interaction' || node.type === 'trigger'),
+    );
+    return selectedDraggedNodes.length > 0 ? selectedDraggedNodes : [draggedNode];
+  }
+
+  function getInteractionPositionOverrides(movedNodes: readonly StoryFlowNode[]) {
+    return new Map(
+      movedNodes.flatMap((node) =>
+        node.type === 'interaction' ? [[node.id, node.position] as const] : [],
+      ),
+    );
+  }
+
+  function handleNodeDragStart(_: MouseEvent | TouchEvent, node: StoryFlowNode) {
+    if (graphSelection && !selectedGraphNodeIds.has(node.id)) closeInspector();
+    beginLocalEdit();
+  }
+
+  function handleNodeDrag(
+    _: MouseEvent | TouchEvent,
+    node: StoryFlowNode,
+    draggedNodes: StoryFlowNode[],
+  ) {
+    const movedNodes = getMovedNarrativeNodes(node, draggedNodes);
+    previewInteractionMoves(movedNodes, getInteractionPositionOverrides(movedNodes));
+  }
+
+  async function persistNodeDrag(node: StoryFlowNode, draggedNodes: StoryFlowNode[]) {
+    const movedNodes = getMovedNarrativeNodes(node, draggedNodes);
+    const interactionPositionOverrides = getInteractionPositionOverrides(movedNodes);
+    const directlyMovedTriggers = movedNodes.flatMap((movedNode) =>
+      movedNode.type === 'trigger' ? [movedNode] : [],
+    );
+    const directlyMovedTriggerIds = new Set(
+      directlyMovedTriggers.flatMap((triggerNode) => triggerNode.data.triggerIds),
+    );
+    const elasticTriggerUpdates = getInteractionMovesTriggerPositionUpdates(
+      story,
+      interactionPositionOverrides,
+    ).filter((update) =>
+      update.triggerIds.every((triggerId) => !directlyMovedTriggerIds.has(triggerId)),
+    );
+
+    previewInteractionMoves(movedNodes, interactionPositionOverrides);
+    const operations = [
+      ...Array.from(interactionPositionOverrides.entries()).map(([interactionId, position]) =>
+        patchInteraction(interactionId, { position }),
+      ),
+      ...directlyMovedTriggers.map((triggerNode) =>
+        moveTrigger(
+          triggerNode.data.interactionId,
+          triggerNode.data.triggerIds,
+          triggerNode.position,
+        ),
+      ),
+      ...elasticTriggerUpdates.map((update) =>
+        moveTrigger(update.interactionId, update.triggerIds, update.position),
+      ),
+    ];
+
+    try {
+      await Promise.all(operations);
+    } finally {
+      endLocalEdit();
+    }
   }
 
   const select: NodeMouseHandler = (_, node) => {
     if (node.type === 'commentPin') return;
 
     selectCommentThread(undefined);
+    if (selectedGraphNodeIds.has(node.id)) return;
 
     if (node.type === 'graphDecoration') {
       if (reviewOnly) return;
@@ -847,6 +961,25 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
       return;
     }
     closeInspector();
+  }
+
+  function handleGraphSelectionStart() {
+    graphSelectionGesture.current = true;
+    graphSelectionCandidate.current = undefined;
+    closeInspector();
+  }
+
+  function handleGraphSelectionChange({
+    nodes: selectedNodes,
+  }: OnSelectionChangeParams<StoryFlowNode>) {
+    if (!graphSelectionGesture.current) return;
+    graphSelectionCandidate.current = createStoryGraphSelection(selectedNodes);
+  }
+
+  function handleGraphSelectionEnd() {
+    graphSelectionGesture.current = false;
+    setGraphSelection(graphSelectionCandidate.current);
+    graphSelectionCandidate.current = undefined;
   }
 
   const navigateInteractions = (direction: -1 | 1) => {
@@ -1057,23 +1190,32 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
     : `/stories/${storyId}/play?mode=simulation`;
   async function organizeGraph() {
     if (!story || story.interactions.length === 0) return;
-    const selectedLayoutTarget = selected
-      ? { type: 'interaction' as const, interactionId: selected.id }
-      : selectedTriggerTarget
-        ? selectedTriggerTarget.trigger.inputInteractionIds.length === 0
-          ? {
-              type: 'interaction' as const,
-              interactionId: selectedTriggerTarget.interaction.id,
-            }
-          : {
-              type: 'trigger' as const,
-              interactionId: selectedTriggerTarget.interaction.id,
-              triggerId: selectedTriggerTarget.trigger.id,
-            }
-        : undefined;
-    const scope: StoryGraphLayoutScope = selectedLayoutTarget
-      ? { kind: 'selection', targets: [selectedLayoutTarget] }
-      : { kind: 'all' };
+    const graphSelectionTargets = getStoryGraphSelectionTargets(graphSelection);
+    const selectedLayoutTargets =
+      graphSelectionTargets.length > 0
+        ? graphSelectionTargets
+        : selected
+          ? [{ type: 'interaction' as const, interactionId: selected.id }]
+          : selectedTriggerTarget
+            ? selectedTriggerTarget.trigger.inputInteractionIds.length === 0
+              ? [
+                  {
+                    type: 'interaction' as const,
+                    interactionId: selectedTriggerTarget.interaction.id,
+                  },
+                ]
+              : [
+                  {
+                    type: 'trigger' as const,
+                    interactionId: selectedTriggerTarget.interaction.id,
+                    triggerId: selectedTriggerTarget.trigger.id,
+                  },
+                ]
+            : [];
+    const scope: StoryGraphLayoutScope =
+      selectedLayoutTargets.length > 0
+        ? { kind: 'selection', targets: selectedLayoutTargets }
+        : { kind: 'all' };
     const interactionSizes = getMeasuredInteractionSizes(nodes);
     const layout = computeStoryGraphLayout(story, scope, { interactionSizes });
     const hasPositionUpdates =
@@ -1534,7 +1676,13 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
             canEdit={!reviewOnly}
             canComment={story.capabilities?.canComment === true}
             canOrganize={story.interactions.length > 0}
-            organizeSelection={Boolean(selected || selectedTriggerTarget)}
+            organizeSelectionCount={
+              graphSelection
+                ? graphSelection.interactionIds.length + graphSelection.triggers.length
+                : selected || selectedTriggerTarget
+                  ? 1
+                  : 0
+            }
             placingComment={placingComment}
             onCreateRoot={() => void createRootFromClick()}
             onAddFrame={() => void addGraphDecoration('frame')}
@@ -1556,42 +1704,29 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
             onConnectEnd={reviewOnly ? undefined : endCanvasConnection}
             onNodeClick={select}
             onPaneClick={handlePaneClick}
-            onNodeDragStart={reviewOnly ? undefined : beginLocalEdit}
-            onNodeDrag={
-              reviewOnly
-                ? undefined
-                : (_, node) => {
-                    if (node.type === 'interaction') {
-                      previewInteractionDrag(node.id, node.position);
-                    }
-                  }
-            }
-            onNodeDragStop={(_, node) => {
-              if (!reviewOnly && node.type === 'interaction') {
-                const triggerPositionUpdates = getInteractionDragTriggerPositionUpdates(
-                  story,
-                  node.id,
-                  node.position,
-                );
-                previewInteractionDrag(node.id, node.position);
-                void patchInteraction(node.id, { position: node.position });
-                triggerPositionUpdates.forEach((update) => {
-                  void moveTrigger(update.interactionId, update.triggerIds, update.position);
-                });
+            onSelectionStart={reviewOnly ? undefined : handleGraphSelectionStart}
+            onSelectionChange={reviewOnly ? undefined : handleGraphSelectionChange}
+            onSelectionEnd={reviewOnly ? undefined : handleGraphSelectionEnd}
+            onNodeDragStart={reviewOnly ? undefined : handleNodeDragStart}
+            onNodeDrag={reviewOnly ? undefined : handleNodeDrag}
+            onNodeDragStop={(_, node, draggedNodes) => {
+              if (reviewOnly) return;
+              if (node.type === 'interaction' || node.type === 'trigger') {
+                void persistNodeDrag(node, draggedNodes);
+                return;
               }
-              if (!reviewOnly && node.type === 'trigger') {
-                void moveTrigger(node.data.interactionId, node.data.triggerIds, node.position);
-              }
-              if (!reviewOnly && node.type === 'graphDecoration') {
+              if (node.type === 'graphDecoration') {
                 void updateGraphDecoration(node.id, { position: node.position });
               }
-              if (!reviewOnly) endLocalEdit();
+              endLocalEdit();
             }}
             fitView
             fitViewOptions={fitViewOptions}
             minZoom={0.05}
             panOnDrag={canvasPanMouseButtons}
             panActivationKeyCode="Space"
+            selectionOnDrag={!reviewOnly}
+            selectionMode={SelectionMode.Full}
           >
             <Background />
             <Controls />
@@ -1661,7 +1796,9 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
                 x
               </button>
             </div>
-            {selectedGraphDecoration ? (
+            {graphSelection ? (
+              <StoryGraphSelectionInspector selection={graphSelection} />
+            ) : selectedGraphDecoration ? (
               <GraphDecorationInspector
                 decoration={selectedGraphDecoration}
                 onPatch={(patch) => void updateGraphDecoration(selectedGraphDecoration.id, patch)}

@@ -41,9 +41,11 @@ Paralleax currently includes:
   users see every story they can read with capability and ownership filters. Local
   return-to-page navigation is preserved through sign-in and registration.
 - Editor-only React Flow graph authoring.
-- Deterministic vertical graph auto-layout for the complete graph or the selected
-  interaction/linked trigger, with grouped trigger-marker placement and fixed
-  bottom-output/top-input interaction routing.
+- Rectangular graph multi-selection for interactions and linked trigger markers,
+  with a transient count inspector, group drag-and-drop, and outside-click clearing.
+- Deterministic vertical graph auto-layout for the complete graph, one selected
+  interaction/linked trigger, or a rectangular multi-selection, with grouped
+  trigger-marker placement and fixed bottom-output/top-input interaction routing.
 - Editor-only Simulation Mode diagnostics.
 - Live simultaneous editing for clients connected to the same API process. Every
   committed interaction, trigger, position, context entity, item/stat structure,

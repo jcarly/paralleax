@@ -155,7 +155,7 @@ export function buildTriggerNodes(
           type: 'trigger',
           position,
           draggable: true,
-          selectable: false,
+          selectable: true,
           data: {
             interactionId: target.id,
             triggerId: group.primaryTrigger.id,
@@ -197,23 +197,44 @@ export function applyInteractionDragTriggerPreview(
   interactionId: string,
   position: { x: number; y: number },
 ): StoryFlowNode[] {
-  if (!story || !story.interactions.some((interaction) => interaction.id === interactionId)) {
+  return applyInteractionMovesTriggerPreview(nodes, story, new Map([[interactionId, position]]));
+}
+
+export function applyInteractionMovesTriggerPreview(
+  nodes: StoryFlowNode[],
+  story: Story | undefined,
+  positionOverrides: ReadonlyMap<string, { x: number; y: number }>,
+  directlyMovedTriggerNodeIds: ReadonlySet<string> = new Set(),
+): StoryFlowNode[] {
+  if (
+    !story ||
+    positionOverrides.size === 0 ||
+    !story.interactions.some((interaction) => positionOverrides.has(interaction.id))
+  ) {
     return nodes;
   }
 
-  const positionOverrides = new Map([[interactionId, position]]);
   const previewPositions = new Map<string, { x: number; y: number }>();
 
   story.interactions.forEach((target, targetIndex) => {
     const affectsTarget =
-      target.id === interactionId ||
-      target.triggers.some((trigger) => trigger.inputInteractionIds.includes(interactionId));
+      positionOverrides.has(target.id) ||
+      target.triggers.some((trigger) =>
+        trigger.inputInteractionIds.some((inputId) => positionOverrides.has(inputId)),
+      );
     if (!affectsTarget) return;
 
     getLinkedTriggerGroups(target).forEach((group, triggerIndex) => {
-      if (target.id !== interactionId && !group.inputInteractionIds.includes(interactionId)) return;
+      if (
+        !positionOverrides.has(target.id) &&
+        !group.inputInteractionIds.some((inputId) => positionOverrides.has(inputId))
+      ) {
+        return;
+      }
+      const triggerNodeId = getTriggerNodeId(target.id, group.primaryTrigger.id);
+      if (directlyMovedTriggerNodeIds.has(triggerNodeId)) return;
       previewPositions.set(
-        getTriggerNodeId(target.id, group.primaryTrigger.id),
+        triggerNodeId,
         getTriggerNodePosition(story, target, targetIndex, group, triggerIndex, positionOverrides),
       );
     });
@@ -242,21 +263,39 @@ export function applyInteractionDragEdgePreview(
   interactionId: string,
   position: { x: number; y: number },
 ): TriggerFlowEdge[] {
-  if (!story || !story.interactions.some((interaction) => interaction.id === interactionId)) {
+  return applyInteractionMovesEdgePreview(edges, story, new Map([[interactionId, position]]));
+}
+
+export function applyInteractionMovesEdgePreview(
+  edges: TriggerFlowEdge[],
+  story: Story | undefined,
+  positionOverrides: ReadonlyMap<string, { x: number; y: number }>,
+): TriggerFlowEdge[] {
+  if (
+    !story ||
+    positionOverrides.size === 0 ||
+    !story.interactions.some((interaction) => positionOverrides.has(interaction.id))
+  ) {
     return edges;
   }
 
-  const positionOverrides = new Map([[interactionId, position]]);
   const previewHandles = new Map<string, Pick<TriggerFlowEdge, 'sourceHandle' | 'targetHandle'>>();
 
   story.interactions.forEach((target, targetIndex) => {
     const affectsTarget =
-      target.id === interactionId ||
-      target.triggers.some((trigger) => trigger.inputInteractionIds.includes(interactionId));
+      positionOverrides.has(target.id) ||
+      target.triggers.some((trigger) =>
+        trigger.inputInteractionIds.some((inputId) => positionOverrides.has(inputId)),
+      );
     if (!affectsTarget) return;
 
     getLinkedTriggerGroups(target).forEach((group, triggerIndex) => {
-      if (target.id !== interactionId && !group.inputInteractionIds.includes(interactionId)) return;
+      if (
+        !positionOverrides.has(target.id) &&
+        !group.inputInteractionIds.some((inputId) => positionOverrides.has(inputId))
+      ) {
+        return;
+      }
       const triggerNodeId = getTriggerNodeId(target.id, group.primaryTrigger.id);
       const triggerPosition = getTriggerNodePosition(
         story,

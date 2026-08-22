@@ -133,6 +133,9 @@ details. They should stay covered by tests as the editor grows.
 
 - The narrative model is the source of truth; React Flow is only a canvas
   projection.
+- A rectangular graph selection is transient editor state. It never creates a
+  persisted Group, changes trigger ownership, or gives semantic meaning to a
+  decoration frame that overlaps the selected nodes.
 - Graph decorations are authored presentation metadata only. They never affect
   trigger eligibility, interaction ownership, reader output, or progress replay.
 - A decoration frame is not a semantic group. Moving or resizing it never moves

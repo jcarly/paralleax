@@ -277,6 +277,126 @@ test.describe('Story editor', () => {
     ).toBeVisible();
   });
 
+  test('selects interactions and triggers with a rectangle and drags them as a group', async ({
+    page,
+  }) => {
+    const current = storyWithConditionCandidate();
+    current.access = { visibility: 'private', editPolicy: 'owner', commentPolicy: 'editors' };
+    current.capabilities = {
+      canRead: true,
+      canEdit: true,
+      canManage: true,
+      canComment: false,
+    };
+    await page.addInitScript(() => {
+      class TestEventSource {
+        onopen: (() => void) | null = null;
+        onerror: (() => void) | null = null;
+        addEventListener() {}
+        close() {}
+      }
+      Object.defineProperty(window, 'EventSource', {
+        configurable: true,
+        value: TestEventSource,
+      });
+    });
+    await page.route('**/api/stories/story-1/comment-threads', (route) =>
+      route.fulfill({ json: [] }),
+    );
+    const interactionPositions = new Map<string, { x: number; y: number }>();
+    let triggerPosition: { x: number; y: number } | undefined;
+    await mockStory(page, current);
+
+    for (const interactionId of ['interaction-1', 'interaction-2']) {
+      await page.route(`**/api/stories/story-1/interactions/${interactionId}`, async (route) => {
+        const patch = route.request().postDataJSON() as { position: { x: number; y: number } };
+        interactionPositions.set(interactionId, patch.position);
+        const interaction = current.interactions.find(({ id }) => id === interactionId)!;
+        interaction.position = patch.position;
+        await route.fulfill({
+          json: {
+            interaction: structuredClone(interaction),
+            revision: 2,
+            updatedAt: current.updatedAt,
+          },
+        });
+      });
+    }
+    await page.route(
+      '**/api/stories/story-1/interactions/interaction-2/triggers/trigger-2',
+      async (route) => {
+        const patch = route.request().postDataJSON() as { position: { x: number; y: number } };
+        triggerPosition = patch.position;
+        current.interactions[1].triggers[0].position = patch.position;
+        await route.fulfill({
+          json: {
+            interactionId: 'interaction-2',
+            trigger: structuredClone(current.interactions[1].triggers[0]),
+            revision: 2,
+            updatedAt: current.updatedAt,
+          },
+        });
+      },
+    );
+
+    await page.goto('/stories/story-1/edit');
+    const graphNodes = [
+      page.locator('.react-flow__node[data-id="interaction-1"]'),
+      page.locator('.react-flow__node[data-id="interaction-2"]'),
+      page.locator('.react-flow__node[data-id="trigger:interaction-2:trigger-2"]'),
+    ];
+    const boxes = await Promise.all(graphNodes.map((node) => node.boundingBox()));
+    expect(boxes.every(Boolean)).toBe(true);
+    const left = Math.min(...boxes.map((box) => box!.x)) - 12;
+    const top = Math.min(...boxes.map((box) => box!.y)) - 12;
+    const right = Math.max(...boxes.map((box) => box!.x + box!.width)) + 12;
+    const bottom = Math.max(...boxes.map((box) => box!.y + box!.height)) + 12;
+
+    await page.mouse.move(left, top);
+    await page.mouse.down();
+    await page.mouse.move(right, bottom, { steps: 8 });
+    await expect(page.locator('.react-flow__selection')).toBeVisible();
+    await page.mouse.up();
+
+    await expect(page.getByRole('heading', { name: 'Selected elements' })).toBeVisible();
+    await expect(page.getByText('2 interactions selected')).toBeVisible();
+    await expect(page.getByText('1 trigger selected')).toBeVisible();
+
+    const draggedNode = page.locator('.react-flow__node[data-id="interaction-1"]');
+    const draggedBox = await draggedNode.boundingBox();
+    expect(draggedBox).not.toBeNull();
+    await page.mouse.move(
+      draggedBox!.x + draggedBox!.width / 2,
+      draggedBox!.y + draggedBox!.height / 2,
+    );
+    await page.mouse.down();
+    await page.mouse.move(
+      draggedBox!.x + draggedBox!.width / 2 + 90,
+      draggedBox!.y + draggedBox!.height / 2 + 60,
+      { steps: 8 },
+    );
+    await page.mouse.up();
+
+    await expect.poll(() => interactionPositions.size).toBe(2);
+    await expect.poll(() => triggerPosition).toBeDefined();
+    const firstDelta = {
+      x: interactionPositions.get('interaction-1')!.x - 120,
+      y: interactionPositions.get('interaction-1')!.y - 140,
+    };
+    const secondDelta = {
+      x: interactionPositions.get('interaction-2')!.x - 120,
+      y: interactionPositions.get('interaction-2')!.y - 300,
+    };
+    expect(secondDelta.x).toBeCloseTo(firstDelta.x, 3);
+    expect(secondDelta.y).toBeCloseTo(firstDelta.y, 3);
+
+    const pane = page.locator('.react-flow__pane');
+    const paneBox = await pane.boundingBox();
+    expect(paneBox).not.toBeNull();
+    await page.mouse.click(paneBox!.x + paneBox!.width - 16, paneBox!.y + paneBox!.height - 16);
+    await expect(page.getByRole('heading', { name: 'Selected elements' })).toHaveCount(0);
+  });
+
   test('previews trigger and arrow placement while an interaction is dragged', async ({ page }) => {
     const current = storyWithHorizontalLink();
     current.interactions[1].triggers[0].position = { x: 540, y: 240 };

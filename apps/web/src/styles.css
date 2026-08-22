@@ -631,6 +631,11 @@ header span {
 .canvas-tool-action:disabled:hover::after {
   opacity: 1;
 }
+.canvas .react-flow__selection,
+.canvas .react-flow__nodesselection-rect {
+  border: 1px dashed var(--color-primary);
+  background: var(--color-primary-halo);
+}
 .comments-toolbar-button {
   gap: 0.4rem;
 }
@@ -720,6 +725,10 @@ header span {
   font-size: 0.78rem;
   letter-spacing: 0.04em;
   text-transform: uppercase;
+  color: var(--color-muted);
+}
+.graph-selection-inspector p {
+  margin: 0.5rem 0;
   color: var(--color-muted);
 }
 .review-target-inspector {

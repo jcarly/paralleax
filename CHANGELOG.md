@@ -2,6 +2,9 @@
 
 ## 2026-08-22
 
+- Added rectangular interaction and linked-trigger multi-selection with a count
+  inspector, group drag-and-drop persistence, outside-click clearing, and scoped
+  automatic layout for the selected group.
 - Grouped root, frame, text, graph-layout, and post-it canvas actions into a
   left-aligned vertical icon toolbar with accessible labels and hover/focus
   tooltips.

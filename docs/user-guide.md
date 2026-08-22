@@ -212,9 +212,19 @@ running through neighboring trigger diamonds whenever the hierarchy permits it.
 Select one interaction or linked trigger first to change the action to **Organize
 selected element**. Only that element is repositioned; neighboring elements stay
 fixed and act as layout anchors and obstacles. A selected root trigger reorganizes
-its interaction because the root marker is attached to that card. The layout
-operation already accepts several targets internally so the same behavior can be
-used by future graph multi-selection.
+its interaction because the root marker is attached to that card.
+
+Drag on empty graph space with the left mouse button to draw a selection rectangle.
+Every interaction card and linked trigger marker fully contained by the rectangle
+is selected; frames, text decorations, and review post-its are ignored. The
+inspector shows the number of selected interactions and trigger markers. Drag any
+selected card or trigger marker to move and save the complete selection together.
+Click outside the selection to clear it. Use the middle mouse button, or hold
+**Space** while dragging, to pan the graph instead.
+
+With a rectangular selection active, the toolbar action becomes **Organize selected
+elements** and applies the automatic layout only to that group. Unselected elements
+remain fixed and continue to act as anchors and collision obstacles.
 
 Existing and newly arranged arrows always leave an interaction from the center of
 its bottom edge and enter an interaction at the center of its top edge.

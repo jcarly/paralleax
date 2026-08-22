@@ -273,7 +273,7 @@ describe('story graph mapping', () => {
         type: 'trigger',
         position: { x: 235, y: 356 },
         draggable: true,
-        selectable: false,
+        selectable: true,
         data: {
           interactionId: 'interaction-2',
           triggerId: 'trigger-linked',

@@ -7,7 +7,7 @@ interface StoryCanvasToolbarProps {
   canEdit: boolean;
   canComment: boolean;
   canOrganize: boolean;
-  organizeSelection: boolean;
+  organizeSelectionCount: number;
   placingComment: boolean;
   onCreateRoot: () => void;
   onAddFrame: () => void;
@@ -20,7 +20,7 @@ export function StoryCanvasToolbar({
   canEdit,
   canComment,
   canOrganize,
-  organizeSelection,
+  organizeSelectionCount,
   placingComment,
   onCreateRoot,
   onAddFrame,
@@ -29,7 +29,9 @@ export function StoryCanvasToolbar({
   onToggleCommentPlacement,
 }: StoryCanvasToolbarProps) {
   const { t } = useTranslation();
-  const organizeLabel = t(organizeSelection ? 'editor.organizeSelected' : 'editor.organizeGraph');
+  const organizeLabel = organizeSelectionCount
+    ? t('editor.organizeSelected', { count: organizeSelectionCount })
+    : t('editor.organizeGraph');
   const postItLabel = t(placingComment ? 'comments.clickCanvas' : 'comments.placeOnCanvas');
 
   return (

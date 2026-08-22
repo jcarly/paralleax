@@ -91,6 +91,7 @@ vi.mock('@xyflow/react', async () => {
         />
       ) : null,
     Position: { Bottom: 'bottom', Left: 'left', Right: 'right', Top: 'top' },
+    SelectionMode: { Full: 'full', Partial: 'partial' },
     ReactFlow: ({
       nodes,
       edges,
@@ -100,11 +101,17 @@ vi.mock('@xyflow/react', async () => {
       onConnectStart,
       onConnectEnd,
       onNodeClick,
+      onNodeDragStart,
       onNodeDrag,
       onPaneClick,
       onNodeDragStop,
+      onSelectionStart,
+      onSelectionChange,
+      onSelectionEnd,
       panOnDrag,
       panActivationKeyCode,
+      selectionOnDrag,
+      selectionMode,
       minZoom,
       children,
     }: any) => {
@@ -122,8 +129,23 @@ vi.mock('@xyflow/react', async () => {
           data-min-zoom={minZoom}
           data-pan-on-drag={JSON.stringify(panOnDrag)}
           data-pan-activation-key={panActivationKeyCode}
+          data-selection-on-drag={selectionOnDrag}
+          data-selection-mode={selectionMode}
         >
           <button data-testid="flow-pane" onClick={(event) => onPaneClick?.(event)} />
+          <button
+            data-testid="box-select-first-branch"
+            onClick={(event) => {
+              const selectedNodes = nodes.filter((node: any) =>
+                ['interaction-1', 'interaction-2', 'trigger:interaction-2:trigger-2'].includes(
+                  node.id,
+                ),
+              );
+              onSelectionStart?.(event);
+              onSelectionChange?.({ nodes: selectedNodes, edges: [] });
+              onSelectionEnd?.(event);
+            }}
+          />
           {nodes.map((node: any) => {
             const NodeComponent = nodeTypes[node.type];
             return (
@@ -133,6 +155,7 @@ vi.mock('@xyflow/react', async () => {
                 data-z-index={node.zIndex}
                 data-node-x={node.position.x}
                 data-node-y={node.position.y}
+                data-node-selected={node.selected ? 'true' : 'false'}
                 style={node.style}
                 onClick={(event) => onNodeClick?.(event, node)}
                 role="button"
@@ -143,20 +166,36 @@ vi.mock('@xyflow/react', async () => {
                   data-testid={`preview-drag-node-${node.id}`}
                   onClick={(event) => {
                     event.stopPropagation();
-                    onNodeDrag?.(event, {
-                      ...node,
-                      position: { x: node.position.x + 100, y: node.position.y + 80 },
-                    });
+                    const movedNodes = (
+                      node.selected ? nodes.filter((candidate: any) => candidate.selected) : [node]
+                    ).map((candidate: any) => ({
+                      ...candidate,
+                      position: {
+                        x: candidate.position.x + 100,
+                        y: candidate.position.y + 80,
+                      },
+                    }));
+                    const movedNode = movedNodes.find((candidate: any) => candidate.id === node.id);
+                    onNodeDrag?.(event, movedNode, movedNodes);
                   }}
                 />
                 <span
                   data-testid={`drag-node-${node.id}`}
                   onClick={(event) => {
                     event.stopPropagation();
-                    onNodeDragStop?.(event, {
-                      ...node,
-                      position: { x: node.position.x + 25, y: node.position.y + 15 },
-                    });
+                    const selectedNodes = node.selected
+                      ? nodes.filter((candidate: any) => candidate.selected)
+                      : [node];
+                    const movedNodes = selectedNodes.map((candidate: any) => ({
+                      ...candidate,
+                      position: {
+                        x: candidate.position.x + 25,
+                        y: candidate.position.y + 15,
+                      },
+                    }));
+                    const movedNode = movedNodes.find((candidate: any) => candidate.id === node.id);
+                    onNodeDragStart?.(event, node, selectedNodes);
+                    onNodeDragStop?.(event, movedNode, movedNodes);
                   }}
                 />
                 <span
@@ -540,6 +579,74 @@ describe('StoryEditor', () => {
 
     expect(screen.getByTestId('react-flow')).toHaveAttribute('data-pan-on-drag', '[1]');
     expect(screen.getByTestId('react-flow')).toHaveAttribute('data-pan-activation-key', 'Space');
+    expect(screen.getByTestId('react-flow')).toHaveAttribute('data-selection-on-drag', 'true');
+    expect(screen.getByTestId('react-flow')).toHaveAttribute('data-selection-mode', 'full');
+  });
+
+  it('selects contained interactions and triggers with a rectangle and summarizes them', async () => {
+    const user = userEvent.setup();
+    await renderEditor(storyWithThreeInteractions());
+
+    await user.click(screen.getByTestId('box-select-first-branch'));
+
+    expect(screen.getByRole('heading', { name: 'Selected elements' })).toBeInTheDocument();
+    expect(screen.getByText('2 interactions selected')).toBeInTheDocument();
+    expect(screen.getByText('1 trigger selected')).toBeInTheDocument();
+    expect(screen.getByTestId('flow-node-interaction-1')).toHaveAttribute(
+      'data-node-selected',
+      'true',
+    );
+    expect(screen.getByTestId('flow-node-interaction-2')).toHaveAttribute(
+      'data-node-selected',
+      'true',
+    );
+    expect(screen.getByTestId('flow-node-trigger:interaction-2:trigger-2')).toHaveAttribute(
+      'data-node-selected',
+      'true',
+    );
+    expect(screen.getByTestId('flow-node-interaction-3')).toHaveAttribute(
+      'data-node-selected',
+      'false',
+    );
+
+    await user.click(screen.getByTestId('flow-pane'));
+
+    expect(screen.queryByRole('heading', { name: 'Selected elements' })).not.toBeInTheDocument();
+    expect(screen.getByTestId('flow-node-interaction-1')).toHaveAttribute(
+      'data-node-selected',
+      'false',
+    );
+  });
+
+  it('moves every selected interaction and trigger when one selected element is dragged', async () => {
+    const user = userEvent.setup();
+    const story = storyWithThreeInteractions();
+    await renderEditor(story);
+    await user.click(screen.getByTestId('box-select-first-branch'));
+    const triggerNode = screen.getByTestId('flow-node-trigger:interaction-2:trigger-2');
+    const triggerPosition = {
+      x: Number(triggerNode.getAttribute('data-node-x')) + 25,
+      y: Number(triggerNode.getAttribute('data-node-y')) + 15,
+    };
+
+    await user.click(screen.getByTestId('drag-node-interaction-1'));
+
+    await waitFor(() => {
+      expect(api.updateInteraction).toHaveBeenCalledWith('story-1', 'interaction-1', {
+        position: { x: 105, y: 135 },
+      });
+      expect(api.updateInteraction).toHaveBeenCalledWith('story-1', 'interaction-2', {
+        position: { x: 105, y: 285 },
+      });
+      expect(api.updateTrigger).toHaveBeenCalledWith('story-1', 'interaction-2', 'trigger-2', {
+        position: triggerPosition,
+      });
+    });
+    expect(api.updateInteraction).not.toHaveBeenCalledWith(
+      'story-1',
+      'interaction-3',
+      expect.anything(),
+    );
   });
 
   it('groups icon-only canvas actions in an accessible toolbar with hover labels', async () => {
@@ -642,6 +749,38 @@ describe('StoryEditor', () => {
         position: expected.triggerUpdates[0].position,
       });
     });
+  });
+
+  it('automatically organizes every element in a rectangular selection and nothing else', async () => {
+    const user = userEvent.setup();
+    const story = storyWithThreeInteractions();
+    const expected = computeStoryGraphLayout(story, {
+      kind: 'selection',
+      targets: [
+        { type: 'interaction', interactionId: 'interaction-1' },
+        { type: 'interaction', interactionId: 'interaction-2' },
+        { type: 'trigger', interactionId: 'interaction-2', triggerId: 'trigger-2' },
+      ],
+    });
+    await renderEditor(story);
+
+    await user.click(screen.getByTestId('box-select-first-branch'));
+    await user.click(screen.getByRole('button', { name: 'Organize 3 selected elements' }));
+
+    await waitFor(() => {
+      expect(api.updateInteraction).toHaveBeenCalledTimes(expected.interactionUpdates.length);
+      expect(api.updateTrigger).toHaveBeenCalledTimes(
+        expected.triggerUpdates.reduce((total, update) => total + update.triggerIds.length, 0),
+      );
+    });
+    expect(api.updateInteraction).not.toHaveBeenCalledWith(
+      'story-1',
+      'interaction-3',
+      expect.anything(),
+    );
+    expected.interactionUpdates.forEach(({ interactionId, position }) =>
+      expect(api.updateInteraction).toHaveBeenCalledWith('story-1', interactionId, { position }),
+    );
   });
 
   it('previews automatic trigger placement while an interaction is moving', async () => {
