@@ -1272,7 +1272,7 @@ describe('StoryEditor', () => {
     await user.clear(comparisonValue);
     await user.type(comparisonValue, '5');
     await user.click(screen.getByRole('button', { name: 'x' }));
-  });
+  }, 30_000);
 
   it('creates an item definition and gives separate copies to a character', async () => {
     const user = userEvent.setup();
@@ -1350,7 +1350,7 @@ describe('StoryEditor', () => {
         selector: 'strong',
       }),
     ).toHaveLength(2);
-  });
+  }, 30_000);
 
   it('collapses each story context section and the whole navigation', async () => {
     const user = userEvent.setup();

@@ -695,7 +695,7 @@ export class StoriesRepository {
         valueType: definition.value_type,
         ...(definition.category ? { category: definition.category } : {}),
         ...(definition.image_url ? { imageUrl: definition.image_url } : {}),
-        changePerHour: definition.change_per_hour,
+        ...(definition.change_per_hour ? { changePerHour: definition.change_per_hour } : {}),
       })),
       itemDefinitions: (itemDefinitionsByStory.get(row.id) ?? []).map((definition) => ({
         id: definition.id,

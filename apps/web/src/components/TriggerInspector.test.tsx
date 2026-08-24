@@ -121,7 +121,7 @@ describe('TriggerInspector temporal conditions', () => {
   });
 
   it('edits multiple weekdays, dates, date ranges, and time slots', async () => {
-    const story = storyWithConditions([
+    const story: Story = storyWithConditions([
       {
         temporal: {
           dates: ['2026-08-15'],
@@ -178,5 +178,92 @@ describe('TriggerInspector temporal conditions', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Add date range' }));
     await userEvent.click(screen.getByRole('button', { name: 'Add time slot' }));
     expect(onSaveTrigger).toHaveBeenCalledTimes(12);
+  });
+
+  it('edits interaction, location, character, item, and variable conditions', () => {
+    const story: Story = storyWithConditions([
+      { interactionId: 'source-1', hasBeenVisited: true },
+      { locationId: 'location-1', isCurrentLocation: true },
+      { characterId: 'character-1', isPresent: true },
+      { itemDefinitionId: 'item-1', isOwned: true },
+      { statId: 'score', operator: 'gte', value: 1 },
+    ]);
+    story.interactions.push(
+      {
+        id: 'source-1',
+        title: 'First source',
+        body: '',
+        position: { x: 0, y: 0 },
+        triggers: [],
+      },
+      {
+        id: 'source-2',
+        title: 'Second source',
+        body: '',
+        position: { x: 0, y: 0 },
+        triggers: [],
+      },
+    );
+    story.locations = [
+      { id: 'location-1', name: 'Harbor', description: '' },
+      { id: 'location-2', name: 'Station', description: '' },
+    ];
+    story.characters = [
+      { id: 'character-1', name: 'Mira', description: '' },
+      { id: 'character-2', name: 'Jon', description: '' },
+    ];
+    story.itemDefinitions = [
+      { id: 'item-1', name: 'Key', description: '' },
+      { id: 'item-2', name: 'Map', description: '' },
+    ];
+    story.statDefinitions = [
+      { id: 'score-definition', name: 'Score', valueType: 'number' },
+      { id: 'mood-definition', name: 'Mood', valueType: 'string' },
+    ];
+    story.stats = [
+      { id: 'score', statDefinitionId: 'score-definition', initialValue: 1 },
+      { id: 'mood', statDefinitionId: 'mood-definition', initialValue: 'calm' },
+    ];
+    const onSaveTrigger = renderInspector(story);
+
+    fireEvent.change(screen.getByLabelText('Condition interaction'), {
+      target: { value: 'source-2' },
+    });
+    fireEvent.change(screen.getByLabelText('Interaction condition operator'), {
+      target: { value: 'not-visited' },
+    });
+    fireEvent.change(screen.getByLabelText('Condition location'), {
+      target: { value: 'location-2' },
+    });
+    fireEvent.change(screen.getByLabelText('Location condition operator'), {
+      target: { value: 'not-current' },
+    });
+    fireEvent.change(screen.getByLabelText('Condition character'), {
+      target: { value: 'character-2' },
+    });
+    fireEvent.change(screen.getByLabelText('Character condition operator'), {
+      target: { value: 'absent' },
+    });
+    fireEvent.change(screen.getByLabelText('Condition item'), { target: { value: 'item-2' } });
+    fireEvent.change(screen.getByLabelText('Item condition operator'), {
+      target: { value: 'not-owned' },
+    });
+    fireEvent.change(screen.getByLabelText('Condition variable'), { target: { value: ':mood' } });
+    fireEvent.change(screen.getByLabelText('Variable condition operator'), {
+      target: { value: 'neq' },
+    });
+    fireEvent.change(screen.getByLabelText('Variable condition value'), {
+      target: { value: '7' },
+    });
+
+    expect(onSaveTrigger).toHaveBeenCalledTimes(11);
+    expect(onSaveTrigger).toHaveBeenLastCalledWith(
+      'interaction-1',
+      'trigger-1',
+      [],
+      expect.arrayContaining([
+        expect.objectContaining({ statId: 'score', operator: 'gte', value: 7 }),
+      ]),
+    );
   });
 });

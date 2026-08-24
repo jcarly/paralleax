@@ -4,6 +4,13 @@ import type { Story } from '@paralleax/shared';
 const story: Story = {
   id: 'story-1',
   title: 'Test story',
+  access: { visibility: 'private', editPolicy: 'owner', commentPolicy: 'editors' },
+  capabilities: {
+    canRead: true,
+    canEdit: true,
+    canManage: true,
+    canComment: false,
+  },
   createdAt: '2026-07-14T08:00:00.000Z',
   updatedAt: '2026-07-14T08:00:00.000Z',
   interactions: [
@@ -67,6 +74,37 @@ async function mockStory(page: Page, initialStory: Story = cloneStory()) {
   });
 }
 
+async function mockEditorBackgroundRequests(page: Page) {
+  await page.addInitScript(() => {
+    class TestEventSource {
+      readonly listeners = new Map<string, Array<() => void>>();
+      onopen: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+
+      constructor(readonly url: string) {
+        const testWindow = window as typeof window & { storyEvents?: TestEventSource[] };
+        testWindow.storyEvents = [...(testWindow.storyEvents ?? []), this];
+        setTimeout(() => this.onopen?.(), 0);
+      }
+
+      addEventListener(type: string, listener: () => void) {
+        this.listeners.set(type, [...(this.listeners.get(type) ?? []), listener]);
+      }
+
+      emit(type: string) {
+        this.listeners.get(type)?.forEach((listener) => listener());
+      }
+
+      close() {}
+    }
+
+    Object.defineProperty(window, 'EventSource', { configurable: true, value: TestEventSource });
+  });
+  await page.route('**/api/stories/story-1/comment-threads', (route) =>
+    route.fulfill({ json: [] }),
+  );
+}
+
 test.describe('Story editor', () => {
   test.beforeEach(async ({ page }) => {
     await page.route('**/api/auth/me', (route) =>
@@ -78,44 +116,12 @@ test.describe('Story editor', () => {
         },
       }),
     );
+    await mockEditorBackgroundRequests(page);
     await mockStory(page);
   });
 
   test('applies a remote story invalidation without reloading the editor', async ({ page }) => {
-    await page.addInitScript(() => {
-      class TestEventSource {
-        readonly listeners = new Map<string, Array<() => void>>();
-        onopen: (() => void) | null = null;
-        onerror: (() => void) | null = null;
-
-        constructor(readonly url: string) {
-          const testWindow = window as typeof window & { storyEvents?: TestEventSource[] };
-          testWindow.storyEvents = [...(testWindow.storyEvents ?? []), this];
-          setTimeout(() => this.onopen?.(), 0);
-        }
-
-        addEventListener(type: string, listener: () => void) {
-          this.listeners.set(type, [...(this.listeners.get(type) ?? []), listener]);
-        }
-
-        emit(type: string) {
-          this.listeners.get(type)?.forEach((listener) => listener());
-        }
-
-        close() {}
-      }
-
-      Object.defineProperty(window, 'EventSource', { configurable: true, value: TestEventSource });
-    });
-
     let current = cloneStory();
-    current.access = { visibility: 'private', editPolicy: 'owner', commentPolicy: 'editors' };
-    current.capabilities = {
-      canRead: true,
-      canEdit: true,
-      canManage: true,
-      canComment: false,
-    };
     await page.route('**/api/stories/story-1', (route) =>
       route.fulfill({ json: structuredClone(current) }),
     );
@@ -281,28 +287,6 @@ test.describe('Story editor', () => {
     page,
   }) => {
     const current = storyWithConditionCandidate();
-    current.access = { visibility: 'private', editPolicy: 'owner', commentPolicy: 'editors' };
-    current.capabilities = {
-      canRead: true,
-      canEdit: true,
-      canManage: true,
-      canComment: false,
-    };
-    await page.addInitScript(() => {
-      class TestEventSource {
-        onopen: (() => void) | null = null;
-        onerror: (() => void) | null = null;
-        addEventListener() {}
-        close() {}
-      }
-      Object.defineProperty(window, 'EventSource', {
-        configurable: true,
-        value: TestEventSource,
-      });
-    });
-    await page.route('**/api/stories/story-1/comment-threads', (route) =>
-      route.fulfill({ json: [] }),
-    );
     const interactionPositions = new Map<string, { x: number; y: number }>();
     let triggerPosition: { x: number; y: number } | undefined;
     await mockStory(page, current);
@@ -625,7 +609,6 @@ test.describe('Story editor', () => {
       .evaluate((element) => Number.parseInt(getComputedStyle(element).zIndex || '0', 10));
     expect(frameLayer).toBeLessThan(interactionLayer);
 
-    await frame.click({ position: { x: 5, y: 5 } });
     await expect(page.getByRole('heading', { name: 'Frame' })).toBeVisible();
     await page.getByLabel('Width').fill('560');
     await page.getByLabel('Width').blur();
@@ -633,7 +616,7 @@ test.describe('Story editor', () => {
     await page.getByRole('button', { name: 'Add text' }).click();
     const text = page.getByTestId('graph-text-text-1');
     await expect(text).toBeVisible();
-    await text.click();
+    await expect(page.getByRole('heading', { name: 'Text' })).toBeVisible();
     await page.getByLabel('Content').fill('Opening act');
     await page.getByLabel('Content').blur();
     await page.getByLabel('Text size').fill('48');
@@ -650,7 +633,9 @@ test.describe('Story editor', () => {
     await expect.poll(() => patches).toContainEqual({ fontStyle: 'italic' });
   });
 
-  test('reorients the output arrow when its target moves across the trigger', async ({ page }) => {
+  test('keeps the incoming arrow attached to the interaction top across a move', async ({
+    page,
+  }) => {
     let current = storyWithHorizontalLink();
     await mockStory(page, current);
 
@@ -666,7 +651,9 @@ test.describe('Story editor', () => {
     await page.goto('/stories/story-1/edit');
     const edgeId = 'trigger:interaction-2:trigger-2-output';
     await expect(page.locator(`[data-id="${edgeId}"] .react-flow__edge-path`)).toBeAttached();
-    await expect.poll(async () => (await getEdgeEndDirection(page, edgeId)).dx).toBeGreaterThan(0);
+    await expect.poll(async () => (await getEdgeEndDirection(page, edgeId)).dy).toBeGreaterThan(0);
+    const initialDirection = await getEdgeEndDirection(page, edgeId);
+    expect(Math.abs(initialDirection.dy)).toBeGreaterThan(Math.abs(initialDirection.dx));
 
     const target = page.getByTestId('interaction-node').filter({ hasText: 'Linked scene' });
     const box = await target.boundingBox();
@@ -678,9 +665,9 @@ test.describe('Story editor', () => {
     });
     await page.mouse.up();
 
-    await expect.poll(async () => (await getEdgeEndDirection(page, edgeId)).dx).toBeLessThan(0);
+    await expect.poll(async () => (await getEdgeEndDirection(page, edgeId)).dy).toBeGreaterThan(0);
     const finalDirection = await getEdgeEndDirection(page, edgeId);
-    expect(Math.abs(finalDirection.dx)).toBeGreaterThan(Math.abs(finalDirection.dy));
+    expect(Math.abs(finalDirection.dy)).toBeGreaterThan(Math.abs(finalDirection.dx));
   });
 
   test('edits root trigger path conditions from the root trigger marker', async ({ page }) => {

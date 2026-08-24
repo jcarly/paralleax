@@ -511,13 +511,11 @@ describe('StoriesRepository', () => {
         id: 'alarm-definition',
         name: 'Alarm',
         valueType: 'boolean',
-        changePerHour: 0,
       },
       {
         id: 'charge-definition',
         name: 'Charge',
         valueType: 'number',
-        changePerHour: 0,
       },
     ];
     saved.stats = [

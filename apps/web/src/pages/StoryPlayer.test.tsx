@@ -1,5 +1,5 @@
 import React from 'react';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -135,10 +135,11 @@ describe('StoryPlayer', () => {
     remote.interactions[2].triggers[0].conditions = [];
     vi.mocked(api.getStory).mockResolvedValue(remote);
 
-    const source = FakeEventSource.instances.find(
-      ({ url }) => url === '/api/stories/story-1/events',
-    );
-    expect(source).toBeDefined();
+    let source: FakeEventSource | undefined;
+    await waitFor(() => {
+      source = FakeEventSource.instances.find(({ url }) => url === '/api/stories/story-1/events');
+      expect(source).toBeDefined();
+    });
     source?.emit('story-changed');
 
     expect(await screen.findByDisplayValue('Remote next')).toBeInTheDocument();

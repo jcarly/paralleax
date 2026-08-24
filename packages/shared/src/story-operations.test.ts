@@ -366,6 +366,20 @@ describe('shared story operations', () => {
     ).toEqual(['end', 'contextual']);
   });
 
+  it('evaluates not-visited interaction conditions', () => {
+    const story = storyFixture();
+    story.interactions[1].triggers[0].conditions = [
+      { interactionId: 'end', hasBeenVisited: false },
+    ];
+
+    expect(getAvailableInteractions(story, 'root', ['root']).map(({ id }) => id)).toContain(
+      'middle',
+    );
+    expect(
+      getAvailableInteractions(story, 'root', ['root', 'end']).map(({ id }) => id),
+    ).not.toContain('middle');
+  });
+
   it('deduplicates interactions made available by several eligible triggers', () => {
     const story = storyFixture();
     story.interactions[2].triggers.push({
@@ -696,6 +710,70 @@ describe('typed stats', () => {
       'battery-1': { 'battery-charge': 6 },
       'battery-2': { 'battery-charge': 10 },
     });
+  });
+
+  it('evaluates trigger conditions against the targeted item instance value', () => {
+    const story = storyFixture();
+    story.statDefinitions = [{ id: 'durability-definition', name: 'Durability' }];
+    story.itemDefinitions = [
+      {
+        id: 'key-definition',
+        name: 'Key',
+        description: '',
+        stats: [
+          { id: 'key-durability', statDefinitionId: 'durability-definition', initialValue: 10 },
+        ],
+      },
+    ];
+    story.characters = [
+      {
+        id: 'mira',
+        name: 'Mira',
+        description: '',
+        items: [
+          { id: 'key-1', itemDefinitionId: 'key-definition' },
+          { id: 'key-2', itemDefinitionId: 'key-definition' },
+        ],
+      },
+    ];
+    story.interactions[1].triggers[0].conditions = [
+      { statId: 'key-durability', itemId: 'key-1', operator: 'gte', value: 5 },
+    ];
+    const itemStatValues = {
+      'key-1': { 'key-durability': 6 },
+      'key-2': { 'key-durability': 2 },
+    };
+
+    expect(
+      getAvailableInteractions(
+        story,
+        'root',
+        ['root'],
+        null,
+        [],
+        {},
+        story.startDateTime,
+        [],
+        itemStatValues,
+      ).map(({ id }) => id),
+    ).toContain('middle');
+
+    story.interactions[1].triggers[0].conditions = [
+      { statId: 'key-durability', itemId: 'key-2', operator: 'gte', value: 5 },
+    ];
+    expect(
+      getAvailableInteractions(
+        story,
+        'root',
+        ['root'],
+        null,
+        [],
+        {},
+        story.startDateTime,
+        [],
+        itemStatValues,
+      ).map(({ id }) => id),
+    ).not.toContain('middle');
   });
 });
 

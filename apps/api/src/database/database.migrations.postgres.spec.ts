@@ -519,8 +519,8 @@ describePostgres('Database migrations PostgreSQL upgrade', () => {
     );
     await pool.query(
       `INSERT INTO item_definitions
-       (id, story_id, name, description, image_url, stats, sort_order)
-       VALUES ('supply', 'restored-story', 'Supply', '', '', '[]'::jsonb, 0)`,
+       (id, story_id, name, description, image_url, sort_order)
+       VALUES ('supply', 'restored-story', 'Supply', '', '', 0)`,
     );
 
     const client = await pool.connect();

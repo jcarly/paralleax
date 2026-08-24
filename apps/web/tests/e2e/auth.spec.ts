@@ -44,9 +44,10 @@ test('registers, creates a story, signs out, and signs back in', async ({ page }
     }
     await route.fulfill({ json: stories });
   });
+  await page.route('**/api/stories/public', (route) => route.fulfill({ json: [] }));
 
   await page.goto('/');
-  await page.getByRole('button', { name: 'Create an account' }).click();
+  await page.getByRole('link', { name: 'Create account' }).click();
   await page.getByLabel('Email address').fill('author@example.com');
   await page.getByLabel('Password', { exact: true }).fill('correct horse battery staple');
   await page.getByLabel('Confirm password').fill('correct horse battery staple');
@@ -59,6 +60,7 @@ test('registers, creates a story, signs out, and signs back in', async ({ page }
   await expect(page.getByRole('heading', { name: 'New story', exact: true })).toBeVisible();
 
   await page.getByRole('button', { name: 'Sign out' }).click();
+  await page.getByRole('link', { name: 'Sign in' }).click();
   await expect(page.getByRole('heading', { name: 'Sign in to Paralleax' })).toBeVisible();
   await page.getByLabel('Email address').fill('author@example.com');
   await page.getByLabel('Password', { exact: true }).fill('correct horse battery staple');

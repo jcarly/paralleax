@@ -107,6 +107,128 @@ describe('api client', () => {
     });
   });
 
+  it('calls administration, access, import, decoration, and variable endpoints', async () => {
+    fetchMock.mockResolvedValue(jsonResponse({}));
+
+    await api.listUsers();
+    expect(fetchMock).toHaveBeenLastCalledWith('/api/admin/users', {
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    await api.updateUserRole('user-1', 'admin');
+    expect(fetchMock).toHaveBeenLastCalledWith('/api/admin/users/user-1', {
+      headers: { 'Content-Type': 'application/json' },
+      method: 'PATCH',
+      body: JSON.stringify({ role: 'admin' }),
+    });
+
+    await api.getStoryAccess('story-1');
+    expect(fetchMock).toHaveBeenLastCalledWith('/api/stories/story-1/access', {
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    await api.updateStoryAccess('story-1', {
+      visibility: 'public',
+      editPolicy: 'owner',
+      commentPolicy: 'readers',
+    });
+    expect(fetchMock).toHaveBeenLastCalledWith('/api/stories/story-1/access', {
+      headers: { 'Content-Type': 'application/json' },
+      method: 'PATCH',
+      body: JSON.stringify({
+        visibility: 'public',
+        editPolicy: 'owner',
+        commentPolicy: 'readers',
+      }),
+    });
+
+    await api.setStoryCollaborator('story-1', 'editor@example.com', 'editor');
+    expect(fetchMock).toHaveBeenLastCalledWith('/api/stories/story-1/access/collaborators', {
+      headers: { 'Content-Type': 'application/json' },
+      method: 'POST',
+      body: JSON.stringify({ email: 'editor@example.com', role: 'editor' }),
+    });
+
+    await api.removeStoryCollaborator('story-1', 'user-1');
+    expect(fetchMock).toHaveBeenLastCalledWith('/api/stories/story-1/access/collaborators/user-1', {
+      headers: { 'Content-Type': 'application/json' },
+      method: 'DELETE',
+    });
+
+    const files = [{ name: 'startup.txt', content: '*finish' }];
+    await api.importChoiceScript(files);
+    expect(fetchMock).toHaveBeenLastCalledWith('/api/stories/imports/choicescript', {
+      headers: { 'Content-Type': 'application/json' },
+      method: 'POST',
+      body: JSON.stringify({ files }),
+    });
+
+    await api.createGraphDecoration('story-1', {
+      kind: 'frame',
+      position: { x: 10, y: 20 },
+      width: 300,
+      height: 200,
+    });
+    expect(fetchMock).toHaveBeenLastCalledWith('/api/stories/story-1/graph-decorations', {
+      headers: { 'Content-Type': 'application/json' },
+      method: 'POST',
+      body: JSON.stringify({
+        kind: 'frame',
+        position: { x: 10, y: 20 },
+        width: 300,
+        height: 200,
+      }),
+    });
+
+    await api.updateGraphDecoration('story-1', 'frame-1', { width: 360 });
+    expect(fetchMock).toHaveBeenLastCalledWith('/api/stories/story-1/graph-decorations/frame-1', {
+      headers: { 'Content-Type': 'application/json' },
+      method: 'PATCH',
+      body: JSON.stringify({ width: 360 }),
+    });
+
+    await api.deleteGraphDecoration('story-1', 'frame-1');
+    expect(fetchMock).toHaveBeenLastCalledWith('/api/stories/story-1/graph-decorations/frame-1', {
+      headers: { 'Content-Type': 'application/json' },
+      method: 'DELETE',
+    });
+
+    await api.deleteStatDefinition('story-1', 'definition-1');
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      '/api/stories/story-1/stat-definitions/definition-1',
+      {
+        headers: { 'Content-Type': 'application/json' },
+        method: 'DELETE',
+      },
+    );
+
+    const assignment = {
+      statDefinitionId: 'definition-1',
+      ownerType: 'character' as const,
+      ownerId: 'character-1',
+      initialValue: 2,
+    };
+    await api.createStatAssignment('story-1', assignment);
+    expect(fetchMock).toHaveBeenLastCalledWith('/api/stories/story-1/stats', {
+      headers: { 'Content-Type': 'application/json' },
+      method: 'POST',
+      body: JSON.stringify(assignment),
+    });
+
+    await api.updateStatAssignment('story-1', 'stat-1', { initialValue: 3 });
+    expect(fetchMock).toHaveBeenLastCalledWith('/api/stories/story-1/stats/stat-1', {
+      headers: { 'Content-Type': 'application/json' },
+      method: 'PATCH',
+      body: JSON.stringify({ initialValue: 3 }),
+    });
+
+    await api.deleteStatAssignment('story-1', 'stat-1');
+    expect(fetchMock).toHaveBeenLastCalledWith('/api/stories/story-1/stats/stat-1', {
+      headers: { 'Content-Type': 'application/json' },
+      method: 'DELETE',
+    });
+  });
+
   it('calls anchored comment thread endpoints', async () => {
     fetchMock.mockResolvedValue(jsonResponse([]));
     await api.listCommentThreads('story-1');
