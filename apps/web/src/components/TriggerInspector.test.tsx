@@ -45,6 +45,27 @@ function renderInspector(story: Story, onSaveTrigger = vi.fn().mockResolvedValue
 }
 
 describe('TriggerInspector temporal conditions', () => {
+  it('adds a typed variable condition', async () => {
+    const story: Story = storyWithConditions([]);
+    story.statDefinitions = [{ id: 'open-definition', name: 'Open', valueType: 'boolean' }];
+    story.stats = [{ id: 'open', statDefinitionId: 'open-definition', initialValue: false }];
+    const onSaveTrigger = renderInspector(story);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Add condition' }));
+    await userEvent.click(
+      within(screen.getByRole('group', { name: 'Condition type' })).getByRole('button', {
+        name: 'Variable',
+      }),
+    );
+
+    expect(onSaveTrigger).toHaveBeenLastCalledWith(
+      'interaction-1',
+      'trigger-1',
+      [],
+      [{ statId: 'open', operator: 'eq', value: false }],
+    );
+  });
+
   it('adds an item ownership condition', async () => {
     const story: Story = storyWithConditions([]);
     story.itemDefinitions = [

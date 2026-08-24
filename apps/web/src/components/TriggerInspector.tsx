@@ -1,5 +1,6 @@
 import type {
   Interaction,
+  StatCondition,
   Story,
   TemporalCondition,
   TriggerCondition,
@@ -8,6 +9,13 @@ import type {
 import { useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { getRelatedTriggerVariantIds } from '../storyGraph';
+import {
+  getStatTargets,
+  statTargetId,
+  statTargetLabel,
+  statTargetValueType,
+  type StatTarget,
+} from '../storyStats';
 
 type ConditionType = 'interaction' | 'location' | 'character' | 'stat' | 'item' | 'dateTime';
 
@@ -43,15 +51,7 @@ export function TriggerInspector({
   const variantIds = getRelatedTriggerVariantIds(interaction, trigger);
   const variants = interaction.triggers.filter((item) => variantIds.includes(item.id));
   const hasOrVariants = variants.length > 1;
-  const stats = (story.characters ?? []).flatMap((character) =>
-    (character.stats ?? []).map((stat) => ({
-      ...stat,
-      label: `${character.name} — ${
-        story.statDefinitions?.find(({ id }) => id === stat.statDefinitionId)?.name ??
-        t('triggerInspector.unknownStat')
-      }`,
-    })),
-  );
+  const statTargets = getStatTargets(story);
 
   async function updateTrigger(
     targetTrigger: Interaction['triggers'][number],
@@ -76,8 +76,16 @@ export function TriggerInspector({
         return character ? { characterId: character.id, isPresent: true } : undefined;
       }
       case 'stat': {
-        const stat = stats[0];
-        return stat ? { statId: stat.id, operator: 'gte', value: stat.initialValue } : undefined;
+        const target = statTargets[0];
+        return target
+          ? {
+              statId: target.assignment.id,
+              ...(target.itemId ? { itemId: target.itemId } : {}),
+              operator:
+                statTargetValueType(target) === 'number' ? ('gte' as const) : ('eq' as const),
+              value: target.assignment.initialValue,
+            }
+          : undefined;
       }
       case 'item': {
         const definition = story.itemDefinitions?.[0];
@@ -128,7 +136,7 @@ export function TriggerInspector({
                         : 'itemDefinitionId' in condition
                           ? condition.itemDefinitionId
                           : 'statId' in condition
-                            ? condition.statId
+                            ? `${condition.itemId ?? ''}:${condition.statId}`
                             : 'time'
                 }-${index}`}
               >
@@ -235,6 +243,17 @@ export function TriggerInspector({
                       <option value="absent">{t('triggerInspector.absent')}</option>
                     </select>
                   </>
+                ) : 'statId' in condition ? (
+                  <StatConditionFields
+                    condition={condition}
+                    storyLabel={t('attributes.owner.story')}
+                    targets={statTargets}
+                    onChange={(nextCondition) => {
+                      const next = [...variant.conditions];
+                      next[index] = nextCondition;
+                      void updateTrigger(variant, variant.inputInteractionIds, next);
+                    }}
+                  />
                 ) : 'itemDefinitionId' in condition ? (
                   <>
                     <select
@@ -281,53 +300,7 @@ export function TriggerInspector({
                       void updateTrigger(variant, variant.inputInteractionIds, next);
                     }}
                   />
-                ) : (
-                  <>
-                    <select
-                      aria-label={t('triggerInspector.conditionStat')}
-                      value={condition.statId}
-                      onChange={(event) => {
-                        const next = [...variant.conditions];
-                        next[index] = { ...condition, statId: event.target.value };
-                        void updateTrigger(variant, variant.inputInteractionIds, next);
-                      }}
-                    >
-                      {stats.map((stat) => (
-                        <option key={stat.id} value={stat.id}>
-                          {stat.label}
-                        </option>
-                      ))}
-                    </select>
-                    <select
-                      aria-label={t('triggerInspector.statOperator')}
-                      value={condition.operator}
-                      onChange={(event) => {
-                        const next = [...variant.conditions];
-                        next[index] = {
-                          ...condition,
-                          operator: event.target.value as typeof condition.operator,
-                        };
-                        void updateTrigger(variant, variant.inputInteractionIds, next);
-                      }}
-                    >
-                      <option value="eq">{t('triggerInspector.equals')}</option>
-                      <option value="lt">{t('triggerInspector.lessThan')}</option>
-                      <option value="lte">{t('triggerInspector.atMost')}</option>
-                      <option value="gt">{t('triggerInspector.greaterThan')}</option>
-                      <option value="gte">{t('triggerInspector.atLeast')}</option>
-                    </select>
-                    <input
-                      aria-label={t('triggerInspector.statValue')}
-                      type="number"
-                      value={condition.value}
-                      onChange={(event) => {
-                        const next = [...variant.conditions];
-                        next[index] = { ...condition, value: Number(event.target.value) };
-                        void updateTrigger(variant, variant.inputInteractionIds, next);
-                      }}
-                    />
-                  </>
-                )}
+                ) : null}
                 <button
                   className="ghost danger"
                   onClick={() =>
@@ -361,7 +334,9 @@ export function TriggerInspector({
                   ? t('triggerInspector.conditionUnavailable.character')
                   : undefined,
               stat:
-                stats.length === 0 ? t('triggerInspector.conditionUnavailable.stat') : undefined,
+                statTargets.length === 0
+                  ? t('triggerInspector.conditionUnavailable.stat')
+                  : undefined,
               item:
                 (story.itemDefinitions?.length ?? 0) === 0
                   ? t('triggerInspector.conditionUnavailable.item')
@@ -408,6 +383,94 @@ export function TriggerInspector({
         </button>
       )}
     </div>
+  );
+}
+
+function StatConditionFields({
+  condition,
+  targets,
+  storyLabel,
+  onChange,
+}: {
+  condition: StatCondition;
+  targets: StatTarget[];
+  storyLabel: string;
+  onChange: (condition: StatCondition) => void;
+}) {
+  const { t } = useTranslation();
+  const selectedTarget = targets.find(
+    (target) => target.assignment.id === condition.statId && target.itemId === condition.itemId,
+  );
+  const valueType = selectedTarget ? statTargetValueType(selectedTarget) : 'number';
+  return (
+    <>
+      <select
+        aria-label={t('triggerInspector.conditionStat')}
+        value={`${condition.itemId ?? ''}:${condition.statId}`}
+        onChange={(event) => {
+          const target = targets.find(
+            (candidate) => statTargetId(candidate) === event.target.value,
+          );
+          if (!target) return;
+          const nextValueType = statTargetValueType(target);
+          onChange({
+            statId: target.assignment.id,
+            ...(target.itemId ? { itemId: target.itemId } : {}),
+            operator: nextValueType === 'number' ? 'gte' : 'eq',
+            value: target.assignment.initialValue,
+          });
+        }}
+      >
+        {targets.map((target) => (
+          <option key={statTargetId(target)} value={statTargetId(target)}>
+            {statTargetLabel(target, storyLabel)}
+          </option>
+        ))}
+      </select>
+      <select
+        aria-label={t('triggerInspector.statOperator')}
+        value={condition.operator}
+        onChange={(event) =>
+          onChange({
+            ...condition,
+            operator: event.target.value as StatCondition['operator'],
+          })
+        }
+      >
+        <option value="eq">{t('triggerInspector.equals')}</option>
+        <option value="neq">{t('triggerInspector.notEquals')}</option>
+        {valueType === 'number' ? (
+          <>
+            <option value="lt">{t('triggerInspector.lessThan')}</option>
+            <option value="lte">{t('triggerInspector.atMost')}</option>
+            <option value="gt">{t('triggerInspector.greaterThan')}</option>
+            <option value="gte">{t('triggerInspector.atLeast')}</option>
+          </>
+        ) : null}
+      </select>
+      {valueType === 'boolean' ? (
+        <select
+          aria-label={t('triggerInspector.statValue')}
+          value={String(condition.value)}
+          onChange={(event) => onChange({ ...condition, value: event.target.value === 'true' })}
+        >
+          <option value="true">true</option>
+          <option value="false">false</option>
+        </select>
+      ) : (
+        <input
+          aria-label={t('triggerInspector.statValue')}
+          type={valueType === 'number' ? 'number' : 'text'}
+          value={String(condition.value)}
+          onChange={(event) =>
+            onChange({
+              ...condition,
+              value: valueType === 'number' ? Number(event.target.value) : event.target.value,
+            })
+          }
+        />
+      )}
+    </>
   );
 }
 

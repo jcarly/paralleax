@@ -184,6 +184,73 @@ describe('Stories API', () => {
     );
   });
 
+  it('POST /api/stories/imports/choicescript creates a complete story atomically', async () => {
+    const response = await request(httpServer)
+      .post('/api/stories/imports/choicescript')
+      .send({
+        files: [
+          {
+            name: 'startup.txt',
+            content: `*title Imported mystery
+An envelope waits on the table.
+*choice
+  #Open it
+    A key falls out.
+    *goto ending
+  #Leave it
+    You walk away.
+    *goto ending
+*label ending
+Night falls.
+*ending`,
+          },
+        ],
+      })
+      .expect(201);
+
+    expect(response.body.story).toMatchObject({
+      title: 'Imported mystery',
+      access: { visibility: 'private', editPolicy: 'owner', commentPolicy: 'editors' },
+    });
+    expect(response.body.story.interactions).toHaveLength(4);
+    expect(response.body.report).toMatchObject({
+      format: 'choicescript',
+      sourceFileCount: 1,
+      sceneCount: 1,
+      interactionCount: 4,
+    });
+
+    const listResponse = await request(httpServer).get('/api/stories').expect(200);
+    expect(listResponse.body).toHaveLength(1);
+    expect(listResponse.body[0]).toMatchObject({
+      id: response.body.story.id,
+      interactionCount: 4,
+    });
+  });
+
+  it('validates ChoiceScript import files and rejects unresolved flow', async () => {
+    await request(httpServer)
+      .post('/api/stories/imports/choicescript')
+      .send({ files: [{ name: 'startup.cs', content: 'Invalid extension.' }] })
+      .expect(400);
+    await request(httpServer)
+      .post('/api/stories/imports/choicescript')
+      .send({ files: [{ name: 'startup.txt', content: 'Start.\n*goto absent' }] })
+      .expect(400);
+    await request(httpServer)
+      .post('/api/stories/imports/choicescript')
+      .send({
+        files: [
+          { name: 'startup.txt', content: 'a'.repeat(50_000) },
+          { name: 'ending.txt', content: 'b'.repeat(50_000) },
+        ],
+      })
+      .expect(400);
+
+    const listResponse = await request(httpServer).get('/api/stories').expect(200);
+    expect(listResponse.body).toEqual([]);
+  });
+
   it('GET /api/stories/:storyId returns a story', async () => {
     const story = await createStory('Story to read');
 
@@ -294,7 +361,7 @@ describe('Stories API', () => {
       })
       .expect(200);
     expect(progress.body.state).toMatchObject({
-      version: 1,
+      version: 2,
       journeyInteractionIds: [root.id, child.id, root.id],
       currentInteractionId: root.id,
       visitedInteractionIds: [root.id, child.id],
@@ -537,6 +604,7 @@ describe('Stories API', () => {
       '<div data-conditional-text-target="next" onclick="alert(1)">' +
       '<button type="button" contenteditable="false" data-conditional-text-link="next">Next</button>' +
       '<p>Conditional clue</p></div>' +
+      '<span data-stat-value="score" data-stat-item="item-1" onclick="alert(1)"></span>' +
       '<iframe src="https://www.youtube-nocookie.com/embed/video-1"></iframe>' +
       '<iframe src="https://evil.example/embed"></iframe><script>alert(1)</script>';
 
@@ -551,6 +619,8 @@ describe('Stories API', () => {
     expect(sanitized).toContain('https://media.example/scene.mp4');
     expect(sanitized).toContain('data-conditional-text-target="next"');
     expect(sanitized).toContain('data-conditional-text-link="next"');
+    expect(sanitized).toContain('data-stat-value="score"');
+    expect(sanitized).toContain('data-stat-item="item-1"');
     expect(sanitized).not.toContain('onclick');
     expect(sanitized).toContain('https://www.youtube-nocookie.com/embed/video-1');
     expect(sanitized).not.toContain('onerror');
@@ -920,6 +990,80 @@ describe('Stories API', () => {
     ]);
   });
 
+  it('creates typed stats, attaches them, and replays effects and conditions', async () => {
+    const story = await createStory();
+    const withRoot = await createInteraction(story.id);
+    const root = withRoot.interactions[0];
+    const withChild = await createInteraction(story.id, { parentId: root.id });
+    const child = withChild.interactions.find(({ id }) => id !== root.id)!;
+
+    const withDefinition = await request(httpServer)
+      .post(`/api/stories/${story.id}/stat-definitions`)
+      .send({ name: 'Score', valueType: 'number' })
+      .expect(201);
+    const definition = (withDefinition.body as StatDefinitionMutationResult).statDefinition;
+    expect(definition).not.toHaveProperty('key');
+    const withAssignment = await request(httpServer)
+      .post(`/api/stories/${story.id}/stats`)
+      .send({
+        statDefinitionId: definition.id,
+        ownerType: 'story',
+        initialValue: 2,
+      })
+      .expect(201);
+    const assignment = (withAssignment.body as Story).stats![0];
+
+    await request(httpServer)
+      .patch(`/api/stories/${story.id}/interactions/${root.id}`)
+      .send({
+        statEffects: [{ statId: assignment.id, operation: 'add', value: 3 }],
+      })
+      .expect(200);
+    await request(httpServer)
+      .patch(`/api/stories/${story.id}/interactions/${child.id}/triggers/${child.triggers[0].id}`)
+      .send({
+        conditions: [{ statId: assignment.id, operator: 'gte', value: 5 }],
+      })
+      .expect(200);
+
+    const progress = await request(httpServer)
+      .patch(`/api/stories/${story.id}/progress`)
+      .send({ journeyInteractionIds: [root.id] })
+      .expect(200);
+    expect(progress.body.state).toMatchObject({
+      version: 2,
+      statValues: { [assignment.id]: 5 },
+    });
+
+    await request(httpServer)
+      .post(`/api/stories/${story.id}/stats`)
+      .send({
+        statDefinitionId: definition.id,
+        ownerType: 'story',
+        initialValue: 9,
+      })
+      .expect(400);
+    await request(httpServer)
+      .patch(`/api/stories/${story.id}/interactions/${root.id}`)
+      .send({
+        statEffects: [{ statId: assignment.id, operation: 'set', value: false }],
+      })
+      .expect(400);
+
+    const deleted = await request(httpServer)
+      .delete(`/api/stories/${story.id}/stats/${assignment.id}`)
+      .expect(200);
+    expect((deleted.body as Story).interactions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: root.id, statEffects: [] }),
+        expect.objectContaining({
+          id: child.id,
+          triggers: [expect.objectContaining({ conditions: [] })],
+        }),
+      ]),
+    );
+  });
+
   it('creates and updates character stats, then uses them in effects and conditions', async () => {
     const story = await createStory();
     const graph = await createInteraction(story.id);
@@ -1171,31 +1315,58 @@ describe('Stories API', () => {
         ],
       })
       .expect(201);
+    const lockedDefinition = await request(httpServer)
+      .post(`/api/stories/${story.id}/stat-definitions`)
+      .send({ name: 'Locked', valueType: 'boolean' })
+      .expect(201);
+    const extendedDefinition = await request(httpServer)
+      .patch(`/api/stories/${story.id}/item-definitions/${itemDefinition.body.itemDefinition.id}`)
+      .send({
+        stats: [
+          itemDefinition.body.itemDefinition.stats[0],
+          {
+            id: 'client-temporary-assignment-id',
+            statDefinitionId: lockedDefinition.body.statDefinition.id,
+            initialValue: true,
+          },
+        ],
+      })
+      .expect(200);
+    expect(extendedDefinition.body.itemDefinition.stats).toEqual([
+      itemDefinition.body.itemDefinition.stats[0],
+      expect.objectContaining({
+        statDefinitionId: lockedDefinition.body.statDefinition.id,
+        initialValue: true,
+      }),
+    ]);
+    expect(extendedDefinition.body.itemDefinition.stats[1].id).not.toBe(
+      'client-temporary-assignment-id',
+    );
     const item = await request(httpServer)
       .post(`/api/stories/${story.id}/characters/${character.body.character.id}/items`)
       .send({ itemDefinitionId: itemDefinition.body.itemDefinition.id })
       .expect(201);
     const effect = {
       itemId: item.body.item.id,
-      statDefinitionId: statDefinition.body.statDefinition.id,
+      statId: itemDefinition.body.itemDefinition.stats[0].id,
       operation: 'add',
       value: -2,
     };
 
     const updated = await request(httpServer)
       .patch(`/api/stories/${story.id}/interactions/${interaction.id}`)
-      .send({ itemStatEffects: [effect] })
+      .send({ statEffects: [effect] })
       .expect(200);
-    expect(updated.body.interaction.itemStatEffects).toEqual([effect]);
+    expect(updated.body.interaction.statEffects).toEqual([effect]);
 
     await request(httpServer)
       .patch(`/api/stories/${story.id}/interactions/${interaction.id}`)
-      .send({ itemStatEffects: [effect, { ...effect, value: 1 }] })
+      .send({ statEffects: [effect, { ...effect, value: 1 }] })
       .expect(400);
     await request(httpServer)
       .patch(`/api/stories/${story.id}/interactions/${interaction.id}`)
       .send({
-        itemStatEffects: [{ ...effect, statDefinitionId: 'unassigned-stat-definition' }],
+        statEffects: [{ ...effect, statId: 'unassigned-stat-assignment' }],
       })
       .expect(400);
 
@@ -1205,7 +1376,7 @@ describe('Stories API', () => {
       .expect(200);
     const loaded = await request(httpServer).get(`/api/stories/${story.id}`).expect(200);
     expect(
-      (loaded.body as Story).interactions.find(({ id }) => id === interaction.id)?.itemStatEffects,
+      (loaded.body as Story).interactions.find(({ id }) => id === interaction.id)?.statEffects,
     ).toEqual([]);
   });
 
@@ -1323,16 +1494,16 @@ describe('Stories API', () => {
     await request(httpServer)
       .patch(`/api/stories/${story.id}/interactions/${interaction.id}`)
       .send({
-        statEffects: [{ statId: stat.body.stat.id, operation: 'add', value: 1 }],
-        itemEffects: [{ itemId: item.body.item.id, operation: 'obtain' }],
-        itemStatEffects: [
+        statEffects: [
+          { statId: stat.body.stat.id, operation: 'add', value: 1 },
           {
             itemId: item.body.item.id,
-            statDefinitionId: statDefinition.body.statDefinition.id,
+            statId: itemDefinition.body.itemDefinition.stats[0].id,
             operation: 'add',
             value: -1,
           },
         ],
+        itemEffects: [{ itemId: item.body.item.id, operation: 'obtain' }],
       })
       .expect(200);
     await request(httpServer)
@@ -1351,7 +1522,9 @@ describe('Stories API', () => {
       )
       .expect(200);
     expect(withoutStat.body.characters[0].stats).toEqual([]);
-    expect(withoutStat.body.interactions[0].statEffects).toEqual([]);
+    expect(withoutStat.body.interactions[0].statEffects).toEqual([
+      expect.objectContaining({ itemId: item.body.item.id }),
+    ]);
     expect(withoutStat.body.interactions[0].triggers[0].conditions).toEqual([]);
 
     const withoutItem = await request(httpServer)
@@ -1361,7 +1534,7 @@ describe('Stories API', () => {
       .expect(200);
     expect(withoutItem.body.characters[0].items).toEqual([]);
     expect(withoutItem.body.interactions[0].itemEffects).toEqual([]);
-    expect(withoutItem.body.interactions[0].itemStatEffects).toEqual([]);
+    expect(withoutItem.body.interactions[0].statEffects).toEqual([]);
   });
 
   it('rejects foreign stat references and duplicate effects', async () => {

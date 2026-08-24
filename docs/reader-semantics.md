@@ -15,8 +15,12 @@ getAvailableInteractions(
   visitedIds: string[],
   currentLocationId?: string | null,
   currentCharacterIds?: string[],
-  statValues?: Readonly<Record<string, number>>,
+  statValues?: Readonly<Record<string, number | boolean | string>>,
   currentDateTime?: string,
+  ownedItemDefinitionIds?: readonly string[],
+  itemStatValues?: Readonly<
+    Record<string, Readonly<Record<string, number | boolean | string>>>
+  >,
 ): Interaction[];
 ```
 
@@ -25,9 +29,12 @@ getAvailableInteractions(
 `currentLocationId` is the reader's current authored location, or `null` before
 one has been established.
 `currentCharacterIds` lists the characters present in the current interaction.
-`statValues` contains the current numeric value of each character stat.
+`statValues` contains the current typed value of each non-item stat assignment.
 `currentDateTime` is the current story-local calendar value. When omitted, the
 story's authored `startDateTime` is used.
+`ownedItemDefinitionIds` contains the definitions represented in the current
+reader inventory. `itemStatValues` is keyed first by exact item instance and then by its
+item-definition assignment id.
 
 ## Trigger Eligibility
 
@@ -55,7 +62,9 @@ For conditions:
   interaction;
 - every `isPresent: false` condition must reference a character absent from the
   current interaction;
-- stat conditions compare the current value with `=`, `<`, `<=`, `>`, or `>=`;
+- typed stat conditions compare matching values with `=` or `!=`; numeric stats
+  additionally support `<`, `<=`, `>`, and `>=`. A missing or
+  mismatched value fails the condition;
 - temporal conditions compare the current story-local date, weekday, and time
   with their authored alternatives;
 - conditions on the same trigger are evaluated as AND.
@@ -93,27 +102,34 @@ presence does not carry over: the reader evaluates character conditions against
 the current interaction only. Before an interaction has been selected, the
 current cast is empty.
 
-## Character Stats
+## Typed Stats
 
-Reader stat state starts from every authored stat's `initialValue`. Selecting an
-interaction applies each stat definition's positive or negative hourly change
-for the interaction duration. It then applies explicit effects in authored
-order: `add` increments the current value and `set` replaces it. The next choices
-are evaluated against the resulting values. A rate is prorated by minutes, so
-`-2` per hour changes a stat by `-0.5` during a 15-minute interaction.
+Reader stat state starts from every authored assignment's `initialValue`. Story,
+character, and location assignments are keyed directly by assignment id. Every
+exact item instance independently starts with the assignments on its item
+definition and is keyed first by instance id and then by assignment id. A
+character assignment is a characteristic in the interface but follows these
+same replay rules.
+
+Selecting an interaction applies each numeric stat definition's positive or
+negative hourly change for the interaction duration. It then applies explicit
+effects in authored order: `add` increments a numeric value and `set` replaces a
+number, boolean, or string with a matching value. The next choices are evaluated
+against the resulting values. A rate is prorated by minutes, so `-2` per hour
+changes a numeric stat by `-0.5` during a 15-minute interaction.
 
 Starting simulation from a specific interaction applies that interaction's
 time-based change, stat effects, and inventory effects. Restart rebuilds the
 same direct-start state, and stepping backward replays the remaining journey so
 changes are reversible without maintaining an inverse log.
 
-## Item Stats
+### Exact item values
 
 Every item instance starts with an independent copy of the initial values
 assigned by its item definition. Reusing one definition for several instances
 does not share their runtime values. The reusable stat definition's hourly rate
 is applied to every matching instance as story time advances, then the selected
-interaction applies its ordered item-stat `add` or `set` effects.
+interaction applies its ordered stat `add` or `set` effects.
 
 Item stat effects target an exact item instance and one stat exposed by that
 instance's definition. The values are replayed for the complete authored set of
@@ -122,6 +138,11 @@ to the player. Authored instances are resolved from character or location roots
 and their descendants, so moving an instance within that graph does not detach
 it from its definition or runtime stat defaults. A location root is not
 automatically treated as reader-owned inventory.
+
+Replay keys values by assignment id so two owners can use the same reusable
+definition without sharing state. Item values additionally require an exact item
+instance id. Rich-text interpolation reads these replayed maps through sanitized
+inert markers and does not evaluate expressions.
 
 ## Story Time
 
@@ -200,16 +221,20 @@ versioned progress snapshot per user and story. The snapshot is JSON because the
 runtime state evolves as typed conditions and effects are added, while
 `user_id`, `story_id`, and `updated_at` remain relational columns.
 
-Version 1 stores:
+Version 1 historically stores:
 
 - the complete ordered journey, including repeated interaction visits;
 - the current interaction and unique visited-interaction list;
 - current story-local date and time;
 - current location;
-- current character-stat values;
+- current numeric character-stat values;
 - owned item-instance ids.
 - current item-stat values, keyed independently by item instance and stat
   definition.
+
+Version 2 generalizes those fields: `statValues` contains typed non-item
+assignment values, while `itemStatValues` contains typed values keyed
+independently by exact item instance and assignment id.
 
 The ordered journey is authoritative for state that can currently be replayed.
 The API derives current interaction, visited ids, story time, location, and stats
@@ -222,8 +247,10 @@ instance of that definition owned by the target character; losing an absent
 item is a no-op. Legacy exact-instance and unassigned effects remain replayable.
 Deterministic runtime ids preserve both instance and owner across replay,
 backward navigation, and saved progress.
-The same replay reconstructs item stat values from their definition defaults,
-time-based rates, and explicit interaction effects.
+The same replay reconstructs non-item and exact-item stat values from their
+authored defaults, time-based rates, and explicit interaction effects. Existing
+version 1 snapshots remain readable and are rematerialized as version 2 after a
+subsequent save.
 
 The reader reconciles loaded progress with the authored story it fetched:
 interaction and item ids that no longer exist are removed, and replayable
@@ -281,8 +308,8 @@ reader progress behavior instead.
 
 An open Simulation Mode session subscribes to authored-story invalidations. When
 another editor commits a change, the simulation reloads the authorized story and
-replays its current ordered journey. Availability, time, location, stats,
-inventory, item stats, and the current interaction are reconstructed through the
+replays its current ordered journey. Availability, time, location, typed stats,
+inventory, item values, and the current interaction are reconstructed through the
 same deterministic shared operations used for reader progress; simulation still
 does not persist reader progress.
 
@@ -290,7 +317,7 @@ does not persist reader progress.
 
 The MVP reader does not support:
 
-- generic story variables or non-character attributes;
+- calculated stats, formulas, or dependency graphs;
 - probabilities;
 - automatic choices;
 - final interactions;

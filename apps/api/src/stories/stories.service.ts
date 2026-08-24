@@ -16,6 +16,8 @@ import {
   deleteGraphDecorationFromStory,
   deleteTriggerInStory,
   ensureStoryInteractionPositions,
+  getStatValueType,
+  isStatValueOfType,
   normalizeTriggerInputIds,
   updateTriggerInStory,
   updateGraphDecorationInStory,
@@ -37,6 +39,7 @@ import {
 } from '@paralleax/shared';
 import {
   CreateInteractionDto,
+  CreateStatAssignmentDto,
   CreateGraphDecorationDto,
   CreateCharacterDto,
   CreateCharacterItemDto,
@@ -49,6 +52,7 @@ import {
   CreateTriggerDto,
   SaveReaderProgressDto,
   UpdateInteractionDto,
+  UpdateStatAssignmentDto,
   UpdateGraphDecorationDto,
   UpdateCharacterDto,
   UpdateCharacterStatDto,
@@ -64,6 +68,16 @@ import {
 import { sanitizeRichText } from './rich-text';
 import { StoriesRepository } from './stories.repository';
 import { buildGraphDecoration } from './application/graph-decorations';
+import {
+  buildStatCondition,
+  createStatAssignment,
+  createStatDefinition,
+  deleteStatAssignment,
+  deleteStatDefinition,
+  updateStatAssignment,
+  updateStatDefinition,
+  validateStatEffects,
+} from './application/story-stats';
 import { StoryEventsService, type StoryChangeType } from './story.events';
 
 @Injectable()
@@ -265,16 +279,7 @@ export class StoriesService {
           interaction.characterIds = [...new Set(input.characterIds)];
         }
         if (input.statEffects !== undefined) {
-          const statIds = this.statIds(story);
-          if (input.statEffects.some(({ statId }) => !statIds.has(statId))) {
-            throw new BadRequestException('Stat effects must belong to the same story');
-          }
-          if (
-            new Set(input.statEffects.map(({ statId }) => statId)).size !== input.statEffects.length
-          ) {
-            throw new BadRequestException('An interaction can only affect a stat once');
-          }
-          interaction.statEffects = input.statEffects;
+          interaction.statEffects = validateStatEffects(story, input.statEffects);
         }
         if (input.itemEffects !== undefined) {
           const itemIds = this.itemIds(story);
@@ -299,38 +304,6 @@ export class StoriesService {
             throw new BadRequestException('An interaction can only affect an item once');
           }
           interaction.itemEffects = input.itemEffects;
-        }
-        if (input.itemStatEffects !== undefined) {
-          const items = new Map(
-            [...(story.characters ?? []), ...(story.locations ?? [])].flatMap((owner) =>
-              (owner.items ?? []).map((item) => [item.id, item]),
-            ),
-          );
-          const definitions = new Map(
-            (story.itemDefinitions ?? []).map((definition) => [definition.id, definition]),
-          );
-          if (
-            input.itemStatEffects.some((effect) => {
-              const item = items.get(effect.itemId);
-              return (
-                !item ||
-                !(definitions.get(item.itemDefinitionId)?.stats ?? []).some(
-                  ({ statDefinitionId }) => statDefinitionId === effect.statDefinitionId,
-                )
-              );
-            })
-          ) {
-            throw new BadRequestException(
-              'Item stat effects must reference a stat assigned to the same-story item',
-            );
-          }
-          const effectKeys = input.itemStatEffects.map(
-            ({ itemId, statDefinitionId }) => `${itemId}:${statDefinitionId}`,
-          );
-          if (new Set(effectKeys).size !== effectKeys.length) {
-            throw new BadRequestException('An interaction can only affect an item stat once');
-          }
-          interaction.itemStatEffects = input.itemStatEffects;
         }
         if (input.durationMinutes !== undefined) {
           interaction.durationMinutes = input.durationMinutes;
@@ -552,18 +525,69 @@ export class StoriesService {
     const story = await this.update(
       storyId,
       (story) => {
-        (story.statDefinitions ??= []).push({
-          id: statDefinitionId,
-          name: input.name.trim(),
-          ...(input.category?.trim() ? { category: input.category.trim() } : {}),
-          imageUrl: input.imageUrl?.trim() ?? '',
-          changePerHour: input.changePerHour ?? 0,
+        createStatDefinition(story, statDefinitionId, {
+          ...input,
+          valueType: input.valueType ?? 'number',
         });
         return story;
       },
       userId,
     );
     return this.statDefinitionResult(story, statDefinitionId);
+  }
+  async deleteStatDefinition(
+    storyId: string,
+    statDefinitionId: string,
+    userId: string,
+  ): Promise<Story> {
+    return this.update(
+      storyId,
+      (story) => {
+        deleteStatDefinition(story, statDefinitionId);
+        return story;
+      },
+      userId,
+    );
+  }
+  async createStatAssignment(
+    storyId: string,
+    input: CreateStatAssignmentDto,
+    userId: string,
+  ): Promise<Story> {
+    const id = randomUUID();
+    return this.update(
+      storyId,
+      (story) => {
+        createStatAssignment(story, id, input);
+        return story;
+      },
+      userId,
+    );
+  }
+  async updateStatAssignment(
+    storyId: string,
+    statId: string,
+    input: UpdateStatAssignmentDto,
+    userId: string,
+  ): Promise<Story> {
+    return this.update(
+      storyId,
+      (story) => {
+        updateStatAssignment(story, statId, input.initialValue);
+        return story;
+      },
+      userId,
+    );
+  }
+  async deleteStatAssignment(storyId: string, statId: string, userId: string): Promise<Story> {
+    return this.update(
+      storyId,
+      (story) => {
+        deleteStatAssignment(story, statId);
+        return story;
+      },
+      userId,
+    );
   }
   async createItemDefinition(
     storyId: string,
@@ -607,23 +631,12 @@ export class StoriesService {
         }
         if (input.imageUrl !== undefined) definition.imageUrl = input.imageUrl.trim();
         if (input.stats !== undefined) {
-          definition.stats = this.itemDefinitionStats(story, input.stats);
-          const assignedStatIds = new Set(
-            definition.stats.map(({ statDefinitionId }) => statDefinitionId),
-          );
-          const affectedItemIds = new Set(
-            [...(story.characters ?? []), ...(story.locations ?? [])].flatMap((owner) =>
-              (owner.items ?? [])
-                .filter(({ itemDefinitionId }) => itemDefinitionId === definition.id)
-                .map(({ id }) => id),
-            ),
-          );
-          for (const interaction of story.interactions) {
-            interaction.itemStatEffects = (interaction.itemStatEffects ?? []).filter(
-              ({ itemId, statDefinitionId }) =>
-                !affectedItemIds.has(itemId) || assignedStatIds.has(statDefinitionId),
-            );
+          const nextStats = this.itemDefinitionStats(story, input.stats, definition.stats ?? []);
+          const nextIds = new Set(nextStats.map(({ id }) => id));
+          for (const current of definition.stats ?? []) {
+            if (!nextIds.has(current.id)) deleteStatAssignment(story, current.id);
           }
+          definition.stats = nextStats;
         }
         return story;
       },
@@ -640,15 +653,7 @@ export class StoriesService {
     const story = await this.update(
       storyId,
       (story) => {
-        const definition = this.statDefinition(story, statDefinitionId);
-        if (input.name !== undefined) definition.name = input.name.trim();
-        if (input.category !== undefined) {
-          const category = input.category.trim();
-          if (category) definition.category = category;
-          else delete definition.category;
-        }
-        if (input.imageUrl !== undefined) definition.imageUrl = input.imageUrl.trim();
-        if (input.changePerHour !== undefined) definition.changePerHour = input.changePerHour;
+        updateStatDefinition(story, statDefinitionId, input);
         return story;
       },
       userId,
@@ -695,19 +700,10 @@ export class StoriesService {
     const story = await this.update(
       storyId,
       (story) => {
-        const character = this.character(story, characterId);
-        this.statDefinition(story, input.statDefinitionId);
-        if (
-          (character.stats ?? []).some(
-            ({ statDefinitionId }) => statDefinitionId === input.statDefinitionId,
-          )
-        ) {
-          throw new BadRequestException('Character already has this stat');
-        }
-        (character.stats ??= []).push({
-          id: statId,
-          statDefinitionId: input.statDefinitionId,
-          initialValue: input.initialValue,
+        createStatAssignment(story, statId, {
+          ...input,
+          ownerType: 'character',
+          ownerId: characterId,
         });
         return story;
       },
@@ -839,7 +835,7 @@ export class StoriesService {
       storyId,
       (story) => {
         const stat = this.stat(story, characterId, statId);
-        if (input.initialValue !== undefined) stat.initialValue = input.initialValue;
+        updateStatAssignment(story, stat.id, input.initialValue);
         return story;
       },
       userId,
@@ -855,19 +851,8 @@ export class StoriesService {
     return this.update(
       storyId,
       (story) => {
-        const character = this.character(story, characterId);
         this.stat(story, characterId, statId);
-        character.stats = (character.stats ?? []).filter(({ id }) => id !== statId);
-        for (const interaction of story.interactions) {
-          interaction.statEffects = (interaction.statEffects ?? []).filter(
-            ({ statId: affectedStatId }) => affectedStatId !== statId,
-          );
-          for (const trigger of interaction.triggers) {
-            trigger.conditions = trigger.conditions.filter(
-              (condition) => !('statId' in condition) || condition.statId !== statId,
-            );
-          }
-        }
+        deleteStatAssignment(story, statId);
         return story;
       },
       userId,
@@ -898,9 +883,14 @@ export class StoriesService {
           interaction.itemEffects = (interaction.itemEffects ?? []).filter(
             ({ itemId: affectedItemId }) => affectedItemId !== itemId,
           );
-          interaction.itemStatEffects = (interaction.itemStatEffects ?? []).filter(
+          interaction.statEffects = (interaction.statEffects ?? []).filter(
             ({ itemId: affectedItemId }) => affectedItemId !== itemId,
           );
+          for (const trigger of interaction.triggers) {
+            trigger.conditions = trigger.conditions.filter(
+              (condition) => !('statId' in condition) || condition.itemId !== itemId,
+            );
+          }
         }
         return story;
       },
@@ -947,11 +937,6 @@ export class StoriesService {
     if (!item) throw new NotFoundException('Character item not found');
     return item;
   }
-  private statIds(story: Story) {
-    return new Set(
-      (story.characters ?? []).flatMap((character) => (character.stats ?? []).map(({ id }) => id)),
-    );
-  }
   private itemIds(story: Story) {
     return new Set(
       [...(story.characters ?? []), ...(story.locations ?? [])].flatMap((owner) =>
@@ -961,16 +946,37 @@ export class StoriesService {
   }
   private itemDefinitionStats(
     story: Story,
-    stats: Array<{ statDefinitionId: string; initialValue: number }>,
+    stats: Array<{ id?: string; statDefinitionId: string; initialValue: unknown }>,
+    existing: Array<{ id: string; statDefinitionId: string; initialValue: unknown }> = [],
   ) {
-    const definitionIds = new Set((story.statDefinitions ?? []).map(({ id }) => id));
-    if (stats.some(({ statDefinitionId }) => !definitionIds.has(statDefinitionId))) {
+    const definitions = new Map(
+      (story.statDefinitions ?? []).map((definition) => [definition.id, definition]),
+    );
+    if (stats.some(({ statDefinitionId }) => !definitions.has(statDefinitionId))) {
       throw new BadRequestException('Item stats must belong to the same story');
     }
     if (new Set(stats.map(({ statDefinitionId }) => statDefinitionId)).size !== stats.length) {
       throw new BadRequestException('An item definition can only assign a stat once');
     }
-    return stats;
+    return stats.map((stat) => {
+      const definition = definitions.get(stat.statDefinitionId)!;
+      const existingAssignment = existing.find(
+        ({ statDefinitionId }) => statDefinitionId === stat.statDefinitionId,
+      );
+      if (
+        (typeof stat.initialValue !== 'number' &&
+          typeof stat.initialValue !== 'boolean' &&
+          typeof stat.initialValue !== 'string') ||
+        !isStatValueOfType(stat.initialValue, getStatValueType(definition))
+      ) {
+        throw new BadRequestException(`Stat value must be a ${getStatValueType(definition)}`);
+      }
+      return {
+        id: existingAssignment?.id ?? randomUUID(),
+        statDefinitionId: stat.statDefinitionId,
+        initialValue: stat.initialValue,
+      };
+    });
   }
   private assertInteractionReferences(story: Story, inputInteractionIds: string[]) {
     const interactionIds = new Set(story.interactions.map(({ id }) => id));
@@ -982,7 +988,6 @@ export class StoriesService {
     const interactionIds = new Set(story.interactions.map(({ id }) => id));
     const locationIds = new Set((story.locations ?? []).map(({ id }) => id));
     const characterIds = new Set((story.characters ?? []).map(({ id }) => id));
-    const statIds = this.statIds(story);
     const itemDefinitionIds = new Set((story.itemDefinitions ?? []).map(({ id }) => id));
     return conditions.map((condition) => {
       const isInteractionCondition =
@@ -1047,6 +1052,14 @@ export class StoriesService {
           isOwned: condition.isOwned!,
         };
       }
+      if (isStatCondition) {
+        return buildStatCondition(story, {
+          statId: condition.statId!,
+          ...(condition.itemId ? { itemId: condition.itemId } : {}),
+          operator: condition.operator!,
+          value: condition.value,
+        });
+      }
       if (isTemporalCondition) {
         const temporal = condition.temporal!;
         const dates = [...new Set(temporal.dates ?? [])];
@@ -1076,14 +1089,7 @@ export class StoriesService {
           },
         };
       }
-      if (!statIds.has(condition.statId!)) {
-        throw new BadRequestException('Trigger references must belong to the same story');
-      }
-      return {
-        statId: condition.statId!,
-        operator: condition.operator!,
-        value: condition.value!,
-      };
+      throw new BadRequestException('Trigger condition is invalid');
     });
   }
   private interactionResult(story: Story, interactionId: string): InteractionMutationResult {

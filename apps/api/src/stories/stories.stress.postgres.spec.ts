@@ -95,7 +95,13 @@ function largeStory(count: number): Story {
       id: `item-definition-${index}`,
       name: `Item ${index}`,
       description: `Reusable item ${index}`,
-      stats: [{ statDefinitionId: `stat-definition-${index % 10}`, initialValue: index }],
+      stats: [
+        {
+          id: `item-definition-${index}-stat`,
+          statDefinitionId: `stat-definition-${index % 10}`,
+          initialValue: index,
+        },
+      ],
     })),
     characters: Array.from({ length: 20 }, (_, index) => ({
       id: `character-${index}`,

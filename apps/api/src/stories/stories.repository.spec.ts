@@ -46,7 +46,13 @@ function graphStory(): Story {
     { id: 'location-1', name: 'Harbor', description: 'A quiet harbor.', category: 'Coast' },
   ];
   saved.statDefinitions = [
-    { id: 'definition-1', name: 'Trust', category: 'Relationships', changePerHour: -0.5 },
+    {
+      id: 'definition-1',
+      name: 'Trust',
+      valueType: 'number',
+      category: 'Relationships',
+      changePerHour: -0.5,
+    },
   ];
   saved.itemDefinitions = [
     {
@@ -54,7 +60,7 @@ function graphStory(): Story {
       name: 'Key',
       description: 'A brass key.',
       category: 'Quest items',
-      stats: [{ statDefinitionId: 'definition-1', initialValue: 8 }],
+      stats: [{ id: 'item-stat-1', statDefinitionId: 'definition-1', initialValue: 8 }],
     },
   ];
   saved.characters = [
@@ -78,16 +84,11 @@ function graphStory(): Story {
       position: { x: 10, y: 20 },
       locationId: 'location-1',
       characterIds: ['character-1'],
-      statEffects: [{ statId: 'stat-1', operation: 'add', value: 1 }],
-      itemEffects: [{ itemId: 'item-1', operation: 'obtain' }],
-      itemStatEffects: [
-        {
-          itemId: 'item-1',
-          statDefinitionId: 'definition-1',
-          operation: 'add',
-          value: -1,
-        },
+      statEffects: [
+        { statId: 'stat-1', operation: 'add', value: 1 },
+        { itemId: 'item-1', statId: 'item-stat-1', operation: 'add', value: -1 },
       ],
+      itemEffects: [{ itemId: 'item-1', operation: 'obtain' }],
       durationMinutes: 15,
       triggers: [{ id: 'trigger-1', inputInteractionIds: [], conditions: [] }],
     },
@@ -97,7 +98,6 @@ function graphStory(): Story {
       body: 'Continue here',
       position: { x: 30, y: 40 },
       durationMinutes: 0,
-      itemStatEffects: [],
       triggers: [
         {
           id: 'trigger-2',
@@ -205,6 +205,7 @@ function relationalRead(query: jest.Mock, saved = story()) {
             story_id: saved.id,
             interaction_id: interaction.id,
             stat_id: effect.statId,
+            item_id: effect.itemId ?? null,
             operation: effect.operation,
             value: effect.value,
             sort_order: index,
@@ -225,30 +226,68 @@ function relationalRead(query: jest.Mock, saved = story()) {
         ),
       });
     }
-    if (sql.includes('FROM character_stats')) {
-      return Promise.resolve({
-        rows: (saved.characters ?? []).flatMap((character) =>
-          (character.stats ?? []).map((stat, index) => ({
-            id: stat.id,
-            story_id: saved.id,
-            character_id: character.id,
-            stat_definition_id: stat.statDefinitionId,
-            initial_value: stat.initialValue,
-            sort_order: index,
-          })),
-        ),
-      });
-    }
     if (sql.includes('FROM stat_definitions')) {
       return Promise.resolve({
         rows: (saved.statDefinitions ?? []).map((definition, index) => ({
           id: definition.id,
           story_id: saved.id,
           name: definition.name,
+          value_type: definition.valueType,
           category: definition.category ?? '',
           image_url: definition.imageUrl ?? '',
           change_per_hour: definition.changePerHour ?? 0,
           sort_order: index,
+        })),
+      });
+    }
+    if (sql.includes('FROM stat_assignments')) {
+      const assignments = [
+        ...(saved.stats ?? []).map((stat, index) => ({
+          stat,
+          owner_type: 'story',
+          character_id: null,
+          location_id: null,
+          item_definition_id: null,
+          sort_order: index,
+        })),
+        ...(saved.characters ?? []).flatMap((character) =>
+          (character.stats ?? []).map((stat, index) => ({
+            stat,
+            owner_type: 'character',
+            character_id: character.id,
+            location_id: null,
+            item_definition_id: null,
+            sort_order: index,
+          })),
+        ),
+        ...(saved.locations ?? []).flatMap((location) =>
+          (location.stats ?? []).map((stat, index) => ({
+            stat,
+            owner_type: 'location',
+            character_id: null,
+            location_id: location.id,
+            item_definition_id: null,
+            sort_order: index,
+          })),
+        ),
+        ...(saved.itemDefinitions ?? []).flatMap((definition) =>
+          (definition.stats ?? []).map((stat, index) => ({
+            stat,
+            owner_type: 'item_definition',
+            character_id: null,
+            location_id: null,
+            item_definition_id: definition.id,
+            sort_order: index,
+          })),
+        ),
+      ];
+      return Promise.resolve({
+        rows: assignments.map(({ stat, ...owner }) => ({
+          id: stat.id,
+          story_id: saved.id,
+          stat_definition_id: stat.statDefinitionId,
+          initial_value: stat.initialValue,
+          ...owner,
         })),
       });
     }
@@ -261,7 +300,6 @@ function relationalRead(query: jest.Mock, saved = story()) {
           description: definition.description,
           category: definition.category ?? '',
           image_url: definition.imageUrl ?? '',
-          stats: definition.stats ?? [],
           sort_order: index,
         })),
       });
@@ -350,7 +388,6 @@ function relationalRead(query: jest.Mock, saved = story()) {
           position_y: interaction.position.y,
           location_id: interaction.locationId ?? null,
           duration_minutes: interaction.durationMinutes ?? 0,
-          item_stat_effects: interaction.itemStatEffects ?? [],
           sort_order: index,
         })),
       });
@@ -467,6 +504,76 @@ describe('StoriesRepository', () => {
     ]);
   });
 
+  it('assembles typed stat definitions, owner assignments, and interaction effects', async () => {
+    const saved = graphStory();
+    saved.statDefinitions = [
+      {
+        id: 'alarm-definition',
+        name: 'Alarm',
+        valueType: 'boolean',
+        changePerHour: 0,
+      },
+      {
+        id: 'charge-definition',
+        name: 'Charge',
+        valueType: 'number',
+        changePerHour: 0,
+      },
+    ];
+    saved.stats = [
+      {
+        id: 'story-stat-1',
+        statDefinitionId: 'alarm-definition',
+        initialValue: false,
+      },
+    ];
+    saved.characters![0].stats = [
+      {
+        id: 'character-stat-1',
+        statDefinitionId: 'charge-definition',
+        initialValue: 2,
+      },
+    ];
+    saved.itemDefinitions![0].stats = [
+      {
+        id: 'item-stat-1',
+        statDefinitionId: 'charge-definition',
+        initialValue: 10,
+      },
+    ];
+    saved.interactions[0].statEffects = [
+      {
+        statId: 'story-stat-1',
+        operation: 'set',
+        value: true,
+      },
+      {
+        statId: 'item-stat-1',
+        itemId: 'item-1',
+        operation: 'add',
+        value: -1,
+      },
+    ];
+    relationalRead(mockQuery, saved);
+
+    const loaded = await repository().find(saved.id, ownerId);
+
+    expect(loaded?.statDefinitions).toEqual(saved.statDefinitions);
+    expect(loaded?.stats).toEqual(saved.stats);
+    expect(loaded?.characters?.[0]).toMatchObject({
+      id: 'character-1',
+      stats: saved.characters![0].stats,
+    });
+    expect(loaded?.itemDefinitions?.[0]).toMatchObject({
+      id: 'item-definition-1',
+      stats: saved.itemDefinitions![0].stats,
+    });
+    expect(loaded?.interactions[0]).toMatchObject({
+      id: 'interaction-1',
+      statEffects: saved.interactions[0].statEffects,
+    });
+  });
+
   it('returns no stories without querying graph tables when metadata is empty', async () => {
     mockQuery.mockResolvedValue({ rows: [] });
     await expect(repository().list(ownerId)).resolves.toEqual([]);
@@ -550,24 +657,15 @@ describe('StoriesRepository', () => {
     );
     expect(mockClientQuery).toHaveBeenCalledWith(
       expect.stringContaining('INSERT INTO stat_definitions'),
-      ['definition-1', saved.id, 'Trust', 'Relationships', '', -0.5, 0],
+      ['definition-1', saved.id, 'Trust', 'number', 'Relationships', '', -0.5, 0],
     );
     expect(mockClientQuery).toHaveBeenCalledWith(
       expect.stringContaining('INSERT INTO item_definitions'),
-      [
-        'item-definition-1',
-        saved.id,
-        'Key',
-        'A brass key.',
-        'Quest items',
-        '',
-        JSON.stringify(saved.itemDefinitions?.[0].stats),
-        0,
-      ],
+      ['item-definition-1', saved.id, 'Key', 'A brass key.', 'Quest items', '', 0],
     );
     expect(mockClientQuery).toHaveBeenCalledWith(
-      expect.stringContaining('INSERT INTO character_stats'),
-      ['stat-1', saved.id, 'character-1', 'definition-1', 2, 0],
+      expect.stringContaining('INSERT INTO stat_assignments'),
+      [expect.stringContaining('"id":"stat-1"')],
     );
     expect(mockClientQuery).toHaveBeenCalledWith(
       expect.stringContaining('INSERT INTO item_instances'),
@@ -631,6 +729,50 @@ describe('StoriesRepository', () => {
       [saved.id, 'Updated transactionally', '2026-01-02T00:00:00.000Z'],
     );
     expect(mockClientQuery).toHaveBeenCalledWith('COMMIT');
+    expect(mockClientQuery).not.toHaveBeenCalledWith(
+      'DELETE FROM stat_definitions WHERE story_id = $1',
+      [saved.id],
+    );
+  });
+
+  it('writes typed stat effects without replacing unchanged definitions or assignments', async () => {
+    const saved = graphStory();
+    saved.stats = [
+      {
+        id: 'story-stat-1',
+        statDefinitionId: 'definition-1',
+        initialValue: 0,
+      },
+    ];
+    relationalRead(mockClientQuery, saved);
+
+    await repository().mutate(
+      saved.id,
+      (value) => {
+        value.interactions[0].statEffects = [
+          {
+            statId: 'story-stat-1',
+            operation: 'set',
+            value: 5,
+          },
+        ];
+        return value;
+      },
+      ownerId,
+    );
+
+    expect(mockClientQuery).not.toHaveBeenCalledWith(
+      'DELETE FROM stat_assignments WHERE story_id = $1',
+      [saved.id],
+    );
+    expect(mockClientQuery).not.toHaveBeenCalledWith(
+      'DELETE FROM stat_definitions WHERE story_id = $1',
+      [saved.id],
+    );
+    expect(mockClientQuery).toHaveBeenCalledWith(
+      expect.stringContaining('INSERT INTO interaction_stat_effects'),
+      [saved.id, 'interaction-1', 'story-stat-1', null, 'set', JSON.stringify(5), 0],
+    );
   });
 
   it('persists interaction and trigger graph differences', async () => {

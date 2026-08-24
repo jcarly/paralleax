@@ -1,8 +1,9 @@
-import type { ItemDefinition, StatDefinition } from '@paralleax/shared';
+import { getStatValueType, type ItemDefinition, type StatDefinition } from '@paralleax/shared';
 import { useTranslation } from 'react-i18next';
 import { CategoryField } from './CategoryField';
 import { ImageUrlField } from './ImageUrlField';
 import { RemoveRowButton } from './RemoveRowButton';
+import { StatValueField } from './StatValueField';
 
 export function ItemDefinitionInspector({
   itemDefinition,
@@ -68,7 +69,15 @@ export function ItemDefinitionInspector({
             const candidate = statDefinitions.find(
               ({ id }) => !itemStats.some(({ statDefinitionId }) => statDefinitionId === id),
             )!;
-            const stats = [...itemStats, { statDefinitionId: candidate.id, initialValue: 0 }];
+            const valueType = getStatValueType(candidate);
+            const stats = [
+              ...itemStats,
+              {
+                id: crypto.randomUUID(),
+                statDefinitionId: candidate.id,
+                initialValue: valueType === 'number' ? 0 : valueType === 'boolean' ? false : '',
+              },
+            ];
             onChange({ ...itemDefinition, stats });
             void onPatch(itemDefinition.id, { stats });
           }}
@@ -82,8 +91,14 @@ export function ItemDefinitionInspector({
             aria-label={t('inspector.itemStat')}
             value={stat.statDefinitionId}
             onChange={(event) => {
+              const definition = statDefinitions.find(({ id }) => id === event.target.value)!;
+              const valueType = getStatValueType(definition);
               const stats = [...itemStats];
-              stats[index] = { ...stat, statDefinitionId: event.target.value };
+              stats[index] = {
+                ...stat,
+                statDefinitionId: definition.id,
+                initialValue: valueType === 'number' ? 0 : valueType === 'boolean' ? false : '',
+              };
               onChange({ ...itemDefinition, stats });
               void onPatch(itemDefinition.id, { stats });
             }}
@@ -101,18 +116,23 @@ export function ItemDefinitionInspector({
               </option>
             ))}
           </select>
-          <input
-            aria-label={t('inspector.itemStatInitialValue')}
-            type="number"
+          <StatValueField
+            ariaLabel={t('inspector.itemStatInitialValue')}
             value={stat.initialValue}
-            onChange={(event) => {
+            valueType={getStatValueType(
+              statDefinitions.find(({ id }) => id === stat.statDefinitionId) ?? {
+                id: stat.statDefinitionId,
+                name: stat.statDefinitionId,
+              },
+            )}
+            onChange={(initialValue) => {
               const stats = [...itemStats];
-              stats[index] = { ...stat, initialValue: Number(event.target.value) };
+              stats[index] = { ...stat, initialValue };
               onChange({ ...itemDefinition, stats });
             }}
-            onBlur={(event) => {
+            onBlur={(initialValue) => {
               const stats = [...itemStats];
-              stats[index] = { ...stat, initialValue: Number(event.target.value) };
+              stats[index] = { ...stat, initialValue };
               void onPatch(itemDefinition.id, { stats });
             }}
           />

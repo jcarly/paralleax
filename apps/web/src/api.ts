@@ -1,9 +1,12 @@
 import type {
   CharacterMutationResult,
+  ChoiceScriptImportReport,
+  ChoiceScriptSourceFile,
   CommentAnchor,
   CharacterItemMutationResult,
   CharacterStatMutationResult,
   CreateCharacterInput,
+  CreateStatAssignmentInput,
   CreateCharacterItemInput,
   CreateCharacterStatInput,
   CreateInteractionInput,
@@ -24,6 +27,7 @@ import type {
   StorySummary,
   TriggerMutationResult,
   UpdateInteractionInput,
+  UpdateStatAssignmentInput,
   UpdateGraphDecorationInput,
   UpdateItemDefinitionInput,
   UpdateCharacterInput,
@@ -94,6 +98,10 @@ export interface ManagedUser {
 }
 type InteractionSaveResponse = InteractionMutationResult | Story;
 type TriggerSaveResponse = TriggerMutationResult | Story;
+export interface ChoiceScriptImportResponse {
+  story: Story;
+  report: ChoiceScriptImportReport;
+}
 export const api = {
   me: () => request<AuthUser>('/auth/me'),
   register: (email: string, password: string, accessCode?: string) =>
@@ -148,6 +156,11 @@ export const api = {
     request<Story>('/stories', { method: 'POST', body: JSON.stringify({ title }) }),
   createDemoStory: () =>
     request<Story>('/stories/demo', { method: 'POST', body: JSON.stringify({}) }),
+  importChoiceScript: (files: ChoiceScriptSourceFile[]) =>
+    request<ChoiceScriptImportResponse>('/stories/imports/choicescript', {
+      method: 'POST',
+      body: JSON.stringify({ files }),
+    }),
   renameStory: (id: string, title: string) =>
     request<Story>(`/stories/${id}`, { method: 'PATCH', body: JSON.stringify({ title }) }),
   updateStory: (id: string, input: UpdateStoryInput) =>
@@ -243,6 +256,24 @@ export const api = {
       `/stories/${storyId}/stat-definitions/${statDefinitionId}`,
       { method: 'PATCH', body: JSON.stringify(input) },
     ),
+  deleteStatDefinition: (storyId: string, statDefinitionId: string) =>
+    request<Story>(`/stories/${storyId}/stat-definitions/${statDefinitionId}`, {
+      method: 'DELETE',
+    }),
+  createStatAssignment: (storyId: string, input: CreateStatAssignmentInput) =>
+    request<Story>(`/stories/${storyId}/stats`, {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
+  updateStatAssignment: (storyId: string, statId: string, input: UpdateStatAssignmentInput) =>
+    request<Story>(`/stories/${storyId}/stats/${statId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(input),
+    }),
+  deleteStatAssignment: (storyId: string, statId: string) =>
+    request<Story>(`/stories/${storyId}/stats/${statId}`, {
+      method: 'DELETE',
+    }),
   createItemDefinition: (storyId: string, input: CreateItemDefinitionInput) =>
     request<ItemDefinitionMutationResult>(`/stories/${storyId}/item-definitions`, {
       method: 'POST',

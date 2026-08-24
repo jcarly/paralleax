@@ -12,6 +12,7 @@ import {
 } from '@nestjs/common';
 import {
   CreateInteractionDto,
+  CreateStatAssignmentDto,
   CreateGraphDecorationDto,
   CreateCharacterDto,
   CreateCharacterItemDto,
@@ -21,9 +22,11 @@ import {
   MoveItemInstanceDto,
   CreateStatDefinitionDto,
   CreateStoryDto,
+  ImportChoiceScriptDto,
   CreateTriggerDto,
   SaveReaderProgressDto,
   UpdateInteractionDto,
+  UpdateStatAssignmentDto,
   UpdateGraphDecorationDto,
   UpdateCharacterDto,
   UpdateCharacterStatDto,
@@ -36,6 +39,7 @@ import {
   SetStoryCollaboratorDto,
 } from './dto/stories.dto';
 import { StoriesService } from './stories.service';
+import { ChoiceScriptImportService } from './application/choicescript-import';
 import { CurrentUser, OptionalAuth, Public, type RequestUser } from '../auth/auth.decorators';
 import { Throttle } from '@nestjs/throttler';
 
@@ -45,7 +49,10 @@ export const STORY_READ_RATE_LIMIT = 100;
 @Throttle({ default: { limit: STORY_MUTATION_RATE_LIMIT, ttl: 60_000 } })
 @Controller('stories')
 export class StoriesController {
-  constructor(private readonly stories: StoriesService) {}
+  constructor(
+    private readonly stories: StoriesService,
+    private readonly choiceScriptImports: ChoiceScriptImportService,
+  ) {}
 
   @Get()
   @Throttle({ default: { limit: STORY_READ_RATE_LIMIT, ttl: 60_000 } })
@@ -67,6 +74,11 @@ export class StoriesController {
   @Post('demo')
   createDemo(@CurrentUser() user: RequestUser) {
     return this.stories.createDemo(user.id, user.role);
+  }
+
+  @Post('imports/choicescript')
+  importChoiceScript(@Body() input: ImportChoiceScriptDto, @CurrentUser() user: RequestUser) {
+    return this.choiceScriptImports.create(input, user.id);
   }
 
   @Get(':storyId')
@@ -234,6 +246,31 @@ export class StoriesController {
     return this.stories.createStatDefinition(storyId, input, user.id);
   }
 
+  @Post(':storyId/stats') createStatAssignment(
+    @Param('storyId') storyId: string,
+    @Body() input: CreateStatAssignmentDto,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.stories.createStatAssignment(storyId, input, user.id);
+  }
+
+  @Patch(':storyId/stats/:statId') updateStatAssignment(
+    @Param('storyId') storyId: string,
+    @Param('statId') statId: string,
+    @Body() input: UpdateStatAssignmentDto,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.stories.updateStatAssignment(storyId, statId, input, user.id);
+  }
+
+  @Delete(':storyId/stats/:statId') deleteStatAssignment(
+    @Param('storyId') storyId: string,
+    @Param('statId') statId: string,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.stories.deleteStatAssignment(storyId, statId, user.id);
+  }
+
   @Post(':storyId/item-definitions') createItemDefinition(
     @Param('storyId') storyId: string,
     @Body() input: CreateItemDefinitionDto,
@@ -258,6 +295,14 @@ export class StoriesController {
     @CurrentUser() user: RequestUser,
   ) {
     return this.stories.updateStatDefinition(storyId, statDefinitionId, input, user.id);
+  }
+
+  @Delete(':storyId/stat-definitions/:statDefinitionId') deleteStatDefinition(
+    @Param('storyId') storyId: string,
+    @Param('statDefinitionId') statDefinitionId: string,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.stories.deleteStatDefinition(storyId, statDefinitionId, user.id);
   }
 
   @Patch(':storyId/characters/:characterId') updateCharacter(

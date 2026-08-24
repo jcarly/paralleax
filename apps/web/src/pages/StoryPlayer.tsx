@@ -5,6 +5,7 @@ import { Link, useParams, useSearchParams } from 'react-router-dom';
 import type {
   Interaction,
   InteractionMutationResult,
+  StatValue,
   Story,
   TriggerCondition,
 } from '@paralleax/shared';
@@ -34,6 +35,7 @@ import { StoryCommentsPanel } from '../features/comments/StoryCommentsPanel';
 import { useStoryComments } from '../features/comments/useStoryComments';
 import { useStoryRealtime, type StoryRealtimeInvalidation } from '../hooks/useStoryRealtime';
 import { getStoryGraphClickCreationPosition } from '../storyGraphCreationLayout';
+import { getStatTargets, statTargetLabel } from '../storyStats';
 
 function getInteractionTitle(story: Story, interactionId: string) {
   return (
@@ -64,19 +66,12 @@ function describeCondition(story: Story, condition: TriggerCondition, t: TFuncti
     );
   }
   if ('statId' in condition) {
-    const stat = (story.characters ?? [])
-      .flatMap((character) =>
-        (character.stats ?? []).map((item) => ({
-          ...item,
-          label: `${character.name} — ${
-            story.statDefinitions?.find(({ id }) => id === item.statDefinitionId)?.name ??
-            t('player.unknownStat')
-          }`,
-        })),
-      )
-      .find(({ id }) => id === condition.statId);
+    const target = getStatTargets(story).find(
+      (candidate) =>
+        candidate.assignment.id === condition.statId && candidate.itemId === condition.itemId,
+    );
     return t('player.condition.stat', {
-      label: stat?.label ?? condition.statId,
+      label: target ? statTargetLabel(target, t('attributes.owner.story')) : condition.statId,
       operator: t(`player.condition.operator.${condition.operator}`),
       value: condition.value,
     });
@@ -129,9 +124,10 @@ function getUnavailableReason(
   visited: string[],
   currentLocationId: string | null,
   currentCharacterIds: string[],
-  statValues: Readonly<Record<string, number>>,
+  statValues: Readonly<Record<string, StatValue>>,
   currentDateTime: string,
   ownedItemDefinitionIds: readonly string[],
+  itemStatValues: Readonly<Record<string, Readonly<Record<string, StatValue>>>>,
   t: TFunction,
 ) {
   const failures = getTriggerConditionFailures(
@@ -143,6 +139,7 @@ function getUnavailableReason(
     statValues,
     currentDateTime,
     ownedItemDefinitionIds,
+    itemStatValues,
   );
   if (failures.length === 0) return undefined;
 
@@ -166,19 +163,12 @@ function getUnavailableReason(
     );
   }
   if ('statId' in firstFailure) {
-    const stat = (story.characters ?? [])
-      .flatMap((character) =>
-        (character.stats ?? []).map((item) => ({
-          ...item,
-          label: `${character.name} — ${
-            story.statDefinitions?.find(({ id }) => id === item.statDefinitionId)?.name ??
-            t('player.unknownStat')
-          }`,
-        })),
-      )
-      .find(({ id }) => id === firstFailure.statId);
+    const target = getStatTargets(story).find(
+      (candidate) =>
+        candidate.assignment.id === firstFailure.statId && candidate.itemId === firstFailure.itemId,
+    );
     return t('player.requirement.stat', {
-      label: stat?.label ?? firstFailure.statId,
+      label: target ? statTargetLabel(target, t('attributes.owner.story')) : firstFailure.statId,
       operator: t(`player.requirement.operator.${firstFailure.operator}`),
       value: firstFailure.value,
     });
@@ -240,9 +230,11 @@ export function StoryPlayer({
   const [journey, setJourney] = useState<string[]>([]);
   const [visited, setVisited] = useState<string[]>([]);
   const [currentLocationId, setCurrentLocationId] = useState<string | null>(null);
-  const [statValues, setStatValues] = useState<Record<string, number>>({});
+  const [statValues, setStatValues] = useState<Record<string, StatValue>>({});
   const [ownedItemIds, setOwnedItemIds] = useState<string[]>([]);
-  const [itemStatValues, setItemStatValues] = useState<Record<string, Record<string, number>>>({});
+  const [itemStatValues, setItemStatValues] = useState<Record<string, Record<string, StatValue>>>(
+    {},
+  );
   const [playableCharacterId, setPlayableCharacterId] = useState<string>();
   const [progressStatus, setProgressStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>(
     'idle',
@@ -501,6 +493,7 @@ export function StoryPlayer({
             statValues,
             currentDateTime,
             ownedItemDefinitionIds,
+            itemStatValues,
           )
         : [],
     [
@@ -511,6 +504,7 @@ export function StoryPlayer({
       statValues,
       currentDateTime,
       ownedItemDefinitionIds,
+      itemStatValues,
     ],
   );
   const availableChoiceIds = useMemo(() => new Set(choices.map((choice) => choice.id)), [choices]);
@@ -530,6 +524,7 @@ export function StoryPlayer({
                   statValues,
                   currentDateTime,
                   ownedItemDefinitionIds,
+                  itemStatValues,
                 );
             if (failures.some(({ condition }) => 'locationId' in condition)) return [];
             return [
@@ -548,6 +543,7 @@ export function StoryPlayer({
                       statValues,
                       currentDateTime,
                       ownedItemDefinitionIds,
+                      itemStatValues,
                       t,
                     ),
               },
@@ -569,6 +565,7 @@ export function StoryPlayer({
       story,
       visited,
       ownedItemDefinitionIds,
+      itemStatValues,
       t,
     ],
   );
@@ -594,6 +591,7 @@ export function StoryPlayer({
                 statValues,
                 currentDateTime,
                 ownedItemDefinitionIds,
+                itemStatValues,
                 t,
               );
         return [
@@ -613,6 +611,7 @@ export function StoryPlayer({
     currentLocationId,
     isSimulationMode,
     ownedItemDefinitionIds,
+    itemStatValues,
     statValues,
     story,
     t,
@@ -1004,6 +1003,8 @@ export function StoryPlayer({
                     className="story-body"
                     html={current.body}
                     conditionalTextState={conditionalTextState}
+                    statValues={statValues}
+                    itemStatValues={itemStatValues}
                   />
                   {canUseReaderComments ? (
                     <div className="reader-comment-actions">
@@ -1192,8 +1193,7 @@ export function StoryPlayer({
                             <li key={stat.statDefinitionId}>
                               {story.statDefinitions?.find(({ id }) => id === stat.statDefinitionId)
                                 ?.name ?? t('player.unknownStat')}
-                              :{' '}
-                              {itemStatValues[itemId]?.[stat.statDefinitionId] ?? stat.initialValue}
+                              : {itemStatValues[itemId]?.[stat.id] ?? stat.initialValue}
                             </li>
                           ))}
                         </ul>

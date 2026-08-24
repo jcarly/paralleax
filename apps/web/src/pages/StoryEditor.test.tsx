@@ -433,7 +433,7 @@ async function renderEditor(story: Story = baseStory) {
     </MemoryRouter>,
   );
 
-  await screen.findByText('Original title');
+  await screen.findByText('Original title', undefined, { timeout: 5_000 });
 }
 
 async function chooseTriggerConditionType(
@@ -1166,7 +1166,11 @@ describe('StoryEditor', () => {
   it('creates a character stat and configures interaction effects and trigger comparisons', async () => {
     const user = userEvent.setup();
     vi.mocked(api.createStatDefinition).mockResolvedValue({
-      statDefinition: { id: 'definition-1', name: 'Trust' },
+      statDefinition: {
+        id: 'definition-1',
+        name: 'Trust',
+        valueType: 'number',
+      },
       revision: 2,
       updatedAt: baseStory.updatedAt,
     });
@@ -1189,7 +1193,13 @@ describe('StoryEditor', () => {
     });
 
     await renderEditor();
-    await user.click(screen.getByRole('button', { name: 'Add stat definition' }));
+    await user.click(screen.getByRole('button', { name: 'Add variable' }));
+    await user.type(screen.getByLabelText('Name'), 'Trust');
+    await user.click(screen.getByRole('button', { name: 'Create' }));
+    expect(api.createStatDefinition).toHaveBeenCalledWith('story-1', {
+      name: 'Trust',
+      valueType: 'number',
+    });
     const category = screen.getByLabelText('Category');
     await user.type(category, 'Relationships');
     fireEvent.blur(category);
@@ -1230,18 +1240,18 @@ describe('StoryEditor', () => {
     await user.click(screen.getByRole('button', { name: 'Add effect' }));
     await user.click(
       within(screen.getByRole('group', { name: 'Effect type' })).getByRole('button', {
-        name: 'Character stat',
+        name: 'Variable',
       }),
     );
     expect(api.updateInteraction).toHaveBeenCalledWith('story-1', 'interaction-1', {
       statEffects: [{ statId: 'stat-1', operation: 'add', value: 1 }],
     });
-    await user.selectOptions(screen.getByLabelText('Stat effect operation'), 'set');
-    const effectValue = screen.getByLabelText('Stat effect value');
+    await user.selectOptions(screen.getByLabelText('Variable effect operation'), 'set');
+    const effectValue = screen.getByLabelText('Variable effect value');
     await user.clear(effectValue);
     await user.type(effectValue, '4');
     fireEvent.blur(effectValue);
-    await user.click(screen.getByRole('button', { name: 'Delete stat effect' }));
+    await user.click(screen.getByRole('button', { name: 'Delete variable effect' }));
 
     const conditioned = cloneStory(withEffect);
     conditioned.interactions[0].triggers[0].conditions = [
@@ -1252,13 +1262,13 @@ describe('StoryEditor', () => {
     );
     await user.click(screen.getByRole('button', { name: 'Select root trigger' }));
     await user.click(screen.getByRole('button', { name: 'Add condition' }));
-    await chooseTriggerConditionType(user, 'Character stat');
+    await chooseTriggerConditionType(user, 'Variable');
     expect(api.updateTrigger).toHaveBeenCalledWith('story-1', 'interaction-1', 'trigger-1', {
       inputInteractionIds: [],
       conditions: [{ statId: 'stat-1', operator: 'gte', value: 2 }],
     });
-    await user.selectOptions(screen.getByLabelText('Stat condition operator'), 'lt');
-    const comparisonValue = screen.getByLabelText('Stat condition value');
+    await user.selectOptions(screen.getByLabelText('Variable condition operator'), 'lt');
+    const comparisonValue = screen.getByLabelText('Variable condition value');
     await user.clear(comparisonValue);
     await user.type(comparisonValue, '5');
     await user.click(screen.getByRole('button', { name: 'x' }));
@@ -1346,7 +1356,7 @@ describe('StoryEditor', () => {
     const user = userEvent.setup();
     await renderEditor();
 
-    for (const section of ['Locations', 'Characters', 'Stats', 'Items']) {
+    for (const section of ['Locations', 'Characters', 'Variables', 'Items']) {
       const toggle = screen.getByRole('button', { name: new RegExp(section) });
       expect(toggle).toHaveAttribute('aria-expanded', 'true');
       await user.click(toggle);
@@ -1357,6 +1367,46 @@ describe('StoryEditor', () => {
     expect(screen.getByRole('button', { name: 'Expand story context' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Expand story context' }));
     expect(screen.getByRole('button', { name: 'Collapse story context' })).toBeInTheDocument();
+  });
+
+  it('opens the variable creator from the same context header pattern as other entities', async () => {
+    const user = userEvent.setup();
+    await renderEditor();
+
+    const variablesToggle = screen.getByRole('button', { name: /Variables/ });
+    const addVariable = screen.getByRole('button', { name: 'Add variable' });
+    const variablesChevron = variablesToggle.querySelector('.context-heading-label > span');
+    expect(addVariable.closest('.location-panel-header')).toContainElement(variablesToggle);
+    expect(variablesChevron).toHaveTextContent('▾');
+
+    await user.click(variablesToggle);
+    expect(variablesToggle).toHaveAttribute('aria-expanded', 'false');
+    expect(variablesChevron).toHaveTextContent('▸');
+    await user.click(addVariable);
+
+    expect(variablesToggle).toHaveAttribute('aria-expanded', 'true');
+    expect(variablesChevron).toHaveTextContent('▾');
+    expect(
+      within(screen.getByRole('complementary', { name: 'Inspector' })).getByLabelText('Name'),
+    ).toBeInTheDocument();
+    expect(
+      within(screen.getByRole('navigation', { name: 'Story context' })).queryByLabelText('Name'),
+    ).not.toBeInTheDocument();
+  });
+
+  it('selects a variable from the context list and edits it in the inspector', async () => {
+    const user = userEvent.setup();
+    const story = cloneStory();
+    story.statDefinitions = [{ id: 'attribute-definition-1', name: 'Energy', valueType: 'number' }];
+    await renderEditor(story);
+
+    const variableRow = screen.getByRole('button', { name: 'Energy' });
+    await user.click(variableRow);
+
+    expect(variableRow).toHaveClass('selected');
+    const inspector = screen.getByRole('complementary', { name: 'Inspector' });
+    expect(within(inspector).getByRole('heading', { name: 'Variable' })).toBeInTheDocument();
+    expect(within(inspector).getByLabelText('Variable name')).toHaveValue('Energy');
   });
 
   it('remembers the collapsed story context navigation across editor mounts', async () => {
@@ -1426,9 +1476,9 @@ describe('StoryEditor', () => {
         'Playable · 1 interaction',
       ),
     ).toBeInTheDocument();
-    expect(
-      within(within(context).getByRole('button', { name: 'Trust' })).getByText('1 assignment'),
-    ).toBeInTheDocument();
+    expect(within(context).getByRole('button', { name: 'Trust' })).toHaveTextContent(
+      '1 assignment',
+    );
     expect(
       within(within(context).getByRole('button', { name: 'Archive key' })).getByText('2 instances'),
     ).toBeInTheDocument();

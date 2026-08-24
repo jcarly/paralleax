@@ -1,13 +1,15 @@
+import type { StatValue } from './stats.js';
+
 export interface ReaderProgressState {
-  version: 1;
+  version: 1 | 2;
   journeyInteractionIds: string[];
   currentInteractionId: string | null;
   visitedInteractionIds: string[];
   currentDateTime: string;
   currentLocationId: string | null;
-  statValues: Record<string, number>;
+  statValues: Record<string, StatValue>;
   ownedItemIds: string[];
-  itemStatValues?: Record<string, Record<string, number>>;
+  itemStatValues?: Record<string, Record<string, StatValue>>;
 }
 
 export interface ReaderProgress {

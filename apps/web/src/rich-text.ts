@@ -22,6 +22,7 @@ export function sanitizeRichTextForDisplay(value: string): string {
       'iframe',
       'div',
       'button',
+      'span',
     ],
     ALLOWED_ATTR: [
       'href',
@@ -40,6 +41,8 @@ export function sanitizeRichTextForDisplay(value: string): string {
       'aria-label',
       'data-conditional-text-target',
       'data-conditional-text-link',
+      'data-stat-value',
+      'data-stat-item',
     ],
     ALLOWED_URI_REGEXP: /^https?:\/\//i,
   });

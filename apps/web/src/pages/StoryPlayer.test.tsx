@@ -481,6 +481,31 @@ describe('StoryPlayer', () => {
     expect(screen.getByRole('button', { name: 'Next' })).toBeInTheDocument();
   });
 
+  it('replays typed variable effects for conditions and rich-text interpolation', async () => {
+    const user = userEvent.setup();
+    const variableStory = structuredClone(story);
+    variableStory.statDefinitions = [
+      { id: 'score-definition', name: 'Score', valueType: 'number' },
+    ];
+    variableStory.stats = [
+      { id: 'score-assignment', statDefinitionId: 'score-definition', initialValue: 1 },
+    ];
+    variableStory.interactions[0].body =
+      '<p>Score: <span data-stat-value="score-assignment"></span></p>';
+    variableStory.interactions[0].statEffects = [
+      { statId: 'score-assignment', operation: 'add', value: 2 },
+    ];
+    variableStory.interactions[1].triggers[0].conditions = [
+      { statId: 'score-assignment', operator: 'gte', value: 3 },
+    ];
+
+    await renderPlayer('/stories/story-1/play', variableStory);
+    await user.click(screen.getByRole('button', { name: 'Start' }));
+
+    expect(screen.getByText('3', { selector: '[data-stat-value]' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Next' })).toBeInTheDocument();
+  });
+
   it('obtains and loses item instances while saving the derived inventory', async () => {
     const user = userEvent.setup();
     const itemStory = structuredClone(story);
@@ -490,7 +515,7 @@ describe('StoryPlayer', () => {
         id: 'key-definition',
         name: 'Key',
         description: '',
-        stats: [{ statDefinitionId: 'durability', initialValue: 10 }],
+        stats: [{ id: 'key-durability', statDefinitionId: 'durability', initialValue: 10 }],
       },
     ];
     itemStory.characters = [
@@ -502,10 +527,10 @@ describe('StoryPlayer', () => {
       },
     ];
     itemStory.interactions[0].itemEffects = [{ itemId: 'key-1', operation: 'obtain' }];
-    itemStory.interactions[0].itemStatEffects = [
+    itemStory.interactions[0].statEffects = [
       {
         itemId: 'key-1',
-        statDefinitionId: 'durability',
+        statId: 'key-durability',
         operation: 'add',
         value: -2,
       },

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
-import type { Story, StorySummary } from '@paralleax/shared';
+import type { ChoiceScriptImportReport, Story, StorySummary } from '@paralleax/shared';
 import { api, type AuthUser } from '../api';
 import { loadStoryEditor, loadStoryPlayer } from './storyRouteLoaders';
 import './ProductPages.css';
@@ -20,10 +20,26 @@ export function StoryList({ user }: { user: AuthUser | null }) {
   const [sort, setSort] = useState<StorySort>('updated');
   const [view, setView] = useState<StoryView>('grid');
   const [creating, setCreating] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [importFiles, setImportFiles] = useState<File[]>([]);
+  const [importRequestError, setImportRequestError] = useState('');
+  const [importOutcome, setImportOutcome] = useState<{
+    story: Story;
+    report: ChoiceScriptImportReport;
+  }>();
   const [newTitle, setNewTitle] = useState('');
-  const [pending, setPending] = useState<'story' | 'demo' | ''>('');
+  const [pending, setPending] = useState<'story' | 'demo' | 'import' | ''>('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const importSourceSize = importFiles.reduce((total, file) => total + file.size, 0);
+  const importSelectionError =
+    importFiles.length > 50
+      ? t('library.import.tooManyFiles')
+      : importFiles.some(({ size }) => size > 65_536)
+        ? t('library.import.fileTooLarge')
+        : importSourceSize > 96 * 1024
+          ? t('library.import.tooLarge')
+          : '';
 
   useEffect(() => {
     let active = true;
@@ -92,6 +108,42 @@ export function StoryList({ user }: { user: AuthUser | null }) {
     }
   }
 
+  async function runChoiceScriptImport(event: FormEvent) {
+    event.preventDefault();
+    if (pending || importFiles.length === 0 || importSelectionError) return;
+    try {
+      setImportRequestError('');
+      setPending('import');
+      const files = await Promise.all(
+        importFiles.map(async (file) => ({ name: file.name, content: await file.text() })),
+      );
+      const outcome = await api.importChoiceScript(files);
+      setStories((items) => [summarizeStory(outcome.story, user ?? undefined), ...items]);
+      setImportOutcome(outcome);
+      setFilter('all');
+    } catch (caught) {
+      setImportRequestError(caught instanceof Error ? caught.message : t('library.import.failed'));
+    } finally {
+      setPending('');
+    }
+  }
+
+  function openChoiceScriptImport() {
+    setImportFiles([]);
+    setImportOutcome(undefined);
+    setImportRequestError('');
+    setError('');
+    setImporting(true);
+  }
+
+  function closeChoiceScriptImport() {
+    if (pending === 'import') return;
+    setImporting(false);
+    setImportFiles([]);
+    setImportOutcome(undefined);
+    setImportRequestError('');
+  }
+
   async function remove(id: string) {
     try {
       setError('');
@@ -124,6 +176,14 @@ export function StoryList({ user }: { user: AuthUser | null }) {
                 {t(pending === 'demo' ? 'library.generating' : 'library.generateDemo')}
               </button>
             ) : null}
+            <button
+              className="product-secondary"
+              type="button"
+              disabled={Boolean(pending)}
+              onClick={openChoiceScriptImport}
+            >
+              <span aria-hidden="true">⇧</span> {t('library.import.action')}
+            </button>
             <button className="product-primary" type="button" onClick={() => setCreating(true)}>
               <span aria-hidden="true">＋</span> {t('library.newStory')}
             </button>
@@ -296,7 +356,159 @@ export function StoryList({ user }: { user: AuthUser | null }) {
           </section>
         </div>
       ) : null}
+
+      {importing && isAuthenticated ? (
+        <div className="modal-backdrop" role="presentation">
+          <section
+            className="new-story-dialog choicescript-import-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="choicescript-import-title"
+          >
+            <div className="dialog-icon" aria-hidden="true">
+              ⇧
+            </div>
+            <span className="product-eyebrow">{t('library.import.eyebrow')}</span>
+            <h2 id="choicescript-import-title">
+              {t(importOutcome ? 'library.import.resultTitle' : 'library.import.title')}
+            </h2>
+            {importOutcome ? (
+              <ChoiceScriptImportResult report={importOutcome.report} />
+            ) : (
+              <>
+                <p>{t('library.import.description')}</p>
+                <form onSubmit={(event) => void runChoiceScriptImport(event)}>
+                  <label className="product-field choicescript-file-field">
+                    <span>{t('library.import.filesLabel')}</span>
+                    <input
+                      autoFocus
+                      multiple
+                      accept=".txt,text/plain"
+                      type="file"
+                      onChange={(event) => {
+                        setImportFiles(Array.from(event.currentTarget.files ?? []));
+                        setImportOutcome(undefined);
+                        setImportRequestError('');
+                      }}
+                    />
+                  </label>
+                  {importFiles.length > 0 ? (
+                    <div className="choicescript-file-summary" aria-live="polite">
+                      <b>{t('library.import.selected', { count: importFiles.length })}</b>
+                      <span>{importFiles.map(({ name }) => name).join(', ')}</span>
+                      <small>
+                        {t('library.import.size', {
+                          size: Math.ceil(
+                            importFiles.reduce((total, file) => total + file.size, 0) / 1024,
+                          ),
+                        })}
+                      </small>
+                    </div>
+                  ) : null}
+                  {importSelectionError || importRequestError ? (
+                    <p className="library-error choicescript-import-error" role="alert">
+                      {importSelectionError || importRequestError}
+                    </p>
+                  ) : null}
+                  <p className="choicescript-import-notice">{t('library.import.notice')}</p>
+                  <div className="dialog-actions">
+                    <button
+                      className="product-secondary"
+                      type="button"
+                      disabled={pending === 'import'}
+                      onClick={closeChoiceScriptImport}
+                    >
+                      {t('library.import.cancel')}
+                    </button>
+                    <button
+                      className="product-primary"
+                      type="submit"
+                      disabled={
+                        importFiles.length === 0 ||
+                        Boolean(importSelectionError) ||
+                        pending === 'import'
+                      }
+                    >
+                      {t(
+                        pending === 'import' ? 'library.import.importing' : 'library.import.submit',
+                      )}
+                    </button>
+                  </div>
+                </form>
+              </>
+            )}
+            {importOutcome ? (
+              <div className="dialog-actions">
+                <button
+                  className="product-secondary"
+                  type="button"
+                  onClick={closeChoiceScriptImport}
+                >
+                  {t('library.import.close')}
+                </button>
+                <Link
+                  className="product-primary"
+                  to={`/stories/${importOutcome.story.id}/edit`}
+                  onMouseEnter={() => void loadStoryEditor()}
+                  onFocus={() => void loadStoryEditor()}
+                >
+                  {t('library.import.open')}
+                </Link>
+              </div>
+            ) : null}
+          </section>
+        </div>
+      ) : null}
     </main>
+  );
+}
+
+function ChoiceScriptImportResult({ report }: { report: ChoiceScriptImportReport }) {
+  const { t } = useTranslation();
+  const warnings = report.issues.filter(({ severity }) => severity === 'warning');
+  return (
+    <div className="choicescript-import-result">
+      <p>{t('library.import.resultDescription')}</p>
+      <dl>
+        <div>
+          <dt>{t('library.import.scenes')}</dt>
+          <dd>{report.sceneCount}</dd>
+        </div>
+        <div>
+          <dt>{t('library.import.interactions')}</dt>
+          <dd>{report.interactionCount}</dd>
+        </div>
+        <div>
+          <dt>{t('library.import.warnings')}</dt>
+          <dd>{warnings.length}</dd>
+        </div>
+      </dl>
+      {warnings.length > 0 ? (
+        <div className="choicescript-import-warnings">
+          <b>{t('library.import.reviewWarnings')}</b>
+          <ul>
+            {warnings.slice(0, 8).map((issue, index) => (
+              <li key={`${issue.fileName ?? ''}:${issue.line ?? ''}:${issue.code}:${index}`}>
+                <span>
+                  {[
+                    issue.fileName,
+                    issue.line ? t('library.import.line', { line: issue.line }) : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' · ')}
+                </span>
+                {issue.message}
+              </li>
+            ))}
+          </ul>
+          {warnings.length > 8 ? (
+            <small>{t('library.import.moreWarnings', { count: warnings.length - 8 })}</small>
+          ) : null}
+        </div>
+      ) : (
+        <p className="choicescript-import-clean">{t('library.import.noWarnings')}</p>
+      )}
+    </div>
   );
 }
 

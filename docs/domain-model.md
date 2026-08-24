@@ -16,6 +16,7 @@ Main fields:
 - `locations`
 - `characters`
 - `statDefinitions`
+- `stats`
 - `itemDefinitions`
 - `startDateTime`
 
@@ -33,6 +34,7 @@ Main MVP fields:
 - optional `locationId`
 - `characterIds`
 - `statEffects`
+- `itemEffects`
 - `durationMinutes`
 
 The title is used for choices and editor display. The body is used by the reader.
@@ -80,7 +82,7 @@ Examples:
 - not current location.
 - character present;
 - character absent.
-- character stat numeric comparison.
+- typed stat equality/inequality and numeric comparison.
 - story-local exact dates, inclusive date ranges, weekdays, and time slots.
 
 The story clock is a deterministic floating calendar rather than the reader's
@@ -100,25 +102,46 @@ location is runtime reader state.
 
 A character is a story-owned authored entity with an id, name, description,
 optional category, optional portrait image URL, and zero or more assigned
-numeric stats. Stat definitions belong to the story, may have a category and a
+typed stats. Stat definitions belong to the story, may have a category and a
 pictogram image URL, and
 can be assigned to several characters without being recreated. Each assignment
 has its own id and initial value.
 Each reusable definition may also declare a positive or negative change per
-story hour. Time-based changes apply to every character assignment of that
-definition as interaction durations advance the narrative clock.
+story hour when its value type is numeric. Time-based changes apply to every
+assignment of that definition as interaction durations advance the narrative clock.
 An interaction can involve several characters. Presence conditions inspect the
 cast of the current interaction; presence is scene context, not persistent
 play-session state. Interaction effects can add to or set a stat, while trigger
-conditions compare its current runtime value.
+conditions compare its current runtime value. The editor presents a stat assigned
+to a character as a characteristic; this is a presentation of the same assignment
+model, not a second domain concept.
+
+### Stat / Variable
+
+A stat definition is story-owned and has a technical id, an author-facing name,
+and one `number`, `boolean`, or `string` value type. A stat assignment attaches
+that definition to the Story, a character, a location, or an item definition and
+provides its authored initial value. The assignment id, not the reusable
+definition id, is the effect and condition target.
+
+An interaction may `set` any assigned stat or `add` to a numeric one.
+Trigger conditions support equality and inequality for all matching types and
+ordered comparisons for numbers. A missing or ill-typed runtime value never
+silently becomes zero. Item-definition assignments are templates: every exact
+item instance receives an independent runtime value.
+
+The body sanitizer permits inert `span` markers that identify an assignment and,
+for item stats, an exact instance. The reader replaces their text content
+from replayed values without evaluating source expressions or arbitrary code.
+See [ADR-021](decisions/ADR-021-typed-story-stats.md).
 
 ### Item Definition
 
 An item definition is a reusable story-owned description with an id, name,
 description, optional category, optional image URL, and zero or more assignments
-to the story's reusable stat definitions. Each assignment defines the initial
-value inherited by every concrete instance. The definition describes a kind of
-object and is not itself owned by a character.
+to the story's reusable stat definitions. Each assignment defines
+the initial value inherited by every concrete instance. The definition describes
+a kind of object and is not itself owned by a character.
 
 Categories are story-local, type-scoped organizational labels. They group
 locations, characters, stat definitions, or item definitions in the editor but
@@ -146,9 +169,10 @@ See [Trigger semantics](triggers.md) for deletion rules and editor behavior.
 Reader progress belongs to one authenticated user and one story. Relational
 columns enforce ownership, uniqueness, timestamps, and cascading deletion. A
 versioned JSON state stores the ordered journey, current interaction, unique
-visits, story-local date/time, current location, stat values, and owned item
-instances, including per-instance item stat values. Replayable values are
-derived from the ordered journey by the API.
+visits, story-local date/time, current location, typed stat values, and owned item
+instances, including per-instance item stat values. Replayable values are derived
+from the ordered journey by the API. Version 2 stores typed stat snapshots while
+version 1 remains readable for existing saves.
 
 ## Target Model
 
@@ -340,16 +364,15 @@ Possible elements:
 
 Annotations are not part of the MVP implementation.
 
-Later character increments may add playable points of view, attributes,
-relationships, and character-specific narrative paths.
+Later character increments may add playable points of view, relationships, and
+character-specific narrative paths.
 
-### Attribute
+### Future Calculated Stats
 
-An attribute represents a typed value such as a relatively stable attribute,
-changing resource, learned skill, flag, trait, or temporary status. Items and
-relationships are separate entities rather than special attribute names.
-
-It can be modified by an interaction and used as a trigger condition.
+Stored typed stats are implemented. A later increment may add read-only values
+calculated from other stats and explicit factors. Formula validation,
+dependency ordering, cycle detection, and rounding rules must be defined before
+those values become part of the runtime contract.
 
 ### Future Item Definition
 
@@ -404,7 +427,7 @@ The implementation projects authored instances and their descendants through
 PostgreSQL stores exact instances, character/location roots, and typed parent
 relationships.
 
-Items do not replace attributes. Equipment and item behavior contribute
+Items do not replace stats. Equipment and item behavior contribute
 modifiers to an effective value calculated from base, permanent, equipment,
 temporary, and contextual modifiers. Derived values should not be persisted
 when they can be recomputed deterministically.
@@ -438,18 +461,20 @@ that interaction. This presentation does not put comments into reader state.
 
 ### Conditions and Effects
 
-Future conditions inspect narrative, world, and play-session state. Future
-interaction effects modify that state after an interaction is selected.
+Current conditions inspect narrative, world, and replayed reader state. Current
+interaction effects modify typed stats and inventory after an
+interaction is selected. Later families may extend that state.
 
 The model may use a discriminated family of condition and effect types, but each
 supported type must have a typed payload, validation, reader semantics, cleanup
 rules, and tests. A generic `{ type, parameters }` storage envelope must not
 become an unvalidated runtime contract.
 
-Examples of later condition families include attribute comparison, item
-ownership, equipment tags, place, and relationships. Examples of effects include
-attribute modification, giving or removing an item, changing equipment,
-movement, time advancement, and relationship modification.
+Implemented families include stat comparison, item ownership, place,
+history, character presence, and story-local time. Implemented effects include
+stat modification, giving or removing an item, movement, and time
+advancement. Equipment tags, changing equipment, and relationship conditions or
+effects remain later work.
 
 The authoring foundation contains definitions and character-owned instances.
 The playable item vertical includes a runtime inventory, reusable-definition
@@ -459,28 +484,20 @@ later increments.
 
 ### Target Interaction
 
-Later, an interaction may contain:
+Later, an interaction may additionally contain:
 
 - involved characters;
 - visual attitude or posture;
 - speaking indicator;
-- place;
-- delay added to the timeline;
-- attribute impacts;
 - media;
 - final interaction flag;
 - conditional content or display pseudo-code.
 
 ### Target Trigger
 
-Later, a trigger may take into account:
+Later, a trigger may additionally take into account:
 
-- triggering characters;
-- place;
-- time period or schedule;
-- attribute values;
-- input interactions;
-- required or forbidden interactions in history;
+- equipment tags and relationships;
 - appearance probability;
 - automatic trigger probability;
 - availability timing.
@@ -493,13 +510,11 @@ such as being in a place or meeting a character.
 
 ### Play Session
 
-Later, a play session may persist reader progress.
+One persisted reader-progress snapshot per authenticated user and Story is
+implemented. Later play-session increments may add:
 
 Possible elements:
 
-- current interaction;
-- visited interactions;
-- current world state;
 - available save points or autosave state;
 - completion status.
 

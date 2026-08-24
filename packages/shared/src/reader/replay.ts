@@ -1,4 +1,12 @@
-import type { Interaction, ReaderProgressState, Story } from '../model/index.js';
+import type {
+  Interaction,
+  ReaderProgressState,
+  StatAssignment,
+  StatDefinition,
+  StatValue,
+  Story,
+} from '../model/index.js';
+import { getStatValueType, isStatValueOfType } from '../model/index.js';
 import { getJourneyDateTime } from '../time/index.js';
 
 function getStructurallyPlacedItemInstances(story: Story) {
@@ -28,46 +36,98 @@ function getStructurallyPlacedItemInstances(story: Story) {
   });
 }
 
-export function getInitialStatValues(story: Story): Record<string, number> {
-  return Object.fromEntries(
-    (story.characters ?? []).flatMap((character) =>
-      (character.stats ?? []).map((stat) => [stat.id, stat.initialValue]),
-    ),
+export function getNonItemStatAssignments(story: Story): StatAssignment[] {
+  return [
+    ...(story.stats ?? []),
+    ...(story.characters ?? []).flatMap((character) => character.stats ?? []),
+    ...(story.locations ?? []).flatMap((location) => location.stats ?? []),
+  ];
+}
+
+function getStatDefinitions(story: Story): Map<string, StatDefinition> {
+  return new Map((story.statDefinitions ?? []).map((definition) => [definition.id, definition]));
+}
+
+export function getItemStatAssignments(story: Story, itemId: string): StatAssignment[] {
+  const itemDefinitionId = getItemDefinitionIdForInstance(story, itemId);
+  return (
+    (story.itemDefinitions ?? []).find((definition) => definition.id === itemDefinitionId)?.stats ??
+    []
   );
 }
 
+export function getStatDefinitionForAssignment(
+  story: Story,
+  statId: string,
+  itemId?: string,
+): StatDefinition | undefined {
+  const assignment = itemId
+    ? getItemStatAssignments(story, itemId).find(({ id }) => id === statId)
+    : getNonItemStatAssignments(story).find(({ id }) => id === statId);
+  return getStatDefinitions(story).get(assignment?.statDefinitionId ?? '');
+}
+
+function initialValuesForAssignments(
+  definitions: ReadonlyMap<string, StatDefinition>,
+  assignments: readonly StatAssignment[],
+): Record<string, StatValue> {
+  return Object.fromEntries(
+    assignments.flatMap((assignment) => {
+      const definition = definitions.get(assignment.statDefinitionId);
+      return definition && isStatValueOfType(assignment.initialValue, getStatValueType(definition))
+        ? [[assignment.id, assignment.initialValue]]
+        : [];
+    }),
+  );
+}
+
+function applyEffect(
+  currentValue: StatValue | undefined,
+  operation: 'add' | 'set',
+  value: StatValue,
+) {
+  if (operation === 'set') return value;
+  return typeof currentValue === 'number' && typeof value === 'number'
+    ? currentValue + value
+    : currentValue;
+}
+
+export function getInitialStatValues(story: Story): Record<string, StatValue> {
+  return initialValuesForAssignments(getStatDefinitions(story), getNonItemStatAssignments(story));
+}
+
 export function applyInteractionStatEffects(
-  values: Readonly<Record<string, number>>,
+  values: Readonly<Record<string, StatValue>>,
   interaction: Interaction,
-): Record<string, number> {
+): Record<string, StatValue> {
   const next = { ...values };
   for (const effect of interaction.statEffects ?? []) {
-    next[effect.statId] =
-      effect.operation === 'set' ? effect.value : (next[effect.statId] ?? 0) + effect.value;
+    if (effect.itemId) continue;
+    const changed = applyEffect(next[effect.statId], effect.operation, effect.value);
+    if (changed !== undefined) next[effect.statId] = changed;
   }
   return next;
 }
 
 export function applyInteractionTimeStatChanges(
   story: Story,
-  values: Readonly<Record<string, number>>,
+  values: Readonly<Record<string, StatValue>>,
   interaction: Interaction,
-): Record<string, number> {
+): Record<string, StatValue> {
   if (!interaction.durationMinutes) return { ...values };
-  const ratesByDefinition = new Map(
-    (story.statDefinitions ?? []).map((definition) => [
-      definition.id,
-      definition.changePerHour ?? 0,
-    ]),
-  );
+  const definitions = getStatDefinitions(story);
   const next = { ...values };
-  for (const character of story.characters ?? []) {
-    for (const stat of character.stats ?? []) {
-      const changePerHour = ratesByDefinition.get(stat.statDefinitionId) ?? 0;
-      if (changePerHour !== 0) {
-        next[stat.id] =
-          (next[stat.id] ?? stat.initialValue) + (changePerHour * interaction.durationMinutes) / 60;
-      }
+  for (const assignment of getNonItemStatAssignments(story)) {
+    const definition = definitions.get(assignment.statDefinitionId);
+    const currentValue = next[assignment.id];
+    if (
+      definition &&
+      getStatValueType(definition) === 'number' &&
+      typeof currentValue === 'number' &&
+      definition.changePerHour
+    ) {
+      next[assignment.id] =
+        currentValue + (definition.changePerHour * interaction.durationMinutes) / 60;
     }
   }
   return next;
@@ -75,16 +135,16 @@ export function applyInteractionTimeStatChanges(
 
 export function applyInteractionStatChanges(
   story: Story,
-  values: Readonly<Record<string, number>>,
+  values: Readonly<Record<string, StatValue>>,
   interaction: Interaction,
-): Record<string, number> {
+): Record<string, StatValue> {
   return applyInteractionStatEffects(
     applyInteractionTimeStatChanges(story, values, interaction),
     interaction,
   );
 }
 
-export function getJourneyStatValues(story: Story, journey: string[]): Record<string, number> {
+export function getJourneyStatValues(story: Story, journey: string[]): Record<string, StatValue> {
   return journey.reduce((values, interactionId) => {
     const interaction = story.interactions.find(({ id }) => id === interactionId);
     return interaction ? applyInteractionStatChanges(story, values, interaction) : values;
@@ -157,67 +217,66 @@ export function getJourneyOwnedItemDefinitionIds(story: Story, journey: string[]
   });
 }
 
-export function getInitialItemStatValues(story: Story): Record<string, Record<string, number>> {
-  const definitions = new Map(
-    (story.itemDefinitions ?? []).map((definition) => [definition.id, definition]),
+function cloneItemStatValues(
+  values: Readonly<Record<string, Readonly<Record<string, StatValue>>>>,
+): Record<string, Record<string, StatValue>> {
+  return Object.fromEntries(
+    Object.entries(values).map(([itemId, stats]) => [itemId, { ...stats }]),
   );
+}
+
+export function getInitialItemStatValues(story: Story): Record<string, Record<string, StatValue>> {
+  const definitions = getStatDefinitions(story);
   return Object.fromEntries(
     getStructurallyPlacedItemInstances(story).map(({ item }) => [
       item.id,
-      Object.fromEntries(
-        (definitions.get(item.itemDefinitionId)?.stats ?? []).map((stat) => [
-          stat.statDefinitionId,
-          stat.initialValue,
-        ]),
-      ),
+      initialValuesForAssignments(definitions, getItemStatAssignments(story, item.id)),
     ]),
   );
 }
 
 export function applyInteractionItemStatChanges(
   story: Story,
-  values: Readonly<Record<string, Readonly<Record<string, number>>>>,
+  values: Readonly<Record<string, Readonly<Record<string, StatValue>>>>,
   interaction: Interaction,
   ownedItemIds: readonly string[] = [],
-): Record<string, Record<string, number>> {
-  const next = Object.fromEntries(
-    Object.entries(values).map(([itemId, stats]) => [itemId, { ...stats }]),
-  );
-  const definitions = new Map(
-    (story.itemDefinitions ?? []).map((definition) => [definition.id, definition]),
-  );
-  const rates = new Map(
-    (story.statDefinitions ?? []).map((definition) => [
-      definition.id,
-      definition.changePerHour ?? 0,
-    ]),
-  );
+): Record<string, Record<string, StatValue>> {
+  const next = cloneItemStatValues(values);
+  const definitions = getStatDefinitions(story);
+
   for (const itemId of ownedItemIds) {
-    const itemDefinitionId = getItemDefinitionIdForInstance(story, itemId);
-    const definition = definitions.get(itemDefinitionId ?? '');
-    next[itemId] ??= Object.fromEntries(
-      (definition?.stats ?? []).map((stat) => [stat.statDefinitionId, stat.initialValue]),
+    next[itemId] ??= initialValuesForAssignments(
+      definitions,
+      getItemStatAssignments(story, itemId),
     );
   }
+
   if (interaction.durationMinutes) {
     for (const [itemId, itemValues] of Object.entries(next)) {
-      const itemDefinitionId = getItemDefinitionIdForInstance(story, itemId);
-      for (const stat of definitions.get(itemDefinitionId ?? '')?.stats ?? []) {
-        const rate = rates.get(stat.statDefinitionId) ?? 0;
-        if (rate !== 0) {
-          itemValues[stat.statDefinitionId] =
-            (itemValues[stat.statDefinitionId] ?? stat.initialValue) +
-            (rate * interaction.durationMinutes) / 60;
+      for (const assignment of getItemStatAssignments(story, itemId)) {
+        const definition = definitions.get(assignment.statDefinitionId);
+        const currentValue = itemValues[assignment.id];
+        if (
+          definition &&
+          getStatValueType(definition) === 'number' &&
+          typeof currentValue === 'number' &&
+          definition.changePerHour
+        ) {
+          itemValues[assignment.id] =
+            currentValue + (definition.changePerHour * interaction.durationMinutes) / 60;
         }
       }
     }
   }
-  for (const effect of interaction.itemStatEffects ?? []) {
-    next[effect.itemId] ??= {};
-    next[effect.itemId][effect.statDefinitionId] =
-      effect.operation === 'set'
-        ? effect.value
-        : (next[effect.itemId][effect.statDefinitionId] ?? 0) + effect.value;
+
+  for (const effect of interaction.statEffects ?? []) {
+    if (!effect.itemId) continue;
+    next[effect.itemId] ??= initialValuesForAssignments(
+      definitions,
+      getItemStatAssignments(story, effect.itemId),
+    );
+    const changed = applyEffect(next[effect.itemId][effect.statId], effect.operation, effect.value);
+    if (changed !== undefined) next[effect.itemId][effect.statId] = changed;
   }
   return next;
 }
@@ -225,7 +284,7 @@ export function applyInteractionItemStatChanges(
 export function getJourneyItemStatValues(
   story: Story,
   journey: string[],
-): Record<string, Record<string, number>> {
+): Record<string, Record<string, StatValue>> {
   return journey.reduce(
     (state, interactionId, journeyIndex) => {
       const interaction = story.interactions.find(({ id }) => id === interactionId);
@@ -262,7 +321,7 @@ export function buildReaderProgressState(
   const journey = journeyInteractionIds.filter((id) => interactionIds.has(id));
   const items = getJourneyOwnedItemIds(story, journey);
   return {
-    version: 1,
+    version: 2,
     journeyInteractionIds: journey,
     currentInteractionId: journey.at(-1) ?? null,
     visitedInteractionIds: [...new Set(journey)],

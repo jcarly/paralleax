@@ -21,7 +21,7 @@ describePostgres('Database migrations PostgreSQL upgrade', () => {
     await pool.query('CREATE SCHEMA public');
     await new DatabaseMigrator({ pool } as DatabaseConnection).run();
     await pool.end();
-  });
+  }, 60_000);
 
   it('preserves a legacy JSON story, graph, conditions, and owner', async () => {
     await pool.query('DROP SCHEMA public CASCADE');
@@ -566,6 +566,161 @@ describePostgres('Database migrations PostgreSQL upgrade', () => {
          VALUES ('foreign-root', 'restored-story', 'supply', 'missing-location', 2)`,
       ),
     ).rejects.toThrow();
+  }, 30_000);
+
+  it('generalizes legacy character and item stats into typed owner assignments', async () => {
+    await pool.query('DROP SCHEMA public CASCADE');
+    await pool.query('CREATE SCHEMA public');
+
+    const typedStatsMigrationIndex = databaseMigrations.findIndex(
+      ({ id }) => id === '202608220031_typed_stats',
+    );
+    for (const migration of databaseMigrations.slice(0, typedStatsMigrationIndex)) {
+      await pool.query(migration.sql);
+    }
+
+    await pool.query(
+      `INSERT INTO users (id, email, password_hash, created_at)
+       VALUES ('stats-owner', 'stats@paralleax.invalid', 'disabled', now())`,
+    );
+    await pool.query(
+      `INSERT INTO stories
+       (id, revision, title, start_date_time, created_at, updated_at, creator_user_id)
+       VALUES ('stats-story', 1, 'Typed stats', '2000-01-03T08:00', now(), now(), 'stats-owner')`,
+    );
+    await pool.query(
+      `INSERT INTO characters
+       (id, story_id, name, description, image_url, is_playable, sort_order)
+       VALUES ('mira', 'stats-story', 'Mira', '', '', true, 0)`,
+    );
+    await pool.query(
+      `INSERT INTO stat_definitions
+       (id, story_id, name, category, image_url, change_per_hour, sort_order)
+       VALUES ('durability', 'stats-story', 'Durability', '', '', 0, 0)`,
+    );
+    await pool.query(
+      `INSERT INTO character_stats
+       (id, story_id, character_id, stat_definition_id, initial_value, sort_order)
+       VALUES ('mira-durability', 'stats-story', 'mira', 'durability', 4, 0)`,
+    );
+    await pool.query(
+      `INSERT INTO item_definitions
+       (id, story_id, name, description, category, image_url, stats, sort_order)
+       VALUES (
+         'key', 'stats-story', 'Key', '', '', '',
+         '[{"statDefinitionId":"durability","initialValue":10}]'::jsonb,
+         0
+       )`,
+    );
+    await pool.query(
+      `INSERT INTO item_instances
+       (id, story_id, item_definition_id, owner_character_id, sort_order)
+       VALUES ('key-1', 'stats-story', 'key', 'mira', 0)`,
+    );
+    await pool.query(
+      `INSERT INTO interactions
+       (id, story_id, title, body, position_x, position_y, location_id,
+        duration_minutes, item_stat_effects, sort_order)
+       VALUES (
+         'damage-key', 'stats-story', 'Damage key', '', 0, 0, NULL, 0,
+         '[{"itemId":"key-1","statDefinitionId":"durability","operation":"add","value":-2}]'::jsonb,
+         0
+       )`,
+    );
+
+    await pool.query(databaseMigrations[typedStatsMigrationIndex].sql);
+
+    await expect(
+      pool.query(
+        `SELECT value_type FROM stat_definitions
+         WHERE story_id = 'stats-story' AND id = 'durability'`,
+      ),
+    ).resolves.toMatchObject({
+      rows: [{ value_type: 'number' }],
+      rowCount: 1,
+    });
+    await expect(
+      pool.query(
+        `SELECT owner_type, character_id, item_definition_id, initial_value
+         FROM stat_assignments
+         WHERE story_id = 'stats-story'
+         ORDER BY owner_type`,
+      ),
+    ).resolves.toMatchObject({
+      rows: [
+        {
+          owner_type: 'character',
+          character_id: 'mira',
+          item_definition_id: null,
+          initial_value: 4,
+        },
+        {
+          owner_type: 'item_definition',
+          character_id: null,
+          item_definition_id: 'key',
+          initial_value: 10,
+        },
+      ],
+      rowCount: 2,
+    });
+    await expect(
+      pool.query(
+        `SELECT effect.item_id, effect.operation, effect.value, assignment.item_definition_id
+         FROM interaction_stat_effects effect
+         JOIN stat_assignments assignment ON assignment.id = effect.stat_id
+         WHERE effect.story_id = 'stats-story'`,
+      ),
+    ).resolves.toMatchObject({
+      rows: [
+        {
+          item_id: 'key-1',
+          operation: 'add',
+          value: -2,
+          item_definition_id: 'key',
+        },
+      ],
+      rowCount: 1,
+    });
+    await expect(
+      pool.query(
+        `SELECT
+           to_regclass('public.attribute_definitions') AS attribute_definitions,
+           to_regclass('public.attribute_assignments') AS attribute_assignments,
+           to_regclass('public.character_stats') AS character_stats`,
+      ),
+    ).resolves.toMatchObject({
+      rows: [
+        {
+          attribute_definitions: null,
+          attribute_assignments: null,
+          character_stats: null,
+        },
+      ],
+      rowCount: 1,
+    });
+
+    await pool.query(`
+      ALTER TABLE stat_definitions
+      ADD COLUMN key text;
+      UPDATE stat_definitions SET key = 'legacy_' || id;
+      ALTER TABLE stat_definitions
+      ALTER COLUMN key SET NOT NULL,
+      ADD CONSTRAINT stat_definitions_story_key_unique UNIQUE (story_id, key),
+      ADD CONSTRAINT stat_definitions_key_not_blank CHECK (btrim(key) <> '');
+    `);
+    const cleanupMigration = databaseMigrations.find(
+      ({ id }) => id === '202608240032_remove_stat_definition_keys',
+    );
+    await pool.query(cleanupMigration!.sql);
+    await expect(
+      pool.query(
+        `SELECT column_name
+         FROM information_schema.columns
+         WHERE table_schema = 'public'
+           AND table_name = 'stat_definitions'
+           AND column_name = 'key'`,
+      ),
+    ).resolves.toMatchObject({ rows: [], rowCount: 0 });
   }, 30_000);
 });
 

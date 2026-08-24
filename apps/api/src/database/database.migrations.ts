@@ -1234,4 +1234,141 @@ export const databaseMigrations: DatabaseMigration[] = [
         CHECK (comment_policy IN ('editors', 'readers'));
     `,
   },
+  {
+    id: '202608220031_typed_stats',
+    sql: `
+      ALTER TABLE stat_definitions
+      ADD COLUMN value_type text NOT NULL DEFAULT 'number';
+
+      ALTER TABLE stat_definitions
+      ADD CONSTRAINT stat_definitions_name_not_blank CHECK (btrim(name) <> ''),
+      ADD CONSTRAINT stat_definitions_value_type_allowed
+        CHECK (value_type IN ('number', 'boolean', 'string')),
+      ADD CONSTRAINT stat_definitions_hourly_change_numeric
+        CHECK (value_type = 'number' OR change_per_hour = 0);
+
+      ALTER TABLE character_stats RENAME TO stat_assignments;
+      ALTER TABLE stat_assignments
+      ALTER COLUMN character_id DROP NOT NULL,
+      ALTER COLUMN initial_value TYPE jsonb USING to_jsonb(initial_value),
+      ADD COLUMN owner_type text NOT NULL DEFAULT 'character',
+      ADD COLUMN location_id text,
+      ADD COLUMN item_definition_id text;
+      ALTER TABLE stat_assignments ALTER COLUMN owner_type DROP DEFAULT;
+
+      ALTER TABLE stat_assignments
+      ADD CONSTRAINT stat_assignments_location_fkey
+        FOREIGN KEY (story_id, location_id)
+        REFERENCES locations(story_id, id) ON DELETE CASCADE,
+      ADD CONSTRAINT stat_assignments_item_definition_fkey
+        FOREIGN KEY (story_id, item_definition_id)
+        REFERENCES item_definitions(story_id, id) ON DELETE CASCADE,
+      ADD CONSTRAINT stat_assignments_owner_shape CHECK (
+        (owner_type = 'story' AND character_id IS NULL AND location_id IS NULL
+          AND item_definition_id IS NULL)
+        OR (owner_type = 'character' AND character_id IS NOT NULL AND location_id IS NULL
+          AND item_definition_id IS NULL)
+        OR (owner_type = 'location' AND character_id IS NULL AND location_id IS NOT NULL
+          AND item_definition_id IS NULL)
+        OR (owner_type = 'item_definition' AND character_id IS NULL AND location_id IS NULL
+          AND item_definition_id IS NOT NULL)
+      ),
+      ADD CONSTRAINT stat_assignments_primitive_value
+        CHECK (jsonb_typeof(initial_value) IN ('number', 'boolean', 'string'));
+
+      INSERT INTO stat_assignments
+        (id, story_id, character_id, stat_definition_id, initial_value, sort_order,
+         owner_type, location_id, item_definition_id)
+      SELECT
+        COALESCE(
+          stat.value->>'id',
+          'item-stat-' || md5(definition.story_id || ':' || definition.id || ':' ||
+            (stat.value->>'statDefinitionId'))
+        ),
+        definition.story_id,
+        NULL,
+        stat.value->>'statDefinitionId',
+        stat.value->'initialValue',
+        stat.ordinality - 1,
+        'item_definition',
+        NULL,
+        definition.id
+      FROM item_definitions definition
+      CROSS JOIN LATERAL jsonb_array_elements(definition.stats)
+        WITH ORDINALITY AS stat(value, ordinality);
+
+      ALTER TABLE interaction_stat_effects
+      DROP CONSTRAINT interaction_stat_effects_pkey,
+      ALTER COLUMN value TYPE jsonb USING to_jsonb(value),
+      ADD COLUMN id bigserial,
+      ADD COLUMN item_id text,
+      ADD CONSTRAINT interaction_stat_effects_pkey PRIMARY KEY (id),
+      ADD CONSTRAINT interaction_stat_effects_item_fkey
+        FOREIGN KEY (story_id, item_id)
+        REFERENCES item_instances(story_id, id) ON DELETE CASCADE,
+      ADD CONSTRAINT interaction_stat_effects_primitive_value
+        CHECK (jsonb_typeof(value) IN ('number', 'boolean', 'string'));
+
+      INSERT INTO interaction_stat_effects
+        (story_id, interaction_id, stat_id, item_id, operation, value, sort_order)
+      SELECT
+        interaction.story_id,
+        interaction.id,
+        assignment.id,
+        effect.value->>'itemId',
+        effect.value->>'operation',
+        effect.value->'value',
+        COALESCE(existing.next_order, 0) + effect.ordinality - 1
+      FROM interactions interaction
+      CROSS JOIN LATERAL jsonb_array_elements(interaction.item_stat_effects)
+        WITH ORDINALITY AS effect(value, ordinality)
+      JOIN item_instances item
+        ON item.story_id = interaction.story_id AND item.id = effect.value->>'itemId'
+      JOIN stat_assignments assignment
+        ON assignment.story_id = interaction.story_id
+        AND assignment.owner_type = 'item_definition'
+        AND assignment.item_definition_id = item.item_definition_id
+        AND assignment.stat_definition_id = effect.value->>'statDefinitionId'
+      LEFT JOIN LATERAL (
+        SELECT MAX(sort_order) + 1 AS next_order
+        FROM interaction_stat_effects current_effect
+        WHERE current_effect.interaction_id = interaction.id
+      ) existing ON true;
+
+      ALTER TABLE item_definitions
+      DROP CONSTRAINT item_definitions_stats_array,
+      DROP COLUMN stats;
+      ALTER TABLE interactions
+      DROP CONSTRAINT interactions_item_stat_effects_array,
+      DROP COLUMN item_stat_effects;
+
+      CREATE INDEX stat_definitions_story_order_idx
+        ON stat_definitions(story_id, sort_order);
+      CREATE INDEX stat_assignments_story_owner_idx
+        ON stat_assignments(story_id, owner_type, sort_order);
+      CREATE UNIQUE INDEX stat_assignments_story_definition_unique_idx
+        ON stat_assignments(story_id, stat_definition_id)
+        WHERE owner_type = 'story';
+      CREATE UNIQUE INDEX stat_assignments_character_definition_unique_idx
+        ON stat_assignments(story_id, character_id, stat_definition_id)
+        WHERE owner_type = 'character';
+      CREATE UNIQUE INDEX stat_assignments_location_definition_unique_idx
+        ON stat_assignments(story_id, location_id, stat_definition_id)
+        WHERE owner_type = 'location';
+      CREATE UNIQUE INDEX stat_assignments_item_definition_unique_idx
+        ON stat_assignments(story_id, item_definition_id, stat_definition_id)
+        WHERE owner_type = 'item_definition';
+      CREATE INDEX interaction_stat_effects_assignment_idx
+        ON interaction_stat_effects(story_id, stat_id);
+    `,
+  },
+  {
+    id: '202608240032_remove_stat_definition_keys',
+    sql: `
+      ALTER TABLE stat_definitions
+      DROP CONSTRAINT IF EXISTS stat_definitions_story_key_unique,
+      DROP CONSTRAINT IF EXISTS stat_definitions_key_not_blank,
+      DROP COLUMN IF EXISTS key;
+    `,
+  },
 ];

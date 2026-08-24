@@ -15,6 +15,7 @@ vi.mock('../api', () => ({
     listPublicStories: vi.fn(),
     createStory: vi.fn(),
     createDemoStory: vi.fn(),
+    importChoiceScript: vi.fn(),
     deleteStory: vi.fn(),
   },
 }));
@@ -213,6 +214,77 @@ describe('StoryList', () => {
     ).closest('article')!;
     expect(within(demoCard).getByText('1')).toBeInTheDocument();
     expect(api.createDemoStory).toHaveBeenCalledOnce();
+  });
+
+  it('imports ChoiceScript scene files and displays the compatibility report', async () => {
+    const user = userEvent.setup();
+    const importedStory: Story = {
+      id: 'story-imported',
+      title: 'Imported story',
+      createdAt: '2026-08-22T08:00:00.000Z',
+      updatedAt: '2026-08-22T08:00:00.000Z',
+      interactions: [
+        {
+          id: 'interaction-imported',
+          title: 'Startup',
+          body: '<p>Imported prose.</p>',
+          position: { x: 80, y: 120 },
+          triggers: [{ id: 'trigger-imported', inputInteractionIds: [], conditions: [] }],
+        },
+      ],
+    };
+    vi.mocked(api.listStories).mockResolvedValue([]);
+    vi.mocked(api.importChoiceScript).mockResolvedValue({
+      story: importedStory,
+      report: {
+        format: 'choicescript',
+        sourceFileCount: 2,
+        sceneCount: 2,
+        interactionCount: 1,
+        convertedCommandCount: 2,
+        approximatedCommandCount: 1,
+        ignoredCommandCount: 1,
+        issues: [
+          {
+            severity: 'warning',
+            code: 'unsupported_set',
+            message: 'The *set command was ignored.',
+            fileName: 'startup.txt',
+            line: 3,
+          },
+        ],
+      },
+    });
+
+    render(
+      <MemoryRouter>
+        <StoryList user={standardUser} />
+      </MemoryRouter>,
+    );
+    await screen.findByRole('heading', { name: 'No stories found' });
+
+    await user.click(screen.getByRole('button', { name: 'Import ChoiceScript' }));
+    const startup = new File(['*title Imported story\n*set score 1\nStart.'], 'startup.txt', {
+      type: 'text/plain',
+    });
+    const ending = new File(['The end.\n*ending'], 'ending.txt', { type: 'text/plain' });
+    await user.upload(screen.getByLabelText('ChoiceScript scene files'), [startup, ending]);
+    expect(screen.getByText('2 files selected')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Import story' }));
+
+    expect(
+      await screen.findByRole('heading', { name: 'ChoiceScript story imported' }),
+    ).toBeInTheDocument();
+    expect(api.importChoiceScript).toHaveBeenCalledWith([
+      { name: 'startup.txt', content: '*title Imported story\n*set score 1\nStart.' },
+      { name: 'ending.txt', content: 'The end.\n*ending' },
+    ]);
+    expect(screen.getByText('The *set command was ignored.')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Open in editor' })).toHaveAttribute(
+      'href',
+      '/stories/story-imported/edit',
+    );
+    expect(screen.getByRole('heading', { name: 'Imported story' })).toBeInTheDocument();
   });
 
   it('searches, filters by resolved capabilities and ownership, and switches layout', async () => {

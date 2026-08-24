@@ -170,4 +170,28 @@ describe('RichTextEditor', () => {
     );
     expect(screen.getByText('Condition failed.')).toBeInTheDocument();
   });
+
+  it('renders inert typed-stat interpolation markers from replayed values', () => {
+    const html =
+      '<p>Score: <span data-stat-value="score"></span></p>' +
+      '<p>Charge: <span data-stat-value="charge" data-stat-item="battery"></span></p>';
+    render(
+      <RichTextContent
+        html={html}
+        statValues={{ score: 7 }}
+        itemStatValues={{ battery: { charge: 3 } }}
+      />,
+    );
+
+    expect(
+      screen.getByText(
+        (_, element) => element?.tagName === 'P' && element.textContent === 'Score: 7',
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        (_, element) => element?.tagName === 'P' && element.textContent === 'Charge: 3',
+      ),
+    ).toBeInTheDocument();
+  });
 });

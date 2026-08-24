@@ -83,14 +83,43 @@ Before coding:
 1. State the behavior being changed.
 2. Identify affected layer(s): domain, API, web, persistence, documentation.
 3. Identify relevant invariants and regression tests.
-4. Prefer a narrow change over opportunistic refactoring.
+4. If any material implementation question remains, ask the user before coding.
+   This is mandatory when choosing between extending or reusing an existing model
+   and introducing a parallel model, table, API, workflow, or UI concept. Do not
+   infer permission for the parallel design from a general feature request.
+5. Prefer a narrow change over opportunistic refactoring.
+
+### Reuse-first principle
+
+Reuse and extend existing code by default, in the frontend, backend, shared domain,
+API, and persistence layers. Before creating a new component, class, function,
+service, table, endpoint, model, style, or workflow:
+
+1. Search for the closest existing implementation and inspect its callers, tests,
+   styling, and extension points.
+2. Prefer adapting that implementation to support the additional case when the
+   concepts share semantics and lifecycle. A similar parallel implementation adds
+   avoidable code, tests, migrations, and long-term maintenance.
+3. In the frontend, reuse existing components, controls, list patterns, classes,
+   tokens, spacing, markers, and interaction states. Use a prop, variant, modifier
+   class, or small wrapper when only presentation or a limited behavior differs.
+4. In backend and shared code, extend existing domain operations, types, services,
+   repositories, validators, and persistence models when they represent the same
+   concept. Extract focused shared helpers, sub-functions, composed collaborators,
+   or a base/derived class where appropriate when only part of the logic differs.
+5. Keep extended code cohesive. If supporting another case would overload an
+   existing function or class, separate the common logic from the genuinely
+   different logic instead of duplicating the complete implementation.
+6. Create a parallel abstraction only when the semantics, invariants, ownership,
+   or lifecycle are materially different. Record that reason in code documentation,
+   semantic documentation, or an ADR as appropriate, and ask the user first when
+   the distinction was not explicit in the request.
 
 While coding:
 
 - Keep code, tests, UI copy, and technical documentation in English.
 - Do not introduce new domain concepts as incidental implementation details.
 - Avoid adding more responsibilities to known large orchestration files when a focused module is reasonable.
-- Reuse shared domain operations instead of reimplementing them in API or web.
 - Preserve backwards compatibility for persisted stories and reader progress unless the task explicitly includes a migration.
 
 After coding:

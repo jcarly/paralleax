@@ -28,9 +28,6 @@ export async function replaceStoryGraph(client: Queryable, story: Story) {
   }
   for (const [characterIndex, character] of (story.characters ?? []).entries()) {
     await insertCharacter(client, story.id, character, characterIndex);
-    for (const [statIndex, stat] of (character.stats ?? []).entries()) {
-      await insertCharacterStat(client, story.id, character.id, stat, statIndex);
-    }
   }
   const authoredItems = itemEntries(story);
   for (const entry of authoredItems) {
@@ -44,6 +41,7 @@ export async function replaceStoryGraph(client: Queryable, story: Story) {
   for (const [index, decoration] of (story.graphDecorations ?? []).entries()) {
     await insertGraphDecoration(client, story.id, decoration, index);
   }
+  await insertStatAssignments(client, story);
   await insertInteractionGraph(client, story);
 }
 
@@ -51,14 +49,12 @@ async function insertInteractionGraph(client: Queryable, story: Story) {
   await insertJsonRows(
     client,
     `INSERT INTO interactions
-     (id, story_id, title, body, position_x, position_y, location_id, duration_minutes,
-      item_stat_effects, sort_order)
+     (id, story_id, title, body, position_x, position_y, location_id, duration_minutes, sort_order)
      SELECT id, story_id, title, body, position_x, position_y, location_id, duration_minutes,
-            item_stat_effects, sort_order
+            sort_order
      FROM jsonb_to_recordset($1::jsonb) AS row(
        id text, story_id text, title text, body text, position_x double precision,
-       position_y double precision, location_id text, duration_minutes integer,
-       item_stat_effects jsonb, sort_order integer
+       position_y double precision, location_id text, duration_minutes integer, sort_order integer
      )`,
     story.interactions.map((interaction, sortOrder) => ({
       id: interaction.id,
@@ -69,7 +65,6 @@ async function insertInteractionGraph(client: Queryable, story: Story) {
       position_y: interaction.position.y,
       location_id: interaction.locationId ?? null,
       duration_minutes: interaction.durationMinutes ?? 0,
-      item_stat_effects: interaction.itemStatEffects ?? [],
       sort_order: sortOrder,
     })),
   );
@@ -92,17 +87,18 @@ async function insertInteractionGraph(client: Queryable, story: Story) {
   await insertJsonRows(
     client,
     `INSERT INTO interaction_stat_effects
-     (story_id, interaction_id, stat_id, operation, value, sort_order)
-     SELECT story_id, interaction_id, stat_id, operation, value, sort_order
+     (story_id, interaction_id, stat_id, item_id, operation, value, sort_order)
+     SELECT story_id, interaction_id, stat_id, item_id, operation, value, sort_order
      FROM jsonb_to_recordset($1::jsonb) AS row(
-       story_id text, interaction_id text, stat_id text, operation text,
-       value double precision, sort_order integer
+       story_id text, interaction_id text, stat_id text, item_id text, operation text,
+       value jsonb, sort_order integer
      )`,
     story.interactions.flatMap((interaction) =>
       (interaction.statEffects ?? []).map((effect, sortOrder) => ({
         story_id: story.id,
         interaction_id: interaction.id,
         stat_id: effect.statId,
+        item_id: effect.itemId ?? null,
         operation: effect.operation,
         value: effect.value,
         sort_order: sortOrder,
@@ -199,6 +195,15 @@ export async function persistStoryDifference(client: Queryable, before: Story, a
   await persistCharacterDifference(client, before, after);
   await persistGraphDecorationDifference(client, before, after);
 
+  const statAssignmentsChanged =
+    JSON.stringify(storyStatAssignmentState(before)) !==
+    JSON.stringify(storyStatAssignmentState(after));
+  if (statAssignmentsChanged) {
+    await client.query('DELETE FROM interaction_stat_effects WHERE story_id = $1', [after.id]);
+    await client.query('DELETE FROM stat_assignments WHERE story_id = $1', [after.id]);
+    await insertStatAssignments(client, after);
+  }
+
   const beforeInteractions = new Map(before.interactions.map((item) => [item.id, item]));
   const afterInteractions = new Map(after.interactions.map((item) => [item.id, item]));
   for (const interaction of before.interactions) {
@@ -214,7 +219,9 @@ export async function persistStoryDifference(client: Queryable, before: Story, a
     if (!previous) {
       await insertInteraction(client, after.id, interaction, index);
       await replaceInteractionCharacters(client, after.id, interaction);
-      await replaceInteractionStatEffects(client, after.id, interaction);
+      if (!statAssignmentsChanged) {
+        await replaceInteractionStatEffects(client, after.id, interaction);
+      }
       await replaceInteractionItemEffects(client, after.id, interaction);
       for (const [triggerIndex, trigger] of interaction.triggers.entries()) {
         await insertTrigger(client, after.id, interaction.id, trigger, triggerIndex);
@@ -234,6 +241,7 @@ export async function persistStoryDifference(client: Queryable, before: Story, a
       await replaceInteractionCharacters(client, after.id, interaction);
     }
     if (
+      !statAssignmentsChanged &&
       JSON.stringify(previous.statEffects ?? []) !== JSON.stringify(interaction.statEffects ?? [])
     ) {
       await replaceInteractionStatEffects(client, after.id, interaction);
@@ -245,6 +253,124 @@ export async function persistStoryDifference(client: Queryable, before: Story, a
     }
     await persistTriggerDifference(client, after.id, previous, interaction);
   }
+  if (statAssignmentsChanged) {
+    await insertInteractionStatEffects(client, after);
+  }
+}
+
+function storyStatAssignmentState(story: Story) {
+  return [
+    { ownerType: 'story', stats: story.stats ?? [] },
+    ...(story.characters ?? []).map((character) => ({
+      ownerType: 'character',
+      ownerId: character.id,
+      stats: character.stats ?? [],
+    })),
+    ...(story.locations ?? []).map((location) => ({
+      ownerType: 'location',
+      ownerId: location.id,
+      stats: location.stats ?? [],
+    })),
+    ...(story.itemDefinitions ?? []).map((definition) => ({
+      ownerType: 'item_definition',
+      ownerId: definition.id,
+      stats: definition.stats ?? [],
+    })),
+  ];
+}
+
+async function insertStatAssignments(client: Queryable, story: Story) {
+  const assignments = [
+    ...(story.stats ?? []).map((stat, sortOrder) => ({
+      stat,
+      ownerType: 'story',
+      characterId: null,
+      locationId: null,
+      itemDefinitionId: null,
+      sortOrder,
+    })),
+    ...(story.characters ?? []).flatMap((character) =>
+      (character.stats ?? []).map((stat, sortOrder) => ({
+        stat,
+        ownerType: 'character',
+        characterId: character.id,
+        locationId: null,
+        itemDefinitionId: null,
+        sortOrder,
+      })),
+    ),
+    ...(story.locations ?? []).flatMap((location) =>
+      (location.stats ?? []).map((stat, sortOrder) => ({
+        stat,
+        ownerType: 'location',
+        characterId: null,
+        locationId: location.id,
+        itemDefinitionId: null,
+        sortOrder,
+      })),
+    ),
+    ...(story.itemDefinitions ?? []).flatMap((definition) =>
+      (definition.stats ?? []).map((stat, sortOrder) => ({
+        stat,
+        ownerType: 'item_definition',
+        characterId: null,
+        locationId: null,
+        itemDefinitionId: definition.id,
+        sortOrder,
+      })),
+    ),
+  ];
+
+  await insertJsonRows(
+    client,
+    `INSERT INTO stat_assignments
+     (id, story_id, stat_definition_id, owner_type, character_id, location_id,
+      item_definition_id, initial_value, sort_order)
+     SELECT id, story_id, stat_definition_id, owner_type, character_id, location_id,
+            item_definition_id, initial_value, sort_order
+     FROM jsonb_to_recordset($1::jsonb) AS row(
+       id text, story_id text, stat_definition_id text, owner_type text,
+       character_id text, location_id text, item_definition_id text,
+       initial_value jsonb, sort_order integer
+     )`,
+    assignments.map(
+      ({ stat, ownerType, characterId, locationId, itemDefinitionId, sortOrder }) => ({
+        id: stat.id,
+        story_id: story.id,
+        stat_definition_id: stat.statDefinitionId,
+        owner_type: ownerType,
+        character_id: characterId,
+        location_id: locationId,
+        item_definition_id: itemDefinitionId,
+        initial_value: stat.initialValue,
+        sort_order: sortOrder,
+      }),
+    ),
+  );
+}
+
+async function insertInteractionStatEffects(client: Queryable, story: Story) {
+  await insertJsonRows(
+    client,
+    `INSERT INTO interaction_stat_effects
+     (story_id, interaction_id, stat_id, item_id, operation, value, sort_order)
+     SELECT story_id, interaction_id, stat_id, item_id, operation, value, sort_order
+     FROM jsonb_to_recordset($1::jsonb) AS row(
+       story_id text, interaction_id text, stat_id text, item_id text,
+       operation text, value jsonb, sort_order integer
+     )`,
+    story.interactions.flatMap((interaction) =>
+      (interaction.statEffects ?? []).map((effect, sortOrder) => ({
+        story_id: story.id,
+        interaction_id: interaction.id,
+        stat_id: effect.statId,
+        item_id: effect.itemId ?? null,
+        operation: effect.operation,
+        value: effect.value,
+        sort_order: sortOrder,
+      })),
+    ),
+  );
 }
 
 async function insertGraphDecoration(
@@ -400,9 +526,17 @@ async function replaceInteractionStatEffects(
   for (const [index, effect] of (interaction.statEffects ?? []).entries()) {
     await client.query(
       `INSERT INTO interaction_stat_effects
-       (story_id, interaction_id, stat_id, operation, value, sort_order)
-       VALUES ($1, $2, $3, $4, $5, $6)`,
-      [storyId, interaction.id, effect.statId, effect.operation, effect.value, index],
+       (story_id, interaction_id, stat_id, item_id, operation, value, sort_order)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [
+        storyId,
+        interaction.id,
+        effect.statId,
+        effect.itemId ?? null,
+        effect.operation,
+        JSON.stringify(effect.value),
+        index,
+      ],
     );
   }
 }
@@ -441,9 +575,8 @@ async function insertInteraction(
 ) {
   await client.query(
     `INSERT INTO interactions
-     (id, story_id, title, body, position_x, position_y, location_id, duration_minutes,
-      item_stat_effects, sort_order)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+     (id, story_id, title, body, position_x, position_y, location_id, duration_minutes, sort_order)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
     [
       interaction.id,
       storyId,
@@ -453,7 +586,6 @@ async function insertInteraction(
       interaction.position.y,
       interaction.locationId ?? null,
       interaction.durationMinutes ?? 0,
-      JSON.stringify(interaction.itemStatEffects ?? []),
       sortOrder,
     ],
   );
@@ -514,13 +646,6 @@ async function updateInteractionDifference(
     'duration_minutes',
     before.durationMinutes ?? 0,
     after.durationMinutes ?? 0,
-  );
-  addChange(
-    changes,
-    values,
-    'item_stat_effects',
-    JSON.stringify(before.itemStatEffects ?? []),
-    JSON.stringify(after.itemStatEffects ?? []),
   );
   addChange(changes, values, 'sort_order', beforeSortOrder, sortOrder);
   if (changes.length > 0) {
@@ -613,21 +738,6 @@ async function insertCharacter(
   );
 }
 
-async function insertCharacterStat(
-  client: Queryable,
-  storyId: string,
-  characterId: string,
-  stat: NonNullable<Character['stats']>[number],
-  sortOrder: number,
-) {
-  await client.query(
-    `INSERT INTO character_stats
-     (id, story_id, character_id, stat_definition_id, initial_value, sort_order)
-     VALUES ($1, $2, $3, $4, $5, $6)`,
-    [stat.id, storyId, characterId, stat.statDefinitionId, stat.initialValue, sortOrder],
-  );
-}
-
 async function insertStatDefinition(
   client: Queryable,
   storyId: string,
@@ -636,12 +746,13 @@ async function insertStatDefinition(
 ) {
   await client.query(
     `INSERT INTO stat_definitions
-     (id, story_id, name, category, image_url, change_per_hour, sort_order)
-     VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+     (id, story_id, name, value_type, category, image_url, change_per_hour, sort_order)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
     [
       definition.id,
       storyId,
       definition.name,
+      definition.valueType ?? 'number',
       definition.category ?? '',
       definition.imageUrl ?? '',
       definition.changePerHour ?? 0,
@@ -658,8 +769,8 @@ async function insertItemDefinition(
 ) {
   await client.query(
     `INSERT INTO item_definitions
-     (id, story_id, name, description, category, image_url, stats, sort_order)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+     (id, story_id, name, description, category, image_url, sort_order)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)`,
     [
       definition.id,
       storyId,
@@ -667,7 +778,6 @@ async function insertItemDefinition(
       definition.description,
       definition.category ?? '',
       definition.imageUrl ?? '',
-      JSON.stringify(definition.stats ?? []),
       sortOrder,
     ],
   );
@@ -732,6 +842,13 @@ async function persistStatDefinitionDifference(client: Queryable, before: Story,
     const changes: string[] = [];
     const values: unknown[] = [definition.id];
     addChange(changes, values, 'name', previous.name, definition.name);
+    addChange(
+      changes,
+      values,
+      'value_type',
+      previous.valueType ?? 'number',
+      definition.valueType ?? 'number',
+    );
     addChange(changes, values, 'category', previous.category ?? '', definition.category ?? '');
     addChange(changes, values, 'image_url', previous.imageUrl ?? '', definition.imageUrl ?? '');
     addChange(
@@ -784,13 +901,6 @@ async function persistItemDefinitionDifference(client: Queryable, before: Story,
     addChange(
       changes,
       values,
-      'stats',
-      JSON.stringify(previous.stats ?? []),
-      JSON.stringify(definition.stats ?? []),
-    );
-    addChange(
-      changes,
-      values,
       'sort_order',
       (before.itemDefinitions ?? []).findIndex(({ id }) => id === definition.id),
       index,
@@ -825,9 +935,6 @@ async function persistCharacterDifference(client: Queryable, before: Story, afte
     const previous = beforeCharacters.get(character.id);
     if (!previous) {
       await insertCharacter(client, after.id, character, index);
-      for (const [statIndex, stat] of (character.stats ?? []).entries()) {
-        await insertCharacterStat(client, after.id, character.id, stat, statIndex);
-      }
       continue;
     }
     const changes: string[] = [];
@@ -853,7 +960,6 @@ async function persistCharacterDifference(client: Queryable, before: Story, afte
     if (changes.length > 0) {
       await client.query(`UPDATE characters SET ${changes.join(', ')} WHERE id = $1`, values);
     }
-    await persistStatDifference(client, after.id, previous, character);
   }
   await persistItemInstanceDifference(client, before, after);
 }
@@ -956,51 +1062,6 @@ function itemRelationshipSignature(entries: ReturnType<typeof itemEntries>) {
       slotKey,
     })),
   );
-}
-
-async function persistStatDifference(
-  client: Queryable,
-  storyId: string,
-  before: Character,
-  after: Character,
-) {
-  const beforeStats = new Map((before.stats ?? []).map((stat) => [stat.id, stat]));
-  const afterStats = new Map((after.stats ?? []).map((stat) => [stat.id, stat]));
-  for (const stat of before.stats ?? []) {
-    if (!afterStats.has(stat.id)) {
-      await client.query('DELETE FROM character_stats WHERE id = $1 AND story_id = $2', [
-        stat.id,
-        storyId,
-      ]);
-    }
-  }
-  for (const [index, stat] of (after.stats ?? []).entries()) {
-    const previous = beforeStats.get(stat.id);
-    if (!previous) {
-      await insertCharacterStat(client, storyId, after.id, stat, index);
-      continue;
-    }
-    const changes: string[] = [];
-    const values: unknown[] = [stat.id];
-    addChange(
-      changes,
-      values,
-      'stat_definition_id',
-      previous.statDefinitionId,
-      stat.statDefinitionId,
-    );
-    addChange(changes, values, 'initial_value', previous.initialValue, stat.initialValue);
-    addChange(
-      changes,
-      values,
-      'sort_order',
-      (before.stats ?? []).findIndex(({ id }) => id === stat.id),
-      index,
-    );
-    if (changes.length > 0) {
-      await client.query(`UPDATE character_stats SET ${changes.join(', ')} WHERE id = $1`, values);
-    }
-  }
 }
 
 async function persistTriggerDifference(

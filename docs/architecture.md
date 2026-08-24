@@ -65,9 +65,17 @@ between interaction cleanup, trigger mutation, and stale-response merge rules.
 API and web orchestration call these operations instead of redefining domain
 cleanup or optimistic persistence behavior.
 
+Experimental external-source adapters live in `packages/shared/src/import-export/`.
+The ChoiceScript adapter parses source files, builds a compatibility report, and
+maps representable control flow and simple state operations to the canonical Story
+without importing a foreign runtime. Source declarations, assignments,
+comparisons, and substitutions use generic Paralleax typed stats. API
+orchestration supplies IDs and persists the complete mapped Story in one
+transaction; web code owns only local file selection and report presentation.
+
 Deterministic runtime reconstruction lives in `packages/shared/src/reader/`.
-Its replay pipeline derives progress, location, character stats, owned item
-instances, and item stats from the authored story plus ordered journey. Item and
+Its replay pipeline derives progress, location, typed stat values, and owned item
+instances from the authored story plus ordered journey. Non-item and exact-item
 stat replay helpers currently remain colocated there pending their incremental
 extraction into dedicated domain modules.
 
@@ -522,9 +530,9 @@ stable source of regression-friendly sample structures.
   behavior, and Playwright tests for critical editor flows.
 
 Before adding a new concept, check [MVP scope](mvp.md), [Domain model](domain-model.md),
-and [Non-goals](non-goals.md). Locations and characters are the first post-MVP
-context verticals; variables, AI, and player save persistence remain outside the
-implemented narrative model.
+and [Non-goals](non-goals.md). Locations, characters, typed stored variables,
+and player save persistence are implemented context/runtime verticals; calculated
+calculated variables and AI-driven runtime behavior remain outside the narrative model.
 
 ## Storage
 
@@ -538,10 +546,10 @@ The API accesses storage through `StoriesRepository` instead of coupling
 while shared story operations own trigger cleanup, normalization, reader rules,
 and merge semantics.
 
-The current PostgreSQL schema stores Story, Location, Character, reusable Stat
-Definition (including its hourly change rate), Character Stat Assignment,
-Item Definition, story-local Item Instance, Interaction, Interaction Stat Effect,
-Trigger, trigger input, and Graph Decoration state in
+The current PostgreSQL schema stores Story, Location, Character, reusable typed
+Stat Definition (including its hourly change rate), owner-bound Stat Assignment,
+Item Definition, story-local Item Instance, Interaction, Interaction Stat Effect, Trigger, trigger
+input, and Graph Decoration state in
 relational tables. Interaction-to-location, interaction-character, and stat
 effect references use same-story composite foreign keys. Time-based stat changes
 are calculated in the shared engine from interaction durations rather than
@@ -549,10 +557,15 @@ stored as runtime events. Ordered typed trigger conditions are
 stored as JSONB on their owning trigger and their references are validated by
 the application service. Story-local start time and interaction durations are
 relational fields; temporal alternatives remain typed trigger-condition JSONB.
-Item-definition stat assignments and interaction item-stat effects are ordered
-typed JSONB value objects whose same-story and definition membership references
-are validated by `StoriesService`. Reader-progress JSON contains the replayed
-per-instance values.
+Stat definitions and assignments are relational and constrained to one Story.
+Their JSONB values preserve the declared scalar type; owner-shape checks
+distinguish Story, character, location, and item-definition assignments. Exact
+item-instance stat targets and all other same-story references are validated before
+transactional persistence. The writer compares the normalized assignment projection
+before replacing those rows, so an unrelated interaction move or text edit does not
+rewrite definitions, assignments, or effects. Character characteristics and item
+stats are projections of this same stat model, not separate tables or runtime paths.
+Reader-progress JSON contains the replayed non-item and per-instance stat values.
 Context entity categories and image references use relational text columns.
 Categories are organizational metadata only. Image binaries and their upload
 lifecycle are not stored by the application.

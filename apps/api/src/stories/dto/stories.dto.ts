@@ -16,6 +16,7 @@ import type {
 import {
   IsArray,
   IsBoolean,
+  IsDefined,
   IsNotEmpty,
   IsNumber,
   IsObject,
@@ -26,6 +27,7 @@ import {
   Min,
   Max,
   ArrayMaxSize,
+  ArrayMinSize,
   MaxLength,
   ValidateIf,
   ValidateNested,
@@ -37,6 +39,25 @@ export class PositionDto {
 }
 export class CreateStoryDto {
   @IsString() @IsNotEmpty() @MaxLength(200) title!: string;
+}
+export class ChoiceScriptSourceFileDto {
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(260)
+  @Matches(/^[^\\/]+\.txt$/i)
+  name!: string;
+
+  @IsString()
+  @MaxLength(65_536)
+  content!: string;
+}
+export class ImportChoiceScriptDto {
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(50)
+  @ValidateNested({ each: true })
+  @Type(() => ChoiceScriptSourceFileDto)
+  files!: ChoiceScriptSourceFileDto[];
 }
 export class UpdateStoryDto {
   @ValidateIf((_, value) => value !== undefined)
@@ -190,20 +211,18 @@ export class UpdateInteractionDto {
   @Type(() => ItemEffectDto)
   itemEffects?: ItemEffectDto[];
   @ValidateIf((_, value) => value !== undefined)
-  @IsArray()
-  @ArrayMaxSize(500)
-  @ValidateNested({ each: true })
-  @Type(() => ItemStatEffectDto)
-  itemStatEffects?: ItemStatEffectDto[];
-  @ValidateIf((_, value) => value !== undefined)
   @IsInt()
   @Min(0)
   durationMinutes?: number;
 }
 export class StatEffectDto {
   @IsString() statId!: string;
+  @ValidateIf((_, value) => value !== undefined)
+  @IsString()
+  @IsNotEmpty()
+  itemId?: string;
   @IsIn(['add', 'set']) operation!: 'add' | 'set';
-  @IsNumber() value!: number;
+  @IsDefined() value!: unknown;
 }
 export class ItemEffectDto {
   @ValidateIf((_, value) => value !== undefined)
@@ -216,12 +235,6 @@ export class ItemEffectDto {
   @IsString()
   characterId?: string;
   @IsIn(['obtain', 'lose']) operation!: 'obtain' | 'lose';
-}
-export class ItemStatEffectDto {
-  @IsString() itemId!: string;
-  @IsString() statDefinitionId!: string;
-  @IsIn(['add', 'set']) operation!: 'add' | 'set';
-  @IsNumber() value!: number;
 }
 export class DateRangeDto {
   @IsString() @Matches(/^\d{4}-\d{2}-\d{2}$/) startDate!: string;
@@ -330,6 +343,9 @@ export class TriggerConditionDto {
   )
   @IsString()
   statId?: string;
+  @ValidateIf((condition, value) => condition.statId !== undefined && value !== undefined)
+  @IsString()
+  itemId?: string;
   @ValidateIf(
     (condition) =>
       condition.interactionId === undefined &&
@@ -338,8 +354,8 @@ export class TriggerConditionDto {
       condition.itemDefinitionId === undefined &&
       condition.temporal === undefined,
   )
-  @IsIn(['eq', 'lt', 'lte', 'gt', 'gte'])
-  operator?: 'eq' | 'lt' | 'lte' | 'gt' | 'gte';
+  @IsIn(['eq', 'neq', 'lt', 'lte', 'gt', 'gte'])
+  operator?: 'eq' | 'neq' | 'lt' | 'lte' | 'gt' | 'gte';
   @ValidateIf(
     (condition) =>
       condition.interactionId === undefined &&
@@ -348,8 +364,8 @@ export class TriggerConditionDto {
       condition.itemDefinitionId === undefined &&
       condition.temporal === undefined,
   )
-  @IsNumber()
-  value?: number;
+  @IsDefined()
+  value?: unknown;
   @ValidateIf(
     (condition) =>
       condition.interactionId === undefined &&
@@ -455,15 +471,16 @@ export class UpdateCharacterDto {
 }
 export class CreateCharacterStatDto {
   @IsString() @IsNotEmpty() statDefinitionId!: string;
-  @IsNumber() initialValue!: number;
+  @IsDefined() initialValue!: unknown;
 }
 export class UpdateCharacterStatDto {
-  @ValidateIf((_, value) => value !== undefined)
-  @IsNumber()
-  initialValue?: number;
+  @IsDefined() initialValue!: unknown;
 }
 export class CreateStatDefinitionDto {
   @IsString() @IsNotEmpty() @MaxLength(200) name!: string;
+  @ValidateIf((_, value) => value !== undefined)
+  @IsIn(['number', 'boolean', 'string'])
+  valueType?: 'number' | 'boolean' | 'string';
   @ValidateIf((_, value) => value !== undefined)
   @IsString()
   @MaxLength(100)
@@ -493,6 +510,19 @@ export class UpdateStatDefinitionDto {
   @ValidateIf((_, value) => value !== undefined)
   @IsNumber()
   changePerHour?: number;
+}
+export class CreateStatAssignmentDto {
+  @IsString() @IsNotEmpty() statDefinitionId!: string;
+  @IsIn(['story', 'character', 'location', 'itemDefinition'])
+  ownerType!: 'story' | 'character' | 'location' | 'itemDefinition';
+  @ValidateIf((input) => input.ownerType !== 'story')
+  @IsString()
+  @IsNotEmpty()
+  ownerId?: string;
+  @IsDefined() initialValue!: unknown;
+}
+export class UpdateStatAssignmentDto {
+  @IsDefined() initialValue!: unknown;
 }
 export class CreateItemDefinitionDto {
   @IsString() @IsNotEmpty() @MaxLength(200) name!: string;
@@ -539,8 +569,12 @@ export class UpdateItemDefinitionDto {
   stats?: ItemDefinitionStatDto[];
 }
 export class ItemDefinitionStatDto {
+  @ValidateIf((_, value) => value !== undefined)
+  @IsString()
+  @IsNotEmpty()
+  id?: string;
   @IsString() @IsNotEmpty() statDefinitionId!: string;
-  @IsNumber() initialValue!: number;
+  @IsDefined() initialValue!: unknown;
 }
 export class CreateCharacterItemDto {
   @IsString() @IsNotEmpty() itemDefinitionId!: string;

@@ -6,6 +6,42 @@ import { InteractionInspector } from './InteractionInspector';
 afterEach(cleanup);
 
 describe('InteractionInspector time', () => {
+  it('adds a typed variable assignment effect', () => {
+    const interaction: Story['interactions'][number] = {
+      id: 'interaction-1',
+      title: 'Score',
+      body: '',
+      position: { x: 0, y: 0 },
+      triggers: [{ id: 'trigger-1', inputInteractionIds: [], conditions: [] }],
+    };
+    const story: Story = {
+      id: 'story-1',
+      title: 'Story',
+      statDefinitions: [{ id: 'score-definition', name: 'Score', valueType: 'number' }],
+      stats: [{ id: 'score', statDefinitionId: 'score-definition', initialValue: 0 }],
+      interactions: [interaction],
+      createdAt: '2026-07-26T00:00:00.000Z',
+      updatedAt: '2026-07-26T00:00:00.000Z',
+    };
+    const onPatch = vi.fn().mockResolvedValue(undefined);
+
+    render(
+      <InteractionInspector
+        story={story}
+        interaction={interaction}
+        onChange={vi.fn()}
+        onPatch={onPatch}
+        onDelete={vi.fn()}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Add effect' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Variable' }));
+
+    expect(onPatch).toHaveBeenCalledWith('interaction-1', {
+      statEffects: [{ statId: 'score', operation: 'add', value: 1 }],
+    });
+  });
+
   it('organizes real interaction fields into content, context, and effect sections', () => {
     const interaction: Story['interactions'][number] = {
       id: 'interaction-1',
@@ -46,7 +82,7 @@ describe('InteractionInspector time', () => {
       const summary = screen.getByText(sectionName).closest('summary');
       expect(summary?.closest('details')).toHaveAttribute('open');
     }
-    for (const emptyEffectGroup of ['Stat effects', 'Item effects', 'Item stat effects']) {
+    for (const emptyEffectGroup of ['Variable effects', 'Item effects']) {
       expect(screen.queryByRole('heading', { name: emptyEffectGroup })).not.toBeInTheDocument();
     }
 
@@ -124,20 +160,19 @@ describe('InteractionInspector time', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Add effect' }));
 
     const picker = screen.getByRole('group', { name: 'Effect type' });
-    expect(within(picker).getByRole('button', { name: 'Character stat' })).toBeDisabled();
+    expect(within(picker).getByRole('button', { name: 'Variable' })).toBeDisabled();
     expect(within(picker).getByRole('button', { name: 'Item inventory' })).toBeDisabled();
-    expect(within(picker).getByRole('button', { name: 'Item stat' })).toBeDisabled();
-    expect(screen.getByText('Create and assign a stat to a character first.')).toHaveAttribute(
+    expect(screen.getByText('Create and attach a variable first.')).toHaveAttribute(
       'role',
       'tooltip',
     );
-    expect(within(picker).getByRole('button', { name: 'Character stat' })).toHaveAttribute(
+    expect(within(picker).getByRole('button', { name: 'Variable' })).toHaveAttribute(
       'title',
-      'Create and assign a stat to a character first.',
+      'Create and attach a variable first.',
     );
   });
 
-  it('selects a searchable character target separately from its affected stat', () => {
+  it('selects a searchable assigned variable target', () => {
     const interaction: Story['interactions'][number] = {
       id: 'interaction-1',
       title: 'Build trust',
@@ -186,18 +221,17 @@ describe('InteractionInspector time', () => {
       />,
     );
 
-    const target = screen.getByLabelText('Stat effect target');
-    expect(screen.getByRole('heading', { name: 'Stat effects' })).toBeInTheDocument();
-    expect(target).toHaveValue('Mira');
-    expect(screen.getByLabelText('Affected stat')).toHaveValue('trust');
+    const target = screen.getByLabelText('Variable effect target');
+    expect(screen.getByRole('heading', { name: 'Variable effects' })).toBeInTheDocument();
+    expect(target).toHaveValue('Mira — Trust');
 
-    fireEvent.change(target, { target: { value: 'Luc' } });
+    fireEvent.change(target, { target: { value: 'Luc — Trust' } });
     expect(onPatch).toHaveBeenLastCalledWith('interaction-1', {
       statEffects: [{ ...interaction.statEffects![0], statId: 'luc-trust' }],
     });
 
-    fireEvent.change(screen.getByLabelText('Affected stat'), {
-      target: { value: 'health' },
+    fireEvent.change(target, {
+      target: { value: 'Mira — Health' },
     });
     expect(onPatch).toHaveBeenLastCalledWith('interaction-1', {
       statEffects: [{ ...interaction.statEffects![0], statId: 'mira-health' }],
@@ -316,8 +350,8 @@ describe('InteractionInspector time', () => {
           name: 'Key',
           description: '',
           stats: [
-            { statDefinitionId: 'durability', initialValue: 10 },
-            { statDefinitionId: 'charge', initialValue: 3 },
+            { id: 'key-durability', statDefinitionId: 'durability', initialValue: 10 },
+            { id: 'key-charge', statDefinitionId: 'charge', initialValue: 3 },
           ],
         },
       ],
@@ -358,14 +392,14 @@ describe('InteractionInspector time', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Add effect' }));
     fireEvent.click(
       within(screen.getByRole('group', { name: 'Effect type' })).getByRole('button', {
-        name: 'Item stat',
+        name: 'Variable',
       }),
     );
     expect(onPatch).toHaveBeenLastCalledWith('interaction-1', {
-      itemStatEffects: [
+      statEffects: [
         {
           itemId: 'key-1',
-          statDefinitionId: 'durability',
+          statId: 'key-durability',
           operation: 'add',
           value: 1,
         },
@@ -374,10 +408,10 @@ describe('InteractionInspector time', () => {
 
     const withEffect = {
       ...interaction,
-      itemStatEffects: [
+      statEffects: [
         {
           itemId: 'key-1',
-          statDefinitionId: 'durability',
+          statId: 'key-durability',
           operation: 'add' as const,
           value: 1,
         },
@@ -392,45 +426,46 @@ describe('InteractionInspector time', () => {
         onDelete={vi.fn()}
       />,
     );
-    expect(screen.getByText('Item stat change 1')).toBeInTheDocument();
-    const target = screen.getByLabelText('Item stat effect target');
-    expect(target).toHaveValue('Mira — Key #1');
-    expect(screen.getByLabelText('Affected item stat')).toHaveValue('durability');
-    expect(screen.getByLabelText('Item stat effect target')).toHaveAttribute(
+    expect(screen.getByText('Variable change 1')).toBeInTheDocument();
+    const target = screen.getByLabelText('Variable effect target');
+    expect(target).toHaveValue('Mira — Key #1 — Durability');
+    expect(screen.getByLabelText('Variable effect target')).toHaveAttribute(
       'list',
       expect.any(String),
     );
-    expect(container.querySelector('datalist option[value="Home — Key"]')).toBeInTheDocument();
+    expect(
+      container.querySelector('datalist option[value="Home — Key — Durability"]'),
+    ).toBeInTheDocument();
     fireEvent.change(target, {
-      target: { value: 'Mira — Key #2' },
+      target: { value: 'Mira — Key #2 — Durability' },
     });
     expect(onPatch).toHaveBeenLastCalledWith('interaction-1', {
-      itemStatEffects: [{ ...withEffect.itemStatEffects[0], itemId: 'key-2' }],
+      statEffects: [{ ...withEffect.statEffects[0], itemId: 'key-2' }],
     });
-    fireEvent.change(screen.getByLabelText('Affected item stat'), {
-      target: { value: 'charge' },
+    fireEvent.change(target, {
+      target: { value: 'Mira — Key #1 — Charge' },
     });
     expect(onPatch).toHaveBeenLastCalledWith('interaction-1', {
-      itemStatEffects: [{ ...withEffect.itemStatEffects[0], statDefinitionId: 'charge' }],
+      statEffects: [{ ...withEffect.statEffects[0], statId: 'key-charge' }],
     });
-    fireEvent.change(screen.getByLabelText('Item stat effect operation'), {
+    fireEvent.change(screen.getByLabelText('Variable effect operation'), {
       target: { value: 'set' },
     });
     expect(onPatch).toHaveBeenLastCalledWith('interaction-1', {
-      itemStatEffects: [{ ...withEffect.itemStatEffects[0], operation: 'set' }],
+      statEffects: [{ ...withEffect.statEffects[0], operation: 'set' }],
     });
-    fireEvent.change(screen.getByLabelText('Item stat effect value'), {
+    fireEvent.change(screen.getByLabelText('Variable effect value'), {
       target: { value: '-3' },
     });
-    fireEvent.blur(screen.getByLabelText('Item stat effect value'), {
+    fireEvent.blur(screen.getByLabelText('Variable effect value'), {
       target: { value: '-3' },
     });
     expect(onPatch).toHaveBeenLastCalledWith('interaction-1', {
-      itemStatEffects: [{ ...withEffect.itemStatEffects[0], value: -3 }],
+      statEffects: [{ ...withEffect.statEffects[0], value: -3 }],
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Delete item stat effect' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Delete variable effect' }));
     expect(onPatch).toHaveBeenLastCalledWith('interaction-1', {
-      itemStatEffects: [],
+      statEffects: [],
     });
   });
 });

@@ -201,6 +201,12 @@ near the relevant list. The inspector should use a stable internal structure
 across editable objects, such as content, metadata, navigation, and future
 notes, while only showing sections that are meaningful for the selected object.
 
+Equivalent entities in the same navigation surface must reuse the existing
+section header, list row, pictogram, spacing, hover, and selected-state patterns.
+Before adding component-specific markup or CSS, extend or extract the closest
+existing pattern. A deliberate visual exception should reflect a product
+semantic difference, not an implementation shortcut.
+
 Large labeled buttons should be rare in the authoring surface. Prefer icons,
 context menus, keyboard shortcuts, and local actions when the command is clear.
 

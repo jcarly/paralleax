@@ -20,7 +20,14 @@ const story: Story = {
     },
   ],
   statDefinitions: [{ id: 'trust', name: 'Trust' }],
-  itemDefinitions: [{ id: 'key', name: 'Key', description: '' }],
+  itemDefinitions: [
+    {
+      id: 'key',
+      name: 'Key',
+      description: '',
+      stats: [{ id: 'key-trust', statDefinitionId: 'trust', initialValue: 0 }],
+    },
+  ],
   characters: [
     {
       id: 'mira',
@@ -47,9 +54,7 @@ const story: Story = {
       title: 'Locked route',
       body: '',
       position: { x: 0, y: 132 },
-      itemStatEffects: [
-        { itemId: 'mira-key', statDefinitionId: 'trust', operation: 'add', value: 1 },
-      ],
+      statEffects: [{ itemId: 'mira-key', statId: 'key-trust', operation: 'add', value: 1 }],
       triggers: [
         {
           id: 'linked',
@@ -68,9 +73,7 @@ const story: Story = {
       title: 'Inspect location item',
       body: '',
       position: { x: 0, y: 264 },
-      itemStatEffects: [
-        { itemId: 'harbor-key', statDefinitionId: 'trust', operation: 'add', value: 1 },
-      ],
+      statEffects: [{ itemId: 'harbor-key', statId: 'key-trust', operation: 'add', value: 1 }],
       triggers: [{ id: 'inspect-linked', inputInteractionIds: ['locked'], conditions: [] }],
     },
   ],

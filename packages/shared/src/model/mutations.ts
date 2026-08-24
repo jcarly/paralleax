@@ -2,16 +2,15 @@ import type { Character } from './characters.js';
 import type { Position } from './common.js';
 import type { Interaction } from './interactions.js';
 import type { GraphDecoration } from './graph-decorations.js';
-import type {
-  ItemDefinition,
-  ItemDefinitionStat,
-  ItemEffect,
-  ItemInstance,
-  ItemRelationshipType,
-  ItemStatEffect,
-} from './items.js';
+import type { ItemDefinition, ItemEffect, ItemInstance, ItemRelationshipType } from './items.js';
 import type { Location } from './locations.js';
-import type { CharacterStat, StatDefinition, StatEffect } from './stats.js';
+import type {
+  StatAssignment,
+  StatDefinition,
+  StatEffect,
+  StatValue,
+  StatValueType,
+} from './stats.js';
 import type { Trigger } from './triggers.js';
 
 export interface StoryMutationMetadata {
@@ -42,7 +41,13 @@ export interface CharacterMutationResult extends StoryMutationMetadata {
 
 export interface CharacterStatMutationResult extends StoryMutationMetadata {
   characterId: string;
-  stat: CharacterStat;
+  stat: StatAssignment;
+}
+
+export interface StatAssignmentMutationResult extends StoryMutationMetadata {
+  ownerType: 'story' | 'character' | 'location' | 'itemDefinition';
+  ownerId?: string;
+  stat: StatAssignment;
 }
 
 export interface StatDefinitionMutationResult extends StoryMutationMetadata {
@@ -80,7 +85,6 @@ export interface UpdateInteractionInput {
   characterIds?: string[];
   statEffects?: StatEffect[];
   itemEffects?: ItemEffect[];
-  itemStatEffects?: ItemStatEffect[];
   durationMinutes?: number;
 }
 
@@ -116,15 +120,16 @@ export interface UpdateCharacterInput {
 
 export interface CreateCharacterStatInput {
   statDefinitionId: string;
-  initialValue: number;
+  initialValue: StatValue;
 }
 
 export interface UpdateCharacterStatInput {
-  initialValue?: number;
+  initialValue?: StatValue;
 }
 
 export interface CreateStatDefinitionInput {
   name: string;
+  valueType?: StatValueType;
   category?: string;
   imageUrl?: string;
   changePerHour?: number;
@@ -137,12 +142,23 @@ export interface UpdateStatDefinitionInput {
   changePerHour?: number;
 }
 
+export interface CreateStatAssignmentInput {
+  statDefinitionId: string;
+  ownerType: 'story' | 'character' | 'location' | 'itemDefinition';
+  ownerId?: string;
+  initialValue: StatValue;
+}
+
+export interface UpdateStatAssignmentInput {
+  initialValue: StatValue;
+}
+
 export interface CreateItemDefinitionInput {
   name: string;
   description?: string;
   category?: string;
   imageUrl?: string;
-  stats?: ItemDefinitionStat[];
+  stats?: Array<Omit<StatAssignment, 'id'> & { id?: string }>;
 }
 
 export interface UpdateItemDefinitionInput {
@@ -150,7 +166,7 @@ export interface UpdateItemDefinitionInput {
   description?: string;
   category?: string;
   imageUrl?: string;
-  stats?: ItemDefinitionStat[];
+  stats?: Array<Omit<StatAssignment, 'id'> & { id?: string }>;
 }
 
 export interface CreateCharacterItemInput {
@@ -179,7 +195,6 @@ export type InteractionContentPatch = Partial<
     | 'characterIds'
     | 'statEffects'
     | 'itemEffects'
-    | 'itemStatEffects'
     | 'durationMinutes'
   >
 >;

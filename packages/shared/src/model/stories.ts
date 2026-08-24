@@ -3,7 +3,7 @@ import type { GraphDecoration } from './graph-decorations.js';
 import type { Interaction } from './interactions.js';
 import type { ItemDefinition } from './items.js';
 import type { Location } from './locations.js';
-import type { StatDefinition } from './stats.js';
+import type { StatAssignment, StatDefinition } from './stats.js';
 import type { StoryAccessCapabilities, StoryAccessSettings } from '../access-control.js';
 
 export interface Story {
@@ -12,6 +12,7 @@ export interface Story {
   title: string;
   locations?: Location[];
   characters?: Character[];
+  stats?: StatAssignment[];
   statDefinitions?: StatDefinition[];
   itemDefinitions?: ItemDefinition[];
   graphDecorations?: GraphDecoration[];

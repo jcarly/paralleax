@@ -71,15 +71,39 @@ describePostgres('StoriesRepository PostgreSQL integration', () => {
           description: 'A quiet harbor.',
           category: 'Coast',
           imageUrl: 'https://images.example/harbor.png',
+          stats: [
+            {
+              id: 'weather-stat',
+              statDefinitionId: 'weather-definition',
+              initialValue: 'calm',
+            },
+          ],
         },
       ],
       statDefinitions: [
+        { id: 'alarm-definition', name: 'Alarm', valueType: 'boolean' },
+        {
+          id: 'courage-definition',
+          name: 'Courage',
+          valueType: 'number',
+          changePerHour: 2,
+        },
+        { id: 'weather-definition', name: 'Weather', valueType: 'string' },
+        { id: 'charge-definition', name: 'Charge', valueType: 'number' },
         {
           id: 'definition-1',
           name: 'Trust',
+          valueType: 'number',
           category: 'Relationships',
           imageUrl: 'https://images.example/trust.svg',
           changePerHour: -0.5,
+        },
+      ],
+      stats: [
+        {
+          id: 'alarm-stat',
+          statDefinitionId: 'alarm-definition',
+          initialValue: false,
         },
       ],
       itemDefinitions: [
@@ -89,6 +113,13 @@ describePostgres('StoriesRepository PostgreSQL integration', () => {
           description: 'A brass key.',
           category: 'Quest items',
           imageUrl: 'https://images.example/key.png',
+          stats: [
+            {
+              id: 'charge-stat',
+              statDefinitionId: 'charge-definition',
+              initialValue: 10,
+            },
+          ],
         },
       ],
       characters: [
@@ -98,7 +129,14 @@ describePostgres('StoriesRepository PostgreSQL integration', () => {
           description: 'An investigator.',
           category: 'Allies',
           imageUrl: 'https://images.example/mira.png',
-          stats: [{ id: 'stat-1', statDefinitionId: 'definition-1', initialValue: 2 }],
+          stats: [
+            {
+              id: 'courage-stat',
+              statDefinitionId: 'courage-definition',
+              initialValue: 1,
+            },
+            { id: 'stat-1', statDefinitionId: 'definition-1', initialValue: 2 },
+          ],
           items: [
             { id: 'item-1', itemDefinitionId: 'item-definition-1' },
             { id: 'item-2', itemDefinitionId: 'item-definition-1' },
@@ -134,7 +172,25 @@ describePostgres('StoriesRepository PostgreSQL integration', () => {
           position: { x: 80, y: 120 },
           locationId: 'location-1',
           characterIds: ['character-1'],
-          statEffects: [{ statId: 'stat-1', operation: 'add', value: 1 }],
+          statEffects: [
+            { statId: 'stat-1', operation: 'add', value: 1 },
+            {
+              statId: 'alarm-stat',
+              operation: 'set',
+              value: true,
+            },
+            {
+              statId: 'courage-stat',
+              operation: 'add',
+              value: 2,
+            },
+            {
+              statId: 'charge-stat',
+              itemId: 'item-1',
+              operation: 'add',
+              value: -1,
+            },
+          ],
           itemEffects: [{ itemId: 'item-1', operation: 'obtain' }],
           durationMinutes: 45,
           triggers: [{ id: 'trigger-1', inputInteractionIds: [], conditions: [] }],
@@ -153,6 +209,15 @@ describePostgres('StoriesRepository PostgreSQL integration', () => {
                 { locationId: 'location-1', isCurrentLocation: true },
                 { characterId: 'character-1', isPresent: true },
                 { statId: 'stat-1', operator: 'gte', value: 3 },
+                { statId: 'alarm-stat', operator: 'eq', value: true },
+                { statId: 'courage-stat', operator: 'gte', value: 4 },
+                { statId: 'weather-stat', operator: 'eq', value: 'calm' },
+                {
+                  statId: 'charge-stat',
+                  itemId: 'item-1',
+                  operator: 'gte',
+                  value: 9,
+                },
                 {
                   temporal: {
                     weekdays: ['monday', 'tuesday'],
@@ -204,7 +269,7 @@ describePostgres('StoriesRepository PostgreSQL integration', () => {
       position: { x: 420, y: 360 },
       locationId: 'location-1',
       characterIds: ['character-1'],
-      statEffects: [{ statId: 'stat-1', operation: 'add', value: 1 }],
+      statEffects: story.interactions[0].statEffects,
       itemEffects: [{ itemId: 'item-1', operation: 'obtain' }],
       durationMinutes: 45,
     });
@@ -241,23 +306,38 @@ describePostgres('StoriesRepository PostgreSQL integration', () => {
         description: 'A quiet harbor.',
         category: 'Coast',
         imageUrl: 'https://images.example/harbor.png',
+        stats: story.locations?.[0].stats,
       },
     ]);
     expect(reloaded?.characters?.[0].imageUrl).toBe('https://images.example/mira.png');
     expect(reloaded?.characters?.[0].category).toBe('Allies');
-    expect(reloaded?.statDefinitions?.[0].imageUrl).toBe('https://images.example/trust.svg');
-    expect(reloaded?.statDefinitions?.[0].category).toBe('Relationships');
-    expect(reloaded?.statDefinitions?.[0].changePerHour).toBe(-0.5);
+    expect(reloaded?.characters?.[0].stats).toEqual(story.characters?.[0].stats);
+    expect(reloaded?.statDefinitions).toEqual(story.statDefinitions);
+    expect(reloaded?.stats).toEqual(story.stats);
+    expect(reloaded?.statDefinitions?.[4].imageUrl).toBe('https://images.example/trust.svg');
+    expect(reloaded?.statDefinitions?.[4].category).toBe('Relationships');
+    expect(reloaded?.statDefinitions?.[4].changePerHour).toBe(-0.5);
     expect(reloaded?.itemDefinitions?.[0].imageUrl).toBe('https://images.example/key.png');
     expect(reloaded?.itemDefinitions?.[0].category).toBe('Quest items');
+    expect(reloaded?.itemDefinitions?.[0].stats).toEqual(story.itemDefinitions?.[0].stats);
     expect(reloaded?.interactions[1].triggers[0]).toEqual({
       id: 'trigger-2',
       inputInteractionIds: ['interaction-1'],
+      position: { x: 280, y: 240 },
       conditions: [
         { interactionId: 'interaction-1', hasBeenVisited: true },
         { locationId: 'location-1', isCurrentLocation: true },
         { characterId: 'character-1', isPresent: true },
         { statId: 'stat-1', operator: 'gte', value: 3 },
+        { statId: 'alarm-stat', operator: 'eq', value: true },
+        { statId: 'courage-stat', operator: 'gte', value: 4 },
+        { statId: 'weather-stat', operator: 'eq', value: 'calm' },
+        {
+          statId: 'charge-stat',
+          itemId: 'item-1',
+          operator: 'gte',
+          value: 9,
+        },
         {
           temporal: {
             weekdays: ['monday', 'tuesday'],
@@ -391,8 +471,10 @@ describePostgres('StoriesRepository PostgreSQL integration', () => {
          (SELECT count(*)::int FROM characters WHERE story_id = $1) AS characters,
          (SELECT count(*)::int FROM interaction_characters WHERE story_id = $1)
            AS interaction_characters,
-         (SELECT count(*)::int FROM character_stats WHERE story_id = $1)
-           AS character_stats,
+         (SELECT count(*)::int FROM stat_definitions WHERE story_id = $1)
+           AS stat_definitions,
+         (SELECT count(*)::int FROM stat_assignments WHERE story_id = $1)
+           AS stat_assignments,
          (SELECT count(*)::int FROM interaction_stat_effects WHERE story_id = $1)
            AS interaction_stat_effects,
          (SELECT count(*)::int FROM interaction_item_effects WHERE story_id = $1)
@@ -414,12 +496,13 @@ describePostgres('StoriesRepository PostgreSQL integration', () => {
       locations: 1,
       characters: 1,
       interaction_characters: 1,
-      character_stats: 1,
-      interaction_stat_effects: 1,
+      stat_definitions: 5,
+      stat_assignments: 5,
+      interaction_stat_effects: 4,
       interaction_item_effects: 1,
       triggers: 2,
       inputs: 1,
-      conditions: 5,
+      conditions: 9,
     });
   });
 });

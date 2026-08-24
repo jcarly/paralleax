@@ -3,6 +3,7 @@ import type { Connection } from '@xyflow/react';
 import {
   deleteTriggerInStory,
   deleteGraphDecorationFromStory,
+  getStatValueType,
   getNextChildPosition,
   getNextParentPosition,
   getNextRootPosition,
@@ -13,6 +14,7 @@ import {
   type CharacterMutationResult,
   type CharacterItemMutationResult,
   type CharacterStatMutationResult,
+  type CreateStatDefinitionInput,
   type Interaction,
   type InteractionContentPatch,
   type InteractionMutationResult,
@@ -580,10 +582,12 @@ export function useStoryEditorPersistence(storyId: string) {
   }
 
   async function createCharacterStat(characterId: string, statDefinitionId: string) {
+    const definition = story?.statDefinitions?.find(({ id }) => id === statDefinitionId);
+    const valueType = definition ? getStatValueType(definition) : 'number';
     const result = await trackSave(() =>
       api.createCharacterStat(storyId, characterId, {
         statDefinitionId,
-        initialValue: 0,
+        initialValue: valueType === 'number' ? 0 : valueType === 'boolean' ? false : '',
       }),
     );
     if (!result) return;
@@ -618,8 +622,8 @@ export function useStoryEditorPersistence(storyId: string) {
     setStory((current) => (current ? mergeServerStory(current, result) : current));
   }
 
-  async function createStatDefinition() {
-    const result = await trackSave(() => api.createStatDefinition(storyId, { name: 'New stat' }));
+  async function createStatDefinition(input: CreateStatDefinitionInput) {
+    const result = await trackSave(() => api.createStatDefinition(storyId, input));
     if (!result) return undefined;
     setStory((current) =>
       current

@@ -1,4 +1,5 @@
 import type { TemporalCondition } from '../time/types.js';
+import type { StatValue } from '../model/stats.js';
 
 export interface InteractionVisitedCondition {
   interactionId: string;
@@ -15,12 +16,13 @@ export interface CharacterCondition {
   isPresent: boolean;
 }
 
-export type StatComparisonOperator = 'eq' | 'lt' | 'lte' | 'gt' | 'gte';
+export type StatComparisonOperator = 'eq' | 'neq' | 'lt' | 'lte' | 'gt' | 'gte';
 
-export interface CharacterStatCondition {
+export interface StatCondition {
   statId: string;
+  itemId?: string;
   operator: StatComparisonOperator;
-  value: number;
+  value: StatValue;
 }
 
 export interface ItemCondition {
@@ -32,7 +34,7 @@ export type TriggerCondition =
   | InteractionVisitedCondition
   | LocationCondition
   | CharacterCondition
-  | CharacterStatCondition
+  | StatCondition
   | ItemCondition
   | TemporalCondition;
 

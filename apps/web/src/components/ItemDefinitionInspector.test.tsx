@@ -83,12 +83,12 @@ describe('ItemDefinitionInspector', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Add stat' }));
     expect(onPatch).toHaveBeenLastCalledWith('item-definition-1', {
-      stats: [{ statDefinitionId: 'durability', initialValue: 0 }],
+      stats: [{ id: expect.any(String), statDefinitionId: 'durability', initialValue: 0 }],
     });
 
     const withStat = {
       ...itemDefinition,
-      stats: [{ statDefinitionId: 'durability', initialValue: 0 }],
+      stats: [{ id: 'item-durability', statDefinitionId: 'durability', initialValue: 0 }],
     };
     rerender(
       <ItemDefinitionInspector
@@ -105,7 +105,7 @@ describe('ItemDefinitionInspector', () => {
       target: { value: 'quality' },
     });
     expect(onPatch).toHaveBeenLastCalledWith('item-definition-1', {
-      stats: [{ statDefinitionId: 'quality', initialValue: 0 }],
+      stats: [{ id: 'item-durability', statDefinitionId: 'quality', initialValue: 0 }],
     });
     fireEvent.change(screen.getByLabelText('Item stat initial value'), {
       target: { value: '12' },
@@ -114,7 +114,7 @@ describe('ItemDefinitionInspector', () => {
       target: { value: '12' },
     });
     expect(onPatch).toHaveBeenLastCalledWith('item-definition-1', {
-      stats: [{ statDefinitionId: 'durability', initialValue: 12 }],
+      stats: [{ id: 'item-durability', statDefinitionId: 'durability', initialValue: 12 }],
     });
     fireEvent.click(screen.getByRole('button', { name: 'Delete item stat' }));
     expect(onPatch).toHaveBeenLastCalledWith('item-definition-1', { stats: [] });
@@ -128,8 +128,8 @@ describe('ItemDefinitionInspector', () => {
         itemDefinition={{
           ...itemDefinition,
           stats: [
-            { statDefinitionId: 'durability', initialValue: 10 },
-            { statDefinitionId: 'quality', initialValue: 5 },
+            { id: 'item-durability', statDefinitionId: 'durability', initialValue: 10 },
+            { id: 'item-quality', statDefinitionId: 'quality', initialValue: 5 },
           ],
         }}
         onChange={onChange}

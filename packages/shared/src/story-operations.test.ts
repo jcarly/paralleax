@@ -600,6 +600,105 @@ describe('story time', () => {
   });
 });
 
+describe('typed stats', () => {
+  it('replays typed effects and evaluates stat conditions without defaulting missing values', () => {
+    const story = storyFixture();
+    story.statDefinitions = [
+      {
+        id: 'score-definition',
+        name: 'Score',
+        valueType: 'number',
+        changePerHour: 2,
+      },
+      { id: 'open-definition', name: 'Door open', valueType: 'boolean' },
+      { id: 'name-definition', name: 'Alias', valueType: 'string' },
+    ];
+    story.stats = [
+      { id: 'score', statDefinitionId: 'score-definition', initialValue: 2 },
+      { id: 'door-open', statDefinitionId: 'open-definition', initialValue: false },
+      { id: 'alias', statDefinitionId: 'name-definition', initialValue: 'Mira' },
+    ];
+    story.interactions[0].statEffects = [
+      { statId: 'score', operation: 'add', value: 3 },
+      { statId: 'door-open', operation: 'set', value: true },
+    ];
+    story.interactions[0].durationMinutes = 30;
+    story.interactions[1].triggers[0].conditions = [
+      { statId: 'door-open', operator: 'eq', value: true },
+      { statId: 'alias', operator: 'neq', value: 'Unknown' },
+    ];
+
+    const values = getJourneyStatValues(story, ['root']);
+    expect(values).toEqual({ score: 6, 'door-open': true, alias: 'Mira' });
+    expect(
+      getAvailableInteractions(
+        story,
+        'root',
+        ['root'],
+        null,
+        [],
+        values,
+        story.startDateTime,
+        [],
+      ).map(({ id }) => id),
+    ).toContain('middle');
+
+    story.interactions[1].triggers[0].conditions = [
+      { statId: 'missing', operator: 'eq', value: 0 },
+    ];
+    expect(
+      getAvailableInteractions(
+        story,
+        'root',
+        ['root'],
+        null,
+        [],
+        values,
+        story.startDateTime,
+        [],
+      ).map(({ id }) => id),
+    ).not.toContain('middle');
+  });
+
+  it('keeps independent item stat values per exact instance', () => {
+    const story = storyFixture();
+    story.statDefinitions = [{ id: 'charge-definition', name: 'Charge', valueType: 'number' }];
+    story.itemDefinitions = [
+      {
+        id: 'battery-definition',
+        name: 'Battery',
+        description: '',
+        stats: [{ id: 'battery-charge', statDefinitionId: 'charge-definition', initialValue: 10 }],
+      },
+    ];
+    story.characters = [
+      {
+        id: 'mira',
+        name: 'Mira',
+        description: '',
+        items: [
+          { id: 'battery-1', itemDefinitionId: 'battery-definition' },
+          { id: 'battery-2', itemDefinitionId: 'battery-definition' },
+        ],
+      },
+    ];
+    story.interactions[0].statEffects = [
+      {
+        statId: 'battery-charge',
+        itemId: 'battery-1',
+        operation: 'add',
+        value: -4,
+      },
+    ];
+
+    const progress = buildReaderProgressState(story, ['root']);
+    expect(progress.itemStatValues).toEqual({
+      'battery-1': { 'battery-charge': 6 },
+      'battery-2': { 'battery-charge': 10 },
+    });
+  });
+});
+
 describe('reader progress', () => {
   it('materializes replayable state while keeping repeated journey visits', () => {
     const story = storyFixture();
@@ -626,20 +725,27 @@ describe('reader progress', () => {
         id: 'key-definition',
         name: 'Key',
         description: '',
-        stats: [{ statDefinitionId: 'durability-definition', initialValue: 10 }],
+        stats: [
+          {
+            id: 'key-durability',
+            statDefinitionId: 'durability-definition',
+            initialValue: 10,
+          },
+        ],
       },
     ];
-    story.interactions[0].itemStatEffects = [
+    story.interactions[0].statEffects = [
+      { statId: 'trust', operation: 'add', value: 2 },
       {
         itemId: 'key-1',
-        statDefinitionId: 'durability-definition',
+        statId: 'key-durability',
         operation: 'add',
         value: 3,
       },
     ];
 
     expect(buildReaderProgressState(story, ['root', 'middle', 'root'], ['key-1'])).toEqual({
-      version: 1,
+      version: 2,
       journeyInteractionIds: ['root', 'middle', 'root'],
       currentInteractionId: 'root',
       visitedInteractionIds: ['root', 'middle'],
@@ -647,7 +753,7 @@ describe('reader progress', () => {
       currentLocationId: 'harbor',
       statValues: { trust: 5 },
       ownedItemIds: ['key-1'],
-      itemStatValues: { 'key-1': { 'durability-definition': 15 } },
+      itemStatValues: { 'key-1': { 'key-durability': 15 } },
     });
   });
 
@@ -699,6 +805,9 @@ describe('reader progress', () => {
 
   it('resolves character-rooted item trees and ignores disconnected instances', () => {
     const story = storyFixture();
+    story.statDefinitions = [
+      { id: 'durability-definition', name: 'Durability', valueType: 'number' },
+    ];
     story.characters = [
       {
         id: 'mira',
@@ -732,25 +841,37 @@ describe('reader progress', () => {
         id: 'backpack-definition',
         name: 'Backpack',
         description: '',
-        stats: [{ statDefinitionId: 'durability-definition', initialValue: 20 }],
+        stats: [
+          {
+            id: 'backpack-durability',
+            statDefinitionId: 'durability-definition',
+            initialValue: 20,
+          },
+        ],
       },
       {
         id: 'key-definition',
         name: 'Key',
         description: '',
-        stats: [{ statDefinitionId: 'durability-definition', initialValue: 10 }],
+        stats: [
+          { id: 'key-durability', statDefinitionId: 'durability-definition', initialValue: 10 },
+        ],
       },
       {
         id: 'charm-definition',
         name: 'Charm',
         description: '',
-        stats: [{ statDefinitionId: 'durability-definition', initialValue: 5 }],
+        stats: [
+          { id: 'charm-durability', statDefinitionId: 'durability-definition', initialValue: 5 },
+        ],
       },
       {
         id: 'orphan-definition',
         name: 'Orphan',
         description: '',
-        stats: [{ statDefinitionId: 'durability-definition', initialValue: 1 }],
+        stats: [
+          { id: 'orphan-durability', statDefinitionId: 'durability-definition', initialValue: 1 },
+        ],
       },
     ];
     story.interactions[0].itemEffects = [{ itemId: 'key-1', operation: 'obtain' }];
@@ -765,14 +886,17 @@ describe('reader progress', () => {
     expect(getItemOwnerIdForInstance(story, 'orphan-1')).toBeUndefined();
     expect(progress.ownedItemIds).toEqual(['key-1']);
     expect(progress.itemStatValues).toEqual({
-      'backpack-1': { 'durability-definition': 20 },
-      'key-1': { 'durability-definition': 10 },
-      'charm-1': { 'durability-definition': 5 },
+      'backpack-1': { 'backpack-durability': 20 },
+      'key-1': { 'key-durability': 10 },
+      'charm-1': { 'charm-durability': 5 },
     });
   });
 
   it('resolves location-rooted item trees during replay', () => {
     const story = storyFixture();
+    story.statDefinitions = [
+      { id: 'durability-definition', name: 'Durability', valueType: 'number' },
+    ];
     story.locations = [
       {
         id: 'home',
@@ -795,7 +919,9 @@ describe('reader progress', () => {
         id: 'supply-definition',
         name: 'Supply',
         description: '',
-        stats: [{ statDefinitionId: 'durability-definition', initialValue: 10 }],
+        stats: [
+          { id: 'supply-durability', statDefinitionId: 'durability-definition', initialValue: 10 },
+        ],
       },
     ];
     story.interactions[0].itemEffects = [{ itemId: 'supply-1', operation: 'obtain' }];
@@ -805,7 +931,7 @@ describe('reader progress', () => {
     expect(getItemDefinitionIdForInstance(story, 'supply-1')).toBe('supply-definition');
     expect(getItemOwnerIdForInstance(story, 'supply-1')).toBe('home');
     expect(progress.ownedItemIds).toEqual(['supply-1']);
-    expect(progress.itemStatValues['supply-1']).toEqual({ 'durability-definition': 10 });
+    expect(progress.itemStatValues['supply-1']).toEqual({ 'supply-durability': 10 });
   });
 
   it('obtains reusable item definitions and evaluates item ownership conditions', () => {
@@ -864,7 +990,7 @@ describe('reader progress', () => {
         id: 'key-definition',
         name: 'Key',
         description: '',
-        stats: [{ statDefinitionId: 'durability', initialValue: 10 }],
+        stats: [{ id: 'key-durability', statDefinitionId: 'durability', initialValue: 10 }],
       },
     ];
     story.characters = [
@@ -878,24 +1004,24 @@ describe('reader progress', () => {
         ],
       },
     ];
-    story.interactions[0].itemStatEffects = [
+    story.interactions[0].statEffects = [
       {
         itemId: 'key-1',
-        statDefinitionId: 'durability',
+        statId: 'key-durability',
         operation: 'add',
         value: -4,
       },
       {
         itemId: 'key-2',
-        statDefinitionId: 'durability',
+        statId: 'key-durability',
         operation: 'set',
         value: 3,
       },
     ];
 
     expect(buildReaderProgressState(story, ['root']).itemStatValues).toEqual({
-      'key-1': { durability: 6 },
-      'key-2': { durability: 3 },
+      'key-1': { 'key-durability': 6 },
+      'key-2': { 'key-durability': 3 },
     });
   });
 });

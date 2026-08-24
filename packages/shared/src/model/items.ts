@@ -1,15 +1,12 @@
+import type { StatAssignment } from './stats.js';
+
 export interface ItemDefinition {
   id: string;
   name: string;
   description: string;
   category?: string;
   imageUrl?: string;
-  stats?: ItemDefinitionStat[];
-}
-
-export interface ItemDefinitionStat {
-  statDefinitionId: string;
-  initialValue: number;
+  stats?: StatAssignment[];
 }
 
 export interface ItemInstance {
@@ -28,11 +25,4 @@ export interface ItemEffect {
   itemDefinitionId?: string;
   characterId?: string;
   operation: 'obtain' | 'lose';
-}
-
-export interface ItemStatEffect {
-  itemId: string;
-  statDefinitionId: string;
-  operation: 'add' | 'set';
-  value: number;
 }

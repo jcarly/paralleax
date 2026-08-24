@@ -1,4 +1,5 @@
 import type { Interaction } from '../model/interactions.js';
+import type { StatValue } from '../model/stats.js';
 import type { Story } from '../model/stories.js';
 import type { Trigger } from '../model/triggers.js';
 import { DEFAULT_STORY_DATE_TIME } from '../time/calendar.js';
@@ -11,9 +12,10 @@ export function isTriggerEligible(
   visited: Set<string>,
   currentLocationId: string | null = null,
   currentCharacterIds: string[] = [],
-  statValues: Readonly<Record<string, number>> = {},
+  statValues: Readonly<Record<string, StatValue>> = {},
   currentDateTime = DEFAULT_STORY_DATE_TIME,
   ownedItemDefinitionIds: readonly string[] = [],
+  itemStatValues: Readonly<Record<string, Readonly<Record<string, StatValue>>>> = {},
 ): boolean {
   return (
     doesTriggerInputMatch(trigger, currentInteractionId) &&
@@ -26,6 +28,7 @@ export function isTriggerEligible(
         statValues,
         currentDateTime,
         ownedItemDefinitionIds,
+        itemStatValues,
       ),
     )
   );
@@ -48,9 +51,10 @@ export function getAvailableInteractions(
   visitedIds: string[],
   currentLocationId: string | null = null,
   currentCharacterIds: string[] = [],
-  statValues: Readonly<Record<string, number>> = {},
+  statValues: Readonly<Record<string, StatValue>> = {},
   currentDateTime = story.startDateTime ?? DEFAULT_STORY_DATE_TIME,
   ownedItemDefinitionIds: readonly string[] = [],
+  itemStatValues: Readonly<Record<string, Readonly<Record<string, StatValue>>>> = {},
 ): Interaction[] {
   const visited = new Set(visitedIds);
   return story.interactions.filter((interaction) =>
@@ -64,6 +68,7 @@ export function getAvailableInteractions(
         statValues,
         currentDateTime,
         ownedItemDefinitionIds,
+        itemStatValues,
       ),
     ),
   );
@@ -84,9 +89,10 @@ export function getTriggerConditionFailures(
   visitedIds: string[],
   currentLocationId: string | null = null,
   currentCharacterIds: string[] = [],
-  statValues: Readonly<Record<string, number>> = {},
+  statValues: Readonly<Record<string, StatValue>> = {},
   currentDateTime = DEFAULT_STORY_DATE_TIME,
   ownedItemDefinitionIds: readonly string[] = [],
+  itemStatValues: Readonly<Record<string, Readonly<Record<string, StatValue>>>> = {},
 ): TriggerConditionFailure[] {
   const visited = new Set(visitedIds);
   const inputMatchingTriggers = interaction.triggers.filter((trigger) =>
@@ -104,6 +110,7 @@ export function getTriggerConditionFailures(
           statValues,
           currentDateTime,
           ownedItemDefinitionIds,
+          itemStatValues,
         ),
       ),
     )
@@ -123,6 +130,7 @@ export function getTriggerConditionFailures(
             statValues,
             currentDateTime,
             ownedItemDefinitionIds,
+            itemStatValues,
           ),
       )
       .map((condition) => ({ triggerId: trigger.id, condition })),
@@ -134,9 +142,10 @@ function conditionMatches(
   visited: Set<string>,
   currentLocationId: string | null,
   currentCharacterIds: string[],
-  statValues: Readonly<Record<string, number>>,
+  statValues: Readonly<Record<string, StatValue>>,
   currentDateTime: string,
   ownedItemDefinitionIds: readonly string[],
+  itemStatValues: Readonly<Record<string, Readonly<Record<string, StatValue>>>>,
 ) {
   if ('interactionId' in condition) {
     return condition.hasBeenVisited
@@ -156,8 +165,13 @@ function conditionMatches(
     return condition.isOwned ? isOwned : !isOwned;
   }
   if ('temporal' in condition) return temporalConditionMatches(condition, currentDateTime);
-  const currentValue = statValues[condition.statId] ?? 0;
+  const currentValue = condition.itemId
+    ? itemStatValues[condition.itemId]?.[condition.statId]
+    : statValues[condition.statId];
+  if (currentValue === undefined || typeof currentValue !== typeof condition.value) return false;
   if (condition.operator === 'eq') return currentValue === condition.value;
+  if (condition.operator === 'neq') return currentValue !== condition.value;
+  if (typeof currentValue !== 'number' || typeof condition.value !== 'number') return false;
   if (condition.operator === 'lt') return currentValue < condition.value;
   if (condition.operator === 'lte') return currentValue <= condition.value;
   if (condition.operator === 'gt') return currentValue > condition.value;

@@ -29,6 +29,17 @@ New stories are private to the account that creates them. The creator can later
 share them explicitly. The first account created on a new installation is its
 administrator.
 
+To inspect a small ChoiceScript project, select `Import ChoiceScript` beside
+`New story`, then select all of its `.txt` scene files. Paralleax creates the
+private Story in one operation and shows how many scenes and interactions were
+converted. Review every compatibility warning before editing or playing the
+result. Literal variable declarations, assignments, simple option comparisons,
+and direct substitutions are converted to Paralleax typed variables. More
+complex expressions, random values, inputs, and subroutines remain reported
+approximations and do not run with ChoiceScript semantics. The current limit is
+50 files and 96 KiB of source in total. Only import source material you have permission to use. See
+[`choicescript-import.md`](choicescript-import.md) for the exact mapping.
+
 ## Manage Story Access
 
 Select `Access` from a story card or its editor toolbar. The creator or an
@@ -273,9 +284,9 @@ In the trigger inspector:
 
 1. Select **Add condition**.
 2. Choose the condition type. Its relevant fields appear after the selection.
-3. Choose the interaction, location, character, item, assigned character stat,
-   or date/time rule to check.
-4. Choose its operator and, for a stat, the numeric comparison value.
+3. Choose the interaction, location, character, item, assigned variable, or
+   date/time rule to check.
+4. Choose its operator and, for a variable, the typed comparison value.
 
 Conditions in one group must all match. For a linked trigger, use the prominent
 **+ Add OR condition group** action to create an empty alternative group. The
@@ -285,24 +296,47 @@ groups. When several groups are shown, the cross in the top-right corner deletes
 only that group immediately and keeps the inspector open on a surviving group.
 
 Conditions can check reading history, current location, characters present in
-the current interaction, compare a character stat, or filter the story-local
-calendar. A date/time condition can contain several exact dates, inclusive date
+the current interaction, compare any assigned variable, or filter the
+story-local calendar. A date/time condition can contain several exact dates, inclusive date
 ranges, weekdays, and time slots. Entries of one kind are alternatives; the
 non-empty kinds must all match. A time slot ending before it starts crosses
 midnight.
 
-## Character Stats
+## Variables
 
-Create a reusable definition from the collapsible **Stats** list in **Story
-context**. Then open a character, choose that definition, and use **Add stat**
-to assign it with an initial value. The same definition can be assigned to
-several characters, with an independent value for each.
+Open the collapsible **Variables** list in **Story context** and select **Add
+variable**. Give it a name and choose Number, Boolean, or Text; the type
+cannot change after creation. Expand the variable and attach it to the Story, a
+character, a location, or an item definition with an initial value. One owner can
+use a definition once, while the same definition can be attached to several
+owners with independent assignments. A Number variable may also define a
+positive or negative change per story hour, prorated by interaction duration.
 
-The **Locations**, **Characters**, **Stats**, and **Items** lists can be collapsed
+In an interaction, select **Add effect**, then **Variable**. Choose the attached
+target and either set its value or, for numbers, add a positive or negative
+amount. Item-definition variables require one exact item copy, and every copy
+keeps an independent runtime value.
+
+In a trigger, select **Add condition**, then **Variable**. Numbers support all
+comparisons; Boolean and Text values support equality and inequality. Effects
+are applied before the next available interactions are evaluated. Deleting an
+attachment or definition also removes effects and conditions that target it.
+
+Imported rich text may contain inert variable markers. The reader replaces only
+their text content with replayed values; it does not execute expressions from
+the story body. Calculated variables that depend on other variables are not yet
+implemented.
+
+When a variable is attached to a character, the character inspector presents it
+as a characteristic. It is still the same stat definition and assignment used
+for Story, location, and item-definition variables; no separate characteristic
+model is created.
+
+The **Locations**, **Characters**, **Variables**, and **Items** lists can be collapsed
 independently. Collapse or expand the whole story context menu from the control
 in its top-right corner.
 
-Open any location, character, reusable stat, or reusable item and fill in
+Open any location, character, reusable variable, or reusable item and fill in
 **Category** to organize it. The field suggests categories already used for the
 same entity type, while still accepting a new name. The four context lists group
 their rows by category and place entries without a category under
@@ -313,20 +347,16 @@ entity name or category and find matching text in interaction titles and bodies.
 card shows its number of text occurrences beside the title. The arrow buttons
 move cyclically through matching interactions and center the selected card.
 
-Selecting a location, character, stat, or item changes the same arrows to move
+Selecting a location, character, variable, or item changes the same arrows to move
 through interactions that reference that entity, including trigger conditions
 and effects. Selecting a location or character also lowers the opacity of
 unrelated interaction cards. The graph controls allow zooming out to 5% for
 large stories.
 
-Locations, characters, reusable items, and reusable stats accept an optional
+Locations, characters, reusable items, and reusable variables accept an optional
 image URL in their inspector. The editor previews the image and displays a
-thumbnail in the context lists. Stat images are intended to work as compact
+thumbnail in the context lists. Variable images are intended to work as compact
 pictograms.
-
-Select a trigger marker, choose **Add condition**, then select **Character stat**
-to compare the current value with a threshold. The reader applies an
-interaction's effects before it evaluates the next available interactions.
 
 ## Character Items
 
@@ -349,15 +379,16 @@ the editor numbers them so the intended copy is explicit. The reader displays
 the resulting inventory and saves it with progress. Items do not have trigger
 conditions or equipment behavior yet.
 
-### Item stats
+### Item variables
 
-Open an item definition and use **Add stat** to assign any reusable story stat
-with an initial value. Every copy of that item starts from the definition value
-but evolves independently during reading.
+Open a variable and attach it to an item definition with an initial value. Every
+copy of that item starts from the definition value but evolves independently
+during reading.
 
-Open an interaction and use **Add item stat effect** to select one exact item
-copy and one of its assigned stats. The effect can add a value or set the value
-directly. The player inventory displays the current values for owned items.
+Open an interaction and use **Add effect**, then **Variable**, to select one
+exact item copy and one of its assigned variables. The effect can add a number
+or set a typed value directly. The player inventory displays the current values
+for owned items.
 
 ### Item effects and conditions
 
@@ -370,16 +401,16 @@ owned by the selected character.
 In the trigger editor, use **Add item condition** to require that the reader
 owns, or does not own, at least one copy of an item definition.
 
-In a character inspector, use the `x` button beside an assigned stat or item to
-remove it. Removing an assignment also cleans interaction effects and conditions
-that referenced that exact character stat or item instance.
+In a character inspector, use the `x` button beside an assigned characteristic
+or item to remove it. Removing an assignment also cleans interaction effects and
+conditions that referenced that exact variable or item instance.
 
 Enable **Playable character** in a character inspector to make that character
 the story protagonist. The current version supports one playable character; a
 new selection replaces the previous one.
 
 At the start of reading, select the playable character card. The reader then
-shows that character's image, current stats, and inventory on the left. Other
+shows that character's image, current characteristics, and inventory on the left. Other
 characters present in the current interaction appear as encounter cards on the
 right.
 

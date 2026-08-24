@@ -477,7 +477,7 @@ header span {
   padding: 0;
   list-style: none;
 }
-.location-panel li button {
+.location-panel .context-category-group > ul > li > button {
   display: grid;
   grid-template-columns: 30px minmax(0, 1fr);
   gap: 0.5rem;
@@ -492,12 +492,12 @@ header span {
   text-align: left;
   box-shadow: none;
 }
-.location-panel li button:hover {
+.location-panel .context-category-group > ul > li > button:hover {
   background: var(--color-surface-secondary);
   box-shadow: none;
   transform: none;
 }
-.location-panel li button.selected {
+.location-panel .context-category-group > ul > li > button.selected {
   background: var(--color-primary-soft);
   color: var(--color-primary-strong);
 }
@@ -2244,7 +2244,8 @@ header span {
 .graph-frame-resize-handle {
   pointer-events: auto;
 }
-.graph-text-decoration.selected, .graph-text-decoration:hover {
+.graph-text-decoration.selected,
+.graph-text-decoration:hover {
   border-color: currentColor;
   box-shadow: 0 0 0 3px var(--color-primary-halo);
 }
@@ -3591,4 +3592,35 @@ header span {
   .editor-page {
     height: calc(100vh - 58px);
   }
+}
+
+.attribute-definitions-panel {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.attribute-definition-create,
+.attribute-assignment-create {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.attribute-assignment-list {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.attribute-assignment-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(70px, 0.8fr) auto;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.attribute-definition-create-actions {
+  display: flex;
+  gap: 0.4rem;
 }

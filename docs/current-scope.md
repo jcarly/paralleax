@@ -10,7 +10,7 @@ Paralleax currently includes:
 
 - Story authoring and PostgreSQL persistence.
 - Interactions with rich content, graph positions, location context, character cast,
-  stat effects, item effects, item-stat effects, and duration.
+  typed stat effects, item effects, and duration.
 - Triggers with multiple input interactions, typed conditions, and optional saved
   positions for linked graph markers.
 - Persisted visual graph decorations: movable, resizable colored frames and movable
@@ -20,7 +20,12 @@ Paralleax currently includes:
 - Story-local deterministic calendar time.
 - Locations.
 - Characters.
-- Reusable stat definitions and character stat assignments.
+- Reusable typed stat definitions and authored assignments on the Story,
+  characters, locations, and item definitions. Number, boolean, and string values
+  support deterministic replay, interaction effects, trigger conditions, and
+  inert rich-text interpolation; exact item instances keep independent values.
+  A stat assigned to a character is presented as a character characteristic,
+  without creating a separate persistence or runtime model.
 - Reusable item definitions.
 - Exact authored item instances, including nested item relationships.
 - Character- or location-rooted item placement and nested item relationships.
@@ -40,6 +45,11 @@ Paralleax currently includes:
 - A unified story library: anonymous visitors see public stories, while signed-in
   users see every story they can read with capability and ownership filters. Local
   return-to-page navigation is preserved through sign-in and registration.
+- An experimental small-project ChoiceScript importer in the signed-in story
+  library. It converts prose, scenes, choices, labels, and jumps in one atomic
+  Story creation. Simple declarations, assignments, comparisons, and variable
+  substitutions map to Paralleax typed stats, while unsupported expressions
+  and runtime commands remain explicit in the compatibility report.
 - Editor-only React Flow graph authoring.
 - Rectangular graph multi-selection for interactions and linked trigger markers,
   with a transient count inspector, group drag-and-drop, and outside-click clearing.
@@ -68,7 +78,7 @@ Paralleax currently includes:
 
 The following remain future or incomplete unless a task explicitly implements them:
 
-- generic story variables/attributes beyond current typed stats;
+- calculated stats/variables, formulas, and dependency graphs;
 - probabilities and automatic choices;
 - real-time choice timers;
 - explicit final/completed story semantics;
@@ -79,6 +89,7 @@ The following remain future or incomplete unless a task explicitly implements th
 - suggestion workflow, message editing, mentions, notifications, and horizontally
   distributed comment events;
 - stable public import/export format;
+- lossless or runtime-equivalent ChoiceScript import and incremental re-import;
 - executable/Unity/video exports;
 - AI-driven narrative/runtime behavior.
 

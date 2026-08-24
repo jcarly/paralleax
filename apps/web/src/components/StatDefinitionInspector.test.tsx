@@ -10,9 +10,19 @@ describe('StatDefinitionInspector', () => {
     const onPatch = vi.fn().mockResolvedValue(undefined);
     render(
       <StatDefinitionInspector
+        story={{
+          id: 'story-1',
+          title: 'Story',
+          interactions: [],
+          createdAt: '2026-08-24T00:00:00.000Z',
+          updatedAt: '2026-08-24T00:00:00.000Z',
+        }}
         statDefinition={{ id: 'energy', name: 'Energy', changePerHour: -1 }}
         onChange={onChange}
         onPatch={onPatch}
+        onCreate={vi.fn().mockResolvedValue(undefined)}
+        onStory={vi.fn()}
+        onClose={vi.fn()}
       />,
     );
 

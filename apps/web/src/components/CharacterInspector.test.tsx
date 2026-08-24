@@ -48,7 +48,7 @@ describe('CharacterInspector', () => {
             name: 'Key',
             description: '',
             imageUrl: 'https://images.example/key.png',
-            stats: [{ statDefinitionId: 'stat-definition-1', initialValue: 7 }],
+            stats: [{ id: 'item-trust', statDefinitionId: 'stat-definition-1', initialValue: 7 }],
           },
           { id: 'item-definition-2', name: 'Map', description: '' },
         ]}

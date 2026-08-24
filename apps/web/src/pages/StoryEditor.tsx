@@ -5,7 +5,6 @@ import {
   useRef,
   useState,
   type MouseEvent as ReactMouseEvent,
-  type ReactNode,
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -45,6 +44,7 @@ import { ItemDefinitionInspector } from '../components/ItemDefinitionInspector';
 import { LocationInspector } from '../components/LocationInspector';
 import { StatDefinitionInspector } from '../components/StatDefinitionInspector';
 import { StoryCanvasToolbar } from '../components/StoryCanvasToolbar';
+import { CategorizedContextList, ContextThumbnail } from '../components/StoryContextList';
 import { StoryGraphSelectionInspector } from '../components/StoryGraphSelectionInspector';
 import { TriggerEdge } from '../components/TriggerEdge';
 import { TriggerInspector } from '../components/TriggerInspector';
@@ -112,16 +112,6 @@ function getInitialStoryContextPanelOpen() {
   }
 }
 
-function ContextThumbnail({ imageUrl, fallback }: { imageUrl?: string; fallback: string }) {
-  return imageUrl ? (
-    <img className="context-picto" src={imageUrl} alt="" />
-  ) : (
-    <span className="context-picto context-picto-placeholder" aria-hidden="true">
-      {fallback}
-    </span>
-  );
-}
-
 function getInitials(name: string) {
   return name
     .split(/\s+/)
@@ -141,49 +131,6 @@ function getCategorySuggestions(items: Array<{ category?: string }>) {
 function matchesContextSearch(entity: { name: string; category?: string }, query: string) {
   return [entity.name, entity.category ?? ''].some((value) =>
     value.toLocaleLowerCase().includes(query),
-  );
-}
-
-function groupContextEntities<T extends { id: string; category?: string }>(
-  items: T[],
-  uncategorizedLabel: string,
-) {
-  const groups = new Map<string, T[]>();
-  for (const item of items) {
-    const category = item.category?.trim() || uncategorizedLabel;
-    groups.set(category, [...(groups.get(category) ?? []), item]);
-  }
-  return [...groups.entries()]
-    .sort(([left], [right]) => {
-      if (left === uncategorizedLabel) return 1;
-      if (right === uncategorizedLabel) return -1;
-      return left.localeCompare(right);
-    })
-    .map(([category, groupedItems]) => ({ category, items: groupedItems }));
-}
-
-function CategorizedContextList<T extends { id: string; category?: string }>({
-  items,
-  renderItem,
-}: {
-  items: T[];
-  renderItem: (item: T) => ReactNode;
-}) {
-  const { t } = useTranslation();
-  return (
-    <div className="context-category-list">
-      {groupContextEntities(items, t('editor.uncategorized')).map(
-        ({ category, items: groupedItems }) => (
-          <section className="context-category-group" key={category}>
-            <div className="context-category-heading">
-              <span>{category}</span>
-              <small>{groupedItems.length}</small>
-            </div>
-            <ul>{groupedItems.map(renderItem)}</ul>
-          </section>
-        ),
-      )}
-    </div>
   );
 }
 
@@ -250,6 +197,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
   const [selectedItemDefinitionId, setSelectedItemDefinitionId] = useState<string>();
   const [searchQuery, setSearchQuery] = useState('');
   const [isLocationPanelOpen, setIsLocationPanelOpen] = useState(getInitialStoryContextPanelOpen);
+  const [isCreatingStatDefinition, setIsCreatingStatDefinition] = useState(false);
   const [openContextSections, setOpenContextSections] = useState({
     locations: true,
     characters: true,
@@ -260,9 +208,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
   const [pendingConnection, setPendingConnection] = useState<Connection>();
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [placingComment, setPlacingComment] = useState(false);
-  const [graphSelection, setGraphSelection] = useState<StoryGraphSelection | undefined>(
-    undefined,
-  );
+  const [graphSelection, setGraphSelection] = useState<StoryGraphSelection | undefined>(undefined);
   const [nodes, setNodes, onNodesChange] = useNodesState<StoryFlowNode>([]);
   const [edges, setEdges] = useEdgesState<TriggerFlowEdge>([]);
   const [interactionSizes, setInteractionSizes] = useState<
@@ -440,8 +386,19 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
       }
     }
     for (const location of story?.locations ?? []) {
+      for (const stat of location.stats ?? []) {
+        stats.set(stat.statDefinitionId, (stats.get(stat.statDefinitionId) ?? 0) + 1);
+      }
       for (const item of location.items ?? []) {
         items.set(item.itemDefinitionId, (items.get(item.itemDefinitionId) ?? 0) + 1);
+      }
+    }
+    for (const stat of story?.stats ?? []) {
+      stats.set(stat.statDefinitionId, (stats.get(stat.statDefinitionId) ?? 0) + 1);
+    }
+    for (const definition of story?.itemDefinitions ?? []) {
+      for (const stat of definition.stats ?? []) {
+        stats.set(stat.statDefinitionId, (stats.get(stat.statDefinitionId) ?? 0) + 1);
       }
     }
 
@@ -455,6 +412,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
     selectedLocation ||
     selectedCharacter ||
     selectedStatDefinition ||
+    isCreatingStatDefinition ||
     selectedItemDefinition,
   );
   const showContextualComments = Boolean(
@@ -472,6 +430,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
     setSelectedLocationId(undefined);
     setSelectedCharacterId(undefined);
     setSelectedStatDefinitionId(undefined);
+    setIsCreatingStatDefinition(false);
     setSelectedItemDefinitionId(undefined);
   }, []);
 
@@ -574,9 +533,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
 
   const getClickCreationPosition = useCallback(
     (creation: StoryGraphClickCreation) =>
-      story
-        ? getStoryGraphClickCreationPosition(story, creation, { interactionSizes })
-        : undefined,
+      story ? getStoryGraphClickCreationPosition(story, creation, { interactionSizes }) : undefined,
     [interactionSizes, story],
   );
   const createRootFromClick = useCallback(
@@ -585,18 +542,12 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
   );
   const createChildFromClick = useCallback(
     (sourceId: string) =>
-      createChildFromInteraction(
-        sourceId,
-        getClickCreationPosition({ kind: 'child', sourceId }),
-      ),
+      createChildFromInteraction(sourceId, getClickCreationPosition({ kind: 'child', sourceId })),
     [createChildFromInteraction, getClickCreationPosition],
   );
   const createParentFromClick = useCallback(
     (targetId: string) =>
-      createParentForInteraction(
-        targetId,
-        getClickCreationPosition({ kind: 'parent', targetId }),
-      ),
+      createParentForInteraction(targetId, getClickCreationPosition({ kind: 'parent', targetId })),
     [createParentForInteraction, getClickCreationPosition],
   );
 
@@ -732,9 +683,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
   useEffect(() => {
     setNodes([
       ...decorationNodes,
-      ...narrativeNodes.map((node) =>
-        reviewOnly ? { ...node, draggable: false } : node,
-      ),
+      ...narrativeNodes.map((node) => (reviewOnly ? { ...node, draggable: false } : node)),
       ...commentNodes,
     ]);
   }, [commentNodes, decorationNodes, narrativeNodes, reviewOnly, setNodes]);
@@ -1049,21 +998,13 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
 
     if (!start || connectionState.isValid === true || connectionState.toNode) return;
     if (start.handleType === 'source') {
-      const position = getDroppedInteractionPosition(
-        event,
-        flowInstance.current,
-        'child',
-      );
+      const position = getDroppedInteractionPosition(event, flowInstance.current, 'child');
 
       void createChildFromInteraction(start.nodeId, position);
       return;
     }
 
-    const position = getDroppedInteractionPosition(
-      event,
-      flowInstance.current,
-      'parent',
-    );
+    const position = getDroppedInteractionPosition(event, flowInstance.current, 'parent');
 
     void createParentForInteraction(start.nodeId, position);
   };
@@ -1129,11 +1070,9 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
     setIsLocationPanelOpen(true);
   }
 
-  async function addStatDefinition() {
-    const statDefinitionId = await createStatDefinition();
-    if (!statDefinitionId) return;
+  function addStatDefinition() {
     closeInspector();
-    setSelectedStatDefinitionId(statDefinitionId);
+    setIsCreatingStatDefinition(true);
     setIsLocationPanelOpen(true);
     setOpenContextSections((sections) => ({ ...sections, stats: true }));
   }
@@ -1559,7 +1498,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
                 >
                   <span className="context-heading-label">
                     <span aria-hidden="true">{openContextSections.stats ? '▾' : '▸'}</span>
-                    {t('editor.stats')}
+                    {t('attributes.title')}
                   </span>
                   <small aria-label={formatCount(story.statDefinitions?.length ?? 0, 'stat')}>
                     {story.statDefinitions?.length ?? 0}
@@ -1569,7 +1508,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
                   <button
                     aria-label={t('editor.addStatDefinition')}
                     type="button"
-                    onClick={() => void addStatDefinition()}
+                    onClick={addStatDefinition}
                   >
                     {t('editor.add')}
                   </button>
@@ -1598,6 +1537,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
                         <span className="context-row-copy">
                           <strong>{definition.name}</strong>
                           <small>
+                            {t(`attributes.type.${definition.valueType ?? 'number'}`)} ·{' '}
                             {formatCount(
                               contextReferenceCounts.stats.get(definition.id) ?? 0,
                               'assignment',
@@ -1808,6 +1748,26 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
                   void deleteGraphDecoration(decorationId);
                 }}
               />
+            ) : !reviewOnly && (isCreatingStatDefinition || selectedStatDefinition) ? (
+              <StatDefinitionInspector
+                categorySuggestions={statCategories}
+                creating={isCreatingStatDefinition}
+                key={selectedStatDefinition?.id ?? 'creating-stat-definition'}
+                onChange={updateLocalStatDefinition}
+                onClose={closeInspector}
+                onCreate={async (input) => {
+                  const definitionId = await createStatDefinition(input);
+                  if (definitionId) {
+                    setIsCreatingStatDefinition(false);
+                    setSelectedStatDefinitionId(definitionId);
+                  }
+                  return definitionId;
+                }}
+                onPatch={updateStatDefinition}
+                onStory={setStory}
+                statDefinition={selectedStatDefinition}
+                story={story}
+              />
             ) : reviewOnly ? (
               <ReviewTargetInspector
                 interaction={selected}
@@ -1864,13 +1824,6 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
                 onCreateItem={createCharacterItem}
                 onDeleteItem={deleteCharacterItem}
                 onMoveItem={moveItemInstance}
-              />
-            ) : selectedStatDefinition ? (
-              <StatDefinitionInspector
-                statDefinition={selectedStatDefinition}
-                categorySuggestions={statCategories}
-                onChange={updateLocalStatDefinition}
-                onPatch={updateStatDefinition}
               />
             ) : selectedItemDefinition ? (
               <ItemDefinitionInspector
@@ -1996,10 +1949,7 @@ function getDroppedInteractionPosition(
 ): Position | undefined {
   if (!flow) return undefined;
 
-  const pointer =
-    'changedTouches' in event
-      ? event.changedTouches[0]
-      : event;
+  const pointer = 'changedTouches' in event ? event.changedTouches[0] : event;
 
   const drop = flow.screenToFlowPosition({
     x: pointer.clientX,
@@ -2008,10 +1958,7 @@ function getDroppedInteractionPosition(
 
   return {
     x: Math.round(drop.x - interactionNodeWidth / 2),
-    y:
-      placement === 'child'
-        ? Math.round(drop.y)
-        : Math.round(drop.y - interactionNodeHeight),
+    y: placement === 'child' ? Math.round(drop.y) : Math.round(drop.y - interactionNodeHeight),
   };
 }
 
@@ -2034,11 +1981,7 @@ function applyInteractionSizeChanges(
 ) {
   let next: Map<string, { width: number; height: number }> | undefined;
   for (const change of changes) {
-    if (
-      change.type !== 'dimensions' ||
-      !change.dimensions ||
-      !interactionIds.has(change.id)
-    ) {
+    if (change.type !== 'dimensions' || !change.dimensions || !interactionIds.has(change.id)) {
       continue;
     }
     const previous = (next ?? current).get(change.id);

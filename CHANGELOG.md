@@ -1,7 +1,34 @@
 # Changelog
 
+## 2026-08-24
+
+- Unified variable authoring with the other story-context entities: the left
+  navigation now contains compact selectable rows only, while variable creation,
+  properties, assignments, and deletion live in a dedicated inspector.
+- Removed the parallel attribute implementation from the pending work and
+  generalized the existing stat definitions, assignments, effects, conditions,
+  replay, API, and relational tables instead. Character characteristics and item
+  variables are now contextual views of that one typed-variable model.
+- Removed stable variable keys from the canonical model, API, database, and
+  editor. ChoiceScript identifiers now exist only in the importer's transient
+  lookup map; imported Stories make no re-import or ChoiceScript re-export promise.
+
 ## 2026-08-22
 
+- Extended the existing numeric stat model with number, boolean, and text values;
+  Story, character, location, and item-definition assignments; exact per-item
+  runtime values; ordered interaction effects; typed trigger comparisons; inert
+  rich-text interpolation; deterministic reader replay; progress version 2; and
+  editor authoring controls. Existing numeric stats are migrated into the same
+  relational model, while calculated variables are deferred.
+- Extended the ChoiceScript importer so literal `*create` and scene-scoped
+  `*temp` declarations, simple `*set` operations, option comparisons, and direct
+  variable substitutions map to the generic Paralleax variable model.
+- Added an experimental ChoiceScript importer beside story creation, with
+  multi-scene `.txt` selection, deterministic prose/choice/label/jump mapping,
+  atomic Story persistence, compatibility warnings, English/French UI, and
+  validation against the official example and CSLIB `char_creator` without
+  bundling either external corpus.
 - Added rectangular interaction and linked-trigger multi-selection with a count
   inspector, group drag-and-drop persistence, outside-click clearing, and scoped
   automatic layout for the selected group.

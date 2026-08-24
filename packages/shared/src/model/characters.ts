@@ -1,5 +1,5 @@
 import type { ItemInstance } from './items.js';
-import type { CharacterStat } from './stats.js';
+import type { StatAssignment } from './stats.js';
 
 export interface Character {
   id: string;
@@ -8,6 +8,6 @@ export interface Character {
   category?: string;
   imageUrl?: string;
   isPlayable?: boolean;
-  stats?: CharacterStat[];
+  stats?: StatAssignment[];
   items?: ItemInstance[];
 }

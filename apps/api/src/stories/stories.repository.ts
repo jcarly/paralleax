@@ -3,8 +3,6 @@ import {
   DEFAULT_STORY_DATE_TIME,
   defaultStoryAccess,
   resolveStoryAccess,
-  type ItemDefinitionStat,
-  type ItemStatEffect,
   type GraphDecoration,
   type ReaderProgress,
   type ReaderProgressState,
@@ -13,6 +11,8 @@ import {
   type StoryAccessSettings,
   type StoryCollaboratorRole,
   type StorySummary,
+  type StatValue,
+  type StatValueType,
   type TriggerCondition,
 } from '@paralleax/shared';
 import type { PoolClient } from 'pg';
@@ -52,7 +52,6 @@ type InteractionRow = {
   position_y: number;
   location_id: string | null;
   duration_minutes: number;
-  item_stat_effects: ItemStatEffect[];
   sort_order: number;
 };
 type GraphDecorationRow = {
@@ -87,26 +86,28 @@ type StatDefinitionRow = {
   id: string;
   story_id: string;
   name: string;
+  value_type: StatValueType;
   category: string;
   image_url: string;
   change_per_hour: number;
   sort_order: number;
 };
-type ItemDefinitionRow = LocationRow & {
-  stats: ItemDefinitionStat[];
+type StatAssignmentRow = {
+  id: string;
+  story_id: string;
+  stat_definition_id: string;
+  owner_type: 'story' | 'character' | 'location' | 'item_definition';
+  character_id: string | null;
+  location_id: string | null;
+  item_definition_id: string | null;
+  initial_value: StatValue;
+  sort_order: number;
 };
+type ItemDefinitionRow = LocationRow;
 type InteractionCharacterRow = {
   story_id: string;
   interaction_id: string;
   character_id: string;
-  sort_order: number;
-};
-type CharacterStatRow = {
-  id: string;
-  story_id: string;
-  character_id: string;
-  stat_definition_id: string;
-  initial_value: number;
   sort_order: number;
 };
 type CharacterItemRow = {
@@ -130,8 +131,9 @@ type StatEffectRow = {
   story_id: string;
   interaction_id: string;
   stat_id: string;
+  item_id: string | null;
   operation: 'add' | 'set';
-  value: number;
+  value: StatValue;
   sort_order: number;
 };
 type ItemEffectRow = {
@@ -477,7 +479,7 @@ export class StoriesRepository {
     const storyIds = storyRows.map(({ id }) => id);
     const interactions = await queryable.query<InteractionRow>(
       `SELECT id, story_id, title, body, position_x, position_y, location_id,
-              duration_minutes, item_stat_effects, sort_order
+              duration_minutes, sort_order
          FROM interactions WHERE story_id = ANY($1::text[])
          ORDER BY story_id, sort_order`,
       [storyIds],
@@ -502,13 +504,21 @@ export class StoriesRepository {
       [storyIds],
     );
     const statDefinitions = await queryable.query<StatDefinitionRow>(
-      `SELECT id, story_id, name, category, image_url, change_per_hour, sort_order
+      `SELECT id, story_id, name, value_type, category, image_url,
+              change_per_hour, sort_order
          FROM stat_definitions WHERE story_id = ANY($1::text[])
          ORDER BY story_id, sort_order`,
       [storyIds],
     );
+    const statAssignments = await queryable.query<StatAssignmentRow>(
+      `SELECT id, story_id, stat_definition_id, owner_type, character_id,
+              location_id, item_definition_id, initial_value, sort_order
+         FROM stat_assignments WHERE story_id = ANY($1::text[])
+         ORDER BY story_id, owner_type, sort_order`,
+      [storyIds],
+    );
     const itemDefinitions = await queryable.query<ItemDefinitionRow>(
-      `SELECT id, story_id, name, description, category, image_url, stats, sort_order
+      `SELECT id, story_id, name, description, category, image_url, sort_order
          FROM item_definitions WHERE story_id = ANY($1::text[])
          ORDER BY story_id, sort_order`,
       [storyIds],
@@ -517,12 +527,6 @@ export class StoriesRepository {
       `SELECT story_id, interaction_id, character_id, sort_order
          FROM interaction_characters WHERE story_id = ANY($1::text[])
          ORDER BY story_id, interaction_id, sort_order`,
-      [storyIds],
-    );
-    const characterStats = await queryable.query<CharacterStatRow>(
-      `SELECT id, story_id, character_id, stat_definition_id, initial_value, sort_order
-         FROM character_stats WHERE story_id = ANY($1::text[])
-         ORDER BY story_id, character_id, sort_order`,
       [storyIds],
     );
     const characterItems = await queryable.query<CharacterItemRow>(
@@ -540,7 +544,7 @@ export class StoriesRepository {
       [storyIds],
     );
     const statEffects = await queryable.query<StatEffectRow>(
-      `SELECT story_id, interaction_id, stat_id, operation, value, sort_order
+      `SELECT story_id, interaction_id, stat_id, item_id, operation, value, sort_order
          FROM interaction_stat_effects WHERE story_id = ANY($1::text[])
          ORDER BY story_id, interaction_id, sort_order`,
       [storyIds],
@@ -582,12 +586,27 @@ export class StoriesRepository {
     const locationsByStory = groupBy(locations.rows, ({ story_id }) => story_id);
     const charactersByStory = groupBy(characters.rows, ({ story_id }) => story_id);
     const statDefinitionsByStory = groupBy(statDefinitions.rows, ({ story_id }) => story_id);
+    const storyStats = groupBy(
+      statAssignments.rows.filter(({ owner_type }) => owner_type === 'story'),
+      ({ story_id }) => story_id,
+    );
+    const statsByCharacter = groupBy(
+      statAssignments.rows.filter(({ owner_type }) => owner_type === 'character'),
+      ({ character_id }) => character_id ?? '',
+    );
+    const statsByLocation = groupBy(
+      statAssignments.rows.filter(({ owner_type }) => owner_type === 'location'),
+      ({ location_id }) => location_id ?? '',
+    );
+    const statsByItemDefinition = groupBy(
+      statAssignments.rows.filter(({ owner_type }) => owner_type === 'item_definition'),
+      ({ item_definition_id }) => item_definition_id ?? '',
+    );
     const itemDefinitionsByStory = groupBy(itemDefinitions.rows, ({ story_id }) => story_id);
     const charactersByInteraction = groupBy(
       interactionCharacters.rows,
       ({ interaction_id }) => interaction_id,
     );
-    const statsByCharacter = groupBy(characterStats.rows, ({ character_id }) => character_id);
     const itemRowsById = new Map(characterItems.rows.map((item) => [item.id, item]));
     const relationshipByChild = new Map(
       itemRelationships.rows.map((relationship) => [relationship.child_item_id, relationship]),
@@ -614,6 +633,9 @@ export class StoriesRepository {
       startDateTime: row.start_date_time,
       createdAt: iso(row.created_at),
       updatedAt: iso(row.updated_at),
+      ...(storyStats.get(row.id)?.length
+        ? { stats: storyStats.get(row.id)!.map(projectStatAssignment) }
+        : {}),
       graphDecorations: (graphDecorationsByStory.get(row.id) ?? []).map((decoration) =>
         decoration.kind === 'frame'
           ? {
@@ -642,6 +664,11 @@ export class StoriesRepository {
         description: location.description,
         ...(location.category ? { category: location.category } : {}),
         ...(location.image_url ? { imageUrl: location.image_url } : {}),
+        ...(statsByLocation.get(location.id)?.length
+          ? {
+              stats: statsByLocation.get(location.id)!.map(projectStatAssignment),
+            }
+          : {}),
         ...(itemsByLocation.get(location.id)?.length
           ? {
               items: itemsByLocation
@@ -657,11 +684,7 @@ export class StoriesRepository {
         ...(character.category ? { category: character.category } : {}),
         ...(character.image_url ? { imageUrl: character.image_url } : {}),
         ...(character.is_playable ? { isPlayable: true } : {}),
-        stats: (statsByCharacter.get(character.id) ?? []).map((stat) => ({
-          id: stat.id,
-          statDefinitionId: stat.stat_definition_id,
-          initialValue: stat.initial_value,
-        })),
+        stats: (statsByCharacter.get(character.id) ?? []).map(projectStatAssignment),
         items: (itemsByCharacter.get(character.id) ?? []).map((item) =>
           projectItemInstance(item, relationshipByChild),
         ),
@@ -669,6 +692,7 @@ export class StoriesRepository {
       statDefinitions: (statDefinitionsByStory.get(row.id) ?? []).map((definition) => ({
         id: definition.id,
         name: definition.name,
+        valueType: definition.value_type,
         ...(definition.category ? { category: definition.category } : {}),
         ...(definition.image_url ? { imageUrl: definition.image_url } : {}),
         changePerHour: definition.change_per_hour,
@@ -679,7 +703,7 @@ export class StoriesRepository {
         description: definition.description,
         ...(definition.category ? { category: definition.category } : {}),
         ...(definition.image_url ? { imageUrl: definition.image_url } : {}),
-        stats: definition.stats ?? [],
+        stats: (statsByItemDefinition.get(definition.id) ?? []).map(projectStatAssignment),
       })),
       interactions: (interactionsByStory.get(row.id) ?? []).map((interaction) => ({
         id: interaction.id,
@@ -693,6 +717,7 @@ export class StoriesRepository {
         ),
         statEffects: (effectsByInteraction.get(interaction.id) ?? []).map((effect) => ({
           statId: effect.stat_id,
+          ...(effect.item_id ? { itemId: effect.item_id } : {}),
           operation: effect.operation,
           value: effect.value,
         })),
@@ -702,7 +727,6 @@ export class StoriesRepository {
           ...(effect.character_id ? { characterId: effect.character_id } : {}),
           operation: effect.operation,
         })),
-        itemStatEffects: interaction.item_stat_effects ?? [],
         triggers: (triggersByInteraction.get(interaction.id) ?? []).map((trigger) => ({
           id: trigger.id,
           inputInteractionIds: (inputsByTrigger.get(trigger.id) ?? []).map(
@@ -786,6 +810,14 @@ function projectItemInstance(
           ...(relationship.slot_key ? { slotKey: relationship.slot_key } : {}),
         }
       : {}),
+  };
+}
+
+function projectStatAssignment(row: StatAssignmentRow) {
+  return {
+    id: row.id,
+    statDefinitionId: row.stat_definition_id,
+    initialValue: row.initial_value,
   };
 }
 

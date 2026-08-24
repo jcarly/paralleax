@@ -23,6 +23,9 @@ details. They should stay covered by tests as the editor grows.
   iframe hosts are removed before persistence.
 - A conditional body block stores only its target interaction id. Its visibility
   is derived from outgoing triggers and it cannot define independent conditions.
+- A rich-text variable marker stores only same-story assignment and optional
+  exact item-instance ids in inert allowlisted attributes. It cannot evaluate an
+  expression or execute authored code.
 - Disconnecting its target preserves the conditional body content but hides it
   from readers. Simulation Mode keeps it visible with unavailable styling and an
   explanation.
@@ -39,8 +42,8 @@ details. They should stay covered by tests as the editor grows.
   interaction reachable if the trigger conditions also match.
 - Conditions on the same trigger are AND conditions: all conditions must match.
 - Conditions can check visited interactions, the current location, character
-  presence in the current interaction, a numeric character stat, or the
-  story-local calendar.
+  presence in the current interaction, a typed stat assignment, item ownership,
+  or the story-local calendar.
 - A story has a valid floating `YYYY-MM-DDTHH:mm` start date and time.
 - An interaction duration is a non-negative integer number of minutes. Selecting
   an interaction advances time before evaluating its outgoing choices.
@@ -57,23 +60,35 @@ details. They should stay covered by tests as the editor grows.
   characters from that story without duplicates.
 - Character presence is scoped to the current interaction and does not carry
   over to the next interaction.
-- A stat definition belongs to exactly one story and can be assigned to several
-  characters.
-- A stat definition has a finite hourly change rate. Zero disables time-based
-  change; positive and negative rates affect every assignment of the definition.
-- A character stat assignment belongs to exactly one character, references one
-  same-story stat definition, has a finite numeric initial value, and may only
-  be referenced inside that story.
-- A character cannot receive the same stat definition twice.
+- A stat definition belongs to exactly one story and has one immutable scalar
+  type (`number`, `boolean`, or `string`). Its technical id is the only canonical
+  identity; its author-facing name may change and does not need to be unique.
+- A stat assignment belongs to exactly one Story, character, location, or item
+  definition, references a definition from the same Story, and has an initial
+  value matching that definition's type. One owner cannot assign the same
+  definition twice. A character assignment is presented as a characteristic,
+  but remains the same domain and persistence model.
+- A numeric stat definition has a finite hourly change rate. Zero disables
+  time-based change; positive and negative rates affect every assignment of the
+  definition. Boolean and string stats cannot change automatically with time.
 - A story has at most one playable character in the current reader vertical.
   Selecting a new playable character clears the previous selection.
-- Removing a character stat also removes interaction stat effects and trigger
-  conditions that reference that assignment.
+- Removing a stat assignment or definition removes interaction stat effects and
+  trigger conditions that reference it.
+- `set` stat effects preserve the declared type. `add` and ordered
+  comparisons are numeric only; equality and inequality require matching types.
+  Missing or ill-typed runtime values never default to zero.
+- Effects and conditions target an assignment id. An item-definition assignment
+  additionally requires an exact instance of that definition.
+- Removing an item instance also removes stat effects and conditions targeting
+  that exact instance.
+- Numeric stat hourly changes are prorated by interaction duration and applied
+  before ordered explicit effects.
 - An item definition belongs to exactly one story.
 - An item definition may assign each same-story stat definition at most once,
-  with a finite numeric initial value inherited by every item instance.
-- Locations, characters, stat definitions, and item definitions may reference
-  an optional image URL. An empty value means that no image is configured.
+  with a correctly typed initial value inherited independently by every item instance.
+- Locations, characters, stat definitions, and item definitions may
+  reference an optional image URL. An empty value means that no image is configured.
 - Locations, characters, stat definitions, and item definitions may have one
   optional category label. Categories organize entities of the same type and do
   not affect reader evaluation or ownership.
@@ -85,14 +100,14 @@ details. They should stay covered by tests as the editor grows.
 - Several item instances owned by one character may reference the same item
   definition; every instance keeps a distinct id.
 - Removing an authored character item instance also removes legacy
-  exact-instance inventory effects and item-stat effects that reference it.
+  exact-instance inventory effects and stat effects that reference it.
 - Interaction inventory effects normally reference any same-story item
   definition and may target one same-story character; obtaining creates a new
   runtime instance owned by that character and losing removes one of that
   character's instances. Legacy effects without a character remain readable.
 - Runtime item stat values are independent per item instance, even when several
   instances share one item definition.
-- An item stat effect references one exact item instance and one stat assigned
+- An item-targeted stat effect references one exact item instance and one stat assigned
   by that instance's definition. An interaction can affect that pair at most
   once, using finite `add` or `set` semantics.
 - Accepted recursive-item target invariants are documented in ADR-013. An item
@@ -106,10 +121,11 @@ details. They should stay covered by tests as the editor grows.
   between characters, locations, or item containers preserves its
   complete projected subtree without changing ids; deleting a non-empty
   container is rejected.
-- Removing a stat assignment from an item definition removes interaction
-  item-stat effects that would otherwise reference that unassigned stat.
-- An interaction has at most one effect per stat. An effect either adds a finite
-  value to the current value or replaces it.
+- Removing a stat assignment from an item definition removes interaction stat
+  effects that would otherwise reference that unassigned stat.
+- An interaction has at most one effect per non-item assignment or exact
+  item-instance/assignment pair. An effect either adds a finite numeric value or
+  replaces the value with one of the definition's declared type.
 - Selecting an interaction first applies time-based stat changes for its
   duration, then its explicit stat effects, before the next choices are
   evaluated. Replaying the journey reconstructs the same stat state.
@@ -117,7 +133,7 @@ details. They should stay covered by tests as the editor grows.
 - Reader progress belongs to exactly one authenticated user and one story.
 - Its JSON state is versioned and keeps the ordered journey, including repeated
   visits, plus a materialized runtime snapshot.
-- Current interaction, unique visits, story time, location, and stats are
+- Current interaction, unique visits, story time, location, and typed stats are
   reconstructed from the ordered journey before persistence.
 - Saved owned item ids reference distinct authored or deterministic runtime item
   instances and are reconstructed by replaying interaction item effects.

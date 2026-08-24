@@ -24,6 +24,7 @@ export function sanitizeRichText(value: string): string {
       'iframe',
       'div',
       'button',
+      'span',
     ],
     allowedAttributes: {
       a: ['href', 'target', 'rel'],
@@ -33,6 +34,7 @@ export function sanitizeRichText(value: string): string {
       iframe: ['src', 'title', 'allow', 'allowfullscreen'],
       div: ['data-conditional-text-target'],
       button: ['type', 'contenteditable', 'aria-label', 'data-conditional-text-link'],
+      span: ['data-stat-value', 'data-stat-item'],
     },
     allowedSchemes: ['http', 'https'],
     allowedSchemesByTag: {

@@ -5,11 +5,14 @@ import type {
   ItemDefinition,
   MoveItemInstanceInput,
   StatDefinition,
+  StatValue,
 } from '@paralleax/shared';
+import { getStatValueType } from '@paralleax/shared';
 import { CategoryField } from './CategoryField';
 import { ImageUrlField } from './ImageUrlField';
 import { ItemInstanceTree } from './ItemInstanceTree';
 import { RemoveRowButton } from './RemoveRowButton';
+import { StatValueField } from './StatValueField';
 
 export function CharacterInspector({
   character,
@@ -40,7 +43,7 @@ export function CharacterInspector({
   onPatchStat: (
     characterId: string,
     statId: string,
-    patch: { initialValue?: number },
+    patch: { initialValue?: StatValue },
   ) => Promise<void>;
   onDeleteStat: (characterId: string, statId: string) => Promise<void>;
   onCreateItem: (characterId: string, itemDefinitionId: string) => Promise<void>;
@@ -143,23 +146,23 @@ export function CharacterInspector({
           </span>
           <label>
             {t('inspector.initialValue')}
-            <input
-              type="number"
+            <StatValueField
+              ariaLabel={t('inspector.initialValue')}
               value={stat.initialValue}
-              onChange={(event) =>
+              valueType={getStatValueType(
+                statDefinitions.find(({ id }) => id === stat.statDefinitionId) ?? {
+                  id: stat.statDefinitionId,
+                  name: stat.statDefinitionId,
+                },
+              )}
+              onChange={(initialValue) =>
                 onChange({
                   stats: (character.stats ?? []).map((item) =>
-                    item.id === stat.id
-                      ? { ...item, initialValue: Number(event.target.value) }
-                      : item,
+                    item.id === stat.id ? { ...item, initialValue } : item,
                   ),
                 })
               }
-              onBlur={(event) =>
-                void onPatchStat(character.id, stat.id, {
-                  initialValue: Number(event.target.value),
-                })
-              }
+              onBlur={(initialValue) => void onPatchStat(character.id, stat.id, { initialValue })}
             />
           </label>
           <RemoveRowButton

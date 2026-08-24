@@ -51,6 +51,26 @@ export function getReferencedInteractionIds(
         : [];
     }),
   );
+  const locationStatIds = new Set(
+    (story.locations ?? []).flatMap((location) => {
+      if (reference.type === 'location' && location.id === reference.id) {
+        return (location.stats ?? []).map((stat) => stat.id);
+      }
+      return [];
+    }),
+  );
+  const definitionStatIds = new Set(
+    reference.type === 'stat'
+      ? [
+          ...(story.stats ?? []),
+          ...(story.characters ?? []).flatMap((character) => character.stats ?? []),
+          ...(story.locations ?? []).flatMap((location) => location.stats ?? []),
+          ...(story.itemDefinitions ?? []).flatMap((definition) => definition.stats ?? []),
+        ]
+          .filter((stat) => stat.statDefinitionId === reference.id)
+          .map((stat) => stat.id)
+      : [],
+  );
   const itemIds = new Set(
     [...(story.characters ?? []), ...(story.locations ?? [])].flatMap((owner) =>
       (owner.items ?? [])
@@ -78,11 +98,17 @@ export function getReferencedInteractionIds(
           (interaction.itemEffects ?? []).some((effect) =>
             effect.itemId ? locationItemIds.has(effect.itemId) : false,
           ) ||
-          (interaction.itemStatEffects ?? []).some((effect) =>
-            locationItemIds.has(effect.itemId),
+          (interaction.statEffects ?? []).some(
+            (effect) =>
+              locationStatIds.has(effect.statId) ||
+              (effect.itemId ? locationItemIds.has(effect.itemId) : false),
           ) ||
           conditions.some(
-            (condition) => 'locationId' in condition && condition.locationId === reference.id,
+            (condition) =>
+              ('locationId' in condition && condition.locationId === reference.id) ||
+              ('statId' in condition &&
+                (locationStatIds.has(condition.statId) ||
+                  (condition.itemId ? locationItemIds.has(condition.itemId) : false))),
           )
         );
       }
@@ -95,8 +121,8 @@ export function getReferencedInteractionIds(
               effect.characterId === reference.id ||
               (effect.itemId ? characterItemIds.has(effect.itemId) : false),
           ) ||
-          (interaction.itemStatEffects ?? []).some((effect) =>
-            characterItemIds.has(effect.itemId),
+          (interaction.statEffects ?? []).some(
+            (effect) => effect.itemId !== undefined && characterItemIds.has(effect.itemId),
           ) ||
           conditions.some(
             (condition) =>
@@ -107,12 +133,9 @@ export function getReferencedInteractionIds(
       }
       if (reference.type === 'stat') {
         return (
-          (interaction.statEffects ?? []).some((effect) => characterStatIds.has(effect.statId)) ||
-          (interaction.itemStatEffects ?? []).some(
-            (effect) => effect.statDefinitionId === reference.id,
-          ) ||
+          (interaction.statEffects ?? []).some((effect) => definitionStatIds.has(effect.statId)) ||
           conditions.some(
-            (condition) => 'statId' in condition && characterStatIds.has(condition.statId),
+            (condition) => 'statId' in condition && definitionStatIds.has(condition.statId),
           )
         );
       }
@@ -122,8 +145,16 @@ export function getReferencedInteractionIds(
             effect.itemDefinitionId === reference.id ||
             (effect.itemId ? itemIds.has(effect.itemId) : false),
         ) ||
-        (interaction.itemStatEffects ?? []).some((effect) => itemIds.has(effect.itemId)) ||
-        conditions.some((condition) => isItemConditionFor(condition, reference.id))
+        (interaction.statEffects ?? []).some(
+          (effect) => effect.itemId !== undefined && itemIds.has(effect.itemId),
+        ) ||
+        conditions.some(
+          (condition) =>
+            isItemConditionFor(condition, reference.id) ||
+            ('statId' in condition &&
+              condition.itemId !== undefined &&
+              itemIds.has(condition.itemId)),
+        )
       );
     })
     .map((interaction) => interaction.id);
