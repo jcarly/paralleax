@@ -1,377 +1,180 @@
-import {
-  BadRequestException,
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
-import { randomUUID } from 'node:crypto';
-import {
-  createDemoStory,
-  defaultStoryAccess,
-  buildReaderProgressState,
-  isStoryDate,
-  isStoryDateTime,
-  isStoryTime,
-  deleteInteractionFromStory,
-  deleteGraphDecorationFromStory,
-  deleteTriggerInStory,
-  ensureStoryInteractionPositions,
-  getItemDescendantIds,
-  getStoryItemEntries,
-  getStatValueType,
-  isStatValueOfType,
-  normalizeTriggerInputIds,
-  updateTriggerInStory,
-  updateGraphDecorationInStory,
-  type CharacterMutationResult,
-  type CharacterItemMutationResult,
-  type CharacterStatMutationResult,
-  type InteractionMutationResult,
-  type GraphDecorationMutationResult,
-  type ItemDefinitionMutationResult,
-  type LocationMutationResult,
-  type ReaderProgress,
-  type StatDefinitionMutationResult,
-  type Story,
-  type TriggerCondition,
-  type TriggerMutationResult,
-  type StoryAccessSettings,
-  type UserRole,
+import { Injectable } from '@nestjs/common';
+import type {
+  CharacterItemMutationResult,
+  CharacterMutationResult,
+  CharacterStatMutationResult,
+  GraphDecorationMutationResult,
+  InteractionMutationResult,
+  ItemDefinitionMutationResult,
+  LocationMutationResult,
+  ReaderProgress,
+  StatDefinitionMutationResult,
+  Story,
+  TriggerMutationResult,
+  UserRole,
 } from '@paralleax/shared';
-import {
-  CreateInteractionDto,
-  CreateStatAssignmentDto,
-  CreateGraphDecorationDto,
+import { StoryAccessService } from './application/story-access';
+import { StoryContextService } from './application/story-context';
+import { StoryGraphService } from './application/story-graph';
+import { StoryMetadataService } from './application/story-metadata';
+import { StoryReaderProgressService } from './application/story-reader-progress';
+import type {
   CreateCharacterDto,
   CreateCharacterItemDto,
   CreateCharacterStatDto,
-  CreateLocationDto,
-  MoveItemInstanceDto,
+  CreateGraphDecorationDto,
+  CreateInteractionDto,
   CreateItemDefinitionDto,
+  CreateLocationDto,
+  CreateStatAssignmentDto,
   CreateStatDefinitionDto,
   CreateStoryDto,
   CreateTriggerDto,
+  MoveItemInstanceDto,
   SaveReaderProgressDto,
-  UpdateInteractionDto,
-  UpdateStatAssignmentDto,
-  UpdateGraphDecorationDto,
+  SetStoryCollaboratorDto,
   UpdateCharacterDto,
   UpdateCharacterStatDto,
-  UpdateLocationDto,
+  UpdateGraphDecorationDto,
+  UpdateInteractionDto,
   UpdateItemDefinitionDto,
+  UpdateLocationDto,
+  UpdateStatAssignmentDto,
   UpdateStatDefinitionDto,
-  UpdateTriggerDto,
-  UpdateStoryDto,
-  TriggerConditionDto,
   UpdateStoryAccessDto,
-  SetStoryCollaboratorDto,
+  UpdateStoryDto,
+  UpdateTriggerDto,
 } from './dto/stories.dto';
-import { sanitizeRichText } from './rich-text';
-import { StoriesRepository } from './stories.repository';
-import { buildGraphDecoration } from './application/graph-decorations';
-import { moveStoryItemInstance } from './application/story-items';
-import {
-  buildStatCondition,
-  createStatAssignment,
-  createStatDefinition,
-  deleteStatAssignment,
-  deleteStatDefinition,
-  updateStatAssignment,
-  updateStatDefinition,
-  validateStatEffects,
-} from './application/story-stats';
-import { StoryEventsService, type StoryChangeType } from './story.events';
 
 @Injectable()
 export class StoriesService {
   constructor(
-    private readonly repository: StoriesRepository,
-    private readonly events: StoryEventsService,
+    private readonly metadata: StoryMetadataService,
+    private readonly access: StoryAccessService,
+    private readonly readerProgress: StoryReaderProgressService,
+    private readonly graph: StoryGraphService,
+    private readonly context: StoryContextService,
   ) {}
 
   async list(userId: string) {
-    return this.repository.list(userId);
+    return this.metadata.list(userId);
   }
+
   async listPublic() {
-    return this.repository.listPublic();
+    return this.metadata.listPublic();
   }
+
   async get(id: string, userId?: string): Promise<Story> {
-    const story = await this.repository.find(id, userId);
-    if (!story) throw new NotFoundException('Story not found');
-    return structuredClone(ensureStoryInteractionPositions(story));
+    return this.metadata.get(id, userId);
   }
+
   async stream(id: string, userId: string) {
-    const story = await this.get(id, userId);
-    if (!story.capabilities?.canEdit) {
-      throw new ForbiddenException('Story edit access required');
-    }
-    return this.events.stream(id);
+    return this.metadata.stream(id, userId);
   }
+
   async create(input: CreateStoryDto, userId: string): Promise<Story> {
-    const now = new Date().toISOString();
-    const story: Story = {
-      id: randomUUID(),
-      revision: 1,
-      title: input.title.trim() || 'Untitled',
-      startDateTime: now.slice(0, 16),
-      locations: [],
-      characters: [],
-      interactions: [],
-      access: { ...defaultStoryAccess },
-      createdAt: now,
-      updatedAt: now,
-    };
-    await this.repository.save(story, userId);
-    return structuredClone(story);
+    return this.metadata.create(input, userId);
   }
+
   async createDemo(userId: string, actorRole: UserRole): Promise<Story> {
-    if (actorRole !== 'admin') {
-      throw new ForbiddenException('Administrator access required');
-    }
-    const now = new Date().toISOString();
-    const story = createDemoStory(randomUUID(), now);
-    story.access = { ...defaultStoryAccess };
-    await this.repository.save(story, userId);
-    return structuredClone(story);
+    return this.metadata.createDemo(userId, actorRole);
   }
+
   async updateStory(id: string, input: UpdateStoryDto, userId: string): Promise<Story> {
-    return this.update(
-      id,
-      (story) => {
-        if (input.title !== undefined) story.title = input.title.trim() || 'Untitled';
-        if (input.startDateTime !== undefined) {
-          if (!isStoryDateTime(input.startDateTime)) {
-            throw new BadRequestException('Story start date and time is invalid');
-          }
-          story.startDateTime = input.startDateTime;
-        }
-        return story;
-      },
-      userId,
-    );
+    return this.metadata.update(id, input, userId);
   }
+
   async delete(id: string, userId: string): Promise<void> {
-    if (!(await this.repository.delete(id, userId))) throw new NotFoundException('Story not found');
-    this.publish(id, 'deleted');
+    await this.metadata.delete(id, userId);
   }
+
   async getProgress(storyId: string, userId: string): Promise<ReaderProgress | null> {
-    await this.get(storyId, userId);
-    const progress = await this.repository.findProgress(storyId, userId);
-    return progress ?? null;
+    return this.readerProgress.get(storyId, userId);
   }
+
   async getAccess(storyId: string, userId: string) {
-    const access = await this.repository.getAccess(storyId, userId);
-    if (!access) throw new NotFoundException('Story not found');
-    return access;
+    return this.access.get(storyId, userId);
   }
+
   async updateAccess(storyId: string, input: UpdateStoryAccessDto, userId: string) {
-    const settings: StoryAccessSettings = {
-      visibility: input.visibility,
-      editPolicy: input.editPolicy,
-      commentPolicy: input.commentPolicy,
-    };
-    if (!(await this.repository.updateAccess(storyId, userId, settings))) {
-      throw new NotFoundException('Story not found');
-    }
-    this.publish(storyId, 'access-updated');
-    return this.getAccess(storyId, userId);
+    return this.access.update(storyId, input, userId);
   }
+
   async setCollaborator(storyId: string, input: SetStoryCollaboratorDto, userId: string) {
-    await this.getAccess(storyId, userId);
-    const email = input.email.trim().toLowerCase();
-    if (!(await this.repository.setCollaborator(storyId, userId, email, input.role))) {
-      throw new BadRequestException('The collaborator must be an existing non-owner account');
-    }
-    this.publish(storyId, 'access-updated');
-    return this.getAccess(storyId, userId);
+    return this.access.setCollaborator(storyId, input, userId);
   }
+
   async removeCollaborator(storyId: string, collaboratorId: string, userId: string) {
-    await this.getAccess(storyId, userId);
-    if (await this.repository.removeCollaborator(storyId, userId, collaboratorId)) {
-      this.publish(storyId, 'access-updated');
-    }
+    await this.access.removeCollaborator(storyId, collaboratorId, userId);
   }
+
   async saveProgress(
     storyId: string,
     input: SaveReaderProgressDto,
     userId: string,
   ): Promise<ReaderProgress> {
-    const story = await this.get(storyId, userId);
-    const interactionIds = new Set(story.interactions.map(({ id }) => id));
-    if (input.journeyInteractionIds.some((id) => !interactionIds.has(id))) {
-      throw new BadRequestException('Reader journey interactions must belong to the same story');
-    }
-    const itemIds = this.itemIds(story);
-    if ((input.ownedItemIds ?? []).some((id) => !itemIds.has(id))) {
-      throw new BadRequestException('Reader items must belong to the same story');
-    }
-    const state = buildReaderProgressState(story, input.journeyInteractionIds, input.ownedItemIds);
-    const updatedAt = new Date().toISOString();
-    if (!(await this.repository.saveProgress(storyId, userId, state, updatedAt))) {
-      throw new NotFoundException('Story not found');
-    }
-    return { state, updatedAt };
+    return this.readerProgress.save(storyId, input, userId);
   }
+
   async deleteProgress(storyId: string, userId: string): Promise<void> {
-    await this.get(storyId, userId);
-    await this.repository.deleteProgress(storyId, userId);
+    await this.readerProgress.delete(storyId, userId);
   }
+
   async createInteraction(
     storyId: string,
     input: CreateInteractionDto,
     userId: string,
   ): Promise<InteractionMutationResult> {
-    const interactionId = randomUUID();
-    const triggerId = randomUUID();
-    const story = await this.update(
-      storyId,
-      (story) => {
-        if (input.parentId && !story.interactions.some((item) => item.id === input.parentId))
-          throw new NotFoundException('Parent interaction not found');
-        story.interactions.push({
-          id: interactionId,
-          title: 'New interaction',
-          body: 'Describe what happens here.',
-          position: input.position ?? {
-            x: 80 + story.interactions.length * 40,
-            y: 100 + story.interactions.length * 30,
-          },
-          durationMinutes: 0,
-          triggers: [
-            {
-              id: triggerId,
-              inputInteractionIds: input.parentId ? [input.parentId] : [],
-              conditions: [],
-            },
-          ],
-        });
-        return story;
-      },
-      userId,
-    );
-    return this.interactionResult(story, interactionId);
+    return this.graph.createInteraction(storyId, input, userId);
   }
+
   async updateInteraction(
     storyId: string,
     interactionId: string,
     input: UpdateInteractionDto,
     userId: string,
   ): Promise<InteractionMutationResult> {
-    const story = await this.update(
-      storyId,
-      (story) => {
-        const interaction = this.interaction(story, interactionId);
-        if (input.title !== undefined) interaction.title = input.title;
-        if (input.body !== undefined) interaction.body = sanitizeRichText(input.body ?? '');
-        if (input.position !== undefined) interaction.position = input.position;
-        if (input.locationId !== undefined) {
-          if (
-            input.locationId !== null &&
-            !(story.locations ?? []).some(({ id }) => id === input.locationId)
-          ) {
-            throw new BadRequestException('Interaction location must belong to the same story');
-          }
-          interaction.locationId = input.locationId;
-        }
-        if (input.characterIds !== undefined) {
-          const characterIds = new Set((story.characters ?? []).map(({ id }) => id));
-          if (input.characterIds.some((id) => !characterIds.has(id))) {
-            throw new BadRequestException('Interaction characters must belong to the same story');
-          }
-          interaction.characterIds = [...new Set(input.characterIds)];
-        }
-        if (input.statEffects !== undefined) {
-          interaction.statEffects = validateStatEffects(story, input.statEffects);
-        }
-        if (input.itemEffects !== undefined) {
-          const itemIds = this.itemIds(story);
-          const itemDefinitionIds = new Set((story.itemDefinitions ?? []).map(({ id }) => id));
-          const characterIds = new Set((story.characters ?? []).map(({ id }) => id));
-          if (
-            input.itemEffects.some(
-              ({ itemId, itemDefinitionId, characterId }) =>
-                Number(itemId !== undefined) + Number(itemDefinitionId !== undefined) !== 1 ||
-                (itemId !== undefined && !itemIds.has(itemId)) ||
-                (itemDefinitionId !== undefined && !itemDefinitionIds.has(itemDefinitionId)) ||
-                (characterId !== undefined && !characterIds.has(characterId)),
-            )
-          ) {
-            throw new BadRequestException('Item effects must belong to the same story');
-          }
-          const effectTargets = input.itemEffects.map(
-            ({ itemId, itemDefinitionId, characterId }) =>
-              `${characterId ?? ''}:${itemId ?? `definition:${itemDefinitionId}`}`,
-          );
-          if (new Set(effectTargets).size !== input.itemEffects.length) {
-            throw new BadRequestException('An interaction can only affect an item once');
-          }
-          interaction.itemEffects = input.itemEffects;
-        }
-        if (input.durationMinutes !== undefined) {
-          interaction.durationMinutes = input.durationMinutes;
-        }
-        return story;
-      },
-      userId,
-    );
-    return this.interactionResult(story, interactionId);
+    return this.graph.updateInteraction(storyId, interactionId, input, userId);
   }
+
   async deleteInteraction(storyId: string, interactionId: string, userId: string): Promise<Story> {
-    return this.update(
-      storyId,
-      (story) => {
-        this.interaction(story, interactionId);
-        return deleteInteractionFromStory(story, interactionId);
-      },
-      userId,
-    );
+    return this.graph.deleteInteraction(storyId, interactionId, userId);
   }
+
   async createGraphDecoration(
     storyId: string,
     input: CreateGraphDecorationDto,
     userId: string,
   ): Promise<GraphDecorationMutationResult> {
-    const decorationId = randomUUID();
-    const story = await this.update(
-      storyId,
-      (story) => {
-        (story.graphDecorations ??= []).push(buildGraphDecoration(decorationId, input));
-        return story;
-      },
-      userId,
-    );
-    return this.graphDecorationResult(story, decorationId);
+    return this.graph.createGraphDecoration(storyId, input, userId);
   }
+
   async updateGraphDecoration(
     storyId: string,
     decorationId: string,
     input: UpdateGraphDecorationDto,
     userId: string,
   ): Promise<GraphDecorationMutationResult> {
-    const story = await this.update(
-      storyId,
-      (story) => {
-        this.graphDecoration(story, decorationId);
-        return updateGraphDecorationInStory(story, decorationId, input);
-      },
-      userId,
-    );
-    return this.graphDecorationResult(story, decorationId);
+    return this.graph.updateGraphDecoration(storyId, decorationId, input, userId);
   }
+
   async deleteGraphDecoration(
     storyId: string,
     decorationId: string,
     userId: string,
   ): Promise<Story> {
-    return this.update(
-      storyId,
-      (story) => {
-        this.graphDecoration(story, decorationId);
-        return deleteGraphDecorationFromStory(story, decorationId);
-      },
-      userId,
-    );
+    return this.graph.deleteGraphDecoration(storyId, decorationId, userId);
   }
+
+  async addTrigger(
+    storyId: string,
+    interactionId: string,
+    input: CreateTriggerDto,
+    userId: string,
+  ): Promise<TriggerMutationResult> {
+    return this.graph.addTrigger(storyId, interactionId, input, userId);
+  }
+
   async updateTrigger(
     storyId: string,
     interactionId: string,
@@ -379,370 +182,124 @@ export class StoriesService {
     input: UpdateTriggerDto,
     userId: string,
   ): Promise<TriggerMutationResult> {
-    const story = await this.update(
-      storyId,
-      (story) => {
-        const interaction = this.interaction(story, interactionId);
-        const trigger = interaction.triggers.find((item) => item.id === triggerId);
-        if (!trigger) throw new NotFoundException('Trigger not found');
-        const conditions =
-          input.conditions === undefined
-            ? trigger.conditions
-            : this.triggerConditions(story, input.conditions);
-        const inputInteractionIds =
-          input.inputInteractionIds === undefined
-            ? trigger.inputInteractionIds
-            : normalizeTriggerInputIds(input.inputInteractionIds);
-        this.assertInteractionReferences(story, inputInteractionIds);
-        return updateTriggerInStory(story, interactionId, triggerId, {
-          inputInteractionIds,
-          conditions,
-          ...(input.position === undefined ? {} : { position: input.position }),
-        });
-      },
-      userId,
-    );
-    return this.triggerResult(story, interactionId, triggerId);
+    return this.graph.updateTrigger(storyId, interactionId, triggerId, input, userId);
   }
-  async addTrigger(
-    storyId: string,
-    interactionId: string,
-    input: CreateTriggerDto,
-    userId: string,
-  ): Promise<TriggerMutationResult> {
-    const triggerId = randomUUID();
-    const story = await this.update(
-      storyId,
-      (story) => {
-        const conditions = this.triggerConditions(story, input.conditions ?? []);
-        this.assertInteractionReferences(story, input.inputInteractionIds ?? []);
-        this.interaction(story, interactionId).triggers.push({
-          id: triggerId,
-          inputInteractionIds: normalizeTriggerInputIds(input.inputInteractionIds ?? []),
-          conditions,
-          ...(input.position === undefined ? {} : { position: input.position }),
-        });
-        return story;
-      },
-      userId,
-    );
-    return this.triggerResult(story, interactionId, triggerId);
-  }
+
   async deleteTrigger(
     storyId: string,
     interactionId: string,
     triggerId: string,
     userId: string,
   ): Promise<Story> {
-    return this.update(
-      storyId,
-      (story) => {
-        const interaction = this.interaction(story, interactionId);
-        if (!interaction.triggers.some((item) => item.id === triggerId))
-          throw new NotFoundException('Trigger not found');
-        return deleteTriggerInStory(story, interactionId, triggerId);
-      },
-      userId,
-    );
+    return this.graph.deleteTrigger(storyId, interactionId, triggerId, userId);
   }
+
   async createLocation(
     storyId: string,
     input: CreateLocationDto,
     userId: string,
   ): Promise<LocationMutationResult> {
-    const locationId = randomUUID();
-    const story = await this.update(
-      storyId,
-      (story) => {
-        (story.locations ??= []).push({
-          id: locationId,
-          name: input.name.trim(),
-          description: input.description ?? '',
-          ...(input.category?.trim() ? { category: input.category.trim() } : {}),
-          imageUrl: input.imageUrl?.trim() ?? '',
-        });
-        return story;
-      },
-      userId,
-    );
-    return this.locationResult(story, locationId);
+    return this.context.createLocation(storyId, input, userId);
   }
+
   async updateLocation(
     storyId: string,
     locationId: string,
     input: UpdateLocationDto,
     userId: string,
   ): Promise<LocationMutationResult> {
-    const story = await this.update(
-      storyId,
-      (story) => {
-        const location = this.location(story, locationId);
-        if (input.name !== undefined) location.name = input.name.trim();
-        if (input.description !== undefined) location.description = input.description;
-        if (input.category !== undefined) {
-          const category = input.category.trim();
-          if (category) location.category = category;
-          else delete location.category;
-        }
-        if (input.imageUrl !== undefined) location.imageUrl = input.imageUrl.trim();
-        return story;
-      },
-      userId,
-    );
-    return this.locationResult(story, locationId);
+    return this.context.updateLocation(storyId, locationId, input, userId);
   }
+
   async createCharacter(
     storyId: string,
     input: CreateCharacterDto,
     userId: string,
   ): Promise<CharacterMutationResult> {
-    const characterId = randomUUID();
-    const story = await this.update(
-      storyId,
-      (story) => {
-        if (input.isPlayable) {
-          for (const character of story.characters ?? []) character.isPlayable = false;
-        }
-        (story.characters ??= []).push({
-          id: characterId,
-          name: input.name.trim(),
-          description: input.description ?? '',
-          ...(input.category?.trim() ? { category: input.category.trim() } : {}),
-          imageUrl: input.imageUrl?.trim() ?? '',
-          isPlayable: input.isPlayable ?? false,
-          stats: [],
-        });
-        return story;
-      },
-      userId,
-    );
-    return this.characterResult(story, characterId);
+    return this.context.createCharacter(storyId, input, userId);
   }
-  async createStatDefinition(
-    storyId: string,
-    input: CreateStatDefinitionDto,
-    userId: string,
-  ): Promise<StatDefinitionMutationResult> {
-    const statDefinitionId = randomUUID();
-    const story = await this.update(
-      storyId,
-      (story) => {
-        createStatDefinition(story, statDefinitionId, {
-          ...input,
-          valueType: input.valueType ?? 'number',
-        });
-        return story;
-      },
-      userId,
-    );
-    return this.statDefinitionResult(story, statDefinitionId);
-  }
-  async deleteStatDefinition(
-    storyId: string,
-    statDefinitionId: string,
-    userId: string,
-  ): Promise<Story> {
-    return this.update(
-      storyId,
-      (story) => {
-        deleteStatDefinition(story, statDefinitionId);
-        return story;
-      },
-      userId,
-    );
-  }
-  async createStatAssignment(
-    storyId: string,
-    input: CreateStatAssignmentDto,
-    userId: string,
-  ): Promise<Story> {
-    const id = randomUUID();
-    return this.update(
-      storyId,
-      (story) => {
-        createStatAssignment(story, id, input);
-        return story;
-      },
-      userId,
-    );
-  }
-  async updateStatAssignment(
-    storyId: string,
-    statId: string,
-    input: UpdateStatAssignmentDto,
-    userId: string,
-  ): Promise<Story> {
-    return this.update(
-      storyId,
-      (story) => {
-        updateStatAssignment(story, statId, input.initialValue);
-        return story;
-      },
-      userId,
-    );
-  }
-  async deleteStatAssignment(storyId: string, statId: string, userId: string): Promise<Story> {
-    return this.update(
-      storyId,
-      (story) => {
-        deleteStatAssignment(story, statId);
-        return story;
-      },
-      userId,
-    );
-  }
-  async createItemDefinition(
-    storyId: string,
-    input: CreateItemDefinitionDto,
-    userId: string,
-  ): Promise<ItemDefinitionMutationResult> {
-    const itemDefinitionId = randomUUID();
-    const story = await this.update(
-      storyId,
-      (story) => {
-        (story.itemDefinitions ??= []).push({
-          id: itemDefinitionId,
-          name: input.name.trim(),
-          description: input.description ?? '',
-          ...(input.category?.trim() ? { category: input.category.trim() } : {}),
-          imageUrl: input.imageUrl?.trim() ?? '',
-          stats: this.itemDefinitionStats(story, input.stats ?? []),
-        });
-        return story;
-      },
-      userId,
-    );
-    return this.itemDefinitionResult(story, itemDefinitionId);
-  }
-  async updateItemDefinition(
-    storyId: string,
-    itemDefinitionId: string,
-    input: UpdateItemDefinitionDto,
-    userId: string,
-  ): Promise<ItemDefinitionMutationResult> {
-    const story = await this.update(
-      storyId,
-      (story) => {
-        const definition = this.itemDefinition(story, itemDefinitionId);
-        if (input.name !== undefined) definition.name = input.name.trim();
-        if (input.description !== undefined) definition.description = input.description;
-        if (input.category !== undefined) {
-          const category = input.category.trim();
-          if (category) definition.category = category;
-          else delete definition.category;
-        }
-        if (input.imageUrl !== undefined) definition.imageUrl = input.imageUrl.trim();
-        if (input.stats !== undefined) {
-          const nextStats = this.itemDefinitionStats(story, input.stats, definition.stats ?? []);
-          const nextIds = new Set(nextStats.map(({ id }) => id));
-          for (const current of definition.stats ?? []) {
-            if (!nextIds.has(current.id)) deleteStatAssignment(story, current.id);
-          }
-          definition.stats = nextStats;
-        }
-        return story;
-      },
-      userId,
-    );
-    return this.itemDefinitionResult(story, itemDefinitionId);
-  }
-  async updateStatDefinition(
-    storyId: string,
-    statDefinitionId: string,
-    input: UpdateStatDefinitionDto,
-    userId: string,
-  ): Promise<StatDefinitionMutationResult> {
-    const story = await this.update(
-      storyId,
-      (story) => {
-        updateStatDefinition(story, statDefinitionId, input);
-        return story;
-      },
-      userId,
-    );
-    return this.statDefinitionResult(story, statDefinitionId);
-  }
+
   async updateCharacter(
     storyId: string,
     characterId: string,
     input: UpdateCharacterDto,
     userId: string,
   ): Promise<CharacterMutationResult> {
-    const story = await this.update(
-      storyId,
-      (story) => {
-        const character = this.character(story, characterId);
-        if (input.name !== undefined) character.name = input.name.trim();
-        if (input.description !== undefined) character.description = input.description;
-        if (input.category !== undefined) {
-          const category = input.category.trim();
-          if (category) character.category = category;
-          else delete character.category;
-        }
-        if (input.imageUrl !== undefined) character.imageUrl = input.imageUrl.trim();
-        if (input.isPlayable !== undefined) {
-          if (input.isPlayable) {
-            for (const candidate of story.characters ?? []) candidate.isPlayable = false;
-          }
-          character.isPlayable = input.isPlayable;
-        }
-        return story;
-      },
-      userId,
-    );
-    return this.characterResult(story, characterId);
+    return this.context.updateCharacter(storyId, characterId, input, userId);
   }
+
+  async createStatDefinition(
+    storyId: string,
+    input: CreateStatDefinitionDto,
+    userId: string,
+  ): Promise<StatDefinitionMutationResult> {
+    return this.context.createStatDefinition(storyId, input, userId);
+  }
+
+  async updateStatDefinition(
+    storyId: string,
+    statDefinitionId: string,
+    input: UpdateStatDefinitionDto,
+    userId: string,
+  ): Promise<StatDefinitionMutationResult> {
+    return this.context.updateStatDefinition(storyId, statDefinitionId, input, userId);
+  }
+
+  async deleteStatDefinition(
+    storyId: string,
+    statDefinitionId: string,
+    userId: string,
+  ): Promise<Story> {
+    return this.context.deleteStatDefinition(storyId, statDefinitionId, userId);
+  }
+
+  async createStatAssignment(
+    storyId: string,
+    input: CreateStatAssignmentDto,
+    userId: string,
+  ): Promise<Story> {
+    return this.context.createStatAssignment(storyId, input, userId);
+  }
+
+  async updateStatAssignment(
+    storyId: string,
+    statId: string,
+    input: UpdateStatAssignmentDto,
+    userId: string,
+  ): Promise<Story> {
+    return this.context.updateStatAssignment(storyId, statId, input, userId);
+  }
+
+  async deleteStatAssignment(storyId: string, statId: string, userId: string): Promise<Story> {
+    return this.context.deleteStatAssignment(storyId, statId, userId);
+  }
+
+  async createItemDefinition(
+    storyId: string,
+    input: CreateItemDefinitionDto,
+    userId: string,
+  ): Promise<ItemDefinitionMutationResult> {
+    return this.context.createItemDefinition(storyId, input, userId);
+  }
+
+  async updateItemDefinition(
+    storyId: string,
+    itemDefinitionId: string,
+    input: UpdateItemDefinitionDto,
+    userId: string,
+  ): Promise<ItemDefinitionMutationResult> {
+    return this.context.updateItemDefinition(storyId, itemDefinitionId, input, userId);
+  }
+
   async createCharacterStat(
     storyId: string,
     characterId: string,
     input: CreateCharacterStatDto,
     userId: string,
   ): Promise<CharacterStatMutationResult> {
-    const statId = randomUUID();
-    const story = await this.update(
-      storyId,
-      (story) => {
-        createStatAssignment(story, statId, {
-          ...input,
-          ownerType: 'character',
-          ownerId: characterId,
-        });
-        return story;
-      },
-      userId,
-    );
-    return this.statResult(story, characterId, statId);
+    return this.context.createCharacterStat(storyId, characterId, input, userId);
   }
-  async createCharacterItem(
-    storyId: string,
-    characterId: string,
-    input: CreateCharacterItemDto,
-    userId: string,
-  ): Promise<CharacterItemMutationResult> {
-    const itemId = randomUUID();
-    const story = await this.update(
-      storyId,
-      (story) => {
-        const character = this.character(story, characterId);
-        this.itemDefinition(story, input.itemDefinitionId);
-        (character.items ??= []).push({
-          id: itemId,
-          itemDefinitionId: input.itemDefinitionId,
-        });
-        return story;
-      },
-      userId,
-    );
-    return this.itemResult(story, characterId, itemId);
-  }
-  async moveItemInstance(
-    storyId: string,
-    itemId: string,
-    input: MoveItemInstanceDto,
-    userId: string,
-  ): Promise<Story> {
-    return this.update(storyId, (story) => moveStoryItemInstance(story, itemId, input), userId);
-  }
+
   async updateCharacterStat(
     storyId: string,
     characterId: string,
@@ -750,380 +307,42 @@ export class StoriesService {
     input: UpdateCharacterStatDto,
     userId: string,
   ): Promise<CharacterStatMutationResult> {
-    const story = await this.update(
-      storyId,
-      (story) => {
-        const stat = this.stat(story, characterId, statId);
-        updateStatAssignment(story, stat.id, input.initialValue);
-        return story;
-      },
-      userId,
-    );
-    return this.statResult(story, characterId, statId);
+    return this.context.updateCharacterStat(storyId, characterId, statId, input, userId);
   }
+
   async deleteCharacterStat(
     storyId: string,
     characterId: string,
     statId: string,
     userId: string,
   ): Promise<Story> {
-    return this.update(
-      storyId,
-      (story) => {
-        this.stat(story, characterId, statId);
-        deleteStatAssignment(story, statId);
-        return story;
-      },
-      userId,
-    );
+    return this.context.deleteCharacterStat(storyId, characterId, statId, userId);
   }
+
+  async createCharacterItem(
+    storyId: string,
+    characterId: string,
+    input: CreateCharacterItemDto,
+    userId: string,
+  ): Promise<CharacterItemMutationResult> {
+    return this.context.createCharacterItem(storyId, characterId, input, userId);
+  }
+
+  async moveItemInstance(
+    storyId: string,
+    itemId: string,
+    input: MoveItemInstanceDto,
+    userId: string,
+  ): Promise<Story> {
+    return this.context.moveItemInstance(storyId, itemId, input, userId);
+  }
+
   async deleteCharacterItem(
     storyId: string,
     characterId: string,
     itemId: string,
     userId: string,
   ): Promise<Story> {
-    return this.update(
-      storyId,
-      (story) => {
-        const character = this.character(story, characterId);
-        this.item(story, characterId, itemId);
-        if (
-          getItemDescendantIds(
-            getStoryItemEntries(story).map(({ item }) => item),
-            itemId,
-          ).size > 0
-        ) {
-          throw new BadRequestException(
-            'Move or remove contained items before deleting a container',
-          );
-        }
-        character.items = (character.items ?? []).filter(({ id }) => id !== itemId);
-        for (const interaction of story.interactions) {
-          interaction.itemEffects = (interaction.itemEffects ?? []).filter(
-            ({ itemId: affectedItemId }) => affectedItemId !== itemId,
-          );
-          interaction.statEffects = (interaction.statEffects ?? []).filter(
-            ({ itemId: affectedItemId }) => affectedItemId !== itemId,
-          );
-          for (const trigger of interaction.triggers) {
-            trigger.conditions = trigger.conditions.filter(
-              (condition) => !('statId' in condition) || condition.itemId !== itemId,
-            );
-          }
-        }
-        return story;
-      },
-      userId,
-    );
-  }
-  private interaction(story: Story, id: string) {
-    const item = story.interactions.find((interaction) => interaction.id === id);
-    if (!item) throw new NotFoundException('Interaction not found');
-    return item;
-  }
-  private graphDecoration(story: Story, id: string) {
-    const decoration = (story.graphDecorations ?? []).find((item) => item.id === id);
-    if (!decoration) throw new NotFoundException('Graph decoration not found');
-    return decoration;
-  }
-  private location(story: Story, id: string) {
-    const location = (story.locations ?? []).find((item) => item.id === id);
-    if (!location) throw new NotFoundException('Location not found');
-    return location;
-  }
-  private character(story: Story, id: string) {
-    const character = (story.characters ?? []).find((item) => item.id === id);
-    if (!character) throw new NotFoundException('Character not found');
-    return character;
-  }
-  private stat(story: Story, characterId: string, statId: string) {
-    const stat = this.character(story, characterId).stats?.find(({ id }) => id === statId);
-    if (!stat) throw new NotFoundException('Character stat not found');
-    return stat;
-  }
-  private statDefinition(story: Story, id: string) {
-    const definition = (story.statDefinitions ?? []).find((item) => item.id === id);
-    if (!definition) throw new NotFoundException('Stat definition not found');
-    return definition;
-  }
-  private itemDefinition(story: Story, id: string) {
-    const definition = (story.itemDefinitions ?? []).find((item) => item.id === id);
-    if (!definition) throw new NotFoundException('Item definition not found');
-    return definition;
-  }
-  private item(story: Story, characterId: string, itemId: string) {
-    const item = this.character(story, characterId).items?.find(({ id }) => id === itemId);
-    if (!item) throw new NotFoundException('Character item not found');
-    return item;
-  }
-  private itemIds(story: Story) {
-    return new Set(getStoryItemEntries(story).map(({ item }) => item.id));
-  }
-  private itemDefinitionStats(
-    story: Story,
-    stats: Array<{ id?: string; statDefinitionId: string; initialValue: unknown }>,
-    existing: Array<{ id: string; statDefinitionId: string; initialValue: unknown }> = [],
-  ) {
-    const definitions = new Map(
-      (story.statDefinitions ?? []).map((definition) => [definition.id, definition]),
-    );
-    if (stats.some(({ statDefinitionId }) => !definitions.has(statDefinitionId))) {
-      throw new BadRequestException('Item stats must belong to the same story');
-    }
-    if (new Set(stats.map(({ statDefinitionId }) => statDefinitionId)).size !== stats.length) {
-      throw new BadRequestException('An item definition can only assign a stat once');
-    }
-    return stats.map((stat) => {
-      const definition = definitions.get(stat.statDefinitionId)!;
-      const existingAssignment = existing.find(
-        ({ statDefinitionId }) => statDefinitionId === stat.statDefinitionId,
-      );
-      if (
-        (typeof stat.initialValue !== 'number' &&
-          typeof stat.initialValue !== 'boolean' &&
-          typeof stat.initialValue !== 'string') ||
-        !isStatValueOfType(stat.initialValue, getStatValueType(definition))
-      ) {
-        throw new BadRequestException(`Stat value must be a ${getStatValueType(definition)}`);
-      }
-      return {
-        id: existingAssignment?.id ?? randomUUID(),
-        statDefinitionId: stat.statDefinitionId,
-        initialValue: stat.initialValue,
-      };
-    });
-  }
-  private assertInteractionReferences(story: Story, inputInteractionIds: string[]) {
-    const interactionIds = new Set(story.interactions.map(({ id }) => id));
-    if (inputInteractionIds.some((id) => !interactionIds.has(id))) {
-      throw new BadRequestException('Trigger references must belong to the same story');
-    }
-  }
-  private triggerConditions(story: Story, conditions: TriggerConditionDto[]): TriggerCondition[] {
-    const interactionIds = new Set(story.interactions.map(({ id }) => id));
-    const locationIds = new Set((story.locations ?? []).map(({ id }) => id));
-    const characterIds = new Set((story.characters ?? []).map(({ id }) => id));
-    const itemDefinitionIds = new Set((story.itemDefinitions ?? []).map(({ id }) => id));
-    return conditions.map((condition) => {
-      const isInteractionCondition =
-        condition.interactionId !== undefined && condition.hasBeenVisited !== undefined;
-      const isLocationCondition =
-        condition.locationId !== undefined && condition.isCurrentLocation !== undefined;
-      const isCharacterCondition =
-        condition.characterId !== undefined && condition.isPresent !== undefined;
-      const isStatCondition =
-        condition.statId !== undefined &&
-        condition.operator !== undefined &&
-        condition.value !== undefined;
-      const isItemCondition =
-        condition.itemDefinitionId !== undefined && condition.isOwned !== undefined;
-      const isTemporalCondition = condition.temporal !== undefined;
-      if (
-        Number(isInteractionCondition) +
-          Number(isLocationCondition) +
-          Number(isCharacterCondition) +
-          Number(isStatCondition) +
-          Number(isItemCondition) +
-          Number(isTemporalCondition) !==
-        1
-      ) {
-        throw new BadRequestException(
-          'A trigger condition must contain exactly one supported condition type',
-        );
-      }
-      if (isInteractionCondition) {
-        if (!interactionIds.has(condition.interactionId!)) {
-          throw new BadRequestException('Trigger references must belong to the same story');
-        }
-        return {
-          interactionId: condition.interactionId!,
-          hasBeenVisited: condition.hasBeenVisited!,
-        };
-      }
-      if (isLocationCondition) {
-        if (!locationIds.has(condition.locationId!)) {
-          throw new BadRequestException('Trigger references must belong to the same story');
-        }
-        return {
-          locationId: condition.locationId!,
-          isCurrentLocation: condition.isCurrentLocation!,
-        };
-      }
-      if (isCharacterCondition) {
-        if (!characterIds.has(condition.characterId!)) {
-          throw new BadRequestException('Trigger references must belong to the same story');
-        }
-        return {
-          characterId: condition.characterId!,
-          isPresent: condition.isPresent!,
-        };
-      }
-      if (isItemCondition) {
-        if (!itemDefinitionIds.has(condition.itemDefinitionId!)) {
-          throw new BadRequestException('Trigger references must belong to the same story');
-        }
-        return {
-          itemDefinitionId: condition.itemDefinitionId!,
-          isOwned: condition.isOwned!,
-        };
-      }
-      if (isStatCondition) {
-        return buildStatCondition(story, {
-          statId: condition.statId!,
-          ...(condition.itemId ? { itemId: condition.itemId } : {}),
-          operator: condition.operator!,
-          value: condition.value,
-        });
-      }
-      if (isTemporalCondition) {
-        const temporal = condition.temporal!;
-        const dates = [...new Set(temporal.dates ?? [])];
-        const dateRanges = temporal.dateRanges ?? [];
-        const weekdays = [...new Set(temporal.weekdays ?? [])];
-        const timeSlots = temporal.timeSlots ?? [];
-        if (
-          dates.length + dateRanges.length + weekdays.length + timeSlots.length === 0 ||
-          dates.some((date) => !isStoryDate(date)) ||
-          dateRanges.some(
-            ({ startDate, endDate }) =>
-              !isStoryDate(startDate) || !isStoryDate(endDate) || startDate > endDate,
-          ) ||
-          timeSlots.some(
-            ({ startTime, endTime }) =>
-              !isStoryTime(startTime) || !isStoryTime(endTime) || startTime === endTime,
-          )
-        ) {
-          throw new BadRequestException('Temporal trigger condition is invalid');
-        }
-        return {
-          temporal: {
-            dates,
-            dateRanges: dateRanges.map((range) => ({ ...range })),
-            weekdays,
-            timeSlots: timeSlots.map((slot) => ({ ...slot })),
-          },
-        };
-      }
-      throw new BadRequestException('Trigger condition is invalid');
-    });
-  }
-  private interactionResult(story: Story, interactionId: string): InteractionMutationResult {
-    return {
-      interaction: structuredClone(this.interaction(story, interactionId)),
-      revision: story.revision ?? 1,
-      updatedAt: story.updatedAt,
-    };
-  }
-  private graphDecorationResult(story: Story, decorationId: string): GraphDecorationMutationResult {
-    return {
-      decoration: structuredClone(this.graphDecoration(story, decorationId)),
-      revision: story.revision ?? 1,
-      updatedAt: story.updatedAt,
-    };
-  }
-  private triggerResult(
-    story: Story,
-    interactionId: string,
-    triggerId: string,
-  ): TriggerMutationResult {
-    const trigger = this.interaction(story, interactionId).triggers.find(
-      ({ id }) => id === triggerId,
-    );
-    if (!trigger) throw new NotFoundException('Trigger not found');
-    return {
-      interactionId,
-      trigger: structuredClone(trigger),
-      revision: story.revision ?? 1,
-      updatedAt: story.updatedAt,
-    };
-  }
-  private locationResult(story: Story, locationId: string): LocationMutationResult {
-    return {
-      location: structuredClone(this.location(story, locationId)),
-      revision: story.revision ?? 1,
-      updatedAt: story.updatedAt,
-    };
-  }
-  private characterResult(story: Story, characterId: string): CharacterMutationResult {
-    return {
-      character: structuredClone(this.character(story, characterId)),
-      revision: story.revision ?? 1,
-      updatedAt: story.updatedAt,
-    };
-  }
-  private statDefinitionResult(
-    story: Story,
-    statDefinitionId: string,
-  ): StatDefinitionMutationResult {
-    return {
-      statDefinition: structuredClone(this.statDefinition(story, statDefinitionId)),
-      revision: story.revision ?? 1,
-      updatedAt: story.updatedAt,
-    };
-  }
-  private itemDefinitionResult(
-    story: Story,
-    itemDefinitionId: string,
-  ): ItemDefinitionMutationResult {
-    return {
-      itemDefinition: structuredClone(this.itemDefinition(story, itemDefinitionId)),
-      revision: story.revision ?? 1,
-      updatedAt: story.updatedAt,
-    };
-  }
-  private itemResult(
-    story: Story,
-    characterId: string,
-    itemId: string,
-  ): CharacterItemMutationResult {
-    return {
-      characterId,
-      item: structuredClone(this.item(story, characterId, itemId)),
-      revision: story.revision ?? 1,
-      updatedAt: story.updatedAt,
-    };
-  }
-  private statResult(
-    story: Story,
-    characterId: string,
-    statId: string,
-  ): CharacterStatMutationResult {
-    return {
-      characterId,
-      stat: structuredClone(this.stat(story, characterId, statId)),
-      revision: story.revision ?? 1,
-      updatedAt: story.updatedAt,
-    };
-  }
-  private async update(
-    id: string,
-    mutation: (story: Story) => Story,
-    userId: string,
-  ): Promise<Story> {
-    const updated = await this.repository.mutate(
-      id,
-      (story) => {
-        const next = mutation(story);
-        next.id = id;
-        next.interactions = ensureStoryInteractionPositions(next).interactions;
-        next.updatedAt = new Date().toISOString();
-        next.revision = (story.revision ?? 1) + 1;
-        return next;
-      },
-      userId,
-    );
-    if (!updated) throw new NotFoundException('Story not found');
-    this.publish(id, 'updated', updated.revision);
-    return updated;
-  }
-
-  private publish(id: string, change: StoryChangeType, revision?: number) {
-    this.events.publish({
-      storyId: id,
-      change,
-      revision,
-      occurredAt: new Date().toISOString(),
-    });
+    return this.context.deleteCharacterItem(storyId, characterId, itemId, userId);
   }
 }

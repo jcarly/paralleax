@@ -114,16 +114,28 @@ The NestJS application is organized by feature rather than technical layer:
 `AppModule` composes these modules without registering their internal providers
 directly. Feature modules export only providers required by another module.
 
-`StoriesService` owns application-level story behavior:
+`StoriesService` is the thin controller-facing compatibility facade. It preserves
+the existing controller contract while delegating every responsibility to focused
+application services.
 
-- creates and renames stories;
-- creates, updates, and deletes interactions;
-- creates, updates, and deletes triggers;
-- returns the mutated interaction or trigger with story revision metadata for
-  entity-scoped create and update endpoints;
-- delegates trigger cleanup and story mutation rules to `packages/shared`;
-- normalizes missing interaction positions before returning stories;
-- updates timestamps before saving modified stories.
+`stories/application/story-metadata.ts` owns story lists, authorized reads,
+creation, demo creation, title/start-time updates, deletion, and editor-only SSE
+access. `story-access.ts` owns access settings and collaborator orchestration.
+`story-mutations.ts` is the single API application coordinator for authorized
+story mutations: it normalizes legacy positions, updates timestamps and revisions,
+and publishes the resulting story change.
+
+`story-graph.ts` owns interaction, trigger, and graph-decoration orchestration,
+including same-story reference validation and compact entity mutation results.
+`story-context.ts` owns locations, characters, typed-variable definitions and
+assignments, item definitions and instances, and their reference cleanup. Both
+reuse the focused shared and API application operations instead of reimplementing
+their domain rules.
+
+`stories/application/story-reader-progress.ts` owns authenticated progress reads,
+same-story journey and item validation, deterministic state reconstruction, and
+progress persistence/deletion. `StoriesService` retains compatibility methods for
+the controller but delegates this responsibility to the focused service.
 
 The API Webpack build maps emitted `.js` module specifiers back to TypeScript
 sources when it follows workspace aliases. This keeps the shared package's
@@ -178,10 +190,10 @@ accounts. See ADR-017.
 
 Authenticated player progress uses one `story_reader_progress` row per user and
 story. Its keys and update timestamp are relational; its versioned JSONB state
-contains the ordered journey and materialized runtime values. `StoriesService`
-validates same-story references and rebuilds time, location, visits, stats, and
-character item inventory before saving. Simulation Mode stays isolated from
-this persistence flow.
+contains the ordered journey and materialized runtime values.
+`StoryReaderProgressService` validates same-story references and rebuilds time,
+location, visits, stats, and character item inventory before saving. Simulation
+Mode stays isolated from this persistence flow.
 
 `HealthModule` exposes an unauthenticated process liveness check at
 `GET /api/health` and a readiness check at `GET /api/ready`. Readiness requires
@@ -409,7 +421,8 @@ starts shaping the engine.
 1. `StoryEditor` reads the story id from the route.
 2. `useStoryEditorPersistence` calls the API client in `apps/web/src/api.ts`.
 3. `StoriesController` delegates the request to `StoriesService`.
-4. `StoriesService` reads the story from `StoriesRepository`.
+4. The facade delegates the authorized read to `StoryMetadataService`, which
+   reads the story from `StoriesRepository`.
 5. Before returning the story, the service normalizes missing interaction
    positions with `ensureStoryInteractionPositions`.
 6. The web app stores the returned domain story in React state.
@@ -424,7 +437,8 @@ recomputed projections.
 2. `useStoryEditorPersistence` applies an optimistic local update through shared
    story operations.
 3. The hook sends the API request.
-4. The API updates the repository through `StoriesService`.
+4. `StoriesService` delegates graph writes to `StoryGraphService`, which applies
+   them through the shared `StoryMutationService` coordinator and repository.
 5. The API returns the saved interaction and story mutation metadata.
 6. The hook applies that entity to the current local story without replacing
    unrelated interactions or trigger structures.
@@ -563,7 +577,8 @@ Deployment, progressive loading, normalization signals, and operational growth
 are documented separately in [Hosting and scale](hosting-and-scale.md).
 
 The API accesses storage through `StoriesRepository` instead of coupling
-`StoriesService` to SQL calls. `StoriesService` still owns application behavior,
+application services to SQL calls. `StoriesService` only preserves the
+controller-facing contract; focused services own application orchestration,
 while shared story operations own trigger cleanup, normalization, reader rules,
 and merge semantics.
 

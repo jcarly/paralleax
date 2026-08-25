@@ -66,8 +66,12 @@ during the August 2026 code review. Production gates remain authoritative in
 - [x] Centralize recursive item indexing, reachability, descendant collection,
       validation, and subtree moves in `packages/shared`; API, reader, and web
       projections must consume the same domain operations.
-- [ ] Split `StoriesService` into story metadata, interaction/trigger,
+- [x] Split `StoriesService` into story metadata, interaction/trigger,
       context/inventory, and reader-progress application services.
+  - [x] Extract story metadata and access orchestration.
+  - [x] Extract interaction and trigger orchestration.
+  - [x] Extract context and inventory orchestration.
+  - [x] Extract authenticated reader-progress orchestration.
 - [ ] Split `useStoryEditorPersistence` into load/save status, graph mutations,
       and context/inventory mutations while keeping one optimistic-state owner.
 - [x] Share editor and Simulation Mode realtime invalidation helpers and API

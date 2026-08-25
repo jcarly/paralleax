@@ -20,6 +20,15 @@ export class StoryEventsService {
     this.changes.next(event);
   }
 
+  publishChange(storyId: string, change: StoryChangeType, revision?: number) {
+    this.publish({
+      storyId,
+      change,
+      revision,
+      occurredAt: new Date().toISOString(),
+    });
+  }
+
   stream(storyId: string): Observable<MessageEvent> {
     return merge(
       of({

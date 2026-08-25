@@ -19,6 +19,16 @@
 - Reduced the shared public facade to re-exports by moving deterministic demo
   data and default interaction placement into focused `demo` and `graph`
   modules, with their regression tests colocated by responsibility.
+- Began the incremental `StoriesService` split by extracting authenticated
+  reader-progress access, same-story validation, deterministic reconstruction,
+  persistence, and deletion into a focused application service while preserving
+  the existing controller contract.
+- Continued that split with focused metadata and access services, plus one shared
+  mutation coordinator for authorization-scoped persistence, revision and
+  timestamp updates, legacy position normalization, and live invalidations.
+- Completed the incremental `StoriesService` split with focused graph and
+  context/inventory services. The controller-facing service is now a thin facade,
+  and compact mutation metadata is constructed consistently across entity types.
 - Expanded the active code-quality backlog with the August 25 audit findings for
   full-story mutation costs, broad orchestrators, realtime and mutation-result
   duplication, reader-session projection, comments, ChoiceScript modules,

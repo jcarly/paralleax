@@ -33,15 +33,18 @@ only place where a narrative rule exists.
 
 ## Current hotspots
 
-The repository has four unusually broad orchestration files:
+The remaining unusually broad orchestration files are:
 
-- `apps/api/src/stories/stories.service.ts`
 - `apps/web/src/hooks/useStoryEditorPersistence.ts`
 - `apps/web/src/pages/StoryEditor.tsx`
 - `apps/web/src/pages/StoryPlayer.tsx`
 
-They are functional, but they increase agent risk because unrelated concepts share
-large edit surfaces.
+`apps/api/src/stories/stories.service.ts` is intentionally a broad but thin
+controller-facing facade. Story metadata, access, mutation coordination, graph,
+context/inventory, and reader progress live in focused application services.
+
+The remaining hotspots are functional, but they increase agent risk because
+unrelated concepts share large edit surfaces.
 
 Refactor incrementally, extracting one cohesive responsibility when a feature
 already requires touching that area.
@@ -94,11 +97,12 @@ imports/
 ```text
 stories/
   application/
-    story.service.ts
-    interaction.service.ts
-    trigger.service.ts
-    context.service.ts
-    reader-progress.service.ts
+    story-metadata.ts
+    story-access.ts
+    story-mutations.ts
+    story-graph.ts
+    story-context.ts
+    story-reader-progress.ts
   persistence/
   validation/
   dto/
