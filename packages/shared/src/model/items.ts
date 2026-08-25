@@ -17,8 +17,17 @@ export interface ItemInstance {
   slotKey?: string;
 }
 
-export type ItemRelationshipType =
-  'contained' | 'equipped' | 'attached' | 'part_of' | 'installed' | 'worn' | 'held';
+export const ITEM_RELATIONSHIP_TYPES = [
+  'contained',
+  'equipped',
+  'attached',
+  'part_of',
+  'installed',
+  'worn',
+  'held',
+] as const;
+
+export type ItemRelationshipType = (typeof ITEM_RELATIONSHIP_TYPES)[number];
 
 export interface ItemEffect {
   itemId?: string;

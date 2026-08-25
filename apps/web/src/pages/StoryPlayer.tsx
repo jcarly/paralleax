@@ -14,6 +14,7 @@ import {
   applyInteractionItemEffects,
   applyInteractionItemStatChanges,
   buildReaderProgressState,
+  canManageCommentThread,
   ensureStoryInteractionPositions,
   getAvailableInteractions,
   getInitialStatValues,
@@ -33,7 +34,17 @@ import { RichTextContent } from '../components/RichTextContent';
 import { RichTextEditor } from '../components/RichTextEditor';
 import { StoryCommentsPanel } from '../features/comments/StoryCommentsPanel';
 import { useStoryComments } from '../features/comments/useStoryComments';
-import { useStoryRealtime, type StoryRealtimeInvalidation } from '../hooks/useStoryRealtime';
+import {
+  isApiNotFound,
+  isRealtimeEditableTarget,
+  prioritizeStoryRealtimeInvalidation,
+  type StoryRealtimeInvalidation,
+} from '../features/realtime/storyRealtime';
+import {
+  applyInteractionMutationResult,
+  findSavedInteraction,
+} from '../features/story/storyMutationResults';
+import { useStoryRealtime } from '../hooks/useStoryRealtime';
 import { getStoryGraphClickCreationPosition } from '../storyGraphCreationLayout';
 import { getStatTargets, statTargetLabel } from '../storyStats';
 
@@ -332,7 +343,7 @@ export function StoryPlayer({
   const refreshFromRealtime = useCallback(
     (invalidation: StoryRealtimeInvalidation) => {
       if (simulationMutationCount.current > 0 || simulationEditDepth.current > 0) {
-        pendingRealtimeInvalidation.current = prioritizeRealtimeInvalidation(
+        pendingRealtimeInvalidation.current = prioritizeStoryRealtimeInvalidation(
           pendingRealtimeInvalidation.current,
           invalidation,
         );
@@ -345,7 +356,7 @@ export function StoryPlayer({
         .then((nextStory) => {
           if (attempt !== realtimeLoadAttempt.current) return;
           if (simulationMutationCount.current > 0 || simulationEditDepth.current > 0) {
-            pendingRealtimeInvalidation.current = prioritizeRealtimeInvalidation(
+            pendingRealtimeInvalidation.current = prioritizeStoryRealtimeInvalidation(
               pendingRealtimeInvalidation.current,
               invalidation,
             );
@@ -446,9 +457,7 @@ export function StoryPlayer({
   );
   const canManageSelectedReaderThread = Boolean(
     selectedReaderCommentThread &&
-    (story?.capabilities?.canManage ||
-      story?.capabilities?.canEdit ||
-      selectedReaderCommentThread.createdBy.id === currentUserId),
+    canManageCommentThread(story?.capabilities, currentUserId, selectedReaderCommentThread),
   );
   const currentDateTime = useMemo(
     () => (story ? getJourneyDateTime(story, journey) : '2000-01-03T08:00'),
@@ -781,7 +790,7 @@ export function StoryPlayer({
             },
       ),
     );
-    const created = interactionFromResponse(result, story);
+    const created = findSavedInteraction(result, story);
     setStory((currentStory) =>
       currentStory ? applyInteractionResponse(currentStory, result) : currentStory,
     );
@@ -1265,45 +1274,5 @@ export function StoryPlayer({
 
 function applyInteractionResponse(story: Story, result: InteractionMutationResult | Story) {
   if ('interactions' in result) return ensureStoryInteractionPositions(result);
-  const interaction = result.interaction;
-  const exists = story.interactions.some(({ id }) => id === interaction.id);
-  return ensureStoryInteractionPositions({
-    ...story,
-    revision: result.revision,
-    updatedAt: result.updatedAt,
-    interactions: exists
-      ? story.interactions.map((item) => (item.id === interaction.id ? interaction : item))
-      : [...story.interactions, interaction],
-  });
-}
-
-function interactionFromResponse(result: InteractionMutationResult | Story, current: Story) {
-  if (!('interactions' in result)) return result.interaction;
-  const currentIds = new Set(current.interactions.map(({ id }) => id));
-  return result.interactions.find(({ id }) => !currentIds.has(id));
-}
-
-function prioritizeRealtimeInvalidation(
-  current: StoryRealtimeInvalidation | undefined,
-  incoming: StoryRealtimeInvalidation,
-): StoryRealtimeInvalidation {
-  if (current === 'deleted' || incoming === 'deleted') return 'deleted';
-  if (current === 'changed' || incoming === 'changed') return 'changed';
-  return 'ready';
-}
-
-function isRealtimeEditableTarget(target: EventTarget | null): target is HTMLElement {
-  return (
-    target instanceof HTMLElement &&
-    target.matches('input, textarea, select, [contenteditable="true"]')
-  );
-}
-
-function isApiNotFound(caught: unknown): boolean {
-  return (
-    caught instanceof Error &&
-    'status' in caught &&
-    typeof caught.status === 'number' &&
-    caught.status === 404
-  );
+  return ensureStoryInteractionPositions(applyInteractionMutationResult(story, result));
 }

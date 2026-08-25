@@ -1,12 +1,13 @@
-import type {
-  Character,
-  GraphDecoration,
-  Interaction,
-  ItemDefinition,
-  Location,
-  StatDefinition,
-  Story,
-  Trigger,
+import {
+  getStoryItemEntries,
+  type Character,
+  type GraphDecoration,
+  type Interaction,
+  type ItemDefinition,
+  type Location,
+  type StatDefinition,
+  type Story,
+  type Trigger,
 } from '@paralleax/shared';
 import type { Queryable } from './stories.persistence.types';
 
@@ -1033,24 +1034,12 @@ async function persistItemInstanceDifference(client: Queryable, before: Story, a
 }
 
 function itemEntries(story: Story) {
-  return [
-    ...(story.characters ?? []).flatMap((character) =>
-      (character.items ?? []).map((item, sortOrder) => ({
-        ownerCharacterId: character.id as string | null,
-        ownerLocationId: null as string | null,
-        item,
-        sortOrder,
-      })),
-    ),
-    ...(story.locations ?? []).flatMap((location) =>
-      (location.items ?? []).map((item, sortOrder) => ({
-        ownerCharacterId: null as string | null,
-        ownerLocationId: location.id as string | null,
-        item,
-        sortOrder,
-      })),
-    ),
-  ];
+  return getStoryItemEntries(story).map(({ ownerType, ownerId, item, sortOrder }) => ({
+    ownerCharacterId: ownerType === 'character' ? ownerId : null,
+    ownerLocationId: ownerType === 'location' ? ownerId : null,
+    item,
+    sortOrder,
+  }));
 }
 
 function itemRelationshipSignature(entries: ReturnType<typeof itemEntries>) {

@@ -48,12 +48,8 @@ export class CommentsRepository {
        ORDER BY message.created_at, message.id`,
       [result.rows.map(({ id }) => id)],
     );
-    return result.rows.map((row) =>
-      mapThread(
-        row,
-        messages.rows.filter(({ thread_id }) => thread_id === row.id),
-      ),
-    );
+    const messagesByThread = groupMessagesByThread(messages.rows);
+    return result.rows.map((row) => mapThread(row, messagesByThread.get(row.id) ?? []));
   }
 
   async find(storyId: string, threadId: string): Promise<StoryCommentThread | undefined> {
@@ -248,6 +244,16 @@ function mapMessage(row: MessageRow): CommentMessage {
     createdAt: iso(row.created_at),
     ...(row.edited_at ? { editedAt: iso(row.edited_at) } : {}),
   };
+}
+
+function groupMessagesByThread(rows: MessageRow[]) {
+  const messagesByThread = new Map<string, MessageRow[]>();
+  for (const row of rows) {
+    const messages = messagesByThread.get(row.thread_id);
+    if (messages) messages.push(row);
+    else messagesByThread.set(row.thread_id, [row]);
+  }
+  return messagesByThread;
 }
 
 function author(id: string, email: string): CommentAuthor {

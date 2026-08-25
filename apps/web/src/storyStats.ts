@@ -1,4 +1,5 @@
 import {
+  getStoryItemEntries,
   getStatValueType,
   type StatAssignment,
   type StatDefinition,
@@ -68,29 +69,35 @@ export function getStatTargets(story: Story): StatTarget[] {
   const itemDefinitions = new Map(
     (story.itemDefinitions ?? []).map((definition) => [definition.id, definition]),
   );
-  const itemTargets = [...(story.characters ?? []), ...(story.locations ?? [])].flatMap((owner) =>
-    (owner.items ?? []).flatMap((item) => {
-      const itemDefinition = itemDefinitions.get(item.itemDefinitionId);
-      const matchingItems = (owner.items ?? []).filter(
-        ({ itemDefinitionId }) => itemDefinitionId === item.itemDefinitionId,
-      );
-      const itemCopyNumber =
-        matchingItems.length > 1
-          ? ` #${matchingItems.findIndex(({ id }) => id === item.id) + 1}`
-          : '';
-      return (itemDefinition?.stats ?? []).map((assignment) => ({
-        assignment,
-        definition: definitions.get(assignment.statDefinitionId),
-        ownerType: 'itemDefinition' as const,
-        ownerId: itemDefinition?.id,
-        ownerName: itemDefinition?.name,
-        itemId: item.id,
-        itemName: itemDefinition?.name,
-        itemCopyNumber,
-        instanceOwnerName: owner.name,
-      }));
-    }),
-  );
+  const itemEntries = getStoryItemEntries(story);
+  const itemTargets = itemEntries.flatMap(({ ownerType, ownerId, item }) => {
+    const itemDefinition = itemDefinitions.get(item.itemDefinitionId);
+    const matchingItems = itemEntries.filter(
+      (entry) =>
+        entry.ownerType === ownerType &&
+        entry.ownerId === ownerId &&
+        entry.item.itemDefinitionId === item.itemDefinitionId,
+    );
+    const itemCopyNumber =
+      matchingItems.length > 1
+        ? ` #${matchingItems.findIndex((entry) => entry.item.id === item.id) + 1}`
+        : '';
+    const instanceOwnerName =
+      ownerType === 'character'
+        ? story.characters?.find(({ id }) => id === ownerId)?.name
+        : story.locations?.find(({ id }) => id === ownerId)?.name;
+    return (itemDefinition?.stats ?? []).map((assignment) => ({
+      assignment,
+      definition: definitions.get(assignment.statDefinitionId),
+      ownerType: 'itemDefinition' as const,
+      ownerId: itemDefinition?.id,
+      ownerName: itemDefinition?.name,
+      itemId: item.id,
+      itemName: itemDefinition?.name,
+      itemCopyNumber,
+      instanceOwnerName,
+    }));
+  });
   return [...nonItemTargets, ...itemTargets];
 }
 

@@ -1,5 +1,29 @@
 # Changelog
 
+## 2026-08-25
+
+- Centralized authored item-tree indexing, reachability, descendant detection,
+  relationship types, validation, and subtree-preserving moves in the shared
+  domain. Reader replay, API orchestration and persistence, editor navigation,
+  stat targets, and the item-tree inspector now consume the same operations.
+- Centralized editor and Simulation Mode realtime priority, API-not-found and
+  editable-target helpers, and extracted pure story mutation-result adapters
+  from the persistence hook. Compact interaction responses now share one upsert
+  implementation while legacy complete-story responses keep their existing
+  caller-specific merge behavior.
+- Centralized comment-thread management authorization in the shared domain so
+  the API, graph editor, and reader use the same manager/editor/creator rule.
+- Replaced repeated full-message filtering in comment-thread listings with one
+  ordered per-thread index, preserving the API response while making projection
+  cost linear in the number of threads and messages.
+- Reduced the shared public facade to re-exports by moving deterministic demo
+  data and default interaction placement into focused `demo` and `graph`
+  modules, with their regression tests colocated by responsibility.
+- Expanded the active code-quality backlog with the August 25 audit findings for
+  full-story mutation costs, broad orchestrators, realtime and mutation-result
+  duplication, reader-session projection, comments, ChoiceScript modules,
+  global styles, and large test suites.
+
 ## 2026-08-24
 
 - Unified variable authoring with the other story-context entities: the left

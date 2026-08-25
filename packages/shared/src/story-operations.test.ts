@@ -3,8 +3,6 @@ import {
   deleteInteractionFromStory,
   deleteGraphDecorationFromStory,
   deleteTriggerInStory,
-  createDemoStory,
-  ensureStoryInteractionPositions,
   addStoryMinutes,
   buildReaderProgressState,
   getJourneyStatValues,
@@ -13,9 +11,6 @@ import {
   getInputReachableInteractions,
   getItemDefinitionIdForInstance,
   getItemOwnerIdForInstance,
-  getNextChildPosition,
-  getNextParentPosition,
-  getNextRootPosition,
   getTriggerConditionFailures,
   mergeServerStory,
   normalizeTriggerInputIds,
@@ -135,34 +130,6 @@ describe('shared story operations', () => {
     );
   });
 
-  it('creates a demo story covering roots, branches, multi-input triggers, and conditions', () => {
-    const story = createDemoStory('demo-story', '2026-07-14T08:00:00.000Z');
-
-    expect(story).toMatchObject({
-      id: 'demo-story',
-      title: 'Demo: branching investigation',
-      createdAt: '2026-07-14T08:00:00.000Z',
-      updatedAt: '2026-07-14T08:00:00.000Z',
-    });
-    expect(story.interactions).toHaveLength(9);
-    expect(story.interactions.every((interaction) => interaction.triggers.length >= 1)).toBe(true);
-    expect(
-      story.interactions.filter((interaction) =>
-        interaction.triggers.some((trigger) => trigger.inputInteractionIds.length === 0),
-      ),
-    ).toHaveLength(2);
-    expect(
-      story.interactions.some((interaction) =>
-        interaction.triggers.some((trigger) => trigger.inputInteractionIds.length > 1),
-      ),
-    ).toBe(true);
-    expect(
-      story.interactions.some((interaction) =>
-        interaction.triggers.some((trigger) => trigger.conditions.length > 0),
-      ),
-    ).toBe(true);
-  });
-
   it('deduplicates trigger inputs when updating a trigger', () => {
     const updated = updateTriggerInStory(storyFixture(), 'end', 'trigger-end', {
       inputInteractionIds: ['root', 'root', 'middle'],
@@ -279,55 +246,6 @@ describe('shared story operations', () => {
     expect(merged.interactions[1].triggers).toEqual([
       { id: 'trigger-middle-alt', inputInteractionIds: [], conditions: [] },
     ]);
-  });
-
-  it('fills missing interaction positions with stable defaults', () => {
-    const story = storyFixture();
-    delete (story.interactions[1] as Partial<Story['interactions'][number]>).position;
-
-    expect(ensureStoryInteractionPositions(story).interactions[1].position).toEqual({
-      x: 80,
-      y: 252,
-    });
-  });
-
-  it('finds the next child position below occupied vertical outputs', () => {
-    const story = storyFixture();
-
-    expect(getNextChildPosition(story, story.interactions[0])).toEqual({ x: 80, y: 648 });
-  });
-
-  it('finds the next child position when the parent has no stored position', () => {
-    const story = storyFixture();
-    delete (story.interactions[1] as Partial<Story['interactions'][number]>).position;
-
-    expect(getNextChildPosition(story, story.interactions[1])).toEqual({ x: 80, y: 648 });
-  });
-
-  it('finds the next parent position above the target without overlap', () => {
-    const story = storyFixture();
-    story.interactions.push({
-      id: 'other-parent',
-      title: 'Other parent',
-      body: 'Already there',
-      position: { x: 80, y: 270 },
-      triggers: [{ id: 'trigger-other-parent', inputInteractionIds: [], conditions: [] }],
-    });
-
-    expect(getNextParentPosition(story, story.interactions[2])).toEqual({ x: 80, y: -108 });
-  });
-
-  it('finds the next root position below the lowest existing root', () => {
-    const story = storyFixture();
-    story.interactions.push({
-      id: 'second-root',
-      title: 'Second root',
-      body: 'Another start',
-      position: { x: 80, y: 520 },
-      triggers: [{ id: 'trigger-second-root', inputInteractionIds: [], conditions: [] }],
-    });
-
-    expect(getNextRootPosition(story)).toEqual({ x: 80, y: 652 });
   });
 
   it('normalizes trigger inputs without changing their first-seen order', () => {

@@ -1,4 +1,5 @@
 import type { Story } from './model/stories.js';
+import type { StoryAccessCapabilities } from './access-control.js';
 
 export const MAX_COMMENT_BODY_LENGTH = 4_000;
 export const MAX_COMMENT_QUOTE_LENGTH = 1_000;
@@ -55,6 +56,18 @@ export interface StoryCommentThread {
   resolvedAt?: string;
   messages: CommentMessage[];
   detached?: boolean;
+}
+
+export function canManageCommentThread(
+  capabilities: Pick<StoryAccessCapabilities, 'canManage' | 'canEdit'> | undefined,
+  actorId: string | undefined,
+  thread: Pick<StoryCommentThread, 'createdBy'>,
+) {
+  return Boolean(
+    capabilities?.canManage ||
+    capabilities?.canEdit ||
+    (actorId && thread.createdBy.id === actorId),
+  );
 }
 
 export function isCommentAnchor(value: unknown): value is CommentAnchor {

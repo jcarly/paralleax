@@ -1,5 +1,6 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import {
+  getStoryItemEntries,
   getStatValueType,
   isStatValueOfType,
   type StatAssignment,
@@ -264,9 +265,7 @@ function assertItemTarget(story: Story, reference: StatAssignmentReference, item
     return;
   }
   if (!itemId) throw new BadRequestException('Item stats require an exact item instance');
-  const item = [...(story.characters ?? []), ...(story.locations ?? [])]
-    .flatMap((owner) => owner.items ?? [])
-    .find(({ id }) => id === itemId);
+  const item = getStoryItemEntries(story).find(({ item }) => item.id === itemId)?.item;
   if (!item || item.itemDefinitionId !== reference.ownerId) {
     throw new BadRequestException('Item stat target must belong to the same definition');
   }

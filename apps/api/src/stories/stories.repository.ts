@@ -4,6 +4,7 @@ import {
   defaultStoryAccess,
   resolveStoryAccess,
   type GraphDecoration,
+  type ItemRelationshipType,
   type ReaderProgress,
   type ReaderProgressState,
   type Story,
@@ -122,8 +123,7 @@ type ItemRelationshipRow = {
   story_id: string;
   parent_item_id: string;
   child_item_id: string;
-  relationship_type:
-    'contained' | 'equipped' | 'attached' | 'part_of' | 'installed' | 'worn' | 'held';
+  relationship_type: ItemRelationshipType;
   slot_key: string | null;
   sort_order: number;
 };

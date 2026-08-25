@@ -45,6 +45,10 @@ so consumers continue importing from `@paralleax/shared`. The package exports:
   stale responses restoring deleted triggers or trigger inputs;
 - graph placement helpers: `getNextRootPosition`, `getNextChildPosition`, and
   `getNextParentPosition`;
+- recursive item-graph helpers for authored-item indexing, structural
+  reachability, descendant collection, validation, and subtree-preserving moves;
+- anchored-comment validation and the shared manager/editor/thread-creator
+  authorization rule;
 - reader and simulation helpers: `getAvailableInteractions`,
   `getInputReachableInteractions`, `getTriggerConditionFailures`, and
   deterministic story-calendar reconstruction;
@@ -64,6 +68,17 @@ Pure authored-story mutations live in `packages/shared/src/operations/`, split
 between interaction cleanup, trigger mutation, and stale-response merge rules.
 API and web orchestration call these operations instead of redefining domain
 cleanup or optimistic persistence behavior.
+
+Recursive authored-item graph behavior lives in `packages/shared/src/items/`.
+The reader uses its structural reachability projection, the API maps its typed
+placement failures to HTTP errors, persistence uses its stable owner/index
+projection, and the web editor uses the same descendant calculation to exclude
+invalid parents.
+
+Default interaction placement lives in `packages/shared/src/graph/`, while the
+deterministic sample story lives in `packages/shared/src/demo/`. The public
+`index.ts` facade re-exports both modules and owns no implementation for either
+responsibility.
 
 Experimental external-source adapters live in `packages/shared/src/import-export/`.
 The ChoiceScript adapter parses source files, builds a compatibility report, and
@@ -90,8 +105,9 @@ The NestJS application is organized by feature rather than technical layer:
 
 - `auth/` owns credentials, sessions, guards, decorators, and auth endpoints;
 - `stories/` owns story DTOs, application behavior, persistence, and endpoints;
-- `comments/` owns anchored review-thread endpoints, authorization orchestration,
-  and comment persistence without extending the canonical story aggregate;
+- `comments/` owns anchored review-thread endpoints, applies the shared thread
+  authorization rule, and persists comments without extending the canonical
+  story aggregate;
 - `database/` owns the shared PostgreSQL connection and migration lifecycle;
 - `config/` validates environment configuration and exposes typed runtime values.
 
@@ -290,11 +306,16 @@ Formbricks URL in `script-src` and `connect-src` only when that URL is supplied.
 Supporting editor modules keep pure or focused behavior outside the page
 component:
 
-- `hooks/useStoryEditorPersistence.ts`: loading, optimistic updates, API writes,
-  save status and error recovery, stale-response merging, live invalidation
+- `hooks/useStoryEditorPersistence.ts`: one optimistic story-state owner for
+  loading, API writes, save status and error recovery, live invalidation
   deferral, and create/delete workflows.
 - `hooks/useStoryRealtime.ts`: authorized story SSE lifecycle, reconnect status,
   and short-burst invalidation coalescing shared by editor and Simulation Mode.
+- `features/realtime/`: invalidation priority, API-not-found recognition, and
+  editable-target detection shared by editor and Simulation Mode.
+- `features/story/storyMutationResults.ts`: pure mutation metadata and entity
+  adapters shared by persistence and Simulation Mode; complete-story legacy
+  responses retain their caller-specific merge policy.
 - `storyGraph.ts`: projection from the domain story model to React Flow
   interaction nodes, trigger nodes, and trigger edges.
 - `features/graph-decorations/`: focused projection, rendering, resizing, and

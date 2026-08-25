@@ -24,6 +24,7 @@ import {
 } from '@xyflow/react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import {
+  canManageCommentThread as canActorManageCommentThread,
   isCommentAnchorDetached,
   type Character,
   type CommentAnchor,
@@ -58,6 +59,7 @@ import { useStoryComments } from '../features/comments/useStoryComments';
 import { GraphDecorationInspector } from '../features/graph-decorations/GraphDecorationInspector';
 import { GraphDecorationNode } from '../features/graph-decorations/GraphDecorationNode';
 import { buildGraphDecorationNodes } from '../features/graph-decorations/graphDecorationNodes';
+import { isRealtimeEditableTarget } from '../features/realtime/storyRealtime';
 import { useStoryEditorPersistence } from '../hooks/useStoryEditorPersistence';
 import { usePendingSaveGuard } from '../hooks/usePendingSaveGuard';
 import {
@@ -297,12 +299,8 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
   })();
   const canManageCommentThread = useCallback(
     (thread: StoryCommentThread) =>
-      Boolean(
-        story?.capabilities?.canManage ||
-        story?.capabilities?.canEdit ||
-        (currentUserId && thread.createdBy.id === currentUserId),
-      ),
-    [currentUserId, story?.capabilities?.canEdit, story?.capabilities?.canManage],
+      canActorManageCommentThread(story?.capabilities, currentUserId, thread),
+    [currentUserId, story?.capabilities],
   );
   const openCommentCounts = useMemo(() => {
     const counts = new Map<string, number>();
@@ -1873,13 +1871,6 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
         </div>
       ) : null}
     </main>
-  );
-}
-
-function isRealtimeEditableTarget(target: EventTarget | null): target is HTMLElement {
-  return (
-    target instanceof HTMLElement &&
-    target.matches('input, textarea, select, [contenteditable="true"]')
   );
 }
 

@@ -1,4 +1,9 @@
-import type { Interaction, Story, TriggerCondition } from '@paralleax/shared';
+import {
+  getStoryItemEntries,
+  type Interaction,
+  type Story,
+  type TriggerCondition,
+} from '@paralleax/shared';
 
 export type StoryContextReference =
   | { type: 'location'; id: string }
@@ -71,22 +76,25 @@ export function getReferencedInteractionIds(
           .map((stat) => stat.id)
       : [],
   );
+  const itemEntries = getStoryItemEntries(story);
   const itemIds = new Set(
-    [...(story.characters ?? []), ...(story.locations ?? [])].flatMap((owner) =>
-      (owner.items ?? [])
-        .filter((item) => reference.type === 'item' && item.itemDefinitionId === reference.id)
-        .map((item) => item.id),
+    itemEntries.flatMap(({ item }) =>
+      reference.type === 'item' && item.itemDefinitionId === reference.id ? [item.id] : [],
     ),
   );
   const characterItemIds = new Set(
-    (story.characters ?? [])
-      .filter((character) => reference.type === 'character' && character.id === reference.id)
-      .flatMap((character) => (character.items ?? []).map((item) => item.id)),
+    itemEntries.flatMap(({ ownerType, ownerId, item }) =>
+      reference.type === 'character' && ownerType === 'character' && ownerId === reference.id
+        ? [item.id]
+        : [],
+    ),
   );
   const locationItemIds = new Set(
-    (story.locations ?? [])
-      .filter((location) => reference.type === 'location' && location.id === reference.id)
-      .flatMap((location) => (location.items ?? []).map((item) => item.id)),
+    itemEntries.flatMap(({ ownerType, ownerId, item }) =>
+      reference.type === 'location' && ownerType === 'location' && ownerId === reference.id
+        ? [item.id]
+        : [],
+    ),
   );
 
   return story.interactions

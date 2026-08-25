@@ -16,6 +16,8 @@ import {
   deleteGraphDecorationFromStory,
   deleteTriggerInStory,
   ensureStoryInteractionPositions,
+  getItemDescendantIds,
+  getStoryItemEntries,
   getStatValueType,
   isStatValueOfType,
   normalizeTriggerInputIds,
@@ -27,7 +29,6 @@ import {
   type InteractionMutationResult,
   type GraphDecorationMutationResult,
   type ItemDefinitionMutationResult,
-  type ItemInstance,
   type LocationMutationResult,
   type ReaderProgress,
   type StatDefinitionMutationResult,
@@ -68,6 +69,7 @@ import {
 import { sanitizeRichText } from './rich-text';
 import { StoriesRepository } from './stories.repository';
 import { buildGraphDecoration } from './application/graph-decorations';
+import { moveStoryItemInstance } from './application/story-items';
 import {
   buildStatCondition,
   createStatAssignment,
@@ -739,90 +741,7 @@ export class StoriesService {
     input: MoveItemInstanceDto,
     userId: string,
   ): Promise<Story> {
-    return this.update(
-      storyId,
-      (story) => {
-        const entries = [
-          ...(story.characters ?? []).flatMap((character) =>
-            (character.items ?? []).map((item) => ({ owner: character, item })),
-          ),
-          ...(story.locations ?? []).flatMap((location) =>
-            (location.items ?? []).map((item) => ({ owner: location, item })),
-          ),
-        ];
-        const moving = entries.find(({ item }) => item.id === itemId);
-        if (!moving) throw new NotFoundException('Item instance not found');
-        const targets =
-          Number(Boolean(input.characterId)) +
-          Number(Boolean(input.locationId)) +
-          Number(Boolean(input.parentItemId));
-        if (targets !== 1) {
-          throw new BadRequestException(
-            'An item placement must target exactly one character, location, or parent item',
-          );
-        }
-
-        const descendants = new Set([itemId]);
-        let changed = true;
-        while (changed) {
-          changed = false;
-          for (const { item } of entries) {
-            if (
-              item.parentItemId &&
-              descendants.has(item.parentItemId) &&
-              !descendants.has(item.id)
-            ) {
-              descendants.add(item.id);
-              changed = true;
-            }
-          }
-        }
-
-        let targetOwner: { items?: ItemInstance[] } | undefined = input.characterId
-          ? this.character(story, input.characterId)
-          : input.locationId
-            ? this.location(story, input.locationId)
-            : undefined;
-        if (input.parentItemId) {
-          if (!input.relationshipType) {
-            throw new BadRequestException('A parent item placement requires a relationship type');
-          }
-          if (descendants.has(input.parentItemId)) {
-            throw new BadRequestException('An item cannot become a descendant of itself');
-          }
-          const parent = entries.find(({ item }) => item.id === input.parentItemId);
-          if (!parent) throw new BadRequestException('Parent item must belong to the same story');
-          targetOwner = parent.owner;
-        } else if (input.relationshipType || input.slotKey) {
-          throw new BadRequestException(
-            'Relationship type and slot are only valid for a parent item placement',
-          );
-        }
-
-        const subtree = entries
-          .filter(({ item }) => descendants.has(item.id))
-          .map(({ item }) => item);
-        for (const character of story.characters ?? []) {
-          character.items = (character.items ?? []).filter(({ id }) => !descendants.has(id));
-        }
-        for (const location of story.locations ?? []) {
-          location.items = (location.items ?? []).filter(({ id }) => !descendants.has(id));
-        }
-        if (input.parentItemId) {
-          moving.item.parentItemId = input.parentItemId;
-          moving.item.relationshipType = input.relationshipType;
-          if (input.slotKey) moving.item.slotKey = input.slotKey;
-          else delete moving.item.slotKey;
-        } else {
-          delete moving.item.parentItemId;
-          delete moving.item.relationshipType;
-          delete moving.item.slotKey;
-        }
-        (targetOwner!.items ??= []).push(...subtree);
-        return story;
-      },
-      userId,
-    );
+    return this.update(storyId, (story) => moveStoryItemInstance(story, itemId, input), userId);
   }
   async updateCharacterStat(
     storyId: string,
@@ -870,9 +789,10 @@ export class StoriesService {
         const character = this.character(story, characterId);
         this.item(story, characterId, itemId);
         if (
-          [...(story.characters ?? []), ...(story.locations ?? [])].some((candidate) =>
-            (candidate.items ?? []).some(({ parentItemId }) => parentItemId === itemId),
-          )
+          getItemDescendantIds(
+            getStoryItemEntries(story).map(({ item }) => item),
+            itemId,
+          ).size > 0
         ) {
           throw new BadRequestException(
             'Move or remove contained items before deleting a container',
@@ -938,11 +858,7 @@ export class StoriesService {
     return item;
   }
   private itemIds(story: Story) {
-    return new Set(
-      [...(story.characters ?? []), ...(story.locations ?? [])].flatMap((owner) =>
-        (owner.items ?? []).map(({ id }) => id),
-      ),
-    );
+    return new Set(getStoryItemEntries(story).map(({ item }) => item.id));
   }
   private itemDefinitionStats(
     story: Story,

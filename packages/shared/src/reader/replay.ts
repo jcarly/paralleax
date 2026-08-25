@@ -7,34 +7,8 @@ import type {
   Story,
 } from '../model/index.js';
 import { getStatValueType, isStatValueOfType } from '../model/index.js';
+import { getStructurallyPlacedItemInstances } from '../items/index.js';
 import { getJourneyDateTime } from '../time/index.js';
-
-function getStructurallyPlacedItemInstances(story: Story) {
-  return [...(story.characters ?? []), ...(story.locations ?? [])].flatMap((owner) => {
-    const items = owner.items ?? [];
-    const childrenByParentId = new Map<string, typeof items>();
-    for (const item of items) {
-      if (!item.parentItemId) continue;
-      childrenByParentId.set(item.parentItemId, [
-        ...(childrenByParentId.get(item.parentItemId) ?? []),
-        item,
-      ]);
-    }
-
-    const reachableIds = new Set<string>();
-    const pending = items.filter((item) => !item.parentItemId);
-    while (pending.length > 0) {
-      const item = pending.pop();
-      if (!item || reachableIds.has(item.id)) continue;
-      reachableIds.add(item.id);
-      pending.push(...(childrenByParentId.get(item.id) ?? []));
-    }
-
-    return items
-      .filter((item) => reachableIds.has(item.id))
-      .map((item) => ({ ownerId: owner.id, item }));
-  });
-}
 
 export function getNonItemStatAssignments(story: Story): StatAssignment[] {
   return [

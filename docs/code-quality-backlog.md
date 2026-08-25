@@ -47,6 +47,8 @@ during the August 2026 code review. Production gates remain authoritative in
       large stories, then retain a regression budget.
 - [ ] Add direct repository commands for story metadata, interaction text, and
       node positions so common updates avoid a complete graph read and lock.
+- [x] Group comment messages by thread once when listing discussions instead of
+      filtering the complete message result for every thread.
 - [ ] Replace remaining complete-story delete responses with explicit cleanup
       result contracts where the client can apply them safely.
 - [ ] Measure long-journey replay and large item graphs, then add interaction and
@@ -57,16 +59,30 @@ during the August 2026 code review. Production gates remain authoritative in
 
 ## P1 — Module Boundaries
 
-- [ ] Split `packages/shared/src/index.ts` into model, story mutations, reader,
-      inventory, time, and demo-data modules while retaining public exports.
+- [x] Split the shared domain into model, operations, reader, triggers, time,
+      and import/export modules while retaining public exports.
+- [x] Move demo-story data and the remaining interaction-placement helpers out
+      of `packages/shared/src/index.ts` into focused `demo` and `graph` modules.
+- [x] Centralize recursive item indexing, reachability, descendant collection,
+      validation, and subtree moves in `packages/shared`; API, reader, and web
+      projections must consume the same domain operations.
 - [ ] Split `StoriesService` into story metadata, interaction/trigger,
       context/inventory, and reader-progress application services.
 - [ ] Split `useStoryEditorPersistence` into load/save status, graph mutations,
       and context/inventory mutations while keeping one optimistic-state owner.
+- [x] Share editor and Simulation Mode realtime invalidation helpers and API
+      mutation-result adapters inside focused web feature modules.
 - [ ] Extract Story Player presentation and reader-session state without
       duplicating engine state in React.
 - [ ] Extract Story Editor navigation, selection, and connection-dialog
       orchestration without moving semantics into React Flow.
+- [x] Centralize comment-thread management authorization in the shared domain so
+      the API and editor cannot drift.
+- [ ] Split the ChoiceScript importer into parser, mapping, graph-builder/layout,
+      and compatibility-report modules without leaking source semantics into the
+      Paralleax engine.
+- [ ] Split the global web stylesheet by shell, editor, inspector, graph, reader,
+      and review features while retaining one shared token foundation.
 - [ ] Break large test files into capability suites and remove broad `any` usage
       from React Flow test doubles.
 

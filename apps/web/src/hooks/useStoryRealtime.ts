@@ -1,7 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
+import type {
+  StoryRealtimeInvalidation,
+  StoryRealtimeStatus,
+} from '../features/realtime/storyRealtime';
 
-export type StoryRealtimeStatus = 'live' | 'reconnecting' | 'unavailable';
-export type StoryRealtimeInvalidation = 'ready' | 'changed' | 'deleted';
+export type {
+  StoryRealtimeInvalidation,
+  StoryRealtimeStatus,
+} from '../features/realtime/storyRealtime';
 
 const refreshDelayMs = 75;
 

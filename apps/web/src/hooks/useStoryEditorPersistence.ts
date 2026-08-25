@@ -12,13 +12,11 @@ import {
   updateGraphDecorationInStory,
   updateTriggerInStory,
   type CharacterMutationResult,
-  type CharacterItemMutationResult,
   type CharacterStatMutationResult,
   type CreateStatDefinitionInput,
   type Interaction,
   type InteractionContentPatch,
   type InteractionMutationResult,
-  type GraphDecorationMutationResult,
   type ItemDefinitionMutationResult,
   type LocationMutationResult,
   type MoveItemInstanceInput,
@@ -30,9 +28,29 @@ import {
   type UpdateGraphDecorationInput,
 } from '@paralleax/shared';
 import { api } from '../api';
+import {
+  isApiNotFound,
+  prioritizeStoryRealtimeInvalidation,
+  type StoryRealtimeInvalidation,
+} from '../features/realtime/storyRealtime';
+import {
+  applyCharacterItemResult,
+  applyCharacterPatchResult,
+  applyCharacterResult,
+  applyCharacterStatResult,
+  applyGraphDecorationResult,
+  applyInteractionMutationResult,
+  applyLocationPatchResult,
+  applyLocationResult,
+  applyStoryMutationMetadata as applyMutationMetadata,
+  applyTriggerMutationResult,
+  findSavedInteraction as savedInteraction,
+  findSavedTrigger as savedTrigger,
+  updateLocalCharacterStat,
+} from '../features/story/storyMutationResults';
 import { getPendingConnection, getPendingTriggerInputConnection } from '../storyConnection';
 import { planTriggerInputDeletion } from '../storyTriggerInput';
-import { useStoryRealtime, type StoryRealtimeInvalidation } from './useStoryRealtime';
+import { useStoryRealtime } from './useStoryRealtime';
 
 export function useStoryEditorPersistence(storyId: string) {
   const [story, setStory] = useState<Story>();
@@ -117,7 +135,7 @@ export function useStoryEditorPersistence(storyId: string) {
   const refreshFromRealtime = useCallback(
     (invalidation: StoryRealtimeInvalidation) => {
       if (activeSaveCount.current > 0 || localEditDepth.current > 0) {
-        pendingRealtimeInvalidation.current = prioritizeInvalidation(
+        pendingRealtimeInvalidation.current = prioritizeStoryRealtimeInvalidation(
           pendingRealtimeInvalidation.current,
           invalidation,
         );
@@ -130,7 +148,7 @@ export function useStoryEditorPersistence(storyId: string) {
         .then((next) => {
           if (attempt !== loadAttempt.current) return;
           if (activeSaveCount.current > 0 || localEditDepth.current > 0) {
-            pendingRealtimeInvalidation.current = prioritizeInvalidation(
+            pendingRealtimeInvalidation.current = prioritizeStoryRealtimeInvalidation(
               pendingRealtimeInvalidation.current,
               invalidation,
             );
@@ -210,9 +228,7 @@ export function useStoryEditorPersistence(storyId: string) {
         api.updateTrigger(storyId, interactionId, triggerId, patch),
       );
       if (!next) return;
-      setStory((current) =>
-        current ? applyTriggerResult(current, next, interactionId, triggerId) : current,
-      );
+      setStory((current) => (current ? applyTriggerResult(current, next) : current));
     },
     [storyId, trackSave],
   );
@@ -239,9 +255,7 @@ export function useStoryEditorPersistence(storyId: string) {
         api.updateTrigger(storyId, interactionId, trigger.id, { position }),
       );
       if (!next) return;
-      setStory((current) =>
-        current ? applyTriggerResult(current, next, interactionId, trigger.id) : current,
-      );
+      setStory((current) => (current ? applyTriggerResult(current, next) : current));
     }
   }
 
@@ -263,9 +277,7 @@ export function useStoryEditorPersistence(storyId: string) {
     patch.inputInteractionIds.forEach((inputId) =>
       deletedTriggerInputKeys.current.delete(`${nextTrigger.id}:${inputId}`),
     );
-    setStory((current) =>
-      current ? applyTriggerResult(current, created, interactionId, nextTrigger.id) : current,
-    );
+    setStory((current) => (current ? applyTriggerResult(current, created) : current));
     return nextTrigger.id;
   }
 
@@ -333,9 +345,7 @@ export function useStoryEditorPersistence(storyId: string) {
       const nextTrigger = savedTrigger(created, story, pending.target.id);
       if (!nextTrigger) return;
       deletedTriggerInputKeys.current.delete(`${nextTrigger.id}:${pending.sourceId}`);
-      setStory((current) =>
-        current ? applyTriggerResult(current, created, pending.target.id, nextTrigger.id) : current,
-      );
+      setStory((current) => (current ? applyTriggerResult(current, created) : current));
     },
     [story, storyId, trackSave],
   );
@@ -360,11 +370,7 @@ export function useStoryEditorPersistence(storyId: string) {
         api.updateTrigger(storyId, pending.targetId, pending.trigger.id, patch),
       );
       if (!updated) return;
-      setStory((current) =>
-        current
-          ? applyTriggerResult(current, updated, pending.targetId, pending.trigger.id)
-          : current,
-      );
+      setStory((current) => (current ? applyTriggerResult(current, updated) : current));
     },
     [story, storyId, trackSave],
   );
@@ -450,8 +456,8 @@ export function useStoryEditorPersistence(storyId: string) {
       if (!linkedTrigger) return;
       setStory((current) => {
         if (!current) return current;
-        const withCreatedParent = applyInteractionResult(current, withParent, parent.id);
-        return applyTriggerResult(withCreatedParent, linkedTrigger, target.id);
+        const withCreatedParent = applyInteractionResult(current, withParent);
+        return applyTriggerResult(withCreatedParent, linkedTrigger);
       });
     },
     [createConnectionTrigger, story, storyId, trackSave],
@@ -770,159 +776,6 @@ export function useStoryEditorPersistence(storyId: string) {
   };
 }
 
-function prioritizeInvalidation(
-  current: StoryRealtimeInvalidation | undefined,
-  incoming: StoryRealtimeInvalidation,
-): StoryRealtimeInvalidation {
-  if (current === 'deleted' || incoming === 'deleted') return 'deleted';
-  if (current === 'changed' || incoming === 'changed') return 'changed';
-  return 'ready';
-}
-
-function isApiNotFound(caught: unknown): boolean {
-  return (
-    caught instanceof Error &&
-    'status' in caught &&
-    typeof caught.status === 'number' &&
-    caught.status === 404
-  );
-}
-
-function applyGraphDecorationResult(story: Story, result: GraphDecorationMutationResult): Story {
-  const exists = (story.graphDecorations ?? []).some(({ id }) => id === result.decoration.id);
-  return applyMutationMetadata(
-    {
-      ...story,
-      graphDecorations: exists
-        ? (story.graphDecorations ?? []).map((decoration) =>
-            decoration.id === result.decoration.id ? result.decoration : decoration,
-          )
-        : [...(story.graphDecorations ?? []), result.decoration],
-    },
-    result,
-  );
-}
-
-function applyLocationResult(story: Story, result: LocationMutationResult): Story {
-  const exists = (story.locations ?? []).some(({ id }) => id === result.location.id);
-  return applyMutationMetadata(
-    {
-      ...story,
-      locations: exists
-        ? (story.locations ?? []).map((location) =>
-            location.id === result.location.id ? result.location : location,
-          )
-        : [...(story.locations ?? []), result.location],
-    },
-    result,
-  );
-}
-
-function applyLocationPatchResult(
-  story: Story,
-  result: LocationMutationResult,
-  locationId: string,
-  patch: Partial<
-    Pick<LocationMutationResult['location'], 'name' | 'description' | 'category' | 'imageUrl'>
-  >,
-): Story {
-  return applyMutationMetadata(
-    {
-      ...story,
-      locations: (story.locations ?? []).map((location) =>
-        location.id === locationId ? { ...location, ...patch } : location,
-      ),
-    },
-    result,
-  );
-}
-
-function applyCharacterResult(story: Story, result: CharacterMutationResult): Story {
-  const exists = (story.characters ?? []).some(({ id }) => id === result.character.id);
-  return applyMutationMetadata(
-    {
-      ...story,
-      characters: exists
-        ? (story.characters ?? []).map((character) =>
-            character.id === result.character.id ? result.character : character,
-          )
-        : [...(story.characters ?? []), result.character],
-    },
-    result,
-  );
-}
-
-function applyCharacterPatchResult(
-  story: Story,
-  result: CharacterMutationResult,
-  characterId: string,
-  patch: Partial<
-    Pick<
-      CharacterMutationResult['character'],
-      'name' | 'description' | 'category' | 'imageUrl' | 'isPlayable'
-    >
-  >,
-): Story {
-  return applyMutationMetadata(
-    {
-      ...story,
-      characters: (story.characters ?? []).map((character) =>
-        character.id === characterId ? { ...character, ...patch } : character,
-      ),
-    },
-    result,
-  );
-}
-
-function applyCharacterStatResult(story: Story, result: CharacterStatMutationResult): Story {
-  return applyMutationMetadata(
-    {
-      ...story,
-      characters: (story.characters ?? []).map((character) =>
-        character.id === result.characterId
-          ? { ...character, stats: [...(character.stats ?? []), result.stat] }
-          : character,
-      ),
-    },
-    result,
-  );
-}
-
-function applyCharacterItemResult(story: Story, result: CharacterItemMutationResult): Story {
-  return applyMutationMetadata(
-    {
-      ...story,
-      characters: (story.characters ?? []).map((character) =>
-        character.id === result.characterId
-          ? { ...character, items: [...(character.items ?? []), result.item] }
-          : character,
-      ),
-    },
-    result,
-  );
-}
-
-function updateLocalCharacterStat(
-  story: Story,
-  characterId: string,
-  statId: string,
-  patch: Partial<Pick<CharacterStatMutationResult['stat'], 'initialValue'>>,
-) {
-  return {
-    ...story,
-    characters: (story.characters ?? []).map((character) =>
-      character.id === characterId
-        ? {
-            ...character,
-            stats: (character.stats ?? []).map((stat) =>
-              stat.id === statId ? { ...stat, ...patch } : stat,
-            ),
-          }
-        : character,
-    ),
-  };
-}
-
 function emptyStory(storyId: string): Story {
   return {
     id: storyId,
@@ -933,53 +786,14 @@ function emptyStory(storyId: string): Story {
   };
 }
 
-function applyMutationMetadata(
-  story: Story,
-  mutation: { revision: number; updatedAt: string },
-): Story {
-  return { ...story, revision: mutation.revision, updatedAt: mutation.updatedAt };
+function applyInteractionResult(story: Story, result: InteractionMutationResult | Story): Story {
+  if ('interactions' in result) return mergeServerStory(story, result);
+  return applyInteractionMutationResult(story, result);
 }
 
-function applyInteractionResult(
-  story: Story,
-  result: InteractionMutationResult | Story,
-  interactionId?: string,
-): Story {
+function applyTriggerResult(story: Story, result: TriggerMutationResult | Story): Story {
   if ('interactions' in result) return mergeServerStory(story, result);
-  const saved = savedInteraction(result, story, interactionId);
-  if (!saved) return story;
-  const exists = story.interactions.some(({ id }) => id === saved.id);
-  const interactions = exists
-    ? story.interactions.map((interaction) => (interaction.id === saved.id ? saved : interaction))
-    : [...story.interactions, saved];
-  return applyMutationMetadata({ ...story, interactions }, result);
-}
-
-function applyTriggerResult(
-  story: Story,
-  result: TriggerMutationResult | Story,
-  interactionId: string,
-  triggerId?: string,
-): Story {
-  if ('interactions' in result) return mergeServerStory(story, result);
-  const saved = savedTrigger(result, story, interactionId, triggerId);
-  if (!saved) return story;
-  return applyMutationMetadata(
-    {
-      ...story,
-      interactions: story.interactions.map((interaction) => {
-        if (interaction.id !== interactionId) return interaction;
-        const exists = interaction.triggers.some(({ id }) => id === saved.id);
-        return {
-          ...interaction,
-          triggers: exists
-            ? interaction.triggers.map((trigger) => (trigger.id === saved.id ? saved : trigger))
-            : [...interaction.triggers, saved],
-        };
-      }),
-    },
-    result,
-  );
+  return applyTriggerMutationResult(story, result);
 }
 
 function applyInteractionPatchResult(
@@ -997,30 +811,4 @@ function applyInteractionPatchResult(
     );
   }
   return applyMutationMetadata(updateInteractionInStory(story, interactionId, patch), result);
-}
-
-function savedInteraction(
-  result: InteractionMutationResult | Story,
-  current: Story,
-  interactionId?: string,
-) {
-  if (!('interactions' in result)) return result.interaction;
-  if (interactionId) return result.interactions.find(({ id }) => id === interactionId);
-  const currentIds = new Set(current.interactions.map(({ id }) => id));
-  return result.interactions.find(({ id }) => !currentIds.has(id));
-}
-
-function savedTrigger(
-  result: TriggerMutationResult | Story,
-  current: Story,
-  interactionId: string,
-  triggerId?: string,
-) {
-  if (!('interactions' in result)) return result.trigger;
-  const triggers = result.interactions.find(({ id }) => id === interactionId)?.triggers ?? [];
-  if (triggerId) return triggers.find(({ id }) => id === triggerId);
-  const currentIds = new Set(
-    current.interactions.find(({ id }) => id === interactionId)?.triggers.map(({ id }) => id) ?? [],
-  );
-  return triggers.find(({ id }) => !currentIds.has(id));
 }

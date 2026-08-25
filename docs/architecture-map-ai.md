@@ -33,11 +33,12 @@ only place where a narrative rule exists.
 
 ## Current hotspots
 
-The repository has three unusually broad files:
+The repository has four unusually broad orchestration files:
 
-- `packages/shared/src/index.ts`
 - `apps/api/src/stories/stories.service.ts`
 - `apps/web/src/hooks/useStoryEditorPersistence.ts`
+- `apps/web/src/pages/StoryEditor.tsx`
+- `apps/web/src/pages/StoryPlayer.tsx`
 
 They are functional, but they increase agent risk because unrelated concepts share
 large edit surfaces.
@@ -74,8 +75,14 @@ operations/
   triggers.ts
   merge.ts
 
+items/
+  graph.ts
+
 graph/
   placement.ts
+
+demo/
+  story.ts
 
 imports/
   intermediate-model.ts
@@ -111,6 +118,11 @@ features/story-editor/
   simulation/
 
 features/story-player/
+
+features/realtime/
+
+features/story/
+  storyMutationResults.ts
 ```
 
 ## Extraction rule

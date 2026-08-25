@@ -1,23 +1,16 @@
-import type {
-  ItemDefinition,
-  ItemInstance,
-  ItemRelationshipType,
-  MoveItemInstanceInput,
-  StatDefinition,
+import {
+  getItemDescendantIds,
+  groupItemInstancesByParent,
+  ITEM_RELATIONSHIP_TYPES,
+  type ItemDefinition,
+  type ItemInstance,
+  type ItemRelationshipType,
+  type MoveItemInstanceInput,
+  type StatDefinition,
 } from '@paralleax/shared';
 import type { CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { RemoveRowButton } from './RemoveRowButton';
-
-const relationshipTypes: ItemRelationshipType[] = [
-  'contained',
-  'equipped',
-  'attached',
-  'part_of',
-  'installed',
-  'worn',
-  'held',
-];
 
 export function ItemInstanceTree({
   items,
@@ -35,21 +28,14 @@ export function ItemInstanceTree({
   onDelete?: (itemId: string) => Promise<void>;
 }) {
   const { t } = useTranslation();
-  const childrenByParent = new Map<string, ItemInstance[]>();
-  for (const item of items) {
-    if (!item.parentItemId) continue;
-    childrenByParent.set(item.parentItemId, [
-      ...(childrenByParent.get(item.parentItemId) ?? []),
-      item,
-    ]);
-  }
+  const childrenByParent = groupItemInstancesByParent(items);
   const itemIds = new Set(items.map(({ id }) => id));
   const roots = items.filter(({ parentItemId }) => !parentItemId || !itemIds.has(parentItemId));
 
   const renderItem = (item: ItemInstance, depth: number, ancestors: ReadonlySet<string>) => {
     const definition = itemDefinitions.find(({ id }) => id === item.itemDefinitionId);
     const nextAncestors = new Set([...ancestors, item.id]);
-    const descendants = collectDescendants(item.id, childrenByParent);
+    const descendants = getItemDescendantIds(items, item.id);
     return (
       <li key={item.id} style={{ '--item-depth': depth } as CSSProperties}>
         <div className="item-tree-card">
@@ -119,7 +105,7 @@ export function ItemInstanceTree({
                     })
                   }
                 >
-                  {relationshipTypes.map((type) => (
+                  {ITEM_RELATIONSHIP_TYPES.map((type) => (
                     <option key={type} value={type}>
                       {t(`inspector.relationshipType.${type}`)}
                     </option>
@@ -164,16 +150,4 @@ export function ItemInstanceTree({
   return (
     <ul className="item-instance-tree">{roots.map((item) => renderItem(item, 0, new Set()))}</ul>
   );
-}
-
-function collectDescendants(itemId: string, childrenByParent: ReadonlyMap<string, ItemInstance[]>) {
-  const descendants = new Set<string>();
-  const pending = [...(childrenByParent.get(itemId) ?? [])];
-  while (pending.length > 0) {
-    const child = pending.pop()!;
-    if (descendants.has(child.id)) continue;
-    descendants.add(child.id);
-    pending.push(...(childrenByParent.get(child.id) ?? []));
-  }
-  return descendants;
 }

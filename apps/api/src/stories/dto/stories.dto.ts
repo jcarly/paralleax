@@ -3,6 +3,7 @@ import {
   MAX_GRAPH_DECORATION_TEXT_LENGTH,
   MAX_GRAPH_TEXT_SIZE,
   MAX_INTERACTION_BODY_LENGTH,
+  ITEM_RELATIONSHIP_TYPES,
   MIN_GRAPH_FRAME_HEIGHT,
   MIN_GRAPH_FRAME_WIDTH,
   MIN_GRAPH_TEXT_SIZE,
@@ -11,6 +12,7 @@ import type {
   StoryCommentPolicy,
   StoryCollaboratorRole,
   StoryEditPolicy,
+  ItemRelationshipType,
   StoryVisibility,
 } from '@paralleax/shared';
 import {
@@ -593,9 +595,8 @@ export class MoveItemInstanceDto {
   @IsNotEmpty()
   parentItemId?: string;
   @ValidateIf((_, value) => value !== undefined)
-  @IsIn(['contained', 'equipped', 'attached', 'part_of', 'installed', 'worn', 'held'])
-  relationshipType?:
-    'contained' | 'equipped' | 'attached' | 'part_of' | 'installed' | 'worn' | 'held';
+  @IsIn(ITEM_RELATIONSHIP_TYPES)
+  relationshipType?: ItemRelationshipType;
   @ValidateIf((_, value) => value !== undefined)
   @IsString()
   @MaxLength(100)

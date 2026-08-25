@@ -1,4 +1,5 @@
 import {
+  canManageCommentThread,
   commentAnchorBelongsToStory,
   isCommentAnchorDetached,
   locateCommentQuote,
@@ -108,5 +109,23 @@ describe('comment anchors', () => {
         },
       }),
     ).toBe(false);
+  });
+
+  it('lets story managers, editors, and the creator manage a comment thread', () => {
+    const thread = { createdBy: { id: 'creator-1', email: 'creator@example.com' } };
+
+    expect(canManageCommentThread({ canManage: true, canEdit: false }, 'manager-1', thread)).toBe(
+      true,
+    );
+    expect(canManageCommentThread({ canManage: false, canEdit: true }, 'editor-1', thread)).toBe(
+      true,
+    );
+    expect(canManageCommentThread({ canManage: false, canEdit: false }, 'creator-1', thread)).toBe(
+      true,
+    );
+    expect(canManageCommentThread({ canManage: false, canEdit: false }, 'reader-1', thread)).toBe(
+      false,
+    );
+    expect(canManageCommentThread(undefined, undefined, thread)).toBe(false);
   });
 });

@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import {
+  canManageCommentThread,
   commentAnchorBelongsToStory,
   commentAnchorLabel,
   isCommentAnchor,
@@ -83,11 +84,7 @@ export class CommentsService {
   ) {
     const story = await this.storyFor(storyId, actor);
     const thread = await this.threadFor(storyId, threadId);
-    if (
-      !story.capabilities?.canManage &&
-      !story.capabilities?.canEdit &&
-      thread.createdBy.id !== actor.id
-    ) {
+    if (!canManageCommentThread(story.capabilities, actor.id, thread)) {
       throw new ForbiddenException('Resolving this comment is not permitted');
     }
     const updated = await this.comments.updateStatus(
@@ -103,11 +100,7 @@ export class CommentsService {
   async updateAnchor(storyId: string, threadId: string, anchor: CommentAnchor, actor: RequestUser) {
     const story = await this.storyFor(storyId, actor);
     const thread = await this.threadFor(storyId, threadId);
-    if (
-      !story.capabilities?.canManage &&
-      !story.capabilities?.canEdit &&
-      thread.createdBy.id !== actor.id
-    ) {
+    if (!canManageCommentThread(story.capabilities, actor.id, thread)) {
       throw new ForbiddenException('Moving this comment is not permitted');
     }
     this.assertAnchor(story, anchor);
