@@ -4,6 +4,9 @@ import {
   countInteractionTextOccurrences,
   getInteractionTextOccurrenceCounts,
   getReferencedInteractionIds,
+  getStoryContextCategorySuggestions,
+  getStoryContextReferenceCounts,
+  matchesStoryContextSearch,
 } from './storyNavigation';
 
 const story: Story = {
@@ -106,5 +109,25 @@ describe('story navigation', () => {
       'locked',
       'inspect-location-item',
     ]);
+  });
+
+  it('shares context-list filtering, categories, and compact assignment summaries', () => {
+    expect(
+      getStoryContextCategorySuggestions([
+        { category: ' Crew ' },
+        { category: 'Places' },
+        { category: 'Crew' },
+        {},
+      ]),
+    ).toEqual(['Crew', 'Places']);
+    expect(matchesStoryContextSearch({ name: 'Mira', category: 'Crew' }, 'mir')).toBe(true);
+    expect(matchesStoryContextSearch({ name: 'Mira', category: 'Crew' }, 'crew')).toBe(true);
+    expect(matchesStoryContextSearch({ name: 'Mira', category: 'Crew' }, 'item')).toBe(false);
+
+    const counts = getStoryContextReferenceCounts(story);
+    expect(counts.locations).toEqual(new Map([['harbor', 1]]));
+    expect(counts.characters).toEqual(new Map([['mira', 1]]));
+    expect(counts.stats).toEqual(new Map([['trust', 2]]));
+    expect(counts.items).toEqual(new Map([['key', 2]]));
   });
 });

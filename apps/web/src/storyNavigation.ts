@@ -168,6 +168,63 @@ export function getReferencedInteractionIds(
     .map((interaction) => interaction.id);
 }
 
+export function getStoryContextCategorySuggestions(items: Array<{ category?: string }>) {
+  return [
+    ...new Set(items.map(({ category }) => category?.trim()).filter(Boolean) as string[]),
+  ].sort((left, right) => left.localeCompare(right));
+}
+
+export function matchesStoryContextSearch(
+  entity: { name: string; category?: string },
+  query: string,
+) {
+  return [entity.name, entity.category ?? ''].some((value) =>
+    value.toLocaleLowerCase().includes(query),
+  );
+}
+
+export function getStoryContextReferenceCounts(story: Story | undefined) {
+  const locations = new Map<string, number>();
+  const characters = new Map<string, number>();
+  const stats = new Map<string, number>();
+  const items = new Map<string, number>();
+
+  for (const interaction of story?.interactions ?? []) {
+    if (interaction.locationId) {
+      locations.set(interaction.locationId, (locations.get(interaction.locationId) ?? 0) + 1);
+    }
+    for (const characterId of interaction.characterIds ?? []) {
+      characters.set(characterId, (characters.get(characterId) ?? 0) + 1);
+    }
+  }
+  for (const character of story?.characters ?? []) {
+    for (const stat of character.stats ?? []) {
+      stats.set(stat.statDefinitionId, (stats.get(stat.statDefinitionId) ?? 0) + 1);
+    }
+    for (const item of character.items ?? []) {
+      items.set(item.itemDefinitionId, (items.get(item.itemDefinitionId) ?? 0) + 1);
+    }
+  }
+  for (const location of story?.locations ?? []) {
+    for (const stat of location.stats ?? []) {
+      stats.set(stat.statDefinitionId, (stats.get(stat.statDefinitionId) ?? 0) + 1);
+    }
+    for (const item of location.items ?? []) {
+      items.set(item.itemDefinitionId, (items.get(item.itemDefinitionId) ?? 0) + 1);
+    }
+  }
+  for (const stat of story?.stats ?? []) {
+    stats.set(stat.statDefinitionId, (stats.get(stat.statDefinitionId) ?? 0) + 1);
+  }
+  for (const definition of story?.itemDefinitions ?? []) {
+    for (const stat of definition.stats ?? []) {
+      stats.set(stat.statDefinitionId, (stats.get(stat.statDefinitionId) ?? 0) + 1);
+    }
+  }
+
+  return { locations, characters, stats, items };
+}
+
 function isItemConditionFor(condition: TriggerCondition, itemDefinitionId: string): boolean {
   return 'itemDefinitionId' in condition && condition.itemDefinitionId === itemDefinitionId;
 }

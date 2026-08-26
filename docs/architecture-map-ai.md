@@ -35,7 +35,6 @@ only place where a narrative rule exists.
 
 The remaining unusually broad orchestration files are:
 
-- `apps/web/src/hooks/useStoryEditorPersistence.ts`
 - `apps/web/src/pages/StoryEditor.tsx`
 - `apps/web/src/pages/StoryPlayer.tsx`
 
@@ -87,10 +86,19 @@ graph/
 demo/
   story.ts
 
-imports/
-  intermediate-model.ts
-  validation.ts
+import-export/
+  choicescript/
+    parser.ts
+    models.ts
+    graph-builder.ts
+    mapping.ts
+    report.ts
+    importer.ts
 ```
+
+The ChoiceScript public importer is a thin staged orchestrator. Its internal
+source model remains adapter-specific and must not be re-exported as Paralleax
+engine semantics.
 
 ### API
 
@@ -115,19 +123,54 @@ separation, not ceremony.
 
 ```text
 features/story-editor/
+  editor.css
   graph/
+    storyGraph.css
   persistence/
   inspectors/
+    inspector-layout.css
+    inspector-controls.css
   navigation/
   simulation/
 
 features/story-player/
+  storyPlayer.css
+  storySimulation.css
+  storyPlayerPresentation.ts
+  useReaderProgressPersistence.ts
+  useReaderSessionState.ts
+
+features/comments/
+  comments.css
+
+styles.css
+responsive.css
 
 features/realtime/
 
 features/story/
   storyMutationResults.ts
+
+features/story-editor/persistence/
+  storyContextPersistence.ts
+  storyGraphPersistence.ts
+  storyPersistenceTypes.ts
+  useStoryPersistenceLifecycle.ts
+
+features/story-editor/graph/
+  useStoryConnectionController.ts
+
+features/story-editor/selection/
+  useStoryEditorSelection.ts
+
+features/story-editor/navigation/
+  useStoryContextNavigation.ts
 ```
+
+`StoryPlayer.tsx` still composes the route and Simulation Mode authoring UI, but
+reader session projection, persistence ordering, and condition copy now live in
+the focused modules above. `useReaderSessionState` delegates every reconstruction
+to `packages/shared`; it is not a browser-side narrative engine.
 
 ## Extraction rule
 

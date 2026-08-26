@@ -39,6 +39,20 @@ browser, database, or ChoiceScript-runtime dependency. The API supplies IDs and
 timestamps and owns the transaction. The web library only reads local files,
 sends one request, and renders the report.
 
+The adapter is split by pipeline responsibility:
+
+- `parser.ts` tokenizes files and produces typed ChoiceScript scenes/statements;
+- `graph-builder.ts` compiles those statements into source-specific draft nodes
+  and edges, then assigns deterministic initial positions;
+- `mapping.ts` allocates Paralleax IDs and maps the draft graph, variables,
+  effects, and conditions into the canonical Story model;
+- `report.ts` owns report construction and issue/error handling;
+- `importer.ts` is the thin public orchestrator and stops the pipeline before
+  persistence whenever a structural error is present.
+
+`models.ts` and `helpers.ts` are internal to this adapter. They are not exported
+as Paralleax domain concepts.
+
 Representable source state is lowered to the existing Paralleax stat definitions,
 typed owner assignments, interaction effects, trigger conditions, and inert
 rich-text markers. No parallel variable model or ChoiceScript-specific runtime

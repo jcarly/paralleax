@@ -14,12 +14,8 @@ import {
   SelectionMode,
   useEdgesState,
   useNodesState,
-  type OnConnectEnd,
-  type OnConnectStart,
-  type Connection,
   type NodeChange,
   type NodeMouseHandler,
-  type OnSelectionChangeParams,
   type ReactFlowInstance,
 } from '@xyflow/react';
 import { Link, Navigate, useParams } from 'react-router-dom';
@@ -60,6 +56,9 @@ import { GraphDecorationInspector } from '../features/graph-decorations/GraphDec
 import { GraphDecorationNode } from '../features/graph-decorations/GraphDecorationNode';
 import { buildGraphDecorationNodes } from '../features/graph-decorations/graphDecorationNodes';
 import { isRealtimeEditableTarget } from '../features/realtime/storyRealtime';
+import { useStoryConnectionController } from '../features/story-editor/graph/useStoryConnectionController';
+import { useStoryContextNavigation } from '../features/story-editor/navigation/useStoryContextNavigation';
+import { useStoryEditorSelection } from '../features/story-editor/selection/useStoryEditorSelection';
 import { useStoryEditorPersistence } from '../hooks/useStoryEditorPersistence';
 import { usePendingSaveGuard } from '../hooks/usePendingSaveGuard';
 import {
@@ -72,28 +71,14 @@ import {
   type SelectedTrigger,
   type StoryFlowNode,
   type TriggerFlowEdge,
-  interactionNodeWidth,
-  interactionNodeHeight,
 } from '../storyGraph';
 import { computeStoryGraphLayout, type StoryGraphLayoutScope } from '../storyGraphLayout';
-import {
-  applyStoryGraphSelection,
-  createStoryGraphSelection,
-  getStoryGraphSelectionNodeIds,
-  getStoryGraphSelectionTargets,
-  type StoryGraphSelection,
-} from '../storyGraphSelection';
+import { applyStoryGraphSelection, getStoryGraphSelectionTargets } from '../storyGraphSelection';
 import {
   getStoryGraphClickCreationPosition,
   type StoryGraphClickCreation,
 } from '../storyGraphCreationLayout';
-import { findInteraction, findSelectedTrigger } from '../storySelection';
-import { getPendingConnection } from '../storyConnection';
-import {
-  getInteractionTextOccurrenceCounts,
-  getReferencedInteractionIds,
-  type StoryContextReference,
-} from '../storyNavigation';
+import { getReferencedInteractionIds } from '../storyNavigation';
 
 const nodeTypes = {
   interaction: InteractionNode,
@@ -104,15 +89,6 @@ const nodeTypes = {
 const edgeTypes = { trigger: TriggerEdge };
 const fitViewOptions = { padding: 0.18, maxZoom: 1 };
 const canvasPanMouseButtons = [1];
-const storyContextPanelStorageKey = 'paralleax-story-context-panel';
-
-function getInitialStoryContextPanelOpen() {
-  try {
-    return window.localStorage.getItem(storyContextPanelStorageKey) !== 'collapsed';
-  } catch {
-    return true;
-  }
-}
 
 function getInitials(name: string) {
   return name
@@ -122,18 +98,6 @@ function getInitials(name: string) {
     .map((part) => part[0])
     .join('')
     .toLocaleUpperCase();
-}
-
-function getCategorySuggestions(items: Array<{ category?: string }>) {
-  return [
-    ...new Set(items.map(({ category }) => category?.trim()).filter(Boolean) as string[]),
-  ].sort((left, right) => left.localeCompare(right));
-}
-
-function matchesContextSearch(entity: { name: string; category?: string }, query: string) {
-  return [entity.name, entity.category ?? ''].some((value) =>
-    value.toLocaleLowerCase().includes(query),
-  );
 }
 
 export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
@@ -190,27 +154,8 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
     ) => t(`editor.count.${entity}`, { count }),
     [t],
   );
-  const [selectedId, setSelectedId] = useState<string>();
-  const [selectedTrigger, setSelectedTrigger] = useState<SelectedTrigger>();
-  const [selectedGraphDecorationId, setSelectedGraphDecorationId] = useState<string>();
-  const [selectedLocationId, setSelectedLocationId] = useState<string>();
-  const [selectedCharacterId, setSelectedCharacterId] = useState<string>();
-  const [selectedStatDefinitionId, setSelectedStatDefinitionId] = useState<string>();
-  const [selectedItemDefinitionId, setSelectedItemDefinitionId] = useState<string>();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [isLocationPanelOpen, setIsLocationPanelOpen] = useState(getInitialStoryContextPanelOpen);
-  const [isCreatingStatDefinition, setIsCreatingStatDefinition] = useState(false);
-  const [openContextSections, setOpenContextSections] = useState({
-    locations: true,
-    characters: true,
-    stats: true,
-    items: true,
-  });
-  const [isConnecting, setIsConnecting] = useState(false);
-  const [pendingConnection, setPendingConnection] = useState<Connection>();
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [placingComment, setPlacingComment] = useState(false);
-  const [graphSelection, setGraphSelection] = useState<StoryGraphSelection | undefined>(undefined);
   const [nodes, setNodes, onNodesChange] = useNodesState<StoryFlowNode>([]);
   const [edges, setEdges] = useEdgesState<TriggerFlowEdge>([]);
   const [interactionSizes, setInteractionSizes] = useState<
@@ -226,14 +171,88 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
     },
     [onNodesChange, story?.interactions],
   );
-  const pendingConnectionStart = useRef<{
-    nodeId: string;
-    handleType: 'source' | 'target';
-  } | null>(null);
   const flowInstance = useRef<ReactFlowInstance<StoryFlowNode, TriggerFlowEdge> | null>(null);
   const canvasRef = useRef<HTMLElement | null>(null);
-  const graphSelectionGesture = useRef(false);
-  const graphSelectionCandidate = useRef<StoryGraphSelection | undefined>(undefined);
+  const {
+    selectedId,
+    selectedTrigger,
+    selectedGraphDecorationId,
+    selectedLocationId,
+    selectedCharacterId,
+    selectedStatDefinitionId,
+    selectedItemDefinitionId,
+    isCreatingStatDefinition,
+    graphSelection,
+    selected,
+    selectedTriggerTarget,
+    selectedGraphDecoration,
+    selectedLocation,
+    selectedCharacter,
+    selectedStatDefinition,
+    selectedItemDefinition,
+    selectedGraphNodeIds,
+    selectedContextReference,
+    selectedCommentTarget,
+    hasInspectorSelection,
+    selectExclusive,
+    selectInteraction,
+    focusInteraction,
+    clearSelection: closeInspector,
+    handleGraphSelectionStart,
+    handleGraphSelectionChange,
+    handleGraphSelectionEnd,
+  } = useStoryEditorSelection(story);
+  const {
+    searchQuery,
+    setSearchQuery,
+    clearSearch,
+    isContextPanelOpen: isLocationPanelOpen,
+    toggleContextPanel,
+    openContextPanel,
+    openContextSections,
+    toggleContextSection,
+    openContextSection,
+    occurrenceCounts,
+    navigationInteractionIds,
+    currentNavigationIndex,
+    emphasizedInteractionIds,
+    filteredLocations,
+    filteredCharacters,
+    filteredStatDefinitions,
+    filteredItemDefinitions,
+    locationCategories,
+    characterCategories,
+    statCategories,
+    itemCategories,
+    contextReferenceCounts,
+    navigateInteractions,
+  } = useStoryContextNavigation({
+    story,
+    selectedId,
+    selectedContextReference,
+    flowInstanceRef: flowInstance,
+    selectInteraction,
+    focusInteraction,
+  });
+  const connectionController = useStoryConnectionController({
+    story,
+    flowInstanceRef: flowInstance,
+    connectInteractions,
+    connectToExistingTrigger,
+    createChildFromInteraction,
+    createParentForInteraction,
+  });
+  const {
+    isConnecting,
+    pending,
+    existingTriggerChoices,
+    requestConnection,
+    startCanvasConnection,
+    endCanvasConnection,
+    createPendingTrigger,
+    extendPendingTrigger,
+    cancelPendingConnection,
+  } = connectionController;
 
   const commentAccess = story?.capabilities?.canEdit === true;
   const reviewOnly = story?.capabilities?.canEdit === false;
@@ -250,37 +269,6 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
         : commentThreads,
     [commentThreads, story],
   );
-  const selected = findInteraction(story, selectedId);
-  const selectedTriggerTarget = findSelectedTrigger(story, selectedTrigger);
-  const selectedGraphDecoration = story?.graphDecorations?.find(
-    ({ id }) => id === selectedGraphDecorationId,
-  );
-  const selectedLocation = story?.locations?.find(({ id }) => id === selectedLocationId);
-  const selectedCharacter = story?.characters?.find(({ id }) => id === selectedCharacterId);
-  const selectedStatDefinition = story?.statDefinitions?.find(
-    ({ id }) => id === selectedStatDefinitionId,
-  );
-  const selectedItemDefinition = story?.itemDefinitions?.find(
-    ({ id }) => id === selectedItemDefinitionId,
-  );
-  const selectedGraphNodeIds = useMemo(
-    () => getStoryGraphSelectionNodeIds(graphSelection),
-    [graphSelection],
-  );
-  const selectedCommentTarget: { targetType: CommentTargetType; targetId: string } | undefined =
-    selected
-      ? { targetType: 'interaction', targetId: selected.id }
-      : selectedTriggerTarget
-        ? { targetType: 'trigger', targetId: selectedTriggerTarget.trigger.id }
-        : selectedLocation
-          ? { targetType: 'location', targetId: selectedLocation.id }
-          : selectedCharacter
-            ? { targetType: 'character', targetId: selectedCharacter.id }
-            : selectedStatDefinition
-              ? { targetType: 'statDefinition', targetId: selectedStatDefinition.id }
-              : selectedItemDefinition
-                ? { targetType: 'itemDefinition', targetId: selectedItemDefinition.id }
-                : undefined;
   const selectedTargetThreads = selectedCommentTarget
     ? projectedCommentThreads.filter(
         (thread) =>
@@ -310,127 +298,12 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
     }
     return counts;
   }, [projectedCommentThreads]);
-  const normalizedSearchQuery = searchQuery.trim().toLocaleLowerCase();
-  const occurrenceCounts = useMemo(
-    () => getInteractionTextOccurrenceCounts(story, searchQuery),
-    [searchQuery, story],
-  );
-  const selectedContextReference: StoryContextReference | undefined = useMemo(
-    () =>
-      selectedLocationId
-        ? { type: 'location', id: selectedLocationId }
-        : selectedCharacterId
-          ? { type: 'character', id: selectedCharacterId }
-          : selectedStatDefinitionId
-            ? { type: 'stat', id: selectedStatDefinitionId }
-            : selectedItemDefinitionId
-              ? { type: 'item', id: selectedItemDefinitionId }
-              : undefined,
-    [selectedCharacterId, selectedItemDefinitionId, selectedLocationId, selectedStatDefinitionId],
-  );
-  const referencedInteractionIds = useMemo(
-    () => getReferencedInteractionIds(story, selectedContextReference),
-    [selectedContextReference, story],
-  );
-  const navigationInteractionIds = useMemo(
-    () => (normalizedSearchQuery ? [...occurrenceCounts.keys()] : referencedInteractionIds),
-    [normalizedSearchQuery, occurrenceCounts, referencedInteractionIds],
-  );
-  const currentNavigationIndex = selectedId ? navigationInteractionIds.indexOf(selectedId) : -1;
-  const emphasizedInteractionIds = useMemo(
-    () =>
-      selectedContextReference?.type === 'location' ||
-      selectedContextReference?.type === 'character'
-        ? new Set(referencedInteractionIds)
-        : undefined,
-    [referencedInteractionIds, selectedContextReference?.type],
-  );
-  const filteredLocations = (story?.locations ?? []).filter((location) =>
-    matchesContextSearch(location, normalizedSearchQuery),
-  );
-  const filteredCharacters = (story?.characters ?? []).filter((character) =>
-    matchesContextSearch(character, normalizedSearchQuery),
-  );
-  const filteredStatDefinitions = (story?.statDefinitions ?? []).filter((definition) =>
-    matchesContextSearch(definition, normalizedSearchQuery),
-  );
-  const filteredItemDefinitions = (story?.itemDefinitions ?? []).filter((definition) =>
-    matchesContextSearch(definition, normalizedSearchQuery),
-  );
-  const locationCategories = getCategorySuggestions(story?.locations ?? []);
-  const characterCategories = getCategorySuggestions(story?.characters ?? []);
-  const statCategories = getCategorySuggestions(story?.statDefinitions ?? []);
-  const itemCategories = getCategorySuggestions(story?.itemDefinitions ?? []);
-  const contextReferenceCounts = useMemo(() => {
-    const locations = new Map<string, number>();
-    const characters = new Map<string, number>();
-    const stats = new Map<string, number>();
-    const items = new Map<string, number>();
-
-    for (const interaction of story?.interactions ?? []) {
-      if (interaction.locationId) {
-        locations.set(interaction.locationId, (locations.get(interaction.locationId) ?? 0) + 1);
-      }
-      for (const characterId of interaction.characterIds ?? []) {
-        characters.set(characterId, (characters.get(characterId) ?? 0) + 1);
-      }
-    }
-    for (const character of story?.characters ?? []) {
-      for (const stat of character.stats ?? []) {
-        stats.set(stat.statDefinitionId, (stats.get(stat.statDefinitionId) ?? 0) + 1);
-      }
-      for (const item of character.items ?? []) {
-        items.set(item.itemDefinitionId, (items.get(item.itemDefinitionId) ?? 0) + 1);
-      }
-    }
-    for (const location of story?.locations ?? []) {
-      for (const stat of location.stats ?? []) {
-        stats.set(stat.statDefinitionId, (stats.get(stat.statDefinitionId) ?? 0) + 1);
-      }
-      for (const item of location.items ?? []) {
-        items.set(item.itemDefinitionId, (items.get(item.itemDefinitionId) ?? 0) + 1);
-      }
-    }
-    for (const stat of story?.stats ?? []) {
-      stats.set(stat.statDefinitionId, (stats.get(stat.statDefinitionId) ?? 0) + 1);
-    }
-    for (const definition of story?.itemDefinitions ?? []) {
-      for (const stat of definition.stats ?? []) {
-        stats.set(stat.statDefinitionId, (stats.get(stat.statDefinitionId) ?? 0) + 1);
-      }
-    }
-
-    return { locations, characters, stats, items };
-  }, [story]);
-  const hasInspectorSelection = Boolean(
-    graphSelection ||
-    selected ||
-    selectedTriggerTarget ||
-    selectedGraphDecoration ||
-    selectedLocation ||
-    selectedCharacter ||
-    selectedStatDefinition ||
-    isCreatingStatDefinition ||
-    selectedItemDefinition,
-  );
   const showContextualComments = Boolean(
     !commentsOpen &&
     selectedCommentTarget &&
     (selectedTargetThreads.length > 0 || contextualDraftAnchor),
   );
   const hasInspector = commentsOpen || hasInspectorSelection;
-
-  const closeInspector = useCallback(() => {
-    setGraphSelection(undefined);
-    setSelectedId(undefined);
-    setSelectedTrigger(undefined);
-    setSelectedGraphDecorationId(undefined);
-    setSelectedLocationId(undefined);
-    setSelectedCharacterId(undefined);
-    setSelectedStatDefinitionId(undefined);
-    setIsCreatingStatDefinition(false);
-    setSelectedItemDefinitionId(undefined);
-  }, []);
 
   const focusCommentThread = useCallback(
     (threadId: string) => {
@@ -439,13 +312,13 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
 
       selectCommentThread(thread.id);
       setCommentsOpen(false);
-      closeInspector();
 
       const graphNodeIds: string[] = [];
       if (thread.anchor.kind === 'canvas') {
+        closeInspector();
         graphNodeIds.push(`comment:${thread.id}`);
       } else if (thread.anchor.targetType === 'interaction') {
-        setSelectedId(thread.anchor.targetId);
+        selectExclusive({ type: 'interaction', id: thread.anchor.targetId });
         graphNodeIds.push(thread.anchor.targetId);
       } else if (thread.anchor.targetType === 'trigger') {
         const triggerId = thread.anchor.targetId;
@@ -453,11 +326,14 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
           interaction.triggers.some(({ id }) => id === triggerId),
         );
         if (owner) {
-          setSelectedTrigger({ interactionId: owner.id, triggerId });
+          selectExclusive({
+            type: 'trigger',
+            trigger: { interactionId: owner.id, triggerId },
+          });
           graphNodeIds.push(owner.id);
-        }
+        } else closeInspector();
       } else if (thread.anchor.targetType === 'location') {
-        setSelectedLocationId(thread.anchor.targetId);
+        selectExclusive({ type: 'location', id: thread.anchor.targetId });
         graphNodeIds.push(
           ...getReferencedInteractionIds(story, {
             type: 'location',
@@ -465,7 +341,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
           }),
         );
       } else if (thread.anchor.targetType === 'character') {
-        setSelectedCharacterId(thread.anchor.targetId);
+        selectExclusive({ type: 'character', id: thread.anchor.targetId });
         graphNodeIds.push(
           ...getReferencedInteractionIds(story, {
             type: 'character',
@@ -473,7 +349,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
           }),
         );
       } else if (thread.anchor.targetType === 'statDefinition') {
-        setSelectedStatDefinitionId(thread.anchor.targetId);
+        selectExclusive({ type: 'statDefinition', id: thread.anchor.targetId });
         graphNodeIds.push(
           ...getReferencedInteractionIds(story, {
             type: 'stat',
@@ -481,7 +357,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
           }),
         );
       } else {
-        setSelectedItemDefinitionId(thread.anchor.targetId);
+        selectExclusive({ type: 'itemDefinition', id: thread.anchor.targetId });
         graphNodeIds.push(
           ...getReferencedInteractionIds(story, {
             type: 'item',
@@ -501,7 +377,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
         });
       }
     },
-    [closeInspector, projectedCommentThreads, selectCommentThread, story],
+    [closeInspector, projectedCommentThreads, selectCommentThread, selectExclusive, story],
   );
 
   const openCommentsForTarget = useCallback(
@@ -516,17 +392,27 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
       if (!thread) return;
       selectCommentThread(thread.id);
       setCommentsOpen(false);
-      closeInspector();
       if (targetType === 'interaction') {
-        setSelectedId(targetId);
+        selectExclusive({ type: 'interaction', id: targetId });
         return;
       }
       const owner = story?.interactions.find((interaction) =>
         interaction.triggers.some(({ id }) => id === targetId),
       );
-      if (owner) setSelectedTrigger({ interactionId: owner.id, triggerId: targetId });
+      if (owner) {
+        selectExclusive({
+          type: 'trigger',
+          trigger: { interactionId: owner.id, triggerId: targetId },
+        });
+      } else closeInspector();
     },
-    [closeInspector, projectedCommentThreads, selectCommentThread, story?.interactions],
+    [
+      closeInspector,
+      projectedCommentThreads,
+      selectCommentThread,
+      selectExclusive,
+      story?.interactions,
+    ],
   );
 
   const getClickCreationPosition = useCallback(
@@ -559,17 +445,14 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
         onCreateParent: reviewOnly
           ? undefined
           : (interactionId) => void createParentFromClick(interactionId),
-        onSelectRootTrigger: (interactionId, triggerId) => {
-          closeInspector();
-          setSelectedTrigger({ interactionId, triggerId });
-        },
+        onSelectRootTrigger: (interactionId, triggerId) =>
+          selectExclusive({ type: 'trigger', trigger: { interactionId, triggerId } }),
         occurrenceCounts,
         emphasizedInteractionIds,
         commentCounts: openCommentCounts,
         onOpenComments: openCommentsForTarget,
       }),
     [
-      closeInspector,
       createChildFromClick,
       createParentFromClick,
       isConnecting,
@@ -578,6 +461,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
       openCommentCounts,
       openCommentsForTarget,
       reviewOnly,
+      selectExclusive,
       selectedId,
       selectedTrigger,
       story,
@@ -596,14 +480,12 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
   const triggerNodes = useMemo(
     () =>
       buildTriggerNodes(story, selectedTrigger, {
-        onSelectTrigger: (interactionId, triggerId) => {
-          closeInspector();
-          setSelectedTrigger({ interactionId, triggerId });
-        },
+        onSelectTrigger: (interactionId, triggerId) =>
+          selectExclusive({ type: 'trigger', trigger: { interactionId, triggerId } }),
         commentCounts: openCommentCounts,
         onOpenComments: openCommentsForTarget,
       }),
-    [closeInspector, openCommentCounts, openCommentsForTarget, story, selectedTrigger],
+    [openCommentCounts, openCommentsForTarget, selectExclusive, story, selectedTrigger],
   );
   const narrativeNodes = useMemo(
     () => applyStoryGraphSelection([...storyNodes, ...triggerNodes], graphSelection),
@@ -686,31 +568,19 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
     ]);
   }, [commentNodes, decorationNodes, narrativeNodes, reviewOnly, setNodes]);
 
-  useEffect(() => {
-    try {
-      window.localStorage.setItem(
-        storyContextPanelStorageKey,
-        isLocationPanelOpen ? 'open' : 'collapsed',
-      );
-    } catch {
-      // The editor remains usable when browser storage is unavailable.
-    }
-  }, [isLocationPanelOpen]);
-
   const selectTriggerData = useCallback(
     (trigger: SelectedTrigger) => {
       selectCommentThread(undefined);
-      closeInspector();
-      setSelectedTrigger(trigger);
+      selectExclusive({ type: 'trigger', trigger });
     },
-    [closeInspector, selectCommentThread],
+    [selectCommentThread, selectExclusive],
   );
   const deleteSelectedTriggerInput = useCallback(
     async (interactionId: string, triggerId: string, inputInteractionId: string) => {
       await deleteTriggerInput(interactionId, triggerId, inputInteractionId);
-      setSelectedTrigger(undefined);
+      closeInspector();
     },
-    [deleteTriggerInput],
+    [closeInspector, deleteTriggerInput],
   );
   const storyEdges = useMemo(
     () =>
@@ -827,15 +697,13 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
 
     if (node.type === 'graphDecoration') {
       if (reviewOnly) return;
-      closeInspector();
-      setSelectedGraphDecorationId(node.id);
+      selectExclusive({ type: 'graphDecoration', id: node.id });
       return;
     }
 
     if (node.type !== 'interaction') return;
 
-    closeInspector();
-    setSelectedId(node.id);
+    selectExclusive({ type: 'interaction', id: node.id });
   };
 
   async function addGraphDecoration(kind: GraphDecoration['kind']) {
@@ -851,8 +719,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
       : { x: 80, y: 80 };
     const decorationId = await createGraphDecoration(kind, position);
     if (!decorationId) return;
-    closeInspector();
-    setSelectedGraphDecorationId(decorationId);
+    selectExclusive({ type: 'graphDecoration', id: decorationId });
   }
 
   function startEntityComment() {
@@ -910,51 +777,6 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
     closeInspector();
   }
 
-  function handleGraphSelectionStart() {
-    graphSelectionGesture.current = true;
-    graphSelectionCandidate.current = undefined;
-    closeInspector();
-  }
-
-  function handleGraphSelectionChange({
-    nodes: selectedNodes,
-  }: OnSelectionChangeParams<StoryFlowNode>) {
-    if (!graphSelectionGesture.current) return;
-    graphSelectionCandidate.current = createStoryGraphSelection(selectedNodes);
-  }
-
-  function handleGraphSelectionEnd() {
-    graphSelectionGesture.current = false;
-    setGraphSelection(graphSelectionCandidate.current);
-    graphSelectionCandidate.current = undefined;
-  }
-
-  const navigateInteractions = (direction: -1 | 1) => {
-    if (navigationInteractionIds.length === 0) return;
-    const nextIndex =
-      currentNavigationIndex < 0
-        ? direction > 0
-          ? 0
-          : navigationInteractionIds.length - 1
-        : (currentNavigationIndex + direction + navigationInteractionIds.length) %
-          navigationInteractionIds.length;
-    const interactionId = navigationInteractionIds[nextIndex];
-    if (normalizedSearchQuery) closeInspector();
-    else {
-      setSelectedTrigger(undefined);
-      setSelectedId(undefined);
-    }
-    setSelectedId(interactionId);
-    window.requestAnimationFrame(() => {
-      void flowInstance.current?.fitView({
-        nodes: [{ id: interactionId }],
-        duration: 250,
-        padding: 0.7,
-        maxZoom: 1,
-      });
-    });
-  };
-
   function toggleCommentsList() {
     if (!commentsOpen) {
       comments.cancelDraft();
@@ -963,54 +785,10 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
     setCommentsOpen((open) => !open);
   }
 
-  const startCanvasConnection: OnConnectStart = (_, params) => {
-    if (!params.nodeId || !params.handleType) {
-      pendingConnectionStart.current = null;
-      setIsConnecting(false);
-      return;
-    }
-    pendingConnectionStart.current = {
-      nodeId: params.nodeId,
-      handleType: params.handleType,
-    };
-    setIsConnecting(true);
-  };
-
-  const endCanvasConnection: OnConnectEnd = (event, connectionState) => {
-    const start = pendingConnectionStart.current;
-    pendingConnectionStart.current = null;
-    setIsConnecting(false);
-    const triggerDropTarget = getTriggerDropTarget(event);
-    if (
-      start?.handleType === 'source' &&
-      triggerDropTarget?.interactionId &&
-      triggerDropTarget.triggerId
-    ) {
-      void connectToExistingTrigger(
-        start.nodeId,
-        triggerDropTarget.interactionId,
-        triggerDropTarget.triggerId,
-      );
-      return;
-    }
-
-    if (!start || connectionState.isValid === true || connectionState.toNode) return;
-    if (start.handleType === 'source') {
-      const position = getDroppedInteractionPosition(event, flowInstance.current, 'child');
-
-      void createChildFromInteraction(start.nodeId, position);
-      return;
-    }
-
-    const position = getDroppedInteractionPosition(event, flowInstance.current, 'parent');
-
-    void createParentForInteraction(start.nodeId, position);
-  };
-
   async function deleteSelectedTrigger(interactionId: string, triggerId: string) {
     if (!window.confirm(t('editor.confirmDeleteTrigger'))) return;
     await deleteTrigger(interactionId, triggerId);
-    setSelectedTrigger(undefined);
+    closeInspector();
   }
 
   async function deleteSelectedTriggerGroup(
@@ -1018,36 +796,41 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
     triggerId: string,
     nextTriggerId: string,
   ) {
-    setSelectedTrigger({ interactionId, triggerId: nextTriggerId });
+    selectExclusive({
+      type: 'trigger',
+      trigger: { interactionId, triggerId: nextTriggerId },
+    });
     await deleteTrigger(interactionId, triggerId);
   }
 
   async function createSelectedTriggerVariant(interactionId: string, triggerId: string) {
     const createdTriggerId = await createTriggerVariant(interactionId, triggerId);
     if (createdTriggerId) {
-      setSelectedTrigger({ interactionId, triggerId: createdTriggerId });
+      selectExclusive({
+        type: 'trigger',
+        trigger: { interactionId, triggerId: createdTriggerId },
+      });
     }
   }
 
   async function deleteSelectedTriggerVariants(interactionId: string, triggerIds: string[]) {
     if (!window.confirm(t('editor.confirmDeleteTriggerVariants'))) return;
     await deleteTriggerVariants(interactionId, triggerIds);
-    setSelectedTrigger(undefined);
+    closeInspector();
   }
 
   async function remove() {
     if (!selected) return;
     if (!window.confirm(`Delete “${selected.title}” and its trigger links?`)) return;
     await deleteInteraction(selected.id);
-    setSelectedId(undefined);
+    closeInspector();
   }
 
   async function addLocation() {
     const locationId = await createLocation();
     if (!locationId) return;
-    closeInspector();
-    setSelectedLocationId(locationId);
-    setIsLocationPanelOpen(true);
+    selectExclusive({ type: 'location', id: locationId });
+    openContextPanel();
   }
 
   function updateLocalLocation(nextLocation: NonNullable<typeof selectedLocation>) {
@@ -1063,16 +846,14 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
   async function addCharacter() {
     const characterId = await createCharacter();
     if (!characterId) return;
-    closeInspector();
-    setSelectedCharacterId(characterId);
-    setIsLocationPanelOpen(true);
+    selectExclusive({ type: 'character', id: characterId });
+    openContextPanel();
   }
 
   function addStatDefinition() {
-    closeInspector();
-    setIsCreatingStatDefinition(true);
-    setIsLocationPanelOpen(true);
-    setOpenContextSections((sections) => ({ ...sections, stats: true }));
+    selectExclusive({ type: 'statDefinitionCreation' });
+    openContextPanel();
+    openContextSection('stats');
   }
 
   function updateLocalStatDefinition(nextDefinition: NonNullable<typeof selectedStatDefinition>) {
@@ -1087,10 +868,9 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
   async function addItemDefinition() {
     const itemDefinitionId = await createItemDefinition();
     if (!itemDefinitionId) return;
-    closeInspector();
-    setSelectedItemDefinitionId(itemDefinitionId);
-    setIsLocationPanelOpen(true);
-    setOpenContextSections((sections) => ({ ...sections, items: true }));
+    selectExclusive({ type: 'itemDefinition', id: itemDefinitionId });
+    openContextPanel();
+    openContextSection('items');
   }
 
   function updateLocalItemDefinition(nextDefinition: NonNullable<typeof selectedItemDefinition>) {
@@ -1100,10 +880,6 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
         definition.id === nextDefinition.id ? nextDefinition : definition,
       ),
     });
-  }
-
-  function toggleContextSection(section: keyof typeof openContextSections) {
-    setOpenContextSections((sections) => ({ ...sections, [section]: !sections[section] }));
   }
 
   function updateLocalCharacter(patch: Partial<NonNullable<typeof selectedCharacter>>) {
@@ -1181,38 +957,6 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
     } finally {
       if (hasPositionUpdates) endLocalEdit();
     }
-  }
-
-  const pending = pendingConnection ? getPendingConnection(story, pendingConnection) : undefined;
-  const existingTriggerChoices =
-    pending?.target.triggers.filter(
-      (trigger) => !trigger.inputInteractionIds.includes(pending.sourceId),
-    ) ?? [];
-
-  function requestConnection(connection: Connection) {
-    const candidate = getPendingConnection(story, connection);
-    if (!candidate) return;
-    const canExtendExisting = candidate.target.triggers.some(
-      (trigger) => !trigger.inputInteractionIds.includes(candidate.sourceId),
-    );
-    if (canExtendExisting) {
-      setPendingConnection(connection);
-      return;
-    }
-    void connectInteractions(connection);
-  }
-
-  function createPendingTrigger() {
-    if (!pendingConnection) return;
-    const connection = pendingConnection;
-    setPendingConnection(undefined);
-    void connectInteractions(connection);
-  }
-
-  function extendPendingTrigger(triggerId: string) {
-    if (!pending) return;
-    setPendingConnection(undefined);
-    void connectToExistingTrigger(pending.sourceId, pending.target.id, triggerId);
   }
 
   return (
@@ -1329,7 +1073,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
             aria-label={t(isLocationPanelOpen ? 'editor.collapseContext' : 'editor.expandContext')}
             aria-expanded={isLocationPanelOpen}
             aria-controls="story-context-panel-content"
-            onClick={() => setIsLocationPanelOpen((open) => !open)}
+            onClick={toggleContextPanel}
           >
             {isLocationPanelOpen ? '‹' : '›'}
           </button>
@@ -1406,9 +1150,8 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
                         aria-label={location.name}
                         className={location.id === selectedLocationId ? 'selected' : 'ghost'}
                         onClick={() => {
-                          closeInspector();
-                          setSearchQuery('');
-                          setSelectedLocationId(location.id);
+                          clearSearch();
+                          selectExclusive({ type: 'location', id: location.id });
                         }}
                       >
                         <ContextThumbnail imageUrl={location.imageUrl} fallback="⌖" />
@@ -1463,9 +1206,8 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
                         aria-label={character.name}
                         className={character.id === selectedCharacterId ? 'selected' : 'ghost'}
                         onClick={() => {
-                          closeInspector();
-                          setSearchQuery('');
-                          setSelectedCharacterId(character.id);
+                          clearSearch();
+                          selectExclusive({ type: 'character', id: character.id });
                         }}
                       >
                         <ContextThumbnail
@@ -1526,9 +1268,8 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
                           definition.id === selectedStatDefinitionId ? 'selected' : 'ghost'
                         }
                         onClick={() => {
-                          closeInspector();
-                          setSearchQuery('');
-                          setSelectedStatDefinitionId(definition.id);
+                          clearSearch();
+                          selectExclusive({ type: 'statDefinition', id: definition.id });
                         }}
                       >
                         <ContextThumbnail imageUrl={definition.imageUrl} fallback="↗" />
@@ -1586,9 +1327,8 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
                           definition.id === selectedItemDefinitionId ? 'selected' : 'ghost'
                         }
                         onClick={() => {
-                          closeInspector();
-                          setSearchQuery('');
-                          setSelectedItemDefinitionId(definition.id);
+                          clearSearch();
+                          selectExclusive({ type: 'itemDefinition', id: definition.id });
                         }}
                       >
                         <ContextThumbnail imageUrl={definition.imageUrl} fallback="▣" />
@@ -1756,8 +1496,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
                 onCreate={async (input) => {
                   const definitionId = await createStatDefinition(input);
                   if (definitionId) {
-                    setIsCreatingStatDefinition(false);
-                    setSelectedStatDefinitionId(definitionId);
+                    selectExclusive({ type: 'statDefinition', id: definitionId });
                   }
                   return definitionId;
                 }}
@@ -1782,10 +1521,9 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
                 onChange={(next) => setStory(next)}
                 onPatch={patchInteraction}
                 onDelete={remove}
-                onSelectInteraction={(interactionId) => {
-                  closeInspector();
-                  setSelectedId(interactionId);
-                }}
+                onSelectInteraction={(interactionId) =>
+                  selectExclusive({ type: 'interaction', id: interactionId })
+                }
               />
             ) : selectedTriggerTarget ? (
               <TriggerInspector
@@ -1859,11 +1597,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
               <button type="button" onClick={createPendingTrigger}>
                 {t('editor.connection.createTrigger')}
               </button>
-              <button
-                className="ghost"
-                type="button"
-                onClick={() => setPendingConnection(undefined)}
-              >
+              <button className="ghost" type="button" onClick={cancelPendingConnection}>
                 {t('editor.connection.cancel')}
               </button>
             </div>
@@ -1872,16 +1606,6 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
       ) : null}
     </main>
   );
-}
-
-function getTriggerDropTarget(event: MouseEvent | TouchEvent) {
-  const target = event.target instanceof Element ? event.target : null;
-  const marker = target?.closest<HTMLElement>('[data-trigger-drop-target="true"]');
-  if (!marker) return undefined;
-  return {
-    interactionId: marker.dataset.interactionId,
-    triggerId: marker.dataset.triggerId,
-  };
 }
 
 function ReviewTargetInspector({
@@ -1931,26 +1655,6 @@ function ReviewTargetInspector({
       ) : null}
     </div>
   );
-}
-
-function getDroppedInteractionPosition(
-  event: MouseEvent | TouchEvent,
-  flow: ReactFlowInstance<StoryFlowNode, TriggerFlowEdge> | null,
-  placement: 'child' | 'parent',
-): Position | undefined {
-  if (!flow) return undefined;
-
-  const pointer = 'changedTouches' in event ? event.changedTouches[0] : event;
-
-  const drop = flow.screenToFlowPosition({
-    x: pointer.clientX,
-    y: pointer.clientY,
-  });
-
-  return {
-    x: Math.round(drop.x - interactionNodeWidth / 2),
-    y: placement === 'child' ? Math.round(drop.y) : Math.round(drop.y - interactionNodeHeight),
-  };
 }
 
 function getMeasuredInteractionSizes(nodes: StoryFlowNode[]) {

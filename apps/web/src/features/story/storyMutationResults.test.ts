@@ -10,9 +10,15 @@ import {
   applyLocationPatchResult,
   applyLocationResult,
   applyTriggerMutationResult,
+  addLocalItemDefinition,
+  addLocalStatDefinition,
   findSavedInteraction,
   findSavedTrigger,
+  updateLocalCharacter,
   updateLocalCharacterStat,
+  updateLocalItemDefinition,
+  updateLocalLocation,
+  updateLocalStatDefinition,
 } from './storyMutationResults';
 
 const updatedAt = '2026-08-25T12:00:00.000Z';
@@ -160,6 +166,56 @@ describe('story mutation result adapters', () => {
     expect(withItem.characters?.[0].items).toEqual([
       { id: 'key', itemDefinitionId: 'key-definition' },
     ]);
+  });
+
+  it('reuses focused local context updates for optimistic persistence', () => {
+    const story: Story = {
+      ...storyFixture(),
+      locations: [{ id: 'harbor', name: 'Harbor', description: '' }],
+      characters: [
+        { id: 'mira', name: 'Mira', description: '', isPlayable: true },
+        { id: 'ira', name: 'Ira', description: '', isPlayable: false },
+      ],
+      statDefinitions: [{ id: 'trust-definition', name: 'Trust', valueType: 'number' }],
+      itemDefinitions: [{ id: 'key-definition', name: 'Key', description: '' }],
+    };
+
+    const withLocation = updateLocalLocation(story, 'harbor', { name: 'Old harbor' });
+    const withCharacter = updateLocalCharacter(withLocation, 'ira', { isPlayable: true });
+    const withAddedStat = addLocalStatDefinition(withCharacter, {
+      id: 'mood-definition',
+      name: 'Mood',
+      valueType: 'string',
+    });
+    const withUpdatedStat = updateLocalStatDefinition(withAddedStat, 'trust-definition', {
+      name: 'Confidence',
+    });
+    const withAddedItem = addLocalItemDefinition(withUpdatedStat, {
+      id: 'bag-definition',
+      name: 'Bag',
+      description: '',
+    });
+    const withUpdatedItem = updateLocalItemDefinition(withAddedItem, 'key-definition', {
+      name: 'Old key',
+    });
+
+    expect(withUpdatedItem.locations?.[0].name).toBe('Old harbor');
+    expect(withUpdatedItem.characters).toEqual([
+      expect.objectContaining({ id: 'mira', isPlayable: false }),
+      expect.objectContaining({ id: 'ira', isPlayable: true }),
+    ]);
+    expect(withUpdatedItem.statDefinitions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: 'trust-definition', name: 'Confidence' }),
+        expect.objectContaining({ id: 'mood-definition', name: 'Mood' }),
+      ]),
+    );
+    expect(withUpdatedItem.itemDefinitions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: 'key-definition', name: 'Old key' }),
+        expect.objectContaining({ id: 'bag-definition', name: 'Bag' }),
+      ]),
+    );
   });
 });
 

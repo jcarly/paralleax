@@ -173,6 +173,24 @@ Start.
     );
   });
 
+  it('rejects duplicate variable declarations before constructing interactions', () => {
+    const result = importFiles([
+      {
+        name: 'startup.txt',
+        content: `*create courage 10
+*create courage 20
+Start.
+*ending`,
+      },
+    ]);
+
+    expect(result.story).toBeUndefined();
+    expect(result.report.interactionCount).toBe(0);
+    expect(result.report.issues).toContainEqual(
+      expect.objectContaining({ severity: 'error', code: 'duplicate_variable_declaration' }),
+    );
+  });
+
   it('escapes imported prose before storing it as rich text', () => {
     const result = importFiles([
       {

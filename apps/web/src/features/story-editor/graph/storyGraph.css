@@ -1,0 +1,465 @@
+/* React Flow graph */
+
+.interaction-node {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 210px;
+  min-height: 116px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-node-border);
+  border-radius: 10px;
+  padding: 0.78rem 0.82rem;
+  box-shadow: var(--shadow-node);
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease,
+    transform 150ms ease,
+    opacity 150ms ease;
+}
+.node-comment-badge {
+  position: absolute;
+  z-index: 4;
+  top: -13px;
+  right: -13px;
+  gap: 0.25rem;
+  min-width: 30px;
+  height: 27px;
+  padding: 0 0.45rem;
+  border: 2px solid var(--color-surface);
+  border-radius: 999px;
+  background: var(--color-trigger);
+  font-size: 0.7rem;
+}
+.root-trigger-comment-badge {
+  position: absolute;
+  z-index: 5;
+  top: -27px;
+  left: 11px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 0.3rem;
+  border: 2px solid var(--color-surface);
+  border-radius: 999px;
+  background: var(--color-trigger-strong);
+  font-size: 0.62rem;
+}
+.interaction-node.dimmed {
+  opacity: 0.24;
+}
+.interaction-node:hover {
+  border-color: #cfc7bc;
+  box-shadow: var(--shadow-node-hover);
+}
+.interaction-node.selected {
+  border-color: var(--color-primary);
+  box-shadow:
+    0 0 0 3px var(--color-primary-halo),
+    var(--shadow-node-selected);
+}
+.interaction-node > strong,
+.interaction-node > .interaction-excerpt {
+  display: block;
+}
+.interaction-node > strong {
+  font-size: 0.9rem;
+  line-height: 1.25;
+}
+.interaction-node strong .interaction-occurrence-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.35rem;
+  height: 1.35rem;
+  margin: 0 0 0 0.45rem;
+  padding: 0 0.32rem;
+  border-radius: 999px;
+  background: var(--color-primary-halo);
+  color: var(--color-primary);
+  font-size: 0.72rem;
+  line-height: 1;
+  vertical-align: middle;
+}
+.interaction-node > .interaction-excerpt {
+  font-size: 0.8rem;
+  color: var(--color-node-muted);
+  line-height: 1.45;
+  margin-top: 0.45rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.interaction-node-context {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 24px;
+  margin-top: auto;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--color-border);
+}
+.interaction-node-location {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 0.25rem;
+  overflow: hidden;
+  color: var(--color-node-muted);
+  font-size: 0.67rem;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.interaction-node-location > span {
+  flex: none;
+  color: var(--color-place);
+  font-size: 0.8rem;
+}
+.interaction-node-characters {
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+  padding-left: 0.3rem;
+}
+.interaction-node-character {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  margin-left: -0.3rem;
+  overflow: hidden;
+  border: 2px solid var(--color-surface);
+  border-radius: 999px;
+  background: #6f8793;
+  color: white;
+  font-size: 0.52rem;
+  font-weight: 750;
+}
+.interaction-node-character:first-child {
+  margin-left: 0;
+}
+.interaction-node-character img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.interaction-node-character-overflow {
+  background: var(--color-surface-secondary);
+  color: var(--color-muted);
+}
+.node-create {
+  position: absolute;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 2px solid var(--color-surface);
+  border-radius: 999px;
+  background: var(--color-primary);
+  color: var(--color-surface);
+  box-shadow: 0 0 0 3px var(--color-primary-halo);
+  opacity: 1;
+  transform: scale(1);
+  transition:
+    opacity 120ms ease,
+    transform 120ms ease,
+    box-shadow 120ms ease;
+}
+.node-create.react-flow__handle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.95rem;
+  font-weight: 800;
+  line-height: 1;
+}
+.node-create-parent {
+  top: -15px;
+  left: 50%;
+  transform: translateX(-50%) scale(1);
+}
+.node-create-child {
+  bottom: -15px;
+  left: 50%;
+  transform: translateX(-50%) scale(1);
+}
+.node-trigger-input {
+  left: calc(50% - 42px);
+  top: -7px;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--color-primary);
+  border-radius: 999px;
+  background: var(--color-surface);
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(0.72);
+  transition:
+    opacity 120ms ease,
+    transform 120ms ease,
+    box-shadow 120ms ease;
+}
+.node-trigger-input.is-visible {
+  opacity: 1;
+  pointer-events: all;
+  transform: scale(1);
+}
+.routing-handle.react-flow__handle {
+  width: 2px;
+  min-width: 2px;
+  height: 2px;
+  min-height: 2px;
+  border: 0;
+  background: transparent;
+  opacity: 0;
+  pointer-events: none;
+}
+.node-create:hover,
+.node-create:focus-visible,
+.node-trigger-input:hover,
+.node-trigger-input:focus-visible {
+  box-shadow: 0 0 0 5px var(--color-primary-halo-strong);
+  outline: none;
+}
+.root-trigger-marker {
+  position: absolute;
+  left: -10px;
+  top: 10px;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 2px solid var(--color-surface);
+  border-radius: 5px;
+  background: var(--color-trigger);
+  box-shadow: 0 0 0 3px var(--color-trigger-halo);
+  transform: rotate(45deg);
+}
+.root-trigger-marker:hover,
+.root-trigger-marker:focus-visible,
+.root-trigger-marker.selected {
+  outline: none;
+  background: var(--color-trigger);
+  border-color: var(--color-primary);
+  box-shadow:
+    0 0 0 4px var(--color-primary-halo),
+    0 3px 10px #2d2d2d22;
+}
+.react-flow__edge.trigger-edge.selected .react-flow__edge-path {
+  stroke: var(--color-trigger-strong);
+  stroke-width: 3;
+}
+.react-flow__edge.trigger-edge .react-flow__edge-path {
+  stroke: var(--color-link-soft);
+  stroke-width: 1.45;
+  transition:
+    stroke 150ms ease,
+    stroke-width 150ms ease;
+}
+.react-flow__edge.trigger-edge:hover .react-flow__edge-path {
+  stroke: var(--color-link-hover);
+  stroke-width: 2;
+}
+.react-flow__edge.trigger-edge .react-flow__edge-path,
+.trigger-edge-hitbox {
+  cursor: default;
+}
+.trigger-marker {
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 2px solid var(--color-surface);
+  border-radius: 5px;
+  background: var(--color-trigger);
+  box-shadow: 0 0 0 3px var(--color-trigger-halo);
+  pointer-events: all;
+  transform: rotate(45deg);
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease,
+    background 150ms ease;
+}
+.trigger-node {
+  position: relative;
+  width: 20px;
+  height: 20px;
+}
+.trigger-comment-badge {
+  position: absolute;
+  z-index: 4;
+  top: -19px;
+  right: -20px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 0.3rem;
+  border: 2px solid var(--color-surface);
+  border-radius: 999px;
+  background: var(--color-trigger-strong);
+  font-size: 0.62rem;
+  pointer-events: all;
+}
+.comment-post-it {
+  width: 250px;
+  cursor: default;
+}
+.comment-post-it .comment-discussion-card {
+  margin: 0;
+  border-color: #d9ad49;
+  border-radius: 3px 10px 10px 10px;
+  background: #f8d878;
+  color: #513a12;
+  box-shadow: 0 8px 20px #6a511d3d;
+}
+.comment-post-it .comment-discussion-card.expanded {
+  width: 320px;
+}
+.comment-post-it .comment-discussion-summary:hover,
+.comment-post-it .comment-discussion-summary:focus-visible {
+  background: #fbe293;
+}
+.comment-post-it .comment-discussion-detail {
+  border-top-color: #d9ad4966;
+}
+.comment-post-it .comment-discussion-messages > div + div {
+  border-top-color: #d9ad4966;
+}
+.comment-post-it .comment-discussion-heading small,
+.comment-post-it .comment-discussion-anchor,
+.comment-post-it .comment-inline-reply label > span,
+.comment-post-it .comment-discussion-messages time,
+.comment-post-it .comment-draft-card > header small {
+  color: #765922;
+}
+.comment-post-it textarea {
+  border-color: #caa244;
+  background: #fff8dc;
+}
+.comment-post-it .comment-draft-card {
+  width: 320px;
+}
+.trigger-node .trigger-marker {
+  position: absolute;
+  inset: 0;
+}
+.react-flow__node-trigger.draggable .trigger-node .trigger-marker {
+  cursor: grab;
+}
+.react-flow__node-trigger.dragging .trigger-node .trigger-marker {
+  cursor: grabbing;
+}
+.react-flow__node-graphDecoration {
+  z-index: -1000 !important;
+}
+.react-flow__node.graph-frame-flow-node {
+  pointer-events: none !important;
+}
+.graph-frame-decoration {
+  position: absolute;
+  inset: 0;
+  box-sizing: border-box;
+  border: 2px dashed;
+  border-radius: 12px;
+  pointer-events: none !important;
+}
+.graph-frame-decoration:hover {
+  border-width: 5px;
+}
+.graph-frame-hit {
+  position: absolute;
+  pointer-events: auto;
+  cursor: pointer;
+  z-index: 2;
+}
+.graph-frame-hit-top,
+.graph-frame-hit-bottom {
+  left: 10px;
+  right: 10px;
+  height: 12px;
+}
+.graph-frame-hit-top {
+  top: -6px;
+}
+.graph-frame-hit-bottom {
+  bottom: -6px;
+}
+.graph-frame-hit-left,
+.graph-frame-hit-right {
+  top: 10px;
+  bottom: 10px;
+  width: 12px;
+}
+.graph-frame-hit-left {
+  left: -6px;
+}
+.graph-frame-hit-right {
+  right: -6px;
+}
+.graph-frame-decoration.selected {
+  border-style: solid;
+  box-shadow: 0 0 0 3px var(--color-primary-halo);
+}
+.graph-frame-resize-line,
+.graph-frame-resize-handle {
+  pointer-events: auto;
+}
+.graph-text-decoration.selected,
+.graph-text-decoration:hover {
+  border-color: currentColor;
+  box-shadow: 0 0 0 3px var(--color-primary-halo);
+}
+.graph-text-decoration {
+  max-width: 520px;
+  padding: 0.2rem 0.35rem;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  line-height: 1.15;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.graph-text-decoration.selected {
+  border-color: currentColor;
+  box-shadow: 0 0 0 3px var(--color-primary-halo);
+}
+.react-flow__node-graphDecoration.draggable {
+  cursor: grab;
+}
+.react-flow__node-graphDecoration.dragging {
+  cursor: grabbing;
+}
+.trigger-node-handle {
+  width: 8px;
+  height: 8px;
+  border: 0;
+  background: transparent;
+}
+.trigger-marker:hover,
+.trigger-marker:focus-visible,
+.trigger-marker.selected {
+  outline: none;
+  background: var(--color-trigger);
+  border-color: var(--color-primary);
+  box-shadow:
+    0 0 0 4px var(--color-primary-halo),
+    0 3px 10px #2d2d2d22;
+}
+.trigger-link-delete {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 2px solid var(--color-surface);
+  border-radius: 999px;
+  background: var(--color-danger);
+  box-shadow: 0 0 0 3px #c53d4f22;
+  font-size: 0.76rem;
+  line-height: 1;
+  opacity: 0;
+  pointer-events: all;
+  cursor: pointer;
+  transition:
+    opacity 120ms ease,
+    box-shadow 120ms ease;
+}
+.trigger-link-delete:hover,
+.trigger-link-delete.visible,
+.trigger-link-delete:focus-visible {
+  opacity: 1;
+}

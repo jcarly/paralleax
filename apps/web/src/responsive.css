@@ -1,0 +1,84 @@
+/* Responsive */
+
+@media (max-width: 800px) {
+  .editor-layout,
+  .editor-layout.with-navigation,
+  .editor-layout.with-inspector,
+  .editor-layout.with-navigation.with-inspector {
+    grid-template-columns: 1fr;
+  }
+  .editor-layout.with-navigation-collapsed,
+  .editor-layout.with-navigation-collapsed.with-inspector,
+  .editor-layout.with-navigation-collapsed.with-inspector.with-comment-rail {
+    grid-template-columns: 48px minmax(0, 1fr);
+  }
+  .location-panel {
+    position: absolute;
+    top: 122px;
+    bottom: 0;
+    left: 0;
+    z-index: 5;
+    width: min(260px, 85vw);
+    box-shadow: var(--shadow-card);
+  }
+  .location-panel.collapsed {
+    width: 48px;
+    box-shadow: none;
+  }
+  .inspector {
+    position: absolute;
+    right: 0;
+    top: 122px;
+    bottom: 0;
+    width: min(340px, 90vw);
+    z-index: 5;
+  }
+  .comments-panel.inspector-placement,
+  .contextual-comments-rail {
+    position: absolute;
+    top: 122px;
+    right: 0;
+    bottom: 0;
+    z-index: 6;
+    width: min(390px, 90vw);
+  }
+  .editor-toolbar {
+    height: auto;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  .editor-page {
+    height: calc(100vh - 58px);
+  }
+}
+
+.attribute-definitions-panel {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.attribute-definition-create,
+.attribute-assignment-create {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.attribute-assignment-list {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.attribute-assignment-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(70px, 0.8fr) auto;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.attribute-definition-create-actions {
+  display: flex;
+  gap: 0.4rem;
+}

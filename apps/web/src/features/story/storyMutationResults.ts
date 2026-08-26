@@ -5,11 +5,35 @@ import type {
   GraphDecorationMutationResult,
   Interaction,
   InteractionMutationResult,
+  ItemDefinitionMutationResult,
   LocationMutationResult,
+  StatDefinitionMutationResult,
   Story,
   Trigger,
   TriggerMutationResult,
 } from '@paralleax/shared';
+
+export type LocationPatch = Partial<
+  Pick<LocationMutationResult['location'], 'name' | 'description' | 'category' | 'imageUrl'>
+>;
+
+export type CharacterPatch = Partial<
+  Pick<
+    CharacterMutationResult['character'],
+    'name' | 'description' | 'category' | 'imageUrl' | 'isPlayable'
+  >
+>;
+
+export type CharacterStatPatch = Partial<Pick<CharacterStatMutationResult['stat'], 'initialValue'>>;
+
+export type StatDefinitionPatch = Partial<StatDefinitionMutationResult['statDefinition']>;
+
+export type ItemDefinitionPatch = Partial<
+  Pick<
+    ItemDefinitionMutationResult['itemDefinition'],
+    'name' | 'description' | 'category' | 'imageUrl' | 'stats'
+  >
+>;
 
 export function applyStoryMutationMetadata(
   story: Story,
@@ -22,89 +46,75 @@ export function applyGraphDecorationResult(
   story: Story,
   result: GraphDecorationMutationResult,
 ): Story {
-  const exists = (story.graphDecorations ?? []).some(({ id }) => id === result.decoration.id);
   return applyStoryMutationMetadata(
     {
       ...story,
-      graphDecorations: exists
-        ? (story.graphDecorations ?? []).map((decoration) =>
-            decoration.id === result.decoration.id ? result.decoration : decoration,
-          )
-        : [...(story.graphDecorations ?? []), result.decoration],
+      graphDecorations: upsertById(story.graphDecorations, result.decoration),
     },
     result,
   );
 }
 
 export function applyLocationResult(story: Story, result: LocationMutationResult): Story {
-  const exists = (story.locations ?? []).some(({ id }) => id === result.location.id);
   return applyStoryMutationMetadata(
     {
       ...story,
-      locations: exists
-        ? (story.locations ?? []).map((location) =>
-            location.id === result.location.id ? result.location : location,
-          )
-        : [...(story.locations ?? []), result.location],
+      locations: upsertById(story.locations, result.location),
     },
     result,
   );
+}
+
+export function updateLocalLocation(story: Story, locationId: string, patch: LocationPatch): Story {
+  return {
+    ...story,
+    locations: patchById<LocationMutationResult['location']>(story.locations, locationId, patch),
+  };
 }
 
 export function applyLocationPatchResult(
   story: Story,
   result: LocationMutationResult,
   locationId: string,
-  patch: Partial<
-    Pick<LocationMutationResult['location'], 'name' | 'description' | 'category' | 'imageUrl'>
-  >,
+  patch: LocationPatch,
 ): Story {
+  return applyStoryMutationMetadata(updateLocalLocation(story, locationId, patch), result);
+}
+
+export function applyCharacterResult(story: Story, result: CharacterMutationResult): Story {
   return applyStoryMutationMetadata(
     {
       ...story,
-      locations: (story.locations ?? []).map((location) =>
-        location.id === locationId ? { ...location, ...patch } : location,
-      ),
+      characters: upsertById(story.characters, result.character),
     },
     result,
   );
 }
 
-export function applyCharacterResult(story: Story, result: CharacterMutationResult): Story {
-  const exists = (story.characters ?? []).some(({ id }) => id === result.character.id);
-  return applyStoryMutationMetadata(
-    {
-      ...story,
-      characters: exists
-        ? (story.characters ?? []).map((character) =>
-            character.id === result.character.id ? result.character : character,
-          )
-        : [...(story.characters ?? []), result.character],
-    },
-    result,
-  );
+export function updateLocalCharacter(
+  story: Story,
+  characterId: string,
+  patch: CharacterPatch,
+): Story {
+  return {
+    ...story,
+    characters: (story.characters ?? []).map((character) =>
+      character.id === characterId
+        ? { ...character, ...patch }
+        : patch.isPlayable
+          ? { ...character, isPlayable: false }
+          : character,
+    ),
+  };
 }
 
 export function applyCharacterPatchResult(
   story: Story,
   result: CharacterMutationResult,
   characterId: string,
-  patch: Partial<
-    Pick<
-      CharacterMutationResult['character'],
-      'name' | 'description' | 'category' | 'imageUrl' | 'isPlayable'
-    >
-  >,
+  patch: CharacterPatch,
 ): Story {
-  return applyStoryMutationMetadata(
-    {
-      ...story,
-      characters: (story.characters ?? []).map((character) =>
-        character.id === characterId ? { ...character, ...patch } : character,
-      ),
-    },
-    result,
-  );
+  return applyStoryMutationMetadata(updateLocalCharacter(story, characterId, patch), result);
 }
 
 export function applyCharacterStatResult(story: Story, result: CharacterStatMutationResult): Story {
@@ -139,7 +149,7 @@ export function updateLocalCharacterStat(
   story: Story,
   characterId: string,
   statId: string,
-  patch: Partial<Pick<CharacterStatMutationResult['stat'], 'initialValue'>>,
+  patch: CharacterStatPatch,
 ): Story {
   return {
     ...story,
@@ -156,18 +166,65 @@ export function updateLocalCharacterStat(
   };
 }
 
+export function addLocalStatDefinition(
+  story: Story,
+  definition: StatDefinitionMutationResult['statDefinition'],
+): Story {
+  return {
+    ...story,
+    statDefinitions: [...(story.statDefinitions ?? []), definition],
+  };
+}
+
+export function updateLocalStatDefinition(
+  story: Story,
+  statDefinitionId: string,
+  patch: StatDefinitionPatch,
+): Story {
+  return {
+    ...story,
+    statDefinitions: patchById<StatDefinitionMutationResult['statDefinition']>(
+      story.statDefinitions,
+      statDefinitionId,
+      patch,
+    ),
+  };
+}
+
+export function addLocalItemDefinition(
+  story: Story,
+  definition: ItemDefinitionMutationResult['itemDefinition'],
+): Story {
+  return {
+    ...story,
+    itemDefinitions: [...(story.itemDefinitions ?? []), definition],
+  };
+}
+
+export function updateLocalItemDefinition(
+  story: Story,
+  itemDefinitionId: string,
+  patch: ItemDefinitionPatch,
+): Story {
+  return {
+    ...story,
+    itemDefinitions: patchById<ItemDefinitionMutationResult['itemDefinition']>(
+      story.itemDefinitions,
+      itemDefinitionId,
+      patch,
+    ),
+  };
+}
+
 export function applyInteractionMutationResult(
   story: Story,
   result: InteractionMutationResult,
 ): Story {
   const interaction = result.interaction;
-  const exists = story.interactions.some(({ id }) => id === interaction.id);
   return applyStoryMutationMetadata(
     {
       ...story,
-      interactions: exists
-        ? story.interactions.map((item) => (item.id === interaction.id ? interaction : item))
-        : [...story.interactions, interaction],
+      interactions: upsertById(story.interactions, interaction),
     },
     result,
   );
@@ -218,4 +275,18 @@ export function findSavedTrigger(
     current.interactions.find(({ id }) => id === interactionId)?.triggers.map(({ id }) => id) ?? [],
   );
   return triggers.find(({ id }) => !currentIds.has(id));
+}
+
+function upsertById<T extends { id: string }>(items: T[] | undefined, entity: T): T[] {
+  return (items ?? []).some(({ id }) => id === entity.id)
+    ? (items ?? []).map((item) => (item.id === entity.id ? entity : item))
+    : [...(items ?? []), entity];
+}
+
+function patchById<T extends { id: string }>(
+  items: T[] | undefined,
+  entityId: string,
+  patch: Partial<T>,
+): T[] {
+  return (items ?? []).map((item) => (item.id === entityId ? { ...item, ...patch } : item));
 }

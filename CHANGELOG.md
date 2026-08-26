@@ -1,5 +1,38 @@
 # Changelog
 
+## 2026-08-26
+
+- Split the 3,626-line global web stylesheet into shared foundations and ordered
+  editor, inspector, review-comment, graph, reader, Simulation Mode, and
+  responsive feature sheets. The original rule order and shared tokens are
+  preserved, including the review layer between the two inspector sections.
+- Split the experimental ChoiceScript adapter into typed parsing, draft graph
+  compilation/layout, canonical Story mapping, and compatibility-report modules.
+  The public importer is now a thin staged orchestrator; transient source names
+  remain internal and the imported Story, warnings, IDs, and persistence contract
+  are unchanged.
+- Consolidated Story Player runtime projection into one shared-engine
+  `ReaderProgressState` instead of parallel React states for journey, current
+  interaction, visits, location, variables, and inventory. Progress persistence
+  now has a focused ordered queue, and translated trigger diagnostics have a
+  presentation-only module that continues to consume shared-domain evaluation.
+- Extracted Story Editor connection gestures and connection-choice state into a
+  focused controller. It reuses the existing connection validators, keeps React
+  Flow as a projection, and preserves empty-canvas parent/child creation and
+  explicit trigger-marker shortcuts.
+- Extracted transient Story Editor inspector and rectangle-selection state into
+  one focused controller. Exclusive targets share one selection path, while
+  context navigation can still focus an interaction without discarding its
+  selected location, character, variable, or item reference.
+- Extracted Story Editor context navigation into a focused controller owning
+  panel persistence, section visibility, search filters, reference counts, and
+  previous/next interaction focus. Existing story-navigation helpers remain the
+  source for text occurrences and authored-context references.
+- Split `useStoryEditorPersistence` into focused lifecycle, graph, and context/
+  inventory collaborators. The 49-line facade remains the only optimistic Story
+  state owner, public editor actions are unchanged, stale-response protections are
+  preserved, and local entity updates reuse the existing mutation adapters.
+
 ## 2026-08-25
 
 - Centralized authored item-tree indexing, reachability, descendant detection,

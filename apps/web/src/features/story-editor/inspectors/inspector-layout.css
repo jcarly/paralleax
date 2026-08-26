@@ -1,0 +1,54 @@
+/* Inspector */
+
+.inspector {
+  background: var(--color-surface);
+  border-left: 1px solid var(--color-border);
+  padding: 1.2rem;
+  overflow: auto;
+  box-shadow: -10px 0 28px #2d2d2d0f;
+}
+.inspector-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  margin-bottom: 0.75rem;
+}
+.inspector-comment-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-right: auto;
+}
+.inspector-comment-actions button {
+  padding: 0.42rem 0.58rem;
+  font-size: 0.7rem;
+}
+.inspector-close {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-secondary);
+}
+.inspector h2 {
+  margin-top: 0;
+}
+.inspector h3 {
+  margin-top: 1.35rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+.graph-selection-inspector p {
+  margin: 0.5rem 0;
+  color: var(--color-muted);
+}
+.review-target-inspector {
+  line-height: 1.55;
+}
+.review-target-inspector [data-comment-field] {
+  user-select: text;
+}

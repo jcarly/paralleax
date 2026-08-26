@@ -1,31 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
-import type {
-  Interaction,
-  InteractionMutationResult,
-  StatValue,
-  Story,
-  TriggerCondition,
-} from '@paralleax/shared';
+import type { Interaction, InteractionMutationResult, Story } from '@paralleax/shared';
 import {
-  applyInteractionStatChanges,
-  applyInteractionItemEffects,
-  applyInteractionItemStatChanges,
-  buildReaderProgressState,
   canManageCommentThread,
   ensureStoryInteractionPositions,
   getAvailableInteractions,
-  getInitialStatValues,
-  getInitialItemStatValues,
   getInputReachableInteractions,
-  getJourneyStatValues,
-  getJourneyOwnedItemIds,
   getItemDefinitionIdForInstance,
   getItemOwnerIdForInstance,
-  getJourneyItemStatValues,
-  getJourneyDateTime,
   getTriggerConditionFailures,
   isCommentAnchorDetached,
 } from '@paralleax/shared';
@@ -34,6 +17,12 @@ import { RichTextContent } from '../components/RichTextContent';
 import { RichTextEditor } from '../components/RichTextEditor';
 import { StoryCommentsPanel } from '../features/comments/StoryCommentsPanel';
 import { useStoryComments } from '../features/comments/useStoryComments';
+import { useReaderProgressPersistence } from '../features/story-player/useReaderProgressPersistence';
+import { useReaderSessionState } from '../features/story-player/useReaderSessionState';
+import {
+  getConditionSummary,
+  getUnavailableReason,
+} from '../features/story-player/storyPlayerPresentation';
 import {
   isApiNotFound,
   isRealtimeEditableTarget,
@@ -46,175 +35,6 @@ import {
 } from '../features/story/storyMutationResults';
 import { useStoryRealtime } from '../hooks/useStoryRealtime';
 import { getStoryGraphClickCreationPosition } from '../storyGraphCreationLayout';
-import { getStatTargets, statTargetLabel } from '../storyStats';
-
-function getInteractionTitle(story: Story, interactionId: string) {
-  return (
-    story.interactions.find((interaction) => interaction.id === interactionId)?.title ??
-    interactionId
-  );
-}
-
-function describeCondition(story: Story, condition: TriggerCondition, t: TFunction) {
-  if ('locationId' in condition) {
-    const name =
-      story.locations?.find((location) => location.id === condition.locationId)?.name ??
-      condition.locationId;
-    return t(
-      condition.isCurrentLocation
-        ? 'player.condition.locationIs'
-        : 'player.condition.locationIsNot',
-      { name },
-    );
-  }
-  if ('interactionId' in condition) {
-    const title = getInteractionTitle(story, condition.interactionId);
-    return t(
-      condition.hasBeenVisited ? 'player.condition.visited' : 'player.condition.notVisited',
-      {
-        title,
-      },
-    );
-  }
-  if ('statId' in condition) {
-    const target = getStatTargets(story).find(
-      (candidate) =>
-        candidate.assignment.id === condition.statId && candidate.itemId === condition.itemId,
-    );
-    return t('player.condition.stat', {
-      label: target ? statTargetLabel(target, t('attributes.owner.story')) : condition.statId,
-      operator: t(`player.condition.operator.${condition.operator}`),
-      value: condition.value,
-    });
-  }
-  if ('itemDefinitionId' in condition) {
-    const name =
-      story.itemDefinitions?.find(({ id }) => id === condition.itemDefinitionId)?.name ??
-      condition.itemDefinitionId;
-    return t(condition.isOwned ? 'player.condition.owns' : 'player.condition.doesNotOwn', {
-      name,
-    });
-  }
-  if ('temporal' in condition) return t('player.condition.temporal');
-  const name =
-    story.characters?.find((character) => character.id === condition.characterId)?.name ??
-    condition.characterId;
-  return t(condition.isPresent ? 'player.condition.present' : 'player.condition.absent', {
-    name,
-  });
-}
-
-function getConditionSummary(
-  story: Story,
-  interaction: Interaction,
-  currentId: string | null,
-  t: TFunction,
-) {
-  const triggers = interaction.triggers.filter((trigger) =>
-    currentId
-      ? trigger.inputInteractionIds.includes(currentId) ||
-        (trigger.inputInteractionIds.length === 0 && trigger.conditions.length > 0)
-      : trigger.inputInteractionIds.length === 0,
-  );
-  const variants = triggers.map((trigger) =>
-    trigger.conditions.length === 0
-      ? t('player.condition.noConditions')
-      : trigger.conditions
-          .map((condition) => describeCondition(story, condition, t))
-          .join(` ${t('player.condition.and')} `),
-  );
-  return variants.length > 1
-    ? variants.join(` ${t('player.condition.or')} `)
-    : (variants[0] ?? t('player.condition.noMatching'));
-}
-
-function getUnavailableReason(
-  story: Story,
-  interaction: Interaction,
-  currentId: string | null,
-  visited: string[],
-  currentLocationId: string | null,
-  currentCharacterIds: string[],
-  statValues: Readonly<Record<string, StatValue>>,
-  currentDateTime: string,
-  ownedItemDefinitionIds: readonly string[],
-  itemStatValues: Readonly<Record<string, Readonly<Record<string, StatValue>>>>,
-  t: TFunction,
-) {
-  const failures = getTriggerConditionFailures(
-    interaction,
-    currentId,
-    visited,
-    currentLocationId,
-    currentCharacterIds,
-    statValues,
-    currentDateTime,
-    ownedItemDefinitionIds,
-    itemStatValues,
-  );
-  if (failures.length === 0) return undefined;
-
-  const firstFailure = failures[0].condition;
-  if ('locationId' in firstFailure) {
-    const name =
-      story.locations?.find((location) => location.id === firstFailure.locationId)?.name ??
-      firstFailure.locationId;
-    return t(
-      firstFailure.isCurrentLocation
-        ? 'player.requirement.locationIs'
-        : 'player.requirement.locationIsNot',
-      { name },
-    );
-  }
-  if ('interactionId' in firstFailure) {
-    const title = getInteractionTitle(story, firstFailure.interactionId);
-    return t(
-      firstFailure.hasBeenVisited ? 'player.requirement.visited' : 'player.requirement.notVisited',
-      { title },
-    );
-  }
-  if ('statId' in firstFailure) {
-    const target = getStatTargets(story).find(
-      (candidate) =>
-        candidate.assignment.id === firstFailure.statId && candidate.itemId === firstFailure.itemId,
-    );
-    return t('player.requirement.stat', {
-      label: target ? statTargetLabel(target, t('attributes.owner.story')) : firstFailure.statId,
-      operator: t(`player.requirement.operator.${firstFailure.operator}`),
-      value: firstFailure.value,
-    });
-  }
-  if ('itemDefinitionId' in firstFailure) {
-    const name =
-      story.itemDefinitions?.find(({ id }) => id === firstFailure.itemDefinitionId)?.name ??
-      firstFailure.itemDefinitionId;
-    return t(firstFailure.isOwned ? 'player.requirement.owns' : 'player.requirement.doesNotOwn', {
-      name,
-    });
-  }
-  if ('temporal' in firstFailure) {
-    return t('player.requirement.temporal', { time: currentDateTime.replace('T', ' ') });
-  }
-  const name =
-    story.characters?.find((character) => character.id === firstFailure.characterId)?.name ??
-    firstFailure.characterId;
-  return t(firstFailure.isPresent ? 'player.requirement.present' : 'player.requirement.absent', {
-    name,
-  });
-}
-
-function uniqueJourneyIds(journey: string[]) {
-  return journey.filter((id, index) => journey.indexOf(id) === index);
-}
-
-function getJourneyLocation(story: Story | undefined, journey: string[]) {
-  if (!story) return null;
-  for (let index = journey.length - 1; index >= 0; index -= 1) {
-    const locationId = story.interactions.find(({ id }) => id === journey[index])?.locationId;
-    if (locationId) return locationId;
-  }
-  return null;
-}
 
 export function StoryPlayer({
   authenticated = true,
@@ -237,25 +57,28 @@ export function StoryPlayer({
   const [loadedKey, setLoadedKey] = useState('');
   const [loadError, setLoadError] = useState<{ key: string; message: string }>();
   const [loadAttempt, setLoadAttempt] = useState(0);
-  const [currentId, setCurrentId] = useState<string | null>(null);
-  const [journey, setJourney] = useState<string[]>([]);
-  const [visited, setVisited] = useState<string[]>([]);
-  const [currentLocationId, setCurrentLocationId] = useState<string | null>(null);
-  const [statValues, setStatValues] = useState<Record<string, StatValue>>({});
-  const [ownedItemIds, setOwnedItemIds] = useState<string[]>([]);
-  const [itemStatValues, setItemStatValues] = useState<Record<string, Record<string, StatValue>>>(
-    {},
-  );
+  const { session, replay: replaySession, advance: advanceSession } = useReaderSessionState();
+  const {
+    journeyInteractionIds: journey,
+    currentInteractionId: currentId,
+    visitedInteractionIds: visited,
+    currentDateTime,
+    currentLocationId,
+    statValues,
+    ownedItemIds,
+    itemStatValues = {},
+  } = session;
   const [playableCharacterId, setPlayableCharacterId] = useState<string>();
-  const [progressStatus, setProgressStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>(
-    'idle',
-  );
+  const {
+    status: progressStatus,
+    markLoaded: markProgressLoaded,
+    save: saveProgress,
+    reset: resetProgress,
+  } = useReaderProgressPersistence({ authenticated, storyId });
   const [forceUnavailableOptions, setForceUnavailableOptions] = useState(false);
   const [editingChoiceId, setEditingChoiceId] = useState<string>();
   const [commentsOpen, setCommentsOpen] = useState(false);
   const editingChoiceInputRef = useRef<HTMLInputElement>(null);
-  const progressSaveQueue = useRef<Promise<void>>(Promise.resolve());
-  const progressAttempt = useRef(0);
   const journeyRef = useRef<string[]>([]);
   const realtimeLoadAttempt = useRef(0);
   const simulationMutationCount = useRef(0);
@@ -285,7 +108,7 @@ export function StoryPlayer({
       .then(({ positioned, progress, effectiveStartInteractionId }) => {
         if (cancelled) return;
         const reconciledProgress = progress
-          ? buildReaderProgressState(
+          ? replaySession(
               positioned,
               progress.state.journeyInteractionIds,
               progress.state.ownedItemIds,
@@ -296,21 +119,11 @@ export function StoryPlayer({
           (effectiveStartInteractionId ? [effectiveStartInteractionId] : []);
         setStory(positioned);
         setLoadedKey(loadKey);
-        setJourney(nextJourney);
-        setVisited(uniqueJourneyIds(nextJourney));
-        setCurrentId(nextJourney.at(-1) ?? null);
-        setCurrentLocationId(getJourneyLocation(positioned, nextJourney));
-        setStatValues(getJourneyStatValues(positioned, nextJourney));
-        setOwnedItemIds(
-          reconciledProgress?.ownedItemIds ?? getJourneyOwnedItemIds(positioned, nextJourney),
-        );
-        setItemStatValues(
-          reconciledProgress?.itemStatValues ?? getJourneyItemStatValues(positioned, nextJourney),
-        );
+        if (!reconciledProgress) replaySession(positioned, nextJourney);
         if (nextJourney.length > 0) {
           setPlayableCharacterId(positioned.characters?.find(({ isPlayable }) => isPlayable)?.id);
         }
-        setProgressStatus(progress ? 'saved' : 'idle');
+        markProgressLoaded(Boolean(progress));
       })
       .catch((caught: unknown) => {
         if (cancelled) return;
@@ -326,7 +139,9 @@ export function StoryPlayer({
     authenticated,
     loadAttempt,
     loadKey,
+    markProgressLoaded,
     requestedStartInteractionId,
+    replaySession,
     simulationRequested,
     storyId,
     t,
@@ -369,15 +184,8 @@ export function StoryPlayer({
             setLoadAttempt((currentAttempt) => currentAttempt + 1);
             return;
           }
-          const replayed = buildReaderProgressState(positioned, journeyRef.current);
+          replaySession(positioned, journeyRef.current);
           setStory(positioned);
-          setJourney(replayed.journeyInteractionIds);
-          setVisited(replayed.visitedInteractionIds);
-          setCurrentId(replayed.currentInteractionId);
-          setCurrentLocationId(replayed.currentLocationId);
-          setStatValues(replayed.statValues);
-          setOwnedItemIds(replayed.ownedItemIds);
-          setItemStatValues(replayed.itemStatValues ?? {});
           setEditingChoiceId((choiceId) =>
             choiceId && positioned.interactions.some(({ id }) => id === choiceId)
               ? choiceId
@@ -400,7 +208,7 @@ export function StoryPlayer({
           }
         });
     },
-    [loadKey, storyId, t],
+    [loadKey, replaySession, storyId, t],
   );
 
   useEffect(() => {
@@ -458,10 +266,6 @@ export function StoryPlayer({
   const canManageSelectedReaderThread = Boolean(
     selectedReaderCommentThread &&
     canManageCommentThread(story?.capabilities, currentUserId, selectedReaderCommentThread),
-  );
-  const currentDateTime = useMemo(
-    () => (story ? getJourneyDateTime(story, journey) : '2000-01-03T08:00'),
-    [journey, story],
   );
   const ownedItemDefinitionIds = useMemo(
     () =>
@@ -647,66 +451,23 @@ export function StoryPlayer({
     if (!story) return;
     comments.cancelDraft();
     comments.selectThread(undefined);
-    const nextJourney = [...journey, interaction.id];
-    const nextOwnedItemIds = applyInteractionItemEffects(
-      story,
-      ownedItemIds,
-      interaction,
-      journey.length,
-    );
-    setCurrentId(interaction.id);
-    setJourney(nextJourney);
-    setVisited((ids) => (ids.includes(interaction.id) ? ids : [...ids, interaction.id]));
-    if (interaction.locationId) setCurrentLocationId(interaction.locationId);
-    setStatValues((values) => applyInteractionStatChanges(story, values, interaction));
-    setItemStatValues((values) =>
-      applyInteractionItemStatChanges(story, values, interaction, nextOwnedItemIds),
-    );
-    setOwnedItemIds(nextOwnedItemIds);
-    if (!isSimulationMode) queueProgressSave(nextJourney, nextOwnedItemIds);
+    const nextSession = advanceSession(story, interaction);
+    if (!isSimulationMode) saveProgress(nextSession);
   }
 
   function restart() {
     comments.cancelDraft();
     comments.selectThread(undefined);
-    setCurrentId(startInteractionId);
-    setJourney(startInteractionId ? [startInteractionId] : []);
-    setVisited(startInteractionId ? [startInteractionId] : []);
-    setCurrentLocationId(
-      story?.interactions.find(({ id }) => id === startInteractionId)?.locationId ?? null,
-    );
-    setStatValues(
-      story
-        ? startInteractionId
-          ? getJourneyStatValues(story, [startInteractionId])
-          : getInitialStatValues(story)
-        : {},
-    );
-    setOwnedItemIds(
-      story && startInteractionId ? getJourneyOwnedItemIds(story, [startInteractionId]) : [],
-    );
-    setItemStatValues(
-      story
-        ? startInteractionId
-          ? getJourneyItemStatValues(story, [startInteractionId])
-          : getInitialItemStatValues(story)
-        : {},
-    );
+    if (story) replaySession(story, startInteractionId ? [startInteractionId] : []);
     setPlayableCharacterId(undefined);
     setForceUnavailableOptions(false);
-    if (!isSimulationMode) queueProgressReset();
+    if (!isSimulationMode) resetProgress();
   }
 
   function stepBack() {
     if (journey.length <= 1) return;
     const nextJourney = journey.slice(0, -1);
-    setJourney(nextJourney);
-    setCurrentId(nextJourney.at(-1) ?? startInteractionId);
-    setVisited(uniqueJourneyIds(nextJourney));
-    setCurrentLocationId(getJourneyLocation(story, nextJourney));
-    if (story) setStatValues(getJourneyStatValues(story, nextJourney));
-    if (story) setOwnedItemIds(getJourneyOwnedItemIds(story, nextJourney));
-    if (story) setItemStatValues(getJourneyItemStatValues(story, nextJourney));
+    if (story) replaySession(story, nextJourney);
   }
 
   async function saveCurrentInteraction(patch: Partial<Pick<Interaction, 'title' | 'body'>>) {
@@ -717,41 +478,6 @@ export function StoryPlayer({
     setStory((currentStory) =>
       currentStory ? applyInteractionResponse(currentStory, result) : currentStory,
     );
-  }
-
-  function queueProgressSave(nextJourney: string[], nextOwnedItemIds: string[]) {
-    if (!authenticated) return;
-    const attempt = ++progressAttempt.current;
-    setProgressStatus('saving');
-    const operation = progressSaveQueue.current
-      .then(() =>
-        api.saveReaderProgress(storyId, {
-          journeyInteractionIds: nextJourney,
-          ownedItemIds: nextOwnedItemIds,
-        }),
-      )
-      .then(() => {
-        if (attempt === progressAttempt.current) setProgressStatus('saved');
-      })
-      .catch(() => {
-        if (attempt === progressAttempt.current) setProgressStatus('error');
-      });
-    progressSaveQueue.current = operation.then(() => undefined);
-  }
-
-  function queueProgressReset() {
-    if (!authenticated) return;
-    const attempt = ++progressAttempt.current;
-    setProgressStatus('saving');
-    const operation = progressSaveQueue.current
-      .then(() => api.deleteReaderProgress(storyId))
-      .then(() => {
-        if (attempt === progressAttempt.current) setProgressStatus('idle');
-      })
-      .catch(() => {
-        if (attempt === progressAttempt.current) setProgressStatus('error');
-      });
-    progressSaveQueue.current = operation.then(() => undefined);
   }
 
   function patchInteraction(

@@ -72,21 +72,49 @@ during the August 2026 code review. Production gates remain authoritative in
   - [x] Extract interaction and trigger orchestration.
   - [x] Extract context and inventory orchestration.
   - [x] Extract authenticated reader-progress orchestration.
-- [ ] Split `useStoryEditorPersistence` into load/save status, graph mutations,
+- [x] Split `useStoryEditorPersistence` into load/save status, graph mutations,
       and context/inventory mutations while keeping one optimistic-state owner.
+  - [x] Extract load, save tracking, error recovery, and realtime deferral.
+  - [x] Extract interaction, trigger, and graph-decoration mutations.
+  - [x] Extract context and inventory mutations without introducing another
+        story-state owner.
 - [x] Share editor and Simulation Mode realtime invalidation helpers and API
       mutation-result adapters inside focused web feature modules.
-- [ ] Extract Story Player presentation and reader-session state without
+- [x] Extract Story Player presentation and reader-session state without
       duplicating engine state in React.
-- [ ] Extract Story Editor navigation, selection, and connection-dialog
+  - [x] Replace parallel journey, current interaction, visit, location, variable,
+        and inventory states with one shared-engine `ReaderProgressState` replay.
+  - [x] Extract the authenticated progress-save queue without changing the API
+        contract or allowing Simulation Mode to persist reader progress.
+  - [x] Extract translated condition summaries and unavailable-reason projection
+        while retaining trigger evaluation in the shared domain.
+- [x] Extract Story Editor navigation, selection, and connection-dialog
       orchestration without moving semantics into React Flow.
+  - [x] Extract connection gesture and connection-choice orchestration while
+        reusing the existing validators and persistence actions.
+  - [x] Extract transient inspector and graph-selection orchestration without
+        storing authored entities or semantics in React Flow.
+  - [x] Extract context-reference and text-search navigation orchestration,
+        including panel state, filters, categories, and reference summaries.
 - [x] Centralize comment-thread management authorization in the shared domain so
       the API and editor cannot drift.
-- [ ] Split the ChoiceScript importer into parser, mapping, graph-builder/layout,
+- [x] Split the ChoiceScript importer into parser, mapping, graph-builder/layout,
       and compatibility-report modules without leaking source semantics into the
       Paralleax engine.
-- [ ] Split the global web stylesheet by shell, editor, inspector, graph, reader,
+  - [x] Extract tokenization and statement parsing behind a typed source model.
+  - [x] Extract draft graph compilation and deterministic initial layout.
+  - [x] Extract Paralleax Story, trigger, effect, condition, and typed-variable
+        mapping while retaining only transient source identifiers.
+  - [x] Centralize compatibility-report construction, source issues, and error
+        detection; keep the public importer as a thin staged orchestrator.
+- [x] Split the global web stylesheet by shell, editor, inspector, graph, reader,
       and review features while retaining one shared token foundation.
+  - [x] Keep tokens, base controls, shell, generic pages, and story-list rules in
+        the root stylesheet.
+  - [x] Move editor layout, graph, review comments, reader, Simulation Mode, and
+        responsive rules beside their owning features.
+  - [x] Preserve the original cascade by loading the two previously separated
+        inspector sections on either side of review comments.
 - [ ] Break large test files into capability suites and remove broad `any` usage
       from React Flow test doubles.
 

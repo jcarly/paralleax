@@ -81,11 +81,12 @@ deterministic sample story lives in `packages/shared/src/demo/`. The public
 responsibility.
 
 Experimental external-source adapters live in `packages/shared/src/import-export/`.
-The ChoiceScript adapter parses source files, builds a compatibility report, and
-maps representable control flow and simple state operations to the canonical Story
-without importing a foreign runtime. Source declarations, assignments,
-comparisons, and substitutions use generic Paralleax typed stats. API
-orchestration supplies IDs and persists the complete mapped Story in one
+The ChoiceScript adapter separates typed source parsing, draft graph compilation
+and layout, canonical Story mapping, and compatibility reporting behind a thin
+pipeline orchestrator. It maps representable control flow and simple state
+operations without importing a foreign runtime. Source declarations,
+assignments, comparisons, and substitutions use generic Paralleax typed stats.
+API orchestration supplies IDs and persists the complete mapped Story in one
 transaction; web code owns only local file selection and report presentation.
 
 Deterministic runtime reconstruction lives in `packages/shared/src/reader/`.
@@ -265,8 +266,9 @@ interactions and triggers.
 
 ### `apps/web`
 
-`StoryEditor` is the page-level orchestration component for the editor. It wires
-React Flow, selection state, inspectors, and persistence actions together.
+`StoryEditor` is the page-level composition component for the editor. It wires
+React Flow, selection state, inspectors, and focused editor controllers to the
+persistence actions.
 
 The root route renders the unified story library. Without a session it uses the
 anonymous public-summary endpoint; with a session it uses the authorized list of
@@ -318,9 +320,32 @@ Formbricks URL in `script-src` and `connect-src` only when that URL is supplied.
 Supporting editor modules keep pure or focused behavior outside the page
 component:
 
-- `hooks/useStoryEditorPersistence.ts`: one optimistic story-state owner for
-  loading, API writes, save status and error recovery, live invalidation
-  deferral, and create/delete workflows.
+- `hooks/useStoryEditorPersistence.ts`: the thin composition facade and single
+  optimistic `Story` state owner. It preserves the editor-facing action contract.
+- `features/story-editor/persistence/useStoryPersistenceLifecycle.ts`: loading,
+  save status and error recovery, live invalidation deferral, and stale-response
+  tombstones. It receives the facade's story setter and owns no parallel Story.
+- `features/story-editor/persistence/storyGraphPersistence.ts`: interaction,
+  trigger, connection, and graph-decoration workflows. It reuses shared story
+  operations and the existing mutation-result adapters.
+- `features/story-editor/persistence/storyContextPersistence.ts`: location,
+  character, typed-variable, and item mutation orchestration. It receives the
+  facade's story setter and lifecycle save tracker instead of owning parallel state.
+- `features/story-editor/persistence/storyPersistenceTypes.ts`: the small shared
+  setter, merger, and save-tracker contracts shared by the collaborators.
+- `features/story-editor/graph/useStoryConnectionController.ts`: transient React
+  Flow connection gestures, empty-canvas parent/child placement, and the
+  new-trigger versus existing-trigger choice. It delegates connection validity to
+  `storyConnection.ts` and persistence to the existing graph actions.
+- `features/story-editor/selection/useStoryEditorSelection.ts`: the single owner
+  for transient inspector targets and rectangle-selection gestures. It resolves
+  selected entities from the canonical Story and deliberately preserves context
+  references only for interaction navigation that requires them.
+- `features/story-editor/navigation/useStoryContextNavigation.ts`: context-panel
+  visibility, section state, entity filters and categories, reference summaries,
+  text occurrences, and previous/next interaction focus. It consumes the pure
+  `storyNavigation.ts` projections and never copies authored entities into local
+  state.
 - `hooks/useStoryRealtime.ts`: authorized story SSE lifecycle, reconnect status,
   and short-burst invalidation coalescing shared by editor and Simulation Mode.
 - `features/realtime/`: invalidation priority, API-not-found recognition, and
@@ -337,8 +362,10 @@ component:
 - `storySelection.ts`: selected interaction and trigger lookup helpers.
 - `storyConnection.ts`: canvas connection validation and created-trigger lookup.
 - `storyTriggerInput.ts`: deletion planning for one trigger input link.
-- `storyNavigation.ts`: interaction text occurrence counting and context-reference
-  navigation for locations, characters, stat definitions, and item definitions.
+- `storyNavigation.ts`: interaction text occurrences, context-reference lookup,
+  reusable context-list filtering/category projections, and compact reference
+  counts consumed by context navigation for locations, characters, stat
+  definitions, and item definitions.
 - `components/InteractionInspector.tsx`: interaction content editing.
 - `components/RichTextEditor.tsx` and `RichTextContent.tsx`: rich-body authoring
   and defense-in-depth sanitized rendering, including conditional body blocks
@@ -346,6 +373,21 @@ component:
 - `components/TriggerInspector.tsx`: trigger condition and OR variant editing.
 - `components/InteractionNode.tsx`, `TriggerNode.tsx`, and `TriggerEdge.tsx`:
   React Flow rendering surfaces.
+
+Supporting reader modules keep session and presentation responsibilities outside
+the route component:
+
+- `features/story-player/useReaderSessionState.ts`: the single React owner of the
+  current `ReaderProgressState`. Loads, restarts, step backs, and live Simulation
+  Mode refreshes use shared deterministic replay; choices apply the same shared
+  operations incrementally. Journey-derived values are not maintained as
+  parallel React states.
+- `features/story-player/useReaderProgressPersistence.ts`: the ordered,
+  authenticated save/delete queue and its presentation status. Simulation Mode
+  never calls it.
+- `features/story-player/storyPlayerPresentation.ts`: translated condition
+  summaries and first-failure labels. It consumes shared trigger diagnostics and
+  does not evaluate narrative conditions independently.
 
 The web app may map a story into React Flow nodes and edges, but it must not
 store story semantics as React Flow data. React Flow data is a projection of the
@@ -434,8 +476,8 @@ recomputed projections.
 ### Editing Story Content
 
 1. The user edits an interaction title, body, or position in the editor.
-2. `useStoryEditorPersistence` applies an optimistic local update through shared
-   story operations.
+2. `useStoryEditorPersistence` and its focused persistence collaborators apply
+   an optimistic local update through shared story operations and adapters.
 3. The hook sends the API request.
 4. `StoriesService` delegates graph writes to `StoryGraphService`, which applies
    them through the shared `StoryMutationService` coordinator and repository.
@@ -512,9 +554,9 @@ through its top-center routing handle. Trigger markers are approached vertically
 when their endpoints are on different rows.
 
 When a normal canvas connection can either extend an existing trigger or create
-a separate trigger, `StoryEditor` presents that choice before calling the
-persistence hook. Dropping directly on a trigger marker remains the explicit
-shortcut for extending that trigger.
+a separate trigger, the focused Story Editor connection controller presents that
+choice before calling the persistence actions. Dropping directly on a trigger
+marker remains the explicit shortcut for extending that trigger.
 
 Every editor mutation passes through the persistence hook's save tracker. The
 toolbar exposes saving, saved, and failed states. A failed mutation leaves a
@@ -661,14 +703,21 @@ exercise the complete legacy-to-current path against PostgreSQL.
 
 ## Styling
 
-The web app currently uses plain CSS with shared custom properties for colors and
-elevation. This keeps the MVP light while the graph editor behavior is still
-stabilizing.
+The web app uses plain CSS with shared custom properties for colors and elevation.
+`apps/web/src/styles.css` owns the token foundation, base controls, application
+shell, generic pages, and story-list rules. Feature styles live beside editor,
+inspector, graph, review-comment, reader, and Simulation Mode code, while
+`responsive.css` contains the final cross-feature media overrides.
+
+`main.tsx` imports these sheets in their deliberate cascade order. Inspector
+layout and inspector controls remain two files around the review-comment sheet
+because those rule groups were separated in the original cascade; regrouping
+them would be a presentation change rather than a module extraction.
 
 Tailwind CSS is a candidate to evaluate once the UI surface justifies a
 design-system decision. React Flow-specific styles, such as node handles and
-trigger markers, may remain in dedicated CSS because they target third-party
-graph classes directly.
+trigger markers, remain in dedicated graph CSS because they target third-party
+classes directly.
 
 ## Tests and CI
 
