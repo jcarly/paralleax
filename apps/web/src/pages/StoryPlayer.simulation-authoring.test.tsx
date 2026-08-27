@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { getStoryGraphClickCreationPosition } from '../storyGraphCreationLayout';
@@ -80,6 +80,35 @@ describe('StoryPlayer simulation authoring', () => {
     expect(screen.getByLabelText('Current interaction content')).toHaveTextContent(
       'Rewritten content.',
     );
+  });
+
+  it('keeps conditional text on its source interaction when its link is followed', async () => {
+    const conditionalStory = structuredClone(story);
+    conditionalStory.interactions[0].body =
+      '<div data-conditional-text-target="next"><button type="button" contenteditable="false" aria-label="Open target interaction: Next" data-conditional-text-link="next">Next</button><p>Source-only clue</p></div>';
+    vi.mocked(api.updateInteraction).mockResolvedValue(conditionalStory);
+
+    await renderPlayer(
+      '/stories/story-1/play?mode=simulation&startInteractionId=start',
+      conditionalStory,
+    );
+
+    const sourceEditor = screen.getByLabelText('Current interaction content');
+    sourceEditor.focus();
+    fireEvent.click(screen.getByRole('button', { name: 'Open target interaction: Next' }));
+
+    expect(await screen.findByDisplayValue('Next')).toBeInTheDocument();
+    const targetEditor = screen.getByLabelText('Current interaction content');
+    expect(targetEditor).toHaveTextContent('You continue.');
+    expect(targetEditor).not.toHaveTextContent('Source-only clue');
+    await waitFor(() =>
+      expect(api.updateInteraction).toHaveBeenCalledWith('story-1', 'start', {
+        body: expect.stringContaining('Source-only clue'),
+      }),
+    );
+    expect(api.updateInteraction).not.toHaveBeenCalledWith('story-1', 'next', {
+      body: expect.stringContaining('Source-only clue'),
+    });
   });
 
   it('adds an option in simulation mode and focuses its title', async () => {

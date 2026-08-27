@@ -209,6 +209,10 @@ target interaction. In player reading, the block is rendered only when that
 target is connected from the current interaction and is currently available
 under the target's trigger conditions.
 
+The block remains authored content of its source interaction. Following its
+target link commits the source body before navigation and never copies that
+body into the target interaction.
+
 Simulation Mode always renders stored conditional blocks. A disconnected or
 condition-blocked block is dimmed and exposes the reason. Simulation choice
 buttons expose their condition summary on hover whether they are available or

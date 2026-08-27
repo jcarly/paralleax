@@ -243,6 +243,7 @@ export function RichTextEditor({
           const targetId = button?.dataset.conditionalTextLink;
           if (targetId) {
             event.preventDefault();
+            editorRef.current?.blur();
             onConditionalTargetClick?.(targetId);
           }
         }}

@@ -144,6 +144,29 @@ describe('RichTextEditor', () => {
     );
   });
 
+  it('commits the source content before following a conditional interaction link', () => {
+    const events: string[] = [];
+    const onBlur = vi.fn(() => events.push('blur'));
+    const onConditionalTargetClick = vi.fn(() => events.push('navigate'));
+    const { container } = render(
+      <RichTextEditor
+        value={
+          '<div data-conditional-text-target="next"><button data-conditional-text-link="next">Next</button><p>Source-only clue</p></div>'
+        }
+        onChange={vi.fn()}
+        onBlur={onBlur}
+        onConditionalTargetClick={onConditionalTargetClick}
+      />,
+    );
+
+    within(container).getByRole('textbox', { name: 'Content' }).focus();
+    fireEvent.click(within(container).getByRole('button', { name: 'Next' }));
+
+    expect(onBlur).toHaveBeenCalledWith(expect.stringContaining('Source-only clue'));
+    expect(onConditionalTargetClick).toHaveBeenCalledWith('next');
+    expect(events).toEqual(['blur', 'navigate']);
+  });
+
   it('hides conditional text in reading and explains unavailable simulation text', () => {
     const html =
       '<div data-conditional-text-target="next"><button data-conditional-text-link="next">Next</button><p>Clue</p></div>';

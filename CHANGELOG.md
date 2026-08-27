@@ -2,6 +2,8 @@
 
 ## 2026-08-27
 
+- Fixed conditional interaction links so their source content is committed
+  before navigation instead of being saved into the target interaction.
 - Replaced the single administrator demo with an atomic five-story catalog that
   progressively demonstrates unconditional paths, visited-interaction
   conditions, Story variables, character stats with flat items, and nested
