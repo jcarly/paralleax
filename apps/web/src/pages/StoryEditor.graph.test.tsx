@@ -9,6 +9,7 @@ import {
   cloneStory,
   FakeEventSource,
   graphDecorationMutation,
+  interactionMutation,
   renderEditor,
   setupStoryEditorTestSuite,
   storyWithThreeInteractions,
@@ -239,6 +240,129 @@ describe('StoryEditor graph collaboration and layout', () => {
       expect(button.querySelector('svg')).toBeInTheDocument();
       expect(button.textContent).toBe('');
     }
+  });
+
+  it('opens a position-aware canvas context menu for creation and comments', async () => {
+    const user = userEvent.setup();
+    const flowPosition = { x: 350, y: 260 };
+    const framePosition = { x: 140, y: 140 };
+    const openContextMenu = () =>
+      fireEvent.contextMenu(screen.getByTestId('flow-pane'), {
+        clientX: 400,
+        clientY: 300,
+      });
+    await renderEditor();
+
+    openContextMenu();
+    const menu = screen.getByRole('menu', { name: 'Canvas actions' });
+    expect(menu).toHaveStyle({ left: '400px', top: '300px' });
+    for (const label of [
+      'Add interaction',
+      'Add comment',
+      'Add frame',
+      'Add text',
+      'Automatic organization',
+    ]) {
+      expect(within(menu).getByRole('menuitem', { name: label })).toBeInTheDocument();
+    }
+    await user.click(within(menu).getByRole('menuitem', { name: 'Automatic organization' }));
+    const organizeMenu = screen.getByRole('menu', { name: 'Automatic organization' });
+    expect(within(organizeMenu).getByRole('menuitem', { name: 'Whole graph' })).toBeEnabled();
+    expect(
+      within(organizeMenu).getByRole('menuitem', { name: 'Current selection' }),
+    ).toBeDisabled();
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.queryByRole('menu', { name: 'Canvas actions' })).not.toBeInTheDocument();
+
+    const withInteraction = cloneStory();
+    withInteraction.interactions.push({
+      id: 'context-interaction',
+      title: 'Context interaction',
+      body: '',
+      position: flowPosition,
+      triggers: [{ id: 'context-trigger', inputInteractionIds: [], conditions: [] }],
+    });
+    vi.mocked(api.createInteraction).mockResolvedValue(
+      interactionMutation(withInteraction, 'context-interaction'),
+    );
+    openContextMenu();
+    await user.click(screen.getByRole('menuitem', { name: 'Add interaction' }));
+    expect(api.createInteraction).toHaveBeenCalledWith('story-1', { position: flowPosition });
+
+    const withFrame = cloneStory();
+    withFrame.graphDecorations = [
+      {
+        id: 'context-frame',
+        kind: 'frame',
+        position: framePosition,
+        color: '#5b6ee1',
+        width: 420,
+        height: 240,
+      },
+    ];
+    vi.mocked(api.createGraphDecoration).mockResolvedValueOnce(
+      graphDecorationMutation(withFrame, 'context-frame'),
+    );
+    openContextMenu();
+    await user.click(screen.getByRole('menuitem', { name: 'Add frame' }));
+    expect(api.createGraphDecoration).toHaveBeenCalledWith('story-1', {
+      kind: 'frame',
+      position: framePosition,
+    });
+
+    const withText = cloneStory();
+    withText.graphDecorations = [
+      {
+        id: 'context-text',
+        kind: 'text',
+        position: flowPosition,
+        color: '#273043',
+        text: 'Aa',
+        fontSize: 32,
+        fontFamily: 'sans',
+        fontWeight: 'normal',
+        fontStyle: 'normal',
+      },
+    ];
+    vi.mocked(api.createGraphDecoration).mockResolvedValueOnce(
+      graphDecorationMutation(withText, 'context-text'),
+    );
+    openContextMenu();
+    await user.click(screen.getByRole('menuitem', { name: 'Add text' }));
+    expect(api.createGraphDecoration).toHaveBeenCalledWith('story-1', {
+      kind: 'text',
+      position: flowPosition,
+    });
+
+    openContextMenu();
+    await user.click(screen.getByRole('menuitem', { name: 'Add comment' }));
+    expect(await screen.findByTestId('flow-node-comment:draft')).toHaveAttribute(
+      'data-node-x',
+      String(flowPosition.x),
+    );
+    expect(screen.getByRole('textbox', { name: 'Comment' })).toBeInTheDocument();
+  });
+
+  it('organizes the current graph selection from the canvas context submenu', async () => {
+    const user = userEvent.setup();
+    await renderEditor(storyWithThreeInteractions());
+    await user.click(screen.getByTestId('box-select-first-branch'));
+
+    fireEvent.contextMenu(screen.getByTestId('flow-pane'), { clientX: 400, clientY: 300 });
+    await user.click(screen.getByRole('menuitem', { name: 'Automatic organization' }));
+    const organizeMenu = screen.getByRole('menu', { name: 'Automatic organization' });
+    const organizeSelection = within(organizeMenu).getByRole('menuitem', {
+      name: 'Current selection',
+    });
+    expect(organizeSelection).toBeEnabled();
+    await user.click(organizeSelection);
+
+    await waitFor(() => expect(api.updateInteraction).toHaveBeenCalled());
+    expect(api.updateInteraction).not.toHaveBeenCalledWith(
+      'story-1',
+      'interaction-3',
+      expect.anything(),
+    );
   });
 
   it('automatically organizes the complete graph and persists interaction and trigger positions', async () => {

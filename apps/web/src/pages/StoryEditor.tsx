@@ -40,6 +40,7 @@ import { InteractionNode } from '../components/InteractionNode';
 import { ItemDefinitionInspector } from '../components/ItemDefinitionInspector';
 import { LocationInspector } from '../components/LocationInspector';
 import { StatDefinitionInspector } from '../components/StatDefinitionInspector';
+import { StoryCanvasContextMenu } from '../components/StoryCanvasContextMenu';
 import { StoryCanvasToolbar } from '../components/StoryCanvasToolbar';
 import { CategorizedContextList, ContextThumbnail } from '../components/StoryContextList';
 import { StoryGraphSelectionInspector } from '../components/StoryGraphSelectionInspector';
@@ -72,7 +73,11 @@ import {
   type StoryFlowNode,
   type TriggerFlowEdge,
 } from '../storyGraph';
-import { computeStoryGraphLayout, type StoryGraphLayoutScope } from '../storyGraphLayout';
+import {
+  computeStoryGraphLayout,
+  type StoryGraphLayoutScope,
+  type StoryGraphLayoutTarget,
+} from '../storyGraphLayout';
 import { applyStoryGraphSelection, getStoryGraphSelectionTargets } from '../storyGraphSelection';
 import {
   getStoryGraphClickCreationPosition,
@@ -89,6 +94,11 @@ const nodeTypes = {
 const edgeTypes = { trigger: TriggerEdge };
 const fitViewOptions = { padding: 0.18, maxZoom: 1 };
 const canvasPanMouseButtons = [1];
+
+interface CanvasContextMenuState {
+  screenPosition: Position;
+  flowPosition: Position;
+}
 
 function getInitials(name: string) {
   return name
@@ -156,6 +166,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
   );
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [placingComment, setPlacingComment] = useState(false);
+  const [canvasContextMenu, setCanvasContextMenu] = useState<CanvasContextMenuState>();
   const [nodes, setNodes, onNodesChange] = useNodesState<StoryFlowNode>([]);
   const [edges, setEdges] = useEdgesState<TriggerFlowEdge>([]);
   const [interactionSizes, setInteractionSizes] = useState<
@@ -690,6 +701,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
   }
 
   const select: NodeMouseHandler = (_, node) => {
+    setCanvasContextMenu(undefined);
     if (node.type === 'commentPin') return;
 
     selectCommentThread(undefined);
@@ -706,12 +718,14 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
     selectExclusive({ type: 'interaction', id: node.id });
   };
 
-  async function addGraphDecoration(kind: GraphDecoration['kind']) {
+  async function addGraphDecoration(kind: GraphDecoration['kind'], anchorPosition?: Position) {
     const bounds = canvasRef.current?.getBoundingClientRect();
-    const center = flowInstance.current?.screenToFlowPosition({
-      x: bounds ? bounds.left + bounds.width / 2 : window.innerWidth / 2,
-      y: bounds ? bounds.top + bounds.height / 2 : window.innerHeight / 2,
-    });
+    const center =
+      anchorPosition ??
+      flowInstance.current?.screenToFlowPosition({
+        x: bounds ? bounds.left + bounds.width / 2 : window.innerWidth / 2,
+        y: bounds ? bounds.top + bounds.height / 2 : window.innerHeight / 2,
+      });
     const position = center
       ? kind === 'frame'
         ? { x: center.x - 210, y: center.y - 120 }
@@ -760,21 +774,41 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
   }
 
   function handlePaneClick(event: ReactMouseEvent) {
+    setCanvasContextMenu(undefined);
     selectCommentThread(undefined);
     if (placingComment && story?.capabilities?.canComment) {
       const position = flowInstance.current?.screenToFlowPosition({
         x: event.clientX,
         y: event.clientY,
       });
-      if (position) {
-        comments.startThread({ kind: 'canvas', position });
-        comments.selectThread(undefined);
-        setCommentsOpen(false);
-      }
+      if (position) startCanvasComment(position);
       setPlacingComment(false);
       return;
     }
     closeInspector();
+  }
+
+  function handlePaneContextMenu(event: MouseEvent | ReactMouseEvent) {
+    event.preventDefault();
+    if (reviewOnly && story?.capabilities?.canComment !== true) return;
+    const position = flowInstance.current?.screenToFlowPosition({
+      x: event.clientX,
+      y: event.clientY,
+    });
+    if (!position) return;
+    setPlacingComment(false);
+    selectCommentThread(undefined);
+    setCanvasContextMenu({
+      screenPosition: { x: event.clientX, y: event.clientY },
+      flowPosition: position,
+    });
+  }
+
+  function startCanvasComment(position: Position) {
+    if (story?.capabilities?.canComment !== true) return;
+    comments.startThread({ kind: 'canvas', position });
+    comments.selectThread(undefined);
+    setCommentsOpen(false);
   }
 
   function toggleCommentsList() {
@@ -901,32 +935,31 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
         selected.id,
       )}`
     : `/stories/${storyId}/play?mode=simulation`;
-  async function organizeGraph() {
-    if (!story || story.interactions.length === 0) return;
+  const selectedLayoutTargets: StoryGraphLayoutTarget[] = (() => {
     const graphSelectionTargets = getStoryGraphSelectionTargets(graphSelection);
-    const selectedLayoutTargets =
-      graphSelectionTargets.length > 0
-        ? graphSelectionTargets
-        : selected
-          ? [{ type: 'interaction' as const, interactionId: selected.id }]
-          : selectedTriggerTarget
-            ? selectedTriggerTarget.trigger.inputInteractionIds.length === 0
-              ? [
-                  {
-                    type: 'interaction' as const,
-                    interactionId: selectedTriggerTarget.interaction.id,
-                  },
-                ]
-              : [
-                  {
-                    type: 'trigger' as const,
-                    interactionId: selectedTriggerTarget.interaction.id,
-                    triggerId: selectedTriggerTarget.trigger.id,
-                  },
-                ]
-            : [];
+    if (graphSelectionTargets.length > 0) return graphSelectionTargets;
+    if (selected) return [{ type: 'interaction', interactionId: selected.id }];
+    if (!selectedTriggerTarget) return [];
+    return selectedTriggerTarget.trigger.inputInteractionIds.length === 0
+      ? [
+          {
+            type: 'interaction',
+            interactionId: selectedTriggerTarget.interaction.id,
+          },
+        ]
+      : [
+          {
+            type: 'trigger',
+            interactionId: selectedTriggerTarget.interaction.id,
+            triggerId: selectedTriggerTarget.trigger.id,
+          },
+        ];
+  })();
+  async function organizeGraph(preference: 'auto' | 'all' | 'selection' = 'auto') {
+    if (!story || story.interactions.length === 0) return;
+    if (preference === 'selection' && selectedLayoutTargets.length === 0) return;
     const scope: StoryGraphLayoutScope =
-      selectedLayoutTargets.length > 0
+      preference !== 'all' && selectedLayoutTargets.length > 0
         ? { kind: 'selection', targets: selectedLayoutTargets }
         : { kind: 'all' };
     const interactionSizes = getMeasuredInteractionSizes(nodes);
@@ -1354,13 +1387,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
             canEdit={!reviewOnly}
             canComment={story.capabilities?.canComment === true}
             canOrganize={story.interactions.length > 0}
-            organizeSelectionCount={
-              graphSelection
-                ? graphSelection.interactionIds.length + graphSelection.triggers.length
-                : selected || selectedTriggerTarget
-                  ? 1
-                  : 0
-            }
+            organizeSelectionCount={selectedLayoutTargets.length}
             placingComment={placingComment}
             onCreateRoot={() => void createRootFromClick()}
             onAddFrame={() => void addGraphDecoration('frame')}
@@ -1368,6 +1395,22 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
             onOrganize={() => void organizeGraph()}
             onToggleCommentPlacement={() => setPlacingComment((placing) => !placing)}
           />
+          {canvasContextMenu ? (
+            <StoryCanvasContextMenu
+              position={canvasContextMenu.screenPosition}
+              canEdit={!reviewOnly}
+              canComment={story.capabilities?.canComment === true}
+              canOrganize={story.interactions.length > 0}
+              organizeSelectionCount={selectedLayoutTargets.length}
+              onCreateInteraction={() => void createRoot(canvasContextMenu.flowPosition)}
+              onAddComment={() => startCanvasComment(canvasContextMenu.flowPosition)}
+              onAddFrame={() => void addGraphDecoration('frame', canvasContextMenu.flowPosition)}
+              onAddText={() => void addGraphDecoration('text', canvasContextMenu.flowPosition)}
+              onOrganizeAll={() => void organizeGraph('all')}
+              onOrganizeSelection={() => void organizeGraph('selection')}
+              onClose={() => setCanvasContextMenu(undefined)}
+            />
+          ) : null}
           <ReactFlow
             nodes={nodes}
             edges={edges}
@@ -1382,6 +1425,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
             onConnectEnd={reviewOnly ? undefined : endCanvasConnection}
             onNodeClick={select}
             onPaneClick={handlePaneClick}
+            onPaneContextMenu={handlePaneContextMenu}
             onSelectionStart={reviewOnly ? undefined : handleGraphSelectionStart}
             onSelectionChange={reviewOnly ? undefined : handleGraphSelectionChange}
             onSelectionEnd={reviewOnly ? undefined : handleGraphSelectionEnd}

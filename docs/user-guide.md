@@ -157,6 +157,12 @@ button-created source interactions are placed above their target. These default
 placements avoid existing interactions when possible. Drag-created interactions
 are placed where the connection is released.
 
+Right-click an empty part of the graph to open the canvas menu. From that click
+position, add a root interaction, a review comment, a frame, or text. The
+**Automatic organization** submenu can reorganize the complete graph or the
+current interaction/trigger selection; the selection action is disabled when
+nothing is selected.
+
 ## Edit Interaction Content
 
 The interaction **Content** field is a WYSIWYG editor. Its toolbar formats text,

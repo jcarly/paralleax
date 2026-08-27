@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
-type CanvasActionIconName = 'root' | 'frame' | 'text' | 'organize' | 'postIt';
+export type CanvasActionIconName = 'root' | 'frame' | 'text' | 'organize' | 'postIt';
 
 interface StoryCanvasToolbarProps {
   canEdit: boolean;
@@ -92,7 +92,7 @@ function CanvasToolButton({
   );
 }
 
-function CanvasActionIcon({ name }: { name: CanvasActionIconName }) {
+export function CanvasActionIcon({ name }: { name: CanvasActionIconName }) {
   const paths = {
     root: (
       <>

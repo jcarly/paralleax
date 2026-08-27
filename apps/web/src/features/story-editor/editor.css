@@ -421,6 +421,71 @@
 .canvas-tool-action:disabled:hover::after {
   opacity: 1;
 }
+.canvas-context-menu,
+.canvas-context-submenu {
+  width: 220px;
+  padding: 0.35rem;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-surface);
+  box-shadow: 0 12px 32px #20221f26;
+}
+.canvas-context-menu {
+  position: fixed;
+  z-index: 30;
+}
+.canvas-context-menu button {
+  width: 100%;
+  min-height: 36px;
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr) auto;
+  gap: 0.55rem;
+  justify-content: stretch;
+  padding: 0.48rem 0.6rem;
+  border: 0;
+  background: transparent;
+  color: var(--color-text);
+  box-shadow: none;
+  text-align: left;
+}
+.canvas-context-menu button:hover,
+.canvas-context-menu button:focus-visible {
+  background: var(--color-primary-soft);
+  color: var(--color-primary-strong);
+}
+.canvas-context-menu button:disabled {
+  background: transparent;
+  color: var(--color-subtle);
+}
+.canvas-context-menu button svg {
+  width: 19px;
+  height: 19px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+.canvas-context-menu button > span:nth-child(2) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.canvas-context-icon-spacer {
+  width: 19px;
+}
+.canvas-context-submenu-trigger {
+  position: relative;
+}
+.canvas-context-submenu {
+  position: absolute;
+  top: -0.35rem;
+  left: calc(100% + 0.4rem);
+}
+.canvas-context-submenu.opens-left {
+  right: calc(100% + 0.4rem);
+  left: auto;
+}
 .canvas .react-flow__selection,
 .canvas .react-flow__nodesselection-rect {
   border: 1px dashed var(--color-primary);

@@ -2,6 +2,9 @@
 
 ## 2026-08-27
 
+- Added an accessible right-click canvas menu for position-aware interaction,
+  post-it, frame, and text creation, plus an automatic-layout submenu for the
+  complete graph or current selection.
 - Added author-facing `{{owner.variable}}` interpolation in interaction content.
   Unique Story, character, location, and exact authored item references are
   lowered to the existing stable stat markers on save and display replayed typed

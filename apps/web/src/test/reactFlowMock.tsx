@@ -94,6 +94,7 @@ function TestReactFlow({
   onNodeDragStart,
   onNodeDrag,
   onPaneClick,
+  onPaneContextMenu,
   onNodeDragStop,
   onSelectionStart,
   onSelectionChange,
@@ -127,7 +128,11 @@ function TestReactFlow({
       data-selection-on-drag={selectionOnDrag}
       data-selection-mode={selectionMode}
     >
-      <button data-testid="flow-pane" onClick={(event) => onPaneClick?.(event)} />
+      <button
+        data-testid="flow-pane"
+        onClick={(event) => onPaneClick?.(event)}
+        onContextMenu={(event) => onPaneContextMenu?.(event)}
+      />
       <button
         data-testid="box-select-first-branch"
         onClick={(event) => {

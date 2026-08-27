@@ -347,6 +347,14 @@ export const resources = {
         organizeGraph: 'Organize graph',
         organizeSelected_one: 'Organize selected element',
         organizeSelected_other: 'Organize {{count}} selected elements',
+        contextMenu: {
+          label: 'Canvas actions',
+          addInteraction: 'Add interaction',
+          addComment: 'Add comment',
+          organize: 'Automatic organization',
+          organizeAll: 'Whole graph',
+          organizeSelection: 'Current selection',
+        },
         inspector: 'Inspector',
         closeInspector: 'Close inspector',
         graphSelection: {
@@ -1134,6 +1142,14 @@ export const resources = {
         organizeGraph: 'Réorganiser le graphe',
         organizeSelected_one: 'Réorganiser l’élément sélectionné',
         organizeSelected_other: 'Réorganiser les {{count}} éléments sélectionnés',
+        contextMenu: {
+          label: 'Actions du canevas',
+          addInteraction: 'Ajouter une interaction',
+          addComment: 'Ajouter un commentaire',
+          organize: 'Réorganisation automatique',
+          organizeAll: 'Graphe complet',
+          organizeSelection: 'Sélection actuelle',
+        },
         inspector: 'Inspecteur',
         closeInspector: 'Fermer l’inspecteur',
         graphSelection: {
