@@ -144,6 +144,15 @@ definition without sharing state. Item values additionally require an exact item
 instance id. Rich-text interpolation reads these replayed maps through sanitized
 inert markers and does not evaluate expressions.
 
+Interaction content may author a marker with `{{owner.variable}}`. `story` is
+the reserved Story owner; a character or location may use its unique name or
+technical id, while an item requires its exact authored instance id. The
+variable part accepts its unique author-facing name or technical definition or
+assignment id. Matching ignores case. The API lowers a uniquely resolved
+reference to stable ids when saving, so later renames do not change its target.
+An unknown, malformed, or ambiguous reference contributes an empty string in
+reader output and never falls back to an initial value or executable expression.
+
 ## Story Time
 
 Every story has an authored `startDateTime` in `YYYY-MM-DDTHH:mm` form. It is a

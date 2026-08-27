@@ -83,7 +83,7 @@ export class StoryGraphService {
       (story) => {
         const interaction = this.interaction(story, interactionId);
         if (input.title !== undefined) interaction.title = input.title;
-        if (input.body !== undefined) interaction.body = sanitizeRichText(input.body ?? '');
+        if (input.body !== undefined) interaction.body = sanitizeRichText(input.body ?? '', story);
         if (input.position !== undefined) interaction.position = input.position;
         if (input.locationId !== undefined) {
           if (

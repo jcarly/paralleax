@@ -75,6 +75,12 @@ placement failures to HTTP errors, persistence uses its stable owner/index
 projection, and the web editor uses the same descendant calculation to exclude
 invalid parents.
 
+Reusable stat-assignment target projection and author-facing rich-text reference
+resolution live in `packages/shared/src/stats/`. The web editor uses that target
+projection for effects, while the API lowers uniquely resolved
+`{{owner.variable}}` shorthand to the same stable assignment markers consumed by
+the reader.
+
 Default interaction placement lives in `packages/shared/src/graph/`, while the
 deterministic sample story lives in `packages/shared/src/demo/`. The public
 `index.ts` facade re-exports both modules and owns no implementation for either

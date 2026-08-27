@@ -194,4 +194,27 @@ describe('RichTextEditor', () => {
       ),
     ).toBeInTheDocument();
   });
+
+  it('hides unresolved author references without altering interpolated string values', () => {
+    render(
+      <RichTextContent
+        html={
+          '<p>Known: <span data-stat-value="message">{{Mira.Message}}</span></p>' +
+          '<p>Unknown: {{Unknown.Message}}</p>' +
+          '<p>Malformed: {{}}</p>'
+        }
+        statValues={{ message: 'Keep {{literal}}' }}
+      />,
+    );
+
+    expect(
+      screen.getByText(
+        (_, element) =>
+          element?.tagName === 'P' && element.textContent === 'Known: Keep {{literal}}',
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Unknown:')).toBeInTheDocument();
+    expect(screen.getByText('Malformed:')).toBeInTheDocument();
+    expect(screen.queryByText(/Unknown\.Message/)).not.toBeInTheDocument();
+  });
 });

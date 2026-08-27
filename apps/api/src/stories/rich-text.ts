@@ -1,8 +1,11 @@
 // sanitize-html exposes a CommonJS `export =` entry point in the NestJS runtime.
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 import sanitizeHtml = require('sanitize-html');
+import { resolveStatInterpolationTarget, type Story } from '@paralleax/shared';
 
-export function sanitizeRichText(value: string): string {
+export function sanitizeRichText(value: string, story?: Story): string {
+  const statMarkerSpanStack: boolean[] = [];
+  let statMarkerDepth = 0;
   return sanitizeHtml(value, {
     allowedTags: [
       'p',
@@ -34,7 +37,7 @@ export function sanitizeRichText(value: string): string {
       iframe: ['src', 'title', 'allow', 'allowfullscreen'],
       div: ['data-conditional-text-target'],
       button: ['type', 'contenteditable', 'aria-label', 'data-conditional-text-link'],
-      span: ['data-stat-value', 'data-stat-item'],
+      span: ['contenteditable', 'data-stat-value', 'data-stat-item'],
     },
     allowedSchemes: ['http', 'https'],
     allowedSchemesByTag: {
@@ -49,6 +52,22 @@ export function sanitizeRichText(value: string): string {
       'www.youtube-nocookie.com',
       'player.vimeo.com',
     ],
+    onOpenTag: (tagName, attributes) => {
+      if (tagName !== 'span') return;
+      const isStatMarker = attributes['data-stat-value'] !== undefined;
+      statMarkerSpanStack.push(isStatMarker);
+      if (isStatMarker) statMarkerDepth += 1;
+    },
+    onCloseTag: (tagName) => {
+      if (tagName !== 'span') return;
+      if (statMarkerSpanStack.pop()) statMarkerDepth -= 1;
+    },
+    textFilter: story
+      ? (text, tagName) =>
+          statMarkerDepth > 0 || tagName === 'button'
+            ? text
+            : compileStatInterpolationText(text, story)
+      : undefined,
     transformTags: {
       a: (_tagName, attributes) => ({
         tagName: 'a',
@@ -62,6 +81,58 @@ export function sanitizeRichText(value: string): string {
         tagName: 'video',
         attribs: { ...attributes, controls: '' },
       }),
+      span: (_tagName, attributes) => ({
+        tagName: 'span',
+        attribs:
+          attributes['data-stat-value'] === undefined
+            ? attributes
+            : { ...attributes, contenteditable: 'false' },
+      }),
     },
   });
+}
+
+function compileStatInterpolationText(text: string, story: Story): string {
+  return text.replace(/\{\{([^{}]*)\}\}/g, (source, escapedExpression: string) => {
+    const target = resolveStatInterpolationTarget(story, decodeSanitizedText(escapedExpression));
+    if (!target) return source;
+    const itemAttribute = target.itemId
+      ? ` data-stat-item="${escapeHtmlAttribute(target.itemId)}"`
+      : '';
+    return `<span contenteditable="false" data-stat-value="${escapeHtmlAttribute(target.assignment.id)}"${itemAttribute}>${source}</span>`;
+  });
+}
+
+function decodeSanitizedText(value: string): string {
+  return value.replace(/&(?:amp|lt|gt|quot|apos|nbsp|#\d+|#x[\da-f]+);/gi, (entity) =>
+    decodeHtmlEntity(entity),
+  );
+}
+
+function decodeHtmlEntity(entity: string): string {
+  const normalized = entity.toLowerCase();
+  const namedEntities: Record<string, string> = {
+    '&amp;': '&',
+    '&lt;': '<',
+    '&gt;': '>',
+    '&quot;': '"',
+    '&apos;': "'",
+    '&nbsp;': '\u00a0',
+  };
+  const named = namedEntities[normalized];
+  if (named !== undefined) return named;
+  const radix = normalized.startsWith('&#x') ? 16 : 10;
+  const digits = normalized.slice(radix === 16 ? 3 : 2, -1);
+  const codePoint = Number.parseInt(digits, radix);
+  return Number.isSafeInteger(codePoint) && codePoint >= 0 && codePoint <= 0x10ffff
+    ? String.fromCodePoint(codePoint)
+    : entity;
+}
+
+function escapeHtmlAttribute(value: string): string {
+  return value
+    .replaceAll('&', '&amp;')
+    .replaceAll('"', '&quot;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;');
 }

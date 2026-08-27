@@ -7,5 +7,6 @@ export * from './items/index.js';
 export * from './model/index.js';
 export * from './operations/index.js';
 export * from './reader/index.js';
+export * from './stats/index.js';
 export * from './time/index.js';
 export * from './triggers/index.js';

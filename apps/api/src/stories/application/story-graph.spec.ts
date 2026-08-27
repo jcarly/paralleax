@@ -44,6 +44,21 @@ describe('StoryGraphService', () => {
     ).rejects.toThrow('Interaction location must belong to the same story');
   });
 
+  it('resolves author variable references while saving interaction content', async () => {
+    const result = await service.updateInteraction(
+      'story-1',
+      'child',
+      { body: '<p>Energy: {{Mira.Energy}} / {{Unknown.Energy}}</p>' },
+      'user-1',
+    );
+
+    expect(result.interaction.body).toBe(
+      '<p>Energy: <span contenteditable="false" data-stat-value="mira-energy">' +
+        '{{Mira.Energy}}</span> / ' +
+        '{{Unknown.Energy}}</p>',
+    );
+  });
+
   it('normalizes trigger inputs and temporal condition collections', async () => {
     const result = await service.addTrigger(
       'story-1',
@@ -109,7 +124,15 @@ function storyFixture(): Story {
     createdAt: '2026-08-25T08:00:00.000Z',
     updatedAt: '2026-08-25T08:00:00.000Z',
     locations: [{ id: 'harbor', name: 'Harbor', description: '' }],
-    characters: [{ id: 'mira', name: 'Mira', description: '', stats: [], items: [] }],
+    characters: [
+      {
+        id: 'mira',
+        name: 'Mira',
+        description: '',
+        stats: [{ id: 'mira-energy', statDefinitionId: 'energy-definition', initialValue: 5 }],
+        items: [],
+      },
+    ],
     statDefinitions: [{ id: 'energy-definition', name: 'Energy', valueType: 'number' }],
     stats: [{ id: 'energy', statDefinitionId: 'energy-definition', initialValue: 5 }],
     itemDefinitions: [{ id: 'key-definition', name: 'Key', description: '' }],

@@ -44,6 +44,7 @@ function renderRichText(
         }
       });
   }
+  removeUnresolvedStatReferences(template.content);
   template.content.querySelectorAll<HTMLElement>('[data-stat-value]').forEach((node) => {
     const statId = node.dataset.statValue ?? '';
     const itemId = node.dataset.statItem;
@@ -51,6 +52,16 @@ function renderRichText(
     node.textContent = value === undefined ? '' : String(value);
   });
   return template.innerHTML;
+}
+
+function removeUnresolvedStatReferences(content: DocumentFragment) {
+  const walker = document.createTreeWalker(content, NodeFilter.SHOW_TEXT);
+  const textNodes: Text[] = [];
+  while (walker.nextNode()) textNodes.push(walker.currentNode as Text);
+  textNodes.forEach((node) => {
+    if (node.parentElement?.closest('[data-stat-value]')) return;
+    node.data = node.data.replace(/\{\{[^{}]*\}\}/g, '');
+  });
 }
 
 export function RichTextContent({

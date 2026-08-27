@@ -26,6 +26,10 @@ details. They should stay covered by tests as the editor grows.
 - A rich-text variable marker stores only same-story assignment and optional
   exact item-instance ids in inert allowlisted attributes. It cannot evaluate an
   expression or execute authored code.
+- The author shorthand `{{owner.variable}}` is resolved only when owner and
+  variable identify one unique same-story target. A valid shorthand is lowered
+  to the existing stable marker when the body is saved; an unresolved shorthand
+  remains editable but renders as empty text to readers.
 - Disconnecting its target preserves the conditional body content but hides it
   from readers. Simulation Mode keeps it visible with unavailable styling and an
   explanation.

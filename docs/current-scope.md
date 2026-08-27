@@ -23,7 +23,8 @@ Paralleax currently includes:
 - Reusable typed stat definitions and authored assignments on the Story,
   characters, locations, and item definitions. Number, boolean, and string values
   support deterministic replay, interaction effects, trigger conditions, and
-  inert rich-text interpolation; exact item instances keep independent values.
+  inert rich-text interpolation, including author shorthand lowered to stable
+  assignment markers; exact item instances keep independent values.
   A stat assigned to a character is presented as a character characteristic,
   without creating a separate persistence or runtime model.
 - Reusable item definitions.

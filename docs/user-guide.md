@@ -174,6 +174,15 @@ frame follows that trigger's conditions automatically. Removing the graph
 connection keeps the authored text in the editor but hides it from players.
 Simulation Mode still shows unavailable frames with reduced opacity and a reason.
 
+Type `{{owner.variable}}` to insert a current variable value into the content.
+Use `story` for a Story variable, for example `{{story.Score}}`, or a unique
+character or location name, for example `{{Mira.Energy}}`. An exact authored item
+uses its instance id. Names and ids ignore case. Once a unique reference is
+saved, Paralleax keeps its stable assignment id even if the owner or variable is
+renamed. An unknown or ambiguous reference stays visible in the editor so it can
+be corrected, but displays nothing during reading. A resolved reference becomes
+one non-editable inline token; delete and retype that token to change its target.
+
 1. Select an interaction block on the canvas.
 2. Edit `Title` and `Content` in the inspector.
 3. Set `Duration (minutes)` to define how much story time passes when it is selected.
@@ -322,9 +331,10 @@ comparisons; Boolean and Text values support equality and inequality. Effects
 are applied before the next available interactions are evaluated. Deleting an
 attachment or definition also removes effects and conditions that target it.
 
-Imported rich text may contain inert variable markers. The reader replaces only
-their text content with replayed values; it does not execute expressions from
-the story body. Calculated variables that depend on other variables are not yet
+Rich text may contain inert variable markers authored with
+`{{owner.variable}}` or created by an importer. The reader replaces only their
+text content with replayed values; it does not execute expressions from the
+story body. Calculated variables that depend on other variables are not yet
 implemented.
 
 When a variable is attached to a character, the character inspector presents it

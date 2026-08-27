@@ -59,6 +59,11 @@ or promise incremental re-import or ChoiceScript re-export.
 
 Rich-text interpolation references a stat assignment through inert structured
 markup and never evaluates arbitrary expressions.
+The author-facing `{{owner.variable}}` shorthand is resolved against one unique
+same-story assignment during body sanitization and lowered to that markup. The
+shorthand is not a second runtime reference model: valid saved content keeps the
+assignment id and optional exact item-instance id, while unresolved shorthand is
+inert and renders as empty text.
 
 ## Consequences
 

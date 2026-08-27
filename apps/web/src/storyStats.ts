@@ -1,105 +1,12 @@
-import {
-  getStoryItemEntries,
-  getStatValueType,
-  type StatAssignment,
-  type StatDefinition,
-  type Story,
+import { getStatValueType, type StatTarget } from '@paralleax/shared';
+
+export {
+  getStatAssignmentOwners,
+  getStatTargets,
+  type StatAssignmentOwner,
+  type StatOwnerType,
+  type StatTarget,
 } from '@paralleax/shared';
-
-export type StatOwnerType = 'story' | 'character' | 'location' | 'itemDefinition';
-
-export interface StatAssignmentOwner {
-  ownerType: StatOwnerType;
-  ownerId?: string;
-  ownerName?: string;
-  assignments: StatAssignment[];
-}
-
-export interface StatTarget {
-  assignment: StatAssignment;
-  definition?: StatDefinition;
-  ownerType: StatOwnerType;
-  ownerId?: string;
-  ownerName?: string;
-  itemId?: string;
-  itemName?: string;
-  itemCopyNumber?: string;
-  instanceOwnerName?: string;
-}
-
-export function getStatAssignmentOwners(story: Story): StatAssignmentOwner[] {
-  return [
-    { ownerType: 'story', assignments: story.stats ?? [] },
-    ...(story.characters ?? []).map((character) => ({
-      ownerType: 'character' as const,
-      ownerId: character.id,
-      ownerName: character.name,
-      assignments: character.stats ?? [],
-    })),
-    ...(story.locations ?? []).map((location) => ({
-      ownerType: 'location' as const,
-      ownerId: location.id,
-      ownerName: location.name,
-      assignments: location.stats ?? [],
-    })),
-    ...(story.itemDefinitions ?? []).map((definition) => ({
-      ownerType: 'itemDefinition' as const,
-      ownerId: definition.id,
-      ownerName: definition.name,
-      assignments: definition.stats ?? [],
-    })),
-  ];
-}
-
-export function getStatTargets(story: Story): StatTarget[] {
-  const definitions = new Map(
-    (story.statDefinitions ?? []).map((definition) => [definition.id, definition]),
-  );
-  const nonItemTargets = getStatAssignmentOwners(story)
-    .filter(({ ownerType }) => ownerType !== 'itemDefinition')
-    .flatMap((owner) =>
-      owner.assignments.map((assignment) => ({
-        assignment,
-        definition: definitions.get(assignment.statDefinitionId),
-        ownerType: owner.ownerType,
-        ownerId: owner.ownerId,
-        ownerName: owner.ownerName,
-      })),
-    );
-  const itemDefinitions = new Map(
-    (story.itemDefinitions ?? []).map((definition) => [definition.id, definition]),
-  );
-  const itemEntries = getStoryItemEntries(story);
-  const itemTargets = itemEntries.flatMap(({ ownerType, ownerId, item }) => {
-    const itemDefinition = itemDefinitions.get(item.itemDefinitionId);
-    const matchingItems = itemEntries.filter(
-      (entry) =>
-        entry.ownerType === ownerType &&
-        entry.ownerId === ownerId &&
-        entry.item.itemDefinitionId === item.itemDefinitionId,
-    );
-    const itemCopyNumber =
-      matchingItems.length > 1
-        ? ` #${matchingItems.findIndex((entry) => entry.item.id === item.id) + 1}`
-        : '';
-    const instanceOwnerName =
-      ownerType === 'character'
-        ? story.characters?.find(({ id }) => id === ownerId)?.name
-        : story.locations?.find(({ id }) => id === ownerId)?.name;
-    return (itemDefinition?.stats ?? []).map((assignment) => ({
-      assignment,
-      definition: definitions.get(assignment.statDefinitionId),
-      ownerType: 'itemDefinition' as const,
-      ownerId: itemDefinition?.id,
-      ownerName: itemDefinition?.name,
-      itemId: item.id,
-      itemName: itemDefinition?.name,
-      itemCopyNumber,
-      instanceOwnerName,
-    }));
-  });
-  return [...nonItemTargets, ...itemTargets];
-}
 
 export function statTargetValueType(target: StatTarget) {
   return target.definition ? getStatValueType(target.definition) : 'number';

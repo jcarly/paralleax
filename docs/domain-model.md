@@ -133,6 +133,10 @@ item instance receives an independent runtime value.
 The body sanitizer permits inert `span` markers that identify an assignment and,
 for item stats, an exact instance. The reader replaces their text content
 from replayed values without evaluating source expressions or arbitrary code.
+Authors may type `{{owner.variable}}` in interaction content. On save, a unique
+Story, character, location, or exact authored item-instance reference is lowered
+to the same stable marker. Unknown or ambiguous references remain visible for
+correction in the editor and render as empty text in the reader.
 See [ADR-021](decisions/ADR-021-typed-story-stats.md).
 
 ### Item Definition

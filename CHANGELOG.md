@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-08-27
+
+- Added author-facing `{{owner.variable}}` interpolation in interaction content.
+  Unique Story, character, location, and exact authored item references are
+  lowered to the existing stable stat markers on save and display replayed typed
+  values during reading; invalid or ambiguous references display nothing without
+  evaluating expressions.
+
 ## 2026-08-26
 
 - Split the 3,626-line global web stylesheet into shared foundations and ordered
