@@ -14,7 +14,7 @@ vi.mock('../api', () => ({
     listStories: vi.fn(),
     listPublicStories: vi.fn(),
     createStory: vi.fn(),
-    createDemoStory: vi.fn(),
+    createDemoStories: vi.fn(),
     importChoiceScript: vi.fn(),
     deleteStory: vi.fn(),
   },
@@ -108,7 +108,7 @@ describe('StoryList', () => {
       '/stories/story-1/play',
     );
     expect(screen.getByRole('button', { name: 'New story' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Generate demo' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Generate demos' })).not.toBeInTheDocument();
 
     await user.hover(within(firstCard).getByRole('link', { name: 'Edit' }));
     expect(loadStoryEditor).toHaveBeenCalledOnce();
@@ -140,7 +140,7 @@ describe('StoryList', () => {
     expect(within(card).queryByRole('link', { name: 'Access' })).not.toBeInTheDocument();
     expect(within(card).queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'New story' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Generate demo' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Generate demos' })).not.toBeInTheDocument();
   });
 
   it('creates and deletes a story from the list', async () => {
@@ -178,11 +178,11 @@ describe('StoryList', () => {
     expect(api.deleteStory).toHaveBeenCalledWith('story-1');
   });
 
-  it('creates a demo story from the list', async () => {
+  it('creates the demo story catalog from the list', async () => {
     const user = userEvent.setup();
     const demoStory: Story = {
       id: 'story-demo',
-      title: 'Demo: branching investigation',
+      title: 'Demo 1: paths only',
       createdAt: '2026-07-14T08:00:00.000Z',
       updatedAt: '2026-07-14T08:00:00.000Z',
       interactions: [
@@ -196,7 +196,12 @@ describe('StoryList', () => {
       ],
     };
     vi.mocked(api.listStories).mockResolvedValue([structuredClone(stories[0])]);
-    vi.mocked(api.createDemoStory).mockResolvedValue(demoStory);
+    const secondDemo = {
+      ...demoStory,
+      id: 'story-demo-2',
+      title: 'Demo 2: visited interaction conditions',
+    };
+    vi.mocked(api.createDemoStories).mockResolvedValue([demoStory, secondDemo]);
 
     render(
       <MemoryRouter>
@@ -205,15 +210,18 @@ describe('StoryList', () => {
     );
     await screen.findByRole('heading', { name: 'First story' });
 
-    await user.click(screen.getByRole('button', { name: 'Generate demo' }));
+    await user.click(screen.getByRole('button', { name: 'Generate demos' }));
 
     const demoCard = (
       await screen.findByRole('heading', {
-        name: 'Demo: branching investigation',
+        name: 'Demo 1: paths only',
       })
     ).closest('article')!;
     expect(within(demoCard).getByText('1')).toBeInTheDocument();
-    expect(api.createDemoStory).toHaveBeenCalledOnce();
+    expect(
+      await screen.findByRole('heading', { name: 'Demo 2: visited interaction conditions' }),
+    ).toBeInTheDocument();
+    expect(api.createDemoStories).toHaveBeenCalledOnce();
   });
 
   it('imports ChoiceScript scene files and displays the compatibility report', async () => {

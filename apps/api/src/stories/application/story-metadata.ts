@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import {
-  createDemoStory,
+  createDemoStories,
   defaultStoryAccess,
   ensureStoryInteractionPositions,
   isStoryDateTime,
@@ -66,15 +66,17 @@ export class StoryMetadataService {
     return structuredClone(story);
   }
 
-  async createDemo(userId: string, actorRole: UserRole): Promise<Story> {
+  async createDemo(userId: string, actorRole: UserRole): Promise<Story[]> {
     if (actorRole !== 'admin') {
       throw new ForbiddenException('Administrator access required');
     }
     const now = new Date().toISOString();
-    const story = createDemoStory(randomUUID(), now);
-    story.access = { ...defaultStoryAccess };
-    await this.repository.save(story, userId);
-    return structuredClone(story);
+    const stories = createDemoStories(now, () => randomUUID()).map((story) => ({
+      ...story,
+      access: { ...defaultStoryAccess },
+    }));
+    await this.repository.saveMany(stories, userId);
+    return structuredClone(stories);
   }
 
   update(storyId: string, input: UpdateStoryDto, userId: string): Promise<Story> {

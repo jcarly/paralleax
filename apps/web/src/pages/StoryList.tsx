@@ -93,13 +93,16 @@ export function StoryList({ user }: { user: AuthUser | null }) {
     }
   }
 
-  async function createDemo() {
+  async function createDemos() {
     if (pending) return;
     try {
       setError('');
       setPending('demo');
-      const story = await api.createDemoStory();
-      setStories((items) => [summarizeStory(story, user ?? undefined), ...items]);
+      const demos = await api.createDemoStories();
+      setStories((items) => [
+        ...demos.map((story) => summarizeStory(story, user ?? undefined)),
+        ...items,
+      ]);
       setFilter('all');
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : t('library.demoFailed'));
@@ -171,7 +174,7 @@ export function StoryList({ user }: { user: AuthUser | null }) {
                 className="product-secondary"
                 type="button"
                 disabled={Boolean(pending)}
-                onClick={() => void createDemo()}
+                onClick={() => void createDemos()}
               >
                 {t(pending === 'demo' ? 'library.generating' : 'library.generateDemo')}
               </button>

@@ -76,7 +76,7 @@ export class StoriesService {
     return this.metadata.create(input, userId);
   }
 
-  async createDemo(userId: string, actorRole: UserRole): Promise<Story> {
+  async createDemo(userId: string, actorRole: UserRole): Promise<Story[]> {
     return this.metadata.createDemo(userId, actorRole);
   }
 

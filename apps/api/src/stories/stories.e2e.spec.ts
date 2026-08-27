@@ -143,7 +143,7 @@ describe('Stories API', () => {
       .expect(400);
   });
 
-  it('POST /api/stories/demo is admin-only and creates a populated demo story', async () => {
+  it('POST /api/stories/demo is admin-only and creates the populated demo catalog', async () => {
     await request(httpServer)
       .post('/api/stories/demo')
       .set('Cookie', 'paralleax_session=user-one')
@@ -155,33 +155,33 @@ describe('Stories API', () => {
       .set('Cookie', 'paralleax_session=admin')
       .send({})
       .expect(201);
-    const story = response.body as Story;
+    const stories = response.body as Story[];
 
-    expect(story).toMatchObject({
-      title: 'Demo: branching investigation',
-    });
-    expect(story.id).toEqual(expect.any(String));
-    expect(story.interactions).toHaveLength(9);
+    expect(stories.map(({ title }) => title)).toEqual([
+      'Demo 1: paths only',
+      'Demo 2: visited interaction conditions',
+      'Demo 3: world variables',
+      'Demo 4: character stats and simple items',
+      'Demo 5: body, equipment, and item stats',
+    ]);
+    expect(stories.every((story) => typeof story.id === 'string')).toBe(true);
+    expect(stories[2].stats).toHaveLength(3);
+    expect(stories[3].characters?.[0].items).toHaveLength(2);
     expect(
-      story.interactions.some((interaction) =>
-        interaction.triggers.some((trigger) => trigger.inputInteractionIds.length > 1),
-      ),
-    ).toBe(true);
-    expect(
-      story.interactions.some((interaction) =>
-        interaction.triggers.some((trigger) => trigger.conditions.length > 0),
-      ),
+      stories[4].characters?.[0].items?.some((item) => item.relationshipType === 'equipped'),
     ).toBe(true);
 
     const listResponse = await request(httpServer)
       .get('/api/stories')
       .set('Cookie', 'paralleax_session=admin')
       .expect(200);
-    expect(listResponse.body).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ id: story.id, interactionCount: story.interactions.length }),
-      ]),
-    );
+    for (const story of stories) {
+      expect(listResponse.body).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ id: story.id, interactionCount: story.interactions.length }),
+        ]),
+      );
+    }
   });
 
   it('POST /api/stories/imports/choicescript creates a complete story atomically', async () => {

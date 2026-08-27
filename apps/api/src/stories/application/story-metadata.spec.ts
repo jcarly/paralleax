@@ -10,6 +10,7 @@ describe('StoryMetadataService', () => {
     listPublic: jest.fn(),
     find: jest.fn(),
     save: jest.fn(),
+    saveMany: jest.fn(),
     delete: jest.fn(),
   };
   const events = { stream: jest.fn(), publishChange: jest.fn() };
@@ -24,6 +25,7 @@ describe('StoryMetadataService', () => {
     jest.clearAllMocks();
     repository.find.mockResolvedValue(storyFixture());
     repository.save.mockResolvedValue(undefined);
+    repository.saveMany.mockResolvedValue(undefined);
   });
 
   afterEach(() => jest.useRealTimers());
@@ -74,9 +76,15 @@ describe('StoryMetadataService', () => {
       'Administrator access required',
     );
 
-    const story = await service.createDemo('admin-1', 'admin');
-    expect(story.title).toBe('Demo: branching investigation');
-    expect(repository.save).toHaveBeenCalledWith(story, 'admin-1');
+    const stories = await service.createDemo('admin-1', 'admin');
+    expect(stories.map(({ title }) => title)).toEqual([
+      'Demo 1: paths only',
+      'Demo 2: visited interaction conditions',
+      'Demo 3: world variables',
+      'Demo 4: character stats and simple items',
+      'Demo 5: body, equipment, and item stats',
+    ]);
+    expect(repository.saveMany).toHaveBeenCalledWith(stories, 'admin-1');
   });
 
   it('updates title and story-local start time through the shared mutation coordinator', async () => {

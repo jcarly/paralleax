@@ -79,7 +79,8 @@ describe('api client', () => {
       body: JSON.stringify({ title: 'New' }),
     });
 
-    await api.createDemoStory();
+    fetchMock.mockResolvedValueOnce(jsonResponse([story]));
+    await expect(api.createDemoStories()).resolves.toEqual([story]);
     expect(fetchMock).toHaveBeenLastCalledWith('/api/stories/demo', {
       headers: { 'Content-Type': 'application/json' },
       method: 'POST',

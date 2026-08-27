@@ -121,9 +121,11 @@ Use the library search, `Editable by me` / `Commentable by me` / `Created by me`
 filters, title or last-edited sorting, and the grid/list controls to find stories
 without changing their stored content.
 
-Administrators can use `Generate demo` to create a populated local demo story
-with roots, branches, multi-input triggers, and simple visited / not visited
-conditions. The action and its API endpoint are unavailable to ordinary users.
+Administrators can use `Generate demos` to create five local demo stories in one
+operation. They progressively cover unconditional paths, visited / not visited
+interaction conditions, Story-owned variables and their conditions, one
+character with stats and flat items, then a body/equipment item tree with item
+stats. The action and its API endpoint are unavailable to ordinary users.
 
 Stories are persisted in PostgreSQL. Restarting the API keeps the
 authored story data as long as the configured database or Docker volume remains

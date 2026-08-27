@@ -248,33 +248,13 @@ export class StoriesRepository {
 
   async save(story: Story, ownerId: string): Promise<void> {
     await this.transaction(async (client) => {
-      await client.query(
-        `INSERT INTO stories
-         (id, revision, title, start_date_time, created_at, updated_at, creator_user_id,
-          visibility, edit_policy, comment_policy)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-         ON CONFLICT (id) DO UPDATE
-         SET title = EXCLUDED.title,
-             start_date_time = EXCLUDED.start_date_time,
-             visibility = EXCLUDED.visibility,
-             edit_policy = EXCLUDED.edit_policy,
-             comment_policy = EXCLUDED.comment_policy,
-             created_at = EXCLUDED.created_at,
-             updated_at = EXCLUDED.updated_at`,
-        [
-          story.id,
-          story.revision ?? 1,
-          story.title,
-          story.startDateTime ?? DEFAULT_STORY_DATE_TIME,
-          story.createdAt,
-          story.updatedAt,
-          ownerId,
-          story.access?.visibility ?? defaultStoryAccess.visibility,
-          story.access?.editPolicy ?? defaultStoryAccess.editPolicy,
-          story.access?.commentPolicy ?? defaultStoryAccess.commentPolicy,
-        ],
-      );
-      await replaceStoryGraph(client, story);
+      await this.saveWith(client, story, ownerId);
+    });
+  }
+
+  async saveMany(stories: readonly Story[], ownerId: string): Promise<void> {
+    await this.transaction(async (client) => {
+      for (const story of stories) await this.saveWith(client, story, ownerId);
     });
   }
 
@@ -754,6 +734,36 @@ export class StoriesRepository {
     } finally {
       client.release();
     }
+  }
+
+  private async saveWith(client: PoolClient, story: Story, ownerId: string): Promise<void> {
+    await client.query(
+      `INSERT INTO stories
+       (id, revision, title, start_date_time, created_at, updated_at, creator_user_id,
+        visibility, edit_policy, comment_policy)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+       ON CONFLICT (id) DO UPDATE
+       SET title = EXCLUDED.title,
+           start_date_time = EXCLUDED.start_date_time,
+           visibility = EXCLUDED.visibility,
+           edit_policy = EXCLUDED.edit_policy,
+           comment_policy = EXCLUDED.comment_policy,
+           created_at = EXCLUDED.created_at,
+           updated_at = EXCLUDED.updated_at`,
+      [
+        story.id,
+        story.revision ?? 1,
+        story.title,
+        story.startDateTime ?? DEFAULT_STORY_DATE_TIME,
+        story.createdAt,
+        story.updatedAt,
+        ownerId,
+        story.access?.visibility ?? defaultStoryAccess.visibility,
+        story.access?.editPolicy ?? defaultStoryAccess.editPolicy,
+        story.access?.commentPolicy ?? defaultStoryAccess.commentPolicy,
+      ],
+    );
+    await replaceStoryGraph(client, story);
   }
 }
 

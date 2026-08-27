@@ -603,6 +603,29 @@ describe('StoriesRepository', () => {
     expect(mockClientQuery).toHaveBeenCalledWith('COMMIT');
   });
 
+  it('saves a demo catalog in one transaction', async () => {
+    mockClientQuery.mockResolvedValue({ rows: [], rowCount: 1 });
+    const first = story();
+    const second = { ...story(), id: 'story-2', title: 'Second demo' };
+
+    await repository().saveMany([first, second], ownerId);
+
+    expect(mockClientQuery.mock.calls.filter(([sql]) => sql === 'BEGIN')).toHaveLength(1);
+    expect(mockClientQuery.mock.calls.filter(([sql]) => sql === 'COMMIT')).toHaveLength(1);
+    expect(mockClientQuery).toHaveBeenCalledWith(expect.stringContaining('ON CONFLICT (id)'), [
+      second.id,
+      1,
+      second.title,
+      second.startDateTime,
+      second.createdAt,
+      second.updatedAt,
+      ownerId,
+      'private',
+      'owner',
+      'editors',
+    ]);
+  });
+
   it('inserts relational interactions, triggers, inputs, and conditions', async () => {
     mockClientQuery.mockResolvedValue({ rows: [], rowCount: 1 });
     const saved = graphStory();

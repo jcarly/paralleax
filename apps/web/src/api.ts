@@ -154,8 +154,8 @@ export const api = {
     request<void>(`/stories/${storyId}/progress`, { method: 'DELETE' }),
   createStory: (title: string) =>
     request<Story>('/stories', { method: 'POST', body: JSON.stringify({ title }) }),
-  createDemoStory: () =>
-    request<Story>('/stories/demo', { method: 'POST', body: JSON.stringify({}) }),
+  createDemoStories: () =>
+    request<Story[]>('/stories/demo', { method: 'POST', body: JSON.stringify({}) }),
   importChoiceScript: (files: ChoiceScriptSourceFile[]) =>
     request<ChoiceScriptImportResponse>('/stories/imports/choicescript', {
       method: 'POST',

@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { buildReaderProgressState, type Story } from '@paralleax/shared';
+import { buildReaderProgressState, createDemoStories, type Story } from '@paralleax/shared';
 import { Pool } from 'pg';
 import type { DatabaseConnection } from '../database/database.connection';
 import { DatabaseMigrator } from '../database/database.migrator';
@@ -504,6 +504,25 @@ describePostgres('StoriesRepository PostgreSQL integration', () => {
       inputs: 1,
       conditions: 9,
     });
+  });
+
+  it('round-trips the complete demo catalog without cross-story id collisions', async () => {
+    const now = new Date().toISOString();
+    const demos = createDemoStories(now, (kind) => `postgres-demo-${kind}-${randomUUID()}`);
+    storyIds.push(...demos.map(({ id }) => id));
+
+    await repository.saveMany(demos, ownerId);
+
+    const reloaded = await Promise.all(demos.map(({ id }) => repository.find(id, ownerId)));
+    expect(reloaded.map((story) => story?.title)).toEqual(demos.map(({ title }) => title));
+    expect(reloaded[2]?.stats).toHaveLength(3);
+    expect(reloaded[3]?.characters?.[0].items).toHaveLength(2);
+    expect(
+      reloaded[4]?.characters?.[0].items?.some((item) => item.relationshipType === 'equipped'),
+    ).toBe(true);
+    expect(reloaded[4]?.itemDefinitions?.some((definition) => definition.stats?.length === 2)).toBe(
+      true,
+    );
   });
 });
 

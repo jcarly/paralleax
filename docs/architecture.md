@@ -12,7 +12,7 @@ The codebase has three runtime workspaces:
   PostgreSQL behind a repository abstraction.
 - `packages/shared`: framework-independent domain types, reader rules, story
   operations, trigger cleanup rules, stale-response merge rules, graph placement
-  helpers, and deterministic demo story generation.
+  helpers, and deterministic demo-story catalog generation.
 
 ## Architecture Rule
 
@@ -591,14 +591,18 @@ same change.
 
 ### Creating Demo Data
 
-An administrator can request a local demo story from the story library. The API
-enforces the administrator role before calling `createDemoStory` from
-`packages/shared`, storing the generated story in `StoriesRepository`, and
-returning it to the web app. Hiding the action for ordinary users is only an
-interface adaptation and is not the authorization boundary.
+An administrator can request the local demo catalog from the story library. The
+API enforces the administrator role before calling `createDemoStories` from
+`packages/shared`, storing all five generated stories atomically through
+`StoriesRepository`, and returning them to the web app. Hiding the action for
+ordinary users is only an interface adaptation and is not the authorization
+boundary.
 
-Demo data should stay deterministic. It is used for manual exploration and as a
-stable source of regression-friendly sample structures.
+The ordered catalog progresses from unconditional paths to visited-interaction
+conditions, Story-owned variables, character stats with flat items, and a nested
+body/equipment item tree with per-instance stats. Demo data stays deterministic
+apart from generated globally unique ids. It is used for manual exploration and
+as a stable source of regression-friendly sample structures.
 
 ## Where To Put New Code
 

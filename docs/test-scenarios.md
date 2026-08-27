@@ -74,8 +74,10 @@ The character-stat vertical keeps these regressions covered:
 
 - Shared: story operations delete only the intended trigger and preserve valid inputs.
 - Shared: stale server merges cannot restore locally deleted triggers.
-- Shared/API/Web: administrator-only demo story generation creates roots, branches,
-  multi-input triggers, and conditions; ordinary users receive a forbidden response.
+- Shared/API/Web: administrator-only demo generation atomically creates five
+  stories covering paths, visited conditions, Story variables, character stats
+  with flat items, and nested body/equipment items with stats; ordinary users
+  receive a forbidden response.
 - API: database migrations create schema state and skip already-applied
   migrations.
 - PostgreSQL migration: a legacy JSON story keeps its title, interactions,

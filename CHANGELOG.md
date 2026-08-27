@@ -2,6 +2,10 @@
 
 ## 2026-08-27
 
+- Replaced the single administrator demo with an atomic five-story catalog that
+  progressively demonstrates unconditional paths, visited-interaction
+  conditions, Story variables, character stats with flat items, and nested
+  body/equipment items with per-instance stats.
 - Added an accessible right-click canvas menu for position-aware interaction,
   post-it, frame, and text creation, plus an automatic-layout submenu for the
   complete graph or current selection.

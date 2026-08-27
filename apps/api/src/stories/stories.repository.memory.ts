@@ -68,6 +68,10 @@ export class InMemoryStoriesRepository {
     this.owners.set(story.id, ownerId);
   }
 
+  async saveMany(stories: readonly Story[], ownerId: string): Promise<void> {
+    for (const story of stories) await this.save(story, ownerId);
+  }
+
   async mutate(
     id: string,
     mutation: (story: Story) => Story | Promise<Story>,
