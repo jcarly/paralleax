@@ -115,8 +115,16 @@ during the August 2026 code review. Production gates remain authoritative in
         responsive rules beside their owning features.
   - [x] Preserve the original cascade by loading the two previously separated
         inspector sections on either side of review comments.
-- [ ] Break large test files into capability suites and remove broad `any` usage
+- [x] Break large test files into capability suites and remove broad `any` usage
       from React Flow test doubles.
+  - [x] Split Story Editor tests into graph, context, interaction, connection, and
+        trigger suites backed by shared typed fixtures and lifecycle setup.
+  - [x] Split Story Player tests into loading/presentation, runtime state,
+        access/comments, and Simulation Mode authoring suites.
+  - [x] Split editor Playwright coverage into persistence, graph, and
+        trigger/item suites backed by one shared route and story harness.
+  - [x] Replace the untyped React Flow component mock with typed node, edge,
+        handle, resize, connection, selection, and drag contracts.
 
 ## P2 — Error Handling And User Feedback
 
