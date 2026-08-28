@@ -134,7 +134,11 @@ details. They should stay covered by tests as the editor grows.
   duration, then its explicit stat effects, before the next choices are
   evaluated. Replaying the journey reconstructs the same stat state.
 - If no interaction is available in the reader, the current branch stops.
-- Reader progress belongs to exactly one authenticated user and one story.
+- A reader save belongs to exactly one authenticated user, one story, and one
+  slot. The two reserved slot ids represent the reader and Simulation Mode
+  autosaves; every other slot is a named manual save.
+- Each user/story pair has at most one autosave per mode and at most 20 manual
+  saves. Manual saves are readable and writable from either authorized mode.
 - Its JSON state is versioned and keeps the ordered journey, including repeated
   visits, plus a materialized runtime snapshot.
 - Current interaction, unique visits, story time, location, and typed stats are
@@ -147,7 +151,10 @@ details. They should stay covered by tests as the editor grows.
   obtain creates another instance; losing an absent definition is a no-op.
 - An item trigger condition references one same-story item definition and tests
   whether at least one instance is currently owned.
-- Author Simulation Mode never loads, updates, or deletes player progress.
+- Normal reader navigation writes only the reader autosave. Normal Simulation
+  Mode navigation writes only the simulation autosave and requires effective
+  edit permission. Loading another slot copies its replayed state into the
+  current mode's autosave without mutating the source slot.
 
 ## Editor Projection Invariants
 

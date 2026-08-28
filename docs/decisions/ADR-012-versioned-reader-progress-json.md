@@ -2,7 +2,11 @@
 
 ## Status
 
-Accepted
+Accepted; amended by [ADR-022](ADR-022-reader-and-simulation-save-slots.md)
+
+ADR-022 preserves the versioned JSON state and deterministic reconstruction from
+this decision, but replaces its one-row cardinality and simulation exclusion
+with explicit save slots. The original decision below remains as history.
 
 ## Context
 

@@ -19,6 +19,7 @@ import {
   CreateCharacterStatDto,
   CreateItemDefinitionDto,
   CreateLocationDto,
+  CreateReaderSaveDto,
   MoveItemInstanceDto,
   CreateStatDefinitionDto,
   CreateStoryDto,
@@ -32,6 +33,7 @@ import {
   UpdateCharacterStatDto,
   UpdateItemDefinitionDto,
   UpdateLocationDto,
+  UpdateReaderSaveDto,
   UpdateStatDefinitionDto,
   UpdateStoryDto,
   UpdateTriggerDto,
@@ -147,6 +149,72 @@ export class StoriesController {
   @HttpCode(204)
   deleteProgress(@Param('storyId') id: string, @CurrentUser() user: RequestUser) {
     return this.stories.deleteProgress(id, user.id);
+  }
+
+  @Get(':storyId/progress/simulation')
+  @Throttle({ default: { limit: STORY_READ_RATE_LIMIT, ttl: 60_000 } })
+  async getSimulationProgress(@Param('storyId') id: string, @CurrentUser() user: RequestUser) {
+    return { progress: await this.stories.getProgress(id, user.id, 'simulation') };
+  }
+
+  @Patch(':storyId/progress/simulation')
+  saveSimulationProgress(
+    @Param('storyId') id: string,
+    @Body() input: SaveReaderProgressDto,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.stories.saveProgress(id, input, user.id, 'simulation');
+  }
+
+  @Delete(':storyId/progress/simulation')
+  @HttpCode(204)
+  deleteSimulationProgress(@Param('storyId') id: string, @CurrentUser() user: RequestUser) {
+    return this.stories.deleteProgress(id, user.id, 'simulation');
+  }
+
+  @Get(':storyId/progress/saves')
+  @Throttle({ default: { limit: STORY_READ_RATE_LIMIT, ttl: 60_000 } })
+  listReaderSaves(@Param('storyId') id: string, @CurrentUser() user: RequestUser) {
+    return this.stories.listReaderSaves(id, user.id);
+  }
+
+  @Post(':storyId/progress/saves')
+  createReaderSave(
+    @Param('storyId') id: string,
+    @Body() input: CreateReaderSaveDto,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.stories.createReaderSave(id, input, user.id);
+  }
+
+  @Get(':storyId/progress/saves/:saveId')
+  @Throttle({ default: { limit: STORY_READ_RATE_LIMIT, ttl: 60_000 } })
+  getReaderSave(
+    @Param('storyId') id: string,
+    @Param('saveId') saveId: string,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.stories.getReaderSave(id, saveId, user.id);
+  }
+
+  @Patch(':storyId/progress/saves/:saveId')
+  updateReaderSave(
+    @Param('storyId') id: string,
+    @Param('saveId') saveId: string,
+    @Body() input: UpdateReaderSaveDto,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.stories.updateReaderSave(id, saveId, input, user.id);
+  }
+
+  @Delete(':storyId/progress/saves/:saveId')
+  @HttpCode(204)
+  deleteReaderSave(
+    @Param('storyId') id: string,
+    @Param('saveId') saveId: string,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.stories.deleteReaderSave(id, saveId, user.id);
   }
 
   @Patch(':storyId') update(

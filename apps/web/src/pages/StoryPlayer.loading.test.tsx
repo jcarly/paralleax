@@ -103,10 +103,14 @@ describe('StoryPlayer loading and presentation', () => {
     expect(screen.getByRole('heading', { name: 'Start' })).toBeInTheDocument();
     expect(screen.getByText('You arrive.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Next' })).toBeInTheDocument();
-    expect(api.saveReaderProgress).toHaveBeenCalledWith('story-1', {
-      journeyInteractionIds: ['start'],
-      ownedItemIds: [],
-    });
+    expect(api.saveReaderProgress).toHaveBeenCalledWith(
+      'story-1',
+      {
+        journeyInteractionIds: ['start'],
+        ownedItemIds: [],
+      },
+      'reader',
+    );
 
     await user.click(screen.getByRole('button', { name: 'Next' }));
     expect(screen.getByRole('heading', { name: 'Next' })).toBeInTheDocument();

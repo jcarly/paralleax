@@ -93,9 +93,12 @@ describe('StoryPlayer simulation authoring', () => {
       conditionalStory,
     );
 
+    const link = await screen.findByRole('button', {
+      name: 'Open target interaction: Next',
+    });
     const sourceEditor = screen.getByLabelText('Current interaction content');
     sourceEditor.focus();
-    fireEvent.click(screen.getByRole('button', { name: 'Open target interaction: Next' }));
+    fireEvent.click(link);
 
     expect(await screen.findByDisplayValue('Next')).toBeInTheDocument();
     const targetEditor = screen.getByLabelText('Current interaction content');

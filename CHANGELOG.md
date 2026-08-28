@@ -2,6 +2,10 @@
 
 ## 2026-08-27
 
+- Added authenticated database-backed save slots: separate reader and Simulation
+  Mode autosaves plus up to 20 named manual saves shared between the two modes.
+  Loading replays current authored state into the active mode without overwriting
+  the source slot, and restart clears only that mode's autosave.
 - Fixed conditional interaction links so their source content is committed
   before navigation instead of being saved into the target interaction.
 - Replaced the single administrator demo with an atomic five-story catalog that

@@ -3,6 +3,7 @@ import {
   MAX_GRAPH_DECORATION_TEXT_LENGTH,
   MAX_GRAPH_TEXT_SIZE,
   MAX_INTERACTION_BODY_LENGTH,
+  MAX_READER_SAVE_NAME_LENGTH,
   ITEM_RELATIONSHIP_TYPES,
   MIN_GRAPH_FRAME_HEIGHT,
   MIN_GRAPH_FRAME_WIDTH,
@@ -95,6 +96,10 @@ export class SaveReaderProgressDto {
   @IsString({ each: true })
   ownedItemIds?: string[];
 }
+export class CreateReaderSaveDto extends SaveReaderProgressDto {
+  @IsString() @IsNotEmpty() @MaxLength(MAX_READER_SAVE_NAME_LENGTH) name!: string;
+}
+export class UpdateReaderSaveDto extends CreateReaderSaveDto {}
 export class CreateInteractionDto {
   @ValidateIf((_, value) => value !== undefined) @IsString() parentId?: string;
   @ValidateIf((_, value) => value !== undefined)

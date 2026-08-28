@@ -251,10 +251,17 @@ The character-stat vertical keeps these regressions covered:
   evaluated after the selected interaction's duration.
 - Shared/API: reader progress keeps repeated journey visits and derives current
   interaction, unique visits, date/time, location, and stats from replay.
-- API/PostgreSQL: one versioned JSON progress snapshot round-trips per user and
-  story, validates interaction/item references, and cascades with its owners.
-- Reader: normal play resumes and serializes progress saves, exposes save
-  failures, and restart deletes the snapshot; Simulation Mode never persists it.
+- API/PostgreSQL: reader and Simulation Mode autosaves plus named manual saves
+  round-trip independently per user and story, validate interaction/item
+  references, and cascade with their owners.
+- API authorization: any authenticated story reader can manage their manual
+  saves, while Simulation Mode autosave access requires effective edit
+  permission.
+- Reader/Simulation: normal navigation resumes and serializes only the current
+  mode's autosave, exposes save failures, and restart deletes only that autosave.
+- Reader/Simulation: load either autosave or a named manual save into either
+  authorized mode, replay it against the current story, then continue in the
+  current mode's autosave without overwriting the loaded source slot.
 - Item stats: a definition assigns reusable initial stats, two instances evolve
   independently, interaction effects target one exact instance/stat pair, and
   reader progress deterministically reconstructs their values.

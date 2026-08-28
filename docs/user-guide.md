@@ -467,15 +467,24 @@ their condition diagnostics. Enable **Force unavailable options** in the author
 tools to test a blocked path deliberately; disabling the control restores normal
 condition enforcement.
 
-Authenticated reading automatically saves progress after every selected
-interaction. Returning to the same story resumes the ordered journey, including
-the current interaction, story time, location, stats, and owned item instances.
-The status beside the reader controls reports saving, success, or failure.
+Authenticated reading automatically updates a reader autosave after every
+selected interaction. Simulation Mode has a separate autosave, so normal author
+testing never replaces the reader's current journey. Returning to the same story
+or simulation resumes the corresponding ordered journey, including current
+interaction, story time, location, stats, and owned item instances. The status
+beside the controls reports saving, success, or failure.
 
-Use `Restart` to clear the reading history, delete that story's saved progress,
-and start again. Author Simulation Mode is separate and never loads or changes
-reader progress. Simulation also provides `Back`, inline interaction editing,
-and option creation without changing the reader's saved journey.
+Use `Saves` to create up to 20 named manual saves, load either autosave or a
+manual save, overwrite a manual save with the current state, or delete it. The
+same named saves are available in reading and Simulation Mode, which lets an
+author open a player's saved situation for debugging. Loading a save copies its
+replayed state into the current mode's autosave; the source save is unchanged.
+
+Use `Restart` to clear the current history, delete only the current mode's
+autosave, and start again. Manual saves and the other mode's autosave remain
+available. Simulation also provides `Back`, inline interaction editing, and
+option creation while keeping its automatic progression separate from the
+reader autosave.
 
 ### Time-based stat changes
 

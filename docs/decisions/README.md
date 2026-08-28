@@ -25,6 +25,7 @@ This folder records accepted architecture and product-shaping decisions.
 - [ADR-019 - Editor-only Graph and Reader Comments](ADR-019-editor-graph-reader-comments.md)
 - [ADR-020 - Live Story Collaboration by Authorized Invalidation](ADR-020-live-story-collaboration.md)
 - [ADR-021 - Generalize Stats into Typed Story Variables](ADR-021-typed-story-stats.md)
+- [ADR-022 - Reader and Simulation Save Slots](ADR-022-reader-and-simulation-save-slots.md)
 
 ## Maintenance
 

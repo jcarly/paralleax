@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import {
@@ -44,7 +44,7 @@ describe('StoryPlayer runtime state', () => {
     await user.click(screen.getByRole('button', { name: 'Start' }));
     await user.click(screen.getByRole('button', { name: 'Restart' }));
 
-    expect(api.deleteReaderProgress).toHaveBeenCalledWith('story-1');
+    expect(api.deleteReaderProgress).toHaveBeenCalledWith('story-1', 'reader');
     expect(screen.getByRole('heading', { name: 'Start the story' })).toBeInTheDocument();
   });
 
@@ -58,16 +58,135 @@ describe('StoryPlayer runtime state', () => {
     expect(await screen.findByText('Progress save failed')).toBeInTheDocument();
   });
 
-  it('keeps author simulation isolated from reader progress', async () => {
+  it('uses a dedicated autosave for author simulation', async () => {
     const user = userEvent.setup();
     await renderPlayer('/stories/story-1/play?mode=simulation');
 
     await user.click(screen.getByRole('button', { name: 'Start' }));
     await user.click(screen.getByRole('button', { name: 'Restart' }));
 
-    expect(api.getReaderProgress).not.toHaveBeenCalled();
-    expect(api.saveReaderProgress).not.toHaveBeenCalled();
-    expect(api.deleteReaderProgress).not.toHaveBeenCalled();
+    expect(api.getReaderProgress).toHaveBeenCalledWith('story-1', 'simulation');
+    expect(api.saveReaderProgress).toHaveBeenCalledWith(
+      'story-1',
+      expect.objectContaining({ journeyInteractionIds: ['start'] }),
+      'simulation',
+    );
+    expect(api.deleteReaderProgress).toHaveBeenCalledWith('story-1', 'simulation');
+  });
+
+  it('autosaves an interaction used as the explicit simulation start', async () => {
+    await renderPlayer('/stories/story-1/play?mode=simulation&startInteractionId=next');
+
+    await waitFor(() =>
+      expect(api.saveReaderProgress).toHaveBeenCalledWith(
+        'story-1',
+        expect.objectContaining({ journeyInteractionIds: ['next'] }),
+        'simulation',
+      ),
+    );
+  });
+
+  it('loads a reader save into simulation and continues in the simulation autosave', async () => {
+    const user = userEvent.setup();
+    await renderPlayer('/stories/story-1/play?mode=simulation');
+    const updatedAt = '2026-08-27T09:00:00.000Z';
+    vi.mocked(api.listReaderSaves).mockResolvedValueOnce([
+      {
+        id: 'reader-autosave',
+        kind: 'reader-autosave',
+        currentInteractionId: 'start',
+        journeyLength: 1,
+        createdAt: updatedAt,
+        updatedAt,
+      },
+    ]);
+    vi.mocked(api.getReaderSave).mockResolvedValueOnce({
+      id: 'reader-autosave',
+      kind: 'reader-autosave',
+      state: {
+        version: 2,
+        journeyInteractionIds: ['start'],
+        currentInteractionId: 'start',
+        visitedInteractionIds: ['start'],
+        currentDateTime: '2000-01-03T08:00',
+        currentLocationId: null,
+        statValues: {},
+        ownedItemIds: [],
+        itemStatValues: {},
+      },
+      createdAt: updatedAt,
+      updatedAt,
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Saves' }));
+    expect(await screen.findByRole('dialog', { name: 'Manage saves' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Load' }));
+
+    expect(await screen.findByDisplayValue('Start')).toBeInTheDocument();
+    await waitFor(() =>
+      expect(api.saveReaderProgress).toHaveBeenCalledWith(
+        'story-1',
+        expect.objectContaining({ journeyInteractionIds: ['start'] }),
+        'simulation',
+      ),
+    );
+  });
+
+  it('creates, overwrites, and deletes a named manual save', async () => {
+    const user = userEvent.setup();
+    const updatedAt = '2026-08-27T09:00:00.000Z';
+    const manualSave = {
+      id: 'manual-save-1',
+      kind: 'manual' as const,
+      name: 'Before the gate',
+      state: {
+        version: 2 as const,
+        journeyInteractionIds: [],
+        currentInteractionId: null,
+        visitedInteractionIds: [],
+        currentDateTime: '2000-01-03T08:00',
+        currentLocationId: null,
+        statValues: {},
+        ownedItemIds: [],
+        itemStatValues: {},
+      },
+      createdAt: updatedAt,
+      updatedAt,
+    };
+    vi.mocked(api.createReaderSave).mockResolvedValueOnce(manualSave);
+    vi.mocked(api.updateReaderSave).mockResolvedValueOnce({
+      ...manualSave,
+      updatedAt: '2026-08-27T09:05:00.000Z',
+    });
+    vi.mocked(api.deleteReaderSave).mockResolvedValueOnce(undefined);
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
+
+    await renderPlayer();
+    await user.click(screen.getByRole('button', { name: 'Saves' }));
+    await user.type(screen.getByRole('textbox', { name: 'Save name' }), 'Before the gate');
+    await user.click(screen.getByRole('button', { name: 'Create save' }));
+
+    expect(api.createReaderSave).toHaveBeenCalledWith(
+      'story-1',
+      expect.objectContaining({ name: 'Before the gate', journeyInteractionIds: [] }),
+    );
+    expect(await screen.findByText('Before the gate')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Overwrite' }));
+    await waitFor(() =>
+      expect(api.updateReaderSave).toHaveBeenCalledWith(
+        'story-1',
+        'manual-save-1',
+        expect.objectContaining({ name: 'Before the gate', journeyInteractionIds: [] }),
+      ),
+    );
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Delete' })).toBeEnabled());
+
+    await user.click(screen.getByRole('button', { name: 'Delete' }));
+    expect(confirm).toHaveBeenCalled();
+    expect(api.deleteReaderSave).toHaveBeenCalledWith('story-1', 'manual-save-1');
+    expect(await screen.findByText('No save exists yet.')).toBeInTheDocument();
+    confirm.mockRestore();
   });
 
   it('replays item effects when simulation starts from an interaction', async () => {

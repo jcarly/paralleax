@@ -5,6 +5,7 @@ import type {
   CommentAnchor,
   CharacterItemMutationResult,
   CharacterStatMutationResult,
+  CreateReaderSaveInput,
   CreateCharacterInput,
   CreateStatAssignmentInput,
   CreateCharacterItemInput,
@@ -20,6 +21,9 @@ import type {
   LocationMutationResult,
   MoveItemInstanceInput,
   ReaderProgress,
+  ReaderAutosaveMode,
+  ReaderSave,
+  ReaderSaveSummary,
   SaveReaderProgressInput,
   StatDefinitionMutationResult,
   Story,
@@ -84,6 +88,10 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   }
   return response.status === 204 ? (undefined as T) : (response.json() as Promise<T>);
 }
+
+function readerProgressPath(storyId: string, mode: ReaderAutosaveMode): string {
+  return `/stories/${storyId}/progress${mode === 'simulation' ? '/simulation' : ''}`;
+}
 export interface AuthUser {
   id: string;
   email: string;
@@ -141,17 +149,37 @@ export const api = {
     }),
   removeStoryCollaborator: (id: string, userId: string) =>
     request<void>(`/stories/${id}/access/collaborators/${userId}`, { method: 'DELETE' }),
-  getReaderProgress: (storyId: string) =>
-    request<{ progress: ReaderProgress | null }>(`/stories/${storyId}/progress`).then(
+  getReaderProgress: (storyId: string, mode: ReaderAutosaveMode = 'reader') =>
+    request<{ progress: ReaderProgress | null }>(readerProgressPath(storyId, mode)).then(
       ({ progress }) => progress,
     ),
-  saveReaderProgress: (storyId: string, input: SaveReaderProgressInput) =>
-    request<ReaderProgress>(`/stories/${storyId}/progress`, {
+  saveReaderProgress: (
+    storyId: string,
+    input: SaveReaderProgressInput,
+    mode: ReaderAutosaveMode = 'reader',
+  ) =>
+    request<ReaderProgress>(readerProgressPath(storyId, mode), {
       method: 'PATCH',
       body: JSON.stringify(input),
     }),
-  deleteReaderProgress: (storyId: string) =>
-    request<void>(`/stories/${storyId}/progress`, { method: 'DELETE' }),
+  deleteReaderProgress: (storyId: string, mode: ReaderAutosaveMode = 'reader') =>
+    request<void>(readerProgressPath(storyId, mode), { method: 'DELETE' }),
+  listReaderSaves: (storyId: string) =>
+    request<ReaderSaveSummary[]>(`/stories/${storyId}/progress/saves`),
+  getReaderSave: (storyId: string, saveId: string) =>
+    request<ReaderSave>(`/stories/${storyId}/progress/saves/${saveId}`),
+  createReaderSave: (storyId: string, input: CreateReaderSaveInput) =>
+    request<ReaderSave>(`/stories/${storyId}/progress/saves`, {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
+  updateReaderSave: (storyId: string, saveId: string, input: CreateReaderSaveInput) =>
+    request<ReaderSave>(`/stories/${storyId}/progress/saves/${saveId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(input),
+    }),
+  deleteReaderSave: (storyId: string, saveId: string) =>
+    request<void>(`/stories/${storyId}/progress/saves/${saveId}`, { method: 'DELETE' }),
   createStory: (title: string) =>
     request<Story>('/stories', { method: 'POST', body: JSON.stringify({ title }) }),
   createDemoStories: () =>

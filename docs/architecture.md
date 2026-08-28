@@ -139,10 +139,11 @@ assignments, item definitions and instances, and their reference cleanup. Both
 reuse the focused shared and API application operations instead of reimplementing
 their domain rules.
 
-`stories/application/story-reader-progress.ts` owns authenticated progress reads,
-same-story journey and item validation, deterministic state reconstruction, and
-progress persistence/deletion. `StoriesService` retains compatibility methods for
-the controller but delegates this responsibility to the focused service.
+`stories/application/story-reader-progress.ts` owns authenticated save-slot
+reads, same-story journey and item validation, deterministic state
+reconstruction, manual-save limits, and save persistence/deletion.
+`StoriesService` retains compatibility methods for the controller but delegates
+this responsibility to the focused service.
 
 The API Webpack build maps emitted `.js` module specifiers back to TypeScript
 sources when it follows workspace aliases. This keeps the shared package's
@@ -195,12 +196,16 @@ administrator cannot be demoted. Story access settings live on `stories`; direct
 viewer/editor grants live in `story_user_permissions` and target existing local
 accounts. See ADR-017.
 
-Authenticated player progress uses one `story_reader_progress` row per user and
-story. Its keys and update timestamp are relational; its versioned JSONB state
-contains the ordered journey and materialized runtime values.
+Authenticated saves use one `story_reader_progress` row per user, story, and
+slot. The slot id, optional manual-save name, and timestamps are relational; the
+versioned JSONB state contains the ordered journey and materialized runtime
+values. Reserved ids keep reader and Simulation Mode autosaves separate, while
+named manual slots are shared between both modes.
 `StoryReaderProgressService` validates same-story references and rebuilds time,
 location, visits, stats, and character item inventory before saving. Simulation
-Mode stays isolated from this persistence flow.
+autosave access additionally requires effective story edit permission. Loading
+any slot replays it against the current authored story and the web client then
+writes that result to the current mode's autosave.
 
 `HealthModule` exposes an unauthenticated process liveness check at
 `GET /api/health` and a readiness check at `GET /api/ready`. Readiness requires

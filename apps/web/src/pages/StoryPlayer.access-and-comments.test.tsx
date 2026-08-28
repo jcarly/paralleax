@@ -51,20 +51,28 @@ describe('StoryPlayer access and comments', () => {
     await user.click(screen.getByRole('button', { name: 'Start' }));
     expect(screen.getByRole('complementary', { name: 'Inventory' })).toHaveTextContent('Key');
     expect(screen.getByRole('complementary', { name: 'Inventory' })).toHaveTextContent('Mira');
-    expect(api.saveReaderProgress).toHaveBeenLastCalledWith('story-1', {
-      journeyInteractionIds: ['start'],
-      ownedItemIds: ['key-1'],
-    });
+    expect(api.saveReaderProgress).toHaveBeenLastCalledWith(
+      'story-1',
+      {
+        journeyInteractionIds: ['start'],
+        ownedItemIds: ['key-1'],
+      },
+      'reader',
+    );
     expect(screen.getByRole('complementary', { name: 'Inventory' })).toHaveTextContent(
       'Durability: 8',
     );
 
     await user.click(screen.getByRole('button', { name: 'Next' }));
     expect(screen.getByRole('complementary', { name: 'Inventory' })).toHaveTextContent('No items.');
-    expect(api.saveReaderProgress).toHaveBeenLastCalledWith('story-1', {
-      journeyInteractionIds: ['start', 'next'],
-      ownedItemIds: [],
-    });
+    expect(api.saveReaderProgress).toHaveBeenLastCalledWith(
+      'story-1',
+      {
+        journeyInteractionIds: ['start', 'next'],
+        ownedItemIds: [],
+      },
+      'reader',
+    );
   });
 
   it('shows an ending and can restart', async () => {
@@ -119,7 +127,7 @@ describe('StoryPlayer access and comments', () => {
     expect(screen.queryByText('Simulation')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Current interaction title')).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Back to editor' })).not.toBeInTheDocument();
-    expect(api.getReaderProgress).toHaveBeenCalledWith('story-1');
+    expect(api.getReaderProgress).toHaveBeenCalledWith('story-1', 'reader');
   });
 
   it('lets an authorized reader comment on the current scene from the reader', async () => {

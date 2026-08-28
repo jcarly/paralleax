@@ -16,7 +16,10 @@ Paralleax currently includes:
 - Persisted visual graph decorations: movable, resizable colored frames and movable
   text with configurable color, size, family, weight, and style. Decorations stay
   behind interactions and trigger markers and have no reader semantics.
-- Reader execution and persisted authenticated reader progress.
+- Reader execution with authenticated database-backed saves: one reader
+  autosave, one editor-only Simulation Mode autosave, and up to 20 named manual
+  saves per user and story. Manual saves and both autosaves can be loaded in
+  either authorized mode without merging their source slots.
 - Story-local deterministic calendar time.
 - Locations.
 - Characters.
@@ -83,7 +86,7 @@ The following remain future or incomplete unless a task explicitly implements th
 - probabilities and automatic choices;
 - real-time choice timers;
 - explicit final/completed story semantics;
-- multiple player save slots and anonymous saves;
+- anonymous or offline saves;
 - managed media upload/storage;
 - presence, remote cursors/selections, conflict-free same-field editing, and
   horizontally distributed story events;

@@ -29,10 +29,14 @@ describe('useReaderProgressPersistence', () => {
     act(() => result.current.save(sessionFixture()));
     expect(result.current.status).toBe('saving');
     await waitFor(() => expect(result.current.status).toBe('saved'));
-    expect(api.saveReaderProgress).toHaveBeenCalledWith('story-1', {
-      journeyInteractionIds: ['start'],
-      ownedItemIds: ['key-1'],
-    });
+    expect(api.saveReaderProgress).toHaveBeenCalledWith(
+      'story-1',
+      {
+        journeyInteractionIds: ['start'],
+        ownedItemIds: ['key-1'],
+      },
+      'reader',
+    );
   });
 
   it('continues the persistence queue after a failed save', async () => {
@@ -46,7 +50,7 @@ describe('useReaderProgressPersistence', () => {
       result.current.reset();
     });
 
-    await waitFor(() => expect(api.deleteReaderProgress).toHaveBeenCalledWith('story-1'));
+    await waitFor(() => expect(api.deleteReaderProgress).toHaveBeenCalledWith('story-1', 'reader'));
     await waitFor(() => expect(result.current.status).toBe('idle'));
   });
 
@@ -63,6 +67,25 @@ describe('useReaderProgressPersistence', () => {
     expect(api.saveReaderProgress).not.toHaveBeenCalled();
     expect(api.deleteReaderProgress).not.toHaveBeenCalled();
     expect(result.current.status).toBe('idle');
+  });
+
+  it('persists simulation progress in its dedicated autosave', async () => {
+    const { result } = renderHook(() =>
+      useReaderProgressPersistence({
+        authenticated: true,
+        storyId: 'story-1',
+        mode: 'simulation',
+      }),
+    );
+
+    act(() => result.current.save(sessionFixture()));
+
+    await waitFor(() => expect(result.current.status).toBe('saved'));
+    expect(api.saveReaderProgress).toHaveBeenCalledWith(
+      'story-1',
+      expect.objectContaining({ journeyInteractionIds: ['start'] }),
+      'simulation',
+    );
   });
 });
 

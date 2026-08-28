@@ -170,13 +170,15 @@ See [Trigger semantics](triggers.md) for deletion rules and editor behavior.
 
 ### Reader Progress
 
-Reader progress belongs to one authenticated user and one story. Relational
-columns enforce ownership, uniqueness, timestamps, and cascading deletion. A
-versioned JSON state stores the ordered journey, current interaction, unique
-visits, story-local date/time, current location, typed stat values, and owned item
-instances, including per-instance item stat values. Replayable values are derived
-from the ordered journey by the API. Version 2 stores typed stat snapshots while
-version 1 remains readable for existing saves.
+Reader saves belong to one authenticated user, one story, and one slot.
+Relational columns enforce ownership, slot uniqueness, timestamps, and cascading
+deletion. Two reserved slots store the reader and Simulation Mode autosaves; up
+to 20 additional slots may have user-facing names and are shared between the two
+modes. A versioned JSON state stores the ordered journey, current interaction,
+unique visits, story-local date/time, current location, typed stat values, and
+owned item instances, including per-instance item stat values. Replayable values
+are derived from the ordered journey by the API. Version 2 stores typed stat
+snapshots while version 1 remains readable for existing saves.
 
 ## Target Model
 
@@ -514,12 +516,11 @@ such as being in a place or meeting a character.
 
 ### Play Session
 
-One persisted reader-progress snapshot per authenticated user and Story is
-implemented. Later play-session increments may add:
+Database-backed reader and Simulation Mode autosaves plus named manual saves are
+implemented for authenticated users. Later play-session increments may add:
 
 Possible elements:
 
-- available save points or autosave state;
 - completion status.
 
 Player saves are separate from story authoring persistence. Story persistence

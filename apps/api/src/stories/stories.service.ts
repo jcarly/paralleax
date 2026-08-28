@@ -7,7 +7,10 @@ import type {
   InteractionMutationResult,
   ItemDefinitionMutationResult,
   LocationMutationResult,
+  ReaderAutosaveMode,
   ReaderProgress,
+  ReaderSave,
+  ReaderSaveSummary,
   StatDefinitionMutationResult,
   Story,
   TriggerMutationResult,
@@ -26,6 +29,7 @@ import type {
   CreateInteractionDto,
   CreateItemDefinitionDto,
   CreateLocationDto,
+  CreateReaderSaveDto,
   CreateStatAssignmentDto,
   CreateStatDefinitionDto,
   CreateStoryDto,
@@ -39,6 +43,7 @@ import type {
   UpdateInteractionDto,
   UpdateItemDefinitionDto,
   UpdateLocationDto,
+  UpdateReaderSaveDto,
   UpdateStatAssignmentDto,
   UpdateStatDefinitionDto,
   UpdateStoryAccessDto,
@@ -88,8 +93,12 @@ export class StoriesService {
     await this.metadata.delete(id, userId);
   }
 
-  async getProgress(storyId: string, userId: string): Promise<ReaderProgress | null> {
-    return this.readerProgress.get(storyId, userId);
+  async getProgress(
+    storyId: string,
+    userId: string,
+    mode: ReaderAutosaveMode = 'reader',
+  ): Promise<ReaderProgress | null> {
+    return this.readerProgress.get(storyId, userId, mode);
   }
 
   async getAccess(storyId: string, userId: string) {
@@ -112,12 +121,46 @@ export class StoriesService {
     storyId: string,
     input: SaveReaderProgressDto,
     userId: string,
+    mode: ReaderAutosaveMode = 'reader',
   ): Promise<ReaderProgress> {
-    return this.readerProgress.save(storyId, input, userId);
+    return this.readerProgress.save(storyId, input, userId, mode);
   }
 
-  async deleteProgress(storyId: string, userId: string): Promise<void> {
-    await this.readerProgress.delete(storyId, userId);
+  async deleteProgress(
+    storyId: string,
+    userId: string,
+    mode: ReaderAutosaveMode = 'reader',
+  ): Promise<void> {
+    await this.readerProgress.delete(storyId, userId, mode);
+  }
+
+  async listReaderSaves(storyId: string, userId: string): Promise<ReaderSaveSummary[]> {
+    return this.readerProgress.listSaves(storyId, userId);
+  }
+
+  async getReaderSave(storyId: string, saveId: string, userId: string): Promise<ReaderSave> {
+    return this.readerProgress.getSave(storyId, saveId, userId);
+  }
+
+  async createReaderSave(
+    storyId: string,
+    input: CreateReaderSaveDto,
+    userId: string,
+  ): Promise<ReaderSave> {
+    return this.readerProgress.createSave(storyId, input, userId);
+  }
+
+  async updateReaderSave(
+    storyId: string,
+    saveId: string,
+    input: UpdateReaderSaveDto,
+    userId: string,
+  ): Promise<ReaderSave> {
+    return this.readerProgress.updateSave(storyId, saveId, input, userId);
+  }
+
+  async deleteReaderSave(storyId: string, saveId: string, userId: string): Promise<void> {
+    await this.readerProgress.deleteSave(storyId, saveId, userId);
   }
 
   async createInteraction(

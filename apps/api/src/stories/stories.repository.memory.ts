@@ -1,8 +1,10 @@
 import {
+  READER_AUTOSAVE_ID,
   defaultStoryAccess,
+  readerSaveKind,
   resolveStoryAccess,
-  type ReaderProgress,
   type ReaderProgressState,
+  type ReaderSave,
   type Story,
   type StoryAccessConfiguration,
   type StoryAccessSettings,
@@ -14,7 +16,7 @@ export class InMemoryStoriesRepository {
   private readonly stories = new Map<string, Story>();
   private readonly owners = new Map<string, string>();
   private readonly mutationQueues = new Map<string, Promise<void>>();
-  private readonly progress = new Map<string, ReaderProgress>();
+  private readonly progress = new Map<string, ReaderSave>();
   private readonly permissions = new Map<string, Map<string, StoryCollaboratorRole>>();
 
   async list(ownerId: string): Promise<StorySummary[]> {
@@ -101,15 +103,32 @@ export class InMemoryStoriesRepository {
     const story = this.stories.get(id);
     if (!story || !this.can(story, id, ownerId).canManage) return false;
     this.owners.delete(id);
-    this.progress.delete(`${ownerId}:${id}`);
+    for (const key of this.progress.keys()) {
+      if (key.includes(`:${id}:`)) this.progress.delete(key);
+    }
     return this.stories.delete(id);
   }
 
-  async findProgress(storyId: string, userId: string): Promise<ReaderProgress | undefined> {
+  async findProgress(
+    storyId: string,
+    userId: string,
+    slotId = READER_AUTOSAVE_ID,
+  ): Promise<ReaderSave | undefined> {
     const story = this.stories.get(storyId);
     if (!story || !this.can(story, storyId, userId).canRead) return undefined;
-    const progress = this.progress.get(`${userId}:${storyId}`);
+    const progress = this.progress.get(progressKey(userId, storyId, slotId));
     return progress ? structuredClone(progress) : undefined;
+  }
+
+  async findProgressSaves(storyId: string, userId: string): Promise<ReaderSave[]> {
+    const story = this.stories.get(storyId);
+    if (!story || !this.can(story, storyId, userId).canRead) return [];
+    const prefix = `${userId}:${storyId}:`;
+    return [...this.progress.entries()]
+      .filter(([key]) => key.startsWith(prefix))
+      .map(([, save]) => save)
+      .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))
+      .map((save) => structuredClone(save));
   }
 
   async saveProgress(
@@ -117,18 +136,30 @@ export class InMemoryStoriesRepository {
     userId: string,
     state: ReaderProgressState,
     updatedAt: string,
+    slotId = READER_AUTOSAVE_ID,
+    name?: string,
+    createdAt = updatedAt,
   ): Promise<boolean> {
     const story = this.stories.get(storyId);
     if (!story || !this.can(story, storyId, userId).canRead) return false;
-    this.progress.set(`${userId}:${storyId}`, {
+    const key = progressKey(userId, storyId, slotId);
+    this.progress.set(key, {
+      id: slotId,
+      kind: readerSaveKind(slotId),
+      ...(name ? { name } : {}),
       state: structuredClone(state),
+      createdAt: this.progress.get(key)?.createdAt ?? createdAt,
       updatedAt,
     });
     return true;
   }
 
-  async deleteProgress(storyId: string, userId: string): Promise<void> {
-    this.progress.delete(`${userId}:${storyId}`);
+  async deleteProgress(
+    storyId: string,
+    userId: string,
+    slotId = READER_AUTOSAVE_ID,
+  ): Promise<void> {
+    this.progress.delete(progressKey(userId, storyId, slotId));
   }
 
   async getAccess(id: string, userId: string): Promise<StoryAccessConfiguration | undefined> {
@@ -179,6 +210,10 @@ export class InMemoryStoriesRepository {
       collaboratorRole: userId ? this.permissions.get(id)?.get(userId) : undefined,
     });
   }
+}
+
+function progressKey(userId: string, storyId: string, slotId: string): string {
+  return `${userId}:${storyId}:${slotId}`;
 }
 
 function emailForUser(userId: string) {

@@ -509,7 +509,8 @@
   color: white;
   font-size: 0.68rem;
 }
-.connection-dialog-backdrop {
+.connection-dialog-backdrop,
+.modal-dialog-backdrop {
   position: fixed;
   inset: 0;
   z-index: 20;
@@ -518,7 +519,8 @@
   padding: 1rem;
   background: #2d2d2d55;
 }
-.connection-dialog {
+.connection-dialog,
+.modal-dialog {
   width: min(460px, 100%);
   border: 1px solid var(--color-border);
   border-radius: 14px;
@@ -526,14 +528,17 @@
   background: var(--color-surface);
   box-shadow: var(--shadow-player);
 }
-.connection-dialog h2 {
+.connection-dialog h2,
+.modal-dialog h2 {
   margin: 0 0 0.4rem;
 }
-.connection-dialog p {
+.connection-dialog p,
+.modal-dialog p {
   margin: 0 0 1rem;
   color: var(--color-muted);
 }
-.connection-dialog-actions {
+.connection-dialog-actions,
+.modal-dialog-actions {
   display: grid;
   gap: 0.6rem;
 }

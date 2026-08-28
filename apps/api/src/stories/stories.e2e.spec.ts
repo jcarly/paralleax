@@ -380,6 +380,55 @@ Night falls.
       .expect({ progress: null });
   });
 
+  it('keeps reader and simulation autosaves beside shared named saves', async () => {
+    const story = await createStory('Save slots story');
+    const withRoot = await createInteraction(story.id);
+    const root = withRoot.interactions[0];
+    const snapshot = { journeyInteractionIds: [root.id], ownedItemIds: [] };
+
+    await request(httpServer).patch(`/api/stories/${story.id}/progress`).send(snapshot).expect(200);
+    await request(httpServer)
+      .patch(`/api/stories/${story.id}/progress/simulation`)
+      .send(snapshot)
+      .expect(200);
+    const manual = await request(httpServer)
+      .post(`/api/stories/${story.id}/progress/saves`)
+      .send({ ...snapshot, name: 'Before the gate' })
+      .expect(201);
+
+    expect(manual.body).toMatchObject({ kind: 'manual', name: 'Before the gate' });
+    const saves = await request(httpServer)
+      .get(`/api/stories/${story.id}/progress/saves`)
+      .expect(200);
+    expect(saves.body).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ kind: 'reader-autosave' }),
+        expect.objectContaining({ kind: 'simulation-autosave' }),
+        expect.objectContaining({ id: manual.body.id, kind: 'manual', name: 'Before the gate' }),
+      ]),
+    );
+    await request(httpServer)
+      .get(`/api/stories/${story.id}/progress/saves/${manual.body.id}`)
+      .expect(200)
+      .expect(({ body }) => {
+        expect(body.state.journeyInteractionIds).toEqual([root.id]);
+      });
+    await request(httpServer)
+      .patch(`/api/stories/${story.id}/progress/saves/${manual.body.id}`)
+      .send({ journeyInteractionIds: [], name: 'After debugging' })
+      .expect(200)
+      .expect(({ body }) => {
+        expect(body).toMatchObject({ name: 'After debugging' });
+        expect(body.state.journeyInteractionIds).toEqual([]);
+      });
+    await request(httpServer)
+      .delete(`/api/stories/${story.id}/progress/saves/${manual.body.id}`)
+      .expect(204);
+    await request(httpServer)
+      .get(`/api/stories/${story.id}/progress/saves/${manual.body.id}`)
+      .expect(404);
+  });
+
   it('POST /api/stories/:storyId/interactions creates a root interaction', async () => {
     const story = await createStory();
 

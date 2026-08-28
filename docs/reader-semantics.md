@@ -227,12 +227,16 @@ The shared reader converts `visitedIds` to a set for condition checks. MVP
 conditions therefore care only whether an interaction has been visited at least
 once, not how many times it was visited or when it was visited.
 
-## Persisted Reader Progress
+## Persisted Saves
 
-Authenticated player reading, unlike author Simulation Mode, stores one
-versioned progress snapshot per user and story. The snapshot is JSON because the
-runtime state evolves as typed conditions and effects are added, while
-`user_id`, `story_id`, and `updated_at` remain relational columns.
+Authenticated play stores versioned progress snapshots in database-backed save
+slots. Every user/story pair has one reserved reader autosave, one reserved
+Simulation Mode autosave, and up to 20 named manual saves. Manual saves and both
+autosaves appear in the same save manager and may be loaded into either mode;
+Simulation Mode itself still requires effective edit permission. The snapshot is
+JSON because runtime state evolves as typed conditions and effects are added,
+while `user_id`, `story_id`, `slot_id`, optional `name`, and timestamps remain
+relational columns.
 
 Version 1 historically stores:
 
@@ -265,12 +269,15 @@ authored defaults, time-based rates, and explicit interaction effects. Existing
 version 1 snapshots remain readable and are rematerialized as version 2 after a
 subsequent save.
 
-The reader reconciles loaded progress with the authored story it fetched:
+The reader and Simulation Mode reconcile loaded saves with the authored story
+they fetched:
 interaction and item ids that no longer exist are removed, and replayable
-derived values are rebuilt without a second full-graph API read. Restart deletes
-the saved snapshot and returns to the authored starting state. Stepping backward
-in Simulation Mode remains an author-only operation and never reads or writes
-player progress.
+derived values are rebuilt without a second full-graph API read. Loading a save
+continues in the current mode and writes subsequent progress to that mode's
+autosave; it does not overwrite the loaded source slot. Restart deletes only the
+current mode's autosave and returns to its configured starting state. Named saves
+remain until explicitly overwritten or deleted. Stepping backward in Simulation
+Mode replays the shortened journey and updates only the simulation autosave.
 
 ## Repeated Interactions and Cycles
 
@@ -323,8 +330,9 @@ An open Simulation Mode session subscribes to authored-story invalidations. When
 another editor commits a change, the simulation reloads the authorized story and
 replays its current ordered journey. Availability, time, location, typed stats,
 inventory, item values, and the current interaction are reconstructed through the
-same deterministic shared operations used for reader progress; simulation still
-does not persist reader progress.
+same deterministic shared operations used for reader progress. Its persisted
+journey remains isolated in the simulation autosave unless the author explicitly
+creates or overwrites a named save.
 
 ## Out of Scope
 
@@ -335,7 +343,7 @@ The MVP reader does not support:
 - automatic choices;
 - final interactions;
 - weighted or prioritized choices;
-- persisted play sessions;
+- anonymous or offline play sessions;
 - ordered or repeated history semantics.
 
 These can be added later only after the current Story / Interaction / Trigger /

@@ -46,8 +46,6 @@ changes`, and whether every non-read permission implies `read`.
   or whether other completion conditions can exist later.
 - Define how a stopped branch differs from a completed story once contextual
   inputless triggers and world state exist.
-- Define play-session persistence: manual save, autosave, save slots, and how
-  save data relates to story updates.
 
 ## World State, Conditions, Effects, and Items
 

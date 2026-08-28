@@ -1,5 +1,13 @@
 import type { StatValue } from './stats.js';
 
+export const READER_AUTOSAVE_ID = 'reader-autosave';
+export const SIMULATION_AUTOSAVE_ID = 'simulation-autosave';
+export const MAX_MANUAL_READER_SAVES = 20;
+export const MAX_READER_SAVE_NAME_LENGTH = 100;
+
+export type ReaderAutosaveMode = 'reader' | 'simulation';
+export type ReaderSaveKind = 'reader-autosave' | 'simulation-autosave' | 'manual';
+
 export interface ReaderProgressState {
   version: 1 | 2;
   journeyInteractionIds: string[];
@@ -17,7 +25,40 @@ export interface ReaderProgress {
   updatedAt: string;
 }
 
+export interface ReaderSave extends ReaderProgress {
+  id: string;
+  kind: ReaderSaveKind;
+  name?: string;
+  createdAt: string;
+}
+
+export interface ReaderSaveSummary {
+  id: string;
+  kind: ReaderSaveKind;
+  name?: string;
+  currentInteractionId: string | null;
+  journeyLength: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface SaveReaderProgressInput {
   journeyInteractionIds: string[];
   ownedItemIds?: string[];
+}
+
+export interface CreateReaderSaveInput extends SaveReaderProgressInput {
+  name: string;
+}
+
+export type UpdateReaderSaveInput = CreateReaderSaveInput;
+
+export function autosaveId(mode: ReaderAutosaveMode): string {
+  return mode === 'simulation' ? SIMULATION_AUTOSAVE_ID : READER_AUTOSAVE_ID;
+}
+
+export function readerSaveKind(id: string): ReaderSaveKind {
+  if (id === READER_AUTOSAVE_ID) return 'reader-autosave';
+  if (id === SIMULATION_AUTOSAVE_ID) return 'simulation-autosave';
+  return 'manual';
 }

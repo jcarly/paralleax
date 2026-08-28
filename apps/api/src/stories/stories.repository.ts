@@ -1,12 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import {
   DEFAULT_STORY_DATE_TIME,
+  READER_AUTOSAVE_ID,
   defaultStoryAccess,
+  readerSaveKind,
   resolveStoryAccess,
   type GraphDecoration,
   type ItemRelationshipType,
-  type ReaderProgress,
   type ReaderProgressState,
+  type ReaderSave,
   type Story,
   type StoryAccessConfiguration,
   type StoryAccessSettings,
@@ -161,7 +163,10 @@ type TriggerInputRow = {
   sort_order: number;
 };
 type ReaderProgressRow = {
+  slot_id: string;
+  name: string | null;
   state: ReaderProgressState;
+  created_at: Date | string;
   updated_at: Date | string;
 };
 
@@ -300,9 +305,38 @@ export class StoriesRepository {
     return (result.rowCount ?? 0) > 0;
   }
 
-  async findProgress(storyId: string, userId: string): Promise<ReaderProgress | undefined> {
+  async findProgress(
+    storyId: string,
+    userId: string,
+    slotId = READER_AUTOSAVE_ID,
+  ): Promise<ReaderSave | undefined> {
     const result = await this.database.pool.query<ReaderProgressRow>(
-      `SELECT progress.state, progress.updated_at
+      `SELECT progress.slot_id, progress.name, progress.state,
+              progress.created_at, progress.updated_at
+       FROM story_reader_progress AS progress
+       JOIN stories ON stories.id = progress.story_id
+       JOIN users AS actor ON actor.id = $2
+       LEFT JOIN story_user_permissions AS permission
+         ON permission.story_id = stories.id AND permission.user_id = $2
+       WHERE progress.story_id = $1
+         AND progress.user_id = $2
+         AND progress.slot_id = $3
+         AND (
+           actor.role = 'admin' OR stories.creator_user_id = $2
+           OR stories.visibility IN ('public', 'authenticated')
+           OR stories.edit_policy = 'authenticated'
+           OR (stories.visibility = 'invitation' AND permission.user_id IS NOT NULL)
+         )`,
+      [storyId, userId, slotId],
+    );
+    const row = result.rows[0];
+    return row ? readerSave(row) : undefined;
+  }
+
+  async findProgressSaves(storyId: string, userId: string): Promise<ReaderSave[]> {
+    const result = await this.database.pool.query<ReaderProgressRow>(
+      `SELECT progress.slot_id, progress.name, progress.state,
+              progress.created_at, progress.updated_at
        FROM story_reader_progress AS progress
        JOIN stories ON stories.id = progress.story_id
        JOIN users AS actor ON actor.id = $2
@@ -315,11 +349,11 @@ export class StoriesRepository {
            OR stories.visibility IN ('public', 'authenticated')
            OR stories.edit_policy = 'authenticated'
            OR (stories.visibility = 'invitation' AND permission.user_id IS NOT NULL)
-         )`,
+         )
+       ORDER BY progress.updated_at DESC, progress.slot_id`,
       [storyId, userId],
     );
-    const row = result.rows[0];
-    return row ? { state: row.state, updatedAt: iso(row.updated_at) } : undefined;
+    return result.rows.map(readerSave);
   }
 
   async saveProgress(
@@ -327,10 +361,14 @@ export class StoriesRepository {
     userId: string,
     state: ReaderProgressState,
     updatedAt: string,
+    slotId = READER_AUTOSAVE_ID,
+    name?: string,
+    createdAt = updatedAt,
   ): Promise<boolean> {
     const result = await this.database.pool.query(
-      `INSERT INTO story_reader_progress (user_id, story_id, state, updated_at)
-       SELECT $2, $1, $3::jsonb, $4
+      `INSERT INTO story_reader_progress
+         (user_id, story_id, slot_id, name, state, created_at, updated_at)
+       SELECT $2, $1, $5, $6, $3::jsonb, $7, $4
        FROM stories
        JOIN users AS actor ON actor.id = $2
        LEFT JOIN story_user_permissions AS permission
@@ -342,17 +380,21 @@ export class StoriesRepository {
            OR stories.edit_policy = 'authenticated'
            OR (stories.visibility = 'invitation' AND permission.user_id IS NOT NULL)
          )
-       ON CONFLICT (user_id, story_id) DO UPDATE
-       SET state = EXCLUDED.state, updated_at = EXCLUDED.updated_at`,
-      [storyId, userId, JSON.stringify(state), updatedAt],
+       ON CONFLICT (user_id, story_id, slot_id) DO UPDATE
+       SET name = EXCLUDED.name, state = EXCLUDED.state, updated_at = EXCLUDED.updated_at`,
+      [storyId, userId, JSON.stringify(state), updatedAt, slotId, name ?? null, createdAt],
     );
     return (result.rowCount ?? 0) > 0;
   }
 
-  async deleteProgress(storyId: string, userId: string): Promise<void> {
+  async deleteProgress(
+    storyId: string,
+    userId: string,
+    slotId = READER_AUTOSAVE_ID,
+  ): Promise<void> {
     await this.database.pool.query(
-      'DELETE FROM story_reader_progress WHERE story_id = $1 AND user_id = $2',
-      [storyId, userId],
+      'DELETE FROM story_reader_progress WHERE story_id = $1 AND user_id = $2 AND slot_id = $3',
+      [storyId, userId, slotId],
     );
   }
 
@@ -833,6 +875,17 @@ function projectStatAssignment(row: StatAssignmentRow) {
 
 function iso(value: Date | string) {
   return value instanceof Date ? value.toISOString() : new Date(value).toISOString();
+}
+
+function readerSave(row: ReaderProgressRow): ReaderSave {
+  return {
+    id: row.slot_id,
+    kind: readerSaveKind(row.slot_id),
+    ...(row.name ? { name: row.name } : {}),
+    state: row.state,
+    createdAt: iso(row.created_at),
+    updatedAt: iso(row.updated_at),
+  };
 }
 
 function accessSettings(

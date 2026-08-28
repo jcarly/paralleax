@@ -172,4 +172,14 @@ describe('DatabaseMigrator', () => {
     expect(migration?.sql).toMatch(/ALTER COLUMN comment_policy SET DEFAULT 'editors'/i);
     expect(migration?.sql).toMatch(/comment_policy IN \('editors', 'readers'\)/i);
   });
+
+  it('migrates the existing progress row into the reader autosave slot', () => {
+    const migration = databaseMigrations.find(({ id }) => id === '202608270033_reader_save_slots');
+
+    expect(migration?.sql).toMatch(/ADD COLUMN slot_id text NOT NULL DEFAULT 'reader-autosave'/i);
+    expect(migration?.sql).toMatch(/SET created_at = updated_at/i);
+    expect(migration?.sql).toMatch(/PRIMARY KEY \(user_id, story_id, slot_id\)/i);
+    expect(migration?.sql).toMatch(/'simulation-autosave'/i);
+    expect(migration?.sql).toMatch(/length\(btrim\(name\)\) BETWEEN 1 AND 100/i);
+  });
 });

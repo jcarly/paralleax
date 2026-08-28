@@ -1371,4 +1371,32 @@ export const databaseMigrations: DatabaseMigration[] = [
       DROP COLUMN IF EXISTS key;
     `,
   },
+  {
+    id: '202608270033_reader_save_slots',
+    sql: `
+      ALTER TABLE story_reader_progress
+      DROP CONSTRAINT story_reader_progress_pkey,
+      ADD COLUMN slot_id text NOT NULL DEFAULT 'reader-autosave',
+      ADD COLUMN name text,
+      ADD COLUMN created_at timestamptz;
+
+      UPDATE story_reader_progress
+      SET created_at = updated_at
+      WHERE created_at IS NULL;
+
+      ALTER TABLE story_reader_progress
+      ALTER COLUMN slot_id DROP DEFAULT,
+      ALTER COLUMN created_at SET NOT NULL,
+      ADD CONSTRAINT story_reader_progress_pkey
+        PRIMARY KEY (user_id, story_id, slot_id),
+      ADD CONSTRAINT story_reader_progress_slot_shape
+        CHECK (
+          (slot_id IN ('reader-autosave', 'simulation-autosave') AND name IS NULL)
+          OR
+          (slot_id NOT IN ('reader-autosave', 'simulation-autosave')
+            AND name IS NOT NULL
+            AND length(btrim(name)) BETWEEN 1 AND 100)
+        );
+    `,
+  },
 ];

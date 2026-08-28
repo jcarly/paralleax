@@ -64,6 +64,7 @@ export async function renderPlayer(initialEntry = '/stories/story-1/play', story
     updatedAt: '2026-07-27T09:00:00.000Z',
   });
   vi.mocked(api.deleteReaderProgress).mockResolvedValue(undefined);
+  vi.mocked(api.listReaderSaves).mockResolvedValue([]);
 
   render(
     <MemoryRouter initialEntries={[initialEntry]}>

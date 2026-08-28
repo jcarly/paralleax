@@ -17,6 +17,7 @@ import { RichTextContent } from '../components/RichTextContent';
 import { RichTextEditor } from '../components/RichTextEditor';
 import { StoryCommentsPanel } from '../features/comments/StoryCommentsPanel';
 import { useStoryComments } from '../features/comments/useStoryComments';
+import { ReaderSaveDialog } from '../features/story-player/ReaderSaveDialog';
 import { useReaderProgressPersistence } from '../features/story-player/useReaderProgressPersistence';
 import { useReaderSessionState } from '../features/story-player/useReaderSessionState';
 import {
@@ -69,17 +70,20 @@ export function StoryPlayer({
     itemStatValues = {},
   } = session;
   const [playableCharacterId, setPlayableCharacterId] = useState<string>();
+  const progressMode = isSimulationMode ? 'simulation' : 'reader';
   const {
     status: progressStatus,
     markLoaded: markProgressLoaded,
     save: saveProgress,
     reset: resetProgress,
-  } = useReaderProgressPersistence({ authenticated, storyId });
+  } = useReaderProgressPersistence({ authenticated, storyId, mode: progressMode });
+  const [savesOpen, setSavesOpen] = useState(false);
   const [forceUnavailableOptions, setForceUnavailableOptions] = useState(false);
   const [editingChoiceId, setEditingChoiceId] = useState<string>();
   const [commentsOpen, setCommentsOpen] = useState(false);
   const editingChoiceInputRef = useRef<HTMLInputElement>(null);
   const journeyRef = useRef<string[]>([]);
+  const directStartAutosavedKey = useRef('');
   const realtimeLoadAttempt = useRef(0);
   const simulationMutationCount = useRef(0);
   const simulationEditDepth = useRef(0);
@@ -89,6 +93,20 @@ export function StoryPlayer({
   useEffect(() => {
     journeyRef.current = journey;
   }, [journey]);
+
+  useEffect(() => {
+    if (
+      !isSimulationMode ||
+      !startInteractionId ||
+      loadedKey !== loadKey ||
+      session.currentInteractionId !== startInteractionId ||
+      directStartAutosavedKey.current === loadKey
+    ) {
+      return;
+    }
+    directStartAutosavedKey.current = loadKey;
+    saveProgress(session);
+  }, [isSimulationMode, loadKey, loadedKey, saveProgress, session, startInteractionId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -102,7 +120,9 @@ export function StoryPlayer({
           ? requestedStartInteractionId
           : null;
         const progress =
-          !authenticated || authorizedSimulation ? null : await api.getReaderProgress(storyId);
+          !authenticated || (authorizedSimulation && effectiveStartInteractionId)
+            ? null
+            : await api.getReaderProgress(storyId, authorizedSimulation ? 'simulation' : 'reader');
         return { positioned, progress, effectiveStartInteractionId };
       })
       .then(({ positioned, progress, effectiveStartInteractionId }) => {
@@ -452,22 +472,38 @@ export function StoryPlayer({
     comments.cancelDraft();
     comments.selectThread(undefined);
     const nextSession = advanceSession(story, interaction);
-    if (!isSimulationMode) saveProgress(nextSession);
+    saveProgress(nextSession);
   }
 
   function restart() {
     comments.cancelDraft();
     comments.selectThread(undefined);
+    directStartAutosavedKey.current = '';
     if (story) replaySession(story, startInteractionId ? [startInteractionId] : []);
     setPlayableCharacterId(undefined);
     setForceUnavailableOptions(false);
-    if (!isSimulationMode) resetProgress();
+    resetProgress();
   }
 
   function stepBack() {
     if (journey.length <= 1) return;
     const nextJourney = journey.slice(0, -1);
-    if (story) replaySession(story, nextJourney);
+    if (story) saveProgress(replaySession(story, nextJourney));
+  }
+
+  function loadSave(save: { state: { journeyInteractionIds: string[]; ownedItemIds: string[] } }) {
+    if (!story) return;
+    const nextSession = replaySession(
+      story,
+      save.state.journeyInteractionIds,
+      save.state.ownedItemIds,
+    );
+    setPlayableCharacterId(
+      nextSession.journeyInteractionIds.length > 0
+        ? story.characters?.find(({ isPlayable }) => isPlayable)?.id
+        : undefined,
+    );
+    saveProgress(nextSession);
   }
 
   async function saveCurrentInteraction(patch: Partial<Pick<Interaction, 'title' | 'body'>>) {
@@ -596,7 +632,7 @@ export function StoryPlayer({
             {t(`player.realtime.${storyRealtimeStatus}`)}
           </span>
         ) : null}
-        {!isSimulationMode && authenticated ? (
+        {authenticated ? (
           <span className={`save-status ${progressStatus}`} role="status" aria-live="polite">
             {progressStatus === 'saving'
               ? t('player.savingProgress')
@@ -608,6 +644,15 @@ export function StoryPlayer({
           </span>
         ) : !isSimulationMode ? (
           <span className="save-status">{t('player.signInToSave')}</span>
+        ) : null}
+        {authenticated ? (
+          <button
+            className="player-toolbar-button"
+            type="button"
+            onClick={() => setSavesOpen(true)}
+          >
+            {t('player.saves.open')}
+          </button>
         ) : null}
         {isSimulationMode ? (
           <button
@@ -994,6 +1039,14 @@ export function StoryPlayer({
         onReply={comments.reply}
         onStatus={comments.setStatus}
       />
+      {savesOpen ? (
+        <ReaderSaveDialog
+          story={story}
+          session={session}
+          onClose={() => setSavesOpen(false)}
+          onLoad={loadSave}
+        />
+      ) : null}
     </main>
   );
 }

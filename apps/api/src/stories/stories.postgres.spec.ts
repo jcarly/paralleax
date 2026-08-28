@@ -394,9 +394,38 @@ describePostgres('StoriesRepository PostgreSQL integration', () => {
 
     await expect(repository.saveProgress(story.id, ownerId, state, updatedAt)).resolves.toBe(true);
     await expect(repository.findProgress(story.id, ownerId)).resolves.toEqual({
+      id: 'reader-autosave',
+      kind: 'reader-autosave',
       state,
+      createdAt: updatedAt,
       updatedAt,
     });
+    await repository.saveProgress(
+      story.id,
+      ownerId,
+      state,
+      '2026-07-27T10:01:00.000Z',
+      'simulation-autosave',
+    );
+    await repository.saveProgress(
+      story.id,
+      ownerId,
+      state,
+      '2026-07-27T10:02:00.000Z',
+      'manual-save-1',
+      'Before the gate',
+    );
+    await expect(repository.findProgressSaves(story.id, ownerId)).resolves.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: 'reader-autosave', kind: 'reader-autosave' }),
+        expect.objectContaining({ id: 'simulation-autosave', kind: 'simulation-autosave' }),
+        expect.objectContaining({
+          id: 'manual-save-1',
+          kind: 'manual',
+          name: 'Before the gate',
+        }),
+      ]),
+    );
 
     await repository.deleteProgress(story.id, ownerId);
     await expect(repository.findProgress(story.id, ownerId)).resolves.toBeUndefined();

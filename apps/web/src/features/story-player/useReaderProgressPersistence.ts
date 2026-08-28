@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
-import type { ReaderProgressState } from '@paralleax/shared';
+import type { ReaderAutosaveMode, ReaderProgressState } from '@paralleax/shared';
 import { api } from '../../api';
 
 export type ReaderProgressStatus = 'idle' | 'saving' | 'saved' | 'error';
@@ -7,9 +7,11 @@ export type ReaderProgressStatus = 'idle' | 'saving' | 'saved' | 'error';
 export function useReaderProgressPersistence({
   authenticated,
   storyId,
+  mode = 'reader',
 }: {
   authenticated: boolean;
   storyId: string;
+  mode?: ReaderAutosaveMode;
 }) {
   const [status, setStatus] = useState<ReaderProgressStatus>('idle');
   const saveQueue = useRef<Promise<void>>(Promise.resolve());
@@ -26,10 +28,14 @@ export function useReaderProgressPersistence({
       setStatus('saving');
       const operation = saveQueue.current
         .then(() =>
-          api.saveReaderProgress(storyId, {
-            journeyInteractionIds: session.journeyInteractionIds,
-            ownedItemIds: session.ownedItemIds,
-          }),
+          api.saveReaderProgress(
+            storyId,
+            {
+              journeyInteractionIds: session.journeyInteractionIds,
+              ownedItemIds: session.ownedItemIds,
+            },
+            mode,
+          ),
         )
         .then(() => {
           if (currentAttempt === attempt.current) setStatus('saved');
@@ -39,7 +45,7 @@ export function useReaderProgressPersistence({
         });
       saveQueue.current = operation.then(() => undefined);
     },
-    [authenticated, storyId],
+    [authenticated, mode, storyId],
   );
 
   const reset = useCallback(() => {
@@ -47,7 +53,7 @@ export function useReaderProgressPersistence({
     const currentAttempt = ++attempt.current;
     setStatus('saving');
     const operation = saveQueue.current
-      .then(() => api.deleteReaderProgress(storyId))
+      .then(() => api.deleteReaderProgress(storyId, mode))
       .then(() => {
         if (currentAttempt === attempt.current) setStatus('idle');
       })
@@ -55,7 +61,7 @@ export function useReaderProgressPersistence({
         if (currentAttempt === attempt.current) setStatus('error');
       });
     saveQueue.current = operation.then(() => undefined);
-  }, [authenticated, storyId]);
+  }, [authenticated, mode, storyId]);
 
   return { status, markLoaded, save, reset };
 }

@@ -1003,14 +1003,25 @@ describe('StoriesRepository', () => {
     };
     mockQuery
       .mockResolvedValueOnce({
-        rows: [{ state, updated_at: new Date('2026-07-27T09:15:00.000Z') }],
+        rows: [
+          {
+            slot_id: 'reader-autosave',
+            name: null,
+            state,
+            created_at: new Date('2026-07-27T09:15:00.000Z'),
+            updated_at: new Date('2026-07-27T09:15:00.000Z'),
+          },
+        ],
         rowCount: 1,
       })
       .mockResolvedValueOnce({ rows: [], rowCount: 1 })
       .mockResolvedValueOnce({ rows: [], rowCount: 1 });
 
     await expect(repository().findProgress('story-1', ownerId)).resolves.toEqual({
+      id: 'reader-autosave',
+      kind: 'reader-autosave',
       state,
+      createdAt: '2026-07-27T09:15:00.000Z',
       updatedAt: '2026-07-27T09:15:00.000Z',
     });
     await expect(
@@ -1021,11 +1032,19 @@ describe('StoriesRepository', () => {
     expect(mockQuery).toHaveBeenNthCalledWith(
       2,
       expect.stringContaining('INSERT INTO story_reader_progress'),
-      ['story-1', ownerId, JSON.stringify(state), '2026-07-27T09:15:00.000Z'],
+      [
+        'story-1',
+        ownerId,
+        JSON.stringify(state),
+        '2026-07-27T09:15:00.000Z',
+        'reader-autosave',
+        null,
+        '2026-07-27T09:15:00.000Z',
+      ],
     );
     expect(mockQuery).toHaveBeenLastCalledWith(
-      'DELETE FROM story_reader_progress WHERE story_id = $1 AND user_id = $2',
-      ['story-1', ownerId],
+      'DELETE FROM story_reader_progress WHERE story_id = $1 AND user_id = $2 AND slot_id = $3',
+      ['story-1', ownerId, 'reader-autosave'],
     );
   });
 });
