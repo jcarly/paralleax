@@ -64,7 +64,11 @@ Paralleax currently includes:
   reversible field/entity delta with its actor and revision in the same database
   transaction. Authors can undo their latest compatible change with the canvas
   button or `Ctrl+Z`, and redo with the adjacent button, `Ctrl+Shift+Z`, or
-  `Ctrl+Y`; shortcuts inside editable fields retain native text undo.
+  `Ctrl+Y`; shortcuts inside editable fields retain native text undo. Recent
+  locally saved graph-position gestures keep a bounded in-memory inverse so
+  undo/redo is projected immediately while PostgreSQL confirms the durable
+  reversal; other, remote, reloaded, or conflicting changes use the authoritative
+  server path.
 - Editor-only Simulation Mode diagnostics.
 - Live simultaneous editing for clients connected to the same API process. Every
   committed interaction, trigger, position, context entity, item/stat structure,

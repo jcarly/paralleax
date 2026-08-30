@@ -1,7 +1,12 @@
-import { screen, waitFor } from '@testing-library/react';
+import { act, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { StoryHistory } from '@paralleax/shared';
+import {
+  diffStoryGraphPositions,
+  updateStoryGraphPositions,
+  type StoryHistory,
+} from '@paralleax/shared';
+import { computeStoryGraphLayout } from '../storyGraphLayout';
 
 vi.mock('../api', async () => {
   const { createStoryApiMock } = await import('../test/mockStoryApi');
@@ -19,6 +24,7 @@ import {
   cloneStory,
   renderEditor,
   setupStoryEditorTestSuite,
+  storyWithTwoInteractions,
 } from '../test/storyEditorTestHarness';
 
 setupStoryEditorTestSuite();
@@ -124,5 +130,57 @@ describe('Story editor history', () => {
     await waitFor(() => expect(api.renameStory).toHaveBeenCalledWith('story-1', 'Renamed story'));
     expect(api.getStoryHistory).toHaveBeenCalledOnce();
     expect(screen.getByRole('button', { name: 'Undo last Story change' })).toBeEnabled();
+  });
+
+  it('restores locally saved graph positions before the durable undo responds', async () => {
+    const user = userEvent.setup();
+    const original = { ...storyWithTwoInteractions(), revision: 1 };
+    const layout = computeStoryGraphLayout(original, { kind: 'all' });
+    const positioned = updateStoryGraphPositions(original, layout);
+    const undoPatch = diffStoryGraphPositions(positioned, original);
+    vi.mocked(api.updateStoryGraphPositions).mockResolvedValue({
+      revision: 2,
+      updatedAt: '2026-08-30T08:01:00.000Z',
+    });
+    let resolveUndo:
+      ((result: Awaited<ReturnType<typeof api.undoStoryChange>>) => void) | undefined;
+    const pendingUndo = new Promise<Awaited<ReturnType<typeof api.undoStoryChange>>>((resolve) => {
+      resolveUndo = resolve;
+    });
+    vi.mocked(api.undoStoryChange).mockReturnValue(pendingUndo);
+
+    await renderEditor(original);
+    await user.click(screen.getByRole('button', { name: 'Organize graph' }));
+    await waitFor(() => expect(api.updateStoryGraphPositions).toHaveBeenCalledOnce());
+    await waitFor(() =>
+      expect(screen.getByTestId('flow-node-interaction-2')).toHaveAttribute(
+        'data-node-y',
+        String(positioned.interactions[1].position.y),
+      ),
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Undo last Story change' }));
+
+    expect(api.undoStoryChange).toHaveBeenCalledWith('story-1');
+    await waitFor(() =>
+      expect(screen.getByTestId('flow-node-interaction-2')).toHaveAttribute(
+        'data-node-y',
+        String(original.interactions[1].position.y),
+      ),
+    );
+
+    await act(async () => {
+      resolveUndo?.({
+        storyId: 'story-1',
+        revision: 3,
+        updatedAt: '2026-08-30T08:02:00.000Z',
+        graphPositions: undoPatch,
+        history: { ...undoableHistory, canUndo: false, canRedo: true },
+      });
+      await pendingUndo;
+    });
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Redo Story change' })).toBeEnabled(),
+    );
   });
 });

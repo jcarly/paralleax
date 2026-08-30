@@ -1,9 +1,5 @@
 import type { Dispatch, SetStateAction } from 'react';
-import type {
-  InteractionContentPatch,
-  Story,
-  StoryGraphPositionPatch,
-} from '@paralleax/shared';
+import type { InteractionContentPatch, Story, StoryGraphPositionPatch } from '@paralleax/shared';
 
 export type StoryStateSetter = Dispatch<SetStateAction<Story | undefined>>;
 

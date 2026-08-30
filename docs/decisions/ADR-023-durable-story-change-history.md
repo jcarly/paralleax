@@ -45,6 +45,13 @@ positions returns those positions with the new Story revision; the editor
 applies that patch to its canonical Story state. Other inverses return the full
 Story because their shape or downstream effects may span several domain areas.
 
+The web editor may keep a bounded, session-only forward/inverse cache for graph
+position events it has just persisted. A matching undo or redo projects that
+patch immediately, while the normal API reversal still selects, validates, and
+persists the durable event. Any non-position mutation, remote/reloaded revision,
+response mismatch, or failed reversal invalidates the cache. Failure also rolls
+back the optimistic projection and reloads the authoritative Story.
+
 History includes Story metadata, interactions, triggers, context entities,
 typed variables and assignments, item structures, and graph decorations. Story
 creation/import, whole-Story deletion, access settings, collaborators, review
@@ -57,6 +64,8 @@ comments, and reader/simulation saves are outside this history.
   mutation instead of owning a special rollback path.
 - Large position-only inverses avoid transferring and replacing unchanged Story
   content while preserving the same durable history and conflict semantics.
+- Recently persisted graph-position inverses appear immediately in the current
+  editor session without making the browser cache authoritative or durable.
 - Collaborative edits to unrelated fields can survive an older inverse.
 - Same-field edits and newly introduced references may make an inverse
   incompatible; the author receives a conflict and the current Story is kept.

@@ -162,9 +162,7 @@ describe('story graph persistence', () => {
         graphHistoryChange: {
           undo: {
             interactionUpdates: [{ interactionId: 'root', position: { x: 0, y: 0 } }],
-            triggerUpdates: [
-              { interactionId: 'child', triggerIds: ['child-trigger'] },
-            ],
+            triggerUpdates: [{ interactionId: 'child', triggerIds: ['child-trigger'] }],
           },
           redo: {
             interactionUpdates: [{ interactionId: 'root', position: { x: 300, y: 200 } }],

@@ -91,11 +91,9 @@ describe('useStoryHistory', () => {
     const change = graphHistoryChange();
     const applyGraphPositions = vi.fn();
     let resolveUndo:
-      | ((result: Awaited<ReturnType<typeof api.undoStoryChange>>) => void)
-      | undefined;
+      ((result: Awaited<ReturnType<typeof api.undoStoryChange>>) => void) | undefined;
     let resolveRedo:
-      | ((result: Awaited<ReturnType<typeof api.redoStoryChange>>) => void)
-      | undefined;
+      ((result: Awaited<ReturnType<typeof api.redoStoryChange>>) => void) | undefined;
     vi.mocked(api.undoStoryChange).mockReturnValue(
       new Promise((resolve) => {
         resolveUndo = resolve;
@@ -190,20 +188,52 @@ describe('useStoryHistory', () => {
     expect(api.getStory).toHaveBeenCalledWith('story-1');
     expect(replaceStory).toHaveBeenCalledWith(current);
   });
+
+  it('does not reuse a graph patch after a newer non-graph local change', async () => {
+    const applyGraphPositions = vi.fn();
+    let resolveUndo:
+      ((result: Awaited<ReturnType<typeof api.undoStoryChange>>) => void) | undefined;
+    const pendingUndo = new Promise<Awaited<ReturnType<typeof api.undoStoryChange>>>((resolve) => {
+      resolveUndo = resolve;
+    });
+    vi.mocked(api.undoStoryChange).mockReturnValue(pendingUndo);
+    const restored = { ...storyAtRevision(4), title: 'Restored title' };
+    const { result } = renderHook(() =>
+      useStoryHistory({
+        storyId: 'story-1',
+        story: storyAtRevision(3),
+        replaceStory: vi.fn(),
+        applyGraphPositions,
+        trackSave,
+      }),
+    );
+    act(() => {
+      result.current.markLocalChange(2, graphHistoryChange());
+      result.current.markLocalChange(3);
+    });
+
+    let undoPromise: Promise<void> | undefined;
+    act(() => {
+      undoPromise = result.current.undo();
+    });
+
+    expect(applyGraphPositions).not.toHaveBeenCalled();
+    resolveUndo?.({
+      story: restored,
+      history: { entries: [], canUndo: true, canRedo: true },
+    });
+    await act(async () => undoPromise);
+  });
 });
 
 function graphHistoryChange() {
   return {
     undo: {
-      interactionUpdates: [
-        { interactionId: 'interaction-1', position: { x: 0, y: 0 } },
-      ],
+      interactionUpdates: [{ interactionId: 'interaction-1', position: { x: 0, y: 0 } }],
       triggerUpdates: [],
     },
     redo: {
-      interactionUpdates: [
-        { interactionId: 'interaction-1', position: { x: 100, y: 200 } },
-      ],
+      interactionUpdates: [{ interactionId: 'interaction-1', position: { x: 100, y: 200 } }],
       triggerUpdates: [],
     },
   };

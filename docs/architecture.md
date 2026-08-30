@@ -542,7 +542,14 @@ second diff and a second relational assembly. The editor ignores initial SSE
 readiness and change events whose revision is already local, preventing a second
 full Story reload after its own inverse. Graph projection indexes interactions by
 id once per immutable Story object so trigger placement and edge routing remain
-linear instead of repeatedly scanning every interaction.
+linear instead of repeatedly scanning every interaction. After a successful local
+graph-position save, the editor retains a bounded pair of forward/inverse patches.
+Undo and redo apply the matching patch to the parent-owned Story state before the
+HTTP response, then reconcile it with the durable response. A different local or
+remote revision invalidates this cache; a failed reversal rolls the projection
+back and reloads the authoritative Story. The cache changes perceived latency
+only and never replaces server-side event selection, precondition checks, or
+persistence.
 
 Interaction bodies are HTML. The API sanitizes them before persistence with a
 strict element, attribute, protocol, and iframe-host allowlist. The web renderer

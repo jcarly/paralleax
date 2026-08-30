@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-08-30
+
+- Added bounded optimistic undo/redo for locally persisted graph-position
+  gestures. The editor applies cached forward/inverse patches before the HTTP
+  response, reconciles them with durable history, and rolls back plus reloads the
+  authoritative Story on failure or mismatch.
+
 ## 2026-08-28
 
 - Added durable authored Story history backed by append-only reversible events.

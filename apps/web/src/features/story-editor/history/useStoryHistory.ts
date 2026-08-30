@@ -18,7 +18,11 @@ interface StoryHistoryDependencies {
 }
 
 const emptyHistory: StoryHistory = { entries: [], canUndo: false, canRedo: false };
-const maximumOptimisticGraphHistory = 50;
+const maximumOptimisticGraphHistory = 20;
+
+interface OptimisticGraphHistoryEntry extends OptimisticGraphHistoryChange {
+  revision: number;
+}
 
 export function useStoryHistory({
   storyId,
@@ -33,8 +37,8 @@ export function useStoryHistory({
   const loadedRevisionRef = useRef<string | undefined>(undefined);
   const localRevisionsRef = useRef(new Set<number>());
   const localChangeVersionRef = useRef(0);
-  const optimisticUndoRef = useRef<OptimisticGraphHistoryChange[]>([]);
-  const optimisticRedoRef = useRef<OptimisticGraphHistoryChange[]>([]);
+  const optimisticUndoRef = useRef<OptimisticGraphHistoryEntry[]>([]);
+  const optimisticRedoRef = useRef<OptimisticGraphHistoryEntry[]>([]);
 
   const clearOptimisticGraphHistory = useCallback(() => {
     optimisticUndoRef.current = [];
@@ -89,9 +93,11 @@ export function useStoryHistory({
       if (revision !== undefined) localRevisionsRef.current.add(revision);
       if (revision !== undefined && graphHistoryChange) {
         optimisticUndoRef.current = [
-          ...optimisticUndoRef.current.slice(-(maximumOptimisticGraphHistory - 1)),
-          graphHistoryChange,
-        ];
+          ...optimisticUndoRef.current.filter((entry) => entry.revision !== revision),
+          { ...graphHistoryChange, revision },
+        ]
+          .sort((left, right) => left.revision - right.revision)
+          .slice(-maximumOptimisticGraphHistory);
         optimisticRedoRef.current = [];
       } else {
         clearOptimisticGraphHistory();
@@ -154,14 +160,7 @@ export function useStoryHistory({
         setBusy(false);
       }
     },
-    [
-      applyGraphPositions,
-      busy,
-      clearOptimisticGraphHistory,
-      replaceStory,
-      storyId,
-      trackSave,
-    ],
+    [applyGraphPositions, busy, clearOptimisticGraphHistory, replaceStory, storyId, trackSave],
   );
 
   return {
