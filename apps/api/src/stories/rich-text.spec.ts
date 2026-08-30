@@ -58,6 +58,24 @@ describe('sanitizeRichText stat interpolation', () => {
       ),
     ).toBe('<p><span>Continue</span></p>');
   });
+
+  it('preserves structured conditional text block markers without editor controls', () => {
+    expect(
+      sanitizeRichText(
+        '<div data-conditional-text-block="clue" class="conditional-text">' +
+          '<div data-rich-text-conditional-controls="clue">Controls</div><p>Clue</p></div>',
+        storyFixture(),
+      ),
+    ).toBe('<div data-conditional-text-block="clue"><p>Clue</p></div>');
+
+    expect(
+      sanitizeRichText(
+        '<p>Before <span data-conditional-text-block="detail" class="conditional-text">' +
+          '<span data-rich-text-conditional-controls="detail">Controls</span>detail</span> after</p>',
+        storyFixture(),
+      ),
+    ).toBe('<p>Before <span data-conditional-text-block="detail">detail</span> after</p>');
+  });
 });
 
 function storyFixture(): Story {

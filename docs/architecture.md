@@ -95,8 +95,11 @@ Inline interaction links use a separate inert rich-text marker containing the
 authored label and stable target interaction id. The API sanitizer keeps only
 same-Story targets, the editor projects the current target title into a reusable
 token/dialog UI, and the reader delegates activation to its existing available
-choice transition. Conditional text frames keep their existing marker and
-availability projection; links do not reuse the frame as canonical markup.
+choice transition. New conditional text frames keep only a stable block id in
+HTML; structured `ConditionalTextBlock` data is stored on the Interaction and
+reuses the shared Trigger condition union, API validation, editor fields, and
+deterministic AND evaluator. Legacy target-based frames retain their availability
+projection. Links do not reuse either frame format as canonical markup.
 
 Default interaction placement lives in `packages/shared/src/graph/`, while the
 deterministic sample story lives in `packages/shared/src/demo/`. The public

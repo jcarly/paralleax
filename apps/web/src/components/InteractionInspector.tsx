@@ -286,11 +286,17 @@ export function InteractionInspector({
           />
         </label>
         <RichTextEditor
+          interactionId={interaction.id}
           story={story}
           value={interaction.body}
           onChange={(body) => updateLocalInteraction({ body })}
           onBlur={(body) => void onPatch(interaction.id, { body })}
           interactionLinkTargets={interactionLinkTargets}
+          conditionalTextBlocks={interaction.conditionalTextBlocks}
+          onConditionalTextChange={(body, conditionalTextBlocks) => {
+            updateLocalInteraction({ body, conditionalTextBlocks });
+            void onPatch(interaction.id, { body, conditionalTextBlocks });
+          }}
           onConditionalTargetClick={onSelectInteraction}
         />
       </section>

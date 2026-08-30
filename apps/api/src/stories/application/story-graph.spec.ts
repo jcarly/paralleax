@@ -59,6 +59,51 @@ describe('StoryGraphService', () => {
     );
   });
 
+  it('stores conditional text with the same validated conditions as Triggers', async () => {
+    const result = await service.updateInteraction(
+      'story-1',
+      'child',
+      {
+        body: '<div data-conditional-text-block="clue"><p>Clue</p></div>',
+        conditionalTextBlocks: [
+          {
+            id: 'clue',
+            conditions: [{ interactionId: 'root', hasBeenVisited: true }],
+          },
+        ],
+      },
+      'user-1',
+    );
+
+    expect(result.interaction).toMatchObject({
+      body: '<div data-conditional-text-block="clue"><p>Clue</p></div>',
+      conditionalTextBlocks: [
+        {
+          id: 'clue',
+          conditions: [{ interactionId: 'root', hasBeenVisited: true }],
+        },
+      ],
+    });
+  });
+
+  it('rejects conditional text references from another Story', async () => {
+    await expect(
+      service.updateInteraction(
+        'story-1',
+        'child',
+        {
+          conditionalTextBlocks: [
+            {
+              id: 'clue',
+              conditions: [{ interactionId: 'foreign', hasBeenVisited: true }],
+            },
+          ],
+        },
+        'user-1',
+      ),
+    ).rejects.toThrow('Condition references must belong to the same story');
+  });
+
   it('normalizes trigger inputs and temporal condition collections', async () => {
     const result = await service.addTrigger(
       'story-1',

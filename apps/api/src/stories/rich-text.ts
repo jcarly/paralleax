@@ -35,10 +35,16 @@ export function sanitizeRichText(value: string, story?: Story): string {
       video: ['src', 'controls', 'poster'],
       source: ['src', 'type'],
       iframe: ['src', 'title', 'allow', 'allowfullscreen'],
-      div: ['data-conditional-text-target'],
+      div: [
+        'data-conditional-text-target',
+        'data-conditional-text-block',
+        'data-rich-text-conditional-controls',
+      ],
       button: ['type', 'contenteditable', 'aria-label', 'data-conditional-text-link'],
       span: [
         'contenteditable',
+        'data-conditional-text-block',
+        'data-rich-text-conditional-controls',
         'data-stat-value',
         'data-stat-item',
         'data-interaction-link-target',
@@ -57,6 +63,9 @@ export function sanitizeRichText(value: string, story?: Story): string {
       'www.youtube-nocookie.com',
       'player.vimeo.com',
     ],
+    exclusiveFilter: ({ tag, attribs }) =>
+      (tag === 'div' || tag === 'span') &&
+      attribs['data-rich-text-conditional-controls'] !== undefined,
     onOpenTag: (tagName, attributes) => {
       if (tagName !== 'span') return;
       const isInertMarker =

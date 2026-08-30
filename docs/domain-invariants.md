@@ -31,8 +31,16 @@ details. They should stay covered by tests as the editor grows.
   normalized to an empty string and authored HTML is limited to 64,000
   characters. Scripts, event handlers, unsafe protocols, and non-allowlisted
   iframe hosts are removed before persistence.
-- A conditional body block stores only its target interaction id. Its visibility
-  is derived from outgoing triggers and it cannot define independent conditions.
+- A structured conditional body frame stores only a stable block id in sanitized
+  HTML. Its owning interaction stores the referenced conditional block and one or
+  more conditions from the same typed family used by Triggers. Those references
+  belong to the same Story and conditions in one block are AND.
+- Removing the last condition through rich-text authoring unwraps the conditional
+  frame while preserving its body content. Editor-only condition controls are
+  never persisted.
+- Legacy conditional frames store only a target interaction id. Their visibility
+  remains derived from outgoing Triggers and they cannot define independent
+  conditions.
 - An inline interaction link stores authored display text and one same-Story
   target interaction id in inert allowlisted markup. Activating it in the reader
   selects the target only when normal trigger evaluation exposes that interaction
@@ -44,9 +52,11 @@ details. They should stay covered by tests as the editor grows.
   variable identify one unique same-story target. A valid shorthand is lowered
   to the existing stable marker when the body is saved; an unresolved shorthand
   remains editable but renders as empty text to readers.
-- Disconnecting its target preserves the conditional body content but hides it
-  from readers. Simulation Mode keeps it visible with unavailable styling and an
-  explanation.
+- A structured conditional frame is visible to readers only while all its
+  conditions match replayed state. Simulation Mode keeps unmatched structured
+  frames visible with unavailable styling and an explanation. Disconnecting a
+  legacy frame target preserves its content but hides it from readers and keeps
+  it visible with equivalent diagnostics in Simulation Mode.
 - A trigger belongs to exactly one output interaction.
 - Trigger inputs, outputs, and all condition references must belong to the same
   story as their trigger.

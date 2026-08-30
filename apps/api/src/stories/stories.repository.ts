@@ -10,6 +10,7 @@ import {
   readerSaveKind,
   resolveStoryAccess,
   type GraphDecoration,
+  type ConditionalTextBlock,
   type ItemRelationshipType,
   type ReaderProgressState,
   type ReaderSave,
@@ -66,6 +67,7 @@ type InteractionRow = {
   position_y: number;
   location_id: string | null;
   duration_minutes: number;
+  conditional_text_blocks: ConditionalTextBlock[];
   sort_order: number;
 };
 type GraphDecorationRow = {
@@ -567,7 +569,7 @@ export class StoriesRepository {
     const storyIds = storyRows.map(({ id }) => id);
     const interactions = await queryable.query<InteractionRow>(
       `SELECT id, story_id, title, body, position_x, position_y, location_id,
-              duration_minutes, sort_order
+              duration_minutes, conditional_text_blocks, sort_order
          FROM interactions WHERE story_id = ANY($1::text[])
          ORDER BY story_id, sort_order`,
       [storyIds],
@@ -800,6 +802,7 @@ export class StoriesRepository {
         position: { x: interaction.position_x, y: interaction.position_y },
         locationId: interaction.location_id,
         durationMinutes: interaction.duration_minutes,
+        conditionalTextBlocks: interaction.conditional_text_blocks,
         characterIds: (charactersByInteraction.get(interaction.id) ?? []).map(
           ({ character_id }) => character_id,
         ),

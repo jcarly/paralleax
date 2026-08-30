@@ -85,6 +85,7 @@ export interface UpdateInteractionInput {
   characterIds?: string[];
   statEffects?: StatEffect[];
   itemEffects?: ItemEffect[];
+  conditionalTextBlocks?: Interaction['conditionalTextBlocks'];
   durationMinutes?: number;
 }
 
@@ -195,6 +196,7 @@ export type InteractionContentPatch = Partial<
     | 'characterIds'
     | 'statEffects'
     | 'itemEffects'
+    | 'conditionalTextBlocks'
     | 'durationMinutes'
   >
 >;

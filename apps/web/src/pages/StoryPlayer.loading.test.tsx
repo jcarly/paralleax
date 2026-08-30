@@ -146,6 +146,30 @@ describe('StoryPlayer loading and presentation', () => {
     expect(screen.queryByText('Disconnected clue')).not.toBeInTheDocument();
   });
 
+  it('evaluates structured conditional text with Trigger condition semantics', async () => {
+    const user = userEvent.setup();
+    const conditionalStory = structuredClone(story);
+    conditionalStory.interactions[0].body =
+      '<div data-conditional-text-block="visited-start"><p>Visited clue</p></div>' +
+      '<div data-conditional-text-block="visited-secret"><p>Hidden clue</p></div>';
+    conditionalStory.interactions[0].conditionalTextBlocks = [
+      {
+        id: 'visited-start',
+        conditions: [{ interactionId: 'start', hasBeenVisited: true }],
+      },
+      {
+        id: 'visited-secret',
+        conditions: [{ interactionId: 'hidden', hasBeenVisited: true }],
+      },
+    ];
+
+    await renderPlayer('/stories/story-1/play', conditionalStory);
+    await user.click(screen.getByRole('button', { name: 'Start' }));
+
+    expect(screen.getByText('Visited clue')).toBeInTheDocument();
+    expect(screen.queryByText('Hidden clue')).not.toBeInTheDocument();
+  });
+
   it('keeps unavailable conditional text visible with an explanation in simulation', async () => {
     const user = userEvent.setup();
     const conditionalStory = structuredClone(story);

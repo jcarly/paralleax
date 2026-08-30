@@ -2,6 +2,13 @@
 
 ## 2026-08-30
 
+- Added structured conditional rich-text frames. Authors can wrap selected text,
+  choose the first condition in a modal, edit condition tokens, add further AND
+  conditions, and remove the final token to unwrap the text without deleting it.
+  The feature reuses Trigger condition types, fields, API validation, and shared
+  deterministic evaluation; reader and Simulation Mode projections use replayed
+  state, while legacy target-based frames remain readable. Selecting text before
+  creating an interaction link now also pre-fills its authored label.
 - Replaced conditional-frame creation behind the rich-text link button with an
   interaction-link dialog for authored display text and target selection. Links
   are projected as editable, removable, movable tokens whose target titles follow

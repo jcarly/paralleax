@@ -1,6 +1,7 @@
 import type { TFunction } from 'i18next';
-import type { Interaction, StatValue, Story, TriggerCondition } from '@paralleax/shared';
+import type { Interaction, StatValue, Story } from '@paralleax/shared';
 import { getTriggerConditionFailures } from '@paralleax/shared';
+import { describeTriggerCondition } from '../../triggerConditionPresentation';
 import { getStatTargets, statTargetLabel } from '../../storyStats';
 
 function getInteractionTitle(story: Story, interactionId: string) {
@@ -8,53 +9,6 @@ function getInteractionTitle(story: Story, interactionId: string) {
     story.interactions.find((interaction) => interaction.id === interactionId)?.title ??
     interactionId
   );
-}
-
-function describeCondition(story: Story, condition: TriggerCondition, t: TFunction) {
-  if ('locationId' in condition) {
-    const name =
-      story.locations?.find((location) => location.id === condition.locationId)?.name ??
-      condition.locationId;
-    return t(
-      condition.isCurrentLocation
-        ? 'player.condition.locationIs'
-        : 'player.condition.locationIsNot',
-      { name },
-    );
-  }
-  if ('interactionId' in condition) {
-    const title = getInteractionTitle(story, condition.interactionId);
-    return t(
-      condition.hasBeenVisited ? 'player.condition.visited' : 'player.condition.notVisited',
-      { title },
-    );
-  }
-  if ('statId' in condition) {
-    const target = getStatTargets(story).find(
-      (candidate) =>
-        candidate.assignment.id === condition.statId && candidate.itemId === condition.itemId,
-    );
-    return t('player.condition.stat', {
-      label: target ? statTargetLabel(target, t('attributes.owner.story')) : condition.statId,
-      operator: t(`player.condition.operator.${condition.operator}`),
-      value: condition.value,
-    });
-  }
-  if ('itemDefinitionId' in condition) {
-    const name =
-      story.itemDefinitions?.find(({ id }) => id === condition.itemDefinitionId)?.name ??
-      condition.itemDefinitionId;
-    return t(condition.isOwned ? 'player.condition.owns' : 'player.condition.doesNotOwn', {
-      name,
-    });
-  }
-  if ('temporal' in condition) return t('player.condition.temporal');
-  const name =
-    story.characters?.find((character) => character.id === condition.characterId)?.name ??
-    condition.characterId;
-  return t(condition.isPresent ? 'player.condition.present' : 'player.condition.absent', {
-    name,
-  });
 }
 
 export function getConditionSummary(
@@ -73,7 +27,7 @@ export function getConditionSummary(
     trigger.conditions.length === 0
       ? t('player.condition.noConditions')
       : trigger.conditions
-          .map((condition) => describeCondition(story, condition, t))
+          .map((condition) => describeTriggerCondition(story, condition, t))
           .join(` ${t('player.condition.and')} `),
   );
   return variants.length > 1

@@ -1423,4 +1423,13 @@ export const databaseMigrations: DatabaseMigration[] = [
         ON story_change_events(story_id, actor_user_id, id DESC);
     `,
   },
+  {
+    id: '202608300035_conditional_text_blocks',
+    sql: `
+      ALTER TABLE interactions
+      ADD COLUMN conditional_text_blocks jsonb NOT NULL DEFAULT '[]'::jsonb,
+      ADD CONSTRAINT interactions_conditional_text_blocks_array
+        CHECK (jsonb_typeof(conditional_text_blocks) = 'array');
+    `,
+  },
 ];

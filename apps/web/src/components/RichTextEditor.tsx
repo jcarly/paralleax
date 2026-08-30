@@ -3,12 +3,16 @@ import {
   getStatTargets,
   hasStatTargets,
   MAX_INTERACTION_BODY_LENGTH,
+  type ConditionalTextBlock,
   type StatTarget,
   type Story,
+  type TriggerCondition,
 } from '@paralleax/shared';
 import { useTranslation } from 'react-i18next';
 import { statTargetPathLabel } from '../storyStats';
+import { describeTriggerCondition } from '../triggerConditionPresentation';
 import type { ConditionalTextState } from './RichTextContent';
+import { RichTextConditionDialog } from './RichTextConditionDialog';
 import {
   RichTextInteractionLinkDialog,
   type RichTextInteractionLinkValue,
@@ -29,6 +33,25 @@ interface EditingVariable {
 }
 
 type EditingInteractionLink = RichTextInteractionLinkValue;
+
+interface EditingConditionalTextCondition {
+  blockId?: string;
+  conditionIndex?: number;
+}
+
+interface PendingConditionalTextFrame {
+  id: string;
+  hadSelection: boolean;
+}
+
+const RICH_TEXT_BLOCK_SELECTOR = 'p, div, h2, h3, blockquote, ul, ol, li';
+const EMPTY_CONDITIONAL_TEXT_BLOCKS: ConditionalTextBlock[] = [];
+
+function conditionalTextFrameTagName(content: string): 'div' | 'span' {
+  const template = document.createElement('template');
+  template.innerHTML = content;
+  return template.content.querySelector(RICH_TEXT_BLOCK_SELECTOR) ? 'div' : 'span';
+}
 
 function getVariableMarkerSource(marker: HTMLElement): string {
   return (
@@ -153,7 +176,11 @@ export function RichTextEditor({
   ariaLabel,
   story,
   interactionLinkTargets = [],
+  interactionId,
+  conditionalTextBlocks = EMPTY_CONDITIONAL_TEXT_BLOCKS,
   conditionalTextState,
+  conditionalTextBlockState,
+  onConditionalTextChange,
   onConditionalTargetClick,
   maxLength = MAX_INTERACTION_BODY_LENGTH,
 }: {
@@ -163,7 +190,11 @@ export function RichTextEditor({
   ariaLabel?: string;
   story?: Story;
   interactionLinkTargets?: { id: string; title: string }[];
+  interactionId?: string;
+  conditionalTextBlocks?: ConditionalTextBlock[];
   conditionalTextState?: ConditionalTextState;
+  conditionalTextBlockState?: ConditionalTextState;
+  onConditionalTextChange?: (html: string, blocks: ConditionalTextBlock[]) => void;
   onConditionalTargetClick?: (interactionId: string) => void;
   maxLength?: number;
 }) {
@@ -177,6 +208,11 @@ export function RichTextEditor({
   const [editingVariable, setEditingVariable] = useState<EditingVariable>();
   const [interactionLinkDialogOpen, setInteractionLinkDialogOpen] = useState(false);
   const [editingInteractionLink, setEditingInteractionLink] = useState<EditingInteractionLink>();
+  const [creatingInteractionLinkText, setCreatingInteractionLinkText] = useState('');
+  const [conditionDialogOpen, setConditionDialogOpen] = useState(false);
+  const [editingCondition, setEditingCondition] = useState<EditingConditionalTextCondition>();
+  const conditionDialogActiveRef = useRef(false);
+  const pendingConditionalFrameRef = useRef<PendingConditionalTextFrame | undefined>(undefined);
   const hasVariables = Boolean(story && hasStatTargets(story));
   const remainingCharacters = maxLength - value.length;
   const isNearLimit = remainingCharacters <= Math.ceil(maxLength * 0.1);
@@ -194,11 +230,17 @@ export function RichTextEditor({
 
   function editorHtml() {
     const clone = editorRef.current?.cloneNode(true) as HTMLDivElement | undefined;
-    clone?.querySelectorAll<HTMLElement>('[data-conditional-text-target]').forEach((frame) => {
-      frame.classList.remove('conditional-text', 'conditional-text-unavailable');
-      frame.removeAttribute('title');
-      frame.querySelector('.conditional-text-reason')?.remove();
-    });
+    clone
+      ?.querySelectorAll<HTMLElement>(
+        '[data-conditional-text-target], [data-conditional-text-block]',
+      )
+      .forEach((frame) => {
+        frame.classList.remove('conditional-text', 'conditional-text-unavailable');
+        if (frame.classList.length === 0) frame.removeAttribute('class');
+        frame.removeAttribute('title');
+        frame.querySelector('.conditional-text-reason')?.remove();
+        frame.querySelector('[data-rich-text-conditional-controls]')?.remove();
+      });
     clone?.querySelectorAll<HTMLElement>('[data-stat-value]').forEach((marker) => {
       restoreRichTextTokenMarker(
         marker,
@@ -236,6 +278,43 @@ export function RichTextEditor({
     selection?.addRange(range);
   }
 
+  function rememberedSelectionText() {
+    const editor = editorRef.current;
+    const range = editorSelectionRef.current;
+    return editor && range && editor.contains(range.commonAncestorContainer)
+      ? range.toString().trim()
+      : '';
+  }
+
+  function rememberedSelectionHtml() {
+    const editor = editorRef.current;
+    const range = editorSelectionRef.current;
+    if (!editor || !range || !editor.contains(range.commonAncestorContainer) || range.collapsed) {
+      return '';
+    }
+    const container = document.createElement('div');
+    container.append(range.cloneContents());
+    return container.innerHTML;
+  }
+
+  function insertInlineConditionalTextFrame(id: string, placeholder: string) {
+    const editor = editorRef.current;
+    const range = editorSelectionRef.current;
+    if (!editor || !range || !editor.contains(range.commonAncestorContainer)) return false;
+    const frame = document.createElement('span');
+    frame.dataset.conditionalTextBlock = id;
+    if (range.collapsed) frame.textContent = placeholder;
+    else frame.append(range.extractContents());
+    range.insertNode(frame);
+    range.setStartAfter(frame);
+    range.collapse(true);
+    const selection = window.getSelection();
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+    editorSelectionRef.current = range.cloneRange();
+    return true;
+  }
+
   useEffect(() => {
     const editor = editorRef.current;
     if (editor && document.activeElement !== editor && editor.innerHTML !== value) {
@@ -254,6 +333,65 @@ export function RichTextEditor({
       else frame.removeAttribute('title');
     });
   }, [conditionalTextState, t, value]);
+
+  useEffect(() => {
+    const editor = editorRef.current;
+    if (!editor || !story) return;
+    editor.querySelectorAll<HTMLElement>('[data-conditional-text-block]').forEach((frame) => {
+      frame.querySelector('[data-rich-text-conditional-controls]')?.remove();
+      const blockId = frame.dataset.conditionalTextBlock ?? '';
+      if (blockId === pendingConditionalFrameRef.current?.id) {
+        frame.classList.remove('conditional-text', 'conditional-text-unavailable');
+        frame.removeAttribute('title');
+        return;
+      }
+      frame.classList.add('conditional-text');
+      const block = conditionalTextBlocks.find(({ id }) => id === blockId);
+      const state = conditionalTextBlockState?.[blockId];
+      frame.classList.toggle(
+        'conditional-text-unavailable',
+        !block || Boolean(state && !state.available),
+      );
+      if (!block) frame.title = t('richText.missingConditionalTextBlock');
+      else if (state && !state.available) frame.title = state.reason ?? t('richText.unavailable');
+      else frame.removeAttribute('title');
+
+      const controls = document.createElement('span');
+      controls.contentEditable = 'false';
+      controls.className = 'rich-text-conditional-controls';
+      controls.dataset.richTextConditionalControls = blockId;
+      controls.setAttribute('aria-label', t('richText.conditionalTextConditions'));
+
+      block?.conditions.forEach((condition, conditionIndex) => {
+        const token = document.createElement('span');
+        token.className = 'rich-text-condition-token';
+        const editButton = document.createElement('button');
+        editButton.type = 'button';
+        editButton.dataset.richTextConditionEdit = String(conditionIndex);
+        editButton.textContent = describeTriggerCondition(story, condition, t);
+        editButton.setAttribute('aria-label', t('richText.editConditionToken'));
+        const removeButton = document.createElement('button');
+        removeButton.type = 'button';
+        removeButton.className = 'trigger-link-delete rich-text-condition-remove';
+        removeButton.dataset.richTextConditionRemove = String(conditionIndex);
+        removeButton.textContent = 'x';
+        removeButton.title = t('richText.removeConditionToken');
+        removeButton.setAttribute('aria-label', t('richText.removeConditionToken'));
+        token.append(editButton, removeButton);
+        controls.append(token);
+      });
+
+      const addButton = document.createElement('button');
+      addButton.type = 'button';
+      addButton.className = 'rich-text-condition-add';
+      addButton.dataset.richTextConditionAdd = '';
+      addButton.textContent = '+';
+      addButton.title = t('richText.addAnotherCondition');
+      addButton.setAttribute('aria-label', t('richText.addAnotherCondition'));
+      controls.append(addButton);
+      frame.prepend(controls);
+    });
+  }, [conditionalTextBlocks, conditionalTextBlockState, story, t, value]);
 
   useEffect(() => {
     const editor = editorRef.current;
@@ -337,6 +475,119 @@ export function RichTextEditor({
     if (editorRef.current) onChange(editorHtml());
   }
 
+  function publishConditionalText(nextBlocks: ConditionalTextBlock[]) {
+    const html = editorHtml();
+    if (onConditionalTextChange) onConditionalTextChange(html, nextBlocks);
+    else onChange(html);
+  }
+
+  function closeConditionDialog() {
+    const pendingFrame = pendingConditionalFrameRef.current;
+    if (pendingFrame) {
+      const frame = Array.from(
+        editorRef.current?.querySelectorAll<HTMLElement>('[data-conditional-text-block]') ?? [],
+      ).find((candidate) => candidate.dataset.conditionalTextBlock === pendingFrame.id);
+      if (frame) {
+        if (pendingFrame.hadSelection) frame.replaceWith(...Array.from(frame.childNodes));
+        else frame.remove();
+      }
+    }
+    pendingConditionalFrameRef.current = undefined;
+    conditionDialogActiveRef.current = false;
+    setConditionDialogOpen(false);
+    setEditingCondition(undefined);
+    queueMicrotask(focusEditorAtRememberedSelection);
+  }
+
+  function openNewConditionalTextFrame() {
+    if (!story || !interactionId) return;
+    const selectedContent = rememberedSelectionHtml();
+    const content = selectedContent || escapeHtmlText(t('richText.conditionalTextPlaceholder'));
+    const id = crypto.randomUUID();
+    const tagName = conditionalTextFrameTagName(content);
+    conditionDialogActiveRef.current = true;
+    pendingConditionalFrameRef.current = { id, hadSelection: Boolean(selectedContent) };
+    focusEditorAtRememberedSelection();
+    const inserted =
+      tagName === 'span'
+        ? insertInlineConditionalTextFrame(id, content)
+        : document.execCommand(
+            'insertHTML',
+            false,
+            `<div data-conditional-text-block="${escapeHtmlAttribute(id)}">${content}</div>`,
+          );
+    if (!inserted) {
+      pendingConditionalFrameRef.current = undefined;
+      conditionDialogActiveRef.current = false;
+      return;
+    }
+    rememberEditorSelection();
+    setEditingCondition({});
+    setConditionDialogOpen(true);
+  }
+
+  function openNewCondition(blockId: string) {
+    conditionDialogActiveRef.current = true;
+    setEditingCondition({ blockId });
+    setConditionDialogOpen(true);
+  }
+
+  function openConditionEditor(blockId: string, conditionIndex: number) {
+    conditionDialogActiveRef.current = true;
+    setEditingCondition({ blockId, conditionIndex });
+    setConditionDialogOpen(true);
+  }
+
+  function commitCondition(condition: TriggerCondition) {
+    const blockId = editingCondition?.blockId;
+    const conditionIndex = editingCondition?.conditionIndex;
+    if (!blockId) {
+      const pendingFrame = pendingConditionalFrameRef.current;
+      if (!pendingFrame) return;
+      publishConditionalText([
+        ...conditionalTextBlocks,
+        { id: pendingFrame.id, conditions: [condition] },
+      ]);
+    } else {
+      const nextBlocks = conditionalTextBlocks.map((block) => {
+        if (block.id !== blockId) return block;
+        if (conditionIndex === undefined) {
+          return { ...block, conditions: [...block.conditions, condition] };
+        }
+        const conditions = [...block.conditions];
+        conditions[conditionIndex] = condition;
+        return { ...block, conditions };
+      });
+      publishConditionalText(nextBlocks);
+    }
+    pendingConditionalFrameRef.current = undefined;
+    conditionDialogActiveRef.current = false;
+    setConditionDialogOpen(false);
+    setEditingCondition(undefined);
+    editorRef.current?.focus();
+  }
+
+  function removeCondition(blockId: string, conditionIndex: number) {
+    const block = conditionalTextBlocks.find(({ id }) => id === blockId);
+    if (!block) return;
+    const conditions = block.conditions.filter((_, index) => index !== conditionIndex);
+    if (conditions.length > 0) {
+      publishConditionalText(
+        conditionalTextBlocks.map((candidate) =>
+          candidate.id === blockId ? { ...candidate, conditions } : candidate,
+        ),
+      );
+      return;
+    }
+
+    const frame = Array.from(
+      editorRef.current?.querySelectorAll<HTMLElement>('[data-conditional-text-block]') ?? [],
+    ).find((candidate) => candidate.dataset.conditionalTextBlock === blockId);
+    frame?.querySelector('[data-rich-text-conditional-controls]')?.remove();
+    if (frame) frame.replaceWith(...Array.from(frame.childNodes));
+    publishConditionalText(conditionalTextBlocks.filter(({ id }) => id !== blockId));
+  }
+
   function insertImage() {
     const url = window.prompt(t('richText.imagePrompt'));
     if (url && /^https?:\/\//i.test(url)) command('insertImage', url);
@@ -413,6 +664,7 @@ export function RichTextEditor({
       editingInteractionLinkElementRef.current = undefined;
       setEditingInteractionLink(undefined);
       setInteractionLinkDialogOpen(false);
+      setCreatingInteractionLinkText('');
       editorRef.current.focus();
       onChange(editorHtml());
       return;
@@ -424,6 +676,7 @@ export function RichTextEditor({
     editingInteractionLinkElementRef.current = undefined;
     setEditingInteractionLink(undefined);
     setInteractionLinkDialogOpen(false);
+    setCreatingInteractionLinkText('');
   }
 
   function openInteractionLinkEditor(marker: HTMLElement) {
@@ -434,6 +687,7 @@ export function RichTextEditor({
     setVariableDialogOpen(false);
     editingInteractionLinkElementRef.current = marker;
     setEditingInteractionLink({ targetId, text: getInteractionLinkText(marker) });
+    setCreatingInteractionLinkText('');
     setInteractionLinkDialogOpen(true);
   }
 
@@ -443,6 +697,7 @@ export function RichTextEditor({
     editingInteractionLinkElementRef.current = undefined;
     setEditingInteractionLink(undefined);
     setInteractionLinkDialogOpen(false);
+    setCreatingInteractionLinkText('');
     queueMicrotask(() => {
       if (editButton?.isConnected) editButton.focus();
       else focusEditorAtRememberedSelection();
@@ -580,6 +835,16 @@ export function RichTextEditor({
         </button>
         <button
           type="button"
+          aria-label={t('richText.addConditionalText')}
+          title={t('richText.addConditionalText')}
+          disabled={!story || !interactionId}
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={openNewConditionalTextFrame}
+        >
+          {'[?]'}
+        </button>
+        <button
+          type="button"
           aria-label={t('richText.addInteractionLink')}
           title={t('richText.addInteractionLink')}
           disabled={interactionLinkTargets.length === 0}
@@ -590,6 +855,7 @@ export function RichTextEditor({
             setVariableDialogOpen(false);
             editingInteractionLinkElementRef.current = undefined;
             setEditingInteractionLink(undefined);
+            setCreatingInteractionLinkText(rememberedSelectionText());
             setInteractionLinkDialogOpen(true);
           }}
         >
@@ -637,11 +903,33 @@ export function RichTextEditor({
               ? `edit:${editingInteractionLink.targetId}`
               : 'create-interaction-link'
           }
-          initialValue={editingInteractionLink}
+          initialValue={
+            editingInteractionLink ??
+            (creatingInteractionLinkText
+              ? { targetId: '', text: creatingInteractionLinkText }
+              : undefined)
+          }
           mode={editingInteractionLink ? 'edit' : 'create'}
           targets={interactionLinkTargets}
           onCancel={closeInteractionLinkDialog}
           onConfirm={commitInteractionLink}
+        />
+      ) : null}
+      {conditionDialogOpen && story && interactionId ? (
+        <RichTextConditionDialog
+          key={`${editingCondition?.blockId ?? 'new'}:${editingCondition?.conditionIndex ?? 'add'}`}
+          currentInteractionId={interactionId}
+          initialCondition={
+            editingCondition?.blockId !== undefined && editingCondition.conditionIndex !== undefined
+              ? conditionalTextBlocks.find(({ id }) => id === editingCondition.blockId)?.conditions[
+                  editingCondition.conditionIndex
+                ]
+              : undefined
+          }
+          mode={editingCondition?.conditionIndex === undefined ? 'create' : 'edit'}
+          story={story}
+          onCancel={closeConditionDialog}
+          onConfirm={commitCondition}
         />
       ) : null}
       <div
@@ -653,6 +941,11 @@ export function RichTextEditor({
         aria-label={ariaLabel ?? t('richText.content')}
         aria-multiline="true"
         suppressContentEditableWarning
+        onMouseDown={(event) => {
+          if ((event.target as HTMLElement).closest('[data-rich-text-conditional-controls]')) {
+            event.preventDefault();
+          }
+        }}
         onDragStart={(event) => {
           const editButton = (event.target as HTMLElement).closest<HTMLElement>(
             '[data-rich-text-variable-edit], [data-rich-text-interaction-link-edit]',
@@ -679,6 +972,35 @@ export function RichTextEditor({
         onDragEnd={finishRichTextTokenDrag}
         onClick={(event) => {
           const target = event.target as HTMLElement;
+          const conditionControls = target.closest<HTMLElement>(
+            '[data-rich-text-conditional-controls]',
+          );
+          const conditionFrame = conditionControls?.closest<HTMLElement>(
+            '[data-conditional-text-block]',
+          );
+          const blockId = conditionFrame?.dataset.conditionalTextBlock;
+          const removeConditionButton = target.closest<HTMLElement>(
+            '[data-rich-text-condition-remove]',
+          );
+          if (blockId && removeConditionButton) {
+            event.preventDefault();
+            event.stopPropagation();
+            removeCondition(blockId, Number(removeConditionButton.dataset.richTextConditionRemove));
+            return;
+          }
+          const editConditionButton = target.closest<HTMLElement>(
+            '[data-rich-text-condition-edit]',
+          );
+          if (blockId && editConditionButton) {
+            event.preventDefault();
+            openConditionEditor(blockId, Number(editConditionButton.dataset.richTextConditionEdit));
+            return;
+          }
+          if (blockId && target.closest('[data-rich-text-condition-add]')) {
+            event.preventDefault();
+            openNewCondition(blockId);
+            return;
+          }
           const removeTokenButton = target.closest<HTMLElement>(
             '[data-rich-text-variable-remove], [data-rich-text-interaction-link-remove]',
           );
@@ -721,11 +1043,13 @@ export function RichTextEditor({
         onFocus={rememberEditorSelection}
         onInput={() => {
           rememberEditorSelection();
+          if (conditionDialogActiveRef.current && pendingConditionalFrameRef.current) return;
           onChange(editorHtml());
         }}
         onKeyUp={rememberEditorSelection}
         onMouseUp={rememberEditorSelection}
         onBlur={() => {
+          if (conditionDialogActiveRef.current) return;
           rememberEditorSelection();
           onBlur(editorHtml());
         }}

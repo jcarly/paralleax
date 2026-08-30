@@ -16,6 +16,7 @@ export type ConditionalTextState = Readonly<
 function renderRichText(
   html: string,
   conditionalTextState: ConditionalTextState | undefined,
+  conditionalTextBlockState: ConditionalTextState | undefined,
   unavailableMessage: string,
   statValues: Readonly<Record<string, StatValue>> | undefined,
   itemStatValues: Readonly<Record<string, Readonly<Record<string, StatValue>>>> | undefined,
@@ -29,6 +30,27 @@ function renderRichText(
       .forEach((frame) => {
         const targetId = frame.dataset.conditionalTextTarget ?? '';
         const state = conditionalTextState[targetId];
+        if (!state?.visible) {
+          frame.remove();
+          return;
+        }
+        frame.classList.add('conditional-text');
+        if (!state.available) {
+          frame.classList.add('conditional-text-unavailable');
+          frame.title = state.reason ?? unavailableMessage;
+          const explanation = document.createElement('small');
+          explanation.className = 'conditional-text-reason';
+          explanation.textContent = frame.title;
+          frame.append(explanation);
+        }
+      });
+  }
+  if (conditionalTextBlockState) {
+    template.content
+      .querySelectorAll<HTMLElement>('[data-conditional-text-block]')
+      .forEach((frame) => {
+        const blockId = frame.dataset.conditionalTextBlock ?? '';
+        const state = conditionalTextBlockState[blockId];
         if (!state?.visible) {
           frame.remove();
           return;
@@ -84,6 +106,7 @@ export function RichTextContent({
   html,
   className,
   conditionalTextState,
+  conditionalTextBlockState,
   statValues,
   itemStatValues,
   onInteractionLinkClick,
@@ -91,6 +114,7 @@ export function RichTextContent({
   html: string;
   className?: string;
   conditionalTextState?: ConditionalTextState;
+  conditionalTextBlockState?: ConditionalTextState;
   statValues?: Readonly<Record<string, StatValue>>;
   itemStatValues?: Readonly<Record<string, Readonly<Record<string, StatValue>>>>;
   onInteractionLinkClick?: (interactionId: string) => void;
@@ -104,6 +128,7 @@ export function RichTextContent({
         __html: renderRichText(
           html,
           conditionalTextState,
+          conditionalTextBlockState,
           t('player.unavailable'),
           statValues,
           itemStatValues,

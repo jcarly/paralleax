@@ -249,6 +249,12 @@ export class UpdateInteractionDto {
   @Type(() => ItemEffectDto)
   itemEffects?: ItemEffectDto[];
   @ValidateIf((_, value) => value !== undefined)
+  @IsArray()
+  @ArrayMaxSize(500)
+  @ValidateNested({ each: true })
+  @Type(() => ConditionalTextBlockDto)
+  conditionalTextBlocks?: ConditionalTextBlockDto[];
+  @ValidateIf((_, value) => value !== undefined)
   @IsInt()
   @Min(0)
   durationMinutes?: number;
@@ -637,6 +643,19 @@ export class MoveItemInstanceDto {
   @IsString()
   @MaxLength(100)
   slotKey?: string;
+}
+export class ConditionalTextBlockDto {
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(200)
+  id!: string;
+
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(500)
+  @ValidateNested({ each: true })
+  @Type(() => TriggerConditionDto)
+  conditions!: TriggerConditionDto[];
 }
 export class CreateTriggerDto {
   @ValidateIf((_, value) => value !== undefined)

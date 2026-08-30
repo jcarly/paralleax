@@ -78,7 +78,14 @@ choice, not a separate transition mechanism. A link may reference another
 interaction, but selecting it advances the journey only when that interaction is
 present in the normally evaluated available-choice set. An unavailable,
 disconnected, or missing target is rendered inert and cannot bypass its triggers.
-Conditional text frames remain a separate rich-text projection.
+Conditional text frames remain a separate rich-text projection. A structured
+frame references a condition group owned by the current interaction. Its
+conditions use the exact Trigger condition types and evaluator, are combined as
+AND, and inspect the same visited interactions, current context, typed values,
+inventory, and story-local time. The reader removes a frame when any condition
+fails. Simulation Mode keeps it visible with unavailable styling and a condition
+summary. Legacy target-based frames continue to project normal outgoing choice
+availability.
 
 ## Inputless Triggers
 

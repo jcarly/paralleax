@@ -19,18 +19,41 @@ export function isTriggerEligible(
 ): boolean {
   return (
     doesTriggerInputMatch(trigger, currentInteractionId) &&
-    trigger.conditions.every((condition) =>
-      conditionMatches(
-        condition,
-        visited,
-        currentLocationId,
-        currentCharacterIds,
-        statValues,
-        currentDateTime,
-        ownedItemDefinitionIds,
-        itemStatValues,
-      ),
+    doConditionsMatch(
+      trigger.conditions,
+      visited,
+      currentLocationId,
+      currentCharacterIds,
+      statValues,
+      currentDateTime,
+      ownedItemDefinitionIds,
+      itemStatValues,
     )
+  );
+}
+
+/** Evaluates an AND group using the same semantics as Trigger conditions. */
+export function doConditionsMatch(
+  conditions: readonly TriggerCondition[],
+  visited: ReadonlySet<string>,
+  currentLocationId: string | null = null,
+  currentCharacterIds: readonly string[] = [],
+  statValues: Readonly<Record<string, StatValue>> = {},
+  currentDateTime = DEFAULT_STORY_DATE_TIME,
+  ownedItemDefinitionIds: readonly string[] = [],
+  itemStatValues: Readonly<Record<string, Readonly<Record<string, StatValue>>>> = {},
+): boolean {
+  return conditions.every((condition) =>
+    conditionMatches(
+      condition,
+      visited,
+      currentLocationId,
+      currentCharacterIds,
+      statValues,
+      currentDateTime,
+      ownedItemDefinitionIds,
+      itemStatValues,
+    ),
   );
 }
 
@@ -101,17 +124,15 @@ export function getTriggerConditionFailures(
 
   if (
     inputMatchingTriggers.some((trigger) =>
-      trigger.conditions.every((condition) =>
-        conditionMatches(
-          condition,
-          visited,
-          currentLocationId,
-          currentCharacterIds,
-          statValues,
-          currentDateTime,
-          ownedItemDefinitionIds,
-          itemStatValues,
-        ),
+      doConditionsMatch(
+        trigger.conditions,
+        visited,
+        currentLocationId,
+        currentCharacterIds,
+        statValues,
+        currentDateTime,
+        ownedItemDefinitionIds,
+        itemStatValues,
       ),
     )
   ) {
@@ -139,9 +160,9 @@ export function getTriggerConditionFailures(
 
 function conditionMatches(
   condition: TriggerCondition,
-  visited: Set<string>,
+  visited: ReadonlySet<string>,
   currentLocationId: string | null,
-  currentCharacterIds: string[],
+  currentCharacterIds: readonly string[],
   statValues: Readonly<Record<string, StatValue>>,
   currentDateTime: string,
   ownedItemDefinitionIds: readonly string[],

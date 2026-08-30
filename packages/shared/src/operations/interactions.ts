@@ -20,6 +20,13 @@ export function deleteInteractionFromStory(story: Story, interactionId: string):
       .filter((item) => item.id !== interactionId)
       .map((item) => ({
         ...item,
+        conditionalTextBlocks: (item.conditionalTextBlocks ?? []).map((block) => ({
+          ...block,
+          conditions: block.conditions.filter(
+            (condition) =>
+              !('interactionId' in condition) || condition.interactionId !== interactionId,
+          ),
+        })),
         triggers: item.triggers.map((trigger) => {
           const inputInteractionIds = trigger.inputInteractionIds.filter(
             (id) => id !== interactionId,

@@ -264,6 +264,7 @@ function authoredStoryProjection(story: Story): JsonValue {
       characterIds: interaction.characterIds ?? [],
       statEffects: interaction.statEffects ?? [],
       itemEffects: interaction.itemEffects ?? [],
+      conditionalTextBlocks: interaction.conditionalTextBlocks ?? [],
       triggers: interaction.triggers.map((trigger) => ({
         ...trigger,
         inputInteractionIds: trigger.inputInteractionIds ?? [],

@@ -195,4 +195,13 @@ describe('DatabaseMigrator', () => {
     expect(migration?.sql).toMatch(/reverts_event_id bigint UNIQUE/i);
     expect(migration?.sql).toMatch(/UNIQUE \(story_id, revision\)/i);
   });
+
+  it('adds structured conditional text blocks through a forward migration', () => {
+    const migration = databaseMigrations.find(
+      ({ id }) => id === '202608300035_conditional_text_blocks',
+    );
+
+    expect(migration?.sql).toMatch(/ADD COLUMN conditional_text_blocks jsonb NOT NULL/i);
+    expect(migration?.sql).toMatch(/jsonb_typeof\(conditional_text_blocks\) = 'array'/i);
+  });
 });

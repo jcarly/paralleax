@@ -13,8 +13,12 @@ Paralleax currently includes:
   typed stat effects, item effects, and duration. Rich content supports editable,
   removable, and movable inline interaction-link tokens with separate authored
   text and stable target ids; reader navigation still requires the target to be
-  available through normal trigger evaluation. Existing conditional text frames
-  remain a distinct preserved format.
+  available through normal trigger evaluation. Rich content also supports
+  structured conditional frames whose editable condition tokens reuse Trigger
+  condition types, fields, validation, and deterministic AND evaluation. A
+  selection is wrapped when the frame is created, adding/removing conditions
+  preserves its content, and removing the final token unwraps the frame. Legacy
+  target-based conditional frames remain readable.
 - Triggers with multiple input interactions, typed conditions, and optional saved
   positions for linked graph markers.
 - Persisted visual graph decorations: movable, resizable colored frames and movable

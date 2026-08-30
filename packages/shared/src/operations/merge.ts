@@ -53,6 +53,9 @@ export function mergeServerStory(
         itemEffects: hasOwn(patch ?? {}, 'itemEffects')
           ? (patch?.itemEffects ?? [])
           : currentItem.itemEffects,
+        conditionalTextBlocks: hasOwn(patch ?? {}, 'conditionalTextBlocks')
+          ? (patch?.conditionalTextBlocks ?? [])
+          : currentItem.conditionalTextBlocks,
         durationMinutes: hasOwn(patch ?? {}, 'durationMinutes')
           ? (patch?.durationMinutes ?? 0)
           : currentItem.durationMinutes,

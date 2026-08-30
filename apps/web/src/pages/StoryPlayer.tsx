@@ -4,6 +4,7 @@ import { Link, useParams, useSearchParams } from 'react-router-dom';
 import type { Interaction, InteractionMutationResult, Story } from '@paralleax/shared';
 import {
   canManageCommentThread,
+  doConditionsMatch,
   ensureStoryInteractionPositions,
   getAvailableInteractions,
   getInputReachableInteractions,
@@ -36,6 +37,7 @@ import {
 } from '../features/story/storyMutationResults';
 import { useStoryRealtime } from '../hooks/useStoryRealtime';
 import { getStoryGraphClickCreationPosition } from '../storyGraphCreationLayout';
+import { describeTriggerCondition } from '../triggerConditionPresentation';
 
 export function StoryPlayer({
   authenticated = true,
@@ -455,6 +457,45 @@ export function StoryPlayer({
     t,
     visited,
   ]);
+  const conditionalTextBlockState = useMemo(() => {
+    if (!story || !current) return {};
+    const visitedIds = new Set(visited);
+    return Object.fromEntries(
+      (current.conditionalTextBlocks ?? []).map((block) => {
+        const available = doConditionsMatch(
+          block.conditions,
+          visitedIds,
+          currentLocationId,
+          current.characterIds ?? [],
+          statValues,
+          currentDateTime,
+          ownedItemDefinitionIds,
+          itemStatValues,
+        );
+        return [
+          block.id,
+          {
+            visible: isSimulationMode || available,
+            available,
+            reason: block.conditions
+              .map((condition) => describeTriggerCondition(story, condition, t))
+              .join(` ${t('player.condition.and')} `),
+          },
+        ];
+      }),
+    );
+  }, [
+    current,
+    currentDateTime,
+    currentLocationId,
+    isSimulationMode,
+    itemStatValues,
+    ownedItemDefinitionIds,
+    statValues,
+    story,
+    t,
+    visited,
+  ]);
   const interactionLinkTargets = useMemo(
     () =>
       !story || !current
@@ -507,7 +548,9 @@ export function StoryPlayer({
     saveProgress(nextSession);
   }
 
-  async function saveCurrentInteraction(patch: Partial<Pick<Interaction, 'title' | 'body'>>) {
+  async function saveCurrentInteraction(
+    patch: Partial<Pick<Interaction, 'title' | 'body' | 'conditionalTextBlocks'>>,
+  ) {
     if (!current) return;
     const result = await trackSimulationMutation(() =>
       api.updateInteraction(storyId, current.id, patch),
@@ -519,7 +562,7 @@ export function StoryPlayer({
 
   function patchInteraction(
     interactionId: string,
-    patch: Partial<Pick<Interaction, 'title' | 'body'>>,
+    patch: Partial<Pick<Interaction, 'title' | 'body' | 'conditionalTextBlocks'>>,
   ) {
     if (!story) return;
     setStory({
@@ -530,7 +573,9 @@ export function StoryPlayer({
     });
   }
 
-  function patchCurrentInteraction(patch: Partial<Pick<Interaction, 'title' | 'body'>>) {
+  function patchCurrentInteraction(
+    patch: Partial<Pick<Interaction, 'title' | 'body' | 'conditionalTextBlocks'>>,
+  ) {
     if (!current) return;
     patchInteraction(current.id, patch);
   }
@@ -761,12 +806,19 @@ export function StoryPlayer({
                   />
                   <RichTextEditor
                     ariaLabel={t('player.currentInteractionContent')}
+                    interactionId={current.id}
                     story={story}
                     value={current.body}
                     onChange={(body) => patchCurrentInteraction({ body })}
                     onBlur={(body) => void saveCurrentInteraction({ body })}
                     interactionLinkTargets={interactionLinkTargets}
+                    conditionalTextBlocks={current.conditionalTextBlocks}
+                    onConditionalTextChange={(body, conditionalTextBlocks) => {
+                      patchCurrentInteraction({ body, conditionalTextBlocks });
+                      void saveCurrentInteraction({ body, conditionalTextBlocks });
+                    }}
                     conditionalTextState={conditionalTextState}
+                    conditionalTextBlockState={conditionalTextBlockState}
                     onConditionalTargetClick={(interactionId) => {
                       const target = story.interactions.find(({ id }) => id === interactionId);
                       if (
@@ -785,6 +837,7 @@ export function StoryPlayer({
                     className="story-body"
                     html={current.body}
                     conditionalTextState={conditionalTextState}
+                    conditionalTextBlockState={conditionalTextBlockState}
                     statValues={statValues}
                     itemStatValues={itemStatValues}
                     onInteractionLinkClick={(interactionId) => {

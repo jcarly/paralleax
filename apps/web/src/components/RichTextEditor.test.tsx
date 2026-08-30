@@ -144,6 +144,137 @@ describe('RichTextEditor', () => {
     );
   });
 
+  it('prefills a new interaction link from the selected text', async () => {
+    const user = userEvent.setup();
+    const { container } = render(
+      <RichTextEditor
+        value="<p>Continue now</p>"
+        onChange={vi.fn()}
+        onBlur={vi.fn()}
+        interactionLinkTargets={[{ id: 'next', title: 'Next scene' }]}
+      />,
+    );
+    const editor = within(container).getByRole('textbox', { name: 'Content' });
+    const text = editor.querySelector('p')!.firstChild!;
+    const range = document.createRange();
+    range.setStart(text, 0);
+    range.setEnd(text, 'Continue'.length);
+    const selection = window.getSelection()!;
+    selection.removeAllRanges();
+    selection.addRange(range);
+    fireEvent.mouseUp(editor);
+
+    await user.click(within(container).getByRole('button', { name: 'Add interaction link' }));
+
+    expect(within(container).getByLabelText('Text to display')).toHaveValue('Continue');
+  });
+
+  it('creates a conditional frame around the selected rich text with a Trigger condition', async () => {
+    const user = userEvent.setup();
+    const story = conditionalTextStoryFixture();
+    const onConditionalTextChange = vi.fn();
+    const { container } = render(
+      <RichTextEditor
+        interactionId="root"
+        story={story}
+        value="<p>Before <strong>selected text</strong> after</p>"
+        onChange={vi.fn()}
+        onBlur={vi.fn()}
+        onConditionalTextChange={onConditionalTextChange}
+      />,
+    );
+    const editor = within(container).getByRole('textbox', { name: 'Content' });
+    const selected = editor.querySelector('strong')!;
+    const range = document.createRange();
+    range.selectNode(selected);
+    const selection = window.getSelection()!;
+    selection.removeAllRanges();
+    selection.addRange(range);
+    fireEvent.mouseUp(editor);
+
+    await user.click(within(container).getByRole('button', { name: 'Add conditional text' }));
+    await user.click(within(container).getByRole('button', { name: 'Interaction' }));
+    await user.click(within(container).getByRole('button', { name: 'Insert' }));
+
+    expect(onConditionalTextChange).toHaveBeenCalledWith(
+      expect.stringMatching(
+        /^<p>Before <span data-conditional-text-block="[^"]+"><strong>selected text<\/strong><\/span> after<\/p>$/,
+      ),
+      [
+        {
+          id: expect.any(String),
+          conditions: [{ interactionId: 'next', hasBeenVisited: true }],
+        },
+      ],
+    );
+  });
+
+  it('restores selected text when conditional frame creation is cancelled', async () => {
+    const user = userEvent.setup();
+    const onConditionalTextChange = vi.fn();
+    const { container } = render(
+      <RichTextEditor
+        interactionId="root"
+        story={conditionalTextStoryFixture()}
+        value="<p>Before <strong>selected text</strong> after</p>"
+        onChange={vi.fn()}
+        onBlur={vi.fn()}
+        onConditionalTextChange={onConditionalTextChange}
+      />,
+    );
+    const editor = within(container).getByRole('textbox', { name: 'Content' });
+    const range = document.createRange();
+    range.selectNode(editor.querySelector('strong')!);
+    const selection = window.getSelection()!;
+    selection.removeAllRanges();
+    selection.addRange(range);
+    fireEvent.mouseUp(editor);
+
+    await user.click(within(container).getByRole('button', { name: 'Add conditional text' }));
+    expect(editor.querySelector('[data-conditional-text-block]')).not.toBeNull();
+    await user.click(within(container).getByRole('button', { name: 'Cancel' }));
+
+    expect(editor.innerHTML).toBe('<p>Before <strong>selected text</strong> after</p>');
+    expect(onConditionalTextChange).not.toHaveBeenCalled();
+  });
+
+  it('edits and removes conditional tokens, unwrapping text after the last condition', async () => {
+    const user = userEvent.setup();
+    const onConditionalTextChange = vi.fn();
+    const story = conditionalTextStoryFixture();
+    const blocks = [
+      {
+        id: 'block-1',
+        conditions: [{ interactionId: 'next', hasBeenVisited: true }],
+      },
+    ];
+    const { container } = render(
+      <RichTextEditor
+        interactionId="root"
+        story={story}
+        value={'<div data-conditional-text-block="block-1"><p>Secret text</p></div>'}
+        onChange={vi.fn()}
+        onBlur={vi.fn()}
+        conditionalTextBlocks={blocks}
+        onConditionalTextChange={onConditionalTextChange}
+      />,
+    );
+
+    await user.click(within(container).getByRole('button', { name: 'Edit condition' }));
+    await user.selectOptions(
+      within(container).getByLabelText('Interaction condition operator'),
+      'not-visited',
+    );
+    await user.click(within(container).getByRole('button', { name: 'Update' }));
+    expect(onConditionalTextChange).toHaveBeenLastCalledWith(
+      expect.stringContaining('data-conditional-text-block="block-1"'),
+      [{ id: 'block-1', conditions: [{ interactionId: 'next', hasBeenVisited: false }] }],
+    );
+
+    await user.click(within(container).getByRole('button', { name: 'Remove condition' }));
+    expect(onConditionalTextChange).toHaveBeenLastCalledWith('<p>Secret text</p>', []);
+  });
+
   it('walks story owners and nested items before inserting a stable variable marker', async () => {
     const user = userEvent.setup();
     const execCommand = vi.fn().mockReturnValue(true);
@@ -462,6 +593,32 @@ describe('RichTextEditor', () => {
     expect(screen.getByText('Condition failed.')).toBeInTheDocument();
   });
 
+  it('projects structured conditional frames in reader and simulation modes', () => {
+    const html = '<div data-conditional-text-block="clue"><p>Structured clue</p></div>';
+    const { container, rerender } = render(
+      <RichTextContent
+        html={html}
+        conditionalTextBlockState={{
+          clue: { visible: false, available: false, reason: 'Condition failed.' },
+        }}
+      />,
+    );
+    expect(within(container).queryByText('Structured clue')).not.toBeInTheDocument();
+
+    rerender(
+      <RichTextContent
+        html={html}
+        conditionalTextBlockState={{
+          clue: { visible: true, available: false, reason: 'Condition failed.' },
+        }}
+      />,
+    );
+    expect(within(container).getByText('Structured clue').closest('.conditional-text')).toHaveClass(
+      'conditional-text-unavailable',
+    );
+    expect(within(container).getByText('Condition failed.')).toBeInTheDocument();
+  });
+
   it('renders interaction links as reader controls without bypassing unavailable targets', async () => {
     const user = userEvent.setup();
     const onInteractionLinkClick = vi.fn();
@@ -583,6 +740,31 @@ function variableStoryFixture(): Story {
       },
     ],
     interactions: [],
+    createdAt: '2026-08-30T00:00:00.000Z',
+    updatedAt: '2026-08-30T00:00:00.000Z',
+  };
+}
+
+function conditionalTextStoryFixture(): Story {
+  return {
+    id: 'conditional-story',
+    title: 'Conditional story',
+    interactions: [
+      {
+        id: 'root',
+        title: 'Root',
+        body: '',
+        position: { x: 0, y: 0 },
+        triggers: [],
+      },
+      {
+        id: 'next',
+        title: 'Next',
+        body: '',
+        position: { x: 0, y: 100 },
+        triggers: [],
+      },
+    ],
     createdAt: '2026-08-30T00:00:00.000Z',
     updatedAt: '2026-08-30T00:00:00.000Z',
   };

@@ -36,6 +36,27 @@ describe('Story difference persistence', () => {
       .map(([, values]) => JSON.parse(values[0] as string) as unknown[]);
     expect(graphPayloads.map((rows) => rows.length)).toEqual([2_000, 2_000]);
   });
+
+  it('persists conditional text blocks with an interaction content update', async () => {
+    const before = graphStory(1);
+    const after = structuredClone(before);
+    after.revision = 2;
+    after.updatedAt = '2026-08-30T10:00:00.000Z';
+    after.interactions[0].conditionalTextBlocks = [
+      {
+        id: 'clue',
+        conditions: [{ interactionId: 'interaction-0', hasBeenVisited: true }],
+      },
+    ];
+    const query = jest.fn().mockResolvedValue({ rows: [], rowCount: 1 });
+
+    await persistStoryDifference({ query } as unknown as Queryable, before, after);
+
+    expect(query).toHaveBeenCalledWith(
+      'UPDATE interactions SET conditional_text_blocks = $2 WHERE id = $1',
+      ['interaction-0', JSON.stringify(after.interactions[0].conditionalTextBlocks)],
+    );
+  });
 });
 
 function graphStory(interactionCount: number): Story {

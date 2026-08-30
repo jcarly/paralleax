@@ -93,6 +93,13 @@
   white-space: normal;
 }
 
+span.conditional-text {
+  display: inline-block;
+  margin: 0.15rem 0.2rem;
+  padding: 0.35rem 0.55rem;
+  vertical-align: baseline;
+}
+
 .conditional-text > button[data-conditional-text-link] {
   margin-bottom: 0.65rem;
   padding: 0.3rem 0.55rem;

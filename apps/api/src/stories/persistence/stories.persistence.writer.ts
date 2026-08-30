@@ -52,12 +52,14 @@ async function insertInteractionGraph(client: Queryable, story: Story) {
   await insertJsonRows(
     client,
     `INSERT INTO interactions
-     (id, story_id, title, body, position_x, position_y, location_id, duration_minutes, sort_order)
+     (id, story_id, title, body, position_x, position_y, location_id, duration_minutes,
+      conditional_text_blocks, sort_order)
      SELECT id, story_id, title, body, position_x, position_y, location_id, duration_minutes,
-            sort_order
+            conditional_text_blocks, sort_order
      FROM jsonb_to_recordset($1::jsonb) AS row(
        id text, story_id text, title text, body text, position_x double precision,
-       position_y double precision, location_id text, duration_minutes integer, sort_order integer
+       position_y double precision, location_id text, duration_minutes integer,
+       conditional_text_blocks jsonb, sort_order integer
      )`,
     story.interactions.map((interaction, sortOrder) => ({
       id: interaction.id,
@@ -68,6 +70,7 @@ async function insertInteractionGraph(client: Queryable, story: Story) {
       position_y: interaction.position.y,
       location_id: interaction.locationId ?? null,
       duration_minutes: interaction.durationMinutes ?? 0,
+      conditional_text_blocks: interaction.conditionalTextBlocks ?? [],
       sort_order: sortOrder,
     })),
   );
@@ -649,8 +652,9 @@ async function insertInteraction(
 ) {
   await client.query(
     `INSERT INTO interactions
-     (id, story_id, title, body, position_x, position_y, location_id, duration_minutes, sort_order)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+     (id, story_id, title, body, position_x, position_y, location_id, duration_minutes,
+      conditional_text_blocks, sort_order)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
     [
       interaction.id,
       storyId,
@@ -660,6 +664,7 @@ async function insertInteraction(
       interaction.position.y,
       interaction.locationId ?? null,
       interaction.durationMinutes ?? 0,
+      JSON.stringify(interaction.conditionalTextBlocks ?? []),
       sortOrder,
     ],
   );
@@ -718,6 +723,13 @@ async function updateInteractionDifference(
     'duration_minutes',
     before.durationMinutes ?? 0,
     after.durationMinutes ?? 0,
+  );
+  addChange(
+    changes,
+    values,
+    'conditional_text_blocks',
+    JSON.stringify(before.conditionalTextBlocks ?? []),
+    JSON.stringify(after.conditionalTextBlocks ?? []),
   );
   addChange(changes, values, 'sort_order', beforeSortOrder, sortOrder);
   if (changes.length > 0) {

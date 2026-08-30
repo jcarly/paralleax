@@ -85,6 +85,16 @@ export class StoryGraphService {
       (story) => {
         const interaction = this.interaction(story, interactionId);
         if (input.title !== undefined) interaction.title = input.title;
+        if (input.conditionalTextBlocks !== undefined) {
+          const blockIds = input.conditionalTextBlocks.map(({ id }) => id);
+          if (new Set(blockIds).size !== blockIds.length) {
+            throw new BadRequestException('Conditional text block IDs must be unique');
+          }
+          interaction.conditionalTextBlocks = input.conditionalTextBlocks.map((block) => ({
+            id: block.id,
+            conditions: this.conditions(story, block.conditions),
+          }));
+        }
         if (input.body !== undefined) interaction.body = sanitizeRichText(input.body ?? '', story);
         if (input.position !== undefined) interaction.position = input.position;
         if (input.locationId !== undefined) {
@@ -253,7 +263,7 @@ export class StoryGraphService {
         const conditions =
           input.conditions === undefined
             ? trigger.conditions
-            : this.triggerConditions(story, input.conditions);
+            : this.conditions(story, input.conditions);
         const inputInteractionIds =
           input.inputInteractionIds === undefined
             ? trigger.inputInteractionIds
@@ -280,7 +290,7 @@ export class StoryGraphService {
     const story = await this.mutations.update(
       storyId,
       (story) => {
-        const conditions = this.triggerConditions(story, input.conditions ?? []);
+        const conditions = this.conditions(story, input.conditions ?? []);
         this.assertInteractionReferences(story, input.inputInteractionIds ?? []);
         this.interaction(story, interactionId).triggers.push({
           id: triggerId,
@@ -333,7 +343,7 @@ export class StoryGraphService {
     }
   }
 
-  private triggerConditions(story: Story, conditions: TriggerConditionDto[]): TriggerCondition[] {
+  private conditions(story: Story, conditions: TriggerConditionDto[]): TriggerCondition[] {
     const interactionIds = new Set(story.interactions.map(({ id }) => id));
     const locationIds = new Set((story.locations ?? []).map(({ id }) => id));
     const characterIds = new Set((story.characters ?? []).map(({ id }) => id));
@@ -362,12 +372,12 @@ export class StoryGraphService {
         1
       ) {
         throw new BadRequestException(
-          'A trigger condition must contain exactly one supported condition type',
+          'A condition must contain exactly one supported condition type',
         );
       }
       if (isInteractionCondition) {
         if (!interactionIds.has(condition.interactionId!)) {
-          throw new BadRequestException('Trigger references must belong to the same story');
+          throw new BadRequestException('Condition references must belong to the same story');
         }
         return {
           interactionId: condition.interactionId!,
@@ -376,7 +386,7 @@ export class StoryGraphService {
       }
       if (isLocationCondition) {
         if (!locationIds.has(condition.locationId!)) {
-          throw new BadRequestException('Trigger references must belong to the same story');
+          throw new BadRequestException('Condition references must belong to the same story');
         }
         return {
           locationId: condition.locationId!,
@@ -385,7 +395,7 @@ export class StoryGraphService {
       }
       if (isCharacterCondition) {
         if (!characterIds.has(condition.characterId!)) {
-          throw new BadRequestException('Trigger references must belong to the same story');
+          throw new BadRequestException('Condition references must belong to the same story');
         }
         return {
           characterId: condition.characterId!,
@@ -394,7 +404,7 @@ export class StoryGraphService {
       }
       if (isItemCondition) {
         if (!itemDefinitionIds.has(condition.itemDefinitionId!)) {
-          throw new BadRequestException('Trigger references must belong to the same story');
+          throw new BadRequestException('Condition references must belong to the same story');
         }
         return {
           itemDefinitionId: condition.itemDefinitionId!,
@@ -427,7 +437,7 @@ export class StoryGraphService {
               !isStoryTime(startTime) || !isStoryTime(endTime) || startTime === endTime,
           )
         ) {
-          throw new BadRequestException('Temporal trigger condition is invalid');
+          throw new BadRequestException('Temporal condition is invalid');
         }
         return {
           temporal: {
@@ -438,7 +448,7 @@ export class StoryGraphService {
           },
         };
       }
-      throw new BadRequestException('Trigger condition is invalid');
+      throw new BadRequestException('Condition is invalid');
     });
   }
 

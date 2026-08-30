@@ -40,6 +40,7 @@ export function sanitizeRichTextForDisplay(value: string): string {
       'contenteditable',
       'aria-label',
       'data-conditional-text-target',
+      'data-conditional-text-block',
       'data-conditional-text-link',
       'data-interaction-link-target',
       'data-stat-value',

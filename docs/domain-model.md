@@ -35,12 +35,17 @@ Main MVP fields:
 - `characterIds`
 - `statEffects`
 - `itemEffects`
+- `conditionalTextBlocks`
 - `durationMinutes`
 
 The title is used for choices and editor display. The body is used by the reader.
-The sanitized body may contain conditional text blocks that reference one target
-interaction by id. A block does not store conditions: it projects the outgoing
-trigger availability between its owning interaction and that target.
+The sanitized body may contain conditional text frames. New frames reference a
+same-interaction `ConditionalTextBlock` by stable id; that structured block owns
+one or more of the exact condition variants also used by Triggers. Conditions in
+one block are AND. The reader evaluates them against the same replayed state as
+Trigger conditions. Legacy frames that reference one target interaction remain
+readable and continue to project the outgoing Trigger availability between their
+owning interaction and that target.
 
 ### Trigger
 

@@ -4,6 +4,7 @@ import {
   mockGraphPositionUpdates,
   mockStory,
   prepareEditorPage,
+  storyWithConditionCandidate,
 } from './editorTestHarness';
 
 test.describe('Story editor persistence', () => {
@@ -139,6 +140,71 @@ test.describe('Story editor persistence', () => {
 
     await expect(content.locator('strong')).toHaveText('rich');
     await expect(content.locator('img')).toHaveAttribute('src', 'https://media.example/scene.gif');
+  });
+
+  test('wraps selected text in a structured conditional frame and preserves it on removal', async ({
+    page,
+  }) => {
+    const current = storyWithConditionCandidate();
+    const patches: Array<Record<string, unknown>> = [];
+    await mockStory(page, current);
+    await page.route('**/api/stories/story-1/interactions/interaction-1', async (route) => {
+      const patch = route.request().postDataJSON() as Record<string, unknown>;
+      patches.push(patch);
+      const interaction = { ...current.interactions[0], ...patch };
+      await route.fulfill({
+        json: {
+          interaction,
+          revision: patches.length + 1,
+          updatedAt: '2026-08-30T12:00:00.000Z',
+        },
+      });
+    });
+
+    await page.goto('/stories/story-1/edit');
+    await page.getByTestId('interaction-node').filter({ hasText: 'Original title' }).click();
+    const content = page.getByRole('textbox', { name: 'Content' });
+    await content.evaluate((element) => {
+      element.focus();
+      const text = element.firstChild;
+      if (!text) throw new Error('Expected interaction body text');
+      const range = document.createRange();
+      range.setStart(text, 9);
+      range.setEnd(text, 16);
+      const selection = window.getSelection();
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+      element.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+    });
+
+    await page.getByRole('button', { name: 'Add conditional text' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Add a condition' });
+    await dialog.getByRole('button', { name: 'Interaction' }).click();
+    await dialog.getByRole('button', { name: 'Insert' }).click();
+
+    await expect
+      .poll(() => patches.find((patch) => 'conditionalTextBlocks' in patch))
+      .toMatchObject({
+        body: expect.stringMatching(
+          /^Original <span data-conditional-text-block="[^"]+">content<\/span>$/,
+        ),
+        conditionalTextBlocks: [
+          {
+            id: expect.any(String),
+            conditions: [{ interactionId: 'interaction-2', hasBeenVisited: true }],
+          },
+        ],
+      });
+    await expect(page.getByRole('button', { name: 'Edit condition' })).toBeVisible();
+
+    await page.getByRole('button', { name: 'Remove condition' }).click();
+    await expect
+      .poll(() => patches.at(-1))
+      .toMatchObject({
+        body: 'Original content',
+        conditionalTextBlocks: [],
+      });
+    await expect(content).toHaveText('Original content');
   });
 
   test('edits the story clock and interaction duration', async ({ page }) => {
