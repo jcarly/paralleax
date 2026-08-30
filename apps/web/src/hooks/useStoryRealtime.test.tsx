@@ -8,7 +8,7 @@ import {
 
 class FakeEventSource {
   static instances: FakeEventSource[] = [];
-  readonly listeners = new Map<string, Array<() => void>>();
+  readonly listeners = new Map<string, Array<(event: Event) => void>>();
   onopen: (() => void) | null = null;
   onerror: (() => void) | null = null;
   closed = false;
@@ -17,12 +17,14 @@ class FakeEventSource {
     FakeEventSource.instances.push(this);
   }
 
-  addEventListener(type: string, listener: () => void) {
+  addEventListener(type: string, listener: (event: Event) => void) {
     this.listeners.set(type, [...(this.listeners.get(type) ?? []), listener]);
   }
 
-  emit(type: string) {
-    this.listeners.get(type)?.forEach((listener) => listener());
+  emit(type: string, data?: object) {
+    const event =
+      data === undefined ? new Event(type) : new MessageEvent(type, { data: JSON.stringify(data) });
+    this.listeners.get(type)?.forEach((listener) => listener(event));
   }
 
   close() {
@@ -30,8 +32,14 @@ class FakeEventSource {
   }
 }
 
-function Fixture({ onInvalidate }: { onInvalidate: (event: StoryRealtimeInvalidation) => void }) {
-  const status: StoryRealtimeStatus = useStoryRealtime('story / 1', true, onInvalidate);
+function Fixture({
+  onInvalidate,
+  revision,
+}: {
+  onInvalidate: (event: StoryRealtimeInvalidation) => void;
+  revision?: number;
+}) {
+  const status: StoryRealtimeStatus = useStoryRealtime('story / 1', true, onInvalidate, revision);
   return <span>{status}</span>;
 }
 
@@ -69,5 +77,29 @@ describe('useStoryRealtime', () => {
 
     act(() => source.emit('story-deleted'));
     expect(onInvalidate).toHaveBeenLastCalledWith('deleted');
+  });
+
+  it('ignores initial readiness and changes already represented by the local revision', () => {
+    const onInvalidate = vi.fn();
+    const { rerender } = render(<Fixture onInvalidate={onInvalidate} revision={1} />);
+    const source = FakeEventSource.instances[0];
+
+    act(() => {
+      source.emit('ready');
+      vi.advanceTimersByTime(75);
+    });
+    expect(onInvalidate).not.toHaveBeenCalled();
+
+    act(() => source.emit('story-changed', { revision: 2 }));
+    rerender(<Fixture onInvalidate={onInvalidate} revision={2} />);
+    act(() => vi.advanceTimersByTime(75));
+    expect(onInvalidate).not.toHaveBeenCalled();
+
+    act(() => {
+      source.emit('story-changed', { revision: 3 });
+      vi.advanceTimersByTime(75);
+    });
+    expect(onInvalidate).toHaveBeenCalledOnce();
+    expect(onInvalidate).toHaveBeenCalledWith('changed');
   });
 });

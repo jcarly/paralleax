@@ -203,21 +203,20 @@ describe('StoryEditor graph collaboration and layout', () => {
     await user.click(screen.getByTestId('drag-node-interaction-1'));
 
     await waitFor(() => {
-      expect(api.updateInteraction).toHaveBeenCalledWith('story-1', 'interaction-1', {
-        position: { x: 105, y: 135 },
-      });
-      expect(api.updateInteraction).toHaveBeenCalledWith('story-1', 'interaction-2', {
-        position: { x: 105, y: 285 },
-      });
-      expect(api.updateTrigger).toHaveBeenCalledWith('story-1', 'interaction-2', 'trigger-2', {
-        position: triggerPosition,
+      expect(api.updateStoryGraphPositions).toHaveBeenCalledWith('story-1', {
+        interactionUpdates: [
+          { interactionId: 'interaction-1', position: { x: 105, y: 135 } },
+          { interactionId: 'interaction-2', position: { x: 105, y: 285 } },
+        ],
+        triggerUpdates: [
+          {
+            interactionId: 'interaction-2',
+            triggerIds: ['trigger-2'],
+            position: triggerPosition,
+          },
+        ],
       });
     });
-    expect(api.updateInteraction).not.toHaveBeenCalledWith(
-      'story-1',
-      'interaction-3',
-      expect.anything(),
-    );
   });
 
   it('groups icon-only canvas actions in an accessible toolbar with hover labels', async () => {
@@ -225,9 +224,11 @@ describe('StoryEditor graph collaboration and layout', () => {
 
     const toolbar = screen.getByRole('toolbar', { name: 'Canvas tools' });
     expect(toolbar).toHaveClass('canvas-tools');
-    expect(within(toolbar).getAllByRole('button')).toHaveLength(5);
+    expect(within(toolbar).getAllByRole('button')).toHaveLength(7);
 
     for (const label of [
+      'Undo last Story change',
+      'Redo Story change',
       'Add root',
       'Add frame',
       'Add text',
@@ -357,11 +358,10 @@ describe('StoryEditor graph collaboration and layout', () => {
     expect(organizeSelection).toBeEnabled();
     await user.click(organizeSelection);
 
-    await waitFor(() => expect(api.updateInteraction).toHaveBeenCalled());
-    expect(api.updateInteraction).not.toHaveBeenCalledWith(
-      'story-1',
+    await waitFor(() => expect(api.updateStoryGraphPositions).toHaveBeenCalled());
+    const updates = vi.mocked(api.updateStoryGraphPositions).mock.calls[0][1];
+    expect(updates.interactionUpdates.map(({ interactionId }) => interactionId)).not.toContain(
       'interaction-3',
-      expect.anything(),
     );
   });
 
@@ -373,24 +373,16 @@ describe('StoryEditor graph collaboration and layout', () => {
 
     await user.click(screen.getByRole('button', { name: 'Organize graph' }));
 
-    await waitFor(() => {
-      expect(api.updateInteraction).toHaveBeenCalledTimes(expected.interactionUpdates.length);
-      expect(api.updateTrigger).toHaveBeenCalledTimes(
-        expected.triggerUpdates.reduce((total, update) => total + update.triggerIds.length, 0),
-      );
-    });
+    await waitFor(() =>
+      expect(api.updateStoryGraphPositions).toHaveBeenCalledWith('story-1', {
+        interactionUpdates: expected.interactionUpdates,
+        triggerUpdates: expected.triggerUpdates,
+      }),
+    );
     expected.interactionUpdates.forEach(({ interactionId, position }) => {
-      expect(api.updateInteraction).toHaveBeenCalledWith('story-1', interactionId, { position });
       expect(screen.getByTestId(`flow-node-${interactionId}`)).toHaveAttribute(
         'data-node-y',
         String(position.y),
-      );
-    });
-    expected.triggerUpdates.forEach(({ interactionId, triggerIds, position }) => {
-      triggerIds.forEach((triggerId) =>
-        expect(api.updateTrigger).toHaveBeenCalledWith('story-1', interactionId, triggerId, {
-          position,
-        }),
       );
     });
   });
@@ -407,21 +399,11 @@ describe('StoryEditor graph collaboration and layout', () => {
     await user.click(screen.getByTestId('flow-node-interaction-2'));
     await user.click(screen.getByRole('button', { name: 'Organize selected element' }));
 
-    await waitFor(() => {
-      expect(api.updateInteraction).toHaveBeenCalledTimes(expected.interactionUpdates.length);
-    });
-    expect(api.updateInteraction).not.toHaveBeenCalledWith(
-      'story-1',
-      'interaction-1',
-      expect.anything(),
-    );
-    expect(api.updateInteraction).not.toHaveBeenCalledWith(
-      'story-1',
-      'interaction-3',
-      expect.anything(),
-    );
-    expected.interactionUpdates.forEach(({ interactionId, position }) =>
-      expect(api.updateInteraction).toHaveBeenCalledWith('story-1', interactionId, { position }),
+    await waitFor(() =>
+      expect(api.updateStoryGraphPositions).toHaveBeenCalledWith('story-1', {
+        interactionUpdates: expected.interactionUpdates,
+        triggerUpdates: expected.triggerUpdates,
+      }),
     );
   });
 
@@ -437,12 +419,12 @@ describe('StoryEditor graph collaboration and layout', () => {
     await user.click(screen.getByTestId('flow-trigger-interaction-2-trigger-2'));
     await user.click(screen.getByRole('button', { name: 'Organize selected element' }));
 
-    expect(api.updateInteraction).not.toHaveBeenCalled();
-    await waitFor(() => {
-      expect(api.updateTrigger).toHaveBeenCalledWith('story-1', 'interaction-2', 'trigger-2', {
-        position: expected.triggerUpdates[0].position,
-      });
-    });
+    await waitFor(() =>
+      expect(api.updateStoryGraphPositions).toHaveBeenCalledWith('story-1', {
+        interactionUpdates: expected.interactionUpdates,
+        triggerUpdates: expected.triggerUpdates,
+      }),
+    );
   });
 
   it('automatically organizes every element in a rectangular selection and nothing else', async () => {
@@ -461,19 +443,11 @@ describe('StoryEditor graph collaboration and layout', () => {
     await user.click(screen.getByTestId('box-select-first-branch'));
     await user.click(screen.getByRole('button', { name: 'Organize 3 selected elements' }));
 
-    await waitFor(() => {
-      expect(api.updateInteraction).toHaveBeenCalledTimes(expected.interactionUpdates.length);
-      expect(api.updateTrigger).toHaveBeenCalledTimes(
-        expected.triggerUpdates.reduce((total, update) => total + update.triggerIds.length, 0),
-      );
-    });
-    expect(api.updateInteraction).not.toHaveBeenCalledWith(
-      'story-1',
-      'interaction-3',
-      expect.anything(),
-    );
-    expected.interactionUpdates.forEach(({ interactionId, position }) =>
-      expect(api.updateInteraction).toHaveBeenCalledWith('story-1', interactionId, { position }),
+    await waitFor(() =>
+      expect(api.updateStoryGraphPositions).toHaveBeenCalledWith('story-1', {
+        interactionUpdates: expected.interactionUpdates,
+        triggerUpdates: expected.triggerUpdates,
+      }),
     );
   });
 
@@ -490,7 +464,7 @@ describe('StoryEditor graph collaboration and layout', () => {
       expect(triggerNode).not.toHaveAttribute('data-node-x', initialX);
       expect(triggerNode).not.toHaveAttribute('data-node-y', initialY);
     });
-    expect(api.updateInteraction).not.toHaveBeenCalled();
+    expect(api.updateStoryGraphPositions).not.toHaveBeenCalled();
   });
 
   it('previews and persists an elastic movement for a positioned trigger', async () => {
@@ -508,11 +482,17 @@ describe('StoryEditor graph collaboration and layout', () => {
     await userEvent.click(screen.getByTestId('drag-node-interaction-1'));
 
     await waitFor(() => {
-      expect(api.updateInteraction).toHaveBeenCalledWith('story-1', 'interaction-1', {
-        position: finalInteractionPosition,
-      });
-      expect(api.updateTrigger).toHaveBeenCalledWith('story-1', 'interaction-2', 'trigger-2', {
-        position: expectedUpdate.position,
+      expect(api.updateStoryGraphPositions).toHaveBeenCalledWith('story-1', {
+        interactionUpdates: [
+          { interactionId: 'interaction-1', position: finalInteractionPosition },
+        ],
+        triggerUpdates: [
+          {
+            interactionId: 'interaction-2',
+            triggerIds: ['trigger-2'],
+            position: expectedUpdate.position,
+          },
+        ],
       });
     });
     expect(screen.getByTestId(triggerNodeId)).toHaveAttribute(

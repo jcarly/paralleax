@@ -3,11 +3,13 @@ import type { Connection } from '@xyflow/react';
 import {
   deleteGraphDecorationFromStory,
   deleteTriggerInStory,
+  diffStoryGraphPositions,
   getNextChildPosition,
   getNextParentPosition,
   getNextRootPosition,
   mergeServerStory,
   updateGraphDecorationInStory,
+  updateStoryGraphPositions,
   updateInteractionInStory,
   updateTriggerInStory,
   type Interaction,
@@ -15,6 +17,7 @@ import {
   type InteractionMutationResult,
   type Position,
   type Story,
+  type StoryGraphPositionUpdates,
   type TriggerCondition,
   type TriggerMutationResult,
   type UpdateGraphDecorationInput,
@@ -100,6 +103,26 @@ export function useStoryGraphPersistence({
       if (!next) return;
       setStory((current) => (current ? applyTriggerResult(current, next) : current));
     }
+  }
+
+  async function saveGraphPositions(updates: StoryGraphPositionUpdates) {
+    if (
+      !story ||
+      (updates.interactionUpdates.length === 0 && updates.triggerUpdates.length === 0)
+    ) {
+      return;
+    }
+    const positionedStory = updateStoryGraphPositions(story, updates);
+    const redo = diffStoryGraphPositions(story, positionedStory);
+    if (redo.interactionUpdates.length === 0 && redo.triggerUpdates.length === 0) return;
+    const undo = diffStoryGraphPositions(positionedStory, story);
+
+    setStory((current) => (current ? updateStoryGraphPositions(current, updates) : current));
+    const result = await trackSave(() => api.updateStoryGraphPositions(storyId, updates), {
+      graphHistoryChange: { undo, redo },
+    });
+    if (!result) return;
+    setStory((current) => (current ? applyStoryMutationMetadata(current, result) : current));
   }
 
   async function createTriggerVariant(interactionId: string, baseTriggerId: string) {
@@ -362,6 +385,7 @@ export function useStoryGraphPersistence({
   return {
     saveTrigger,
     moveTrigger,
+    saveGraphPositions,
     createTriggerVariant,
     deleteTrigger,
     deleteTriggerVariants,

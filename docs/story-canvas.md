@@ -91,13 +91,9 @@ when their meaning is unambiguous for the clicked canvas object or empty area.
 
 ## Edge Routing
 
-Edges should adapt to the relative position of their source, trigger marker, and
-target interaction.
-
-The editor should avoid a fixed handle rule when it creates visually awkward
-curves. Top and bottom handles are a good default for vertical flows, but the
-edge renderer should eventually choose the cleanest side or curve based on node
-positions.
+Narrative edges always leave the bottom-center output of their source
+interaction and enter the top-center input of their target interaction. Trigger
+markers and orthogonal routing lanes adapt between those fixed semantic handles.
 
 Target behavior:
 
@@ -107,8 +103,8 @@ Target behavior:
 - trigger marker placement should minimize visual bends;
 - arrows should point to the meaningful interaction input action, not to an
   invisible or secondary handle.
-- edge rendering should infer whether a horizontal or vertical route is cleaner
-  from the source and target positions.
+- routing should use free horizontal lanes and vertical approaches to minimize
+  crossings and avoid unrelated cards and Trigger markers where possible.
 
 The model must not change to satisfy edge routing. Routing is a canvas
 projection concern.

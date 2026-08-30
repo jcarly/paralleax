@@ -101,6 +101,32 @@ describe('api client', () => {
       body: JSON.stringify({ startDateTime: '2026-07-27T09:30' }),
     });
 
+    const graphPositions = {
+      interactionUpdates: [{ interactionId: 'interaction-1', position: { x: 100, y: 200 } }],
+      triggerUpdates: [],
+    };
+    await api.updateStoryGraphPositions('story-1', graphPositions);
+    expect(fetchMock).toHaveBeenLastCalledWith('/api/stories/story-1/graph/positions', {
+      headers: { 'Content-Type': 'application/json' },
+      method: 'PATCH',
+      body: JSON.stringify(graphPositions),
+    });
+
+    await api.getStoryHistory('story-1');
+    expect(fetchMock).toHaveBeenLastCalledWith('/api/stories/story-1/history', {
+      headers: { 'Content-Type': 'application/json' },
+    });
+    await api.undoStoryChange('story-1');
+    expect(fetchMock).toHaveBeenLastCalledWith('/api/stories/story-1/history/undo', {
+      headers: { 'Content-Type': 'application/json' },
+      method: 'POST',
+    });
+    await api.redoStoryChange('story-1');
+    expect(fetchMock).toHaveBeenLastCalledWith('/api/stories/story-1/history/redo', {
+      headers: { 'Content-Type': 'application/json' },
+      method: 'POST',
+    });
+
     await api.deleteStory('story-1');
     expect(fetchMock).toHaveBeenLastCalledWith('/api/stories/story-1', {
       headers: { 'Content-Type': 'application/json' },

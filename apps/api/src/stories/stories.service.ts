@@ -19,6 +19,7 @@ import type {
 import { StoryAccessService } from './application/story-access';
 import { StoryContextService } from './application/story-context';
 import { StoryGraphService } from './application/story-graph';
+import { StoryHistoryService } from './application/story-history';
 import { StoryMetadataService } from './application/story-metadata';
 import { StoryReaderProgressService } from './application/story-reader-progress';
 import type {
@@ -48,6 +49,7 @@ import type {
   UpdateStatDefinitionDto,
   UpdateStoryAccessDto,
   UpdateStoryDto,
+  UpdateStoryGraphPositionsDto,
   UpdateTriggerDto,
 } from './dto/stories.dto';
 
@@ -59,6 +61,7 @@ export class StoriesService {
     private readonly readerProgress: StoryReaderProgressService,
     private readonly graph: StoryGraphService,
     private readonly context: StoryContextService,
+    private readonly history: StoryHistoryService,
   ) {}
 
   async list(userId: string) {
@@ -75,6 +78,18 @@ export class StoriesService {
 
   async stream(id: string, userId: string) {
     return this.metadata.stream(id, userId);
+  }
+
+  async getHistory(id: string, userId: string) {
+    return this.history.get(id, userId);
+  }
+
+  async undo(id: string, userId: string) {
+    return this.history.undo(id, userId);
+  }
+
+  async redo(id: string, userId: string) {
+    return this.history.redo(id, userId);
   }
 
   async create(input: CreateStoryDto, userId: string): Promise<Story> {
@@ -169,6 +184,10 @@ export class StoriesService {
     userId: string,
   ): Promise<InteractionMutationResult> {
     return this.graph.createInteraction(storyId, input, userId);
+  }
+
+  async updateGraphPositions(storyId: string, input: UpdateStoryGraphPositionsDto, userId: string) {
+    return this.graph.updatePositions(storyId, input, userId);
   }
 
   async updateInteraction(

@@ -40,6 +40,37 @@ export class PositionDto {
   @IsNumber() x!: number;
   @IsNumber() y!: number;
 }
+export class StoryGraphInteractionPositionUpdateDto {
+  @IsString() @IsNotEmpty() interactionId!: string;
+  @IsObject()
+  @ValidateNested()
+  @Type(() => PositionDto)
+  position!: PositionDto;
+}
+export class StoryGraphTriggerPositionUpdateDto {
+  @IsString() @IsNotEmpty() interactionId!: string;
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(500)
+  @IsString({ each: true })
+  triggerIds!: string[];
+  @IsObject()
+  @ValidateNested()
+  @Type(() => PositionDto)
+  position!: PositionDto;
+}
+export class UpdateStoryGraphPositionsDto {
+  @IsArray()
+  @ArrayMaxSize(5_000)
+  @ValidateNested({ each: true })
+  @Type(() => StoryGraphInteractionPositionUpdateDto)
+  interactionUpdates!: StoryGraphInteractionPositionUpdateDto[];
+  @IsArray()
+  @ArrayMaxSize(5_000)
+  @ValidateNested({ each: true })
+  @Type(() => StoryGraphTriggerPositionUpdateDto)
+  triggerUpdates!: StoryGraphTriggerPositionUpdateDto[];
+}
 export class CreateStoryDto {
   @IsString() @IsNotEmpty() @MaxLength(200) title!: string;
 }

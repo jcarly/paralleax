@@ -31,6 +31,15 @@ export function useStoryPersistenceLifecycle({
   const pendingRealtimeInvalidationRef = useRef<StoryRealtimeInvalidation | undefined>(undefined);
   const realtimeRefreshRef = useRef<(invalidation: StoryRealtimeInvalidation) => void>(() => {});
 
+  const replaceStory = useCallback(
+    (next: Story) => {
+      deletedTriggerIdsRef.current.clear();
+      deletedTriggerInputKeysRef.current.clear();
+      setStory(next);
+    },
+    [setStory],
+  );
+
   const flushPendingRealtimeRefresh = useCallback(() => {
     if (activeSaveCountRef.current > 0 || localEditDepthRef.current > 0) return;
     const pending = pendingRealtimeInvalidationRef.current;
@@ -84,9 +93,7 @@ export function useStoryPersistenceLifecycle({
       .getStory(storyId)
       .then((next) => {
         if (attempt !== loadAttemptRef.current) return;
-        deletedTriggerIdsRef.current.clear();
-        deletedTriggerInputKeysRef.current.clear();
-        setStory(next);
+        replaceStory(next);
         setError('');
         setSaveStatus('idle');
       })
@@ -95,7 +102,7 @@ export function useStoryPersistenceLifecycle({
         setError(caught.message);
         setSaveStatus('error');
       });
-  }, [setStory, storyId]);
+  }, [replaceStory, storyId]);
 
   const refreshFromRealtime = useCallback(
     (invalidation: StoryRealtimeInvalidation) => {
@@ -119,9 +126,7 @@ export function useStoryPersistenceLifecycle({
             );
             return;
           }
-          deletedTriggerIdsRef.current.clear();
-          deletedTriggerInputKeysRef.current.clear();
-          setStory(next);
+          replaceStory(next);
           setError('');
         })
         .catch((caught: unknown) => {
@@ -133,7 +138,7 @@ export function useStoryPersistenceLifecycle({
           }
         });
     },
-    [setStory, storyId],
+    [replaceStory, setStory, storyId],
   );
 
   useEffect(() => {
@@ -144,6 +149,7 @@ export function useStoryPersistenceLifecycle({
     storyId,
     story?.capabilities?.canEdit === true,
     refreshFromRealtime,
+    story?.revision,
   );
 
   const beginLocalEdit = useCallback(() => {
@@ -171,6 +177,7 @@ export function useStoryPersistenceLifecycle({
     retry: load,
     trackSave,
     mergeIncomingStory,
+    replaceStory,
     deletedTriggerIdsRef,
     deletedTriggerInputKeysRef,
   };

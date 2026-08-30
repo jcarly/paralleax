@@ -16,6 +16,7 @@ vi.mock('../../../api', () => ({
     createGraphDecoration: vi.fn(),
     updateGraphDecoration: vi.fn(),
     deleteGraphDecoration: vi.fn(),
+    updateStoryGraphPositions: vi.fn(),
   },
 }));
 
@@ -135,14 +136,60 @@ describe('story graph persistence', () => {
     await harness.actions.deleteGraphDecoration('frame');
     expect(harness.story().graphDecorations).toEqual([]);
   });
+
+  it('registers the exact reversible graph patch after a grouped position save', async () => {
+    const trackedOptions: Parameters<TrackStorySave>[1][] = [];
+    const trackSave: TrackStorySave = async (operation, options) => {
+      trackedOptions.push(options);
+      return operation();
+    };
+    const harness = createHarness(trackSave);
+    vi.mocked(api.updateStoryGraphPositions).mockResolvedValue(metadata(2));
+
+    await harness.actions.saveGraphPositions({
+      interactionUpdates: [{ interactionId: 'root', position: { x: 300, y: 200 } }],
+      triggerUpdates: [
+        {
+          interactionId: 'child',
+          triggerIds: ['child-trigger'],
+          position: { x: 310, y: 360 },
+        },
+      ],
+    });
+
+    expect(trackedOptions).toEqual([
+      {
+        graphHistoryChange: {
+          undo: {
+            interactionUpdates: [{ interactionId: 'root', position: { x: 0, y: 0 } }],
+            triggerUpdates: [
+              { interactionId: 'child', triggerIds: ['child-trigger'] },
+            ],
+          },
+          redo: {
+            interactionUpdates: [{ interactionId: 'root', position: { x: 300, y: 200 } }],
+            triggerUpdates: [
+              {
+                interactionId: 'child',
+                triggerIds: ['child-trigger'],
+                position: { x: 310, y: 360 },
+              },
+            ],
+          },
+        },
+      },
+    ]);
+    expect(harness.story()).toMatchObject(metadata(2));
+    expect(harness.story().interactions[0].position).toEqual({ x: 300, y: 200 });
+    expect(harness.story().interactions[1].triggers[0].position).toEqual({ x: 310, y: 360 });
+  });
 });
 
-function createHarness() {
+function createHarness(trackSave: TrackStorySave = async (operation) => operation()) {
   let story: Story | undefined = storyFixture();
   const setStory: StoryStateSetter = (next) => {
     story = typeof next === 'function' ? next(story) : next;
   };
-  const trackSave: TrackStorySave = async (operation) => operation();
   const deletedTriggerIdsRef = { current: new Set<string>() };
   const deletedTriggerInputKeysRef = { current: new Set<string>() };
   const mergeIncomingStory: MergeIncomingStory = (current, incoming, edited, options) =>

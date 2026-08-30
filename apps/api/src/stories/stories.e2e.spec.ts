@@ -101,6 +101,132 @@ describe('Stories API', () => {
     expect(response.body).toEqual([]);
   });
 
+  it('persists authored Story history and supports undo and redo', async () => {
+    const created = await createStory('Original title');
+    await request(httpServer)
+      .patch(`/api/stories/${created.id}`)
+      .send({ title: 'Changed title' })
+      .expect(200);
+
+    const history = await request(httpServer).get(`/api/stories/${created.id}/history`).expect(200);
+    expect(history.body).toMatchObject({
+      canUndo: true,
+      canRedo: false,
+      entries: [{ kind: 'change', revision: 2, reverted: false }],
+    });
+
+    const undone = await request(httpServer)
+      .post(`/api/stories/${created.id}/history/undo`)
+      .expect(201);
+    expect(undone.body.story).toMatchObject({ title: 'Original title', revision: 3 });
+    expect(undone.body.history).toMatchObject({ canUndo: false, canRedo: true });
+
+    const reloadedHistory = await request(httpServer)
+      .get(`/api/stories/${created.id}/history`)
+      .expect(200);
+    expect(reloadedHistory.body).toMatchObject({ canUndo: false, canRedo: true });
+
+    const redone = await request(httpServer)
+      .post(`/api/stories/${created.id}/history/redo`)
+      .expect(201);
+    expect(redone.body.story).toMatchObject({ title: 'Changed title', revision: 4 });
+    expect(redone.body.history).toMatchObject({ canUndo: true, canRedo: false });
+  });
+
+  it('refuses to undo over a later overlapping collaborator change', async () => {
+    const ownerCookie = 'paralleax_session=user-one';
+    const collaboratorCookie = 'paralleax_session=user-two';
+    const created = await request(httpServer)
+      .post('/api/stories')
+      .set('Cookie', ownerCookie)
+      .send({ title: 'Original title' })
+      .expect(201);
+    await request(httpServer)
+      .patch(`/api/stories/${created.body.id}/access`)
+      .set('Cookie', ownerCookie)
+      .send({ visibility: 'invitation', editPolicy: 'owner', commentPolicy: 'editors' })
+      .expect(200);
+    await request(httpServer)
+      .post(`/api/stories/${created.body.id}/access/collaborators`)
+      .set('Cookie', ownerCookie)
+      .send({ email: 'user-two@paralleax.invalid', role: 'editor' })
+      .expect(201);
+    await request(httpServer)
+      .patch(`/api/stories/${created.body.id}`)
+      .set('Cookie', ownerCookie)
+      .send({ title: 'Owner title' })
+      .expect(200);
+    await request(httpServer)
+      .patch(`/api/stories/${created.body.id}`)
+      .set('Cookie', collaboratorCookie)
+      .send({ title: 'Collaborator title' })
+      .expect(200);
+
+    await request(httpServer)
+      .post(`/api/stories/${created.body.id}/history/undo`)
+      .set('Cookie', ownerCookie)
+      .expect(409);
+    const current = await request(httpServer)
+      .get(`/api/stories/${created.body.id}`)
+      .set('Cookie', ownerCookie)
+      .expect(200);
+    expect(current.body.title).toBe('Collaborator title');
+  });
+
+  it('records one reversible history event for a grouped graph position gesture', async () => {
+    const created = await createStory('Grouped graph move');
+    const root = await createInteraction(created.id);
+    const rootInteraction = root.interactions[0];
+    const child = await createInteraction(created.id, { parentId: rootInteraction.id });
+    const childInteraction = child.interactions[1];
+    const childTrigger = childInteraction.triggers[0];
+    const historyBefore = await request(httpServer)
+      .get(`/api/stories/${created.id}/history`)
+      .expect(200);
+
+    await request(httpServer)
+      .patch(`/api/stories/${created.id}/graph/positions`)
+      .send({
+        interactionUpdates: [
+          { interactionId: rootInteraction.id, position: { x: 300, y: 200 } },
+          { interactionId: childInteraction.id, position: { x: 300, y: 500 } },
+        ],
+        triggerUpdates: [
+          {
+            interactionId: childInteraction.id,
+            triggerIds: [childTrigger.id],
+            position: { x: 310, y: 360 },
+          },
+        ],
+      })
+      .expect(200);
+
+    const historyAfter = await request(httpServer)
+      .get(`/api/stories/${created.id}/history`)
+      .expect(200);
+    expect(historyAfter.body.entries).toHaveLength(historyBefore.body.entries.length + 1);
+    const undone = await request(httpServer)
+      .post(`/api/stories/${created.id}/history/undo`)
+      .expect(201);
+    expect(undone.body.story).toBeUndefined();
+    expect(undone.body).toMatchObject({
+      storyId: created.id,
+      revision: expect.any(Number),
+      graphPositions: {
+        interactionUpdates: [
+          { interactionId: rootInteraction.id, position: rootInteraction.position },
+          { interactionId: childInteraction.id, position: childInteraction.position },
+        ],
+        triggerUpdates: [{ interactionId: childInteraction.id, triggerIds: [childTrigger.id] }],
+      },
+    });
+
+    const reloaded = await request(httpServer).get(`/api/stories/${created.id}`).expect(200);
+    expect(reloaded.body.interactions[0].position).toEqual(rootInteraction.position);
+    expect(reloaded.body.interactions[1].position).toEqual(childInteraction.position);
+    expect(reloaded.body.interactions[1].triggers[0].position).toBeUndefined();
+  });
+
   it('rate-limits story mutations independently from reads', async () => {
     // Keep Supertest from owning and closing the shared server while concurrent requests are active.
     await app.listen(0);

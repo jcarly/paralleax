@@ -60,6 +60,11 @@ Paralleax currently includes:
 - Deterministic vertical graph auto-layout for the complete graph, one selected
   interaction/linked trigger, or a rectangular multi-selection, with grouped
   trigger-marker placement and fixed bottom-output/top-input interaction routing.
+- Durable authored Story change history. Every new content mutation stores a
+  reversible field/entity delta with its actor and revision in the same database
+  transaction. Authors can undo their latest compatible change with the canvas
+  button or `Ctrl+Z`, and redo with the adjacent button, `Ctrl+Shift+Z`, or
+  `Ctrl+Y`; shortcuts inside editable fields retain native text undo.
 - Editor-only Simulation Mode diagnostics.
 - Live simultaneous editing for clients connected to the same API process. Every
   committed interaction, trigger, position, context entity, item/stat structure,

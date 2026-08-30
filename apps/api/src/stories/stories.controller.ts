@@ -36,6 +36,7 @@ import {
   UpdateReaderSaveDto,
   UpdateStatDefinitionDto,
   UpdateStoryDto,
+  UpdateStoryGraphPositionsDto,
   UpdateTriggerDto,
   UpdateStoryAccessDto,
   SetStoryCollaboratorDto,
@@ -95,6 +96,22 @@ export class StoriesController {
   @Throttle({ default: { limit: STORY_READ_RATE_LIMIT, ttl: 60_000 } })
   stream(@Param('storyId') id: string, @CurrentUser() user: RequestUser) {
     return this.stories.stream(id, user.id);
+  }
+
+  @Get(':storyId/history')
+  @Throttle({ default: { limit: STORY_READ_RATE_LIMIT, ttl: 60_000 } })
+  getHistory(@Param('storyId') id: string, @CurrentUser() user: RequestUser) {
+    return this.stories.getHistory(id, user.id);
+  }
+
+  @Post(':storyId/history/undo')
+  undo(@Param('storyId') id: string, @CurrentUser() user: RequestUser) {
+    return this.stories.undo(id, user.id);
+  }
+
+  @Post(':storyId/history/redo')
+  redo(@Param('storyId') id: string, @CurrentUser() user: RequestUser) {
+    return this.stories.redo(id, user.id);
   }
 
   @Get(':storyId/access')
@@ -237,6 +254,14 @@ export class StoriesController {
     @CurrentUser() user: RequestUser,
   ) {
     return this.stories.createInteraction(id, input, user.id);
+  }
+
+  @Patch(':storyId/graph/positions') updateGraphPositions(
+    @Param('storyId') storyId: string,
+    @Body() input: UpdateStoryGraphPositionsDto,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.stories.updateGraphPositions(storyId, input, user.id);
   }
 
   @Patch(':storyId/interactions/:interactionId') updateInteraction(

@@ -1,8 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import {
+  applyStoryChangeDelta,
+  createStoryChangeDelta,
+  createStoryHistoryMutationResult,
   DEFAULT_STORY_DATE_TIME,
   READER_AUTOSAVE_ID,
   defaultStoryAccess,
+  invertStoryChangeDelta,
   readerSaveKind,
   resolveStoryAccess,
   type GraphDecoration,
@@ -10,6 +14,8 @@ import {
   type ReaderProgressState,
   type ReaderSave,
   type Story,
+  type StoryHistory,
+  type StoryHistoryMutationResult,
   type StoryAccessConfiguration,
   type StoryAccessSettings,
   type StoryCollaboratorRole,
@@ -25,6 +31,11 @@ import {
   persistStoryDifference,
   replaceStoryGraph,
 } from './persistence/stories.persistence.writer';
+import {
+  findStoryHistoryCandidate,
+  insertStoryHistoryEvent,
+  readStoryHistory,
+} from './persistence/story-history.persistence';
 
 type StoryRow = {
   id: string;
@@ -269,29 +280,84 @@ export class StoriesRepository {
     ownerId: string,
   ): Promise<Story | undefined> {
     return this.transaction(async (client) => {
-      const lock = await client.query(
-        `SELECT stories.id
-         FROM stories
-         JOIN users AS actor ON actor.id = $2
-         LEFT JOIN story_user_permissions AS permission
-           ON permission.story_id = stories.id AND permission.user_id = $2
-         WHERE stories.id = $1
-           AND (
-             actor.role = 'admin'
-             OR stories.creator_user_id = $2
-             OR stories.edit_policy = 'authenticated'
-             OR (stories.visibility <> 'private' AND permission.role = 'editor')
-           )
-         FOR UPDATE OF stories`,
-        [id, ownerId],
-      );
-      if (!lock.rowCount) return undefined;
+      if (!(await this.hasEditAccess(client, id, ownerId, true))) return undefined;
       const current = await this.findWith(client, id, ownerId);
       if (!current) return undefined;
       const updated = await mutation(structuredClone(current));
-      await persistStoryDifference(client, current, updated);
+      const changes = createStoryChangeDelta(current, updated);
+      await persistStoryDifference(client, current, updated, changes);
+      if (changes && updated.revision !== current.revision && updated.revision !== undefined) {
+        await insertStoryHistoryEvent(client, {
+          storyId: id,
+          actorUserId: ownerId,
+          revision: updated.revision,
+          kind: 'change',
+          operation: 'story.updated',
+          changes,
+          createdAt: updated.updatedAt,
+        });
+      }
       return this.findWith(client, id, ownerId);
     });
+  }
+
+  async getHistory(id: string, userId: string, limit = 50): Promise<StoryHistory | undefined> {
+    if (!(await this.hasEditAccess(this.database.pool, id, userId))) return undefined;
+    return readStoryHistory(this.database.pool, id, userId, limit);
+  }
+
+  async revertHistory(
+    id: string,
+    userId: string,
+    action: 'undo' | 'redo',
+  ): Promise<
+    | { kind: 'applied'; result: StoryHistoryMutationResult }
+    | { kind: 'unavailable' }
+    | { kind: 'conflict'; paths: string[] }
+    | undefined
+  > {
+    try {
+      return await this.transaction(async (client) => {
+        if (!(await this.hasEditAccess(client, id, userId, true))) return undefined;
+        const event = await findStoryHistoryCandidate(client, id, userId, action);
+        if (!event) return { kind: 'unavailable' as const };
+        const current = await this.findWith(client, id, userId);
+        if (!current) return undefined;
+        const reverted = applyStoryChangeDelta(current, event.changes, 'backward');
+        if (!reverted.applied) {
+          throw new StoryHistoryConflictError(reverted.conflicts.map(({ path }) => path));
+        }
+
+        const updated = reverted.story;
+        updated.id = id;
+        updated.updatedAt = new Date().toISOString();
+        updated.revision = (current.revision ?? 1) + 1;
+        const changes = invertStoryChangeDelta(event.changes);
+
+        await persistStoryDifference(client, current, updated, changes);
+        await insertStoryHistoryEvent(client, {
+          storyId: id,
+          actorUserId: userId,
+          revision: updated.revision,
+          kind: action,
+          operation: event.operation,
+          changes,
+          createdAt: updated.updatedAt,
+          revertsEventId: String(event.id),
+        });
+        const history = await readStoryHistory(client, id, userId);
+        return {
+          kind: 'applied' as const,
+          result: createStoryHistoryMutationResult(current, updated, changes, history),
+        };
+      });
+    } catch (error) {
+      if (error instanceof StoryHistoryConflictError) {
+        return { kind: 'conflict', paths: error.paths };
+      }
+      if (isPostgresHistoryConflict(error)) return { kind: 'conflict', paths: [] };
+      throw error;
+    }
   }
 
   async delete(id: string, ownerId: string): Promise<boolean> {
@@ -778,6 +844,31 @@ export class StoriesRepository {
     }
   }
 
+  private async hasEditAccess(
+    queryable: Queryable,
+    id: string,
+    userId: string,
+    lock = false,
+  ): Promise<boolean> {
+    const result = await queryable.query(
+      `SELECT stories.id
+       FROM stories
+       JOIN users AS actor ON actor.id = $2
+       LEFT JOIN story_user_permissions AS permission
+         ON permission.story_id = stories.id AND permission.user_id = $2
+       WHERE stories.id = $1
+         AND (
+           actor.role = 'admin'
+           OR stories.creator_user_id = $2
+           OR stories.edit_policy = 'authenticated'
+           OR (stories.visibility <> 'private' AND permission.role = 'editor')
+         )
+       ${lock ? 'FOR UPDATE OF stories' : ''}`,
+      [id, userId],
+    );
+    return Boolean(result.rowCount);
+  }
+
   private async saveWith(client: PoolClient, story: Story, ownerId: string): Promise<void> {
     await client.query(
       `INSERT INTO stories
@@ -886,6 +977,17 @@ function readerSave(row: ReaderProgressRow): ReaderSave {
     createdAt: iso(row.created_at),
     updatedAt: iso(row.updated_at),
   };
+}
+
+class StoryHistoryConflictError extends Error {
+  constructor(readonly paths: string[]) {
+    super('The Story change can no longer be applied safely.');
+  }
+}
+
+function isPostgresHistoryConflict(error: unknown): boolean {
+  if (!error || typeof error !== 'object' || !('code' in error)) return false;
+  return ['23503', '23505', '23514'].includes(String(error.code));
 }
 
 function accessSettings(

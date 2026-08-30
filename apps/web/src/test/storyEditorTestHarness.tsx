@@ -142,5 +142,10 @@ export function setupStoryEditorTestSuite() {
     FakeEventSource.instances = [];
     vi.spyOn(window, 'confirm').mockReturnValue(true);
     vi.mocked(api.listCommentThreads).mockResolvedValue([]);
+    vi.mocked(api.getStoryHistory).mockResolvedValue({
+      entries: [],
+      canUndo: false,
+      canRedo: false,
+    });
   });
 }

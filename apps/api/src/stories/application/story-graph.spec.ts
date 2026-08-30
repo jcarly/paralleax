@@ -114,6 +114,30 @@ describe('StoryGraphService', () => {
       revision: 4,
     });
   });
+
+  it('persists a graph position gesture through one Story mutation', async () => {
+    const result = await service.updatePositions(
+      'story-1',
+      {
+        interactionUpdates: [{ interactionId: 'root', position: { x: 200, y: 300 } }],
+        triggerUpdates: [
+          {
+            interactionId: 'child',
+            triggerIds: ['child-trigger'],
+            position: { x: 210, y: 220 },
+          },
+        ],
+      },
+      'user-1',
+    );
+
+    expect(result).toEqual({ revision: 4, updatedAt: '2026-08-25T16:00:00.000Z' });
+    expect(mutations.update).toHaveBeenCalledTimes(1);
+    const mutation = mutations.update.mock.calls[0][1] as (story: Story) => Story;
+    const updated = mutation(storyFixture());
+    expect(updated.interactions[0].position).toEqual({ x: 200, y: 300 });
+    expect(updated.interactions[1].triggers[0].position).toEqual({ x: 210, y: 220 });
+  });
 });
 
 function storyFixture(): Story {

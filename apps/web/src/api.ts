@@ -27,6 +27,10 @@ import type {
   SaveReaderProgressInput,
   StatDefinitionMutationResult,
   Story,
+  StoryHistory,
+  StoryHistoryMutationResult,
+  StoryGraphPositionUpdates,
+  StoryMutationMetadata,
   StoryCommentThread,
   StorySummary,
   TriggerMutationResult,
@@ -132,6 +136,11 @@ export const api = {
   listStories: () => request<StorySummary[]>('/stories'),
   listPublicStories: () => request<StorySummary[]>('/stories/public'),
   getStory: (id: string) => request<Story>(`/stories/${id}`),
+  getStoryHistory: (id: string) => request<StoryHistory>(`/stories/${id}/history`),
+  undoStoryChange: (id: string) =>
+    request<StoryHistoryMutationResult>(`/stories/${id}/history/undo`, { method: 'POST' }),
+  redoStoryChange: (id: string) =>
+    request<StoryHistoryMutationResult>(`/stories/${id}/history/redo`, { method: 'POST' }),
   getStoryAccess: (id: string) => request<StoryAccessConfiguration>(`/stories/${id}/access`),
   updateStoryAccess: (id: string, settings: StoryAccessSettings) =>
     request<StoryAccessConfiguration>(`/stories/${id}/access`, {
@@ -194,6 +203,11 @@ export const api = {
   updateStory: (id: string, input: UpdateStoryInput) =>
     request<Story>(`/stories/${id}`, { method: 'PATCH', body: JSON.stringify(input) }),
   deleteStory: (id: string) => request<void>(`/stories/${id}`, { method: 'DELETE' }),
+  updateStoryGraphPositions: (id: string, input: StoryGraphPositionUpdates) =>
+    request<StoryMutationMetadata>(`/stories/${id}/graph/positions`, {
+      method: 'PATCH',
+      body: JSON.stringify(input),
+    }),
   listCommentThreads: (storyId: string) =>
     request<StoryCommentThread[]>(`/stories/${storyId}/comment-threads`),
   createCommentThread: (storyId: string, anchor: CommentAnchor, body: string) =>

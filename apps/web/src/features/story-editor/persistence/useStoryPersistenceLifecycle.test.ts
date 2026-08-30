@@ -30,7 +30,7 @@ describe('story persistence lifecycle', () => {
 
     expect(result.current.error).toBe('');
     expect(result.current.saveStatus).toBe('idle');
-    expect(useStoryRealtime).toHaveBeenLastCalledWith('story-1', true, expect.any(Function));
+    expect(useStoryRealtime).toHaveBeenLastCalledWith('story-1', true, expect.any(Function), 1);
   });
 
   it('tracks successful and failed saves without owning another Story state', async () => {

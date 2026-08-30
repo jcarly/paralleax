@@ -125,7 +125,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
     renameStory,
     updateStoryStartDateTime,
     saveTrigger,
-    moveTrigger,
+    saveGraphPositions,
     createTriggerVariant,
     deleteTrigger,
     deleteTriggerVariants,
@@ -154,6 +154,10 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
     createCharacterItem,
     deleteCharacterItem,
     moveItemInstance,
+    history,
+    historyBusy,
+    undo,
+    redo,
   } = useStoryEditorPersistence(storyId);
   usePendingSaveGuard(Boolean(story) && (saveStatus === 'saving' || saveStatus === 'error'));
   const formatCount = useCallback(
@@ -315,6 +319,22 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
     (selectedTargetThreads.length > 0 || contextualDraftAnchor),
   );
   const hasInspector = commentsOpen || hasInspectorSelection;
+
+  useEffect(() => {
+    const handleHistoryShortcut = (event: KeyboardEvent) => {
+      if (!(event.ctrlKey || event.metaKey) || event.altKey) return;
+      if (isRealtimeEditableTarget(event.target)) return;
+      const key = event.key.toLowerCase();
+      const action =
+        key === 'y' || (key === 'z' && event.shiftKey) ? 'redo' : key === 'z' ? 'undo' : undefined;
+      if (!action || saveStatus === 'saving' || saveStatus === 'error' || historyBusy) return;
+      if (action === 'undo' ? !history.canUndo : !history.canRedo) return;
+      event.preventDefault();
+      void (action === 'undo' ? undo() : redo());
+    };
+    document.addEventListener('keydown', handleHistoryShortcut);
+    return () => document.removeEventListener('keydown', handleHistoryShortcut);
+  }, [history.canRedo, history.canUndo, historyBusy, redo, saveStatus, undo]);
 
   const focusCommentThread = useCallback(
     (threadId: string) => {
@@ -677,24 +697,20 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
     );
 
     previewInteractionMoves(movedNodes, interactionPositionOverrides);
-    const operations = [
-      ...Array.from(interactionPositionOverrides.entries()).map(([interactionId, position]) =>
-        patchInteraction(interactionId, { position }),
-      ),
-      ...directlyMovedTriggers.map((triggerNode) =>
-        moveTrigger(
-          triggerNode.data.interactionId,
-          triggerNode.data.triggerIds,
-          triggerNode.position,
-        ),
-      ),
-      ...elasticTriggerUpdates.map((update) =>
-        moveTrigger(update.interactionId, update.triggerIds, update.position),
-      ),
+    const interactionUpdates = Array.from(interactionPositionOverrides.entries()).map(
+      ([interactionId, position]) => ({ interactionId, position }),
+    );
+    const triggerUpdates = [
+      ...directlyMovedTriggers.map((triggerNode) => ({
+        interactionId: triggerNode.data.interactionId,
+        triggerIds: triggerNode.data.triggerIds,
+        position: triggerNode.position,
+      })),
+      ...elasticTriggerUpdates,
     ];
 
     try {
-      await Promise.all(operations);
+      await saveGraphPositions({ interactionUpdates, triggerUpdates });
     } finally {
       endLocalEdit();
     }
@@ -967,15 +983,6 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
     const hasPositionUpdates =
       layout.interactionUpdates.length > 0 || layout.triggerUpdates.length > 0;
     if (hasPositionUpdates) beginLocalEdit();
-    const operations = [
-      ...layout.interactionUpdates.map(({ interactionId, position }) =>
-        patchInteraction(interactionId, { position }),
-      ),
-      ...layout.triggerUpdates.map(({ interactionId, triggerIds, position }) =>
-        moveTrigger(interactionId, triggerIds, position),
-      ),
-    ];
-
     window.requestAnimationFrame(() => {
       if (layout.affectedNodeIds.length === 0) return;
       void flowInstance.current?.fitView({
@@ -986,7 +993,10 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
       });
     });
     try {
-      await Promise.all(operations);
+      await saveGraphPositions({
+        interactionUpdates: layout.interactionUpdates,
+        triggerUpdates: layout.triggerUpdates,
+      });
     } finally {
       if (hasPositionUpdates) endLocalEdit();
     }
@@ -1389,6 +1399,11 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
             canOrganize={story.interactions.length > 0}
             organizeSelectionCount={selectedLayoutTargets.length}
             placingComment={placingComment}
+            canUndo={history.canUndo}
+            canRedo={history.canRedo}
+            historyBusy={historyBusy || saveStatus === 'saving' || saveStatus === 'error'}
+            onUndo={() => void undo()}
+            onRedo={() => void redo()}
             onCreateRoot={() => void createRootFromClick()}
             onAddFrame={() => void addGraphDecoration('frame')}
             onAddText={() => void addGraphDecoration('text')}

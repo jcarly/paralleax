@@ -8,6 +8,7 @@ import { ChoiceScriptImportService } from './application/choicescript-import';
 import { StoryAccessService } from './application/story-access';
 import { StoryContextService } from './application/story-context';
 import { StoryGraphService } from './application/story-graph';
+import { StoryHistoryService } from './application/story-history';
 import { StoryMetadataService } from './application/story-metadata';
 import { StoryMutationService } from './application/story-mutations';
 import { StoryReaderProgressService } from './application/story-reader-progress';
@@ -23,6 +24,7 @@ import { StoryReaderProgressService } from './application/story-reader-progress'
     StoryAccessService,
     StoryContextService,
     StoryGraphService,
+    StoryHistoryService,
     StoryMetadataService,
     StoryMutationService,
     StoryReaderProgressService,

@@ -33,10 +33,13 @@ describe('story realtime helpers', () => {
     const input = document.createElement('input');
     const editable = document.createElement('div');
     editable.setAttribute('contenteditable', 'true');
+    const editableChild = document.createElement('span');
+    editable.append(editableChild);
     const plain = document.createElement('div');
 
     expect(isRealtimeEditableTarget(input)).toBe(true);
     expect(isRealtimeEditableTarget(editable)).toBe(true);
+    expect(isRealtimeEditableTarget(editableChild)).toBe(true);
     expect(isRealtimeEditableTarget(plain)).toBe(false);
     expect(isRealtimeEditableTarget(null)).toBe(false);
   });

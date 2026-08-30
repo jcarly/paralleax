@@ -1399,4 +1399,28 @@ export const databaseMigrations: DatabaseMigration[] = [
         );
     `,
   },
+  {
+    id: '202608280034_story_change_history',
+    sql: `
+      CREATE TABLE story_change_events (
+        id bigserial PRIMARY KEY,
+        story_id text NOT NULL REFERENCES stories(id) ON DELETE CASCADE,
+        actor_user_id text REFERENCES users(id) ON DELETE SET NULL,
+        revision integer NOT NULL CHECK (revision > 1),
+        kind text NOT NULL CHECK (kind IN ('change', 'undo', 'redo')),
+        operation text NOT NULL CHECK (btrim(operation) <> ''),
+        changes jsonb NOT NULL CHECK (jsonb_typeof(changes) = 'object'),
+        reverts_event_id bigint UNIQUE
+          REFERENCES story_change_events(id) ON DELETE RESTRICT,
+        created_at timestamptz NOT NULL,
+        UNIQUE (story_id, revision),
+        CHECK (reverts_event_id IS NULL OR kind IN ('undo', 'redo'))
+      );
+
+      CREATE INDEX story_change_events_story_order_idx
+        ON story_change_events(story_id, id DESC);
+      CREATE INDEX story_change_events_actor_order_idx
+        ON story_change_events(story_id, actor_user_id, id DESC);
+    `,
+  },
 ];

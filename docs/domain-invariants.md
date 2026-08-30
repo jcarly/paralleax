@@ -8,6 +8,16 @@ details. They should stay covered by tests as the editor grows.
 - A story contains zero or more interactions.
 - Review comment threads are story-scoped collaboration metadata, not authored
   story state. They never change reader evaluation, progress, or exports.
+- Every reversible canonical Story-content mutation creates a new Story revision
+  and one durable authored-change event in the same transaction. An undo or redo
+  appends another inverse event and revision; it never deletes prior history.
+- Global undo selects the current author's latest active normal or redo event;
+  redo selects that author's latest active undo event. A reversal preserves
+  unrelated later changes and must fail rather than overwrite a changed affected
+  value or create invalid same-Story references.
+- Story access settings, collaborators, review comments, reader/simulation saves,
+  Story creation/import, and whole-Story deletion are outside authored-content
+  undo history because their ownership and lifecycles differ.
 - Reader-visible discussions are limited to the current interaction. Displaying
   or writing them never changes the ordered journey or runtime evaluation.
 - A comment anchor is either a graph position, a same-story target entity, or a

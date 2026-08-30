@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test';
-import type { Story } from '@paralleax/shared';
+import type { Story, StoryGraphPositionUpdates } from '@paralleax/shared';
 
 export const story: Story = {
   id: 'story-1',
@@ -74,6 +74,22 @@ export async function mockStory(page: Page, initialStory: Story = cloneStory()) 
   });
 }
 
+export async function mockGraphPositionUpdates(
+  page: Page,
+  onUpdate: (updates: StoryGraphPositionUpdates) => void | Promise<void> = () => {},
+) {
+  await page.route('**/api/stories/story-1/graph/positions', async (route) => {
+    const updates = route.request().postDataJSON() as StoryGraphPositionUpdates;
+    await onUpdate(updates);
+    await route.fulfill({
+      json: {
+        revision: 2,
+        updatedAt: '2026-07-14T08:01:00.000Z',
+      },
+    });
+  });
+}
+
 async function mockEditorBackgroundRequests(page: Page) {
   await page.addInitScript(() => {
     class TestEventSource {
@@ -103,6 +119,10 @@ async function mockEditorBackgroundRequests(page: Page) {
   await page.route('**/api/stories/story-1/comment-threads', (route) =>
     route.fulfill({ json: [] }),
   );
+  await page.route('**/api/stories/story-1/history', (route) =>
+    route.fulfill({ json: { entries: [], canUndo: false, canRedo: false } }),
+  );
+  await mockGraphPositionUpdates(page);
 }
 
 export async function prepareEditorPage(page: Page) {

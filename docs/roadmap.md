@@ -2,6 +2,8 @@
 
 This roadmap describes the progression from the validated narrative core to a public Paralleax platform.
 
+Status reviewed: 2026-08-28.
+
 It is organized around **user capabilities** rather than implementation areas. Engineering work supports these milestones but does not define them by itself.
 
 For the authoritative implemented baseline, see [Current scope](current-scope.md). The original narrative-core milestone is documented in [MVP](mvp.md). Operational requirements live in [Production readiness](production-readiness.md), and implementation debt belongs in [Code quality backlog](code-quality-backlog.md).
@@ -17,6 +19,28 @@ Each milestone contains:
 - **Dependencies**: important sequencing constraints.
 
 Version numbers express product progression, not a requirement to finish every possible feature in one domain before moving forward. Small increments from later milestones may be implemented earlier when they validate the architecture or unblock current work.
+
+## Current Position and Delivery Order
+
+Paralleax is suitable for demonstrations, private-alpha use, and small or
+moderately complex test stories. The implemented product already contains
+substantial V0.3, V0.4, V0.6, V0.8, and V0.9 foundations, but that does not make
+the later milestones complete: public delivery is still gated by the unfinished
+reliability, conflict, exchange-format, accessibility, and publication work.
+
+The near-term delivery sequence is:
+
+1. close the remaining standalone V0.2 reliability and accessibility gaps now
+   that durable authored history and global undo/redo are implemented;
+2. complete V0.3 optimistic concurrency, conflict recovery, history labels,
+   retention, and author-facing history browsing;
+3. establish the stable Paralleax backup/import-export contract required by V0.6;
+4. add Story validation, onboarding, and accessibility evidence to reach V0.7;
+5. then deepen world state, dynamic execution, collaboration, and publishing
+   according to validated user needs.
+
+Later milestone foundations may continue to be improved when they support these
+steps, but they must not bypass their production dependencies.
 
 ## Guiding Principles
 
@@ -53,7 +77,7 @@ Completed. The historical criteria remain documented in [MVP](mvp.md).
 
 ---
 
-## V0.2 — Reliable Large-Story Authoring — In Progress
+## V0.2 — Reliable Large-Story Authoring — Advanced, In Progress
 
 ### Goal
 
@@ -71,30 +95,50 @@ An author can safely create, navigate, edit, test, and recover a large story wit
 - Save-state protection during navigation and page unload.
 - Rich-text and HTTP payload limits.
 - Story Canvas foundations.
-- Search and reference navigation.
-- Simulation Mode foundations.
-- Authenticated reader-progress persistence.
+- Search, filtering, text occurrences, and context-reference navigation.
+- Rectangular interaction/Trigger multi-selection and group movement.
+- Complete, single-element, and selected-group automatic graph layout.
+- Fixed bottom-output/top-input routing and collision-aware Trigger placement.
+- Position-aware graph context actions and icon-only canvas tools.
+- Simulation Mode with condition diagnostics, forced paths, backward replay,
+  inline interaction editing, and option creation.
+- Separate authenticated reader and Simulation Mode autosaves plus named manual
+  saves shared between the two modes.
+- Recoverable reader loading, visible progress-save state, and editor unload/
+  navigation guards while saves are pending or failed.
+- Deterministic demo-story fixtures and a 2,000-interaction graph baseline.
+- English/French interface localization and a reusable design-system foundation.
+- Durable per-author Story-content history with atomic reversible deltas,
+  conflict-safe inverse revisions, vertical undo/redo controls, and global
+  `Ctrl+Z`, `Ctrl+Shift+Z`, and `Ctrl+Y` shortcuts outside editable fields.
 - Lazy-loaded editor/player routes.
 
 ### Remaining scope
 
 #### Authoring UX
 
-- Refine Story Canvas navigation and interaction ergonomics.
-- Add a focused narrative-neighborhood mode for large graphs.
+- Add an author-facing history browser with meaningful operation labels and
+  grouping; the current controls expose only undo/redo availability.
+- Add a focused narrative-neighborhood mode if large-story usability testing
+  confirms that search and reference navigation are insufficient.
 - Improve empty states, contextual actions, keyboard guidance, and shortcuts.
-- Add whole-graph auto-layout with immediate undo.
 - Continue search/filter/focal-point improvements where large-story tests justify them.
-- Consolidate the design system and accessibility behavior.
-- Extend interface internationalization when the authoring flows stabilize.
+- Consolidate dialog, loading, empty, recoverable-error, and save-error behavior.
+- Complete automated accessibility checks and a manual keyboard/focus audit.
+- Extend interface internationalization only as remaining authoring flows stabilize.
+- Give Simulation Mode mutations visible saving, failure, and recovery behavior.
 
 #### Reliability and scale
 
 - Define representative story-size and creator-account performance budgets.
 - Profile before changing graph projection or React Flow synchronization.
 - Continue replacing unnecessary full-graph persistence with targeted mutations.
-- Verify backup and restore procedures.
+- Add story-level size/entity quotas and provider-level abuse limits.
+- Complete a recorded backup restoration drill in the selected deployment
+  environment; keep the existing CI restore verification green.
 - Maintain reproducible stress-test fixtures and recorded baselines.
+- Add a real-browser regression for late route responses and unresolved-save
+  navigation guards.
 
 ### Exit criteria
 
@@ -107,15 +151,19 @@ V0.2 is complete when:
 - authors can locate and navigate to relevant interactions without manually scanning the full graph;
 - critical editor and reader workflows are covered by automated regression tests;
 - the Story Canvas is usable without developer knowledge of the internal graph model.
+- authors can undo and redo supported Story modifications from keyboard and menu
+  controls without losing unrelated canonical changes.
 
 ### Dependencies
 
 - Performance changes require measured evidence.
 - Large structural refactors are not V0.2 goals by themselves; extract modules incrementally when needed.
+- Further history browsing, retention, and audit presentation build on the V0.3
+  revision/event foundation; do not add graph-only snapshot stacks beside it.
 
 ---
 
-## V0.3 — Identity, Revisions, and Permissions — Partial Foundation
+## V0.3 — Identity, Revisions, and Permissions — Advanced Foundation
 
 ### Goal
 
@@ -125,23 +173,54 @@ Stories have reliable ownership and revision semantics so multiple people and fu
 
 - Local user accounts.
 - Opaque cookie sessions.
-- Creator-only story ownership.
+- Creator ownership and global user/administrator roles.
+- Story revisions incremented on authored mutations and returned in mutation
+  results and live invalidation events.
+- Private, authenticated, invitation, and public Story visibility.
+- Owner, collaborator, authenticated-user, and administrator editing policies.
+- Story-specific viewer/editor grants with effective read/edit/manage/comment
+  capabilities.
+- Central shared access resolution consumed by API and web presentation, with
+  repository authorization enforced in PostgreSQL.
+- Administrator account management and last-administrator protection.
+- Process-local live invalidation with deterministic editor reload and
+  Simulation Mode replay.
+- Append-only PostgreSQL authored-change events, atomically stored precise
+  reversible deltas, actor/revision metadata, and recent ordered summaries.
+- Current-author undo/redo as inverse canonical revisions. Unrelated later edits
+  survive; overlapping or structurally invalid reversals return a conflict.
+- Revision-aware editor controls and shortcuts that preserve native text-field
+  undo and reuse canonical Story replacement after a successful inverse.
 
 ### Remaining scope
 
 #### Revision model
 
-- Add explicit story revisions to mutations.
-- Reject obsolete writes with clear conflict responses.
-- Define editor merge/retry behavior.
-- Preserve user work across recoverable conflicts.
+- Require an expected Story or entity revision on every mutable operation where
+  an obsolete write could destroy newer canonical work.
+- Reject obsolete writes with a stable `409 Conflict` response and request id.
+- Define and implement the editor choices for reload, retry, overwrite, or merge
+  according to mutation type.
+- Preserve active drafts across recoverable conflicts and test concurrent edits
+  from separate clients.
+- Decide whether conflict scope remains Story-wide or becomes entity/field-level
+  for common independent mutations.
+- Define snapshot cadence, event compaction, and retention for long-lived large
+  Stories without weakening the append-only audit contract.
+- Add stable operation labels and optional gesture grouping above the precise
+  delta format, then expose a navigable history browser.
+- Decide whether explicitly selected older events may be reversed in the future;
+  global undo remains scoped to the current author's latest active event.
 
 #### Access model
 
-- Centralize access checks in a `StoryAccessPolicy` or equivalent boundary.
-- Support private, unlisted, and eventually public visibility.
-- Add delegated read/edit/manage permissions.
-- Add account recovery and external identity providers when operationally required.
+- Finish consolidating repeated SQL/application access expressions behind one
+  explicit policy contract without weakening query-level authorization.
+- Decide whether an explicit unlisted visibility differs from invitation and
+  public visibility before adding it.
+- Add password change/reset, email verification, session revocation, and account
+  export/deletion before open registration.
+- Add external identity providers only when operationally required.
 
 ### Exit criteria
 
@@ -152,6 +231,8 @@ V0.3 is complete when:
 - authorization is centralized rather than scattered across endpoints;
 - Story visibility and delegated access can be represented without changing the core narrative model;
 - the editor has a defined UX for recoverable conflicts.
+- authored changes have an ordered, durable history that can drive safe
+  author-facing undo/redo rather than a transient graph-only snapshot stack.
 
 ### Dependencies
 
@@ -161,7 +242,7 @@ V0.3 is complete when:
 
 ---
 
-## V0.4 — Typed World State — Partially Implemented
+## V0.4 — Typed World State — Advanced Foundation
 
 ### Goal
 
@@ -171,31 +252,43 @@ Authors can model persistent world state beyond visited interactions while the e
 
 - Locations and current-location conditions.
 - Characters, interaction casts, and presence conditions.
-- Numeric character stats, effects, and comparisons.
+- Reusable number, boolean, and string variables assigned to Stories,
+  characters, locations, and item definitions.
+- Typed initial values, interaction effects, Trigger comparisons, hourly change,
+  inert rich-text interpolation, and deterministic replay.
 - Item definitions and exact authored item instances.
 - Deterministic inventory replay.
 - Recursive item-instance persistence and authoring.
-- Character-owned item roots.
+- Character- and location-owned item roots.
 - Typed parent relationships and cycle-safe subtree transfers between characters
-  and item containers.
+  locations, and item containers.
+- Independent per-instance item variable values and exact-instance effects.
 - Story-local deterministic time.
 - Interaction durations and calendar-based Trigger conditions.
+- One playable-character reader projection with character sheet, inventory, and
+  encountered-character presentation.
+- Authoring annotations and contextual discussions that remain outside runtime
+  Story semantics.
 
-### World-State Model to Clarify
+### World-State Model Direction
 
-Before adding many new concepts, define which concepts are genuinely distinct domain types and which are configurations of a smaller typed state system.
+ADR-021 settled the base direction: stable attributes, resources, boolean flags,
+and similar scalar state extend the existing typed-variable model rather than
+creating parallel attribute tables or workflows. New concepts should remain
+distinct only when their ownership, lifecycle, or invariants materially differ.
 
-Candidate concepts include stable attributes, resources, skills, boolean flags, traits, and temporary statuses.
-
-Do not introduce a generic untyped key/value variable bag merely to cover all of these cases.
+Calculated variables, formulas, dependency graphs, traits with non-scalar
+semantics, and temporary statuses remain separate decisions. Do not introduce a
+generic untyped key/value bag merely to cover them.
 
 ### Remaining scope
 
 #### General world state
 
-- Define typed non-character state where real scenarios require it.
-- Add conditions/effects for accepted state types.
-- Persist additional runtime state through deterministic journey replay and/or reader-progress snapshots.
+- Add calculated variables and dependency factors only after cycle, update-order,
+  precision, and debugging semantics are documented.
+- Decide whether temporary statuses are ordinary variable assignments with an
+  expiry rule or a distinct runtime concept.
 - Improve reference-resolution UX when deleting referenced entities.
 
 #### Character relationships
@@ -237,7 +330,6 @@ Only implement later stages when concrete story requirements justify them.
 
 - Playable character points of view.
 - Graph filters/focal points for world entities and groups.
-- Author annotations that do not affect execution.
 - Explicit final interactions and completed-story semantics.
 
 ### Exit criteria
@@ -259,7 +351,7 @@ V0.4 is complete when:
 
 ---
 
-## V0.5 — Dynamic Execution — Partial Foundation
+## V0.5 — Dynamic Execution — Early Foundation
 
 ### Goal
 
@@ -270,6 +362,8 @@ Stories can react not only to world state but also to time and controlled automa
 - Interaction durations.
 - Deterministic story-local calendar progression.
 - Date, date-range, weekday, and time-slot availability.
+- Deterministic backward replay and persisted reader/simulation journeys that
+  provide the restoration boundary for future dynamic behavior.
 
 ### Remaining scope
 
@@ -304,6 +398,20 @@ V0.5 is complete when:
 
 Paralleax can ingest and emit non-trivial story data through explicit, validated adapters without making any external engine the specification for the Paralleax core.
 
+### Implemented foundation
+
+- Experimental ChoiceScript import from the signed-in Story library.
+- Staged source parser, typed source model, draft graph compiler/layout,
+  Paralleax mapping, and compatibility-report modules.
+- Atomic API validation and complete Story persistence.
+- Conversion of prose, choices, labels, jumps, simple typed variables, literal
+  effects/comparisons, and inert substitutions.
+- Explicit source-file/line diagnostics for unsupported commands and expressions.
+- Transient source-identifier mapping with no ChoiceScript concepts added to the
+  canonical Story model.
+- Synthetic regression fixtures plus documented checks against the official
+  ChoiceScript example and CSLIB `char_creator`.
+
 ### Preferred pipeline
 
 ```text
@@ -318,14 +426,22 @@ source inventory
 
 ### Remaining scope
 
-- Define a source-neutral intermediate representation.
-- Define structural and semantic validation.
-- Produce compatibility and unsupported-feature reports.
-- Create stable internal import APIs.
-- Import one representative non-trivial external scenario without source-specific changes to core semantics.
+- Define a source-neutral retained representation for unsupported source and
+  richer expressions; the current draft graph remains ChoiceScript-specific.
+- Separate dry-run compatibility analysis from Story creation and make the full
+  report downloadable.
+- Extend structural and semantic validation into a reusable Story validation
+  boundary rather than importer-only checks.
+- Promote the current internal import boundary only after its contracts are
+  stable and source-neutral where required.
+- Automate licensed, version-pinned compatibility corpora without copying
+  prohibited commercial sources.
 - Use more complex systems as architecture stress tests.
 - Define a stable public Paralleax import/export format after internal compatibility requirements are understood.
-- Support export suitable for backup/versioning before promising executable exports.
+- Support a downloadable Story backup, validation, and restore workflow before
+  promising executable or lossless foreign-engine exports.
+- Add ZIP/folder and larger background imports with progress and rollback only
+  after the synchronous small-project path is proven.
 
 ### Exit criteria
 
@@ -351,6 +467,19 @@ V0.6 is complete when:
 
 An author who did not build Paralleax can create, test, save, maintain, export, and understand a moderately complex story without developer assistance.
 
+### Implemented foundation
+
+- Unified Story library with creation, deletion, search, filtering, sorting, and
+  grid/list presentation.
+- Five deterministic demonstration Stories covering paths, visited conditions,
+  Story variables, character stats/items, and recursive item state.
+- Story Canvas creation, selection, navigation, layout, contextual actions, and
+  inspectors for the implemented narrative model.
+- Simulation diagnostics, forced-path testing, inline editing, and separate
+  simulation saves.
+- English/French interface and an extensive English user guide.
+- Broad unit, API, PostgreSQL, component, coverage, stress, and Playwright suites.
+
 ### Scope
 
 - Coherent onboarding and first-story flow.
@@ -364,6 +493,8 @@ An author who did not build Paralleax can create, test, save, maintain, export, 
 - User-facing documentation.
 - Accessibility pass on critical authoring workflows.
 - Representative usability testing with external authors.
+- Cohesive loading, empty, failure, recovery, and confirmation patterns across
+  the complete authoring workflow.
 
 ### Exit criteria
 
@@ -385,19 +516,34 @@ V0.7 is complete when:
 
 ---
 
-## V0.8 — Collaboration and Review
+## V0.8 — Collaboration and Review — Partial Foundation
 
 ### Goal
 
 Several contributors can safely propose, review, and edit story content without silently overwriting one another.
 
+### Implemented foundation
+
+- Story-specific viewer/editor permissions and reader/editor comment policy.
+- Anchored discussions on graph positions, entities, and supported text ranges,
+  with replies, open/resolved state, detached-anchor detection, and navigation.
+- Reader-contextual interaction discussions.
+- Process-local live Story and comment invalidation.
+- Deterministic editor refresh and Simulation Mode replay after remote changes.
+
+These features support review and simultaneous awareness, but they are not yet a
+safe multi-author conflict or proposal workflow.
+
 ### Scope
 
 - Suggestions/contribution proposals.
 - Review and approval/rejection workflows.
-- Accepted/rejected/pending change history.
-- Contributor roles and delegated permissions.
-- Event-log or equivalent auditable history.
+- Accepted/rejected/pending proposal history layered on the same authored-change
+  event foundation used by undo/redo.
+- Contributor roles beyond the existing viewer/editor grants where concrete
+  review workflows require them.
+- Collaborative audit projection of the event history, including actor and
+  review metadata without allowing undo to erase past events.
 - Real-time collaboration only where it provides clear value and revision/conflict semantics are proven.
 
 ### Exit criteria
@@ -416,11 +562,25 @@ V0.8 is complete when:
 
 ---
 
-## V0.9 — Publishing Readiness
+## V0.9 — Publishing Readiness — Early Foundation
 
 ### Goal
 
 A validated Story can become a stable reader-facing publication without exposing mutable authoring state.
+
+### Implemented foundation
+
+- Anonymous reading of public Stories and authenticated/invitation/private
+  visibility for other access modes.
+- Stable Story player routes, separate editor-only Simulation Mode, and
+  capability-based interface controls.
+- Authenticated reader saves kept separate from authored Story persistence.
+- Provider-neutral production images, migration-first deployment, health/
+  readiness probes, structured request logging, exact production-origin checks,
+  smoke tests, and private-alpha operator guidance.
+
+Public visibility currently exposes the mutable authored Story. It is not yet a
+versioned publication workflow.
 
 ### Scope
 

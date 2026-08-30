@@ -218,7 +218,22 @@ interaction position is saved when the pointer is released.
 The canvas actions are grouped in a vertical icon toolbar at the top-left of the
 graph, immediately beside the story-context list. Hover an icon, or focus it
 with the keyboard, to identify **Add root**, **Add frame**, **Add text**,
-**Organize graph**, or **Place a post-it** before activating it.
+**Organize graph**, or **Place a post-it** before activating it. The first two
+icons undo and redo committed Story changes. A disabled icon means that no
+compatible change is currently available for that direction.
+
+Use **Undo** or `Ctrl+Z` while focus is outside a text field to reverse your most
+recent compatible Story modification. Use **Redo**, `Ctrl+Shift+Z`, or `Ctrl+Y`
+to restore it. History is stored in PostgreSQL and remains available after a
+reload. In collaborative editing, the command targets your own latest change and
+keeps unrelated later work; if another change overlaps it or now depends on it,
+Paralleax rejects the reversal instead of overwriting current content. Inside an
+input or rich-text field, `Ctrl+Z` remains the normal local text undo shortcut.
+
+History covers Story content, interactions, Triggers, context entities,
+variables, items, and graph decorations. Access settings, collaborators, review
+comments, reader/simulation saves, whole-Story creation/import, and deletion are
+not part of this undo stack.
 
 Use **Organize graph** with no interaction or trigger selected to arrange every
 narrative element in a spaced vertical hierarchy. The layout separates disconnected

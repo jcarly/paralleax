@@ -9,6 +9,7 @@ import {
   isStoryTime,
   normalizeTriggerInputIds,
   updateGraphDecorationInStory,
+  updateStoryGraphPositions,
   updateTriggerInStory,
   type GraphDecorationMutationResult,
   type InteractionMutationResult,
@@ -23,6 +24,7 @@ import type {
   TriggerConditionDto,
   UpdateGraphDecorationDto,
   UpdateInteractionDto,
+  UpdateStoryGraphPositionsDto,
   UpdateTriggerDto,
 } from '../dto/stories.dto';
 import { sanitizeRichText } from '../rich-text';
@@ -136,6 +138,47 @@ export class StoryGraphService {
       userId,
     );
     return this.interactionResult(story, interactionId);
+  }
+
+  async updatePositions(storyId: string, input: UpdateStoryGraphPositionsDto, userId: string) {
+    if (input.interactionUpdates.length === 0 && input.triggerUpdates.length === 0) {
+      throw new BadRequestException('At least one graph position update is required');
+    }
+    const story = await this.mutations.update(
+      storyId,
+      (story) => {
+        const interactionIds = new Set(story.interactions.map(({ id }) => id));
+        const updatedInteractionIds = input.interactionUpdates.map(
+          ({ interactionId }) => interactionId,
+        );
+        if (
+          new Set(updatedInteractionIds).size !== updatedInteractionIds.length ||
+          updatedInteractionIds.some((id) => !interactionIds.has(id))
+        ) {
+          throw new BadRequestException(
+            'Graph interaction position targets must be unique and belong to the Story',
+          );
+        }
+        const updatedTriggerKeys = input.triggerUpdates.flatMap(({ interactionId, triggerIds }) =>
+          triggerIds.map((triggerId) => `${interactionId}:${triggerId}`),
+        );
+        if (new Set(updatedTriggerKeys).size !== updatedTriggerKeys.length) {
+          throw new BadRequestException('Graph Trigger position targets must be unique');
+        }
+        for (const { interactionId, triggerIds } of input.triggerUpdates) {
+          const interaction = story.interactions.find(({ id }) => id === interactionId);
+          const storyTriggerIds = new Set(interaction?.triggers.map(({ id }) => id) ?? []);
+          if (!interaction || triggerIds.some((triggerId) => !storyTriggerIds.has(triggerId))) {
+            throw new BadRequestException(
+              'Graph Trigger position targets must belong to their Story interaction',
+            );
+          }
+        }
+        return updateStoryGraphPositions(story, input);
+      },
+      userId,
+    );
+    return storyMutationMetadata(story);
   }
 
   deleteInteraction(storyId: string, interactionId: string, userId: string): Promise<Story> {

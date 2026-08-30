@@ -537,15 +537,16 @@ describe('StoryEditor triggers', () => {
     const story = storyWithTwoInteractions();
     const withoutLink = structuredClone(story);
     withoutLink.interactions[1].triggers[0].inputInteractionIds = [];
-    const staleMovedStory = structuredClone(story);
-    staleMovedStory.interactions[1].position = { x: 105, y: 285 };
     let resolveLinkDeletion: (story: Story) => void = () => {};
     vi.mocked(api.updateTrigger).mockReturnValue(
       new Promise((resolve) => {
         resolveLinkDeletion = resolve;
       }),
     );
-    vi.mocked(api.updateInteraction).mockResolvedValue(staleMovedStory);
+    vi.mocked(api.updateStoryGraphPositions).mockResolvedValue({
+      revision: 2,
+      updatedAt: story.updatedAt,
+    });
 
     await renderEditor(story);
     await user.click(screen.getByTestId('delete-link-interaction-1-interaction-2'));
@@ -554,8 +555,9 @@ describe('StoryEditor triggers', () => {
     await user.click(screen.getByTestId('drag-node-interaction-2'));
 
     await waitFor(() => {
-      expect(api.updateInteraction).toHaveBeenCalledWith('story-1', 'interaction-2', {
-        position: { x: 105, y: 285 },
+      expect(api.updateStoryGraphPositions).toHaveBeenCalledWith('story-1', {
+        interactionUpdates: [{ interactionId: 'interaction-2', position: { x: 105, y: 285 } }],
+        triggerUpdates: [],
       });
     });
     expect(screen.queryByTestId('flow-edge-interaction-1-interaction-2')).not.toBeInTheDocument();

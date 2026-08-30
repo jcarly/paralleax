@@ -6,11 +6,12 @@ It is different from default placement. Default placement decides where a newly
 created interaction appears. Auto layout rearranges interactions that already
 exist.
 
-## First Version
+## Current Behavior
 
-The first useful command can be a single `Reorganize` action.
+The canvas exposes one automatic-organization action for the complete graph, a
+selected interaction or linked Trigger marker, or a rectangular multi-selection.
 
-Initial behavior:
+Current behavior:
 
 - act immediately;
 - reorganize the whole graph;
@@ -18,10 +19,8 @@ Initial behavior:
 - avoid overlap;
 - reduce unnecessary crossings when possible;
 - keep triggers visible and editable;
-- be undoable with `Ctrl+Z`.
-
-Selection-based reorganization is not part of the first version. Multi-selection
-would add UI and implementation complexity before the basic behavior is proven.
+- treat the complete organization as one canonical position mutation;
+- be undoable as one durable history step with `Ctrl+Z` or the canvas control.
 
 Locking interactions in place is also out of scope for the first version.
 
@@ -42,11 +41,11 @@ authoring clarity.
 
 ## Undo
 
-Auto layout must be undoable.
-
-Longer term, every story modification should be undoable with `Ctrl+Z`, but
-layout changes are especially important because they can move many interactions
-at once.
+Auto layout uses the same durable authored-change history as other Story
+mutations. All interaction and Trigger positions from one organization command
+are saved through one batched mutation, so one undo restores the complete prior
+layout. Undo appends an inverse revision and does not own a special graph-only
+snapshot stack.
 
 ## Later Options
 

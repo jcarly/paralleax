@@ -1,5 +1,29 @@
 # Changelog
 
+## 2026-08-28
+
+- Added durable authored Story history backed by append-only reversible events.
+  Every revisioned content mutation records its field/entity delta atomically;
+  undo and redo create inverse revisions, preserve unrelated collaborative edits,
+  and return a conflict instead of overwriting overlapping later work.
+- Added vertical canvas Undo/Redo icon controls and global `Ctrl+Z`,
+  `Ctrl+Shift+Z`, and `Ctrl+Y` shortcuts. Editable fields keep native text undo,
+  while history state and controls remain available after reload.
+- Grouped interaction and Trigger position persistence into one graph request,
+  revision, and history event for multi-selection drags and automatic layout.
+- Removed per-revision history reloads from the editor, combined history entries
+  and availability into one database read, and made large entity-delta placement
+  indexing linear. A 2,000-interaction graph-wide change now has an explicit
+  history performance regression budget.
+- Batched graph-wide undo/redo position persistence into at most two SQL updates,
+  reused the exact inverted event delta, and removed the redundant post-write
+  Story reload. Large automatic-layout reversals no longer issue one update per
+  interaction and Trigger.
+- Made position-only undo/redo responses differential, suppressed redundant
+  realtime reloads for revisions already applied locally, and indexed graph
+  interactions once during Trigger/edge projection. Large reversals now avoid
+  transferring the complete Story and repeated quadratic interaction scans.
+
 ## 2026-08-27
 
 - Added authenticated database-backed save slots: separate reader and Simulation

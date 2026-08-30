@@ -21,14 +21,19 @@ changes`, and whether every non-read permission implies `read`.
 
 ## Change History and Suggestions
 
-- Define event granularity: decide whether events are coarse, such as
-  `interaction.updated`, or precise, such as `interaction.title.changed`,
-  `trigger.input.added`, and `condition.removed`.
+- Define author-facing operation labels and grouping on top of the implemented
+  precise reversible field/entity deltas, especially for multi-request gestures.
 - Define how pending suggestions are previewed: decide whether users inspect a
   list of events, a temporary draft state, or both.
 - Define how rejected suggestions are retained and whether they can be reopened.
-- Define snapshot cadence, event compaction, and retention once change history is
-  implemented; avoid one history event per text keystroke.
+- Define snapshot cadence, event compaction, and retention for long-lived Story
+  histories; avoid one history event per text keystroke.
+- Decide whether a future history browser may reverse an explicitly selected
+  older event. Global undo currently selects the current author's latest active
+  reversible event and rejects overlapping or structurally invalid inverses.
+- Decide whether non-text local drafts need a pre-commit undo layer. Text fields
+  currently retain native undo while focused; global shortcuts and toolbar
+  controls apply only to committed canonical history.
 
 ## Story Format and Examples
 

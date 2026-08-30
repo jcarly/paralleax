@@ -1,5 +1,6 @@
 import {
   getStoryItemEntries,
+  isStoryGraphPositionDelta,
   type Character,
   type GraphDecoration,
   type Interaction,
@@ -7,6 +8,7 @@ import {
   type Location,
   type StatDefinition,
   type Story,
+  type StoryChangeDelta,
   type Trigger,
 } from '@paralleax/shared';
 import type { Queryable } from './stories.persistence.types';
@@ -173,7 +175,12 @@ async function insertJsonRows(client: Queryable, sql: string, rows: object[]) {
   await client.query(sql, [JSON.stringify(rows)]);
 }
 
-export async function persistStoryDifference(client: Queryable, before: Story, after: Story) {
+export async function persistStoryDifference(
+  client: Queryable,
+  before: Story,
+  after: Story,
+  delta?: StoryChangeDelta,
+) {
   const storyChanges: string[] = [];
   const storyValues: unknown[] = [after.id];
   addChange(storyChanges, storyValues, 'title', before.title, after.title);
@@ -189,6 +196,9 @@ export async function persistStoryDifference(client: Queryable, before: Story, a
   if (storyChanges.length > 0) {
     await client.query(`UPDATE stories SET ${storyChanges.join(', ')} WHERE id = $1`, storyValues);
   }
+
+  await persistGraphPositionDifference(client, before, after);
+  if (delta && isStoryGraphPositionDelta(delta)) return;
 
   await persistLocationDifference(client, before, after);
   await persistStatDefinitionDifference(client, before, after);
@@ -206,6 +216,7 @@ export async function persistStoryDifference(client: Queryable, before: Story, a
   }
 
   const beforeInteractions = new Map(before.interactions.map((item) => [item.id, item]));
+  const beforeInteractionIndexes = new Map(before.interactions.map(({ id }, index) => [id, index]));
   const afterInteractions = new Map(after.interactions.map((item) => [item.id, item]));
   for (const interaction of before.interactions) {
     if (!afterInteractions.has(interaction.id)) {
@@ -233,7 +244,7 @@ export async function persistStoryDifference(client: Queryable, before: Story, a
       client,
       previous,
       interaction,
-      before.interactions.findIndex(({ id }) => id === interaction.id),
+      beforeInteractionIndexes.get(interaction.id) ?? -1,
       index,
     );
     if (
@@ -256,6 +267,68 @@ export async function persistStoryDifference(client: Queryable, before: Story, a
   }
   if (statAssignmentsChanged) {
     await insertInteractionStatEffects(client, after);
+  }
+}
+
+async function persistGraphPositionDifference(client: Queryable, before: Story, after: Story) {
+  const beforeInteractions = new Map(
+    before.interactions.map((interaction) => [interaction.id, interaction]),
+  );
+  const interactionRows: object[] = [];
+  const triggerRows: object[] = [];
+
+  for (const interaction of after.interactions) {
+    const previous = beforeInteractions.get(interaction.id);
+    if (!previous) continue;
+    if (
+      previous.position.x !== interaction.position.x ||
+      previous.position.y !== interaction.position.y
+    ) {
+      interactionRows.push({
+        id: interaction.id,
+        position_x: interaction.position.x,
+        position_y: interaction.position.y,
+      });
+    }
+
+    const beforeTriggers = new Map(previous.triggers.map((trigger) => [trigger.id, trigger]));
+    for (const trigger of interaction.triggers) {
+      const previousTrigger = beforeTriggers.get(trigger.id);
+      if (
+        previousTrigger &&
+        (previousTrigger.position?.x !== trigger.position?.x ||
+          previousTrigger.position?.y !== trigger.position?.y)
+      ) {
+        triggerRows.push({
+          id: trigger.id,
+          position_x: trigger.position?.x ?? null,
+          position_y: trigger.position?.y ?? null,
+        });
+      }
+    }
+  }
+
+  if (interactionRows.length > 0) {
+    await client.query(
+      `UPDATE interactions AS target
+       SET position_x = row.position_x, position_y = row.position_y
+       FROM jsonb_to_recordset($1::jsonb) AS row(
+         id text, position_x double precision, position_y double precision
+       )
+       WHERE target.id = row.id AND target.story_id = $2`,
+      [JSON.stringify(interactionRows), after.id],
+    );
+  }
+  if (triggerRows.length > 0) {
+    await client.query(
+      `UPDATE triggers AS target
+       SET position_x = row.position_x, position_y = row.position_y
+       FROM jsonb_to_recordset($1::jsonb) AS row(
+         id text, position_x double precision, position_y double precision
+       )
+       WHERE target.id = row.id AND target.story_id = $2`,
+      [JSON.stringify(triggerRows), after.id],
+    );
   }
 }
 
@@ -638,8 +711,6 @@ async function updateInteractionDifference(
   const values: unknown[] = [after.id];
   addChange(changes, values, 'title', before.title, after.title);
   addChange(changes, values, 'body', before.body, after.body);
-  addChange(changes, values, 'position_x', before.position.x, after.position.x);
-  addChange(changes, values, 'position_y', before.position.y, after.position.y);
   addChange(changes, values, 'location_id', before.locationId ?? null, after.locationId ?? null);
   addChange(
     changes,
@@ -1075,16 +1146,6 @@ async function persistTriggerDifference(
     const previousIndex = beforeInteraction.triggers.findIndex(({ id }) => id === trigger.id);
     if (previousIndex !== index) {
       await client.query('UPDATE triggers SET sort_order = $2 WHERE id = $1', [trigger.id, index]);
-    }
-    if (
-      previous.position?.x !== trigger.position?.x ||
-      previous.position?.y !== trigger.position?.y
-    ) {
-      await client.query('UPDATE triggers SET position_x = $2, position_y = $3 WHERE id = $1', [
-        trigger.id,
-        trigger.position?.x ?? null,
-        trigger.position?.y ?? null,
-      ]);
     }
     if (
       JSON.stringify(previous.inputInteractionIds) !==

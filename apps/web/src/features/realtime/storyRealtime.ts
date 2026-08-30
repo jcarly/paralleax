@@ -22,6 +22,7 @@ export function isApiNotFound(caught: unknown): boolean {
 export function isRealtimeEditableTarget(target: EventTarget | null): target is HTMLElement {
   return (
     target instanceof HTMLElement &&
-    target.matches('input, textarea, select, [contenteditable="true"]')
+    (target.matches('input, textarea, select, [contenteditable="true"]') ||
+      target.closest('[contenteditable="true"]') !== null)
   );
 }

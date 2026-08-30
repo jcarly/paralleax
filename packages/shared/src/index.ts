@@ -2,6 +2,7 @@ export * from './access-control.js';
 export * from './comments.js';
 export * from './demo/index.js';
 export * from './graph/index.js';
+export * from './history/index.js';
 export * from './import-export/index.js';
 export * from './items/index.js';
 export * from './model/index.js';

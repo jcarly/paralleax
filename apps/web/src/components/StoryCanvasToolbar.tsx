@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
-export type CanvasActionIconName = 'root' | 'frame' | 'text' | 'organize' | 'postIt';
+export type CanvasActionIconName =
+  'undo' | 'redo' | 'root' | 'frame' | 'text' | 'organize' | 'postIt';
 
 interface StoryCanvasToolbarProps {
   canEdit: boolean;
@@ -9,6 +10,11 @@ interface StoryCanvasToolbarProps {
   canOrganize: boolean;
   organizeSelectionCount: number;
   placingComment: boolean;
+  canUndo: boolean;
+  canRedo: boolean;
+  historyBusy: boolean;
+  onUndo: () => void;
+  onRedo: () => void;
   onCreateRoot: () => void;
   onAddFrame: () => void;
   onAddText: () => void;
@@ -22,6 +28,11 @@ export function StoryCanvasToolbar({
   canOrganize,
   organizeSelectionCount,
   placingComment,
+  canUndo,
+  canRedo,
+  historyBusy,
+  onUndo,
+  onRedo,
   onCreateRoot,
   onAddFrame,
   onAddText,
@@ -38,6 +49,18 @@ export function StoryCanvasToolbar({
     <div className="canvas-tools" role="toolbar" aria-label={t('editor.canvasTools')}>
       {canEdit ? (
         <>
+          <CanvasToolButton
+            label={t('editor.undo')}
+            icon="undo"
+            disabled={!canUndo || historyBusy}
+            onClick={onUndo}
+          />
+          <CanvasToolButton
+            label={t('editor.redo')}
+            icon="redo"
+            disabled={!canRedo || historyBusy}
+            onClick={onRedo}
+          />
           <CanvasToolButton label={t('editor.addRoot')} icon="root" onClick={onCreateRoot} />
           <CanvasToolButton label={t('decoration.addFrame')} icon="frame" onClick={onAddFrame} />
           <CanvasToolButton label={t('decoration.addText')} icon="text" onClick={onAddText} />
@@ -94,6 +117,18 @@ function CanvasToolButton({
 
 export function CanvasActionIcon({ name }: { name: CanvasActionIconName }) {
   const paths = {
+    undo: (
+      <>
+        <path d="M9 7 4 12l5 5" />
+        <path d="M5 12h8a6 6 0 0 1 6 6" />
+      </>
+    ),
+    redo: (
+      <>
+        <path d="m15 7 5 5-5 5" />
+        <path d="M19 12h-8a6 6 0 0 0-6 6" />
+      </>
+    ),
     root: (
       <>
         <path d="M12 3v7M8.5 6.5h7" />

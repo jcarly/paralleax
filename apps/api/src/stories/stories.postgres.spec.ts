@@ -382,6 +382,47 @@ describePostgres('StoriesRepository PostgreSQL integration', () => {
     });
   });
 
+  it('keeps reversible authored history across repository instances', async () => {
+    const story = persistedStory();
+    story.revision = 1;
+    await repository.save(story, ownerId);
+    await repository.mutate(
+      story.id,
+      (current) => ({
+        ...current,
+        revision: 2,
+        title: 'Changed through history',
+        updatedAt: new Date().toISOString(),
+      }),
+      ownerId,
+    );
+
+    const reloadedRepository = new StoriesRepository(database);
+    await expect(reloadedRepository.getHistory(story.id, ownerId)).resolves.toMatchObject({
+      canUndo: true,
+      canRedo: false,
+      entries: [{ revision: 2, kind: 'change', reverted: false }],
+    });
+    const undone = await reloadedRepository.revertHistory(story.id, ownerId, 'undo');
+    expect(undone).toMatchObject({
+      kind: 'applied',
+      result: {
+        story: { title: 'PostgreSQL round trip', revision: 3 },
+        history: { canUndo: false, canRedo: true },
+      },
+    });
+
+    const finalRepository = new StoriesRepository(database);
+    const redone = await finalRepository.revertHistory(story.id, ownerId, 'redo');
+    expect(redone).toMatchObject({
+      kind: 'applied',
+      result: {
+        story: { title: 'Changed through history', revision: 4 },
+        history: { canUndo: true, canRedo: false },
+      },
+    });
+  });
+
   it('round-trips versioned reader progress JSON per user and story', async () => {
     const story = persistedStory();
     await repository.save(story, ownerId);

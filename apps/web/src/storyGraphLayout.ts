@@ -1,4 +1,4 @@
-import type { Position, Story } from '@paralleax/shared';
+import type { Position, Story, StoryGraphInteractionPositionUpdate } from '@paralleax/shared';
 import {
   getInteractionMovesTriggerPositionUpdates,
   getLinkedTriggerGroups,
@@ -16,10 +16,7 @@ export type StoryGraphLayoutTarget =
 export type StoryGraphLayoutScope =
   { kind: 'all' } | { kind: 'selection'; targets: readonly StoryGraphLayoutTarget[] };
 
-export interface InteractionPositionUpdate {
-  interactionId: string;
-  position: Position;
-}
+export type InteractionPositionUpdate = StoryGraphInteractionPositionUpdate;
 
 export interface StoryGraphLayoutResult {
   interactionUpdates: InteractionPositionUpdate[];

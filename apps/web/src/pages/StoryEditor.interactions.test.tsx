@@ -11,7 +11,6 @@ import {
   renderEditor,
   setupStoryEditorTestSuite,
   storyWithTwoInteractions,
-  triggerMutation,
 } from '../test/storyEditorTestHarness';
 
 vi.mock('../api', async () => {
@@ -364,7 +363,10 @@ describe('StoryEditor interactions', () => {
   it('does not erase title or body when a drag save only returns a position update', async () => {
     const movedStory = cloneStory();
     movedStory.interactions[0].position = { x: 105, y: 135 };
-    vi.mocked(api.updateInteraction).mockResolvedValue(movedStory);
+    vi.mocked(api.updateStoryGraphPositions).mockResolvedValue({
+      revision: 2,
+      updatedAt: movedStory.updatedAt,
+    });
 
     await renderEditor();
 
@@ -372,8 +374,9 @@ describe('StoryEditor interactions', () => {
     await userEvent.click(screen.getByTestId('drag-node-interaction-1'));
 
     await waitFor(() => {
-      expect(api.updateInteraction).toHaveBeenCalledWith('story-1', 'interaction-1', {
-        position: { x: 105, y: 135 },
+      expect(api.updateStoryGraphPositions).toHaveBeenCalledWith('story-1', {
+        interactionUpdates: [{ interactionId: 'interaction-1', position: { x: 105, y: 135 } }],
+        triggerUpdates: [],
       });
     });
 
@@ -388,7 +391,10 @@ describe('StoryEditor interactions', () => {
     staleMovedStory.interactions[0].position = { x: 105, y: 135 };
     staleMovedStory.interactions[1].title = '';
     staleMovedStory.interactions[1].body = '';
-    vi.mocked(api.updateInteraction).mockResolvedValue(staleMovedStory);
+    vi.mocked(api.updateStoryGraphPositions).mockResolvedValue({
+      revision: 2,
+      updatedAt: staleMovedStory.updatedAt,
+    });
 
     await renderEditor(story);
 
@@ -396,8 +402,9 @@ describe('StoryEditor interactions', () => {
     await userEvent.click(screen.getByTestId('drag-node-interaction-1'));
 
     await waitFor(() => {
-      expect(api.updateInteraction).toHaveBeenCalledWith('story-1', 'interaction-1', {
-        position: { x: 105, y: 135 },
+      expect(api.updateStoryGraphPositions).toHaveBeenCalledWith('story-1', {
+        interactionUpdates: [{ interactionId: 'interaction-1', position: { x: 105, y: 135 } }],
+        triggerUpdates: [],
       });
     });
 
@@ -411,17 +418,25 @@ describe('StoryEditor interactions', () => {
     story.interactions[1].triggers[0].position = { x: 400, y: 300 };
     const movedStory = structuredClone(story);
     movedStory.interactions[1].triggers[0].position = { x: 425, y: 315 };
-    vi.mocked(api.updateTrigger).mockResolvedValue(
-      triggerMutation(movedStory, 'interaction-2', 'trigger-2'),
-    );
+    vi.mocked(api.updateStoryGraphPositions).mockResolvedValue({
+      revision: 2,
+      updatedAt: movedStory.updatedAt,
+    });
 
     await renderEditor(story);
     expect(screen.getByTestId('flow-trigger-interaction-2-trigger-2')).not.toHaveClass('nodrag');
     await userEvent.click(screen.getByTestId('drag-node-trigger:interaction-2:trigger-2'));
 
     await waitFor(() => {
-      expect(api.updateTrigger).toHaveBeenCalledWith('story-1', 'interaction-2', 'trigger-2', {
-        position: { x: 425, y: 315 },
+      expect(api.updateStoryGraphPositions).toHaveBeenCalledWith('story-1', {
+        interactionUpdates: [],
+        triggerUpdates: [
+          {
+            interactionId: 'interaction-2',
+            triggerIds: ['trigger-2'],
+            position: { x: 425, y: 315 },
+          },
+        ],
       });
     });
   });
@@ -439,20 +454,26 @@ describe('StoryEditor interactions', () => {
     movedStory.interactions[1].triggers.forEach((trigger) => {
       trigger.position = { x: 425, y: 315 };
     });
-    vi.mocked(api.updateTrigger).mockImplementation(async (_storyId, interactionId, triggerId) =>
-      triggerMutation(movedStory, interactionId, triggerId),
-    );
+    vi.mocked(api.updateStoryGraphPositions).mockResolvedValue({
+      revision: 2,
+      updatedAt: movedStory.updatedAt,
+    });
 
     await renderEditor(story);
     await userEvent.click(screen.getByTestId('drag-node-trigger:interaction-2:trigger-2'));
 
-    await waitFor(() => expect(api.updateTrigger).toHaveBeenCalledTimes(2));
-    expect(api.updateTrigger).toHaveBeenCalledWith('story-1', 'interaction-2', 'trigger-2', {
-      position: { x: 425, y: 315 },
-    });
-    expect(api.updateTrigger).toHaveBeenCalledWith('story-1', 'interaction-2', 'trigger-variant', {
-      position: { x: 425, y: 315 },
-    });
+    await waitFor(() =>
+      expect(api.updateStoryGraphPositions).toHaveBeenCalledWith('story-1', {
+        interactionUpdates: [],
+        triggerUpdates: [
+          {
+            interactionId: 'interaction-2',
+            triggerIds: ['trigger-2', 'trigger-variant'],
+            position: { x: 425, y: 315 },
+          },
+        ],
+      }),
+    );
   });
 
   it('deletes the selected interaction', async () => {

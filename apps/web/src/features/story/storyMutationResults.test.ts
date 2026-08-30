@@ -14,6 +14,7 @@ import {
   addLocalStatDefinition,
   findSavedInteraction,
   findSavedTrigger,
+  getStoryMutationRevision,
   updateLocalCharacter,
   updateLocalCharacterStat,
   updateLocalItemDefinition,
@@ -24,6 +25,12 @@ import {
 const updatedAt = '2026-08-25T12:00:00.000Z';
 
 describe('story mutation result adapters', () => {
+  it('reads revision metadata from successful Story mutation results', () => {
+    expect(getStoryMutationRevision({ revision: 4, updatedAt })).toBe(4);
+    expect(getStoryMutationRevision({ revision: '4' })).toBeUndefined();
+    expect(getStoryMutationRevision(undefined)).toBeUndefined();
+  });
+
   it('adds or replaces compact interaction results and applies their metadata', () => {
     const story = storyFixture();
     const added = interaction('new', 'New');

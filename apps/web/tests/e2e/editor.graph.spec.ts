@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import {
   getEdgeEndDirection,
+  mockGraphPositionUpdates,
   mockStory,
   prepareEditorPage,
   story,
@@ -20,38 +21,15 @@ test.describe('Story editor graph', () => {
     const interactionPositions = new Map<string, { x: number; y: number }>();
     let triggerPosition: { x: number; y: number } | undefined;
     await mockStory(page, current);
-
-    for (const interactionId of ['interaction-1', 'interaction-2']) {
-      await page.route(`**/api/stories/story-1/interactions/${interactionId}`, async (route) => {
-        const patch = route.request().postDataJSON() as { position: { x: number; y: number } };
-        interactionPositions.set(interactionId, patch.position);
-        const interaction = current.interactions.find(({ id }) => id === interactionId)!;
-        interaction.position = patch.position;
-        await route.fulfill({
-          json: {
-            interaction: structuredClone(interaction),
-            revision: 2,
-            updatedAt: current.updatedAt,
-          },
-        });
-      });
-    }
-    await page.route(
-      '**/api/stories/story-1/interactions/interaction-2/triggers/trigger-2',
-      async (route) => {
-        const patch = route.request().postDataJSON() as { position: { x: number; y: number } };
-        triggerPosition = patch.position;
-        current.interactions[1].triggers[0].position = patch.position;
-        await route.fulfill({
-          json: {
-            interactionId: 'interaction-2',
-            trigger: structuredClone(current.interactions[1].triggers[0]),
-            revision: 2,
-            updatedAt: current.updatedAt,
-          },
-        });
-      },
-    );
+    await mockGraphPositionUpdates(page, ({ interactionUpdates, triggerUpdates }) => {
+      interactionUpdates.forEach(({ interactionId, position }) =>
+        interactionPositions.set(interactionId, position),
+      );
+      triggerPosition = triggerUpdates.find(
+        ({ interactionId, triggerIds }) =>
+          interactionId === 'interaction-2' && triggerIds.includes('trigger-2'),
+      )?.position;
+    });
 
     await page.goto('/stories/story-1/edit');
     const graphNodes = [
@@ -116,27 +94,12 @@ test.describe('Story editor graph', () => {
     current.interactions[1].triggers[0].position = { x: 540, y: 240 };
     let savedTriggerPosition: { x: number; y: number } | undefined;
     await mockStory(page, current);
-    await page.route('**/api/stories/story-1/interactions/interaction-2', async (route) => {
-      const patch = route.request().postDataJSON() as { position: { x: number; y: number } };
-      const moved = structuredClone(current);
-      moved.interactions[1].position = patch.position;
-      await route.fulfill({ json: moved });
+    await mockGraphPositionUpdates(page, ({ triggerUpdates }) => {
+      savedTriggerPosition = triggerUpdates.find(
+        ({ interactionId, triggerIds }) =>
+          interactionId === 'interaction-2' && triggerIds.includes('trigger-2'),
+      )?.position;
     });
-    await page.route(
-      '**/api/stories/story-1/interactions/interaction-2/triggers/trigger-2',
-      async (route) => {
-        const patch = route.request().postDataJSON() as { position: { x: number; y: number } };
-        savedTriggerPosition = patch.position;
-        await route.fulfill({
-          json: {
-            interactionId: 'interaction-2',
-            trigger: { ...current.interactions[1].triggers[0], position: patch.position },
-            revision: 2,
-            updatedAt: current.updatedAt,
-          },
-        });
-      },
-    );
 
     await page.goto('/stories/story-1/edit');
     const interaction = page.getByTestId('interaction-node').filter({ hasText: 'Linked scene' });
@@ -222,27 +185,14 @@ test.describe('Story editor graph', () => {
     await mockStory(page, current);
     let savedPosition: { x: number; y: number } | undefined;
 
-    await page.route(
-      '**/api/stories/story-1/interactions/interaction-2/triggers/trigger-2',
-      async (route) => {
-        expect(route.request().method()).toBe('PATCH');
-        const patch = route.request().postDataJSON() as {
-          position: { x: number; y: number };
-        };
-        expect(Object.keys(patch)).toEqual(['position']);
-        savedPosition = patch.position;
-        const trigger = structuredClone(current.interactions[1].triggers[0]);
-        trigger.position = patch.position;
-        await route.fulfill({
-          json: {
-            interactionId: 'interaction-2',
-            trigger,
-            revision: 2,
-            updatedAt: current.updatedAt,
-          },
-        });
-      },
-    );
+    await mockGraphPositionUpdates(page, ({ interactionUpdates, triggerUpdates }) => {
+      expect(interactionUpdates).toEqual([]);
+      const update = triggerUpdates.find(
+        ({ interactionId, triggerIds }) =>
+          interactionId === 'interaction-2' && triggerIds.includes('trigger-2'),
+      );
+      savedPosition = update?.position;
+    });
 
     await page.goto('/stories/story-1/edit');
     const marker = page.getByTestId('flow-trigger-interaction-2-trigger-2');
@@ -366,17 +316,8 @@ test.describe('Story editor graph', () => {
   test('keeps the incoming arrow attached to the interaction top across a move', async ({
     page,
   }) => {
-    let current = storyWithHorizontalLink();
+    const current = storyWithHorizontalLink();
     await mockStory(page, current);
-
-    await page.route('**/api/stories/story-1/interactions/interaction-2', async (route) => {
-      const patch = route.request().postDataJSON() as {
-        position: { x: number; y: number };
-      };
-      current = structuredClone(current);
-      current.interactions[1].position = patch.position;
-      await route.fulfill({ json: current });
-    });
 
     await page.goto('/stories/story-1/edit');
     const edgeId = 'trigger:interaction-2:trigger-2-output';

@@ -42,6 +42,11 @@ export function applyStoryMutationMetadata(
   return { ...story, revision: mutation.revision, updatedAt: mutation.updatedAt };
 }
 
+export function getStoryMutationRevision(result: unknown): number | undefined {
+  if (typeof result !== 'object' || result === null || !('revision' in result)) return undefined;
+  return typeof result.revision === 'number' ? result.revision : undefined;
+}
+
 export function applyGraphDecorationResult(
   story: Story,
   result: GraphDecorationMutationResult,

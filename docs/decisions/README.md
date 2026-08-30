@@ -26,6 +26,7 @@ This folder records accepted architecture and product-shaping decisions.
 - [ADR-020 - Live Story Collaboration by Authorized Invalidation](ADR-020-live-story-collaboration.md)
 - [ADR-021 - Generalize Stats into Typed Story Variables](ADR-021-typed-story-stats.md)
 - [ADR-022 - Reader and Simulation Save Slots](ADR-022-reader-and-simulation-save-slots.md)
+- [ADR-023 - Durable Authored Story Change History](ADR-023-durable-story-change-history.md)
 
 ## Maintenance
 

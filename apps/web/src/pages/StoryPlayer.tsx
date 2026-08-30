@@ -235,7 +235,12 @@ export function StoryPlayer({
     realtimeRefresh.current = refreshFromRealtime;
   }, [refreshFromRealtime]);
 
-  const storyRealtimeStatus = useStoryRealtime(storyId, isSimulationMode, refreshFromRealtime);
+  const storyRealtimeStatus = useStoryRealtime(
+    storyId,
+    isSimulationMode,
+    refreshFromRealtime,
+    story?.revision,
+  );
 
   const beginSimulationEdit = useCallback(() => {
     simulationEditDepth.current += 1;

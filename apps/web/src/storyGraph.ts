@@ -1,5 +1,5 @@
 import { MarkerType, Position, type Edge, type Node } from '@xyflow/react';
-import type { Story } from '@paralleax/shared';
+import type { Story, StoryGraphTriggerPositionUpdate } from '@paralleax/shared';
 import type { InteractionNodeData } from './components/InteractionNode';
 import type { TriggerNodeData } from './components/TriggerNode';
 import type { CommentPinFlowNode } from './features/comments/CommentPinNode';
@@ -60,12 +60,12 @@ const triggerOutputMarker = { type: MarkerType.ArrowClosed, color: '#8d918f' } a
 const minimumSavedTriggerFollowRatio = 0.25;
 const savedTriggerFollowRatioRange = 0.5;
 const savedTriggerFollowDistanceScale = 240;
+const storyInteractionIndexes = new WeakMap<
+  Story,
+  ReadonlyMap<string, { interaction: Story['interactions'][number]; index: number }>
+>();
 
-export interface TriggerPositionUpdate {
-  interactionId: string;
-  triggerIds: string[];
-  position: { x: number; y: number };
-}
+export type TriggerPositionUpdate = StoryGraphTriggerPositionUpdate;
 
 export function buildInteractionNodes(
   story: Story | undefined,
@@ -311,9 +311,9 @@ export function applyInteractionMovesEdgePreview(
       };
 
       group.inputInteractionIds.forEach((sourceId) => {
-        const sourceIndex = story.interactions.findIndex((item) => item.id === sourceId);
-        const source = story.interactions[sourceIndex];
-        if (!source) return;
+        const sourceEntry = getIndexedStoryInteraction(story, sourceId);
+        if (!sourceEntry) return;
+        const { interaction: source, index: sourceIndex } = sourceEntry;
         previewHandles.set(
           `${triggerNodeId}-${sourceId}`,
           constrainInteractionOutputHandle(
@@ -460,10 +460,9 @@ export function buildTriggerEdges(
         const triggerIds = group.triggers.map((trigger) => trigger.id);
         const conditionCount = getTotalConditionCount(group.triggers);
         const inputEdges = group.inputInteractionIds.map((source) => {
-          const sourceIndex = story.interactions.findIndex((item) => item.id === source);
-          const sourceInteraction = story.interactions[sourceIndex];
-          const sourceCenter = sourceInteraction
-            ? getInteractionCenter(sourceInteraction, sourceIndex)
+          const sourceEntry = getIndexedStoryInteraction(story, source);
+          const sourceCenter = sourceEntry
+            ? getInteractionCenter(sourceEntry.interaction, sourceEntry.index)
             : triggerCenter;
           const handles = constrainInteractionOutputHandle(
             getRoutingHandleIds(sourceCenter, triggerCenter),
@@ -604,6 +603,10 @@ export function getTriggerNodePosition(
   interactionPositionOverrides?: ReadonlyMap<string, { x: number; y: number }>,
 ) {
   const savedPosition = getSavedTriggerNodePosition(group);
+  if (!interactionPositionOverrides || interactionPositionOverrides.size === 0) {
+    if (savedPosition) return savedPosition;
+  }
+
   const automaticPosition = getAutomaticTriggerNodePosition(
     story,
     target,
@@ -613,9 +616,6 @@ export function getTriggerNodePosition(
     interactionPositionOverrides,
   );
   if (!savedPosition) return automaticPosition;
-  if (!interactionPositionOverrides || interactionPositionOverrides.size === 0) {
-    return savedPosition;
-  }
 
   const originalAutomaticPosition = getAutomaticTriggerNodePosition(
     story,
@@ -663,10 +663,15 @@ export function getAutomaticTriggerNodePosition(
   interactionPositionOverrides?: ReadonlyMap<string, { x: number; y: number }>,
 ) {
   const inputCenters = group.inputInteractionIds.flatMap((inputId) => {
-    const inputIndex = story.interactions.findIndex((item) => item.id === inputId);
-    const input = story.interactions[inputIndex];
-    return input
-      ? [getInteractionCenter(input, inputIndex, interactionPositionOverrides?.get(input.id))]
+    const inputEntry = getIndexedStoryInteraction(story, inputId);
+    return inputEntry
+      ? [
+          getInteractionCenter(
+            inputEntry.interaction,
+            inputEntry.index,
+            interactionPositionOverrides?.get(inputEntry.interaction.id),
+          ),
+        ]
       : [];
   });
   const averageInput = inputCenters.reduce(
@@ -686,6 +691,20 @@ export function getAutomaticTriggerNodePosition(
       (averageInput.y / inputCount + targetCenter.y) / 2 - triggerNodeSize / 2 + triggerIndex * 24,
     ),
   };
+}
+
+function getIndexedStoryInteraction(story: Story, interactionId: string) {
+  let index = storyInteractionIndexes.get(story);
+  if (!index) {
+    index = new Map(
+      story.interactions.map((interaction, interactionIndex) => [
+        interaction.id,
+        { interaction, index: interactionIndex },
+      ]),
+    );
+    storyInteractionIndexes.set(story, index);
+  }
+  return index.get(interactionId);
 }
 
 export function getRoutingHandleIds(

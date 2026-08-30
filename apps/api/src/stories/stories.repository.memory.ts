@@ -1,16 +1,35 @@
 import {
+  applyStoryChangeDelta,
+  createStoryChangeDelta,
+  createStoryHistoryMutationResult,
   READER_AUTOSAVE_ID,
   defaultStoryAccess,
+  invertStoryChangeDelta,
   readerSaveKind,
   resolveStoryAccess,
   type ReaderProgressState,
   type ReaderSave,
   type Story,
+  type StoryChangeDelta,
   type StoryAccessConfiguration,
   type StoryAccessSettings,
   type StoryCollaboratorRole,
   type StorySummary,
+  type StoryHistory,
+  type StoryHistoryEventKind,
+  type StoryHistoryMutationResult,
 } from '@paralleax/shared';
+
+interface MemoryStoryHistoryEvent {
+  id: string;
+  revision: number;
+  kind: StoryHistoryEventKind;
+  operation: string;
+  changes: StoryChangeDelta;
+  actorUserId: string;
+  createdAt: string;
+  revertsEventId?: string;
+}
 
 export class InMemoryStoriesRepository {
   private readonly stories = new Map<string, Story>();
@@ -18,6 +37,8 @@ export class InMemoryStoriesRepository {
   private readonly mutationQueues = new Map<string, Promise<void>>();
   private readonly progress = new Map<string, ReaderSave>();
   private readonly permissions = new Map<string, Map<string, StoryCollaboratorRole>>();
+  private readonly history = new Map<string, MemoryStoryHistoryEvent[]>();
+  private nextHistoryId = 1;
 
   async list(ownerId: string): Promise<StorySummary[]> {
     return [...this.stories.entries()]
@@ -79,30 +100,99 @@ export class InMemoryStoriesRepository {
     mutation: (story: Story) => Story | Promise<Story>,
     ownerId: string,
   ): Promise<Story | undefined> {
-    const previous = this.mutationQueues.get(id) ?? Promise.resolve();
-    let release!: () => void;
-    const gate = new Promise<void>((resolve) => (release = resolve));
-    const current = previous.then(() => gate);
-    this.mutationQueues.set(id, current);
-    await previous;
-
-    try {
+    return this.serializeMutation(id, async () => {
       const candidate = this.stories.get(id);
       const story = candidate && this.can(candidate, id, ownerId).canEdit ? candidate : undefined;
       if (!story) return undefined;
       const updated = await mutation(structuredClone(story));
+      const changes = createStoryChangeDelta(story, updated);
       this.stories.set(id, structuredClone(updated));
+      if (changes && updated.revision !== story.revision && updated.revision !== undefined) {
+        this.appendHistory(id, {
+          actorUserId: ownerId,
+          revision: updated.revision,
+          kind: 'change',
+          operation: 'story.updated',
+          changes,
+          createdAt: updated.updatedAt,
+        });
+      }
       return structuredClone(updated);
-    } finally {
-      release();
-      if (this.mutationQueues.get(id) === current) this.mutationQueues.delete(id);
-    }
+    });
+  }
+
+  async getHistory(id: string, userId: string, limit = 50): Promise<StoryHistory | undefined> {
+    const story = this.stories.get(id);
+    if (!story || !this.can(story, id, userId).canEdit) return undefined;
+    return this.historyFor(id, userId, limit);
+  }
+
+  async revertHistory(
+    id: string,
+    userId: string,
+    action: 'undo' | 'redo',
+  ): Promise<
+    | { kind: 'applied'; result: StoryHistoryMutationResult }
+    | { kind: 'unavailable' }
+    | { kind: 'conflict'; paths: string[] }
+    | undefined
+  > {
+    return this.serializeMutation(id, async () => {
+      const current = this.stories.get(id);
+      if (!current || !this.can(current, id, userId).canEdit) return undefined;
+      const events = this.history.get(id) ?? [];
+      const reversedEventIds = new Set(
+        events.flatMap(({ revertsEventId }) => (revertsEventId ? [revertsEventId] : [])),
+      );
+      const candidate = [...events]
+        .reverse()
+        .find(
+          (event) =>
+            event.actorUserId === userId &&
+            !reversedEventIds.has(event.id) &&
+            (action === 'undo' ? event.kind !== 'undo' : event.kind === 'undo'),
+        );
+      if (!candidate) return { kind: 'unavailable' as const };
+      const reverted = applyStoryChangeDelta(current, candidate.changes, 'backward');
+      if (!reverted.applied) {
+        return {
+          kind: 'conflict' as const,
+          paths: reverted.conflicts.map(({ path }) => path),
+        };
+      }
+      const updated = reverted.story;
+      updated.updatedAt = new Date().toISOString();
+      updated.revision = (current.revision ?? 1) + 1;
+      const changes = invertStoryChangeDelta(candidate.changes);
+      this.stories.set(id, structuredClone(updated));
+      this.appendHistory(id, {
+        actorUserId: userId,
+        revision: updated.revision,
+        kind: action,
+        operation: candidate.operation,
+        changes,
+        createdAt: updated.updatedAt,
+        revertsEventId: candidate.id,
+      });
+      const story = await this.find(id, userId);
+      if (!story) return undefined;
+      return {
+        kind: 'applied' as const,
+        result: createStoryHistoryMutationResult(
+          current,
+          story,
+          changes,
+          this.historyFor(id, userId),
+        ),
+      };
+    });
   }
 
   async delete(id: string, ownerId: string): Promise<boolean> {
     const story = this.stories.get(id);
     if (!story || !this.can(story, id, ownerId).canManage) return false;
     this.owners.delete(id);
+    this.history.delete(id);
     for (const key of this.progress.keys()) {
       if (key.includes(`:${id}:`)) this.progress.delete(key);
     }
@@ -209,6 +299,58 @@ export class InMemoryStoriesRepository {
       isOwner: this.owners.get(id) === userId,
       collaboratorRole: userId ? this.permissions.get(id)?.get(userId) : undefined,
     });
+  }
+
+  private appendHistory(
+    storyId: string,
+    event: Omit<MemoryStoryHistoryEvent, 'id'>,
+  ): MemoryStoryHistoryEvent {
+    const stored = { ...event, id: String(this.nextHistoryId++) };
+    const events = this.history.get(storyId) ?? [];
+    events.push(stored);
+    this.history.set(storyId, events);
+    return stored;
+  }
+
+  private historyFor(storyId: string, userId: string, limit = 50): StoryHistory {
+    const events = this.history.get(storyId) ?? [];
+    const reversedEventIds = new Set(
+      events.flatMap(({ revertsEventId }) => (revertsEventId ? [revertsEventId] : [])),
+    );
+    const activeForActor = events.filter(
+      ({ id, actorUserId }) => actorUserId === userId && !reversedEventIds.has(id),
+    );
+    return {
+      entries: [...events]
+        .reverse()
+        .slice(0, limit)
+        .map((event) => ({
+          id: event.id,
+          revision: event.revision,
+          kind: event.kind,
+          operation: event.operation,
+          actor: { id: event.actorUserId, email: emailForUser(event.actorUserId) },
+          createdAt: event.createdAt,
+          reverted: reversedEventIds.has(event.id),
+        })),
+      canUndo: activeForActor.some(({ kind }) => kind !== 'undo'),
+      canRedo: activeForActor.some(({ kind }) => kind === 'undo'),
+    };
+  }
+
+  private async serializeMutation<T>(id: string, work: () => Promise<T>): Promise<T> {
+    const previous = this.mutationQueues.get(id) ?? Promise.resolve();
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => (release = resolve));
+    const current = previous.then(() => gate);
+    this.mutationQueues.set(id, current);
+    await previous;
+    try {
+      return await work();
+    } finally {
+      release();
+      if (this.mutationQueues.get(id) === current) this.mutationQueues.delete(id);
+    }
   }
 }
 

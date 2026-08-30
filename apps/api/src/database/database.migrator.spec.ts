@@ -182,4 +182,17 @@ describe('DatabaseMigrator', () => {
     expect(migration?.sql).toMatch(/'simulation-autosave'/i);
     expect(migration?.sql).toMatch(/length\(btrim\(name\)\) BETWEEN 1 AND 100/i);
   });
+
+  it('adds append-only reversible Story change events', () => {
+    const migration = databaseMigrations.find(
+      ({ id }) => id === '202608280034_story_change_history',
+    );
+
+    expect(migration?.sql).toMatch(/CREATE TABLE story_change_events/i);
+    expect(migration?.sql).toMatch(/actor_user_id text REFERENCES users\(id\) ON DELETE SET NULL/i);
+    expect(migration?.sql).toMatch(/kind IN \('change', 'undo', 'redo'\)/i);
+    expect(migration?.sql).toMatch(/changes jsonb NOT NULL/i);
+    expect(migration?.sql).toMatch(/reverts_event_id bigint UNIQUE/i);
+    expect(migration?.sql).toMatch(/UNIQUE \(story_id, revision\)/i);
+  });
 });

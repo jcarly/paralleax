@@ -1,4 +1,4 @@
-import type { Story } from '@paralleax/shared';
+import { createStoryChangeDelta, type Story } from '@paralleax/shared';
 import type { DatabaseConnection } from '../database/database.connection';
 import { StoriesRepository } from './stories.repository';
 
@@ -756,6 +756,96 @@ describe('StoriesRepository', () => {
     );
   });
 
+  it('records a versioned authored mutation in the same transaction', async () => {
+    const saved = { ...story(), revision: 1 };
+    relationalRead(mockClientQuery, saved);
+    const relationalImplementation = mockClientQuery.getMockImplementation()!;
+    mockClientQuery.mockImplementation((sql: string, values?: unknown[]) => {
+      if (sql.includes('INSERT INTO story_change_events')) {
+        return Promise.resolve({ rows: [{ id: 1 }], rowCount: 1 });
+      }
+      return relationalImplementation(sql, values);
+    });
+
+    await repository().mutate(
+      saved.id,
+      (value) => ({
+        ...value,
+        revision: 2,
+        title: 'Versioned title',
+        updatedAt: '2026-01-02T00:00:00.000Z',
+      }),
+      ownerId,
+    );
+
+    expect(mockClientQuery).toHaveBeenCalledWith(
+      expect.stringContaining('INSERT INTO story_change_events'),
+      expect.arrayContaining([saved.id, ownerId, 2, 'change', 'story.updated']),
+    );
+    expect(mockClientQuery).toHaveBeenCalledWith('COMMIT');
+  });
+
+  it('applies a compatible history inverse and appends its undo event', async () => {
+    const current = {
+      ...story(),
+      revision: 2,
+      title: 'Changed title',
+      updatedAt: '2026-01-02T00:00:00.000Z',
+    };
+    const original = { ...current, revision: 1, title: 'Repository story' };
+    const changes = createStoryChangeDelta(original, current)!;
+    const savedRepository = repository();
+    const internals = savedRepository as unknown as {
+      hasEditAccess: () => Promise<boolean>;
+      findWith: () => Promise<Story | undefined>;
+    };
+    jest.spyOn(internals, 'hasEditAccess').mockResolvedValue(true);
+    jest.spyOn(internals, 'findWith').mockResolvedValueOnce(current);
+    mockClientQuery.mockImplementation((sql: string) => {
+      if (sql.includes('LIMIT 1')) {
+        return Promise.resolve({
+          rows: [
+            {
+              id: 1,
+              revision: 2,
+              kind: 'change',
+              operation: 'story.updated',
+              changes,
+              actor_user_id: ownerId,
+              actor_email: 'owner@example.com',
+              created_at: current.updatedAt,
+              reverted: false,
+            },
+          ],
+        });
+      }
+      if (sql.includes('INSERT INTO story_change_events')) {
+        return Promise.resolve({ rows: [{ id: 2 }], rowCount: 1 });
+      }
+      if (sql.includes('WITH recent_entries')) {
+        return Promise.resolve({ rows: [{ id: null, can_undo: false, can_redo: true }] });
+      }
+      if (sql.includes('ORDER BY event.id DESC')) return Promise.resolve({ rows: [] });
+      return Promise.resolve({ rows: [], rowCount: 1 });
+    });
+
+    await expect(savedRepository.revertHistory(current.id, ownerId, 'undo')).resolves.toMatchObject(
+      {
+        kind: 'applied',
+        result: {
+          story: { title: original.title, revision: 3 },
+          history: { canUndo: false, canRedo: true },
+        },
+      },
+    );
+    expect(mockClientQuery).toHaveBeenCalledWith(
+      expect.stringContaining('INSERT INTO story_change_events'),
+      expect.arrayContaining([current.id, ownerId, 3, 'undo', 'story.updated']),
+    );
+    expect(internals.findWith).toHaveBeenCalledTimes(1);
+    expect(mockClientQuery).toHaveBeenCalledWith('COMMIT');
+  });
+
   it('writes typed stat effects without replacing unchanged definitions or assignments', async () => {
     const saved = graphStory();
     saved.stats = [
@@ -840,10 +930,12 @@ describe('StoriesRepository', () => {
     );
 
     expect(mockClientQuery).toHaveBeenCalledWith(
-      expect.stringContaining(
-        'UPDATE interactions SET title = $2, position_x = $3, position_y = $4',
-      ),
-      ['interaction-1', 'Renamed start', 50, 60],
+      expect.stringContaining('UPDATE interactions SET title = $2'),
+      ['interaction-1', 'Renamed start'],
+    );
+    expect(mockClientQuery).toHaveBeenCalledWith(
+      expect.stringContaining('UPDATE interactions AS target'),
+      [JSON.stringify([{ id: 'interaction-1', position_x: 50, position_y: 60 }]), saved.id],
     );
     expect(mockClientQuery).toHaveBeenCalledWith(
       'DELETE FROM interactions WHERE id = $1 AND story_id = $2',
@@ -859,8 +951,8 @@ describe('StoriesRepository', () => {
       1,
     ]);
     expect(mockClientQuery).toHaveBeenCalledWith(
-      'UPDATE triggers SET position_x = $2, position_y = $3 WHERE id = $1',
-      ['trigger-1', 210, 175],
+      expect.stringContaining('UPDATE triggers AS target'),
+      [JSON.stringify([{ id: 'trigger-1', position_x: 210, position_y: 175 }]), saved.id],
     );
     expect(mockClientQuery).toHaveBeenCalledWith(
       'UPDATE triggers SET conditions = $2 WHERE id = $1',

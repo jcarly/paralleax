@@ -1,5 +1,10 @@
 import { expect, test } from '@playwright/test';
-import { cloneStory, mockStory, prepareEditorPage } from './editorTestHarness';
+import {
+  cloneStory,
+  mockGraphPositionUpdates,
+  mockStory,
+  prepareEditorPage,
+} from './editorTestHarness';
 
 test.describe('Story editor persistence', () => {
   test.beforeEach(async ({ page }) => {
@@ -58,6 +63,57 @@ test.describe('Story editor persistence', () => {
     ).toBeVisible();
     await expect(page.getByLabel('Title')).toBeVisible();
     await expect(page.getByText('Loading...')).toHaveCount(0);
+  });
+
+  test('undoes a persisted Story change and keeps the restored state after reload', async ({
+    page,
+  }) => {
+    let current = cloneStory();
+    current.revision = 2;
+    current.title = 'Changed story title';
+    let history = {
+      entries: [
+        {
+          id: '1',
+          revision: 2,
+          kind: 'change',
+          operation: 'story.updated',
+          createdAt: '2026-08-28T08:01:00.000Z',
+          reverted: false,
+        },
+      ],
+      canUndo: true,
+      canRedo: false,
+    };
+    await page.route('**/api/stories/story-1', (route) => {
+      if (route.request().method() === 'GET') {
+        return route.fulfill({ json: structuredClone(current) });
+      }
+      return route.fallback();
+    });
+    await page.route('**/api/stories/story-1/history', (route) =>
+      route.fulfill({ json: structuredClone(history) }),
+    );
+    await page.route('**/api/stories/story-1/history/undo', (route) => {
+      current = cloneStory();
+      current.revision = 3;
+      history = {
+        entries: [],
+        canUndo: false,
+        canRedo: true,
+      };
+      return route.fulfill({ json: { story: structuredClone(current), history } });
+    });
+
+    await page.goto('/stories/story-1/edit');
+    const undo = page.getByRole('button', { name: 'Undo last Story change' });
+    await expect(undo).toBeEnabled();
+    await undo.click();
+
+    await expect(page.locator('.story-title-input')).toHaveValue('Test story');
+    await expect(page.getByRole('button', { name: 'Redo Story change' })).toBeEnabled();
+    await page.reload();
+    await expect(page.locator('.story-title-input')).toHaveValue('Test story');
   });
 
   test('edits and saves rich interaction content', async ({ page }) => {
@@ -140,13 +196,10 @@ test.describe('Story editor persistence', () => {
   });
 
   test('keeps title and body visible after dragging an interaction', async ({ page }) => {
-    const moved = cloneStory();
-    moved.interactions[0].position = { x: 240, y: 180 };
-
-    await page.route('**/api/stories/story-1/interactions/interaction-1', async (route) => {
-      expect(route.request().method()).toBe('PATCH');
-      expect(route.request().postDataJSON()).toHaveProperty('position');
-      await route.fulfill({ json: moved });
+    await mockGraphPositionUpdates(page, ({ interactionUpdates, triggerUpdates }) => {
+      expect(interactionUpdates).toHaveLength(1);
+      expect(interactionUpdates[0]).toMatchObject({ interactionId: 'interaction-1' });
+      expect(triggerUpdates).toEqual([]);
     });
 
     await page.goto('/stories/story-1/edit');

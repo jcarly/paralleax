@@ -69,6 +69,12 @@ between interaction cleanup, trigger mutation, and stale-response merge rules.
 API and web orchestration call these operations instead of redefining domain
 cleanup or optimistic persistence behavior.
 
+Deterministic reversible authored deltas live in `packages/shared/src/history/`.
+They project canonical Story content without access, runtime, ownership,
+timestamp, or capability fields. Nested id-bearing entity collections are
+matched by stable ids and changed fields carry before/after preconditions, so an
+inverse can preserve unrelated later edits and report overlapping conflicts.
+
 Recursive authored-item graph behavior lives in `packages/shared/src/items/`.
 The reader uses its structural reachability projection, the API maps its typed
 placement failures to HTTP errors, persistence uses its stable owner/index
@@ -131,6 +137,15 @@ access. `story-access.ts` owns access settings and collaborator orchestration.
 `story-mutations.ts` is the single API application coordinator for authorized
 story mutations: it normalizes legacy positions, updates timestamps and revisions,
 and publishes the resulting story change.
+
+`story-history.ts` owns authorized history reads and undo/redo orchestration.
+`StoriesRepository.mutate` records a reversible event atomically with every
+revisioned content write. The relational `story_change_events` stream is
+append-only: inverse events reference the event they reverse, and a reversal
+locks the Story, verifies delta preconditions, persists the relational
+difference, increments the revision, and publishes the normal live invalidation.
+Comments, access changes, Story creation/deletion, and reader progress do not use
+this path.
 
 `story-graph.ts` owns interaction, trigger, and graph-decoration orchestration,
 including same-story reference validation and compact entity mutation results.
@@ -344,6 +359,15 @@ component:
   facade's story setter and lifecycle save tracker instead of owning parallel state.
 - `features/story-editor/persistence/storyPersistenceTypes.ts`: the small shared
   setter, merger, and save-tracker contracts shared by the collaborators.
+- `features/story-editor/history/useStoryHistory.ts`: session-scoped history
+  status loading and serialized undo/redo actions. Successful local authored
+  saves mark undo as available through the existing persistence facade instead
+  of reloading history after every Story revision; revisions not reported by a
+  local save resynchronize availability after collaborative changes. Successful
+  non-graph inverses reuse the lifecycle's canonical Story replacement path;
+  position-only inverses apply their compact shared graph patch to the same
+  parent-owned Story state. Both reuse lifecycle save-state reporting instead of
+  owning parallel Story state.
 - `features/story-editor/graph/useStoryConnectionController.ts`: transient React
   Flow connection gestures, empty-canvas parent/child placement, and the
   new-trigger versus existing-trigger choice. It delegates connection validity to
@@ -500,6 +524,25 @@ Story-level and delete responses still use `mergeServerStory`. Entity-scoped
 responses avoid carrying unrelated stale graph state in the first place. When
 adding or changing editor persistence behavior, keep both entity application and
 stale story merge regressions covered.
+
+Every revisioned mutation also appends its shared reversible delta inside the
+same repository transaction. `GET /stories/:storyId/history` returns recent
+event summaries and the current author's undo/redo availability. Undo and redo
+apply inverse events on the server. General changes return the complete already
+validated authoritative Story. Position-only changes return the shared minimal
+interaction/Trigger position patch plus revision metadata, which the editor
+applies without replacing untouched entities. Entity-array delta construction
+and application build id/placement indexes once, so a graph-wide position change
+remains linear in the number of interactions and triggers. Recent entries and
+undo/redo availability share one history read query after the repository's
+access check. A position-only delta persists all existing interaction positions
+and all existing Trigger positions through at most two JSON-backed bulk updates.
+Undo and redo store the directly inverted source delta, avoiding both a complete
+second diff and a second relational assembly. The editor ignores initial SSE
+readiness and change events whose revision is already local, preventing a second
+full Story reload after its own inverse. Graph projection indexes interactions by
+id once per immutable Story object so trigger placement and edge routing remain
+linear instead of repeatedly scanning every interaction.
 
 Interaction bodies are HTML. The API sanitizes them before persistence with a
 strict element, attribute, protocol, and iframe-host allowlist. The web renderer
