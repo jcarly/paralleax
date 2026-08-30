@@ -765,6 +765,7 @@ export function StoryPlayer({
                   />
                   <RichTextEditor
                     ariaLabel={t('player.currentInteractionContent')}
+                    story={story}
                     value={current.body}
                     onChange={(body) => patchCurrentInteraction({ body })}
                     onBlur={(body) => void saveCurrentInteraction({ body })}

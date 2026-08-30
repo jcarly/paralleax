@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Story } from '../model/index.js';
-import { getStatTargets, resolveStatInterpolationTarget } from './targets.js';
+import { getStatTargets, hasStatTargets, resolveStatInterpolationTarget } from './targets.js';
 
 describe('stat targets', () => {
   it('projects non-item assignments and every exact authored item target', () => {
@@ -18,6 +18,9 @@ describe('stat targets', () => {
       { assignmentId: 'harbor-energy', itemId: undefined, ownerType: 'location' },
       { assignmentId: 'battery-charge', itemId: 'battery-1', ownerType: 'itemDefinition' },
     ]);
+    expect(
+      getStatTargets(story).find(({ itemId }) => itemId === 'battery-1')?.itemPathNames,
+    ).toEqual(['Bag', 'Battery']);
   });
 
   it('resolves author references by unique owner and variable names or ids', () => {
@@ -36,6 +39,33 @@ describe('stat targets', () => {
       itemId: 'battery-1',
       assignment: { id: 'battery-charge' },
     });
+  });
+
+  it('reports whether at least one concrete assignment target can be selected', () => {
+    expect(hasStatTargets(storyFixture())).toBe(true);
+    expect(
+      hasStatTargets({
+        ...storyFixture(),
+        stats: [],
+        characters: [],
+        locations: [],
+      }),
+    ).toBe(false);
+    expect(
+      hasStatTargets({
+        ...storyFixture(),
+        stats: [],
+        characters: [
+          {
+            id: 'mira',
+            name: 'Mira',
+            description: '',
+            items: [{ id: 'battery-1', itemDefinitionId: 'battery-definition' }],
+          },
+        ],
+        locations: [],
+      }),
+    ).toBe(true);
   });
 
   it('rejects malformed, unknown, and ambiguous author references', () => {
@@ -71,7 +101,15 @@ function storyFixture(): Story {
         name: 'Mira',
         description: '',
         stats: [{ id: 'mira-energy', statDefinitionId: 'energy-definition', initialValue: 5 }],
-        items: [{ id: 'battery-1', itemDefinitionId: 'battery-definition' }],
+        items: [
+          { id: 'bag-1', itemDefinitionId: 'bag-definition' },
+          {
+            id: 'battery-1',
+            itemDefinitionId: 'battery-definition',
+            parentItemId: 'bag-1',
+            relationshipType: 'contained',
+          },
+        ],
       },
     ],
     locations: [
@@ -83,6 +121,11 @@ function storyFixture(): Story {
       },
     ],
     itemDefinitions: [
+      {
+        id: 'bag-definition',
+        name: 'Bag',
+        description: '',
+      },
       {
         id: 'battery-definition',
         name: 'Battery',

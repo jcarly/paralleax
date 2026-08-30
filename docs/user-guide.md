@@ -182,14 +182,30 @@ frame follows that trigger's conditions automatically. Removing the graph
 connection keeps the authored text in the editor but hides it from players.
 Simulation Mode still shows unavailable frames with reduced opacity and a reason.
 
-Type `{{owner.variable}}` to insert a current variable value into the content.
-Use `story` for a Story variable, for example `{{story.Score}}`, or a unique
-character or location name, for example `{{Mira.Energy}}`. An exact authored item
-uses its instance id. Names and ids ignore case. Once a unique reference is
-saved, Paralleax keeps its stable assignment id even if the owner or variable is
-renamed. An unknown or ambiguous reference stays visible in the editor so it can
-be corrected, but displays nothing during reading. A resolved reference becomes
-one non-editable inline token; delete and retype that token to change its target.
+Use the **Add variable** toolbar button to open the variable dialog. Its first
+selector lists the Story and every character or location that has an available
+assignment. Choosing a character or location then lists its variables and root
+items; choosing an item adds another selector for its variables and nested items
+until an exact variable is reached. The dialog keeps the choice as a draft until
+you select **Insert**.
+
+The editor displays the result as one stable inline token with a readable path,
+such as `Alice → Strength` or `Alice → Bag → Battery → Charge`. The path is
+projected from the target's stable assignment and exact-item ids, so it updates
+automatically when a character, location, item definition, or variable is
+renamed. Select the token's main area to reopen the dialog on its current target,
+choose another variable, then select **Modify**. Use the small red cross in the
+token's top-right corner to remove it directly. Drag the token's main area and
+drop it at another caret position to move it within the interaction content. The
+token label cannot be edited independently from its target.
+
+You may also type `{{owner.variable}}` directly. Use `story` for a Story variable,
+for example `{{story.Score}}`, or a unique character or location name, for example
+`{{Mira.Energy}}`. An exact authored item uses its instance id. Names and ids
+ignore case. Once a unique reference is saved, Paralleax keeps its stable
+assignment id even if the owner or variable is renamed. An unknown or ambiguous
+reference stays visible in the editor so it can be corrected, but displays
+nothing during reading.
 
 1. Select an interaction block on the canvas.
 2. Edit `Title` and `Content` in the inspector.

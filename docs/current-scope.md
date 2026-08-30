@@ -27,7 +27,11 @@ Paralleax currently includes:
   characters, locations, and item definitions. Number, boolean, and string values
   support deterministic replay, interaction effects, trigger conditions, and
   inert rich-text interpolation, including author shorthand lowered to stable
-  assignment markers; exact item instances keep independent values.
+  assignment markers and a progressive editor dialog for Story, character,
+  location, and nested exact-item targets. Saved markers remain selectable and
+  replaceable and movable authoring tokens, with direct inline removal and
+  readable paths projected from stable ids so target renames appear immediately;
+  exact item instances keep independent values.
   A stat assigned to a character is presented as a character characteristic,
   without creating a separate persistence or runtime model.
 - Reusable item definitions.

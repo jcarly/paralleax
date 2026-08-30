@@ -1,11 +1,15 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import type { Story } from '@paralleax/shared';
 import { RichTextContent } from './RichTextContent';
 import { RichTextEditor } from './RichTextEditor';
 
 describe('RichTextEditor', () => {
-  afterEach(() => vi.restoreAllMocks());
+  afterEach(() => {
+    vi.restoreAllMocks();
+    Reflect.deleteProperty(document, 'caretRangeFromPoint');
+  });
 
   it('edits rich HTML and offers image, GIF, and video insertion', async () => {
     const user = userEvent.setup();
@@ -144,6 +148,212 @@ describe('RichTextEditor', () => {
     );
   });
 
+  it('walks story owners and nested items before inserting a stable variable marker', async () => {
+    const user = userEvent.setup();
+    const execCommand = vi.fn().mockReturnValue(true);
+    Object.defineProperty(document, 'execCommand', {
+      configurable: true,
+      value: execCommand,
+    });
+    const story = variableStoryFixture();
+    const { container } = render(
+      <RichTextEditor value="" onChange={vi.fn()} onBlur={vi.fn()} story={story} />,
+    );
+
+    const addVariable = within(container).getByRole('button', { name: 'Add variable' });
+    await user.click(addVariable);
+    expect(within(container).getByRole('dialog', { name: 'Add a variable' })).toBeInTheDocument();
+    const owner = within(container).getByLabelText('Variable owner');
+    expect(within(owner).getByRole('option', { name: 'Story — Demo' })).toBeInTheDocument();
+    expect(within(owner).getByRole('option', { name: 'Character — Mira' })).toBeInTheDocument();
+    expect(within(owner).getByRole('option', { name: 'Location — Lab' })).toBeInTheDocument();
+
+    await user.selectOptions(owner, 'owner:character:mira');
+    const characterContent = within(container).getByLabelText('Variable or item in Mira');
+    expect(
+      within(characterContent).getByRole('option', { name: 'Variable — Health' }),
+    ).toBeInTheDocument();
+    expect(
+      within(characterContent).getByRole('option', { name: 'Item — Bag' }),
+    ).toBeInTheDocument();
+    await user.selectOptions(characterContent, 'item:bag');
+    await user.selectOptions(
+      within(container).getByLabelText('Variable or item in Bag'),
+      'item:battery',
+    );
+    await user.selectOptions(
+      within(container).getByLabelText('Variable or item in Battery'),
+      'variable:battery:charge',
+    );
+    expect(within(container).getByText('Mira → Bag → Battery → Charge')).toBeInTheDocument();
+
+    expect(execCommand).not.toHaveBeenCalledWith(
+      'insertHTML',
+      false,
+      expect.stringContaining('data-stat-value="charge"'),
+    );
+    await user.click(within(container).getByRole('button', { name: 'Insert' }));
+
+    expect(execCommand).toHaveBeenLastCalledWith(
+      'insertHTML',
+      false,
+      '<span contenteditable="false" data-stat-value="charge" data-stat-item="battery">{{battery.Charge}}</span>',
+    );
+
+    await user.click(addVariable);
+    await user.selectOptions(
+      within(container).getByLabelText('Variable owner'),
+      'owner:story:demo',
+    );
+    await user.selectOptions(
+      within(container).getByLabelText('Variable or item in Demo'),
+      'variable:story:score',
+    );
+    await user.click(within(container).getByRole('button', { name: 'Insert' }));
+    expect(execCommand).toHaveBeenLastCalledWith(
+      'insertHTML',
+      false,
+      '<span contenteditable="false" data-stat-value="score">{{story.Score}}</span>',
+    );
+  });
+
+  it('edits and removes an existing variable token without persisting editor controls', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    const { container } = render(
+      <RichTextEditor
+        value={
+          '<p>Value: <span contenteditable="false" data-stat-value="score">{{story.Score}}</span></p>'
+        }
+        onChange={onChange}
+        onBlur={vi.fn()}
+        story={variableStoryFixture()}
+      />,
+    );
+
+    const token = within(container).getByRole('button', {
+      name: 'Edit variable Story → Score',
+    });
+    await user.click(token);
+    expect(within(container).getByRole('dialog', { name: 'Edit variable' })).toBeInTheDocument();
+    expect(within(container).getByLabelText('Variable owner')).toHaveValue('owner:story:demo');
+    expect(within(container).getByLabelText('Variable or item in Demo')).toHaveValue(
+      'variable:story:score',
+    );
+
+    await user.selectOptions(
+      within(container).getByLabelText('Variable owner'),
+      'owner:character:mira',
+    );
+    await user.selectOptions(
+      within(container).getByLabelText('Variable or item in Mira'),
+      'variable:character:health',
+    );
+    expect(within(container).getByText('Mira → Health')).toBeInTheDocument();
+
+    expect(onChange).not.toHaveBeenCalled();
+    await user.click(within(container).getByRole('button', { name: 'Update' }));
+
+    expect(onChange).toHaveBeenLastCalledWith(
+      '<p>Value: <span contenteditable="false" data-stat-value="health">{{Mira.Health}}</span></p>',
+    );
+    expect(onChange.mock.lastCall?.[0]).not.toContain('aria-label');
+    expect(onChange.mock.lastCall?.[0]).not.toContain('rich-text-variable-selected');
+    expect(onChange.mock.lastCall?.[0]).not.toContain('data-rich-text-variable');
+    expect(onChange.mock.lastCall?.[0]).not.toContain('trigger-link-delete');
+
+    const removeVariable = within(container).getByRole('button', {
+      name: 'Remove variable Mira → Health',
+    });
+    expect(removeVariable).toHaveClass('trigger-link-delete', 'rich-text-variable-token-remove');
+    await user.click(removeVariable);
+
+    expect(onChange).toHaveBeenLastCalledWith('<p>Value: </p>');
+    expect(container.querySelector('[data-stat-value]')).toBeNull();
+  });
+
+  it('projects variable token labels from stable ids after entity renames', () => {
+    const value =
+      '<p>Value: <span contenteditable="false" data-stat-value="health">{{Mira.Health}}</span></p>';
+    const { container, rerender } = render(
+      <RichTextEditor
+        value={value}
+        onChange={vi.fn()}
+        onBlur={vi.fn()}
+        story={variableStoryFixture()}
+      />,
+    );
+
+    expect(
+      within(container).getByRole('button', { name: 'Edit variable Mira → Health' }),
+    ).toBeInTheDocument();
+
+    const renamedStory = variableStoryFixture();
+    renamedStory.characters![0].name = 'Alice';
+    renamedStory.statDefinitions![1].name = 'Force';
+    rerender(
+      <RichTextEditor value={value} onChange={vi.fn()} onBlur={vi.fn()} story={renamedStory} />,
+    );
+
+    expect(
+      within(container).getByRole('button', { name: 'Edit variable Alice → Force' }),
+    ).toBeInTheDocument();
+    expect(container.querySelector('[data-stat-value]')).toHaveTextContent('Alice → Force');
+    expect(container.querySelector('[data-stat-value]')).not.toHaveTextContent('{{');
+  });
+
+  it('moves a variable token within the rich text without persisting drag controls', () => {
+    const onChange = vi.fn();
+    const { container } = render(
+      <RichTextEditor
+        value={
+          '<p>Before <span contenteditable="false" data-stat-value="score">{{story.Score}}</span> after.</p>'
+        }
+        onChange={onChange}
+        onBlur={vi.fn()}
+        story={variableStoryFixture()}
+      />,
+    );
+    const editor = within(container).getByRole('textbox', { name: 'Content' });
+    const token = within(container).getByRole('button', {
+      name: 'Edit variable Story → Score',
+    });
+    const marker = token.closest<HTMLElement>('[data-stat-value]')!;
+    const targetText = [...editor.querySelector('p')!.childNodes].find(
+      (node) => node.nodeType === Node.TEXT_NODE && node.textContent === ' after.',
+    )!;
+    const dropRange = document.createRange();
+    dropRange.setStart(targetText, targetText.textContent!.length);
+    dropRange.collapse(true);
+    Object.defineProperty(document, 'caretRangeFromPoint', {
+      configurable: true,
+      value: vi.fn(() => dropRange),
+    });
+    const dataTransfer = {
+      dropEffect: 'none',
+      effectAllowed: 'none',
+      setData: vi.fn(),
+    };
+
+    expect(token).toHaveAttribute('draggable', 'true');
+    fireEvent.dragStart(token, { dataTransfer });
+    expect(marker).toHaveClass('rich-text-variable-dragging');
+    expect(dataTransfer.effectAllowed).toBe('move');
+    expect(dataTransfer.setData).toHaveBeenCalledWith('text/plain', 'Story → Score');
+
+    fireEvent.dragOver(editor, { clientX: 80, clientY: 20, dataTransfer });
+    expect(dataTransfer.dropEffect).toBe('move');
+    fireEvent.drop(editor, { clientX: 80, clientY: 20, dataTransfer });
+
+    expect(marker).not.toHaveClass('rich-text-variable-dragging');
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange).toHaveBeenLastCalledWith(
+      '<p>Before  after.<span contenteditable="false" data-stat-value="score">{{story.Score}}</span></p>',
+    );
+    expect(onChange.mock.lastCall?.[0]).not.toContain('draggable');
+    expect(onChange.mock.lastCall?.[0]).not.toContain('rich-text-variable-dragging');
+  });
+
   it('commits the source content before following a conditional interaction link', () => {
     const events: string[] = [];
     const onBlur = vi.fn(() => events.push('blur'));
@@ -241,3 +451,54 @@ describe('RichTextEditor', () => {
     expect(screen.queryByText(/Unknown\.Message/)).not.toBeInTheDocument();
   });
 });
+
+function variableStoryFixture(): Story {
+  return {
+    id: 'demo',
+    title: 'Demo',
+    statDefinitions: [
+      { id: 'score-definition', name: 'Score' },
+      { id: 'health-definition', name: 'Health' },
+      { id: 'danger-definition', name: 'Danger' },
+      { id: 'charge-definition', name: 'Charge' },
+    ],
+    stats: [{ id: 'score', statDefinitionId: 'score-definition', initialValue: 0 }],
+    characters: [
+      {
+        id: 'mira',
+        name: 'Mira',
+        description: '',
+        stats: [{ id: 'health', statDefinitionId: 'health-definition', initialValue: 10 }],
+        items: [
+          { id: 'bag', itemDefinitionId: 'bag-definition' },
+          {
+            id: 'battery',
+            itemDefinitionId: 'battery-definition',
+            parentItemId: 'bag',
+            relationshipType: 'contained',
+          },
+        ],
+      },
+    ],
+    locations: [
+      {
+        id: 'lab',
+        name: 'Lab',
+        description: '',
+        stats: [{ id: 'danger', statDefinitionId: 'danger-definition', initialValue: 1 }],
+      },
+    ],
+    itemDefinitions: [
+      { id: 'bag-definition', name: 'Bag', description: '' },
+      {
+        id: 'battery-definition',
+        name: 'Battery',
+        description: '',
+        stats: [{ id: 'charge', statDefinitionId: 'charge-definition', initialValue: 3 }],
+      },
+    ],
+    interactions: [],
+    createdAt: '2026-08-30T00:00:00.000Z',
+    updatedAt: '2026-08-30T00:00:00.000Z',
+  };
+}

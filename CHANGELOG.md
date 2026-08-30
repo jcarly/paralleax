@@ -2,6 +2,15 @@
 
 ## 2026-08-30
 
+- Added an interaction-content variable dialog that progressively traverses the
+  Story, characters, locations, and nested exact item instances before inserting
+  the existing stable typed-variable marker. Existing markers are selectable
+  inline controls that reopen the dialog on their current target; a graph-style
+  cross removes them directly. Draft choices and editor controls are never
+  persisted. Tokens show readable owner-to-variable paths instead of source
+  braces, reproject current names from their stable ids after entity renames, and
+  can be dragged to another caret position in the same rich-text content. The
+  same authoring flow is available in the inspector and Simulation Mode.
 - Added bounded optimistic undo/redo for locally persisted graph-position
   gestures. The editor applies cached forward/inverse patches before the HTTP
   response, reconciles them with durable history, and rolls back plus reloads the

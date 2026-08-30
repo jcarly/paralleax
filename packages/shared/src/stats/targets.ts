@@ -1,5 +1,11 @@
-import { getStoryItemEntries } from '../items/graph.js';
-import type { StatAssignment, StatDefinition, Story } from '../model/index.js';
+import { getStoryItemEntries, type StoryItemEntry } from '../items/graph.js';
+import type {
+  ItemDefinition,
+  ItemInstance,
+  StatAssignment,
+  StatDefinition,
+  Story,
+} from '../model/index.js';
 
 export type StatOwnerType = 'story' | 'character' | 'location' | 'itemDefinition';
 
@@ -19,6 +25,7 @@ export interface StatTarget {
   itemId?: string;
   itemName?: string;
   itemCopyNumber?: string;
+  itemPathNames?: string[];
   instanceOwnerName?: string;
 }
 
@@ -67,16 +74,9 @@ export function getStatTargets(story: Story): StatTarget[] {
   const itemEntries = getStoryItemEntries(story);
   const itemTargets = itemEntries.flatMap(({ ownerType, ownerId, item }) => {
     const itemDefinition = itemDefinitions.get(item.itemDefinitionId);
-    const matchingItems = itemEntries.filter(
-      (entry) =>
-        entry.ownerType === ownerType &&
-        entry.ownerId === ownerId &&
-        entry.item.itemDefinitionId === item.itemDefinitionId,
+    const ownerEntries = itemEntries.filter(
+      (entry) => entry.ownerType === ownerType && entry.ownerId === ownerId,
     );
-    const itemCopyNumber =
-      matchingItems.length > 1
-        ? ` #${matchingItems.findIndex((entry) => entry.item.id === item.id) + 1}`
-        : '';
     const instanceOwnerName =
       ownerType === 'character'
         ? story.characters?.find(({ id }) => id === ownerId)?.name
@@ -89,11 +89,30 @@ export function getStatTargets(story: Story): StatTarget[] {
       ownerName: itemDefinition?.name,
       itemId: item.id,
       itemName: itemDefinition?.name,
-      itemCopyNumber,
+      itemCopyNumber: getItemCopyNumber(ownerEntries, item),
+      itemPathNames: getItemPathNames(ownerEntries, item, itemDefinitions),
       instanceOwnerName,
     }));
   });
   return [...nonItemTargets, ...itemTargets];
+}
+
+export function hasStatTargets(story: Story): boolean {
+  if (
+    (story.stats?.length ?? 0) > 0 ||
+    story.characters?.some((character) => (character.stats?.length ?? 0) > 0) ||
+    story.locations?.some((location) => (location.stats?.length ?? 0) > 0)
+  ) {
+    return true;
+  }
+  const assignedItemDefinitionIds = new Set(
+    (story.itemDefinitions ?? [])
+      .filter((definition) => (definition.stats?.length ?? 0) > 0)
+      .map(({ id }) => id),
+  );
+  return getStoryItemEntries(story).some(({ item }) =>
+    assignedItemDefinitionIds.has(item.itemDefinitionId),
+  );
 }
 
 export function resolveStatInterpolationTarget(
@@ -135,4 +154,37 @@ function matchesStatReference(target: StatTarget, reference: string): boolean {
 
 function normalizeReferencePart(value: string): string {
   return value.trim().replace(/\s+/g, ' ').toLowerCase();
+}
+
+function getItemCopyNumber(entries: readonly StoryItemEntry[], item: ItemInstance): string {
+  const matchingItems = entries.filter(
+    (entry) => entry.item.itemDefinitionId === item.itemDefinitionId,
+  );
+  return matchingItems.length > 1
+    ? ` #${matchingItems.findIndex((entry) => entry.item.id === item.id) + 1}`
+    : '';
+}
+
+function getItemPathNames(
+  entries: readonly StoryItemEntry[],
+  item: ItemInstance,
+  definitions: ReadonlyMap<string, ItemDefinition>,
+): string[] {
+  const entriesByItemId = new Map(entries.map((entry) => [entry.item.id, entry]));
+  const pathNames: string[] = [];
+  const visitedItemIds = new Set<string>();
+  let currentItem: ItemInstance | undefined = item;
+
+  while (currentItem && !visitedItemIds.has(currentItem.id)) {
+    visitedItemIds.add(currentItem.id);
+    const definition = definitions.get(currentItem.itemDefinitionId);
+    pathNames.unshift(
+      `${definition?.name ?? currentItem.itemDefinitionId}${getItemCopyNumber(entries, currentItem)}`,
+    );
+    currentItem = currentItem.parentItemId
+      ? entriesByItemId.get(currentItem.parentItemId)?.item
+      : undefined;
+  }
+
+  return pathNames;
 }

@@ -83,9 +83,13 @@ invalid parents.
 
 Reusable stat-assignment target projection and author-facing rich-text reference
 resolution live in `packages/shared/src/stats/`. The web editor uses that target
-projection for effects, while the API lowers uniquely resolved
-`{{owner.variable}}` shorthand to the same stable assignment markers consumed by
-the reader.
+projection for effects and its progressive rich-text variable picker. Rich-text
+tokens persist stable assignment and exact-item ids, then project their readable
+owner/item/variable path from the current Story so renames require no marker
+rewrite. Their editor-only controls support in-content drag-and-drop and are
+flattened back to the same inert marker before emitting authored HTML. The API
+lowers uniquely resolved `{{owner.variable}}` shorthand to the same stable
+assignment markers consumed by the reader.
 
 Default interaction placement lives in `packages/shared/src/graph/`, while the
 deterministic sample story lives in `packages/shared/src/demo/`. The public

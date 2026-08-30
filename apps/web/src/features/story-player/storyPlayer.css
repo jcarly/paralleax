@@ -94,18 +94,6 @@
   font-weight: 650;
 }
 
-.conditional-target-picker {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  margin: 0;
-  font-size: 0.75rem;
-}
-
-.conditional-target-picker select {
-  min-width: 12rem;
-}
-
 .player-inventory {
   grid-column: 1;
   grid-row: 2;

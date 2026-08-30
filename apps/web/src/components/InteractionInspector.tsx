@@ -286,6 +286,7 @@ export function InteractionInspector({
           />
         </label>
         <RichTextEditor
+          story={story}
           value={interaction.body}
           onChange={(body) => updateLocalInteraction({ body })}
           onBlur={(body) => void onPatch(interaction.id, { body })}

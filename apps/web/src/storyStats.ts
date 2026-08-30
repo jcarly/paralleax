@@ -16,10 +16,26 @@ export function statTargetId(target: StatTarget) {
   return `${target.itemId ?? ''}:${target.assignment.id}`;
 }
 
-export function statTargetLabel(target: StatTarget, storyLabel: string) {
+export function statTargetLabel(
+  target: StatTarget,
+  storyLabel: string,
+  {
+    separator = ' — ',
+    includeItemPath = false,
+  }: { separator?: string; includeItemPath?: boolean } = {},
+) {
   const statName = target.definition?.name ?? target.assignment.statDefinitionId;
   if (target.itemId) {
-    return `${target.instanceOwnerName ?? target.itemId} — ${target.itemName ?? target.ownerName ?? target.itemId}${target.itemCopyNumber ?? ''} — ${statName}`;
+    const itemNames = includeItemPath
+      ? (target.itemPathNames ?? [
+          `${target.itemName ?? target.ownerName ?? target.itemId}${target.itemCopyNumber ?? ''}`,
+        ])
+      : [`${target.itemName ?? target.ownerName ?? target.itemId}${target.itemCopyNumber ?? ''}`];
+    return [target.instanceOwnerName ?? target.itemId, ...itemNames, statName].join(separator);
   }
-  return `${target.ownerName ?? storyLabel} — ${statName}`;
+  return [target.ownerName ?? storyLabel, statName].join(separator);
+}
+
+export function statTargetPathLabel(target: StatTarget, storyLabel: string) {
+  return statTargetLabel(target, storyLabel, { separator: ' → ', includeItemPath: true });
 }
