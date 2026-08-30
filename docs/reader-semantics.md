@@ -71,6 +71,15 @@ For conditions:
 
 Inputs on the same trigger are evaluated as OR.
 
+## Inline Interaction Links
+
+Rich-text interaction links are an alternative presentation of an available
+choice, not a separate transition mechanism. A link may reference another
+interaction, but selecting it advances the journey only when that interaction is
+present in the normally evaluated available-choice set. An unavailable,
+disconnected, or missing target is rendered inert and cannot bypass its triggers.
+Conditional text frames remain a separate rich-text projection.
+
 ## Inputless Triggers
 
 Inputless triggers have no input interactions. The MVP distinguishes two cases:

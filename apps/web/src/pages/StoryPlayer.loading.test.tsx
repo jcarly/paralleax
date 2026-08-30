@@ -118,6 +118,19 @@ describe('StoryPlayer loading and presentation', () => {
     expect(screen.getByText('Start')).toBeInTheDocument();
   });
 
+  it('follows an available inline interaction link without bypassing trigger availability', async () => {
+    const user = userEvent.setup();
+    const linkedStory = structuredClone(story);
+    linkedStory.interactions[0].body =
+      '<p><span data-interaction-link-target="next">Continue in the text</span></p>';
+
+    await renderPlayer('/stories/story-1/play', linkedStory);
+    await user.click(screen.getByRole('button', { name: 'Start' }));
+    await user.click(screen.getByRole('button', { name: 'Continue in the text' }));
+
+    expect(screen.getByRole('heading', { name: 'Next' })).toBeInTheDocument();
+  });
+
   it('projects conditional body text from outgoing trigger availability', async () => {
     const user = userEvent.setup();
     const conditionalStory = structuredClone(story);

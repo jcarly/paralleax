@@ -2,6 +2,13 @@
 
 ## 2026-08-30
 
+- Replaced conditional-frame creation behind the rich-text link button with an
+  interaction-link dialog for authored display text and target selection. Links
+  are projected as editable, removable, movable tokens whose target titles follow
+  interaction renames, and as classic inline controls in the reader. Link
+  activation reuses normal trigger availability and cannot bypass conditions.
+  Existing conditional frames remain preserved for the future conditional-text
+  authoring workflow.
 - Added an interaction-content variable dialog that progressively traverses the
   Story, characters, locations, and nested exact item instances before inserting
   the existing stable typed-variable marker. Existing markers are selectable

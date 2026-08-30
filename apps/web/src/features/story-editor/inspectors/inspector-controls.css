@@ -86,18 +86,6 @@
   padding: 0.35rem 0.5rem;
 }
 
-.rich-text-toolbar-picker {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  margin: 0;
-  font-size: 0.75rem;
-}
-
-.rich-text-toolbar-picker select {
-  min-width: 12rem;
-}
-
 .rich-text-variable-picker {
   display: grid;
   gap: 0.85rem;
@@ -113,26 +101,28 @@
   font-weight: 650;
 }
 
+.rich-text-variable-field input,
 .rich-text-variable-field select {
   width: 100%;
 }
 
+.rich-text-interaction-link-dialog,
 .rich-text-variable-dialog {
   width: min(560px, 100%);
 }
 
-.rich-text-variable-dialog-header {
+.rich-text-dialog-header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 1rem;
 }
 
-.rich-text-variable-dialog-header > div {
+.rich-text-dialog-header > div {
   min-width: 0;
 }
 
-.rich-text-variable-dialog-header .rich-text-variable-dialog-close {
+.rich-text-dialog-header .rich-text-dialog-close {
   flex: 0 0 auto;
   min-width: 2rem;
   padding: 0.35rem;
@@ -149,7 +139,13 @@
   color: var(--color-primary-strong);
 }
 
-.modal-dialog-actions.rich-text-variable-dialog-actions {
+.rich-text-interaction-link-form {
+  display: grid;
+  gap: 0.85rem;
+  margin-top: 1rem;
+}
+
+.modal-dialog-actions.rich-text-dialog-actions {
   display: flex;
   justify-content: flex-end;
   margin-top: 1rem;
@@ -169,7 +165,7 @@
   outline: 2px solid rgb(109 91 208 / 18%);
 }
 
-.rich-text-surface [data-stat-value] {
+.rich-text-surface :is([data-interaction-link-target], [data-stat-value]) {
   position: relative;
   display: inline-flex;
   max-width: 100%;
@@ -187,7 +183,7 @@
   cursor: pointer;
 }
 
-.rich-text-variable-token-edit {
+.rich-text-token-edit {
   max-width: 100%;
   padding: 0.08rem 0.38rem;
   overflow: hidden;
@@ -203,14 +199,14 @@
   cursor: grab;
 }
 
-.rich-text-variable-token-edit:hover,
-.rich-text-variable-token-edit:focus-visible {
+.rich-text-token-edit:hover,
+.rich-text-token-edit:focus-visible {
   background: transparent;
   box-shadow: none;
   transform: none;
 }
 
-.rich-text-variable-token-remove.trigger-link-delete {
+.rich-text-token-remove.trigger-link-delete {
   z-index: 1;
   top: -9px;
   right: -9px;
@@ -220,19 +216,20 @@
   transform: none;
 }
 
-.rich-text-surface [data-stat-value]:hover,
-.rich-text-surface [data-stat-value]:focus,
+.rich-text-surface :is([data-interaction-link-target], [data-stat-value]):hover,
+.rich-text-surface :is([data-interaction-link-target], [data-stat-value]):focus,
+.rich-text-surface .rich-text-interaction-link-selected,
 .rich-text-surface .rich-text-variable-selected {
   border-color: var(--color-primary-strong);
   outline: 2px solid var(--color-primary-halo-strong);
 }
 
-.rich-text-surface .rich-text-variable-dragging {
+.rich-text-surface .rich-text-token-dragging {
   opacity: 0.55;
 }
 
-.rich-text-surface .rich-text-variable-dragging,
-.rich-text-surface .rich-text-variable-dragging .rich-text-variable-token-edit {
+.rich-text-surface .rich-text-token-dragging,
+.rich-text-surface .rich-text-token-dragging .rich-text-token-edit {
   cursor: grabbing;
 }
 

@@ -4,8 +4,8 @@ import sanitizeHtml = require('sanitize-html');
 import { resolveStatInterpolationTarget, type Story } from '@paralleax/shared';
 
 export function sanitizeRichText(value: string, story?: Story): string {
-  const statMarkerSpanStack: boolean[] = [];
-  let statMarkerDepth = 0;
+  const inertMarkerSpanStack: boolean[] = [];
+  let inertMarkerDepth = 0;
   return sanitizeHtml(value, {
     allowedTags: [
       'p',
@@ -37,7 +37,12 @@ export function sanitizeRichText(value: string, story?: Story): string {
       iframe: ['src', 'title', 'allow', 'allowfullscreen'],
       div: ['data-conditional-text-target'],
       button: ['type', 'contenteditable', 'aria-label', 'data-conditional-text-link'],
-      span: ['contenteditable', 'data-stat-value', 'data-stat-item'],
+      span: [
+        'contenteditable',
+        'data-stat-value',
+        'data-stat-item',
+        'data-interaction-link-target',
+      ],
     },
     allowedSchemes: ['http', 'https'],
     allowedSchemesByTag: {
@@ -54,17 +59,19 @@ export function sanitizeRichText(value: string, story?: Story): string {
     ],
     onOpenTag: (tagName, attributes) => {
       if (tagName !== 'span') return;
-      const isStatMarker = attributes['data-stat-value'] !== undefined;
-      statMarkerSpanStack.push(isStatMarker);
-      if (isStatMarker) statMarkerDepth += 1;
+      const isInertMarker =
+        attributes['data-stat-value'] !== undefined ||
+        attributes['data-interaction-link-target'] !== undefined;
+      inertMarkerSpanStack.push(isInertMarker);
+      if (isInertMarker) inertMarkerDepth += 1;
     },
     onCloseTag: (tagName) => {
       if (tagName !== 'span') return;
-      if (statMarkerSpanStack.pop()) statMarkerDepth -= 1;
+      if (inertMarkerSpanStack.pop()) inertMarkerDepth -= 1;
     },
     textFilter: story
       ? (text, tagName) =>
-          statMarkerDepth > 0 || tagName === 'button'
+          inertMarkerDepth > 0 || tagName === 'button'
             ? text
             : compileStatInterpolationText(text, story)
       : undefined,
@@ -81,13 +88,26 @@ export function sanitizeRichText(value: string, story?: Story): string {
         tagName: 'video',
         attribs: { ...attributes, controls: '' },
       }),
-      span: (_tagName, attributes) => ({
-        tagName: 'span',
-        attribs:
-          attributes['data-stat-value'] === undefined
-            ? attributes
-            : { ...attributes, contenteditable: 'false' },
-      }),
+      span: (_tagName, attributes) => {
+        const sanitizedAttributes = { ...attributes };
+        const interactionTarget = sanitizedAttributes['data-interaction-link-target'];
+        if (
+          interactionTarget &&
+          story &&
+          !story.interactions.some(({ id }) => id === interactionTarget)
+        ) {
+          delete sanitizedAttributes['data-interaction-link-target'];
+        }
+        const isInertMarker =
+          sanitizedAttributes['data-stat-value'] !== undefined ||
+          sanitizedAttributes['data-interaction-link-target'] !== undefined;
+        return {
+          tagName: 'span',
+          attribs: isInertMarker
+            ? { ...sanitizedAttributes, contenteditable: 'false' }
+            : sanitizedAttributes,
+        };
+      },
     },
   });
 }

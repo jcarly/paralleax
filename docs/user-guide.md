@@ -176,11 +176,19 @@ The character indicator below the editor measures the stored HTML. It warns in
 the final 10% of the 64,000-character allowance and reports when content is over
 the limit and cannot be saved.
 
-Use the link icon labelled **Add conditional text** to choose an interaction
-connected by an outgoing trigger and insert an editable conditional frame. The
-frame follows that trigger's conditions automatically. Removing the graph
-connection keeps the authored text in the editor but hides it from players.
-Simulation Mode still shows unavailable frames with reduced opacity and a reason.
+Use the link icon labelled **Add interaction link** to open a dialog, enter the
+text to display, and choose another interaction as its target. The editor shows
+the result as a token in the form `🔗 Continue | Next scene`. Select the token to
+reopen the dialog, use its red cross to remove it, or drag it to another caret
+position. Renaming the target interaction updates the projected target title
+without rewriting the authored link text.
+
+During reading, the chosen text is displayed as a normal inline link. It can
+navigate only when the target is an available choice under the normal trigger
+rules; unavailable or disconnected targets stay visible but disabled. Existing
+conditional text frames remain supported and keep their previous availability
+projection. The link button no longer creates those frames; their authoring UI is
+reserved for the future conditional-text workflow.
 
 Use the **Add variable** toolbar button to open the variable dialog. Its first
 selector lists the Story and every character or location that has an available

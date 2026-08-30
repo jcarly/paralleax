@@ -44,6 +44,22 @@ function renderRichText(
         }
       });
   }
+  template.content
+    .querySelectorAll<HTMLElement>('[data-interaction-link-target]')
+    .forEach((marker) => {
+      const targetId = marker.dataset.interactionLinkTarget ?? '';
+      const state = conditionalTextState?.[targetId];
+      const link = document.createElement('button');
+      link.type = 'button';
+      link.className = 'interaction-link';
+      link.dataset.interactionLinkTarget = targetId;
+      link.textContent = marker.textContent;
+      if (conditionalTextState && !state?.available) {
+        link.disabled = true;
+        link.title = state?.reason ?? unavailableMessage;
+      }
+      marker.replaceWith(link);
+    });
   removeUnresolvedStatReferences(template.content);
   template.content.querySelectorAll<HTMLElement>('[data-stat-value]').forEach((node) => {
     const statId = node.dataset.statValue ?? '';
@@ -70,12 +86,14 @@ export function RichTextContent({
   conditionalTextState,
   statValues,
   itemStatValues,
+  onInteractionLinkClick,
 }: {
   html: string;
   className?: string;
   conditionalTextState?: ConditionalTextState;
   statValues?: Readonly<Record<string, StatValue>>;
   itemStatValues?: Readonly<Record<string, Readonly<Record<string, StatValue>>>>;
+  onInteractionLinkClick?: (interactionId: string) => void;
 }) {
   const { t } = useTranslation();
   return (
@@ -90,6 +108,13 @@ export function RichTextContent({
           statValues,
           itemStatValues,
         ),
+      }}
+      onClick={(event) => {
+        const link = (event.target as HTMLElement).closest<HTMLButtonElement>(
+          'button[data-interaction-link-target]',
+        );
+        if (!link || link.disabled) return;
+        onInteractionLinkClick?.(link.dataset.interactionLinkTarget ?? '');
       }}
     />
   );

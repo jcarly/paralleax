@@ -42,6 +42,22 @@ describe('sanitizeRichText stat interpolation', () => {
     expect(sanitized).toContain('{{Mira.Energy}}');
     expect(sanitized).not.toContain('data-stat-value');
   });
+
+  it('preserves same-story interaction links and strips unknown targets', () => {
+    const story = storyFixture();
+
+    expect(
+      sanitizeRichText('<p><span data-interaction-link-target="next">Continue</span></p>', story),
+    ).toBe(
+      '<p><span data-interaction-link-target="next" contenteditable="false">Continue</span></p>',
+    );
+    expect(
+      sanitizeRichText(
+        '<p><span data-interaction-link-target="outside">Continue</span></p>',
+        story,
+      ),
+    ).toBe('<p><span>Continue</span></p>');
+  });
 });
 
 function storyFixture(): Story {
@@ -72,6 +88,14 @@ function storyFixture(): Story {
         stats: [{ id: 'battery-charge', statDefinitionId: 'charge-definition', initialValue: 10 }],
       },
     ],
-    interactions: [],
+    interactions: [
+      {
+        id: 'next',
+        title: 'Next',
+        body: '',
+        position: { x: 0, y: 0 },
+        triggers: [],
+      },
+    ],
   };
 }

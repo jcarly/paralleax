@@ -10,7 +10,11 @@ Paralleax currently includes:
 
 - Story authoring and PostgreSQL persistence.
 - Interactions with rich content, graph positions, location context, character cast,
-  typed stat effects, item effects, and duration.
+  typed stat effects, item effects, and duration. Rich content supports editable,
+  removable, and movable inline interaction-link tokens with separate authored
+  text and stable target ids; reader navigation still requires the target to be
+  available through normal trigger evaluation. Existing conditional text frames
+  remain a distinct preserved format.
 - Triggers with multiple input interactions, typed conditions, and optional saved
   positions for linked graph markers.
 - Persisted visual graph decorations: movable, resizable colored frames and movable

@@ -195,8 +195,8 @@ export function InteractionInspector({
 }) {
   const { t } = useTranslation();
   const characters = story.characters ?? [];
-  const outgoingInteractions = story.interactions.filter((candidate) =>
-    candidate.triggers.some((trigger) => trigger.inputInteractionIds.includes(interaction.id)),
+  const interactionLinkTargets = story.interactions.filter(
+    (candidate) => candidate.id !== interaction.id,
   );
   const statTargets = getStatTargets(story);
   const statEffects = interaction.statEffects ?? [];
@@ -290,7 +290,7 @@ export function InteractionInspector({
           value={interaction.body}
           onChange={(body) => updateLocalInteraction({ body })}
           onBlur={(body) => void onPatch(interaction.id, { body })}
-          conditionalTargets={outgoingInteractions}
+          interactionLinkTargets={interactionLinkTargets}
           onConditionalTargetClick={onSelectInteraction}
         />
       </section>

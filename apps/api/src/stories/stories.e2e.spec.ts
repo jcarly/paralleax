@@ -779,6 +779,7 @@ Night falls.
       '<div data-conditional-text-target="next" onclick="alert(1)">' +
       '<button type="button" contenteditable="false" data-conditional-text-link="next">Next</button>' +
       '<p>Conditional clue</p></div>' +
+      `<span data-interaction-link-target="${interaction.id}">Continue</span>` +
       '<span data-stat-value="score" data-stat-item="item-1" onclick="alert(1)"></span>' +
       '<iframe src="https://www.youtube-nocookie.com/embed/video-1"></iframe>' +
       '<iframe src="https://evil.example/embed"></iframe><script>alert(1)</script>';
@@ -794,6 +795,7 @@ Night falls.
     expect(sanitized).toContain('https://media.example/scene.mp4');
     expect(sanitized).toContain('data-conditional-text-target="next"');
     expect(sanitized).toContain('data-conditional-text-link="next"');
+    expect(sanitized).toContain(`data-interaction-link-target="${interaction.id}"`);
     expect(sanitized).toContain('data-stat-value="score"');
     expect(sanitized).toContain('data-stat-item="item-1"');
     expect(sanitized).not.toContain('onclick');

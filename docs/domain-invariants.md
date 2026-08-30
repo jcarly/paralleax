@@ -33,6 +33,10 @@ details. They should stay covered by tests as the editor grows.
   iframe hosts are removed before persistence.
 - A conditional body block stores only its target interaction id. Its visibility
   is derived from outgoing triggers and it cannot define independent conditions.
+- An inline interaction link stores authored display text and one same-Story
+  target interaction id in inert allowlisted markup. Activating it in the reader
+  selects the target only when normal trigger evaluation exposes that interaction
+  as an available choice; a text link never bypasses narrative availability.
 - A rich-text variable marker stores only same-story assignment and optional
   exact item-instance ids in inert allowlisted attributes. It cannot evaluate an
   expression or execute authored code.

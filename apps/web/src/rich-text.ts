@@ -41,6 +41,7 @@ export function sanitizeRichTextForDisplay(value: string): string {
       'aria-label',
       'data-conditional-text-target',
       'data-conditional-text-link',
+      'data-interaction-link-target',
       'data-stat-value',
       'data-stat-item',
     ],

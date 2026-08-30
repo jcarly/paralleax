@@ -455,15 +455,11 @@ export function StoryPlayer({
     t,
     visited,
   ]);
-  const outgoingInteractions = useMemo(
+  const interactionLinkTargets = useMemo(
     () =>
       !story || !current
         ? []
-        : story.interactions.filter((interaction) =>
-            interaction.triggers.some((trigger) =>
-              trigger.inputInteractionIds.includes(current.id),
-            ),
-          ),
+        : story.interactions.filter((interaction) => interaction.id !== current.id),
     [current, story],
   );
 
@@ -769,7 +765,7 @@ export function StoryPlayer({
                     value={current.body}
                     onChange={(body) => patchCurrentInteraction({ body })}
                     onBlur={(body) => void saveCurrentInteraction({ body })}
-                    conditionalTargets={outgoingInteractions}
+                    interactionLinkTargets={interactionLinkTargets}
                     conditionalTextState={conditionalTextState}
                     onConditionalTargetClick={(interactionId) => {
                       const target = story.interactions.find(({ id }) => id === interactionId);
@@ -791,6 +787,10 @@ export function StoryPlayer({
                     conditionalTextState={conditionalTextState}
                     statValues={statValues}
                     itemStatValues={itemStatValues}
+                    onInteractionLinkClick={(interactionId) => {
+                      const target = story.interactions.find(({ id }) => id === interactionId);
+                      if (target && availableChoiceIds.has(interactionId)) choose(target);
+                    }}
                   />
                   {canUseReaderComments ? (
                     <div className="reader-comment-actions">

@@ -91,6 +91,13 @@ flattened back to the same inert marker before emitting authored HTML. The API
 lowers uniquely resolved `{{owner.variable}}` shorthand to the same stable
 assignment markers consumed by the reader.
 
+Inline interaction links use a separate inert rich-text marker containing the
+authored label and stable target interaction id. The API sanitizer keeps only
+same-Story targets, the editor projects the current target title into a reusable
+token/dialog UI, and the reader delegates activation to its existing available
+choice transition. Conditional text frames keep their existing marker and
+availability projection; links do not reuse the frame as canonical markup.
+
 Default interaction placement lives in `packages/shared/src/graph/`, while the
 deterministic sample story lives in `packages/shared/src/demo/`. The public
 `index.ts` facade re-exports both modules and owns no implementation for either
