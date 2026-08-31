@@ -9,6 +9,7 @@ import {
   invertStoryChangeDelta,
   readerSaveKind,
   resolveStoryAccess,
+  storyHistoryOperations,
   type GraphDecoration,
   type ConditionalTextBlock,
   type ItemRelationshipType,
@@ -280,6 +281,7 @@ export class StoriesRepository {
     id: string,
     mutation: (story: Story) => Story | Promise<Story>,
     ownerId: string,
+    operation: string = storyHistoryOperations.storyUpdated,
   ): Promise<Story | undefined> {
     return this.transaction(async (client) => {
       if (!(await this.hasEditAccess(client, id, ownerId, true))) return undefined;
@@ -294,7 +296,7 @@ export class StoriesRepository {
           actorUserId: ownerId,
           revision: updated.revision,
           kind: 'change',
-          operation: 'story.updated',
+          operation,
           changes,
           createdAt: updated.updatedAt,
         });

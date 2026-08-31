@@ -50,6 +50,29 @@ describe('Story editor history', () => {
     vi.mocked(api.getStoryHistory).mockResolvedValue(undoableHistory);
   });
 
+  it('opens the durable history panel and refreshes its latest events', async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.getStoryHistory).mockResolvedValue({
+      ...undoableHistory,
+      entries: [
+        {
+          ...undoableHistory.entries[0],
+          operation: 'interaction.created',
+          actor: { id: 'user-1', email: 'alice@example.test' },
+        },
+      ],
+    });
+
+    await renderEditor({ ...cloneStory(), revision: 2 });
+    await waitFor(() => expect(api.getStoryHistory).toHaveBeenCalledOnce());
+    await user.click(screen.getByRole('button', { name: 'Open Story history' }));
+
+    await waitFor(() => expect(api.getStoryHistory).toHaveBeenCalledTimes(2));
+    expect(screen.getByRole('complementary', { name: 'History' })).toBeInTheDocument();
+    expect(screen.getByText('Interaction created')).toBeInTheDocument();
+    expect(screen.getByText('alice@example.test')).toBeInTheDocument();
+  });
+
   it('replaces the editor Story from the persistent undo result', async () => {
     const user = userEvent.setup();
     const changed = { ...cloneStory(), revision: 2, title: 'Changed title' };

@@ -21,6 +21,7 @@ import { useStoryComments } from '../features/comments/useStoryComments';
 import { ReaderSaveDialog } from '../features/story-player/ReaderSaveDialog';
 import { useReaderProgressPersistence } from '../features/story-player/useReaderProgressPersistence';
 import { useReaderSessionState } from '../features/story-player/useReaderSessionState';
+import { useSimulationMutationPersistence } from '../features/story-player/useSimulationMutationPersistence';
 import {
   getConditionSummary,
   getUnavailableReason,
@@ -36,6 +37,7 @@ import {
   findSavedInteraction,
 } from '../features/story/storyMutationResults';
 import { useStoryRealtime } from '../hooks/useStoryRealtime';
+import { usePendingSaveGuard } from '../hooks/usePendingSaveGuard';
 import { getStoryGraphClickCreationPosition } from '../storyGraphCreationLayout';
 import { describeTriggerCondition } from '../triggerConditionPresentation';
 
@@ -87,10 +89,22 @@ export function StoryPlayer({
   const journeyRef = useRef<string[]>([]);
   const directStartAutosavedKey = useRef('');
   const realtimeLoadAttempt = useRef(0);
-  const simulationMutationCount = useRef(0);
   const simulationEditDepth = useRef(0);
   const pendingRealtimeInvalidation = useRef<StoryRealtimeInvalidation | undefined>(undefined);
   const realtimeRefresh = useRef<(invalidation: StoryRealtimeInvalidation) => void>(() => {});
+  const simulationMutations = useSimulationMutationPersistence({
+    storyId,
+    fallbackError: t('player.storyChangesSaveFailed'),
+  });
+  const hasActiveSimulationMutations = simulationMutations.hasActiveMutations;
+
+  usePendingSaveGuard(
+    authenticated &&
+      (progressStatus === 'saving' ||
+        progressStatus === 'error' ||
+        (isSimulationMode &&
+          (simulationMutations.status === 'saving' || simulationMutations.status === 'error'))),
+  );
 
   useEffect(() => {
     journeyRef.current = journey;
@@ -170,16 +184,40 @@ export function StoryPlayer({
   ]);
 
   const flushPendingRealtimeRefresh = useCallback(() => {
-    if (simulationMutationCount.current > 0 || simulationEditDepth.current > 0) return;
+    if (hasActiveSimulationMutations() || simulationEditDepth.current > 0) return;
     const pending = pendingRealtimeInvalidation.current;
     if (!pending) return;
     pendingRealtimeInvalidation.current = undefined;
     realtimeRefresh.current(pending);
-  }, []);
+  }, [hasActiveSimulationMutations]);
+
+  const applyReloadedSimulationStory = useCallback(
+    (nextStory: Story) => {
+      const positioned = ensureStoryInteractionPositions(nextStory);
+      if (positioned.capabilities?.canEdit !== true) {
+        setStory(undefined);
+        setLoadAttempt((currentAttempt) => currentAttempt + 1);
+        return;
+      }
+      replaySession(positioned, journeyRef.current);
+      setStory(positioned);
+      setEditingChoiceId((choiceId) =>
+        choiceId && positioned.interactions.some(({ id }) => id === choiceId)
+          ? choiceId
+          : undefined,
+      );
+      setPlayableCharacterId((characterId) =>
+        characterId && positioned.characters?.some(({ id }) => id === characterId)
+          ? characterId
+          : undefined,
+      );
+    },
+    [replaySession],
+  );
 
   const refreshFromRealtime = useCallback(
     (invalidation: StoryRealtimeInvalidation) => {
-      if (simulationMutationCount.current > 0 || simulationEditDepth.current > 0) {
+      if (hasActiveSimulationMutations() || simulationEditDepth.current > 0) {
         pendingRealtimeInvalidation.current = prioritizeStoryRealtimeInvalidation(
           pendingRealtimeInvalidation.current,
           invalidation,
@@ -192,7 +230,7 @@ export function StoryPlayer({
         .getStory(storyId)
         .then((nextStory) => {
           if (attempt !== realtimeLoadAttempt.current) return;
-          if (simulationMutationCount.current > 0 || simulationEditDepth.current > 0) {
+          if (hasActiveSimulationMutations() || simulationEditDepth.current > 0) {
             pendingRealtimeInvalidation.current = prioritizeStoryRealtimeInvalidation(
               pendingRealtimeInvalidation.current,
               invalidation,
@@ -200,24 +238,7 @@ export function StoryPlayer({
             return;
           }
 
-          const positioned = ensureStoryInteractionPositions(nextStory);
-          if (positioned.capabilities?.canEdit !== true) {
-            setStory(undefined);
-            setLoadAttempt((currentAttempt) => currentAttempt + 1);
-            return;
-          }
-          replaySession(positioned, journeyRef.current);
-          setStory(positioned);
-          setEditingChoiceId((choiceId) =>
-            choiceId && positioned.interactions.some(({ id }) => id === choiceId)
-              ? choiceId
-              : undefined,
-          );
-          setPlayableCharacterId((characterId) =>
-            characterId && positioned.characters?.some(({ id }) => id === characterId)
-              ? characterId
-              : undefined,
-          );
+          applyReloadedSimulationStory(nextStory);
         })
         .catch((caught: unknown) => {
           if (attempt !== realtimeLoadAttempt.current) return;
@@ -230,7 +251,7 @@ export function StoryPlayer({
           }
         });
     },
-    [loadKey, replaySession, storyId, t],
+    [applyReloadedSimulationStory, hasActiveSimulationMutations, loadKey, storyId, t],
   );
 
   useEffect(() => {
@@ -253,15 +274,9 @@ export function StoryPlayer({
     setTimeout(flushPendingRealtimeRefresh, 0);
   }, [flushPendingRealtimeRefresh]);
 
-  async function trackSimulationMutation<T>(operation: () => Promise<T>): Promise<T> {
-    simulationMutationCount.current += 1;
-    try {
-      return await operation();
-    } finally {
-      simulationMutationCount.current = Math.max(0, simulationMutationCount.current - 1);
-      flushPendingRealtimeRefresh();
-    }
-  }
+  useEffect(() => {
+    if (simulationMutations.status !== 'saving') flushPendingRealtimeRefresh();
+  }, [flushPendingRealtimeRefresh, simulationMutations.status]);
 
   const current = useMemo(
     () => story?.interactions.find((item) => item.id === currentId),
@@ -552,11 +567,12 @@ export function StoryPlayer({
     patch: Partial<Pick<Interaction, 'title' | 'body' | 'conditionalTextBlocks'>>,
   ) {
     if (!current) return;
-    const result = await trackSimulationMutation(() =>
-      api.updateInteraction(storyId, current.id, patch),
-    );
-    setStory((currentStory) =>
-      currentStory ? applyInteractionResponse(currentStory, result) : currentStory,
+    await simulationMutations.run(
+      () => api.updateInteraction(storyId, current.id, patch),
+      (result) =>
+        setStory((currentStory) =>
+          currentStory ? applyInteractionResponse(currentStory, result) : currentStory,
+        ),
     );
   }
 
@@ -582,27 +598,31 @@ export function StoryPlayer({
 
   async function addOption() {
     if (!story) return;
-    const result = await trackSimulationMutation(() =>
-      api.createInteraction(
-        storyId,
-        current
-          ? {
-              parentId: current.id,
-              position: getStoryGraphClickCreationPosition(story, {
-                kind: 'child',
-                sourceId: current.id,
-              }),
-            }
-          : {
-              position: getStoryGraphClickCreationPosition(story, { kind: 'root' }),
-            },
-      ),
+    await simulationMutations.run(
+      () =>
+        api.createInteraction(
+          storyId,
+          current
+            ? {
+                parentId: current.id,
+                position: getStoryGraphClickCreationPosition(story, {
+                  kind: 'child',
+                  sourceId: current.id,
+                }),
+              }
+            : {
+                position: getStoryGraphClickCreationPosition(story, { kind: 'root' }),
+              },
+        ),
+      (result) => {
+        const created = findSavedInteraction(result, story);
+        setStory((currentStory) =>
+          currentStory ? applyInteractionResponse(currentStory, result) : currentStory,
+        );
+        setEditingChoiceId(created?.id);
+      },
+      { retryable: false },
     );
-    const created = findSavedInteraction(result, story);
-    setStory((currentStory) =>
-      currentStory ? applyInteractionResponse(currentStory, result) : currentStory,
-    );
-    setEditingChoiceId(created?.id);
   }
 
   function startReaderComment() {
@@ -614,12 +634,19 @@ export function StoryPlayer({
 
   async function saveChoiceTitle(interaction: Interaction, title: string) {
     setEditingChoiceId(undefined);
-    const result = await trackSimulationMutation(() =>
-      api.updateInteraction(storyId, interaction.id, { title }),
+    await simulationMutations.run(
+      () => api.updateInteraction(storyId, interaction.id, { title }),
+      (result) =>
+        setStory((currentStory) =>
+          currentStory ? applyInteractionResponse(currentStory, result) : currentStory,
+        ),
     );
-    setStory((currentStory) =>
-      currentStory ? applyInteractionResponse(currentStory, result) : currentStory,
-    );
+  }
+
+  async function reloadAfterSimulationMutationFailure() {
+    await simulationMutations.run(() => api.getStory(storyId), applyReloadedSimulationStory, {
+      retryable: false,
+    });
   }
 
   if (!story || loadedKey !== loadKey) {
@@ -677,6 +704,34 @@ export function StoryPlayer({
             <span aria-hidden="true" />
             {t(`player.realtime.${storyRealtimeStatus}`)}
           </span>
+        ) : null}
+        {isSimulationMode && simulationMutations.status !== 'idle' ? (
+          <div
+            className={`simulation-save-feedback ${simulationMutations.status}`}
+            role={simulationMutations.status === 'error' ? 'alert' : 'status'}
+            aria-live="polite"
+          >
+            <span>
+              {simulationMutations.status === 'saving'
+                ? t('player.savingStoryChanges')
+                : simulationMutations.status === 'saved'
+                  ? t('player.storyChangesSaved')
+                  : t('player.storyChangesSaveFailed')}
+            </span>
+            {simulationMutations.status === 'error' ? (
+              <>
+                <small>{simulationMutations.error}</small>
+                {simulationMutations.canRetry ? (
+                  <button type="button" onClick={simulationMutations.retry}>
+                    {t('player.retryStoryChanges')}
+                  </button>
+                ) : null}
+                <button type="button" onClick={() => void reloadAfterSimulationMutationFailure()}>
+                  {t('player.reloadStoryAfterSaveFailure')}
+                </button>
+              </>
+            ) : null}
+          </div>
         ) : null}
         {authenticated ? (
           <span className={`save-status ${progressStatus}`} role="status" aria-live="polite">

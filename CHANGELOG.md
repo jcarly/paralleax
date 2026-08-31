@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-08-31
+
+- Added visible persistence state for authored changes made from Simulation Mode.
+  Safe updates can be retried after failure, uncertain create operations recover
+  through a canonical Story reload to avoid duplicates, and pending or failed
+  authored mutations participate in navigation and unload protection.
+- Added an author-facing durable Story history panel to the graph toolbar. Recent
+  events are grouped by day and show localized semantic operation labels, actor,
+  time, revision, and reverted state while reusing the existing canonical
+  undo/redo actions. Operation identifiers are shared by the domain, API, and web
+  layers; existing `story.updated` events remain readable.
+
 ## 2026-08-30
 
 - Added structured conditional rich-text frames. Authors can wrap selected text,

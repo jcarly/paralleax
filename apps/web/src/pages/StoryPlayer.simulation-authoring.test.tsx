@@ -82,6 +82,49 @@ describe('StoryPlayer simulation authoring', () => {
     );
   });
 
+  it('shows a failed simulation mutation and retries the same safe update', async () => {
+    const user = userEvent.setup();
+    const renamed = structuredClone(story);
+    renamed.interactions[1].title = 'Recovered title';
+    vi.mocked(api.updateInteraction)
+      .mockRejectedValueOnce(new Error('Connection lost'))
+      .mockResolvedValueOnce(renamed);
+
+    await renderPlayer('/stories/story-1/play?mode=simulation&startInteractionId=next');
+
+    const titleInput = screen.getByLabelText('Current interaction title');
+    await user.clear(titleInput);
+    await user.type(titleInput, 'Recovered title');
+    await user.tab();
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Story changes could not be saved');
+    expect(screen.getByRole('alert')).toHaveTextContent('Connection lost');
+    await user.click(screen.getByRole('button', { name: 'Retry' }));
+
+    expect(await screen.findByText('Story changes saved')).toBeInTheDocument();
+    expect(api.updateInteraction).toHaveBeenCalledTimes(2);
+    expect(screen.getByLabelText('Current interaction title')).toHaveValue('Recovered title');
+  });
+
+  it('reloads after an uncertain option creation instead of offering a duplicate retry', async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.createInteraction).mockRejectedValueOnce(new Error('Response lost'));
+
+    await renderPlayer('/stories/story-1/play?mode=simulation&startInteractionId=next');
+    vi.mocked(api.getStory).mockClear();
+    vi.mocked(api.getStory).mockResolvedValue(story);
+    await user.click(screen.getByRole('button', { name: 'Add option' }));
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('Response lost');
+    expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Reload Story' }));
+
+    await waitFor(() => expect(api.getStory).toHaveBeenCalledOnce());
+    expect(await screen.findByText('Story changes saved')).toBeInTheDocument();
+    expect(api.createInteraction).toHaveBeenCalledOnce();
+  });
+
   it('keeps conditional text on its source interaction when its link is followed', async () => {
     const conditionalStory = structuredClone(story);
     conditionalStory.interactions[0].body =

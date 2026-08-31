@@ -69,7 +69,9 @@ comments, and reader/simulation saves are outside this history.
 - Collaborative edits to unrelated fields can survive an older inverse.
 - Same-field edits and newly introduced references may make an inverse
   incompatible; the author receives a conflict and the current Story is kept.
-- The first implementation exposes recent event summaries plus undo/redo state;
-  richer history browsing can build on the same append-only event stream.
+- Recent event summaries are presented through localized semantic operation
+  labels and grouped by day with actor, revision, and reverted state. The browser
+  remains a projection of the same append-only event stream and reuses the same
+  canonical undo/redo actions.
 - Existing stories have no synthetic pre-migration events. Their first new
   content mutation starts the durable history.

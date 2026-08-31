@@ -107,6 +107,19 @@ export function useStoryHistory({
     [clearOptimisticGraphHistory],
   );
 
+  const refreshHistory = useCallback(async () => {
+    if (story?.capabilities?.canEdit !== true || story.id !== storyId) return;
+    const attempt = ++loadAttemptRef.current;
+    try {
+      const next = await api.getStoryHistory(storyId);
+      if (attempt !== loadAttemptRef.current) return;
+      loadedRevisionRef.current = `${story.id}:${story.revision ?? 'legacy'}`;
+      setHistory(next);
+    } catch {
+      if (attempt === loadAttemptRef.current) setHistory(emptyHistory);
+    }
+  }, [story, storyId]);
+
   const apply = useCallback(
     async (action: 'undo' | 'redo') => {
       if (busy) return;
@@ -167,6 +180,7 @@ export function useStoryHistory({
     history: story?.capabilities?.canEdit === true && story.id === storyId ? history : emptyHistory,
     historyBusy: busy,
     markLocalChange,
+    refreshHistory,
     undo: useCallback(() => apply('undo'), [apply]),
     redo: useCallback(() => apply('redo'), [apply]),
   };

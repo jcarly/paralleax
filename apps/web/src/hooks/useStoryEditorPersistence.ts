@@ -105,6 +105,7 @@ export function useStoryEditorPersistence(storyId: string) {
     retry: persistence.retry,
     history: history.history,
     historyBusy: history.historyBusy,
+    refreshHistory: history.refreshHistory,
     undo: history.undo,
     redo: history.redo,
     renameStory,

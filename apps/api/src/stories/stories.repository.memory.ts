@@ -7,6 +7,7 @@ import {
   invertStoryChangeDelta,
   readerSaveKind,
   resolveStoryAccess,
+  storyHistoryOperations,
   type ReaderProgressState,
   type ReaderSave,
   type Story,
@@ -99,6 +100,7 @@ export class InMemoryStoriesRepository {
     id: string,
     mutation: (story: Story) => Story | Promise<Story>,
     ownerId: string,
+    operation: string = storyHistoryOperations.storyUpdated,
   ): Promise<Story | undefined> {
     return this.serializeMutation(id, async () => {
       const candidate = this.stories.get(id);
@@ -112,7 +114,7 @@ export class InMemoryStoriesRepository {
           actorUserId: ownerId,
           revision: updated.revision,
           kind: 'change',
-          operation: 'story.updated',
+          operation,
           changes,
           createdAt: updated.updatedAt,
         });

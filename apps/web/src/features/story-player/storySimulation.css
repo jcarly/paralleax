@@ -96,6 +96,38 @@
   color: #f0aaa5;
 }
 
+.simulation-save-feedback {
+  display: inline-flex;
+  max-width: 30rem;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.3rem 0.5rem;
+  color: #aabdb4;
+  font-size: 0.72rem;
+}
+
+.simulation-save-feedback.saved {
+  color: #b9d6c7;
+}
+
+.simulation-save-feedback.error {
+  color: #f0aaa5;
+}
+
+.simulation-save-feedback small {
+  overflow-wrap: anywhere;
+}
+
+.simulation-save-feedback button {
+  min-height: 26px;
+  padding: 0.2rem 0.45rem;
+  border: 1px solid currentColor;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font-size: 0.68rem;
+}
+
 .player-toolbar-button,
 .player-exit {
   display: inline-flex;

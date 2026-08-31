@@ -2,7 +2,7 @@
 
 This roadmap describes the progression from the validated narrative core to a public Paralleax platform.
 
-Status reviewed: 2026-08-28.
+Status reviewed: 2026-08-31.
 
 It is organized around **user capabilities** rather than implementation areas. Engineering work supports these milestones but does not define them by itself.
 
@@ -30,10 +30,11 @@ reliability, conflict, exchange-format, accessibility, and publication work.
 
 The near-term delivery sequence is:
 
-1. close the remaining standalone V0.2 reliability and accessibility gaps now
-   that durable authored history and global undo/redo are implemented;
-2. complete V0.3 optimistic concurrency, conflict recovery, history labels,
-   retention, and author-facing history browsing;
+1. close the remaining standalone V0.2 reliability, scale, and accessibility gaps
+   now that durable authored history, visible Simulation Mode mutation recovery,
+   and author-facing history browsing are implemented;
+2. complete V0.3 optimistic concurrency, conflict recovery, history retention,
+   and optional gesture grouping;
 3. establish the stable Paralleax backup/import-export contract required by V0.6;
 4. add Story validation, onboarding, and accessibility evidence to reach V0.7;
 5. then deepen world state, dynamic execution, collaboration, and publishing
@@ -111,14 +112,17 @@ An author can safely create, navigate, edit, test, and recover a large story wit
 - Durable per-author Story-content history with atomic reversible deltas,
   conflict-safe inverse revisions, vertical undo/redo controls, and global
   `Ctrl+Z`, `Ctrl+Shift+Z`, and `Ctrl+Y` shortcuts outside editable fields.
+- A localized author-facing history browser with semantic operation labels,
+  day grouping, actor/revision metadata, reverted state, and the same canonical
+  undo/redo controls.
+- Visible saving, saved, failure, retry, canonical-reload recovery, and unload
+  protection for authored mutations made from Simulation Mode.
 - Lazy-loaded editor/player routes.
 
 ### Remaining scope
 
 #### Authoring UX
 
-- Add an author-facing history browser with meaningful operation labels and
-  grouping; the current controls expose only undo/redo availability.
 - Add a focused narrative-neighborhood mode if large-story usability testing
   confirms that search and reference navigation are insufficient.
 - Improve empty states, contextual actions, keyboard guidance, and shortcuts.
@@ -126,7 +130,6 @@ An author can safely create, navigate, edit, test, and recover a large story wit
 - Consolidate dialog, loading, empty, recoverable-error, and save-error behavior.
 - Complete automated accessibility checks and a manual keyboard/focus audit.
 - Extend interface internationalization only as remaining authoring flows stabilize.
-- Give Simulation Mode mutations visible saving, failure, and recovery behavior.
 
 #### Reliability and scale
 
@@ -191,6 +194,9 @@ Stories have reliable ownership and revision semantics so multiple people and fu
   survive; overlapping or structurally invalid reversals return a conflict.
 - Revision-aware editor controls and shortcuts that preserve native text-field
   undo and reuse canonical Story replacement after a successful inverse.
+- Stable shared operation categories and a localized history browser showing
+  recent events by day with actor, revision, reverted state, and canonical
+  undo/redo availability.
 
 ### Remaining scope
 
@@ -207,8 +213,8 @@ Stories have reliable ownership and revision semantics so multiple people and fu
   for common independent mutations.
 - Define snapshot cadence, event compaction, and retention for long-lived large
   Stories without weakening the append-only audit contract.
-- Add stable operation labels and optional gesture grouping above the precise
-  delta format, then expose a navigable history browser.
+- Decide whether adjacent low-level events should support optional gesture
+  grouping without weakening the precise delta or audit formats.
 - Decide whether explicitly selected older events may be reversed in the future;
   global undo remains scoped to the current author's latest active event.
 

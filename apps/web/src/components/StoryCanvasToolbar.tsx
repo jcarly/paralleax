@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 export type CanvasActionIconName =
-  'undo' | 'redo' | 'root' | 'frame' | 'text' | 'organize' | 'postIt';
+  'undo' | 'redo' | 'history' | 'root' | 'frame' | 'text' | 'organize' | 'postIt';
 
 interface StoryCanvasToolbarProps {
   canEdit: boolean;
@@ -13,8 +13,10 @@ interface StoryCanvasToolbarProps {
   canUndo: boolean;
   canRedo: boolean;
   historyBusy: boolean;
+  historyOpen: boolean;
   onUndo: () => void;
   onRedo: () => void;
+  onToggleHistory: () => void;
   onCreateRoot: () => void;
   onAddFrame: () => void;
   onAddText: () => void;
@@ -31,8 +33,10 @@ export function StoryCanvasToolbar({
   canUndo,
   canRedo,
   historyBusy,
+  historyOpen,
   onUndo,
   onRedo,
+  onToggleHistory,
   onCreateRoot,
   onAddFrame,
   onAddText,
@@ -60,6 +64,13 @@ export function StoryCanvasToolbar({
             icon="redo"
             disabled={!canRedo || historyBusy}
             onClick={onRedo}
+          />
+          <CanvasToolButton
+            label={t('editor.history.open')}
+            icon="history"
+            active={historyOpen}
+            pressed={historyOpen}
+            onClick={onToggleHistory}
           />
           <CanvasToolButton label={t('editor.addRoot')} icon="root" onClick={onCreateRoot} />
           <CanvasToolButton label={t('decoration.addFrame')} icon="frame" onClick={onAddFrame} />
@@ -127,6 +138,14 @@ export function CanvasActionIcon({ name }: { name: CanvasActionIconName }) {
       <>
         <path d="m15 7 5 5-5 5" />
         <path d="M19 12h-8a6 6 0 0 0-6 6" />
+      </>
+    ),
+    history: (
+      <>
+        <path d="M5 6h14M5 12h14M5 18h14" />
+        <circle cx="3" cy="6" r="0.7" />
+        <circle cx="3" cy="12" r="0.7" />
+        <circle cx="3" cy="18" r="0.7" />
       </>
     ),
     root: (

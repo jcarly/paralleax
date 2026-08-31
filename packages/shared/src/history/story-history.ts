@@ -3,6 +3,39 @@ import { diffStoryGraphPositions, type StoryGraphPositionPatch } from '../graph/
 
 export type StoryHistoryEventKind = 'change' | 'undo' | 'redo';
 
+export const storyHistoryOperations = {
+  storyUpdated: 'story.updated',
+  storyMetadataUpdated: 'story.metadata.updated',
+  interactionCreated: 'interaction.created',
+  interactionUpdated: 'interaction.updated',
+  interactionDeleted: 'interaction.deleted',
+  graphPositionsUpdated: 'graph.positions.updated',
+  triggerCreated: 'trigger.created',
+  triggerUpdated: 'trigger.updated',
+  triggerDeleted: 'trigger.deleted',
+  graphDecorationCreated: 'graph-decoration.created',
+  graphDecorationUpdated: 'graph-decoration.updated',
+  graphDecorationDeleted: 'graph-decoration.deleted',
+  locationCreated: 'location.created',
+  locationUpdated: 'location.updated',
+  characterCreated: 'character.created',
+  characterUpdated: 'character.updated',
+  statDefinitionCreated: 'stat-definition.created',
+  statDefinitionUpdated: 'stat-definition.updated',
+  statDefinitionDeleted: 'stat-definition.deleted',
+  statAssignmentCreated: 'stat-assignment.created',
+  statAssignmentUpdated: 'stat-assignment.updated',
+  statAssignmentDeleted: 'stat-assignment.deleted',
+  itemDefinitionCreated: 'item-definition.created',
+  itemDefinitionUpdated: 'item-definition.updated',
+  itemInstanceCreated: 'item-instance.created',
+  itemInstanceMoved: 'item-instance.moved',
+  itemInstanceDeleted: 'item-instance.deleted',
+} as const;
+
+export type StoryHistoryOperation =
+  (typeof storyHistoryOperations)[keyof typeof storyHistoryOperations];
+
 export interface StoryHistoryActor {
   id: string;
   email?: string;

@@ -35,7 +35,12 @@ describe('StoryGraphService', () => {
       },
     });
     expect(result).not.toHaveProperty('interactions');
-    expect(mutations.update).toHaveBeenCalledWith('story-1', expect.any(Function), 'user-1');
+    expect(mutations.update).toHaveBeenCalledWith(
+      'story-1',
+      expect.any(Function),
+      'user-1',
+      'interaction.created',
+    );
   });
 
   it('rejects interaction references from another story', async () => {

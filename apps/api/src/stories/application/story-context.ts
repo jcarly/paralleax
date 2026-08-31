@@ -5,6 +5,7 @@ import {
   getStatValueType,
   getStoryItemEntries,
   isStatValueOfType,
+  storyHistoryOperations,
   type CharacterItemMutationResult,
   type CharacterMutationResult,
   type CharacterStatMutationResult,
@@ -64,6 +65,7 @@ export class StoryContextService {
         return story;
       },
       userId,
+      storyHistoryOperations.locationCreated,
     );
     return this.locationResult(story, locationId);
   }
@@ -89,6 +91,7 @@ export class StoryContextService {
         return story;
       },
       userId,
+      storyHistoryOperations.locationUpdated,
     );
     return this.locationResult(story, locationId);
   }
@@ -117,6 +120,7 @@ export class StoryContextService {
         return story;
       },
       userId,
+      storyHistoryOperations.characterCreated,
     );
     return this.characterResult(story, characterId);
   }
@@ -148,6 +152,7 @@ export class StoryContextService {
         return story;
       },
       userId,
+      storyHistoryOperations.characterUpdated,
     );
     return this.characterResult(story, characterId);
   }
@@ -168,6 +173,7 @@ export class StoryContextService {
         return story;
       },
       userId,
+      storyHistoryOperations.statDefinitionCreated,
     );
     return this.statDefinitionResult(story, statDefinitionId);
   }
@@ -185,6 +191,7 @@ export class StoryContextService {
         return story;
       },
       userId,
+      storyHistoryOperations.statDefinitionUpdated,
     );
     return this.statDefinitionResult(story, statDefinitionId);
   }
@@ -201,6 +208,7 @@ export class StoryContextService {
         return story;
       },
       userId,
+      storyHistoryOperations.statDefinitionDeleted,
     );
   }
 
@@ -217,6 +225,7 @@ export class StoryContextService {
         return story;
       },
       userId,
+      storyHistoryOperations.statAssignmentCreated,
     );
   }
 
@@ -233,6 +242,7 @@ export class StoryContextService {
         return story;
       },
       userId,
+      storyHistoryOperations.statAssignmentUpdated,
     );
   }
 
@@ -244,6 +254,7 @@ export class StoryContextService {
         return story;
       },
       userId,
+      storyHistoryOperations.statAssignmentDeleted,
     );
   }
 
@@ -267,6 +278,7 @@ export class StoryContextService {
         return story;
       },
       userId,
+      storyHistoryOperations.itemDefinitionCreated,
     );
     return this.itemDefinitionResult(story, itemDefinitionId);
   }
@@ -300,6 +312,7 @@ export class StoryContextService {
         return story;
       },
       userId,
+      storyHistoryOperations.itemDefinitionUpdated,
     );
     return this.itemDefinitionResult(story, itemDefinitionId);
   }
@@ -322,6 +335,7 @@ export class StoryContextService {
         return story;
       },
       userId,
+      storyHistoryOperations.statAssignmentCreated,
     );
     return this.statResult(story, characterId, statId);
   }
@@ -341,6 +355,7 @@ export class StoryContextService {
         return story;
       },
       userId,
+      storyHistoryOperations.statAssignmentUpdated,
     );
     return this.statResult(story, characterId, statId);
   }
@@ -359,6 +374,7 @@ export class StoryContextService {
         return story;
       },
       userId,
+      storyHistoryOperations.statAssignmentDeleted,
     );
   }
 
@@ -381,6 +397,7 @@ export class StoryContextService {
         return story;
       },
       userId,
+      storyHistoryOperations.itemInstanceCreated,
     );
     return this.itemResult(story, characterId, itemId);
   }
@@ -395,6 +412,7 @@ export class StoryContextService {
       storyId,
       (story) => moveStoryItemInstance(story, itemId, input),
       userId,
+      storyHistoryOperations.itemInstanceMoved,
     );
   }
 
@@ -436,6 +454,7 @@ export class StoryContextService {
         return story;
       },
       userId,
+      storyHistoryOperations.itemInstanceDeleted,
     );
   }
 

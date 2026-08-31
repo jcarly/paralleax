@@ -58,6 +58,7 @@ import { GraphDecorationNode } from '../features/graph-decorations/GraphDecorati
 import { buildGraphDecorationNodes } from '../features/graph-decorations/graphDecorationNodes';
 import { isRealtimeEditableTarget } from '../features/realtime/storyRealtime';
 import { useStoryConnectionController } from '../features/story-editor/graph/useStoryConnectionController';
+import { StoryHistoryPanel } from '../features/story-editor/history/StoryHistoryPanel';
 import { useStoryContextNavigation } from '../features/story-editor/navigation/useStoryContextNavigation';
 import { useStoryEditorSelection } from '../features/story-editor/selection/useStoryEditorSelection';
 import { useStoryEditorPersistence } from '../hooks/useStoryEditorPersistence';
@@ -156,6 +157,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
     moveItemInstance,
     history,
     historyBusy,
+    refreshHistory,
     undo,
     redo,
   } = useStoryEditorPersistence(storyId);
@@ -169,6 +171,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
     [t],
   );
   const [commentsOpen, setCommentsOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const [placingComment, setPlacingComment] = useState(false);
   const [canvasContextMenu, setCanvasContextMenu] = useState<CanvasContextMenuState>();
   const [nodes, setNodes, onNodesChange] = useNodesState<StoryFlowNode>([]);
@@ -1402,14 +1405,29 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
             canUndo={history.canUndo}
             canRedo={history.canRedo}
             historyBusy={historyBusy || saveStatus === 'saving' || saveStatus === 'error'}
+            historyOpen={historyOpen}
             onUndo={() => void undo()}
             onRedo={() => void redo()}
+            onToggleHistory={() => {
+              const open = !historyOpen;
+              setHistoryOpen(open);
+              if (open) void refreshHistory();
+            }}
             onCreateRoot={() => void createRootFromClick()}
             onAddFrame={() => void addGraphDecoration('frame')}
             onAddText={() => void addGraphDecoration('text')}
             onOrganize={() => void organizeGraph()}
             onToggleCommentPlacement={() => setPlacingComment((placing) => !placing)}
           />
+          {historyOpen ? (
+            <StoryHistoryPanel
+              history={history}
+              busy={historyBusy || saveStatus === 'saving' || saveStatus === 'error'}
+              onUndo={() => void undo()}
+              onRedo={() => void redo()}
+              onClose={() => setHistoryOpen(false)}
+            />
+          ) : null}
           {canvasContextMenu ? (
             <StoryCanvasContextMenu
               position={canvasContextMenu.screenPosition}

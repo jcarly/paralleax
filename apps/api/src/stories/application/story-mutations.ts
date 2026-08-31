@@ -1,5 +1,9 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { ensureStoryInteractionPositions, type Story } from '@paralleax/shared';
+import {
+  ensureStoryInteractionPositions,
+  storyHistoryOperations,
+  type Story,
+} from '@paralleax/shared';
 import { StoriesRepository } from '../stories.repository';
 import { StoryEventsService } from '../story.events';
 
@@ -10,7 +14,12 @@ export class StoryMutationService {
     private readonly events: StoryEventsService,
   ) {}
 
-  async update(storyId: string, mutation: (story: Story) => Story, userId: string): Promise<Story> {
+  async update(
+    storyId: string,
+    mutation: (story: Story) => Story,
+    userId: string,
+    operation: string = storyHistoryOperations.storyUpdated,
+  ): Promise<Story> {
     const updated = await this.repository.mutate(
       storyId,
       (story) => {
@@ -22,6 +31,7 @@ export class StoryMutationService {
         return next;
       },
       userId,
+      operation,
     );
     if (!updated) throw new NotFoundException('Story not found');
     this.events.publishChange(storyId, 'updated', updated.revision);

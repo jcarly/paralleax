@@ -80,8 +80,14 @@ Paralleax currently includes:
   locally saved graph-position gestures keep a bounded in-memory inverse so
   undo/redo is projected immediately while PostgreSQL confirms the durable
   reversal; other, remote, reloaded, or conflicting changes use the authoritative
-  server path.
-- Editor-only Simulation Mode diagnostics.
+  server path. An icon-only canvas action opens the latest durable events grouped
+  by day with localized operation labels, actor, time, revision, and reverted
+  state; the panel reuses the same global undo/redo operations.
+- Editor-only Simulation Mode diagnostics. Authored mutations made from a
+  simulation expose saving, saved, and failed states. Safe updates can be retried;
+  uncertain creations recover by reloading the canonical Story so a timeout cannot
+  duplicate content. Navigation and unload protection includes unresolved authored
+  simulation mutations as well as reader-progress saves.
 - Live simultaneous editing for clients connected to the same API process. Every
   committed interaction, trigger, position, context entity, item/stat structure,
   and graph-decoration change invalidates open editor and Simulation Mode clients;

@@ -8,6 +8,7 @@ import {
   isStoryDate,
   isStoryTime,
   normalizeTriggerInputIds,
+  storyHistoryOperations,
   updateGraphDecorationInStory,
   updateStoryGraphPositions,
   updateTriggerInStory,
@@ -70,6 +71,7 @@ export class StoryGraphService {
         return story;
       },
       userId,
+      storyHistoryOperations.interactionCreated,
     );
     return this.interactionResult(story, interactionId);
   }
@@ -146,6 +148,7 @@ export class StoryGraphService {
         return story;
       },
       userId,
+      storyHistoryOperations.interactionUpdated,
     );
     return this.interactionResult(story, interactionId);
   }
@@ -187,6 +190,7 @@ export class StoryGraphService {
         return updateStoryGraphPositions(story, input);
       },
       userId,
+      storyHistoryOperations.graphPositionsUpdated,
     );
     return storyMutationMetadata(story);
   }
@@ -199,6 +203,7 @@ export class StoryGraphService {
         return deleteInteractionFromStory(story, interactionId);
       },
       userId,
+      storyHistoryOperations.interactionDeleted,
     );
   }
 
@@ -215,6 +220,7 @@ export class StoryGraphService {
         return story;
       },
       userId,
+      storyHistoryOperations.graphDecorationCreated,
     );
     return this.graphDecorationResult(story, decorationId);
   }
@@ -232,6 +238,7 @@ export class StoryGraphService {
         return updateGraphDecorationInStory(story, decorationId, input);
       },
       userId,
+      storyHistoryOperations.graphDecorationUpdated,
     );
     return this.graphDecorationResult(story, decorationId);
   }
@@ -244,6 +251,7 @@ export class StoryGraphService {
         return deleteGraphDecorationFromStory(story, decorationId);
       },
       userId,
+      storyHistoryOperations.graphDecorationDeleted,
     );
   }
 
@@ -276,6 +284,7 @@ export class StoryGraphService {
         });
       },
       userId,
+      storyHistoryOperations.triggerUpdated,
     );
     return this.triggerResult(story, interactionId, triggerId);
   }
@@ -301,6 +310,7 @@ export class StoryGraphService {
         return story;
       },
       userId,
+      storyHistoryOperations.triggerCreated,
     );
     return this.triggerResult(story, interactionId, triggerId);
   }
@@ -321,6 +331,7 @@ export class StoryGraphService {
         return deleteTriggerInStory(story, interactionId, triggerId);
       },
       userId,
+      storyHistoryOperations.triggerDeleted,
     );
   }
 

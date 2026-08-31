@@ -24,6 +24,7 @@ describe('StoryMutationService', () => {
       'story-1',
       (story) => ({ ...story, id: 'foreign-id', title: 'Updated' }),
       'user-1',
+      'interaction.updated',
     );
 
     expect(updated).toMatchObject({
@@ -33,7 +34,12 @@ describe('StoryMutationService', () => {
       updatedAt: '2026-08-25T15:00:00.000Z',
       interactions: [{ id: 'root', position: { x: 80, y: 120 } }],
     });
-    expect(repository.mutate).toHaveBeenCalledWith('story-1', expect.any(Function), 'user-1');
+    expect(repository.mutate).toHaveBeenCalledWith(
+      'story-1',
+      expect.any(Function),
+      'user-1',
+      'interaction.updated',
+    );
     expect(events.publishChange).toHaveBeenCalledWith('story-1', 'updated', 3);
   });
 

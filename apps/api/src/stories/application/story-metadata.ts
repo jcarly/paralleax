@@ -10,6 +10,7 @@ import {
   defaultStoryAccess,
   ensureStoryInteractionPositions,
   isStoryDateTime,
+  storyHistoryOperations,
   type Story,
   type UserRole,
 } from '@paralleax/shared';
@@ -93,6 +94,7 @@ export class StoryMetadataService {
         return story;
       },
       userId,
+      storyHistoryOperations.storyMetadataUpdated,
     );
   }
 
