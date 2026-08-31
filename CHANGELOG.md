@@ -2,6 +2,9 @@
 
 ## 2026-08-31
 
+- Lazy-loaded the standalone prototype route so its React Flow runtime and styles
+  no longer inflate the initial application bundle. Every production chunk now
+  stays below Vite's 500 kB warning threshold.
 - Replaced graph-only OR Trigger variants with condition groups owned by one
   Trigger: groups are OR and their conditions are AND. Each Trigger now has a
   0–100 appearance probability (100 by default), evaluated by one deterministic

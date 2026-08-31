@@ -9,8 +9,15 @@ import { AuthPage } from './pages/AuthPage';
 import { StoryList } from './pages/StoryList';
 import { StoryAccessPage } from './pages/StoryAccessPage';
 import { AdminUsersPage } from './pages/AdminUsersPage';
-import { ParalleaxPrototype } from './pages/ParalleaxPrototype';
-import { loadStoryEditor, loadStoryPlayer } from './pages/storyRouteLoaders';
+import {
+  loadParalleaxPrototype,
+  loadStoryEditor,
+  loadStoryPlayer,
+} from './pages/storyRouteLoaders';
+
+const ParalleaxPrototype = lazy(() =>
+  loadParalleaxPrototype().then(({ ParalleaxPrototype }) => ({ default: ParalleaxPrototype })),
+);
 
 const StoryEditor = lazy(() =>
   loadStoryEditor().then(({ StoryEditor }) => ({ default: StoryEditor })),
@@ -47,7 +54,12 @@ export function App() {
     return () => window.removeEventListener('paralleax:session-expired', expireSession);
   }, [isPrototype]);
 
-  if (isPrototype) return <ParalleaxPrototype />;
+  if (isPrototype)
+    return (
+      <Suspense fallback={<main className="page">{t('shell.loadingWorkspace')}</main>}>
+        <ParalleaxPrototype />
+      </Suspense>
+    );
   if (user === undefined) return <main className="page">{t('shell.loading')}</main>;
   const currentDestination = `${location.pathname}${location.search}${location.hash}`;
   const returnTo = safeReturnTo(new URLSearchParams(location.search).get('returnTo'));

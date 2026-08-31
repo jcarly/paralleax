@@ -48,14 +48,14 @@ describe('App', () => {
     vi.mocked(api.register).mockResolvedValue(user);
   });
 
-  it('opens every prototype sub-route without checking the real account session', () => {
+  it('opens every prototype sub-route without checking the real account session', async () => {
     render(
       <MemoryRouter initialEntries={['/prototype/paralleax/design-system']}>
         <App />
       </MemoryRouter>,
     );
 
-    expect(screen.getByText('Prototype mock')).toBeInTheDocument();
+    expect(await screen.findByText('Prototype mock')).toBeInTheDocument();
     expect(api.me).not.toHaveBeenCalled();
   });
 
