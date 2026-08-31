@@ -68,7 +68,12 @@ details. They should stay covered by tests as the editor grows.
   reading.
 - Inputs on the same trigger are OR conditions: any one input can make the output
   interaction reachable if the trigger conditions also match.
-- Conditions on the same trigger are AND conditions: all conditions must match.
+- A trigger owns one or more condition groups. Conditions inside a group are AND;
+  groups are OR. At least one complete group must match.
+- A trigger owns one appearance probability from 0 through 100, defaulting to 100. Input and condition-group rules are evaluated before one deterministic
+  probability roll is applied for that trigger and narrative step.
+- Several triggers targeting one interaction remain independent eligibility and
+  probability gates. The interaction is available when at least one succeeds.
 - Conditions can check visited interactions, the current location, character
   presence in the current interaction, a typed stat assignment, item ownership,
   or the story-local calendar.
@@ -110,6 +115,8 @@ details. They should stay covered by tests as the editor grows.
   additionally requires an exact instance of that definition.
 - Removing an item instance also removes stat effects and conditions targeting
   that exact instance.
+- Reader and Simulation progress preserve the probability seed. Reloading or
+  stepping backward replays the same rolls; starting a new run creates a new seed.
 - Numeric stat hourly changes are prorated by interaction duration and applied
   before ordered explicit effects.
 - An item definition belongs to exactly one story.

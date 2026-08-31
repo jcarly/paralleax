@@ -1,6 +1,11 @@
 import type { TFunction } from 'i18next';
-import type { Interaction, StatValue, Story } from '@paralleax/shared';
-import { getTriggerConditionFailures } from '@paralleax/shared';
+import type { Interaction, StatValue, Story, TriggerProbabilityContext } from '@paralleax/shared';
+import {
+  getTriggerConditionFailures,
+  getTriggerConditionGroups,
+  getTriggerConditions,
+  getTriggerProbabilityFailures,
+} from '@paralleax/shared';
 import { describeTriggerCondition } from '../../triggerConditionPresentation';
 import { getStatTargets, statTargetLabel } from '../../storyStats';
 
@@ -20,15 +25,17 @@ export function getConditionSummary(
   const triggers = interaction.triggers.filter((trigger) =>
     currentId
       ? trigger.inputInteractionIds.includes(currentId) ||
-        (trigger.inputInteractionIds.length === 0 && trigger.conditions.length > 0)
+        (trigger.inputInteractionIds.length === 0 && getTriggerConditions(trigger).length > 0)
       : trigger.inputInteractionIds.length === 0,
   );
-  const variants = triggers.map((trigger) =>
-    trigger.conditions.length === 0
-      ? t('player.condition.noConditions')
-      : trigger.conditions
-          .map((condition) => describeTriggerCondition(story, condition, t))
-          .join(` ${t('player.condition.and')} `),
+  const variants = triggers.flatMap((trigger) =>
+    getTriggerConditionGroups(trigger).map(({ conditions }) =>
+      conditions.length === 0
+        ? t('player.condition.noConditions')
+        : conditions
+            .map((condition) => describeTriggerCondition(story, condition, t))
+            .join(` ${t('player.condition.and')} `),
+    ),
   );
   return variants.length > 1
     ? variants.join(` ${t('player.condition.or')} `)
@@ -47,6 +54,7 @@ export function getUnavailableReason(
   ownedItemDefinitionIds: readonly string[],
   itemStatValues: Readonly<Record<string, Readonly<Record<string, StatValue>>>>,
   t: TFunction,
+  probabilityContext?: TriggerProbabilityContext,
 ) {
   const failures = getTriggerConditionFailures(
     interaction,
@@ -59,6 +67,26 @@ export function getUnavailableReason(
     ownedItemDefinitionIds,
     itemStatValues,
   );
+  if (failures.length === 0 && probabilityContext) {
+    const probabilityFailures = getTriggerProbabilityFailures(
+      interaction,
+      currentId,
+      visited,
+      probabilityContext,
+      currentLocationId,
+      currentCharacterIds,
+      statValues,
+      currentDateTime,
+      ownedItemDefinitionIds,
+      itemStatValues,
+    );
+    if (probabilityFailures.length > 0) {
+      return t('player.requirement.probabilityFailed', {
+        probability: probabilityFailures[0].appearanceProbability,
+        roll: probabilityFailures[0].roll.toFixed(2),
+      });
+    }
+  }
   if (failures.length === 0) return undefined;
 
   const firstFailure = failures[0].condition;

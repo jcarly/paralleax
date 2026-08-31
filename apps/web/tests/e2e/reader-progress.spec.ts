@@ -55,13 +55,24 @@ test('resumes and updates authenticated reader progress', async ({ page }) => {
       return;
     }
     expect(route.request().method()).toBe('PATCH');
-    expect(route.request().postDataJSON()).toEqual({
+    const input = route.request().postDataJSON() as {
+      journeyInteractionIds: string[];
+      ownedItemIds: string[];
+      randomSeed: string;
+    };
+    expect(input).toEqual({
       journeyInteractionIds: ['start', 'next'],
       ownedItemIds: [],
+      randomSeed: expect.any(String),
     });
     await route.fulfill({
       json: {
-        state: { ...savedState, journeyInteractionIds: ['start', 'next'] },
+        state: {
+          ...savedState,
+          version: 3,
+          journeyInteractionIds: ['start', 'next'],
+          randomSeed: input.randomSeed,
+        },
         updatedAt: '2026-07-27T09:45:00.000Z',
       },
     });

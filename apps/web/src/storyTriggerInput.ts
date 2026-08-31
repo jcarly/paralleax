@@ -1,8 +1,7 @@
-import type { TriggerCondition, Story } from '@paralleax/shared';
+import type { Story } from '@paralleax/shared';
 
 export interface TriggerInputDeletionPlan {
   inputInteractionIds: string[];
-  conditions: TriggerCondition[];
 }
 
 export function planTriggerInputDeletion(
@@ -18,6 +17,5 @@ export function planTriggerInputDeletion(
   const inputInteractionIds = trigger.inputInteractionIds.filter((id) => id !== inputInteractionId);
   return {
     inputInteractionIds,
-    conditions: trigger.conditions,
   };
 }

@@ -410,7 +410,7 @@ describe('story graph automatic layout', () => {
     expect(result.affectedNodeIds).toEqual(['left']);
   });
 
-  it('positions a selected grouped trigger without moving its interactions', () => {
+  it('positions only the selected trigger without moving its interactions', () => {
     const story = createLayoutStory();
     story.interactions = story.interactions.slice(0, 2);
     story.interactions[1].position = { x: 80, y: 500 };
@@ -427,12 +427,12 @@ describe('story graph automatic layout', () => {
 
     expect(result.interactionUpdates).toEqual([]);
     expect(result.triggerUpdates).toHaveLength(1);
-    expect(result.triggerUpdates[0].triggerIds).toEqual(['trigger-left', 'trigger-left-variant']);
+    expect(result.triggerUpdates[0].triggerIds).toEqual(['trigger-left-variant']);
     expect(result.triggerUpdates[0].position.y).toBeGreaterThan(
       story.interactions[0].position.y + interactionNodeHeight,
     );
     expect(result.triggerUpdates[0].position.y).toBeLessThan(story.interactions[1].position.y);
-    expect(result.affectedNodeIds).toEqual(['trigger:left:trigger-left']);
+    expect(result.affectedNodeIds).toEqual(['trigger:left:trigger-left-variant']);
   });
 
   it('accepts several interaction and trigger targets for future multi-selection', () => {

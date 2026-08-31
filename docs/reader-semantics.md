@@ -21,6 +21,11 @@ getAvailableInteractions(
   itemStatValues?: Readonly<
     Record<string, Readonly<Record<string, number | boolean | string>>>
   >,
+  probabilityContext?: {
+    randomSeed: string;
+    step: number;
+    forcedTriggerIds?: readonly string[];
+  },
 ): Interaction[];
 ```
 
@@ -35,13 +40,17 @@ story's authored `startDateTime` is used.
 `ownedItemDefinitionIds` contains the definitions represented in the current
 reader inventory. `itemStatValues` is keyed first by exact item instance and then by its
 item-definition assignment id.
+`probabilityContext` identifies the saved run and current narrative step. It
+keeps the Trigger roll stable across rendering, reload, backward replay, and
+Simulation diagnostics.
 
 ## Trigger Eligibility
 
 A trigger is eligible when:
 
 1. its input rule matches;
-2. all its conditions match the visited history.
+2. every condition in at least one of its condition groups matches;
+3. its one deterministic appearance roll succeeds.
 
 For input rules:
 
@@ -67,9 +76,17 @@ For conditions:
   mismatched value fails the condition;
 - temporal conditions compare the current story-local date, weekday, and time
   with their authored alternatives;
-- conditions on the same trigger are evaluated as AND.
+- conditions inside one group are evaluated as AND;
+- groups on the same trigger are evaluated as OR.
 
 Inputs on the same trigger are evaluated as OR.
+
+The appearance probability is an integer from 0 through 100 and defaults to 100.
+The roll is derived from the progress seed, narrative step, and Trigger id. It is
+performed only after the input rule and one condition group match. If several
+Triggers target the same interaction, they roll independently and any successful
+Trigger makes the interaction available. Simulation Mode reports probability
+failure and may explicitly force an unavailable path; normal reading cannot.
 
 ## Inline Interaction Links
 
@@ -355,7 +372,6 @@ creates or overwrites a named save.
 The MVP reader does not support:
 
 - calculated stats, formulas, or dependency graphs;
-- probabilities;
 - automatic choices;
 - final interactions;
 - weighted or prioritized choices;

@@ -55,7 +55,8 @@ describe('StoryReaderProgressService', () => {
 
     expect(progress).toMatchObject({
       state: {
-        version: 2,
+        version: 3,
+        randomSeed: expect.any(String),
         journeyInteractionIds: ['root'],
         currentInteractionId: 'root',
       },
@@ -70,6 +71,27 @@ describe('StoryReaderProgressService', () => {
       undefined,
       progress.updatedAt,
     );
+  });
+
+  it('preserves an existing run seed for legacy clients that do not send it', async () => {
+    repository.findProgress.mockResolvedValueOnce({
+      state: {
+        version: 3,
+        randomSeed: 'existing-seed',
+        journeyInteractionIds: [],
+        currentInteractionId: null,
+        visitedInteractionIds: [],
+        currentDateTime: '2000-01-03T08:00',
+        currentLocationId: null,
+        statValues: {},
+        ownedItemIds: [],
+      },
+      updatedAt: '2026-08-25T11:00:00.000Z',
+    });
+
+    const progress = await service.save('story-1', { journeyInteractionIds: ['root'] }, 'user-1');
+
+    expect(progress.state.randomSeed).toBe('existing-seed');
   });
 
   it('keeps reader and simulation autosaves in distinct reserved slots', async () => {

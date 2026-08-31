@@ -1,4 +1,5 @@
 import type { Interaction, Story } from '../model/index.js';
+import { getTriggerConditionGroups, toCanonicalTrigger } from '../triggers/model.js';
 
 export function updateInteractionInStory(
   story: Story,
@@ -31,13 +32,17 @@ export function deleteInteractionFromStory(story: Story, interactionId: string):
           const inputInteractionIds = trigger.inputInteractionIds.filter(
             (id) => id !== interactionId,
           );
+          const canonicalTrigger = toCanonicalTrigger(trigger);
           return {
-            ...trigger,
+            ...canonicalTrigger,
             inputInteractionIds,
-            conditions: trigger.conditions.filter(
-              (condition) =>
-                !('interactionId' in condition) || condition.interactionId !== interactionId,
-            ),
+            conditionGroups: getTriggerConditionGroups(trigger).map((group) => ({
+              ...group,
+              conditions: group.conditions.filter(
+                (condition) =>
+                  !('interactionId' in condition) || condition.interactionId !== interactionId,
+              ),
+            })),
           };
         }),
       })),

@@ -4,6 +4,8 @@ import {
   deleteGraphDecorationFromStory,
   deleteInteractionFromStory,
   deleteTriggerInStory,
+  getTriggerAppearanceProbability,
+  getTriggerConditionGroups,
   getStoryItemEntries,
   isStoryDate,
   isStoryTime,
@@ -16,6 +18,7 @@ import {
   type InteractionMutationResult,
   type Story,
   type TriggerCondition,
+  type TriggerConditionGroup,
   type TriggerMutationResult,
 } from '@paralleax/shared';
 import type {
@@ -64,7 +67,8 @@ export class StoryGraphService {
             {
               id: triggerId,
               inputInteractionIds: input.parentId ? [input.parentId] : [],
-              conditions: [],
+              conditionGroups: [{ id: randomUUID(), conditions: [] }],
+              appearanceProbability: 100,
             },
           ],
         });
@@ -268,10 +272,7 @@ export class StoryGraphService {
         const interaction = this.interaction(story, interactionId);
         const trigger = interaction.triggers.find((item) => item.id === triggerId);
         if (!trigger) throw new NotFoundException('Trigger not found');
-        const conditions =
-          input.conditions === undefined
-            ? trigger.conditions
-            : this.conditions(story, input.conditions);
+        const conditionGroups = this.triggerConditionGroups(story, input, trigger);
         const inputInteractionIds =
           input.inputInteractionIds === undefined
             ? trigger.inputInteractionIds
@@ -279,7 +280,9 @@ export class StoryGraphService {
         this.assertInteractionReferences(story, inputInteractionIds);
         return updateTriggerInStory(story, interactionId, triggerId, {
           inputInteractionIds,
-          conditions,
+          conditionGroups,
+          appearanceProbability:
+            input.appearanceProbability ?? getTriggerAppearanceProbability(trigger),
           ...(input.position === undefined ? {} : { position: input.position }),
         });
       },
@@ -299,12 +302,13 @@ export class StoryGraphService {
     const story = await this.mutations.update(
       storyId,
       (story) => {
-        const conditions = this.conditions(story, input.conditions ?? []);
+        const conditionGroups = this.triggerConditionGroups(story, input);
         this.assertInteractionReferences(story, input.inputInteractionIds ?? []);
         this.interaction(story, interactionId).triggers.push({
           id: triggerId,
           inputInteractionIds: normalizeTriggerInputIds(input.inputInteractionIds ?? []),
-          conditions,
+          conditionGroups,
+          appearanceProbability: input.appearanceProbability ?? 100,
           ...(input.position === undefined ? {} : { position: input.position }),
         });
         return story;
@@ -352,6 +356,38 @@ export class StoryGraphService {
     if (inputInteractionIds.some((id) => !interactionIds.has(id))) {
       throw new BadRequestException('Trigger references must belong to the same story');
     }
+  }
+
+  private triggerConditionGroups(
+    story: Story,
+    input: CreateTriggerDto | UpdateTriggerDto,
+    current?: Story['interactions'][number]['triggers'][number],
+  ): TriggerConditionGroup[] {
+    if (input.conditionGroups !== undefined && input.conditions !== undefined) {
+      throw new BadRequestException('Use conditionGroups instead of legacy conditions');
+    }
+    const groups = input.conditionGroups
+      ? input.conditionGroups.map((group) => ({
+          id: group.id,
+          conditions: this.conditions(story, group.conditions),
+        }))
+      : input.conditions
+        ? [
+            {
+              id: current ? getTriggerConditionGroups(current)[0].id : randomUUID(),
+              conditions: this.conditions(story, input.conditions),
+            },
+          ]
+        : current
+          ? getTriggerConditionGroups(current)
+          : [{ id: randomUUID(), conditions: [] }];
+    if (new Set(groups.map(({ id }) => id)).size !== groups.length) {
+      throw new BadRequestException('Trigger condition group IDs must be unique');
+    }
+    if (groups.reduce((count, group) => count + group.conditions.length, 0) > 500) {
+      throw new BadRequestException('A Trigger can contain at most 500 conditions');
+    }
+    return groups;
   }
 
   private conditions(story: Story, conditions: TriggerConditionDto[]): TriggerCondition[] {

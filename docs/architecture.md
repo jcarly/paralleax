@@ -195,7 +195,8 @@ transactional mutation, resolves creator ownership, global administrator status,
 story defaults, and any per-user grant in SQL so knowledge of a story id cannot
 bypass authorization. Public reads use optional authentication; all mutation
 routes still require a session. It assembles relational story,
-interaction, trigger, and input rows plus trigger condition JSONB into the domain `Story` expected
+interaction, trigger, and input rows plus Trigger condition-group JSONB and
+appearance probability into the domain `Story` expected
 by the service and writes field-level differences for mutations.
 `stories/persistence/stories.persistence.writer.ts` owns the relational write plan: full graph
 replacement for initial saves and entity-level differences for mutations. The
@@ -419,7 +420,8 @@ component:
 - `components/RichTextEditor.tsx` and `RichTextContent.tsx`: rich-body authoring
   and defense-in-depth sanitized rendering, including conditional body blocks
   projected from outgoing trigger availability.
-- `components/TriggerInspector.tsx`: trigger condition and OR variant editing.
+- `components/TriggerInspector.tsx`: Trigger probability and owned OR
+  condition-group editing.
 - `components/InteractionNode.tsx`, `TriggerNode.tsx`, and `TriggerEdge.tsx`:
   React Flow rendering surfaces.
 
@@ -594,12 +596,13 @@ split deliberately:
 - `packages/shared` owns the actual trigger mutation and cleanup rules.
 
 A linked graph edge represents one trigger input. Several graph edges may point
-to the same trigger marker when one trigger has several inputs. Several triggers
-with the exact same input set are grouped visually as OR condition variants, but
-they remain distinct domain triggers.
+to the same trigger marker when one trigger has several inputs. Each Trigger has
+its own marker even when another Trigger has the exact same input set. This
+preserves independent probability gates, selection, and comments in the graph
+projection.
 
 Linked trigger markers are draggable. Their optional saved position belongs to
-the authored graph projection, is persisted on each represented trigger variant,
+the authored graph projection, is persisted on its Trigger,
 and has no reader semantics. Triggers without a saved position retain the stable
 automatic placement derived from their inputs and output interaction. Root
 trigger markers remain attached to their interaction cards. Moving a connected

@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import type { Interaction, ReaderProgressState, Story } from '@paralleax/shared';
 import {
   applyInteractionItemEffects,
@@ -9,7 +9,8 @@ import {
 } from '@paralleax/shared';
 
 const EMPTY_READER_SESSION: ReaderProgressState = {
-  version: 2,
+  version: 3,
+  randomSeed: '',
   journeyInteractionIds: [],
   currentInteractionId: null,
   visitedInteractionIds: [],
@@ -20,12 +21,31 @@ const EMPTY_READER_SESSION: ReaderProgressState = {
   itemStatValues: {},
 };
 
+export function createReaderRandomSeed(): string {
+  return (
+    globalThis.crypto?.randomUUID?.() ??
+    `reader-${Date.now()}-${Math.random().toString(36).slice(2)}`
+  );
+}
+
 export function useReaderSessionState() {
   const [session, setSession] = useState<ReaderProgressState>(EMPTY_READER_SESSION);
+  const randomSeedRef = useRef(createReaderRandomSeed());
 
   const replay = useCallback(
-    (story: Story, journeyInteractionIds: string[], ownedItemIds: string[] = []) => {
-      const nextSession = buildReaderProgressState(story, journeyInteractionIds, ownedItemIds);
+    (
+      story: Story,
+      journeyInteractionIds: string[],
+      ownedItemIds: string[] = [],
+      randomSeed?: string,
+    ) => {
+      randomSeedRef.current = randomSeed || randomSeedRef.current;
+      const nextSession = buildReaderProgressState(
+        story,
+        journeyInteractionIds,
+        ownedItemIds,
+        randomSeedRef.current,
+      );
       setSession(nextSession);
       return nextSession;
     },
@@ -43,7 +63,8 @@ export function useReaderSessionState() {
       );
       const nextSession: ReaderProgressState = {
         ...session,
-        version: 2,
+        version: 3,
+        randomSeed: session.randomSeed || randomSeedRef.current,
         journeyInteractionIds,
         currentInteractionId: interaction.id,
         visitedInteractionIds: session.visitedInteractionIds.includes(interaction.id)

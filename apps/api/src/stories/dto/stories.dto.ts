@@ -126,6 +126,11 @@ export class SaveReaderProgressDto {
   @ArrayMaxSize(5_000)
   @IsString({ each: true })
   ownedItemIds?: string[];
+  @ValidateIf((_, value) => value !== undefined)
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(200)
+  randomSeed?: string;
 }
 export class CreateReaderSaveDto extends SaveReaderProgressDto {
   @IsString() @IsNotEmpty() @MaxLength(MAX_READER_SAVE_NAME_LENGTH) name!: string;
@@ -657,6 +662,18 @@ export class ConditionalTextBlockDto {
   @Type(() => TriggerConditionDto)
   conditions!: TriggerConditionDto[];
 }
+export class TriggerConditionGroupDto {
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(200)
+  id!: string;
+
+  @IsArray()
+  @ArrayMaxSize(500)
+  @ValidateNested({ each: true })
+  @Type(() => TriggerConditionDto)
+  conditions!: TriggerConditionDto[];
+}
 export class CreateTriggerDto {
   @ValidateIf((_, value) => value !== undefined)
   @IsArray()
@@ -669,6 +686,18 @@ export class CreateTriggerDto {
   @ValidateNested({ each: true })
   @Type(() => TriggerConditionDto)
   conditions?: TriggerConditionDto[];
+  @ValidateIf((_, value) => value !== undefined)
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(100)
+  @ValidateNested({ each: true })
+  @Type(() => TriggerConditionGroupDto)
+  conditionGroups?: TriggerConditionGroupDto[];
+  @ValidateIf((_, value) => value !== undefined)
+  @IsInt()
+  @Min(0)
+  @Max(100)
+  appearanceProbability?: number;
   @ValidateIf((_, value) => value !== undefined)
   @IsObject()
   @ValidateNested()
@@ -687,6 +716,18 @@ export class UpdateTriggerDto {
   @ValidateNested({ each: true })
   @Type(() => TriggerConditionDto)
   conditions?: TriggerConditionDto[];
+  @ValidateIf((_, value) => value !== undefined)
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(100)
+  @ValidateNested({ each: true })
+  @Type(() => TriggerConditionGroupDto)
+  conditionGroups?: TriggerConditionGroupDto[];
+  @ValidateIf((_, value) => value !== undefined)
+  @IsInt()
+  @Min(0)
+  @Max(100)
+  appearanceProbability?: number;
   @ValidateIf((_, value) => value !== undefined)
   @IsObject()
   @ValidateNested()

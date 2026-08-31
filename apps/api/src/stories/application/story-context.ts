@@ -4,6 +4,8 @@ import {
   getItemDescendantIds,
   getStatValueType,
   getStoryItemEntries,
+  getTriggerAppearanceProbability,
+  getTriggerConditionGroups,
   isStatValueOfType,
   storyHistoryOperations,
   type CharacterItemMutationResult,
@@ -446,9 +448,14 @@ export class StoryContextService {
             ({ itemId: affectedItemId }) => affectedItemId !== itemId,
           );
           for (const trigger of interaction.triggers) {
-            trigger.conditions = trigger.conditions.filter(
-              (condition) => !('statId' in condition) || condition.itemId !== itemId,
-            );
+            trigger.conditionGroups = getTriggerConditionGroups(trigger).map((group) => ({
+              ...group,
+              conditions: group.conditions.filter(
+                (condition) => !('statId' in condition) || condition.itemId !== itemId,
+              ),
+            }));
+            trigger.appearanceProbability = getTriggerAppearanceProbability(trigger);
+            delete trigger.conditions;
           }
         }
         return story;

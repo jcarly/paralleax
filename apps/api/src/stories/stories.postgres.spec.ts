@@ -324,30 +324,36 @@ describePostgres('StoriesRepository PostgreSQL integration', () => {
       id: 'trigger-2',
       inputInteractionIds: ['interaction-1'],
       position: { x: 280, y: 240 },
-      conditions: [
-        { interactionId: 'interaction-1', hasBeenVisited: true },
-        { locationId: 'location-1', isCurrentLocation: true },
-        { characterId: 'character-1', isPresent: true },
-        { statId: 'stat-1', operator: 'gte', value: 3 },
-        { statId: 'alarm-stat', operator: 'eq', value: true },
-        { statId: 'courage-stat', operator: 'gte', value: 4 },
-        { statId: 'weather-stat', operator: 'eq', value: 'calm' },
+      conditionGroups: [
         {
-          statId: 'charge-stat',
-          itemId: 'item-1',
-          operator: 'gte',
-          value: 9,
-        },
-        {
-          temporal: {
-            weekdays: ['monday', 'tuesday'],
-            timeSlots: [
-              { startTime: '09:00', endTime: '12:00' },
-              { startTime: '22:00', endTime: '02:00' },
-            ],
-          },
+          id: 'trigger-2',
+          conditions: [
+            { interactionId: 'interaction-1', hasBeenVisited: true },
+            { locationId: 'location-1', isCurrentLocation: true },
+            { characterId: 'character-1', isPresent: true },
+            { statId: 'stat-1', operator: 'gte', value: 3 },
+            { statId: 'alarm-stat', operator: 'eq', value: true },
+            { statId: 'courage-stat', operator: 'gte', value: 4 },
+            { statId: 'weather-stat', operator: 'eq', value: 'calm' },
+            {
+              statId: 'charge-stat',
+              itemId: 'item-1',
+              operator: 'gte',
+              value: 9,
+            },
+            {
+              temporal: {
+                weekdays: ['monday', 'tuesday'],
+                timeSlots: [
+                  { startTime: '09:00', endTime: '12:00' },
+                  { startTime: '22:00', endTime: '02:00' },
+                ],
+              },
+            },
+          ],
         },
       ],
+      appearanceProbability: 100,
     });
   });
 
@@ -556,7 +562,12 @@ describePostgres('StoriesRepository PostgreSQL integration', () => {
           JOIN triggers ON triggers.id = trigger_inputs.trigger_id
           JOIN interactions ON interactions.id = triggers.output_interaction_id
           WHERE interactions.story_id = $1) AS inputs,
-         (SELECT coalesce(sum(jsonb_array_length(conditions)), 0)::int FROM triggers
+         (SELECT coalesce(sum(group_count.count), 0)::int
+          FROM triggers
+          CROSS JOIN LATERAL (
+            SELECT coalesce(sum(jsonb_array_length(condition_group.value->'conditions')), 0) AS count
+            FROM jsonb_array_elements(condition_groups) AS condition_group(value)
+          ) AS group_count
           WHERE story_id = $1) AS conditions`,
       [story.id],
     );

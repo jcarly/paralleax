@@ -15,17 +15,25 @@ test.describe('Story editor triggers and items', () => {
     const initialStory = storyWithConditionCandidate();
     await mockStory(page, initialStory);
     const updated = structuredClone(initialStory);
-    updated.interactions[0].triggers[0].conditions = [
-      { interactionId: 'interaction-2', hasBeenVisited: true },
+    updated.interactions[0].triggers[0].conditionGroups = [
+      {
+        id: 'trigger-1',
+        conditions: [{ interactionId: 'interaction-2', hasBeenVisited: true }],
+      },
     ];
+    delete updated.interactions[0].triggers[0].conditions;
 
     await page.route(
       '**/api/stories/story-1/interactions/interaction-1/triggers/trigger-1',
       async (route) => {
         expect(route.request().method()).toBe('PATCH');
         expect(route.request().postDataJSON()).toEqual({
-          inputInteractionIds: [],
-          conditions: [{ interactionId: 'interaction-2', hasBeenVisited: true }],
+          conditionGroups: [
+            {
+              id: 'trigger-1',
+              conditions: [{ interactionId: 'interaction-2', hasBeenVisited: true }],
+            },
+          ],
         });
         await route.fulfill({ json: updated });
       },
@@ -60,21 +68,35 @@ test.describe('Story editor triggers and items', () => {
       {
         id: 'trigger-a',
         inputInteractionIds: ['interaction-1'],
-        conditions: [{ interactionId: 'interaction-1', hasBeenVisited: true }],
-      },
-      {
-        id: 'trigger-b',
-        inputInteractionIds: ['interaction-1'],
-        conditions: [{ interactionId: 'interaction-1', hasBeenVisited: false }],
+        conditionGroups: [
+          {
+            id: 'group-a',
+            conditions: [{ interactionId: 'interaction-1', hasBeenVisited: true }],
+          },
+          {
+            id: 'group-b',
+            conditions: [{ interactionId: 'interaction-1', hasBeenVisited: false }],
+          },
+        ],
       },
     ];
     await mockStory(page, initialStory);
     const afterDelete = structuredClone(initialStory);
-    afterDelete.interactions[1].triggers = [afterDelete.interactions[1].triggers[1]];
+    afterDelete.interactions[1].triggers[0].conditionGroups = [
+      afterDelete.interactions[1].triggers[0].conditionGroups![1],
+    ];
     await page.route(
       '**/api/stories/story-1/interactions/interaction-2/triggers/trigger-a',
       async (route) => {
-        expect(route.request().method()).toBe('DELETE');
+        expect(route.request().method()).toBe('PATCH');
+        expect(route.request().postDataJSON()).toEqual({
+          conditionGroups: [
+            {
+              id: 'group-b',
+              conditions: [{ interactionId: 'interaction-1', hasBeenVisited: false }],
+            },
+          ],
+        });
         await route.fulfill({ json: afterDelete });
       },
     );
@@ -90,7 +112,7 @@ test.describe('Story editor triggers and items', () => {
     await page.getByRole('button', { name: 'Delete this OR group' }).first().click();
 
     await expect(page.getByRole('heading', { name: 'Path conditions' })).toBeVisible();
-    await expect(page.getByTestId('flow-trigger-interaction-2-trigger-b')).toHaveClass(/selected/);
+    await expect(page.getByTestId('flow-trigger-interaction-2-trigger-a')).toHaveClass(/selected/);
     expect(dialogCount).toBe(0);
   });
 

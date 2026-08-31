@@ -325,6 +325,10 @@ A trigger defines when an interaction becomes available.
 - A trigger with no input makes its interaction available at story start.
 - A linked trigger has one or more input interactions.
 - Several inputs on the same trigger act as alternatives: any input can make the output interaction reachable if conditions match.
+- Condition groups are alternatives (OR), while all conditions inside one group
+  must match (AND).
+- Appearance probability is evaluated once for the Trigger after its inputs and
+  one condition group match; it is 100% by default.
 
 To edit a linked trigger, select the trigger marker on the edge between two
 interactions.
@@ -344,12 +348,15 @@ In the trigger inspector:
    date/time rule to check.
 4. Choose its operator and, for a variable, the typed comparison value.
 
-Conditions in one group must all match. For a linked trigger, use the prominent
-**+ Add OR condition group** action to create an empty alternative group. The
-type chooser opens immediately for that new group, and unavailable types explain
-their prerequisite on hover or keyboard focus. **OR** is displayed between
-groups. When several groups are shown, the cross in the top-right corner deletes
-only that group immediately and keeps the inspector open on a surviving group.
+Conditions in one group must all match. Use the prominent **+ Add OR condition
+group** action to create an empty alternative group, then add its first condition.
+Unavailable types explain their prerequisite on hover or keyboard focus. **OR**
+is displayed between groups. When several groups are shown, the cross in the
+top-right corner deletes only that group immediately and keeps the inspector open.
+
+Set **Appearance probability** between 0 and 100. The reader makes one seeded,
+reproducible roll for that Trigger at each narrative step. Separate Triggers have
+separate rolls even when they lead to the same interaction.
 
 Conditions can check reading history, current location, characters present in
 the current interaction, compare any assigned variable, or filter the
@@ -495,7 +502,8 @@ parameters to a player URL does not enable author controls for a reader.
 
 The reader starts with interactions that have root triggers. After each choice,
 it shows the interactions made available by matching trigger inputs and
-conditions. The scene header shows the current location, story time, and present
+condition groups whose Trigger probability roll succeeds. The scene header shows
+the current location, story time, and present
 characters. When the story has a playable character, the left character sheet
 shows that character's stats and inventory; the right panel shows the
 other characters present in the current interaction.
@@ -503,8 +511,9 @@ other characters present in the current interaction.
 The reader presents the options currently available to the player. Simulation
 Mode additionally keeps unavailable options visible with reduced opacity and
 their condition diagnostics. Enable **Force unavailable options** in the author
-tools to test a blocked path deliberately; disabling the control restores normal
-condition enforcement.
+tools to test a condition- or probability-blocked path deliberately; disabling
+the control restores normal enforcement. A failed probability diagnostic shows
+the configured percentage and deterministic roll.
 
 Authenticated reading automatically updates a reader autosave after every
 selected interaction. Simulation Mode has a separate autosave, so normal author
@@ -512,6 +521,8 @@ testing never replaces the reader's current journey. Returning to the same story
 or simulation resumes the corresponding ordered journey, including current
 interaction, story time, location, stats, and owned item instances. The status
 beside the controls reports saving, success, or failure.
+The save also preserves the probability seed, so loading or stepping backward
+reproduces the same rolls. Restart creates a new seed for the new run.
 
 Use `Saves` to create up to 20 named manual saves, load either autosave or a
 manual save, overwrite a manual save with the current state, or delete it. The

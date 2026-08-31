@@ -290,12 +290,14 @@ export function buildReaderProgressState(
   story: Story,
   journeyInteractionIds: string[],
   _ownedItemIds: string[] = [],
+  randomSeed = `legacy-reader:${story.id}`,
 ): ReaderProgressState {
   const interactionIds = new Set(story.interactions.map(({ id }) => id));
   const journey = journeyInteractionIds.filter((id) => interactionIds.has(id));
   const items = getJourneyOwnedItemIds(story, journey);
   return {
-    version: 2,
+    version: 3,
+    randomSeed,
     journeyInteractionIds: journey,
     currentInteractionId: journey.at(-1) ?? null,
     visitedInteractionIds: [...new Set(journey)],

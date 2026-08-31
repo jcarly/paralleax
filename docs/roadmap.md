@@ -66,7 +66,7 @@ Validate that an author can model and execute branching interactive narrative wi
 - Graph editor.
 - Interaction editing and movement without data loss.
 - Multiple Trigger inputs and contextual inputless Triggers.
-- Alternative condition variants through multiple Triggers.
+- Alternative OR condition groups owned by one Trigger, with AND inside each group.
 - Trigger cleanup and structural deletion protections.
 - Visible save state and reload recovery.
 - PostgreSQL story persistence.
@@ -370,15 +370,16 @@ Stories can react not only to world state but also to time and controlled automa
 - Date, date-range, weekday, and time-slot availability.
 - Deterministic backward replay and persisted reader/simulation journeys that
   provide the restoration boundary for future dynamic behavior.
+- Trigger appearance probability with one deterministic seeded roll per Trigger
+  and narrative step, persisted in reader and Simulation saves.
+- Simulation probability diagnostics and forced-path inspection.
 
 ### Remaining scope
 
 - Real-time choice countdowns.
 - Delayed automatic choices.
-- Appearance probability.
 - Probabilistic automatic choices.
-- Explicit deterministic seeding/replay semantics for probability.
-- Simulation controls and diagnostics for timed/probabilistic behavior.
+- Simulation controls and diagnostics for timed behavior.
 
 ### Exit criteria
 

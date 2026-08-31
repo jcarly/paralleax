@@ -369,7 +369,7 @@ export const api = {
   addTrigger: (
     storyId: string,
     interactionId: string,
-    input: UpdateTriggerInput = { inputInteractionIds: [], conditions: [] },
+    input: UpdateTriggerInput = { inputInteractionIds: [] },
   ) =>
     request<TriggerSaveResponse>(`/stories/${storyId}/interactions/${interactionId}/triggers`, {
       method: 'POST',

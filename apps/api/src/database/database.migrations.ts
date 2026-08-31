@@ -1432,4 +1432,82 @@ export const databaseMigrations: DatabaseMigration[] = [
         CHECK (jsonb_typeof(conditional_text_blocks) = 'array');
     `,
   },
+  {
+    id: '202608310036_trigger_condition_groups_and_probability',
+    sql: `
+      ALTER TABLE triggers
+      RENAME COLUMN conditions TO condition_groups;
+
+      ALTER TABLE triggers
+      DROP CONSTRAINT IF EXISTS triggers_conditions_array;
+
+      UPDATE triggers
+      SET condition_groups = jsonb_build_array(
+        jsonb_build_object('id', id, 'conditions', condition_groups)
+      );
+
+      ALTER TABLE triggers
+      ADD COLUMN appearance_probability smallint NOT NULL DEFAULT 100,
+      ADD CONSTRAINT triggers_condition_groups_array
+        CHECK (
+          jsonb_typeof(condition_groups) = 'array'
+          AND jsonb_array_length(condition_groups) > 0
+        ),
+      ADD CONSTRAINT triggers_appearance_probability_range
+        CHECK (appearance_probability BETWEEN 0 AND 100);
+
+      CREATE TEMP TABLE trigger_group_merge_map ON COMMIT DROP AS
+      SELECT
+        candidate.id AS source_id,
+        first_value(candidate.id) OVER (
+          PARTITION BY candidate.story_id, candidate.output_interaction_id,
+            candidate.input_signature
+          ORDER BY candidate.sort_order, candidate.id
+        ) AS retained_id
+      FROM (
+        SELECT
+          trigger.id,
+          trigger.story_id,
+          trigger.output_interaction_id,
+          trigger.sort_order,
+          COALESCE(
+            (
+              SELECT jsonb_agg(input.input_interaction_id ORDER BY input.input_interaction_id)::text
+              FROM trigger_inputs input
+              WHERE input.trigger_id = trigger.id
+            ),
+            '[]'
+          ) AS input_signature
+        FROM triggers trigger
+      ) candidate;
+
+      WITH merged AS (
+        SELECT
+          mapping.retained_id,
+          jsonb_agg(condition_group.value ORDER BY source.sort_order, condition_group.ordinality)
+            AS condition_groups
+        FROM trigger_group_merge_map mapping
+        JOIN triggers source ON source.id = mapping.source_id
+        CROSS JOIN LATERAL jsonb_array_elements(source.condition_groups)
+          WITH ORDINALITY AS condition_group(value, ordinality)
+        GROUP BY mapping.retained_id
+      )
+      UPDATE triggers retained
+      SET condition_groups = merged.condition_groups
+      FROM merged
+      WHERE retained.id = merged.retained_id;
+
+      UPDATE story_comment_threads thread
+      SET anchor = jsonb_set(thread.anchor, '{targetId}', to_jsonb(mapping.retained_id))
+      FROM trigger_group_merge_map mapping
+      WHERE mapping.source_id <> mapping.retained_id
+        AND thread.anchor->>'targetType' = 'trigger'
+        AND thread.anchor->>'targetId' = mapping.source_id;
+
+      DELETE FROM triggers trigger
+      USING trigger_group_merge_map mapping
+      WHERE trigger.id = mapping.source_id
+        AND mapping.source_id <> mapping.retained_id;
+    `,
+  },
 ];

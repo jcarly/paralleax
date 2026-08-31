@@ -1,4 +1,6 @@
 import {
+  getTriggerAppearanceProbability,
+  getTriggerConditionGroups,
   getStoryItemEntries,
   isStoryGraphPositionDelta,
   type Character,
@@ -139,11 +141,14 @@ async function insertInteractionGraph(client: Queryable, story: Story) {
   await insertJsonRows(
     client,
     `INSERT INTO triggers
-     (id, story_id, output_interaction_id, position_x, position_y, conditions, sort_order)
-     SELECT id, story_id, output_interaction_id, position_x, position_y, conditions, sort_order
+     (id, story_id, output_interaction_id, position_x, position_y, condition_groups,
+      appearance_probability, sort_order)
+     SELECT id, story_id, output_interaction_id, position_x, position_y, condition_groups,
+       appearance_probability, sort_order
      FROM jsonb_to_recordset($1::jsonb) AS row(
        id text, story_id text, output_interaction_id text, position_x double precision,
-       position_y double precision, conditions jsonb, sort_order integer
+       position_y double precision, condition_groups jsonb, appearance_probability smallint,
+       sort_order integer
      )`,
     triggers.map(({ interaction, trigger, sortOrder }) => ({
       id: trigger.id,
@@ -151,7 +156,8 @@ async function insertInteractionGraph(client: Queryable, story: Story) {
       output_interaction_id: interaction.id,
       position_x: trigger.position?.x ?? null,
       position_y: trigger.position?.y ?? null,
-      conditions: trigger.conditions,
+      condition_groups: getTriggerConditionGroups(trigger),
+      appearance_probability: getTriggerAppearanceProbability(trigger),
       sort_order: sortOrder,
     })),
   );
@@ -679,15 +685,17 @@ async function insertTrigger(
 ) {
   await client.query(
     `INSERT INTO triggers
-     (id, story_id, output_interaction_id, position_x, position_y, conditions, sort_order)
-     VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+     (id, story_id, output_interaction_id, position_x, position_y, condition_groups,
+      appearance_probability, sort_order)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
     [
       trigger.id,
       storyId,
       outputInteractionId,
       trigger.position?.x ?? null,
       trigger.position?.y ?? null,
-      JSON.stringify(trigger.conditions),
+      JSON.stringify(getTriggerConditionGroups(trigger)),
+      getTriggerAppearanceProbability(trigger),
       sortOrder,
     ],
   );
@@ -1162,12 +1170,20 @@ async function persistTriggerDifference(
     if (
       JSON.stringify(previous.inputInteractionIds) !==
         JSON.stringify(trigger.inputInteractionIds) ||
-      JSON.stringify(previous.conditions) !== JSON.stringify(trigger.conditions)
+      JSON.stringify(getTriggerConditionGroups(previous)) !==
+        JSON.stringify(getTriggerConditionGroups(trigger)) ||
+      getTriggerAppearanceProbability(previous) !== getTriggerAppearanceProbability(trigger)
     ) {
-      await client.query('UPDATE triggers SET conditions = $2 WHERE id = $1', [
-        trigger.id,
-        JSON.stringify(trigger.conditions),
-      ]);
+      await client.query(
+        `UPDATE triggers
+         SET condition_groups = $2, appearance_probability = $3
+         WHERE id = $1`,
+        [
+          trigger.id,
+          JSON.stringify(getTriggerConditionGroups(trigger)),
+          getTriggerAppearanceProbability(trigger),
+        ],
+      );
       await replaceTriggerInputs(client, storyId, trigger);
     }
   }

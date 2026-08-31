@@ -55,12 +55,14 @@ export function mapChoiceScriptGraphToStory(
     }
     const triggers =
       incomingEdges.length === 0
-        ? [{ id: options.createId(), inputInteractionIds: [], conditions: [] }]
-        : [...triggerGroups.values()].map((group) => ({
-            id: options.createId(),
-            inputInteractionIds: unique(group.inputKeys).map((key) => interactionIds.get(key)!),
-            conditions: group.condition ? [group.condition] : [],
-          }));
+        ? [buildTrigger(options.createId(), [], [])]
+        : [...triggerGroups.values()].map((group) =>
+            buildTrigger(
+              options.createId(),
+              unique(group.inputKeys).map((key) => interactionIds.get(key)!),
+              group.condition ? [group.condition] : [],
+            ),
+          );
     const statEffects = node.effects.flatMap((effect) => {
       const declaration = resolveVariableDeclaration(declarations, effect.sceneName, effect.name);
       const ids = declaration ? variableIds.get(declaration.sourceKey) : undefined;
@@ -133,6 +135,19 @@ export function mapChoiceScriptGraphToStory(
     access: { ...defaultStoryAccess },
     createdAt: options.timestamp,
     updatedAt: options.timestamp,
+  };
+}
+
+function buildTrigger(
+  id: string,
+  inputInteractionIds: string[],
+  conditions: NonNullable<Interaction['triggers'][number]['conditions']>,
+): Interaction['triggers'][number] {
+  return {
+    id,
+    inputInteractionIds,
+    conditionGroups: [{ id: `${id}:conditions`, conditions }],
+    appearanceProbability: 100,
   };
 }
 

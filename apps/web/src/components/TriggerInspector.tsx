@@ -1,6 +1,13 @@
-import type { Interaction, Story, TriggerCondition } from '@paralleax/shared';
+import {
+  getTriggerAppearanceProbability,
+  getTriggerConditionGroups,
+  type Interaction,
+  type Story,
+  type TriggerCondition,
+  type TriggerConditionGroup,
+  type UpdateTriggerInput,
+} from '@paralleax/shared';
 import { useTranslation } from 'react-i18next';
-import { getRelatedTriggerVariantIds } from '../storyGraph';
 import { conditionUnavailableReasons, createTriggerCondition } from '../triggerConditionAuthoring';
 import { AddConditionControl, TriggerConditionFields } from './TriggerConditionEditor';
 
@@ -9,10 +16,7 @@ export function TriggerInspector({
   interaction,
   trigger,
   onSaveTrigger,
-  onCreateTriggerVariant,
-  onDeleteTriggerGroup,
   onDeleteTrigger,
-  onDeleteTriggerVariants,
 }: {
   story: Story;
   interaction: Interaction;
@@ -20,107 +24,119 @@ export function TriggerInspector({
   onSaveTrigger: (
     interactionId: string,
     triggerId: string,
-    inputInteractionIds: string[],
-    conditions: TriggerCondition[],
-  ) => Promise<void>;
-  onCreateTriggerVariant: (interactionId: string, triggerId: string) => Promise<void>;
-  onDeleteTriggerGroup: (
-    interactionId: string,
-    triggerId: string,
-    nextTriggerId: string,
+    input: UpdateTriggerInput,
   ) => Promise<void>;
   onDeleteTrigger: (interactionId: string, triggerId: string) => Promise<void>;
-  onDeleteTriggerVariants: (interactionId: string, triggerIds: string[]) => Promise<void>;
 }) {
   const { t } = useTranslation();
-  const variantIds = getRelatedTriggerVariantIds(interaction, trigger);
-  const variants = interaction.triggers.filter((item) => variantIds.includes(item.id));
-  const hasOrVariants = variants.length > 1;
+  const groups = getTriggerConditionGroups(trigger);
 
-  async function updateTrigger(
-    targetTrigger: Interaction['triggers'][number],
-    inputIds: string[],
-    conditions: TriggerCondition[],
-  ) {
-    await onSaveTrigger(interaction.id, targetTrigger.id, inputIds, conditions);
+  function saveGroups(conditionGroups: TriggerConditionGroup[]) {
+    return onSaveTrigger(interaction.id, trigger.id, { conditionGroups });
+  }
+
+  function updateGroup(groupId: string, conditions: TriggerCondition[]) {
+    return saveGroups(
+      groups.map((group) => (group.id === groupId ? { ...group, conditions } : group)),
+    );
   }
 
   return (
     <div>
       <h3>{t('triggerInspector.title')}</h3>
-      {hasOrVariants ? <p className="hint">{t('triggerInspector.variantsHelp')}</p> : null}
-      {variants.map((variant, variantIndex) => (
-        <div className="trigger-variant" key={variant.id}>
-          {variantIndex > 0 ? <div className="or-divider">{t('triggerInspector.or')}</div> : null}
-          {hasOrVariants ? (
-            <div className="trigger-variant-header">
-              <h4>{t('triggerInspector.group', { number: variantIndex + 1 })}</h4>
+      <label className="field">
+        <span>{t('triggerInspector.appearanceProbability')}</span>
+        <div className="trigger-probability-field">
+          <input
+            aria-label={t('triggerInspector.appearanceProbability')}
+            defaultValue={getTriggerAppearanceProbability(trigger)}
+            key={`${trigger.id}:${getTriggerAppearanceProbability(trigger)}`}
+            max={100}
+            min={0}
+            type="number"
+            onBlur={(event) => {
+              const value = Math.round(
+                Math.min(100, Math.max(0, Number(event.currentTarget.value))),
+              );
+              event.currentTarget.value = String(value);
+              if (value === getTriggerAppearanceProbability(trigger)) return;
+              void onSaveTrigger(interaction.id, trigger.id, {
+                appearanceProbability: value,
+              });
+            }}
+          />
+          <span aria-hidden="true">%</span>
+        </div>
+        <small>{t('triggerInspector.appearanceProbabilityHelp')}</small>
+      </label>
+      <p className="hint">{t('triggerInspector.variantsHelp')}</p>
+      {groups.map((group, groupIndex) => (
+        <div className="trigger-variant" key={group.id}>
+          {groupIndex > 0 ? <div className="or-divider">{t('triggerInspector.or')}</div> : null}
+          <div className="trigger-variant-header">
+            <h4>{t('triggerInspector.group', { number: groupIndex + 1 })}</h4>
+            {groups.length > 1 ? (
               <button
                 aria-label={t('triggerInspector.deleteGroup')}
                 className="ghost danger trigger-variant-delete"
                 title={t('triggerInspector.deleteGroup')}
                 type="button"
-                onClick={() => {
-                  const nextVariant = variants[variantIndex + 1] ?? variants[variantIndex - 1];
-                  if (nextVariant) {
-                    void onDeleteTriggerGroup(interaction.id, variant.id, nextVariant.id);
-                  }
-                }}
+                onClick={() => void saveGroups(groups.filter(({ id }) => id !== group.id))}
               >
                 ×
               </button>
-            </div>
-          ) : null}
+            ) : null}
+          </div>
           <div className="conditions">
-            {variant.conditions.map((condition, index) => (
-              <div className="condition" key={`${variant.id}-${index}`}>
+            {group.conditions.map((condition, index) => (
+              <div className="condition" key={`${group.id}-${index}`}>
                 <TriggerConditionFields
                   condition={condition}
                   currentInteractionId={interaction.id}
                   story={story}
                   onChange={(nextCondition) => {
-                    const next = [...variant.conditions];
+                    const next = [...group.conditions];
                     next[index] = nextCondition;
-                    void updateTrigger(variant, variant.inputInteractionIds, next);
+                    void updateGroup(group.id, next);
                   }}
                 />
                 <button
                   className="ghost danger"
                   onClick={() =>
-                    void updateTrigger(
-                      variant,
-                      variant.inputInteractionIds,
-                      variant.conditions.filter((_, itemIndex) => itemIndex !== index),
+                    void updateGroup(
+                      group.id,
+                      group.conditions.filter((_, itemIndex) => itemIndex !== index),
                     )
                   }
                 >
-                  x
+                  ×
                 </button>
               </div>
             ))}
           </div>
           <AddConditionControl
-            initiallyOpen={
-              hasOrVariants && variant.id === trigger.id && variant.conditions.length === 0
-            }
             unavailableReasons={conditionUnavailableReasons(story, interaction.id, t)}
             onAdd={(type) => {
               const condition = createTriggerCondition(story, interaction.id, type);
-              if (condition) {
-                void updateTrigger(variant, variant.inputInteractionIds, [
-                  ...variant.conditions,
-                  condition,
-                ]);
-              }
+              if (condition) void updateGroup(group.id, [...group.conditions, condition]);
             }}
           />
         </div>
       ))}
       <button
         className="trigger-add-group"
-        disabled={trigger.inputInteractionIds.length === 0 || story.interactions.length < 2}
         type="button"
-        onClick={() => void onCreateTriggerVariant(interaction.id, trigger.id)}
+        onClick={() =>
+          void saveGroups([
+            ...groups,
+            {
+              id:
+                globalThis.crypto?.randomUUID?.() ??
+                `condition-group-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+              conditions: [],
+            },
+          ])
+        }
       >
         <span aria-hidden="true" className="trigger-add-group-icon">
           +
@@ -128,21 +144,12 @@ export function TriggerInspector({
         <span>{t('triggerInspector.addGroup')}</span>
       </button>
       <hr />
-      {hasOrVariants ? (
-        <button
-          className="danger trigger-delete-action"
-          onClick={() => void onDeleteTriggerVariants(interaction.id, variantIds)}
-        >
-          {t('triggerInspector.deleteAllGroups')}
-        </button>
-      ) : (
-        <button
-          className="danger trigger-delete-action"
-          onClick={() => void onDeleteTrigger(interaction.id, trigger.id)}
-        >
-          {t('triggerInspector.deleteTrigger')}
-        </button>
-      )}
+      <button
+        className="danger trigger-delete-action"
+        onClick={() => void onDeleteTrigger(interaction.id, trigger.id)}
+      >
+        {t('triggerInspector.deleteTrigger')}
+      </button>
     </div>
   );
 }

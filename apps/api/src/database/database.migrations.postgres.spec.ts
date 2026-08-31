@@ -66,6 +66,11 @@ describePostgres('Database migrations PostgreSQL upgrade', () => {
                   inputInteractionIds: ['legacy-root', 'legacy-root'],
                   conditions: [{ interactionId: 'legacy-root', hasBeenVisited: true }],
                 },
+                {
+                  id: 'legacy-child-trigger-alt',
+                  inputInteractionIds: ['legacy-root'],
+                  conditions: [{ interactionId: 'legacy-root', hasBeenVisited: false }],
+                },
               ],
             },
           ],
@@ -123,7 +128,8 @@ describePostgres('Database migrations PostgreSQL upgrade', () => {
     });
     await expect(
       pool.query(
-        `SELECT trigger.conditions, trigger.position_x, trigger.position_y,
+        `SELECT trigger.condition_groups, trigger.appearance_probability,
+                trigger.position_x, trigger.position_y,
                 input.input_interaction_id
          FROM triggers AS trigger
          JOIN trigger_inputs AS input
@@ -133,7 +139,17 @@ describePostgres('Database migrations PostgreSQL upgrade', () => {
     ).resolves.toMatchObject({
       rows: [
         {
-          conditions: [{ interactionId: 'legacy-root', hasBeenVisited: true }],
+          condition_groups: [
+            {
+              id: 'legacy-child-trigger',
+              conditions: [{ interactionId: 'legacy-root', hasBeenVisited: true }],
+            },
+            {
+              id: 'legacy-child-trigger-alt',
+              conditions: [{ interactionId: 'legacy-root', hasBeenVisited: false }],
+            },
+          ],
+          appearance_probability: 100,
           position_x: null,
           position_y: null,
           input_interaction_id: 'legacy-root',

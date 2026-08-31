@@ -175,7 +175,6 @@ describe('StoryEditor interactions', () => {
       });
       expect(api.addTrigger).toHaveBeenCalledWith('story-1', 'interaction-2', {
         inputInteractionIds: ['interaction-parent'],
-        conditions: [],
       });
       expect(api.updateTrigger).not.toHaveBeenCalled();
     });
@@ -216,7 +215,6 @@ describe('StoryEditor interactions', () => {
       });
       expect(api.addTrigger).toHaveBeenCalledWith('story-1', 'interaction-2', {
         inputInteractionIds: ['interaction-parent'],
-        conditions: [],
       });
       expect(api.updateTrigger).not.toHaveBeenCalled();
     });
@@ -441,7 +439,7 @@ describe('StoryEditor interactions', () => {
     });
   });
 
-  it('moves every trigger variant represented by one grouped marker', async () => {
+  it('moves only the selected trigger when another trigger uses the same input', async () => {
     const story = storyWithTwoInteractions();
     story.interactions[1].triggers[0].position = { x: 400, y: 300 };
     story.interactions[1].triggers.push({
@@ -451,9 +449,7 @@ describe('StoryEditor interactions', () => {
       position: { x: 400, y: 300 },
     });
     const movedStory = structuredClone(story);
-    movedStory.interactions[1].triggers.forEach((trigger) => {
-      trigger.position = { x: 425, y: 315 };
-    });
+    movedStory.interactions[1].triggers[0].position = { x: 425, y: 315 };
     vi.mocked(api.updateStoryGraphPositions).mockResolvedValue({
       revision: 2,
       updatedAt: movedStory.updatedAt,
@@ -468,7 +464,7 @@ describe('StoryEditor interactions', () => {
         triggerUpdates: [
           {
             interactionId: 'interaction-2',
-            triggerIds: ['trigger-2', 'trigger-variant'],
+            triggerIds: ['trigger-2'],
             position: { x: 425, y: 315 },
           },
         ],

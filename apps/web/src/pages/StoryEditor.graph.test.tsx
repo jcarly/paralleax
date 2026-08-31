@@ -224,11 +224,12 @@ describe('StoryEditor graph collaboration and layout', () => {
 
     const toolbar = screen.getByRole('toolbar', { name: 'Canvas tools' });
     expect(toolbar).toHaveClass('canvas-tools');
-    expect(within(toolbar).getAllByRole('button')).toHaveLength(7);
+    expect(within(toolbar).getAllByRole('button')).toHaveLength(8);
 
     for (const label of [
       'Undo last Story change',
       'Redo Story change',
+      'Open Story history',
       'Add root',
       'Add frame',
       'Add text',

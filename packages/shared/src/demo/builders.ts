@@ -43,9 +43,11 @@ export function buildDemoTrigger(
   inputInteractionIds: string[],
   conditions: TriggerCondition[] = [],
 ): Trigger {
+  const id = demoEntityId(storyId, `trigger-${localId}`);
   return {
-    id: demoEntityId(storyId, `trigger-${localId}`),
+    id,
     inputInteractionIds,
-    conditions,
+    conditionGroups: [{ id: `${id}:conditions`, conditions }],
+    appearanceProbability: 100,
   };
 }

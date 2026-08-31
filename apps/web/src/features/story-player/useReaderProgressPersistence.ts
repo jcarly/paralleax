@@ -33,6 +33,7 @@ export function useReaderProgressPersistence({
             {
               journeyInteractionIds: session.journeyInteractionIds,
               ownedItemIds: session.ownedItemIds,
+              ...(session.randomSeed ? { randomSeed: session.randomSeed } : {}),
             },
             mode,
           ),

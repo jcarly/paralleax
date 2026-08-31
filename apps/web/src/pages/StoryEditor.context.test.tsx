@@ -176,8 +176,12 @@ describe('StoryEditor story context', () => {
     await user.click(screen.getByRole('button', { name: 'Add condition' }));
     await chooseTriggerConditionType(user, 'Location');
     expect(api.updateTrigger).toHaveBeenCalledWith('story-1', 'interaction-1', 'trigger-1', {
-      inputInteractionIds: [],
-      conditions: [{ locationId: 'location-1', isCurrentLocation: true }],
+      conditionGroups: [
+        {
+          id: 'trigger-1',
+          conditions: [{ locationId: 'location-1', isCurrentLocation: true }],
+        },
+      ],
     });
   });
 
@@ -242,13 +246,21 @@ describe('StoryEditor story context', () => {
     await user.click(screen.getByRole('button', { name: 'Add condition' }));
     await chooseTriggerConditionType(user, 'Character');
     expect(api.updateTrigger).toHaveBeenCalledWith('story-1', 'interaction-1', 'trigger-1', {
-      inputInteractionIds: [],
-      conditions: [{ characterId: 'character-1', isPresent: true }],
+      conditionGroups: [
+        {
+          id: 'trigger-1',
+          conditions: [{ characterId: 'character-1', isPresent: true }],
+        },
+      ],
     });
     await user.selectOptions(screen.getByLabelText('Character condition operator'), 'absent');
     expect(api.updateTrigger).toHaveBeenLastCalledWith('story-1', 'interaction-1', 'trigger-1', {
-      inputInteractionIds: [],
-      conditions: [{ characterId: 'character-1', isPresent: false }],
+      conditionGroups: [
+        {
+          id: 'trigger-1',
+          conditions: [{ characterId: 'character-1', isPresent: false }],
+        },
+      ],
     });
   });
 
@@ -353,14 +365,18 @@ describe('StoryEditor story context', () => {
     await user.click(screen.getByRole('button', { name: 'Add condition' }));
     await chooseTriggerConditionType(user, 'Variable');
     expect(api.updateTrigger).toHaveBeenCalledWith('story-1', 'interaction-1', 'trigger-1', {
-      inputInteractionIds: [],
-      conditions: [{ statId: 'stat-1', operator: 'gte', value: 2 }],
+      conditionGroups: [
+        {
+          id: 'trigger-1',
+          conditions: [{ statId: 'stat-1', operator: 'gte', value: 2 }],
+        },
+      ],
     });
     await user.selectOptions(screen.getByLabelText('Variable condition operator'), 'lt');
     const comparisonValue = screen.getByLabelText('Variable condition value');
     await user.clear(comparisonValue);
     await user.type(comparisonValue, '5');
-    await user.click(screen.getByRole('button', { name: 'x' }));
+    await user.click(screen.getByRole('button', { name: '\u00d7' }));
   }, 30_000);
 
   it('creates an item definition and gives separate copies to a character', async () => {

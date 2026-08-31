@@ -74,6 +74,35 @@ describe('StoryPlayer runtime state', () => {
     expect(api.deleteReaderProgress).toHaveBeenCalledWith('story-1', 'simulation');
   });
 
+  it('shows failed Trigger probability rolls in simulation and allows forcing the path', async () => {
+    const user = userEvent.setup();
+    const probabilityStory = structuredClone(story);
+    probabilityStory.interactions.push({
+      id: 'rare',
+      title: 'Rare path',
+      body: 'A rare event.',
+      position: { x: 300, y: 0 },
+      triggers: [
+        {
+          id: 'rare-trigger',
+          inputInteractionIds: ['start'],
+          conditionGroups: [{ id: 'always', conditions: [] }],
+          appearanceProbability: 0,
+        },
+      ],
+    });
+    await renderPlayer('/stories/story-1/play?mode=simulation', probabilityStory);
+
+    await user.click(screen.getByRole('button', { name: 'Start' }));
+    const rare = screen.getByRole('button', { name: /Rare path/ });
+    expect(rare).toBeDisabled();
+    expect(screen.getByText(/0% chance; deterministic roll/)).toBeInTheDocument();
+
+    await user.click(screen.getByRole('checkbox', { name: /Force unavailable options/ }));
+    await user.click(rare);
+    expect(await screen.findByDisplayValue('Rare path')).toBeInTheDocument();
+  });
+
   it('autosaves an interaction used as the explicit simulation start', async () => {
     await renderPlayer('/stories/story-1/play?mode=simulation&startInteractionId=next');
 

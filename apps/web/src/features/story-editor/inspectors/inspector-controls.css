@@ -354,6 +354,15 @@
   display: grid;
   gap: 0.5rem;
 }
+.trigger-probability-field {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.trigger-probability-field input {
+  width: 6rem;
+  margin: 0;
+}
 .trigger-variant {
   position: relative;
   display: grid;

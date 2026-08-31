@@ -1,4 +1,5 @@
 import {
+  getTriggerConditions,
   getStoryItemEntries,
   type Interaction,
   type Story,
@@ -99,7 +100,7 @@ export function getReferencedInteractionIds(
 
   return story.interactions
     .filter((interaction) => {
-      const conditions = interaction.triggers.flatMap((trigger) => trigger.conditions);
+      const conditions = interaction.triggers.flatMap(getTriggerConditions);
       if (reference.type === 'location') {
         return (
           interaction.locationId === reference.id ||

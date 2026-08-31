@@ -14,7 +14,11 @@ import type {
   Story,
   TriggerMutationResult,
 } from '@paralleax/shared';
-import { MAX_INTERACTION_BODY_LENGTH } from '@paralleax/shared';
+import {
+  getTriggerConditionGroups,
+  getTriggerConditions,
+  MAX_INTERACTION_BODY_LENGTH,
+} from '@paralleax/shared';
 import { AppModule } from '../app.module';
 import { AuthService } from '../auth/auth.service';
 import { DatabaseMigrator } from '../database/database.migrator';
@@ -487,7 +491,8 @@ Night falls.
       })
       .expect(200);
     expect(progress.body.state).toMatchObject({
-      version: 2,
+      version: 3,
+      randomSeed: expect.any(String),
       journeyInteractionIds: [root.id, child.id, root.id],
       currentInteractionId: root.id,
       visitedInteractionIds: [root.id, child.id],
@@ -831,7 +836,7 @@ Night falls.
     expect(response.body.interactions[0].id).toBe(child.id);
     expect(response.body.interactions[0].triggers[0]).toMatchObject({
       inputInteractionIds: [],
-      conditions: [],
+      conditionGroups: [{ conditions: [] }],
     });
   });
 
@@ -864,7 +869,9 @@ Night falls.
     )!;
     expect(updatedChild.triggers).toHaveLength(1);
     expect(updatedChild.triggers[0].inputInteractionIds).toEqual([secondParent.id]);
-    expect(updatedChild.triggers[0].conditions).toEqual([]);
+    expect(getTriggerConditionGroups(updatedChild.triggers[0])).toEqual([
+      expect.objectContaining({ conditions: [] }),
+    ]);
   });
 
   it('POST /api/stories/:storyId/interactions/:interactionId/triggers adds a trigger', async () => {
@@ -880,7 +887,8 @@ Night falls.
     expect(result.interactionId).toBe(interaction.id);
     expect(result.trigger).toMatchObject({
       inputInteractionIds: [],
-      conditions: [],
+      conditionGroups: [{ conditions: [] }],
+      appearanceProbability: 100,
     });
   });
 
@@ -903,7 +911,9 @@ Night falls.
     const result = response.body as TriggerMutationResult;
     expect(result.interactionId).toBe(child.id);
     expect(result.trigger.inputInteractionIds).toEqual([parent.id]);
-    expect(result.trigger.conditions).toEqual([{ interactionId: parent.id, hasBeenVisited: true }]);
+    expect(getTriggerConditionGroups(result.trigger)[0].conditions).toEqual([
+      { interactionId: parent.id, hasBeenVisited: true },
+    ]);
   });
 
   it('updates only a trigger canvas position without changing its narrative rules', async () => {
@@ -959,7 +969,9 @@ Night falls.
       .send({ inputInteractionIds: [], conditions: [{ temporal }] })
       .expect(200);
 
-    expect((response.body as TriggerMutationResult).trigger.conditions).toEqual([{ temporal }]);
+    expect(
+      getTriggerConditionGroups((response.body as TriggerMutationResult).trigger)[0].conditions,
+    ).toEqual([{ temporal }]);
     await request(httpServer)
       .patch(`/api/stories/${story.id}/interactions/${interaction.id}/triggers/${trigger.id}`)
       .send({
@@ -1208,7 +1220,8 @@ Night falls.
       .send({ journeyInteractionIds: [root.id] })
       .expect(200);
     expect(progress.body.state).toMatchObject({
-      version: 2,
+      version: 3,
+      randomSeed: expect.any(String),
       statValues: { [assignment.id]: 5 },
     });
 
@@ -1235,7 +1248,11 @@ Night falls.
         expect.objectContaining({ id: root.id, statEffects: [] }),
         expect.objectContaining({
           id: child.id,
-          triggers: [expect.objectContaining({ conditions: [] })],
+          triggers: [
+            expect.objectContaining({
+              conditionGroups: [expect.objectContaining({ conditions: [] })],
+            }),
+          ],
         }),
       ]),
     );
@@ -1297,9 +1314,9 @@ Night falls.
         conditions: [{ statId: stat.id, operator: 'gte', value: 4 }],
       })
       .expect(200);
-    expect((conditioned.body as TriggerMutationResult).trigger.conditions).toEqual([
-      { statId: stat.id, operator: 'gte', value: 4 },
-    ]);
+    expect(
+      getTriggerConditionGroups((conditioned.body as TriggerMutationResult).trigger)[0].conditions,
+    ).toEqual([{ statId: stat.id, operator: 'gte', value: 4 }]);
   });
 
   it('creates reusable item definitions and several owned instances of the same item', async () => {
@@ -1610,7 +1627,7 @@ Night falls.
         conditions: [{ itemDefinitionId: definition.body.itemDefinition.id, isOwned: true }],
       })
       .expect(200);
-    expect(conditioned.body.trigger.conditions).toEqual([
+    expect(getTriggerConditionGroups(conditioned.body.trigger)[0].conditions).toEqual([
       { itemDefinitionId: definition.body.itemDefinition.id, isOwned: true },
     ]);
 
@@ -1702,7 +1719,7 @@ Night falls.
     expect(withoutStat.body.interactions[0].statEffects).toEqual([
       expect.objectContaining({ itemId: item.body.item.id }),
     ]);
-    expect(withoutStat.body.interactions[0].triggers[0].conditions).toEqual([]);
+    expect(getTriggerConditions(withoutStat.body.interactions[0].triggers[0])).toEqual([]);
 
     const withoutItem = await request(httpServer)
       .delete(
@@ -1826,9 +1843,7 @@ Night falls.
     const updatedInteraction = (response.body as Story).interactions.find(
       (item) => item.id === interaction.id,
     )!;
-    expect(updatedInteraction.triggers).toEqual([
-      { id: trigger.id, inputInteractionIds: [], conditions: [] },
-    ]);
+    expect(updatedInteraction.triggers).toEqual([{ ...trigger, inputInteractionIds: [] }]);
   });
 
   it('returns 404 for unknown story ids', async () => {

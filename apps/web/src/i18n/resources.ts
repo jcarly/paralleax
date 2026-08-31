@@ -582,6 +582,8 @@ export const resources = {
           temporal: 'Requires a different story date or time. Current time: {{time}}.',
           present: 'Requires "{{name}}" to be present.',
           absent: 'Requires "{{name}}" to be absent.',
+          probabilityFailed:
+            'The Trigger did not appear ({{probability}}% chance; deterministic roll: {{roll}}).',
           operator: {
             eq: 'equal to',
             neq: 'different from',
@@ -735,7 +737,10 @@ export const resources = {
       },
       triggerInspector: {
         title: 'Path conditions',
-        variantsHelp: 'This visual trigger contains alternative condition groups.',
+        appearanceProbability: 'Appearance probability',
+        appearanceProbabilityHelp: 'One deterministic roll is made for this Trigger at each step.',
+        variantsHelp:
+          'Groups are alternatives (OR); conditions inside a group must all match (AND).',
         or: 'OR',
         group: 'Condition group {{number}}',
         unknownStat: 'Unknown variable',
@@ -787,7 +792,6 @@ export const resources = {
         },
         deleteGroup: 'Delete this OR group',
         addGroup: 'Add OR condition group',
-        deleteAllGroups: 'Delete all OR groups',
         deleteTrigger: 'Delete trigger',
         dateTime: 'Date and time',
         weekday: {
@@ -1505,6 +1509,8 @@ export const resources = {
           temporal: 'Une autre date ou heure est requise. Heure actuelle : {{time}}.',
           present: '« {{name}} » doit être présent.',
           absent: '« {{name}} » doit être absent.',
+          probabilityFailed:
+            'Le déclencheur n’est pas apparu ({{probability}} % de chance ; tirage déterministe : {{roll}}).',
           operator: {
             eq: 'égal à',
             neq: 'différent de',
@@ -1660,7 +1666,11 @@ export const resources = {
       },
       triggerInspector: {
         title: 'Conditions du chemin',
-        variantsHelp: 'Ce déclencheur visuel contient plusieurs groupes de conditions possibles.',
+        appearanceProbability: 'Probabilité d’apparition',
+        appearanceProbabilityHelp:
+          'Un seul tirage déterministe est effectué pour ce déclencheur à chaque étape.',
+        variantsHelp:
+          'Les groupes sont alternatifs (OU) ; toutes les conditions d’un groupe doivent être vraies (ET).',
         or: 'OU',
         group: 'Groupe de conditions {{number}}',
         unknownStat: 'Variable inconnue',
@@ -1712,7 +1722,6 @@ export const resources = {
         },
         deleteGroup: 'Supprimer ce groupe OU',
         addGroup: 'Ajouter un groupe de conditions OU',
-        deleteAllGroups: 'Supprimer tous les groupes OU',
         deleteTrigger: 'Supprimer le déclencheur',
         dateTime: 'Date et heure',
         weekday: {

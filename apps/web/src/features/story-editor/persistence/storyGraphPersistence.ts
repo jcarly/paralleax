@@ -7,6 +7,8 @@ import {
   getNextChildPosition,
   getNextParentPosition,
   getNextRootPosition,
+  getTriggerAppearanceProbability,
+  getTriggerConditionGroups,
   mergeServerStory,
   updateGraphDecorationInStory,
   updateStoryGraphPositions,
@@ -18,8 +20,8 @@ import {
   type Position,
   type Story,
   type StoryGraphPositionUpdates,
-  type TriggerCondition,
   type TriggerMutationResult,
+  type UpdateTriggerInput,
   type UpdateGraphDecorationInput,
 } from '@paralleax/shared';
 import { api } from '../../../api';
@@ -56,17 +58,13 @@ export function useStoryGraphPersistence({
 }: StoryGraphPersistenceDependencies) {
   const interactionSaveQueueRef = useRef<Promise<void>>(Promise.resolve());
   const saveTrigger = useCallback(
-    async (
-      interactionId: string,
-      triggerId: string,
-      inputInteractionIds: string[],
-      conditions: TriggerCondition[],
-    ) => {
-      const nextInputs = [...new Set(inputInteractionIds)];
-      nextInputs.forEach((inputId) =>
+    async (interactionId: string, triggerId: string, input: UpdateTriggerInput) => {
+      const patch = input.inputInteractionIds
+        ? { ...input, inputInteractionIds: [...new Set(input.inputInteractionIds)] }
+        : input;
+      patch.inputInteractionIds?.forEach((inputId) =>
         deletedTriggerInputKeysRef.current.delete(`${triggerId}:${inputId}`),
       );
-      const patch = { inputInteractionIds: nextInputs, conditions };
       setStory((current) =>
         current ? updateTriggerInStory(current, interactionId, triggerId, patch) : current,
       );
@@ -125,28 +123,6 @@ export function useStoryGraphPersistence({
     setStory((current) => (current ? applyStoryMutationMetadata(current, result) : current));
   }
 
-  async function createTriggerVariant(interactionId: string, baseTriggerId: string) {
-    if (!story) return undefined;
-    const interaction = story.interactions.find((item) => item.id === interactionId);
-    const baseTrigger = interaction?.triggers.find((trigger) => trigger.id === baseTriggerId);
-    if (!interaction || !baseTrigger) return undefined;
-
-    const patch = {
-      inputInteractionIds: baseTrigger.inputInteractionIds,
-      conditions: [],
-      ...(baseTrigger.position ? { position: baseTrigger.position } : {}),
-    };
-    const created = await trackSave(() => api.addTrigger(storyId, interactionId, patch));
-    if (!created) return undefined;
-    const nextTrigger = findSavedTrigger(created, story, interactionId);
-    if (!nextTrigger) return undefined;
-    patch.inputInteractionIds.forEach((inputId) =>
-      deletedTriggerInputKeysRef.current.delete(`${nextTrigger.id}:${inputId}`),
-    );
-    setStory((current) => (current ? applyTriggerResult(current, created) : current));
-    return nextTrigger.id;
-  }
-
   async function deleteTrigger(interactionId: string, triggerId: string) {
     const interaction = story?.interactions.find((item) => item.id === interactionId);
     const removesTrigger = (interaction?.triggers.length ?? 0) > 1;
@@ -161,36 +137,15 @@ export function useStoryGraphPersistence({
     setStory((current) => (current ? mergeIncomingStory(current, next) : next));
   }
 
-  async function deleteTriggerVariants(interactionId: string, triggerIds: string[]) {
-    if (!story || triggerIds.length === 0) return;
-
-    let optimisticStory = story;
-    for (const triggerId of triggerIds) {
-      const interaction = optimisticStory.interactions.find((item) => item.id === interactionId);
-      const removesTrigger = (interaction?.triggers.length ?? 0) > 1;
-      if (removesTrigger) {
-        deletedTriggerIdsRef.current.add(triggerId);
-      }
-      optimisticStory = deleteTriggerInStory(optimisticStory, interactionId, triggerId);
-    }
-    setStory(optimisticStory);
-
-    let nextStory = optimisticStory;
-    for (const triggerId of triggerIds) {
-      const deleted = await trackSave(() => api.deleteTrigger(storyId, interactionId, triggerId));
-      if (!deleted) return;
-      nextStory = deleted;
-    }
-    setStory((current) => (current ? mergeIncomingStory(current, nextStory) : nextStory));
-  }
-
   const deleteTriggerInput = useCallback(
     async (interactionId: string, triggerId: string, inputInteractionId: string) => {
       const plan = planTriggerInputDeletion(story, interactionId, triggerId, inputInteractionId);
       if (!plan) return;
 
       deletedTriggerInputKeysRef.current.add(`${triggerId}:${inputInteractionId}`);
-      await saveTrigger(interactionId, triggerId, plan.inputInteractionIds, plan.conditions);
+      await saveTrigger(interactionId, triggerId, {
+        inputInteractionIds: plan.inputInteractionIds,
+      });
     },
     [deletedTriggerInputKeysRef, saveTrigger, story],
   );
@@ -204,7 +159,6 @@ export function useStoryGraphPersistence({
       const created = await trackSave(() =>
         api.addTrigger(storyId, pending.target.id, {
           inputInteractionIds: [pending.sourceId],
-          conditions: [],
         }),
       );
       if (!created) return;
@@ -225,7 +179,8 @@ export function useStoryGraphPersistence({
       deletedTriggerInputKeysRef.current.delete(`${pending.trigger.id}:${pending.sourceId}`);
       const patch = {
         inputInteractionIds,
-        conditions: pending.trigger.conditions,
+        conditionGroups: getTriggerConditionGroups(pending.trigger),
+        appearanceProbability: getTriggerAppearanceProbability(pending.trigger),
       };
       setStory((current) =>
         current
@@ -294,7 +249,6 @@ export function useStoryGraphPersistence({
       const created = await trackSave(() =>
         api.addTrigger(storyId, targetId, {
           inputInteractionIds: [sourceId],
-          conditions: [],
         }),
       );
       if (!created) return undefined;
@@ -386,9 +340,7 @@ export function useStoryGraphPersistence({
     saveTrigger,
     moveTrigger,
     saveGraphPositions,
-    createTriggerVariant,
     deleteTrigger,
-    deleteTriggerVariants,
     deleteTriggerInput,
     connectInteractions,
     connectToExistingTrigger,

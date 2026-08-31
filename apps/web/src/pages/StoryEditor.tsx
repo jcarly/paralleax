@@ -21,6 +21,7 @@ import {
 import { Link, Navigate, useParams } from 'react-router-dom';
 import {
   canManageCommentThread as canActorManageCommentThread,
+  getTriggerConditions,
   isCommentAnchorDetached,
   type Character,
   type CommentAnchor,
@@ -127,9 +128,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
     updateStoryStartDateTime,
     saveTrigger,
     saveGraphPositions,
-    createTriggerVariant,
     deleteTrigger,
-    deleteTriggerVariants,
     deleteTriggerInput,
     connectInteractions,
     connectToExistingTrigger,
@@ -841,34 +840,6 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
   async function deleteSelectedTrigger(interactionId: string, triggerId: string) {
     if (!window.confirm(t('editor.confirmDeleteTrigger'))) return;
     await deleteTrigger(interactionId, triggerId);
-    closeInspector();
-  }
-
-  async function deleteSelectedTriggerGroup(
-    interactionId: string,
-    triggerId: string,
-    nextTriggerId: string,
-  ) {
-    selectExclusive({
-      type: 'trigger',
-      trigger: { interactionId, triggerId: nextTriggerId },
-    });
-    await deleteTrigger(interactionId, triggerId);
-  }
-
-  async function createSelectedTriggerVariant(interactionId: string, triggerId: string) {
-    const createdTriggerId = await createTriggerVariant(interactionId, triggerId);
-    if (createdTriggerId) {
-      selectExclusive({
-        type: 'trigger',
-        trigger: { interactionId, triggerId: createdTriggerId },
-      });
-    }
-  }
-
-  async function deleteSelectedTriggerVariants(interactionId: string, triggerIds: string[]) {
-    if (!window.confirm(t('editor.confirmDeleteTriggerVariants'))) return;
-    await deleteTriggerVariants(interactionId, triggerIds);
     closeInspector();
   }
 
@@ -1608,10 +1579,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
                 interaction={selectedTriggerTarget.interaction}
                 trigger={selectedTriggerTarget.trigger}
                 onSaveTrigger={saveTrigger}
-                onCreateTriggerVariant={createSelectedTriggerVariant}
-                onDeleteTriggerGroup={deleteSelectedTriggerGroup}
                 onDeleteTrigger={deleteSelectedTrigger}
-                onDeleteTriggerVariants={deleteSelectedTriggerVariants}
               />
             ) : selectedLocation ? (
               <LocationInspector
@@ -1716,7 +1684,7 @@ function ReviewTargetInspector({
     return (
       <div className="review-target-inspector">
         <h3>{t('inspector.trigger')}</h3>
-        <p>{t('comments.triggerSummary', { count: trigger.conditions.length })}</p>
+        <p>{t('comments.triggerSummary', { count: getTriggerConditions(trigger).length })}</p>
       </div>
     );
   }

@@ -147,7 +147,8 @@ describe('shared story operations', () => {
     expect(updated.interactions[1].triggers[0]).toEqual({
       id: 'trigger-middle',
       inputInteractionIds: ['root'],
-      conditions: [],
+      conditionGroups: [{ id: 'trigger-middle', conditions: [] }],
+      appearanceProbability: 100,
       position: { x: 240, y: 315 },
     });
   });
@@ -171,7 +172,12 @@ describe('shared story operations', () => {
     const updated = deleteTriggerInStory(storyFixture(), 'middle', 'trigger-middle');
 
     expect(updated.interactions[1].triggers).toEqual([
-      { id: 'trigger-middle', inputInteractionIds: [], conditions: [] },
+      {
+        id: 'trigger-middle',
+        inputInteractionIds: [],
+        conditionGroups: [{ id: 'trigger-middle', conditions: [] }],
+        appearanceProbability: 100,
+      },
     ]);
   });
 
@@ -180,10 +186,18 @@ describe('shared story operations', () => {
 
     expect(updated.interactions.map((item) => item.id)).toEqual(['middle', 'end']);
     expect(updated.interactions[0].triggers).toEqual([
-      { id: 'trigger-middle', inputInteractionIds: [], conditions: [] },
+      {
+        id: 'trigger-middle',
+        inputInteractionIds: [],
+        conditionGroups: [{ id: 'trigger-middle', conditions: [] }],
+        appearanceProbability: 100,
+      },
     ]);
     expect(updated.interactions[1].triggers[0].inputInteractionIds).toEqual(['middle']);
-    expect(updated.interactions[1].triggers[0].conditions).toEqual([]);
+    expect(updated.interactions[1].triggers[0].conditionGroups).toEqual([
+      { id: 'trigger-end', conditions: [] },
+    ]);
+    expect(updated.interactions[1].triggers[0].appearanceProbability).toBe(100);
   });
 
   it('does not restore locally deleted triggers from stale server stories', () => {
@@ -340,6 +354,7 @@ describe('shared story operations', () => {
     expect(getTriggerConditionFailures(story.interactions[2], 'root', [])).toEqual([
       {
         triggerId: 'trigger-end',
+        conditionGroupId: 'trigger-end',
         condition: { interactionId: 'root', hasBeenVisited: true },
       },
     ]);
@@ -372,6 +387,7 @@ describe('shared story operations', () => {
     expect(getTriggerConditionFailures(story.interactions[1], 'root', [], null)).toEqual([
       {
         triggerId: 'trigger-middle',
+        conditionGroupId: 'trigger-middle',
         condition: { locationId: 'harbor', isCurrentLocation: true },
       },
     ]);
@@ -405,6 +421,7 @@ describe('shared story operations', () => {
     expect(getTriggerConditionFailures(story.interactions[1], 'root', [], null, [])).toEqual([
       {
         triggerId: 'trigger-middle',
+        conditionGroupId: 'trigger-middle',
         condition: { characterId: 'mira', isPresent: true },
       },
     ]);
@@ -741,7 +758,8 @@ describe('reader progress', () => {
     ];
 
     expect(buildReaderProgressState(story, ['root', 'middle', 'root'], ['key-1'])).toEqual({
-      version: 2,
+      version: 3,
+      randomSeed: 'legacy-reader:story-1',
       journeyInteractionIds: ['root', 'middle', 'root'],
       currentInteractionId: 'root',
       visitedInteractionIds: ['root', 'middle'],

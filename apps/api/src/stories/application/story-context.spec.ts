@@ -1,4 +1,4 @@
-import type { Story } from '@paralleax/shared';
+import { getTriggerConditions, type Story } from '@paralleax/shared';
 import { StoryContextService } from './story-context';
 import type { StoryMutationService } from './story-mutations';
 
@@ -101,7 +101,7 @@ describe('StoryContextService', () => {
     ]);
     expect(deleted.interactions[0].itemEffects).toEqual([]);
     expect(deleted.interactions[0].statEffects).toEqual([]);
-    expect(deleted.interactions[0].triggers[0].conditions).toEqual([]);
+    expect(getTriggerConditions(deleted.interactions[0].triggers[0])).toEqual([]);
   });
 });
 

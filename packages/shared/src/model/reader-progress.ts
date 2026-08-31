@@ -9,7 +9,9 @@ export type ReaderAutosaveMode = 'reader' | 'simulation';
 export type ReaderSaveKind = 'reader-autosave' | 'simulation-autosave' | 'manual';
 
 export interface ReaderProgressState {
-  version: 1 | 2;
+  version: 1 | 2 | 3;
+  /** Missing only on progress created before seeded Trigger probabilities existed. */
+  randomSeed?: string;
   journeyInteractionIds: string[];
   currentInteractionId: string | null;
   visitedInteractionIds: string[];
@@ -45,6 +47,7 @@ export interface ReaderSaveSummary {
 export interface SaveReaderProgressInput {
   journeyInteractionIds: string[];
   ownedItemIds?: string[];
+  randomSeed?: string;
 }
 
 export interface CreateReaderSaveInput extends SaveReaderProgressInput {

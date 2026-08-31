@@ -55,6 +55,7 @@ export function ReaderSaveDialog({
   const snapshot = {
     journeyInteractionIds: session.journeyInteractionIds,
     ownedItemIds: session.ownedItemIds,
+    ...(session.randomSeed ? { randomSeed: session.randomSeed } : {}),
   };
 
   async function create(event: FormEvent) {

@@ -1,5 +1,5 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
-import type { Story } from '@paralleax/shared';
+import { getTriggerConditions, type Story } from '@paralleax/shared';
 import {
   buildStatCondition,
   createStatAssignment,
@@ -171,7 +171,7 @@ describe('story stats application rules', () => {
     deleteStatAssignment(story, storyStat.id);
     expect(story.stats).toEqual([]);
     expect(story.interactions[0].statEffects).toHaveLength(2);
-    expect(story.interactions[0].triggers[0].conditions).toHaveLength(1);
+    expect(getTriggerConditions(story.interactions[0].triggers[0])).toHaveLength(1);
 
     deleteStatDefinition(story, definition.id);
     expect(story.statDefinitions).toEqual([]);
@@ -179,7 +179,7 @@ describe('story stats application rules', () => {
     expect(story.locations?.[0].stats).toEqual([]);
     expect(story.itemDefinitions?.[0].stats).toEqual([]);
     expect(story.interactions[0].statEffects).toEqual([]);
-    expect(story.interactions[0].triggers[0].conditions).toEqual([]);
+    expect(getTriggerConditions(story.interactions[0].triggers[0])).toEqual([]);
     expect(() => findStatAssignment(story, characterStat.id)).toThrow(NotFoundException);
     expect(() => deleteStatDefinition(story, definition.id)).toThrow(NotFoundException);
   });

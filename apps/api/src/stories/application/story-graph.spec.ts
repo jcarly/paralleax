@@ -31,7 +31,13 @@ describe('StoryGraphService', () => {
       interaction: {
         title: 'New interaction',
         position: { x: 320, y: 480 },
-        triggers: [{ inputInteractionIds: ['root'], conditions: [] }],
+        triggers: [
+          {
+            inputInteractionIds: ['root'],
+            conditionGroups: [{ conditions: [] }],
+            appearanceProbability: 100,
+          },
+        ],
       },
     });
     expect(result).not.toHaveProperty('interactions');
@@ -131,19 +137,49 @@ describe('StoryGraphService', () => {
       interactionId: 'child',
       trigger: {
         inputInteractionIds: ['root'],
-        conditions: [
+        conditionGroups: [
           {
-            temporal: {
-              dates: ['2026-08-25'],
-              weekdays: ['monday'],
-              dateRanges: [],
-              timeSlots: [],
-            },
+            conditions: [
+              {
+                temporal: {
+                  dates: ['2026-08-25'],
+                  weekdays: ['monday'],
+                  dateRanges: [],
+                  timeSlots: [],
+                },
+              },
+            ],
           },
         ],
+        appearanceProbability: 100,
       },
       revision: 4,
     });
+  });
+
+  it('stores condition groups and one Trigger appearance probability', async () => {
+    const result = await service.updateTrigger(
+      'story-1',
+      'child',
+      'child-trigger',
+      {
+        conditionGroups: [
+          { id: 'visited', conditions: [{ interactionId: 'root', hasBeenVisited: true }] },
+          { id: 'fallback', conditions: [] },
+        ],
+        appearanceProbability: 35,
+      },
+      'user-1',
+    );
+
+    expect(result.trigger).toMatchObject({
+      conditionGroups: [
+        { id: 'visited', conditions: [{ interactionId: 'root', hasBeenVisited: true }] },
+        { id: 'fallback', conditions: [] },
+      ],
+      appearanceProbability: 35,
+    });
+    expect(result.trigger).not.toHaveProperty('conditions');
   });
 
   it('creates graph decorations through the existing decoration builder', async () => {

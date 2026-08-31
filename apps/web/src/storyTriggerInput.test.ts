@@ -47,7 +47,7 @@ describe('trigger input deletion planning', () => {
   it('plans an empty root trigger when the selected input is its last input', () => {
     expect(
       planTriggerInputDeletion(story, 'interaction-2', 'trigger-single', 'interaction-1'),
-    ).toEqual({ inputInteractionIds: [], conditions: [] });
+    ).toEqual({ inputInteractionIds: [] });
   });
 
   it('updates the trigger when other inputs remain', () => {
@@ -55,7 +55,6 @@ describe('trigger input deletion planning', () => {
       planTriggerInputDeletion(story, 'interaction-2', 'trigger-multiple', 'interaction-1'),
     ).toEqual({
       inputInteractionIds: ['interaction-3'],
-      conditions: [{ interactionId: 'interaction-1', hasBeenVisited: true }],
     });
   });
 

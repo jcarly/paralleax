@@ -10,7 +10,8 @@ In the current MVP model, a trigger belongs to one output interaction and contai
 
 - one trigger id;
 - zero, one, or several input interaction ids;
-- zero or several conditions.
+- one or more condition groups, each containing zero or several conditions;
+- one appearance probability from 0 through 100, defaulting to 100.
 
 ## Inputs
 
@@ -19,7 +20,8 @@ A trigger can have several input interactions.
 Several inputs on the same trigger represent an OR:
 
 - if the reader is currently on any one of those input interactions, the trigger input rule matches;
-- the trigger is still available only if all conditions also match.
+- the trigger is still available only if one complete condition group matches
+  and its appearance roll succeeds.
 
 Example:
 
@@ -33,7 +35,8 @@ Here, interaction `C` can become available after `A` or after `B`, depending on 
 
 ## Conditions
 
-Conditions on the same trigger represent an AND:
+Conditions inside one group represent an AND. Groups on the same Trigger
+represent an OR:
 
 - every "visited" condition must be present in the reader history;
 - every "not visited" condition must be absent from the reader history.
@@ -50,6 +53,11 @@ Conditions on the same trigger represent an AND:
 Inputs answer "where can this trigger come from?"
 
 Conditions answer "what must already be true about the path or reader context?"
+
+After input and condition-group evaluation, the reader makes one deterministic
+appearance roll for the Trigger. The roll uses the saved run seed, narrative
+step, and Trigger id. It is therefore stable across rendering, reload, backward
+replay, and Simulation diagnostics. Separate Triggers always roll separately.
 
 Temporal trigger conditions use the story-local clock. Exact dates and inclusive
 date ranges are alternatives in one calendar-date category. Weekdays form
@@ -138,10 +146,10 @@ The inspector exposes one **Add condition** action per condition group. It then
 asks for the condition type and renders only the fields relevant to that type.
 Alternative OR groups use a prominent plus action; when several groups exist,
 **OR** appears between them and each group has an accessible delete cross in its
-top-right corner. A new alternative group copies the selected trigger inputs but
-starts without conditions and opens its type chooser. Unavailable types explain
-their missing prerequisite on hover or keyboard focus. Deleting one group is
-immediate, selects a surviving group, and keeps the trigger inspector open.
+top-right corner. A new alternative group is added to the selected Trigger and
+starts without conditions. Unavailable types explain their missing prerequisite
+on hover or keyboard focus. Deleting one group is immediate and keeps the Trigger
+inspector open. The same inspector edits the single 0–100 appearance probability.
 
 The interaction inspector should stay focused on interaction content. Trigger
 inputs and outputs are represented by the graph itself, so the trigger inspector
@@ -179,7 +187,7 @@ intentional shortcut that adds the source to that trigger without opening the
 choice.
 
 Adding the source to an existing trigger means every input on that trigger shares
-the same condition set. Creating a new trigger means the route has its own
+the same condition groups and probability. Creating a new trigger means the route has its own
 condition group.
 
 Graphically, a linked trigger is represented as a circular marker between its
@@ -240,41 +248,17 @@ Use a single trigger with several inputs when the same conditions apply to every
 Use several triggers when each route to the same output needs different conditions.
 
 Several triggers may also connect the same input interaction to the same output
-interaction. This is useful when the same route should be available through
-alternative condition groups.
+interaction, but they remain separate reachability and probability gates.
 
 Example:
 
 ```text
-A --> Trigger 1 --> C  if X has been visited
-A --> Trigger 2 --> C  if Y has not been visited
+A --> Trigger 1 (30%) --> C
+A --> Trigger 2 (80%) --> C
 ```
 
-This represents an OR between condition groups:
-
-- Trigger 1 conditions must all match; or
-- Trigger 2 conditions must all match.
-
-This belongs in the MVP because it lets authors express path logic such as "if
-the reader has visited A OR if the reader has visited B" while preserving the
-simple rule that conditions inside one trigger are AND.
-
-The editor should prefer a grouped visual edge for several triggers between the
-same source and target. The graph can show one link between the two interactions,
-while the trigger inspector exposes several route variants. Adding an "OR
-condition group" in that inspector creates another trigger behind the same visual
-link.
-
-When adding an OR condition group from the inspector, the editor creates a new
-trigger with the same inputs as the selected grouped route. The new trigger is a
-separate domain trigger, even though it shares the same visual marker.
-
-The grouped inspector should also support deleting variants at two levels:
-delete one OR condition group, or delete all OR condition groups behind the
-selected visual marker. If deleting all variants would remove the last trigger of
-an interaction, the existing invariant still applies: the last trigger becomes an
-inputless root trigger instead of leaving the interaction without a trigger.
-
-The domain model should still keep those variants as distinct triggers. The
-grouped edge is a display and editing convenience, not a different trigger
-semantics.
+Use condition groups inside one Trigger when inputs and probability are shared
+and only the alternative conditions differ. The inspector adds and removes those
+groups directly on the Trigger. Use several Triggers only when the route requires
+independent inputs, probability gates, comments, or lifecycle. Even with identical
+inputs, each Trigger keeps its own graph marker.

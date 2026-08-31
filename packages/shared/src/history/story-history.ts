@@ -1,5 +1,6 @@
 import type { Story } from '../model/stories.js';
 import { diffStoryGraphPositions, type StoryGraphPositionPatch } from '../graph/positions.js';
+import { toCanonicalTrigger } from '../triggers/model.js';
 
 export type StoryHistoryEventKind = 'change' | 'undo' | 'redo';
 
@@ -299,9 +300,8 @@ function authoredStoryProjection(story: Story): JsonValue {
       itemEffects: interaction.itemEffects ?? [],
       conditionalTextBlocks: interaction.conditionalTextBlocks ?? [],
       triggers: interaction.triggers.map((trigger) => ({
-        ...trigger,
+        ...toCanonicalTrigger(trigger),
         inputInteractionIds: trigger.inputInteractionIds ?? [],
-        conditions: trigger.conditions ?? [],
       })),
     })),
   });

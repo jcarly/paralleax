@@ -25,10 +25,12 @@ describe('useReaderSessionState', () => {
     const story = storyFixture();
     const { result } = renderHook(() => useReaderSessionState());
 
-    act(() => result.current.replay(story, ['start']));
+    act(() => result.current.replay(story, ['start'], [], 'saved-seed'));
     act(() => result.current.advance(story, story.interactions[1]));
 
-    expect(result.current.session).toEqual(buildReaderProgressState(story, ['start', 'next']));
+    expect(result.current.session).toEqual(
+      buildReaderProgressState(story, ['start', 'next'], [], 'saved-seed'),
+    );
   });
 });
 

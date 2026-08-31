@@ -20,7 +20,10 @@ import { StoryCommentsPanel } from '../features/comments/StoryCommentsPanel';
 import { useStoryComments } from '../features/comments/useStoryComments';
 import { ReaderSaveDialog } from '../features/story-player/ReaderSaveDialog';
 import { useReaderProgressPersistence } from '../features/story-player/useReaderProgressPersistence';
-import { useReaderSessionState } from '../features/story-player/useReaderSessionState';
+import {
+  createReaderRandomSeed,
+  useReaderSessionState,
+} from '../features/story-player/useReaderSessionState';
 import { useSimulationMutationPersistence } from '../features/story-player/useSimulationMutationPersistence';
 import {
   getConditionSummary,
@@ -72,6 +75,7 @@ export function StoryPlayer({
     statValues,
     ownedItemIds,
     itemStatValues = {},
+    randomSeed = '',
   } = session;
   const [playableCharacterId, setPlayableCharacterId] = useState<string>();
   const progressMode = isSimulationMode ? 'simulation' : 'reader';
@@ -148,6 +152,7 @@ export function StoryPlayer({
               positioned,
               progress.state.journeyInteractionIds,
               progress.state.ownedItemIds,
+              progress.state.randomSeed ?? createReaderRandomSeed(),
             )
           : undefined;
         const nextJourney =
@@ -155,7 +160,9 @@ export function StoryPlayer({
           (effectiveStartInteractionId ? [effectiveStartInteractionId] : []);
         setStory(positioned);
         setLoadedKey(loadKey);
-        if (!reconciledProgress) replaySession(positioned, nextJourney);
+        if (!reconciledProgress) {
+          replaySession(positioned, nextJourney, [], createReaderRandomSeed());
+        }
         if (nextJourney.length > 0) {
           setPlayableCharacterId(positioned.characters?.find(({ isPlayable }) => isPlayable)?.id);
         }
@@ -349,6 +356,7 @@ export function StoryPlayer({
             currentDateTime,
             ownedItemDefinitionIds,
             itemStatValues,
+            { randomSeed, step: journey.length },
           )
         : [],
     [
@@ -360,6 +368,8 @@ export function StoryPlayer({
       currentDateTime,
       ownedItemDefinitionIds,
       itemStatValues,
+      randomSeed,
+      journey.length,
     ],
   );
   const availableChoiceIds = useMemo(() => new Set(choices.map((choice) => choice.id)), [choices]);
@@ -400,6 +410,7 @@ export function StoryPlayer({
                       ownedItemDefinitionIds,
                       itemStatValues,
                       t,
+                      { randomSeed, step: journey.length },
                     ),
               },
             ];
@@ -421,6 +432,8 @@ export function StoryPlayer({
       visited,
       ownedItemDefinitionIds,
       itemStatValues,
+      randomSeed,
+      journey.length,
       t,
     ],
   );
@@ -536,7 +549,14 @@ export function StoryPlayer({
     comments.cancelDraft();
     comments.selectThread(undefined);
     directStartAutosavedKey.current = '';
-    if (story) replaySession(story, startInteractionId ? [startInteractionId] : []);
+    if (story) {
+      replaySession(
+        story,
+        startInteractionId ? [startInteractionId] : [],
+        [],
+        createReaderRandomSeed(),
+      );
+    }
     setPlayableCharacterId(undefined);
     setForceUnavailableOptions(false);
     resetProgress();
@@ -548,12 +568,15 @@ export function StoryPlayer({
     if (story) saveProgress(replaySession(story, nextJourney));
   }
 
-  function loadSave(save: { state: { journeyInteractionIds: string[]; ownedItemIds: string[] } }) {
+  function loadSave(save: {
+    state: { journeyInteractionIds: string[]; ownedItemIds: string[]; randomSeed?: string };
+  }) {
     if (!story) return;
     const nextSession = replaySession(
       story,
       save.state.journeyInteractionIds,
       save.state.ownedItemIds,
+      save.state.randomSeed ?? createReaderRandomSeed(),
     );
     setPlayableCharacterId(
       nextSession.journeyInteractionIds.length > 0

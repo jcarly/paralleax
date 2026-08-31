@@ -43,7 +43,6 @@ describe('StoryEditor connections', () => {
     await waitFor(() => {
       expect(api.addTrigger).toHaveBeenCalledWith('story-1', 'interaction-3', {
         inputInteractionIds: ['interaction-1'],
-        conditions: [],
       });
       expect(api.updateTrigger).not.toHaveBeenCalled();
     });
@@ -68,7 +67,6 @@ describe('StoryEditor connections', () => {
     await waitFor(() => {
       expect(api.addTrigger).toHaveBeenCalledWith('story-1', 'interaction-2', {
         inputInteractionIds: ['interaction-1'],
-        conditions: [],
       });
       expect(api.updateTrigger).not.toHaveBeenCalled();
     });
@@ -102,7 +100,6 @@ describe('StoryEditor connections', () => {
     await waitFor(() => {
       expect(api.addTrigger).toHaveBeenCalledWith('story-1', 'interaction-3', {
         inputInteractionIds: ['interaction-2'],
-        conditions: [],
       });
       expect(api.updateTrigger).not.toHaveBeenCalled();
     });
@@ -125,7 +122,8 @@ describe('StoryEditor connections', () => {
     await waitFor(() => {
       expect(api.updateTrigger).toHaveBeenCalledWith('story-1', 'interaction-2', 'trigger-2', {
         inputInteractionIds: ['interaction-1', 'interaction-3'],
-        conditions: [],
+        conditionGroups: [{ id: 'trigger-2', conditions: [] }],
+        appearanceProbability: 100,
       });
     });
     expect(api.addTrigger).not.toHaveBeenCalled();
@@ -152,7 +150,13 @@ describe('StoryEditor connections', () => {
       expect(api.addTrigger).not.toHaveBeenCalled();
       expect(api.updateTrigger).toHaveBeenCalledWith('story-1', 'interaction-2', 'trigger-2', {
         inputInteractionIds: ['interaction-1', 'interaction-3'],
-        conditions: [{ interactionId: 'interaction-1', hasBeenVisited: true }],
+        conditionGroups: [
+          {
+            id: 'trigger-2',
+            conditions: [{ interactionId: 'interaction-1', hasBeenVisited: true }],
+          },
+        ],
+        appearanceProbability: 100,
       });
     });
     expect(screen.getByTestId('flow-edge-interaction-1-interaction-2')).toBeInTheDocument();
@@ -172,7 +176,8 @@ describe('StoryEditor connections', () => {
       expect(api.addTrigger).not.toHaveBeenCalled();
       expect(api.updateTrigger).toHaveBeenCalledWith('story-1', 'interaction-1', 'trigger-1', {
         inputInteractionIds: ['interaction-2'],
-        conditions: [],
+        conditionGroups: [{ id: 'trigger-1', conditions: [] }],
+        appearanceProbability: 100,
       });
     });
     expect(await screen.findByTestId('flow-edge-interaction-2-interaction-1')).toBeInTheDocument();
@@ -201,7 +206,6 @@ describe('StoryEditor connections', () => {
     await waitFor(() => {
       expect(api.updateTrigger).toHaveBeenCalledWith('story-1', 'interaction-2', 'trigger-2', {
         inputInteractionIds: [],
-        conditions: [],
       });
     });
     expect(screen.queryByTestId('flow-edge-interaction-1-interaction-2')).not.toBeInTheDocument();
@@ -211,7 +215,6 @@ describe('StoryEditor connections', () => {
     await waitFor(() => {
       expect(api.addTrigger).toHaveBeenCalledWith('story-1', 'interaction-3', {
         inputInteractionIds: ['interaction-2'],
-        conditions: [],
       });
     });
     expect(screen.queryByTestId('flow-edge-interaction-1-interaction-2')).not.toBeInTheDocument();

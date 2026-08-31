@@ -1,4 +1,10 @@
-import { createStoryChangeDelta, type Story } from '@paralleax/shared';
+import {
+  createStoryChangeDelta,
+  getTriggerAppearanceProbability,
+  getTriggerConditionGroups,
+  toCanonicalTrigger,
+  type Story,
+} from '@paralleax/shared';
 import type { DatabaseConnection } from '../database/database.connection';
 import { StoriesRepository } from './stories.repository';
 
@@ -372,7 +378,8 @@ function relationalRead(query: jest.Mock, saved = story()) {
             position_x: trigger.position?.x ?? null,
             position_y: trigger.position?.y ?? null,
             sort_order: index,
-            conditions: trigger.conditions,
+            condition_groups: getTriggerConditionGroups(trigger),
+            appearance_probability: getTriggerAppearanceProbability(trigger),
           })),
         ),
       });
@@ -388,6 +395,7 @@ function relationalRead(query: jest.Mock, saved = story()) {
           position_y: interaction.position.y,
           location_id: interaction.locationId ?? null,
           duration_minutes: interaction.durationMinutes ?? 0,
+          conditional_text_blocks: interaction.conditionalTextBlocks ?? [],
           sort_order: index,
         })),
       });
@@ -496,6 +504,8 @@ describe('StoriesRepository', () => {
         characterIds: interaction.characterIds ?? [],
         statEffects: interaction.statEffects ?? [],
         itemEffects: interaction.itemEffects ?? [],
+        conditionalTextBlocks: interaction.conditionalTextBlocks ?? [],
+        triggers: interaction.triggers.map(toCanonicalTrigger),
       })),
     });
     expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining('WHERE stories.id = $1'), [
@@ -895,8 +905,11 @@ describe('StoriesRepository', () => {
       (value) => {
         value.interactions[0].title = 'Renamed start';
         value.interactions[0].position = { x: 50, y: 60 };
-        value.interactions[0].triggers[0].conditions = [
-          { interactionId: 'interaction-1', hasBeenVisited: false },
+        value.interactions[0].triggers[0].conditionGroups = [
+          {
+            id: 'trigger-1',
+            conditions: [{ interactionId: 'interaction-1', hasBeenVisited: false }],
+          },
         ];
         value.interactions[0].triggers[0].position = { x: 210, y: 175 };
         value.interactions[0].triggers.push({
@@ -947,7 +960,8 @@ describe('StoriesRepository', () => {
       'interaction-1',
       null,
       null,
-      JSON.stringify([]),
+      JSON.stringify([{ id: 'trigger-3', conditions: [] }]),
+      100,
       1,
     ]);
     expect(mockClientQuery).toHaveBeenCalledWith(
@@ -955,8 +969,17 @@ describe('StoriesRepository', () => {
       [JSON.stringify([{ id: 'trigger-1', position_x: 210, position_y: 175 }]), saved.id],
     );
     expect(mockClientQuery).toHaveBeenCalledWith(
-      'UPDATE triggers SET conditions = $2 WHERE id = $1',
-      ['trigger-1', JSON.stringify([{ interactionId: 'interaction-1', hasBeenVisited: false }])],
+      expect.stringContaining('SET condition_groups = $2, appearance_probability = $3'),
+      [
+        'trigger-1',
+        JSON.stringify([
+          {
+            id: 'trigger-1',
+            conditions: [{ interactionId: 'interaction-1', hasBeenVisited: false }],
+          },
+        ]),
+        100,
+      ],
     );
     expect(mockClientQuery).toHaveBeenCalledWith(
       'DELETE FROM graph_decorations WHERE id = $1 AND story_id = $2',

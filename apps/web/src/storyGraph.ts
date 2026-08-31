@@ -1,5 +1,9 @@
 import { MarkerType, Position, type Edge, type Node } from '@xyflow/react';
-import type { Story, StoryGraphTriggerPositionUpdate } from '@paralleax/shared';
+import {
+  getTriggerConditions,
+  type Story,
+  type StoryGraphTriggerPositionUpdate,
+} from '@paralleax/shared';
 import type { InteractionNodeData } from './components/InteractionNode';
 import type { TriggerNodeData } from './components/TriggerNode';
 import type { CommentPinFlowNode } from './features/comments/CommentPinNode';
@@ -773,47 +777,17 @@ export interface LinkedTriggerGroup {
 export function getLinkedTriggerGroups(
   interaction: Story['interactions'][number],
 ): LinkedTriggerGroup[] {
-  const groups = new Map<string, LinkedTriggerGroup>();
-
-  interaction.triggers
+  return interaction.triggers
     .filter((trigger) => trigger.inputInteractionIds.length > 0)
-    .forEach((trigger) => {
-      const key = getTriggerGroupKey(trigger.inputInteractionIds);
-      const existing = groups.get(key);
-      if (existing) {
-        existing.triggers.push(trigger);
-        return;
-      }
-
-      groups.set(key, {
-        inputInteractionIds: [...trigger.inputInteractionIds],
-        primaryTrigger: trigger,
-        triggers: [trigger],
-      });
-    });
-
-  return [...groups.values()];
-}
-
-function getTriggerGroupKey(inputInteractionIds: string[]) {
-  return [...inputInteractionIds].sort().join('|');
+    .map((trigger) => ({
+      inputInteractionIds: [...trigger.inputInteractionIds],
+      primaryTrigger: trigger,
+      triggers: [trigger],
+    }));
 }
 
 function getTotalConditionCount(triggers: Story['interactions'][number]['triggers']) {
-  return triggers.reduce((total, trigger) => total + trigger.conditions.length, 0);
-}
-
-export function getRelatedTriggerVariantIds(
-  interaction: Story['interactions'][number],
-  trigger: Story['interactions'][number]['triggers'][number],
-): string[] {
-  if (trigger.inputInteractionIds.length === 0) return [trigger.id];
-
-  const key = getTriggerGroupKey(trigger.inputInteractionIds);
-  return interaction.triggers
-    .filter((candidate) => candidate.inputInteractionIds.length > 0)
-    .filter((candidate) => getTriggerGroupKey(candidate.inputInteractionIds) === key)
-    .map((candidate) => candidate.id);
+  return triggers.reduce((total, trigger) => total + getTriggerConditions(trigger).length, 0);
 }
 
 export function getTriggerNodeId(interactionId: string, triggerId: string) {

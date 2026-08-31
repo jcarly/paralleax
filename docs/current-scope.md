@@ -19,8 +19,10 @@ Paralleax currently includes:
   selection is wrapped when the frame is created, adding/removing conditions
   preserves its content, and removing the final token unwraps the frame. Legacy
   target-based conditional frames remain readable.
-- Triggers with multiple input interactions, typed conditions, and optional saved
-  positions for linked graph markers.
+- Triggers with multiple input interactions, OR condition groups containing AND
+  typed conditions, one 0–100 appearance probability, and optional saved positions
+  for linked graph markers. Probability uses one deterministic roll per Trigger
+  and narrative step.
 - Persisted visual graph decorations: movable, resizable colored frames and movable
   text with configurable color, size, family, weight, and style. Decorations stay
   behind interactions and trigger markers and have no reader semantics.
@@ -28,6 +30,8 @@ Paralleax currently includes:
   autosave, one editor-only Simulation Mode autosave, and up to 20 named manual
   saves per user and story. Manual saves and both autosaves can be loaded in
   either authorized mode without merging their source slots.
+  Saves preserve the random seed used by Trigger probability, so reload and
+  backward replay reproduce the same result while restart creates a new run seed.
 - Story-local deterministic calendar time.
 - Locations.
 - Characters.
@@ -110,7 +114,7 @@ Paralleax currently includes:
 The following remain future or incomplete unless a task explicitly implements them:
 
 - calculated stats/variables, formulas, and dependency graphs;
-- probabilities and automatic choices;
+- automatic choices and probabilistic automatic execution;
 - real-time choice timers;
 - explicit final/completed story semantics;
 - anonymous or offline saves;

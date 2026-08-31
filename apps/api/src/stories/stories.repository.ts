@@ -24,7 +24,7 @@ import {
   type StorySummary,
   type StatValue,
   type StatValueType,
-  type TriggerCondition,
+  type TriggerConditionGroup,
 } from '@paralleax/shared';
 import type { PoolClient } from 'pg';
 import { DatabaseConnection } from '../database/database.connection';
@@ -168,7 +168,8 @@ type TriggerRow = {
   position_x: number | null;
   position_y: number | null;
   sort_order: number;
-  conditions: TriggerCondition[];
+  condition_groups: TriggerConditionGroup[];
+  appearance_probability: number;
 };
 type TriggerInputRow = {
   story_id: string;
@@ -651,7 +652,7 @@ export class StoriesRepository {
     const triggers = await queryable.query<TriggerRow>(
       `SELECT triggers.id, interactions.story_id, triggers.output_interaction_id,
                 triggers.position_x, triggers.position_y, triggers.sort_order,
-                triggers.conditions
+                triggers.condition_groups, triggers.appearance_probability
          FROM triggers
          JOIN interactions ON interactions.id = triggers.output_interaction_id
          WHERE interactions.story_id = ANY($1::text[])
@@ -825,7 +826,8 @@ export class StoriesRepository {
           inputInteractionIds: (inputsByTrigger.get(trigger.id) ?? []).map(
             ({ input_interaction_id }) => input_interaction_id,
           ),
-          conditions: trigger.conditions,
+          conditionGroups: trigger.condition_groups,
+          appearanceProbability: trigger.appearance_probability,
           ...(typeof trigger.position_x === 'number' && typeof trigger.position_y === 'number'
             ? { position: { x: trigger.position_x, y: trigger.position_y } }
             : {}),

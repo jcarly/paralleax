@@ -56,6 +56,7 @@ describe('StoryPlayer access and comments', () => {
       {
         journeyInteractionIds: ['start'],
         ownedItemIds: ['key-1'],
+        randomSeed: expect.any(String),
       },
       'reader',
     );
@@ -70,6 +71,7 @@ describe('StoryPlayer access and comments', () => {
       {
         journeyInteractionIds: ['start', 'next'],
         ownedItemIds: [],
+        randomSeed: expect.any(String),
       },
       'reader',
     );

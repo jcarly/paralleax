@@ -1,14 +1,12 @@
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { Story } from '@paralleax/shared';
+import type { Story, TriggerCondition } from '@paralleax/shared';
 import { TriggerInspector } from './TriggerInspector';
 
 afterEach(cleanup);
 
-function storyWithConditions(
-  conditions: Story['interactions'][number]['triggers'][number]['conditions'],
-) {
+function storyWithConditions(conditions: TriggerCondition[]) {
   return {
     id: 'story-1',
     title: 'Timed story',
@@ -35,10 +33,7 @@ function renderInspector(story: Story, onSaveTrigger = vi.fn().mockResolvedValue
       interaction={interaction}
       trigger={interaction.triggers[0]}
       onSaveTrigger={onSaveTrigger}
-      onCreateTriggerVariant={vi.fn()}
-      onDeleteTriggerGroup={vi.fn()}
       onDeleteTrigger={vi.fn()}
-      onDeleteTriggerVariants={vi.fn()}
     />,
   );
   return onSaveTrigger;
@@ -58,12 +53,11 @@ describe('TriggerInspector temporal conditions', () => {
       }),
     );
 
-    expect(onSaveTrigger).toHaveBeenLastCalledWith(
-      'interaction-1',
-      'trigger-1',
-      [],
-      [{ statId: 'open', operator: 'eq', value: false }],
-    );
+    expect(onSaveTrigger).toHaveBeenLastCalledWith('interaction-1', 'trigger-1', {
+      conditionGroups: [
+        { id: 'trigger-1', conditions: [{ statId: 'open', operator: 'eq', value: false }] },
+      ],
+    });
   });
 
   it('adds an item ownership condition', async () => {
@@ -80,12 +74,11 @@ describe('TriggerInspector temporal conditions', () => {
     expect(within(picker).getByText('Choose a condition type')).toBeInTheDocument();
     await userEvent.click(within(picker).getByRole('button', { name: 'Item' }));
 
-    expect(onSaveTrigger).toHaveBeenLastCalledWith(
-      'interaction-1',
-      'trigger-1',
-      [],
-      [{ itemDefinitionId: 'key', isOwned: true }],
-    );
+    expect(onSaveTrigger).toHaveBeenLastCalledWith('interaction-1', 'trigger-1', {
+      conditionGroups: [
+        { id: 'trigger-1', conditions: [{ itemDefinitionId: 'key', isOwned: true }] },
+      ],
+    });
   });
 
   it('adds a date and time condition', async () => {
@@ -98,12 +91,9 @@ describe('TriggerInspector temporal conditions', () => {
       }),
     );
 
-    expect(onSaveTrigger).toHaveBeenCalledWith(
-      'interaction-1',
-      'trigger-1',
-      [],
-      [{ temporal: { weekdays: ['monday'] } }],
-    );
+    expect(onSaveTrigger).toHaveBeenCalledWith('interaction-1', 'trigger-1', {
+      conditionGroups: [{ id: 'trigger-1', conditions: [{ temporal: { weekdays: ['monday'] } }] }],
+    });
   });
 
   it('explains why condition types are unavailable', async () => {
@@ -134,30 +124,34 @@ describe('TriggerInspector temporal conditions', () => {
     const onSaveTrigger = renderInspector(story);
 
     await userEvent.click(screen.getByLabelText('Tue'));
-    expect(onSaveTrigger).toHaveBeenLastCalledWith(
-      'interaction-1',
-      'trigger-1',
-      [],
-      expect.arrayContaining([
-        expect.objectContaining({
-          temporal: expect.objectContaining({ weekdays: ['monday', 'tuesday'] }),
-        }),
-      ]),
-    );
+    expect(onSaveTrigger).toHaveBeenLastCalledWith('interaction-1', 'trigger-1', {
+      conditionGroups: [
+        {
+          id: 'trigger-1',
+          conditions: expect.arrayContaining([
+            expect.objectContaining({
+              temporal: expect.objectContaining({ weekdays: ['monday', 'tuesday'] }),
+            }),
+          ]),
+        },
+      ],
+    });
 
     fireEvent.change(screen.getByLabelText('Allowed date 1'), {
       target: { value: '2026-08-16' },
     });
-    expect(onSaveTrigger).toHaveBeenLastCalledWith(
-      'interaction-1',
-      'trigger-1',
-      [],
-      expect.arrayContaining([
-        expect.objectContaining({
-          temporal: expect.objectContaining({ dates: ['2026-08-16'] }),
-        }),
-      ]),
-    );
+    expect(onSaveTrigger).toHaveBeenLastCalledWith('interaction-1', 'trigger-1', {
+      conditionGroups: [
+        {
+          id: 'trigger-1',
+          conditions: expect.arrayContaining([
+            expect.objectContaining({
+              temporal: expect.objectContaining({ dates: ['2026-08-16'] }),
+            }),
+          ]),
+        },
+      ],
+    });
 
     fireEvent.change(screen.getByLabelText('Date range 1 start'), {
       target: { value: '2026-09-02' },
@@ -257,13 +251,26 @@ describe('TriggerInspector temporal conditions', () => {
     });
 
     expect(onSaveTrigger).toHaveBeenCalledTimes(11);
-    expect(onSaveTrigger).toHaveBeenLastCalledWith(
-      'interaction-1',
-      'trigger-1',
-      [],
-      expect.arrayContaining([
-        expect.objectContaining({ statId: 'score', operator: 'gte', value: 7 }),
-      ]),
-    );
+    expect(onSaveTrigger).toHaveBeenLastCalledWith('interaction-1', 'trigger-1', {
+      conditionGroups: [
+        {
+          id: 'trigger-1',
+          conditions: expect.arrayContaining([
+            expect.objectContaining({ statId: 'score', operator: 'gte', value: 7 }),
+          ]),
+        },
+      ],
+    });
+  });
+
+  it('saves the Trigger appearance probability', () => {
+    const onSaveTrigger = renderInspector(storyWithConditions([]));
+
+    fireEvent.change(screen.getByLabelText('Appearance probability'), { target: { value: '35' } });
+    fireEvent.blur(screen.getByLabelText('Appearance probability'));
+
+    expect(onSaveTrigger).toHaveBeenLastCalledWith('interaction-1', 'trigger-1', {
+      appearanceProbability: 35,
+    });
   });
 });

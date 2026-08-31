@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { getTriggerConditions } from '../../triggers/index.js';
 import { importChoiceScript } from './importer.js';
 
 function importFiles(files: Array<{ name: string; content: string }>) {
@@ -114,7 +115,7 @@ Choose with ${'${courage}'} courage.
     const assignment = result.story!.stats![0];
     const [opening, choice] = result.story!.interactions;
     expect(opening.body).toContain(`data-stat-value="${assignment.id}"`);
-    expect(choice.triggers[0].conditions).toEqual([
+    expect(getTriggerConditions(choice.triggers[0])).toEqual([
       { statId: assignment.id, operator: 'gt', value: 40 },
     ]);
     expect(choice.statEffects).toEqual([{ statId: assignment.id, operation: 'add', value: 10 }]);

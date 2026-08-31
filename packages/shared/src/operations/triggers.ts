@@ -1,4 +1,9 @@
 import type { Story, TriggerPatch } from '../model/index.js';
+import {
+  getTriggerAppearanceProbability,
+  getTriggerConditionGroups,
+  toCanonicalTrigger,
+} from '../triggers/model.js';
 
 export function normalizeTriggerInputIds(inputInteractionIds: string[]): string[] {
   return [...new Set(inputInteractionIds)];
@@ -18,16 +23,37 @@ export function updateTriggerInStory(
             ...item,
             triggers: item.triggers.map((trigger) =>
               trigger.id === triggerId
-                ? {
-                    ...trigger,
-                    ...(patch.inputInteractionIds === undefined
-                      ? {}
-                      : {
-                          inputInteractionIds: normalizeTriggerInputIds(patch.inputInteractionIds),
-                        }),
-                    ...(patch.conditions === undefined ? {} : { conditions: patch.conditions }),
-                    ...(patch.position === undefined ? {} : { position: patch.position }),
-                  }
+                ? (() => {
+                    const canonicalTrigger = toCanonicalTrigger(trigger);
+                    return {
+                      ...canonicalTrigger,
+                      conditionGroups: getTriggerConditionGroups(trigger),
+                      appearanceProbability: getTriggerAppearanceProbability(trigger),
+                      ...(patch.inputInteractionIds === undefined
+                        ? {}
+                        : {
+                            inputInteractionIds: normalizeTriggerInputIds(
+                              patch.inputInteractionIds,
+                            ),
+                          }),
+                      ...(patch.conditionGroups === undefined
+                        ? patch.conditions === undefined
+                          ? {}
+                          : {
+                              conditionGroups: [
+                                {
+                                  id: trigger.conditionGroups?.[0]?.id ?? trigger.id,
+                                  conditions: patch.conditions,
+                                },
+                              ],
+                            }
+                        : { conditionGroups: patch.conditionGroups }),
+                      ...(patch.appearanceProbability === undefined
+                        ? {}
+                        : { appearanceProbability: patch.appearanceProbability }),
+                      ...(patch.position === undefined ? {} : { position: patch.position }),
+                    };
+                  })()
                 : trigger,
             ),
           }
@@ -50,7 +76,9 @@ export function deleteTriggerInStory(
             triggers:
               item.triggers.length <= 1
                 ? item.triggers.map((trigger) =>
-                    trigger.id === triggerId ? { ...trigger, inputInteractionIds: [] } : trigger,
+                    trigger.id === triggerId
+                      ? { ...toCanonicalTrigger(trigger), inputInteractionIds: [] }
+                      : trigger,
                   )
                 : item.triggers.filter((trigger) => trigger.id !== triggerId),
           }

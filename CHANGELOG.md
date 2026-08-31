@@ -2,6 +2,12 @@
 
 ## 2026-08-31
 
+- Replaced graph-only OR Trigger variants with condition groups owned by one
+  Trigger: groups are OR and their conditions are AND. Each Trigger now has a
+  0–100 appearance probability (100 by default), evaluated by one deterministic
+  seeded roll per narrative step. Reader and Simulation saves preserve the seed;
+  Simulation explains failed rolls and can force the path. PostgreSQL migrates
+  legacy Triggers with identical inputs/output into stable JSONB groups.
 - Added visible persistence state for authored changes made from Simulation Mode.
   Safe updates can be retried after failure, uncertain create operations recover
   through a canonical Story reload to avoid duplicates, and pending or failed

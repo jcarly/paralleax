@@ -147,7 +147,10 @@ export class StoryReaderProgressService {
     name?: string,
     createdAt?: string,
   ): Promise<ReaderProgress | ReaderSave> {
-    const state = this.buildState(story, input);
+    const existingSeed = input.randomSeed
+      ? undefined
+      : (await this.repository.findProgress(story.id, userId, slotId))?.state.randomSeed;
+    const state = this.buildState(story, input, input.randomSeed ?? existingSeed ?? randomUUID());
     const updatedAt = new Date().toISOString();
     if (
       !(await this.repository.saveProgress(
@@ -174,7 +177,7 @@ export class StoryReaderProgressService {
       : { state, updatedAt };
   }
 
-  private buildState(story: Story, input: SaveReaderProgressDto) {
+  private buildState(story: Story, input: SaveReaderProgressDto, randomSeed: string) {
     const interactionIds = new Set(story.interactions.map(({ id }) => id));
     if (input.journeyInteractionIds.some((id) => !interactionIds.has(id))) {
       throw new BadRequestException('Reader journey interactions must belong to the same story');
@@ -183,7 +186,12 @@ export class StoryReaderProgressService {
     if ((input.ownedItemIds ?? []).some((id) => !itemIds.has(id))) {
       throw new BadRequestException('Reader items must belong to the same story');
     }
-    return buildReaderProgressState(story, input.journeyInteractionIds, input.ownedItemIds);
+    return buildReaderProgressState(
+      story,
+      input.journeyInteractionIds,
+      input.ownedItemIds,
+      randomSeed,
+    );
   }
 
   private name(value: string): string {

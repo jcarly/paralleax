@@ -1,6 +1,8 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import {
   getStoryItemEntries,
+  getTriggerAppearanceProbability,
+  getTriggerConditionGroups,
   getStatValueType,
   isStatValueOfType,
   type StatAssignment,
@@ -297,9 +299,14 @@ function removeStatAssignments(story: Story, assignmentIds: ReadonlySet<string>)
       ({ statId }) => !assignmentIds.has(statId),
     );
     for (const trigger of interaction.triggers) {
-      trigger.conditions = trigger.conditions.filter(
-        (condition) => !('statId' in condition) || !assignmentIds.has(condition.statId),
-      );
+      trigger.conditionGroups = getTriggerConditionGroups(trigger).map((group) => ({
+        ...group,
+        conditions: group.conditions.filter(
+          (condition) => !('statId' in condition) || !assignmentIds.has(condition.statId),
+        ),
+      }));
+      trigger.appearanceProbability = getTriggerAppearanceProbability(trigger);
+      delete trigger.conditions;
     }
   }
 }

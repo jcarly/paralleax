@@ -55,12 +55,17 @@ Main MVP fields:
 
 - `id`
 - `inputInteractionIds`
-- `conditions`
+- `conditionGroups`
+- `appearanceProbability` (0–100, default 100)
 - optional `position` for the linked editor marker
 
 `inputInteractionIds` can contain several interactions. An interaction is therefore not limited to a single input.
 
-A trigger has exactly one output interaction: the interaction that owns the trigger. Its inputs are alternative sources. In other words, several input interactions on the same trigger represent an OR: any one of them can make the output interaction reachable, as long as the trigger conditions also match.
+A trigger has exactly one output interaction: the interaction that owns the trigger.
+Its inputs are alternative sources. Several input interactions on the same trigger
+represent an OR. Conditions inside one group are AND, while the groups owned by
+the trigger are OR. Once an input and one complete group match, one deterministic
+appearance roll is made for the trigger.
 
 The optional position is authoring projection metadata. It changes only where a
 linked trigger marker appears on the canvas and never affects reachability or
@@ -509,8 +514,6 @@ Later, an interaction may additionally contain:
 Later, a trigger may additionally take into account:
 
 - equipment tags and relationships;
-- appearance probability;
-- automatic trigger probability;
 - availability timing.
 
 An inputless trigger in the target model does not necessarily mean "available

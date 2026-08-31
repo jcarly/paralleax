@@ -8,7 +8,6 @@ import {
   buildTriggerEdges,
   buildTriggerNodes,
   getInteractionDragTriggerPositionUpdates,
-  getRelatedTriggerVariantIds,
   getRoutingHandleIds,
   getTriggerNodeId,
 } from './storyGraph';
@@ -383,13 +382,10 @@ describe('story graph mapping', () => {
         positionedStory,
         'interaction-1',
         finalInteractionPosition,
-      ),
+      ).map(({ interactionId, triggerIds }) => ({ interactionId, triggerIds })),
     ).toEqual([
-      {
-        interactionId: 'interaction-2',
-        triggerIds: ['trigger-linked', 'trigger-linked-variant'],
-        position: savedAfter.position,
-      },
+      { interactionId: 'interaction-2', triggerIds: ['trigger-linked'] },
+      { interactionId: 'interaction-2', triggerIds: ['trigger-linked-variant'] },
     ]);
   });
 
@@ -491,7 +487,7 @@ describe('story graph mapping', () => {
     });
   });
 
-  it('groups several triggers with the same inputs behind one trigger marker', () => {
+  it('keeps several Triggers with the same inputs on separate markers', () => {
     const groupedStory = structuredClone(story);
     groupedStory.interactions[1].triggers.push({
       id: 'trigger-alternative',
@@ -499,19 +495,24 @@ describe('story graph mapping', () => {
       conditions: [{ interactionId: 'interaction-3', hasBeenVisited: false }],
     });
 
-    expect(buildTriggerNodes(groupedStory)).toHaveLength(1);
+    expect(buildTriggerNodes(groupedStory)).toHaveLength(2);
     expect(buildTriggerNodes(groupedStory)[0].data).toMatchObject({
       interactionId: 'interaction-2',
       triggerId: 'trigger-linked',
-      triggerIds: ['trigger-linked', 'trigger-alternative'],
-      conditionCount: 2,
+      triggerIds: ['trigger-linked'],
+      conditionCount: 1,
       inputCount: 2,
-      orGroupCount: 2,
+      orGroupCount: 1,
     });
-    expect(buildTriggerEdges(groupedStory)).toHaveLength(3);
+    expect(buildTriggerNodes(groupedStory)[1].data).toMatchObject({
+      triggerId: 'trigger-alternative',
+      triggerIds: ['trigger-alternative'],
+      conditionCount: 1,
+    });
+    expect(buildTriggerEdges(groupedStory)).toHaveLength(6);
   });
 
-  it('points a grouped trigger badge at a variant that has an open comment', () => {
+  it('points each Trigger badge at its own open comments', () => {
     const groupedStory = structuredClone(story);
     groupedStory.interactions[1].triggers.push({
       id: 'trigger-alternative',
@@ -519,11 +520,15 @@ describe('story graph mapping', () => {
       conditions: [],
     });
 
-    expect(
-      buildTriggerNodes(groupedStory, undefined, {
-        commentCounts: new Map([['trigger-alternative', 2]]),
-      })[0].data,
-    ).toMatchObject({ commentCount: 2, commentTargetId: 'trigger-alternative' });
+    const nodes = buildTriggerNodes(groupedStory, undefined, {
+      commentCounts: new Map([['trigger-alternative', 2]]),
+    });
+    expect(nodes.find((node) => node.data.triggerId === 'trigger-alternative')?.data).toMatchObject(
+      {
+        commentCount: 2,
+        commentTargetId: 'trigger-alternative',
+      },
+    );
   });
 
   it('keeps triggers with different input sets in separate visual groups', () => {
@@ -546,43 +551,6 @@ describe('story graph mapping', () => {
       ['trigger-two-inputs'],
     ]);
     expect(buildTriggerEdges(splitStory)).toHaveLength(5);
-  });
-
-  it('finds OR trigger variants by matching the same input set regardless of order', () => {
-    const interaction = structuredClone(story.interactions[1]);
-    interaction.triggers = [
-      {
-        id: 'trigger-a',
-        inputInteractionIds: ['interaction-1', 'interaction-3'],
-        conditions: [],
-      },
-      {
-        id: 'trigger-b',
-        inputInteractionIds: ['interaction-3', 'interaction-1'],
-        conditions: [],
-      },
-      {
-        id: 'trigger-c',
-        inputInteractionIds: ['interaction-1'],
-        conditions: [],
-      },
-      {
-        id: 'trigger-root',
-        inputInteractionIds: [],
-        conditions: [],
-      },
-    ];
-
-    expect(getRelatedTriggerVariantIds(interaction, interaction.triggers[0])).toEqual([
-      'trigger-a',
-      'trigger-b',
-    ]);
-    expect(getRelatedTriggerVariantIds(interaction, interaction.triggers[2])).toEqual([
-      'trigger-c',
-    ]);
-    expect(getRelatedTriggerVariantIds(interaction, interaction.triggers[3])).toEqual([
-      'trigger-root',
-    ]);
   });
 
   it('returns empty graph parts without a story', () => {

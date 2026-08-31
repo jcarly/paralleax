@@ -40,5 +40,12 @@ export type TriggerCondition =
 
 export interface TriggerConditionFailure {
   triggerId: string;
+  conditionGroupId: string;
   condition: TriggerCondition;
+}
+
+export interface TriggerProbabilityFailure {
+  triggerId: string;
+  appearanceProbability: number;
+  roll: number;
 }

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Story } from '../model/index.js';
 import { buildReaderProgressState, getJourneyOwnedItemDefinitionIds } from '../reader/index.js';
-import { getAvailableInteractions } from '../triggers/index.js';
+import { getAvailableInteractions, getTriggerConditions } from '../triggers/index.js';
 import { createDemoStories } from './story.js';
 
 const timestamp = '2026-07-14T08:00:00.000Z';
@@ -61,7 +61,7 @@ describe('demo stories', () => {
     expect(story.itemDefinitions).toEqual([]);
     expect(
       story.interactions.every((interaction) =>
-        interaction.triggers.every((trigger) => trigger.conditions.length === 0),
+        interaction.triggers.every((trigger) => getTriggerConditions(trigger).length === 0),
       ),
     ).toBe(true);
     expect(
