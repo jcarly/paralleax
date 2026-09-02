@@ -9,8 +9,9 @@ import {
 } from '@paralleax/shared';
 
 const EMPTY_READER_SESSION: ReaderProgressState = {
-  version: 3,
+  version: 4,
   randomSeed: '',
+  stepStartedAt: [],
   journeyInteractionIds: [],
   currentInteractionId: null,
   visitedInteractionIds: [],
@@ -38,13 +39,23 @@ export function useReaderSessionState() {
       journeyInteractionIds: string[],
       ownedItemIds: string[] = [],
       randomSeed?: string,
+      stepStartedAt?: string[],
     ) => {
       randomSeedRef.current = randomSeed || randomSeedRef.current;
+      const now = new Date().toISOString();
+      const normalizedStepStartedAt = Array.from(
+        { length: journeyInteractionIds.length + 1 },
+        (_, index) => {
+          const value = stepStartedAt?.[index];
+          return value && !Number.isNaN(Date.parse(value)) ? value : now;
+        },
+      );
       const nextSession = buildReaderProgressState(
         story,
         journeyInteractionIds,
         ownedItemIds,
         randomSeedRef.current,
+        normalizedStepStartedAt,
       );
       setSession(nextSession);
       return nextSession;
@@ -63,8 +74,9 @@ export function useReaderSessionState() {
       );
       const nextSession: ReaderProgressState = {
         ...session,
-        version: 3,
+        version: 4,
         randomSeed: session.randomSeed || randomSeedRef.current,
+        stepStartedAt: [...(session.stepStartedAt ?? []), new Date().toISOString()],
         journeyInteractionIds,
         currentInteractionId: interaction.id,
         visitedInteractionIds: session.visitedInteractionIds.includes(interaction.id)

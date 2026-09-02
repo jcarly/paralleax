@@ -6,6 +6,7 @@ import {
   getStoryItemEntries,
   getTriggerAppearanceProbability,
   getTriggerConditionGroups,
+  getTriggerTimerSeconds,
   isStatValueOfType,
   storyHistoryOperations,
   type CharacterItemMutationResult,
@@ -455,6 +456,7 @@ export class StoryContextService {
               ),
             }));
             trigger.appearanceProbability = getTriggerAppearanceProbability(trigger);
+            trigger.timerSeconds = getTriggerTimerSeconds(trigger);
             delete trigger.conditions;
           }
         }

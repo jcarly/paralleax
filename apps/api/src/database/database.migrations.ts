@@ -1510,4 +1510,13 @@ export const databaseMigrations: DatabaseMigration[] = [
         AND mapping.source_id <> mapping.retained_id;
     `,
   },
+  {
+    id: '202609010037_trigger_timers',
+    sql: `
+      ALTER TABLE triggers
+      ADD COLUMN timer_seconds integer,
+      ADD CONSTRAINT triggers_timer_seconds_non_negative
+        CHECK (timer_seconds IS NULL OR timer_seconds >= 0);
+    `,
+  },
 ];

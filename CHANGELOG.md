@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-09-01
+
+- Added nullable non-negative Trigger availability timers. Timed reader options
+  show a draining bar and disappear on expiry; Simulation keeps expired options
+  disabled with diagnostics and its existing force control. Version 4 reader and
+  Simulation saves persist wall-clock choice-step starts across reload, background
+  time, named saves, and backward Simulation navigation. PostgreSQL stores the
+  authored seconds through a forward-only migration; zero seconds is valid and
+  expires immediately.
+
 ## 2026-08-31
 
 - Lazy-loaded the standalone prototype route so its React Flow runtime and styles

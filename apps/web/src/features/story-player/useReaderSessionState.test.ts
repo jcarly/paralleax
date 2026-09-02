@@ -19,6 +19,7 @@ describe('useReaderSessionState', () => {
     expect(result.current.session.currentInteractionId).toBe('next');
     expect(result.current.session.visitedInteractionIds).toEqual(['start', 'next']);
     expect(result.current.session.currentLocationId).toBe('bridge');
+    expect(result.current.session.stepStartedAt).toHaveLength(4);
   });
 
   it('advances incrementally to the same deterministic state as a full replay', () => {
@@ -29,7 +30,13 @@ describe('useReaderSessionState', () => {
     act(() => result.current.advance(story, story.interactions[1]));
 
     expect(result.current.session).toEqual(
-      buildReaderProgressState(story, ['start', 'next'], [], 'saved-seed'),
+      buildReaderProgressState(
+        story,
+        ['start', 'next'],
+        [],
+        'saved-seed',
+        result.current.session.stepStartedAt,
+      ),
     );
   });
 });

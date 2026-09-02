@@ -34,6 +34,7 @@ describe('useReaderProgressPersistence', () => {
       {
         journeyInteractionIds: ['start'],
         ownedItemIds: ['key-1'],
+        stepStartedAt: ['2026-08-26T07:59:00.000Z', '2026-08-26T08:00:00.000Z'],
       },
       'reader',
     );
@@ -87,11 +88,27 @@ describe('useReaderProgressPersistence', () => {
       'simulation',
     );
   });
+
+  it('can select the resolved autosave mode while a Story is loading', async () => {
+    const { result } = renderHook(() =>
+      useReaderProgressPersistence({ authenticated: true, storyId: 'story-1' }),
+    );
+
+    act(() => result.current.save(sessionFixture(), 'simulation'));
+
+    await waitFor(() => expect(result.current.status).toBe('saved'));
+    expect(api.saveReaderProgress).toHaveBeenCalledWith(
+      'story-1',
+      expect.objectContaining({ journeyInteractionIds: ['start'] }),
+      'simulation',
+    );
+  });
 });
 
 function sessionFixture(): ReaderProgressState {
   return {
-    version: 2,
+    version: 4,
+    stepStartedAt: ['2026-08-26T07:59:00.000Z', '2026-08-26T08:00:00.000Z'],
     journeyInteractionIds: ['start'],
     currentInteractionId: 'start',
     visitedInteractionIds: ['start'],

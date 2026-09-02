@@ -85,7 +85,7 @@ test.describe('Story editor graph', () => {
     const pane = page.locator('.react-flow__pane');
     const paneBox = await pane.boundingBox();
     expect(paneBox).not.toBeNull();
-    await page.mouse.click(paneBox!.x + paneBox!.width - 16, paneBox!.y + paneBox!.height - 16);
+    await page.mouse.click(paneBox!.x + paneBox!.width / 2, paneBox!.y + 48);
     await expect(page.getByRole('heading', { name: 'Selected elements' })).toHaveCount(0);
   });
 

@@ -57,6 +57,7 @@ Main MVP fields:
 - `inputInteractionIds`
 - `conditionGroups`
 - `appearanceProbability` (0–100, default 100)
+- `timerSeconds` (nullable non-negative integer, default `null`)
 - optional `position` for the linked editor marker
 
 `inputInteractionIds` can contain several interactions. An interaction is therefore not limited to a single input.
@@ -66,6 +67,9 @@ Its inputs are alternative sources. Several input interactions on the same trigg
 represent an OR. Conditions inside one group are AND, while the groups owned by
 the trigger are OR. Once an input and one complete group match, one deterministic
 appearance roll is made for the trigger.
+
+After those gates succeed, a non-null timer limits availability to the configured
+number of wall-clock seconds in the current choice step. Zero expires immediately.
 
 The optional position is authoring projection metadata. It changes only where a
 linked trigger marker appears on the canvas and never affects reachability or
@@ -188,7 +192,9 @@ modes. A versioned JSON state stores the ordered journey, current interaction,
 unique visits, story-local date/time, current location, typed stat values, and
 owned item instances, including per-instance item stat values. Replayable values
 are derived from the ordered journey by the API. Version 2 stores typed stat
-snapshots while version 1 remains readable for existing saves.
+snapshots, version 3 adds the deterministic probability seed, and version 4 adds
+one wall-clock choice-step start before the journey plus one after every selected
+interaction. Versions 1–3 remain readable for existing saves.
 
 ## Target Model
 

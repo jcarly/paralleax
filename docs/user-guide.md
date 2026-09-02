@@ -329,6 +329,8 @@ A trigger defines when an interaction becomes available.
   must match (AND).
 - Appearance probability is evaluated once for the Trigger after its inputs and
   one condition group match; it is 100% by default.
+- Availability timer is optional. When configured, it limits the otherwise
+  eligible option for that many real seconds; zero keeps it hidden.
 
 To edit a linked trigger, select the trigger marker on the edge between two
 interactions.
@@ -357,6 +359,11 @@ top-right corner deletes only that group immediately and keeps the inspector ope
 Set **Appearance probability** between 0 and 100. The reader makes one seeded,
 reproducible roll for that Trigger at each narrative step. Separate Triggers have
 separate rolls even when they lead to the same interaction.
+
+Set **Availability timer** to a whole number of seconds, or leave it empty for no
+timer. A timed option shows a draining bar. At zero or after expiration, normal
+reading removes the option. Simulation keeps it visible but disabled with an
+expiration explanation; **Force unavailable options** can still inspect it.
 
 Conditions can check reading history, current location, characters present in
 the current interaction, compare any assigned variable, or filter the
@@ -507,6 +514,7 @@ the current location, story time, and present
 characters. When the story has a playable character, the left character sheet
 shows that character's stats and inventory; the right panel shows the
 other characters present in the current interaction.
+Timed options show a bar that drains for their remaining availability window.
 
 The reader presents the options currently available to the player. Simulation
 Mode additionally keeps unavailable options visible with reduced opacity and
@@ -514,6 +522,8 @@ their condition diagnostics. Enable **Force unavailable options** in the author
 tools to test a condition- or probability-blocked path deliberately; disabling
 the control restores normal enforcement. A failed probability diagnostic shows
 the configured percentage and deterministic roll.
+Timer expiration is reported separately in Simulation instead of removing the
+option.
 
 Authenticated reading automatically updates a reader autosave after every
 selected interaction. Simulation Mode has a separate autosave, so normal author
@@ -523,6 +533,9 @@ interaction, story time, location, stats, and owned item instances. The status
 beside the controls reports saving, success, or failure.
 The save also preserves the probability seed, so loading or stepping backward
 reproduces the same rolls. Restart creates a new seed for the new run.
+It also preserves choice-step start times. Timers therefore keep elapsing while
+the page is closed or in the background; Simulation `Back` restores the original
+deadline instead of restarting it.
 
 Use `Saves` to create up to 20 named manual saves, load either autosave or a
 manual save, overwrite a manual save with the current state, or delete it. The

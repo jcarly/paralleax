@@ -49,5 +49,6 @@ export function buildDemoTrigger(
     inputInteractionIds,
     conditionGroups: [{ id: `${id}:conditions`, conditions }],
     appearanceProbability: 100,
+    timerSeconds: null,
   };
 }

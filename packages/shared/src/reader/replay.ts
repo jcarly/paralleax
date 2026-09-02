@@ -291,13 +291,25 @@ export function buildReaderProgressState(
   journeyInteractionIds: string[],
   _ownedItemIds: string[] = [],
   randomSeed = `legacy-reader:${story.id}`,
+  stepStartedAt?: string[],
 ): ReaderProgressState {
   const interactionIds = new Set(story.interactions.map(({ id }) => id));
-  const journey = journeyInteractionIds.filter((id) => interactionIds.has(id));
+  const journeyEntries = journeyInteractionIds
+    .map((id, index) => ({ id, index }))
+    .filter(({ id }) => interactionIds.has(id));
+  const journey = journeyEntries.map(({ id }) => id);
   const items = getJourneyOwnedItemIds(story, journey);
   return {
-    version: 3,
+    version: 4,
     randomSeed,
+    ...(stepStartedAt
+      ? {
+          stepStartedAt: [
+            stepStartedAt[0],
+            ...journeyEntries.map(({ index }) => stepStartedAt[index + 1]),
+          ].filter((value): value is string => typeof value === 'string'),
+        }
+      : {}),
     journeyInteractionIds: journey,
     currentInteractionId: journey.at(-1) ?? null,
     visitedInteractionIds: [...new Set(journey)],

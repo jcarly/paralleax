@@ -1,6 +1,7 @@
 import {
   getTriggerAppearanceProbability,
   getTriggerConditionGroups,
+  getTriggerTimerSeconds,
   type Interaction,
   type Story,
   type TriggerCondition,
@@ -68,6 +69,31 @@ export function TriggerInspector({
           <span aria-hidden="true">%</span>
         </div>
         <small>{t('triggerInspector.appearanceProbabilityHelp')}</small>
+      </label>
+      <label className="field">
+        <span>{t('triggerInspector.timer')}</span>
+        <div className="trigger-probability-field">
+          <input
+            aria-label={t('triggerInspector.timer')}
+            defaultValue={getTriggerTimerSeconds(trigger) ?? ''}
+            key={`${trigger.id}:timer:${getTriggerTimerSeconds(trigger) ?? 'none'}`}
+            min={0}
+            placeholder="—"
+            step={1}
+            type="number"
+            onBlur={(event) => {
+              const rawValue = event.currentTarget.value.trim();
+              const value = rawValue
+                ? Math.round(Math.min(2_147_483_647, Math.max(0, Number(rawValue))))
+                : null;
+              event.currentTarget.value = value === null ? '' : String(value);
+              if (value === getTriggerTimerSeconds(trigger)) return;
+              void onSaveTrigger(interaction.id, trigger.id, { timerSeconds: value });
+            }}
+          />
+          <span aria-hidden="true">s</span>
+        </div>
+        <small>{t('triggerInspector.timerHelp')}</small>
       </label>
       <p className="hint">{t('triggerInspector.variantsHelp')}</p>
       {groups.map((group, groupIndex) => (

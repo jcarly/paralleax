@@ -22,7 +22,9 @@ Paralleax currently includes:
 - Triggers with multiple input interactions, OR condition groups containing AND
   typed conditions, one 0–100 appearance probability, and optional saved positions
   for linked graph markers. Probability uses one deterministic roll per Trigger
-  and narrative step.
+  and narrative step. A nullable non-negative timer limits how long an otherwise
+  eligible Trigger exposes its option; active timers render as draining bars,
+  while zero-second timers never appear in normal reading.
 - Persisted visual graph decorations: movable, resizable colored frames and movable
   text with configurable color, size, family, weight, and style. Decorations stay
   behind interactions and trigger markers and have no reader semantics.
@@ -32,6 +34,8 @@ Paralleax currently includes:
   either authorized mode without merging their source slots.
   Saves preserve the random seed used by Trigger probability, so reload and
   backward replay reproduce the same result while restart creates a new run seed.
+  Version 4 progress also preserves wall-clock choice-step starts, so timed options
+  continue across reload and Simulation backward navigation.
 - Story-local deterministic calendar time.
 - Locations.
 - Characters.
@@ -115,7 +119,6 @@ The following remain future or incomplete unless a task explicitly implements th
 
 - calculated stats/variables, formulas, and dependency graphs;
 - automatic choices and probabilistic automatic execution;
-- real-time choice timers;
 - explicit final/completed story semantics;
 - anonymous or offline saves;
 - managed media upload/storage;

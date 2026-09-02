@@ -25,6 +25,7 @@ import {
   IsObject,
   IsIn,
   IsInt,
+  IsISO8601,
   IsString,
   Matches,
   Min,
@@ -131,6 +132,11 @@ export class SaveReaderProgressDto {
   @IsNotEmpty()
   @MaxLength(200)
   randomSeed?: string;
+  @ValidateIf((_, value) => value !== undefined)
+  @IsArray()
+  @ArrayMaxSize(10_001)
+  @IsISO8601({}, { each: true })
+  stepStartedAt?: string[];
 }
 export class CreateReaderSaveDto extends SaveReaderProgressDto {
   @IsString() @IsNotEmpty() @MaxLength(MAX_READER_SAVE_NAME_LENGTH) name!: string;
@@ -698,6 +704,11 @@ export class CreateTriggerDto {
   @Min(0)
   @Max(100)
   appearanceProbability?: number;
+  @ValidateIf((_, value) => value !== undefined && value !== null)
+  @IsInt()
+  @Min(0)
+  @Max(2_147_483_647)
+  timerSeconds?: number | null;
   @ValidateIf((_, value) => value !== undefined)
   @IsObject()
   @ValidateNested()
@@ -728,6 +739,11 @@ export class UpdateTriggerDto {
   @Min(0)
   @Max(100)
   appearanceProbability?: number;
+  @ValidateIf((_, value) => value !== undefined && value !== null)
+  @IsInt()
+  @Min(0)
+  @Max(2_147_483_647)
+  timerSeconds?: number | null;
   @ValidateIf((_, value) => value !== undefined)
   @IsObject()
   @ValidateNested()

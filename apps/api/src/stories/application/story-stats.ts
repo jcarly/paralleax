@@ -3,6 +3,7 @@ import {
   getStoryItemEntries,
   getTriggerAppearanceProbability,
   getTriggerConditionGroups,
+  getTriggerTimerSeconds,
   getStatValueType,
   isStatValueOfType,
   type StatAssignment,
@@ -306,6 +307,7 @@ function removeStatAssignments(story: Story, assignmentIds: ReadonlySet<string>)
         ),
       }));
       trigger.appearanceProbability = getTriggerAppearanceProbability(trigger);
+      trigger.timerSeconds = getTriggerTimerSeconds(trigger);
       delete trigger.conditions;
     }
   }

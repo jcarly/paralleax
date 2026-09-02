@@ -1,10 +1,11 @@
 import type { TFunction } from 'i18next';
-import type { Interaction, StatValue, Story, TriggerProbabilityContext } from '@paralleax/shared';
+import type { Interaction, StatValue, Story, TriggerEvaluationContext } from '@paralleax/shared';
 import {
   getTriggerConditionFailures,
   getTriggerConditionGroups,
   getTriggerConditions,
   getTriggerProbabilityFailures,
+  getTriggerTimerFailures,
 } from '@paralleax/shared';
 import { describeTriggerCondition } from '../../triggerConditionPresentation';
 import { getStatTargets, statTargetLabel } from '../../storyStats';
@@ -54,7 +55,7 @@ export function getUnavailableReason(
   ownedItemDefinitionIds: readonly string[],
   itemStatValues: Readonly<Record<string, Readonly<Record<string, StatValue>>>>,
   t: TFunction,
-  probabilityContext?: TriggerProbabilityContext,
+  evaluationContext?: TriggerEvaluationContext,
 ) {
   const failures = getTriggerConditionFailures(
     interaction,
@@ -67,12 +68,12 @@ export function getUnavailableReason(
     ownedItemDefinitionIds,
     itemStatValues,
   );
-  if (failures.length === 0 && probabilityContext) {
+  if (failures.length === 0 && evaluationContext) {
     const probabilityFailures = getTriggerProbabilityFailures(
       interaction,
       currentId,
       visited,
-      probabilityContext,
+      evaluationContext,
       currentLocationId,
       currentCharacterIds,
       statValues,
@@ -84,6 +85,23 @@ export function getUnavailableReason(
       return t('player.requirement.probabilityFailed', {
         probability: probabilityFailures[0].appearanceProbability,
         roll: probabilityFailures[0].roll.toFixed(2),
+      });
+    }
+    const timerFailures = getTriggerTimerFailures(
+      interaction,
+      currentId,
+      visited,
+      evaluationContext,
+      currentLocationId,
+      currentCharacterIds,
+      statValues,
+      currentDateTime,
+      ownedItemDefinitionIds,
+      itemStatValues,
+    );
+    if (timerFailures.length > 0) {
+      return t('player.requirement.timerExpired', {
+        count: timerFailures[0].timerSeconds,
       });
     }
   }

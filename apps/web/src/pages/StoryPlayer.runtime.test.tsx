@@ -103,6 +103,37 @@ describe('StoryPlayer runtime state', () => {
     expect(await screen.findByDisplayValue('Rare path')).toBeInTheDocument();
   });
 
+  it('shows a draining bar above an available timed option', async () => {
+    const user = userEvent.setup();
+    const timedStory = structuredClone(story);
+    timedStory.interactions[1].triggers[0].timerSeconds = 10;
+
+    await renderPlayer('/stories/story-1/play', timedStory);
+    await user.click(screen.getByRole('button', { name: 'Start' }));
+
+    expect(screen.getByRole('button', { name: 'Next' })).toBeInTheDocument();
+    const timer = screen.getByRole('progressbar', {
+      name: 'Time remaining for this option',
+    });
+    expect(timer).toHaveAttribute('aria-valuemax', '10');
+    expect(timer).toHaveAttribute('aria-valuenow', '10');
+  });
+
+  it('keeps an expired option visible but disabled in simulation', async () => {
+    const user = userEvent.setup();
+    const timedStory = structuredClone(story);
+    timedStory.interactions[1].triggers[0].timerSeconds = 0;
+
+    await renderPlayer('/stories/story-1/play?mode=simulation', timedStory);
+    await user.click(screen.getByRole('button', { name: 'Start' }));
+
+    expect(screen.getByRole('button', { name: /Next/ })).toBeDisabled();
+    expect(screen.getByText('The Trigger timer expired after 0 seconds.')).toBeInTheDocument();
+    expect(
+      screen.getByRole('progressbar', { name: 'Time remaining for this option' }),
+    ).toHaveAttribute('aria-valuenow', '0');
+  });
+
   it('autosaves an interaction used as the explicit simulation start', async () => {
     await renderPlayer('/stories/story-1/play?mode=simulation&startInteractionId=next');
 
@@ -113,6 +144,39 @@ describe('StoryPlayer runtime state', () => {
         'simulation',
       ),
     );
+  });
+
+  it('restores an expired timer after stepping backward in simulation', async () => {
+    const user = userEvent.setup();
+    const timedStory = structuredClone(story);
+    timedStory.interactions.push({
+      id: 'timed-path',
+      title: 'Timed path',
+      body: 'Too late.',
+      position: { x: 300, y: 0 },
+      triggers: [
+        {
+          id: 'timed-path-trigger',
+          inputInteractionIds: ['start'],
+          conditionGroups: [{ id: 'timed-path-group', conditions: [] }],
+          appearanceProbability: 100,
+          timerSeconds: 1,
+        },
+      ],
+    });
+
+    await renderPlayer('/stories/story-1/play?mode=simulation', timedStory);
+    await user.click(screen.getByRole('button', { name: 'Start' }));
+    expect(screen.getByRole('button', { name: 'Timed path' })).toBeEnabled();
+    await waitFor(() => expect(screen.getByRole('button', { name: /Timed path/ })).toBeDisabled(), {
+      timeout: 2_000,
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Next' }));
+    await user.click(screen.getByRole('button', { name: 'Back' }));
+
+    expect(screen.getByRole('button', { name: /Timed path/ })).toBeDisabled();
+    expect(screen.getByText('The Trigger timer expired after 1 second.')).toBeInTheDocument();
   });
 
   it('loads a reader save into simulation and continues in the simulation autosave', async () => {

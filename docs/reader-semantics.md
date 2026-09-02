@@ -21,10 +21,11 @@ getAvailableInteractions(
   itemStatValues?: Readonly<
     Record<string, Readonly<Record<string, number | boolean | string>>>
   >,
-  probabilityContext?: {
+  evaluationContext?: {
     randomSeed: string;
     step: number;
     forcedTriggerIds?: readonly string[];
+    elapsedTimeMs?: number;
   },
 ): Interaction[];
 ```
@@ -40,9 +41,10 @@ story's authored `startDateTime` is used.
 `ownedItemDefinitionIds` contains the definitions represented in the current
 reader inventory. `itemStatValues` is keyed first by exact item instance and then by its
 item-definition assignment id.
-`probabilityContext` identifies the saved run and current narrative step. It
+`evaluationContext` identifies the saved run and current narrative step. It
 keeps the Trigger roll stable across rendering, reload, backward replay, and
-Simulation diagnostics.
+Simulation diagnostics. Its explicit elapsed wall-clock time applies Trigger
+timers without coupling the shared engine to browser APIs.
 
 ## Trigger Eligibility
 
@@ -51,6 +53,7 @@ A trigger is eligible when:
 1. its input rule matches;
 2. every condition in at least one of its condition groups matches;
 3. its one deterministic appearance roll succeeds.
+4. its optional availability timer has not expired.
 
 For input rules:
 
@@ -87,6 +90,15 @@ performed only after the input rule and one condition group match. If several
 Triggers target the same interaction, they roll independently and any successful
 Trigger makes the interaction available. Simulation Mode reports probability
 failure and may explicitly force an unavailable path; normal reading cannot.
+
+The Trigger timer is either `null` or a non-negative integer number of seconds.
+`null` has no deadline. Zero expires immediately. A timed Trigger starts from the
+persisted timestamp of the current choice step after its preceding gates match.
+If several Triggers expose one interaction, any active Trigger is sufficient. An
+eligible untimed Trigger removes the countdown; otherwise the option bar follows
+the eligible Trigger with the longest remaining window. The normal reader removes
+an expired option. Simulation keeps it disabled with an expiration diagnostic and
+can force it through the existing author control.
 
 ## Inline Interaction Links
 
@@ -286,6 +298,12 @@ Version 2 generalizes those fields: `statValues` contains typed non-item
 assignment values, while `itemStatValues` contains typed values keyed
 independently by exact item instance and assignment id.
 
+Version 3 adds the run seed used by deterministic Trigger probability. Version 4
+adds `stepStartedAt`: one wall-clock timestamp before the first interaction and
+one after every ordered journey entry. Closing, reloading, or backgrounding the
+reader does not pause these timers. Old saves receive current timestamps when
+reconciled and are persisted in version 4 on the next autosave update.
+
 The ordered journey is authoritative for state that can currently be replayed.
 The API derives current interaction, visited ids, story time, location, and stats
 from that journey before writing JSON; clients cannot provide trusted derived
@@ -310,7 +328,8 @@ continues in the current mode and writes subsequent progress to that mode's
 autosave; it does not overwrite the loaded source slot. Restart deletes only the
 current mode's autosave and returns to its configured starting state. Named saves
 remain until explicitly overwritten or deleted. Stepping backward in Simulation
-Mode replays the shortened journey and updates only the simulation autosave.
+Mode replays the shortened journey, restores the choice-step timestamp aligned
+with that journey position, and updates only the simulation autosave.
 
 ## Repeated Interactions and Cycles
 

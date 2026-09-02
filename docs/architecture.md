@@ -115,9 +115,11 @@ assignments, comparisons, and substitutions use generic Paralleax typed stats.
 API orchestration supplies IDs and persists the complete mapped Story in one
 transaction; web code owns only local file selection and report presentation.
 
-Deterministic runtime reconstruction lives in `packages/shared/src/reader/`.
+Runtime reconstruction lives in `packages/shared/src/reader/`.
 Its replay pipeline derives progress, location, typed stat values, and owned item
-instances from the authored story plus ordered journey. Non-item and exact-item
+instances from the authored story plus ordered journey. Trigger timers additionally
+consume explicit persisted choice-step timestamps and wall-clock evaluation time.
+Non-item and exact-item
 stat replay helpers currently remain colocated there pending their incremental
 extraction into dedicated domain modules.
 
@@ -196,7 +198,7 @@ story defaults, and any per-user grant in SQL so knowledge of a story id cannot
 bypass authorization. Public reads use optional authentication; all mutation
 routes still require a session. It assembles relational story,
 interaction, trigger, and input rows plus Trigger condition-group JSONB and
-appearance probability into the domain `Story` expected
+appearance probability and nullable timer into the domain `Story` expected
 by the service and writes field-level differences for mutations.
 `stories/persistence/stories.persistence.writer.ts` owns the relational write plan: full graph
 replacement for initial saves and entity-level differences for mutations. The
@@ -228,8 +230,8 @@ accounts. See ADR-017.
 
 Authenticated saves use one `story_reader_progress` row per user, story, and
 slot. The slot id, optional manual-save name, and timestamps are relational; the
-versioned JSONB state contains the ordered journey and materialized runtime
-values. Reserved ids keep reader and Simulation Mode autosaves separate, while
+versioned JSONB state contains the ordered journey, materialized runtime values,
+probability seed, and choice-step wall-clock starts. Reserved ids keep reader and Simulation Mode autosaves separate, while
 named manual slots are shared between both modes.
 `StoryReaderProgressService` validates same-story references and rebuilds time,
 location, visits, stats, and character item inventory before saving. Simulation
@@ -420,7 +422,7 @@ component:
 - `components/RichTextEditor.tsx` and `RichTextContent.tsx`: rich-body authoring
   and defense-in-depth sanitized rendering, including conditional body blocks
   projected from outgoing trigger availability.
-- `components/TriggerInspector.tsx`: Trigger probability and owned OR
+- `components/TriggerInspector.tsx`: Trigger probability, timer, and owned OR
   condition-group editing.
 - `components/InteractionNode.tsx`, `TriggerNode.tsx`, and `TriggerEdge.tsx`:
   React Flow rendering surfaces.
@@ -437,8 +439,12 @@ the route component:
   authenticated save/delete queue and its presentation status. Simulation Mode
   never calls it.
 - `features/story-player/storyPlayerPresentation.ts`: translated condition
-  summaries and first-failure labels. It consumes shared trigger diagnostics and
+  summaries and first-failure labels, including probability and timer failures.
+  It consumes shared trigger diagnostics and
   does not evaluate narrative conditions independently.
+- `features/story-player/ChoiceTimerBar.tsx`: accessible CSS-driven countdown
+  projection. The route schedules only expiration and focus synchronization,
+  avoiding continuous whole-player rerenders.
 
 The web app may map a story into React Flow nodes and edges, but it must not
 store story semantics as React Flow data. React Flow data is a projection of the

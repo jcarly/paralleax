@@ -157,7 +157,7 @@ describe('StoryGraphService', () => {
     });
   });
 
-  it('stores condition groups and one Trigger appearance probability', async () => {
+  it('stores condition groups, probability, and a nullable Trigger timer', async () => {
     const result = await service.updateTrigger(
       'story-1',
       'child',
@@ -168,6 +168,7 @@ describe('StoryGraphService', () => {
           { id: 'fallback', conditions: [] },
         ],
         appearanceProbability: 35,
+        timerSeconds: 0,
       },
       'user-1',
     );
@@ -178,8 +179,18 @@ describe('StoryGraphService', () => {
         { id: 'fallback', conditions: [] },
       ],
       appearanceProbability: 35,
+      timerSeconds: 0,
     });
     expect(result.trigger).not.toHaveProperty('conditions');
+
+    const cleared = await service.updateTrigger(
+      'story-1',
+      'child',
+      'child-trigger',
+      { timerSeconds: null },
+      'user-1',
+    );
+    expect(cleared.trigger.timerSeconds).toBeNull();
   });
 
   it('creates graph decorations through the existing decoration builder', async () => {

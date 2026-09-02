@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ReaderAutosaveMode, ReaderProgressState } from '@paralleax/shared';
 import { api } from '../../api';
 
@@ -16,14 +16,19 @@ export function useReaderProgressPersistence({
   const [status, setStatus] = useState<ReaderProgressStatus>('idle');
   const saveQueue = useRef<Promise<void>>(Promise.resolve());
   const attempt = useRef(0);
+  const modeRef = useRef(mode);
+  useEffect(() => {
+    modeRef.current = mode;
+  }, [mode]);
 
   const markLoaded = useCallback((hasSavedProgress: boolean) => {
     setStatus(hasSavedProgress ? 'saved' : 'idle');
   }, []);
 
   const save = useCallback(
-    (session: ReaderProgressState) => {
+    (session: ReaderProgressState, modeOverride?: ReaderAutosaveMode) => {
       if (!authenticated) return;
+      const persistenceMode = modeOverride ?? modeRef.current;
       const currentAttempt = ++attempt.current;
       setStatus('saving');
       const operation = saveQueue.current
@@ -34,8 +39,9 @@ export function useReaderProgressPersistence({
               journeyInteractionIds: session.journeyInteractionIds,
               ownedItemIds: session.ownedItemIds,
               ...(session.randomSeed ? { randomSeed: session.randomSeed } : {}),
+              ...(session.stepStartedAt ? { stepStartedAt: session.stepStartedAt } : {}),
             },
-            mode,
+            persistenceMode,
           ),
         )
         .then(() => {
@@ -46,15 +52,16 @@ export function useReaderProgressPersistence({
         });
       saveQueue.current = operation.then(() => undefined);
     },
-    [authenticated, mode, storyId],
+    [authenticated, storyId],
   );
 
   const reset = useCallback(() => {
     if (!authenticated) return;
+    const persistenceMode = modeRef.current;
     const currentAttempt = ++attempt.current;
     setStatus('saving');
     const operation = saveQueue.current
-      .then(() => api.deleteReaderProgress(storyId, mode))
+      .then(() => api.deleteReaderProgress(storyId, persistenceMode))
       .then(() => {
         if (currentAttempt === attempt.current) setStatus('idle');
       })
@@ -62,7 +69,7 @@ export function useReaderProgressPersistence({
         if (currentAttempt === attempt.current) setStatus('error');
       });
     saveQueue.current = operation.then(() => undefined);
-  }, [authenticated, mode, storyId]);
+  }, [authenticated, storyId]);
 
   return { status, markLoaded, save, reset };
 }

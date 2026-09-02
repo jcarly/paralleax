@@ -4,7 +4,9 @@ import {
   deterministicTriggerRoll,
   doConditionsMatch,
   getAvailableInteractions,
+  getInteractionTimerState,
   getTriggerProbabilityFailures,
+  getTriggerTimerFailures,
 } from './evaluation.js';
 
 describe('condition group evaluation', () => {
@@ -70,6 +72,94 @@ describe('Trigger groups and probability', () => {
         appearanceProbability: 0,
       }),
     ]);
+  });
+});
+
+describe('Trigger timers', () => {
+  const context = { randomSeed: 'saved-seed', step: 1 };
+
+  it('keeps an untimed Trigger available indefinitely', () => {
+    const story = probabilityStory({ timerSeconds: null });
+
+    expect(
+      getAvailableInteractions(
+        story,
+        'start',
+        ['start'],
+        null,
+        [],
+        {},
+        undefined,
+        [],
+        {},
+        {
+          ...context,
+          elapsedTimeMs: 60_000,
+        },
+      ),
+    ).toContainEqual(expect.objectContaining({ id: 'target' }));
+  });
+
+  it('expires a timed Trigger at its exact boundary', () => {
+    const story = probabilityStory({ timerSeconds: 5 });
+    const interaction = story.interactions[1];
+    const beforeExpiry = { ...context, elapsedTimeMs: 4_000 };
+
+    expect(
+      getAvailableInteractions(
+        story,
+        'start',
+        ['start'],
+        null,
+        [],
+        {},
+        undefined,
+        [],
+        {},
+        beforeExpiry,
+      ),
+    ).toContainEqual(expect.objectContaining({ id: 'target' }));
+    expect(getInteractionTimerState(interaction, 'start', ['start'], beforeExpiry)).toMatchObject({
+      timerSeconds: 5,
+      remainingTimeMs: 1_000,
+      remainingRatio: 0.2,
+      expired: false,
+    });
+    const expired = { ...context, elapsedTimeMs: 5_000 };
+    expect(
+      getAvailableInteractions(story, 'start', ['start'], null, [], {}, undefined, [], {}, expired),
+    ).not.toContainEqual(expect.objectContaining({ id: 'target' }));
+    expect(getTriggerTimerFailures(interaction, 'start', ['start'], expired)).toEqual([
+      { triggerId: 'target-trigger', timerSeconds: 5, elapsedTimeMs: 5_000 },
+    ]);
+  });
+
+  it('never exposes a zero-second Trigger', () => {
+    const story = probabilityStory({ timerSeconds: 0 });
+
+    expect(
+      getAvailableInteractions(story, 'start', ['start'], null, [], {}, undefined, [], {}, context),
+    ).not.toContainEqual(expect.objectContaining({ id: 'target' }));
+    expect(getTriggerTimerFailures(story.interactions[1], 'start', ['start'], context)).toEqual([
+      { triggerId: 'target-trigger', timerSeconds: 0, elapsedTimeMs: 0 },
+    ]);
+  });
+
+  it('keeps an option untimed when another eligible Trigger has no timer', () => {
+    const story = probabilityStory({ timerSeconds: 1 });
+    story.interactions[1].triggers.push({
+      id: 'untimed-trigger',
+      inputInteractionIds: ['start'],
+      conditionGroups: [{ id: 'untimed-group', conditions: [] }],
+      appearanceProbability: 100,
+      timerSeconds: null,
+    });
+    const elapsed = { ...context, elapsedTimeMs: 2_000 };
+
+    expect(
+      getAvailableInteractions(story, 'start', ['start'], null, [], {}, undefined, [], {}, elapsed),
+    ).toContainEqual(expect.objectContaining({ id: 'target' }));
+    expect(getInteractionTimerState(story.interactions[1], 'start', ['start'], elapsed)).toBeNull();
   });
 });
 

@@ -8,11 +8,13 @@ import type {
   TriggerCondition,
   TriggerConditionFailure,
   TriggerProbabilityFailure,
+  TriggerTimerFailure,
 } from './conditions.js';
 import {
   getTriggerAppearanceProbability,
   getTriggerConditionGroups,
   getTriggerConditions,
+  getTriggerTimerSeconds,
 } from './model.js';
 
 export interface TriggerProbabilityContext {
@@ -27,6 +29,20 @@ export interface TriggerProbabilityResult {
   succeeds: boolean;
 }
 
+export interface TriggerEvaluationContext extends TriggerProbabilityContext {
+  elapsedTimeMs?: number;
+}
+
+export interface TriggerTimerResult {
+  triggerId: string;
+  timerSeconds: number;
+  durationMs: number;
+  elapsedTimeMs: number;
+  remainingTimeMs: number;
+  remainingRatio: number;
+  expired: boolean;
+}
+
 export function isTriggerEligible(
   trigger: Trigger,
   currentInteractionId: string | null,
@@ -37,11 +53,12 @@ export function isTriggerEligible(
   currentDateTime = DEFAULT_STORY_DATE_TIME,
   ownedItemDefinitionIds: readonly string[] = [],
   itemStatValues: Readonly<Record<string, Readonly<Record<string, StatValue>>>> = {},
-  probabilityContext: TriggerProbabilityContext = {
+  evaluationContext: TriggerEvaluationContext = {
     randomSeed: 'legacy-reader',
     step: visited.size,
   },
 ): boolean {
+  const timer = getTriggerTimerResult(trigger, evaluationContext.elapsedTimeMs);
   return (
     doesTriggerInputMatch(trigger, currentInteractionId) &&
     doTriggerConditionGroupsMatch(
@@ -54,7 +71,8 @@ export function isTriggerEligible(
       ownedItemDefinitionIds,
       itemStatValues,
     ) &&
-    getTriggerProbabilityResult(trigger, probabilityContext).succeeds
+    getTriggerProbabilityResult(trigger, evaluationContext).succeeds &&
+    timer?.expired !== true
   );
 }
 
@@ -93,6 +111,26 @@ export function getTriggerProbabilityResult(
     appearanceProbability,
     roll,
     succeeds: forced || appearanceProbability >= 100 || roll < appearanceProbability,
+  };
+}
+
+export function getTriggerTimerResult(
+  trigger: Trigger,
+  elapsedTimeMs = 0,
+): TriggerTimerResult | null {
+  const timerSeconds = getTriggerTimerSeconds(trigger);
+  if (timerSeconds === null) return null;
+  const durationMs = timerSeconds * 1_000;
+  const elapsed = Number.isFinite(elapsedTimeMs) ? Math.max(0, elapsedTimeMs) : 0;
+  const remainingTimeMs = Math.max(0, durationMs - elapsed);
+  return {
+    triggerId: trigger.id,
+    timerSeconds,
+    durationMs,
+    elapsedTimeMs: elapsed,
+    remainingTimeMs,
+    remainingRatio: durationMs === 0 ? 0 : remainingTimeMs / durationMs,
+    expired: durationMs === 0 || elapsed >= durationMs,
   };
 }
 
@@ -155,7 +193,7 @@ export function getAvailableInteractions(
   currentDateTime = story.startDateTime ?? DEFAULT_STORY_DATE_TIME,
   ownedItemDefinitionIds: readonly string[] = [],
   itemStatValues: Readonly<Record<string, Readonly<Record<string, StatValue>>>> = {},
-  probabilityContext: TriggerProbabilityContext = {
+  evaluationContext: TriggerEvaluationContext = {
     randomSeed: `legacy-reader:${story.id}`,
     step: visitedIds.length,
   },
@@ -173,9 +211,41 @@ export function getAvailableInteractions(
         currentDateTime,
         ownedItemDefinitionIds,
         itemStatValues,
-        probabilityContext,
+        evaluationContext,
       ),
     ),
+  );
+}
+
+export function getInteractionTimerState(
+  interaction: Interaction,
+  currentInteractionId: string | null,
+  visitedIds: string[],
+  evaluationContext: TriggerEvaluationContext,
+  currentLocationId: string | null = null,
+  currentCharacterIds: string[] = [],
+  statValues: Readonly<Record<string, StatValue>> = {},
+  currentDateTime = DEFAULT_STORY_DATE_TIME,
+  ownedItemDefinitionIds: readonly string[] = [],
+  itemStatValues: Readonly<Record<string, Readonly<Record<string, StatValue>>>> = {},
+): TriggerTimerResult | null {
+  const candidates = getTimerCandidates(
+    interaction,
+    currentInteractionId,
+    visitedIds,
+    evaluationContext,
+    currentLocationId,
+    currentCharacterIds,
+    statValues,
+    currentDateTime,
+    ownedItemDefinitionIds,
+    itemStatValues,
+  );
+  if (candidates.some((candidate) => candidate === null)) return null;
+  return (candidates as TriggerTimerResult[]).reduce<TriggerTimerResult | null>(
+    (longest, candidate) =>
+      !longest || candidate.remainingTimeMs > longest.remainingTimeMs ? candidate : longest,
+    null,
   );
 }
 
@@ -283,6 +353,72 @@ export function getTriggerProbabilityFailures(
     appearanceProbability: result.appearanceProbability,
     roll: result.roll,
   }));
+}
+
+export function getTriggerTimerFailures(
+  interaction: Interaction,
+  currentInteractionId: string | null,
+  visitedIds: string[],
+  evaluationContext: TriggerEvaluationContext,
+  currentLocationId: string | null = null,
+  currentCharacterIds: string[] = [],
+  statValues: Readonly<Record<string, StatValue>> = {},
+  currentDateTime = DEFAULT_STORY_DATE_TIME,
+  ownedItemDefinitionIds: readonly string[] = [],
+  itemStatValues: Readonly<Record<string, Readonly<Record<string, StatValue>>>> = {},
+): TriggerTimerFailure[] {
+  const candidates = getTimerCandidates(
+    interaction,
+    currentInteractionId,
+    visitedIds,
+    evaluationContext,
+    currentLocationId,
+    currentCharacterIds,
+    statValues,
+    currentDateTime,
+    ownedItemDefinitionIds,
+    itemStatValues,
+  );
+  if (candidates.some((candidate) => candidate === null || !candidate.expired)) return [];
+  return (candidates as TriggerTimerResult[]).map(({ triggerId, timerSeconds, elapsedTimeMs }) => ({
+    triggerId,
+    timerSeconds,
+    elapsedTimeMs,
+  }));
+}
+
+function getTimerCandidates(
+  interaction: Interaction,
+  currentInteractionId: string | null,
+  visitedIds: string[],
+  evaluationContext: TriggerEvaluationContext,
+  currentLocationId: string | null,
+  currentCharacterIds: string[],
+  statValues: Readonly<Record<string, StatValue>>,
+  currentDateTime: string,
+  ownedItemDefinitionIds: readonly string[],
+  itemStatValues: Readonly<Record<string, Readonly<Record<string, StatValue>>>>,
+): Array<TriggerTimerResult | null> {
+  const visited = new Set(visitedIds);
+  return interaction.triggers.flatMap((trigger) => {
+    if (
+      !doesTriggerInputMatch(trigger, currentInteractionId) ||
+      !doTriggerConditionGroupsMatch(
+        trigger,
+        visited,
+        currentLocationId,
+        currentCharacterIds,
+        statValues,
+        currentDateTime,
+        ownedItemDefinitionIds,
+        itemStatValues,
+      ) ||
+      !getTriggerProbabilityResult(trigger, evaluationContext).succeeds
+    ) {
+      return [];
+    }
+    return [getTriggerTimerResult(trigger, evaluationContext.elapsedTimeMs)];
+  });
 }
 
 function conditionMatches(

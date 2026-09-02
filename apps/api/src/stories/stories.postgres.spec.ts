@@ -204,6 +204,7 @@ describePostgres('StoriesRepository PostgreSQL integration', () => {
             {
               id: 'trigger-2',
               inputInteractionIds: ['interaction-1'],
+              timerSeconds: 12,
               conditions: [
                 { interactionId: 'interaction-1', hasBeenVisited: true },
                 { locationId: 'location-1', isCurrentLocation: true },
@@ -354,6 +355,7 @@ describePostgres('StoriesRepository PostgreSQL integration', () => {
         },
       ],
       appearanceProbability: 100,
+      timerSeconds: 12,
     });
   });
 

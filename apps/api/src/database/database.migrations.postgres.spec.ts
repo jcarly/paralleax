@@ -129,6 +129,7 @@ describePostgres('Database migrations PostgreSQL upgrade', () => {
     await expect(
       pool.query(
         `SELECT trigger.condition_groups, trigger.appearance_probability,
+                trigger.timer_seconds,
                 trigger.position_x, trigger.position_y,
                 input.input_interaction_id
          FROM triggers AS trigger
@@ -150,6 +151,7 @@ describePostgres('Database migrations PostgreSQL upgrade', () => {
             },
           ],
           appearance_probability: 100,
+          timer_seconds: null,
           position_x: null,
           position_y: null,
           input_interaction_id: 'legacy-root',
@@ -157,6 +159,12 @@ describePostgres('Database migrations PostgreSQL upgrade', () => {
       ],
       rowCount: 1,
     });
+    await expect(
+      pool.query(`UPDATE triggers SET timer_seconds = -1 WHERE id = 'legacy-child-trigger'`),
+    ).rejects.toThrow(/triggers_timer_seconds_non_negative/i);
+    await expect(
+      pool.query(`UPDATE triggers SET timer_seconds = 0 WHERE id = 'legacy-child-trigger'`),
+    ).resolves.toMatchObject({ rowCount: 1 });
     await expect(
       pool.query(`SELECT id FROM users WHERE id = 'migration-user'`),
     ).resolves.toMatchObject({ rowCount: 1 });

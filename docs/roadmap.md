@@ -373,13 +373,14 @@ Stories can react not only to world state but also to time and controlled automa
 - Trigger appearance probability with one deterministic seeded roll per Trigger
   and narrative step, persisted in reader and Simulation saves.
 - Simulation probability diagnostics and forced-path inspection.
+- Persisted real-time Trigger countdowns with draining reader bars, version 4
+  choice-step timestamps, reload/background continuity, and Simulation
+  expiration diagnostics plus forced-path inspection.
 
 ### Remaining scope
 
-- Real-time choice countdowns.
 - Delayed automatic choices.
 - Probabilistic automatic choices.
-- Simulation controls and diagnostics for timed behavior.
 
 ### Exit criteria
 
@@ -395,7 +396,7 @@ V0.5 is complete when:
 
 - Probability requires an explicit deterministic/debugging strategy.
 - Automatic choices depend on stable Reader semantics.
-- Real-time timers require persistence/reload semantics before public use.
+- Real-time timer persistence/reload semantics are defined by ADR-026.
 
 ---
 

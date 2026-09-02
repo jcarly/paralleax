@@ -13,5 +13,6 @@ export interface Trigger {
   conditions?: TriggerCondition[];
   conditionGroups?: TriggerConditionGroup[];
   appearanceProbability?: number;
+  timerSeconds?: number | null;
   position?: Position;
 }

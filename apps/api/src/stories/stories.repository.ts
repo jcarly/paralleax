@@ -170,6 +170,7 @@ type TriggerRow = {
   sort_order: number;
   condition_groups: TriggerConditionGroup[];
   appearance_probability: number;
+  timer_seconds: number | null;
 };
 type TriggerInputRow = {
   story_id: string;
@@ -652,7 +653,8 @@ export class StoriesRepository {
     const triggers = await queryable.query<TriggerRow>(
       `SELECT triggers.id, interactions.story_id, triggers.output_interaction_id,
                 triggers.position_x, triggers.position_y, triggers.sort_order,
-                triggers.condition_groups, triggers.appearance_probability
+                triggers.condition_groups, triggers.appearance_probability,
+                triggers.timer_seconds
          FROM triggers
          JOIN interactions ON interactions.id = triggers.output_interaction_id
          WHERE interactions.story_id = ANY($1::text[])
@@ -828,6 +830,7 @@ export class StoriesRepository {
           ),
           conditionGroups: trigger.condition_groups,
           appearanceProbability: trigger.appearance_probability,
+          timerSeconds: trigger.timer_seconds,
           ...(typeof trigger.position_x === 'number' && typeof trigger.position_y === 'number'
             ? { position: { x: trigger.position_x, y: trigger.position_y } }
             : {}),

@@ -149,6 +149,7 @@ describe('shared story operations', () => {
       inputInteractionIds: ['root'],
       conditionGroups: [{ id: 'trigger-middle', conditions: [] }],
       appearanceProbability: 100,
+      timerSeconds: null,
       position: { x: 240, y: 315 },
     });
   });
@@ -177,6 +178,7 @@ describe('shared story operations', () => {
         inputInteractionIds: [],
         conditionGroups: [{ id: 'trigger-middle', conditions: [] }],
         appearanceProbability: 100,
+        timerSeconds: null,
       },
     ]);
   });
@@ -191,6 +193,7 @@ describe('shared story operations', () => {
         inputInteractionIds: [],
         conditionGroups: [{ id: 'trigger-middle', conditions: [] }],
         appearanceProbability: 100,
+        timerSeconds: null,
       },
     ]);
     expect(updated.interactions[1].triggers[0].inputInteractionIds).toEqual(['middle']);
@@ -758,7 +761,7 @@ describe('reader progress', () => {
     ];
 
     expect(buildReaderProgressState(story, ['root', 'middle', 'root'], ['key-1'])).toEqual({
-      version: 3,
+      version: 4,
       randomSeed: 'legacy-reader:story-1',
       journeyInteractionIds: ['root', 'middle', 'root'],
       currentInteractionId: 'root',

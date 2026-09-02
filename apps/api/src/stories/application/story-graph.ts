@@ -6,6 +6,7 @@ import {
   deleteTriggerInStory,
   getTriggerAppearanceProbability,
   getTriggerConditionGroups,
+  getTriggerTimerSeconds,
   getStoryItemEntries,
   isStoryDate,
   isStoryTime,
@@ -69,6 +70,7 @@ export class StoryGraphService {
               inputInteractionIds: input.parentId ? [input.parentId] : [],
               conditionGroups: [{ id: randomUUID(), conditions: [] }],
               appearanceProbability: 100,
+              timerSeconds: null,
             },
           ],
         });
@@ -283,6 +285,8 @@ export class StoryGraphService {
           conditionGroups,
           appearanceProbability:
             input.appearanceProbability ?? getTriggerAppearanceProbability(trigger),
+          timerSeconds:
+            input.timerSeconds === undefined ? getTriggerTimerSeconds(trigger) : input.timerSeconds,
           ...(input.position === undefined ? {} : { position: input.position }),
         });
       },
@@ -309,6 +313,7 @@ export class StoryGraphService {
           inputInteractionIds: normalizeTriggerInputIds(input.inputInteractionIds ?? []),
           conditionGroups,
           appearanceProbability: input.appearanceProbability ?? 100,
+          timerSeconds: input.timerSeconds ?? null,
           ...(input.position === undefined ? {} : { position: input.position }),
         });
         return story;

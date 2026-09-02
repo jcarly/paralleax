@@ -491,8 +491,9 @@ Night falls.
       })
       .expect(200);
     expect(progress.body.state).toMatchObject({
-      version: 3,
+      version: 4,
       randomSeed: expect.any(String),
+      stepStartedAt: expect.arrayContaining([expect.any(String)]),
       journeyInteractionIds: [root.id, child.id, root.id],
       currentInteractionId: root.id,
       visitedInteractionIds: [root.id, child.id],
@@ -905,6 +906,7 @@ Night falls.
       .send({
         inputInteractionIds: [parent.id, parent.id],
         conditions: [{ interactionId: parent.id, hasBeenVisited: true }],
+        timerSeconds: 0,
       })
       .expect(200);
 
@@ -914,6 +916,17 @@ Night falls.
     expect(getTriggerConditionGroups(result.trigger)[0].conditions).toEqual([
       { interactionId: parent.id, hasBeenVisited: true },
     ]);
+    expect(result.trigger.timerSeconds).toBe(0);
+
+    await request(httpServer)
+      .patch(`/api/stories/${story.id}/interactions/${child.id}/triggers/${trigger.id}`)
+      .send({ timerSeconds: -1 })
+      .expect(400);
+    const cleared = await request(httpServer)
+      .patch(`/api/stories/${story.id}/interactions/${child.id}/triggers/${trigger.id}`)
+      .send({ timerSeconds: null })
+      .expect(200);
+    expect((cleared.body as TriggerMutationResult).trigger.timerSeconds).toBeNull();
   });
 
   it('updates only a trigger canvas position without changing its narrative rules', async () => {
@@ -1220,8 +1233,9 @@ Night falls.
       .send({ journeyInteractionIds: [root.id] })
       .expect(200);
     expect(progress.body.state).toMatchObject({
-      version: 3,
+      version: 4,
       randomSeed: expect.any(String),
+      stepStartedAt: expect.arrayContaining([expect.any(String)]),
       statValues: { [assignment.id]: 5 },
     });
 

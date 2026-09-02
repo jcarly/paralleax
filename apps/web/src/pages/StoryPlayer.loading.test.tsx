@@ -109,6 +109,7 @@ describe('StoryPlayer loading and presentation', () => {
         journeyInteractionIds: ['start'],
         ownedItemIds: [],
         randomSeed: expect.any(String),
+        stepStartedAt: [expect.any(String), expect.any(String)],
       },
       'reader',
     );

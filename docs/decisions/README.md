@@ -29,6 +29,7 @@ This folder records accepted architecture and product-shaping decisions.
 - [ADR-023 - Durable Authored Story Change History](ADR-023-durable-story-change-history.md)
 - [ADR-024 - Structured Conditional Rich Text](ADR-024-structured-conditional-rich-text.md)
 - [ADR-025 - Trigger Condition Groups and Seeded Probability](ADR-025-trigger-condition-groups-and-seeded-probability.md)
+- [ADR-026 - Persisted Trigger Choice Timers](ADR-026-persisted-trigger-choice-timers.md)
 
 ## Maintenance
 

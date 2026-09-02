@@ -51,6 +51,9 @@ export function updateTriggerInStory(
                       ...(patch.appearanceProbability === undefined
                         ? {}
                         : { appearanceProbability: patch.appearanceProbability }),
+                      ...(patch.timerSeconds === undefined
+                        ? {}
+                        : { timerSeconds: patch.timerSeconds }),
                       ...(patch.position === undefined ? {} : { position: patch.position }),
                     };
                   })()

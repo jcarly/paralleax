@@ -185,7 +185,12 @@ export interface MoveItemInstanceInput {
 export type UpdateTriggerInput = Partial<
   Pick<
     Trigger,
-    'inputInteractionIds' | 'conditions' | 'conditionGroups' | 'appearanceProbability' | 'position'
+    | 'inputInteractionIds'
+    | 'conditions'
+    | 'conditionGroups'
+    | 'appearanceProbability'
+    | 'timerSeconds'
+    | 'position'
   >
 >;
 
@@ -207,6 +212,11 @@ export type InteractionContentPatch = Partial<
 export type TriggerPatch = Partial<
   Pick<
     Trigger,
-    'inputInteractionIds' | 'conditions' | 'conditionGroups' | 'appearanceProbability' | 'position'
+    | 'inputInteractionIds'
+    | 'conditions'
+    | 'conditionGroups'
+    | 'appearanceProbability'
+    | 'timerSeconds'
+    | 'position'
   >
 >;

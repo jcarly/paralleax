@@ -1,16 +1,24 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
-import type { Interaction, InteractionMutationResult, Story } from '@paralleax/shared';
+import type {
+  Interaction,
+  InteractionMutationResult,
+  ReaderAutosaveMode,
+  ReaderProgressState,
+  Story,
+} from '@paralleax/shared';
 import {
   canManageCommentThread,
   doConditionsMatch,
   ensureStoryInteractionPositions,
   getAvailableInteractions,
+  getInteractionTimerState,
   getInputReachableInteractions,
   getItemDefinitionIdForInstance,
   getItemOwnerIdForInstance,
   getTriggerConditionFailures,
+  getTriggerTimerSeconds,
   isCommentAnchorDetached,
 } from '@paralleax/shared';
 import { api } from '../api';
@@ -19,6 +27,7 @@ import { RichTextEditor } from '../components/RichTextEditor';
 import { StoryCommentsPanel } from '../features/comments/StoryCommentsPanel';
 import { useStoryComments } from '../features/comments/useStoryComments';
 import { ReaderSaveDialog } from '../features/story-player/ReaderSaveDialog';
+import { ChoiceTimerBar } from '../features/story-player/ChoiceTimerBar';
 import { useReaderProgressPersistence } from '../features/story-player/useReaderProgressPersistence';
 import {
   createReaderRandomSeed,
@@ -76,6 +85,7 @@ export function StoryPlayer({
     ownedItemIds,
     itemStatValues = {},
     randomSeed = '',
+    stepStartedAt = [],
   } = session;
   const [playableCharacterId, setPlayableCharacterId] = useState<string>();
   const progressMode = isSimulationMode ? 'simulation' : 'reader';
@@ -90,7 +100,8 @@ export function StoryPlayer({
   const [editingChoiceId, setEditingChoiceId] = useState<string>();
   const [commentsOpen, setCommentsOpen] = useState(false);
   const editingChoiceInputRef = useRef<HTMLInputElement>(null);
-  const journeyRef = useRef<string[]>([]);
+  const sessionRef = useRef<ReaderProgressState>(session);
+  const [timerNow, setTimerNow] = useState(() => Date.now());
   const directStartAutosavedKey = useRef('');
   const realtimeLoadAttempt = useRef(0);
   const simulationEditDepth = useRef(0);
@@ -111,8 +122,8 @@ export function StoryPlayer({
   );
 
   useEffect(() => {
-    journeyRef.current = journey;
-  }, [journey]);
+    sessionRef.current = session;
+  }, [session]);
 
   useEffect(() => {
     if (
@@ -136,6 +147,9 @@ export function StoryPlayer({
         const positioned = ensureStoryInteractionPositions(nextStory);
         const authorizedSimulation =
           simulationRequested && positioned.capabilities?.canEdit === true;
+        const loadedProgressMode: ReaderAutosaveMode = authorizedSimulation
+          ? 'simulation'
+          : 'reader';
         const effectiveStartInteractionId = authorizedSimulation
           ? requestedStartInteractionId
           : null;
@@ -143,16 +157,18 @@ export function StoryPlayer({
           !authenticated || (authorizedSimulation && effectiveStartInteractionId)
             ? null
             : await api.getReaderProgress(storyId, authorizedSimulation ? 'simulation' : 'reader');
-        return { positioned, progress, effectiveStartInteractionId };
+        return { positioned, progress, effectiveStartInteractionId, loadedProgressMode };
       })
-      .then(({ positioned, progress, effectiveStartInteractionId }) => {
+      .then(({ positioned, progress, effectiveStartInteractionId, loadedProgressMode }) => {
         if (cancelled) return;
+        setTimerNow(Date.now());
         const reconciledProgress = progress
           ? replaySession(
               positioned,
               progress.state.journeyInteractionIds,
               progress.state.ownedItemIds,
               progress.state.randomSeed ?? createReaderRandomSeed(),
+              progress.state.stepStartedAt,
             )
           : undefined;
         const nextJourney =
@@ -161,7 +177,25 @@ export function StoryPlayer({
         setStory(positioned);
         setLoadedKey(loadKey);
         if (!reconciledProgress) {
-          replaySession(positioned, nextJourney, [], createReaderRandomSeed());
+          const createdSession = replaySession(
+            positioned,
+            nextJourney,
+            [],
+            createReaderRandomSeed(),
+          );
+          if (
+            !effectiveStartInteractionId &&
+            positioned.interactions.some((interaction) =>
+              interaction.triggers.some((trigger) => getTriggerTimerSeconds(trigger) !== null),
+            )
+          ) {
+            saveProgress(createdSession, loadedProgressMode);
+          }
+        } else if (
+          !progress?.state.stepStartedAt ||
+          progress.state.stepStartedAt.length !== progress.state.journeyInteractionIds.length + 1
+        ) {
+          saveProgress(reconciledProgress, loadedProgressMode);
         }
         if (nextJourney.length > 0) {
           setPlayableCharacterId(positioned.characters?.find(({ isPlayable }) => isPlayable)?.id);
@@ -185,6 +219,7 @@ export function StoryPlayer({
     markProgressLoaded,
     requestedStartInteractionId,
     replaySession,
+    saveProgress,
     simulationRequested,
     storyId,
     t,
@@ -201,12 +236,20 @@ export function StoryPlayer({
   const applyReloadedSimulationStory = useCallback(
     (nextStory: Story) => {
       const positioned = ensureStoryInteractionPositions(nextStory);
+      setTimerNow(Date.now());
       if (positioned.capabilities?.canEdit !== true) {
         setStory(undefined);
         setLoadAttempt((currentAttempt) => currentAttempt + 1);
         return;
       }
-      replaySession(positioned, journeyRef.current);
+      const currentSession = sessionRef.current;
+      replaySession(
+        positioned,
+        currentSession.journeyInteractionIds,
+        currentSession.ownedItemIds,
+        currentSession.randomSeed,
+        currentSession.stepStartedAt,
+      );
       setStory(positioned);
       setEditingChoiceId((choiceId) =>
         choiceId && positioned.interactions.some(({ id }) => id === choiceId)
@@ -342,6 +385,15 @@ export function StoryPlayer({
       }),
     [current?.characterIds, story?.characters],
   );
+  const currentStepStartedAt = stepStartedAt[journey.length];
+  const triggerEvaluationContext = useMemo(() => {
+    const startedAt = currentStepStartedAt ? Date.parse(currentStepStartedAt) : timerNow;
+    return {
+      randomSeed,
+      step: journey.length,
+      elapsedTimeMs: Math.max(0, timerNow - (Number.isNaN(startedAt) ? timerNow : startedAt)),
+    };
+  }, [currentStepStartedAt, journey.length, randomSeed, timerNow]);
 
   const choices = useMemo(
     () =>
@@ -356,7 +408,7 @@ export function StoryPlayer({
             currentDateTime,
             ownedItemDefinitionIds,
             itemStatValues,
-            { randomSeed, step: journey.length },
+            triggerEvaluationContext,
           )
         : [],
     [
@@ -368,8 +420,7 @@ export function StoryPlayer({
       currentDateTime,
       ownedItemDefinitionIds,
       itemStatValues,
-      randomSeed,
-      journey.length,
+      triggerEvaluationContext,
     ],
   );
   const availableChoiceIds = useMemo(() => new Set(choices.map((choice) => choice.id)), [choices]);
@@ -392,10 +443,23 @@ export function StoryPlayer({
                   itemStatValues,
                 );
             if (failures.some(({ condition }) => 'locationId' in condition)) return [];
+            const timerState = getInteractionTimerState(
+              interaction,
+              current?.id ?? null,
+              visited,
+              triggerEvaluationContext,
+              currentLocationId,
+              current?.characterIds ?? [],
+              statValues,
+              currentDateTime,
+              ownedItemDefinitionIds,
+              itemStatValues,
+            );
             return [
               {
                 interaction,
                 available,
+                timerState,
                 unavailableReason: available
                   ? undefined
                   : getUnavailableReason(
@@ -410,7 +474,7 @@ export function StoryPlayer({
                       ownedItemDefinitionIds,
                       itemStatValues,
                       t,
-                      { randomSeed, step: journey.length },
+                      triggerEvaluationContext,
                     ),
               },
             ];
@@ -418,6 +482,18 @@ export function StoryPlayer({
         : choices.map((interaction) => ({
             interaction,
             available: true,
+            timerState: getInteractionTimerState(
+              interaction,
+              current?.id ?? null,
+              visited,
+              triggerEvaluationContext,
+              currentLocationId,
+              current?.characterIds ?? [],
+              statValues,
+              currentDateTime,
+              ownedItemDefinitionIds,
+              itemStatValues,
+            ),
             unavailableReason: undefined,
           })),
     [
@@ -432,11 +508,33 @@ export function StoryPlayer({
       visited,
       ownedItemDefinitionIds,
       itemStatValues,
-      randomSeed,
-      journey.length,
+      triggerEvaluationContext,
       t,
     ],
   );
+  useEffect(() => {
+    const nextExpiration = visibleChoices.reduce<number | undefined>((next, { timerState }) => {
+      if (!timerState || timerState.expired || timerState.remainingTimeMs <= 0) return next;
+      return next === undefined
+        ? timerState.remainingTimeMs
+        : Math.min(next, timerState.remainingTimeMs);
+    }, undefined);
+    if (nextExpiration === undefined) return;
+    const timeout = window.setTimeout(
+      () => setTimerNow(Date.now()),
+      Math.max(1, Math.ceil(nextExpiration) + 20),
+    );
+    return () => window.clearTimeout(timeout);
+  }, [visibleChoices]);
+  useEffect(() => {
+    const synchronizeTimer = () => setTimerNow(Date.now());
+    window.addEventListener('focus', synchronizeTimer);
+    document.addEventListener('visibilitychange', synchronizeTimer);
+    return () => {
+      window.removeEventListener('focus', synchronizeTimer);
+      document.removeEventListener('visibilitychange', synchronizeTimer);
+    };
+  }, []);
   const conditionalTextState = useMemo(() => {
     if (!story || !current) return {};
     return Object.fromEntries(
@@ -461,6 +559,7 @@ export function StoryPlayer({
                 ownedItemDefinitionIds,
                 itemStatValues,
                 t,
+                triggerEvaluationContext,
               );
         return [
           interaction.id,
@@ -483,6 +582,7 @@ export function StoryPlayer({
     statValues,
     story,
     t,
+    triggerEvaluationContext,
     visited,
   ]);
   const conditionalTextBlockState = useMemo(() => {
@@ -539,8 +639,33 @@ export function StoryPlayer({
 
   function choose(interaction: Interaction) {
     if (!story) return;
+    const now = Date.now();
+    if (!(isSimulationMode && forceUnavailableOptions)) {
+      const startedAt = currentStepStartedAt ? Date.parse(currentStepStartedAt) : now;
+      const stillAvailable = getAvailableInteractions(
+        story,
+        current?.id ?? null,
+        visited,
+        currentLocationId,
+        current?.characterIds ?? [],
+        statValues,
+        currentDateTime,
+        ownedItemDefinitionIds,
+        itemStatValues,
+        {
+          randomSeed,
+          step: journey.length,
+          elapsedTimeMs: Math.max(0, now - (Number.isNaN(startedAt) ? now : startedAt)),
+        },
+      ).some(({ id }) => id === interaction.id);
+      if (!stillAvailable) {
+        setTimerNow(now);
+        return;
+      }
+    }
     comments.cancelDraft();
     comments.selectThread(undefined);
+    setTimerNow(now);
     const nextSession = advanceSession(story, interaction);
     saveProgress(nextSession);
   }
@@ -549,6 +674,7 @@ export function StoryPlayer({
     comments.cancelDraft();
     comments.selectThread(undefined);
     directStartAutosavedKey.current = '';
+    setTimerNow(Date.now());
     if (story) {
       replaySession(
         story,
@@ -565,18 +691,36 @@ export function StoryPlayer({
   function stepBack() {
     if (journey.length <= 1) return;
     const nextJourney = journey.slice(0, -1);
-    if (story) saveProgress(replaySession(story, nextJourney));
+    setTimerNow(Date.now());
+    if (story) {
+      saveProgress(
+        replaySession(
+          story,
+          nextJourney,
+          [],
+          randomSeed,
+          stepStartedAt.slice(0, nextJourney.length + 1),
+        ),
+      );
+    }
   }
 
   function loadSave(save: {
-    state: { journeyInteractionIds: string[]; ownedItemIds: string[]; randomSeed?: string };
+    state: {
+      journeyInteractionIds: string[];
+      ownedItemIds: string[];
+      randomSeed?: string;
+      stepStartedAt?: string[];
+    };
   }) {
     if (!story) return;
+    setTimerNow(Date.now());
     const nextSession = replaySession(
       story,
       save.state.journeyInteractionIds,
       save.state.ownedItemIds,
       save.state.randomSeed ?? createReaderRandomSeed(),
+      save.state.stepStartedAt,
     );
     setPlayableCharacterId(
       nextSession.journeyInteractionIds.length > 0
@@ -942,8 +1086,14 @@ export function StoryPlayer({
           )}
           {playableCharacters.length === 0 || playedCharacter ? (
             <div className="choices">
-              {visibleChoices.map(({ interaction, available, unavailableReason }) => (
+              {visibleChoices.map(({ interaction, available, timerState, unavailableReason }) => (
                 <div className="choice-row" key={interaction.id}>
+                  {timerState ? (
+                    <ChoiceTimerBar
+                      key={`${journey.length}:${interaction.id}:${timerState.triggerId}:${currentStepStartedAt ?? ''}`}
+                      timer={timerState}
+                    />
+                  ) : null}
                   {editingChoiceId === interaction.id ? (
                     <input
                       ref={editingChoiceInputRef}

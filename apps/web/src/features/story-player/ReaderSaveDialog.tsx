@@ -56,6 +56,7 @@ export function ReaderSaveDialog({
     journeyInteractionIds: session.journeyInteractionIds,
     ownedItemIds: session.ownedItemIds,
     ...(session.randomSeed ? { randomSeed: session.randomSeed } : {}),
+    ...(session.stepStartedAt ? { stepStartedAt: session.stepStartedAt } : {}),
   };
 
   async function create(event: FormEvent) {

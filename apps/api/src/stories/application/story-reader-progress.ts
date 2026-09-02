@@ -147,11 +147,24 @@ export class StoryReaderProgressService {
     name?: string,
     createdAt?: string,
   ): Promise<ReaderProgress | ReaderSave> {
-    const existingSeed = input.randomSeed
-      ? undefined
-      : (await this.repository.findProgress(story.id, userId, slotId))?.state.randomSeed;
-    const state = this.buildState(story, input, input.randomSeed ?? existingSeed ?? randomUUID());
     const updatedAt = new Date().toISOString();
+    const existing =
+      input.randomSeed && input.stepStartedAt
+        ? undefined
+        : await this.repository.findProgress(story.id, userId, slotId);
+    const sameJourney =
+      JSON.stringify(existing?.state.journeyInteractionIds) ===
+      JSON.stringify(input.journeyInteractionIds);
+    const stepStartedAt =
+      input.stepStartedAt ??
+      (sameJourney ? existing?.state.stepStartedAt : undefined) ??
+      Array.from({ length: input.journeyInteractionIds.length + 1 }, () => updatedAt);
+    const state = this.buildState(
+      story,
+      input,
+      input.randomSeed ?? existing?.state.randomSeed ?? randomUUID(),
+      stepStartedAt,
+    );
     if (
       !(await this.repository.saveProgress(
         story.id,
@@ -177,7 +190,12 @@ export class StoryReaderProgressService {
       : { state, updatedAt };
   }
 
-  private buildState(story: Story, input: SaveReaderProgressDto, randomSeed: string) {
+  private buildState(
+    story: Story,
+    input: SaveReaderProgressDto,
+    randomSeed: string,
+    stepStartedAt: string[],
+  ) {
     const interactionIds = new Set(story.interactions.map(({ id }) => id));
     if (input.journeyInteractionIds.some((id) => !interactionIds.has(id))) {
       throw new BadRequestException('Reader journey interactions must belong to the same story');
@@ -186,11 +204,17 @@ export class StoryReaderProgressService {
     if ((input.ownedItemIds ?? []).some((id) => !itemIds.has(id))) {
       throw new BadRequestException('Reader items must belong to the same story');
     }
+    if (stepStartedAt.length !== input.journeyInteractionIds.length + 1) {
+      throw new BadRequestException(
+        'Reader timer steps must contain one timestamp before the journey and one per interaction',
+      );
+    }
     return buildReaderProgressState(
       story,
       input.journeyInteractionIds,
       input.ownedItemIds,
       randomSeed,
+      stepStartedAt,
     );
   }
 

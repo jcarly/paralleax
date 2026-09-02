@@ -2,6 +2,7 @@ import {
   createStoryChangeDelta,
   getTriggerAppearanceProbability,
   getTriggerConditionGroups,
+  getTriggerTimerSeconds,
   toCanonicalTrigger,
   type Story,
 } from '@paralleax/shared';
@@ -380,6 +381,7 @@ function relationalRead(query: jest.Mock, saved = story()) {
             sort_order: index,
             condition_groups: getTriggerConditionGroups(trigger),
             appearance_probability: getTriggerAppearanceProbability(trigger),
+            timer_seconds: getTriggerTimerSeconds(trigger),
           })),
         ),
       });
@@ -962,6 +964,7 @@ describe('StoriesRepository', () => {
       null,
       JSON.stringify([{ id: 'trigger-3', conditions: [] }]),
       100,
+      null,
       1,
     ]);
     expect(mockClientQuery).toHaveBeenCalledWith(
@@ -969,7 +972,9 @@ describe('StoriesRepository', () => {
       [JSON.stringify([{ id: 'trigger-1', position_x: 210, position_y: 175 }]), saved.id],
     );
     expect(mockClientQuery).toHaveBeenCalledWith(
-      expect.stringContaining('SET condition_groups = $2, appearance_probability = $3'),
+      expect.stringContaining(
+        'SET condition_groups = $2, appearance_probability = $3, timer_seconds = $4',
+      ),
       [
         'trigger-1',
         JSON.stringify([
@@ -979,7 +984,12 @@ describe('StoriesRepository', () => {
           },
         ]),
         100,
+        null,
       ],
+    );
+    expect(mockClientQuery).not.toHaveBeenCalledWith(
+      'DELETE FROM trigger_inputs WHERE trigger_id = $1',
+      ['trigger-1'],
     );
     expect(mockClientQuery).toHaveBeenCalledWith(
       'DELETE FROM graph_decorations WHERE id = $1 AND story_id = $2',

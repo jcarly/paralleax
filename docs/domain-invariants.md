@@ -72,8 +72,12 @@ details. They should stay covered by tests as the editor grows.
   groups are OR. At least one complete group must match.
 - A trigger owns one appearance probability from 0 through 100, defaulting to 100. Input and condition-group rules are evaluated before one deterministic
   probability roll is applied for that trigger and narrative step.
+- A trigger owns one nullable non-negative integer timer in seconds. `null` means
+  no timer and zero expires immediately. Input, conditions, and probability are
+  evaluated before timer expiration.
 - Several triggers targeting one interaction remain independent eligibility and
-  probability gates. The interaction is available when at least one succeeds.
+  probability/timer gates. The interaction is available when at least one succeeds;
+  one successful untimed Trigger keeps it available without a countdown.
 - Conditions can check visited interactions, the current location, character
   presence in the current interaction, a typed stat assignment, item ownership,
   or the story-local calendar.
@@ -117,6 +121,10 @@ details. They should stay covered by tests as the editor grows.
   that exact instance.
 - Reader and Simulation progress preserve the probability seed. Reloading or
   stepping backward replays the same rolls; starting a new run creates a new seed.
+- Version 4 Reader and Simulation progress preserve one wall-clock start for the
+  choice step before the journey and one after every selected interaction.
+  Reloading does not pause timers; Simulation backward navigation restores the
+  timestamp of the restored step.
 - Numeric stat hourly changes are prorated by interaction duration and applied
   before ordered explicit effects.
 - An item definition belongs to exactly one story.

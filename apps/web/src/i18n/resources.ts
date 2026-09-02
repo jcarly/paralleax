@@ -525,6 +525,7 @@ export const resources = {
         startStory: 'Start the story',
         chooseStartingInteraction: 'Choose a starting interaction.',
         newOptionTitle: 'New option title',
+        optionTimer: 'Time remaining for this option',
         unavailable: 'Unavailable in the current simulation state',
         forced: ' Forced for this test.',
         addOption: 'Add option',
@@ -584,6 +585,8 @@ export const resources = {
           absent: 'Requires "{{name}}" to be absent.',
           probabilityFailed:
             'The Trigger did not appear ({{probability}}% chance; deterministic roll: {{roll}}).',
+          timerExpired_one: 'The Trigger timer expired after {{count}} second.',
+          timerExpired_other: 'The Trigger timer expired after {{count}} seconds.',
           operator: {
             eq: 'equal to',
             neq: 'different from',
@@ -739,6 +742,8 @@ export const resources = {
         title: 'Path conditions',
         appearanceProbability: 'Appearance probability',
         appearanceProbabilityHelp: 'One deterministic roll is made for this Trigger at each step.',
+        timer: 'Availability timer',
+        timerHelp: 'Leave empty for no timer. Zero seconds keeps the option hidden.',
         variantsHelp:
           'Groups are alternatives (OR); conditions inside a group must all match (AND).',
         or: 'OR',
@@ -1452,6 +1457,7 @@ export const resources = {
         startStory: 'Commencer l’histoire',
         chooseStartingInteraction: 'Choisissez une interaction de départ.',
         newOptionTitle: 'Titre de la nouvelle option',
+        optionTimer: 'Temps restant pour cette option',
         unavailable: 'Indisponible dans l’état actuel de la simulation',
         forced: ' Forcée pour ce test.',
         addOption: 'Ajouter une option',
@@ -1511,6 +1517,8 @@ export const resources = {
           absent: '« {{name}} » doit être absent.',
           probabilityFailed:
             'Le déclencheur n’est pas apparu ({{probability}} % de chance ; tirage déterministe : {{roll}}).',
+          timerExpired_one: 'Le timer du déclencheur a expiré après {{count}} seconde.',
+          timerExpired_other: 'Le timer du déclencheur a expiré après {{count}} secondes.',
           operator: {
             eq: 'égal à',
             neq: 'différent de',
@@ -1669,6 +1677,8 @@ export const resources = {
         appearanceProbability: 'Probabilité d’apparition',
         appearanceProbabilityHelp:
           'Un seul tirage déterministe est effectué pour ce déclencheur à chaque étape.',
+        timer: 'Timer de disponibilité',
+        timerHelp: 'Laissez vide pour aucun timer. Zéro seconde masque toujours l’option.',
         variantsHelp:
           'Les groupes sont alternatifs (OU) ; toutes les conditions d’un groupe doivent être vraies (ET).',
         or: 'OU',

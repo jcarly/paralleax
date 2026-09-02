@@ -6,7 +6,7 @@ import { TriggerInspector } from './TriggerInspector';
 
 afterEach(cleanup);
 
-function storyWithConditions(conditions: TriggerCondition[]) {
+function storyWithConditions(conditions: TriggerCondition[]): Story {
   return {
     id: 'story-1',
     title: 'Timed story',
@@ -40,6 +40,28 @@ function renderInspector(story: Story, onSaveTrigger = vi.fn().mockResolvedValue
 }
 
 describe('TriggerInspector temporal conditions', () => {
+  it('sets and clears the Trigger availability timer', () => {
+    const story = storyWithConditions([]);
+    const onSaveTrigger = renderInspector(story);
+    const timer = screen.getByRole('spinbutton', { name: 'Availability timer' });
+
+    fireEvent.change(timer, { target: { value: '8' } });
+    fireEvent.blur(timer);
+    expect(onSaveTrigger).toHaveBeenLastCalledWith('interaction-1', 'trigger-1', {
+      timerSeconds: 8,
+    });
+
+    cleanup();
+    story.interactions[0].triggers[0].timerSeconds = 8;
+    const onClearTimer = renderInspector(story);
+    const savedTimer = screen.getByRole('spinbutton', { name: 'Availability timer' });
+    fireEvent.change(savedTimer, { target: { value: '' } });
+    fireEvent.blur(savedTimer);
+    expect(onClearTimer).toHaveBeenLastCalledWith('interaction-1', 'trigger-1', {
+      timerSeconds: null,
+    });
+  });
+
   it('adds a typed variable condition', async () => {
     const story: Story = storyWithConditions([]);
     story.statDefinitions = [{ id: 'open-definition', name: 'Open', valueType: 'boolean' }];

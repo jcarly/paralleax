@@ -47,6 +47,7 @@ export function getStoryGraphClickCreationPosition(
     inputInteractionIds: source ? [source.id] : [],
     conditionGroups: [{ id: triggerId, conditions: [] }],
     appearanceProbability: 100,
+    timerSeconds: null,
   };
   const placeholder: Interaction = {
     id: interactionId,
@@ -61,6 +62,7 @@ export function getStoryGraphClickCreationPosition(
         inputInteractionIds: [interactionId],
         conditionGroups: [{ id: triggerId, conditions: [] }],
         appearanceProbability: 100,
+        timerSeconds: null,
       }
     : undefined;
   const projectedStory: Story = {

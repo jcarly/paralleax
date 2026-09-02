@@ -44,7 +44,8 @@ path without changing normal reader semantics.
 - The shared package remains the only owner of eligibility and deterministic
   probability semantics.
 - Saves reproduce probability outcomes without storing every individual roll.
-- Automatic choice execution and timers remain separate future behavior.
+- Timer behavior is defined separately by ADR-026; automatic choice execution
+  remains future behavior.
 - Legacy TypeScript story fixtures and imported data can still expose one
   `conditions` array temporarily; normalization converts it to the canonical
   single group before persistence or mutation.

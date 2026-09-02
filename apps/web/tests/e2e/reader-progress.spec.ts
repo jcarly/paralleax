@@ -37,6 +37,12 @@ test('resumes and updates authenticated reader progress', async ({ page }) => {
     statValues: {},
     ownedItemIds: [],
   };
+  const savedInputs: Array<{
+    journeyInteractionIds: string[];
+    ownedItemIds: string[];
+    randomSeed: string;
+    stepStartedAt: string[];
+  }> = [];
 
   await page.route('**/api/auth/me', (route) =>
     route.fulfill({
@@ -59,19 +65,19 @@ test('resumes and updates authenticated reader progress', async ({ page }) => {
       journeyInteractionIds: string[];
       ownedItemIds: string[];
       randomSeed: string;
+      stepStartedAt: string[];
     };
-    expect(input).toEqual({
-      journeyInteractionIds: ['start', 'next'],
-      ownedItemIds: [],
-      randomSeed: expect.any(String),
-    });
+    savedInputs.push(input);
     await route.fulfill({
       json: {
         state: {
           ...savedState,
-          version: 3,
-          journeyInteractionIds: ['start', 'next'],
+          version: 4,
+          journeyInteractionIds: input.journeyInteractionIds,
+          currentInteractionId: input.journeyInteractionIds.at(-1) ?? null,
+          visitedInteractionIds: input.journeyInteractionIds,
           randomSeed: input.randomSeed,
+          stepStartedAt: input.stepStartedAt,
         },
         updatedAt: '2026-07-27T09:45:00.000Z',
       },
@@ -85,5 +91,13 @@ test('resumes and updates authenticated reader progress', async ({ page }) => {
   await expect(page.getByText('2026-07-27 09:15')).toBeVisible();
   await page.getByRole('button', { name: 'Continue' }).click();
   await expect(page.getByRole('heading', { name: 'Continue' })).toBeVisible();
+  await expect
+    .poll(() => savedInputs.at(-1))
+    .toEqual({
+      journeyInteractionIds: ['start', 'next'],
+      ownedItemIds: [],
+      randomSeed: expect.any(String),
+      stepStartedAt: [expect.any(String), expect.any(String), expect.any(String)],
+    });
   await expect(page.getByText('Progress saved')).toBeVisible();
 });

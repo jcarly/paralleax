@@ -12,6 +12,7 @@ In the current MVP model, a trigger belongs to one output interaction and contai
 - zero, one, or several input interaction ids;
 - one or more condition groups, each containing zero or several conditions;
 - one appearance probability from 0 through 100, defaulting to 100.
+- one nullable non-negative timer in seconds, defaulting to no timer.
 
 ## Inputs
 
@@ -58,6 +59,17 @@ After input and condition-group evaluation, the reader makes one deterministic
 appearance roll for the Trigger. The roll uses the saved run seed, narrative
 step, and Trigger id. It is therefore stable across rendering, reload, backward
 replay, and Simulation diagnostics. Separate Triggers always roll separately.
+
+After those gates succeed, a configured timer keeps the Trigger active only for
+the specified wall-clock duration of the current choice step. `null` means no
+timer; zero expires immediately. Reloading and closing do not pause an
+authenticated saved session. A draining bar appears above a timed option. On
+expiry the reader removes it, while Simulation keeps it disabled and explains
+the expiration. Simulation backward navigation restores the original step time.
+
+If several Triggers target the same interaction, any active one keeps the option
+available. One eligible untimed Trigger means the option has no countdown;
+otherwise the displayed bar uses the longest remaining eligible window.
 
 Temporal trigger conditions use the story-local clock. Exact dates and inclusive
 date ranges are alternatives in one calendar-date category. Weekdays form
@@ -149,7 +161,8 @@ Alternative OR groups use a prominent plus action; when several groups exist,
 top-right corner. A new alternative group is added to the selected Trigger and
 starts without conditions. Unavailable types explain their missing prerequisite
 on hover or keyboard focus. Deleting one group is immediate and keeps the Trigger
-inspector open. The same inspector edits the single 0–100 appearance probability.
+inspector open. The same inspector edits the single 0–100 appearance probability
+and an optional integer timer in seconds.
 
 The interaction inspector should stay focused on interaction content. Trigger
 inputs and outputs are represented by the graph itself, so the trigger inspector
@@ -187,8 +200,8 @@ intentional shortcut that adds the source to that trigger without opening the
 choice.
 
 Adding the source to an existing trigger means every input on that trigger shares
-the same condition groups and probability. Creating a new trigger means the route has its own
-condition group.
+the same condition groups, probability, and timer. Creating a new trigger means
+the route has its own condition group.
 
 Graphically, a linked trigger is represented as a circular marker between its
 inputs and its output interaction. When a trigger has several inputs, their links
@@ -257,7 +270,7 @@ A --> Trigger 1 (30%) --> C
 A --> Trigger 2 (80%) --> C
 ```
 
-Use condition groups inside one Trigger when inputs and probability are shared
+Use condition groups inside one Trigger when inputs, probability, and timer are shared
 and only the alternative conditions differ. The inspector adds and removes those
 groups directly on the Trigger. Use several Triggers only when the route requires
 independent inputs, probability gates, comments, or lifecycle. Even with identical

@@ -2,6 +2,7 @@ import type { Trigger, TriggerConditionGroup } from '../model/triggers.js';
 import type { TriggerCondition } from './conditions.js';
 
 export const DEFAULT_TRIGGER_APPEARANCE_PROBABILITY = 100;
+export const DEFAULT_TRIGGER_TIMER_SECONDS = null;
 
 export function getTriggerConditionGroups(trigger: Trigger): TriggerConditionGroup[] {
   if (trigger.conditionGroups && trigger.conditionGroups.length > 0) {
@@ -18,6 +19,10 @@ export function getTriggerAppearanceProbability(trigger: Trigger): number {
   return trigger.appearanceProbability ?? DEFAULT_TRIGGER_APPEARANCE_PROBABILITY;
 }
 
+export function getTriggerTimerSeconds(trigger: Trigger): number | null {
+  return trigger.timerSeconds ?? DEFAULT_TRIGGER_TIMER_SECONDS;
+}
+
 export function toCanonicalTrigger(trigger: Trigger): Trigger {
   const canonical = { ...trigger };
   delete canonical.conditions;
@@ -28,5 +33,6 @@ export function toCanonicalTrigger(trigger: Trigger): Trigger {
       conditions: [...group.conditions],
     })),
     appearanceProbability: getTriggerAppearanceProbability(trigger),
+    timerSeconds: getTriggerTimerSeconds(trigger),
   };
 }

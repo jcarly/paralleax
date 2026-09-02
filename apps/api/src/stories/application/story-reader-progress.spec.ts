@@ -55,8 +55,9 @@ describe('StoryReaderProgressService', () => {
 
     expect(progress).toMatchObject({
       state: {
-        version: 3,
+        version: 4,
         randomSeed: expect.any(String),
+        stepStartedAt: ['2026-08-25T12:00:00.000Z', '2026-08-25T12:00:00.000Z'],
         journeyInteractionIds: ['root'],
         currentInteractionId: 'root',
       },
@@ -71,6 +72,25 @@ describe('StoryReaderProgressService', () => {
       undefined,
       progress.updatedAt,
     );
+  });
+
+  it('preserves one supplied wall-clock start per reader step', async () => {
+    const stepStartedAt = ['2026-08-25T11:59:00.000Z', '2026-08-25T12:00:00.000Z'];
+
+    const progress = await service.save(
+      'story-1',
+      { journeyInteractionIds: ['root'], stepStartedAt },
+      'user-1',
+    );
+
+    expect(progress.state.stepStartedAt).toEqual(stepStartedAt);
+    await expect(
+      service.save(
+        'story-1',
+        { journeyInteractionIds: ['root'], stepStartedAt: [stepStartedAt[0]] },
+        'user-1',
+      ),
+    ).rejects.toThrow('Reader timer steps must contain one timestamp');
   });
 
   it('preserves an existing run seed for legacy clients that do not send it', async () => {

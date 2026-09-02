@@ -49,3 +49,9 @@ export interface TriggerProbabilityFailure {
   appearanceProbability: number;
   roll: number;
 }
+
+export interface TriggerTimerFailure {
+  triggerId: string;
+  timerSeconds: number;
+  elapsedTimeMs: number;
+}
