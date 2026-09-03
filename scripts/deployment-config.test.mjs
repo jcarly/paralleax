@@ -36,6 +36,7 @@ test('Railway web deployment probes the public reverse proxy', async () => {
   assert.match(dockerfile, /^ENV NGINX_ENTRYPOINT_LOCAL_RESOLVERS=1$/m);
   assert.match(nginxConfiguration, /^\s*listen \$\{PORT\};$/m);
   assert.match(nginxConfiguration, /^\s*resolver \$\{NGINX_LOCAL_RESOLVERS\} valid=10s;$/m);
+  assert.match(nginxConfiguration, /^ {4}client_max_body_size 128k;$/m);
   assert.match(nginxConfiguration, /^\s*set \$api_upstream "\$\{API_HOST\}:\$\{API_PORT\}";$/m);
   assert.match(nginxConfiguration, /^\s*proxy_pass http:\/\/\$api_upstream\$request_uri;$/m);
   assert.match(
@@ -44,6 +45,15 @@ test('Railway web deployment probes the public reverse proxy', async () => {
   );
   assert.match(nginxConfiguration, /^\s*proxy_buffering off;$/m);
   assert.match(nginxConfiguration, /^\s*proxy_read_timeout 1h;$/m);
+  const administratorImportLocation = nginxConfiguration.match(
+    /^\s*location = \/api\/stories\/imports\/qsp\/admin \{(?<body>[\s\S]*?)^\s{4}\}$/m,
+  )?.groups?.body;
+  assert.ok(administratorImportLocation);
+  assert.match(administratorImportLocation, /^\s*client_max_body_size 0;$/m);
+  assert.match(administratorImportLocation, /^\s*client_body_timeout 1h;$/m);
+  assert.match(administratorImportLocation, /^\s*proxy_request_buffering off;$/m);
+  assert.match(administratorImportLocation, /^\s*proxy_read_timeout 1h;$/m);
+  assert.match(administratorImportLocation, /^\s*proxy_send_timeout 1h;$/m);
   assert.doesNotMatch(nginxConfiguration, /proxy_pass http:\/\/\$\{API_HOST\}/);
 });
 
@@ -57,4 +67,16 @@ test('the optional Formbricks web build and CSP use the same public app URL', as
   assert.match(productionCompose, /^\s+VITE_FORMBRICKS_APP_URL: \$\{VITE_FORMBRICKS_APP_URL:-\}$/m);
   assert.match(nginxConfiguration, /connect-src 'self' \$\{VITE_FORMBRICKS_APP_URL\}/);
   assert.match(nginxConfiguration, /script-src 'self' \$\{VITE_FORMBRICKS_APP_URL\}/);
+});
+
+test('local development exposes services only through IPv4 loopback', async () => {
+  const localCompose = await readRepositoryFile('compose.yaml');
+
+  assert.match(localCompose, /^\s+- '127\.0\.0\.1:5432:5432'$/m);
+  assert.match(localCompose, /^\s+- '127\.0\.0\.1:\$\{API_PORT:-3300\}:3000'$/m);
+  assert.match(localCompose, /^\s+- '127\.0\.0\.1:5173:5173'$/m);
+  assert.match(localCompose, /^\s+CORS_ORIGIN: \$\{CORS_ORIGIN:-http:\/\/127\.0\.0\.1:5173\}$/m);
+  assert.doesNotMatch(localCompose, /^\s+- '5432:5432'$/m);
+  assert.doesNotMatch(localCompose, /^\s+- '\$\{API_PORT:-3300\}:3000'$/m);
+  assert.doesNotMatch(localCompose, /^\s+- '5173:5173'$/m);
 });

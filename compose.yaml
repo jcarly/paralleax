@@ -29,7 +29,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-paralleax}
       POSTGRES_DB: ${POSTGRES_DB:-paralleax}
     ports:
-      - '5432:5432'
+      - '127.0.0.1:5432:5432'
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
@@ -53,10 +53,10 @@ services:
       NODE_OPTIONS: '--max-old-space-size=2048'
       DATABASE_URL: ${DATABASE_URL:-postgres://paralleax:paralleax@db:5432/paralleax}
       POSTGRES_SSL: ${POSTGRES_SSL:-false}
-      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://127.0.0.1:5173}
       LEGACY_STORY_OWNER_EMAIL: ${LEGACY_STORY_OWNER_EMAIL:-}
     ports:
-      - '${API_PORT:-3300}:3000'
+      - '127.0.0.1:${API_PORT:-3300}:3000'
     volumes:
       - .:/workspace
       - node-modules:/workspace/node_modules
@@ -80,7 +80,7 @@ services:
       VITE_FORMBRICKS_APP_URL: ${VITE_FORMBRICKS_APP_URL:-}
       NODE_OPTIONS: '--max-old-space-size=2048'
     ports:
-      - '5173:5173'
+      - '127.0.0.1:5173:5173'
     volumes:
       - .:/workspace
       - node-modules:/workspace/node_modules

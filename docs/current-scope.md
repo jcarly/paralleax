@@ -74,6 +74,17 @@ Paralleax currently includes:
   Story creation. Simple declarations, assignments, comparisons, and variable
   substitutions map to Paralleax typed stats, while unsupported expressions
   and runtime commands remain explicit in the compatibility report.
+- An experimental single-file QSP importer in the same story-import workflow. It
+  reads compiled `.qsp`/`.gam` and UTF-8 QSP text formats, converts locations,
+  static actions, literal output and assignments (including literal-index array
+  cells), action-only `IF` / `ELSEIF` / `ELSE` branches, and static navigation,
+  then returns occurrence-aware warnings and a complete
+  feature coverage matrix. QSP state reuses Story stats, effects, and Trigger
+  condition groups; unsupported runtime semantics do not become Paralleax engine
+  behavior. Standard accounts retain the 80 KiB request limit; administrators
+  use an authenticated binary upload without a Paralleax application-level limit.
+  The import dialog reports measurable upload percentage, then an indeterminate
+  analysis-and-persistence phase after the server has received the file.
 - Editor-only React Flow graph authoring.
 - Rectangular graph multi-selection for interactions and linked trigger markers,
   with a transient count inspector, group drag-and-drop, and outside-click clearing.
@@ -128,6 +139,7 @@ The following remain future or incomplete unless a task explicitly implements th
   distributed comment events;
 - stable public import/export format;
 - lossless or runtime-equivalent ChoiceScript import and incremental re-import;
+- lossless or runtime-equivalent QSP import, QSP re-export, and incremental re-import;
 - executable/Unity/video exports;
 - AI-driven narrative/runtime behavior.
 

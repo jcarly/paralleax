@@ -1,4 +1,9 @@
 import type { ParsedScene, SourceLine } from './models.js';
+export {
+  escapeImportedHtml as escapeHtml,
+  truncateImportedText as truncate,
+  uniqueImportedValues as unique,
+} from '../source-utils.js';
 
 export function normalizeIdentifier(value: string | undefined) {
   return (value ?? '')
@@ -26,23 +31,6 @@ export function displayAnchor(anchor: string) {
 
 export function fallbackSource(scene: ParsedScene): SourceLine {
   return { fileName: scene.fileName, sceneName: scene.name, number: 1, indent: 0, text: '' };
-}
-
-export function escapeHtml(value: string) {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
-
-export function truncate(value: string, length: number) {
-  return value.length <= length ? value : `${value.slice(0, Math.max(0, length - 1)).trimEnd()}…`;
-}
-
-export function unique(values: string[]) {
-  return [...new Set(values)];
 }
 
 export function escapeRegExp(value: string) {

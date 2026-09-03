@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiError, api } from './api';
 
 function jsonResponse(body: unknown, init: Partial<Response> = {}) {
@@ -16,6 +16,10 @@ describe('api client', () => {
   beforeEach(() => {
     fetchMock.mockReset();
     vi.stubGlobal('fetch', fetchMock);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   it('calls authentication and character resource removal endpoints', async () => {
@@ -254,6 +258,74 @@ describe('api client', () => {
       headers: { 'Content-Type': 'application/json' },
       method: 'DELETE',
     });
+  });
+
+  it('uploads an administrator QSP import with measurable progress', async () => {
+    class FakeXmlHttpRequest {
+      static latest: FakeXmlHttpRequest;
+      status = 0;
+      responseText = '';
+      upload = {
+        onprogress: null as ((event: ProgressEvent) => void) | null,
+        onload: null as (() => void) | null,
+      };
+      onload: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+      open = vi.fn();
+      setRequestHeader = vi.fn();
+      send = vi.fn();
+
+      constructor() {
+        FakeXmlHttpRequest.latest = this;
+      }
+    }
+    vi.stubGlobal('XMLHttpRequest', FakeXmlHttpRequest);
+    const content = new Blob(['QSP source']);
+    const onProgress = vi.fn();
+    const result = {
+      story: {
+        id: 'story-qsp',
+        title: 'Large game',
+        createdAt: 'now',
+        updatedAt: 'now',
+        interactions: [],
+      },
+      report: {
+        format: 'qsp' as const,
+        sourceFileCount: 1,
+        locationCount: 1,
+        actionCount: 0,
+        interactionCount: 1,
+        convertedStatementCount: 1,
+        approximatedStatementCount: 0,
+        unsupportedStatementCount: 0,
+        coverage: [],
+        issues: [],
+      },
+    };
+
+    const importPromise = api.importUnlimitedQsp(
+      { name: 'large game.qsps', format: 'text', content },
+      onProgress,
+    );
+    const xhr = FakeXmlHttpRequest.latest;
+
+    expect(xhr.open).toHaveBeenCalledWith(
+      'POST',
+      '/api/stories/imports/qsp/admin?name=large%20game.qsps&format=text',
+    );
+    expect(xhr.setRequestHeader).toHaveBeenCalledWith('Content-Type', 'application/octet-stream');
+    expect(xhr.send).toHaveBeenCalledWith(content);
+
+    xhr.upload.onprogress?.({ lengthComputable: true, loaded: 42, total: 100 } as ProgressEvent);
+    xhr.upload.onload?.();
+    expect(onProgress).toHaveBeenNthCalledWith(1, 42);
+    expect(onProgress).toHaveBeenNthCalledWith(2, 100);
+
+    xhr.status = 201;
+    xhr.responseText = JSON.stringify(result);
+    xhr.onload?.();
+    await expect(importPromise).resolves.toEqual(result);
   });
 
   it('calls anchored comment thread endpoints', async () => {

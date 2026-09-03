@@ -99,7 +99,7 @@ npm run dev
 
 Local URLs:
 
-- Web: http://localhost:5173
+- Web: http://127.0.0.1:5173
 - API: http://localhost:3300/api
 
 Contextual Formbricks feedback is optional and disabled by default. Set both
@@ -239,8 +239,8 @@ Copy-Item .env.example .env
 docker compose up
 ```
 
-Then open http://localhost:5173. The API is exposed at http://localhost:3300/api.
-PostgreSQL is exposed at `localhost:5432` and stores data in the
+Then open http://127.0.0.1:5173. The API is exposed at http://127.0.0.1:3300/api.
+PostgreSQL is exposed at `127.0.0.1:5432` and stores data in the
 `postgres-data` Docker volume.
 
 ## Private Alpha Deployment

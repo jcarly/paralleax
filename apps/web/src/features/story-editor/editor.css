@@ -124,6 +124,8 @@
 }
 .location-panel {
   position: relative;
+  height: 100%;
+  min-height: 0;
   min-width: 0;
   z-index: 3;
   overflow: visible;
@@ -136,7 +138,8 @@
   overflow: visible;
 }
 .location-panel-content {
-  height: 100%;
+  position: absolute;
+  inset: 0;
   min-height: 0;
   overflow-x: hidden;
   overflow-y: auto;

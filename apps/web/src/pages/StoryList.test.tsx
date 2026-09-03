@@ -1,11 +1,11 @@
 import React from 'react';
-import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Story, StorySummary } from '@paralleax/shared';
 import { StoryList } from './StoryList';
-import { api, type AuthUser } from '../api';
+import { api, type AuthUser, type QspImportResponse } from '../api';
 import { loadStoryEditor, loadStoryPlayer } from './storyRouteLoaders';
 import { i18n } from '../i18n';
 
@@ -16,6 +16,8 @@ vi.mock('../api', () => ({
     createStory: vi.fn(),
     createDemoStories: vi.fn(),
     importChoiceScript: vi.fn(),
+    importQsp: vi.fn(),
+    importUnlimitedQsp: vi.fn(),
     deleteStory: vi.fn(),
   },
 }));
@@ -271,7 +273,7 @@ describe('StoryList', () => {
     );
     await screen.findByRole('heading', { name: 'No stories found' });
 
-    await user.click(screen.getByRole('button', { name: 'Import ChoiceScript' }));
+    await user.click(screen.getByRole('button', { name: 'Import a story' }));
     const startup = new File(['*title Imported story\n*set score 1\nStart.'], 'startup.txt', {
       type: 'text/plain',
     });
@@ -293,6 +295,157 @@ describe('StoryList', () => {
       '/stories/story-imported/edit',
     );
     expect(screen.getByRole('heading', { name: 'Imported story' })).toBeInTheDocument();
+  });
+
+  it('imports a QSP game and displays the compatibility coverage matrix', async () => {
+    const user = userEvent.setup();
+    const importedStory: Story = {
+      id: 'story-qsp',
+      title: 'QSP story',
+      createdAt: '2026-09-02T08:00:00.000Z',
+      updatedAt: '2026-09-02T08:00:00.000Z',
+      interactions: [
+        {
+          id: 'interaction-start',
+          title: 'Start',
+          body: '<p>Start.</p>',
+          position: { x: 80, y: 120 },
+          triggers: [{ id: 'trigger-start', inputInteractionIds: [], conditions: [] }],
+        },
+      ],
+    };
+    vi.mocked(api.listStories).mockResolvedValue([]);
+    vi.mocked(api.importQsp).mockResolvedValue({
+      story: importedStory,
+      report: {
+        format: 'qsp',
+        sourceFileCount: 1,
+        locationCount: 1,
+        actionCount: 0,
+        interactionCount: 1,
+        convertedStatementCount: 1,
+        approximatedStatementCount: 0,
+        unsupportedStatementCount: 0,
+        coverage: [
+          { feature: 'locations', support: 'supported', occurrences: 1 },
+          { feature: 'variables', support: 'partial', occurrences: 0 },
+        ],
+        issues: [],
+      },
+    });
+
+    render(
+      <MemoryRouter>
+        <StoryList user={standardUser} />
+      </MemoryRouter>,
+    );
+    await screen.findByRole('heading', { name: 'No stories found' });
+    await user.click(screen.getByRole('button', { name: 'Import a story' }));
+    await user.selectOptions(screen.getByLabelText('Source format'), 'qsp');
+    const source = "# Start\n*pl 'Start.'\n---";
+    await user.upload(
+      screen.getByLabelText('QSP game file'),
+      new File([source], 'sample.qsps', { type: 'text/plain' }),
+    );
+    await user.click(screen.getByRole('button', { name: 'Import story' }));
+
+    expect(await screen.findByRole('heading', { name: 'QSP story imported' })).toBeInTheDocument();
+    expect(api.importQsp).toHaveBeenCalledWith({
+      name: 'sample.qsps',
+      format: 'text',
+      contentBase64: btoa(source),
+    });
+    expect(screen.getByText('QSP compatibility coverage')).toBeInTheDocument();
+    expect(screen.getByText('Variables, arrays, and expressions')).toBeInTheDocument();
+    expect(screen.getByText('Partial')).toBeInTheDocument();
+  });
+
+  it('streams QSP games larger than the standard limit for administrators', async () => {
+    const user = userEvent.setup();
+    const importedStory: Story = {
+      id: 'story-large-qsp',
+      title: 'Large QSP story',
+      createdAt: '2026-09-02T08:00:00.000Z',
+      updatedAt: '2026-09-02T08:00:00.000Z',
+      interactions: [
+        {
+          id: 'interaction-start',
+          title: 'Start',
+          body: '<p>Start.</p>',
+          position: { x: 80, y: 120 },
+          triggers: [{ id: 'trigger-start', inputInteractionIds: [], conditions: [] }],
+        },
+      ],
+    };
+    const importResult: QspImportResponse = {
+      story: importedStory,
+      report: {
+        format: 'qsp' as const,
+        sourceFileCount: 1,
+        locationCount: 1,
+        actionCount: 0,
+        interactionCount: 1,
+        convertedStatementCount: 1,
+        approximatedStatementCount: 0,
+        unsupportedStatementCount: 0,
+        coverage: [{ feature: 'locations', support: 'supported', occurrences: 1 }],
+        issues: [],
+      },
+    };
+    let reportUploadProgress: ((percentage: number) => void) | undefined;
+    let finishImport!: (result: QspImportResponse) => void;
+    vi.mocked(api.listStories).mockResolvedValue([]);
+    vi.mocked(api.importUnlimitedQsp).mockImplementation((_file, onUploadProgress) => {
+      reportUploadProgress = onUploadProgress;
+      return new Promise((resolve) => {
+        finishImport = resolve;
+      });
+    });
+
+    render(
+      <MemoryRouter>
+        <StoryList user={administrator} />
+      </MemoryRouter>,
+    );
+    await screen.findByRole('heading', { name: 'No stories found' });
+    await user.click(screen.getByRole('button', { name: 'Import a story' }));
+    await user.selectOptions(screen.getByLabelText('Source format'), 'qsp');
+    const source = new File([' '.repeat(81 * 1024)], 'large.qsps', {
+      type: 'text/plain',
+    });
+    await user.upload(screen.getByLabelText('QSP game file'), source);
+
+    expect(
+      screen.getByText('Approximately 81 KiB · no Paralleax limit for administrators'),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Import story' })).toBeEnabled();
+    await user.click(screen.getByRole('button', { name: 'Import story' }));
+
+    expect(api.importUnlimitedQsp).toHaveBeenCalledWith(
+      {
+        name: 'large.qsps',
+        format: 'text',
+        content: source,
+      },
+      expect.any(Function),
+    );
+    act(() => reportUploadProgress?.(42));
+    expect(screen.getByText('Uploading the file… 42%')).toBeInTheDocument();
+    expect(screen.getByRole('progressbar', { name: 'Uploading the file… 42%' })).toHaveAttribute(
+      'aria-valuenow',
+      '42',
+    );
+
+    act(() => reportUploadProgress?.(100));
+    expect(
+      screen.getByRole('progressbar', {
+        name: 'File received. Analysing and creating the story…',
+      }),
+    ).not.toHaveAttribute('aria-valuenow');
+
+    await act(async () => finishImport(importResult));
+    expect(await screen.findByRole('heading', { name: 'QSP story imported' })).toBeInTheDocument();
+    expect(api.importQsp).not.toHaveBeenCalled();
   });
 
   it('searches, filters by resolved capabilities and ownership, and switches layout', async () => {

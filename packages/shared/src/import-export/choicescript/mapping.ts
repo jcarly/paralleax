@@ -2,6 +2,7 @@ import { defaultStoryAccess } from '../../access-control.js';
 import type { Interaction } from '../../model/interactions.js';
 import type { Story } from '../../model/stories.js';
 import type { StatValue, StatValueType } from '../../model/stats.js';
+import { buildImportedTrigger } from '../story-builders.js';
 import { layoutChoiceScriptGraph } from './graph-builder.js';
 import {
   escapeHtml,
@@ -55,12 +56,12 @@ export function mapChoiceScriptGraphToStory(
     }
     const triggers =
       incomingEdges.length === 0
-        ? [buildTrigger(options.createId(), [], [])]
+        ? [buildImportedTrigger(options.createId(), [], [[]])]
         : [...triggerGroups.values()].map((group) =>
-            buildTrigger(
+            buildImportedTrigger(
               options.createId(),
               unique(group.inputKeys).map((key) => interactionIds.get(key)!),
-              group.condition ? [group.condition] : [],
+              group.condition ? [[group.condition]] : [[]],
             ),
           );
     const statEffects = node.effects.flatMap((effect) => {
@@ -135,20 +136,6 @@ export function mapChoiceScriptGraphToStory(
     access: { ...defaultStoryAccess },
     createdAt: options.timestamp,
     updatedAt: options.timestamp,
-  };
-}
-
-function buildTrigger(
-  id: string,
-  inputInteractionIds: string[],
-  conditions: NonNullable<Interaction['triggers'][number]['conditions']>,
-): Interaction['triggers'][number] {
-  return {
-    id,
-    inputInteractionIds,
-    conditionGroups: [{ id: `${id}:conditions`, conditions }],
-    appearanceProbability: 100,
-    timerSeconds: null,
   };
 }
 

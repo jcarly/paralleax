@@ -10,7 +10,7 @@ Start the local stack:
 npm run dev
 ```
 
-Then open http://localhost:5173.
+Then open http://127.0.0.1:5173.
 
 The home page is the `Stories` library. Without an account, it lists stories
 their authors have made public. Once signed in, the same page lists every story
@@ -29,8 +29,9 @@ New stories are private to the account that creates them. The creator can later
 share them explicitly. The first account created on a new installation is its
 administrator.
 
-To inspect a small ChoiceScript project, select `Import ChoiceScript` beside
-`New story`, then select all of its `.txt` scene files. Paralleax creates the
+To inspect an external story, select `Import a story` beside `New story`, then
+choose its source format. For a small ChoiceScript project, select all of its
+`.txt` scene files. Paralleax creates the
 private Story in one operation and shows how many scenes and interactions were
 converted. Review every compatibility warning before editing or playing the
 result. Literal variable declarations, assignments, simple option comparisons,
@@ -39,6 +40,24 @@ complex expressions, random values, inputs, and subroutines remain reported
 approximations and do not run with ChoiceScript semantics. The current limit is
 50 files and 96 KiB of source in total. Only import source material you have permission to use. See
 [`choicescript-import.md`](choicescript-import.md) for the exact mapping.
+
+For a QSP game, choose `QSP game` and select one compiled `.qsp`/`.gam` file or
+one UTF-8 `.qsps`, `.qsp-txt`, or `.txt-qsp` source. Standard accounts can import
+up to 80 KiB; administrators have no Paralleax application-level size limit,
+although the deployment infrastructure may enforce one. The importer converts
+locations, static actions, literal output and assignments,
+literal-index array cells, action-only `IF` / `ELSEIF` / `ELSE` branches, and
+static `GOTO` paths. Numeric and string variables reuse Story stats; `AND` and
+`OR` become Trigger condition groups, with preceding branches negated to preserve
+QSP exclusivity. Its
+report also displays the complete QSP coverage matrix, including unsupported
+calculated state, general conditional execution, subroutines, inventory, dynamic
+code, media, events, saves, input, and libraries. Review the automatic-navigation warning:
+QSP executes `GOTO` immediately, while the current Paralleax mapping exposes the
+destination as another reader choice. See [`qsp-import.md`](qsp-import.md).
+Large administrator imports show the measured file-upload percentage. At 100%,
+the indicator changes to `Analysing and creating the story` until server-side
+conversion and persistence finish.
 
 ## Manage Story Access
 

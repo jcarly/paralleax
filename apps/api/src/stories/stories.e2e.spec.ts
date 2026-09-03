@@ -381,6 +381,143 @@ Night falls.
     expect(listResponse.body).toEqual([]);
   });
 
+  it('POST /api/stories/imports/qsp creates a Story and returns its compatibility report', async () => {
+    const source = `# Start
+*pl 'A corridor stretches ahead.'
+score[2] = 2
+if score[2] >= 3:
+  act 'Wait': goto 'Ending'
+elseif score[2] >= 2:
+  act 'Continue': goto 'Ending'
+else:
+  act 'Stop': goto 'Ending'
+end
+--- Start ---
+# Ending
+*pl 'The end.'
+--- Ending ---`;
+    const response = await request(httpServer)
+      .post('/api/stories/imports/qsp')
+      .send({
+        file: {
+          name: 'corridor.qsps',
+          format: 'text',
+          contentBase64: Buffer.from(source, 'utf8').toString('base64'),
+        },
+      })
+      .expect(201);
+
+    expect(response.body.story).toMatchObject({
+      title: 'corridor',
+      access: { visibility: 'private', editPolicy: 'owner', commentPolicy: 'editors' },
+    });
+    expect(response.body.story.interactions.map(({ title }: { title: string }) => title)).toEqual([
+      'Start',
+      'Wait',
+      'Continue',
+      'Stop',
+      'Ending',
+    ]);
+    expect(response.body.story.statDefinitions).toEqual([
+      expect.objectContaining({ name: 'Score [2]', valueType: 'number', category: 'QSP' }),
+    ]);
+    expect(response.body.story.interactions[0].statEffects).toEqual([
+      expect.objectContaining({ operation: 'set', value: 2 }),
+    ]);
+    expect(response.body.story.interactions[2].triggers[0].conditionGroups[0].conditions).toEqual([
+      expect.objectContaining({ operator: 'lt', value: 3 }),
+      expect.objectContaining({ operator: 'gte', value: 2 }),
+    ]);
+    expect(response.body.story.interactions[3].triggers[0].conditionGroups[0].conditions).toEqual([
+      expect.objectContaining({ operator: 'lt', value: 3 }),
+      expect.objectContaining({ operator: 'lt', value: 2 }),
+    ]);
+    expect(response.body.report).toMatchObject({
+      format: 'qsp',
+      sourceFileCount: 1,
+      locationCount: 2,
+      actionCount: 3,
+      interactionCount: 5,
+    });
+    expect(response.body.report.coverage).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ feature: 'variables', support: 'partial' }),
+      ]),
+    );
+
+    const listResponse = await request(httpServer).get('/api/stories').expect(200);
+    expect(listResponse.body).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: response.body.story.id, interactionCount: 5 }),
+      ]),
+    );
+  });
+
+  it('allows administrators to stream QSP files beyond the standard import limit', async () => {
+    const source = `# Start\n*pl 'Large import.'\n--- Start ---\n${' '.repeat(81 * 1024)}`;
+    const path = '/api/stories/imports/qsp/admin?name=large.qsps&format=text';
+
+    await request(httpServer)
+      .post(path)
+      .set('Cookie', 'paralleax_session=user-one')
+      .set('Content-Type', 'application/octet-stream')
+      .send(Buffer.from(source, 'utf8'))
+      .expect(403);
+
+    const response = await request(httpServer)
+      .post(path)
+      .set('Cookie', 'paralleax_session=admin')
+      .set('Content-Type', 'application/octet-stream')
+      .send(Buffer.from(source, 'utf8'))
+      .expect(201);
+
+    expect(response.body.story).toMatchObject({ title: 'large' });
+    expect(response.body.report).toMatchObject({
+      format: 'qsp',
+      sourceFileCount: 1,
+      locationCount: 1,
+    });
+  });
+
+  it('keeps the QSP size limit on the standard import route', async () => {
+    await request(httpServer)
+      .post('/api/stories/imports/qsp')
+      .send({
+        file: {
+          name: 'large.qsps',
+          format: 'text',
+          contentBase64: Buffer.alloc(80 * 1024 + 1, 32).toString('base64'),
+        },
+      })
+      .expect(400);
+  });
+
+  it('validates QSP format metadata and rejects unresolved locations atomically', async () => {
+    await request(httpServer)
+      .post('/api/stories/imports/qsp')
+      .send({
+        file: {
+          name: 'invalid.qsp',
+          format: 'text',
+          contentBase64: Buffer.from('# Start\n---', 'utf8').toString('base64'),
+        },
+      })
+      .expect(400);
+    await request(httpServer)
+      .post('/api/stories/imports/qsp')
+      .send({
+        file: {
+          name: 'unresolved.qsps',
+          format: 'text',
+          contentBase64: Buffer.from("# Start\ngoto 'Missing'\n---", 'utf8').toString('base64'),
+        },
+      })
+      .expect(400);
+
+    const listResponse = await request(httpServer).get('/api/stories').expect(200);
+    expect(listResponse.body).toEqual([]);
+  });
+
   it('GET /api/stories/:storyId returns a story', async () => {
     const story = await createStory('Story to read');
 

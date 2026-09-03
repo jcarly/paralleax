@@ -2,14 +2,20 @@ import {
   Body,
   Controller,
   Delete,
+  ForbiddenException,
   Get,
   Header,
+  Headers,
   HttpCode,
   Param,
   Patch,
   Post,
+  Query,
+  Req,
   Sse,
+  UnsupportedMediaTypeException,
 } from '@nestjs/common';
+import type { Request } from 'express';
 import {
   CreateInteractionDto,
   CreateStatAssignmentDto,
@@ -24,6 +30,8 @@ import {
   CreateStatDefinitionDto,
   CreateStoryDto,
   ImportChoiceScriptDto,
+  ImportQspDto,
+  QspSourceMetadataDto,
   CreateTriggerDto,
   SaveReaderProgressDto,
   UpdateInteractionDto,
@@ -42,9 +50,10 @@ import {
   SetStoryCollaboratorDto,
 } from './dto/stories.dto';
 import { StoriesService } from './stories.service';
-import { ChoiceScriptImportService } from './application/choicescript-import';
+import { StoryImportService } from './application/story-import';
 import { CurrentUser, OptionalAuth, Public, type RequestUser } from '../auth/auth.decorators';
 import { Throttle } from '@nestjs/throttler';
+import { readBinaryRequestBody } from '../operations/request-body';
 
 export const STORY_MUTATION_RATE_LIMIT = 60;
 export const STORY_READ_RATE_LIMIT = 100;
@@ -54,7 +63,7 @@ export const STORY_READ_RATE_LIMIT = 100;
 export class StoriesController {
   constructor(
     private readonly stories: StoriesService,
-    private readonly choiceScriptImports: ChoiceScriptImportService,
+    private readonly storyImports: StoryImportService,
   ) {}
 
   @Get()
@@ -81,7 +90,30 @@ export class StoriesController {
 
   @Post('imports/choicescript')
   importChoiceScript(@Body() input: ImportChoiceScriptDto, @CurrentUser() user: RequestUser) {
-    return this.choiceScriptImports.create(input, user.id);
+    return this.storyImports.createChoiceScript(input, user.id);
+  }
+
+  @Post('imports/qsp')
+  importQsp(@Body() input: ImportQspDto, @CurrentUser() user: RequestUser) {
+    return this.storyImports.createQsp(input, user.id);
+  }
+
+  @Post('imports/qsp/admin')
+  async importUnlimitedQsp(
+    @Query() input: QspSourceMetadataDto,
+    @Headers('content-type') contentType: string | undefined,
+    @Req() request: Request,
+    @CurrentUser() user: RequestUser,
+  ) {
+    if (user.role !== 'admin') throw new ForbiddenException('Administrator access required');
+    if (!contentType?.toLocaleLowerCase().startsWith('application/octet-stream')) {
+      throw new UnsupportedMediaTypeException('Expected an application/octet-stream QSP file');
+    }
+    return this.storyImports.createUnlimitedQsp(
+      input,
+      await readBinaryRequestBody(request),
+      user.id,
+    );
   }
 
   @Get(':storyId')

@@ -1,5 +1,33 @@
 # Changelog
 
+## 2026-09-02
+
+- Kept tall story-import dialogs and long graph context lists within the viewport
+  with independent vertical scrolling.
+- Bound local Compose ports explicitly to IPv4 loopback and documented
+  `http://127.0.0.1:5173` so browsers do not hang when Docker Desktop advertises
+  an unresponsive IPv6 `localhost` listener.
+- Added a first experimental QSP importer to the existing story-import workflow.
+  It reads one compiled `.qsp`/`.gam` or UTF-8 text game through the official
+  converter, maps locations, static actions, literal text and assignments,
+  literal-index array cells, action-only `IF` / `ELSEIF` / `ELSE` branches, and
+  static navigation to a private Story atomically, and reports source-local
+  approximations. Numeric/string state reuses Story stats and interaction
+  effects; action conditions with `NO`, `AND`, and `OR` reuse Trigger condition
+  groups, with sequential branch exclusions preserved. Calculated state, dynamic
+  array indices, collection operations, general imperative branches,
+  subroutines, jumps, loops, dynamic code, inventory, UI/media, runtime events,
+  saves/input, and libraries remain explicit in the coverage matrix. No QSP
+  runtime or persistence model was added to the Paralleax core. Standard accounts
+  retain an 80 KiB import limit, while administrators can use an authenticated
+  binary upload with no Paralleax application-level size limit. The import dialog
+  now shows measured upload completion followed by a distinct indeterminate
+  analysis-and-persistence phase. The production Nginx proxy exempts only this
+  administrator route from its global 128 KiB body limit, disables request
+  buffering there, and allows long upload and processing phases. Interpolated
+  navigation targets are reported as unsupported dynamic navigation without
+  being mistaken for missing static locations or rejecting the entire import.
+
 ## 2026-09-01
 
 - Added nullable non-negative Trigger availability timers. Timed reader options

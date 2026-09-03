@@ -107,13 +107,25 @@ deterministic sample story lives in `packages/shared/src/demo/`. The public
 responsibility.
 
 Experimental external-source adapters live in `packages/shared/src/import-export/`.
-The ChoiceScript adapter separates typed source parsing, draft graph compilation
-and layout, canonical Story mapping, and compatibility reporting behind a thin
-pipeline orchestrator. It maps representable control flow and simple state
-operations without importing a foreign runtime. Source declarations,
-assignments, comparisons, and substitutions use generic Paralleax typed stats.
-API orchestration supplies IDs and persists the complete mapped Story in one
+The ChoiceScript adapter separates typed source parsing, draft graph compilation,
+canonical Story mapping, and compatibility reporting behind a thin pipeline
+orchestrator. The QSP adapter follows the same workflow, uses the official format
+converter at its source boundary, and adds a stable feature coverage matrix for
+its substantially broader runtime gaps. Both reuse the shared deterministic
+import graph layout. They map representable concepts without importing a foreign
+runtime. Source state that shares Paralleax semantics must use generic typed stats,
+items, effects, and Trigger conditions instead of parallel models. API
+orchestration supplies IDs and persists the complete mapped Story in one
 transaction; web code owns only local file selection and report presentation.
+The standard QSP route retains its small JSON/base64 request boundary. An
+administrator-only binary route streams larger source files past the global JSON
+parser and reuses the same QSP mapping and persistence service. The production
+Nginx proxy disables its otherwise global 128 KiB body limit and request buffering
+only for that exact authenticated route, with extended transfer and processing
+timeouts. A hosting platform in front of Nginx may still impose its own transport
+limit. The browser uses upload progress events for this route, then presents
+server-side analysis and atomic persistence as an indeterminate phase rather than
+inventing a completion estimate.
 
 Runtime reconstruction lives in `packages/shared/src/reader/`.
 Its replay pipeline derives progress, location, typed stat values, and owned item

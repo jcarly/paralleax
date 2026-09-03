@@ -4,7 +4,7 @@ import { StoriesController } from './stories.controller';
 import { StoriesRepository } from './stories.repository';
 import { StoriesService } from './stories.service';
 import { StoryEventsService } from './story.events';
-import { ChoiceScriptImportService } from './application/choicescript-import';
+import { StoryImportService } from './application/story-import';
 import { StoryAccessService } from './application/story-access';
 import { StoryContextService } from './application/story-context';
 import { StoryGraphService } from './application/story-graph';
@@ -20,7 +20,7 @@ import { StoryReaderProgressService } from './application/story-reader-progress'
     StoriesRepository,
     StoriesService,
     StoryEventsService,
-    ChoiceScriptImportService,
+    StoryImportService,
     StoryAccessService,
     StoryContextService,
     StoryGraphService,

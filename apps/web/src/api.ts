@@ -2,6 +2,8 @@ import type {
   CharacterMutationResult,
   ChoiceScriptImportReport,
   ChoiceScriptSourceFile,
+  QspImportReport,
+  QspSourceFormat,
   CommentAnchor,
   CharacterItemMutationResult,
   CharacterStatMutationResult,
@@ -68,29 +70,62 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     ...init,
   });
   if (!response.ok) {
-    if (response.status === 401 && !path.startsWith('/auth/')) {
-      window.dispatchEvent(new Event('paralleax:session-expired'));
-    }
-    const body = await response.text();
-    let message = body || `HTTP ${response.status}`;
-    let code: string | undefined;
-    let requestId: string | undefined;
-    try {
-      const error = JSON.parse(body) as {
-        code?: string;
-        message?: string | string[];
-        requestId?: string;
-      };
-      if (Array.isArray(error.message)) message = error.message.join(', ');
-      else if (error.message) message = error.message;
-      code = error.code;
-      requestId = error.requestId;
-    } catch {
-      // Preserve plain-text and non-JSON error responses.
-    }
-    throw new ApiError(message, response.status, code, requestId);
+    throw apiError(path, response.status, await response.text());
   }
   return response.status === 204 ? (undefined as T) : (response.json() as Promise<T>);
+}
+
+function uploadBinary<T>(
+  path: string,
+  content: Blob,
+  onUploadProgress?: (percentage: number) => void,
+): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', `/api${path}`);
+    xhr.setRequestHeader('Content-Type', 'application/octet-stream');
+    xhr.upload.onprogress = (event) => {
+      if (!event.lengthComputable || event.total <= 0) return;
+      onUploadProgress?.(Math.min(100, Math.round((event.loaded / event.total) * 100)));
+    };
+    xhr.upload.onload = () => onUploadProgress?.(100);
+    xhr.onload = () => {
+      if (xhr.status < 200 || xhr.status >= 300) {
+        reject(apiError(path, xhr.status, xhr.responseText));
+        return;
+      }
+      try {
+        resolve(xhr.status === 204 ? (undefined as T) : (JSON.parse(xhr.responseText) as T));
+      } catch {
+        reject(new ApiError('The server returned an invalid JSON response', xhr.status));
+      }
+    };
+    xhr.onerror = () => reject(new ApiError('The server could not be reached', 0));
+    xhr.send(content);
+  });
+}
+
+function apiError(path: string, status: number, body: string) {
+  if (status === 401 && !path.startsWith('/auth/')) {
+    window.dispatchEvent(new Event('paralleax:session-expired'));
+  }
+  let message = body || `HTTP ${status}`;
+  let code: string | undefined;
+  let requestId: string | undefined;
+  try {
+    const error = JSON.parse(body) as {
+      code?: string;
+      message?: string | string[];
+      requestId?: string;
+    };
+    if (Array.isArray(error.message)) message = error.message.join(', ');
+    else if (error.message) message = error.message;
+    code = error.code;
+    requestId = error.requestId;
+  } catch {
+    // Preserve plain-text and non-JSON error responses.
+  }
+  return new ApiError(message, status, code, requestId);
 }
 
 function readerProgressPath(storyId: string, mode: ReaderAutosaveMode): string {
@@ -113,6 +148,10 @@ type TriggerSaveResponse = TriggerMutationResult | Story;
 export interface ChoiceScriptImportResponse {
   story: Story;
   report: ChoiceScriptImportReport;
+}
+export interface QspImportResponse {
+  story: Story;
+  report: QspImportReport;
 }
 export const api = {
   me: () => request<AuthUser>('/auth/me'),
@@ -198,6 +237,20 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ files }),
     }),
+  importQsp: (file: { name: string; format: QspSourceFormat; contentBase64: string }) =>
+    request<QspImportResponse>('/stories/imports/qsp', {
+      method: 'POST',
+      body: JSON.stringify({ file }),
+    }),
+  importUnlimitedQsp: (
+    file: { name: string; format: QspSourceFormat; content: Blob },
+    onUploadProgress?: (percentage: number) => void,
+  ) =>
+    uploadBinary<QspImportResponse>(
+      `/stories/imports/qsp/admin?name=${encodeURIComponent(file.name)}&format=${file.format}`,
+      file.content,
+      onUploadProgress,
+    ),
   renameStory: (id: string, title: string) =>
     request<Story>(`/stories/${id}`, { method: 'PATCH', body: JSON.stringify({ title }) }),
   updateStory: (id: string, input: UpdateStoryInput) =>
