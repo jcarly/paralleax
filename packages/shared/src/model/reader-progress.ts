@@ -44,6 +44,7 @@ export interface ReaderSaveSummary {
   kind: ReaderSaveKind;
   name?: string;
   currentInteractionId: string | null;
+  currentInteractionTitle?: string;
   journeyLength: number;
   createdAt: string;
   updatedAt: string;

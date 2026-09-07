@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { mergeServerStory, type InteractionContentPatch, type Story } from '@paralleax/shared';
-import { api } from '../../../api';
+import {
+  mergeServerStory,
+  type InteractionContentPatch,
+  type Story,
+  type StoryEditorLoadingProjection,
+} from '@paralleax/shared';
 import { useStoryRealtime } from '../../../hooks/useStoryRealtime';
 import {
   isApiNotFound,
@@ -8,6 +12,7 @@ import {
   type StoryRealtimeInvalidation,
 } from '../../realtime/storyRealtime';
 import type { MergeIncomingStory, StoryStateSetter, TrackStorySave } from './storyPersistenceTypes';
+import { loadStoryEditorProjection } from './storyEditorLoader';
 
 interface StoryPersistenceLifecycleDependencies {
   storyId: string;
@@ -21,6 +26,9 @@ export function useStoryPersistenceLifecycle({
   setStory,
 }: StoryPersistenceLifecycleDependencies) {
   const [error, setError] = useState('');
+  const [loadPhase, setLoadPhase] = useState<StoryEditorLoadingProjection['phase'] | 'bootstrap'>(
+    'bootstrap',
+  );
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const saveAttemptRef = useRef(0);
   const deletedTriggerIdsRef = useRef(new Set<string>());
@@ -89,11 +97,16 @@ export function useStoryPersistenceLifecycle({
 
   const load = useCallback(() => {
     const attempt = ++loadAttemptRef.current;
-    return api
-      .getStory(storyId)
+    setLoadPhase('bootstrap');
+    return loadStoryEditorProjection(storyId, (projection) => {
+      if (attempt !== loadAttemptRef.current) return;
+      setStory(projection.story);
+      setLoadPhase(projection.phase);
+    })
       .then((next) => {
         if (attempt !== loadAttemptRef.current) return;
         replaceStory(next);
+        setLoadPhase('ready');
         setError('');
         setSaveStatus('idle');
       })
@@ -115,8 +128,7 @@ export function useStoryPersistenceLifecycle({
       }
 
       const attempt = ++loadAttemptRef.current;
-      void api
-        .getStory(storyId)
+      void loadStoryEditorProjection(storyId)
         .then((next) => {
           if (attempt !== loadAttemptRef.current) return;
           if (activeSaveCountRef.current > 0 || localEditDepthRef.current > 0) {
@@ -127,6 +139,7 @@ export function useStoryPersistenceLifecycle({
             return;
           }
           replaceStory(next);
+          setLoadPhase('ready');
           setError('');
         })
         .catch((caught: unknown) => {
@@ -147,7 +160,7 @@ export function useStoryPersistenceLifecycle({
 
   const realtimeStatus = useStoryRealtime(
     storyId,
-    story?.capabilities?.canEdit === true,
+    loadPhase === 'ready' && story?.capabilities?.canEdit === true,
     refreshFromRealtime,
     story?.revision,
   );
@@ -170,6 +183,7 @@ export function useStoryPersistenceLifecycle({
 
   return {
     error,
+    loadPhase,
     saveStatus,
     realtimeStatus,
     beginLocalEdit,

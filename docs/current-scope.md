@@ -67,8 +67,16 @@ Paralleax currently includes:
 - An administrator-only account interface with role summaries, account search and
   filtering, global user/admin assignment, and visible last-administrator protection.
 - A unified story library: anonymous visitors see public stories, while signed-in
-  users see every story they can read with capability and ownership filters. Local
-  return-to-page navigation is preserved through sign-in and registration.
+  users see every story they can read with capability and ownership filters.
+  Search, filtering, sorting, and incremental pagination use lightweight server
+  summaries and do not load Story graphs. Local return-to-page navigation is
+  preserved through sign-in and registration.
+- Paginated, revision-consistent Story read projections. The editor displays
+  context lists first, then interaction and Trigger structure, then bodies,
+  effects, and conditions before enabling mutations. Reader and Simulation Mode
+  load paginated context plus only their journey and the option interactions and
+  Triggers structurally relevant to the current step; unrelated graph branches
+  and graph decorations are not loaded into the player.
 - An experimental small-project ChoiceScript importer in the signed-in story
   library. It converts prose, scenes, choices, labels, and jumps in one atomic
   Story creation. Simple declarations, assignments, comparisons, and variable

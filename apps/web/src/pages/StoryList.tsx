@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
-import type { Story, StorySummary } from '@paralleax/shared';
+import { STORY_LIST_PAGE_SIZE, type Story, type StorySummary } from '@paralleax/shared';
 import { api, type AuthUser } from '../api';
 import { StoryImportDialog } from '../features/story-import/StoryImportDialog';
 import { loadStoryEditor, loadStoryPlayer } from './storyRouteLoaders';
@@ -17,6 +17,7 @@ export function StoryList({ user }: { user: AuthUser | null }) {
   const isAdministrator = user?.role === 'admin';
   const [stories, setStories] = useState<StorySummary[]>([]);
   const [query, setQuery] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
   const [filter, setFilter] = useState<StoryFilter>('all');
   const [sort, setSort] = useState<StorySort>('updated');
   const [view, setView] = useState<StoryView>('grid');
@@ -24,41 +25,88 @@ export function StoryList({ user }: { user: AuthUser | null }) {
   const [importing, setImporting] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [pending, setPending] = useState<'story' | 'demo' | ''>('');
-  const [loading, setLoading] = useState(true);
+  const [loadedRequestKey, setLoadedRequestKey] = useState('');
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [page, setPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
+  const [refreshVersion, setRefreshVersion] = useState(0);
   const [error, setError] = useState('');
+  const listRequestVersion = useRef(0);
+  const listRequestKey = [
+    isAuthenticated ? (user?.id ?? 'authenticated') : 'public',
+    debouncedQuery,
+    isAuthenticated ? filter : 'all',
+    sort,
+    refreshVersion,
+  ].join(':');
+  const loading = loadedRequestKey !== listRequestKey;
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => setDebouncedQuery(query), 250);
+    return () => window.clearTimeout(timeout);
+  }, [query]);
 
   useEffect(() => {
     let active = true;
-    api[isAuthenticated ? 'listStories' : 'listPublicStories']()
-      .then((items) => {
-        if (active) setStories(items);
+    const requestVersion = ++listRequestVersion.current;
+    api[isAuthenticated ? 'listStories' : 'listPublicStories']({
+      page: 1,
+      pageSize: STORY_LIST_PAGE_SIZE,
+      query: debouncedQuery,
+      filter: isAuthenticated ? filter : 'all',
+      sort,
+    })
+      .then((result) => {
+        if (!active || requestVersion !== listRequestVersion.current) return;
+        setStories(result.items);
+        setPage(result.page);
+        setTotalCount(result.totalCount);
+        setHasMore(result.hasMore);
+        setError('');
       })
       .catch((caught: Error) => {
-        if (active) setError(caught.message);
+        if (active && requestVersion === listRequestVersion.current) setError(caught.message);
       })
       .finally(() => {
-        if (active) setLoading(false);
+        if (active && requestVersion === listRequestVersion.current) {
+          setLoadedRequestKey(listRequestKey);
+        }
       });
     return () => {
       active = false;
     };
-  }, [isAuthenticated, user?.id]);
+  }, [debouncedQuery, filter, isAuthenticated, listRequestKey, sort]);
 
-  const visibleStories = useMemo(() => {
-    const normalizedQuery = query.trim().toLocaleLowerCase();
-    return stories
-      .filter((story) => {
-        if (filter === 'editable' && !story.capabilities?.canEdit) return false;
-        if (filter === 'commentable' && !story.capabilities?.canComment) return false;
-        if (filter === 'owned' && story.owner?.id !== user?.id) return false;
-        return story.title.toLocaleLowerCase().includes(normalizedQuery);
-      })
-      .sort((left, right) =>
-        sort === 'title'
-          ? left.title.localeCompare(right.title)
-          : Date.parse(right.updatedAt) - Date.parse(left.updatedAt),
-      );
-  }, [filter, query, sort, stories, user?.id]);
+  async function loadMoreStories() {
+    if (!hasMore || loadingMore) return;
+    const requestVersion = listRequestVersion.current;
+    try {
+      setError('');
+      setLoadingMore(true);
+      const result = await api[isAuthenticated ? 'listStories' : 'listPublicStories']({
+        page: page + 1,
+        pageSize: STORY_LIST_PAGE_SIZE,
+        query: debouncedQuery,
+        filter: isAuthenticated ? filter : 'all',
+        sort,
+      });
+      if (requestVersion !== listRequestVersion.current) return;
+      setStories((current) => [
+        ...current,
+        ...result.items.filter((item) => !current.some(({ id }) => id === item.id)),
+      ]);
+      setPage(result.page);
+      setTotalCount(result.totalCount);
+      setHasMore(result.hasMore);
+    } catch (caught) {
+      if (requestVersion === listRequestVersion.current) {
+        setError(caught instanceof Error ? caught.message : t('library.loadMoreFailed'));
+      }
+    } finally {
+      setLoadingMore(false);
+    }
+  }
 
   async function create(event: FormEvent) {
     event.preventDefault();
@@ -69,9 +117,10 @@ export function StoryList({ user }: { user: AuthUser | null }) {
       setPending('story');
       const story = await api.createStory(title);
       setStories((items) => [summarizeStory(story, user ?? undefined), ...items]);
+      setTotalCount((count) => count + 1);
       setNewTitle('');
       setCreating(false);
-      setFilter('all');
+      resetLibraryView();
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : t('library.createFailed'));
     } finally {
@@ -89,7 +138,8 @@ export function StoryList({ user }: { user: AuthUser | null }) {
         ...demos.map((story) => summarizeStory(story, user ?? undefined)),
         ...items,
       ]);
-      setFilter('all');
+      setTotalCount((count) => count + demos.length);
+      resetLibraryView();
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : t('library.demoFailed'));
     } finally {
@@ -102,9 +152,18 @@ export function StoryList({ user }: { user: AuthUser | null }) {
       setError('');
       await api.deleteStory(id);
       setStories((items) => items.filter((item) => item.id !== id));
+      setTotalCount((count) => Math.max(0, count - 1));
+      setRefreshVersion((version) => version + 1);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : t('library.deleteFailed'));
     }
+  }
+
+  function resetLibraryView() {
+    setQuery('');
+    setDebouncedQuery('');
+    setFilter('all');
+    setSort('updated');
   }
 
   return (
@@ -216,7 +275,7 @@ export function StoryList({ user }: { user: AuthUser | null }) {
         </p>
       ) : null}
       <div className="library-count" aria-live="polite">
-        <b>{visibleStories.length}</b> {t('library.count', { count: visibleStories.length })}
+        <b>{totalCount}</b> {t('library.count', { count: totalCount })}
       </div>
 
       {loading ? (
@@ -224,24 +283,38 @@ export function StoryList({ user }: { user: AuthUser | null }) {
           <span className="loading-ring" aria-hidden="true" />
           <h2>{t('library.loading')}</h2>
         </section>
-      ) : visibleStories.length ? (
-        <section className={`library-grid ${view === 'list' ? 'list' : ''}`}>
-          {visibleStories.map((story, index) => (
-            <StoryCard
-              key={story.id}
-              story={story}
-              tone={storyTone(story.id, index)}
-              remove={remove}
-            />
-          ))}
-        </section>
+      ) : stories.length ? (
+        <>
+          <section className={`library-grid ${view === 'list' ? 'list' : ''}`}>
+            {stories.map((story, index) => (
+              <StoryCard
+                key={story.id}
+                story={story}
+                tone={storyTone(story.id, index)}
+                remove={remove}
+              />
+            ))}
+          </section>
+          {hasMore ? (
+            <div className="library-load-more">
+              <button
+                className="product-secondary"
+                type="button"
+                disabled={loadingMore}
+                onClick={() => void loadMoreStories()}
+              >
+                {t(loadingMore ? 'library.loadingMore' : 'library.loadMore')}
+              </button>
+            </div>
+          ) : null}
+        </>
       ) : (
         <section className="library-empty">
           <span aria-hidden="true">◇</span>
           <h2>{t('library.emptyTitle')}</h2>
           <p>
             {t(
-              stories.length
+              query || filter !== 'all'
                 ? 'library.emptyFiltered'
                 : !isAuthenticated
                   ? 'library.anonymous.empty'
@@ -319,7 +392,8 @@ export function StoryList({ user }: { user: AuthUser | null }) {
           onClose={() => setImporting(false)}
           onImported={(story) => {
             setStories((items) => [summarizeStory(story, user), ...items]);
-            setFilter('all');
+            setTotalCount((count) => count + 1);
+            resetLibraryView();
           }}
         />
       ) : null}

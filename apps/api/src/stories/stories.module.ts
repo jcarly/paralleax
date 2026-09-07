@@ -12,6 +12,7 @@ import { StoryHistoryService } from './application/story-history';
 import { StoryMetadataService } from './application/story-metadata';
 import { StoryMutationService } from './application/story-mutations';
 import { StoryReaderProgressService } from './application/story-reader-progress';
+import { StoryRuntimeService } from './application/story-runtime';
 
 @Module({
   imports: [DatabaseModule],
@@ -28,6 +29,7 @@ import { StoryReaderProgressService } from './application/story-reader-progress'
     StoryMetadataService,
     StoryMutationService,
     StoryReaderProgressService,
+    StoryRuntimeService,
   ],
   exports: [StoriesRepository],
 })

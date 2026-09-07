@@ -2,7 +2,14 @@
 import { cleanup, render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, vi } from 'vitest';
-import type { Story } from '@paralleax/shared';
+import {
+  doesTriggerInputMatch,
+  getTriggerConditions,
+  getStatAssignmentOwners,
+  getStoryItemEntries,
+  STORY_EDITOR_PAGE_SIZE,
+  type Story,
+} from '@paralleax/shared';
 import { api } from '../api';
 import { StoryPlayer } from '../pages/StoryPlayer';
 import { FakeEventSource } from './FakeEventSource';
@@ -85,7 +92,121 @@ export function setupStoryPlayerTestSuite() {
 
   beforeEach(() => {
     vi.resetAllMocks();
+    mockStoryRuntimeLoading();
     FakeEventSource.instances = [];
     vi.mocked(api.listCommentThreads).mockResolvedValue([]);
   });
+}
+
+function mockStoryRuntimeLoading() {
+  let loadedStory: Story | undefined;
+  vi.mocked(api.getStoryRuntimeBootstrap).mockImplementation(async () => {
+    loadedStory = structuredClone(await api.getStory('story-1'));
+    const story = loadedStory;
+    return {
+      id: story.id,
+      revision: story.revision ?? 1,
+      title: story.title,
+      startDateTime: story.startDateTime,
+      access: story.access,
+      capabilities: story.capabilities,
+      owner: story.owner,
+      createdAt: story.createdAt,
+      updatedAt: story.updatedAt,
+      contextCounts: {
+        locations: story.locations?.length ?? 0,
+        characters: story.characters?.length ?? 0,
+        statDefinitions: story.statDefinitions?.length ?? 0,
+        statAssignments: getStatAssignmentOwners(story).reduce(
+          (count, owner) => count + owner.assignments.length,
+          0,
+        ),
+        itemDefinitions: story.itemDefinitions?.length ?? 0,
+        itemInstances: getStoryItemEntries(story).length,
+        graphDecorations: 0,
+      },
+      interactionCount: story.interactions.length,
+      triggerCount: story.interactions.reduce(
+        (count, interaction) => count + interaction.triggers.length,
+        0,
+      ),
+    };
+  });
+  vi.mocked(api.getStoryRuntimeContextPage).mockImplementation(async (_id, page, pageSize) => {
+    const story = requiredRuntimeStory(loadedStory);
+    return {
+      revision: story.revision ?? 1,
+      page,
+      pageSize: pageSize ?? STORY_EDITOR_PAGE_SIZE,
+      hasMore: false,
+      locations: story.locations ?? [],
+      characters: story.characters ?? [],
+      statDefinitions: story.statDefinitions ?? [],
+      statAssignments: getStatAssignmentOwners(story).flatMap((owner) =>
+        owner.assignments.map((assignment) => ({
+          ...assignment,
+          ownerType: owner.ownerType,
+          ownerId: owner.ownerId,
+        })),
+      ),
+      itemDefinitions: story.itemDefinitions ?? [],
+      itemInstances: getStoryItemEntries(story).map(({ ownerType, ownerId, item }) => ({
+        ...item,
+        ownerType,
+        ownerId,
+      })),
+      graphDecorations: [],
+    };
+  });
+  vi.mocked(api.getStoryRuntimeSlice).mockImplementation(async (_id, request = {}) => {
+    const story = requiredRuntimeStory(loadedStory);
+    const candidates =
+      request.includeOptions === false
+        ? []
+        : story.interactions.filter((interaction) =>
+            interaction.triggers.some((trigger) =>
+              doesTriggerInputMatch(trigger, request.currentInteractionId ?? null),
+            ),
+          );
+    const page = request.page ?? 1;
+    const pageSize = request.pageSize ?? STORY_EDITOR_PAGE_SIZE;
+    const options = candidates.slice((page - 1) * pageSize, page * pageSize);
+    const optionIds = new Set(options.map(({ id }) => id));
+    const requestedIds = new Set(request.interactionIds ?? []);
+    const referencedIds = new Set(
+      options.flatMap((interaction) =>
+        interaction.triggers.flatMap((trigger) =>
+          getTriggerConditions(trigger).flatMap((condition) =>
+            'interactionId' in condition ? [condition.interactionId] : [],
+          ),
+        ),
+      ),
+    );
+    return {
+      revision: story.revision ?? 1,
+      page,
+      pageSize,
+      totalOptionCount: candidates.length,
+      hasMore: page * pageSize < candidates.length,
+      optionInteractionIds: [...optionIds],
+      interactionReferences: story.interactions
+        .filter(({ id }) => referencedIds.has(id))
+        .map(({ id, title }) => ({ id, title })),
+      interactions: story.interactions
+        .filter(({ id }) => optionIds.has(id) || requestedIds.has(id))
+        .map((interaction) => ({
+          ...structuredClone(interaction),
+          triggers: optionIds.has(interaction.id)
+            ? interaction.triggers.filter((trigger) =>
+                doesTriggerInputMatch(trigger, request.currentInteractionId ?? null),
+              )
+            : [],
+        })),
+    };
+  });
+}
+
+function requiredRuntimeStory(story: Story | undefined): Story {
+  if (!story) throw new Error('The runtime bootstrap must be loaded first.');
+  return story;
 }

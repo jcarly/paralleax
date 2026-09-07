@@ -101,8 +101,13 @@ describe('Stories API', () => {
   it('GET /api/stories lists stories', async () => {
     const response = await request(httpServer).get('/api/stories').expect(200);
 
-    expect(Array.isArray(response.body)).toBe(true);
-    expect(response.body).toEqual([]);
+    expect(response.body).toEqual({
+      items: [],
+      page: 1,
+      pageSize: 24,
+      totalCount: 0,
+      hasMore: false,
+    });
   });
 
   it('persists authored Story history and supports undo and redo', async () => {
@@ -306,7 +311,7 @@ describe('Stories API', () => {
       .set('Cookie', 'paralleax_session=admin')
       .expect(200);
     for (const story of stories) {
-      expect(listResponse.body).toEqual(
+      expect(listResponse.body.items).toEqual(
         expect.arrayContaining([
           expect.objectContaining({ id: story.id, interactionCount: story.interactions.length }),
         ]),
@@ -351,8 +356,8 @@ Night falls.
     });
 
     const listResponse = await request(httpServer).get('/api/stories').expect(200);
-    expect(listResponse.body).toHaveLength(1);
-    expect(listResponse.body[0]).toMatchObject({
+    expect(listResponse.body.items).toHaveLength(1);
+    expect(listResponse.body.items[0]).toMatchObject({
       id: response.body.story.id,
       interactionCount: 4,
     });
@@ -378,7 +383,7 @@ Night falls.
       .expect(400);
 
     const listResponse = await request(httpServer).get('/api/stories').expect(200);
-    expect(listResponse.body).toEqual([]);
+    expect(listResponse.body.items).toEqual([]);
   });
 
   it('POST /api/stories/imports/qsp creates a Story and returns its compatibility report', async () => {
@@ -446,7 +451,7 @@ end
     );
 
     const listResponse = await request(httpServer).get('/api/stories').expect(200);
-    expect(listResponse.body).toEqual(
+    expect(listResponse.body.items).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ id: response.body.story.id, interactionCount: 5 }),
       ]),
@@ -515,7 +520,7 @@ end
       .expect(400);
 
     const listResponse = await request(httpServer).get('/api/stories').expect(200);
-    expect(listResponse.body).toEqual([]);
+    expect(listResponse.body.items).toEqual([]);
   });
 
   it('GET /api/stories/:storyId returns a story', async () => {
@@ -527,6 +532,127 @@ end
       id: story.id,
       title: 'Story to read',
     });
+  });
+
+  it('loads paginated runtime context and only structurally relevant option triggers', async () => {
+    const story = await createStory('Runtime slices');
+    await request(httpServer)
+      .get(`/api/stories/${story.id}/runtime/context?page=1&pageSize=1`)
+      .set('Cookie', 'paralleax_session=anonymous')
+      .expect(404);
+    const withRoot = await createInteraction(story.id);
+    const root = withRoot.interactions[0];
+    const withChild = await createInteraction(story.id, { parentId: root.id });
+    const child = withChild.interactions.find(({ id }) => id !== root.id)!;
+    const withContextual = await createInteraction(story.id);
+    const contextual = withContextual.interactions.find(
+      ({ id }) => id !== root.id && id !== child.id,
+    )!;
+    await request(httpServer)
+      .patch(
+        `/api/stories/${story.id}/interactions/${contextual.id}/triggers/${contextual.triggers[0].id}`,
+      )
+      .send({ conditions: [{ interactionId: root.id, hasBeenVisited: true }] })
+      .expect(200);
+
+    const bootstrap = await request(httpServer).get(`/api/stories/${story.id}/runtime`).expect(200);
+    expect(bootstrap.body).toMatchObject({ id: story.id, interactionCount: 3 });
+    expect(bootstrap.body).not.toHaveProperty('interactions');
+
+    const context = await request(httpServer)
+      .get(`/api/stories/${story.id}/runtime/context?page=1&pageSize=1`)
+      .expect(200);
+    expect(context.body).toMatchObject({ page: 1, pageSize: 1, graphDecorations: [] });
+
+    const firstPage = await request(httpServer)
+      .post(`/api/stories/${story.id}/runtime/slice`)
+      .send({
+        currentInteractionId: root.id,
+        interactionIds: [root.id],
+        page: 1,
+        pageSize: 1,
+      })
+      .expect(200);
+    expect(firstPage.body).toMatchObject({ totalOptionCount: 2, hasMore: true });
+    expect(firstPage.body.optionInteractionIds).toHaveLength(1);
+    expect(firstPage.body.interactions).toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: root.id, triggers: [] })]),
+    );
+
+    const secondPage = await request(httpServer)
+      .post(`/api/stories/${story.id}/runtime/slice`)
+      .send({
+        currentInteractionId: root.id,
+        page: 2,
+        pageSize: 1,
+      })
+      .expect(200);
+    const optionIds = [
+      ...firstPage.body.optionInteractionIds,
+      ...secondPage.body.optionInteractionIds,
+    ];
+    expect(optionIds).toEqual(expect.arrayContaining([child.id, contextual.id]));
+    expect(optionIds).not.toContain(root.id);
+
+    const journeyOnly = await request(httpServer)
+      .post(`/api/stories/${story.id}/runtime/slice`)
+      .send({
+        currentInteractionId: root.id,
+        interactionIds: [root.id],
+        includeOptions: false,
+        page: 1,
+        pageSize: 1,
+      })
+      .expect(200);
+    expect(journeyOnly.body).toMatchObject({
+      totalOptionCount: 0,
+      hasMore: false,
+      optionInteractionIds: [],
+      interactions: [expect.objectContaining({ id: root.id, triggers: [] })],
+    });
+  });
+
+  it('loads the editor projection in revision-consistent paginated stages', async () => {
+    const story = await createStory('Progressive editor');
+    const withRoot = await createInteraction(story.id);
+    const root = withRoot.interactions[0];
+    const withChild = await createInteraction(story.id, { parentId: root.id });
+    const child = withChild.interactions.find(({ id }) => id !== root.id)!;
+    await request(httpServer)
+      .patch(`/api/stories/${story.id}/interactions/${child.id}`)
+      .send({ body: '<p>Deferred body</p>', durationMinutes: 5 })
+      .expect(200);
+
+    const bootstrap = await request(httpServer).get(`/api/stories/${story.id}/editor`).expect(200);
+    const interactions = await request(httpServer)
+      .get(`/api/stories/${story.id}/editor/interactions?page=1&pageSize=1`)
+      .expect(200);
+    const triggers = await request(httpServer)
+      .get(`/api/stories/${story.id}/editor/triggers?page=1&pageSize=1`)
+      .expect(200);
+    const interactionContent = await request(httpServer)
+      .get(`/api/stories/${story.id}/editor/content/interactions?page=2&pageSize=1`)
+      .expect(200);
+    const triggerContent = await request(httpServer)
+      .get(`/api/stories/${story.id}/editor/content/triggers?page=1&pageSize=1`)
+      .expect(200);
+
+    expect(bootstrap.body).toMatchObject({ interactionCount: 2, triggerCount: 2 });
+    expect(interactions.body).toMatchObject({
+      revision: bootstrap.body.revision,
+      page: 1,
+      pageSize: 1,
+      hasMore: true,
+    });
+    expect(interactions.body.interactions[0]).not.toHaveProperty('body');
+    expect(interactions.body.interactions[0]).not.toHaveProperty('triggers');
+    expect(triggers.body.triggers[0]).not.toHaveProperty('conditionGroups');
+    expect(interactionContent.body.interactions[0]).toMatchObject({
+      interactionId: child.id,
+      body: '<p>Deferred body</p>',
+      durationMinutes: 5,
+    });
+    expect(triggerContent.body.triggers[0]).toHaveProperty('conditionGroups');
   });
 
   it('PATCH /api/stories/:storyId renames a story', async () => {
@@ -2012,7 +2138,7 @@ end
       .get('/api/stories')
       .set('Cookie', 'paralleax_session=user-two')
       .expect(200);
-    expect(otherList.body).toEqual([]);
+    expect(otherList.body.items).toEqual([]);
 
     await request(httpServer)
       .get(`/api/stories/${created.body.id}`)
@@ -2167,15 +2293,15 @@ end
 
     const response = await request(httpServer).get('/api/stories/public').expect(200);
 
-    expect(response.body).toEqual([
+    expect(response.body.items).toEqual([
       expect.objectContaining({
         id: publicStory.body.id,
         title: 'Public catalogue story',
         capabilities: expect.objectContaining({ canRead: true, canEdit: false, canManage: false }),
       }),
     ]);
-    expect(response.body[0]).not.toHaveProperty('owner');
-    expect(response.body).not.toEqual(
+    expect(response.body.items[0]).not.toHaveProperty('owner');
+    expect(response.body.items).not.toEqual(
       expect.arrayContaining([expect.objectContaining({ id: privateStory.body.id })]),
     );
   });

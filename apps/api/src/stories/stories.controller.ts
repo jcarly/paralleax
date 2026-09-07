@@ -27,6 +27,7 @@ import {
   CreateLocationDto,
   CreateReaderSaveDto,
   MoveItemInstanceDto,
+  PaginationQueryDto,
   CreateStatDefinitionDto,
   CreateStoryDto,
   ImportChoiceScriptDto,
@@ -34,6 +35,8 @@ import {
   QspSourceMetadataDto,
   CreateTriggerDto,
   SaveReaderProgressDto,
+  StoryListQueryDto,
+  StoryRuntimeSliceDto,
   UpdateInteractionDto,
   UpdateStatAssignmentDto,
   UpdateGraphDecorationDto,
@@ -68,15 +71,15 @@ export class StoriesController {
 
   @Get()
   @Throttle({ default: { limit: STORY_READ_RATE_LIMIT, ttl: 60_000 } })
-  list(@CurrentUser() user: RequestUser) {
-    return this.stories.list(user.id);
+  list(@Query() query: StoryListQueryDto, @CurrentUser() user: RequestUser) {
+    return this.stories.list(user.id, query);
   }
 
   @Public()
   @Get('public')
   @Throttle({ default: { limit: STORY_READ_RATE_LIMIT, ttl: 60_000 } })
-  listPublic() {
-    return this.stories.listPublic();
+  listPublic(@Query() query: StoryListQueryDto) {
+    return this.stories.listPublic({ ...query, filter: 'all' });
   }
 
   @Post() create(@Body() input: CreateStoryDto, @CurrentUser() user: RequestUser) {
@@ -121,6 +124,86 @@ export class StoriesController {
   @Throttle({ default: { limit: STORY_READ_RATE_LIMIT, ttl: 60_000 } })
   get(@Param('storyId') id: string, @CurrentUser() user?: RequestUser) {
     return this.stories.get(id, user?.id);
+  }
+
+  @Post(':storyId/runtime/slice')
+  @HttpCode(200)
+  @OptionalAuth()
+  @Throttle({ default: { limit: STORY_READ_RATE_LIMIT, ttl: 60_000 } })
+  getRuntimeSlice(
+    @Param('storyId') id: string,
+    @Body() input: StoryRuntimeSliceDto,
+    @CurrentUser() user?: RequestUser,
+  ) {
+    return this.stories.getRuntimeSlice(id, user?.id, input);
+  }
+
+  @Get(':storyId/runtime/context')
+  @OptionalAuth()
+  @Throttle({ default: { limit: STORY_READ_RATE_LIMIT, ttl: 60_000 } })
+  getRuntimeContextPage(
+    @Param('storyId') id: string,
+    @Query() query: PaginationQueryDto,
+    @CurrentUser() user?: RequestUser,
+  ) {
+    return this.stories.getRuntimeContextPage(id, user?.id, query.page, query.pageSize);
+  }
+
+  @Get(':storyId/runtime')
+  @OptionalAuth()
+  @Throttle({ default: { limit: STORY_READ_RATE_LIMIT, ttl: 60_000 } })
+  getRuntimeBootstrap(@Param('storyId') id: string, @CurrentUser() user?: RequestUser) {
+    return this.stories.getRuntimeBootstrap(id, user?.id);
+  }
+
+  @Get(':storyId/editor')
+  getEditorBootstrap(@Param('storyId') id: string, @CurrentUser() user: RequestUser) {
+    return this.stories.getEditorBootstrap(id, user.id);
+  }
+
+  @Get(':storyId/editor/context')
+  getEditorContextPage(
+    @Param('storyId') id: string,
+    @Query() query: PaginationQueryDto,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.stories.getEditorContextPage(id, user.id, query.page, query.pageSize);
+  }
+
+  @Get(':storyId/editor/interactions')
+  getEditorInteractionPage(
+    @Param('storyId') id: string,
+    @Query() query: PaginationQueryDto,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.stories.getEditorInteractionPage(id, user.id, query.page, query.pageSize);
+  }
+
+  @Get(':storyId/editor/triggers')
+  getEditorTriggerPage(
+    @Param('storyId') id: string,
+    @Query() query: PaginationQueryDto,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.stories.getEditorTriggerPage(id, user.id, query.page, query.pageSize);
+  }
+
+  @Get(':storyId/editor/content/interactions')
+  getEditorInteractionContentPage(
+    @Param('storyId') id: string,
+    @Query() query: PaginationQueryDto,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.stories.getEditorInteractionContentPage(id, user.id, query.page, query.pageSize);
+  }
+
+  @Get(':storyId/editor/content/triggers')
+  getEditorTriggerContentPage(
+    @Param('storyId') id: string,
+    @Query() query: PaginationQueryDto,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.stories.getEditorTriggerContentPage(id, user.id, query.page, query.pageSize);
   }
 
   @Sse(':storyId/events')

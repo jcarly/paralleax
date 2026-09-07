@@ -7,5 +7,6 @@ export * from './locations.js';
 export * from './mutations.js';
 export * from './reader-progress.js';
 export * from './stats.js';
+export * from './story-loading.js';
 export * from './stories.js';
 export * from './triggers.js';

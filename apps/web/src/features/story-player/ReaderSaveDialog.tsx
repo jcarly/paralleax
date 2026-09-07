@@ -19,7 +19,7 @@ export function ReaderSaveDialog({
   story: Story;
   session: ReaderProgressState;
   onClose: () => void;
-  onLoad: (save: ReaderSave) => void;
+  onLoad: (save: ReaderSave) => void | Promise<void>;
 }) {
   const { t } = useTranslation();
   const [saves, setSaves] = useState<ReaderSaveSummary[]>([]);
@@ -80,7 +80,7 @@ export function ReaderSaveDialog({
     setPending(`load:${saveId}`);
     setError('');
     try {
-      onLoad(await api.getReaderSave(story.id, saveId));
+      await onLoad(await api.getReaderSave(story.id, saveId));
       onClose();
     } catch (caught) {
       setError(message(caught, t('player.saves.loadFailed')));
@@ -173,7 +173,7 @@ export function ReaderSaveDialog({
           <div className="reader-save-list">
             {saves.map((save) => {
               const currentTitle = save.currentInteractionId
-                ? interactionTitles.get(save.currentInteractionId)
+                ? (save.currentInteractionTitle ?? interactionTitles.get(save.currentInteractionId))
                 : undefined;
               return (
                 <article key={save.id}>

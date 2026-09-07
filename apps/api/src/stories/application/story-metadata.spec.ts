@@ -31,11 +31,25 @@ describe('StoryMetadataService', () => {
   afterEach(() => jest.useRealTimers());
 
   it('delegates story lists and normalizes legacy positions on reads', async () => {
-    repository.list.mockResolvedValue([{ id: 'story-1' }]);
-    repository.listPublic.mockResolvedValue([{ id: 'public-story' }]);
+    repository.list.mockResolvedValue({
+      items: [{ id: 'story-1' }],
+      page: 1,
+      pageSize: 24,
+      totalCount: 1,
+      hasMore: false,
+    });
+    repository.listPublic.mockResolvedValue({
+      items: [{ id: 'public-story' }],
+      page: 1,
+      pageSize: 24,
+      totalCount: 1,
+      hasMore: false,
+    });
 
-    await expect(service.list('user-1')).resolves.toEqual([{ id: 'story-1' }]);
-    await expect(service.listPublic()).resolves.toEqual([{ id: 'public-story' }]);
+    await expect(service.list('user-1')).resolves.toMatchObject({ items: [{ id: 'story-1' }] });
+    await expect(service.listPublic()).resolves.toMatchObject({
+      items: [{ id: 'public-story' }],
+    });
     await expect(service.get('story-1', 'user-1')).resolves.toMatchObject({
       interactions: [{ id: 'root', position: { x: 80, y: 120 } }],
     });

@@ -98,6 +98,7 @@ export function useStoryEditorPersistence(storyId: string) {
     story,
     setStory,
     error: persistence.error,
+    loadPhase: persistence.loadPhase,
     saveStatus: persistence.saveStatus,
     realtimeStatus: persistence.realtimeStatus,
     beginLocalEdit: persistence.beginLocalEdit,

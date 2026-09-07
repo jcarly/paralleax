@@ -77,7 +77,7 @@ describe('StoryList', () => {
 
   it('loads and displays stories with edit and play links', async () => {
     const user = userEvent.setup();
-    vi.mocked(api.listStories).mockResolvedValue(structuredClone(stories));
+    vi.mocked(api.listStories).mockResolvedValue(storyPage(structuredClone(stories)));
 
     render(
       <MemoryRouter>
@@ -119,13 +119,15 @@ describe('StoryList', () => {
   });
 
   it('loads the anonymous catalogue without authoring actions', async () => {
-    vi.mocked(api.listPublicStories).mockResolvedValue([
-      {
-        ...structuredClone(stories[0]),
-        access: { visibility: 'public', editPolicy: 'owner', commentPolicy: 'editors' },
-        capabilities: { canRead: true, canEdit: false, canManage: false, canComment: false },
-      },
-    ]);
+    vi.mocked(api.listPublicStories).mockResolvedValue(
+      storyPage([
+        {
+          ...structuredClone(stories[0]),
+          access: { visibility: 'public', editPolicy: 'owner', commentPolicy: 'editors' },
+          capabilities: { canRead: true, canEdit: false, canManage: false, canComment: false },
+        },
+      ]),
+    );
 
     render(
       <MemoryRouter>
@@ -154,7 +156,9 @@ describe('StoryList', () => {
       updatedAt: '2026-07-14T08:00:00.000Z',
       interactions: [],
     };
-    vi.mocked(api.listStories).mockResolvedValue([structuredClone(stories[0])]);
+    vi.mocked(api.listStories)
+      .mockResolvedValueOnce(storyPage([structuredClone(stories[0])]))
+      .mockResolvedValueOnce(storyPage([]));
     vi.mocked(api.createStory).mockResolvedValue(createdStory);
     vi.mocked(api.deleteStory).mockResolvedValue(undefined);
 
@@ -178,6 +182,7 @@ describe('StoryList', () => {
       expect(screen.queryByRole('heading', { name: 'First story' })).not.toBeInTheDocument(),
     );
     expect(api.deleteStory).toHaveBeenCalledWith('story-1');
+    expect(api.listStories).toHaveBeenCalledTimes(2);
   });
 
   it('creates the demo story catalog from the list', async () => {
@@ -197,7 +202,7 @@ describe('StoryList', () => {
         },
       ],
     };
-    vi.mocked(api.listStories).mockResolvedValue([structuredClone(stories[0])]);
+    vi.mocked(api.listStories).mockResolvedValue(storyPage([structuredClone(stories[0])]));
     const secondDemo = {
       ...demoStory,
       id: 'story-demo-2',
@@ -243,7 +248,7 @@ describe('StoryList', () => {
         },
       ],
     };
-    vi.mocked(api.listStories).mockResolvedValue([]);
+    vi.mocked(api.listStories).mockResolvedValue(storyPage([]));
     vi.mocked(api.importChoiceScript).mockResolvedValue({
       story: importedStory,
       report: {
@@ -314,7 +319,7 @@ describe('StoryList', () => {
         },
       ],
     };
-    vi.mocked(api.listStories).mockResolvedValue([]);
+    vi.mocked(api.listStories).mockResolvedValue(storyPage([]));
     vi.mocked(api.importQsp).mockResolvedValue({
       story: importedStory,
       report: {
@@ -394,7 +399,7 @@ describe('StoryList', () => {
     };
     let reportUploadProgress: ((percentage: number) => void) | undefined;
     let finishImport!: (result: QspImportResponse) => void;
-    vi.mocked(api.listStories).mockResolvedValue([]);
+    vi.mocked(api.listStories).mockResolvedValue(storyPage([]));
     vi.mocked(api.importUnlimitedQsp).mockImplementation((_file, onUploadProgress) => {
       reportUploadProgress = onUploadProgress;
       return new Promise((resolve) => {
@@ -450,7 +455,19 @@ describe('StoryList', () => {
 
   it('searches, filters by resolved capabilities and ownership, and switches layout', async () => {
     const user = userEvent.setup();
-    vi.mocked(api.listStories).mockResolvedValue(structuredClone(stories));
+    vi.mocked(api.listStories).mockImplementation(async (options) => {
+      const items = structuredClone(stories)
+        .filter((story) =>
+          story.title.toLocaleLowerCase().includes(options?.query?.toLocaleLowerCase() ?? ''),
+        )
+        .filter((story) => {
+          if (options?.filter === 'editable') return story.capabilities?.canEdit;
+          if (options?.filter === 'commentable') return story.capabilities?.canComment;
+          if (options?.filter === 'owned') return story.owner?.id === standardUser.id;
+          return true;
+        });
+      return storyPage(items);
+    });
 
     render(
       <MemoryRouter>
@@ -460,21 +477,27 @@ describe('StoryList', () => {
     await screen.findByRole('heading', { name: 'First story' });
 
     await user.type(screen.getByRole('searchbox', { name: 'Search stories' }), 'Second');
-    expect(screen.queryByRole('heading', { name: 'First story' })).not.toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Second story' })).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.queryByRole('heading', { name: 'First story' })).not.toBeInTheDocument(),
+    );
+    expect(await screen.findByRole('heading', { name: 'Second story' })).toBeInTheDocument();
 
     await user.clear(screen.getByRole('searchbox', { name: 'Search stories' }));
     await user.click(screen.getByRole('button', { name: 'Editable by me' }));
-    expect(screen.getByRole('heading', { name: 'First story' })).toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: 'Second story' })).not.toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'First story' })).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.queryByRole('heading', { name: 'Second story' })).not.toBeInTheDocument(),
+    );
 
     await user.click(screen.getByRole('button', { name: 'Commentable by me' }));
-    expect(screen.getByRole('heading', { name: 'First story' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Second story' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'First story' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Second story' })).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Created by me' }));
-    expect(screen.getByRole('heading', { name: 'First story' })).toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: 'Second story' })).not.toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'First story' })).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.queryByRole('heading', { name: 'Second story' })).not.toBeInTheDocument(),
+    );
 
     await user.click(screen.getByRole('button', { name: 'List view' }));
     expect(screen.getByRole('button', { name: 'List view' })).toHaveAttribute(
@@ -496,13 +519,15 @@ describe('StoryList', () => {
   });
 
   it('only shows actions allowed by resolved story capabilities', async () => {
-    vi.mocked(api.listStories).mockResolvedValue([
-      {
-        ...stories[0],
-        access: { visibility: 'public', editPolicy: 'owner', commentPolicy: 'editors' },
-        capabilities: { canRead: true, canEdit: false, canManage: false, canComment: false },
-      },
-    ]);
+    vi.mocked(api.listStories).mockResolvedValue(
+      storyPage([
+        {
+          ...stories[0],
+          access: { visibility: 'public', editPolicy: 'owner', commentPolicy: 'editors' },
+          capabilities: { canRead: true, canEdit: false, canManage: false, canComment: false },
+        },
+      ]),
+    );
 
     render(
       <MemoryRouter>
@@ -518,13 +543,15 @@ describe('StoryList', () => {
   });
 
   it('keeps commenter-only readers on the player surface', async () => {
-    vi.mocked(api.listStories).mockResolvedValue([
-      {
-        ...stories[0],
-        access: { visibility: 'authenticated', editPolicy: 'owner', commentPolicy: 'readers' },
-        capabilities: { canRead: true, canEdit: false, canManage: false, canComment: true },
-      },
-    ]);
+    vi.mocked(api.listStories).mockResolvedValue(
+      storyPage([
+        {
+          ...stories[0],
+          access: { visibility: 'authenticated', editPolicy: 'owner', commentPolicy: 'readers' },
+          capabilities: { canRead: true, canEdit: false, canManage: false, canComment: true },
+        },
+      ]),
+    );
 
     render(
       <MemoryRouter>
@@ -542,7 +569,7 @@ describe('StoryList', () => {
 
   it('translates product copy without changing authored story titles', async () => {
     await i18n.changeLanguage('fr');
-    vi.mocked(api.listStories).mockResolvedValue([structuredClone(stories[0])]);
+    vi.mocked(api.listStories).mockResolvedValue(storyPage([structuredClone(stories[0])]));
 
     render(
       <MemoryRouter>
@@ -555,3 +582,13 @@ describe('StoryList', () => {
     expect(screen.getByRole('button', { name: 'Nouvelle histoire' })).toBeInTheDocument();
   });
 });
+
+function storyPage(items: StorySummary[]) {
+  return {
+    items,
+    page: 1,
+    pageSize: 24,
+    totalCount: items.length,
+    hasMore: false,
+  };
+}

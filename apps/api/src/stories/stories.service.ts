@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import type {
-  CharacterItemMutationResult,
+import {
+  STORY_LIST_PAGE_SIZE,
+  type CharacterItemMutationResult,
   CharacterMutationResult,
   CharacterStatMutationResult,
   GraphDecorationMutationResult,
@@ -13,6 +14,8 @@ import type {
   ReaderSaveSummary,
   StatDefinitionMutationResult,
   Story,
+  StoryListOptions,
+  StoryRuntimeSliceRequest,
   TriggerMutationResult,
   UserRole,
 } from '@paralleax/shared';
@@ -22,6 +25,7 @@ import { StoryGraphService } from './application/story-graph';
 import { StoryHistoryService } from './application/story-history';
 import { StoryMetadataService } from './application/story-metadata';
 import { StoryReaderProgressService } from './application/story-reader-progress';
+import { StoryRuntimeService } from './application/story-runtime';
 import type {
   CreateCharacterDto,
   CreateCharacterItemDto,
@@ -59,17 +63,57 @@ export class StoriesService {
     private readonly metadata: StoryMetadataService,
     private readonly access: StoryAccessService,
     private readonly readerProgress: StoryReaderProgressService,
+    private readonly runtime: StoryRuntimeService,
     private readonly graph: StoryGraphService,
     private readonly context: StoryContextService,
     private readonly history: StoryHistoryService,
   ) {}
 
-  async list(userId: string) {
-    return this.metadata.list(userId);
+  async list(
+    userId: string,
+    options: StoryListOptions = { page: 1, pageSize: STORY_LIST_PAGE_SIZE },
+  ) {
+    return this.metadata.list(userId, options);
   }
 
-  async listPublic() {
-    return this.metadata.listPublic();
+  async listPublic(options: StoryListOptions = { page: 1, pageSize: STORY_LIST_PAGE_SIZE }) {
+    return this.metadata.listPublic(options);
+  }
+
+  getEditorBootstrap(id: string, userId: string) {
+    return this.metadata.getEditorBootstrap(id, userId);
+  }
+
+  getEditorContextPage(id: string, userId: string, page: number, pageSize: number) {
+    return this.metadata.getEditorContextPage(id, userId, page, pageSize);
+  }
+
+  getEditorInteractionPage(id: string, userId: string, page: number, pageSize: number) {
+    return this.metadata.getEditorInteractionPage(id, userId, page, pageSize);
+  }
+
+  getEditorTriggerPage(id: string, userId: string, page: number, pageSize: number) {
+    return this.metadata.getEditorTriggerPage(id, userId, page, pageSize);
+  }
+
+  getEditorInteractionContentPage(id: string, userId: string, page: number, pageSize: number) {
+    return this.metadata.getEditorInteractionContentPage(id, userId, page, pageSize);
+  }
+
+  getEditorTriggerContentPage(id: string, userId: string, page: number, pageSize: number) {
+    return this.metadata.getEditorTriggerContentPage(id, userId, page, pageSize);
+  }
+
+  getRuntimeBootstrap(id: string, userId?: string) {
+    return this.runtime.getBootstrap(id, userId);
+  }
+
+  getRuntimeContextPage(id: string, userId: string | undefined, page: number, pageSize: number) {
+    return this.runtime.getContextPage(id, userId, page, pageSize);
+  }
+
+  getRuntimeSlice(id: string, userId: string | undefined, request: StoryRuntimeSliceRequest) {
+    return this.runtime.getSlice(id, userId, request);
   }
 
   async get(id: string, userId?: string): Promise<Story> {

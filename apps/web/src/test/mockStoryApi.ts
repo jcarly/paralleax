@@ -6,6 +6,15 @@ type StoryApiMock = Partial<Record<StoryApiKey, Mock>>;
 export function createStoryApiMock() {
   return {
     getStory: vi.fn(),
+    getStoryRuntimeBootstrap: vi.fn(),
+    getStoryRuntimeContextPage: vi.fn(),
+    getStoryRuntimeSlice: vi.fn(),
+    getStoryEditorBootstrap: vi.fn(),
+    getStoryEditorContextPage: vi.fn(),
+    getStoryEditorInteractionPage: vi.fn(),
+    getStoryEditorTriggerPage: vi.fn(),
+    getStoryEditorInteractionContentPage: vi.fn(),
+    getStoryEditorTriggerContentPage: vi.fn(),
     getStoryHistory: vi.fn(),
     undoStoryChange: vi.fn(),
     redoStoryChange: vi.fn(),

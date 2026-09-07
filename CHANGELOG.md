@@ -1,5 +1,25 @@
 # Changelog
 
+## 2026-09-03
+
+- Replaced full-aggregate story-library reads with paginated server-side summary
+  search, capability/ownership filtering, and sorting. Story cards no longer
+  cause interactions, Triggers, context entities, effects, or item graphs to be
+  assembled or transferred.
+- Added revision-consistent staged editor loading: context lists arrive first,
+  followed by paginated interaction summaries, Trigger structures, interaction
+  content/effects, and Trigger condition/probability/timer content. Authoring
+  remains read-only until the projection is complete, and concurrent-revision
+  pages restart the load.
+- Added targeted reader and Simulation Mode projections. The player loads
+  paginated context, its bounded journey chunks, and only current-input or
+  contextual inputless option Triggers. Previous-step candidates are removed,
+  already hydrated journey interactions are not transferred again, unavailable
+  content is not mistaken for a branch ending while options load, and the shared
+  deterministic reader remains the semantic authority. Progress access now uses
+  the runtime bootstrap, while autosave reconstruction loads only context and the
+  submitted journey instead of the full authored graph.
+
 ## 2026-09-02
 
 - Kept tall story-import dialogs and long graph context lists within the viewport

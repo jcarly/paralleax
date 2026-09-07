@@ -10,8 +10,10 @@ import {
   defaultStoryAccess,
   ensureStoryInteractionPositions,
   isStoryDateTime,
+  STORY_LIST_PAGE_SIZE,
   storyHistoryOperations,
   type Story,
+  type StoryListOptions,
   type UserRole,
 } from '@paralleax/shared';
 import type { CreateStoryDto, UpdateStoryDto } from '../dto/stories.dto';
@@ -27,12 +29,46 @@ export class StoryMetadataService {
     private readonly mutations: StoryMutationService,
   ) {}
 
-  list(userId: string) {
-    return this.repository.list(userId);
+  list(userId: string, options: StoryListOptions = { page: 1, pageSize: STORY_LIST_PAGE_SIZE }) {
+    return this.repository.list(userId, options);
   }
 
-  listPublic() {
-    return this.repository.listPublic();
+  listPublic(options: StoryListOptions = { page: 1, pageSize: STORY_LIST_PAGE_SIZE }) {
+    return this.repository.listPublic(options);
+  }
+
+  getEditorBootstrap(storyId: string, userId: string) {
+    return this.requireEditorProjection(this.repository.findEditorBootstrap(storyId, userId));
+  }
+
+  getEditorContextPage(storyId: string, userId: string, page: number, pageSize: number) {
+    return this.requireEditorProjection(
+      this.repository.findEditorContextPage(storyId, userId, page, pageSize),
+    );
+  }
+
+  getEditorInteractionPage(storyId: string, userId: string, page: number, pageSize: number) {
+    return this.requireEditorProjection(
+      this.repository.findEditorInteractionPage(storyId, userId, page, pageSize),
+    );
+  }
+
+  getEditorTriggerPage(storyId: string, userId: string, page: number, pageSize: number) {
+    return this.requireEditorProjection(
+      this.repository.findEditorTriggerPage(storyId, userId, page, pageSize),
+    );
+  }
+
+  getEditorInteractionContentPage(storyId: string, userId: string, page: number, pageSize: number) {
+    return this.requireEditorProjection(
+      this.repository.findEditorInteractionContentPage(storyId, userId, page, pageSize),
+    );
+  }
+
+  getEditorTriggerContentPage(storyId: string, userId: string, page: number, pageSize: number) {
+    return this.requireEditorProjection(
+      this.repository.findEditorTriggerContentPage(storyId, userId, page, pageSize),
+    );
   }
 
   async get(storyId: string, userId?: string): Promise<Story> {
@@ -103,5 +139,11 @@ export class StoryMetadataService {
       throw new NotFoundException('Story not found');
     }
     this.events.publishChange(storyId, 'deleted');
+  }
+
+  private async requireEditorProjection<T>(projection: Promise<T | undefined>): Promise<T> {
+    const result = await projection;
+    if (!result) throw new NotFoundException('Story not found');
+    return result;
   }
 }

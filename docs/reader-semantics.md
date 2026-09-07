@@ -323,13 +323,32 @@ subsequent save.
 The reader and Simulation Mode reconcile loaded saves with the authored story
 they fetched:
 interaction and item ids that no longer exist are removed, and replayable
-derived values are rebuilt without a second full-graph API read. Loading a save
+derived values are rebuilt without a full-graph browser read. Loading a save
 continues in the current mode and writes subsequent progress to that mode's
 autosave; it does not overwrite the loaded source slot. Restart deletes only the
 current mode's autosave and returns to its configured starting state. Named saves
 remain until explicitly overwritten or deleted. Stepping backward in Simulation
 Mode replays the shortened journey, restores the choice-step timestamp aligned
 with that journey position, and updates only the simulation autosave.
+
+## Runtime Read Projection
+
+The web reader and Simulation Mode do not load the complete authored graph.
+They load Story metadata and context in revisioned pages, then request one
+targeted slice for the current narrative step. A slice contains the requested
+ordered-journey interactions and paginated option outputs. For each option it
+contains only Triggers whose input matches the current interaction, plus
+condition-bearing inputless Triggers; before the Story starts, all inputless
+Triggers are candidates. Small id/title references are included when a condition
+names another interaction.
+
+This is a transport and memory projection, not a second reader implementation.
+Once assembled, availability, OR/AND groups, typed conditions, seeded
+probability, timers, effects, and replay still use the shared deterministic
+operations described above. Moving to another interaction replaces the previous
+option candidates, while the ordered journey remains available for replay. Long
+journeys are fetched in bounded chunks. A page from another authored revision is
+never combined silently with the current projection.
 
 ## Repeated Interactions and Cycles
 

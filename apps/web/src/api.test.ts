@@ -390,18 +390,58 @@ describe('api client', () => {
     fetchMock.mockResolvedValue(jsonResponse(story));
 
     await api.listStories();
-    expect(fetchMock).toHaveBeenLastCalledWith('/api/stories', {
-      headers: { 'Content-Type': 'application/json' },
-    });
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      '/api/stories?page=1&pageSize=24&filter=all&sort=updated',
+      {
+        headers: { 'Content-Type': 'application/json' },
+      },
+    );
+
+    await api.listStories({ page: 2, query: 'forest', filter: 'editable', sort: 'title' });
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      '/api/stories?page=2&pageSize=24&filter=editable&sort=title&query=forest',
+      {
+        headers: { 'Content-Type': 'application/json' },
+      },
+    );
 
     await api.listPublicStories();
-    expect(fetchMock).toHaveBeenLastCalledWith('/api/stories/public', {
-      headers: { 'Content-Type': 'application/json' },
-    });
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      '/api/stories/public?page=1&pageSize=24&filter=all&sort=updated',
+      {
+        headers: { 'Content-Type': 'application/json' },
+      },
+    );
 
     await api.getStory('story-1');
     expect(fetchMock).toHaveBeenLastCalledWith('/api/stories/story-1', {
       headers: { 'Content-Type': 'application/json' },
+    });
+
+    await api.getStoryRuntimeBootstrap('story-1');
+    expect(fetchMock).toHaveBeenLastCalledWith('/api/stories/story-1/runtime', {
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    await api.getStoryRuntimeContextPage('story-1', 2, 50);
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      '/api/stories/story-1/runtime/context?page=2&pageSize=50',
+      { headers: { 'Content-Type': 'application/json' } },
+    );
+
+    await api.getStoryRuntimeSlice('story-1', {
+      currentInteractionId: 'interaction-1',
+      interactionIds: ['interaction-1'],
+    });
+    expect(fetchMock).toHaveBeenLastCalledWith('/api/stories/story-1/runtime/slice', {
+      headers: { 'Content-Type': 'application/json' },
+      method: 'POST',
+      body: JSON.stringify({
+        currentInteractionId: 'interaction-1',
+        interactionIds: ['interaction-1'],
+        page: 1,
+        pageSize: 100,
+      }),
     });
 
     fetchMock.mockResolvedValueOnce(jsonResponse({ progress: null }));

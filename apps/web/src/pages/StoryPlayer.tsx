@@ -35,6 +35,10 @@ import {
 } from '../features/story-player/useReaderSessionState';
 import { useSimulationMutationPersistence } from '../features/story-player/useSimulationMutationPersistence';
 import {
+  loadStoryRuntimeContext,
+  loadStoryRuntimeSlice,
+} from '../features/story-player/storyRuntimeLoader';
+import {
   getConditionSummary,
   getUnavailableReason,
 } from '../features/story-player/storyPlayerPresentation';
@@ -73,6 +77,8 @@ export function StoryPlayer({
   const loadKey = `${storyId}:${simulationRequested ? 'simulation-request' : 'reader'}:${requestedStartInteractionId ?? ''}`;
   const [loadedKey, setLoadedKey] = useState('');
   const [loadError, setLoadError] = useState<{ key: string; message: string }>();
+  const [runtimeOptionsError, setRuntimeOptionsError] = useState('');
+  const [runtimeSliceKey, setRuntimeSliceKey] = useState('');
   const [loadAttempt, setLoadAttempt] = useState(0);
   const { session, replay: replaySession, advance: advanceSession } = useReaderSessionState();
   const {
@@ -87,6 +93,10 @@ export function StoryPlayer({
     randomSeed = '',
     stepStartedAt = [],
   } = session;
+  const requestedRuntimeSliceKey = story ? runtimeStateKey(story, currentId, journey) : '';
+  const runtimeSliceReady = Boolean(
+    story && runtimeSliceKey === requestedRuntimeSliceKey && !runtimeOptionsError,
+  );
   const [playableCharacterId, setPlayableCharacterId] = useState<string>();
   const progressMode = isSimulationMode ? 'simulation' : 'reader';
   const {
@@ -142,21 +152,32 @@ export function StoryPlayer({
   useEffect(() => {
     let cancelled = false;
     void api
-      .getStory(storyId)
-      .then(async (nextStory) => {
-        const positioned = ensureStoryInteractionPositions(nextStory);
+      .getStoryRuntimeBootstrap(storyId)
+      .then(async (bootstrap) => {
         const authorizedSimulation =
-          simulationRequested && positioned.capabilities?.canEdit === true;
+          simulationRequested && bootstrap.capabilities?.canEdit === true;
         const loadedProgressMode: ReaderAutosaveMode = authorizedSimulation
           ? 'simulation'
           : 'reader';
         const effectiveStartInteractionId = authorizedSimulation
           ? requestedStartInteractionId
           : null;
-        const progress =
+        const [runtimeStory, progress] = await Promise.all([
+          loadStoryRuntimeContext(storyId, bootstrap),
           !authenticated || (authorizedSimulation && effectiveStartInteractionId)
-            ? null
-            : await api.getReaderProgress(storyId, authorizedSimulation ? 'simulation' : 'reader');
+            ? Promise.resolve(null)
+            : api.getReaderProgress(storyId, authorizedSimulation ? 'simulation' : 'reader'),
+        ]);
+        const journeyInteractionIds =
+          progress?.state.journeyInteractionIds ??
+          (effectiveStartInteractionId ? [effectiveStartInteractionId] : []);
+        const positioned = ensureStoryInteractionPositions(
+          await loadStoryRuntimeSlice(
+            runtimeStory,
+            journeyInteractionIds.at(-1) ?? null,
+            journeyInteractionIds,
+          ),
+        );
         return { positioned, progress, effectiveStartInteractionId, loadedProgressMode };
       })
       .then(({ positioned, progress, effectiveStartInteractionId, loadedProgressMode }) => {
@@ -175,6 +196,8 @@ export function StoryPlayer({
           reconciledProgress?.journeyInteractionIds ??
           (effectiveStartInteractionId ? [effectiveStartInteractionId] : []);
         setStory(positioned);
+        setRuntimeSliceKey(runtimeStateKey(positioned, nextJourney.at(-1) ?? null, nextJourney));
+        setRuntimeOptionsError('');
         setLoadedKey(loadKey);
         if (!reconciledProgress) {
           const createdSession = replaySession(
@@ -251,6 +274,14 @@ export function StoryPlayer({
         currentSession.stepStartedAt,
       );
       setStory(positioned);
+      setRuntimeSliceKey(
+        runtimeStateKey(
+          positioned,
+          currentSession.currentInteractionId,
+          currentSession.journeyInteractionIds,
+        ),
+      );
+      setRuntimeOptionsError('');
       setEditingChoiceId((choiceId) =>
         choiceId && positioned.interactions.some(({ id }) => id === choiceId)
           ? choiceId
@@ -276,8 +307,17 @@ export function StoryPlayer({
       }
 
       const attempt = ++realtimeLoadAttempt.current;
+      const currentSession = sessionRef.current;
       void api
-        .getStory(storyId)
+        .getStoryRuntimeBootstrap(storyId)
+        .then((bootstrap) => loadStoryRuntimeContext(storyId, bootstrap))
+        .then((runtimeStory) =>
+          loadStoryRuntimeSlice(
+            runtimeStory,
+            currentSession.currentInteractionId,
+            currentSession.journeyInteractionIds,
+          ),
+        )
         .then((nextStory) => {
           if (attempt !== realtimeLoadAttempt.current) return;
           if (hasActiveSimulationMutations() || simulationEditDepth.current > 0) {
@@ -328,6 +368,26 @@ export function StoryPlayer({
     if (simulationMutations.status !== 'saving') flushPendingRealtimeRefresh();
   }, [flushPendingRealtimeRefresh, simulationMutations.status]);
 
+  useEffect(() => {
+    if (!story || loadedKey !== loadKey || runtimeSliceKey === requestedRuntimeSliceKey) return;
+    let cancelled = false;
+    setRuntimeOptionsError('');
+    void loadStoryRuntimeSlice(story, currentId, journey)
+      .then((nextStory) => {
+        if (cancelled) return;
+        setStory(nextStory);
+        setRuntimeSliceKey(runtimeStateKey(nextStory, currentId, journey));
+      })
+      .catch((caught: unknown) => {
+        if (!cancelled) {
+          setRuntimeOptionsError(caught instanceof Error ? caught.message : t('player.loadFailed'));
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [currentId, journey, loadKey, loadedKey, requestedRuntimeSliceKey, runtimeSliceKey, story, t]);
+
   const current = useMemo(
     () => story?.interactions.find((item) => item.id === currentId),
     [currentId, story],
@@ -361,7 +421,7 @@ export function StoryPlayer({
   );
   const ownedItemDefinitionIds = useMemo(
     () =>
-      story
+      story && runtimeSliceKey === requestedRuntimeSliceKey
         ? ownedItemIds.flatMap((itemId) => {
             const definitionId = getItemDefinitionIdForInstance(story, itemId);
             return definitionId ? [definitionId] : [];
@@ -397,7 +457,7 @@ export function StoryPlayer({
 
   const choices = useMemo(
     () =>
-      story
+      story && runtimeSliceReady
         ? getAvailableInteractions(
             story,
             current?.id ?? null,
@@ -421,12 +481,13 @@ export function StoryPlayer({
       ownedItemDefinitionIds,
       itemStatValues,
       triggerEvaluationContext,
+      runtimeSliceReady,
     ],
   );
   const availableChoiceIds = useMemo(() => new Set(choices.map((choice) => choice.id)), [choices]);
   const visibleChoices = useMemo(
     () =>
-      isSimulationMode && story
+      isSimulationMode && story && runtimeSliceReady
         ? getInputReachableInteractions(story, current?.id ?? null).flatMap((interaction) => {
             const available = availableChoiceIds.has(interaction.id);
             const failures = available
@@ -510,6 +571,7 @@ export function StoryPlayer({
       itemStatValues,
       triggerEvaluationContext,
       t,
+      runtimeSliceReady,
     ],
   );
   useEffect(() => {
@@ -705,7 +767,7 @@ export function StoryPlayer({
     }
   }
 
-  function loadSave(save: {
+  async function loadSave(save: {
     state: {
       journeyInteractionIds: string[];
       ownedItemIds: string[];
@@ -715,8 +777,14 @@ export function StoryPlayer({
   }) {
     if (!story) return;
     setTimerNow(Date.now());
-    const nextSession = replaySession(
+    const loadedStory = await loadStoryRuntimeSlice(
       story,
+      save.state.journeyInteractionIds.at(-1) ?? null,
+      save.state.journeyInteractionIds,
+    );
+    setStory(loadedStory);
+    const nextSession = replaySession(
+      loadedStory,
       save.state.journeyInteractionIds,
       save.state.ownedItemIds,
       save.state.randomSeed ?? createReaderRandomSeed(),
@@ -724,8 +792,15 @@ export function StoryPlayer({
     );
     setPlayableCharacterId(
       nextSession.journeyInteractionIds.length > 0
-        ? story.characters?.find(({ isPlayable }) => isPlayable)?.id
+        ? loadedStory.characters?.find(({ isPlayable }) => isPlayable)?.id
         : undefined,
+    );
+    setRuntimeSliceKey(
+      runtimeStateKey(
+        loadedStory,
+        nextSession.currentInteractionId,
+        nextSession.journeyInteractionIds,
+      ),
     );
     saveProgress(nextSession);
   }
@@ -811,9 +886,20 @@ export function StoryPlayer({
   }
 
   async function reloadAfterSimulationMutationFailure() {
-    await simulationMutations.run(() => api.getStory(storyId), applyReloadedSimulationStory, {
-      retryable: false,
-    });
+    const currentSession = sessionRef.current;
+    await simulationMutations.run(
+      async () => {
+        const bootstrap = await api.getStoryRuntimeBootstrap(storyId);
+        const runtimeStory = await loadStoryRuntimeContext(storyId, bootstrap);
+        return loadStoryRuntimeSlice(
+          runtimeStory,
+          currentSession.currentInteractionId,
+          currentSession.journeyInteractionIds,
+        );
+      },
+      applyReloadedSimulationStory,
+      { retryable: false },
+    );
   }
 
   if (!story || loadedKey !== loadKey) {
@@ -1084,6 +1170,16 @@ export function StoryPlayer({
               <p>{t('player.chooseStartingInteraction')}</p>
             </>
           )}
+          {runtimeOptionsError ? (
+            <p className="error" role="alert">
+              {runtimeOptionsError}
+            </p>
+          ) : null}
+          {!runtimeSliceReady && !runtimeOptionsError ? (
+            <p className="hint" role="status">
+              {t('player.loadingOptions')}
+            </p>
+          ) : null}
           {playableCharacters.length === 0 || playedCharacter ? (
             <div className="choices">
               {visibleChoices.map(({ interaction, available, timerState, unavailableReason }) => (
@@ -1153,7 +1249,7 @@ export function StoryPlayer({
                   </span>
                 </button>
               ) : null}
-              {choices.length === 0 && current && !isSimulationMode ? (
+              {runtimeSliceReady && choices.length === 0 && current && !isSimulationMode ? (
                 <div className="ending">
                   <span aria-hidden="true">◇</span>
                   <div>
@@ -1341,4 +1437,12 @@ export function StoryPlayer({
 function applyInteractionResponse(story: Story, result: InteractionMutationResult | Story) {
   if ('interactions' in result) return ensureStoryInteractionPositions(result);
   return ensureStoryInteractionPositions(applyInteractionMutationResult(story, result));
+}
+
+function runtimeStateKey(
+  story: Pick<Story, 'revision'>,
+  currentInteractionId: string | null,
+  journeyInteractionIds: readonly string[],
+) {
+  return `${story.revision ?? 1}:${currentInteractionId ?? 'start'}:${journeyInteractionIds.join(',')}`;
 }

@@ -5,6 +5,7 @@ import type { Story } from '@paralleax/shared';
 import { api } from '../../../api';
 import { useStoryRealtime } from '../../../hooks/useStoryRealtime';
 import { useStoryPersistenceLifecycle } from './useStoryPersistenceLifecycle';
+import { loadStoryEditorProjection } from './storyEditorLoader';
 
 vi.mock('../../../api', () => ({
   api: {
@@ -16,10 +17,19 @@ vi.mock('../../../hooks/useStoryRealtime', () => ({
   useStoryRealtime: vi.fn(() => 'live'),
 }));
 
+vi.mock('./storyEditorLoader', () => ({
+  loadStoryEditorProjection: vi.fn(),
+}));
+
 describe('story persistence lifecycle', () => {
   beforeEach(() => {
     vi.resetAllMocks();
     vi.mocked(useStoryRealtime).mockReturnValue('live');
+    vi.mocked(loadStoryEditorProjection).mockImplementation(async (storyId, onProgress) => {
+      const story = await api.getStory(storyId);
+      onProgress?.({ story, phase: 'ready' });
+      return story;
+    });
   });
 
   it('loads the story into the single parent-owned state and resets save feedback', async () => {

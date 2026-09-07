@@ -1,20 +1,28 @@
 import type { Story } from '@paralleax/shared';
 import type { StoriesRepository } from '../stories.repository';
 import { StoryReaderProgressService } from './story-reader-progress';
+import type { StoryRuntimeService } from './story-runtime';
 
 describe('StoryReaderProgressService', () => {
   const repository = {
-    find: jest.fn(),
     findProgress: jest.fn(),
     findProgressSaves: jest.fn(),
     saveProgress: jest.fn(),
     deleteProgress: jest.fn(),
   };
-  const service = new StoryReaderProgressService(repository as unknown as StoriesRepository);
+  const runtime = {
+    getAccess: jest.fn(),
+    getStoryForJourney: jest.fn(),
+  };
+  const service = new StoryReaderProgressService(
+    repository as unknown as StoriesRepository,
+    runtime as unknown as StoryRuntimeService,
+  );
 
   beforeEach(() => {
     jest.clearAllMocks();
-    repository.find.mockResolvedValue(storyFixture());
+    runtime.getAccess.mockResolvedValue(storyFixture());
+    runtime.getStoryForJourney.mockResolvedValue(storyFixture());
     repository.saveProgress.mockResolvedValue(true);
     repository.findProgressSaves.mockResolvedValue([]);
   });
@@ -26,7 +34,7 @@ describe('StoryReaderProgressService', () => {
 
     await expect(service.get('story-1', 'user-1')).resolves.toBeNull();
 
-    expect(repository.find).toHaveBeenCalledWith('story-1', 'user-1');
+    expect(runtime.getAccess).toHaveBeenCalledWith('story-1', 'user-1');
     expect(repository.findProgress).toHaveBeenCalledWith('story-1', 'user-1', 'reader-autosave');
   });
 
@@ -135,7 +143,7 @@ describe('StoryReaderProgressService', () => {
   });
 
   it('requires effective edit access for the simulation autosave', async () => {
-    repository.find.mockResolvedValueOnce({
+    runtime.getAccess.mockResolvedValueOnce({
       ...storyFixture(),
       capabilities: { canRead: true, canEdit: false, canManage: false, canComment: false },
     });
@@ -152,7 +160,9 @@ describe('StoryReaderProgressService', () => {
       { name: '  Before the gate  ', journeyInteractionIds: ['root'] },
       'user-1',
     );
-    repository.findProgressSaves.mockResolvedValueOnce([save]);
+    repository.findProgressSaves.mockResolvedValueOnce([
+      { ...save, currentInteractionTitle: 'Root' },
+    ]);
 
     await expect(service.listSaves('story-1', 'user-1')).resolves.toEqual([
       expect.objectContaining({
@@ -160,6 +170,7 @@ describe('StoryReaderProgressService', () => {
         kind: 'manual',
         name: 'Before the gate',
         currentInteractionId: 'root',
+        currentInteractionTitle: 'Root',
         journeyLength: 1,
       }),
     ]);
@@ -195,7 +206,7 @@ describe('StoryReaderProgressService', () => {
   });
 
   it('does not expose inaccessible stories and checks access before deletion', async () => {
-    repository.find.mockResolvedValueOnce(undefined);
+    runtime.getAccess.mockRejectedValueOnce(new Error('Story not found'));
     await expect(service.get('missing-story', 'user-1')).rejects.toThrow('Story not found');
 
     await service.delete('story-1', 'user-1');

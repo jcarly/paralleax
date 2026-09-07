@@ -119,6 +119,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
     story,
     setStory,
     error,
+    loadPhase,
     saveStatus,
     realtimeStatus,
     beginLocalEdit,
@@ -271,8 +272,8 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
     cancelPendingConnection,
   } = connectionController;
 
-  const commentAccess = story?.capabilities?.canEdit === true;
-  const reviewOnly = story?.capabilities?.canEdit === false;
+  const commentAccess = loadPhase === 'ready' && story?.capabilities?.canEdit === true;
+  const reviewOnly = loadPhase !== 'ready' || story?.capabilities?.canEdit === false;
   const comments = useStoryComments(storyId, commentAccess);
   const commentThreads = comments.threads;
   const selectCommentThread = comments.selectThread;
@@ -1010,6 +1011,11 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
           />
         </label>
         <div className="actions">
+          {loadPhase !== 'ready' ? (
+            <span className="save-status saving" role="status" aria-live="polite">
+              {t(`editor.loadingPhase.${loadPhase}`)}
+            </span>
+          ) : null}
           {story.capabilities?.canManage ? (
             <Link className="button secondary" to={`/stories/${storyId}/access`}>
               {t('editor.access')}

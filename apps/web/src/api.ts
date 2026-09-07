@@ -1,3 +1,4 @@
+import { STORY_EDITOR_PAGE_SIZE, STORY_LIST_PAGE_SIZE } from '@paralleax/shared';
 import type {
   CharacterMutationResult,
   ChoiceScriptImportReport,
@@ -22,6 +23,7 @@ import type {
   ItemDefinitionMutationResult,
   LocationMutationResult,
   MoveItemInstanceInput,
+  PaginatedResult,
   ReaderProgress,
   ReaderAutosaveMode,
   ReaderSave,
@@ -29,12 +31,23 @@ import type {
   SaveReaderProgressInput,
   StatDefinitionMutationResult,
   Story,
+  StoryEditorBootstrap,
+  StoryEditorContextPage,
+  StoryEditorInteractionContentPage,
+  StoryEditorInteractionPage,
+  StoryEditorTriggerContentPage,
+  StoryEditorTriggerPage,
   StoryHistory,
   StoryHistoryMutationResult,
   StoryGraphPositionUpdates,
   StoryMutationMetadata,
+  StoryRuntimeBootstrap,
+  StoryRuntimeContextPage,
+  StoryRuntimeSlice,
+  StoryRuntimeSliceRequest,
   StoryCommentThread,
   StorySummary,
+  StoryListOptions,
   TriggerMutationResult,
   UpdateInteractionInput,
   UpdateStatAssignmentInput,
@@ -131,6 +144,24 @@ function apiError(path: string, status: number, body: string) {
 function readerProgressPath(storyId: string, mode: ReaderAutosaveMode): string {
   return `/stories/${storyId}/progress${mode === 'simulation' ? '/simulation' : ''}`;
 }
+
+function paginationPath(path: string, page: number, pageSize: number): string {
+  const search = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
+  return `${path}?${search.toString()}`;
+}
+
+function storyListPath(path: string, options: Partial<StoryListOptions>): string {
+  const search = new URLSearchParams({
+    page: String(options.page ?? 1),
+    pageSize: String(options.pageSize ?? STORY_LIST_PAGE_SIZE),
+    filter: options.filter ?? 'all',
+    sort: options.sort ?? 'updated',
+  });
+  const query = options.query?.trim();
+  if (query) search.set('query', query);
+  return `${path}?${search.toString()}`;
+}
+
 export interface AuthUser {
   id: string;
   email: string;
@@ -172,9 +203,53 @@ export const api = {
       method: 'PATCH',
       body: JSON.stringify({ role }),
     }),
-  listStories: () => request<StorySummary[]>('/stories'),
-  listPublicStories: () => request<StorySummary[]>('/stories/public'),
+  listStories: (options: Partial<StoryListOptions> = {}) =>
+    request<PaginatedResult<StorySummary>>(storyListPath('/stories', options)),
+  listPublicStories: (options: Partial<StoryListOptions> = {}) =>
+    request<PaginatedResult<StorySummary>>(storyListPath('/stories/public', options)),
   getStory: (id: string) => request<Story>(`/stories/${id}`),
+  getStoryRuntimeBootstrap: (id: string) =>
+    request<StoryRuntimeBootstrap>(`/stories/${id}/runtime`),
+  getStoryRuntimeContextPage: (id: string, page: number, pageSize = STORY_EDITOR_PAGE_SIZE) =>
+    request<StoryRuntimeContextPage>(
+      paginationPath(`/stories/${id}/runtime/context`, page, pageSize),
+    ),
+  getStoryRuntimeSlice: (id: string, input: Partial<StoryRuntimeSliceRequest> = {}) =>
+    request<StoryRuntimeSlice>(`/stories/${id}/runtime/slice`, {
+      method: 'POST',
+      body: JSON.stringify({
+        ...(input.currentInteractionId ? { currentInteractionId: input.currentInteractionId } : {}),
+        ...(input.interactionIds ? { interactionIds: input.interactionIds } : {}),
+        ...(input.includeOptions !== undefined ? { includeOptions: input.includeOptions } : {}),
+        page: input.page ?? 1,
+        pageSize: input.pageSize ?? STORY_EDITOR_PAGE_SIZE,
+      }),
+    }),
+  getStoryEditorBootstrap: (id: string) => request<StoryEditorBootstrap>(`/stories/${id}/editor`),
+  getStoryEditorContextPage: (id: string, page: number, pageSize = STORY_EDITOR_PAGE_SIZE) =>
+    request<StoryEditorContextPage>(
+      paginationPath(`/stories/${id}/editor/context`, page, pageSize),
+    ),
+  getStoryEditorInteractionPage: (id: string, page: number, pageSize = STORY_EDITOR_PAGE_SIZE) =>
+    request<StoryEditorInteractionPage>(
+      paginationPath(`/stories/${id}/editor/interactions`, page, pageSize),
+    ),
+  getStoryEditorTriggerPage: (id: string, page: number, pageSize = STORY_EDITOR_PAGE_SIZE) =>
+    request<StoryEditorTriggerPage>(
+      paginationPath(`/stories/${id}/editor/triggers`, page, pageSize),
+    ),
+  getStoryEditorInteractionContentPage: (
+    id: string,
+    page: number,
+    pageSize = STORY_EDITOR_PAGE_SIZE,
+  ) =>
+    request<StoryEditorInteractionContentPage>(
+      paginationPath(`/stories/${id}/editor/content/interactions`, page, pageSize),
+    ),
+  getStoryEditorTriggerContentPage: (id: string, page: number, pageSize = STORY_EDITOR_PAGE_SIZE) =>
+    request<StoryEditorTriggerContentPage>(
+      paginationPath(`/stories/${id}/editor/content/triggers`, page, pageSize),
+    ),
   getStoryHistory: (id: string) => request<StoryHistory>(`/stories/${id}/history`),
   undoStoryChange: (id: string) =>
     request<StoryHistoryMutationResult>(`/stories/${id}/history/undo`, { method: 'POST' }),

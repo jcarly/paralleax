@@ -4,6 +4,9 @@ import {
   MAX_GRAPH_TEXT_SIZE,
   MAX_INTERACTION_BODY_LENGTH,
   MAX_READER_SAVE_NAME_LENGTH,
+  MAX_STORY_PAGE_SIZE,
+  STORY_EDITOR_PAGE_SIZE,
+  STORY_LIST_PAGE_SIZE,
   ITEM_RELATIONSHIP_TYPES,
   MIN_GRAPH_FRAME_HEIGHT,
   MIN_GRAPH_FRAME_WIDTH,
@@ -24,6 +27,7 @@ import {
   IsNotEmpty,
   IsNumber,
   IsObject,
+  IsOptional,
   IsIn,
   IsInt,
   IsISO8601,
@@ -75,6 +79,54 @@ export class UpdateStoryGraphPositionsDto {
 }
 export class CreateStoryDto {
   @IsString() @IsNotEmpty() @MaxLength(200) title!: string;
+}
+
+export class PaginationQueryDto {
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  page = 1;
+
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(MAX_STORY_PAGE_SIZE)
+  pageSize = STORY_EDITOR_PAGE_SIZE;
+}
+
+export class StoryListQueryDto extends PaginationQueryDto {
+  override pageSize = STORY_LIST_PAGE_SIZE;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  query?: string;
+
+  @IsOptional()
+  @IsIn(['all', 'editable', 'commentable', 'owned'])
+  filter: 'all' | 'editable' | 'commentable' | 'owned' = 'all';
+
+  @IsOptional()
+  @IsIn(['updated', 'title'])
+  sort: 'updated' | 'title' = 'updated';
+}
+
+export class StoryRuntimeSliceDto extends PaginationQueryDto {
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(200)
+  currentInteractionId?: string | null;
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(MAX_STORY_PAGE_SIZE)
+  @IsString({ each: true })
+  interactionIds?: string[];
+
+  @IsOptional()
+  @IsBoolean()
+  includeOptions?: boolean;
 }
 export class ChoiceScriptSourceFileDto {
   @IsString()

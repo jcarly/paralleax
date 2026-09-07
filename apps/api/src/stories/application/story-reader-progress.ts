@@ -24,17 +24,21 @@ import type {
   UpdateReaderSaveDto,
 } from '../dto/stories.dto';
 import { StoriesRepository } from '../stories.repository';
+import { StoryRuntimeService } from './story-runtime';
 
 @Injectable()
 export class StoryReaderProgressService {
-  constructor(private readonly repository: StoriesRepository) {}
+  constructor(
+    private readonly repository: StoriesRepository,
+    private readonly runtime: StoryRuntimeService,
+  ) {}
 
   async get(
     storyId: string,
     userId: string,
     mode: ReaderAutosaveMode = 'reader',
   ): Promise<ReaderProgress | null> {
-    const story = await this.story(storyId, userId);
+    const story = await this.runtime.getAccess(storyId, userId);
     this.assertModeAccess(story, mode);
     const progress = await this.repository.findProgress(storyId, userId, autosaveId(mode));
     return progress ? { state: progress.state, updatedAt: progress.updatedAt } : null;
@@ -46,7 +50,11 @@ export class StoryReaderProgressService {
     userId: string,
     mode: ReaderAutosaveMode = 'reader',
   ): Promise<ReaderProgress> {
-    const story = await this.story(storyId, userId);
+    const story = await this.runtime.getStoryForJourney(
+      storyId,
+      userId,
+      input.journeyInteractionIds,
+    );
     this.assertModeAccess(story, mode);
     return this.persist(story, input, userId, autosaveId(mode));
   }
@@ -56,27 +64,30 @@ export class StoryReaderProgressService {
     userId: string,
     mode: ReaderAutosaveMode = 'reader',
   ): Promise<void> {
-    const story = await this.story(storyId, userId);
+    const story = await this.runtime.getAccess(storyId, userId);
     this.assertModeAccess(story, mode);
     await this.repository.deleteProgress(storyId, userId, autosaveId(mode));
   }
 
   async listSaves(storyId: string, userId: string): Promise<ReaderSaveSummary[]> {
-    await this.story(storyId, userId);
+    await this.runtime.getAccess(storyId, userId);
     const saves = await this.repository.findProgressSaves(storyId, userId);
-    return saves.map(({ id, kind, name, state, createdAt, updatedAt }) => ({
-      id,
-      kind,
-      ...(name ? { name } : {}),
-      currentInteractionId: state.currentInteractionId,
-      journeyLength: state.journeyInteractionIds.length,
-      createdAt,
-      updatedAt,
-    }));
+    return saves.map(
+      ({ id, kind, name, state, currentInteractionTitle, createdAt, updatedAt }) => ({
+        id,
+        kind,
+        ...(name ? { name } : {}),
+        currentInteractionId: state.currentInteractionId,
+        ...(currentInteractionTitle ? { currentInteractionTitle } : {}),
+        journeyLength: state.journeyInteractionIds.length,
+        createdAt,
+        updatedAt,
+      }),
+    );
   }
 
   async getSave(storyId: string, saveId: string, userId: string): Promise<ReaderSave> {
-    await this.story(storyId, userId);
+    await this.runtime.getAccess(storyId, userId);
     const save = await this.repository.findProgress(storyId, userId, saveId);
     if (!save) throw new NotFoundException('Reader save not found');
     return save;
@@ -87,7 +98,11 @@ export class StoryReaderProgressService {
     input: CreateReaderSaveDto,
     userId: string,
   ): Promise<ReaderSave> {
-    const story = await this.story(storyId, userId);
+    const story = await this.runtime.getStoryForJourney(
+      storyId,
+      userId,
+      input.journeyInteractionIds,
+    );
     const saves = await this.repository.findProgressSaves(storyId, userId);
     if (saves.filter(({ kind }) => kind === 'manual').length >= MAX_MANUAL_READER_SAVES) {
       throw new ConflictException(
@@ -104,7 +119,11 @@ export class StoryReaderProgressService {
     input: UpdateReaderSaveDto,
     userId: string,
   ): Promise<ReaderSave> {
-    const story = await this.story(storyId, userId);
+    const story = await this.runtime.getStoryForJourney(
+      storyId,
+      userId,
+      input.journeyInteractionIds,
+    );
     if (readerSaveKind(saveId) !== 'manual') {
       throw new BadRequestException('Autosaves are updated by their reader mode');
     }
@@ -114,7 +133,7 @@ export class StoryReaderProgressService {
   }
 
   async deleteSave(storyId: string, saveId: string, userId: string): Promise<void> {
-    await this.story(storyId, userId);
+    await this.runtime.getAccess(storyId, userId);
     if (readerSaveKind(saveId) !== 'manual') {
       throw new BadRequestException('Autosaves are reset by their reader mode');
     }
@@ -229,15 +248,9 @@ export class StoryReaderProgressService {
     return name;
   }
 
-  private assertModeAccess(story: Story, mode: ReaderAutosaveMode): void {
+  private assertModeAccess(story: Pick<Story, 'capabilities'>, mode: ReaderAutosaveMode): void {
     if (mode === 'simulation' && story.capabilities?.canEdit !== true) {
       throw new NotFoundException('Story not found');
     }
-  }
-
-  private async story(storyId: string, userId: string): Promise<Story> {
-    const story = await this.repository.find(storyId, userId);
-    if (!story) throw new NotFoundException('Story not found');
-    return story;
   }
 }

@@ -5,6 +5,7 @@ import {
   createStoryHistoryMutationResult,
   DEFAULT_STORY_DATE_TIME,
   READER_AUTOSAVE_ID,
+  STORY_LIST_PAGE_SIZE,
   defaultStoryAccess,
   invertStoryChangeDelta,
   readerSaveKind,
@@ -22,6 +23,18 @@ import {
   type StoryAccessSettings,
   type StoryCollaboratorRole,
   type StorySummary,
+  type PaginatedResult,
+  type StoryEditorBootstrap,
+  type StoryEditorContextPage,
+  type StoryEditorInteractionContentPage,
+  type StoryEditorInteractionPage,
+  type StoryEditorTriggerContentPage,
+  type StoryEditorTriggerPage,
+  type StoryListOptions,
+  type StoryRuntimeBootstrap,
+  type StoryRuntimeContextPage,
+  type StoryRuntimeSlice,
+  type StoryRuntimeSliceRequest,
   type StatValue,
   type StatValueType,
   type TriggerConditionGroup,
@@ -38,6 +51,14 @@ import {
   insertStoryHistoryEvent,
   readStoryHistory,
 } from './persistence/story-history.persistence';
+import {
+  readStoryEditorContextPage,
+  readStoryEditorInteractionContentPage,
+  readStoryEditorInteractionPage,
+  readStoryEditorTriggerContentPage,
+  readStoryEditorTriggerPage,
+} from './persistence/story-editor.persistence';
+import { readStoryRuntimeSlice } from './persistence/story-runtime.persistence';
 
 type StoryRow = {
   id: string;
@@ -57,8 +78,20 @@ type StoryRow = {
 };
 type StorySummaryRow = StoryRow & {
   interaction_count: number | string;
+  total_count: number | string;
 };
 type PublicStorySummaryRow = Omit<StorySummaryRow, 'owner_email'>;
+type StoryEditorBootstrapRow = StoryRow & {
+  location_count: number | string;
+  character_count: number | string;
+  stat_definition_count: number | string;
+  stat_assignment_count: number | string;
+  item_definition_count: number | string;
+  item_instance_count: number | string;
+  graph_decoration_count: number | string;
+  interaction_count: number | string;
+  trigger_count: number | string;
+};
 type InteractionRow = {
   id: string;
   story_id: string;
@@ -184,6 +217,7 @@ type ReaderProgressRow = {
   state: ReaderProgressState;
   created_at: Date | string;
   updated_at: Date | string;
+  current_interaction_title?: string | null;
 };
 
 const storyAccessSelect = `SELECT stories.id, stories.revision, stories.title,
@@ -201,66 +235,276 @@ const storyAccessSelect = `SELECT stories.id, stories.revision, stories.title,
 export class StoriesRepository {
   constructor(private readonly database: DatabaseConnection) {}
 
-  async list(userId: string): Promise<StorySummary[]> {
+  async list(
+    userId: string,
+    options: StoryListOptions = { page: 1, pageSize: STORY_LIST_PAGE_SIZE },
+  ): Promise<PaginatedResult<StorySummary>> {
+    const filter = authenticatedStoryFilter(options.filter ?? 'all');
+    const order = storySummaryOrder(options.sort ?? 'updated');
+    const query = options.query?.trim() ?? '';
+    const offset = (options.page - 1) * options.pageSize;
     const result = await this.database.pool.query<StorySummaryRow>(
       `SELECT stories.id, stories.revision, stories.title, stories.creator_user_id,
               owner.email AS owner_email, stories.visibility, stories.edit_policy,
               stories.comment_policy, actor.id AS actor_id, actor.role AS actor_role,
               permission.role AS collaborator_role, stories.start_date_time,
-              stories.created_at, stories.updated_at, COUNT(interactions.id) AS interaction_count
+              stories.created_at, stories.updated_at,
+              (SELECT COUNT(*) FROM interactions WHERE interactions.story_id = stories.id)
+                AS interaction_count,
+              COUNT(*) OVER() AS total_count
        FROM stories
        JOIN users AS owner ON owner.id = stories.creator_user_id
        JOIN users AS actor ON actor.id = $1
        LEFT JOIN story_user_permissions AS permission
          ON permission.story_id = stories.id AND permission.user_id = $1
-       LEFT JOIN interactions ON interactions.story_id = stories.id
-       WHERE actor.role = 'admin'
-          OR stories.creator_user_id = $1
-          OR stories.visibility IN ('public', 'authenticated')
-          OR stories.edit_policy = 'authenticated'
-          OR (stories.visibility = 'invitation' AND permission.user_id IS NOT NULL)
-       GROUP BY stories.id, owner.id, actor.id, permission.role
-       ORDER BY stories.updated_at DESC, stories.created_at DESC`,
-      [userId],
+       WHERE (
+         actor.role = 'admin'
+         OR stories.creator_user_id = $1
+         OR stories.visibility IN ('public', 'authenticated')
+         OR stories.edit_policy = 'authenticated'
+         OR (stories.visibility = 'invitation' AND permission.user_id IS NOT NULL)
+       )
+       AND ($2 = '' OR stories.title ILIKE '%' || $2 || '%')
+       AND (${filter})
+       ORDER BY ${order}
+       LIMIT $3 OFFSET $4`,
+      [userId, query, options.pageSize, offset],
     );
-    return result.rows.map((row) => ({
+    return pageResult(
+      result.rows.map((row) => storySummary(row, userId)),
+      result.rows[0] ? Number(result.rows[0].total_count) : 0,
+      options,
+    );
+  }
+
+  async listPublic(
+    options: StoryListOptions = { page: 1, pageSize: STORY_LIST_PAGE_SIZE },
+  ): Promise<PaginatedResult<StorySummary>> {
+    const order = storySummaryOrder(options.sort ?? 'updated');
+    const query = options.query?.trim() ?? '';
+    const offset = (options.page - 1) * options.pageSize;
+    const result = await this.database.pool.query<PublicStorySummaryRow>(
+      `SELECT stories.id, stories.revision, stories.title, stories.creator_user_id,
+              stories.visibility, stories.edit_policy, stories.comment_policy,
+              NULL::text AS actor_id, NULL::text AS actor_role,
+              NULL::text AS collaborator_role, stories.start_date_time,
+              stories.created_at, stories.updated_at,
+              (SELECT COUNT(*) FROM interactions WHERE interactions.story_id = stories.id)
+                AS interaction_count,
+              COUNT(*) OVER() AS total_count
+       FROM stories
+       WHERE stories.visibility = 'public'
+         AND ($1 = '' OR stories.title ILIKE '%' || $1 || '%')
+       ORDER BY ${order}
+       LIMIT $2 OFFSET $3`,
+      [query, options.pageSize, offset],
+    );
+    return pageResult(
+      result.rows.map((row) => storySummary(row)),
+      result.rows[0] ? Number(result.rows[0].total_count) : 0,
+      options,
+    );
+  }
+
+  async findEditorBootstrap(id: string, userId: string): Promise<StoryEditorBootstrap | undefined> {
+    const result = await this.database.pool.query<StoryEditorBootstrapRow>(
+      `SELECT accessible.*,
+         (SELECT COUNT(*) FROM locations WHERE story_id = accessible.id) AS location_count,
+         (SELECT COUNT(*) FROM characters WHERE story_id = accessible.id) AS character_count,
+         (SELECT COUNT(*) FROM stat_definitions WHERE story_id = accessible.id)
+           AS stat_definition_count,
+         (SELECT COUNT(*) FROM stat_assignments WHERE story_id = accessible.id)
+           AS stat_assignment_count,
+         (SELECT COUNT(*) FROM item_definitions WHERE story_id = accessible.id)
+           AS item_definition_count,
+         (SELECT COUNT(*) FROM item_instances WHERE story_id = accessible.id) AS item_instance_count,
+         (SELECT COUNT(*) FROM graph_decorations WHERE story_id = accessible.id)
+           AS graph_decoration_count,
+         (SELECT COUNT(*) FROM interactions WHERE story_id = accessible.id) AS interaction_count,
+         (SELECT COUNT(*) FROM triggers
+            JOIN interactions trigger_outputs
+              ON trigger_outputs.id = triggers.output_interaction_id
+            WHERE trigger_outputs.story_id = accessible.id) AS trigger_count
+       FROM (
+         ${storyAccessSelect}
+         WHERE stories.id = $1
+           AND (
+             actor.role = 'admin' OR stories.creator_user_id = $2
+             OR stories.visibility = 'public'
+             OR (
+               actor.id IS NOT NULL AND (
+                 stories.visibility = 'authenticated'
+                 OR stories.edit_policy = 'authenticated'
+                 OR (stories.visibility = 'invitation' AND permission.user_id IS NOT NULL)
+               )
+             )
+           )
+       ) AS accessible`,
+      [id, userId],
+    );
+    const row = result.rows[0];
+    if (!row) return undefined;
+    return {
       id: row.id,
       revision: row.revision,
       title: row.title,
-      interactionCount: Number(row.interaction_count),
       startDateTime: row.start_date_time,
       access: accessSettings(row),
       capabilities: capabilities(row, userId),
       owner: { id: row.creator_user_id, email: row.owner_email },
       createdAt: iso(row.created_at),
       updatedAt: iso(row.updated_at),
-    }));
+      contextCounts: {
+        locations: Number(row.location_count),
+        characters: Number(row.character_count),
+        statDefinitions: Number(row.stat_definition_count),
+        statAssignments: Number(row.stat_assignment_count),
+        itemDefinitions: Number(row.item_definition_count),
+        itemInstances: Number(row.item_instance_count),
+        graphDecorations: Number(row.graph_decoration_count),
+      },
+      interactionCount: Number(row.interaction_count),
+      triggerCount: Number(row.trigger_count),
+    };
   }
 
-  async listPublic(): Promise<StorySummary[]> {
-    const result = await this.database.pool.query<PublicStorySummaryRow>(
-      `SELECT stories.id, stories.revision, stories.title, stories.creator_user_id,
-              stories.visibility, stories.edit_policy, stories.comment_policy,
-              NULL::text AS actor_id, NULL::text AS actor_role,
-              NULL::text AS collaborator_role, stories.start_date_time,
-              stories.created_at, stories.updated_at, COUNT(interactions.id) AS interaction_count
-       FROM stories
-       LEFT JOIN interactions ON interactions.story_id = stories.id
-       WHERE stories.visibility = 'public'
-       GROUP BY stories.id
-       ORDER BY stories.updated_at DESC, stories.created_at DESC`,
+  async findEditorContextPage(
+    id: string,
+    userId: string,
+    page: number,
+    pageSize: number,
+  ): Promise<StoryEditorContextPage | undefined> {
+    const story = await this.findAccessibleStoryRow(this.database.pool, id, userId);
+    if (!story) return undefined;
+    return readStoryEditorContextPage(this.database.pool, {
+      storyId: id,
+      revision: story.revision,
+      page,
+      pageSize,
+    });
+  }
+
+  async findEditorInteractionPage(
+    id: string,
+    userId: string,
+    page: number,
+    pageSize: number,
+  ): Promise<StoryEditorInteractionPage | undefined> {
+    const story = await this.findAccessibleStoryRow(this.database.pool, id, userId);
+    if (!story) return undefined;
+    return readStoryEditorInteractionPage(this.database.pool, {
+      storyId: id,
+      revision: story.revision,
+      page,
+      pageSize,
+    });
+  }
+
+  async findEditorTriggerPage(
+    id: string,
+    userId: string,
+    page: number,
+    pageSize: number,
+  ): Promise<StoryEditorTriggerPage | undefined> {
+    const story = await this.findAccessibleStoryRow(this.database.pool, id, userId);
+    if (!story) return undefined;
+    return readStoryEditorTriggerPage(this.database.pool, {
+      storyId: id,
+      revision: story.revision,
+      page,
+      pageSize,
+    });
+  }
+
+  async findEditorInteractionContentPage(
+    id: string,
+    userId: string,
+    page: number,
+    pageSize: number,
+  ): Promise<StoryEditorInteractionContentPage | undefined> {
+    const story = await this.findAccessibleStoryRow(this.database.pool, id, userId);
+    if (!story) return undefined;
+    return readStoryEditorInteractionContentPage(this.database.pool, {
+      storyId: id,
+      revision: story.revision,
+      page,
+      pageSize,
+    });
+  }
+
+  async findEditorTriggerContentPage(
+    id: string,
+    userId: string,
+    page: number,
+    pageSize: number,
+  ): Promise<StoryEditorTriggerContentPage | undefined> {
+    const story = await this.findAccessibleStoryRow(this.database.pool, id, userId);
+    if (!story) return undefined;
+    return readStoryEditorTriggerContentPage(this.database.pool, {
+      storyId: id,
+      revision: story.revision,
+      page,
+      pageSize,
+    });
+  }
+
+  async findRuntimeBootstrap(
+    id: string,
+    userId?: string,
+  ): Promise<StoryRuntimeBootstrap | undefined> {
+    return this.findEditorBootstrap(id, userId ?? '');
+  }
+
+  async findRuntimeAccess(
+    id: string,
+    userId?: string,
+  ): Promise<Pick<Story, 'id' | 'revision' | 'capabilities'> | undefined> {
+    const story = await this.findAccessibleStoryRow(this.database.pool, id, userId);
+    return story
+      ? {
+          id: story.id,
+          revision: story.revision,
+          capabilities: capabilities(story, userId),
+        }
+      : undefined;
+  }
+
+  async findRuntimeContextPage(
+    id: string,
+    userId: string | undefined,
+    page: number,
+    pageSize: number,
+  ): Promise<StoryRuntimeContextPage | undefined> {
+    const story = await this.findAccessibleStoryRow(this.database.pool, id, userId);
+    if (!story) return undefined;
+    return readStoryEditorContextPage(
+      this.database.pool,
+      {
+        storyId: id,
+        revision: story.revision,
+        page,
+        pageSize,
+      },
+      false,
     );
-    return result.rows.map((row) => ({
-      id: row.id,
-      revision: row.revision,
-      title: row.title,
-      interactionCount: Number(row.interaction_count),
-      startDateTime: row.start_date_time,
-      access: accessSettings(row),
-      capabilities: capabilities(row),
-      createdAt: iso(row.created_at),
-      updatedAt: iso(row.updated_at),
-    }));
+  }
+
+  async findRuntimeSlice(
+    id: string,
+    userId: string | undefined,
+    request: StoryRuntimeSliceRequest,
+  ): Promise<StoryRuntimeSlice | undefined> {
+    const story = await this.findAccessibleStoryRow(this.database.pool, id, userId);
+    if (!story) return undefined;
+    return readStoryRuntimeSlice(this.database.pool, {
+      storyId: id,
+      revision: story.revision,
+      currentInteractionId: request.currentInteractionId,
+      interactionIds: request.interactionIds ?? [],
+      includeOptions: request.includeOptions,
+      page: request.page,
+      pageSize: request.pageSize,
+    });
   }
 
   async find(id: string, userId?: string): Promise<Story | undefined> {
@@ -405,13 +649,20 @@ export class StoriesRepository {
     return row ? readerSave(row) : undefined;
   }
 
-  async findProgressSaves(storyId: string, userId: string): Promise<ReaderSave[]> {
+  async findProgressSaves(
+    storyId: string,
+    userId: string,
+  ): Promise<Array<ReaderSave & { currentInteractionTitle?: string }>> {
     const result = await this.database.pool.query<ReaderProgressRow>(
       `SELECT progress.slot_id, progress.name, progress.state,
-              progress.created_at, progress.updated_at
+              progress.created_at, progress.updated_at,
+              current_interaction.title AS current_interaction_title
        FROM story_reader_progress AS progress
        JOIN stories ON stories.id = progress.story_id
        JOIN users AS actor ON actor.id = $2
+       LEFT JOIN interactions AS current_interaction
+         ON current_interaction.story_id = progress.story_id
+        AND current_interaction.id = progress.state ->> 'currentInteractionId'
        LEFT JOIN story_user_permissions AS permission
          ON permission.story_id = stories.id AND permission.user_id = $2
        WHERE progress.story_id = $1
@@ -548,7 +799,11 @@ export class StoriesRepository {
     return (result.rowCount ?? 0) > 0;
   }
 
-  private async findWith(queryable: Queryable, id: string, userId?: string) {
+  private async findAccessibleStoryRow(
+    queryable: Queryable,
+    id: string,
+    userId?: string,
+  ): Promise<StoryRow | undefined> {
     const result = await queryable.query<StoryRow>(
       `${storyAccessSelect}
        WHERE stories.id = $1
@@ -565,7 +820,12 @@ export class StoriesRepository {
          )`,
       [id, userId ?? null],
     );
-    return (await this.assemble(queryable, result.rows))[0];
+    return result.rows[0];
+  }
+
+  private async findWith(queryable: Queryable, id: string, userId?: string) {
+    const row = await this.findAccessibleStoryRow(queryable, id, userId);
+    return row ? (await this.assemble(queryable, [row]))[0] : undefined;
   }
 
   private async assemble(queryable: Queryable, storyRows: StoryRow[]): Promise<Story[]> {
@@ -978,12 +1238,15 @@ function iso(value: Date | string) {
   return value instanceof Date ? value.toISOString() : new Date(value).toISOString();
 }
 
-function readerSave(row: ReaderProgressRow): ReaderSave {
+function readerSave(row: ReaderProgressRow): ReaderSave & { currentInteractionTitle?: string } {
   return {
     id: row.slot_id,
     kind: readerSaveKind(row.slot_id),
     ...(row.name ? { name: row.name } : {}),
     state: row.state,
+    ...(row.current_interaction_title
+      ? { currentInteractionTitle: row.current_interaction_title }
+      : {}),
     createdAt: iso(row.created_at),
     updatedAt: iso(row.updated_at),
   };
@@ -1029,4 +1292,56 @@ function capabilities(
     isOwner: (actorId ?? row.actor_id) === row.creator_user_id,
     collaboratorRole: row.collaborator_role ?? undefined,
   });
+}
+
+function storySummary(
+  row: StorySummaryRow | PublicStorySummaryRow,
+  actorId?: string,
+): StorySummary {
+  return {
+    id: row.id,
+    revision: row.revision,
+    title: row.title,
+    interactionCount: Number(row.interaction_count),
+    startDateTime: row.start_date_time,
+    access: accessSettings(row),
+    capabilities: capabilities(row, actorId),
+    ...('owner_email' in row ? { owner: { id: row.creator_user_id, email: row.owner_email } } : {}),
+    createdAt: iso(row.created_at),
+    updatedAt: iso(row.updated_at),
+  };
+}
+
+function pageResult<T>(
+  items: T[],
+  totalCount: number,
+  options: Pick<StoryListOptions, 'page' | 'pageSize'>,
+): PaginatedResult<T> {
+  return {
+    items,
+    page: options.page,
+    pageSize: options.pageSize,
+    totalCount,
+    hasMore: options.page * options.pageSize < totalCount,
+  };
+}
+
+function authenticatedStoryFilter(filter: StoryListOptions['filter']) {
+  const editable = `(actor.role = 'admin'
+    OR stories.creator_user_id = $1
+    OR stories.edit_policy = 'authenticated'
+    OR (stories.visibility <> 'private' AND permission.role = 'editor'))`;
+  if (filter === 'editable') return editable;
+  if (filter === 'commentable') {
+    return `(stories.comment_policy = 'readers'
+      OR (stories.comment_policy = 'editors' AND ${editable}))`;
+  }
+  if (filter === 'owned') return `(stories.creator_user_id = $1)`;
+  return 'TRUE';
+}
+
+function storySummaryOrder(sort: StoryListOptions['sort']) {
+  return sort === 'title'
+    ? 'LOWER(stories.title), stories.id'
+    : 'stories.updated_at DESC, stories.created_at DESC, stories.id';
 }

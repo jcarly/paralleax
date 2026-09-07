@@ -359,6 +359,61 @@ describePostgres('StoriesRepository PostgreSQL integration', () => {
     });
   });
 
+  it('reads paginated editor projections and a targeted runtime slice', async () => {
+    const story = persistedStory();
+    await repository.save(story, ownerId);
+
+    const bootstrap = await repository.findEditorBootstrap(story.id, ownerId);
+    const context = await repository.findEditorContextPage(story.id, ownerId, 1, 1);
+    const interactionPage = await repository.findEditorInteractionPage(story.id, ownerId, 1, 1);
+    const runtime = await repository.findRuntimeSlice(story.id, ownerId, {
+      currentInteractionId: 'interaction-1',
+      interactionIds: ['interaction-1'],
+      page: 1,
+      pageSize: 100,
+    });
+    const journeyOnly = await repository.findRuntimeSlice(story.id, ownerId, {
+      currentInteractionId: 'interaction-1',
+      interactionIds: ['interaction-1'],
+      includeOptions: false,
+      page: 1,
+      pageSize: 100,
+    });
+
+    expect(bootstrap).toMatchObject({ interactionCount: 2, triggerCount: 2 });
+    expect(context).toMatchObject({ page: 1, pageSize: 1, hasMore: true });
+    expect(interactionPage).toMatchObject({
+      hasMore: true,
+      interactions: [expect.objectContaining({ id: 'interaction-1', title: 'Original title' })],
+    });
+    expect(runtime).toMatchObject({
+      totalOptionCount: 1,
+      hasMore: false,
+      optionInteractionIds: ['interaction-2'],
+      interactionReferences: [{ id: 'interaction-1', title: 'Original title' }],
+    });
+    expect(runtime?.interactions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: 'interaction-1', triggers: [] }),
+        expect.objectContaining({
+          id: 'interaction-2',
+          triggers: [
+            expect.objectContaining({
+              id: 'trigger-2',
+              inputInteractionIds: ['interaction-1'],
+              timerSeconds: 12,
+            }),
+          ],
+        }),
+      ]),
+    );
+    expect(journeyOnly).toMatchObject({
+      totalOptionCount: 0,
+      optionInteractionIds: [],
+      interactions: [expect.objectContaining({ id: 'interaction-1', triggers: [] })],
+    });
+  });
+
   it('merges concurrent field-level mutations without losing fields', async () => {
     const story = persistedStory();
     await repository.save(story, ownerId);
@@ -472,6 +527,7 @@ describePostgres('StoriesRepository PostgreSQL integration', () => {
           id: 'manual-save-1',
           kind: 'manual',
           name: 'Before the gate',
+          currentInteractionTitle: 'Original title',
         }),
       ]),
     );
@@ -530,12 +586,15 @@ describePostgres('StoriesRepository PostgreSQL integration', () => {
     await expect(repository.find(story.id)).resolves.toMatchObject({
       capabilities: { canRead: true, canEdit: false, canManage: false },
     });
-    await expect(repository.listPublic()).resolves.toEqual([
-      expect.objectContaining({
-        id: story.id,
-        capabilities: { canRead: true, canEdit: false, canManage: false, canComment: false },
-      }),
-    ]);
+    await expect(repository.listPublic()).resolves.toMatchObject({
+      items: [
+        expect.objectContaining({
+          id: story.id,
+          capabilities: { canRead: true, canEdit: false, canManage: false, canComment: false },
+        }),
+      ],
+      totalCount: 1,
+    });
   });
 
   it('stores the story graph in relational tables', async () => {

@@ -726,6 +726,12 @@
   gap: 1rem;
 }
 
+.library-load-more {
+  display: flex;
+  justify-content: center;
+  margin-top: 24px;
+}
+
 .library-card {
   min-width: 0;
   overflow: hidden;

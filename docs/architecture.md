@@ -159,9 +159,12 @@ directly. Feature modules export only providers required by another module.
 the existing controller contract while delegating every responsibility to focused
 application services.
 
-`stories/application/story-metadata.ts` owns story lists, authorized reads,
-creation, demo creation, title/start-time updates, deletion, and editor-only SSE
-access. `story-access.ts` owns access settings and collaborator orchestration.
+`stories/application/story-metadata.ts` owns paginated story lists, complete
+compatibility reads, staged editor read projections, creation, demo creation,
+title/start-time updates, deletion, and editor-only SSE access.
+`story-runtime.ts` owns authorized runtime bootstraps, context pages, and targeted
+option/journey slices for the reader and Simulation Mode. `story-access.ts` owns
+access settings and collaborator orchestration.
 `story-mutations.ts` is the single API application coordinator for authorized
 story mutations: it normalizes legacy positions, updates timestamps and revisions,
 and publishes the resulting story change.
@@ -223,16 +226,34 @@ schema changes. The service does not depend on the physical relational shape,
 so storage and query projections can evolve without moving endpoint behavior or
 shared domain rules.
 
-Story listing uses a separate lightweight `StorySummary` projection. Its
-aggregate queries return metadata and an interaction count without loading
-interactions, triggers, context entities, or item graphs. The authenticated
-`GET /api/stories` projection resolves every story accessible to the requesting
+Story listing uses a separate paginated `StorySummary` projection. Its aggregate
+queries return metadata and an interaction count without loading interactions,
+Triggers, context entities, or item graphs. Search, access/ownership filters, and
+sorting execute before pagination in PostgreSQL. The authenticated
+`GET /api/stories` projection resolves stories accessible to the requesting
 account; the anonymous `GET /api/stories/public` projection filters to public
 visibility, omits owner account identifiers, and resolves capabilities as a
 signed-out reader. Creation endpoints still return the created complete story;
 the web workspace converts that one result to a summary locally. Both story and
 summary projections include resolved capabilities so the interface can hide
 unavailable actions without becoming the security boundary.
+
+Initial editor reads use a staged projection instead of the complete aggregate:
+an authorized bootstrap supplies metadata, revision, and collection counts;
+paginated endpoints then return context lists, interaction summaries, Trigger
+structures, interaction content/effects, and Trigger conditions/probability/timer
+content in that order. Every page repeats the Story revision. The browser retries
+the complete staged read when a concurrent mutation would otherwise mix
+revisions and enables authoring only after the content stage is complete.
+
+Player reads use an optional-auth runtime projection. Context definitions and
+assignments are paginated independently from the graph. A runtime slice contains
+the requested journey interactions plus one page of option outputs and only the
+Triggers structurally relevant to the current input, including contextual
+inputless Triggers. Long journeys use bounded id chunks without rediscovering
+options. The browser discards candidates from the previous step and applies the
+existing shared replay and Trigger evaluation to the partial transport
+projection. See ADR-027.
 
 The first account becomes the first administrator through a serialized database
 transaction. Administrator role updates use the same lock, and the final
@@ -249,7 +270,11 @@ named manual slots are shared between both modes.
 location, visits, stats, and character item inventory before saving. Simulation
 autosave access additionally requires effective story edit permission. Loading
 any slot replays it against the current authored story and the web client then
-writes that result to the current mode's autosave.
+writes that result to the current mode's autosave. Progress reads, lists, and
+deletions authorize through a metadata-only runtime access projection rather than assembling a full
+Story. Progress writes reuse the runtime context plus only their requested
+journey interactions, so autosaving does not reconstruct unrelated graph
+branches on the API server.
 
 `HealthModule` exposes an unauthenticated process liveness check at
 `GET /api/health` and a readiness check at `GET /api/ready`. Readiness requires
@@ -417,6 +442,9 @@ component:
 - `features/story/storyMutationResults.ts`: pure mutation metadata and entity
   adapters shared by persistence and Simulation Mode; complete-story legacy
   responses retain their caller-specific merge policy.
+- `features/story/storyProjectionLoading.ts`: framework-light assembly of
+  paginated context rows into the existing Story model, plus revision mismatch
+  signaling shared by editor and player loaders.
 - `storyGraph.ts`: projection from the domain story model to React Flow
   interaction nodes, trigger nodes, and trigger edges.
 - `features/graph-decorations/`: focused projection, rendering, resizing, and
@@ -454,6 +482,10 @@ the route component:
   summaries and first-failure labels, including probability and timer failures.
   It consumes shared trigger diagnostics and
   does not evaluate narrative conditions independently.
+- `features/story-player/storyRuntimeLoader.ts`: paginated runtime-context and
+  current-option loading. It retains journey interactions, replaces stale option
+  candidates per step, and chunks long saved journeys without owning narrative
+  evaluation rules.
 - `features/story-player/ChoiceTimerBar.tsx`: accessible CSS-driven countdown
   projection. The route schedules only expiration and focus synchronization,
   avoiding continuous whole-player rerenders.

@@ -432,61 +432,80 @@ describe('StoriesRepository', () => {
           created_at: saved.createdAt,
           updated_at: saved.updatedAt,
           interaction_count: '3',
+          total_count: '1',
         },
       ],
     });
 
     const listed = await repository().list(ownerId);
 
-    expect(listed).toEqual([
-      {
-        id: saved.id,
-        revision: 1,
-        title: saved.title,
-        interactionCount: 3,
-        startDateTime: saved.startDateTime,
-        access: { visibility: 'private', editPolicy: 'owner', commentPolicy: 'editors' },
-        capabilities: { canRead: true, canEdit: true, canManage: true, canComment: true },
-        owner: { id: ownerId, email: 'owner@example.com' },
-        createdAt: saved.createdAt,
-        updatedAt: saved.updatedAt,
-      },
-    ]);
+    expect(listed).toEqual({
+      items: [
+        {
+          id: saved.id,
+          revision: 1,
+          title: saved.title,
+          interactionCount: 3,
+          startDateTime: saved.startDateTime,
+          access: { visibility: 'private', editPolicy: 'owner', commentPolicy: 'editors' },
+          capabilities: { canRead: true, canEdit: true, canManage: true, canComment: true },
+          owner: { id: ownerId, email: 'owner@example.com' },
+          createdAt: saved.createdAt,
+          updatedAt: saved.updatedAt,
+        },
+      ],
+      page: 1,
+      pageSize: 24,
+      totalCount: 1,
+      hasMore: false,
+    });
     expect(mockQuery).toHaveBeenCalledTimes(1);
-    expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining('COUNT(interactions.id)'), [
+    expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining('AS interaction_count'), [
       ownerId,
+      '',
+      24,
+      0,
     ]);
   });
 
   it('lists only public story summaries with anonymous capabilities', async () => {
     const saved = story();
+    const { owner_email: _ownerEmail, ...publicRow } = storyRow(saved);
     mockQuery.mockResolvedValueOnce({
       rows: [
         {
-          ...storyRow(saved),
+          ...publicRow,
           visibility: 'public',
           actor_id: null,
           actor_role: null,
           interaction_count: '2',
+          total_count: '1',
         },
       ],
     });
 
-    await expect(repository().listPublic()).resolves.toEqual([
-      {
-        id: saved.id,
-        revision: 1,
-        title: saved.title,
-        interactionCount: 2,
-        startDateTime: saved.startDateTime,
-        access: { visibility: 'public', editPolicy: 'owner', commentPolicy: 'editors' },
-        capabilities: { canRead: true, canEdit: false, canManage: false, canComment: false },
-        createdAt: saved.createdAt,
-        updatedAt: saved.updatedAt,
-      },
-    ]);
-    expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining("visibility = 'public'"));
-    expect(mockQuery).toHaveBeenCalledWith(expect.not.stringContaining('owner.email'));
+    await expect(repository().listPublic()).resolves.toEqual({
+      items: [
+        {
+          id: saved.id,
+          revision: 1,
+          title: saved.title,
+          interactionCount: 2,
+          startDateTime: saved.startDateTime,
+          access: { visibility: 'public', editPolicy: 'owner', commentPolicy: 'editors' },
+          capabilities: { canRead: true, canEdit: false, canManage: false, canComment: false },
+          createdAt: saved.createdAt,
+          updatedAt: saved.updatedAt,
+        },
+      ],
+      page: 1,
+      pageSize: 24,
+      totalCount: 1,
+      hasMore: false,
+    });
+    expect(mockQuery.mock.calls[0]?.[0]).toEqual(expect.stringContaining("visibility = 'public'"));
+    expect(mockQuery.mock.calls[0]?.[0]).toEqual(expect.not.stringContaining('owner.email'));
+    expect(mockQuery.mock.calls[0]?.[1]).toEqual(['', 24, 0]);
   });
 
   it('finds and assembles a story by id', async () => {
@@ -586,7 +605,13 @@ describe('StoriesRepository', () => {
 
   it('returns no stories without querying graph tables when metadata is empty', async () => {
     mockQuery.mockResolvedValue({ rows: [] });
-    await expect(repository().list(ownerId)).resolves.toEqual([]);
+    await expect(repository().list(ownerId)).resolves.toEqual({
+      items: [],
+      page: 1,
+      pageSize: 24,
+      totalCount: 0,
+      hasMore: false,
+    });
     expect(mockQuery).toHaveBeenCalledTimes(1);
   });
 
