@@ -77,7 +77,10 @@ export function StoryPlayer({
   const loadKey = `${storyId}:${simulationRequested ? 'simulation-request' : 'reader'}:${requestedStartInteractionId ?? ''}`;
   const [loadedKey, setLoadedKey] = useState('');
   const [loadError, setLoadError] = useState<{ key: string; message: string }>();
-  const [runtimeOptionsError, setRuntimeOptionsError] = useState('');
+  const [runtimeOptionsFailure, setRuntimeOptionsFailure] = useState<{
+    key: string;
+    message: string;
+  }>();
   const [runtimeSliceKey, setRuntimeSliceKey] = useState('');
   const [loadAttempt, setLoadAttempt] = useState(0);
   const { session, replay: replaySession, advance: advanceSession } = useReaderSessionState();
@@ -94,6 +97,8 @@ export function StoryPlayer({
     stepStartedAt = [],
   } = session;
   const requestedRuntimeSliceKey = story ? runtimeStateKey(story, currentId, journey) : '';
+  const runtimeOptionsError =
+    runtimeOptionsFailure?.key === requestedRuntimeSliceKey ? runtimeOptionsFailure.message : '';
   const runtimeSliceReady = Boolean(
     story && runtimeSliceKey === requestedRuntimeSliceKey && !runtimeOptionsError,
   );
@@ -197,7 +202,7 @@ export function StoryPlayer({
           (effectiveStartInteractionId ? [effectiveStartInteractionId] : []);
         setStory(positioned);
         setRuntimeSliceKey(runtimeStateKey(positioned, nextJourney.at(-1) ?? null, nextJourney));
-        setRuntimeOptionsError('');
+        setRuntimeOptionsFailure(undefined);
         setLoadedKey(loadKey);
         if (!reconciledProgress) {
           const createdSession = replaySession(
@@ -281,7 +286,7 @@ export function StoryPlayer({
           currentSession.journeyInteractionIds,
         ),
       );
-      setRuntimeOptionsError('');
+      setRuntimeOptionsFailure(undefined);
       setEditingChoiceId((choiceId) =>
         choiceId && positioned.interactions.some(({ id }) => id === choiceId)
           ? choiceId
@@ -371,16 +376,19 @@ export function StoryPlayer({
   useEffect(() => {
     if (!story || loadedKey !== loadKey || runtimeSliceKey === requestedRuntimeSliceKey) return;
     let cancelled = false;
-    setRuntimeOptionsError('');
     void loadStoryRuntimeSlice(story, currentId, journey)
       .then((nextStory) => {
         if (cancelled) return;
         setStory(nextStory);
         setRuntimeSliceKey(runtimeStateKey(nextStory, currentId, journey));
+        setRuntimeOptionsFailure(undefined);
       })
       .catch((caught: unknown) => {
         if (!cancelled) {
-          setRuntimeOptionsError(caught instanceof Error ? caught.message : t('player.loadFailed'));
+          setRuntimeOptionsFailure({
+            key: requestedRuntimeSliceKey,
+            message: caught instanceof Error ? caught.message : t('player.loadFailed'),
+          });
         }
       });
     return () => {
@@ -427,7 +435,7 @@ export function StoryPlayer({
             return definitionId ? [definitionId] : [];
           })
         : [],
-    [ownedItemIds, story],
+    [ownedItemIds, requestedRuntimeSliceKey, runtimeSliceKey, story],
   );
   const playableCharacters = useMemo(
     () => (story?.characters ?? []).filter(({ isPlayable }) => isPlayable),

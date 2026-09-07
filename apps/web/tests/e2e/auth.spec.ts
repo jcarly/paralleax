@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import type { Story } from '@paralleax/shared';
+import { paginated } from './editorTestHarness';
 
 test('registers, creates a story, signs out, and signs back in', async ({ page }) => {
   let authenticated = false;
@@ -29,7 +30,12 @@ test('registers, creates a story, signs out, and signs back in', async ({ page }
     authenticated = true;
     await route.fulfill({ json: user });
   });
-  await page.route('**/api/stories', async (route) => {
+  await page.route('**/api/stories**', async (route) => {
+    const url = new URL(route.request().url());
+    if (url.pathname.endsWith('/stories/public')) {
+      await route.fulfill({ json: paginated([]) });
+      return;
+    }
     if (route.request().method() === 'POST') {
       const story: Story = {
         id: 'story-1',
@@ -42,9 +48,18 @@ test('registers, creates a story, signs out, and signs back in', async ({ page }
       await route.fulfill({ status: 201, json: story });
       return;
     }
-    await route.fulfill({ json: stories });
+    await route.fulfill({
+      json: paginated(
+        stories.map((story) => ({
+          id: story.id,
+          title: story.title,
+          interactionCount: story.interactions.length,
+          createdAt: story.createdAt,
+          updatedAt: story.updatedAt,
+        })),
+      ),
+    });
   });
-  await page.route('**/api/stories/public', (route) => route.fulfill({ json: [] }));
 
   await page.goto('/');
   await page.getByRole('link', { name: 'Create account' }).click();

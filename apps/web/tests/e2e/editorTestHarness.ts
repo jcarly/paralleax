@@ -1,5 +1,19 @@
 import type { Page } from '@playwright/test';
-import type { Story, StoryGraphPositionUpdates } from '@paralleax/shared';
+import type {
+  PaginatedResult,
+  Story,
+  StoryGraphPositionUpdates,
+  StoryRuntimeSliceRequest,
+} from '@paralleax/shared';
+import {
+  storyProjectionBootstrap,
+  storyProjectionContextPage,
+  storyProjectionInteractionContentPage,
+  storyProjectionInteractionPage,
+  storyProjectionRuntimeSlice,
+  storyProjectionTriggerContentPage,
+  storyProjectionTriggerPage,
+} from '../../src/test/storyProjectionFixtures';
 
 export const story: Story = {
   id: 'story-1',
@@ -63,15 +77,65 @@ export async function getEdgeEndDirection(page: Page, edgeId: string) {
     });
 }
 
-export async function mockStory(page: Page, initialStory: Story = cloneStory()) {
+type StorySource = Story | (() => Story);
+
+export async function mockStory(page: Page, initialStory: StorySource = cloneStory()) {
+  await page.route('**/api/stories/story-1/editor**', async (route) => {
+    const current = resolveStory(initialStory);
+    const url = new URL(route.request().url());
+    const { page: pageNumber, pageSize } = pageRequest(url);
+    const response = url.pathname.endsWith('/editor/context')
+      ? storyProjectionContextPage(current, pageNumber, pageSize)
+      : url.pathname.endsWith('/editor/interactions')
+        ? storyProjectionInteractionPage(current, pageNumber, pageSize)
+        : url.pathname.endsWith('/editor/triggers')
+          ? storyProjectionTriggerPage(current, pageNumber, pageSize)
+          : url.pathname.endsWith('/editor/content/interactions')
+            ? storyProjectionInteractionContentPage(current, pageNumber, pageSize)
+            : url.pathname.endsWith('/editor/content/triggers')
+              ? storyProjectionTriggerContentPage(current, pageNumber, pageSize)
+              : storyProjectionBootstrap(current);
+    await route.fulfill({ json: structuredClone(response) });
+  });
   await page.route('**/api/stories/story-1', async (route) => {
     if (route.request().method() === 'GET') {
-      await route.fulfill({ json: structuredClone(initialStory) });
+      await route.fulfill({ json: structuredClone(resolveStory(initialStory)) });
       return;
     }
 
     await route.fallback();
   });
+}
+
+export async function mockRuntimeStory(page: Page, initialStory: StorySource) {
+  await page.route('**/api/stories/story-1/runtime**', async (route) => {
+    const current = resolveStory(initialStory);
+    const url = new URL(route.request().url());
+    if (url.pathname.endsWith('/runtime/context')) {
+      const { page: pageNumber, pageSize } = pageRequest(url);
+      await route.fulfill({
+        json: structuredClone(storyProjectionContextPage(current, pageNumber, pageSize, false)),
+      });
+      return;
+    }
+    if (url.pathname.endsWith('/runtime/slice')) {
+      const request = route.request().postDataJSON() as Partial<StoryRuntimeSliceRequest>;
+      await route.fulfill({ json: structuredClone(storyProjectionRuntimeSlice(current, request)) });
+      return;
+    }
+    await route.fulfill({ json: structuredClone(storyProjectionBootstrap(current, false)) });
+  });
+}
+
+export function paginated<T>(items: T[], page = 1, pageSize = 24): PaginatedResult<T> {
+  const offset = (page - 1) * pageSize;
+  return {
+    items: items.slice(offset, offset + pageSize),
+    page,
+    pageSize,
+    totalCount: items.length,
+    hasMore: page * pageSize < items.length,
+  };
 }
 
 export async function mockGraphPositionUpdates(
@@ -137,4 +201,20 @@ export async function prepareEditorPage(page: Page) {
   );
   await mockEditorBackgroundRequests(page);
   await mockStory(page);
+}
+
+function resolveStory(source: StorySource): Story {
+  return typeof source === 'function' ? source() : source;
+}
+
+function pageRequest(url: URL): { page: number; pageSize: number } {
+  return {
+    page: positiveNumber(url.searchParams.get('page'), 1),
+    pageSize: positiveNumber(url.searchParams.get('pageSize'), 100),
+  };
+}
+
+function positiveNumber(value: string | null, fallback: number): number {
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
 }

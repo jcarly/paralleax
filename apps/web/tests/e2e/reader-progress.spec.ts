@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import type { ReaderProgressState, Story } from '@paralleax/shared';
+import { mockRuntimeStory } from './editorTestHarness';
 
 test('resumes and updates authenticated reader progress', async ({ page }) => {
   const story: Story = {
@@ -83,7 +84,7 @@ test('resumes and updates authenticated reader progress', async ({ page }) => {
       },
     });
   });
-  await page.route('**/api/stories/story-1', (route) => route.fulfill({ json: story }));
+  await mockRuntimeStory(page, story);
 
   await page.goto('/stories/story-1/play');
 

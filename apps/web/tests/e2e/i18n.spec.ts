@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { paginated } from './editorTestHarness';
 
 test('switches and remembers the interface language without translating story titles', async ({
   page,
@@ -12,9 +13,9 @@ test('switches and remembers the interface language without translating story ti
       },
     }),
   );
-  await page.route('**/api/stories', (route) =>
+  await page.route('**/api/stories**', (route) =>
     route.fulfill({
-      json: [
+      json: paginated([
         {
           id: 'story-1',
           title: 'A room full of echoes',
@@ -22,7 +23,7 @@ test('switches and remembers the interface language without translating story ti
           createdAt: '2026-01-01T00:00:00.000Z',
           updatedAt: '2026-01-01T00:00:00.000Z',
         },
-      ],
+      ]),
     }),
   );
 

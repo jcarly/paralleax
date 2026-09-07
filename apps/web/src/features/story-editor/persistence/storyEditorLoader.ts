@@ -113,8 +113,15 @@ async function loadConsistentStoryEditorProjection(
       interactions: story.interactions.map((interaction) => {
         const next = interactionContent.get(interaction.id);
         if (!next) return interaction;
-        const { interactionId: _interactionId, ...fields } = next;
-        return { ...interaction, ...fields };
+        return {
+          ...interaction,
+          body: next.body,
+          durationMinutes: next.durationMinutes,
+          characterIds: next.characterIds,
+          statEffects: next.statEffects,
+          itemEffects: next.itemEffects,
+          conditionalTextBlocks: next.conditionalTextBlocks,
+        };
       }),
     };
     onProgress?.({ story, phase: 'content' });
@@ -137,8 +144,12 @@ async function loadConsistentStoryEditorProjection(
         triggers: interaction.triggers.map((trigger) => {
           const next = triggerContent.get(trigger.id);
           if (!next) return trigger;
-          const { triggerId: _triggerId, ...fields } = next;
-          return { ...trigger, ...fields };
+          return {
+            ...trigger,
+            conditionGroups: next.conditionGroups,
+            appearanceProbability: next.appearanceProbability,
+            timerSeconds: next.timerSeconds,
+          };
         }),
       })),
     };

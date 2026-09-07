@@ -470,7 +470,8 @@ describe('StoriesRepository', () => {
 
   it('lists only public story summaries with anonymous capabilities', async () => {
     const saved = story();
-    const { owner_email: _ownerEmail, ...publicRow } = storyRow(saved);
+    const publicRow = { ...storyRow(saved) };
+    Reflect.deleteProperty(publicRow, 'owner_email');
     mockQuery.mockResolvedValueOnce({
       rows: [
         {

@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { cloneStory, mockStory, prepareEditorPage } from './editorTestHarness';
+import { cloneStory, mockStory, paginated, prepareEditorPage } from './editorTestHarness';
 
 test.describe('Constrained overlays and editor panels', () => {
   test('keeps a tall import dialog scrollable within the viewport', async ({ page }) => {
@@ -14,7 +14,7 @@ test.describe('Constrained overlays and editor panels', () => {
         },
       }),
     );
-    await page.route('**/api/stories', (route) => route.fulfill({ json: [] }));
+    await page.route('**/api/stories**', (route) => route.fulfill({ json: paginated([]) }));
 
     await page.goto('/stories');
     await page.getByRole('button', { name: 'Import a story' }).click();

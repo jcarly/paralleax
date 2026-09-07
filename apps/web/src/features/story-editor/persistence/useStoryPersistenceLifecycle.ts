@@ -26,9 +26,11 @@ export function useStoryPersistenceLifecycle({
   setStory,
 }: StoryPersistenceLifecycleDependencies) {
   const [error, setError] = useState('');
-  const [loadPhase, setLoadPhase] = useState<StoryEditorLoadingProjection['phase'] | 'bootstrap'>(
-    'bootstrap',
-  );
+  const [loadProgress, setLoadProgress] = useState<{
+    storyId: string;
+    phase: StoryEditorLoadingProjection['phase'] | 'bootstrap';
+  }>({ storyId, phase: 'bootstrap' });
+  const loadPhase = loadProgress.storyId === storyId ? loadProgress.phase : 'bootstrap';
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const saveAttemptRef = useRef(0);
   const deletedTriggerIdsRef = useRef(new Set<string>());
@@ -97,16 +99,15 @@ export function useStoryPersistenceLifecycle({
 
   const load = useCallback(() => {
     const attempt = ++loadAttemptRef.current;
-    setLoadPhase('bootstrap');
     return loadStoryEditorProjection(storyId, (projection) => {
       if (attempt !== loadAttemptRef.current) return;
       setStory(projection.story);
-      setLoadPhase(projection.phase);
+      setLoadProgress({ storyId, phase: projection.phase });
     })
       .then((next) => {
         if (attempt !== loadAttemptRef.current) return;
         replaceStory(next);
-        setLoadPhase('ready');
+        setLoadProgress({ storyId, phase: 'ready' });
         setError('');
         setSaveStatus('idle');
       })
@@ -115,7 +116,12 @@ export function useStoryPersistenceLifecycle({
         setError(caught.message);
         setSaveStatus('error');
       });
-  }, [replaceStory, storyId]);
+  }, [replaceStory, setStory, storyId]);
+
+  const retry = useCallback(() => {
+    setLoadProgress({ storyId, phase: 'bootstrap' });
+    return load();
+  }, [load, storyId]);
 
   const refreshFromRealtime = useCallback(
     (invalidation: StoryRealtimeInvalidation) => {
@@ -139,7 +145,7 @@ export function useStoryPersistenceLifecycle({
             return;
           }
           replaceStory(next);
-          setLoadPhase('ready');
+          setLoadProgress({ storyId, phase: 'ready' });
           setError('');
         })
         .catch((caught: unknown) => {
@@ -188,7 +194,7 @@ export function useStoryPersistenceLifecycle({
     realtimeStatus,
     beginLocalEdit,
     endLocalEdit,
-    retry: load,
+    retry,
     trackSave,
     mergeIncomingStory,
     replaceStory,

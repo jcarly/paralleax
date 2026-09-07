@@ -14,6 +14,7 @@ test.describe('Story editor persistence', () => {
 
   test('applies a remote story invalidation without reloading the editor', async ({ page }) => {
     let current = cloneStory();
+    await mockStory(page, () => current);
     await page.route('**/api/stories/story-1', (route) =>
       route.fulfill({ json: structuredClone(current) }),
     );
@@ -86,6 +87,7 @@ test.describe('Story editor persistence', () => {
       canUndo: true,
       canRedo: false,
     };
+    await mockStory(page, () => current);
     await page.route('**/api/stories/story-1', (route) => {
       if (route.request().method() === 'GET') {
         return route.fulfill({ json: structuredClone(current) });
