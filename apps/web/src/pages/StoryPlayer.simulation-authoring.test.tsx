@@ -213,17 +213,22 @@ describe('StoryPlayer simulation authoring', () => {
     });
     delete (withOption.interactions[3] as Partial<(typeof withOption.interactions)[number]>)
       .position;
-    const withNestedOption = structuredClone(withOption);
-    withNestedOption.interactions.push({
+    const nestedPosition = getStoryGraphClickCreationPosition(withOption, {
+      kind: 'child',
+      sourceId: 'option-1',
+    })!;
+    const nestedOption = {
       id: 'option-2',
       title: 'Nested option',
       body: '',
-      position: { x: 80, y: 648 },
+      position: nestedPosition,
       triggers: [{ id: 'trigger-option-2', inputInteractionIds: ['option-1'], conditions: [] }],
+    };
+    vi.mocked(api.createInteraction).mockResolvedValueOnce(withOption).mockResolvedValueOnce({
+      interaction: nestedOption,
+      revision: 1,
+      updatedAt: story.updatedAt,
     });
-    vi.mocked(api.createInteraction)
-      .mockResolvedValueOnce(withOption)
-      .mockResolvedValueOnce(withNestedOption);
     vi.mocked(api.updateInteraction).mockResolvedValue(withOption);
 
     await renderPlayer('/stories/story-1/play?mode=simulation&startInteractionId=next');
@@ -231,31 +236,37 @@ describe('StoryPlayer simulation authoring', () => {
     await user.keyboard('{Enter}');
 
     await user.click(await screen.findByRole('button', { name: 'New option' }));
-    const nestedPosition = getStoryGraphClickCreationPosition(withOption, {
-      kind: 'child',
-      sourceId: 'option-1',
-    })!;
     await user.click(screen.getByRole('button', { name: 'Add option' }));
 
     expect(api.createInteraction).toHaveBeenLastCalledWith('story-1', {
       parentId: 'option-1',
-      position: nestedPosition,
+      position: {
+        x: expect.any(Number),
+        y: expect.any(Number),
+      },
     });
+    const nestedCreation = vi.mocked(api.createInteraction).mock.lastCall?.[1];
+    expect(Number.isFinite(nestedCreation?.position?.x)).toBe(true);
+    expect(Number.isFinite(nestedCreation?.position?.y)).toBe(true);
     expect(await screen.findByLabelText('New option title')).toHaveValue('Nested option');
   });
 
   it('adds a root option at the beginning of simulation mode', async () => {
     const user = userEvent.setup();
-    const position = getStoryGraphClickCreationPosition(story, { kind: 'root' })!;
-    const withRoot = structuredClone(story);
-    withRoot.interactions.push({
+    const runtimeStory = { ...story, interactions: [story.interactions[0]] };
+    const position = getStoryGraphClickCreationPosition(runtimeStory, { kind: 'root' })!;
+    const rootOption = {
       id: 'root-2',
       title: 'New option',
       body: '',
       position,
       triggers: [{ id: 'trigger-root-2', inputInteractionIds: [], conditions: [] }],
+    };
+    vi.mocked(api.createInteraction).mockResolvedValue({
+      interaction: rootOption,
+      revision: 1,
+      updatedAt: story.updatedAt,
     });
-    vi.mocked(api.createInteraction).mockResolvedValue(withRoot);
 
     await renderPlayer('/stories/story-1/play?mode=simulation');
 

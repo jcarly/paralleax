@@ -74,4 +74,59 @@ describe('AuthRepository', () => {
       'token-hash',
     ]);
   });
+
+  it('lists managed users and updates a role transactionally', async () => {
+    const row = {
+      id: user.id,
+      email: user.email,
+      role: 'user' as const,
+      created_at: new Date(user.createdAt),
+    };
+    query.mockResolvedValueOnce({ rows: [row] });
+    clientQuery
+      .mockResolvedValueOnce({})
+      .mockResolvedValueOnce({})
+      .mockResolvedValueOnce({ rows: [row] })
+      .mockResolvedValueOnce({});
+
+    await expect(repository.listUsers()).resolves.toEqual([
+      { id: user.id, email: user.email, role: 'user', createdAt: user.createdAt },
+    ]);
+    await expect(repository.updateUserRole(user.id, 'user')).resolves.toEqual({
+      id: user.id,
+      email: user.email,
+      role: 'user',
+      createdAt: user.createdAt,
+    });
+
+    expect(clientQuery).toHaveBeenCalledWith(expect.stringContaining('UPDATE users AS target'), [
+      user.id,
+      'user',
+    ]);
+    expect(clientQuery).toHaveBeenCalledWith('COMMIT');
+    expect(release).toHaveBeenCalled();
+  });
+
+  it('returns no user when a role update is rejected by the final-admin guard', async () => {
+    clientQuery
+      .mockResolvedValueOnce({})
+      .mockResolvedValueOnce({})
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({});
+
+    await expect(repository.updateUserRole(user.id, 'user')).resolves.toBeUndefined();
+  });
+
+  it('rolls back and releases the client when a role update fails', async () => {
+    const failure = new Error('database unavailable');
+    clientQuery
+      .mockResolvedValueOnce({})
+      .mockResolvedValueOnce({})
+      .mockRejectedValueOnce(failure)
+      .mockResolvedValueOnce({});
+
+    await expect(repository.updateUserRole(user.id, 'admin')).rejects.toBe(failure);
+    expect(clientQuery).toHaveBeenCalledWith('ROLLBACK');
+    expect(release).toHaveBeenCalled();
+  });
 });

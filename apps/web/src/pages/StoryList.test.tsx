@@ -1,5 +1,5 @@
 import React from 'react';
-import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -112,10 +112,16 @@ describe('StoryList', () => {
     expect(screen.getByRole('button', { name: 'New story' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Generate demos' })).not.toBeInTheDocument();
 
-    await user.hover(within(firstCard).getByRole('link', { name: 'Edit' }));
+    const editLink = within(firstCard).getByRole('link', { name: 'Edit' });
+    const readLink = within(firstCard).getByRole('link', { name: 'Read' });
+    await user.hover(editLink);
     expect(loadStoryEditor).toHaveBeenCalledOnce();
-    await user.hover(within(firstCard).getByRole('link', { name: 'Read' }));
+    fireEvent.focus(editLink);
+    expect(loadStoryEditor).toHaveBeenCalledTimes(2);
+    await user.hover(readLink);
     expect(loadStoryPlayer).toHaveBeenCalledOnce();
+    fireEvent.focus(readLink);
+    expect(loadStoryPlayer).toHaveBeenCalledTimes(2);
   });
 
   it('loads the anonymous catalogue without authoring actions', async () => {

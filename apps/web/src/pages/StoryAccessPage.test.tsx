@@ -38,6 +38,7 @@ describe('StoryAccessPage', () => {
       ...structuredClone(access),
       collaborators: [{ userId: 'user-2', email: 'reader@example.com', role: 'viewer' }],
     });
+    vi.mocked(api.removeStoryCollaborator).mockResolvedValue(undefined);
   });
 
   function renderPage() {
@@ -80,5 +81,9 @@ describe('StoryAccessPage', () => {
       'viewer',
     );
     expect(await screen.findByText('reader@example.com')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Remove' }));
+    expect(api.removeStoryCollaborator).toHaveBeenCalledWith('story-1', 'user-2');
+    expect(screen.queryByText('reader@example.com')).not.toBeInTheDocument();
   });
 });
