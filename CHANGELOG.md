@@ -2,9 +2,38 @@
 
 ## 2026-09-08
 
+- Fixed reader autosaves for items obtained from reusable definitions. The API
+  now recognizes deterministic runtime item instances produced by the submitted
+  journey while continuing to reject foreign item ids and rebuilding the
+  canonical inventory through shared replay.
 - Fixed QSP location import when several independent top-level blocks test the
   same literal `ARGS[0]` value. Their contents are now merged into one imported
   variant in source order instead of rejecting the location as a duplicate.
+- Added a separate Playwright alpha-acceptance project and CI job that exercise
+  registration, authoring, PostgreSQL persistence, sign-in recovery, and a
+  conditional Simulation Mode path against the real API without endpoint mocks.
+- Extended real-stack acceptance coverage with durable content undo/redo across
+  full editor reloads and a real browser-offline save failure that verifies
+  visible failure, guarded navigation, canonical recovery, and subsequent
+  successful persistence. The acceptance tests now reuse one real-stack harness.
+- Added a real-stack save-slot journey covering reader autosave resume, named
+  manual-save persistence after reader restart, cross-mode loading into
+  Simulation, Simulation autosave resume, and reader/Simulation isolation.
+- Added real-stack replay coverage for a calculated Story-variable value,
+  runtime-obtained inventory with item stats, Story time, deterministic Trigger
+  probability, and an active Trigger timer across reader reload.
+- Added two-account real-stack acceptance for reader/editor invitations,
+  effective UI permissions, reader-only editor redirection, collaborator edits,
+  live SSE invalidation, and PostgreSQL durability across browser reloads.
+- Fixed rapid consecutive Story-access selector changes so each visibility,
+  editing, or commenting change composes from the latest form state instead of
+  potentially overwriting a preceding selection.
+- Fixed concurrent authored-save feedback so the editor remains pending until
+  every active request completes and cannot hide an earlier late failure behind
+  a faster successful request.
+- Added real-stack transport-reordering and structural graph acceptance. A real
+  delayed Story response now races a child creation before create, move, delete,
+  and PostgreSQL reload durability are verified.
 
 ## 2026-09-07
 

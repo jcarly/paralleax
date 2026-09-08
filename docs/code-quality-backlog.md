@@ -138,6 +138,24 @@ during the August 2026 code review. Production gates remain authoritative in
 
 ## P2 — Testing And Accessibility
 
+- [x] Add a separate Playwright real-stack golden path with PostgreSQL and no
+      intercepted Paralleax endpoints for invited registration, Story authoring,
+      reload, sign-in recovery, and conditioned Simulation Mode traversal.
+- [x] Add real-stack P0 coverage for offline save failure visibility, guarded
+      navigation, canonical reload recovery, and undo/redo data survival after
+      browser reload.
+- [x] Add real-stack P0 coverage for slow and out-of-order save responses plus
+      graph move/create/delete survival.
+- [x] Add real-stack P0 coverage for independent reader/Simulation autosaves,
+      reader resume after reload, and a named manual save loaded into Simulation
+      without repopulating the reset reader autosave.
+- [x] Extend real-stack reader-save coverage to assert reconstructed variables,
+      runtime inventory and item stats, story time, seeded probability, and
+      timers before and after reload.
+- [x] Add real-stack P0 coverage for two-user invitations, permissions, editing,
+      and live invalidation.
+- [ ] Add small real-stack P1 scenarios for review comments, known
+      ChoiceScript/QSP fixtures, and scheduled realistically sized Story use.
 - [ ] Add Playwright coverage for reader load retry and unresolved-save guards,
       including real browser `beforeunload` behavior.
 - [ ] Add automated accessibility checks and a manual keyboard/focus audit.

@@ -95,10 +95,14 @@ export function StoryAccessPage() {
               <select
                 value={access.visibility}
                 onChange={(event) =>
-                  setAccess({
-                    ...access,
-                    visibility: event.target.value as StoryAccessConfiguration['visibility'],
-                  })
+                  setAccess((current) =>
+                    current
+                      ? {
+                          ...current,
+                          visibility: event.target.value as StoryAccessConfiguration['visibility'],
+                        }
+                      : current,
+                  )
                 }
               >
                 {(['private', 'authenticated', 'public', 'invitation'] as const).map((value) => (
@@ -113,10 +117,14 @@ export function StoryAccessPage() {
               <select
                 value={access.editPolicy}
                 onChange={(event) =>
-                  setAccess({
-                    ...access,
-                    editPolicy: event.target.value as StoryAccessConfiguration['editPolicy'],
-                  })
+                  setAccess((current) =>
+                    current
+                      ? {
+                          ...current,
+                          editPolicy: event.target.value as StoryAccessConfiguration['editPolicy'],
+                        }
+                      : current,
+                  )
                 }
               >
                 {(['owner', 'collaborators', 'authenticated'] as const).map((value) => (
@@ -131,10 +139,15 @@ export function StoryAccessPage() {
               <select
                 value={access.commentPolicy}
                 onChange={(event) =>
-                  setAccess({
-                    ...access,
-                    commentPolicy: event.target.value as StoryAccessConfiguration['commentPolicy'],
-                  })
+                  setAccess((current) =>
+                    current
+                      ? {
+                          ...current,
+                          commentPolicy: event.target
+                            .value as StoryAccessConfiguration['commentPolicy'],
+                        }
+                      : current,
+                  )
                 }
               >
                 {(['editors', 'readers'] as const).map((value) => (

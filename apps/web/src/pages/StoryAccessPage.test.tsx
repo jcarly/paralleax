@@ -66,11 +66,16 @@ describe('StoryAccessPage', () => {
     ).not.toBeInTheDocument();
 
     await user.selectOptions(screen.getByLabelText('Who can read this story?'), 'public');
+    await user.selectOptions(screen.getByLabelText('Who can edit this story?'), 'collaborators');
     await user.selectOptions(screen.getByLabelText('Who may comment?'), 'readers');
     await user.click(screen.getByRole('button', { name: 'Save access' }));
     expect(api.updateStoryAccess).toHaveBeenCalledWith(
       'story-1',
-      expect.objectContaining({ visibility: 'public', commentPolicy: 'readers' }),
+      expect.objectContaining({
+        visibility: 'public',
+        editPolicy: 'collaborators',
+        commentPolicy: 'readers',
+      }),
     );
 
     await user.type(screen.getByLabelText('Account email'), 'reader@example.com');

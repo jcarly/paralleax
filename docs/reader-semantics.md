@@ -307,7 +307,9 @@ reconciled and are persisted in version 4 on the next autosave update.
 The ordered journey is authoritative for state that can currently be replayed.
 The API derives current interaction, visited ids, story time, location, and stats
 from that journey before writing JSON; clients cannot provide trusted derived
-values. Owned item ids are validated against item instances in the same story.
+values. Supplied owned item ids are accepted only when they are authored instances
+from the same Story or deterministic runtime instances produced by replaying that
+journey; the canonical saved inventory is still rebuilt from the journey.
 Interaction item effects target a reusable item definition. Obtaining creates a
 new instance owned by the effect's target character, so the same definition can
 be obtained several times by one or several characters. Losing removes one

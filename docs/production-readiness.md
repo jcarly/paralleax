@@ -39,6 +39,19 @@ small test stories. It is not yet ready for an open public production service.
   proxy path in the selected environment.
 - Implemented foundation: process health and PostgreSQL/schema readiness
   endpoints.
+- Implemented foundation: CI runs a browser golden path against the real API and
+  PostgreSQL for invited registration, authoring, reload, reconnection, and
+  Simulation Mode. The same real-stack project verifies content undo/redo across
+  reloads and an offline failed-save path with guarded navigation and canonical
+  recovery. It also verifies independent reader and Simulation autosaves plus a
+  named save crossing from reading into Simulation, as well as reader-state
+  reconstruction for variables, runtime inventory and item stats, Story time,
+  seeded probability, and timers. A two-user scenario also verifies reader/editor
+  invitations, effective UI permissions, reader redirection, collaborator edits,
+  live SSE invalidation, and persistence. Real-response transport reordering also
+  verifies that pending/error state remains accurate and graph creation, movement,
+  and deletion survive reloads. Compact review and representative import paths
+  remain P1 extensions rather than core alpha data-safety gaps.
 - Implemented foundation: structured production logs, request identifiers,
   request completion logs, and stable API error envelopes that hide unexpected
   internal details.

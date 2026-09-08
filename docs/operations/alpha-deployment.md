@@ -165,11 +165,15 @@ After every deployment:
 
 1. Confirm the provider reports both containers healthy.
 2. Run `npm run smoke:deployment -- https://alpha.example.com`.
-3. Register with the current invitation code.
-4. Create a story, add and edit an interaction, and reload the editor.
-5. Run Simulation Mode and confirm it does not alter reader progress.
-6. Sign out, sign in again, and confirm the story and reader progress persist.
-7. Record the image digests, migration id, database backup identifier, smoke
+3. On an isolated staging database, run the real-stack browser acceptance path:
+   `PARALLEAX_ACCEPTANCE_BASE_URL=https://alpha.example.com PARALLEAX_ACCEPTANCE_ACCESS_CODE=... npm run test:acceptance`.
+   It creates a uniquely named test account and Story and must not target the
+   production user database.
+4. Register with the current invitation code.
+5. Create a story, add and edit an interaction, and reload the editor.
+6. Run Simulation Mode and confirm it does not alter reader progress.
+7. Sign out, sign in again, and confirm the story and reader progress persist.
+8. Record the image digests, migration id, database backup identifier, smoke
    result, operator, and deployment time.
 
 ## Monitoring And Alerts

@@ -93,6 +93,21 @@ An author can safely create, navigate, edit, test, and recover a large story wit
 - Atomic Trigger creation.
 - Batched complete-story persistence.
 - Reproducible large-story PostgreSQL and editor stress tests.
+- A separate real-stack Playwright alpha-acceptance project exercises invited
+  registration, Story/context/graph authoring, PostgreSQL persistence, reload,
+  sign-in recovery, variable effects and conditions, and Simulation Mode without
+  intercepting Paralleax endpoints. It also verifies durable content undo/redo
+  across full reloads and offline-save failure, guarded navigation, canonical
+  recovery, and the next successful save. Reader and Simulation autosaves are
+  exercised independently across reload and restart, including a named reader
+  save loaded into Simulation without modifying its source slot. A richer reader
+  save also verifies replayed variables, runtime inventory and item stats, Story
+  time, seeded probability, and Trigger timers across reload. A two-browser-context
+  scenario verifies reader/editor grants, the reader-only graph redirect,
+  manager-only access controls, collaborator editing, live invalidation, and
+  PostgreSQL durability. A transport-reordering scenario delays one real API
+  response while another mutation completes, then verifies pending/error status
+  correctness and graph create/move/delete durability across reloads.
 - Save-state protection during navigation and page unload.
 - Rich-text and HTTP payload limits.
 - Story Canvas foundations.
@@ -142,6 +157,9 @@ An author can safely create, navigate, edit, test, and recover a large story wit
 - Maintain reproducible stress-test fixtures and recorded baselines.
 - Add a real-browser regression for late route responses and unresolved-save
   navigation guards.
+- Extend the real-stack acceptance project with a compact review flow,
+  representative ChoiceScript/QSP imports, and a scheduled realistically sized
+  Story run. Keep this suite small and sequential.
 
 ### Exit criteria
 

@@ -65,6 +65,61 @@ describe('story persistence lifecycle', () => {
     expect(result.current).toMatchObject({ error: 'Save rejected', saveStatus: 'error' });
   });
 
+  it('keeps a concurrent save batch pending until every response completes', async () => {
+    vi.mocked(api.getStory).mockResolvedValue(storyFixture());
+    const { result } = renderLifecycle();
+    await waitFor(() => expect(result.current.story).toBeDefined());
+
+    let resolveSlowSave: ((value: string) => void) | undefined;
+    const slowOperation = new Promise<string>((resolve) => {
+      resolveSlowSave = resolve;
+    });
+    let slowSave: Promise<string | undefined> | undefined;
+    act(() => {
+      slowSave = result.current.trackSave(() => slowOperation);
+    });
+
+    await act(async () => {
+      await result.current.trackSave(async () => 'fast value');
+    });
+    expect(result.current.saveStatus).toBe('saving');
+
+    await act(async () => {
+      resolveSlowSave?.('slow value');
+      await slowSave;
+    });
+    expect(result.current.saveStatus).toBe('saved');
+  });
+
+  it('keeps an earlier concurrent failure visible after a later save succeeds', async () => {
+    vi.mocked(api.getStory).mockResolvedValue(storyFixture());
+    const { result } = renderLifecycle();
+    await waitFor(() => expect(result.current.story).toBeDefined());
+
+    let rejectSlowSave: ((reason: Error) => void) | undefined;
+    const slowOperation = new Promise<string>((_, reject) => {
+      rejectSlowSave = reject;
+    });
+    let slowSave: Promise<string | undefined> | undefined;
+    act(() => {
+      slowSave = result.current.trackSave(() => slowOperation);
+    });
+
+    await act(async () => {
+      await result.current.trackSave(async () => 'fast value');
+    });
+    expect(result.current.saveStatus).toBe('saving');
+
+    await act(async () => {
+      rejectSlowSave?.(new Error('Earlier save failed'));
+      await slowSave;
+    });
+    expect(result.current).toMatchObject({
+      error: 'Earlier save failed',
+      saveStatus: 'error',
+    });
+  });
+
   it('defers realtime reloads until a local edit finishes', async () => {
     vi.mocked(api.getStory).mockResolvedValue(storyFixture());
     const { result } = renderLifecycle();

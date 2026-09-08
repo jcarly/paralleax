@@ -129,7 +129,16 @@ Paralleax currently includes:
 - Optional Formbricks-powered contextual feedback from the application header,
   with localized controls and non-content route, surface, version, viewport, and
   language context. The integration stays disabled when it is not configured.
-- Unit, integration, PostgreSQL, component, and Playwright testing.
+- Unit, integration, PostgreSQL, component, fast mocked Playwright UI testing,
+  and a real-stack Playwright alpha-acceptance path covering registration,
+  authoring, reload, reconnection, persistence, Simulation Mode, durable content
+  undo/redo, offline failed-save protection and recovery, independent reader and
+  Simulation autosave resumption, cross-mode named-save loading, and rich reader
+  replay across variables, runtime inventory, time, probability, and timers. A
+  two-account path verifies reader/editor invitations, effective permissions,
+  reader-only redirection, live collaborator invalidation, and reload durability.
+  A transport-reordered real-response path verifies truthful concurrent save
+  status and graph create/move/delete persistence across full reloads.
 - Provider-neutral production API/web images, a migration-first Compose shape,
   exact production-origin enforcement, invitation-code registration, deployment
   smoke checks, and operator runbooks for a private alpha.

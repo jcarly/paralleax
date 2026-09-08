@@ -219,22 +219,26 @@ export class StoryReaderProgressService {
     if (input.journeyInteractionIds.some((id) => !interactionIds.has(id))) {
       throw new BadRequestException('Reader journey interactions must belong to the same story');
     }
-    const itemIds = new Set(getStoryItemEntries(story).map(({ item }) => item.id));
-    if ((input.ownedItemIds ?? []).some((id) => !itemIds.has(id))) {
-      throw new BadRequestException('Reader items must belong to the same story');
-    }
     if (stepStartedAt.length !== input.journeyInteractionIds.length + 1) {
       throw new BadRequestException(
         'Reader timer steps must contain one timestamp before the journey and one per interaction',
       );
     }
-    return buildReaderProgressState(
+    const state = buildReaderProgressState(
       story,
       input.journeyInteractionIds,
       input.ownedItemIds,
       randomSeed,
       stepStartedAt,
     );
+    const itemIds = new Set([
+      ...getStoryItemEntries(story).map(({ item }) => item.id),
+      ...state.ownedItemIds,
+    ]);
+    if ((input.ownedItemIds ?? []).some((id) => !itemIds.has(id))) {
+      throw new BadRequestException('Reader items must belong to the same story');
+    }
+    return state;
   }
 
   private name(value: string): string {

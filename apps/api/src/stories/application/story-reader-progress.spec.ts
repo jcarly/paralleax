@@ -82,6 +82,36 @@ describe('StoryReaderProgressService', () => {
     );
   });
 
+  it('accepts deterministic runtime items produced by the saved journey', async () => {
+    const story = storyFixture();
+    story.interactions[0].itemEffects = [
+      {
+        itemDefinitionId: 'item-definition-1',
+        characterId: 'character-1',
+        operation: 'obtain',
+      },
+    ];
+    runtime.getStoryForJourney.mockResolvedValueOnce(story);
+    const runtimeItemId = 'runtime-item:0:0:character-1:item-definition-1';
+
+    const progress = await service.save(
+      'story-1',
+      { journeyInteractionIds: ['root'], ownedItemIds: [runtimeItemId] },
+      'user-1',
+    );
+
+    expect(progress.state.ownedItemIds).toEqual([runtimeItemId]);
+    expect(repository.saveProgress).toHaveBeenCalledWith(
+      'story-1',
+      'user-1',
+      expect.objectContaining({ ownedItemIds: [runtimeItemId] }),
+      expect.any(String),
+      'reader-autosave',
+      undefined,
+      expect.any(String),
+    );
+  });
+
   it('preserves one supplied wall-clock start per reader step', async () => {
     const stepStartedAt = ['2026-08-25T11:59:00.000Z', '2026-08-25T12:00:00.000Z'];
 

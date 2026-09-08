@@ -32,7 +32,7 @@ export function useStoryPersistenceLifecycle({
   }>({ storyId, phase: 'bootstrap' });
   const loadPhase = loadProgress.storyId === storyId ? loadProgress.phase : 'bootstrap';
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
-  const saveAttemptRef = useRef(0);
+  const saveBatchErrorRef = useRef('');
   const deletedTriggerIdsRef = useRef(new Set<string>());
   const deletedTriggerInputKeysRef = useRef(new Set<string>());
   const loadAttemptRef = useRef(0);
@@ -60,22 +60,28 @@ export function useStoryPersistenceLifecycle({
 
   const trackSave: TrackStorySave = useCallback(
     async <T>(operation: () => Promise<T>): Promise<T | undefined> => {
-      const attempt = ++saveAttemptRef.current;
+      const startsBatch = activeSaveCountRef.current === 0;
+      if (startsBatch) {
+        saveBatchErrorRef.current = '';
+        setError('');
+      }
       activeSaveCountRef.current += 1;
-      setError('');
       setSaveStatus('saving');
       try {
-        const result = await operation();
-        if (attempt === saveAttemptRef.current) setSaveStatus('saved');
-        return result;
+        return await operation();
       } catch (caught) {
-        if (attempt === saveAttemptRef.current) {
-          setError(caught instanceof Error ? caught.message : 'The story could not be saved.');
-          setSaveStatus('error');
-        }
+        const message = caught instanceof Error ? caught.message : 'The story could not be saved.';
+        saveBatchErrorRef.current = message;
+        setError(message);
+        setSaveStatus('error');
         return undefined;
       } finally {
         activeSaveCountRef.current = Math.max(0, activeSaveCountRef.current - 1);
+        if (activeSaveCountRef.current === 0) {
+          setSaveStatus(saveBatchErrorRef.current ? 'error' : 'saved');
+        } else if (!saveBatchErrorRef.current) {
+          setSaveStatus('saving');
+        }
         flushPendingRealtimeRefresh();
       }
     },

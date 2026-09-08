@@ -689,7 +689,10 @@ marker remains the explicit shortcut for extending that trigger.
 Every editor mutation passes through the persistence hook's save tracker. The
 toolbar exposes saving, saved, and failed states. A failed mutation leaves a
 visible error with an action that reloads the persisted story, which also
-recovers from optimistic local state that the server did not accept.
+recovers from optimistic local state that the server did not accept. Concurrent
+mutations form one pending batch: the tracker reports saved only after every
+request completes, and any failure in that batch remains visible even if a later
+request succeeded first.
 
 While that tracker reports a pending or failed save, `usePendingSaveGuard`
 protects browser closing/reloading and internal anchor navigation with native
@@ -858,7 +861,16 @@ classes directly.
   across repository instances and concurrent row mutation coverage.
 - Web: Vitest and Testing Library.
 - Shared: Vitest for narrative rules and pure story operations.
-- Functional: Playwright.
+- Functional UI: fast Playwright suites with controlled API responses.
+- Alpha acceptance: a small sequential Playwright suite against the real API and
+  PostgreSQL. Core flows do not intercept Paralleax endpoints; the explicit
+  transport-reordering case holds and forwards a real API response without
+  fabricating its payload. The project can start a local stack or target a
+  deployed environment through `PARALLEAX_ACCEPTANCE_BASE_URL`. A shared test-only
+  harness owns registration, Story creation, mutation response checks, and common
+  editor interactions without replacing the production HTTP boundary. Isolated
+  browser contexts exercise account-specific permissions and live collaboration
+  without sharing authentication state.
 - Coverage: Jest coverage for the API, Vitest V8 coverage for shared and the web app,
   with per-workspace thresholds enforced by the coverage commands.
 - Code style: ESLint and Prettier.
@@ -876,6 +888,7 @@ npm run test -w @paralleax/shared
 npm run test -w @paralleax/api
 npm run test -w @paralleax/web
 npm run test:e2e -w @paralleax/web
+npm run test:acceptance -w @paralleax/web
 npm run typecheck
 npm run coverage
 npm run build

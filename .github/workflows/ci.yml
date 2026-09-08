@@ -180,3 +180,56 @@ jobs:
             apps/web/test-results/
           if-no-files-found: ignore
           retention-days: 7
+
+  acceptance:
+    name: Alpha acceptance (real stack)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: paralleax
+          POSTGRES_PASSWORD: paralleax
+          POSTGRES_DB: paralleax_acceptance
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U paralleax -d paralleax_acceptance"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      PARALLEAX_ACCEPTANCE_ACCESS_CODE: playwright-alpha-access-code
+      PARALLEAX_ACCEPTANCE_DATABASE_URL: postgres://paralleax:paralleax@127.0.0.1:5432/paralleax_acceptance
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Set up npm
+        run: npm install --global npm@12.0.1
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline
+
+      - name: Install Playwright browsers
+        run: npm run playwright:install -w @paralleax/web -- --with-deps
+
+      - name: Run real-stack alpha acceptance
+        run: npm run test:acceptance -w @paralleax/web
+
+      - name: Upload acceptance reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-acceptance-reports
+          path: |
+            apps/web/playwright-report/acceptance/
+            apps/web/test-results/acceptance/
+          if-no-files-found: ignore
+          retention-days: 7

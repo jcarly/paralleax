@@ -11,7 +11,8 @@
     "coverage": "vitest run --coverage",
     "playwright:run": "playwright test",
     "playwright:install": "playwright install chromium",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:acceptance": "playwright test --config playwright.acceptance.config.ts"
   },
   "dependencies": {
     "@formbricks/js": "^5.0.0",

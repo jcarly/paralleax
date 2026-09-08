@@ -60,6 +60,33 @@ The character-stat vertical keeps these regressions covered:
   threads are not projected.
 - Browser: an author can register, create a story, sign out, sign back in, and
   find the story again.
+- Real-stack browser acceptance: with no intercepted Paralleax endpoint, an
+  invited author can create a Story, location, character, Story variable,
+  interactions and Triggers; persist context, an effect, and a condition; reload
+  and sign in again; then traverse the conditioned path in Simulation Mode.
+- Real-stack browser acceptance: interaction-content undo and redo update the
+  canonical PostgreSQL Story and each result remains intact after a complete
+  editor reload.
+- Real-stack browser acceptance: taking the browser offline during an interaction
+  edit exposes the failed-save state, refusing internal navigation keeps the
+  author in the editor, canonical reload discards the unconfirmed value, and the
+  next online edit persists across reload.
+- Real-stack browser acceptance: reader progress resumes after reload, a named
+  save survives reader restart, that save loads into Simulation and becomes its
+  independent autosave, and the reset reader autosave remains empty.
+- Real-stack browser acceptance: a reader autosave reconstructs a Story variable
+  changed by hourly rate and explicit effect, a runtime-obtained item and its
+  initial stat, Story time, the deterministic probability seed, option visibility,
+  and a Trigger timer consistently after reload.
+- Real-stack browser acceptance: an owner invites a second account as a reader,
+  the account can read but has no edit or access-management action and a direct
+  editor URL redirects to the player; after promotion to editor, that account can
+  edit the Story, the owner's already-open editor receives the committed change
+  through SSE, and both contexts retain it after reload.
+- Real-stack browser acceptance: one real Story metadata response is held after
+  its API commit while a child-interaction creation completes first. Save status
+  remains pending until both responses settle; the child then survives movement
+  and reload, and its confirmed deletion remains absent after another reload.
 
 ## Unit / Component Tests
 
