@@ -1,16 +1,23 @@
 # QSP Import
 
-Paralleax includes an experimental QSP adapter for inspecting small games as a
-Story graph. It is an adapter, not a QSP runtime, and it does not change the
+Paralleax includes an experimental QSP adapter for inspecting games as a Story
+graph. It is an adapter, not a QSP runtime, and it does not change the
 Paralleax narrative model to reproduce QSP execution semantics.
 
 ## Author workflow
 
 From the signed-in `Stories` library, select `Import a story`, choose `QSP game`,
-then select one of these files:
+then select either one game file or one collection of location files:
 
 - a compiled `.qsp` or `.gam` game;
-- a UTF-8 `.qsps`, `.qsp-txt`, or `.txt-qsp` source file.
+- a UTF-8 `.qsps`, `.qsp-txt`, or `.txt-qsp` source file;
+- all UTF-8 `.qsrc` files from a QSP `locations` directory, selected together.
+
+Compiled/text game files and `.qsrc` collections are two inputs to the same
+adapter. A location collection is packaged by the browser for one atomic API
+request; it does not create a parallel QSP model or persistence workflow. When
+the collection contains a location named `start`, it is placed first and used as
+the likely Story entry. Otherwise, selected source order is retained.
 
 The standard request boundary accepts one file up to 80 KiB. Administrators use
 an authenticated binary upload with no Paralleax application-level size limit;
@@ -37,8 +44,8 @@ it can produce source locations and compatibility issues before canonical mappin
 ## Pipeline and ownership
 
 ```text
-QSP game file
-  -> official format decoding
+QSP game file or .qsrc location collection
+  -> official format decoding per game/source file
   -> locations, static actions, and statement analysis
   -> compatibility issues and coverage matrix
   -> Paralleax interactions and triggers
@@ -72,6 +79,11 @@ The first vertical slice converts:
   `AND`, and `OR` expressions. Earlier branches are negated for every later
   branch so QSP's sequential exclusivity is preserved;
 - static `GOTO` and `GT` destinations to graph reachability;
+- top-level literal `IF $ARGS[0] = 'value'` blocks to separate interactions, and
+  the first literal `GOTO`/`GT` argument to the corresponding interaction. An
+  empty `ARGS[0]` selector remains on the base location interaction. Repeated
+  independent blocks for the same value are merged into that variant in source
+  order, matching QSP's sequential execution;
 - alternative incoming paths to one unconditional Trigger owned by their output
   Interaction;
 - the source filename to the Story title;
@@ -92,6 +104,9 @@ interaction, and reported as an approximation.
 
 The returned `QspImportReport` contains source counts, converted/approximated/
 unsupported statement counts, localized issues, and a stable feature matrix.
+To keep very large source collections bounded, it retains at most 2,000 detailed
+warnings and reports the remaining number in `omittedWarningCount`; blocking
+errors are never omitted. Statement and feature occurrence counters remain exact.
 The matrix reports three states:
 
 - `supported`: locations and entry discovery;
@@ -115,10 +130,11 @@ have equivalent import behavior:
   array-wide lookup/mutation/reordering, tuples and multidimensional indices,
   calculated names, system variables, string concatenation,
   multiplication/division effects, and the complete QSP coercion rules;
-- general `IF` / `ELSEIF` / `ELSE` execution, including conditional prose,
-  assignments or navigation, dynamically declared actions, and branches with
-  side effects. Only action-only branches with reducible stat expressions are
-  currently lowered to Trigger condition groups;
+- general `IF` / `ELSEIF` / `ELSE` execution, apart from top-level literal
+  `ARGS[0]` location variants, including conditional prose, assignments or
+  navigation, dynamically declared actions, and branches with side effects.
+  Only action-only branches with reducible stat expressions are currently
+  lowered to Trigger condition groups;
 - `GOSUB`, `GS`, `FUNC`, arguments, local scope, return values, recursion, and
   call-stack behavior;
 - local labels, `JUMP`, loops, and dynamic code evaluation;
@@ -130,7 +146,9 @@ have equivalent import behavior:
   other player UI behavior;
 - service locations and engine events such as counters, new-location hooks,
   object selection, user commands, and save/load hooks;
-- included libraries and multi-file source projects;
+- project manifests, source includes, and included libraries. A flat collection
+  of `.qsrc` location files is supported, but project build configuration and
+  dependencies are not resolved;
 - QSP save/load compatibility and migration into deterministic Paralleax journeys;
 - a dry-run/downloadable full report and background uploads for very large games;
 - licensed compatibility corpora that exercise every supported command family.

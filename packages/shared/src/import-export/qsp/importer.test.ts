@@ -2,6 +2,7 @@ import { writeQsp } from './converter.js';
 import { describe, expect, it } from 'vitest';
 import { getTriggerConditionGroups } from '../../triggers/index.js';
 import { importQsp } from './importer.js';
+import { parseQspLocationBundle, serializeQspLocationBundle } from './source-bundle.js';
 
 function importSource(source: Parameters<typeof importQsp>[0]) {
   let id = 0;
@@ -13,6 +14,129 @@ function importSource(source: Parameters<typeof importQsp>[0]) {
 }
 
 describe('QSP importer', () => {
+  it('combines qsrc location files and connects literal ARGS[0] variants', () => {
+    const result = importSource({
+      name: 'Girl Life.qsrc',
+      format: 'locations',
+      content: [
+        {
+          name: 'locations/room.qsrc',
+          content: `# room
+if $ARGS[0] = 'inside':
+  'You are inside.'
+end
+--- room ---`,
+        },
+        {
+          name: 'locations/start.qsrc',
+          content: `# start
+if $ARGS[0] = '':
+  gt 'start', 'menu'
+end
+if $ARGS[0] = 'menu':
+  'Main menu'
+  act 'Enter': gt 'room', 'inside'
+end
+--- start ---`,
+        },
+      ],
+    });
+
+    expect(result.report).toMatchObject({
+      sourceFileCount: 2,
+      locationCount: 2,
+      actionCount: 1,
+      interactionCount: 5,
+    });
+    expect(result.story?.title).toBe('Girl Life');
+    expect(result.story?.interactions.map(({ title }) => title)).toEqual([
+      'start',
+      'start · menu',
+      'Enter',
+      'room',
+      'room · inside',
+    ]);
+    const [start, menu, enter, , inside] = result.story!.interactions;
+    expect(menu.body).toBe('<p>Main menu</p>');
+    expect(menu.triggers[0].inputInteractionIds).toEqual([start.id]);
+    expect(enter.triggers[0].inputInteractionIds).toEqual([menu.id]);
+    expect(inside.body).toBe('<p>You are inside.</p>');
+    expect(inside.triggers[0].inputInteractionIds).toEqual([enter.id]);
+    expect(result.report.issues).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: 'navigation_arguments_ignored' }),
+        expect.objectContaining({ code: 'unsupported_condition' }),
+      ]),
+    );
+  });
+
+  it('merges repeated independent ARGS[0] blocks into one ordered variant', () => {
+    const result = importSource({
+      name: 'Girl Life.qsrc',
+      format: 'locations',
+      content: [
+        {
+          name: 'locations/start.qsrc',
+          content: "# start\ngt 'sex_ev_pillow_talk2', 'morning_sore_pussy'\n--- start ---",
+        },
+        {
+          name: 'locations/sex_ev_pillow_talk2.qsrc',
+          content: `# sex_ev_pillow_talk2
+if $ARGS[0] = 'morning_sore_pussy':
+  'First part.'
+end
+! other top-level code may separate repeated selectors
+if $ARGS[0] = 'morning_sore_pussy':
+  *pl 'Second part.'
+  unknown_command
+end
+--- sex_ev_pillow_talk2 ---`,
+        },
+      ],
+    });
+
+    expect(result.story).toBeDefined();
+    expect(result.story?.interactions.map(({ title }) => title)).toEqual([
+      'start',
+      'sex_ev_pillow_talk2',
+      'sex_ev_pillow_talk2 · morning_sore_pussy',
+    ]);
+    const [start, , variant] = result.story!.interactions;
+    expect(variant.body).toBe('<p>First part.</p><p>Second part.</p>');
+    expect(variant.triggers[0].inputInteractionIds).toEqual([start.id]);
+    expect(result.report.issues).toContainEqual(
+      expect.objectContaining({
+        severity: 'warning',
+        code: 'unsupported_statement',
+        fileName: 'locations/sex_ev_pillow_talk2.qsrc',
+        locationName: 'sex_ev_pillow_talk2',
+        line: 8,
+      }),
+    );
+    expect(result.report.issues).not.toContainEqual(
+      expect.objectContaining({ code: 'duplicate_location_argument_variant' }),
+    );
+  });
+
+  it('serializes qsrc collections for the HTTP import boundary', () => {
+    const files = [{ name: 'locations/start.qsrc', content: '# start\n--- start ---' }];
+    expect(parseQspLocationBundle(serializeQspLocationBundle(files))).toEqual(files);
+  });
+
+  it('bounds detailed warnings without losing large-import occurrence counts', () => {
+    const statements = Array.from({ length: 2_050 }, (_, index) => `unknown_${index}`).join('\n');
+    const result = importSource({
+      name: 'large-report.qsps',
+      format: 'text',
+      content: `# Start\n${statements}\n--- Start ---`,
+    });
+
+    expect(result.story).toBeDefined();
+    expect(result.report.unsupportedStatementCount).toBe(2_050);
+    expect(result.report.issues).toHaveLength(2_000);
+    expect(result.report.omittedWarningCount).toBe(50);
+  });
+
   it('maps text locations, static actions, text output, and navigation', () => {
     const result = importSource({
       name: 'lighthouse.qsps',
@@ -114,6 +238,28 @@ end
     );
     expect(result.report.issues).not.toContainEqual(
       expect.objectContaining({ code: 'missing_location_target' }),
+    );
+  });
+
+  it('keeps a static navigation target when only its arguments are dynamic', () => {
+    const result = importSource({
+      name: 'dynamic-argument.qsps',
+      format: 'text',
+      content: `# Start
+gt 'End', $variant
+--- Start ---
+# End
+--- End ---`,
+    });
+
+    expect(result.story?.interactions[1].triggers[0].inputInteractionIds).toEqual([
+      result.story?.interactions[0].id,
+    ]);
+    expect(result.report.issues).toEqual(
+      expect.arrayContaining([expect.objectContaining({ code: 'navigation_arguments_ignored' })]),
+    );
+    expect(result.report.issues).not.toEqual(
+      expect.arrayContaining([expect.objectContaining({ code: 'dynamic_navigation_target' })]),
     );
   });
 

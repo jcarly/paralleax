@@ -12,6 +12,16 @@ rendered prose, actions, conditional branches, state mutation, reusable
 procedures, menus, and navigation. It therefore does not map one-to-one to a
 Paralleax location or interaction.
 
+The current importer can now consume the repository's `.qsrc` location files
+directly, without first compiling them into one `.qsp` binary. It also maps the
+common top-level `IF $ARGS[0] = 'value'` convention to distinct interactions and
+resolves a literal first `GT` argument to that variant. This makes entry/menu
+flows such as `start` structurally visible and keeps diagnostics tied to their
+original `.qsrc` files. It does not make the complete game playable: calculated
+expressions, subroutine locations, dynamic navigation, mutable actions,
+inventory, UI/media behavior, and QSP event hooks remain material gaps described
+below.
+
 The source repository did not expose a project-wide content license in its root.
 Some bundled tools have their own licenses, but those do not grant permission to
 redistribute the game's prose or media. The repository also contains explicit

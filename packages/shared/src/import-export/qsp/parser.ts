@@ -17,47 +17,37 @@ export function parseQspSource(
   source: QspImportSource,
   report: QspImportReport,
 ): ParsedQspLocation[] {
-  let locations: QspSourceLocation[];
-  let textLocationCodeLines: number[] = [];
-  try {
-    if (source.format === 'binary') {
-      if (!(source.content instanceof ArrayBuffer)) throw new Error('Expected binary content.');
-      locations = readQsp(source.content);
-    } else {
-      if (typeof source.content !== 'string') throw new Error('Expected UTF-8 text content.');
-      const content = source.content.replace(/^\uFEFF/, '');
-      textLocationCodeLines = findTextLocationCodeLines(content);
-      locations = readQsps(content);
-    }
-  } catch (caught) {
-    addQspImportIssue(report, {
-      severity: 'error',
-      code: 'invalid_qsp_file',
-      message: caught instanceof Error ? caught.message : 'The QSP file could not be decoded.',
-      fileName: source.name,
-    });
-    return [];
-  }
+  const decodedFiles = decodeQspFiles(source, report);
+  if (decodedFiles.length === 0) return [];
 
-  if (locations.length === 0) {
+  const decodedLocations = decodedFiles.flatMap((file) =>
+    file.locations.map((location, locationIndex) => ({
+      location,
+      fileName: file.name,
+      codeLine: file.codeLines[locationIndex] ?? 1,
+    })),
+  );
+  if (decodedLocations.length === 0) {
     addQspImportIssue(report, {
       severity: 'error',
       code: 'no_locations',
-      message: 'The QSP game does not contain any readable location.',
+      message: 'The QSP source does not contain any readable location.',
       fileName: source.name,
     });
     return [];
   }
 
+  const orderedLocations =
+    source.format === 'locations' ? putLikelyEntryFirst(decodedLocations) : decodedLocations;
   const names = new Set<string>();
-  const parsed = locations.flatMap((location, locationIndex) => {
+  const parsed = orderedLocations.flatMap(({ location, fileName, codeLine }, locationIndex) => {
     const name = location.name.trim();
     if (!name) {
       addQspImportIssue(report, {
         severity: 'error',
         code: 'empty_location_name',
         message: 'A QSP location has no name.',
-        fileName: source.name,
+        fileName,
       });
       return [];
     }
@@ -67,18 +57,15 @@ export function parseQspSource(
         severity: 'error',
         code: 'duplicate_location',
         message: `The QSP location "${name}" is defined more than once.`,
-        fileName: source.name,
+        fileName,
         locationName: name,
       });
       return [];
     }
     names.add(normalizedName);
-    const sourcePosition = {
-      fileName: source.name,
-      locationName: name,
-      line: textLocationCodeLines[locationIndex] ?? 1,
-    };
-    const extracted = extractActBlocks(location.code, sourcePosition, report);
+    const sourcePosition = { fileName, locationName: name, line: codeLine };
+    const variants = extractLocationArgumentVariants(location.code, sourcePosition, report);
+    const extracted = extractActBlocks(variants.baseCode, sourcePosition, report);
     const compiledActions = location.actions.map((action) => ({
       ...action,
       source: sourcePosition,
@@ -88,7 +75,30 @@ export function parseQspSource(
       source: { ...sourcePosition, line: sourceLine },
       ...(conditionGroups ? { conditionGroups } : {}),
     }));
-    const actions = deduplicateActions([...compiledActions, ...sourceActions]);
+    const locations: ParsedQspLocation[] = [
+      {
+        name,
+        description: location.description,
+        code: extracted.remainingCode,
+        actions: deduplicateActions([...compiledActions, ...sourceActions]),
+        source: sourcePosition,
+      },
+    ];
+    for (const variant of variants.variants) {
+      const variantExtracted = extractActBlocks(variant.code, variant.source, report);
+      locations.push({
+        name,
+        entryArgument: variant.argument,
+        description: [],
+        code: variantExtracted.remainingCode,
+        actions: variantExtracted.blocks.map(({ action, sourceLine, conditionGroups }) => ({
+          ...action,
+          source: { ...variant.source, line: sourceLine },
+          ...(conditionGroups ? { conditionGroups } : {}),
+        })),
+        source: variant.source,
+      });
+    }
     if (/^\$/.test(name)) {
       addQspSourceIssue(
         report,
@@ -101,21 +111,151 @@ export function parseQspSource(
       report.approximatedStatementCount += 1;
       touchQspFeature(report, 'runtime_events');
     }
-    return [
-      {
-        name,
-        description: location.description,
-        code: extracted.remainingCode,
-        actions,
-        source: sourcePosition,
-      },
-    ];
+    return locations;
   });
-  report.locationCount = parsed.length;
+  report.locationCount = orderedLocations.length;
   report.actionCount = parsed.reduce((total, location) => total + location.actions.length, 0);
-  touchQspFeature(report, 'locations', parsed.length);
+  touchQspFeature(report, 'locations', orderedLocations.length);
   touchQspFeature(report, 'actions', report.actionCount);
   return parsed;
+}
+
+function decodeQspFiles(
+  source: QspImportSource,
+  report: QspImportReport,
+): Array<{ name: string; locations: QspSourceLocation[]; codeLines: number[] }> {
+  if (source.format === 'locations') {
+    return source.content.flatMap((file) => {
+      const decoded = decodeTextQspFile(file.name, file.content, report);
+      if (decoded[0]?.locations.length === 0) {
+        addQspImportIssue(report, {
+          severity: 'error',
+          code: 'no_locations_in_source_file',
+          message: 'The selected .qsrc file does not contain a readable QSP location.',
+          fileName: file.name,
+        });
+        return [];
+      }
+      return decoded;
+    });
+  }
+  try {
+    if (source.format === 'binary') {
+      if (!(source.content instanceof ArrayBuffer)) throw new Error('Expected binary content.');
+      return [{ name: source.name, locations: readQsp(source.content), codeLines: [] }];
+    }
+    if (typeof source.content !== 'string') throw new Error('Expected UTF-8 text content.');
+    return decodeTextQspFile(source.name, source.content, report);
+  } catch (caught) {
+    addQspImportIssue(report, {
+      severity: 'error',
+      code: 'invalid_qsp_file',
+      message: caught instanceof Error ? caught.message : 'The QSP file could not be decoded.',
+      fileName: source.name,
+    });
+    return [];
+  }
+}
+
+function decodeTextQspFile(
+  fileName: string,
+  sourceContent: string,
+  report: QspImportReport,
+): Array<{ name: string; locations: QspSourceLocation[]; codeLines: number[] }> {
+  const content = sourceContent.replace(/^\uFEFF/, '');
+  try {
+    return [
+      {
+        name: fileName,
+        locations: readQsps(content),
+        codeLines: findTextLocationCodeLines(content),
+      },
+    ];
+  } catch (caught) {
+    addQspImportIssue(report, {
+      severity: 'error',
+      code: 'invalid_qsp_file',
+      message: caught instanceof Error ? caught.message : 'The QSP file could not be decoded.',
+      fileName,
+    });
+    return [];
+  }
+}
+
+function putLikelyEntryFirst<T extends { location: QspSourceLocation }>(locations: T[]) {
+  const index = locations.findIndex(({ location }) => normalizeQspName(location.name) === 'start');
+  if (index <= 0) return locations;
+  return [locations[index], ...locations.slice(0, index), ...locations.slice(index + 1)];
+}
+
+function extractLocationArgumentVariants(
+  lines: string[],
+  source: { fileName: string; locationName: string; line: number },
+  report: QspImportReport,
+) {
+  const baseCode = [...lines];
+  const variants: Array<{
+    argument: string;
+    code: string[];
+    source: { fileName: string; locationName: string; line: number };
+  }> = [];
+  const variantsByArgument = new Map<string, (typeof variants)[number]>();
+  let outerBlockDepth = 0;
+  for (let index = 0; index < lines.length; index += 1) {
+    const trimmed = lines[index].trim();
+    if (/^end\b/i.test(trimmed) && outerBlockDepth > 0) {
+      outerBlockDepth -= 1;
+      continue;
+    }
+    if (outerBlockDepth > 0) {
+      if (/^(?:act|if|loop)\b.*:\s*$/i.test(trimmed)) outerBlockDepth += 1;
+      continue;
+    }
+    const opening = /^if\b\s*(.+):\s*$/i.exec(trimmed);
+    const argument = opening ? parseLocationArgumentSelector(opening[1]) : undefined;
+    if (argument === undefined) {
+      if (/^(?:act|if|loop)\b.*:\s*$/i.test(trimmed)) outerBlockDepth += 1;
+      continue;
+    }
+    const endIndex = findMultilineBlockEnd(lines, index, lines.length);
+    if (endIndex === undefined) continue;
+    baseCode[index] = '';
+    baseCode[endIndex] = '';
+    if (argument) {
+      for (let removed = index + 1; removed < endIndex; removed += 1) baseCode[removed] = '';
+      const code = lines.slice(index + 1, endIndex);
+      const sourceLine = source.line + index + 1;
+      const existing = variantsByArgument.get(argument);
+      if (existing) {
+        const gap = sourceLine - existing.source.line - existing.code.length;
+        if (gap > 0) existing.code.push(...Array<string>(gap).fill(''));
+        existing.code.push(...code);
+      } else {
+        const variant = {
+          argument,
+          code,
+          source: { ...source, line: sourceLine },
+        };
+        variants.push(variant);
+        variantsByArgument.set(argument, variant);
+      }
+    }
+    index = endIndex;
+    report.convertedStatementCount += 1;
+    touchQspFeature(report, 'conditions');
+  }
+  return { baseCode, variants };
+}
+
+function parseLocationArgumentSelector(expression: string): string | undefined {
+  const selector = /^\s*\$args\s*\[\s*0\s*\]\s*=\s*/i.exec(expression);
+  if (!selector) return undefined;
+  const literalExpression = expression.slice(selector[0].length).trim();
+  const value = parseQspStringLiteral(literalExpression);
+  return value !== undefined &&
+    consumedLiteralLength(literalExpression) === literalExpression.length
+    ? value
+    : undefined;
 }
 
 function extractActBlocks(

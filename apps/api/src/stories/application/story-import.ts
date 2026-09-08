@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import {
   importChoiceScript,
   importQsp,
+  parseQspLocationBundle,
   type ChoiceScriptImportResult,
   type QspImportResult,
   type QspImportSource,
@@ -30,28 +31,29 @@ export class StoryImportService {
 
   async createQsp(input: ImportQspDto, userId: string) {
     const bytes = Buffer.from(input.file.contentBase64, 'base64');
-    if (bytes.byteLength > QSP_IMPORT_SOURCE_LIMIT) {
-      throw new BadRequestException('The QSP game file exceeds the 80 KiB import limit');
-    }
-    return this.createQspFromBytes(input.file, bytes, userId);
+    return this.createQspFromBytes(input.file, bytes, userId, QSP_IMPORT_SOURCE_LIMIT);
   }
 
   createUnlimitedQsp(input: QspSourceMetadataDto, bytes: Buffer, userId: string) {
     return this.createQspFromBytes(input, bytes, userId);
   }
 
-  private createQspFromBytes(input: QspSourceMetadataDto, bytes: Buffer, userId: string) {
+  private createQspFromBytes(
+    input: QspSourceMetadataDto,
+    bytes: Buffer,
+    userId: string,
+    sourceLimit?: number,
+  ) {
     const expectedFormat = qspFormatForFileName(input.name);
     if (expectedFormat !== input.format) {
       throw new BadRequestException(
         `The file extension does not match the declared QSP ${input.format} format`,
       );
     }
-    const source: QspImportSource = {
-      name: input.name,
-      format: input.format,
-      content: input.format === 'text' ? decodeUtf8(bytes) : bufferToArrayBuffer(bytes),
-    };
+    const source = qspImportSource(input, bytes);
+    if (sourceLimit !== undefined && qspSourceSize(source) > sourceLimit) {
+      throw new BadRequestException('The QSP source exceeds the 80 KiB import limit');
+    }
     return this.persist(importQsp(source, importOptions()), 'QSP', userId);
   }
 
@@ -90,7 +92,34 @@ function importOptions() {
 }
 
 function qspFormatForFileName(name: string): QspImportSource['format'] {
-  return /\.(?:qsp|gam)$/i.test(name) ? 'binary' : 'text';
+  if (/\.(?:qsp|gam)$/i.test(name)) return 'binary';
+  return /\.qsrc$/i.test(name) ? 'locations' : 'text';
+}
+
+function qspImportSource(input: QspSourceMetadataDto, bytes: Buffer): QspImportSource {
+  if (input.format === 'binary') {
+    return { name: input.name, format: 'binary', content: bufferToArrayBuffer(bytes) };
+  }
+  const content = decodeUtf8(bytes);
+  return input.format === 'locations'
+    ? { name: input.name, format: 'locations', content: decodeQspLocationBundle(content) }
+    : { name: input.name, format: 'text', content };
+}
+
+function decodeQspLocationBundle(content: string) {
+  try {
+    return parseQspLocationBundle(content);
+  } catch (caught) {
+    throw new BadRequestException(
+      caught instanceof Error ? caught.message : 'The QSP locations bundle is invalid',
+    );
+  }
+}
+
+function qspSourceSize(source: QspImportSource) {
+  if (source.format === 'binary') return source.content.byteLength;
+  if (source.format === 'text') return Buffer.byteLength(source.content, 'utf8');
+  return source.content.reduce((total, file) => total + Buffer.byteLength(file.content, 'utf8'), 0);
 }
 
 function decodeUtf8(bytes: Uint8Array) {

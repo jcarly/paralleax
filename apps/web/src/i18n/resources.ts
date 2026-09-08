@@ -121,6 +121,8 @@ export const resources = {
           filesLabel: 'ChoiceScript scene files',
           selected_one: '{{count}} file selected',
           selected_other: '{{count}} files selected',
+          moreFiles_one: '{{count}} more file',
+          moreFiles_other: '{{count}} more files',
           size: 'Approximately {{size}} KiB · 96 KiB maximum',
           tooManyFiles: 'Select no more than 50 scene files.',
           fileTooLarge: 'Each scene file must be 64 KiB or smaller.',
@@ -130,15 +132,16 @@ export const resources = {
           qsp: {
             title: 'Import a QSP game',
             description:
-              'Select one compiled .qsp/.gam game or one UTF-8 .qsps source. Paralleax will create a private Story and produce a detailed compatibility report.',
-            filesLabel: 'QSP game file',
+              'Select one compiled .qsp/.gam game, one UTF-8 .qsps source, or all .qsrc files from a locations folder. Paralleax will create a private Story and produce a detailed compatibility report.',
+            filesLabel: 'QSP game or location files',
             size: 'Approximately {{size}} KiB · 80 KiB maximum',
             sizeAdministrator: 'Approximately {{size}} KiB · no Paralleax limit for administrators',
-            oneFile: 'Select exactly one QSP game file.',
-            invalidFile: 'Select a .qsp, .gam, .qsps, .qsp-txt, or .txt-qsp file.',
+            incompatibleFiles:
+              'Select one QSP game file, or a collection containing only .qsrc location files.',
+            invalidFile: 'Select a .qsp, .gam, .qsps, .qsp-txt, .txt-qsp, or .qsrc file.',
             tooLarge: 'The QSP game exceeds the 80 KiB import limit.',
             notice:
-              'The adapter converts static locations and actions, literal text and assignments, literal-index array cells, action-only IF/ELSEIF/ELSE branches, and GOTO paths. The report identifies every detected approximation and unsupported runtime feature.',
+              'The adapter converts static locations and actions, literal text and assignments, literal-index array cells, action-only IF/ELSEIF/ELSE branches, ARGS[0] location variants, and GOTO paths. The report identifies every detected approximation and unsupported runtime feature.',
             failed: 'Could not import this QSP game',
             resultTitle: 'QSP story imported',
             locations: 'Locations',
@@ -1111,6 +1114,8 @@ export const resources = {
           filesLabel: 'Fichiers de scènes ChoiceScript',
           selected_one: '{{count}} fichier sélectionné',
           selected_other: '{{count}} fichiers sélectionnés',
+          moreFiles_one: '{{count}} fichier supplémentaire',
+          moreFiles_other: '{{count}} fichiers supplémentaires',
           size: 'Environ {{size}} Kio · 96 Kio maximum',
           tooManyFiles: 'Sélectionnez au maximum 50 fichiers de scènes.',
           fileTooLarge: 'Chaque fichier de scène doit faire au maximum 64 Kio.',
@@ -1120,16 +1125,17 @@ export const resources = {
           qsp: {
             title: 'Importer un jeu QSP',
             description:
-              'Sélectionnez un jeu compilé .qsp/.gam ou une source .qsps UTF-8. Paralleax créera une Story privée et produira un rapport de compatibilité détaillé.',
-            filesLabel: 'Fichier de jeu QSP',
+              'Sélectionnez un jeu compilé .qsp/.gam, une source .qsps UTF-8 ou tous les fichiers .qsrc d’un dossier locations. Paralleax créera une Story privée et produira un rapport de compatibilité détaillé.',
+            filesLabel: 'Jeu QSP ou fichiers de lieux',
             size: 'Environ {{size}} Kio · 80 Kio maximum',
             sizeAdministrator:
               'Environ {{size}} Kio · aucune limite Paralleax pour les administrateurs',
-            oneFile: 'Sélectionnez exactement un fichier de jeu QSP.',
-            invalidFile: 'Sélectionnez un fichier .qsp, .gam, .qsps, .qsp-txt ou .txt-qsp.',
+            incompatibleFiles:
+              'Sélectionnez un seul fichier de jeu QSP, ou uniquement des fichiers de lieux .qsrc.',
+            invalidFile: 'Sélectionnez un fichier .qsp, .gam, .qsps, .qsp-txt, .txt-qsp ou .qsrc.',
             tooLarge: 'Le jeu QSP dépasse la limite d’import de 80 Kio.',
             notice:
-              'L’adaptateur convertit les lieux et actions statiques, textes et affectations littérales, cellules de tableau à indice littéral, branches IF/ELSEIF/ELSE composées d’actions et chemins GOTO. Le rapport identifie chaque approximation et fonction du moteur non prise en charge.',
+              'L’adaptateur convertit les lieux et actions statiques, textes et affectations littérales, cellules de tableau à indice littéral, branches IF/ELSEIF/ELSE composées d’actions, variantes de lieu ARGS[0] et chemins GOTO. Le rapport identifie chaque approximation et fonction du moteur non prise en charge.',
             failed: 'Impossible d’importer ce jeu QSP',
             resultTitle: 'Histoire QSP importée',
             locations: 'Lieux',

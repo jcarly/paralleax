@@ -18,20 +18,25 @@ const FEATURE_SUPPORT: ReadonlyArray<[QspFeatureId, QspFeatureSupport]> = [
   ['saves_and_input', 'unsupported'],
   ['libraries', 'unsupported'],
 ];
+const MAX_DETAILED_WARNINGS = 2_000;
+const detailedWarningCounts = new WeakMap<QspImportReport, number>();
 
-export function createQspImportReport(): QspImportReport {
-  return {
+export function createQspImportReport(sourceFileCount = 1): QspImportReport {
+  const report: QspImportReport = {
     format: 'qsp',
-    sourceFileCount: 1,
+    sourceFileCount,
     locationCount: 0,
     actionCount: 0,
     interactionCount: 0,
     convertedStatementCount: 0,
     approximatedStatementCount: 0,
     unsupportedStatementCount: 0,
+    omittedWarningCount: 0,
     coverage: FEATURE_SUPPORT.map(([feature, support]) => ({ feature, support, occurrences: 0 })),
     issues: [],
   };
+  detailedWarningCounts.set(report, 0);
+  return report;
 }
 
 export function hasQspImportErrors(report: QspImportReport) {
@@ -44,6 +49,14 @@ export function touchQspFeature(report: QspImportReport, feature: QspFeatureId, 
 }
 
 export function addQspImportIssue(report: QspImportReport, issue: QspImportIssue) {
+  if (issue.severity === 'warning') {
+    const warningCount = detailedWarningCounts.get(report) ?? 0;
+    if (warningCount >= MAX_DETAILED_WARNINGS) {
+      report.omittedWarningCount = (report.omittedWarningCount ?? 0) + 1;
+      return;
+    }
+    detailedWarningCounts.set(report, warningCount + 1);
+  }
   report.issues.push(issue);
 }
 

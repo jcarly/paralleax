@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
+import { serializeQspLocationBundle } from '@paralleax/shared';
 import type {
   ChoiceScriptImportReport,
   QspImportReport,
@@ -46,26 +47,11 @@ export function StoryImportDialog({
       );
       const result =
         format === 'qsp'
-          ? isAdministrator
-            ? await api.importUnlimitedQsp(
-                {
-                  name: files[0].name,
-                  format: qspFormatForFileName(files[0].name),
-                  content: files[0],
-                },
-                (percentage) => {
-                  setProgress(
-                    percentage >= 100
-                      ? { phase: 'processing' }
-                      : { phase: 'uploading', percentage },
-                  );
-                },
-              )
-            : await api.importQsp({
-                name: files[0].name,
-                format: qspFormatForFileName(files[0].name),
-                contentBase64: await readFileAsBase64(files[0]),
-              })
+          ? await importQspFiles(files, isAdministrator, (percentage) => {
+              setProgress(
+                percentage >= 100 ? { phase: 'processing' } : { phase: 'uploading', percentage },
+              );
+            })
           : await api.importChoiceScript(
               await Promise.all(
                 files.map(async (file) => ({ name: file.name, content: await file.text() })),
@@ -143,9 +129,9 @@ export function StoryImportDialog({
                 <input
                   key={format}
                   autoFocus
-                  multiple={format === 'choicescript'}
+                  multiple
                   accept={
-                    format === 'qsp' ? '.qsp,.gam,.qsps,.qsp-txt,.txt-qsp' : '.txt,text/plain'
+                    format === 'qsp' ? '.qsp,.gam,.qsps,.qsp-txt,.txt-qsp,.qsrc' : '.txt,text/plain'
                   }
                   type="file"
                   onChange={(event) => {
@@ -157,7 +143,7 @@ export function StoryImportDialog({
               {files.length > 0 ? (
                 <div className="choicescript-file-summary" aria-live="polite">
                   <b>{t('library.import.selected', { count: files.length })}</b>
-                  <span>{files.map(({ name }) => name).join(', ')}</span>
+                  <span>{summarizeFileNames(files, t)}</span>
                   <small>
                     {t(
                       format === 'qsp'
@@ -245,6 +231,8 @@ function ImportProgress({ progress }: { progress: StoryImportProgress }) {
 function StoryImportResult({ report }: { report: StoryImportReport }) {
   const { t } = useTranslation();
   const warnings = report.issues.filter(({ severity }) => severity === 'warning');
+  const warningCount =
+    warnings.length + (report.format === 'qsp' ? (report.omittedWarningCount ?? 0) : 0);
   const sourceCount = report.format === 'qsp' ? report.locationCount : report.sceneCount;
   return (
     <div className="choicescript-import-result">
@@ -262,7 +250,7 @@ function StoryImportResult({ report }: { report: StoryImportReport }) {
         </div>
         <div>
           <dt>{t('library.import.warnings')}</dt>
-          <dd>{warnings.length}</dd>
+          <dd>{warningCount}</dd>
         </div>
       </dl>
       {warnings.length > 0 ? (
@@ -284,8 +272,8 @@ function StoryImportResult({ report }: { report: StoryImportReport }) {
               </li>
             ))}
           </ul>
-          {warnings.length > 8 ? (
-            <small>{t('library.import.moreWarnings', { count: warnings.length - 8 })}</small>
+          {warningCount > 8 ? (
+            <small>{t('library.import.moreWarnings', { count: warningCount - 8 })}</small>
           ) : null}
         </div>
       ) : (
@@ -327,8 +315,10 @@ function importSelectionError(
   t: ReturnType<typeof useTranslation>['t'],
 ) {
   if (format === 'qsp') {
-    if (files.length > 1) return t('library.import.qsp.oneFile');
-    if (files.some(({ name }) => !/\.(?:qsp|gam|qsps|qsp-txt|txt-qsp)$/i.test(name)))
+    const locationFiles = files.filter(({ name }) => /\.qsrc$/i.test(name));
+    if (files.length > 1 && locationFiles.length !== files.length)
+      return t('library.import.qsp.incompatibleFiles');
+    if (files.some(({ name }) => !/\.(?:qsp|gam|qsps|qsp-txt|txt-qsp|qsrc)$/i.test(name)))
       return t('library.import.qsp.invalidFile');
     if (!isAdministrator && sourceSize > 80 * 1024) return t('library.import.qsp.tooLarge');
     return '';
@@ -340,10 +330,62 @@ function importSelectionError(
 }
 
 function qspFormatForFileName(name: string): QspSourceFormat {
-  return /\.(?:qsp|gam)$/i.test(name) ? 'binary' : 'text';
+  if (/\.(?:qsp|gam)$/i.test(name)) return 'binary';
+  return /\.qsrc$/i.test(name) ? 'locations' : 'text';
 }
 
-async function readFileAsBase64(file: File) {
+async function importQspFiles(
+  files: File[],
+  isAdministrator: boolean,
+  onUploadProgress: (percentage: number) => void,
+) {
+  const source = await prepareQspSource(files);
+  return isAdministrator
+    ? api.importUnlimitedQsp(source, onUploadProgress)
+    : api.importQsp({
+        name: source.name,
+        format: source.format,
+        contentBase64: await readBlobAsBase64(source.content),
+      });
+}
+
+async function prepareQspSource(files: File[]): Promise<{
+  name: string;
+  format: QspSourceFormat;
+  content: Blob;
+}> {
+  const format = qspFormatForFileName(files[0].name);
+  if (format !== 'locations') return { name: files[0].name, format, content: files[0] };
+  const sources = await Promise.all(
+    files.map(async (file) => ({
+      name: file.webkitRelativePath || file.name,
+      content: await file.text(),
+    })),
+  );
+  return {
+    name: qspLocationsSourceName(files),
+    format,
+    content: new Blob([serializeQspLocationBundle(sources)], {
+      type: 'application/octet-stream',
+    }),
+  };
+}
+
+function qspLocationsSourceName(files: File[]) {
+  const relativeRoot = files
+    .map(({ webkitRelativePath }) => (webkitRelativePath ?? '').split('/').filter(Boolean)[0])
+    .find(Boolean);
+  return `${relativeRoot || 'QSP locations'}.qsrc`;
+}
+
+function summarizeFileNames(files: File[], t: ReturnType<typeof useTranslation>['t']) {
+  const visible = files.slice(0, 4).map(({ name }) => name);
+  return files.length > visible.length
+    ? `${visible.join(', ')} · ${t('library.import.moreFiles', { count: files.length - visible.length })}`
+    : visible.join(', ');
+}
+
+async function readBlobAsBase64(file: Blob) {
   const bytes = new Uint8Array(await file.arrayBuffer());
   let binary = '';
   for (const byte of bytes) binary += String.fromCharCode(byte);

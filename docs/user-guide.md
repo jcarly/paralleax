@@ -41,15 +41,17 @@ approximations and do not run with ChoiceScript semantics. The current limit is
 50 files and 96 KiB of source in total. Only import source material you have permission to use. See
 [`choicescript-import.md`](choicescript-import.md) for the exact mapping.
 
-For a QSP game, choose `QSP game` and select one compiled `.qsp`/`.gam` file or
-one UTF-8 `.qsps`, `.qsp-txt`, or `.txt-qsp` source. Standard accounts can import
-up to 80 KiB; administrators have no Paralleax application-level size limit,
-although the deployment infrastructure may enforce one. The importer converts
-locations, static actions, literal output and assignments,
+For a QSP game, choose `QSP game` and select one compiled `.qsp`/`.gam` file,
+one UTF-8 `.qsps`, `.qsp-txt`, or `.txt-qsp` source, or all `.qsrc` files from a
+`locations` directory. Standard accounts can import up to 80 KiB;
+administrators have no Paralleax application-level size limit, although the
+deployment infrastructure may enforce one. The importer converts locations,
+literal `ARGS[0]` variants, static actions, literal output and assignments,
 literal-index array cells, action-only `IF` / `ELSEIF` / `ELSE` branches, and
-static `GOTO` paths. Numeric and string variables reuse Story stats; `AND` and
-`OR` become Trigger condition groups, with preceding branches negated to preserve
-QSP exclusivity. Its
+static `GOTO` paths. A literal first navigation argument connects to its matching
+variant. Numeric and string variables reuse Story stats; `AND` and `OR` become
+Trigger condition groups, with preceding branches negated to preserve QSP
+exclusivity. Its
 report also displays the complete QSP coverage matrix, including unsupported
 calculated state, general conditional execution, subroutines, inventory, dynamic
 code, media, events, saves, input, and libraries. Review the automatic-navigation warning:

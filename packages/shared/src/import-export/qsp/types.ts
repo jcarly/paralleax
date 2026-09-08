@@ -1,12 +1,32 @@
 import type { Story } from '../../model/stories.js';
 
-export type QspSourceFormat = 'binary' | 'text';
+export type QspSourceFormat = 'binary' | 'text' | 'locations';
 
-export interface QspImportSource {
+export interface QspLocationSourceFile {
   name: string;
-  format: QspSourceFormat;
-  content: ArrayBuffer | string;
+  content: string;
 }
+
+interface QspBinaryImportSource {
+  name: string;
+  format: 'binary';
+  content: ArrayBuffer;
+}
+
+interface QspTextImportSource {
+  name: string;
+  format: 'text';
+  content: string;
+}
+
+interface QspLocationsImportSource {
+  name: string;
+  format: 'locations';
+  content: QspLocationSourceFile[];
+}
+
+export type QspImportSource =
+  QspBinaryImportSource | QspTextImportSource | QspLocationsImportSource;
 
 export type QspImportIssueSeverity = 'warning' | 'error';
 
@@ -46,13 +66,14 @@ export interface QspFeatureCoverage {
 
 export interface QspImportReport {
   format: 'qsp';
-  sourceFileCount: 1;
+  sourceFileCount: number;
   locationCount: number;
   actionCount: number;
   interactionCount: number;
   convertedStatementCount: number;
   approximatedStatementCount: number;
   unsupportedStatementCount: number;
+  omittedWarningCount?: number;
   coverage: QspFeatureCoverage[];
   issues: QspImportIssue[];
 }

@@ -18,6 +18,7 @@ import {
   getTriggerConditionGroups,
   getTriggerConditions,
   MAX_INTERACTION_BODY_LENGTH,
+  serializeQspLocationBundle,
 } from '@paralleax/shared';
 import { AppModule } from '../app.module';
 import { AuthService } from '../auth/auth.service';
@@ -482,6 +483,35 @@ end
       sourceFileCount: 1,
       locationCount: 1,
     });
+  });
+
+  it('imports a collection of qsrc location files through the existing QSP endpoint', async () => {
+    const bundle = serializeQspLocationBundle([
+      { name: 'locations/ending.qsrc', content: "# Ending\n'Done.'\n--- Ending ---" },
+      {
+        name: 'locations/start.qsrc',
+        content:
+          "# start\nif $ARGS[0] = '':\n  gt 'start', 'menu'\nend\nif $ARGS[0] = 'menu':\n  act 'Finish': gt 'Ending'\nend\n--- start ---",
+      },
+    ]);
+    const response = await request(httpServer)
+      .post('/api/stories/imports/qsp')
+      .send({
+        file: {
+          name: 'locations.qsrc',
+          format: 'locations',
+          contentBase64: Buffer.from(bundle, 'utf8').toString('base64'),
+        },
+      })
+      .expect(201);
+
+    expect(response.body.story.interactions.map(({ title }: { title: string }) => title)).toEqual([
+      'start',
+      'start · menu',
+      'Finish',
+      'Ending',
+    ]);
+    expect(response.body.report).toMatchObject({ sourceFileCount: 2, locationCount: 2 });
   });
 
   it('keeps the QSP size limit on the standard import route', async () => {

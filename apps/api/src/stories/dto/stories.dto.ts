@@ -151,18 +151,18 @@ export class QspSourceMetadataDto {
   @IsString()
   @IsNotEmpty()
   @MaxLength(260)
-  @Matches(/^[^\\/]+\.(?:qsp|gam|qsps|qsp-txt|txt-qsp)$/i)
+  @Matches(/^[^\\/]+\.(?:qsp|gam|qsps|qsp-txt|txt-qsp|qsrc)$/i)
   name!: string;
 
-  @IsIn(['binary', 'text'])
-  format!: 'binary' | 'text';
+  @IsIn(['binary', 'text', 'locations'])
+  format!: 'binary' | 'text' | 'locations';
 }
 
 export class QspSourceFileDto extends QspSourceMetadataDto {
   @IsString()
   @IsNotEmpty()
   @IsBase64()
-  @MaxLength(110_000)
+  @MaxLength(200_000)
   contentBase64!: string;
 }
 export class ImportQspDto {

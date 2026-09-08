@@ -28,12 +28,18 @@ export interface ParsedQspAction {
 export interface ParsedQspLocation extends Omit<QspSourceLocation, 'actions'> {
   source: QspSourcePosition;
   actions: ParsedQspAction[];
+  entryArgument?: string;
 }
 
 export interface QspCodeAnalysis {
   text: string[];
-  targetLocationNames: string[];
+  navigationTargets: QspNavigationTarget[];
   effects: QspVariableEffect[];
+}
+
+export interface QspNavigationTarget {
+  locationName: string;
+  argument?: string;
 }
 
 export interface QspVariableEffect {

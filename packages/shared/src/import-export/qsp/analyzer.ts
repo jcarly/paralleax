@@ -9,7 +9,7 @@ export function analyzeQspCode(
   source: QspSourcePosition,
   report: QspImportReport,
 ): QspCodeAnalysis {
-  const analysis: QspCodeAnalysis = { text: [], targetLocationNames: [], effects: [] };
+  const analysis: QspCodeAnalysis = { text: [], navigationTargets: [], effects: [] };
   let unsupportedBlockDepth = 0;
   for (let lineIndex = 0; lineIndex < lines.length; lineIndex += 1) {
     const sourceAtLine = { ...source, line: source.line + lineIndex };
@@ -96,7 +96,8 @@ export function analyzeQspCode(
       if (navigation) {
         const targetExpression = navigation[1];
         const target = parseQspStringLiteral(targetExpression);
-        if (!target || containsQspInterpolation(targetExpression)) {
+        const targetLength = consumedLiteralLength(targetExpression);
+        if (!target || containsQspInterpolation(targetExpression.slice(0, targetLength))) {
           unsupported(
             report,
             { ...source, line: source.line + lineIndex },
@@ -106,16 +107,20 @@ export function analyzeQspCode(
           );
           continue;
         }
-        analysis.targetLocationNames.push(target);
+        const remainder = targetExpression.slice(targetLength).trim();
+        const argumentResult = parseNavigationArgument(remainder);
+        analysis.navigationTargets.push({
+          locationName: target,
+          ...(argumentResult.argument !== undefined ? { argument: argumentResult.argument } : {}),
+        });
         report.convertedStatementCount += 1;
         touchQspFeature(report, 'navigation');
-        const remainder = targetExpression.slice(consumedLiteralLength(targetExpression)).trim();
-        if (remainder) {
+        if (argumentResult.ignored) {
           addQspSourceIssue(
             report,
             { ...source, line: source.line + lineIndex },
             'navigation_arguments_ignored',
-            `Arguments passed to the location "${target}" were not imported.`,
+            `Some arguments passed to the location "${target}" were not imported.`,
           );
           report.approximatedStatementCount += 1;
         }
@@ -132,7 +137,7 @@ export function analyzeQspCode(
       );
     }
   }
-  if (analysis.targetLocationNames.length > 1) {
+  if (analysis.navigationTargets.length > 1) {
     addQspSourceIssue(
       report,
       source,
@@ -142,6 +147,18 @@ export function analyzeQspCode(
     report.approximatedStatementCount += 1;
   }
   return analysis;
+}
+
+function parseNavigationArgument(remainder: string): { argument?: string; ignored: boolean } {
+  if (!remainder) return { ignored: false };
+  if (!remainder.startsWith(',')) return { ignored: true };
+  const expression = remainder.slice(1).trim();
+  const argument = parseQspStringLiteral(expression);
+  if (argument === undefined || containsQspInterpolation(expression)) return { ignored: true };
+  return {
+    argument,
+    ignored: Boolean(expression.slice(consumedLiteralLength(expression)).trim()),
+  };
 }
 
 function containsQspInterpolation(value: string) {

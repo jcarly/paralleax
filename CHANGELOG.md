@@ -1,5 +1,26 @@
 # Changelog
 
+## 2026-09-08
+
+- Fixed QSP location import when several independent top-level blocks test the
+  same literal `ARGS[0]` value. Their contents are now merged into one imported
+  variant in source order instead of rejecting the location as a duplicate.
+
+## 2026-09-07
+
+- Extended the existing experimental QSP adapter to import a selected collection
+  of UTF-8 `.qsrc` location files through the same compatibility report, mapping,
+  validation, and atomic persistence pipeline as compiled/text games. Literal
+  top-level `ARGS[0]` location variants now become separate interactions, and a
+  literal first `GOTO`/`GT` argument connects to the matching variant. The
+  importer prefers a `start` location as the collection entry, preserves source
+  filenames in diagnostics, and keeps unsupported project manifests, libraries,
+  dynamic arguments, and runtime behavior explicit. Large imports retain exact
+  occurrence counters while bounding detailed warning payloads; blocking errors
+  are never omitted. Graph edge de-duplication and imported layout queues now run
+  in linear time instead of repeatedly scanning or copying their accumulated
+  data, and very wide or cyclic imported layers wrap into bounded rows.
+
 ## 2026-09-03
 
 - Replaced full-aggregate story-library reads with paginated server-side summary

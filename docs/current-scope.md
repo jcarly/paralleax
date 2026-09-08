@@ -82,11 +82,13 @@ Paralleax currently includes:
   Story creation. Simple declarations, assignments, comparisons, and variable
   substitutions map to Paralleax typed stats, while unsupported expressions
   and runtime commands remain explicit in the compatibility report.
-- An experimental single-file QSP importer in the same story-import workflow. It
-  reads compiled `.qsp`/`.gam` and UTF-8 QSP text formats, converts locations,
+- An experimental QSP importer in the same story-import workflow. It reads
+  compiled `.qsp`/`.gam`, UTF-8 QSP text formats, or a selected collection of
+  `.qsrc` location files. It converts locations and literal `ARGS[0]` variants,
   static actions, literal output and assignments (including literal-index array
-  cells), action-only `IF` / `ELSEIF` / `ELSE` branches, and static navigation,
-  then returns occurrence-aware warnings and a complete
+  cells), action-only `IF` / `ELSEIF` / `ELSE` branches, and static navigation;
+  a literal first navigation argument is connected to the matching imported
+  `ARGS[0]` variant. It then returns occurrence-aware warnings and a complete
   feature coverage matrix. QSP state reuses Story stats, effects, and Trigger
   condition groups; unsupported runtime semantics do not become Paralleax engine
   behavior. Standard accounts retain the 80 KiB request limit; administrators

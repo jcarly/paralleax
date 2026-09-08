@@ -355,7 +355,7 @@ describe('StoryList', () => {
     await user.selectOptions(screen.getByLabelText('Source format'), 'qsp');
     const source = "# Start\n*pl 'Start.'\n---";
     await user.upload(
-      screen.getByLabelText('QSP game file'),
+      screen.getByLabelText('QSP game or location files'),
       new File([source], 'sample.qsps', { type: 'text/plain' }),
     );
     await user.click(screen.getByRole('button', { name: 'Import story' }));
@@ -369,6 +369,58 @@ describe('StoryList', () => {
     expect(screen.getByText('QSP compatibility coverage')).toBeInTheDocument();
     expect(screen.getByText('Variables, arrays, and expressions')).toBeInTheDocument();
     expect(screen.getByText('Partial')).toBeInTheDocument();
+  });
+
+  it('bundles multiple qsrc location files for the QSP importer', async () => {
+    const user = userEvent.setup();
+    const importedStory: Story = {
+      id: 'story-qsrc',
+      title: 'QSP locations',
+      createdAt: '2026-09-07T08:00:00.000Z',
+      updatedAt: '2026-09-07T08:00:00.000Z',
+      interactions: [],
+    };
+    vi.mocked(api.listStories).mockResolvedValue(storyPage([]));
+    vi.mocked(api.importQsp).mockResolvedValue({
+      story: importedStory,
+      report: {
+        format: 'qsp',
+        sourceFileCount: 2,
+        locationCount: 2,
+        actionCount: 0,
+        interactionCount: 2,
+        convertedStatementCount: 0,
+        approximatedStatementCount: 0,
+        unsupportedStatementCount: 0,
+        coverage: [],
+        issues: [],
+      },
+    });
+
+    render(
+      <MemoryRouter>
+        <StoryList user={standardUser} />
+      </MemoryRouter>,
+    );
+    await screen.findByRole('heading', { name: 'No stories found' });
+    await user.click(screen.getByRole('button', { name: 'Import a story' }));
+    await user.selectOptions(screen.getByLabelText('Source format'), 'qsp');
+    await user.upload(screen.getByLabelText('QSP game or location files'), [
+      new File(['# start\n--- start ---'], 'start.qsrc', { type: 'text/plain' }),
+      new File(['# room\n--- room ---'], 'room.qsrc', { type: 'text/plain' }),
+    ]);
+    await user.click(screen.getByRole('button', { name: 'Import story' }));
+
+    await waitFor(() => expect(api.importQsp).toHaveBeenCalledTimes(1));
+    const request = vi.mocked(api.importQsp).mock.calls[0][0];
+    expect(request).toMatchObject({ name: 'QSP locations.qsrc', format: 'locations' });
+    expect(JSON.parse(atob(request.contentBase64))).toEqual({
+      version: 1,
+      files: [
+        { name: 'start.qsrc', content: '# start\n--- start ---' },
+        { name: 'room.qsrc', content: '# room\n--- room ---' },
+      ],
+    });
   });
 
   it('streams QSP games larger than the standard limit for administrators', async () => {
@@ -424,7 +476,7 @@ describe('StoryList', () => {
     const source = new File([' '.repeat(81 * 1024)], 'large.qsps', {
       type: 'text/plain',
     });
-    await user.upload(screen.getByLabelText('QSP game file'), source);
+    await user.upload(screen.getByLabelText('QSP game or location files'), source);
 
     expect(
       screen.getByText('Approximately 81 KiB · no Paralleax limit for administrators'),
