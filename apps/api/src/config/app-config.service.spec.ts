@@ -10,8 +10,27 @@ describe('AppConfigService', () => {
       corsOrigin: 'http://localhost:5173',
       nodeEnvironment: 'development',
       registrationMode: 'open',
+      authRegistrationRateLimit: 5,
     });
     expect(config.nodeEnvironment).toBe('development');
+  });
+
+  it('allows the registration rate limit only in the test environment', () => {
+    expect(
+      loadAppConfig({
+        NODE_ENV: 'test',
+        TEST_AUTH_REGISTRATION_RATE_LIMIT: '100',
+      }).authRegistrationRateLimit,
+    ).toBe(100);
+    expect(
+      loadAppConfig({
+        NODE_ENV: 'production',
+        DATABASE_URL: 'postgres://db/app',
+        CORS_ORIGIN: 'https://app.example.com',
+        REGISTRATION_MODE: 'closed',
+        TEST_AUTH_REGISTRATION_RATE_LIMIT: '100',
+      }).authRegistrationRateLimit,
+    ).toBe(5);
   });
 
   it('normalizes optional configuration and enables production cookies', () => {
@@ -41,6 +60,10 @@ describe('AppConfigService', () => {
     [{ CORS_ORIGIN: 'ftp://example.com' }, 'CORS_ORIGIN must use http: or https:'],
     [{ CORS_ORIGIN: 'https://example.com/app' }, 'CORS_ORIGIN must contain only an http(s) origin'],
     [{ PORT: '70000' }, 'PORT must be an integer between 1 and 65535'],
+    [
+      { NODE_ENV: 'test', TEST_AUTH_REGISTRATION_RATE_LIMIT: '0' },
+      'TEST_AUTH_REGISTRATION_RATE_LIMIT must be an integer between 1 and 10000',
+    ],
     [{ POSTGRES_SSL: 'yes' }, 'POSTGRES_SSL must be true or false'],
     [{ NODE_ENV: 'staging' }, 'NODE_ENV must be one of'],
     [{ REGISTRATION_MODE: 'invite' }, 'REGISTRATION_MODE must be one of'],

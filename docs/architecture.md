@@ -305,6 +305,10 @@ request id on `ApiError` for future support and recovery workflows.
 The global throttler defaults to 100 requests per minute. Story reads retain
 that limit, while story mutation routes use a stricter 60-per-minute policy.
 Authentication registration and login keep their separate lower limits.
+The locally managed real-stack acceptance server raises only the registration
+limit through a validated test-environment setting because its isolated scenarios
+create more than five accounts from one CI address; production keeps the normal
+five-per-minute limit.
 Interaction HTML is rejected above 64,000 characters before sanitization and
 persistence. Express JSON and form parsing is configured explicitly at 128 KiB.
 Parser rejections pass through the API exception filter as a stable

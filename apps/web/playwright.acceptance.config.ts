@@ -2,7 +2,9 @@ import { defineConfig, devices } from '@playwright/test';
 import { resolve } from 'node:path';
 
 const externalBaseUrl = process.env.PARALLEAX_ACCEPTANCE_BASE_URL;
-const baseURL = externalBaseUrl ?? 'http://127.0.0.1:5173';
+const apiPort = localPort(process.env.PARALLEAX_ACCEPTANCE_API_PORT, 3300);
+const webPort = localPort(process.env.PARALLEAX_ACCEPTANCE_WEB_PORT, 5173);
+const baseURL = externalBaseUrl ?? `http://127.0.0.1:${webPort}`;
 const repositoryRoot = resolve(import.meta.dirname, '../..');
 const accessCode = process.env.PARALLEAX_ACCEPTANCE_ACCESS_CODE ?? 'playwright-alpha-access-code';
 
@@ -30,28 +32,29 @@ export default defineConfig({
           cwd: repositoryRoot,
           env: {
             ...process.env,
-            CORS_ORIGIN: 'http://127.0.0.1:5173',
+            CORS_ORIGIN: `http://127.0.0.1:${webPort}`,
             DATABASE_URL:
               process.env.PARALLEAX_ACCEPTANCE_DATABASE_URL ??
               'postgres://paralleax:paralleax@127.0.0.1:5432/paralleax',
             NODE_ENV: 'test',
-            PORT: '3300',
+            PORT: String(apiPort),
             POSTGRES_SSL: 'false',
             REGISTRATION_ACCESS_CODE: accessCode,
             REGISTRATION_MODE: 'access-code',
+            TEST_AUTH_REGISTRATION_RATE_LIMIT: '100',
           },
-          url: 'http://127.0.0.1:3300/api/ready',
+          url: `http://127.0.0.1:${apiPort}/api/ready`,
           reuseExistingServer: !process.env.CI,
           timeout: 240_000,
         },
         {
-          command: 'npm run dev -w @paralleax/web -- --host 127.0.0.1',
+          command: `npm run dev -w @paralleax/web -- --host 127.0.0.1 --port ${webPort} --strictPort`,
           cwd: repositoryRoot,
           env: {
             ...process.env,
-            VITE_API_PROXY_TARGET: 'http://127.0.0.1:3300',
+            VITE_API_PROXY_TARGET: `http://127.0.0.1:${apiPort}`,
           },
-          url: 'http://127.0.0.1:5173',
+          url: `http://127.0.0.1:${webPort}`,
           reuseExistingServer: !process.env.CI,
           timeout: 120_000,
         },
@@ -63,3 +66,11 @@ export default defineConfig({
     },
   ],
 });
+
+function localPort(value: string | undefined, fallback: number) {
+  const port = Number(value ?? fallback);
+  if (!Number.isInteger(port) || port < 1 || port > 65_535) {
+    throw new Error('Acceptance server ports must be integers between 1 and 65535.');
+  }
+  return port;
+}

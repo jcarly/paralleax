@@ -13,6 +13,7 @@ export class AppConfigService {
   readonly postgresSslCa?: string;
   readonly registrationMode!: RegistrationMode;
   readonly registrationAccessCode?: string;
+  readonly authRegistrationRateLimit!: number;
 
   constructor() {
     Object.assign(this, loadAppConfig(process.env));
@@ -52,6 +53,15 @@ export function loadAppConfig(environment: NodeJS.ProcessEnv) {
       'REGISTRATION_ACCESS_CODE must contain at least 16 characters in access-code mode',
     );
   }
+  const authRegistrationRateLimit =
+    nodeEnvironment === 'test'
+      ? integerValue(
+          'TEST_AUTH_REGISTRATION_RATE_LIMIT',
+          environment.TEST_AUTH_REGISTRATION_RATE_LIMIT ?? '5',
+          1,
+          10_000,
+        )
+      : 5;
   return {
     nodeEnvironment,
     databaseUrl: validUrl(
@@ -65,6 +75,7 @@ export function loadAppConfig(environment: NodeJS.ProcessEnv) {
     postgresSslCa: environment.POSTGRES_SSL_CA?.replace(/\\n/g, '\n'),
     registrationMode,
     registrationAccessCode: registrationMode === 'access-code' ? registrationAccessCode : undefined,
+    authRegistrationRateLimit,
   };
 }
 
@@ -91,11 +102,15 @@ function validUrl(name: string, value: string, protocols: string[]) {
 }
 
 function validPort(value: string) {
-  const port = Number(value);
-  if (!Number.isInteger(port) || port < 1 || port > 65_535) {
-    throw new Error('PORT must be an integer between 1 and 65535');
+  return integerValue('PORT', value, 1, 65_535);
+}
+
+function integerValue(name: string, value: string, minimum: number, maximum: number) {
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < minimum || parsed > maximum) {
+    throw new Error(`${name} must be an integer between ${minimum} and ${maximum}`);
   }
-  return port;
+  return parsed;
 }
 
 function booleanValue(name: string, value: string) {

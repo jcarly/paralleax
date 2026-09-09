@@ -87,6 +87,23 @@ describe('Auth API', () => {
     await agent.get('/api/auth/me').expect(401);
   });
 
+  it('keeps the default registration throttle at five requests per minute', async () => {
+    await app.listen(0);
+    const responses = await Promise.all(
+      Array.from({ length: 6 }, (_, index) =>
+        request(httpServer)
+          .post('/api/auth/register')
+          .send({
+            email: `rate-limited-${index}@example.com`,
+            password: 'correct horse battery staple',
+          }),
+      ),
+    );
+
+    expect(responses.filter(({ status }) => status === 201)).toHaveLength(5);
+    expect(responses.filter(({ status }) => status === 429)).toHaveLength(1);
+  });
+
   it('rejects invalid credentials and protects story routes', async () => {
     await request(httpServer).get('/api/stories').expect(401);
     await request(httpServer)

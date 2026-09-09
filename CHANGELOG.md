@@ -2,6 +2,15 @@
 
 ## 2026-09-09
 
+- Fixed the real-stack acceptance suite exhausting the production-strength
+  registration throttle after its first five accounts. The API keeps the normal
+  five-per-minute limit and accepts a validated higher limit only under the test
+  environment used by the local acceptance stack. Its API and web ports can also
+  be overridden safely when a developer already has the application running.
+- Updated the production upload, query parsing, and HTML-sanitization
+  dependencies to patched releases. Multer remains an explicit override until
+  Nest's Express adapter adopts the corrected release itself, while the API Jest
+  configuration transpiles the sanitizer's ESM-only parser subtree for Jest 29.
 - Added a two-account real-stack review journey. An invited reader creates a
   comment on the current interaction, the author receives it live, navigates
   back to the anchored graph node, replies and resolves it, and the reader sees

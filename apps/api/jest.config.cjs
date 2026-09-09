@@ -4,8 +4,13 @@ module.exports = {
   testEnvironment: 'node',
   testRegex: '.*\\.spec\\.ts$',
   transform: {
-    '^.+\\.(t|j)s$': 'ts-jest',
+    '^.+\\.ts$': 'ts-jest',
+    '^.+\\.js$': ['ts-jest', { tsconfig: { allowJs: true } }],
   },
+  // sanitize-html 2.17.7 is CommonJS but its patched htmlparser2 dependency is
+  // ESM-only. Node 24 can require it directly; Jest 29 needs the nested ESM
+  // packages transpiled before its CommonJS test runtime evaluates them.
+  transformIgnorePatterns: ['<rootDir>/../../node_modules/(?!sanitize-html/node_modules/)'],
   collectCoverageFrom: ['src/**/*.ts', '!src/main.ts', '!src/**/*.spec.ts'],
   coverageDirectory: 'coverage',
   coverageReporters: ['text', 'html', 'lcov'],
