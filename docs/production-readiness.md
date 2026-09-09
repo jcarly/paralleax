@@ -50,8 +50,13 @@ small test stories. It is not yet ready for an open public production service.
   invitations, effective UI permissions, reader redirection, collaborator edits,
   live SSE invalidation, and persistence. Real-response transport reordering also
   verifies that pending/error state remains accurate and graph creation, movement,
-  and deletion survive reloads. Compact review and representative import paths
-  remain P1 extensions rather than core alpha data-safety gaps.
+  and deletion survive reloads. A two-account review scenario now covers an
+  anchored reader comment, author navigation/reply/resolution, bidirectional live
+  updates, and reload persistence. Small repository-owned ChoiceScript and QSP
+  `locations` fixtures are imported, opened, and traversed in Simulation through
+  separate real-stack scenarios. A weekly/manual stress lane also runs the
+  PostgreSQL baseline and a 599-interaction real-stack journey through import,
+  complete graph loading, search navigation, edit/reload, and Simulation.
 - Implemented foundation: structured production logs, request identifiers,
   request completion logs, and stable API error envelopes that hide unexpected
   internal details.
@@ -167,11 +172,15 @@ characters, 100 item instances, 1,000 triggers, and linked conditions) measured:
 - complete relational load: 316 ms;
 - one node-position mutation, including repository read/diff/write: 688 ms;
 - React Flow projection of 2,000 linked interactions: 647 ms in Vitest/jsdom.
+- real-stack import of 300 QSP locations producing 599 interactions: 1.29 s;
+- initial browser editor projection of those 599 interactions: 9.00 s;
+- complete browser journey through search, edit, reload, and Simulation: 2.5 min.
 
 Before batched graph insertion, the same initial save took 68.7 s. These are
-developer-machine regression baselines, not production p95/p99 claims. Run the
-opt-in PostgreSQL stress suite in a controlled CI job and retain measurements
-before setting provider-specific service objectives.
+developer-machine regression baselines, not production p95/p99 claims. The
+weekly/manual CI stress lane retains structured PostgreSQL and browser
+measurements; compare those results before setting provider-specific service
+objectives.
 
 ## Security and Abuse Baseline
 

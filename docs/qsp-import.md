@@ -119,6 +119,11 @@ Each matrix row includes the number of detected occurrences. Zero does not mean
 that the feature is supported; it only means that the selected game did not
 exercise it in code the static analyzer could identify.
 
+The Playwright real-stack acceptance project imports two small repository-owned
+`.qsrc` locations through the library UI, verifies the generated action and
+literal `ARGS[0]` destination in the graph, and traverses that path in Simulation
+Mode without mocking a Paralleax endpoint.
+
 ## What remains for runtime-equivalent support
 
 Complete QSP compatibility would require several source concepts that do not yet

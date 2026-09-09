@@ -136,6 +136,11 @@ Importing content never grants rights to use it: the author remains responsible
 for the selected source and assets. In particular, do not turn publicly readable
 commercial game sources into bundled test data without permission.
 
+The Playwright real-stack acceptance project additionally imports a small
+repository-owned two-scene source through the library UI, opens its generated
+graph, and traverses one mapped branch in Simulation Mode without mocking a
+Paralleax endpoint.
+
 Technical references:
 
 - [ChoiceScript official repository and example](https://github.com/dfabulich/choicescript/tree/main/web/mygame/scenes)

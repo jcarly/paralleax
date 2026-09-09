@@ -868,9 +868,14 @@ classes directly.
   fabricating its payload. The project can start a local stack or target a
   deployed environment through `PARALLEAX_ACCEPTANCE_BASE_URL`. A shared test-only
   harness owns registration, Story creation, mutation response checks, and common
-  editor interactions without replacing the production HTTP boundary. Isolated
-  browser contexts exercise account-specific permissions and live collaboration
-  without sharing authentication state.
+  editor/access interactions without replacing the production HTTP boundary.
+  Isolated browser contexts exercise account-specific permissions, live
+  collaboration, and the anchored reader-to-author review loop without sharing
+  authentication state. Small ChoiceScript and QSP `locations` fixtures also
+  cross the production import endpoints before their generated graph and one
+  Simulation path are inspected. A gated large-Story case uses the same boundary
+  and logs structured browser timings; it and the PostgreSQL stress suite run on
+  the weekly/manual stress lane rather than every push.
 - Coverage: Jest coverage for the API, Vitest V8 coverage for shared and the web app,
   with per-workspace thresholds enforced by the coverage commands.
 - Code style: ESLint and Prettier.
@@ -889,6 +894,7 @@ npm run test -w @paralleax/api
 npm run test -w @paralleax/web
 npm run test:e2e -w @paralleax/web
 npm run test:acceptance -w @paralleax/web
+RUN_LARGE_STORY_ACCEPTANCE=true npm run test:acceptance -w @paralleax/web -- large-story.scheduled.spec.ts
 npm run typecheck
 npm run coverage
 npm run build

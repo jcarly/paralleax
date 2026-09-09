@@ -107,7 +107,15 @@ An author can safely create, navigate, edit, test, and recover a large story wit
   manager-only access controls, collaborator editing, live invalidation, and
   PostgreSQL durability. A transport-reordering scenario delays one real API
   response while another mutation completes, then verifies pending/error status
-  correctness and graph create/move/delete durability across reloads.
+  correctness and graph create/move/delete durability across reloads. A compact
+  two-account review scenario verifies a reader-created interaction comment,
+  author navigation/reply/resolution, bidirectional live updates, and persistence
+  after reload. Separate ChoiceScript and QSP `locations` scenarios import small
+  repository fixtures through the library, inspect their graph, and traverse a
+  mapped path in Simulation Mode. A weekly/manual stress lane creates a linked
+  599-interaction Story, verifies complete graph loading, search navigation,
+  edit/reload durability, and Simulation, and records browser and PostgreSQL
+  timing baselines.
 - Save-state protection during navigation and page unload.
 - Rich-text and HTTP payload limits.
 - Story Canvas foundations.
@@ -157,9 +165,6 @@ An author can safely create, navigate, edit, test, and recover a large story wit
 - Maintain reproducible stress-test fixtures and recorded baselines.
 - Add a real-browser regression for late route responses and unresolved-save
   navigation guards.
-- Extend the real-stack acceptance project with a compact review flow,
-  representative ChoiceScript/QSP imports, and a scheduled realistically sized
-  Story run. Keep this suite small and sequential.
 
 ### Exit criteria
 

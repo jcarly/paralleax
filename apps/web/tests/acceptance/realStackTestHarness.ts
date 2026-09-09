@@ -10,6 +10,12 @@ export interface AcceptanceAccount {
   password: string;
 }
 
+interface StoryAccessOptions {
+  visibility: 'private' | 'authenticated' | 'public' | 'invitation';
+  editPolicy: 'owner' | 'collaborators' | 'authenticated';
+  commentPolicy: 'editors' | 'readers';
+}
+
 interface AcceptanceStorySession extends AcceptanceAccount {
   storyId: string;
   storyTitle: string;
@@ -68,6 +74,61 @@ export async function createStory(page: Page, prefix: string) {
   return { storyId: story.id, storyTitle };
 }
 
+export async function openStoryAccess(page: Page, storyTitle: string) {
+  await page.getByRole('link', { name: 'Stories', exact: true }).click();
+  await expect(page.getByRole('region', { name: 'Loading stories' })).toBeHidden();
+  const storyCard = page.locator('.library-card').filter({ hasText: storyTitle });
+  await expect(storyCard).toBeVisible();
+  await storyCard.getByRole('link', { name: 'Access' }).click();
+  await expect(page.getByRole('heading', { name: 'Access and permissions' })).toBeVisible();
+}
+
+export async function configureStoryAccess(
+  page: Page,
+  storyId: string,
+  options: StoryAccessOptions,
+) {
+  await page.getByLabel('Who can read this story?').selectOption(options.visibility);
+  await page.getByLabel('Who can edit this story?').selectOption(options.editPolicy);
+  await page.getByLabel('Who may comment?').selectOption(options.commentPolicy);
+  await expect(page.getByLabel('Who can read this story?')).toHaveValue(options.visibility);
+  await expect(page.getByLabel('Who can edit this story?')).toHaveValue(options.editPolicy);
+  await expect(page.getByLabel('Who may comment?')).toHaveValue(options.commentPolicy);
+
+  const accessUpdate = waitForApiResponse(
+    page,
+    'PATCH',
+    new RegExp(`/api/stories/${storyId}/access$`),
+  );
+  await page.getByRole('button', { name: 'Save access' }).click();
+  const response = await expectSuccessful(accessUpdate);
+  expect(response.request().postDataJSON()).toMatchObject(options);
+}
+
+export async function inviteStoryCollaborator(
+  page: Page,
+  storyId: string,
+  email: string,
+  role: 'viewer' | 'editor' = 'viewer',
+) {
+  await page.getByLabel('Account email').fill(email);
+  await page.getByLabel('Permission').selectOption(role);
+  const invitation = waitForApiResponse(
+    page,
+    'POST',
+    new RegExp(`/api/stories/${storyId}/access/collaborators$`),
+  );
+  await page.getByRole('button', { name: 'Add invitation' }).click();
+  await expectSuccessful(invitation);
+
+  const grant = page.locator('.access-list li').filter({ hasText: email });
+  await expect(grant).toBeVisible();
+  await expect(
+    grant.getByText(role === 'editor' ? 'Editor' : 'Reader', { exact: true }),
+  ).toBeVisible();
+  return grant;
+}
+
 export function interactionNode(page: Page, title: string) {
   return page.getByTestId('interaction-node').filter({ hasText: title });
 }
@@ -111,13 +172,13 @@ export function waitForTriggerPatch(page: Page) {
   );
 }
 
-export function waitForApiResponse(page: Page, method: string, path: RegExp) {
+export function waitForApiResponse(page: Page, method: string, path: RegExp, timeout = 60_000) {
   return page.waitForResponse(
     (response) => {
       const request = response.request();
       return request.method() === method && path.test(new URL(response.url()).pathname);
     },
-    { timeout: 60_000 },
+    { timeout },
   );
 }
 

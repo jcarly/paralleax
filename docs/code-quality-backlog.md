@@ -55,7 +55,8 @@ during the August 2026 code review. Production gates remain authoritative in
       item lookup maps only where the measurements confirm repeated linear costs.
 - [ ] Retain React Flow projection and interaction-latency budgets after the
       current 2,000-node baseline.
-- [ ] Run controlled PostgreSQL stress tests in CI and retain comparable results.
+- [x] Run controlled PostgreSQL stress tests in the weekly/manual CI stress lane
+      and retain their structured measurements in job logs.
 
 ## P1 — Module Boundaries
 
@@ -154,8 +155,14 @@ during the August 2026 code review. Production gates remain authoritative in
       timers before and after reload.
 - [x] Add real-stack P0 coverage for two-user invitations, permissions, editing,
       and live invalidation.
-- [ ] Add small real-stack P1 scenarios for review comments, known
-      ChoiceScript/QSP fixtures, and scheduled realistically sized Story use.
+- [x] Add a small real-stack P1 review scenario for a reader-created anchored
+      comment, author navigation/reply/resolution, live updates in both
+      directions, and reload persistence.
+- [x] Add small real-stack P1 scenarios for known ChoiceScript and QSP
+      `locations` fixtures, including graph inspection and Simulation traversal.
+- [x] Add a weekly/manual real-stack P1 scenario for realistically sized Story
+      import, complete graph loading, search navigation, editing/reload, and
+      Simulation traversal, with structured timing output.
 - [ ] Add Playwright coverage for reader load retry and unresolved-save guards,
       including real browser `beforeunload` behavior.
 - [ ] Add automated accessibility checks and a manual keyboard/focus audit.

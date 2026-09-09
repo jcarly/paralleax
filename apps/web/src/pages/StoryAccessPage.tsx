@@ -1,7 +1,11 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router-dom';
-import type { StoryAccessConfiguration, StoryCollaboratorRole } from '@paralleax/shared';
+import type {
+  StoryAccessConfiguration,
+  StoryAccessSettings,
+  StoryCollaboratorRole,
+} from '@paralleax/shared';
 import { api } from '../api';
 import './ProductPages.css';
 
@@ -15,11 +19,26 @@ export function StoryAccessPage() {
   const [error, setError] = useState('');
 
   useEffect(() => {
+    let cancelled = false;
     api
       .getStoryAccess(storyId)
-      .then(setAccess)
-      .catch((caught: Error) => setError(caught.message));
+      .then((loadedAccess) => {
+        if (!cancelled) setAccess(loadedAccess);
+      })
+      .catch((caught: Error) => {
+        if (!cancelled) setError(caught.message);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [storyId]);
+
+  function updateAccessSetting<Key extends keyof StoryAccessSettings>(
+    key: Key,
+    value: StoryAccessSettings[Key],
+  ) {
+    setAccess((current) => (current ? { ...current, [key]: value } : current));
+  }
 
   async function save() {
     if (!access || pending) return;
@@ -95,13 +114,9 @@ export function StoryAccessPage() {
               <select
                 value={access.visibility}
                 onChange={(event) =>
-                  setAccess((current) =>
-                    current
-                      ? {
-                          ...current,
-                          visibility: event.target.value as StoryAccessConfiguration['visibility'],
-                        }
-                      : current,
+                  updateAccessSetting(
+                    'visibility',
+                    event.currentTarget.value as StoryAccessConfiguration['visibility'],
                   )
                 }
               >
@@ -117,13 +132,9 @@ export function StoryAccessPage() {
               <select
                 value={access.editPolicy}
                 onChange={(event) =>
-                  setAccess((current) =>
-                    current
-                      ? {
-                          ...current,
-                          editPolicy: event.target.value as StoryAccessConfiguration['editPolicy'],
-                        }
-                      : current,
+                  updateAccessSetting(
+                    'editPolicy',
+                    event.currentTarget.value as StoryAccessConfiguration['editPolicy'],
                   )
                 }
               >
@@ -139,14 +150,9 @@ export function StoryAccessPage() {
               <select
                 value={access.commentPolicy}
                 onChange={(event) =>
-                  setAccess((current) =>
-                    current
-                      ? {
-                          ...current,
-                          commentPolicy: event.target
-                            .value as StoryAccessConfiguration['commentPolicy'],
-                        }
-                      : current,
+                  updateAccessSetting(
+                    'commentPolicy',
+                    event.currentTarget.value as StoryAccessConfiguration['commentPolicy'],
                   )
                 }
               >

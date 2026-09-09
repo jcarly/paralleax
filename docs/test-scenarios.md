@@ -83,6 +83,24 @@ The character-stat vertical keeps these regressions covered:
   editor URL redirects to the player; after promotion to editor, that account can
   edit the Story, the owner's already-open editor receives the committed change
   through SSE, and both contexts retain it after reload.
+- Real-stack browser acceptance: an invited reader comments on the current
+  interaction; the author's open editor receives the thread live, opens it from
+  the global list, selects the anchored graph interaction, replies, and resolves
+  it; the reader receives both mutations live and finds the resolved discussion
+  with both messages after reload.
+- Real-stack browser acceptance: a two-scene repository ChoiceScript fixture is
+  imported through the library, reports no compatibility warning, exposes both
+  branches and its destination in the graph, and traverses one imported path in
+  Simulation Mode.
+- Real-stack browser acceptance: two repository QSP `.qsrc` locations are
+  imported together through the library, expose their action and literal
+  `ARGS[0]` destination in the graph, display the QSP coverage report, and
+  traverse the imported action path in Simulation Mode.
+- Scheduled real-stack browser acceptance: a generated QSP source imports 300
+  linked locations into 599 interactions; the browser loads every interaction,
+  finds the final one through search, edits and reloads it durably, navigates
+  back to the entry through search, and traverses the first imported link in
+  Simulation Mode while logging import and editor-load timings.
 - Real-stack browser acceptance: one real Story metadata response is held after
   its API commit while a child-interaction creation completes first. Save status
   remains pending until both responses settle; the child then survives movement
@@ -114,7 +132,8 @@ The character-stat vertical keeps these regressions covered:
   restore its current schema so repository tests are independent of file order.
 - PostgreSQL stress: round-trip a configurable 1,000-interaction story and
   enforce explicit budgets for initial save, complete load, and a common node
-  mutation; emit the measured payload size and durations.
+  mutation; emit the measured payload size and durations. CI executes this
+  baseline weekly and when `run_scheduled_stress` is selected manually.
 - Editor stress: project 2,000 linked interactions into React Flow interaction
   nodes, trigger nodes, and edges within the documented local budget.
 - Migration policy: no migration may delete, truncate, or drop the stories table

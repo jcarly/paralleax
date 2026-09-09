@@ -1,8 +1,11 @@
 import { expect, test } from '@playwright/test';
 import {
   createdInteraction,
+  configureStoryAccess,
   expectSuccessful,
   interactionNode,
+  inviteStoryCollaborator,
+  openStoryAccess,
   registerAndCreateStory,
   registerUser,
   waitForApiResponse,
@@ -42,41 +45,13 @@ test('an owner grants reader then editor access and receives the collaborator ed
   try {
     const collaborator = await registerUser(collaboratorPage, 'Collaboration editor');
 
-    await ownerPage.getByRole('link', { name: 'Stories', exact: true }).click();
-    await expect(ownerPage.getByRole('region', { name: 'Loading stories' })).toBeHidden();
-    const ownerStoryCard = ownerPage.locator('.library-card').filter({ hasText: storyTitle });
-    await ownerStoryCard.getByRole('link', { name: 'Access' }).click();
-    await expect(ownerPage.getByRole('heading', { name: 'Access and permissions' })).toBeVisible();
-
-    await ownerPage
-      .getByLabel('Who can read this story?')
-      .selectOption({ label: 'Invited users only' });
-    await ownerPage
-      .getByLabel('Who can edit this story?')
-      .selectOption({ label: 'Invited editors' });
-    await expect(ownerPage.getByLabel('Who can read this story?')).toHaveValue('invitation');
-    await expect(ownerPage.getByLabel('Who can edit this story?')).toHaveValue('collaborators');
-    const accessUpdate = waitForApiResponse(
-      ownerPage,
-      'PATCH',
-      new RegExp(`/api/stories/${storyId}/access$`),
-    );
-    await ownerPage.getByRole('button', { name: 'Save access' }).click();
-    await expectSuccessful(accessUpdate);
-
-    await ownerPage.getByLabel('Account email').fill(collaborator.email);
-    const readerInvitation = waitForApiResponse(
-      ownerPage,
-      'POST',
-      new RegExp(`/api/stories/${storyId}/access/collaborators$`),
-    );
-    await ownerPage.getByRole('button', { name: 'Add invitation' }).click();
-    await expectSuccessful(readerInvitation);
-    const collaboratorGrant = ownerPage.locator('.access-list li').filter({
-      hasText: collaborator.email,
+    await openStoryAccess(ownerPage, storyTitle);
+    await configureStoryAccess(ownerPage, storyId, {
+      visibility: 'invitation',
+      editPolicy: 'collaborators',
+      commentPolicy: 'editors',
     });
-    await expect(collaboratorGrant).toBeVisible();
-    await expect(collaboratorGrant.getByText('Reader', { exact: true })).toBeVisible();
+    const collaboratorGrant = await inviteStoryCollaborator(ownerPage, storyId, collaborator.email);
 
     await collaboratorPage.goto('/');
     await expect(collaboratorPage.getByRole('region', { name: 'Loading stories' })).toBeHidden();
@@ -94,15 +69,7 @@ test('an owner grants reader then editor access and receives the collaborator ed
     await collaboratorPage.getByRole('button', { name: 'Shared opening' }).click();
     await expect(collaboratorPage.getByRole('heading', { name: 'Shared opening' })).toBeVisible();
 
-    await ownerPage.getByLabel('Account email').fill(collaborator.email);
-    await ownerPage.getByLabel('Permission').selectOption({ label: 'Editor' });
-    const editorInvitation = waitForApiResponse(
-      ownerPage,
-      'POST',
-      new RegExp(`/api/stories/${storyId}/access/collaborators$`),
-    );
-    await ownerPage.getByRole('button', { name: 'Add invitation' }).click();
-    await expectSuccessful(editorInvitation);
+    await inviteStoryCollaborator(ownerPage, storyId, collaborator.email, 'editor');
     await expect(collaboratorGrant.getByText('Editor', { exact: true })).toBeVisible();
 
     const ownerEventStream = waitForApiResponse(

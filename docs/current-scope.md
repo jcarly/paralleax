@@ -138,7 +138,14 @@ Paralleax currently includes:
   two-account path verifies reader/editor invitations, effective permissions,
   reader-only redirection, live collaborator invalidation, and reload durability.
   A transport-reordered real-response path verifies truthful concurrent save
-  status and graph create/move/delete persistence across full reloads.
+  status and graph create/move/delete persistence across full reloads. A
+  two-account review path verifies reader-created interaction comments, author
+  navigation, replies, resolution, bidirectional live updates, and persistence.
+  Small ChoiceScript and QSP `locations` paths verify import through the library,
+  the generated graph, and Simulation traversal without API mocks. A gated
+  weekly/manual path builds a 599-interaction Story and verifies complete loading,
+  search navigation, editing, reload durability, and Simulation while retaining
+  timing measurements in CI logs.
 - Provider-neutral production API/web images, a migration-first Compose shape,
   exact production-origin enforcement, invitation-code registration, deployment
   smoke checks, and operator runbooks for a private alpha.

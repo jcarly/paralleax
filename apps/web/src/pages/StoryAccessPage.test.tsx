@@ -1,5 +1,6 @@
-import { cleanup, render, screen } from '@testing-library/react';
+import { act, cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { StrictMode } from 'react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { StoryAccessConfiguration } from '@paralleax/shared';
@@ -90,5 +91,40 @@ describe('StoryAccessPage', () => {
     await user.click(screen.getByRole('button', { name: 'Remove' }));
     expect(api.removeStoryCollaborator).toHaveBeenCalledWith('story-1', 'user-2');
     expect(screen.queryByText('reader@example.com')).not.toBeInTheDocument();
+  });
+
+  it('ignores an obsolete Strict Mode access response after editing starts', async () => {
+    const user = userEvent.setup();
+    let resolveObsolete!: (value: StoryAccessConfiguration) => void;
+    let resolveCurrent!: (value: StoryAccessConfiguration) => void;
+    vi.mocked(api.getStoryAccess)
+      .mockReturnValueOnce(
+        new Promise((resolve) => {
+          resolveObsolete = resolve;
+        }),
+      )
+      .mockReturnValueOnce(
+        new Promise((resolve) => {
+          resolveCurrent = resolve;
+        }),
+      );
+
+    render(
+      <StrictMode>
+        <MemoryRouter initialEntries={['/stories/story-1/access']}>
+          <Routes>
+            <Route path="/stories/:storyId/access" element={<StoryAccessPage />} />
+          </Routes>
+        </MemoryRouter>
+      </StrictMode>,
+    );
+
+    await act(async () => resolveCurrent(structuredClone(access)));
+    const visibility = await screen.findByLabelText('Who can read this story?');
+    await user.selectOptions(visibility, 'invitation');
+    expect(visibility).toHaveValue('invitation');
+
+    await act(async () => resolveObsolete(structuredClone(access)));
+    expect(visibility).toHaveValue('invitation');
   });
 });

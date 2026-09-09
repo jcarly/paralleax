@@ -1,5 +1,27 @@
 # Changelog
 
+## 2026-09-09
+
+- Added a two-account real-stack review journey. An invited reader creates a
+  comment on the current interaction, the author receives it live, navigates
+  back to the anchored graph node, replies and resolves it, and the reader sees
+  both updates before the resolved discussion is verified after reload.
+- Reused shared real-stack access helpers for Story access configuration and
+  reader/editor invitations across collaboration and review acceptance tests.
+- Fixed rapid access-form changes in real browsers by capturing each selected
+  value before scheduling the shared functional state update and ignoring
+  obsolete Strict Mode access-load responses that could reset an edited form.
+  Acceptance helpers now assert the exact payload before relying on invitations.
+- Added separate real-stack import journeys for small repository-owned
+  ChoiceScript and QSP `locations` fixtures. Each journey imports through the
+  library UI, inspects the resulting graph, and traverses the mapped path in
+  Simulation Mode.
+- Added an opt-in real-stack large-Story journey and a weekly/manual CI stress
+  lane. The default 300-location QSP fixture produces 599 linked interactions
+  and verifies complete loading, search navigation, editing, reload durability,
+  and Simulation while logging comparable import and editor-load timings. The
+  same lane runs the existing PostgreSQL stress baseline.
+
 ## 2026-09-08
 
 - Fixed reader autosaves for items obtained from reusable definitions. The API
