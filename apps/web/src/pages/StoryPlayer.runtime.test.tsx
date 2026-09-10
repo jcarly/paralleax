@@ -74,6 +74,20 @@ describe('StoryPlayer runtime state', () => {
     expect(api.deleteReaderProgress).toHaveBeenCalledWith('story-1', 'simulation');
   });
 
+  it('focuses and closes the save dialog without losing its opening control', async () => {
+    const user = userEvent.setup();
+    await renderPlayer();
+    const openingControl = screen.getByRole('button', { name: 'Saves' });
+
+    await user.click(openingControl);
+
+    expect(await screen.findByRole('textbox', { name: 'Save name' })).toHaveFocus();
+    await user.keyboard('{Escape}');
+
+    expect(screen.queryByRole('dialog', { name: 'Manage saves' })).not.toBeInTheDocument();
+    await waitFor(() => expect(openingControl).toHaveFocus());
+  });
+
   it('shows failed Trigger probability rolls in simulation and allows forcing the path', async () => {
     const user = userEvent.setup();
     const probabilityStory = structuredClone(story);

@@ -1,4 +1,5 @@
-import { useId, type KeyboardEvent, type ReactNode } from 'react';
+import { useId, type ReactNode } from 'react';
+import { handleModalDialogKeyDown } from './modalDialogKeyboard';
 
 export function RichTextEditorDialog({
   title,
@@ -18,30 +19,6 @@ export function RichTextEditorDialog({
   const titleId = useId();
   const descriptionId = useId();
 
-  function handleDialogKeyDown(event: KeyboardEvent<HTMLElement>) {
-    if (event.key === 'Escape') {
-      event.preventDefault();
-      onCancel();
-      return;
-    }
-    if (event.key !== 'Tab') return;
-    const focusable = Array.from(
-      event.currentTarget.querySelectorAll<HTMLElement>(
-        'button:not(:disabled), input:not(:disabled), select:not(:disabled), [tabindex]:not([tabindex="-1"])',
-      ),
-    );
-    if (focusable.length === 0) return;
-    const first = focusable[0];
-    const last = focusable.at(-1)!;
-    if (event.shiftKey && document.activeElement === first) {
-      event.preventDefault();
-      last.focus();
-    } else if (!event.shiftKey && document.activeElement === last) {
-      event.preventDefault();
-      first.focus();
-    }
-  }
-
   return (
     <div className="modal-dialog-backdrop" role="presentation" onMouseDown={onCancel}>
       <section
@@ -50,7 +27,7 @@ export function RichTextEditorDialog({
         aria-modal="true"
         className={`modal-dialog${className ? ` ${className}` : ''}`}
         role="dialog"
-        onKeyDown={handleDialogKeyDown}
+        onKeyDown={(event) => handleModalDialogKeyDown(event, onCancel)}
         onMouseDown={(event) => event.stopPropagation()}
       >
         <header className="rich-text-dialog-header">

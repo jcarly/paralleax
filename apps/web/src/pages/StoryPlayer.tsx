@@ -115,6 +115,7 @@ export function StoryPlayer({
   const [editingChoiceId, setEditingChoiceId] = useState<string>();
   const [commentsOpen, setCommentsOpen] = useState(false);
   const editingChoiceInputRef = useRef<HTMLInputElement>(null);
+  const savesDialogTrigger = useRef<HTMLButtonElement>(null);
   const sessionRef = useRef<ReaderProgressState>(session);
   const [timerNow, setTimerNow] = useState(() => Date.now());
   const directStartAutosavedKey = useRef('');
@@ -128,6 +129,11 @@ export function StoryPlayer({
     fallbackError: t('player.storyChangesSaveFailed'),
   });
   const hasActiveSimulationMutations = simulationMutations.hasActiveMutations;
+
+  const closeSavesDialog = useCallback(() => {
+    setSavesOpen(false);
+    window.requestAnimationFrame(() => savesDialogTrigger.current?.focus());
+  }, []);
 
   usePendingSaveGuard(
     authenticated &&
@@ -1017,6 +1023,7 @@ export function StoryPlayer({
         ) : null}
         {authenticated ? (
           <button
+            ref={savesDialogTrigger}
             className="player-toolbar-button"
             type="button"
             onClick={() => setSavesOpen(true)}
@@ -1442,7 +1449,7 @@ export function StoryPlayer({
         <ReaderSaveDialog
           story={story}
           session={session}
-          onClose={() => setSavesOpen(false)}
+          onClose={closeSavesDialog}
           onLoad={loadSave}
         />
       ) : null}

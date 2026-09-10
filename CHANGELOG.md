@@ -1,5 +1,22 @@
 # Changelog
 
+## 2026-09-10
+
+- Added strict WCAG A/AA Axe checks for the Story library, creation and import
+  dialogs, loaded editor, reader, and save dialog. Secondary color tokens now
+  meet text contrast thresholds, the Story title has an accessible name, and
+  decorative React Flow handles no longer expose invalid ARIA.
+- Reused one modal keyboard handler for rich-text, Story creation, import,
+  connection, and reader-save dialogs. Dialogs now receive an intentional
+  initial focus, contain keyboard focus, close with Escape when cancellable, and
+  restore focus to their opening controls where the workflow has one.
+- Deferred the React Flow stylesheet with the existing graphical route chunks
+  instead of downloading it for the Story library and application shell.
+- Added a manifest-based web bundle contract to every production web build. It
+  keeps Story Editor and Story Player as dynamic entries, excludes their
+  incremental assets from the initial chunk graph, reports compressed sizes,
+  and fails when the documented initial or route budgets are exceeded.
+
 ## 2026-09-09
 
 - Replaced the Story library's misleading empty state after a list failure with

@@ -612,6 +612,9 @@ describe('StoryList', () => {
     await user.dblClick(createButton);
 
     expect(api.createStory).toHaveBeenCalledOnce();
+    screen.getByLabelText('Story title').focus();
+    await user.keyboard('{Escape}');
+    expect(screen.getByRole('dialog', { name: 'Create a story' })).toBeVisible();
     expect(screen.getByRole('button', { name: 'Creating…' })).toBeDisabled();
 
     await act(async () =>
@@ -624,6 +627,80 @@ describe('StoryList', () => {
       }),
     );
     expect(await screen.findByRole('heading', { name: 'Only once' })).toBeVisible();
+  });
+
+  it('closes the creation dialog with Escape and restores its opening control', async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.listStories).mockResolvedValue(storyPage([]));
+
+    render(
+      <MemoryRouter>
+        <StoryList user={standardUser} />
+      </MemoryRouter>,
+    );
+    await screen.findByRole('heading', { name: 'No stories found' });
+    const openingControl = screen.getByRole('button', { name: 'New story' });
+
+    await user.click(openingControl);
+
+    const title = screen.getByLabelText('Story title');
+    expect(title).toHaveFocus();
+
+    await user.keyboard('{Escape}');
+
+    expect(screen.queryByRole('dialog', { name: 'Create a story' })).not.toBeInTheDocument();
+    await waitFor(() => expect(openingControl).toHaveFocus());
+  });
+
+  it('focuses and closes the import dialog without losing its opening control', async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.listStories).mockResolvedValue(storyPage([]));
+
+    render(
+      <MemoryRouter>
+        <StoryList user={standardUser} />
+      </MemoryRouter>,
+    );
+    await screen.findByRole('heading', { name: 'No stories found' });
+    const openingControl = screen.getByRole('button', { name: 'Import a story' });
+
+    await user.click(openingControl);
+
+    expect(screen.getByLabelText('ChoiceScript scene files')).toHaveFocus();
+    await user.keyboard('{Escape}');
+
+    expect(
+      screen.queryByRole('dialog', { name: 'Import a ChoiceScript project' }),
+    ).not.toBeInTheDocument();
+    await waitFor(() => expect(openingControl).toHaveFocus());
+  });
+
+  it('keeps a non-cancellable import dialog open when Escape is pressed', async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.listStories).mockResolvedValue(storyPage([]));
+    vi.mocked(api.importChoiceScript).mockReturnValue(new Promise(() => undefined));
+
+    render(
+      <MemoryRouter>
+        <StoryList user={standardUser} />
+      </MemoryRouter>,
+    );
+    await screen.findByRole('heading', { name: 'No stories found' });
+    await user.click(screen.getByRole('button', { name: 'Import a story' }));
+    const dialog = screen.getByRole('dialog', { name: 'Import a ChoiceScript project' });
+    const fileInput = within(dialog).getByLabelText('ChoiceScript scene files');
+    await user.upload(
+      fileInput,
+      new File(['*title Pending import'], 'startup.txt', { type: 'text/plain' }),
+    );
+
+    await user.click(within(dialog).getByRole('button', { name: 'Import story' }));
+    await waitFor(() => expect(api.importChoiceScript).toHaveBeenCalledOnce());
+    fileInput.focus();
+    await user.keyboard('{Escape}');
+
+    expect(dialog).toBeVisible();
+    expect(within(dialog).getByRole('button', { name: 'Importing…' })).toBeDisabled();
   });
 
   it('keeps the creation form recoverable after a temporary failure', async () => {

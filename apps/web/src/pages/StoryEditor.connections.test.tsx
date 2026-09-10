@@ -117,7 +117,9 @@ describe('StoryEditor connections', () => {
     await renderEditor(story);
     await user.click(screen.getByTestId('connect-interaction-3-interaction-2'));
     expect(await screen.findByRole('dialog', { name: 'Connect interactions' })).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Add to condition group 1' }));
+    const existingGroup = screen.getByRole('button', { name: 'Add to condition group 1' });
+    expect(existingGroup).toHaveFocus();
+    await user.click(existingGroup);
 
     await waitFor(() => {
       expect(api.updateTrigger).toHaveBeenCalledWith('story-1', 'interaction-2', 'trigger-2', {
@@ -128,6 +130,21 @@ describe('StoryEditor connections', () => {
     });
     expect(api.addTrigger).not.toHaveBeenCalled();
     expect(await screen.findByTestId('flow-edge-interaction-3-interaction-2')).toBeInTheDocument();
+  });
+
+  it('cancels a pending connection dialog with Escape', async () => {
+    const user = userEvent.setup();
+    const story = storyWithThreeInteractions();
+
+    await renderEditor(story);
+    await user.click(screen.getByTestId('connect-interaction-3-interaction-2'));
+    expect(await screen.findByRole('button', { name: 'Add to condition group 1' })).toHaveFocus();
+
+    await user.keyboard('{Escape}');
+
+    expect(screen.queryByRole('dialog', { name: 'Connect interactions' })).not.toBeInTheDocument();
+    expect(api.addTrigger).not.toHaveBeenCalled();
+    expect(api.updateTrigger).not.toHaveBeenCalled();
   });
 
   it('adds a source to an existing trigger when the connection is dropped on its marker', async () => {

@@ -9,6 +9,7 @@ import type {
   Story,
 } from '@paralleax/shared';
 import { api } from '../../api';
+import { handleModalDialogKeyDown } from '../../components/modalDialogKeyboard';
 import { loadStoryEditor } from '../../pages/storyRouteLoaders';
 
 type StoryImportFormat = 'choicescript' | 'qsp';
@@ -78,6 +79,11 @@ export function StoryImportDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby="story-import-title"
+        onKeyDown={(event) =>
+          handleModalDialogKeyDown(event, () => {
+            if (!pending) onClose();
+          })
+        }
       >
         <div className="dialog-icon" aria-hidden="true">
           ⇧

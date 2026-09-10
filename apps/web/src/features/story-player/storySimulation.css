@@ -307,7 +307,7 @@
   margin: 1.4rem 0 0.6rem;
   padding-bottom: 0.5rem;
   border-bottom: 1px solid #d9d9d2;
-  color: #777b73;
+  color: var(--color-muted);
   font-size: 0.62rem;
   font-weight: 750;
   letter-spacing: 0.1em;
@@ -320,7 +320,7 @@
 
 .player-inventory .hint {
   margin: 0;
-  color: #989c94;
+  color: var(--color-subtle);
   font-size: 0.68rem;
 }
 
@@ -375,7 +375,7 @@
 }
 
 .player-inventory .player-item-list > li > small {
-  color: #989c94;
+  color: var(--color-subtle);
   font-size: 0.6rem;
 }
 
@@ -390,7 +390,7 @@
   padding: 0;
   border-radius: 0;
   background: transparent;
-  color: #71766e;
+  color: var(--color-muted);
   font-size: 0.62rem;
 }
 
@@ -608,7 +608,7 @@
 }
 
 .player-story-content > p:not(.eyebrow) {
-  color: #71766e;
+  color: var(--color-muted);
   font-family: Georgia, serif;
   font-size: 1rem;
   line-height: 1.65;
@@ -644,7 +644,7 @@
 }
 
 .simulation-edit-label small {
-  color: #989c94;
+  color: var(--color-subtle);
   font-size: 0.62rem;
 }
 
@@ -659,7 +659,7 @@
 
 .character-selection > p {
   margin: 0 0 1.5rem;
-  color: #71766e;
+  color: var(--color-muted);
   font-size: 0.78rem;
 }
 
@@ -717,7 +717,7 @@
 .character-choice-card small {
   align-self: start;
   overflow: hidden;
-  color: #71766e;
+  color: var(--color-muted);
   font-size: 0.62rem;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -845,7 +845,7 @@
 
 .ending p {
   margin: 0.25rem 0 0;
-  color: #71766e;
+  color: var(--color-muted);
   font-size: 0.65rem;
 }
 
@@ -898,7 +898,7 @@
 
 .encounter-card p {
   margin: 0;
-  color: #71766e;
+  color: var(--color-muted);
   font-size: 0.63rem;
   line-height: 1.45;
 }

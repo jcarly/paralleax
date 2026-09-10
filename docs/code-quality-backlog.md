@@ -167,13 +167,16 @@ during the August 2026 code review. Production gates remain authoritative in
       an authored save is unresolved.
 - [x] Add Playwright coverage for reader load retry and reader-progress
       unresolved-save navigation guards.
-- [ ] Add automated accessibility checks and a manual keyboard/focus audit.
+- [x] Add automated WCAG A/AA accessibility checks for the Story library,
+      creation/import dialogs, loaded editor, reader, and save dialog.
+- [ ] Complete the manual keyboard/focus audit across all authoring, import,
+      save, access, and comment dialogs.
 - [x] Add focused cleanup tests for obsolete editor/player loads and reader
       autosave story-id changes.
 - [x] Extend cleanup coverage to an explicit editor unmount while its projection
       request remains unresolved.
 - [x] Review coverage thresholds after module splits and cover hidden branches.
-- [ ] Track bundle size so refactors do not pull React Flow into the initial chunk.
+- [x] Track bundle size so refactors do not pull React Flow into the initial chunk.
 
 ## Delivery Notes
 

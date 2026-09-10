@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { STORY_LIST_PAGE_SIZE, type Story, type StorySummary } from '@paralleax/shared';
 import { api, type AuthUser } from '../api';
+import { handleModalDialogKeyDown } from '../components/modalDialogKeyboard';
 import { StoryImportDialog } from '../features/story-import/StoryImportDialog';
 import { loadStoryEditor, loadStoryPlayer } from './storyRouteLoaders';
 import './ProductPages.css';
@@ -34,6 +35,8 @@ export function StoryList({ user }: { user: AuthUser | null }) {
   const [error, setError] = useState('');
   const [loadError, setLoadError] = useState('');
   const listRequestVersion = useRef(0);
+  const creationDialogTrigger = useRef<HTMLElement | null>(null);
+  const importDialogTrigger = useRef<HTMLElement | null>(null);
   const listRequestKey = [
     isAuthenticated ? (user?.id ?? 'authenticated') : 'public',
     debouncedQuery,
@@ -122,7 +125,7 @@ export function StoryList({ user }: { user: AuthUser | null }) {
       setStories((items) => [summarizeStory(story, user ?? undefined), ...items]);
       setTotalCount((count) => count + 1);
       setNewTitle('');
-      setCreating(false);
+      closeCreationDialog();
       resetLibraryView();
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : t('library.createFailed'));
@@ -174,6 +177,28 @@ export function StoryList({ user }: { user: AuthUser | null }) {
     setRefreshVersion((version) => version + 1);
   }
 
+  function openCreationDialog(trigger: HTMLElement) {
+    creationDialogTrigger.current = trigger;
+    setError('');
+    setCreating(true);
+  }
+
+  function closeCreationDialog() {
+    setCreating(false);
+    window.requestAnimationFrame(() => creationDialogTrigger.current?.focus());
+  }
+
+  function openImportDialog(trigger: HTMLElement) {
+    importDialogTrigger.current = trigger;
+    setError('');
+    setImporting(true);
+  }
+
+  function closeImportDialog() {
+    setImporting(false);
+    window.requestAnimationFrame(() => importDialogTrigger.current?.focus());
+  }
+
   return (
     <main className="product-page library-main">
       <section className="library-heading">
@@ -200,14 +225,15 @@ export function StoryList({ user }: { user: AuthUser | null }) {
               className="product-secondary"
               type="button"
               disabled={Boolean(pending)}
-              onClick={() => {
-                setError('');
-                setImporting(true);
-              }}
+              onClick={(event) => openImportDialog(event.currentTarget)}
             >
               <span aria-hidden="true">⇧</span> {t('library.import.action')}
             </button>
-            <button className="product-primary" type="button" onClick={() => setCreating(true)}>
+            <button
+              className="product-primary"
+              type="button"
+              onClick={(event) => openCreationDialog(event.currentTarget)}
+            >
               <span aria-hidden="true">＋</span> {t('library.newStory')}
             </button>
           </div>
@@ -352,7 +378,11 @@ export function StoryList({ user }: { user: AuthUser | null }) {
               {t('library.clearFilters')}
             </button>
           ) : isAuthenticated ? (
-            <button className="product-secondary" type="button" onClick={() => setCreating(true)}>
+            <button
+              className="product-secondary"
+              type="button"
+              onClick={(event) => openCreationDialog(event.currentTarget)}
+            >
               {t('library.createStory')}
             </button>
           ) : null}
@@ -366,6 +396,11 @@ export function StoryList({ user }: { user: AuthUser | null }) {
             role="dialog"
             aria-modal="true"
             aria-labelledby="new-story-title"
+            onKeyDown={(event) =>
+              handleModalDialogKeyDown(event, () => {
+                if (pending !== 'story') closeCreationDialog();
+              })
+            }
           >
             <div className="dialog-icon" aria-hidden="true">
               ◇
@@ -388,7 +423,7 @@ export function StoryList({ user }: { user: AuthUser | null }) {
                   className="product-secondary"
                   type="button"
                   disabled={pending === 'story'}
-                  onClick={() => setCreating(false)}
+                  onClick={closeCreationDialog}
                 >
                   {t('library.dialog.cancel')}
                 </button>
@@ -408,7 +443,7 @@ export function StoryList({ user }: { user: AuthUser | null }) {
       {importing && isAuthenticated ? (
         <StoryImportDialog
           isAdministrator={isAdministrator}
-          onClose={() => setImporting(false)}
+          onClose={closeImportDialog}
           onImported={(story) => {
             setStories((items) => [summarizeStory(story, user), ...items]);
             setTotalCount((count) => count + 1);

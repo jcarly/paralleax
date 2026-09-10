@@ -1,7 +1,7 @@
 .product-page {
   --product-ink: #20221f;
-  --product-muted: #71766e;
-  --product-subtle: #989c94;
+  --product-muted: #666b63;
+  --product-subtle: #686d65;
   --product-line: #dedfd9;
   --product-paper: #ffffff;
   --product-wash: #f7f7f3;
@@ -293,7 +293,7 @@
   align-items: center;
   padding: 0 0.75rem;
   border-bottom: 2px solid transparent;
-  color: #71766e;
+  color: var(--color-muted);
   font-size: 0.75rem;
   font-weight: 600;
   text-decoration: none;
@@ -313,6 +313,7 @@
   grid-template-columns: 32px auto;
   gap: 0.55rem;
   align-items: center;
+  opacity: 1;
 }
 
 .product-user > span:first-child {
@@ -329,7 +330,7 @@
 }
 
 .product-user > span:last-child {
-  color: #71766e;
+  color: var(--color-muted);
   font-size: 0.68rem;
   opacity: 1;
 }
@@ -339,7 +340,7 @@
   padding: 0.45rem 0.65rem;
   border: 0;
   background: transparent;
-  color: #71766e;
+  color: var(--color-muted);
   box-shadow: none;
   font-size: 0.7rem;
 }

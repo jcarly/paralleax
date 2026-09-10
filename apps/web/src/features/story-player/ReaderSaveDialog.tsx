@@ -9,6 +9,7 @@ import {
   type Story,
 } from '@paralleax/shared';
 import { api } from '../../api';
+import { handleModalDialogKeyDown } from '../../components/modalDialogKeyboard';
 
 export function ReaderSaveDialog({
   story,
@@ -127,6 +128,7 @@ export function ReaderSaveDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby="reader-save-dialog-title"
+        onKeyDown={(event) => handleModalDialogKeyDown(event, onClose)}
         onMouseDown={(event) => event.stopPropagation()}
       >
         <div className="reader-save-dialog-header">
@@ -143,6 +145,7 @@ export function ReaderSaveDialog({
           <label>
             <span>{t('player.saves.name')}</span>
             <input
+              autoFocus
               value={name}
               maxLength={MAX_READER_SAVE_NAME_LENGTH}
               placeholder={t('player.saves.namePlaceholder')}

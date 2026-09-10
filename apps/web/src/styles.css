@@ -3,7 +3,7 @@
 :root {
   /* Color tokens */
   --color-text: #20221f;
-  --color-muted: #71766e;
+  --color-muted: #666b63;
   --color-surface: #ffffff;
   --color-surface-secondary: #fbfbf8;
   --color-page: #f7f7f3;
@@ -26,7 +26,7 @@
   --color-error: #a5453f;
   --color-header: #fbfbf8;
   --color-ghost: #636860;
-  --color-subtle: #989c94;
+  --color-subtle: #686d65;
   --color-panel-border: #dedfd9;
   --color-node-border: #d4d7d0;
   --color-node-muted: #71766e;

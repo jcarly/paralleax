@@ -1,7 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
-import '@xyflow/react/dist/style.css';
 import './styles.css';
 import './features/story-editor/editor.css';
 import './features/story-editor/inspectors/inspector-layout.css';

@@ -18,6 +18,7 @@ import {
   type NodeMouseHandler,
   type ReactFlowInstance,
 } from '@xyflow/react';
+import '@xyflow/react/dist/style.css';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import {
   canManageCommentThread as canActorManageCommentThread,
@@ -40,6 +41,7 @@ import { InteractionInspector } from '../components/InteractionInspector';
 import { InteractionNode } from '../components/InteractionNode';
 import { ItemDefinitionInspector } from '../components/ItemDefinitionInspector';
 import { LocationInspector } from '../components/LocationInspector';
+import { handleModalDialogKeyDown } from '../components/modalDialogKeyboard';
 import { StatDefinitionInspector } from '../components/StatDefinitionInspector';
 import { StoryCanvasContextMenu } from '../components/StoryCanvasContextMenu';
 import { StoryCanvasToolbar } from '../components/StoryCanvasToolbar';
@@ -989,6 +991,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
     >
       <div className="editor-toolbar">
         <input
+          aria-label={t('editor.storyTitle')}
           className="story-title-input"
           value={story.title}
           readOnly={reviewOnly}
@@ -1631,12 +1634,14 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
             role="dialog"
             aria-modal="true"
             aria-labelledby="connection-dialog-title"
+            onKeyDown={(event) => handleModalDialogKeyDown(event, cancelPendingConnection)}
           >
             <h2 id="connection-dialog-title">{t('editor.connection.title')}</h2>
             <p>{t('editor.connection.description')}</p>
             <div className="connection-dialog-actions">
               {existingTriggerChoices.map((trigger, index) => (
                 <button
+                  autoFocus={index === 0}
                   className="secondary"
                   type="button"
                   key={trigger.id}

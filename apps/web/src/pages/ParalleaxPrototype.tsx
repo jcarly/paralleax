@@ -11,6 +11,7 @@ import {
   type Connection,
   type NodeProps,
 } from '@xyflow/react';
+import '@xyflow/react/dist/style.css';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   PrototypeAuthPage,

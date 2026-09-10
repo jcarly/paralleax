@@ -57,13 +57,13 @@ test.describe('Story editor persistence', () => {
 
     await page.goto('/stories/story-1/edit');
     await page.getByTestId('interaction-node').filter({ hasText: 'Original title' }).click();
-    await page.getByLabel('Title').fill('New title');
-    await page.getByLabel('Title').blur();
+    await page.getByLabel('Title', { exact: true }).fill('New title');
+    await page.getByLabel('Title', { exact: true }).blur();
 
     await expect(
       page.getByTestId('interaction-node').filter({ hasText: 'New title' }),
     ).toBeVisible();
-    await expect(page.getByLabel('Title')).toBeVisible();
+    await expect(page.getByLabel('Title', { exact: true })).toBeVisible();
     await expect(page.getByText('Loading...')).toHaveCount(0);
   });
 
@@ -307,8 +307,8 @@ test.describe('Story editor persistence', () => {
 
     await page.goto('/stories/story-1/edit');
     await page.getByTestId('interaction-node').filter({ hasText: 'Original title' }).click();
-    await page.getByLabel('Title').fill('Pending browser reload');
-    await page.getByLabel('Title').blur();
+    await page.getByLabel('Title', { exact: true }).fill('Pending browser reload');
+    await page.getByLabel('Title', { exact: true }).blur();
     await expect(page.getByLabel('Story save status')).toContainText('Saving');
 
     const dialogPromise = page.waitForEvent('dialog');
@@ -320,7 +320,7 @@ test.describe('Story editor persistence', () => {
 
     expect(page.isClosed()).toBe(false);
     await expect(page).toHaveURL('/stories/story-1/edit');
-    await expect(page.getByLabel('Title')).toHaveValue('Pending browser reload');
+    await expect(page.getByLabel('Title', { exact: true })).toHaveValue('Pending browser reload');
 
     releaseSave();
     await expect(page.getByLabel('Story save status')).toHaveText('Saved');

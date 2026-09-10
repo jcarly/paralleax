@@ -505,6 +505,14 @@ deterministically. Edit and reader links preload their corresponding chunk on
 hover or keyboard focus so explicit navigation intent hides most of the added
 route-loading latency.
 
+The React Flow stylesheet is imported by the two graphical routes rather than
+the application entry. Vite emits a production manifest, and every web build
+checks its complete static import graph using compressed asset sizes. The
+initial JavaScript and stylesheet budgets are 135 KiB and 24 KiB; incremental
+Story Editor and Story Player assets are limited to 145 KiB and 95 KiB. The
+contract also fails if either route stops being a dynamic entry or becomes a
+static dependency of the application entry.
+
 ## React Flow Boundary
 
 React Flow is currently a good fit for the editor because Paralleax needs custom
@@ -866,6 +874,11 @@ classes directly.
 - Web: Vitest and Testing Library.
 - Shared: Vitest for narrative rules and pure story operations.
 - Functional UI: fast Playwright suites with controlled API responses.
+- Accessibility: strict Axe WCAG A/AA checks cover representative loaded states
+  of the Story library, editor, and reader, including creation, import, and save
+  dialogs. Shared modal keyboard behavior owns focus containment and Escape
+  handling across product dialogs; browser flows also verify restoration to the
+  opening control where one exists.
 - Alpha acceptance: a small sequential Playwright suite against the real API and
   PostgreSQL. Core flows do not intercept Paralleax endpoints; the explicit
   transport-reordering case holds and forwards a real API response without
@@ -882,6 +895,8 @@ classes directly.
   the weekly/manual stress lane rather than every push.
 - Coverage: Jest coverage for the API, Vitest V8 coverage for shared and the web app,
   with per-workspace thresholds enforced by the coverage commands.
+- Bundle contract: the production web build checks the Vite manifest, dynamic
+  route boundaries, and compressed initial/editor/player budgets.
 - Code style: ESLint and Prettier.
 - GitHub Actions: lint, format, typecheck, coverage, build, PostgreSQL 17
   integration and recovery, Playwright, production dependency audit, and

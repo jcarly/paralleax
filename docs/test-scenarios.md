@@ -186,6 +186,9 @@ The character-stat vertical keeps these regressions covered:
   retaining the user-facing message.
 - Operations: the explicit migration command completes before the API process
   starts in Docker Compose.
+- Web build: the Vite manifest keeps Story Editor and Story Player outside the
+  initial static chunk graph, reports their compressed incremental costs, and
+  rejects route or size-budget regressions.
 - API configuration: valid local defaults are typed, while malformed database
   URLs, origins, ports, SSL flags, registration modes, environments, and missing
   production endpoints fail fast.
@@ -394,6 +397,14 @@ The character-stat vertical keeps these regressions covered:
 
 Component and domain regressions supporting these flows also cover:
 
+- WCAG A/AA Axe checks on the Story library, Story-creation and import dialogs,
+  loaded editor, loaded reader, and reader-save dialog, without disabling
+  individual accessibility rules;
+- creation, import, connection, rich-text, and reader-save dialog focus
+  containment and Escape dismissal, with restoration to the exact opening
+  control when the workflow has one;
+- Story creation and import remaining visible when Escape is pressed while
+  their deliberately non-cancellable request is still pending;
 - a failed initial reader load showing an actionable error and recovering on
   retry without remounting the route;
 - character- or location-rooted and nested authored items retaining their definition, root

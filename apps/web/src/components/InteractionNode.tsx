@@ -136,7 +136,7 @@ export function InteractionNode({ id, data }: NodeProps) {
         id="new-trigger-input"
         position={Position.Top}
         className={`node-trigger-input nodrag nopan ${d.showNewTriggerInput ? 'is-visible' : ''}`}
-        aria-label={t('graph.createTriggerInput')}
+        aria-hidden="true"
         title={t('graph.createTrigger')}
       />
       <strong>
