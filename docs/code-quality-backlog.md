@@ -38,7 +38,7 @@ during the August 2026 code review. Production gates remain authoritative in
       npm override; the production dependency audit reports no known findings.
 - [ ] Remove the targeted Swagger `js-yaml` override once Swagger declares the
       fixed patch directly, retaining the high-severity CI audit.
-- [ ] Verify with an automated test that a late response from a previous story
+- [x] Verify with an automated test that a late response from a previous story
       cannot overwrite the active editor or reader route.
 
 ## P1 — Performance And Persistence
@@ -129,8 +129,8 @@ during the August 2026 code review. Production gates remain authoritative in
 
 ## P2 — Error Handling And User Feedback
 
-- [ ] Give Simulation Mode mutations visible saving, failure, and recovery UI.
-- [ ] Add retry and empty states to story listing and prevent duplicate submits.
+- [x] Give Simulation Mode mutations visible saving, failure, and recovery UI.
+- [x] Add retry and empty states to story listing and prevent duplicate submits.
 - [ ] Standardize loading, empty, recoverable-error, save-error, and expired-
       session presentation across frontend routes.
 - [ ] Decide whether failed optimistic mutations should reload or restore the
@@ -163,11 +163,16 @@ during the August 2026 code review. Production gates remain authoritative in
 - [x] Add a weekly/manual real-stack P1 scenario for realistically sized Story
       import, complete graph loading, search navigation, editing/reload, and
       Simulation traversal, with structured timing output.
-- [ ] Add Playwright coverage for reader load retry and unresolved-save guards,
-      including real browser `beforeunload` behavior.
+- [x] Add Playwright coverage for a real browser `beforeunload` cancellation while
+      an authored save is unresolved.
+- [x] Add Playwright coverage for reader load retry and reader-progress
+      unresolved-save navigation guards.
 - [ ] Add automated accessibility checks and a manual keyboard/focus audit.
-- [ ] Add focused cleanup tests for unmounts and story-id changes.
-- [ ] Review coverage thresholds after module splits and cover hidden branches.
+- [x] Add focused cleanup tests for obsolete editor/player loads and reader
+      autosave story-id changes.
+- [x] Extend cleanup coverage to an explicit editor unmount while its projection
+      request remains unresolved.
+- [x] Review coverage thresholds after module splits and cover hidden branches.
 - [ ] Track bundle size so refactors do not pull React Flow into the initial chunk.
 
 ## Delivery Notes

@@ -103,6 +103,46 @@ describe('useReaderProgressPersistence', () => {
       'simulation',
     );
   });
+
+  it('does not let an earlier Story save block or update the active Story', async () => {
+    let resolveFirstSave: (() => void) | undefined;
+    vi.mocked(api.saveReaderProgress)
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolveFirstSave = () =>
+              resolve({
+                state: sessionFixture(),
+                updatedAt: '2026-08-26T08:00:00.000Z',
+              });
+          }),
+      )
+      .mockResolvedValueOnce({
+        state: sessionFixture(),
+        updatedAt: '2026-08-26T08:01:00.000Z',
+      });
+    const { result, rerender } = renderHook(
+      ({ storyId }) => useReaderProgressPersistence({ authenticated: true, storyId }),
+      { initialProps: { storyId: 'story-1' } },
+    );
+
+    act(() => result.current.save(sessionFixture()));
+    await waitFor(() => expect(api.saveReaderProgress).toHaveBeenCalledTimes(1));
+
+    rerender({ storyId: 'story-2' });
+    act(() => result.current.save(sessionFixture()));
+
+    await waitFor(() => expect(api.saveReaderProgress).toHaveBeenCalledTimes(2));
+    expect(api.saveReaderProgress).toHaveBeenLastCalledWith(
+      'story-2',
+      expect.objectContaining({ journeyInteractionIds: ['start'] }),
+      'reader',
+    );
+    await waitFor(() => expect(result.current.status).toBe('saved'));
+
+    act(() => resolveFirstSave?.());
+    await waitFor(() => expect(result.current.status).toBe('saved'));
+  });
 });
 
 function sessionFixture(): ReaderProgressState {

@@ -16,6 +16,7 @@ describe('story runtime loader', () => {
     const story = storyFixture([interaction('current'), interaction('old-option', ['current'])]);
     vi.mocked(api.getStoryRuntimeSlice).mockResolvedValue(
       runtimeSlice({
+        totalOptionCount: 1,
         optionInteractionIds: ['new-option'],
         interactions: [interaction('current'), interaction('new-option', ['current'])],
       }),
@@ -32,6 +33,8 @@ describe('story runtime loader', () => {
       .mockResolvedValueOnce(
         runtimeSlice({
           hasMore: true,
+          pageSize: 1,
+          totalOptionCount: 2,
           optionInteractionIds: ['option-1'],
           interactions: [interaction('current'), interaction('option-1', ['current'])],
         }),
@@ -39,6 +42,8 @@ describe('story runtime loader', () => {
       .mockResolvedValueOnce(
         runtimeSlice({
           page: 2,
+          pageSize: 1,
+          totalOptionCount: 2,
           optionInteractionIds: ['option-2'],
           interactions: [interaction('option-2', ['current'])],
         }),
@@ -116,6 +121,46 @@ describe('story runtime loader', () => {
       id: 'referenced',
       body: 'referenced body',
     });
+  });
+
+  it('rejects a truncated option page instead of treating it as a branch ending', async () => {
+    vi.mocked(api.getStoryRuntimeSlice).mockResolvedValue(
+      runtimeSlice({
+        totalOptionCount: 2,
+        optionInteractionIds: ['option-1'],
+        interactions: [interaction('option-1', ['current'])],
+      }),
+    );
+
+    await expect(
+      loadStoryRuntimeSlice(storyFixture([interaction('current')]), 'current', ['current']),
+    ).rejects.toThrow('runtime options returned 1 of 2 expected records');
+  });
+
+  it('rejects duplicate options returned by separate pages', async () => {
+    vi.mocked(api.getStoryRuntimeSlice)
+      .mockResolvedValueOnce(
+        runtimeSlice({
+          totalOptionCount: 2,
+          hasMore: true,
+          pageSize: 1,
+          optionInteractionIds: ['option-1'],
+          interactions: [interaction('option-1', ['current'])],
+        }),
+      )
+      .mockResolvedValueOnce(
+        runtimeSlice({
+          page: 2,
+          pageSize: 1,
+          totalOptionCount: 2,
+          optionInteractionIds: ['option-1'],
+          interactions: [interaction('option-1', ['current'])],
+        }),
+      );
+
+    await expect(
+      loadStoryRuntimeSlice(storyFixture([interaction('current')]), 'current', ['current']),
+    ).rejects.toThrow('runtime option pages contain duplicate interaction identifiers');
   });
 });
 

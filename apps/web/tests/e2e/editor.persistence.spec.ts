@@ -289,4 +289,40 @@ test.describe('Story editor persistence', () => {
       page.getByTestId('interaction-node').filter({ hasText: 'Original content' }),
     ).toBeVisible();
   });
+
+  test('lets the author cancel a real browser close while a save is unresolved', async ({
+    page,
+  }) => {
+    const updated = cloneStory();
+    updated.interactions[0].title = 'Pending browser reload';
+    let releaseSave = () => {};
+    const saveRelease = new Promise<void>((resolve) => {
+      releaseSave = resolve;
+    });
+    await page.route('**/api/stories/story-1/interactions/interaction-1', async (route) => {
+      expect(route.request().method()).toBe('PATCH');
+      await saveRelease;
+      await route.fulfill({ json: updated });
+    });
+
+    await page.goto('/stories/story-1/edit');
+    await page.getByTestId('interaction-node').filter({ hasText: 'Original title' }).click();
+    await page.getByLabel('Title').fill('Pending browser reload');
+    await page.getByLabel('Title').blur();
+    await expect(page.getByLabel('Story save status')).toContainText('Saving');
+
+    const dialogPromise = page.waitForEvent('dialog');
+    const closePromise = page.close({ runBeforeUnload: true });
+    const dialog = await dialogPromise;
+    expect(dialog.type()).toBe('beforeunload');
+    await dialog.dismiss();
+    await closePromise;
+
+    expect(page.isClosed()).toBe(false);
+    await expect(page).toHaveURL('/stories/story-1/edit');
+    await expect(page.getByLabel('Title')).toHaveValue('Pending browser reload');
+
+    releaseSave();
+    await expect(page.getByLabel('Story save status')).toHaveText('Saved');
+  });
 });

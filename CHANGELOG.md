@@ -2,6 +2,28 @@
 
 ## 2026-09-09
 
+- Replaced the Story library's misleading empty state after a list failure with
+  a dedicated recoverable error state. Authors can retry in place, and rapid
+  duplicate Story-creation clicks remain locked to one request.
+- Hardened editor and player staged loading against truncated, duplicated,
+  misnumbered, cross-revision, and referentially inconsistent projection pages.
+  Revision churn now retries only within its explicit bound before surfacing a
+  controlled load error.
+- Isolated reader autosave queues across Story and mode changes so an older
+  unresolved save cannot block the active Story or overwrite its status. Rapid
+  duplicate activation of the same option now commits only one transition.
+- Added browser coverage for recovering from a temporarily unavailable reader
+  bootstrap and for declining internal navigation while reader progress remains
+  unsaved.
+- Scoped the shared editor save lifecycle to its active Story. A mutation that
+  settles after navigation or unmount can no longer return data to an obsolete
+  caller, alter the new Story's save feedback, or flush an old realtime refresh.
+  A real Chromium test now verifies that authors can cancel `beforeunload` while
+  an authored save is unresolved and continue editing until it completes.
+- Added adversarial regression coverage for response loss after a committed
+  creation, concurrent graph deletion/Trigger edits, revoked collaboration,
+  interrupted QSP uploads, malformed QSP fuzz corpora, dense/cyclic graph
+  layouts, and hostile rich-text sanitizer payloads.
 - Fixed the real-stack acceptance suite exhausting the production-strength
   registration throttle after its first five accounts. The API keeps the normal
   five-per-minute limit and accepts a validated higher limit only under the test

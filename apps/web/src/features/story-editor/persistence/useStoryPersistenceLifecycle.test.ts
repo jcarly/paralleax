@@ -148,6 +148,106 @@ describe('story persistence lifecycle', () => {
 
     expect(merged.interactions[1].triggers.map(({ id }) => id)).toEqual(['child-trigger']);
   });
+
+  it('ignores every late progress and completion response from a previous Story route', async () => {
+    let resolveFirst: ((story: Story) => void) | undefined;
+    let reportFirstProgress: ((story: Story) => void) | undefined;
+    const firstStory = storyFixture('story-1', 'First Story');
+    const secondStory = storyFixture('story-2', 'Second Story');
+    vi.mocked(loadStoryEditorProjection).mockImplementation((storyId, onProgress) => {
+      if (storyId === 'story-2') {
+        onProgress?.({ story: secondStory, phase: 'ready' });
+        return Promise.resolve(secondStory);
+      }
+      return new Promise<Story>((resolve) => {
+        resolveFirst = resolve;
+        reportFirstProgress = (story) => onProgress?.({ story, phase: 'interactions' });
+      });
+    });
+
+    const { result, rerender } = renderHook(
+      ({ storyId }) => {
+        const [story, setStory] = useState<Story>();
+        return { story, ...useStoryPersistenceLifecycle({ storyId, story, setStory }) };
+      },
+      { initialProps: { storyId: 'story-1' } },
+    );
+
+    rerender({ storyId: 'story-2' });
+    await waitFor(() => expect(result.current.story?.id).toBe('story-2'));
+
+    act(() => {
+      reportFirstProgress?.(firstStory);
+      resolveFirst?.(firstStory);
+    });
+    await act(async () => Promise.resolve());
+
+    expect(result.current.story).toMatchObject({ id: 'story-2', title: 'Second Story' });
+  });
+
+  it('discards a save result that settles after the editor moves to another Story', async () => {
+    const firstStory = storyFixture('story-1', 'First Story');
+    const secondStory = storyFixture('story-2', 'Second Story');
+    vi.mocked(api.getStory).mockImplementation((storyId) =>
+      Promise.resolve(storyId === 'story-1' ? firstStory : secondStory),
+    );
+    let resolveFirstSave: ((value: Story) => void) | undefined;
+    const firstSave = new Promise<Story>((resolve) => {
+      resolveFirstSave = resolve;
+    });
+    const { result, rerender } = renderHook(
+      ({ storyId }) => {
+        const [story, setStory] = useState<Story>();
+        return { story, ...useStoryPersistenceLifecycle({ storyId, story, setStory }) };
+      },
+      { initialProps: { storyId: 'story-1' } },
+    );
+    await waitFor(() => expect(result.current.story?.id).toBe('story-1'));
+
+    let trackedSave: Promise<Story | undefined> | undefined;
+    act(() => {
+      trackedSave = result.current.trackSave(() => firstSave);
+    });
+    expect(result.current.saveStatus).toBe('saving');
+
+    rerender({ storyId: 'story-2' });
+    await waitFor(() => expect(result.current.story?.id).toBe('story-2'));
+
+    let saveResult: Story | undefined;
+    await act(async () => {
+      resolveFirstSave?.(firstStory);
+      saveResult = await trackedSave;
+    });
+
+    expect(saveResult).toBeUndefined();
+    expect(result.current.story).toMatchObject({ id: 'story-2', title: 'Second Story' });
+    expect(result.current.saveStatus).toBe('idle');
+  });
+
+  it('ignores unresolved load progress and completion after unmounting', async () => {
+    let resolveLoad: ((story: Story) => void) | undefined;
+    let reportProgress: ((story: Story) => void) | undefined;
+    vi.mocked(loadStoryEditorProjection).mockImplementation(
+      (_storyId, onProgress) =>
+        new Promise<Story>((resolve) => {
+          resolveLoad = resolve;
+          reportProgress = (story) => onProgress?.({ story, phase: 'interactions' });
+        }),
+    );
+    const setStory = vi.fn();
+    const { unmount } = renderHook(() =>
+      useStoryPersistenceLifecycle({ storyId: 'story-1', story: undefined, setStory }),
+    );
+
+    unmount();
+    act(() => {
+      reportProgress?.(storyFixture());
+      resolveLoad?.(storyFixture());
+    });
+    await act(async () => Promise.resolve());
+
+    expect(setStory).not.toHaveBeenCalled();
+  });
 });
 
 function renderLifecycle() {
@@ -160,11 +260,11 @@ function renderLifecycle() {
   });
 }
 
-function storyFixture(): Story {
+function storyFixture(id = 'story-1', title = 'Story'): Story {
   return {
-    id: 'story-1',
+    id,
     revision: 1,
-    title: 'Story',
+    title,
     capabilities: {
       canRead: true,
       canEdit: true,

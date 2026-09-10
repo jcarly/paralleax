@@ -5,6 +5,7 @@ import {
   expectSuccessful,
   interactionNode,
   registerAndCreateStory,
+  requestApiJson,
   waitForApiResponse,
   waitForInteractionPatch,
 } from './realStackTestHarness';
@@ -222,4 +223,77 @@ test('slow reordered saves preserve graph creation, movement, and deletion acros
   await expect(interactionNode(page, 'Stable root')).toBeVisible();
   await expect(interactionNode(page, 'Movable child')).toHaveCount(0);
   await expect(page.locator(`.react-flow__node[data-id="${root.id}"]`)).toBeVisible();
+});
+
+test('a response lost after creation commit recovers canonically without duplicating the interaction', async ({
+  page,
+}) => {
+  const { storyId } = await registerAndCreateStory(page, 'Uncertain committed creation');
+  const creationPath = new RegExp(`/api/stories/${storyId}/interactions$`);
+  let intercepted = false;
+  let markCommitted = () => {};
+  const committed = new Promise<void>((resolve) => {
+    markCommitted = resolve;
+  });
+
+  await page.route(creationPath, async (route) => {
+    if (route.request().method() !== 'POST' || intercepted) {
+      await route.fallback();
+      return;
+    }
+    intercepted = true;
+    const response = await route.fetch();
+    expect(response.ok()).toBe(true);
+    markCommitted();
+    await route.abort('failed');
+  });
+
+  await page.getByRole('button', { name: 'Add root' }).click();
+  await committed;
+  await expect(page.getByLabel('Story save status')).toHaveText('Save failed');
+  await expect(page.getByRole('button', { name: 'Reload story' })).toBeVisible();
+
+  await page.getByRole('button', { name: 'Reload story' }).click();
+  await expect(interactionNode(page, 'New interaction')).toHaveCount(1);
+
+  await page.reload();
+  await expect(interactionNode(page, 'New interaction')).toHaveCount(1);
+});
+
+test('concurrent structural deletion and Trigger editing cannot leave dangling graph references', async ({
+  page,
+}) => {
+  const { storyId } = await registerAndCreateStory(page, 'Concurrent graph integrity');
+  const rootResult = await requestApiJson<{
+    interaction: { id: string; triggers: Array<{ id: string; inputInteractionIds: string[] }> };
+  }>(page, 'POST', `/api/stories/${storyId}/interactions`, {});
+  const childResult = await requestApiJson<{
+    interaction: { id: string; triggers: Array<{ id: string; inputInteractionIds: string[] }> };
+  }>(page, 'POST', `/api/stories/${storyId}/interactions`, {
+    parentId: rootResult.interaction.id,
+  });
+  const childTrigger = childResult.interaction.triggers[0];
+  expect(childTrigger).toBeDefined();
+
+  const [deletion, triggerUpdate] = await Promise.all([
+    page.request.delete(`/api/stories/${storyId}/interactions/${rootResult.interaction.id}`),
+    page.request.patch(
+      `/api/stories/${storyId}/interactions/${childResult.interaction.id}/triggers/${childTrigger.id}`,
+      { data: { inputInteractionIds: [rootResult.interaction.id] } },
+    ),
+  ]);
+
+  expect(deletion.ok()).toBe(true);
+  expect([200, 400, 404]).toContain(triggerUpdate.status());
+
+  const canonical = await requestApiJson<{
+    interactions: Array<{
+      id: string;
+      triggers: Array<{ id: string; inputInteractionIds: string[] }>;
+    }>;
+  }>(page, 'GET', `/api/stories/${storyId}`);
+  expect(canonical.interactions.some(({ id }) => id === rootResult.interaction.id)).toBe(false);
+  const persistedChild = canonical.interactions.find(({ id }) => id === childResult.interaction.id);
+  expect(persistedChild?.triggers).toHaveLength(1);
+  expect(persistedChild?.triggers[0].inputInteractionIds).not.toContain(rootResult.interaction.id);
 });

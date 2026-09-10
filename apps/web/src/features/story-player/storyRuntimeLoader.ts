@@ -9,10 +9,12 @@ import {
 import { api } from '../../api';
 import {
   appendStoryContextPage,
+  assertStoryProjectionIds,
+  assertStoryProjectionPage,
   createStoryContextAccumulator,
   createStoryLoadingProjection,
   projectStoryContext,
-  StoryProjectionRevisionChangedError,
+  StoryProjectionIntegrityError,
 } from '../story/storyProjectionLoading';
 
 const runtimeReference = Symbol('runtimeInteractionReference');
@@ -35,10 +37,30 @@ export async function loadStoryRuntimeContext(
   let page = 1;
   while (true) {
     const result = await api.getStoryRuntimeContextPage(storyId, page);
-    assertRevision(bootstrap.revision, result.revision);
+    assertStoryProjectionPage(bootstrap.revision, page, result);
     appendStoryContextPage(context, result);
-    if (!result.hasMore || result.page * result.pageSize >= contextCount) break;
+    const expectedHasMore = result.page * result.pageSize < contextCount;
+    if (result.hasMore !== expectedHasMore) {
+      throw new StoryProjectionIntegrityError(
+        `runtime context page ${result.page} has inconsistent continuation metadata.`,
+      );
+    }
+    if (!result.hasMore) break;
     page += 1;
+  }
+  for (const key of [
+    'locations',
+    'characters',
+    'statDefinitions',
+    'statAssignments',
+    'itemDefinitions',
+    'itemInstances',
+  ] as const) {
+    assertStoryProjectionIds(
+      `${key} runtime context`,
+      context[key].map(({ id }) => id),
+      bootstrap.contextCounts[key],
+    );
   }
   return projectStoryContext(createStoryLoadingProjection(bootstrap), context);
 }
@@ -63,6 +85,8 @@ export async function loadStoryRuntimeSlice(
   });
   const requestedInteractionChunks = chunk(missingInteractionIds, MAX_STORY_PAGE_SIZE);
   const firstRequestedChunk = requestedInteractionChunks.shift() ?? [];
+  const optionInteractionIds = new Set<string>();
+  let totalOptionCount: number | undefined;
   let page = 1;
   while (true) {
     const result = await api.getStoryRuntimeSlice(story.id, {
@@ -72,10 +96,42 @@ export async function loadStoryRuntimeSlice(
       page,
       pageSize: STORY_EDITOR_PAGE_SIZE,
     });
-    assertRevision(story.revision, result.revision);
+    assertStoryProjectionPage(story.revision, page, result);
+    if (totalOptionCount === undefined) totalOptionCount = result.totalOptionCount;
+    if (result.totalOptionCount !== totalOptionCount) {
+      throw new StoryProjectionIntegrityError(
+        'runtime option pages disagree about their total count.',
+      );
+    }
+    for (const optionInteractionId of result.optionInteractionIds) {
+      if (optionInteractionIds.has(optionInteractionId)) {
+        throw new StoryProjectionIntegrityError(
+          'runtime option pages contain duplicate interaction identifiers.',
+        );
+      }
+      optionInteractionIds.add(optionInteractionId);
+    }
     mergeRuntimeSlice(interactions, result);
+    const expectedHasMore = result.page * result.pageSize < totalOptionCount;
+    if (result.hasMore !== expectedHasMore) {
+      throw new StoryProjectionIntegrityError(
+        `runtime option page ${result.page} has inconsistent continuation metadata.`,
+      );
+    }
     if (!result.hasMore) break;
     page += 1;
+  }
+
+  assertStoryProjectionIds('runtime options', [...optionInteractionIds], totalOptionCount ?? 0);
+  if (
+    [...optionInteractionIds].some((id) => {
+      const interaction = interactions.get(id);
+      return !interaction || isRuntimeReference(interaction);
+    })
+  ) {
+    throw new StoryProjectionIntegrityError(
+      'runtime options contain an interaction without its complete content.',
+    );
   }
 
   for (const requestedIds of requestedInteractionChunks) {
@@ -86,7 +142,7 @@ export async function loadStoryRuntimeSlice(
       page: 1,
       pageSize: STORY_EDITOR_PAGE_SIZE,
     });
-    assertRevision(story.revision, result.revision);
+    assertStoryProjectionPage(story.revision, 1, result);
     mergeRuntimeSlice(interactions, result);
   }
 
@@ -122,8 +178,4 @@ function chunk<T>(items: T[], size: number): T[][] {
     chunks.push(items.slice(index, index + size));
   }
   return chunks;
-}
-
-function assertRevision(expected: number | undefined, received: number): void {
-  if ((expected ?? 1) !== received) throw new StoryProjectionRevisionChangedError();
 }

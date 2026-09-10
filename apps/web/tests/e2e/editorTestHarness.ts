@@ -107,7 +107,13 @@ export async function mockStory(page: Page, initialStory: StorySource = cloneSto
   });
 }
 
-export async function mockRuntimeStory(page: Page, initialStory: StorySource) {
+export async function mockRuntimeStory(
+  page: Page,
+  initialStory: StorySource,
+  options: {
+    bootstrapFailure?: () => { status: number; message: string } | undefined;
+  } = {},
+) {
   await page.route('**/api/stories/story-1/runtime**', async (route) => {
     const current = resolveStory(initialStory);
     const url = new URL(route.request().url());
@@ -121,6 +127,14 @@ export async function mockRuntimeStory(page: Page, initialStory: StorySource) {
     if (url.pathname.endsWith('/runtime/slice')) {
       const request = route.request().postDataJSON() as Partial<StoryRuntimeSliceRequest>;
       await route.fulfill({ json: structuredClone(storyProjectionRuntimeSlice(current, request)) });
+      return;
+    }
+    const bootstrapFailure = options.bootstrapFailure?.();
+    if (bootstrapFailure) {
+      await route.fulfill({
+        status: bootstrapFailure.status,
+        json: { message: bootstrapFailure.message },
+      });
       return;
     }
     await route.fulfill({ json: structuredClone(storyProjectionBootstrap(current, false)) });

@@ -483,4 +483,63 @@ end
       expect.objectContaining({ severity: 'error', code: 'missing_location_target' }),
     );
   });
+
+  it('contains deterministically fuzzed malformed source without throwing or dangling graph ids', () => {
+    const fragments = [
+      "'Readable text'",
+      "*pl '<script>alert(1)</script>'",
+      "act 'Loop': gt 'fuzz'",
+      "act 'Broken'",
+      'if score > 1:',
+      'elseif score = 2:',
+      'else:',
+      'end',
+      "gt 'fuzz', <<$dynamic>>",
+      "$items[0] = 'key'",
+      'score += other',
+      'loop while score < 3:',
+      '! ignored comment',
+      '\u0000 malformed byte',
+    ];
+
+    for (let seed = 1; seed <= 64; seed += 1) {
+      let state = seed;
+      const lines = Array.from({ length: 64 }, () => {
+        state = (state * 1_664_525 + 1_013_904_223) >>> 0;
+        return fragments[state % fragments.length];
+      });
+      const result = importSource({
+        name: `fuzz-${seed}.qsps`,
+        format: 'text',
+        content: `# fuzz\n${lines.join('\n')}\n--- fuzz ---`,
+      });
+      if (!result.story) continue;
+
+      const interactionIds = new Set(result.story.interactions.map(({ id }) => id));
+      expect(interactionIds.size).toBe(result.story.interactions.length);
+      for (const interaction of result.story.interactions) {
+        for (const trigger of interaction.triggers) {
+          expect(trigger.inputInteractionIds.every((id) => interactionIds.has(id))).toBe(true);
+          for (const group of getTriggerConditionGroups(trigger)) {
+            for (const condition of group.conditions) {
+              if ('interactionId' in condition) {
+                expect(interactionIds.has(condition.interactionId)).toBe(true);
+              }
+            }
+          }
+        }
+      }
+    }
+  });
+
+  it('handles deeply nested incomplete control blocks as a compatibility error', () => {
+    const depth = 2_000;
+    const source = `# deep\n${'if score = 1:\n'.repeat(depth)}'text'\n${'end\n'.repeat(
+      depth - 1,
+    )}--- deep ---`;
+
+    expect(() =>
+      importSource({ name: 'deep.qsps', format: 'text', content: source }),
+    ).not.toThrow();
+  });
 });

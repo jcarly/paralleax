@@ -78,6 +78,28 @@ describe('sanitizeRichText stat interpolation', () => {
   });
 });
 
+describe('sanitizeRichText hostile markup', () => {
+  it.each([
+    '<svg><animate href="#x" attributeName="href" values="javascript:alert(1)" /></svg>',
+    '<textarea/><img src="https://media.example/image.png" onerror="alert(1)">',
+    '<textarea><img src=x onerror=alert(1)></textarea/><p>Safe text</p>',
+    '<a href="javascript:alert(1)" target="_self">Unsafe link</a>',
+    '<iframe srcdoc="<script>alert(1)</script>" src="https://evil.example/embed"></iframe>',
+  ])('removes executable mutation-XSS payloads and stays idempotent', (payload) => {
+    const sanitized = sanitizeRichText(payload, storyFixture());
+
+    expect(sanitized).not.toMatch(/javascript:|onerror|srcdoc|<svg|<animate|<textarea/i);
+    expect(sanitizeRichText(sanitized, storyFixture())).toBe(sanitized);
+  });
+
+  it('handles deeply nested hostile markup without throwing or preserving executable content', () => {
+    const payload = `${'<div>'.repeat(2_000)}<img src="x" onerror="alert(1)">${'</div>'.repeat(2_000)}`;
+
+    expect(() => sanitizeRichText(payload, storyFixture())).not.toThrow();
+    expect(sanitizeRichText(payload, storyFixture())).not.toContain('onerror');
+  });
+});
+
 function storyFixture(): Story {
   return {
     id: 'story-1',

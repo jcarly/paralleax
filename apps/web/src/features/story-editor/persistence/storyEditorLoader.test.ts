@@ -140,6 +140,58 @@ describe('story editor loader', () => {
     expect(api.getStoryEditorBootstrap).toHaveBeenCalledTimes(2);
     expect(story.revision).toBe(7);
   });
+
+  it('stops with a recoverable error when revision churn exhausts the bounded retries', async () => {
+    vi.mocked(api.getStoryEditorContextPage).mockResolvedValue({
+      revision: 8,
+      page: 1,
+      pageSize: 100,
+      hasMore: false,
+      locations: [],
+      characters: [],
+      statDefinitions: [],
+      statAssignments: [],
+      itemDefinitions: [],
+      itemInstances: [],
+      graphDecorations: [],
+    });
+
+    await expect(loadStoryEditorProjection('story-1')).rejects.toThrow(
+      'The Story changed while it was loading.',
+    );
+    expect(api.getStoryEditorBootstrap).toHaveBeenCalledTimes(3);
+  });
+
+  it('rejects a prematurely truncated page instead of exposing a partial Story', async () => {
+    vi.mocked(api.getStoryEditorBootstrap).mockResolvedValue({
+      ...bootstrap(),
+      interactionCount: 2,
+    });
+
+    await expect(loadStoryEditorProjection('story-1')).rejects.toThrow(
+      'interaction structure returned 1 of 2 expected records',
+    );
+  });
+
+  it('rejects Trigger structure that references an interaction outside the projection', async () => {
+    vi.mocked(api.getStoryEditorTriggerPage).mockResolvedValue({
+      revision: 7,
+      page: 1,
+      pageSize: 100,
+      hasMore: false,
+      triggers: [
+        {
+          id: 'trigger',
+          outputInteractionId: 'missing-interaction',
+          inputInteractionIds: [],
+        },
+      ],
+    });
+
+    await expect(loadStoryEditorProjection('story-1')).rejects.toThrow(
+      'Trigger structure references an interaction outside the projection',
+    );
+  });
 });
 
 function bootstrap(): StoryEditorBootstrap {

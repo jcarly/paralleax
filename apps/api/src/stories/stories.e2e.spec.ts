@@ -2176,7 +2176,7 @@ end
       .expect(404);
   });
 
-  it('enforces invited reader and editor permissions on existing story endpoints', async () => {
+  it('enforces invited reader, editor, and revoked permissions on existing story endpoints', async () => {
     const ownerCookie = 'paralleax_session=user-one';
     const collaboratorCookie = 'paralleax_session=user-two';
     const created = await request(httpServer)
@@ -2225,6 +2225,26 @@ end
       .set('Cookie', collaboratorCookie)
       .send({ title: 'Collaborative rename' })
       .expect(200);
+
+    await request(httpServer)
+      .delete(`/api/stories/${storyId}/access/collaborators/user-2`)
+      .set('Cookie', ownerCookie)
+      .expect(204);
+    await request(httpServer)
+      .get(`/api/stories/${storyId}/editor`)
+      .set('Cookie', collaboratorCookie)
+      .expect(404);
+    await request(httpServer)
+      .patch(`/api/stories/${storyId}`)
+      .set('Cookie', collaboratorCookie)
+      .send({ title: 'Rename after revocation' })
+      .expect(404);
+
+    const canonical = await request(httpServer)
+      .get(`/api/stories/${storyId}`)
+      .set('Cookie', ownerCookie)
+      .expect(200);
+    expect(canonical.body.title).toBe('Collaborative rename');
   });
 
   it('publishes story invalidations for authored, access, and deletion mutations', async () => {

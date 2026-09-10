@@ -60,6 +60,11 @@ The character-stat vertical keeps these regressions covered:
   threads are not projected.
 - Browser: an author can register, create a story, sign out, sign back in, and
   find the story again.
+- Story library: a failed initial list request shows a distinct recoverable
+  error instead of the empty-library message; retry loads the catalogue, and a
+  rapid double click during Story creation sends only one request. A temporary
+  creation failure preserves the completed form, while a failed next-page load
+  preserves existing cards and retries the same page without duplicates.
 - Real-stack browser acceptance: with no intercepted Paralleax endpoint, an
   invited author can create a Story, location, character, Story variable,
   interactions and Triggers; persist context, an effect, and a condition; reload
@@ -105,6 +110,19 @@ The character-stat vertical keeps these regressions covered:
   its API commit while a child-interaction creation completes first. Save status
   remains pending until both responses settle; the child then survives movement
   and reload, and its confirmed deletion remains absent after another reload.
+- Real-stack browser acceptance: when an interaction creation commits but its
+  HTTP response is lost, the editor exposes the uncertain save and canonical
+  reload recovers exactly one persisted interaction rather than retrying it.
+- Real-stack browser acceptance: concurrent deletion of an input Interaction and
+  editing of its destination Trigger can finish in either order without leaving
+  a persisted Trigger input that references the deleted Interaction.
+- Browser navigation safety: while an authored save remains unresolved, a real
+  Chromium `beforeunload` prompt lets the author cancel closing the page, retain
+  the local edit, and finish the save normally.
+- Reader recovery: a temporary runtime-bootstrap failure exposes a retry action
+  that resumes loading without a browser refresh, and rejecting internal
+  navigation during an unresolved autosave retains the current reader step until
+  persistence finishes.
 
 ## Unit / Component Tests
 
@@ -112,6 +130,24 @@ The character-stat vertical keeps these regressions covered:
   URLs, and render the result in the reader.
 - Rich content security: remove scripts, event handlers, unsafe URLs, and
   unapproved iframe hosts before persistence and display.
+- Rich content security: reject SVG/SMIL URL execution, mutation-XSS markup,
+  `javascript:` links, hostile iframe attributes, and deeply nested event-handler
+  payloads while keeping sanitization idempotent.
+- Staged projections: reject duplicated, missing, unknown, misnumbered, or
+  revision-inconsistent context, interaction, Trigger, content, and option pages;
+  persistent revision churn ends in a controlled error after bounded retries.
+- Reader persistence: a pending autosave from a previous Story cannot delay a
+  new Story save or update its status after the route changes.
+- Editor persistence: a mutation result settling after a Story route change is
+  discarded by the shared save lifecycle, and late projection progress or
+  completion after unmount cannot update the removed editor.
+- Reader interaction: activating one option twice before React rerenders commits
+  only one journey transition and one autosave.
+- Request streaming: an aborted binary upload rejects instead of returning a
+  partial QSP payload to the importer.
+- Adversarial generation: deterministic malformed QSP corpora never produce
+  duplicate or dangling graph ids, and generated dense/cyclic graph layouts stay
+  finite, deterministic, and collision-free.
 
 - Context images: create and update image URLs for a location, character,
   reusable stat, and reusable item, then confirm previews and persisted values.

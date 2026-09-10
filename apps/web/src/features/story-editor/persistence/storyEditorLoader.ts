@@ -10,9 +10,12 @@ import type {
 import { api } from '../../../api';
 import {
   appendStoryContextPage,
+  assertStoryProjectionIds,
+  assertStoryProjectionPage,
   createStoryContextAccumulator,
   createStoryLoadingProjection,
   projectStoryContext,
+  StoryProjectionIntegrityError,
   StoryProjectionRevisionChangedError,
   type StoryContextAccumulator,
 } from '../../story/storyProjectionLoading';
@@ -47,6 +50,7 @@ async function loadConsistentStoryEditorProjection(
   onProgress?.({ story, phase: 'context' });
 
   const context = await loadContext(storyId, bootstrap);
+  assertContextCounts(context, bootstrap);
   story = projectStoryContext(story, context);
   onProgress?.({ story, phase: 'interactions' });
 
@@ -56,6 +60,11 @@ async function loadConsistentStoryEditorProjection(
       (page) => api.getStoryEditorInteractionPage(storyId, page),
       bootstrap,
       (result) => interactionSummaries.push(...result.interactions),
+      bootstrap.interactionCount,
+    );
+    assertStoryProjectionIds(
+      'interaction structure',
+      interactionSummaries.map(({ id }) => id),
       bootstrap.interactionCount,
     );
     story = {
@@ -77,6 +86,23 @@ async function loadConsistentStoryEditorProjection(
       (result) => triggerStructures.push(...result.triggers),
       bootstrap.triggerCount,
     );
+    assertStoryProjectionIds(
+      'Trigger structure',
+      triggerStructures.map(({ id }) => id),
+      bootstrap.triggerCount,
+    );
+    const interactionIds = new Set(story.interactions.map(({ id }) => id));
+    if (
+      triggerStructures.some(
+        ({ outputInteractionId, inputInteractionIds }) =>
+          !interactionIds.has(outputInteractionId) ||
+          inputInteractionIds.some((inputInteractionId) => !interactionIds.has(inputInteractionId)),
+      )
+    ) {
+      throw new StoryProjectionIntegrityError(
+        'Trigger structure references an interaction outside the projection.',
+      );
+    }
     const byInteraction = groupBy(
       triggerStructures,
       ({ outputInteractionId }) => outputInteractionId,
@@ -98,15 +124,23 @@ async function loadConsistentStoryEditorProjection(
       string,
       StoryEditorInteractionContentPage['interactions'][number]
     >();
+    const interactionContentIds: string[] = [];
     await readPages(
       (page) => api.getStoryEditorInteractionContentPage(storyId, page),
       bootstrap,
       (result) => {
         for (const content of result.interactions) {
+          interactionContentIds.push(content.interactionId);
           interactionContent.set(content.interactionId, content);
         }
       },
       bootstrap.interactionCount,
+    );
+    assertStoryProjectionIds(
+      'interaction content',
+      interactionContentIds,
+      bootstrap.interactionCount,
+      new Set(story.interactions.map(({ id }) => id)),
     );
     story = {
       ...story,
@@ -129,13 +163,23 @@ async function loadConsistentStoryEditorProjection(
 
   if (bootstrap.triggerCount > 0) {
     const triggerContent = new Map<string, StoryEditorTriggerContentPage['triggers'][number]>();
+    const triggerContentIds: string[] = [];
     await readPages(
       (page) => api.getStoryEditorTriggerContentPage(storyId, page),
       bootstrap,
       (result) => {
-        for (const content of result.triggers) triggerContent.set(content.triggerId, content);
+        for (const content of result.triggers) {
+          triggerContentIds.push(content.triggerId);
+          triggerContent.set(content.triggerId, content);
+        }
       },
       bootstrap.triggerCount,
+    );
+    assertStoryProjectionIds(
+      'Trigger content',
+      triggerContentIds,
+      bootstrap.triggerCount,
+      new Set(story.interactions.flatMap(({ triggers }) => triggers.map(({ id }) => id))),
     );
     story = {
       ...story,
@@ -189,12 +233,35 @@ async function readPages<
   let pageNumber = 1;
   while (true) {
     const page = await readPage(pageNumber);
-    if (page.revision !== bootstrap.revision) throw new StoryProjectionRevisionChangedError();
+    assertStoryProjectionPage(bootstrap.revision, pageNumber, page);
     onPage(page);
-    if (!page.hasMore || (totalCount !== undefined && page.page * page.pageSize >= totalCount)) {
+    if (totalCount !== undefined) {
+      const expectedHasMore = page.page * page.pageSize < totalCount;
+      if (page.hasMore !== expectedHasMore) {
+        throw new StoryProjectionIntegrityError(
+          `page ${page.page} has inconsistent continuation metadata.`,
+        );
+      }
+    }
+    if (!page.hasMore) {
       return;
     }
     pageNumber += 1;
+  }
+}
+
+function assertContextCounts(
+  context: StoryContextAccumulator,
+  bootstrap: StoryEditorBootstrap,
+): void {
+  for (const key of Object.keys(bootstrap.contextCounts) as Array<
+    keyof StoryEditorBootstrap['contextCounts']
+  >) {
+    assertStoryProjectionIds(
+      `${key} context`,
+      context[key].map(({ id }) => id),
+      bootstrap.contextCounts[key],
+    );
   }
 }
 

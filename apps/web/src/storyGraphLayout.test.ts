@@ -388,6 +388,55 @@ describe('story graph automatic layout', () => {
     expect(Object.values(positions.get('cycle-b')!).every(Number.isFinite)).toBe(true);
   });
 
+  it('keeps generated dense and cyclic graphs finite, deterministic, and collision-free', () => {
+    for (let seed = 1; seed <= 16; seed += 1) {
+      const story = createGeneratedLayoutStory(seed, 36);
+      const interactionSizes = new Map(
+        story.interactions.map(({ id }, index) => [
+          id,
+          {
+            width: interactionNodeWidth + (index % 3) * 24,
+            height: interactionNodeHeight + (index % 5) * 31,
+          },
+        ]),
+      );
+      const first = computeStoryGraphLayout(story, { kind: 'all' }, { interactionSizes });
+      const second = computeStoryGraphLayout(story, { kind: 'all' }, { interactionSizes });
+      const positions = applyInteractionUpdates(story, first);
+      const rectangles = story.interactions.map(({ id }) => ({
+        id,
+        ...positions.get(id)!,
+        ...interactionSizes.get(id)!,
+      }));
+
+      expect(first, `layout differs for seed ${seed}`).toEqual(second);
+      rectangles.forEach((left, leftIndex) => {
+        expect([left.x, left.y, left.width, left.height].every(Number.isFinite)).toBe(true);
+        rectangles.slice(leftIndex + 1).forEach((right) => {
+          const overlaps = !(
+            left.x + left.width <= right.x ||
+            right.x + right.width <= left.x ||
+            left.y + left.height <= right.y ||
+            right.y + right.height <= left.y
+          );
+          expect(overlaps, `seed ${seed}: ${left.id} overlaps ${right.id}`).toBe(false);
+        });
+      });
+      first.triggerUpdates.forEach(({ triggerIds, position }) => {
+        expect(Object.values(position).every(Number.isFinite)).toBe(true);
+        rectangles.forEach((interaction) => {
+          const overlaps = !(
+            position.x + 20 <= interaction.x ||
+            interaction.x + interaction.width <= position.x ||
+            position.y + 20 <= interaction.y ||
+            interaction.y + interaction.height <= position.y
+          );
+          expect(overlaps, `seed ${seed}: ${triggerIds[0]} overlaps ${interaction.id}`).toBe(false);
+        });
+      });
+    }
+  });
+
   it('moves only the selected interaction and elastically follows a saved connected marker', () => {
     const story = createLayoutStory();
     story.interactions = story.interactions.slice(0, 3);
@@ -462,3 +511,46 @@ describe('story graph automatic layout', () => {
     ).toEqual({ interactionUpdates: [], triggerUpdates: [], affectedNodeIds: [] });
   });
 });
+
+function createGeneratedLayoutStory(seed: number, interactionCount: number): Story {
+  let state = seed;
+  const next = () => {
+    state = (state * 1_664_525 + 1_013_904_223) >>> 0;
+    return state;
+  };
+  const interactions: Story['interactions'] = Array.from(
+    { length: interactionCount },
+    (_, index) => {
+      const inputs = new Set<string>();
+      if (index > 0) {
+        const inputCount = 1 + (next() % 3);
+        for (let inputIndex = 0; inputIndex < inputCount; inputIndex += 1) {
+          inputs.add(`generated-${next() % index}`);
+        }
+      }
+      return {
+        id: `generated-${index}`,
+        title: `Generated ${index}`,
+        body: '',
+        position: { x: next() % 700, y: next() % 700 },
+        triggers: [
+          {
+            id: `generated-trigger-${index}`,
+            inputInteractionIds: [...inputs],
+            conditions: [],
+          },
+        ],
+      };
+    },
+  );
+  if (seed % 2 === 0) {
+    interactions[0].triggers[0].inputInteractionIds = [`generated-${interactionCount - 1}`];
+  }
+  return {
+    id: `generated-story-${seed}`,
+    title: `Generated story ${seed}`,
+    createdAt: '2026-09-09T08:00:00.000Z',
+    updatedAt: '2026-09-09T08:00:00.000Z',
+    interactions,
+  };
+}

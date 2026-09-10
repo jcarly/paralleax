@@ -1,6 +1,6 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { Link, MemoryRouter, Route, Routes } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 import {
   api,
@@ -62,6 +62,42 @@ describe('StoryPlayer loading and presentation', () => {
     expect(api.getStory).toHaveBeenCalledTimes(2);
   });
 
+  it('does not let a late response from the previous Story replace the active route', async () => {
+    const user = userEvent.setup();
+    const firstStory = { ...structuredClone(story), title: 'First delayed Story' };
+    const secondStory = {
+      ...structuredClone(story),
+      id: 'story-2',
+      title: 'Second active Story',
+    };
+    let releaseFirst = () => {};
+    const firstRequest = new Promise<typeof story>((resolve) => {
+      releaseFirst = () => resolve(firstStory);
+    });
+    vi.mocked(api.getStory).mockImplementation((storyId) =>
+      storyId === 'story-1' ? firstRequest : Promise.resolve(secondStory),
+    );
+    vi.mocked(api.getReaderProgress).mockResolvedValue(null);
+
+    render(
+      <MemoryRouter initialEntries={['/stories/story-1/play']}>
+        <Link to="/stories/story-2/play">Open second Story</Link>
+        <Routes>
+          <Route path="/stories/:storyId/play" element={<StoryPlayer />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await user.click(screen.getByRole('link', { name: 'Open second Story' }));
+    expect(await screen.findAllByText('Second active Story')).not.toHaveLength(0);
+
+    act(() => releaseFirst());
+    await act(async () => Promise.resolve());
+
+    expect(screen.queryByText('First delayed Story')).not.toBeInTheDocument();
+    expect(screen.getAllByText('Second active Story')).not.toHaveLength(0);
+  });
+
   it('reads publicly without loading or saving authenticated progress', async () => {
     const user = userEvent.setup();
     const publicStory = structuredClone(story);
@@ -118,6 +154,24 @@ describe('StoryPlayer loading and presentation', () => {
     expect(screen.getByRole('heading', { name: 'Next' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Secret' })).toBeInTheDocument();
     expect(screen.getByText('Start')).toBeInTheDocument();
+  });
+
+  it('commits only one transition when an option is activated twice before rerender', async () => {
+    await renderPlayer();
+    const start = screen.getByRole('button', { name: 'Start' });
+
+    act(() => {
+      start.click();
+      start.click();
+    });
+
+    expect(await screen.findByRole('heading', { name: 'Start' })).toBeInTheDocument();
+    await waitFor(() => expect(api.saveReaderProgress).toHaveBeenCalledTimes(1));
+    expect(api.saveReaderProgress).toHaveBeenCalledWith(
+      'story-1',
+      expect.objectContaining({ journeyInteractionIds: ['start'] }),
+      'reader',
+    );
   });
 
   it('follows an available inline interaction link without bypassing trigger availability', async () => {

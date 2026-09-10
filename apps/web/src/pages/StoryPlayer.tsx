@@ -118,6 +118,7 @@ export function StoryPlayer({
   const sessionRef = useRef<ReaderProgressState>(session);
   const [timerNow, setTimerNow] = useState(() => Date.now());
   const directStartAutosavedKey = useRef('');
+  const committedChoiceStep = useRef('');
   const realtimeLoadAttempt = useRef(0);
   const simulationEditDepth = useRef(0);
   const pendingRealtimeInvalidation = useRef<StoryRealtimeInvalidation | undefined>(undefined);
@@ -187,6 +188,7 @@ export function StoryPlayer({
       })
       .then(({ positioned, progress, effectiveStartInteractionId, loadedProgressMode }) => {
         if (cancelled) return;
+        committedChoiceStep.current = '';
         setTimerNow(Date.now());
         const reconciledProgress = progress
           ? replaySession(
@@ -733,6 +735,9 @@ export function StoryPlayer({
         return;
       }
     }
+    const choiceStepKey = `${story.id}:${journey.length}:${current?.id ?? ''}:${currentStepStartedAt ?? ''}`;
+    if (committedChoiceStep.current === choiceStepKey) return;
+    committedChoiceStep.current = choiceStepKey;
     comments.cancelDraft();
     comments.selectThread(undefined);
     setTimerNow(now);
@@ -744,6 +749,7 @@ export function StoryPlayer({
     comments.cancelDraft();
     comments.selectThread(undefined);
     directStartAutosavedKey.current = '';
+    committedChoiceStep.current = '';
     setTimerNow(Date.now());
     if (story) {
       replaySession(
@@ -760,6 +766,7 @@ export function StoryPlayer({
 
   function stepBack() {
     if (journey.length <= 1) return;
+    committedChoiceStep.current = '';
     const nextJourney = journey.slice(0, -1);
     setTimerNow(Date.now());
     if (story) {
@@ -784,6 +791,7 @@ export function StoryPlayer({
     };
   }) {
     if (!story) return;
+    committedChoiceStep.current = '';
     setTimerNow(Date.now());
     const loadedStory = await loadStoryRuntimeSlice(
       story,

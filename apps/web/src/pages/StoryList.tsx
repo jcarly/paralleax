@@ -32,6 +32,7 @@ export function StoryList({ user }: { user: AuthUser | null }) {
   const [hasMore, setHasMore] = useState(false);
   const [refreshVersion, setRefreshVersion] = useState(0);
   const [error, setError] = useState('');
+  const [loadError, setLoadError] = useState('');
   const listRequestVersion = useRef(0);
   const listRequestKey = [
     isAuthenticated ? (user?.id ?? 'authenticated') : 'public',
@@ -63,10 +64,12 @@ export function StoryList({ user }: { user: AuthUser | null }) {
         setPage(result.page);
         setTotalCount(result.totalCount);
         setHasMore(result.hasMore);
-        setError('');
+        setLoadError('');
       })
       .catch((caught: Error) => {
-        if (active && requestVersion === listRequestVersion.current) setError(caught.message);
+        if (active && requestVersion === listRequestVersion.current) {
+          setLoadError(caught.message);
+        }
       })
       .finally(() => {
         if (active && requestVersion === listRequestVersion.current) {
@@ -164,6 +167,11 @@ export function StoryList({ user }: { user: AuthUser | null }) {
     setDebouncedQuery('');
     setFilter('all');
     setSort('updated');
+  }
+
+  function retryLoading() {
+    setLoadError('');
+    setRefreshVersion((version) => version + 1);
   }
 
   return (
@@ -274,14 +282,25 @@ export function StoryList({ user }: { user: AuthUser | null }) {
           {error}
         </p>
       ) : null}
-      <div className="library-count" aria-live="polite">
-        <b>{totalCount}</b> {t('library.count', { count: totalCount })}
-      </div>
+      {!loadError ? (
+        <div className="library-count" aria-live="polite">
+          <b>{totalCount}</b> {t('library.count', { count: totalCount })}
+        </div>
+      ) : null}
 
       {loading ? (
         <section className="library-empty" aria-label={t('library.loadingLabel')}>
           <span className="loading-ring" aria-hidden="true" />
           <h2>{t('library.loading')}</h2>
+        </section>
+      ) : loadError ? (
+        <section className="library-empty" role="alert">
+          <span aria-hidden="true">!</span>
+          <h2>{t('library.loadFailed')}</h2>
+          <p>{loadError}</p>
+          <button className="product-secondary" type="button" onClick={retryLoading}>
+            {t('library.retry')}
+          </button>
         </section>
       ) : stories.length ? (
         <>

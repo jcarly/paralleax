@@ -20,26 +20,64 @@ interface StoryPersistenceLifecycleDependencies {
   setStory: StoryStateSetter;
 }
 
+type StorySaveStatus = 'idle' | 'saving' | 'saved' | 'error';
+
+interface StoryPersistenceFeedback {
+  storyId: string;
+  error: string;
+  saveStatus: StorySaveStatus;
+}
+
 export function useStoryPersistenceLifecycle({
   storyId,
   story,
   setStory,
 }: StoryPersistenceLifecycleDependencies) {
-  const [error, setError] = useState('');
+  const [feedback, setFeedback] = useState<StoryPersistenceFeedback>({
+    storyId,
+    error: '',
+    saveStatus: 'idle',
+  });
+  const error = feedback.storyId === storyId ? feedback.error : '';
+  const saveStatus = feedback.storyId === storyId ? feedback.saveStatus : 'idle';
   const [loadProgress, setLoadProgress] = useState<{
     storyId: string;
     phase: StoryEditorLoadingProjection['phase'] | 'bootstrap';
   }>({ storyId, phase: 'bootstrap' });
   const loadPhase = loadProgress.storyId === storyId ? loadProgress.phase : 'bootstrap';
-  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const saveBatchErrorRef = useRef('');
   const deletedTriggerIdsRef = useRef(new Set<string>());
   const deletedTriggerInputKeysRef = useRef(new Set<string>());
   const loadAttemptRef = useRef(0);
   const activeSaveCountRef = useRef(0);
   const localEditDepthRef = useRef(0);
+  const lifecycleVersionRef = useRef(0);
   const pendingRealtimeInvalidationRef = useRef<StoryRealtimeInvalidation | undefined>(undefined);
   const realtimeRefreshRef = useRef<(invalidation: StoryRealtimeInvalidation) => void>(() => {});
+
+  const updateFeedback = useCallback(
+    (patch: Partial<Omit<StoryPersistenceFeedback, 'storyId'>>) => {
+      setFeedback((current) => ({
+        ...(current.storyId === storyId
+          ? current
+          : { storyId, error: '', saveStatus: 'idle' as const }),
+        ...patch,
+        storyId,
+      }));
+    },
+    [storyId],
+  );
+
+  useEffect(() => {
+    lifecycleVersionRef.current += 1;
+    activeSaveCountRef.current = 0;
+    saveBatchErrorRef.current = '';
+    localEditDepthRef.current = 0;
+    pendingRealtimeInvalidationRef.current = undefined;
+    return () => {
+      lifecycleVersionRef.current += 1;
+    };
+  }, [storyId]);
 
   const replaceStory = useCallback(
     (next: Story) => {
@@ -60,32 +98,36 @@ export function useStoryPersistenceLifecycle({
 
   const trackSave: TrackStorySave = useCallback(
     async <T>(operation: () => Promise<T>): Promise<T | undefined> => {
+      const lifecycleVersion = lifecycleVersionRef.current;
       const startsBatch = activeSaveCountRef.current === 0;
       if (startsBatch) {
         saveBatchErrorRef.current = '';
-        setError('');
+        updateFeedback({ error: '' });
       }
       activeSaveCountRef.current += 1;
-      setSaveStatus('saving');
+      updateFeedback({ saveStatus: 'saving' });
       try {
-        return await operation();
+        const result = await operation();
+        return lifecycleVersion === lifecycleVersionRef.current ? result : undefined;
       } catch (caught) {
+        if (lifecycleVersion !== lifecycleVersionRef.current) return undefined;
         const message = caught instanceof Error ? caught.message : 'The story could not be saved.';
         saveBatchErrorRef.current = message;
-        setError(message);
-        setSaveStatus('error');
+        updateFeedback({ error: message, saveStatus: 'error' });
         return undefined;
       } finally {
-        activeSaveCountRef.current = Math.max(0, activeSaveCountRef.current - 1);
-        if (activeSaveCountRef.current === 0) {
-          setSaveStatus(saveBatchErrorRef.current ? 'error' : 'saved');
-        } else if (!saveBatchErrorRef.current) {
-          setSaveStatus('saving');
+        if (lifecycleVersion === lifecycleVersionRef.current) {
+          activeSaveCountRef.current = Math.max(0, activeSaveCountRef.current - 1);
+          if (activeSaveCountRef.current === 0) {
+            updateFeedback({ saveStatus: saveBatchErrorRef.current ? 'error' : 'saved' });
+          } else if (!saveBatchErrorRef.current) {
+            updateFeedback({ saveStatus: 'saving' });
+          }
+          flushPendingRealtimeRefresh();
         }
-        flushPendingRealtimeRefresh();
       }
     },
-    [flushPendingRealtimeRefresh],
+    [flushPendingRealtimeRefresh, updateFeedback],
   );
 
   const mergeIncomingStory: MergeIncomingStory = useCallback(
@@ -114,15 +156,13 @@ export function useStoryPersistenceLifecycle({
         if (attempt !== loadAttemptRef.current) return;
         replaceStory(next);
         setLoadProgress({ storyId, phase: 'ready' });
-        setError('');
-        setSaveStatus('idle');
+        updateFeedback({ error: '', saveStatus: 'idle' });
       })
       .catch((caught: Error) => {
         if (attempt !== loadAttemptRef.current) return;
-        setError(caught.message);
-        setSaveStatus('error');
+        updateFeedback({ error: caught.message, saveStatus: 'error' });
       });
-  }, [replaceStory, setStory, storyId]);
+  }, [replaceStory, setStory, storyId, updateFeedback]);
 
   const retry = useCallback(() => {
     setLoadProgress({ storyId, phase: 'bootstrap' });
@@ -152,18 +192,20 @@ export function useStoryPersistenceLifecycle({
           }
           replaceStory(next);
           setLoadProgress({ storyId, phase: 'ready' });
-          setError('');
+          updateFeedback({ error: '' });
         })
         .catch((caught: unknown) => {
           if (attempt !== loadAttemptRef.current) return;
           if (invalidation === 'deleted' || isApiNotFound(caught)) {
             setStory(undefined);
-            setError(caught instanceof Error ? caught.message : 'Story not found');
-            setSaveStatus('error');
+            updateFeedback({
+              error: caught instanceof Error ? caught.message : 'Story not found',
+              saveStatus: 'error',
+            });
           }
         });
     },
-    [replaceStory, setStory, storyId],
+    [replaceStory, setStory, storyId, updateFeedback],
   );
 
   useEffect(() => {

@@ -97,16 +97,22 @@ export function setupStoryPlayerTestSuite() {
 }
 
 function mockStoryRuntimeLoading() {
-  let loadedStory: Story | undefined;
-  vi.mocked(api.getStoryRuntimeBootstrap).mockImplementation(async () => {
-    loadedStory = structuredClone(await api.getStory('story-1'));
+  const loadedStories = new Map<string, Story>();
+  vi.mocked(api.getStoryRuntimeBootstrap).mockImplementation(async (storyId) => {
+    const loadedStory = structuredClone(await api.getStory(storyId));
+    loadedStories.set(storyId, loadedStory);
     return storyProjectionBootstrap(loadedStory, false);
   });
-  vi.mocked(api.getStoryRuntimeContextPage).mockImplementation(async (_id, page, pageSize) => {
-    return storyProjectionContextPage(requiredRuntimeStory(loadedStory), page, pageSize, false);
+  vi.mocked(api.getStoryRuntimeContextPage).mockImplementation(async (storyId, page, pageSize) => {
+    return storyProjectionContextPage(
+      requiredRuntimeStory(loadedStories.get(storyId)),
+      page,
+      pageSize,
+      false,
+    );
   });
-  vi.mocked(api.getStoryRuntimeSlice).mockImplementation(async (_id, request = {}) =>
-    storyProjectionRuntimeSlice(requiredRuntimeStory(loadedStory), request),
+  vi.mocked(api.getStoryRuntimeSlice).mockImplementation(async (storyId, request = {}) =>
+    storyProjectionRuntimeSlice(requiredRuntimeStory(loadedStories.get(storyId)), request),
   );
 }
 

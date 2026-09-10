@@ -564,8 +564,11 @@ describe('StoryList', () => {
     );
   });
 
-  it('shows a loading error', async () => {
-    vi.mocked(api.listStories).mockRejectedValue(new Error('API unavailable'));
+  it('shows a distinct loading error and recovers on retry', async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.listStories)
+      .mockRejectedValueOnce(new Error('API unavailable'))
+      .mockResolvedValueOnce(storyPage([structuredClone(stories[0])]));
 
     render(
       <MemoryRouter>
@@ -573,7 +576,126 @@ describe('StoryList', () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByText('API unavailable')).toBeInTheDocument();
+    const alert = await screen.findByRole('alert');
+    expect(
+      within(alert).getByRole('heading', { name: 'Stories could not be loaded' }),
+    ).toBeVisible();
+    expect(within(alert).getByText('API unavailable')).toBeVisible();
+    expect(screen.queryByRole('heading', { name: 'No stories found' })).not.toBeInTheDocument();
+    expect(screen.queryByText('0 stories')).not.toBeInTheDocument();
+
+    await user.click(within(alert).getByRole('button', { name: 'Retry' }));
+
+    expect(await screen.findByRole('heading', { name: 'First story' })).toBeVisible();
+    expect(api.listStories).toHaveBeenCalledTimes(2);
+  });
+
+  it('prevents duplicate story creation while the first request is unresolved', async () => {
+    const user = userEvent.setup();
+    let finishCreation!: (story: Story) => void;
+    const creation = new Promise<Story>((resolve) => {
+      finishCreation = resolve;
+    });
+    vi.mocked(api.listStories).mockResolvedValue(storyPage([]));
+    vi.mocked(api.createStory).mockReturnValue(creation);
+
+    render(
+      <MemoryRouter>
+        <StoryList user={standardUser} />
+      </MemoryRouter>,
+    );
+    await screen.findByRole('heading', { name: 'No stories found' });
+    await user.click(screen.getByRole('button', { name: 'New story' }));
+    await user.type(screen.getByLabelText('Story title'), 'Only once');
+    const createButton = screen.getByRole('button', { name: 'Create story' });
+
+    await user.dblClick(createButton);
+
+    expect(api.createStory).toHaveBeenCalledOnce();
+    expect(screen.getByRole('button', { name: 'Creating…' })).toBeDisabled();
+
+    await act(async () =>
+      finishCreation({
+        id: 'story-created-once',
+        title: 'Only once',
+        createdAt: '2026-07-14T08:00:00.000Z',
+        updatedAt: '2026-07-14T08:00:00.000Z',
+        interactions: [],
+      }),
+    );
+    expect(await screen.findByRole('heading', { name: 'Only once' })).toBeVisible();
+  });
+
+  it('keeps the creation form recoverable after a temporary failure', async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.listStories).mockResolvedValue(storyPage([]));
+    vi.mocked(api.createStory)
+      .mockRejectedValueOnce(new Error('Creation temporarily unavailable'))
+      .mockResolvedValueOnce({
+        id: 'story-recovered',
+        title: 'Recovered story',
+        createdAt: '2026-07-14T08:00:00.000Z',
+        updatedAt: '2026-07-14T08:00:00.000Z',
+        interactions: [],
+      });
+
+    render(
+      <MemoryRouter>
+        <StoryList user={standardUser} />
+      </MemoryRouter>,
+    );
+    await screen.findByRole('heading', { name: 'No stories found' });
+    await user.click(screen.getByRole('button', { name: 'New story' }));
+    await user.type(screen.getByLabelText('Story title'), 'Recovered story');
+    await user.click(screen.getByRole('button', { name: 'Create story' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Creation temporarily unavailable');
+    expect(screen.getByRole('dialog', { name: 'Create a story' })).toBeVisible();
+    expect(screen.getByLabelText('Story title')).toHaveValue('Recovered story');
+
+    await user.click(screen.getByRole('button', { name: 'Create story' }));
+
+    expect(await screen.findByRole('heading', { name: 'Recovered story' })).toBeVisible();
+    expect(api.createStory).toHaveBeenCalledTimes(2);
+  });
+
+  it('retries a failed next page without losing or duplicating loaded stories', async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.listStories)
+      .mockResolvedValueOnce(
+        storyPage([structuredClone(stories[0])], { totalCount: 2, hasMore: true }),
+      )
+      .mockRejectedValueOnce(new Error('Next page unavailable'))
+      .mockResolvedValueOnce(
+        storyPage(structuredClone(stories), { page: 2, totalCount: 2, hasMore: false }),
+      );
+
+    render(
+      <MemoryRouter>
+        <StoryList user={standardUser} />
+      </MemoryRouter>,
+    );
+    expect(await screen.findByRole('heading', { name: 'First story' })).toBeVisible();
+
+    await user.click(screen.getByRole('button', { name: 'Load more stories' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Next page unavailable');
+    expect(screen.getByRole('heading', { name: 'First story' })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Load more stories' })).toBeEnabled();
+
+    await user.click(screen.getByRole('button', { name: 'Load more stories' }));
+
+    expect(await screen.findByRole('heading', { name: 'Second story' })).toBeVisible();
+    expect(screen.getAllByRole('heading', { name: 'First story' })).toHaveLength(1);
+    expect(screen.queryByRole('button', { name: 'Load more stories' })).not.toBeInTheDocument();
+    expect(api.listStories).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ page: 2, pageSize: 24 }),
+    );
+    expect(api.listStories).toHaveBeenNthCalledWith(
+      3,
+      expect.objectContaining({ page: 2, pageSize: 24 }),
+    );
   });
 
   it('only shows actions allowed by resolved story capabilities', async () => {
@@ -641,12 +763,21 @@ describe('StoryList', () => {
   });
 });
 
-function storyPage(items: StorySummary[]) {
+function storyPage(
+  items: StorySummary[],
+  overrides: Partial<{
+    page: number;
+    pageSize: number;
+    totalCount: number;
+    hasMore: boolean;
+  }> = {},
+) {
   return {
     items,
     page: 1,
     pageSize: 24,
     totalCount: items.length,
     hasMore: false,
+    ...overrides,
   };
 }

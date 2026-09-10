@@ -4,6 +4,11 @@ import { api } from '../../api';
 
 export type ReaderProgressStatus = 'idle' | 'saving' | 'saved' | 'error';
 
+interface ScopedReaderProgressStatus {
+  scope: string;
+  value: ReaderProgressStatus;
+}
+
 export function useReaderProgressPersistence({
   authenticated,
   storyId,
@@ -13,26 +18,66 @@ export function useReaderProgressPersistence({
   storyId: string;
   mode?: ReaderAutosaveMode;
 }) {
-  const [status, setStatus] = useState<ReaderProgressStatus>('idle');
-  const saveQueue = useRef<Promise<void>>(Promise.resolve());
-  const attempt = useRef(0);
-  const modeRef = useRef(mode);
+  const displayScope = `${authenticated ? 'authenticated' : 'anonymous'}:${storyId}:${mode}`;
+  const [scopedStatus, setScopedStatus] = useState<ScopedReaderProgressStatus>({
+    scope: displayScope,
+    value: 'idle',
+  });
+  const saveQueues = useRef(new Map<string, Promise<void>>());
+  const attempts = useRef(new Map<string, number>());
+  const lifecycleVersion = useRef(0);
+  const status = scopedStatus.scope === displayScope ? scopedStatus.value : 'idle';
   useEffect(() => {
-    modeRef.current = mode;
-  }, [mode]);
+    lifecycleVersion.current += 1;
+    saveQueues.current = new Map();
+    attempts.current = new Map();
+    return () => {
+      lifecycleVersion.current += 1;
+    };
+  }, [authenticated, mode, storyId]);
 
-  const markLoaded = useCallback((hasSavedProgress: boolean) => {
-    setStatus(hasSavedProgress ? 'saved' : 'idle');
-  }, []);
+  const markLoaded = useCallback(
+    (hasSavedProgress: boolean) => {
+      setScopedStatus({ scope: displayScope, value: hasSavedProgress ? 'saved' : 'idle' });
+    },
+    [displayScope],
+  );
+
+  const enqueuePersistence = useCallback(
+    (
+      queueScope: string,
+      operation: () => Promise<unknown>,
+      completedStatus: ReaderProgressStatus,
+    ) => {
+      const currentLifecycleVersion = lifecycleVersion.current;
+      const currentAttempt = (attempts.current.get(displayScope) ?? 0) + 1;
+      attempts.current.set(displayScope, currentAttempt);
+      setScopedStatus({ scope: displayScope, value: 'saving' });
+      const updateStatus = (value: ReaderProgressStatus) => {
+        if (currentLifecycleVersion !== lifecycleVersion.current) return;
+        if (currentAttempt !== attempts.current.get(displayScope)) return;
+        setScopedStatus((current) =>
+          current.scope === displayScope ? { scope: displayScope, value } : current,
+        );
+      };
+      const queued = (saveQueues.current.get(queueScope) ?? Promise.resolve()).then(operation);
+      const settled = queued.then(
+        () => updateStatus(completedStatus),
+        () => updateStatus('error'),
+      );
+      saveQueues.current.set(queueScope, settled);
+    },
+    [displayScope],
+  );
 
   const save = useCallback(
     (session: ReaderProgressState, modeOverride?: ReaderAutosaveMode) => {
       if (!authenticated) return;
-      const persistenceMode = modeOverride ?? modeRef.current;
-      const currentAttempt = ++attempt.current;
-      setStatus('saving');
-      const operation = saveQueue.current
-        .then(() =>
+      const persistenceMode = modeOverride ?? mode;
+      const queueScope = `${storyId}:${persistenceMode}`;
+      enqueuePersistence(
+        queueScope,
+        () =>
           api.saveReaderProgress(
             storyId,
             {
@@ -43,33 +88,17 @@ export function useReaderProgressPersistence({
             },
             persistenceMode,
           ),
-        )
-        .then(() => {
-          if (currentAttempt === attempt.current) setStatus('saved');
-        })
-        .catch(() => {
-          if (currentAttempt === attempt.current) setStatus('error');
-        });
-      saveQueue.current = operation.then(() => undefined);
+        'saved',
+      );
     },
-    [authenticated, storyId],
+    [authenticated, enqueuePersistence, mode, storyId],
   );
 
   const reset = useCallback(() => {
     if (!authenticated) return;
-    const persistenceMode = modeRef.current;
-    const currentAttempt = ++attempt.current;
-    setStatus('saving');
-    const operation = saveQueue.current
-      .then(() => api.deleteReaderProgress(storyId, persistenceMode))
-      .then(() => {
-        if (currentAttempt === attempt.current) setStatus('idle');
-      })
-      .catch(() => {
-        if (currentAttempt === attempt.current) setStatus('error');
-      });
-    saveQueue.current = operation.then(() => undefined);
-  }, [authenticated, storyId]);
+    const queueScope = `${storyId}:${mode}`;
+    enqueuePersistence(queueScope, () => api.deleteReaderProgress(storyId, mode), 'idle');
+  }, [authenticated, enqueuePersistence, mode, storyId]);
 
   return { status, markLoaded, save, reset };
 }
