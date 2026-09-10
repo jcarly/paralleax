@@ -19,6 +19,7 @@ import {
   type ReactFlowInstance,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
+import '../features/story-editor/graph/storyGraph.css';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import {
   canManageCommentThread as canActorManageCommentThread,

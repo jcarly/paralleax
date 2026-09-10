@@ -506,7 +506,9 @@ hover or keyboard focus so explicit navigation intent hides most of the added
 route-loading latency.
 
 The React Flow stylesheet is imported by the two graphical routes rather than
-the application entry. Vite emits a production manifest, and every web build
+the application entry. Each route imports its local graph overrides after the
+library stylesheet so custom handle positioning and hit-testing remain the last
+word in the CSS cascade. Vite emits a production manifest, and every web build
 checks its complete static import graph using compressed asset sizes. The
 initial JavaScript and stylesheet budgets are 135 KiB and 24 KiB; incremental
 Story Editor and Story Player assets are limited to 145 KiB and 95 KiB. The

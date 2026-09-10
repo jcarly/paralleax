@@ -14,6 +14,49 @@ test.describe('Story editor graph', () => {
     await prepareEditorPage(page);
   });
 
+  test('keeps child creation controls clickable above invisible routing handles', async ({
+    page,
+  }) => {
+    let creationInput: { parentId?: string; position?: { x: number; y: number } } | undefined;
+    await page.route('**/api/stories/story-1/interactions', async (route) => {
+      if (route.request().method() !== 'POST') {
+        await route.fallback();
+        return;
+      }
+
+      creationInput = route.request().postDataJSON() as typeof creationInput;
+      await route.fulfill({
+        json: {
+          interaction: {
+            id: 'interaction-child',
+            title: 'New interaction',
+            body: 'Describe what happens here.',
+            position: creationInput?.position ?? { x: 120, y: 300 },
+            triggers: [
+              {
+                id: 'trigger-child',
+                inputInteractionIds: ['interaction-1'],
+                conditions: [],
+              },
+            ],
+          },
+          revision: 2,
+          updatedAt: '2026-07-14T08:01:00.000Z',
+        },
+      });
+    });
+
+    await page.goto('/stories/story-1/edit');
+    const interaction = page.locator('.react-flow__node[data-id="interaction-1"]');
+    const routingHandle = interaction.locator('[data-handleid="routing-output-bottom"]');
+    await expect(routingHandle).not.toHaveClass(/connectionindicator/);
+    await expect(routingHandle).toHaveCSS('pointer-events', 'none');
+    await interaction.getByRole('button', { name: 'Create child interaction' }).click();
+
+    await expect.poll(() => creationInput?.parentId).toBe('interaction-1');
+    await expect(page.locator('.react-flow__node[data-id="interaction-child"]')).toBeVisible();
+  });
+
   test('selects interactions and triggers with a rectangle and drags them as a group', async ({
     page,
   }) => {

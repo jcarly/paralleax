@@ -172,6 +172,9 @@ The character-stat vertical keeps these regressions covered:
   baseline weekly and when `run_scheduled_stress` is selected manually.
 - Editor stress: project 2,000 linked interactions into React Flow interaction
   nodes, trigger nodes, and edges within the documented local budget.
+- Editor graph: click an interaction creation control where it overlaps a
+  transparent React Flow routing handle and verify that exactly one child is
+  created from the intended parent.
 - Migration policy: no migration may delete, truncate, or drop the stories table
   wholesale.
 - API: repositories never execute migrations as part of an authentication or

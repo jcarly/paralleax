@@ -129,6 +129,7 @@ export function InteractionNode({ id, data }: NodeProps) {
           id={`routing-input-${position}`}
           position={position}
           className="routing-handle"
+          isConnectable={false}
         />
       ))}
       <Handle
@@ -223,6 +224,7 @@ export function InteractionNode({ id, data }: NodeProps) {
           id={`routing-output-${position}`}
           position={position}
           className="routing-handle"
+          isConnectable={false}
         />
       ))}
     </div>

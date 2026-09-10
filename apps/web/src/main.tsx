@@ -6,7 +6,6 @@ import './features/story-editor/editor.css';
 import './features/story-editor/inspectors/inspector-layout.css';
 import './features/comments/comments.css';
 import './features/story-editor/inspectors/inspector-controls.css';
-import './features/story-editor/graph/storyGraph.css';
 import './features/story-player/storyPlayer.css';
 import './features/story-player/storySimulation.css';
 import './responsive.css';

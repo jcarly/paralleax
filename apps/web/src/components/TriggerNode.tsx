@@ -41,6 +41,7 @@ export function TriggerNode({ data }: NodeProps) {
           id={`routing-input-${position}`}
           position={position}
           className="routing-handle"
+          isConnectable={false}
         />
       ))}
       <button
@@ -89,6 +90,7 @@ export function TriggerNode({ data }: NodeProps) {
           id={`routing-output-${position}`}
           position={position}
           className="routing-handle"
+          isConnectable={false}
         />
       ))}
     </div>

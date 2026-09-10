@@ -11,7 +11,9 @@
   initial focus, contain keyboard focus, close with Escape when cancellable, and
   restore focus to their opening controls where the workflow has one.
 - Deferred the React Flow stylesheet with the existing graphical route chunks
-  instead of downloading it for the Story library and application shell.
+  instead of downloading it for the Story library and application shell. Graph
+  overrides now load after that stylesheet so invisible routing handles cannot
+  intercept interaction-creation controls.
 - Added a manifest-based web bundle contract to every production web build. It
   keeps Story Editor and Story Player as dynamic entries, excludes their
   incremental assets from the initial chunk graph, reports compressed sizes,
