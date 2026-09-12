@@ -244,7 +244,9 @@ paginated endpoints then return context lists, interaction summaries, Trigger
 structures, interaction content/effects, and Trigger conditions/probability/timer
 content in that order. Every page repeats the Story revision. The browser retries
 the complete staged read when a concurrent mutation would otherwise mix
-revisions and enables authoring only after the content stage is complete.
+revisions and enables authoring only after the content stage is complete. Page
+queries read and strip one lookahead row, so continuation metadata remains exact
+when a collection ends on a full page without requiring a count query per page.
 
 Player reads use an optional-auth runtime projection. Context definitions and
 assignments are paginated independently from the graph. A runtime slice contains
@@ -558,6 +560,27 @@ before the mouse is released. Unrelated nodes and edges keep their existing
 references. When the drag ends, the final interaction position and any adjusted
 saved trigger positions are optimistically persisted; automatic placement is not
 converted into authored trigger positions.
+
+React Flow mounts only nodes and edges intersecting the current viewport. For a
+Story of at most 250 interactions the initial viewport still fits the complete
+graph; above that threshold it opens around at most eight root interactions, or
+the first interaction when no root exists. Search, context-reference navigation,
+explicit organization, and click-created interaction actions can still focus any
+projected node. A newly created root, child, or parent is selected and brought
+into view. This limits the initial DOM without removing graph data from the
+staged Story projection.
+
+When selection, search emphasis, comments, or a targeted mutation rebuilds the
+projection, the editor structurally reconciles it with the current React Flow
+state. Unchanged nodes and edges keep their object identity, and changed nodes
+keep transient measurements. This prevents an inspector selection or context
+entity creation from invalidating every card and edge while leaving the domain
+Story as the sole canonical state.
+
+The initial staged load is scheduled on the next browser task and cancelled if
+the mounting effect is immediately cleaned up. React Strict Mode can therefore
+replay the development effect without issuing the complete paginated projection
+twice; explicit retry and realtime refresh still start fresh loads.
 
 Graph decorations cross the same boundary as authored graph positions but do not
 carry narrative meaning. The shared `GraphDecoration` union and pure update/delete
@@ -895,6 +918,12 @@ classes directly.
   Simulation path are inspected. A gated large-Story case uses the same boundary
   and logs structured browser timings; it and the PostgreSQL stress suite run on
   the weekly/manual stress lane rather than every push.
+- Browser performance: a separate 600-interaction Playwright fixture runs against
+  instant controlled API projections in both development and production builds.
+  It isolates browser work by recording first-card and ready times, mounted
+  node/edge counts, selection, drag, location/character creation, projection
+  request count, and response bytes. The weekly/manual stress lane runs it with
+  explicit latency and payload budgets.
 - Coverage: Jest coverage for the API, Vitest V8 coverage for shared and the web app,
   with per-workspace thresholds enforced by the coverage commands.
 - Bundle contract: the production web build checks the Vite manifest, dynamic
@@ -914,6 +943,7 @@ npm run test -w @paralleax/shared
 npm run test -w @paralleax/api
 npm run test -w @paralleax/web
 npm run test:e2e -w @paralleax/web
+npm run test:performance -w @paralleax/web
 npm run test:acceptance -w @paralleax/web
 RUN_LARGE_STORY_ACCEPTANCE=true npm run test:acceptance -w @paralleax/web -- large-story.scheduled.spec.ts
 npm run typecheck

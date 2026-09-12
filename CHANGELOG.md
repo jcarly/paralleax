@@ -1,5 +1,27 @@
 # Changelog
 
+## 2026-09-11
+
+- Added a deterministic 600-interaction browser performance suite for both
+  development and production builds, with explicit budgets and structured
+  measurements for staged projection requests, payload size, initial display,
+  selection, drag, and context creation. The weekly/manual stress lane now also
+  captures real-stack operation/API metrics and PostgreSQL query counts.
+- Large Story graphs now mount only visible React Flow elements and initially
+  focus their entry interactions instead of fitting thousands of off-screen
+  elements into one viewport. Search and navigation can still focus every loaded
+  interaction, and click-created roots, children, and parents are selected and
+  brought into view.
+- Reconciled graph projections preserve unchanged node/edge identities and node
+  measurements, avoiding complete React Flow invalidation after selection,
+  search, movement, comments, or targeted context mutations.
+- Deferred the initial editor projection request by one cancellable browser task
+  so React Strict Mode's development-only effect replay no longer downloads all
+  paginated editor projections twice.
+- Fixed staged editor and runtime-context pagination when a collection contains
+  an exact multiple of the page size. Full final pages no longer advertise a
+  nonexistent continuation page and abort large Story loading as incomplete.
+
 ## 2026-09-10
 
 - Added strict WCAG A/AA Axe checks for the Story library, creation and import

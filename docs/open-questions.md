@@ -5,6 +5,13 @@ not block the MVP unless a future implementation touches the affected area.
 
 ## Users and Permissions
 
+- Define display-name rules before replacing email on collaborative surfaces:
+  required versus optional, uniqueness, rename history, moderation, and the
+  fallback/migration for existing accounts. Email must remain private outside
+  self-service, administration, and explicit access management.
+- Define external identity-provider account linking before adding Google or
+  another provider: trusted verified-email claims, collisions with password
+  accounts, unlinking, recovery, and behavior when a provider is unavailable.
 - Define whether `StoryAccessPolicy` evaluates only persisted grants or also
   public defaults, creator ownership, and future invitation state.
 - Define stale-revision behavior for each mutation: automatic retry for
@@ -13,8 +20,8 @@ not block the MVP unless a future implementation touches the affected area.
 - Define the permission hierarchy: decide whether `manage story settings`
   includes every other permission, whether `edit directly` includes `suggest
 changes`, and whether every non-read permission implies `read`.
-- Define public access semantics: decide whether public stories are accessible
-  without an account or only by authenticated users.
+- ADR-017 makes public Stories anonymously readable. Decide whether a future
+  unlisted visibility is distinct from public and invitation visibility.
 - Define approval rules: decide who can approve pending suggestions, whether the
   creator always has override rights, whether several approvals can be required,
   and whether some permissions allow automatic approval.
@@ -34,6 +41,15 @@ changes`, and whether every non-read permission implies `read`.
 - Decide whether non-text local drafts need a pre-commit undo layer. Text fields
   currently retain native undo while focused; global shortcuts and toolbar
   controls apply only to committed canonical history.
+
+## Comments and Review
+
+- Define deletion semantics before adding comment deletion: deleting a complete
+  thread versus one message, author/editor/owner/administrator authority,
+  hard-delete versus tombstone, audit/history retention, replies whose parent is
+  removed, live invalidation, and whether deletion can be undone. Canvas post-its
+  and entity/text threads must share the same rule because they are projections
+  of one comment-thread model.
 
 ## Story Format and Examples
 

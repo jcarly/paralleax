@@ -207,6 +207,7 @@ export function useStoryGraphPersistence({
       );
       if (!next) return;
       setStory((current) => (current ? applyInteractionResult(current, next) : current));
+      return findSavedInteraction(next, story ?? emptyStory(storyId))?.id;
     },
     [setStory, story, storyId, trackSave],
   );
@@ -222,6 +223,7 @@ export function useStoryGraphPersistence({
       );
       if (!next) return;
       setStory((current) => (current ? applyInteractionResult(current, next) : current));
+      return findSavedInteraction(next, story)?.id;
     },
     [setStory, story, storyId, trackSave],
   );
@@ -239,6 +241,7 @@ export function useStoryGraphPersistence({
       );
       if (!next) return;
       setStory((current) => (current ? applyInteractionResult(current, next) : current));
+      return findSavedInteraction(next, story)?.id;
     },
     [setStory, story, storyId, trackSave],
   );
@@ -279,6 +282,7 @@ export function useStoryGraphPersistence({
         const withCreatedParent = applyInteractionResult(current, withParent);
         return applyTriggerResult(withCreatedParent, linkedTrigger);
       });
+      return parent.id;
     },
     [createConnectionTrigger, setStory, story, storyId, trackSave],
   );

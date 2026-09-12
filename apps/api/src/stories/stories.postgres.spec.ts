@@ -366,6 +366,12 @@ describePostgres('StoriesRepository PostgreSQL integration', () => {
     const bootstrap = await repository.findEditorBootstrap(story.id, ownerId);
     const context = await repository.findEditorContextPage(story.id, ownerId, 1, 1);
     const interactionPage = await repository.findEditorInteractionPage(story.id, ownerId, 1, 1);
+    const finalInteractionPage = await repository.findEditorInteractionPage(
+      story.id,
+      ownerId,
+      2,
+      1,
+    );
     const runtime = await repository.findRuntimeSlice(story.id, ownerId, {
       currentInteractionId: 'interaction-1',
       interactionIds: ['interaction-1'],
@@ -385,6 +391,10 @@ describePostgres('StoriesRepository PostgreSQL integration', () => {
     expect(interactionPage).toMatchObject({
       hasMore: true,
       interactions: [expect.objectContaining({ id: 'interaction-1', title: 'Original title' })],
+    });
+    expect(finalInteractionPage).toMatchObject({
+      hasMore: false,
+      interactions: [expect.objectContaining({ id: 'interaction-2' })],
     });
     expect(runtime).toMatchObject({
       totalOptionCount: 1,

@@ -32,7 +32,9 @@ describe('story graph persistence', () => {
       ...metadata(2),
     });
 
-    await harness.actions.createChildFromInteraction('root', { x: 300, y: 400 });
+    await expect(
+      harness.actions.createChildFromInteraction('root', { x: 300, y: 400 }),
+    ).resolves.toBe('created');
 
     expect(api.createInteraction).toHaveBeenCalledWith('story-1', {
       parentId: 'root',

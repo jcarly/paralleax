@@ -2,7 +2,7 @@
 
 Status: Current
 
-Last reviewed: 2026-08-10
+Last reviewed: 2026-09-11
 
 Implemented: Partial
 
@@ -60,6 +60,13 @@ small test stories. It is not yet ready for an open public production service.
 - Implemented foundation: structured production logs, request identifiers,
   request completion logs, and stable API error envelopes that hide unexpected
   internal details.
+- Add a user display name before exposing multi-user Story, comment, or history
+  surfaces to real participants. Those projections must not use email as a
+  public or collaborative identity; email remains limited to the account owner,
+  administrators, and explicit access-management workflows.
+- Keep repository authorization as the access boundary and add non-disclosing
+  client recovery for inaccessible direct URLs: an unauthorized Story route
+  returns the user to the Story library without rendering private metadata.
 - Implemented foundation: interaction bodies are capped at 64,000 characters
   with editor feedback, HTTP request bodies at 128 KiB, and story mutations at
   60 requests per minute. Add aggregate story-size quotas and provider-level
@@ -76,14 +83,26 @@ small test stories. It is not yet ready for an open public production service.
 - Implemented foundation: story listing uses a lightweight `StorySummary`
   aggregate query rather than assembling every complete graph. Retain measured
   query-count, payload, and latency budgets before the open creator alpha.
-- Introduce targeted persistence commands for common field and position edits;
-  reserve complete graph mutation for structural operations.
+- Implemented foundation: a deterministic 600-interaction browser benchmark now
+  isolates frontend work with instant paginated projections in both development
+  and production builds. It retains explicit first-render, ready, selection,
+  drag, context-creation, request-count, and payload budgets. The scheduled real-
+  stack journey records API response timing and bytes for the same common
+  operations, while the PostgreSQL stress lane records query counts as well as
+  durations. Retain stable CI baselines and add a focused React commit profile
+  before declaring the large-Story performance audit complete.
+- Implemented foundation: common field, graph-position, and entity mutations use
+  targeted contracts. Continue removing remaining complete-story reads or
+  responses only where those profiles show a meaningful cost.
 - Implemented foundation: pending or failed editor saves protect browser
   closing/reloading and internal link navigation. Add data-router blocking for
   browser back/forward navigation and retain real-browser coverage.
-- Add accessibility tests and a manual keyboard/focus audit.
+- Implemented foundation: critical library, editor, reader, and modal routes run
+  automated WCAG A/AA checks. Complete the manual keyboard/focus audit.
 - Implemented foundation: CI runs a high-severity production dependency audit.
-  Add repository secret scanning and production-container vulnerability scans.
+  Triage clean-install/build/test/runtime npm warnings, document intentional
+  temporary warnings, and add repository secret scanning and production-container
+  vulnerability scans.
 - Implemented foundation: separate production API/web images, a migration-first
   Compose shape, smoke checks, and CI image builds are available. Connect them to
   the selected provider and complete a recorded rollback drill.

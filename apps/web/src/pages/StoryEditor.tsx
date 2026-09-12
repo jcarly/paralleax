@@ -62,6 +62,11 @@ import { GraphDecorationNode } from '../features/graph-decorations/GraphDecorati
 import { buildGraphDecorationNodes } from '../features/graph-decorations/graphDecorationNodes';
 import { isRealtimeEditableTarget } from '../features/realtime/storyRealtime';
 import { useStoryConnectionController } from '../features/story-editor/graph/useStoryConnectionController';
+import {
+  reconcileStoryFlowEdges,
+  reconcileStoryFlowNodes,
+} from '../features/story-editor/graph/storyFlowReconciliation';
+import { getInitialStoryFitViewOptions } from '../features/story-editor/graph/storyGraphViewport';
 import { StoryHistoryPanel } from '../features/story-editor/history/StoryHistoryPanel';
 import { useStoryContextNavigation } from '../features/story-editor/navigation/useStoryContextNavigation';
 import { useStoryEditorSelection } from '../features/story-editor/selection/useStoryEditorSelection';
@@ -97,7 +102,6 @@ const nodeTypes = {
   commentPin: CommentPinNode,
 };
 const edgeTypes = { trigger: TriggerEdge };
-const fitViewOptions = { padding: 0.18, maxZoom: 1 };
 const canvasPanMouseButtons = [1];
 
 interface CanvasContextMenuState {
@@ -182,15 +186,18 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
   const [interactionSizes, setInteractionSizes] = useState<
     ReadonlyMap<string, { width: number; height: number }>
   >(() => new Map());
+  const interactionIds = useMemo(
+    () => new Set(story?.interactions.map(({ id }) => id) ?? []),
+    [story?.interactions],
+  );
   const handleNodesChange = useCallback(
     (changes: NodeChange<StoryFlowNode>[]) => {
       onNodesChange(changes);
-      const interactionIds = new Set(story?.interactions.map(({ id }) => id) ?? []);
       setInteractionSizes((current) =>
         applyInteractionSizeChanges(current, changes, interactionIds),
       );
     },
-    [onNodesChange, story?.interactions],
+    [interactionIds, onNodesChange],
   );
   const flowInstance = useRef<ReactFlowInstance<StoryFlowNode, TriggerFlowEdge> | null>(null);
   const canvasRef = useRef<HTMLElement | null>(null);
@@ -457,19 +464,51 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
       story ? getStoryGraphClickCreationPosition(story, creation, { interactionSizes }) : undefined,
     [interactionSizes, story],
   );
+  const focusInteractionNode = useCallback(
+    (interactionId: string) => {
+      selectInteraction(interactionId);
+      window.requestAnimationFrame(() => {
+        void flowInstance.current?.fitView({
+          nodes: [{ id: interactionId }],
+          duration: 250,
+          padding: 0.7,
+          maxZoom: 1,
+        });
+      });
+    },
+    [selectInteraction],
+  );
   const createRootFromClick = useCallback(
-    () => createRoot(getClickCreationPosition({ kind: 'root' })),
-    [createRoot, getClickCreationPosition],
+    async (position?: Position) => {
+      const interactionId = await createRoot(
+        position ?? getClickCreationPosition({ kind: 'root' }),
+      );
+      if (!interactionId) return;
+      focusInteractionNode(interactionId);
+    },
+    [createRoot, focusInteractionNode, getClickCreationPosition],
   );
   const createChildFromClick = useCallback(
-    (sourceId: string) =>
-      createChildFromInteraction(sourceId, getClickCreationPosition({ kind: 'child', sourceId })),
-    [createChildFromInteraction, getClickCreationPosition],
+    async (sourceId: string) => {
+      const interactionId = await createChildFromInteraction(
+        sourceId,
+        getClickCreationPosition({ kind: 'child', sourceId }),
+      );
+      if (!interactionId) return;
+      focusInteractionNode(interactionId);
+    },
+    [createChildFromInteraction, focusInteractionNode, getClickCreationPosition],
   );
   const createParentFromClick = useCallback(
-    (targetId: string) =>
-      createParentForInteraction(targetId, getClickCreationPosition({ kind: 'parent', targetId })),
-    [createParentForInteraction, getClickCreationPosition],
+    async (targetId: string) => {
+      const interactionId = await createParentForInteraction(
+        targetId,
+        getClickCreationPosition({ kind: 'parent', targetId }),
+      );
+      if (!interactionId) return;
+      focusInteractionNode(interactionId);
+    },
+    [createParentForInteraction, focusInteractionNode, getClickCreationPosition],
   );
 
   const storyNodes = useMemo(
@@ -524,6 +563,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
       }),
     [openCommentCounts, openCommentsForTarget, selectExclusive, story, selectedTrigger],
   );
+  const initialFitViewOptions = useMemo(() => getInitialStoryFitViewOptions(story), [story]);
   const narrativeNodes = useMemo(
     () => applyStoryGraphSelection([...storyNodes, ...triggerNodes], graphSelection),
     [graphSelection, storyNodes, triggerNodes],
@@ -598,11 +638,12 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
   );
 
   useEffect(() => {
-    setNodes([
+    const projectedNodes = [
       ...decorationNodes,
       ...narrativeNodes.map((node) => (reviewOnly ? { ...node, draggable: false } : node)),
       ...commentNodes,
-    ]);
+    ];
+    setNodes((current) => reconcileStoryFlowNodes(current, projectedNodes));
   }, [commentNodes, decorationNodes, narrativeNodes, reviewOnly, setNodes]);
 
   const selectTriggerData = useCallback(
@@ -628,7 +669,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
   );
 
   useEffect(() => {
-    setEdges(storyEdges);
+    setEdges((current) => reconcileStoryFlowEdges(current, storyEdges));
   }, [setEdges, storyEdges]);
 
   function previewInteractionMoves(
@@ -1416,7 +1457,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
               canComment={story.capabilities?.canComment === true}
               canOrganize={story.interactions.length > 0}
               organizeSelectionCount={selectedLayoutTargets.length}
-              onCreateInteraction={() => void createRoot(canvasContextMenu.flowPosition)}
+              onCreateInteraction={() => void createRootFromClick(canvasContextMenu.flowPosition)}
               onAddComment={() => startCanvasComment(canvasContextMenu.flowPosition)}
               onAddFrame={() => void addGraphDecoration('frame', canvasContextMenu.flowPosition)}
               onAddText={() => void addGraphDecoration('text', canvasContextMenu.flowPosition)}
@@ -1433,6 +1474,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
             onInit={(instance) => {
               flowInstance.current = instance;
             }}
+            onlyRenderVisibleElements
             onNodesChange={handleNodesChange}
             onConnect={reviewOnly ? undefined : requestConnection}
             onConnectStart={reviewOnly ? undefined : startCanvasConnection}
@@ -1457,7 +1499,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
               endLocalEdit();
             }}
             fitView
-            fitViewOptions={fitViewOptions}
+            fitViewOptions={initialFitViewOptions}
             minZoom={0.05}
             panOnDrag={canvasPanMouseButtons}
             panActivationKeyCode="Space"

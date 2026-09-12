@@ -229,8 +229,9 @@ export function useStoryPersistenceLifecycle({
   }, [flushPendingRealtimeRefresh]);
 
   useEffect(() => {
-    void load();
+    const pendingLoad = window.setTimeout(() => void load(), 0);
     return () => {
+      window.clearTimeout(pendingLoad);
       loadAttemptRef.current += 1;
     };
   }, [load]);

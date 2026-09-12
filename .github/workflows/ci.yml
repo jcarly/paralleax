@@ -184,6 +184,10 @@ jobs:
       - name: Run Playwright tests
         run: npm run test:e2e -w @paralleax/web
 
+      - name: Run scheduled browser performance baseline
+        if: github.event_name == 'schedule' || inputs.run_scheduled_stress
+        run: npm run test:performance -w @paralleax/web
+
       - name: Upload Playwright reports
         if: always()
         uses: actions/upload-artifact@v7

@@ -1,5 +1,5 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
-import { useState } from 'react';
+import { createElement, StrictMode, useState, type PropsWithChildren } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Story } from '@paralleax/shared';
 import { api } from '../../../api';
@@ -41,6 +41,23 @@ describe('story persistence lifecycle', () => {
     expect(result.current.error).toBe('');
     expect(result.current.saveStatus).toBe('idle');
     expect(useStoryRealtime).toHaveBeenLastCalledWith('story-1', true, expect.any(Function), 1);
+  });
+
+  it('starts one initial projection load when Strict Mode replays effects', async () => {
+    vi.mocked(api.getStory).mockResolvedValue(storyFixture());
+    const wrapper = ({ children }: PropsWithChildren) =>
+      createElement(StrictMode, undefined, children);
+    const { result } = renderHook(
+      () => {
+        const [story, setStory] = useState<Story>();
+        return { story, ...useStoryPersistenceLifecycle({ storyId: 'story-1', story, setStory }) };
+      },
+      { wrapper },
+    );
+
+    await waitFor(() => expect(result.current.story?.id).toBe('story-1'));
+
+    expect(loadStoryEditorProjection).toHaveBeenCalledOnce();
   });
 
   it('tracks successful and failed saves without owning another Story state', async () => {
@@ -173,6 +190,7 @@ describe('story persistence lifecycle', () => {
       { initialProps: { storyId: 'story-1' } },
     );
 
+    await waitFor(() => expect(reportFirstProgress).toBeDefined());
     rerender({ storyId: 'story-2' });
     await waitFor(() => expect(result.current.story?.id).toBe('story-2'));
 
@@ -239,6 +257,7 @@ describe('story persistence lifecycle', () => {
       useStoryPersistenceLifecycle({ storyId: 'story-1', story: undefined, setStory }),
     );
 
+    await waitFor(() => expect(resolveLoad).toBeDefined());
     unmount();
     act(() => {
       reportProgress?.(storyFixture());

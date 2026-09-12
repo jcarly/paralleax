@@ -13,7 +13,8 @@
     "playwright:run": "playwright test",
     "playwright:install": "playwright install chromium",
     "test:e2e": "playwright test",
-    "test:acceptance": "playwright test --config playwright.acceptance.config.ts"
+    "test:acceptance": "playwright test --config playwright.acceptance.config.ts",
+    "test:performance": "playwright test --config playwright.performance.config.ts"
   },
   "dependencies": {
     "@formbricks/js": "^5.0.0",

@@ -102,10 +102,12 @@ The character-stat vertical keeps these regressions covered:
   `ARGS[0]` destination in the graph, display the QSP coverage report, and
   traverse the imported action path in Simulation Mode.
 - Scheduled real-stack browser acceptance: a generated QSP source imports 300
-  linked locations into 599 interactions; the browser loads every interaction,
-  finds the final one through search, edits and reloads it durably, navigates
-  back to the entry through search, and traverses the first imported link in
-  Simulation Mode while logging import and editor-load timings.
+  linked locations into 599 interactions; the browser loads the complete staged
+  projection, finds the final one through search, edits and moves it, creates a
+  location and character, reloads the changes durably, navigates back to the
+  entry, and traverses the first imported link in Simulation Mode. Structured
+  output records import/load/selection/drag/context timings plus editor response
+  sizes and API response durations.
 - Real-stack browser acceptance: one real Story metadata response is held after
   its API commit while a child-interaction creation completes first. Save status
   remains pending until both responses settle; the child then survives movement
@@ -136,6 +138,8 @@ The character-stat vertical keeps these regressions covered:
 - Staged projections: reject duplicated, missing, unknown, misnumbered, or
   revision-inconsistent context, interaction, Trigger, content, and option pages;
   persistent revision churn ends in a controlled error after bounded retries.
+  A full final page at an exact page-size boundary must report no continuation
+  and must not cause the complete projection to be rejected as incomplete.
 - Reader persistence: a pending autosave from a previous Story cannot delay a
   new Story save or update its status after the route changes.
 - Editor persistence: a mutation result settling after a Story route change is
@@ -168,10 +172,19 @@ The character-stat vertical keeps these regressions covered:
   restore its current schema so repository tests are independent of file order.
 - PostgreSQL stress: round-trip a configurable 1,000-interaction story and
   enforce explicit budgets for initial save, complete load, and a common node
-  mutation; emit the measured payload size and durations. CI executes this
-  baseline weekly and when `run_scheduled_stress` is selected manually.
+  mutation; emit the measured payload size, durations, and SQL query counts with
+  guards against size-dependent N+1 regressions. CI executes this baseline
+  weekly and when `run_scheduled_stress` is selected manually.
 - Editor stress: project 2,000 linked interactions into React Flow interaction
-  nodes, trigger nodes, and edges within the documented local budget.
+  nodes, trigger nodes, and edges within the documented local budget, then
+  preview 120 drag frames under the pure graph-work budget.
+- Browser editor performance: load a deterministic 600-interaction projection
+  with an instant mocked API in development and production builds; enforce
+  budgets for first visible interaction, editor readiness, search selection,
+  drag confirmation, location/character creation, request count, and response
+  bytes. The test also records the number of nodes and edges actually mounted in
+  the viewport so browser rendering cost remains distinguishable from transport
+  and PostgreSQL cost.
 - Editor graph: click an interaction creation control where it overlaps a
   transparent React Flow routing handle and verify that exactly one child is
   created from the intended parent.

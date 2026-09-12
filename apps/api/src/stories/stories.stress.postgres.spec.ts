@@ -12,7 +12,8 @@ const interactionCount = positiveInteger(process.env.STRESS_INTERACTION_COUNT, 1
 
 describeStress('StoriesRepository PostgreSQL stress', () => {
   const pool = new Pool({ connectionString });
-  const database = { pool } as DatabaseConnection;
+  const queryCounter = createQueryCounter(pool);
+  const database = { pool: queryCounter.pool } as DatabaseConnection;
   const repository = new StoriesRepository(database);
   const ownerId = `stress-user-${randomUUID()}`;
 
@@ -35,8 +36,13 @@ describeStress('StoriesRepository PostgreSQL stress', () => {
     const story = largeStory(interactionCount);
     const payloadBytes = Buffer.byteLength(JSON.stringify(story));
 
+    queryCounter.reset();
     const saveMs = await measure(() => repository.save(story, ownerId));
+    const saveQueryCount = queryCounter.value();
+    queryCounter.reset();
     const load = await measureResult(() => repository.find(story.id, ownerId));
+    const loadQueryCount = queryCounter.value();
+    queryCounter.reset();
     const mutation = await measureResult(() =>
       repository.mutate(
         story.id,
@@ -48,6 +54,7 @@ describeStress('StoriesRepository PostgreSQL stress', () => {
         ownerId,
       ),
     );
+    const mutationQueryCount = queryCounter.value();
 
     expect(load.result?.interactions).toHaveLength(interactionCount);
     expect(load.result?.interactions.at(-1)?.triggers[0].inputInteractionIds).toEqual([
@@ -62,16 +69,53 @@ describeStress('StoriesRepository PostgreSQL stress', () => {
       interactions: interactionCount,
       payloadBytes,
       saveMs: round(saveMs),
+      saveQueryCount,
       loadMs: round(load.durationMs),
+      loadQueryCount,
       mutationMs: round(mutation.durationMs),
+      mutationQueryCount,
     };
     console.info(`POSTGRES_STRESS ${JSON.stringify(measurements)}`);
 
     expect(saveMs).toBeLessThan(budget('STRESS_SAVE_BUDGET_MS', 60_000));
     expect(load.durationMs).toBeLessThan(budget('STRESS_LOAD_BUDGET_MS', 15_000));
     expect(mutation.durationMs).toBeLessThan(budget('STRESS_MUTATION_BUDGET_MS', 20_000));
+    expect(saveQueryCount).toBeLessThan(budget('STRESS_SAVE_QUERY_BUDGET', 200));
+    expect(loadQueryCount).toBeLessThan(budget('STRESS_LOAD_QUERY_BUDGET', 100));
+    expect(mutationQueryCount).toBeLessThan(budget('STRESS_MUTATION_QUERY_BUDGET', 250));
   }, 120_000);
 });
+
+function createQueryCounter(pool: Pool) {
+  let count = 0;
+  const instrument = <T extends object>(target: T): T =>
+    new Proxy(target, {
+      get(currentTarget, property) {
+        const value = Reflect.get(currentTarget, property);
+        if (property === 'query' && typeof value === 'function') {
+          return (...args: unknown[]) => {
+            count += 1;
+            return Reflect.apply(value, currentTarget, args);
+          };
+        }
+        if (property === 'connect' && typeof value === 'function') {
+          return async (...args: unknown[]) => {
+            const client = await Reflect.apply(value, currentTarget, args);
+            return instrument(client as object);
+          };
+        }
+        return typeof value === 'function' ? value.bind(currentTarget) : value;
+      },
+    });
+
+  return {
+    pool: instrument(pool),
+    reset: () => {
+      count = 0;
+    },
+    value: () => count,
+  };
+}
 
 function largeStory(count: number): Story {
   const now = new Date().toISOString();

@@ -136,7 +136,7 @@ export async function readStoryEditorContextPage(
 ): Promise<StoryEditorContextPage> {
   const { storyId, revision, page, pageSize } = options;
   const offset = (page - 1) * pageSize;
-  const parameters = [storyId, pageSize, offset];
+  const parameters = pageQueryParameters(storyId, pageSize, offset);
   const [
     locations,
     characters,
@@ -211,15 +211,15 @@ export async function readStoryEditorContextPage(
       itemDefinitions,
       itemInstances,
       graphDecorations,
-    ].some((result) => result.rows.length === pageSize),
-    locations: locations.rows.map((row) => ({
+    ].some((result) => hasPageLookahead(result.rows, pageSize)),
+    locations: pageRows(locations.rows, pageSize).map((row) => ({
       id: row.id,
       name: row.name,
       description: row.description,
       ...(row.category ? { category: row.category } : {}),
       ...(row.image_url ? { imageUrl: row.image_url } : {}),
     })),
-    characters: characters.rows.map((row) => ({
+    characters: pageRows(characters.rows, pageSize).map((row) => ({
       id: row.id,
       name: row.name,
       description: row.description,
@@ -227,7 +227,7 @@ export async function readStoryEditorContextPage(
       ...(row.image_url ? { imageUrl: row.image_url } : {}),
       ...(row.is_playable ? { isPlayable: true } : {}),
     })),
-    statDefinitions: statDefinitions.rows.map((row) => ({
+    statDefinitions: pageRows(statDefinitions.rows, pageSize).map((row) => ({
       id: row.id,
       name: row.name,
       valueType: row.value_type,
@@ -235,21 +235,21 @@ export async function readStoryEditorContextPage(
       ...(row.image_url ? { imageUrl: row.image_url } : {}),
       ...(row.change_per_hour ? { changePerHour: row.change_per_hour } : {}),
     })),
-    statAssignments: statAssignments.rows.map((row) => ({
+    statAssignments: pageRows(statAssignments.rows, pageSize).map((row) => ({
       id: row.id,
       statDefinitionId: row.stat_definition_id,
       initialValue: row.initial_value,
       ownerType: row.owner_type === 'item_definition' ? 'itemDefinition' : row.owner_type,
       ...statOwner(row),
     })),
-    itemDefinitions: itemDefinitions.rows.map((row) => ({
+    itemDefinitions: pageRows(itemDefinitions.rows, pageSize).map((row) => ({
       id: row.id,
       name: row.name,
       description: row.description,
       ...(row.category ? { category: row.category } : {}),
       ...(row.image_url ? { imageUrl: row.image_url } : {}),
     })),
-    itemInstances: itemInstances.rows.map((row) => ({
+    itemInstances: pageRows(itemInstances.rows, pageSize).map((row) => ({
       id: row.id,
       itemDefinitionId: row.item_definition_id,
       ...(row.owner_character_id
@@ -261,7 +261,7 @@ export async function readStoryEditorContextPage(
       ...(row.relationship_type ? { relationshipType: row.relationship_type } : {}),
       ...(row.slot_key ? { slotKey: row.slot_key } : {}),
     })),
-    graphDecorations: graphDecorations.rows.map((row) =>
+    graphDecorations: pageRows(graphDecorations.rows, pageSize).map((row) =>
       row.kind === 'frame'
         ? {
             id: row.id,
@@ -296,14 +296,15 @@ export async function readStoryEditorInteractionPage(
     `SELECT id, title, position_x, position_y, location_id, sort_order
        FROM interactions WHERE story_id = $1
        ORDER BY sort_order, id LIMIT $2 OFFSET $3`,
-    [storyId, pageSize, offset],
+    pageQueryParameters(storyId, pageSize, offset),
   );
+  const interactions = pageRows(result.rows, pageSize);
   return {
     revision,
     page,
     pageSize,
-    hasMore: result.rows.length === pageSize,
-    interactions: result.rows.map((row) => ({
+    hasMore: hasPageLookahead(result.rows, pageSize),
+    interactions: interactions.map((row) => ({
       id: row.id,
       title: row.title,
       position: { x: row.position_x, y: row.position_y },
@@ -327,9 +328,10 @@ export async function readStoryEditorTriggerPage(
        WHERE interactions.story_id = $1
        ORDER BY interactions.sort_order, triggers.sort_order, triggers.id
        LIMIT $2 OFFSET $3`,
-    [storyId, pageSize, offset],
+    pageQueryParameters(storyId, pageSize, offset),
   );
-  const triggerIds = triggers.rows.map(({ id }) => id);
+  const triggerRows = pageRows(triggers.rows, pageSize);
+  const triggerIds = triggerRows.map(({ id }) => id);
   const inputs = triggerIds.length
     ? await queryable.query<TriggerInputRow>(
         `SELECT trigger_id, input_interaction_id, sort_order
@@ -343,8 +345,8 @@ export async function readStoryEditorTriggerPage(
     revision,
     page,
     pageSize,
-    hasMore: triggers.rows.length === pageSize,
-    triggers: triggers.rows.map((row) => ({
+    hasMore: hasPageLookahead(triggers.rows, pageSize),
+    triggers: triggerRows.map((row) => ({
       id: row.id,
       outputInteractionId: row.output_interaction_id,
       inputInteractionIds: (inputsByTrigger.get(row.id) ?? []).map(
@@ -367,9 +369,10 @@ export async function readStoryEditorInteractionContentPage(
     `SELECT id, body, duration_minutes, conditional_text_blocks, sort_order
        FROM interactions WHERE story_id = $1
        ORDER BY sort_order, id LIMIT $2 OFFSET $3`,
-    [storyId, pageSize, offset],
+    pageQueryParameters(storyId, pageSize, offset),
   );
-  const interactionIds = interactions.rows.map(({ id }) => id);
+  const interactionRows = pageRows(interactions.rows, pageSize);
+  const interactionIds = interactionRows.map(({ id }) => id);
   const [characters, statEffects, itemEffects] = interactionIds.length
     ? await Promise.all([
         queryable.query<InteractionCharacterRow>(
@@ -410,8 +413,8 @@ export async function readStoryEditorInteractionContentPage(
     revision,
     page,
     pageSize,
-    hasMore: interactions.rows.length === pageSize,
-    interactions: interactions.rows.map((row) => ({
+    hasMore: hasPageLookahead(interactions.rows, pageSize),
+    interactions: interactionRows.map((row) => ({
       interactionId: row.id,
       body: row.body,
       durationMinutes: row.duration_minutes,
@@ -450,14 +453,15 @@ export async function readStoryEditorTriggerContentPage(
        WHERE interactions.story_id = $1
        ORDER BY interactions.sort_order, triggers.sort_order, triggers.id
        LIMIT $2 OFFSET $3`,
-    [storyId, pageSize, offset],
+    pageQueryParameters(storyId, pageSize, offset),
   );
+  const triggers = pageRows(result.rows, pageSize);
   return {
     revision,
     page,
     pageSize,
-    hasMore: result.rows.length === pageSize,
-    triggers: result.rows.map((row) => ({
+    hasMore: hasPageLookahead(result.rows, pageSize),
+    triggers: triggers.map((row) => ({
       triggerId: row.id,
       conditionGroups: row.condition_groups,
       appearanceProbability: row.appearance_probability,
@@ -479,4 +483,16 @@ function groupBy<T>(items: T[], key: (item: T) => string) {
   const grouped = new Map<string, T[]>();
   for (const item of items) grouped.set(key(item), [...(grouped.get(key(item)) ?? []), item]);
   return grouped;
+}
+
+function pageQueryParameters(storyId: string, pageSize: number, offset: number) {
+  return [storyId, pageSize + 1, offset];
+}
+
+function hasPageLookahead(rows: readonly unknown[], pageSize: number) {
+  return rows.length > pageSize;
+}
+
+function pageRows<T>(rows: T[], pageSize: number) {
+  return rows.slice(0, pageSize);
 }

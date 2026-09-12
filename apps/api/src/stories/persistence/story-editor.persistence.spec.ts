@@ -132,14 +132,14 @@ describe('Story editor persistence projections', () => {
       readStoryEditorContextPage(client, {
         storyId: 'story-1',
         revision: 7,
-        page: 2,
-        pageSize: 2,
+        page: 1,
+        pageSize: 4,
       }),
     ).resolves.toEqual({
       revision: 7,
-      page: 2,
-      pageSize: 2,
-      hasMore: true,
+      page: 1,
+      pageSize: 4,
+      hasMore: false,
       locations: [
         {
           id: 'location-1',
@@ -257,7 +257,7 @@ describe('Story editor persistence projections', () => {
     });
 
     expect(query).toHaveBeenCalledTimes(7);
-    expect(query.mock.calls[0][1]).toEqual(['story-1', 2, 2]);
+    expect(query.mock.calls[0][1]).toEqual(['story-1', 5, 0]);
   });
 
   it('can omit graph decorations from a context page', async () => {
@@ -295,6 +295,14 @@ describe('Story editor persistence projections', () => {
             location_id: null,
             sort_order: 1,
           },
+          {
+            id: 'interaction-lookahead',
+            title: 'Lookahead',
+            position_x: 50,
+            position_y: 60,
+            location_id: null,
+            sort_order: 2,
+          },
         ],
       })
       .mockResolvedValueOnce({
@@ -314,6 +322,14 @@ describe('Story editor persistence projections', () => {
             position_y: null,
             interaction_sort_order: 1,
             sort_order: 1,
+          },
+          {
+            id: 'trigger-lookahead',
+            output_interaction_id: 'interaction-lookahead',
+            position_x: 70,
+            position_y: 80,
+            interaction_sort_order: 2,
+            sort_order: 0,
           },
         ],
       })
@@ -379,6 +395,30 @@ describe('Story editor persistence projections', () => {
     });
   });
 
+  it('does not announce a seventh page when page six is exactly full', async () => {
+    query.mockResolvedValueOnce({
+      rows: Array.from({ length: 100 }, (_, index) => ({
+        id: `interaction-${index + 501}`,
+        title: `Interaction ${index + 501}`,
+        position_x: index,
+        position_y: index,
+        location_id: null,
+        sort_order: index + 500,
+      })),
+    });
+
+    const result = await readStoryEditorInteractionPage(client, {
+      storyId: 'story-1',
+      revision: 4,
+      page: 6,
+      pageSize: 100,
+    });
+
+    expect(result.interactions).toHaveLength(100);
+    expect(result.hasMore).toBe(false);
+    expect(query).toHaveBeenCalledWith(expect.any(String), ['story-1', 101, 500]);
+  });
+
   it('does not query trigger inputs for an empty trigger page', async () => {
     query.mockResolvedValue({ rows: [] });
 
@@ -404,6 +444,13 @@ describe('Story editor persistence projections', () => {
               duration_minutes: 15,
               conditional_text_blocks: [],
               sort_order: 0,
+            },
+            {
+              id: 'interaction-lookahead',
+              body: '<p>Deferred</p>',
+              duration_minutes: 0,
+              conditional_text_blocks: [],
+              sort_order: 1,
             },
           ],
         });
@@ -466,6 +513,14 @@ describe('Story editor persistence projections', () => {
               appearance_probability: 60,
               timer_seconds: 12,
               interaction_sort_order: 0,
+              sort_order: 0,
+            },
+            {
+              id: 'trigger-lookahead',
+              condition_groups: [],
+              appearance_probability: 100,
+              timer_seconds: null,
+              interaction_sort_order: 1,
               sort_order: 0,
             },
           ],

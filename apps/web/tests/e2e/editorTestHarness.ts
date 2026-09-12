@@ -79,7 +79,16 @@ export async function getEdgeEndDirection(page: Page, edgeId: string) {
 
 type StorySource = Story | (() => Story);
 
-export async function mockStory(page: Page, initialStory: StorySource = cloneStory()) {
+export interface MockEditorResponseMetric {
+  path: string;
+  payloadBytes: number;
+}
+
+export async function mockStory(
+  page: Page,
+  initialStory: StorySource = cloneStory(),
+  onEditorResponse?: (metric: MockEditorResponseMetric) => void,
+) {
   await page.route('**/api/stories/story-1/editor**', async (route) => {
     const current = resolveStory(initialStory);
     const url = new URL(route.request().url());
@@ -95,7 +104,12 @@ export async function mockStory(page: Page, initialStory: StorySource = cloneSto
             : url.pathname.endsWith('/editor/content/triggers')
               ? storyProjectionTriggerContentPage(current, pageNumber, pageSize)
               : storyProjectionBootstrap(current);
-    await route.fulfill({ json: structuredClone(response) });
+    const payload = structuredClone(response);
+    onEditorResponse?.({
+      path: url.pathname,
+      payloadBytes: new TextEncoder().encode(JSON.stringify(payload)).byteLength,
+    });
+    await route.fulfill({ json: payload });
   });
   await page.route('**/api/stories/story-1', async (route) => {
     if (route.request().method() === 'GET') {
@@ -203,7 +217,11 @@ async function mockEditorBackgroundRequests(page: Page) {
   await mockGraphPositionUpdates(page);
 }
 
-export async function prepareEditorPage(page: Page) {
+export async function prepareEditorPage(
+  page: Page,
+  initialStory: StorySource = cloneStory(),
+  onEditorResponse?: (metric: MockEditorResponseMetric) => void,
+) {
   await page.route('**/api/auth/me', (route) =>
     route.fulfill({
       json: {
@@ -214,7 +232,7 @@ export async function prepareEditorPage(page: Page) {
     }),
   );
   await mockEditorBackgroundRequests(page);
-  await mockStory(page);
+  await mockStory(page, initialStory, onEditorResponse);
 }
 
 function resolveStory(source: StorySource): Story {

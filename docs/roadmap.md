@@ -2,7 +2,7 @@
 
 This roadmap describes the progression from the validated narrative core to a public Paralleax platform.
 
-Status reviewed: 2026-08-31.
+Status reviewed: 2026-09-11.
 
 It is organized around **user capabilities** rather than implementation areas. Engineering work supports these milestones but does not define them by itself.
 
@@ -30,18 +30,147 @@ reliability, conflict, exchange-format, accessibility, and publication work.
 
 The near-term delivery sequence is:
 
-1. close the remaining standalone V0.2 reliability, scale, and accessibility gaps
-   now that durable authored history, visible Simulation Mode mutation recovery,
-   and author-facing history browsing are implemented;
-2. complete V0.3 optimistic concurrency, conflict recovery, history retention,
+1. close the private-alpha P0 feedback queue below, beginning with measured
+   large-Story performance, private display identities, account-entry visibility,
+   inaccessible-route behavior, and build/runtime warning triage;
+2. deliver the P1 Story-settings/access, localization, comment-inspector, graph
+   correctness, and cyclic-layout work as cohesive verticals;
+3. complete V0.3 optimistic concurrency, conflict recovery, history retention,
    and optional gesture grouping;
-3. establish the stable Paralleax backup/import-export contract required by V0.6;
-4. add Story validation, onboarding, and accessibility evidence to reach V0.7;
-5. then deepen world state, dynamic execution, collaboration, and publishing
+4. establish the stable Paralleax backup/import-export contract required by V0.6;
+5. add Story validation, onboarding, and accessibility evidence to reach V0.7;
+6. then deepen world state, dynamic execution, collaboration, and publishing
    according to validated user needs.
 
 Later milestone foundations may continue to be improved when they support these
 steps, but they must not bypass their production dependencies.
+
+## Private-Alpha Feedback Queue — 2026-09-11
+
+This queue records observed product feedback without replacing the milestone
+roadmap. P0 items block or materially undermine the current private-alpha
+experience. P1 items are the next coherent product verticals after P0. P2 items
+are useful follow-ups that should not interrupt those verticals. Within a
+priority, the order below is the intended delivery order.
+
+### P0 — Address First
+
+1. **Measure and isolate large-Story latency.** Profile development and
+   production builds separately with a representative large fixture. Record
+   interaction drag latency, inspector-selection latency, location/character
+   creation latency, React render/commit counts, request payloads, API timings,
+   SQL query counts, and PostgreSQL timings. Define budgets before optimizing,
+   then fix the measured browser, API, or persistence bottlenecks rather than
+   assuming every slow action has the same cause.
+   **Started 2026-09-11:** the 600-interaction isolated browser baseline
+   identified full React Flow DOM mounting, projection-wide identity churn, and
+   duplicate Strict Mode requests as the dominant local costs. Visible-only
+   mounting, entry-focused initial framing, structural node/edge reconciliation,
+   and cancellable initial scheduling now have regression coverage and explicit
+   development/production budgets. Repeated local production runs reached a
+   visible interaction in 1.9â€“2.3 s, full editor readiness in 3.5â€“4.3 s,
+   selection in 0.7â€“2.4 s, drag confirmation in 0.6â€“0.9 s, and context creation
+   in 0.4 s or less, with 26 staged responses totalling 423 KB. The scheduled real-stack and
+   PostgreSQL lanes now retain API byte/timing and SQL query-count evidence;
+   stable CI results and a focused React commit profile remain before this item
+   can be closed.
+2. **Introduce private display identities.** Story cards, comments, history, and
+   collaborative surfaces must show a pseudonym/display name rather than an
+   email address. Email remains private account data and may appear only where
+   account administration or an explicit access-management workflow requires
+   it. This requires one extension of the existing user model and projections,
+   not a parallel profile model; uniqueness, rename, and legacy fallback rules
+   must be decided before the migration.
+3. **Restore clear account entry.** Make the `Create account` action visually
+   discoverable and verify sign-in/sign-up contrast, keyboard focus, responsive
+   presentation, and the anonymous golden path.
+4. **Handle inaccessible direct URLs consistently.** An authenticated user who
+   opens a Story/editor/player/configuration URL without the required capability
+   returns to the Story library without learning private Story details. API
+   authorization remains the security boundary; client redirection is the
+   recovery UX, not an authorization substitute.
+5. **Triage every npm warning.** Capture clean install, build, test, and runtime
+   logs; classify each warning as security, deprecated/unsupported dependency,
+   configuration, or harmless tooling noise. Resolve security and runtime-risk
+   warnings immediately, document intentional temporary warnings, and avoid
+   force-upgrading across majors without reviewing the dependency contract.
+
+### P1 — Next Product Verticals
+
+1. **Account safety.** Add email verification, password recovery/change, and
+   session revocation before open registration. Keep external identity providers
+   as the separate P2 decision below.
+2. **Story configuration and access.** Put configuration behind a gear beside
+   the Story title and reuse the existing controls inside a tabbed modal:
+   `Properties` owns Story-level properties including the starting date/time,
+   while `Access` owns visibility, editing, commenting, and direct grants.
+   Order scope choices consistently from broad to restricted and use short
+   labels such as `Everyone`, `Signed-in users`, `By invitation`, and `Editors`
+   only where each policy supports them; the French copy is `Tout le monde`,
+   `Utilisateurs connectés`, `Par invitation`, and `Éditeurs`. Use concise field
+   labels such as `Reading` / `Lecture`. Align the grant action with its fields
+   and call it `Add user` (`Ajouter l'utilisateur` in French) while the product
+   grants access only to existing accounts. Reserve the `Send invitation`
+   wording (`Envoyer l'invitation` in French) for a future outbound invitation
+   workflow. Allow an existing viewer/editor grant to be changed in place as
+   well as removed.
+3. **Localized operational errors.** Map stable API error codes to localized web
+   copy and use the server message only as a safe fallback. In particular, the
+   existing-account/non-owner collaborator error must never surface in English
+   while the French interface is active. Audit all access, authentication,
+   import, save, and comment failures for the same leak.
+4. **Inspector-integrated comments.** Replace the floating comment block with a
+   collapsible comment column integrated with the inspector. It is open by
+   default when navigation starts from the global comment list or an entity/
+   Trigger comment badge, otherwise collapsed. Its background remains
+   transparent enough to preserve graph context. Provide one consistent comment
+   icon on interactions, Triggers, and commented context-list rows, plus local
+   indicators beside anchored text. Discussions are expanded; selecting one
+   reveals its reply field, which collapses on blur when empty. Reuse the current
+   thread, anchor, permission, and SSE model rather than introducing another
+   comment representation.
+5. **Complete comment manipulation.** Make graph comment post-its draggable
+   through the existing anchor-update operation. Add authorized thread/comment
+   deletion only after settling thread-versus-message deletion, audit retention,
+   and restoration semantics; cover post-it and non-canvas anchors uniformly.
+6. **Graph correctness and direct actions.** Fix frame resizing so it preserves
+   the frame origin. Route keyboard and contextual actions through shared graph
+   commands: `Delete` removes the selected element only outside editable fields;
+   right-clicking an Interaction or Trigger offers comment, delete, auto-place,
+   and Interaction child creation where applicable; right-clicking a frame or
+   graph text offers deletion. Reuse the existing canvas context menu,
+   confirmation behavior, selection controller, and persistence actions.
+7. **Improve automatic layout for cycles.** Add representative loop and dense
+   cyclic fixtures, define expected readability and stability, then improve the
+   existing deterministic layout without changing Trigger semantics or making
+   React Flow canonical.
+
+### P2 — Follow-Up Improvements
+
+1. **Multiple-selection navigation.** In the selection inspector, allow authors
+   to focus the Interaction subset or Trigger subset without losing the existing
+   rectangle-selection and group-move model.
+2. **Inspector image editing.** Reuse the existing context thumbnail and image
+   URL field for locations, characters, item definitions, and stat definitions.
+   Show a larger same-ratio image frame at the top of each inspector; clicking it
+   opens one shared URL-only image dialog until managed uploads exist.
+3. **External sign-in providers.** Evaluate Google and any additional provider
+   only after defining provider choice, account linking, verified-email trust,
+   duplicate-account recovery, and deployment secrets. Extend the existing user
+   and session model rather than creating provider-specific account silos.
+
+### Acceptance Discipline
+
+- Every P0/P1 behavior change needs a focused regression test at the owning
+  layer and Playwright coverage when it changes a critical user flow.
+- Visual consistency work must extend existing controls, list rows, icons,
+  spacing, modal shells, and graph commands before adding new variants.
+- Performance work begins with a reproducible trace and ends with the same trace
+  demonstrating an explicit improvement; subjective local speed alone is not a
+  sufficient regression contract.
+- Product questions called out above require an explicit decision before
+  implementation and an ADR when they change durable identity, permission, or
+  deletion semantics.
 
 ## Guiding Principles
 
