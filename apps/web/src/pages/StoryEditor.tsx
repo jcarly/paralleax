@@ -200,6 +200,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
     [interactionIds, onNodesChange],
   );
   const flowInstance = useRef<ReactFlowInstance<StoryFlowNode, TriggerFlowEdge> | null>(null);
+  const pendingFocusInteractionIdRef = useRef<string | undefined>(undefined);
   const canvasRef = useRef<HTMLElement | null>(null);
   const {
     selectedId,
@@ -466,15 +467,8 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
   );
   const focusInteractionNode = useCallback(
     (interactionId: string) => {
+      pendingFocusInteractionIdRef.current = interactionId;
       selectInteraction(interactionId);
-      window.requestAnimationFrame(() => {
-        void flowInstance.current?.fitView({
-          nodes: [{ id: interactionId }],
-          duration: 250,
-          padding: 0.7,
-          maxZoom: 1,
-        });
-      });
     },
     [selectInteraction],
   );
@@ -645,6 +639,20 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
     ];
     setNodes((current) => reconcileStoryFlowNodes(current, projectedNodes));
   }, [commentNodes, decorationNodes, narrativeNodes, reviewOnly, setNodes]);
+
+  useEffect(() => {
+    const interactionId = pendingFocusInteractionIdRef.current;
+    if (!interactionId || !nodes.some((node) => node.id === interactionId)) return;
+    pendingFocusInteractionIdRef.current = undefined;
+    window.requestAnimationFrame(() => {
+      void flowInstance.current?.fitView({
+        nodes: [{ id: interactionId }],
+        duration: 250,
+        padding: 0.7,
+        maxZoom: 1,
+      });
+    });
+  }, [nodes]);
 
   const selectTriggerData = useCallback(
     (trigger: SelectedTrigger) => {

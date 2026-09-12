@@ -2,6 +2,10 @@
 
 ## 2026-09-12
 
+- Prevented delayed complete-Story responses and older realtime projections from
+  replacing a newer editor revision. Newly created off-screen interactions now
+  wait until React Flow has registered their node before the editor brings them
+  into view, keeping virtualized child creation immediately editable.
 - Extended the existing user model with required, non-unique display names and
   self-service rename. Existing accounts migrate to a neutral `User <short id>`
   name without deriving public identity from email; Story cards, comments, and

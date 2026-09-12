@@ -159,6 +159,8 @@ The character-stat vertical keeps these regressions covered:
 
 - Shared: story operations delete only the intended trigger and preserve valid inputs.
 - Shared: stale server merges cannot restore locally deleted triggers.
+- Shared/Web: a delayed complete response or realtime projection with an older
+  revision cannot replace the newer in-memory Story.
 - Shared/API/Web: administrator-only demo generation atomically creates five
   stories covering paths, visited conditions, Story variables, character stats
   with flat items, and nested body/equipment items with stats; ordinary users
@@ -244,6 +246,8 @@ The character-stat vertical keeps these regressions covered:
 - Editor: interaction input and output controls also act as graph connection handles.
 - Editor: dropping a source connection on empty canvas creates a linked child interaction at the drop position.
 - Editor: dropping a target connection on empty canvas creates a source interaction linked to the target at the drop position.
+- Editor/Playwright: a click-created child outside the current viewport is focused
+  only after React Flow registers it, then remains immediately visible and editable.
 - Editor: selecting an interaction without a trigger shows a controlled error state instead of a blank page.
 - Editor: a trigger can accept several input interactions.
 - Editor: trigger markers are visible on linked edges and on root interactions.

@@ -155,6 +155,32 @@ describe('story persistence lifecycle', () => {
     expect(api.getStory).toHaveBeenCalledOnce();
   });
 
+  it('does not replace a newer local revision with an older realtime projection', async () => {
+    vi.mocked(api.getStory).mockResolvedValue(storyFixture());
+    const { result } = renderLifecycle();
+    await waitFor(() => expect(result.current.story).toBeDefined());
+
+    let resolveRefresh: ((story: Story) => void) | undefined;
+    vi.mocked(loadStoryEditorProjection).mockImplementationOnce(
+      () =>
+        new Promise<Story>((resolve) => {
+          resolveRefresh = resolve;
+        }),
+    );
+    const invalidate = vi.mocked(useStoryRealtime).mock.calls.at(-1)?.[2];
+    if (!invalidate) throw new Error('Expected a realtime callback');
+
+    act(() => invalidate('changed'));
+    await waitFor(() => expect(resolveRefresh).toBeDefined());
+    act(() => {
+      result.current.setStory({ ...storyFixture(), revision: 3, title: 'Latest local state' });
+      resolveRefresh?.({ ...storyFixture(), revision: 2, title: 'Stale projection' });
+    });
+    await act(async () => Promise.resolve());
+
+    expect(result.current.story).toMatchObject({ revision: 3, title: 'Latest local state' });
+  });
+
   it('applies trigger tombstones to complete incoming story responses', async () => {
     vi.mocked(api.getStory).mockResolvedValue(storyFixture());
     const { result } = renderLifecycle();
@@ -274,6 +300,7 @@ function renderLifecycle() {
     const [story, setStory] = useState<Story>();
     return {
       story,
+      setStory,
       ...useStoryPersistenceLifecycle({ storyId: 'story-1', story, setStory }),
     };
   });

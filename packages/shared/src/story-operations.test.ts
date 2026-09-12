@@ -222,6 +222,24 @@ describe('shared story operations', () => {
     ]);
   });
 
+  it('does not replace a newer local revision with an older complete Story response', () => {
+    const current = storyFixture();
+    current.revision = 3;
+    current.title = 'Latest title';
+    current.interactions.push({
+      id: 'new-child',
+      title: 'New child',
+      body: '',
+      position: { x: 0, y: 400 },
+      triggers: [{ id: 'new-child-trigger', inputInteractionIds: ['middle'], conditions: [] }],
+    });
+    const staleIncoming = storyFixture();
+    staleIncoming.revision = 2;
+    staleIncoming.title = 'Older response';
+
+    expect(mergeServerStory(current, staleIncoming)).toBe(current);
+  });
+
   it('does not restore locally deleted trigger inputs from stale server stories', () => {
     const current = updateTriggerInStory(storyFixture(), 'middle', 'trigger-middle', {
       inputInteractionIds: [],

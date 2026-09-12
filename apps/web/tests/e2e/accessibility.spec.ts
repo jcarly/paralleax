@@ -1,6 +1,12 @@
 import { AxeBuilder } from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
-import { mockRuntimeStory, paginated, prepareEditorPage, story } from './editorTestHarness';
+import {
+  mockAuthenticatedUser,
+  mockRuntimeStory,
+  paginated,
+  prepareEditorPage,
+  story,
+} from './editorTestHarness';
 
 test.describe('automated accessibility', () => {
   test('keeps the Story library and its creation and import dialogs free of WCAG A/AA violations', async ({
@@ -46,15 +52,13 @@ test.describe('automated accessibility', () => {
   test('keeps the loaded Story Player and save dialog free of WCAG A/AA violations', async ({
     page,
   }) => {
-    await page.route('**/api/auth/me', (route) =>
-      route.fulfill({
-        json: {
-          id: 'user-1',
-          email: 'reader@example.com',
-          createdAt: '2026-07-27T08:00:00.000Z',
-        },
-      }),
-    );
+    await mockAuthenticatedUser(page, {
+      id: 'user-1',
+      email: 'reader@example.com',
+      displayName: 'Reader',
+      role: 'user',
+      createdAt: '2026-07-27T08:00:00.000Z',
+    });
     await page.route('**/api/stories/story-1/progress', (route) =>
       route.fulfill({ json: { progress: null } }),
     );
@@ -78,15 +82,7 @@ test.describe('automated accessibility', () => {
 });
 
 async function mockAuthenticatedLibrary(page: Page) {
-  await page.route('**/api/auth/me', (route) =>
-    route.fulfill({
-      json: {
-        id: 'user-1',
-        email: 'author@example.com',
-        createdAt: '2026-01-01T00:00:00.000Z',
-      },
-    }),
-  );
+  await mockAuthenticatedUser(page);
   await page.route(/\/api\/stories(?:\?.*)?$/, (route) =>
     route.fulfill({
       json: paginated([

@@ -14,6 +14,19 @@ import {
   storyProjectionTriggerContentPage,
   storyProjectionTriggerPage,
 } from '../../src/test/storyProjectionFixtures';
+import type { AuthUser } from '../../src/api';
+
+export const testAuthor: AuthUser = {
+  id: 'user-1',
+  email: 'author@example.com',
+  displayName: 'Author',
+  role: 'user',
+  createdAt: '2026-01-01T00:00:00.000Z',
+};
+
+export async function mockAuthenticatedUser(page: Page, user: AuthUser = testAuthor) {
+  await page.route('**/api/auth/me', (route) => route.fulfill({ json: user }));
+}
 
 export const story: Story = {
   id: 'story-1',
@@ -222,15 +235,7 @@ export async function prepareEditorPage(
   initialStory: StorySource = cloneStory(),
   onEditorResponse?: (metric: MockEditorResponseMetric) => void,
 ) {
-  await page.route('**/api/auth/me', (route) =>
-    route.fulfill({
-      json: {
-        id: 'user-1',
-        email: 'author@example.com',
-        createdAt: '2026-01-01T00:00:00.000Z',
-      },
-    }),
-  );
+  await mockAuthenticatedUser(page);
   await mockEditorBackgroundRequests(page);
   await mockStory(page, initialStory, onEditorResponse);
 }

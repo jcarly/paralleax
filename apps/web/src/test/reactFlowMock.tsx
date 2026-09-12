@@ -34,6 +34,8 @@ type TestEdgeData = Record<string, unknown> & {
 type TestFlowNode = Node<TestNodeData>;
 type TestFlowEdge = Edge<TestEdgeData>;
 
+export const reactFlowFitViewMock = vi.fn();
+
 const disconnectedState: FinalConnectionState = {
   isValid: null,
   from: null,
@@ -113,7 +115,7 @@ function TestReactFlow({
         x: x - 50,
         y: y - 40,
       }),
-      fitView: vi.fn(),
+      fitView: reactFlowFitViewMock,
     } as unknown as ReactFlowInstance<TestFlowNode, TestFlowEdge>);
   }, []);
 

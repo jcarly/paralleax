@@ -12,6 +12,7 @@ import {
   setupStoryEditorTestSuite,
   storyWithTwoInteractions,
 } from '../test/storyEditorTestHarness';
+import { reactFlowFitViewMock } from '../test/reactFlowMock';
 
 vi.mock('../api', async () => {
   const { createStoryApiMock } = await import('../test/mockStoryApi');
@@ -62,6 +63,11 @@ describe('StoryEditor interactions', () => {
       parentId: 'interaction-1',
       position: childPosition,
     });
+    await waitFor(() =>
+      expect(reactFlowFitViewMock).toHaveBeenCalledWith(
+        expect.objectContaining({ nodes: [{ id: 'interaction-2' }] }),
+      ),
+    );
   });
 
   it('links the test action to the selected interaction when one is selected', async () => {

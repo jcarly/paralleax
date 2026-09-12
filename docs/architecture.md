@@ -631,7 +631,13 @@ recomputed projections.
 Story-level and delete responses still use `mergeServerStory`. Entity-scoped
 responses avoid carrying unrelated stale graph state in the first place. When
 adding or changing editor persistence behavior, keep both entity application and
-stale story merge regressions covered.
+stale story merge regressions covered. A complete response or realtime projection
+whose revision is older than the same Story already held by the editor is ignored;
+transport completion order must never roll canonical client state backward.
+
+React Flow renders only visible graph elements. Click-created interactions are
+selected immediately, but viewport focus waits until node reconciliation has
+registered the new id so an off-screen virtualized node can be brought into view.
 
 Every revisioned mutation also appends its shared reversible delta inside the
 same repository transaction. `GET /stories/:storyId/history` returns recent

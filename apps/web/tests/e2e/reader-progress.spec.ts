@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import type { ReaderProgressState, Story } from '@paralleax/shared';
-import { mockRuntimeStory } from './editorTestHarness';
+import { mockAuthenticatedUser, mockRuntimeStory } from './editorTestHarness';
 
 test('resumes and updates authenticated reader progress', async ({ page }) => {
   const story = readerStoryFixture();
@@ -158,15 +158,13 @@ test('keeps the reader open when navigation is rejected during an unresolved aut
 });
 
 async function mockSignedInReader(page: Page) {
-  await page.route('**/api/auth/me', (route) =>
-    route.fulfill({
-      json: {
-        id: 'user-1',
-        email: 'reader@example.com',
-        createdAt: '2026-07-27T08:00:00.000Z',
-      },
-    }),
-  );
+  await mockAuthenticatedUser(page, {
+    id: 'user-1',
+    email: 'reader@example.com',
+    displayName: 'Reader',
+    role: 'user',
+    createdAt: '2026-07-27T08:00:00.000Z',
+  });
 }
 
 function readerStoryFixture(): Story {

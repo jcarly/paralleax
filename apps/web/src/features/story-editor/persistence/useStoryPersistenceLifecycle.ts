@@ -81,9 +81,19 @@ export function useStoryPersistenceLifecycle({
 
   const replaceStory = useCallback(
     (next: Story) => {
-      deletedTriggerIdsRef.current.clear();
-      deletedTriggerInputKeysRef.current.clear();
-      setStory(next);
+      setStory((current) => {
+        if (
+          current?.id === next.id &&
+          current.revision !== undefined &&
+          next.revision !== undefined &&
+          next.revision < current.revision
+        ) {
+          return current;
+        }
+        deletedTriggerIdsRef.current.clear();
+        deletedTriggerInputKeysRef.current.clear();
+        return next;
+      });
     },
     [setStory],
   );

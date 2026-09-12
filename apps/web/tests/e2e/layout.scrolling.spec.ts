@@ -1,19 +1,16 @@
 import { expect, test } from '@playwright/test';
-import { cloneStory, mockStory, paginated, prepareEditorPage } from './editorTestHarness';
+import {
+  cloneStory,
+  mockAuthenticatedUser,
+  mockStory,
+  paginated,
+  prepareEditorPage,
+} from './editorTestHarness';
 
 test.describe('Constrained overlays and editor panels', () => {
   test('keeps a tall import dialog scrollable within the viewport', async ({ page }) => {
     await page.setViewportSize({ width: 800, height: 360 });
-    await page.route('**/api/auth/me', (route) =>
-      route.fulfill({
-        json: {
-          id: 'user-1',
-          email: 'author@example.com',
-          role: 'member',
-          createdAt: '2026-01-01T00:00:00.000Z',
-        },
-      }),
-    );
+    await mockAuthenticatedUser(page);
     await page.route('**/api/stories**', (route) => route.fulfill({ json: paginated([]) }));
 
     await page.goto('/stories');

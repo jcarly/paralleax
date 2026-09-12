@@ -17,6 +17,15 @@ export function mergeServerStory(
     deletedTriggerInputKeys?: ReadonlySet<string>;
   } = {},
 ): Story {
+  if (
+    current.id === incoming.id &&
+    current.revision !== undefined &&
+    incoming.revision !== undefined &&
+    incoming.revision < current.revision
+  ) {
+    return current;
+  }
+
   return {
     ...incoming,
     interactions: incoming.interactions.map((item) => {
