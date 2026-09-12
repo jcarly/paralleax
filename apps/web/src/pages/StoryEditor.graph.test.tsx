@@ -38,14 +38,14 @@ describe('StoryEditor graph collaboration and layout', () => {
       anchor: { kind: 'entity', targetType: 'interaction', targetId: 'interaction-2' },
       anchorLabel: 'Second interaction',
       status: 'open',
-      createdBy: { id: 'user-1', email: 'author@example.com' },
+      createdBy: { id: 'user-1', displayName: 'Author' },
       createdAt: '2026-08-16T09:00:00.000Z',
       updatedAt: '2026-08-16T09:00:00.000Z',
       messages: [
         {
           id: 'message-1',
           threadId: 'thread-interaction-2',
-          author: { id: 'user-1', email: 'author@example.com' },
+          author: { id: 'user-1', displayName: 'Author' },
           body: 'Should this choice be clearer?',
           createdAt: '2026-08-16T09:00:00.000Z',
         },

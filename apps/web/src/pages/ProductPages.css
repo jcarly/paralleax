@@ -314,6 +314,11 @@
   gap: 0.55rem;
   align-items: center;
   opacity: 1;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  cursor: pointer;
 }
 
 .product-user > span:first-child {
@@ -333,6 +338,24 @@
   color: var(--color-muted);
   font-size: 0.68rem;
   opacity: 1;
+}
+
+.account-email {
+  display: grid;
+  gap: 0.3rem;
+  margin-top: 1rem;
+  color: var(--product-muted);
+  font-size: 0.72rem;
+}
+
+.account-email b {
+  color: var(--product-ink);
+  font-size: 0.8rem;
+}
+
+.library-card-author {
+  color: var(--product-muted);
+  font-size: 0.68rem;
 }
 
 .product-signout {

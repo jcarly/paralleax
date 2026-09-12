@@ -36,7 +36,7 @@ const undoableHistory: StoryHistory = {
       revision: 2,
       kind: 'change',
       operation: 'story.updated',
-      actor: { id: 'user-1' },
+      actor: { id: 'user-1', displayName: 'Author' },
       createdAt: '2026-08-28T08:01:00.000Z',
       reverted: false,
     },
@@ -58,7 +58,7 @@ describe('Story editor history', () => {
         {
           ...undoableHistory.entries[0],
           operation: 'interaction.created',
-          actor: { id: 'user-1', email: 'alice@example.test' },
+          actor: { id: 'user-1', displayName: 'Alice' },
         },
       ],
     });
@@ -70,7 +70,7 @@ describe('Story editor history', () => {
     await waitFor(() => expect(api.getStoryHistory).toHaveBeenCalledTimes(2));
     expect(screen.getByRole('complementary', { name: 'History' })).toBeInTheDocument();
     expect(screen.getByText('Interaction created')).toBeInTheDocument();
-    expect(screen.getByText('alice@example.test')).toBeInTheDocument();
+    expect(screen.getByText('Alice')).toBeInTheDocument();
   });
 
   it('replaces the editor Story from the persistent undo result', async () => {

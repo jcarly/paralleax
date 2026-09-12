@@ -6,6 +6,12 @@ details. They should stay covered by tests as the editor grows.
 ## MVP Invariants
 
 - A story contains zero or more interactions.
+- A user has one stable technical id and one current, required display name.
+  Display names are non-unique and renaming one changes its collaborative
+  projection without changing authored ownership or attribution ids.
+- Account email is private outside self-service, global administration, and
+  explicit Story access management. Story cards, comments, and authored-change
+  history expose the current display name instead.
 - Review comment threads are story-scoped collaboration metadata, not authored
   story state. They never change reader evaluation, progress, or exports.
 - Every reversible canonical Story-content mutation creates a new Story revision

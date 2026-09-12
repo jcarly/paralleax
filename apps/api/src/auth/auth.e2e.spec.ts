@@ -46,6 +46,18 @@ describe('Auth API', () => {
         }
         return Promise.resolve();
       },
+      updateDisplayName: (id: string, displayName: string) => {
+        const user = [...users.values()].find((candidate) => candidate.id === id);
+        if (!user) return Promise.resolve(undefined);
+        user.displayName = displayName;
+        return Promise.resolve({
+          id: user.id,
+          email: user.email,
+          displayName: user.displayName,
+          role: user.role,
+          createdAt: user.createdAt,
+        });
+      },
       claimMigratedStories: () => Promise.resolve(0),
     };
     const module = await Test.createTestingModule({ imports: [AppModule] })
@@ -72,9 +84,16 @@ describe('Auth API', () => {
     const agent = request.agent(httpServer);
     const registered = await agent
       .post('/api/auth/register')
-      .send({ email: 'Author@Example.com', password: 'correct horse battery staple' })
+      .send({
+        email: 'Author@Example.com',
+        password: 'correct horse battery staple',
+        displayName: 'Alice Author',
+      })
       .expect(201);
-    expect(registered.body).toMatchObject({ email: 'author@example.com' });
+    expect(registered.body).toMatchObject({
+      email: 'author@example.com',
+      displayName: 'Alice Author',
+    });
     expect(registered.headers['set-cookie']?.[0]).toContain('HttpOnly');
 
     await agent
@@ -82,6 +101,16 @@ describe('Auth API', () => {
       .expect(200)
       .expect(({ body }) => {
         expect(body.email).toBe('author@example.com');
+      });
+    await agent
+      .patch('/api/auth/me')
+      .send({ displayName: 'Renamed Author' })
+      .expect(200)
+      .expect(({ body }) => {
+        expect(body).toMatchObject({
+          email: 'author@example.com',
+          displayName: 'Renamed Author',
+        });
       });
     await agent.post('/api/auth/logout').expect(204);
     await agent.get('/api/auth/me').expect(401);
@@ -96,6 +125,7 @@ describe('Auth API', () => {
           .send({
             email: `rate-limited-${index}@example.com`,
             password: 'correct horse battery staple',
+            displayName: `Rate Limited ${index}`,
           }),
       ),
     );
@@ -108,7 +138,7 @@ describe('Auth API', () => {
     await request(httpServer).get('/api/stories').expect(401);
     await request(httpServer)
       .post('/api/auth/register')
-      .send({ email: 'invalid', password: 'short' })
+      .send({ email: 'invalid', password: 'short', displayName: 'Invalid' })
       .expect(400);
     await request(httpServer)
       .post('/api/auth/login')
@@ -118,12 +148,16 @@ describe('Auth API', () => {
 
   it('returns one conflict when the same email is registered concurrently', async () => {
     const attempts = await Promise.all([
-      request(httpServer)
-        .post('/api/auth/register')
-        .send({ email: 'same@example.com', password: 'correct horse battery staple' }),
-      request(httpServer)
-        .post('/api/auth/register')
-        .send({ email: 'same@example.com', password: 'correct horse battery staple' }),
+      request(httpServer).post('/api/auth/register').send({
+        email: 'same@example.com',
+        password: 'correct horse battery staple',
+        displayName: 'Same One',
+      }),
+      request(httpServer).post('/api/auth/register').send({
+        email: 'same@example.com',
+        password: 'correct horse battery staple',
+        displayName: 'Same Two',
+      }),
     ]);
 
     expect(attempts.map(({ status }) => status).sort()).toEqual([201, 409]);

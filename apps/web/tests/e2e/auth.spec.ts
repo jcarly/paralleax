@@ -8,6 +8,8 @@ test('registers, creates a story, signs out, and signs back in', async ({ page }
   const user = {
     id: 'user-1',
     email: 'author@example.com',
+    displayName: 'Author',
+    role: 'user' as const,
     createdAt: '2026-07-18T00:00:00.000Z',
   };
 
@@ -63,6 +65,7 @@ test('registers, creates a story, signs out, and signs back in', async ({ page }
 
   await page.goto('/');
   await page.getByRole('link', { name: 'Create account' }).click();
+  await page.getByLabel('Display name').fill('Author');
   await page.getByLabel('Email address').fill('author@example.com');
   await page.getByLabel('Password', { exact: true }).fill('correct horse battery staple');
   await page.getByLabel('Confirm password').fill('correct horse battery staple');

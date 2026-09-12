@@ -6,5 +6,10 @@ export class CredentialsDto {
 }
 
 export class RegisterDto extends CredentialsDto {
+  @IsString() @MinLength(2) @MaxLength(50) displayName!: string;
   @IsOptional() @IsString() @MaxLength(128) accessCode?: string;
+}
+
+export class UpdateDisplayNameDto {
+  @IsString() @MinLength(2) @MaxLength(50) displayName!: string;
 }

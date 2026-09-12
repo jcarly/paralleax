@@ -2350,7 +2350,11 @@ end
         capabilities: expect.objectContaining({ canRead: true, canEdit: false, canManage: false }),
       }),
     ]);
-    expect(response.body.items[0]).not.toHaveProperty('owner');
+    expect(response.body.items[0]).toHaveProperty('owner', {
+      id: 'user-1',
+      displayName: 'User One',
+    });
+    expect(response.body.items[0].owner).not.toHaveProperty('email');
     expect(response.body.items).not.toEqual(
       expect.arrayContaining([expect.objectContaining({ id: privateStory.body.id })]),
     );

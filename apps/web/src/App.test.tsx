@@ -13,6 +13,7 @@ vi.mock('./api', () => ({
     login: vi.fn(),
     register: vi.fn(),
     logout: vi.fn(),
+    updateCurrentUser: vi.fn(),
   },
 }));
 
@@ -40,12 +41,14 @@ describe('App', () => {
     const user = {
       id: 'user-1',
       email: 'author@example.com',
+      displayName: 'Author',
       role: 'user' as const,
       createdAt: '2026-01-01T00:00:00.000Z',
     };
     vi.mocked(api.me).mockResolvedValue(user);
     vi.mocked(api.login).mockResolvedValue(user);
     vi.mocked(api.register).mockResolvedValue(user);
+    vi.mocked(api.updateCurrentUser).mockResolvedValue(user);
   });
 
   it('opens every prototype sub-route without checking the real account session', async () => {
@@ -72,6 +75,32 @@ describe('App', () => {
     expect(screen.getByText('Stories mock for user-1')).toBeInTheDocument();
   });
 
+  it('updates the current display name from the account dialog', async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.updateCurrentUser).mockResolvedValue({
+      id: 'user-1',
+      email: 'author@example.com',
+      displayName: 'Alice Cooper',
+      role: 'user',
+      createdAt: '2026-01-01T00:00:00.000Z',
+    });
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    await user.click(await screen.findByRole('button', { name: 'Account settings' }));
+    const input = screen.getByLabelText('Display name');
+    await user.clear(input);
+    await user.type(input, '  Alice   Cooper  ');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(api.updateCurrentUser).toHaveBeenCalledWith('Alice Cooper');
+    expect(await screen.findByText('Alice Cooper')).toBeInTheDocument();
+    expect(screen.queryByText('author@example.com')).not.toBeInTheDocument();
+  });
+
   it('redirects the former authenticated workspace route to the unified library', async () => {
     render(
       <MemoryRouter initialEntries={['/stories']}>
@@ -86,6 +115,7 @@ describe('App', () => {
     vi.mocked(api.me).mockResolvedValue({
       id: 'admin-1',
       email: 'admin@example.com',
+      displayName: 'Admin',
       role: 'admin',
       createdAt: '2026-01-01T00:00:00.000Z',
     });
@@ -105,6 +135,7 @@ describe('App', () => {
     vi.mocked(api.me).mockResolvedValue({
       id: 'user-1',
       email: 'member@example.com',
+      displayName: 'Member',
       role: 'user',
       createdAt: '2026-01-01T00:00:00.000Z',
     });

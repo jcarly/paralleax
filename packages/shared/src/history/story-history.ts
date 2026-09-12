@@ -1,6 +1,7 @@
 import type { Story } from '../model/stories.js';
 import { diffStoryGraphPositions, type StoryGraphPositionPatch } from '../graph/positions.js';
 import { toCanonicalTrigger } from '../triggers/model.js';
+import type { UserDisplayIdentity } from '../user-identity.js';
 
 export type StoryHistoryEventKind = 'change' | 'undo' | 'redo';
 
@@ -37,10 +38,7 @@ export const storyHistoryOperations = {
 export type StoryHistoryOperation =
   (typeof storyHistoryOperations)[keyof typeof storyHistoryOperations];
 
-export interface StoryHistoryActor {
-  id: string;
-  email?: string;
-}
+export type StoryHistoryActor = UserDisplayIdentity;
 
 export interface StoryHistoryEntry {
   id: string;

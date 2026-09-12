@@ -18,8 +18,12 @@ the account can read, including owned stories, invitations, authenticated storie
 and public stories. After a successful sign-in or registration, Paralleax returns
 to the page you were viewing; external return destinations are not accepted.
 
-On first use, register with an email address and a password of at least eight
-characters. Later visits restore the session from an HTTP-only cookie. Select
+On first use, register with a display name, an email address, and a password of
+at least eight characters. The display name is shown on Story cards, comments,
+and change history; the account email remains visible only to you,
+administrators, and Story owners managing explicit access. Select your display
+name in the header to rename it without changing your sign-in email. Later visits
+restore the session from an HTTP-only cookie. Select
 `Stories` to return to the unified library and use `Sign out` in the header to
 end the current session. If a session expires on a protected page, Paralleax
 returns to the sign-in screen with an explanation and restores that page after

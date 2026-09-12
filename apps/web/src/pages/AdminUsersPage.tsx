@@ -30,7 +30,8 @@ export function AdminUsersPage({ currentUserId }: { currentUserId?: string }) {
     return users.filter(
       (user) =>
         (roleFilter === 'all' || user.role === roleFilter) &&
-        user.email.toLocaleLowerCase().includes(normalizedQuery),
+        (user.email.toLocaleLowerCase().includes(normalizedQuery) ||
+          user.displayName.toLocaleLowerCase().includes(normalizedQuery)),
     );
   }, [query, roleFilter, users]);
 
@@ -147,15 +148,16 @@ export function AdminUsersPage({ currentUserId }: { currentUserId?: string }) {
               return (
                 <div key={user.id}>
                   <span className="admin-user-avatar" aria-hidden="true">
-                    {user.email.slice(0, 2).toUpperCase()}
+                    {user.displayName.slice(0, 2).toUpperCase()}
                   </span>
                   <span className="admin-user-identity">
                     <span className="admin-user-name">
-                      <b>{user.email}</b>
+                      <b>{user.displayName}</b>
                       {user.id === currentUserId ? (
                         <small className="product-badge neutral">{t('admin.you')}</small>
                       ) : null}
                     </span>
+                    <small>{user.email}</small>
                     <small>
                       {t('admin.joined', {
                         date: new Intl.DateTimeFormat(

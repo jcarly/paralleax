@@ -202,6 +202,11 @@ tokens; only token hashes are stored. `SessionGuard` resolves the HTTP-only sess
 cookie and protects every route unless it is explicitly public. Expired sessions
 are deleted opportunistically during session creation and resolution. User
 creation relies on an atomic unique-email insert rather than a prior lookup alone.
+The same user row owns a required normalized display name. Collaborative
+projections join the current name by stable user id and omit email, while
+self-service, administration, and explicit Story access management retain it.
+Renaming therefore updates future reads without rewriting Story, comment, or
+history rows and without introducing a separate profile model.
 Production chooses an explicit registration mode; private alpha registration can
 require a server-validated invitation code before user creation. A global origin
 guard rejects mutative production requests unless their `Origin` exactly matches
@@ -922,8 +927,10 @@ classes directly.
   instant controlled API projections in both development and production builds.
   It isolates browser work by recording first-card and ready times, mounted
   node/edge counts, selection, drag, location/character creation, projection
-  request count, and response bytes. The weekly/manual stress lane runs it with
-  explicit latency and payload budgets.
+  request count, response bytes, and per-operation React commit/rendered-fiber
+  counts from a test-only DevTools hook. The weekly/manual stress lane runs it
+  with explicit budgets and retains the structured measurements as a JSON test
+  attachment.
 - Coverage: Jest coverage for the API, Vitest V8 coverage for shared and the web app,
   with per-workspace thresholds enforced by the coverage commands.
 - Bundle contract: the production web build checks the Vite manifest, dynamic

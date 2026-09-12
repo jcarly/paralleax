@@ -16,6 +16,7 @@ describe('AdminUsersPage', () => {
       {
         id: 'user-1',
         email: 'member@example.com',
+        displayName: 'Member',
         role: 'user',
         createdAt: '2026-08-13T00:00:00Z',
       },
@@ -23,6 +24,7 @@ describe('AdminUsersPage', () => {
     vi.mocked(api.updateUserRole).mockResolvedValue({
       id: 'user-1',
       email: 'member@example.com',
+      displayName: 'Member',
       role: 'admin',
       createdAt: '2026-08-13T00:00:00Z',
     });
@@ -43,18 +45,21 @@ describe('AdminUsersPage', () => {
       {
         id: 'admin-1',
         email: 'owner@example.com',
+        displayName: 'Owner',
         role: 'admin',
         createdAt: '2026-08-12T00:00:00Z',
       },
       {
         id: 'user-1',
         email: 'member@example.com',
+        displayName: 'Member',
         role: 'user',
         createdAt: '2026-08-13T00:00:00Z',
       },
       {
         id: 'user-2',
         email: 'second@example.com',
+        displayName: 'Second',
         role: 'user',
         createdAt: '2026-08-13T00:00:00Z',
       },
@@ -86,6 +91,7 @@ describe('AdminUsersPage', () => {
       {
         id: 'admin-1',
         email: 'owner@example.com',
+        displayName: 'Owner',
         role: 'admin',
         createdAt: '2026-08-12T00:00:00Z',
       },
@@ -107,12 +113,14 @@ describe('AdminUsersPage', () => {
       {
         id: 'admin-1',
         email: 'owner@example.com',
+        displayName: 'Owner',
         role: 'admin',
         createdAt: '2026-08-12T00:00:00Z',
       },
       {
         id: 'admin-2',
         email: 'second-admin@example.com',
+        displayName: 'Second Admin',
         role: 'admin',
         createdAt: '2026-08-13T00:00:00Z',
       },

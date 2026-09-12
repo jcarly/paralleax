@@ -31,7 +31,13 @@ export class SessionGuard implements CanActivate {
       if (optional) return true;
       throw new UnauthorizedException('Authentication required');
     }
-    request.user = { id: user.id, email: user.email, role: user.role, createdAt: user.createdAt };
+    request.user = {
+      id: user.id,
+      email: user.email,
+      displayName: user.displayName,
+      role: user.role,
+      createdAt: user.createdAt,
+    };
     return true;
   }
 }

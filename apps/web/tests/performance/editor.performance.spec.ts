@@ -6,6 +6,11 @@ import type {
 } from '@paralleax/shared';
 import { createLargeEditorStoryFixture } from '../../src/test/largeEditorStoryFixture';
 import { mockGraphPositionUpdates, prepareEditorPage } from '../e2e/editorTestHarness';
+import {
+  installReactCommitProbe,
+  reactCommitDifference,
+  readReactCommitSnapshot,
+} from './reactCommitProbe';
 
 const interactionCount = positiveInteger(process.env.WEB_PERFORMANCE_INTERACTION_COUNT, 600);
 
@@ -13,6 +18,7 @@ test('measures large-Story editor loading and common interactions', async ({ pag
   test.setTimeout(180_000);
   const story = createLargeEditorStoryFixture(interactionCount, { columns: 1 });
   const editorResponses: Array<{ path: string; payloadBytes: number }> = [];
+  await installReactCommitProbe(page);
   await prepareEditorPage(page, story, (metric) => editorResponses.push(metric));
 
   let savedGraphPositions: StoryGraphPositionUpdates | undefined;
@@ -59,10 +65,12 @@ test('measures large-Story editor loading and common interactions', async ({ pag
   const firstInteractionMs = performance.now() - loadStartedAt;
   await expect(page.getByRole('button', { name: 'Add root' })).toBeEnabled({ timeout: 90_000 });
   const editorReadyMs = performance.now() - loadStartedAt;
+  const loadReact = await readReactCommitSnapshot(page);
   const renderedNodeCount = await page.locator('.react-flow__node').count();
   const renderedEdgeCount = await page.locator('.react-flow__edge').count();
 
   const selectedTitle = `Interaction ${Math.floor(interactionCount / 2)}`;
+  const selectionReactBefore = await readReactCommitSnapshot(page);
   const selectionStartedAt = performance.now();
   await page
     .getByRole('searchbox', { name: 'Search story context and interactions' })
@@ -71,12 +79,17 @@ test('measures large-Story editor loading and common interactions', async ({ pag
   const inspector = page.getByRole('complementary', { name: 'Inspector' });
   await expect(inspector.getByLabel('Title')).toHaveValue(selectedTitle);
   const selectionMs = performance.now() - selectionStartedAt;
+  const selectionReact = reactCommitDifference(
+    await readReactCommitSnapshot(page),
+    selectionReactBefore,
+  );
 
   const selectedNode = page.locator(
     `.react-flow__node[data-id="interaction-${Math.floor(interactionCount / 2)}"]`,
   );
   const selectedBox = await selectedNode.boundingBox();
   expect(selectedBox).not.toBeNull();
+  const dragReactBefore = await readReactCommitSnapshot(page);
   const dragStartedAt = performance.now();
   await page.mouse.move(
     selectedBox!.x + selectedBox!.width / 2,
@@ -91,16 +104,27 @@ test('measures large-Story editor loading and common interactions', async ({ pag
   await page.mouse.up();
   await expect.poll(() => savedGraphPositions).toBeDefined();
   const dragSaveMs = performance.now() - dragStartedAt;
+  const dragReact = reactCommitDifference(await readReactCommitSnapshot(page), dragReactBefore);
 
+  const locationReactBefore = await readReactCommitSnapshot(page);
   const locationStartedAt = performance.now();
   await page.getByRole('button', { name: 'Add location' }).click();
   await expect(inspector.getByLabel('Name')).toHaveValue('New location');
   const locationCreationMs = performance.now() - locationStartedAt;
+  const locationCreationReact = reactCommitDifference(
+    await readReactCommitSnapshot(page),
+    locationReactBefore,
+  );
 
+  const characterReactBefore = await readReactCommitSnapshot(page);
   const characterStartedAt = performance.now();
   await page.getByRole('button', { name: 'Add character' }).click();
   await expect(inspector.getByLabel('Name')).toHaveValue('New character');
   const characterCreationMs = performance.now() - characterStartedAt;
+  const characterCreationReact = reactCommitDifference(
+    await readReactCommitSnapshot(page),
+    characterReactBefore,
+  );
 
   const measurements = {
     project: testInfo.project.name,
@@ -119,8 +143,19 @@ test('measures large-Story editor loading and common interactions', async ({ pag
     dragSaveMs: round(dragSaveMs),
     locationCreationMs: round(locationCreationMs),
     characterCreationMs: round(characterCreationMs),
+    react: {
+      load: loadReact,
+      selection: selectionReact,
+      drag: dragReact,
+      locationCreation: locationCreationReact,
+      characterCreation: characterCreationReact,
+    },
   };
   console.info(`WEB_EDITOR_PERFORMANCE ${JSON.stringify(measurements)}`);
+  await testInfo.attach('editor-performance.json', {
+    body: JSON.stringify(measurements, null, 2),
+    contentType: 'application/json',
+  });
 
   expect(renderedNodeCount).toBeGreaterThan(0);
   expect(renderedNodeCount).toBeLessThan(interactionCount);
@@ -143,6 +178,32 @@ test('measures large-Story editor loading and common interactions', async ({ pag
   expect(measurements.editorPayloadBytes).toBeLessThan(
     positiveInteger(process.env.WEB_PERFORMANCE_EDITOR_PAYLOAD_BUDGET_BYTES, 5 * 1024 * 1024),
   );
+  expect(loadReact.commits).toBeLessThan(reactBudget('LOAD', 'COMMITS', testInfo.project.name, 45));
+  expect(loadReact.renderedFibers).toBeLessThan(
+    reactBudget('LOAD', 'RENDERED_FIBERS', testInfo.project.name, 80_000),
+  );
+  expect(selectionReact.commits).toBeLessThan(
+    reactBudget('SELECTION', 'COMMITS', testInfo.project.name, 20),
+  );
+  expect(selectionReact.renderedFibers).toBeLessThan(
+    reactBudget('SELECTION', 'RENDERED_FIBERS', testInfo.project.name, 25_000),
+  );
+  expect(dragReact.commits).toBeLessThan(reactBudget('DRAG', 'COMMITS', testInfo.project.name, 30));
+  expect(dragReact.renderedFibers).toBeLessThan(
+    reactBudget('DRAG', 'RENDERED_FIBERS', testInfo.project.name, 25_000),
+  );
+  expect(locationCreationReact.commits).toBeLessThan(
+    reactBudget('LOCATION_CREATION', 'COMMITS', testInfo.project.name, 10),
+  );
+  expect(locationCreationReact.renderedFibers).toBeLessThan(
+    reactBudget('LOCATION_CREATION', 'RENDERED_FIBERS', testInfo.project.name, 6_000),
+  );
+  expect(characterCreationReact.commits).toBeLessThan(
+    reactBudget('CHARACTER_CREATION', 'COMMITS', testInfo.project.name, 10),
+  );
+  expect(characterCreationReact.renderedFibers).toBeLessThan(
+    reactBudget('CHARACTER_CREATION', 'RENDERED_FIBERS', testInfo.project.name, 6_000),
+  );
 });
 
 function positiveInteger(value: string | undefined, fallback: number) {
@@ -157,6 +218,14 @@ function budget(metric: string, project: string, development: number, production
   return positiveInteger(
     process.env[environmentName],
     project === 'development' ? development : production,
+  );
+}
+
+function reactBudget(operation: string, signal: string, project: string, fallback: number) {
+  const build = project === 'development' ? 'DEVELOPMENT' : 'PRODUCTION';
+  return positiveInteger(
+    process.env[`WEB_PERFORMANCE_REACT_${operation}_${signal}_${build}_BUDGET`],
+    fallback,
   );
 }
 

@@ -30,6 +30,7 @@ vi.mock('./storyRouteLoaders', () => ({
 const standardUser: AuthUser = {
   id: 'user-1',
   email: 'author@example.com',
+  displayName: 'Author',
   role: 'user',
   createdAt: '2026-01-01T00:00:00.000Z',
 };
@@ -50,7 +51,7 @@ const stories: StorySummary[] = [
     interactionCount: 0,
     access: { visibility: 'private', editPolicy: 'owner', commentPolicy: 'editors' },
     capabilities: { canRead: true, canEdit: true, canManage: true, canComment: true },
-    owner: { id: standardUser.id, email: standardUser.email },
+    owner: { id: standardUser.id, displayName: standardUser.displayName },
   },
   {
     id: 'story-2',
@@ -64,7 +65,7 @@ const stories: StorySummary[] = [
       commentPolicy: 'readers',
     },
     capabilities: { canRead: true, canEdit: false, canManage: false, canComment: true },
-    owner: { id: 'user-2', email: 'reviewer@example.com' },
+    owner: { id: 'user-2', displayName: 'Reviewer' },
   },
 ];
 

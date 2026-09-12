@@ -5,6 +5,7 @@ import type { UserRole } from '@paralleax/shared';
 export interface RequestUser {
   id: string;
   email: string;
+  displayName: string;
   role: UserRole;
   createdAt: string;
 }

@@ -11,7 +11,7 @@ const history: StoryHistory = {
       revision: 4,
       kind: 'undo',
       operation: 'interaction.created',
-      actor: { id: 'user-1', email: 'alice@example.test' },
+      actor: { id: 'user-1', displayName: 'Alice' },
       createdAt: '2026-08-30T10:20:00.000Z',
       reverted: false,
     },
@@ -20,7 +20,7 @@ const history: StoryHistory = {
       revision: 3,
       kind: 'change',
       operation: 'graph.positions.updated',
-      actor: { id: 'user-2', email: 'bob@example.test' },
+      actor: { id: 'user-2', displayName: 'Bob' },
       createdAt: '2026-08-30T09:10:00.000Z',
       reverted: true,
     },
@@ -29,7 +29,7 @@ const history: StoryHistory = {
       revision: 2,
       kind: 'change',
       operation: 'legacy.custom-operation',
-      actor: { id: 'user-1' },
+      actor: { id: 'user-1', displayName: 'Alice' },
       createdAt: '2026-08-29T08:00:00.000Z',
       reverted: false,
     },
@@ -56,7 +56,7 @@ describe('StoryHistoryPanel', () => {
     expect(screen.getByText('Undid: Interaction created')).toBeInTheDocument();
     expect(screen.getByText('Graph layout updated')).toBeInTheDocument();
     expect(screen.getByText('Legacy custom operation')).toBeInTheDocument();
-    expect(screen.getByText('alice@example.test')).toBeInTheDocument();
+    expect(screen.getAllByText('Alice')).toHaveLength(2);
     expect(screen.getByText('Reverted')).toBeInTheDocument();
     expect(screen.getByText('Revision 4')).toBeInTheDocument();
     expect(screen.getAllByRole('heading', { level: 3 })).toHaveLength(2);

@@ -1,5 +1,6 @@
 import type { Story } from './model/stories.js';
 import type { StoryAccessCapabilities } from './access-control.js';
+import type { UserDisplayIdentity } from './user-identity.js';
 
 export const MAX_COMMENT_BODY_LENGTH = 4_000;
 export const MAX_COMMENT_QUOTE_LENGTH = 1_000;
@@ -29,10 +30,7 @@ export type CommentAnchor =
       selector: CommentTextSelector;
     };
 
-export interface CommentAuthor {
-  id: string;
-  email: string;
-}
+export type CommentAuthor = UserDisplayIdentity;
 
 export interface CommentMessage {
   id: string;

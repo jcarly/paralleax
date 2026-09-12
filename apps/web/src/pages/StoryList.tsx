@@ -484,6 +484,11 @@ function StoryCard({
           {t(`library.card.visibility.${story.access?.visibility ?? 'private'}`)}
         </span>
         <h2>{story.title}</h2>
+        {story.owner ? (
+          <span className="library-card-author">
+            {t('library.card.author', { name: story.owner.displayName })}
+          </span>
+        ) : null}
         <p>
           {t(
             story.interactionCount
@@ -575,7 +580,7 @@ function summarizeStory(story: Story, user?: AuthUser): StorySummary {
       canManage: true,
       canComment: true,
     },
-    owner: story.owner ?? (user ? { id: user.id, email: user.email } : undefined),
+    owner: story.owner ?? (user ? { id: user.id, displayName: user.displayName } : undefined),
     createdAt: story.createdAt,
     updatedAt: story.updatedAt,
   };

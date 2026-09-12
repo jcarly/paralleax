@@ -51,7 +51,7 @@ export function CommentDiscussionCard({
         onClick={onExpand}
       >
         <span className="comment-discussion-heading">
-          <b>{latestMessage?.author.email ?? thread.createdBy.email}</b>
+          <b>{latestMessage?.author.displayName ?? thread.createdBy.displayName}</b>
           <small>{t('comments.messageCount', { count: thread.messages.length })}</small>
         </span>
         {thread.anchor.kind === 'text' ? (
@@ -88,7 +88,7 @@ export function CommentDiscussionCard({
             {thread.messages.map((message) => (
               <div key={message.id}>
                 <header>
-                  <b>{message.author.email}</b>
+                  <b>{message.author.displayName}</b>
                   <time dateTime={message.createdAt}>
                     {new Intl.DateTimeFormat(i18n.resolvedLanguage ?? i18n.language, {
                       dateStyle: 'medium',

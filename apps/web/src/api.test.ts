@@ -30,15 +30,23 @@ describe('api client', () => {
       headers: { 'Content-Type': 'application/json' },
     });
 
-    await api.register('author@example.com', 'secret-password', 'alpha-access-code');
+    await api.register('author@example.com', 'secret-password', 'Author', 'alpha-access-code');
     expect(fetchMock).toHaveBeenLastCalledWith('/api/auth/register', {
       headers: { 'Content-Type': 'application/json' },
       method: 'POST',
       body: JSON.stringify({
         email: 'author@example.com',
         password: 'secret-password',
+        displayName: 'Author',
         accessCode: 'alpha-access-code',
       }),
+    });
+
+    await api.updateCurrentUser('Renamed Author');
+    expect(fetchMock).toHaveBeenLastCalledWith('/api/auth/me', {
+      headers: { 'Content-Type': 'application/json' },
+      method: 'PATCH',
+      body: JSON.stringify({ displayName: 'Renamed Author' }),
     });
 
     await api.logout();

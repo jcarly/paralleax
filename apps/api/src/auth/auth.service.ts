@@ -6,7 +6,7 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import type { UserRole } from '@paralleax/shared';
+import { isValidUserDisplayName, normalizeUserDisplayName, type UserRole } from '@paralleax/shared';
 import { createHash, randomBytes, randomUUID, scrypt as nodeScrypt, timingSafeEqual } from 'crypto';
 import { promisify } from 'util';
 import { AuthRepository, type AuthUser } from './auth.repository';
@@ -18,8 +18,12 @@ const sessionDurationMs = 30 * 24 * 60 * 60 * 1000;
 export class AuthService {
   constructor(private readonly repository: AuthRepository) {}
 
-  async register(email: string, password: string) {
+  async register(email: string, password: string, displayName: string) {
     const normalizedEmail = email.trim().toLowerCase();
+    const normalizedDisplayName = normalizeUserDisplayName(displayName);
+    if (!isValidUserDisplayName(normalizedDisplayName)) {
+      throw new BadRequestException('Display name must contain between 2 and 50 characters');
+    }
     if (await this.repository.findUserByEmail(normalizedEmail)) {
       throw new ConflictException('Email already registered');
     }
@@ -27,6 +31,7 @@ export class AuthService {
     const candidate: Omit<AuthUser, 'role'> = {
       id: randomUUID(),
       email: normalizedEmail,
+      displayName: normalizedDisplayName,
       passwordHash: await hashPassword(password),
       createdAt: now,
     };
@@ -71,6 +76,16 @@ export class AuthService {
     return updated;
   }
 
+  async updateDisplayName(userId: string, displayName: string) {
+    const normalizedDisplayName = normalizeUserDisplayName(displayName);
+    if (!isValidUserDisplayName(normalizedDisplayName)) {
+      throw new BadRequestException('Display name must contain between 2 and 50 characters');
+    }
+    const updated = await this.repository.updateDisplayName(userId, normalizedDisplayName);
+    if (!updated) throw new NotFoundException('User not found');
+    return updated;
+  }
+
   private assertAdmin(role: UserRole) {
     if (role !== 'admin') throw new ForbiddenException('Administrator access required');
   }
@@ -91,7 +106,13 @@ export class AuthService {
 }
 
 function publicUser(user: AuthUser) {
-  return { id: user.id, email: user.email, role: user.role, createdAt: user.createdAt };
+  return {
+    id: user.id,
+    email: user.email,
+    displayName: user.displayName,
+    role: user.role,
+    createdAt: user.createdAt,
+  };
 }
 
 function hashToken(token: string) {

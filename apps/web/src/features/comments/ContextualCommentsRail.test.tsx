@@ -10,14 +10,14 @@ const thread: StoryCommentThread = {
   anchor: { kind: 'entity', targetType: 'interaction', targetId: 'interaction-1' },
   anchorLabel: 'Arrival',
   status: 'open',
-  createdBy: { id: 'user-1', email: 'author@example.com' },
+  createdBy: { id: 'user-1', displayName: 'Author' },
   createdAt: '2026-08-13T09:00:00.000Z',
   updatedAt: '2026-08-13T09:00:00.000Z',
   messages: [
     {
       id: 'message-1',
       threadId: 'thread-1',
-      author: { id: 'user-1', email: 'author@example.com' },
+      author: { id: 'user-1', displayName: 'Author' },
       body: 'Could this be clearer?',
       createdAt: '2026-08-13T09:00:00.000Z',
     },
@@ -36,7 +36,7 @@ describe('ContextualCommentsRail', () => {
         {
           id: 'message-2',
           threadId: thread.id,
-          author: { id: 'user-2', email: 'reviewer@example.com' },
+          author: { id: 'user-2', displayName: 'Reviewer' },
           body: 'Yes, let us shorten it.',
           createdAt: '2026-08-13T10:00:00.000Z',
         },

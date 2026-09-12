@@ -112,7 +112,7 @@ describe('comment anchors', () => {
   });
 
   it('lets story managers, editors, and the creator manage a comment thread', () => {
-    const thread = { createdBy: { id: 'creator-1', email: 'creator@example.com' } };
+    const thread = { createdBy: { id: 'creator-1', displayName: 'Creator' } };
 
     expect(canManageCommentThread({ canManage: true, canEdit: false }, 'manager-1', thread)).toBe(
       true,

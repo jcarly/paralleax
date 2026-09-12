@@ -5,10 +5,9 @@ not block the MVP unless a future implementation touches the affected area.
 
 ## Users and Permissions
 
-- Define display-name rules before replacing email on collaborative surfaces:
-  required versus optional, uniqueness, rename history, moderation, and the
-  fallback/migration for existing accounts. Email must remain private outside
-  self-service, administration, and explicit access management.
+- Define moderation and administrator override rules for display names before
+  opening registration beyond the private alpha. The identity shape, rename
+  behavior, privacy boundary, and legacy migration are fixed by ADR-006.
 - Define external identity-provider account linking before adding Google or
   another provider: trusted verified-email claims, collisions with password
   accounts, unlinking, recovery, and behavior when a provider is unavailable.

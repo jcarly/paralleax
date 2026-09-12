@@ -5,6 +5,7 @@ import { DatabaseConnection } from '../database/database.connection';
 export interface AuthUser {
   id: string;
   email: string;
+  displayName: string;
   passwordHash: string;
   role: UserRole;
   createdAt: string;
@@ -12,28 +13,33 @@ export interface AuthUser {
 
 export type ManagedUser = Omit<AuthUser, 'passwordHash'>;
 
+interface AuthUserRow {
+  id: string;
+  email: string;
+  display_name: string;
+  password_hash: string;
+  role: UserRole;
+  created_at: Date;
+}
+
+interface ManagedUserRow {
+  id: string;
+  email: string;
+  display_name: string;
+  role: UserRole;
+  created_at: Date;
+}
+
 @Injectable()
 export class AuthRepository {
   constructor(private readonly database: DatabaseConnection) {}
 
   async findUserByEmail(email: string): Promise<AuthUser | undefined> {
-    const result = await this.database.pool.query<{
-      id: string;
-      email: string;
-      password_hash: string;
-      role: UserRole;
-      created_at: Date;
-    }>('SELECT id, email, password_hash, role, created_at FROM users WHERE email = $1', [email]);
-    const row = result.rows[0];
-    return row
-      ? {
-          id: row.id,
-          email: row.email,
-          passwordHash: row.password_hash,
-          role: row.role,
-          createdAt: row.created_at.toISOString(),
-        }
-      : undefined;
+    const result = await this.database.pool.query<AuthUserRow>(
+      'SELECT id, email, display_name, password_hash, role, created_at FROM users WHERE email = $1',
+      [email],
+    );
+    return result.rows[0] ? mapUser(result.rows[0]) : undefined;
   }
 
   async createUser(user: Omit<AuthUser, 'role'>): Promise<AuthUser | undefined> {
@@ -41,23 +47,17 @@ export class AuthRepository {
     try {
       await client.query('BEGIN');
       await client.query("SELECT pg_advisory_xact_lock(hashtext('paralleax-admin-roles'))");
-      const result = await client.query<{
-        id: string;
-        email: string;
-        password_hash: string;
-        role: UserRole;
-        created_at: Date;
-      }>(
-        `INSERT INTO users (id, email, password_hash, role, created_at)
+      const result = await client.query<AuthUserRow>(
+        `INSERT INTO users (id, email, display_name, password_hash, role, created_at)
          VALUES (
-           $1, $2, $3,
+           $1, $2, $3, $4,
            CASE WHEN EXISTS (SELECT 1 FROM users WHERE role = 'admin')
              THEN 'user' ELSE 'admin' END,
-           $4
+           $5
          )
          ON CONFLICT (email) DO NOTHING
-         RETURNING id, email, password_hash, role, created_at`,
-        [user.id, user.email, user.passwordHash, user.createdAt],
+         RETURNING id, email, display_name, password_hash, role, created_at`,
+        [user.id, user.email, user.displayName, user.passwordHash, user.createdAt],
       );
       await client.query('COMMIT');
       return result.rows[0] ? mapUser(result.rows[0]) : undefined;
@@ -70,18 +70,10 @@ export class AuthRepository {
   }
 
   async listUsers(): Promise<ManagedUser[]> {
-    const result = await this.database.pool.query<{
-      id: string;
-      email: string;
-      role: UserRole;
-      created_at: Date;
-    }>('SELECT id, email, role, created_at FROM users ORDER BY created_at, email');
-    return result.rows.map((row) => ({
-      id: row.id,
-      email: row.email,
-      role: row.role,
-      createdAt: row.created_at.toISOString(),
-    }));
+    const result = await this.database.pool.query<ManagedUserRow>(
+      'SELECT id, email, display_name, role, created_at FROM users ORDER BY created_at, email',
+    );
+    return result.rows.map(mapManagedUser);
   }
 
   async updateUserRole(id: string, role: UserRole): Promise<ManagedUser | undefined> {
@@ -89,12 +81,7 @@ export class AuthRepository {
     try {
       await client.query('BEGIN');
       await client.query("SELECT pg_advisory_xact_lock(hashtext('paralleax-admin-roles'))");
-      const result = await client.query<{
-        id: string;
-        email: string;
-        role: UserRole;
-        created_at: Date;
-      }>(
+      const result = await client.query<ManagedUserRow>(
         `UPDATE users AS target
          SET role = $2
          WHERE target.id = $1
@@ -106,20 +93,28 @@ export class AuthRepository {
                WHERE another_admin.role = 'admin' AND another_admin.id <> target.id
              )
            )
-         RETURNING id, email, role, created_at`,
+         RETURNING id, email, display_name, role, created_at`,
         [id, role],
       );
       await client.query('COMMIT');
-      const row = result.rows[0];
-      return row
-        ? { id: row.id, email: row.email, role: row.role, createdAt: row.created_at.toISOString() }
-        : undefined;
+      return result.rows[0] ? mapManagedUser(result.rows[0]) : undefined;
     } catch (error) {
       await client.query('ROLLBACK');
       throw error;
     } finally {
       client.release();
     }
+  }
+
+  async updateDisplayName(id: string, displayName: string): Promise<ManagedUser | undefined> {
+    const result = await this.database.pool.query<ManagedUserRow>(
+      `UPDATE users
+       SET display_name = $2
+       WHERE id = $1
+       RETURNING id, email, display_name, role, created_at`,
+      [id, displayName],
+    );
+    return result.rows[0] ? mapManagedUser(result.rows[0]) : undefined;
   }
 
   async createSession(session: {
@@ -137,29 +132,15 @@ export class AuthRepository {
   }
 
   async findUserBySessionHash(tokenHash: string): Promise<AuthUser | undefined> {
-    const result = await this.database.pool.query<{
-      id: string;
-      email: string;
-      password_hash: string;
-      role: UserRole;
-      created_at: Date;
-    }>(
-      `SELECT users.id, users.email, users.password_hash, users.role, users.created_at
+    const result = await this.database.pool.query<AuthUserRow>(
+      `SELECT users.id, users.email, users.display_name, users.password_hash,
+              users.role, users.created_at
        FROM sessions
        JOIN users ON users.id = sessions.user_id
        WHERE sessions.token_hash = $1 AND sessions.expires_at > now()`,
       [tokenHash],
     );
-    const row = result.rows[0];
-    return row
-      ? {
-          id: row.id,
-          email: row.email,
-          passwordHash: row.password_hash,
-          role: row.role,
-          createdAt: row.created_at.toISOString(),
-        }
-      : undefined;
+    return result.rows[0] ? mapUser(result.rows[0]) : undefined;
   }
 
   async deleteExpiredSessions(): Promise<void> {
@@ -171,17 +152,22 @@ export class AuthRepository {
   }
 }
 
-function mapUser(row: {
-  id: string;
-  email: string;
-  password_hash: string;
-  role: UserRole;
-  created_at: Date;
-}): AuthUser {
+function mapUser(row: AuthUserRow): AuthUser {
   return {
     id: row.id,
     email: row.email,
+    displayName: row.display_name,
     passwordHash: row.password_hash,
+    role: row.role,
+    createdAt: row.created_at.toISOString(),
+  };
+}
+
+function mapManagedUser(row: ManagedUserRow): ManagedUser {
+  return {
+    id: row.id,
+    email: row.email,
+    displayName: row.display_name,
     role: row.role,
     createdAt: row.created_at.toISOString(),
   };

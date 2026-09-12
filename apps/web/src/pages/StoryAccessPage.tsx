@@ -108,7 +108,11 @@ export function StoryAccessPage() {
         <div className="settings-grid">
           <section className="settings-card">
             <h2>{t('access.general')}</h2>
-            <p>{t('access.owner', { email: access.owner.email })}</p>
+            <p>
+              {t('access.owner', {
+                email: `${access.owner.displayName} · ${access.owner.email}`,
+              })}
+            </p>
             <label className="product-field">
               <span>{t('access.visibility.label')}</span>
               <select
@@ -198,7 +202,8 @@ export function StoryAccessPage() {
               {access.collaborators.map((collaborator) => (
                 <li key={collaborator.userId}>
                   <span>
-                    <b>{collaborator.email}</b>
+                    <b>{collaborator.displayName}</b>
+                    <span>{collaborator.email}</span>
                     <small>{t(`access.role.${collaborator.role}`)}</small>
                   </span>
                   <button

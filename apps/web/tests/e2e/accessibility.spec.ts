@@ -96,7 +96,7 @@ async function mockAuthenticatedLibrary(page: Page) {
           interactionCount: story.interactions.length,
           access: story.access,
           capabilities: story.capabilities,
-          owner: { id: 'user-1', email: 'author@example.com' },
+          owner: { id: 'user-1', displayName: 'Author' },
           createdAt: story.createdAt,
           updatedAt: story.updatedAt,
         },

@@ -71,16 +71,23 @@ priority, the order below is the intended delivery order.
    visible interaction in 1.9â€“2.3 s, full editor readiness in 3.5â€“4.3 s,
    selection in 0.7â€“2.4 s, drag confirmation in 0.6â€“0.9 s, and context creation
    in 0.4 s or less, with 26 staged responses totalling 423 KB. The scheduled real-stack and
-   PostgreSQL lanes now retain API byte/timing and SQL query-count evidence;
-   stable CI results and a focused React commit profile remain before this item
-   can be closed.
+   PostgreSQL lanes now retain API byte/timing and SQL query-count evidence. The
+   focused browser profile also retains per-operation React commits and
+   rendered-fiber counts as a CI artifact. Local development/production
+   baselines recorded 31–33 load commits, 13–14 selection commits, 21 drag
+   commits, and four commits for each context creation. Stable scheduled CI
+   results remain before this item can be closed.
 2. **Introduce private display identities.** Story cards, comments, history, and
    collaborative surfaces must show a pseudonym/display name rather than an
    email address. Email remains private account data and may appear only where
    account administration or an explicit access-management workflow requires
    it. This requires one extension of the existing user model and projections,
-   not a parallel profile model; uniqueness, rename, and legacy fallback rules
-   must be decided before the migration.
+   not a parallel profile model. **Completed 2026-09-12:** registration now
+   requires a normalized non-unique 2–50 character display name, self-service
+   rename preserves the stable user id, and upgraded accounts receive
+   `User <short id>` without using their email. Story cards, comments, and
+   history resolve the current display name; only self-service, administration,
+   and explicit access management expose email.
 3. **Restore clear account entry.** Make the `Create account` action visually
    discoverable and verify sign-in/sign-up contrast, keyboard focus, responsive
    presentation, and the anonymous golden path.

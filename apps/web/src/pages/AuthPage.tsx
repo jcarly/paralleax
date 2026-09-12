@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
+import { isValidUserDisplayName, normalizeUserDisplayName } from '@paralleax/shared';
 import { api, type AuthUser } from '../api';
 import { LanguageSwitcher } from '../components/LanguageSwitcher';
 import './ProductPages.css';
@@ -61,6 +62,7 @@ export function AuthPage({
   const { t } = useTranslation();
   const [localMode, setLocalMode] = useState<AuthMode>(initialMode);
   const [email, setEmail] = useState('');
+  const [displayName, setDisplayName] = useState('');
   const [password, setPassword] = useState('');
   const [confirmation, setConfirmation] = useState('');
   const [accessCode, setAccessCode] = useState('');
@@ -70,7 +72,13 @@ export function AuthPage({
   const mode = onModeChange ? initialMode : localMode;
   const isRegister = mode === 'register';
   const passwordsMatch = !isRegister || password === confirmation;
-  const canSubmit = email.includes('@') && password.length >= 8 && passwordsMatch && !pending;
+  const normalizedDisplayName = normalizeUserDisplayName(displayName);
+  const canSubmit =
+    email.includes('@') &&
+    password.length >= 8 &&
+    passwordsMatch &&
+    (!isRegister || isValidUserDisplayName(normalizedDisplayName)) &&
+    !pending;
 
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -79,7 +87,7 @@ export function AuthPage({
       setError('');
       setPending(true);
       const user = isRegister
-        ? await api.register(email, password, accessCode || undefined)
+        ? await api.register(email, password, normalizedDisplayName, accessCode || undefined)
         : await api.login(email, password);
       onAuthenticated(user);
     } catch (caught) {
@@ -128,6 +136,22 @@ export function AuthPage({
             </p>
           ) : null}
           <form onSubmit={(event) => void submit(event)}>
+            {isRegister ? (
+              <label className="product-field">
+                <span>{t('auth.displayName')}</span>
+                <input
+                  aria-label={t('auth.displayName')}
+                  autoComplete="nickname"
+                  placeholder={t('auth.displayNamePlaceholder')}
+                  value={displayName}
+                  onChange={(event) => setDisplayName(event.target.value)}
+                  minLength={2}
+                  maxLength={50}
+                  required
+                />
+                <small>{t('auth.displayNameHelp')}</small>
+              </label>
+            ) : null}
             <label className="product-field">
               <span>{t('auth.email')}</span>
               <input

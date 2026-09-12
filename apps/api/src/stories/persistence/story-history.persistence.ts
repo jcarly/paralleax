@@ -13,7 +13,7 @@ export interface StoryHistoryEventRow {
   operation: string;
   changes: StoryChangeDelta;
   actor_user_id: string | null;
-  actor_email: string | null;
+  actor_display_name: string | null;
   created_at: Date | string;
   reverted: boolean;
 }
@@ -67,7 +67,7 @@ export async function findStoryHistoryCandidate(
   const kinds: StoryHistoryEventKind[] = action === 'undo' ? ['change', 'redo'] : ['undo'];
   const result = await client.query<StoryHistoryEventRow>(
     `SELECT event.id, event.revision, event.kind, event.operation, event.changes,
-            event.actor_user_id, actor.email AS actor_email, event.created_at,
+            event.actor_user_id, actor.display_name AS actor_display_name, event.created_at,
             false AS reverted
      FROM story_change_events AS event
      LEFT JOIN users AS actor ON actor.id = event.actor_user_id
@@ -94,7 +94,7 @@ export async function readStoryHistory(
   const result = await client.query<StoryHistoryReadRow>(
     `WITH recent_entries AS (
        SELECT event.id, event.revision, event.kind, event.operation, event.changes,
-              event.actor_user_id, actor.email AS actor_email, event.created_at,
+              event.actor_user_id, actor.display_name AS actor_display_name, event.created_at,
               EXISTS (
                 SELECT 1 FROM story_change_events AS inverse
                 WHERE inverse.reverts_event_id = event.id
@@ -155,7 +155,7 @@ function storyHistoryEntry(row: StoryHistoryEventRow): StoryHistoryEntry {
       ? {
           actor: {
             id: row.actor_user_id,
-            ...(row.actor_email ? { email: row.actor_email } : {}),
+            displayName: row.actor_display_name ?? 'Deleted user',
           },
         }
       : {}),

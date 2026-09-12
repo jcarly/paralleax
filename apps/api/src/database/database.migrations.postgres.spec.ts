@@ -746,6 +746,43 @@ describePostgres('Database migrations PostgreSQL upgrade', () => {
       ),
     ).resolves.toMatchObject({ rows: [], rowCount: 0 });
   }, 30_000);
+
+  it('adds private display identities without deriving them from account emails', async () => {
+    await pool.query('DROP SCHEMA public CASCADE');
+    await pool.query('CREATE SCHEMA public');
+    const migrationIndex = databaseMigrations.findIndex(
+      ({ id }) => id === '202609120038_user_display_names',
+    );
+    for (const migration of databaseMigrations.slice(0, migrationIndex)) {
+      await pool.query(migration.sql);
+    }
+    await pool.query(
+      `INSERT INTO users (id, email, password_hash, role, created_at)
+       VALUES
+         ('legacy-user-1234', 'private-address@example.test', 'disabled', 'user', now()),
+         ('migration-user', 'migration@paralleax.invalid', 'disabled', 'user', now())`,
+    );
+
+    await pool.query(databaseMigrations[migrationIndex].sql);
+
+    await expect(
+      pool.query(
+        `SELECT id, display_name
+         FROM users
+         WHERE id IN ('migration-user', 'legacy-user-1234')
+         ORDER BY id`,
+      ),
+    ).resolves.toMatchObject({
+      rows: [
+        { id: 'legacy-user-1234', display_name: 'User LEGACYUS' },
+        { id: 'migration-user', display_name: 'User MIGRATIO' },
+      ],
+      rowCount: 2,
+    });
+    await expect(
+      pool.query("UPDATE users SET display_name = ' ' WHERE id = 'legacy-user-1234'"),
+    ).rejects.toMatchObject({ code: '23514' });
+  }, 30_000);
 });
 
 async function waitForPostgres(pool: Pool) {

@@ -17,6 +17,7 @@ describe('AuthPage', () => {
     const authenticated = {
       id: 'user-1',
       email: 'author@example.com',
+      displayName: 'Author',
       role: 'user' as const,
       createdAt: '2026-01-01T00:00:00.000Z',
     };
@@ -45,6 +46,7 @@ describe('AuthPage', () => {
     const authenticated = {
       id: 'user-2',
       email: 'new@example.com',
+      displayName: 'New Author',
       role: 'user' as const,
       createdAt: '2026-01-01T00:00:00.000Z',
     };
@@ -52,6 +54,7 @@ describe('AuthPage', () => {
     const onAuthenticated = vi.fn();
     render(<AuthPage initialMode="register" onAuthenticated={onAuthenticated} />);
 
+    await user.type(screen.getByLabelText('Display name'), 'New Author');
     await user.type(screen.getByLabelText('Email address'), 'new@example.com');
     await user.type(screen.getByLabelText('Password'), 'correct horse battery staple');
     await user.type(screen.getByLabelText('Confirm password'), 'different password');
@@ -69,6 +72,7 @@ describe('AuthPage', () => {
     expect(api.register).toHaveBeenCalledWith(
       'new@example.com',
       'correct horse battery staple',
+      'New Author',
       'correct-alpha-code',
     );
     expect(onAuthenticated).toHaveBeenCalledWith(authenticated);

@@ -106,9 +106,7 @@ export function StoryHistoryPanel({
                       ) : null}
                     </div>
                     <div className="story-history-entry-meta">
-                      <span>
-                        {entry.actor?.email ?? entry.actor?.id ?? t('editor.history.unknownActor')}
-                      </span>
+                      <span>{entry.actor?.displayName ?? t('editor.history.unknownActor')}</span>
                       <span aria-hidden="true">·</span>
                       <time
                         dateTime={entry.createdAt}

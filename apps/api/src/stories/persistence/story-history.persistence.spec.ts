@@ -78,7 +78,7 @@ describe('Story history persistence', () => {
           ...historyRow(),
           id: '41',
           actor_user_id: null,
-          actor_email: null,
+          actor_display_name: null,
           created_at: '2026-08-28T07:00:00.000Z',
           reverted: true,
           can_undo: true,
@@ -94,7 +94,7 @@ describe('Story history persistence', () => {
           revision: 2,
           kind: 'change',
           operation: 'story.updated',
-          actor: { id: 'user-1', email: 'author@example.com' },
+          actor: { id: 'user-1', displayName: 'Author' },
           createdAt: '2026-08-28T08:00:00.000Z',
           reverted: false,
         },
@@ -111,6 +111,7 @@ describe('Story history persistence', () => {
       canRedo: false,
     });
     expect(query).toHaveBeenCalledTimes(1);
+    expect(query.mock.calls[0]?.[0]).not.toContain('actor.email');
     expect(query).toHaveBeenCalledWith(expect.stringContaining('AS can_redo'), [
       'story-1',
       'user-1',
@@ -149,7 +150,7 @@ function historyRow() {
     operation: 'story.updated',
     changes,
     actor_user_id: 'user-1',
-    actor_email: 'author@example.com',
+    actor_display_name: 'Author',
     created_at: new Date('2026-08-28T08:00:00.000Z'),
     reverted: false,
   };

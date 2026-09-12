@@ -72,7 +72,7 @@ export class InMemoryStoriesRepository {
         startDateTime: story.startDateTime,
         access: story.access ?? defaultStoryAccess,
         capabilities: this.can(story, id, ownerId),
-        owner: { id: this.owners.get(id)!, email: emailForUser(this.owners.get(id)!) },
+        owner: { id: this.owners.get(id)!, displayName: displayNameForUser(this.owners.get(id)!) },
         createdAt: story.createdAt,
         updatedAt: story.updatedAt,
       }))
@@ -86,7 +86,7 @@ export class InMemoryStoriesRepository {
   ): Promise<PaginatedResult<StorySummary>> {
     const summaries = [...this.stories.entries()]
       .filter(([, story]) => (story.access ?? defaultStoryAccess).visibility === 'public')
-      .map(([, story]) => ({
+      .map(([id, story]) => ({
         id: story.id,
         revision: story.revision,
         title: story.title,
@@ -96,6 +96,7 @@ export class InMemoryStoriesRepository {
         capabilities: resolveStoryAccess(story.access ?? defaultStoryAccess, {
           authenticated: false,
         }),
+        owner: { id: this.owners.get(id)!, displayName: displayNameForUser(this.owners.get(id)!) },
         createdAt: story.createdAt,
         updatedAt: story.updatedAt,
       }))
@@ -369,7 +370,7 @@ export class InMemoryStoriesRepository {
       ...story,
       access: story.access ?? defaultStoryAccess,
       capabilities: this.can(story, id, ownerId),
-      owner: { id: this.owners.get(id)!, email: emailForUser(this.owners.get(id)!) },
+      owner: { id: this.owners.get(id)!, displayName: displayNameForUser(this.owners.get(id)!) },
     });
   }
 
@@ -556,11 +557,16 @@ export class InMemoryStoriesRepository {
     if (!story || !this.can(story, id, userId).canManage) return undefined;
     return {
       ...(story.access ?? defaultStoryAccess),
-      owner: { id: this.owners.get(id)!, email: emailForUser(this.owners.get(id)!) },
+      owner: {
+        id: this.owners.get(id)!,
+        email: emailForUser(this.owners.get(id)!),
+        displayName: displayNameForUser(this.owners.get(id)!),
+      },
       collaborators: [...(this.permissions.get(id) ?? new Map()).entries()].map(
         ([collaboratorId, role]) => ({
           userId: collaboratorId,
           email: emailForUser(collaboratorId),
+          displayName: displayNameForUser(collaboratorId),
           role,
         }),
       ),
@@ -628,7 +634,7 @@ export class InMemoryStoriesRepository {
           revision: event.revision,
           kind: event.kind,
           operation: event.operation,
-          actor: { id: event.actorUserId, email: emailForUser(event.actorUserId) },
+          actor: { id: event.actorUserId, displayName: displayNameForUser(event.actorUserId) },
           createdAt: event.createdAt,
           reverted: reversedEventIds.has(event.id),
         })),
@@ -743,6 +749,12 @@ function emailForUser(userId: string) {
   if (userId === 'user-1') return 'user-one@paralleax.invalid';
   if (userId === 'user-2') return 'user-two@paralleax.invalid';
   return `${userId}@paralleax.invalid`;
+}
+
+function displayNameForUser(userId: string) {
+  if (userId === 'user-1') return 'User One';
+  if (userId === 'user-2') return 'User Two';
+  return `User ${userId.slice(0, 8)}`;
 }
 
 function userForEmail(email: string) {

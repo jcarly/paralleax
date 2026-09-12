@@ -215,6 +215,8 @@ installation-wide account and story management.
 Current elements:
 
 - unique normalized email address;
+- one required, non-unique 2–50 character display name, mutable without changing
+  the stable user id;
 - password credentials stored only as a derived hash;
 - owned stories through `Story.creatorUserId`;
 - a global `user` or `admin` role;
@@ -222,7 +224,7 @@ Current elements:
 
 Later elements:
 
-- profile information;
+- optional profile information beyond the implemented display name;
 - authored changes and suggestions.
 
 Local accounts, server-side sessions, administration, story visibility, and

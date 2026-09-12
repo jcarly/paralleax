@@ -34,7 +34,7 @@ class InMemoryCommentsRepository {
     body: string;
     timestamp: string;
   }) {
-    const author = { id: input.authorId, email: `${input.authorId}@paralleax.invalid` };
+    const author = { id: input.authorId, displayName: `User ${input.authorId}` };
     const thread: StoryCommentThread = {
       id: input.id,
       storyId: input.storyId,
@@ -70,7 +70,7 @@ class InMemoryCommentsRepository {
     thread.messages.push({
       id: input.id,
       threadId: input.threadId,
-      author: { id: input.authorId, email: `${input.authorId}@paralleax.invalid` },
+      author: { id: input.authorId, displayName: `User ${input.authorId}` },
       body: input.body,
       createdAt: input.timestamp,
     });
@@ -90,7 +90,7 @@ class InMemoryCommentsRepository {
     thread.updatedAt = timestamp;
     if (status === 'resolved') {
       thread.resolvedAt = timestamp;
-      thread.resolvedBy = { id: actorId, email: `${actorId}@paralleax.invalid` };
+      thread.resolvedBy = { id: actorId, displayName: `User ${actorId}` };
     } else {
       delete thread.resolvedAt;
       delete thread.resolvedBy;
@@ -133,6 +133,7 @@ describe('Comments API', () => {
               ? {
                   id: token,
                   email: `${token}@paralleax.invalid`,
+                  displayName: `User ${token}`,
                   role: 'user',
                   createdAt: '2026-01-01T00:00:00.000Z',
                 }

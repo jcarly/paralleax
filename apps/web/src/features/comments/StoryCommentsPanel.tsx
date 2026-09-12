@@ -139,7 +139,7 @@ export function StoryCommentsPanel({
             {selectedThread.messages.map((message) => (
               <article key={message.id}>
                 <header>
-                  <b>{message.author.email}</b>
+                  <b>{message.author.displayName}</b>
                   <time dateTime={message.createdAt}>
                     {new Intl.DateTimeFormat(i18n.resolvedLanguage ?? i18n.language, {
                       dateStyle: 'medium',

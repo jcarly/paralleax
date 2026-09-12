@@ -1,5 +1,21 @@
 # Changelog
 
+## 2026-09-12
+
+- Extended the existing user model with required, non-unique display names and
+  self-service rename. Existing accounts migrate to a neutral `User <short id>`
+  name without deriving public identity from email; Story cards, comments, and
+  authored-change history now resolve current display names by stable user id,
+  while email remains limited to self-service, administration, and explicit
+  Story access management.
+- Fixed staged editor and runtime-context pagination when a collection contains
+  an exact multiple of the page size. Full final pages no longer advertise a
+  nonexistent continuation page and abort large Story loading as incomplete.
+- Added test-only React commit profiling to the development and production
+  large-Story browser benchmark. Load, selection, drag, and context-creation
+  operations now retain commit and rendered-fiber counts, enforce explicit
+  budgets, and attach their complete measurements as a CI JSON artifact.
+
 ## 2026-09-11
 
 - Added a deterministic 600-interaction browser performance suite for both
@@ -18,9 +34,6 @@
 - Deferred the initial editor projection request by one cancellable browser task
   so React Strict Mode's development-only effect replay no longer downloads all
   paginated editor projections twice.
-- Fixed staged editor and runtime-context pagination when a collection contains
-  an exact multiple of the page size. Full final pages no longer advertise a
-  nonexistent continuation page and abort large Story loading as incomplete.
 
 ## 2026-09-10
 

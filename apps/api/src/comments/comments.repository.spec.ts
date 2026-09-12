@@ -25,9 +25,13 @@ describe('CommentsRepository', () => {
 
     expect(threads.map(({ id }) => id)).toEqual(['thread-new', 'thread-empty', 'thread-old']);
     expect(threads[0].messages.map(({ id }) => id)).toEqual(['new-1', 'new-2']);
+    expect(threads[0].createdBy).toEqual({ id: 'user-1', displayName: 'Author' });
+    expect(threads[0].createdBy).not.toHaveProperty('email');
     expect(threads[1].messages).toEqual([]);
     expect(threads[2].messages.map(({ id }) => id)).toEqual(['old-1']);
     expect(query).toHaveBeenCalledTimes(2);
+    expect(query.mock.calls[0]?.[0]).not.toContain('creator.email');
+    expect(query.mock.calls[1]?.[0]).not.toContain('author.email');
     expect(query).toHaveBeenNthCalledWith(2, expect.stringContaining('message.thread_id = ANY'), [
       ['thread-new', 'thread-empty', 'thread-old'],
     ]);
@@ -50,11 +54,11 @@ function threadRow(id: string, updatedAt: string) {
     anchor_label: 'Story graph',
     status: 'open' as const,
     created_by: 'user-1',
-    created_by_email: 'author@example.com',
+    created_by_display_name: 'Author',
     created_at: '2026-08-25T07:00:00.000Z',
     updated_at: updatedAt,
     resolved_by: null,
-    resolved_by_email: null,
+    resolved_by_display_name: null,
     resolved_at: null,
   };
 }
@@ -64,7 +68,7 @@ function messageRow(id: string, threadId: string, createdAt: string) {
     id,
     thread_id: threadId,
     author_user_id: 'user-1',
-    author_email: 'author@example.com',
+    author_display_name: 'Author',
     body: id,
     created_at: createdAt,
     edited_at: null,

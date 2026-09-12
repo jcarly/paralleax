@@ -1,9 +1,9 @@
-import { Body, Controller, Get, HttpCode, Post, Req, Res } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Patch, Post, Req, Res } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { AppConfigService } from '../config/app-config.service';
 import { CurrentUser, Public, type RequestUser } from './auth.decorators';
 import { AuthService } from './auth.service';
-import { CredentialsDto, RegisterDto } from './dto/credentials.dto';
+import { CredentialsDto, RegisterDto, UpdateDisplayNameDto } from './dto/credentials.dto';
 import { readSessionCookie, sessionCookieName } from './session-cookie';
 import { assertRegistrationAllowed } from './registration-policy';
 
@@ -22,7 +22,7 @@ export class AuthController {
       this.config.registrationAccessCode,
       input.accessCode,
     );
-    const result = await this.auth.register(input.email, input.password);
+    const result = await this.auth.register(input.email, input.password, input.displayName);
     this.setSessionCookie(response, result.token);
     return result.user;
   }
@@ -46,6 +46,11 @@ export class AuthController {
   @Get('me')
   me(@CurrentUser() user: RequestUser) {
     return user;
+  }
+
+  @Patch('me')
+  updateMe(@CurrentUser() user: RequestUser, @Body() input: UpdateDisplayNameDto) {
+    return this.auth.updateDisplayName(user.id, input.displayName);
   }
 
   private setSessionCookie(response: Response, token: string) {

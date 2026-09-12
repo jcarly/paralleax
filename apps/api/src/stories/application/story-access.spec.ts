@@ -18,7 +18,7 @@ describe('StoryAccessService', () => {
     visibility: 'private' as const,
     editPolicy: 'owner' as const,
     commentPolicy: 'editors' as const,
-    owner: { id: 'user-1', email: 'owner@example.com' },
+    owner: { id: 'user-1', email: 'owner@example.com', displayName: 'Owner' },
     collaborators: [],
   };
 

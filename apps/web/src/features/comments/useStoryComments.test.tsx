@@ -47,7 +47,7 @@ const thread: StoryCommentThread = {
   anchor: { kind: 'canvas', position: { x: 10, y: 20 } },
   anchorLabel: 'Story graph',
   status: 'open',
-  createdBy: { id: 'user-1', email: 'reviewer@example.com' },
+  createdBy: { id: 'user-1', displayName: 'Reviewer' },
   createdAt: '2026-08-13T09:00:00.000Z',
   updatedAt: '2026-08-13T09:00:00.000Z',
   messages: [],

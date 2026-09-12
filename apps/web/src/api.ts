@@ -165,12 +165,14 @@ function storyListPath(path: string, options: Partial<StoryListOptions>): string
 export interface AuthUser {
   id: string;
   email: string;
+  displayName: string;
   role: UserRole;
   createdAt: string;
 }
 export interface ManagedUser {
   id: string;
   email: string;
+  displayName: string;
   role: UserRole;
   createdAt: string;
 }
@@ -186,10 +188,15 @@ export interface QspImportResponse {
 }
 export const api = {
   me: () => request<AuthUser>('/auth/me'),
-  register: (email: string, password: string, accessCode?: string) =>
+  register: (email: string, password: string, displayName: string, accessCode?: string) =>
     request<AuthUser>('/auth/register', {
       method: 'POST',
-      body: JSON.stringify({ email, password, ...(accessCode ? { accessCode } : {}) }),
+      body: JSON.stringify({
+        email,
+        password,
+        displayName,
+        ...(accessCode ? { accessCode } : {}),
+      }),
     }),
   login: (email: string, password: string) =>
     request<AuthUser>('/auth/login', {
@@ -197,6 +204,11 @@ export const api = {
       body: JSON.stringify({ email, password }),
     }),
   logout: () => request<void>('/auth/logout', { method: 'POST' }),
+  updateCurrentUser: (displayName: string) =>
+    request<AuthUser>('/auth/me', {
+      method: 'PATCH',
+      body: JSON.stringify({ displayName }),
+    }),
   listUsers: () => request<ManagedUser[]>('/admin/users'),
   updateUserRole: (id: string, role: UserRole) =>
     request<ManagedUser>(`/admin/users/${id}`, {

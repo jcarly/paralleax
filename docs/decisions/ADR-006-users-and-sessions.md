@@ -55,3 +55,17 @@ is checked server-side before password hashing or account creation and is never
 returned to the browser. Production mutations also require an exact match
 between the request `Origin` and the configured public origin. This supplements
 `SameSite=Lax` cookies for the documented same-origin deployment topology.
+
+## Amendment — 2026-09-12
+
+The existing user record also owns one required, non-unique display name. New
+registrations provide a normalized name of 2–50 characters, and signed-in users
+may rename it without changing their stable user id or account email. Upgraded
+accounts receive `User <short id>`; the migration never derives a public name
+from an email address and does not retain a public rename history.
+
+Story summaries, comments, and authored-change history resolve the current
+display name by stable user id. They must not expose account email addresses.
+Email remains available to the account itself, global administrators, and the
+explicit Story access-management workflow. This extends the user and session
+model; it does not introduce a parallel profile identity.

@@ -21,7 +21,7 @@ const access: StoryAccessConfiguration = {
   visibility: 'private',
   editPolicy: 'owner',
   commentPolicy: 'editors',
-  owner: { id: 'owner-1', email: 'owner@example.com' },
+  owner: { id: 'owner-1', email: 'owner@example.com', displayName: 'Owner' },
   collaborators: [],
 };
 
@@ -37,7 +37,14 @@ describe('StoryAccessPage', () => {
     }));
     vi.mocked(api.setStoryCollaborator).mockResolvedValue({
       ...structuredClone(access),
-      collaborators: [{ userId: 'user-2', email: 'reader@example.com', role: 'viewer' }],
+      collaborators: [
+        {
+          userId: 'user-2',
+          email: 'reader@example.com',
+          displayName: 'Reader',
+          role: 'viewer',
+        },
+      ],
     });
     vi.mocked(api.removeStoryCollaborator).mockResolvedValue(undefined);
   });

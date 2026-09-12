@@ -4,6 +4,7 @@ import { Link, Navigate, NavLink, Route, Routes, useLocation, useNavigate } from
 import { api, type AuthUser } from './api';
 import { authenticationPath, safeReturnTo } from './authNavigation';
 import { LanguageSwitcher } from './components/LanguageSwitcher';
+import { AccountDialog } from './components/AccountDialog';
 import { FeedbackButton } from './features/feedback/FeedbackButton';
 import { AuthPage } from './pages/AuthPage';
 import { StoryList } from './pages/StoryList';
@@ -35,6 +36,7 @@ export function App() {
     location.pathname.startsWith('/prototype/paralleax/');
   const [user, setUser] = useState<AuthUser | null>();
   const [sessionExpired, setSessionExpired] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
 
   useEffect(() => {
     if (isPrototype) return;
@@ -102,10 +104,15 @@ export function App() {
         <LanguageSwitcher className="language-switcher-header" />
         {user ? (
           <>
-            <span className="product-user">
-              <span aria-hidden="true">{user.email.slice(0, 2).toUpperCase()}</span>
-              <span>{user.email}</span>
-            </span>
+            <button
+              className="product-user"
+              type="button"
+              aria-label={t('shell.account')}
+              onClick={() => setAccountOpen(true)}
+            >
+              <span aria-hidden="true">{user.displayName.slice(0, 2).toUpperCase()}</span>
+              <span>{user.displayName}</span>
+            </button>
             <button
               className="product-signout"
               onClick={() => void api.logout().finally(() => setUser(null))}
@@ -126,7 +133,12 @@ export function App() {
       </header>
       <Suspense fallback={<main className="page">{t('shell.loadingWorkspace')}</main>}>
         <Routes>
-          <Route path="/" element={<StoryList key={user?.id ?? 'anonymous'} user={user} />} />
+          <Route
+            path="/"
+            element={
+              <StoryList key={user ? `${user.id}:${user.displayName}` : 'anonymous'} user={user} />
+            }
+          />
           <Route path="/login" element={<Navigate to={returnTo} replace />} />
           <Route path="/register" element={<Navigate to={returnTo} replace />} />
           <Route
@@ -158,6 +170,9 @@ export function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>
+      {user && accountOpen ? (
+        <AccountDialog user={user} onClose={() => setAccountOpen(false)} onUpdated={setUser} />
+      ) : null}
     </div>
   );
 }

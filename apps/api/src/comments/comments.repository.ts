@@ -15,11 +15,11 @@ type ThreadRow = {
   anchor_label: string;
   status: 'open' | 'resolved';
   created_by: string;
-  created_by_email: string;
+  created_by_display_name: string;
   created_at: Date | string;
   updated_at: Date | string;
   resolved_by: string | null;
-  resolved_by_email: string | null;
+  resolved_by_display_name: string | null;
   resolved_at: Date | string | null;
 };
 
@@ -27,7 +27,7 @@ type MessageRow = {
   id: string;
   thread_id: string;
   author_user_id: string;
-  author_email: string;
+  author_display_name: string;
   body: string;
   created_at: Date | string;
   edited_at: Date | string | null;
@@ -184,9 +184,9 @@ export class CommentsRepository {
 
 function threadSelect(where: string) {
   return `SELECT thread.id, thread.story_id, thread.anchor, thread.anchor_label, thread.status,
-                 thread.created_by, creator.email AS created_by_email,
+                 thread.created_by, creator.display_name AS created_by_display_name,
                  thread.created_at, thread.updated_at, thread.resolved_by,
-                 resolver.email AS resolved_by_email, thread.resolved_at
+                 resolver.display_name AS resolved_by_display_name, thread.resolved_at
           FROM story_comment_threads AS thread
           JOIN users AS creator ON creator.id = thread.created_by
           LEFT JOIN users AS resolver ON resolver.id = thread.resolved_by
@@ -195,7 +195,7 @@ function threadSelect(where: string) {
 
 function messageSelect() {
   return `SELECT message.id, message.thread_id, message.author_user_id,
-                 author.email AS author_email, message.body,
+                 author.display_name AS author_display_name, message.body,
                  message.created_at, message.edited_at
           FROM story_comment_messages AS message
           JOIN users AS author ON author.id = message.author_user_id`;
@@ -224,11 +224,11 @@ function mapThread(row: ThreadRow, messages: MessageRow[]): StoryCommentThread {
     anchor: row.anchor,
     anchorLabel: row.anchor_label,
     status: row.status,
-    createdBy: author(row.created_by, row.created_by_email),
+    createdBy: author(row.created_by, row.created_by_display_name),
     createdAt: iso(row.created_at),
     updatedAt: iso(row.updated_at),
-    ...(row.resolved_by && row.resolved_by_email
-      ? { resolvedBy: author(row.resolved_by, row.resolved_by_email) }
+    ...(row.resolved_by && row.resolved_by_display_name
+      ? { resolvedBy: author(row.resolved_by, row.resolved_by_display_name) }
       : {}),
     ...(row.resolved_at ? { resolvedAt: iso(row.resolved_at) } : {}),
     messages: messages.map(mapMessage),
@@ -239,7 +239,7 @@ function mapMessage(row: MessageRow): CommentMessage {
   return {
     id: row.id,
     threadId: row.thread_id,
-    author: author(row.author_user_id, row.author_email),
+    author: author(row.author_user_id, row.author_display_name),
     body: row.body,
     createdAt: iso(row.created_at),
     ...(row.edited_at ? { editedAt: iso(row.edited_at) } : {}),
@@ -256,8 +256,8 @@ function groupMessagesByThread(rows: MessageRow[]) {
   return messagesByThread;
 }
 
-function author(id: string, email: string): CommentAuthor {
-  return { id, email };
+function author(id: string, displayName: string): CommentAuthor {
+  return { id, displayName };
 }
 
 function iso(value: Date | string) {

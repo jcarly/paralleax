@@ -66,6 +66,7 @@ type StoryRow = {
   title: string;
   creator_user_id: string;
   owner_email: string;
+  owner_display_name: string;
   visibility: StoryAccessSettings['visibility'];
   edit_policy: StoryAccessSettings['editPolicy'];
   comment_policy: StoryAccessSettings['commentPolicy'];
@@ -222,6 +223,7 @@ type ReaderProgressRow = {
 
 const storyAccessSelect = `SELECT stories.id, stories.revision, stories.title,
   stories.creator_user_id, owner.email AS owner_email,
+  owner.display_name AS owner_display_name,
   stories.visibility, stories.edit_policy, stories.comment_policy,
   actor.id AS actor_id, actor.role AS actor_role, permission.role AS collaborator_role,
   stories.start_date_time, stories.created_at, stories.updated_at
@@ -245,7 +247,8 @@ export class StoriesRepository {
     const offset = (options.page - 1) * options.pageSize;
     const result = await this.database.pool.query<StorySummaryRow>(
       `SELECT stories.id, stories.revision, stories.title, stories.creator_user_id,
-              owner.email AS owner_email, stories.visibility, stories.edit_policy,
+              owner.email AS owner_email, owner.display_name AS owner_display_name,
+              stories.visibility, stories.edit_policy,
               stories.comment_policy, actor.id AS actor_id, actor.role AS actor_role,
               permission.role AS collaborator_role, stories.start_date_time,
               stories.created_at, stories.updated_at,
@@ -285,6 +288,7 @@ export class StoriesRepository {
     const offset = (options.page - 1) * options.pageSize;
     const result = await this.database.pool.query<PublicStorySummaryRow>(
       `SELECT stories.id, stories.revision, stories.title, stories.creator_user_id,
+              owner.display_name AS owner_display_name,
               stories.visibility, stories.edit_policy, stories.comment_policy,
               NULL::text AS actor_id, NULL::text AS actor_role,
               NULL::text AS collaborator_role, stories.start_date_time,
@@ -293,6 +297,7 @@ export class StoriesRepository {
                 AS interaction_count,
               COUNT(*) OVER() AS total_count
        FROM stories
+       JOIN users AS owner ON owner.id = stories.creator_user_id
        WHERE stories.visibility = 'public'
          AND ($1 = '' OR stories.title ILIKE '%' || $1 || '%')
        ORDER BY ${order}
@@ -351,7 +356,7 @@ export class StoriesRepository {
       startDateTime: row.start_date_time,
       access: accessSettings(row),
       capabilities: capabilities(row, userId),
-      owner: { id: row.creator_user_id, email: row.owner_email },
+      owner: { id: row.creator_user_id, displayName: row.owner_display_name },
       createdAt: iso(row.created_at),
       updatedAt: iso(row.updated_at),
       contextCounts: {
@@ -733,9 +738,10 @@ export class StoriesRepository {
     const collaborators = await this.database.pool.query<{
       user_id: string;
       email: string;
+      display_name: string;
       role: StoryCollaboratorRole;
     }>(
-      `SELECT permission.user_id, users.email, permission.role
+      `SELECT permission.user_id, users.email, users.display_name, permission.role
        FROM story_user_permissions AS permission
        JOIN users ON users.id = permission.user_id
        WHERE permission.story_id = $1
@@ -744,10 +750,15 @@ export class StoriesRepository {
     );
     return {
       ...accessSettings(row),
-      owner: { id: row.creator_user_id, email: row.owner_email },
+      owner: {
+        id: row.creator_user_id,
+        email: row.owner_email,
+        displayName: row.owner_display_name,
+      },
       collaborators: collaborators.rows.map((item) => ({
         userId: item.user_id,
         email: item.email,
+        displayName: item.display_name,
         role: item.role,
       })),
     };
@@ -984,7 +995,7 @@ export class StoriesRepository {
       title: row.title,
       access: accessSettings(row),
       capabilities: capabilities(row),
-      owner: { id: row.creator_user_id, email: row.owner_email },
+      owner: { id: row.creator_user_id, displayName: row.owner_display_name },
       startDateTime: row.start_date_time,
       createdAt: iso(row.created_at),
       updatedAt: iso(row.updated_at),
@@ -1306,7 +1317,7 @@ function storySummary(
     startDateTime: row.start_date_time,
     access: accessSettings(row),
     capabilities: capabilities(row, actorId),
-    ...('owner_email' in row ? { owner: { id: row.creator_user_id, email: row.owner_email } } : {}),
+    owner: { id: row.creator_user_id, displayName: row.owner_display_name },
     createdAt: iso(row.created_at),
     updatedAt: iso(row.updated_at),
   };

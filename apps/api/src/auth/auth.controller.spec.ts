@@ -8,6 +8,7 @@ describe('AuthController registration policy', () => {
     user: {
       id: 'user-1',
       email: 'author@example.com',
+      displayName: 'Author',
       role: 'admin' as const,
       createdAt: '2026-08-10T00:00:00.000Z',
     },
@@ -26,7 +27,12 @@ describe('AuthController registration policy', () => {
 
     await expect(
       controller.register(
-        { email: 'author@example.com', password: 'long-enough-password', accessCode: 'wrong' },
+        {
+          email: 'author@example.com',
+          displayName: 'Author',
+          password: 'long-enough-password',
+          accessCode: 'wrong',
+        },
         response,
       ),
     ).rejects.toThrow('A valid invitation code is required');
@@ -36,13 +42,18 @@ describe('AuthController registration policy', () => {
       controller.register(
         {
           email: 'author@example.com',
+          displayName: 'Author',
           password: 'long-enough-password',
           accessCode: 'correct-alpha-code',
         },
         response,
       ),
     ).resolves.toEqual(result.user);
-    expect(auth.register).toHaveBeenCalledWith('author@example.com', 'long-enough-password');
+    expect(auth.register).toHaveBeenCalledWith(
+      'author@example.com',
+      'long-enough-password',
+      'Author',
+    );
     expect(response.cookie).toHaveBeenCalledWith(
       'paralleax_session',
       'session-token',

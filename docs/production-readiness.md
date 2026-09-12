@@ -89,8 +89,10 @@ small test stories. It is not yet ready for an open public production service.
   drag, context-creation, request-count, and payload budgets. The scheduled real-
   stack journey records API response timing and bytes for the same common
   operations, while the PostgreSQL stress lane records query counts as well as
-  durations. Retain stable CI baselines and add a focused React commit profile
-  before declaring the large-Story performance audit complete.
+  durations. A test-only React commit profile now records and budgets load,
+  selection, drag, and context-creation commits and rendered fibers in both
+  builds. Retain stable scheduled CI baselines before declaring the large-Story
+  performance audit complete.
 - Implemented foundation: common field, graph-position, and entity mutations use
   targeted contracts. Continue removing remaining complete-story reads or
   responses only where those profiles show a meaningful cost.

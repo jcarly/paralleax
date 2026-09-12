@@ -1,3 +1,5 @@
+import type { UserDisplayIdentity } from './user-identity.js';
+
 export type UserRole = 'user' | 'admin';
 
 export type StoryVisibility = 'private' | 'authenticated' | 'public' | 'invitation';
@@ -28,11 +30,12 @@ export interface StoryAccessCapabilities {
 export interface StoryCollaborator {
   userId: string;
   email: string;
+  displayName: string;
   role: StoryCollaboratorRole;
 }
 
 export interface StoryAccessConfiguration extends StoryAccessSettings {
-  owner: { id: string; email: string };
+  owner: UserDisplayIdentity & { email: string };
   collaborators: StoryCollaborator[];
 }
 

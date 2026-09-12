@@ -1519,4 +1519,24 @@ export const databaseMigrations: DatabaseMigration[] = [
         CHECK (timer_seconds IS NULL OR timer_seconds >= 0);
     `,
   },
+  {
+    id: '202609120038_user_display_names',
+    sql: `
+      ALTER TABLE users
+      ADD COLUMN display_name text NOT NULL DEFAULT 'User';
+
+      UPDATE users
+      SET display_name = 'User ' || upper(
+        COALESCE(NULLIF(left(replace(id, '-', ''), 8), ''), 'ACCOUNT')
+      );
+
+      ALTER TABLE users
+      ADD CONSTRAINT users_display_name_shape
+        CHECK (
+          char_length(display_name) BETWEEN 2 AND 50
+          AND display_name = btrim(display_name)
+          AND display_name !~ '[[:cntrl:]]'
+        );
+    `,
+  },
 ];

@@ -53,10 +53,14 @@ Paralleax currently includes:
 - Reusable item definitions.
 - Exact authored item instances, including nested item relationships.
 - Character- or location-rooted item placement and nested item relationships.
-- Authentication, sessions, creator ownership, global user/admin roles, per-story
+- Authentication, sessions, creator ownership, required non-unique display names,
+  self-service display-name editing, global user/admin roles, per-story
   visibility, editing, and editor/reader comment policies, reader/editor invitations,
   authenticated anchored review discussions, health/readiness, migrations, and
-  production-oriented API error handling.
+  production-oriented API error handling. Story cards, comments, and change
+  history project current display names by user id without exposing account
+  emails; self-service, administration, and explicit access management retain
+  email where needed.
 - Story review post-its on the graph, interactions, triggers, characters, locations,
   item/stat definitions, and selected title/body/name/description text, with replies,
   open/resolved state, durable quote context, detached-anchor detection, and live

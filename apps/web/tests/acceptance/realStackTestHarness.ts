@@ -40,6 +40,7 @@ export async function registerUser(page: Page, prefix: string): Promise<Acceptan
   const password = 'acceptance-test-password';
 
   await page.goto('/register');
+  await page.getByLabel('Display name').fill(`${prefix} author`);
   await page.getByLabel('Email address').fill(email);
   await page.getByLabel('Password', { exact: true }).fill(password);
   await page.getByLabel('Confirm password').fill(password);
