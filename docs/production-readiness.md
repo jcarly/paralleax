@@ -2,7 +2,7 @@
 
 Status: Current
 
-Last reviewed: 2026-09-11
+Last reviewed: 2026-09-13
 
 Implemented: Partial
 
@@ -101,9 +101,12 @@ small test stories. It is not yet ready for an open public production service.
   browser back/forward navigation and retain real-browser coverage.
 - Implemented foundation: critical library, editor, reader, and modal routes run
   automated WCAG A/AA checks. Complete the manual keyboard/focus audit.
-- Implemented foundation: CI runs a high-severity production dependency audit.
-  Triage clean-install/build/test/runtime npm warnings, document intentional
-  temporary warnings, and add repository secret scanning and production-container
+- Implemented foundation: CI runs a high-severity production dependency audit;
+  clean-install, build, test, coverage, install-script, and web-runtime output is
+  classified in [npm warning triage](npm-warning-triage.md). Full and production
+  npm audits currently report zero findings. The single remaining deprecated
+  package is isolated to the development test chain and has an explicit upstream
+  removal condition. Add repository secret scanning and production-container
   vulnerability scans.
 - Implemented foundation: separate production API/web images, a migration-first
   Compose shape, smoke checks, and CI image builds are available. Connect them to

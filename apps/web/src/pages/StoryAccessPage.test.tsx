@@ -53,11 +53,23 @@ describe('StoryAccessPage', () => {
     render(
       <MemoryRouter initialEntries={['/stories/story-1/access']}>
         <Routes>
+          <Route path="/" element={<div>Story library route</div>} />
           <Route path="/stories/:storyId/access" element={<StoryAccessPage />} />
         </Routes>
       </MemoryRouter>,
     );
   }
+
+  it('returns to the Story library when access management is unavailable', async () => {
+    vi.mocked(api.getStoryAccess).mockRejectedValue(
+      Object.assign(new Error('Story not found'), { status: 404 }),
+    );
+
+    renderPage();
+
+    expect(await screen.findByText('Story library route')).toBeInTheDocument();
+    expect(screen.queryByText('Story not found')).not.toBeInTheDocument();
+  });
 
   it('updates policies and adds an existing account invitation', async () => {
     const user = userEvent.setup();

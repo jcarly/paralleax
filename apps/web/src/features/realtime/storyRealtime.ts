@@ -10,15 +10,6 @@ export function prioritizeStoryRealtimeInvalidation(
   return 'ready';
 }
 
-export function isApiNotFound(caught: unknown): boolean {
-  return (
-    caught instanceof Error &&
-    'status' in caught &&
-    typeof caught.status === 'number' &&
-    caught.status === 404
-  );
-}
-
 export function isRealtimeEditableTarget(target: EventTarget | null): target is HTMLElement {
   return (
     target instanceof HTMLElement &&

@@ -129,6 +129,41 @@ describe('story context persistence', () => {
     expect(harness.story().characters?.[0].stats).toEqual([]);
   });
 
+  it('uses number, boolean, and string defaults for character stats', async () => {
+    const harness = createHarness();
+    vi.mocked(api.createCharacterStat).mockImplementation(async (_storyId, characterId, input) => ({
+      characterId,
+      stat: {
+        id: `created-${input.statDefinitionId}`,
+        statDefinitionId: input.statDefinitionId,
+        initialValue: input.initialValue,
+      },
+      ...metadata(2),
+    }));
+
+    await harness.actions.createCharacterStat('mira', 'trust-definition');
+    await harness.actions.createCharacterStat('mira', 'awake-definition');
+    await harness.actions.createCharacterStat('mira', 'mood-definition');
+    await harness.actions.createCharacterStat('mira', 'missing-definition');
+
+    expect(api.createCharacterStat).toHaveBeenNthCalledWith(1, 'story-1', 'mira', {
+      statDefinitionId: 'trust-definition',
+      initialValue: 0,
+    });
+    expect(api.createCharacterStat).toHaveBeenNthCalledWith(2, 'story-1', 'mira', {
+      statDefinitionId: 'awake-definition',
+      initialValue: false,
+    });
+    expect(api.createCharacterStat).toHaveBeenNthCalledWith(3, 'story-1', 'mira', {
+      statDefinitionId: 'mood-definition',
+      initialValue: '',
+    });
+    expect(api.createCharacterStat).toHaveBeenNthCalledWith(4, 'story-1', 'mira', {
+      statDefinitionId: 'missing-definition',
+      initialValue: 0,
+    });
+  });
+
   it('keeps item definition and instance workflows on the shared story state', async () => {
     const harness = createHarness();
     vi.mocked(api.createItemDefinition).mockResolvedValue({
@@ -188,14 +223,116 @@ describe('story context persistence', () => {
       { id: 'key', itemDefinitionId: 'key-definition' },
     ]);
   });
+
+  it('leaves optimistic state intact when tracked writes yield no server result', async () => {
+    const harness = createHarness(storyFixture(), async () => undefined);
+
+    await expect(harness.actions.createLocation()).resolves.toBeUndefined();
+    await harness.actions.updateLocation('harbor', { name: 'Optimistic harbor' });
+    await expect(harness.actions.createCharacter()).resolves.toBeUndefined();
+    await harness.actions.updateCharacter('mira', { name: 'Optimistic Mira' });
+    await expect(
+      harness.actions.createStatDefinition({ name: 'No result', valueType: 'number' }),
+    ).resolves.toBeUndefined();
+    await harness.actions.updateStatDefinition('trust-definition', { name: 'Optimistic trust' });
+    await expect(harness.actions.createItemDefinition()).resolves.toBeUndefined();
+    await harness.actions.updateItemDefinition('key-definition', { name: 'Optimistic key' });
+    await harness.actions.createCharacterStat('mira', 'trust-definition');
+    await harness.actions.updateCharacterStat('mira', 'trust', { initialValue: 9 });
+    await harness.actions.deleteCharacterStat('mira', 'trust');
+    await harness.actions.createCharacterItem('mira', 'key-definition');
+    await harness.actions.deleteCharacterItem('mira', 'key');
+    await harness.actions.moveItemInstance('key', { locationId: 'harbor' });
+
+    expect(harness.story().locations?.[0].name).toBe('Optimistic harbor');
+    expect(harness.story().characters?.[0]).toMatchObject({
+      name: 'Optimistic Mira',
+      stats: [expect.objectContaining({ initialValue: 9 })],
+    });
+    expect(harness.story().statDefinitions?.[0].name).toBe('Optimistic trust');
+    expect(harness.story().itemDefinitions?.[0].name).toBe('Optimistic key');
+  });
+
+  it('does not recreate parent-owned state after it has been unloaded', async () => {
+    const harness = createHarness(null);
+    vi.mocked(api.createLocation).mockResolvedValue({
+      location: { id: 'workshop', name: 'New location', description: '' },
+      ...metadata(2),
+    });
+    vi.mocked(api.createCharacter).mockResolvedValue({
+      character: { id: 'luc', name: 'New character', description: '' },
+      ...metadata(2),
+    });
+    vi.mocked(api.createStatDefinition).mockResolvedValue({
+      statDefinition: { id: 'mood-definition', name: 'Mood' },
+      ...metadata(2),
+    });
+    vi.mocked(api.createItemDefinition).mockResolvedValue({
+      itemDefinition: { id: 'bag-definition', name: 'New item', description: '' },
+      ...metadata(2),
+    });
+    vi.mocked(api.updateLocation).mockResolvedValue({
+      location: { id: 'harbor', name: 'Updated', description: '' },
+      ...metadata(2),
+    });
+    vi.mocked(api.updateCharacter).mockResolvedValue({
+      character: { id: 'mira', name: 'Updated', description: '' },
+      ...metadata(2),
+    });
+    vi.mocked(api.createCharacterStat).mockResolvedValue({
+      characterId: 'mira',
+      stat: { id: 'stat', statDefinitionId: 'trust-definition', initialValue: 0 },
+      ...metadata(2),
+    });
+    vi.mocked(api.updateCharacterStat).mockResolvedValue({
+      characterId: 'mira',
+      stat: { id: 'stat', statDefinitionId: 'trust-definition', initialValue: 1 },
+      ...metadata(2),
+    });
+    vi.mocked(api.deleteCharacterStat).mockResolvedValue(storyFixture());
+    vi.mocked(api.updateStatDefinition).mockResolvedValue({
+      statDefinition: { id: 'trust-definition', name: 'Updated' },
+      ...metadata(2),
+    });
+    vi.mocked(api.updateItemDefinition).mockResolvedValue({
+      itemDefinition: { id: 'key-definition', name: 'Updated', description: '' },
+      ...metadata(2),
+    });
+    vi.mocked(api.createCharacterItem).mockResolvedValue({
+      characterId: 'mira',
+      item: { id: 'key', itemDefinitionId: 'key-definition' },
+      ...metadata(2),
+    });
+    vi.mocked(api.deleteCharacterItem).mockResolvedValue(storyFixture());
+    vi.mocked(api.moveItemInstance).mockResolvedValue(storyFixture());
+
+    await harness.actions.createLocation();
+    await harness.actions.updateLocation('harbor', { name: 'Updated' });
+    await harness.actions.createCharacter();
+    await harness.actions.updateCharacter('mira', { name: 'Updated' });
+    await harness.actions.createCharacterStat('mira', 'trust-definition');
+    await harness.actions.updateCharacterStat('mira', 'stat', { initialValue: 1 });
+    await harness.actions.deleteCharacterStat('mira', 'stat');
+    await harness.actions.createStatDefinition({ name: 'Mood' });
+    await harness.actions.updateStatDefinition('trust-definition', { name: 'Updated' });
+    await harness.actions.createItemDefinition();
+    await harness.actions.updateItemDefinition('key-definition', { name: 'Updated' });
+    await harness.actions.createCharacterItem('mira', 'key-definition');
+    await harness.actions.deleteCharacterItem('mira', 'key');
+    await harness.actions.moveItemInstance('key', { locationId: 'harbor' });
+
+    expect(harness.current()).toBeUndefined();
+  });
 });
 
-function createHarness() {
-  let story: Story | undefined = storyFixture();
+function createHarness(
+  initialStory: Story | null = storyFixture(),
+  trackSave: TrackStorySave = async (operation) => operation(),
+) {
+  let story: Story | undefined = initialStory ?? undefined;
   const setStory: StoryStateSetter = (next) => {
     story = typeof next === 'function' ? next(story) : next;
   };
-  const trackSave: TrackStorySave = async (operation) => operation();
   const { result } = renderHook(() =>
     useStoryContextPersistence({
       storyId: 'story-1',
@@ -207,6 +344,7 @@ function createHarness() {
 
   return {
     actions: result.current,
+    current: () => story,
     story: () => {
       if (!story) throw new Error('Expected a loaded story');
       return story;
@@ -243,6 +381,7 @@ function storyFixture(): Story {
     statDefinitions: [
       { id: 'trust-definition', name: 'Trust', valueType: 'number' },
       { id: 'awake-definition', name: 'Awake', valueType: 'boolean' },
+      { id: 'mood-definition', name: 'Mood', valueType: 'string' },
     ],
     itemDefinitions: [{ id: 'key-definition', name: 'Key', description: '' }],
     interactions: [

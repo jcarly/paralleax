@@ -1,7 +1,29 @@
 # Changelog
 
+## 2026-09-13
+
+- Completed the private-alpha npm warning triage. Jest 30 and Vitest 5 replace
+  obsolete test dependency chains, all dependency install scripts now have an
+  explicit allow/deny decision, and full as well as production npm audits report
+  zero known vulnerabilities. The one remaining development-only transitive
+  deprecation is documented with its upstream removal condition.
+- Retained the existing coverage thresholds after Vitest 5's more complete
+  branch accounting by adding regression cases for paginated Story-context
+  reconstruction, nested inventory ownership, malformed comment anchors,
+  modal focus containment, failed or late editor persistence responses, and
+  reader probability, timer, and unavailable-requirement presentation.
+
 ## 2026-09-12
 
+- Made inaccessible direct Story URLs recover consistently: hidden or forbidden
+  editor, player, and access routes return to the Story library without exposing
+  API details. Reader-only editor URLs still redirect to the player, and transient
+  loading failures retain their visible retry path.
+- Restored a clear anonymous account entry in the application header. Sign-in
+  remains secondary while registration is a full-size primary action; both are
+  grouped semantically, remain visible on narrow screens, preserve return paths,
+  and are covered for keyboard order, responsive bounds, accessibility, and the
+  complete account golden path.
 - Prevented delayed complete-Story responses and older realtime projections from
   replacing a newer editor revision. Newly created off-screen interactions now
   wait until React Flow has registered their node before the editor brings them

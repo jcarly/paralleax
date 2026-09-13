@@ -83,6 +83,12 @@ read access by itself. Anonymous public readers cannot use comments.
 Public readers can follow a direct `/stories/{id}/play` link without signing in,
 but anonymous progress is not saved.
 
+If the current account cannot read a Story, opening its editor, player, or access
+URL returns to the `Stories` library without showing private Story details. A
+reader who can open the Story but cannot edit it is redirected from an editor URL
+to the player instead. Temporary server or network errors remain visible and can
+be retried.
+
 Administrators can open `Administration` to view account totals, search or filter
 accounts, and promote or demote them between the global `User` and
 `Administrator` roles. A standard user's effective story rights still come from

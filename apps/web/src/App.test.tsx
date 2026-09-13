@@ -186,6 +186,8 @@ describe('App', () => {
     );
 
     expect(await screen.findByText('Anonymous stories mock')).toBeInTheDocument();
+    const accountAccess = screen.getByRole('group', { name: 'Account access' });
+    expect(accountAccess).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Sign in' })).toHaveAttribute(
       'href',
       '/login?returnTo=%2F',
@@ -194,6 +196,8 @@ describe('App', () => {
       'href',
       '/register?returnTo=%2F',
     );
+    expect(accountAccess).toContainElement(screen.getByRole('link', { name: 'Sign in' }));
+    expect(accountAccess).toContainElement(screen.getByRole('link', { name: 'Create account' }));
   });
 
   it('opens a public reader route without an active session', async () => {

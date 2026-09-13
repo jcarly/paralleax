@@ -1,6 +1,8 @@
 import {
   canManageCommentThread,
   commentAnchorBelongsToStory,
+  commentAnchorLabel,
+  isCommentAnchor,
   isCommentAnchorDetached,
   locateCommentQuote,
   type CommentTextSelector,
@@ -36,6 +38,35 @@ describe('comment anchors', () => {
   };
 
   it('validates same-story entity and text anchors', () => {
+    expect(isCommentAnchor({ kind: 'canvas', position: { x: 1, y: 2 } })).toBe(true);
+    expect(
+      isCommentAnchor({ kind: 'entity', targetType: 'character', targetId: 'character-1' }),
+    ).toBe(true);
+    expect(
+      isCommentAnchor({
+        kind: 'text',
+        targetType: 'interaction',
+        targetId: 'interaction-1',
+        field: 'body',
+        selector,
+      }),
+    ).toBe(true);
+    expect(isCommentAnchor(null)).toBe(false);
+    expect(isCommentAnchor({ kind: 'canvas', position: { x: Number.NaN, y: 2 } })).toBe(false);
+    expect(isCommentAnchor({ kind: 'entity', targetType: 'unknown', targetId: 'id' })).toBe(false);
+    expect(isCommentAnchor({ kind: 'entity', targetType: 'character', targetId: '' })).toBe(false);
+    expect(isCommentAnchor({ kind: 'text', targetType: 'interaction', targetId: 'id' })).toBe(
+      false,
+    );
+    expect(
+      isCommentAnchor({
+        kind: 'text',
+        targetType: 'interaction',
+        targetId: 'id',
+        field: 'unknown',
+        selector,
+      }),
+    ).toBe(false);
     expect(
       commentAnchorBelongsToStory(story, {
         kind: 'entity',
@@ -59,6 +90,29 @@ describe('comment anchors', () => {
         selector,
       }),
     ).toBe(true);
+  });
+
+  it('rejects malformed text selectors at every public boundary', () => {
+    const anchor = (selectorOverride: Record<string, unknown>) => ({
+      kind: 'text',
+      targetType: 'interaction',
+      targetId: 'interaction-1',
+      field: 'body',
+      selector: { ...selector, ...selectorOverride },
+    });
+
+    expect(isCommentAnchor(anchor({ exact: '' }))).toBe(false);
+    expect(isCommentAnchor(anchor({ exact: 'x'.repeat(1_001) }))).toBe(false);
+    expect(isCommentAnchor(anchor({ prefix: 1 }))).toBe(false);
+    expect(isCommentAnchor(anchor({ prefix: 'x'.repeat(129) }))).toBe(false);
+    expect(isCommentAnchor(anchor({ suffix: 1 }))).toBe(false);
+    expect(isCommentAnchor(anchor({ suffix: 'x'.repeat(129) }))).toBe(false);
+    expect(isCommentAnchor(anchor({ start: 0.5 }))).toBe(false);
+    expect(isCommentAnchor(anchor({ end: 1.5 }))).toBe(false);
+    expect(isCommentAnchor(anchor({ start: -1 }))).toBe(false);
+    expect(isCommentAnchor(anchor({ end: 0 }))).toBe(false);
+    expect(isCommentAnchor(anchor({ sourceHash: 1 }))).toBe(false);
+    expect(isCommentAnchor(anchor({ sourceHash: 'x'.repeat(129) }))).toBe(false);
   });
 
   it('reattaches a quote through its surrounding context after text moves', () => {
@@ -87,6 +141,96 @@ describe('comment anchors', () => {
         selector: { ...selector, prefix: '', suffix: '' },
       }),
     ).toBe(true);
+    expect(isCommentAnchorDetached(story, { kind: 'canvas', position: { x: 0, y: 0 } })).toBe(
+      false,
+    );
+    expect(
+      isCommentAnchorDetached(story, {
+        kind: 'entity',
+        targetType: 'character',
+        targetId: 'character-1',
+      }),
+    ).toBe(false);
+    expect(
+      isCommentAnchorDetached(story, {
+        kind: 'entity',
+        targetType: 'character',
+        targetId: 'missing',
+      }),
+    ).toBe(true);
+  });
+
+  it('produces stable labels for canvas, entity, text, and missing targets', () => {
+    expect(commentAnchorLabel(story, { kind: 'canvas', position: { x: 0, y: 0 } })).toBe(
+      'Story graph',
+    );
+    expect(
+      commentAnchorLabel(story, {
+        kind: 'entity',
+        targetType: 'interaction',
+        targetId: 'interaction-1',
+      }),
+    ).toBe('Arrival');
+    expect(
+      commentAnchorLabel(story, {
+        kind: 'entity',
+        targetType: 'character',
+        targetId: 'character-1',
+      }),
+    ).toBe('Mira');
+    expect(
+      commentAnchorLabel(story, {
+        kind: 'entity',
+        targetType: 'location',
+        targetId: 'missing',
+      }),
+    ).toBe('missing');
+    expect(
+      commentAnchorLabel(story, {
+        kind: 'text',
+        targetType: 'interaction',
+        targetId: 'interaction-1',
+        field: 'body',
+        selector,
+      }),
+    ).toContain('Arrival:');
+  });
+
+  it('does not attach text fields that the target type does not own', () => {
+    expect(
+      commentAnchorBelongsToStory(story, {
+        kind: 'text',
+        targetType: 'character',
+        targetId: 'character-1',
+        field: 'body',
+        selector,
+      }),
+    ).toBe(false);
+    expect(
+      commentAnchorBelongsToStory(story, {
+        kind: 'text',
+        targetType: 'interaction',
+        targetId: 'interaction-1',
+        field: 'name',
+        selector,
+      }),
+    ).toBe(false);
+    expect(
+      isCommentAnchorDetached(story, {
+        kind: 'text',
+        targetType: 'character',
+        targetId: 'character-1',
+        field: 'title',
+        selector,
+      }),
+    ).toBe(true);
+  });
+
+  it('does not guess between repeated quotes without unique context', () => {
+    expect(locateCommentQuote('harbor then harbor', { ...selector, prefix: '', suffix: '' })).toBe(
+      undefined,
+    );
+    expect(locateCommentQuote('nothing here', selector)).toBe(undefined);
   });
 
   it('matches text anchors against the visible text of rich interaction bodies', () => {
@@ -106,6 +250,29 @@ describe('comment anchors', () => {
           start: 0,
           end: 18,
           sourceHash: 'source-2',
+        },
+      }),
+    ).toBe(false);
+  });
+
+  it('decodes supported HTML entities without accepting invalid numeric code points', () => {
+    const richStory = structuredClone(story);
+    richStory.interactions[0].body =
+      '<p>A&nbsp;&amp;&lt;&gt;&quot;&#39;&apos;&#65;&#x42;&#99999999;</p>';
+
+    expect(
+      isCommentAnchorDetached(richStory, {
+        kind: 'text',
+        targetType: 'interaction',
+        targetId: 'interaction-1',
+        field: 'body',
+        selector: {
+          exact: "A &<>\"''AB&#99999999;",
+          prefix: '',
+          suffix: '',
+          start: 0,
+          end: 21,
+          sourceHash: 'source-3',
         },
       }),
     ).toBe(false);

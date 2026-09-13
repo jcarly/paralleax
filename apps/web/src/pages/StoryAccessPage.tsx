@@ -1,17 +1,20 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useParams } from 'react-router-dom';
+import { Link, Navigate, useParams } from 'react-router-dom';
 import type {
   StoryAccessConfiguration,
   StoryAccessSettings,
   StoryCollaboratorRole,
 } from '@paralleax/shared';
 import { api } from '../api';
+import { useStoryRouteAccessRecovery } from '../features/story/useStoryRouteAccessRecovery';
 import './ProductPages.css';
 
 export function StoryAccessPage() {
   const { t } = useTranslation();
   const { storyId = '' } = useParams();
+  const { storyRouteInaccessible, recoverFromStoryAccessError } =
+    useStoryRouteAccessRecovery(storyId);
   const [access, setAccess] = useState<StoryAccessConfiguration>();
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<StoryCollaboratorRole>('viewer');
@@ -25,13 +28,14 @@ export function StoryAccessPage() {
       .then((loadedAccess) => {
         if (!cancelled) setAccess(loadedAccess);
       })
-      .catch((caught: Error) => {
-        if (!cancelled) setError(caught.message);
+      .catch((caught: unknown) => {
+        if (cancelled || recoverFromStoryAccessError(caught)) return;
+        setError(caught instanceof Error ? caught.message : t('access.loadFailed'));
       });
     return () => {
       cancelled = true;
     };
-  }, [storyId]);
+  }, [recoverFromStoryAccessError, storyId, t]);
 
   function updateAccessSetting<Key extends keyof StoryAccessSettings>(
     key: Key,
@@ -47,6 +51,7 @@ export function StoryAccessPage() {
       setError('');
       setAccess(await api.updateStoryAccess(storyId, access));
     } catch (caught) {
+      if (recoverFromStoryAccessError(caught)) return;
       setError(caught instanceof Error ? caught.message : t('access.saveFailed'));
     } finally {
       setPending(false);
@@ -62,6 +67,7 @@ export function StoryAccessPage() {
       setAccess(await api.setStoryCollaborator(storyId, email.trim(), role));
       setEmail('');
     } catch (caught) {
+      if (recoverFromStoryAccessError(caught)) return;
       setError(caught instanceof Error ? caught.message : t('access.inviteFailed'));
     } finally {
       setPending(false);
@@ -79,11 +85,14 @@ export function StoryAccessPage() {
         collaborators: access.collaborators.filter((item) => item.userId !== userId),
       });
     } catch (caught) {
+      if (recoverFromStoryAccessError(caught)) return;
       setError(caught instanceof Error ? caught.message : t('access.removeFailed'));
     } finally {
       setPending(false);
     }
   }
+
+  if (storyRouteInaccessible) return <Navigate to="/" replace />;
 
   return (
     <main className="product-page settings-page">

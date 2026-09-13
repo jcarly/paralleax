@@ -8,6 +8,7 @@ export const resources = {
       },
       shell: {
         mainNavigation: 'Main navigation',
+        accountAccess: 'Account access',
         stories: 'Stories',
         administration: 'Administration',
         signIn: 'Sign in',
@@ -254,6 +255,7 @@ export const resources = {
         description: 'Control who can read, edit, and comment on this story.',
         back: 'Back to editor',
         loading: 'Loading permissions...',
+        loadFailed: 'Could not load access settings',
         general: 'General access',
         owner: 'Owner: {{email}}',
         visibility: {
@@ -1020,6 +1022,7 @@ export const resources = {
       },
       shell: {
         mainNavigation: 'Navigation principale',
+        accountAccess: 'Accès au compte',
         stories: 'Histoires',
         administration: 'Administration',
         signIn: 'Se connecter',
@@ -1268,6 +1271,7 @@ export const resources = {
         description: 'Contrôlez qui peut lire, modifier et commenter cette histoire.',
         back: 'Retour à l’éditeur',
         loading: 'Chargement des droits…',
+        loadFailed: 'Impossible de charger les droits',
         general: 'Accès général',
         owner: 'Propriétaire : {{email}}',
         visibility: {

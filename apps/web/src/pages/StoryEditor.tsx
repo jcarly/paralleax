@@ -125,6 +125,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
   const {
     story,
     setStory,
+    storyRouteInaccessible,
     error,
     loadPhase,
     saveStatus,
@@ -969,6 +970,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
     });
   }
 
+  if (storyRouteInaccessible) return <Navigate to="/" replace />;
   if (!story) return <main className="page">{error || t('editor.loading')}</main>;
   if (story.capabilities?.canEdit !== true) {
     return <Navigate to={`/stories/${storyId}/play`} replace />;

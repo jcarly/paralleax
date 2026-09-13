@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom';
 import type {
   Interaction,
   InteractionMutationResult,
@@ -43,11 +43,11 @@ import {
   getUnavailableReason,
 } from '../features/story-player/storyPlayerPresentation';
 import {
-  isApiNotFound,
   isRealtimeEditableTarget,
   prioritizeStoryRealtimeInvalidation,
   type StoryRealtimeInvalidation,
 } from '../features/realtime/storyRealtime';
+import { useStoryRouteAccessRecovery } from '../features/story/useStoryRouteAccessRecovery';
 import {
   applyInteractionMutationResult,
   findSavedInteraction,
@@ -66,6 +66,8 @@ export function StoryPlayer({
 }) {
   const { t } = useTranslation();
   const { storyId = '' } = useParams();
+  const { storyRouteInaccessible, markStoryInaccessible, recoverFromStoryAccessError } =
+    useStoryRouteAccessRecovery(storyId);
   const [searchParams] = useSearchParams();
   const simulationRequested = authenticated && searchParams.get('mode') === 'simulation';
   const requestedStartInteractionId = simulationRequested
@@ -240,6 +242,7 @@ export function StoryPlayer({
       })
       .catch((caught: unknown) => {
         if (cancelled) return;
+        if (recoverFromStoryAccessError(caught)) return;
         setLoadError({
           key: loadKey,
           message: caught instanceof Error ? caught.message : t('player.loadFailed'),
@@ -255,6 +258,7 @@ export function StoryPlayer({
     markProgressLoaded,
     requestedStartInteractionId,
     replaySession,
+    recoverFromStoryAccessError,
     saveProgress,
     simulationRequested,
     storyId,
@@ -345,16 +349,23 @@ export function StoryPlayer({
         })
         .catch((caught: unknown) => {
           if (attempt !== realtimeLoadAttempt.current) return;
-          if (invalidation === 'deleted' || isApiNotFound(caught)) {
+          if (invalidation === 'deleted') {
             setStory(undefined);
-            setLoadError({
-              key: loadKey,
-              message: caught instanceof Error ? caught.message : t('player.loadFailed'),
-            });
+            markStoryInaccessible();
+            return;
+          }
+          if (recoverFromStoryAccessError(caught)) {
+            setStory(undefined);
           }
         });
     },
-    [applyReloadedSimulationStory, hasActiveSimulationMutations, loadKey, storyId, t],
+    [
+      applyReloadedSimulationStory,
+      hasActiveSimulationMutations,
+      markStoryInaccessible,
+      recoverFromStoryAccessError,
+      storyId,
+    ],
   );
 
   useEffect(() => {
@@ -392,17 +403,26 @@ export function StoryPlayer({
         setRuntimeOptionsFailure(undefined);
       })
       .catch((caught: unknown) => {
-        if (!cancelled) {
-          setRuntimeOptionsFailure({
-            key: requestedRuntimeSliceKey,
-            message: caught instanceof Error ? caught.message : t('player.loadFailed'),
-          });
-        }
+        if (cancelled || recoverFromStoryAccessError(caught)) return;
+        setRuntimeOptionsFailure({
+          key: requestedRuntimeSliceKey,
+          message: caught instanceof Error ? caught.message : t('player.loadFailed'),
+        });
       });
     return () => {
       cancelled = true;
     };
-  }, [currentId, journey, loadKey, loadedKey, requestedRuntimeSliceKey, runtimeSliceKey, story, t]);
+  }, [
+    currentId,
+    journey,
+    loadKey,
+    loadedKey,
+    recoverFromStoryAccessError,
+    requestedRuntimeSliceKey,
+    runtimeSliceKey,
+    story,
+    t,
+  ]);
 
   const current = useMemo(
     () => story?.interactions.find((item) => item.id === currentId),
@@ -923,6 +943,8 @@ export function StoryPlayer({
       { retryable: false },
     );
   }
+
+  if (storyRouteInaccessible) return <Navigate to="/" replace />;
 
   if (!story || loadedKey !== loadKey) {
     const activeLoadError = loadError?.key === loadKey ? loadError.message : '';

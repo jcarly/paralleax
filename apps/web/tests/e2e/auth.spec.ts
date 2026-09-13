@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import type { Story } from '@paralleax/shared';
 import { paginated } from './editorTestHarness';
 
@@ -64,7 +64,34 @@ test('registers, creates a story, signs out, and signs back in', async ({ page }
   });
 
   await page.goto('/');
-  await page.getByRole('link', { name: 'Create account' }).click();
+  const signIn = page.getByRole('link', { name: 'Sign in' });
+  const createAccount = page.getByRole('link', { name: 'Create account' });
+  await expect(page.getByRole('group', { name: 'Account access' })).toBeVisible();
+  await expect(signIn).toBeVisible();
+  await expect(createAccount).toBeVisible();
+
+  await signIn.focus();
+  await expect(signIn).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(createAccount).toBeFocused();
+
+  const actionStyles = await Promise.all(
+    [signIn, createAccount].map((action) =>
+      action.evaluate((element) => {
+        const style = getComputedStyle(element);
+        return { backgroundColor: style.backgroundColor, color: style.color };
+      }),
+    ),
+  );
+  expect(actionStyles[0]).not.toEqual(actionStyles[1]);
+
+  await page.setViewportSize({ width: 360, height: 640 });
+  await expectAccountActionsToFit(page, 'Sign in', 'Create account');
+  await page.getByLabel('Language').selectOption('fr');
+  await expectAccountActionsToFit(page, 'Se connecter', 'Créer un compte');
+  await page.getByLabel('Langue').selectOption('en');
+
+  await createAccount.click();
   await page.getByLabel('Display name').fill('Author');
   await page.getByLabel('Email address').fill('author@example.com');
   await page.getByLabel('Password', { exact: true }).fill('correct horse battery staple');
@@ -86,3 +113,18 @@ test('registers, creates a story, signs out, and signs back in', async ({ page }
 
   await expect(page.getByRole('heading', { name: 'New story', exact: true })).toBeVisible();
 });
+
+async function expectAccountActionsToFit(page: Page, signInName: string, createName: string) {
+  const responsiveSignIn = page.getByRole('link', { name: signInName });
+  const responsiveCreateAccount = page.getByRole('link', { name: createName });
+  await expect(responsiveSignIn).toBeInViewport();
+  await expect(responsiveCreateAccount).toBeInViewport();
+  const [signInBox, createAccountBox] = await Promise.all([
+    responsiveSignIn.boundingBox(),
+    responsiveCreateAccount.boundingBox(),
+  ]);
+  expect(signInBox).not.toBeNull();
+  expect(createAccountBox).not.toBeNull();
+  expect(signInBox!.x + signInBox!.width).toBeLessThanOrEqual(createAccountBox!.x);
+  expect(createAccountBox!.x + createAccountBox!.width).toBeLessThanOrEqual(360);
+}

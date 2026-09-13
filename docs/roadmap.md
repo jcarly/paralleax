@@ -2,7 +2,7 @@
 
 This roadmap describes the progression from the validated narrative core to a public Paralleax platform.
 
-Status reviewed: 2026-09-11.
+Status reviewed: 2026-09-13.
 
 It is organized around **user capabilities** rather than implementation areas. Engineering work supports these milestones but does not define them by itself.
 
@@ -90,17 +90,34 @@ priority, the order below is the intended delivery order.
    and explicit access management expose email.
 3. **Restore clear account entry.** Make the `Create account` action visually
    discoverable and verify sign-in/sign-up contrast, keyboard focus, responsive
-   presentation, and the anonymous golden path.
+   presentation, and the anonymous golden path. **Completed 2026-09-12:** the
+   anonymous shell now groups account actions, presents registration as the
+   unambiguous primary action, retains sign-in as its secondary counterpart,
+   and keeps both actions visible on narrow screens. Component and browser
+   coverage verifies return paths, visual hierarchy, keyboard order, mobile
+   bounds, accessibility, and the complete registration/sign-in path.
 4. **Handle inaccessible direct URLs consistently.** An authenticated user who
    opens a Story/editor/player/configuration URL without the required capability
    returns to the Story library without learning private Story details. API
    authorization remains the security boundary; client redirection is the
-   recovery UX, not an authorization substitute.
+   recovery UX, not an authorization substitute. **Completed 2026-09-12:** one
+   shared web recovery path now recognizes hidden/forbidden Story reads across
+   editor, player, and access routes and replaces them with the library route.
+   Reader-only editor access continues to redirect to the player, while transient
+   failures retain their error and retry UI. API authorization remains unchanged.
 5. **Triage every npm warning.** Capture clean install, build, test, and runtime
    logs; classify each warning as security, deprecated/unsupported dependency,
    configuration, or harmless tooling noise. Resolve security and runtime-risk
    warnings immediately, document intentional temporary warnings, and avoid
    force-upgrading across majors without reviewing the dependency contract.
+   **Completed 2026-09-13:** clean install, full and production audits, static
+   checks, coverage, production builds, install hooks, and a web runtime smoke
+   are recorded in [npm warning triage](npm-warning-triage.md). Jest 30 and
+   Vitest 5 remove the obsolete test dependency chains while retaining all
+   coverage thresholds. Both npm audits report zero findings and every install
+   hook is explicitly allowed or denied. The sole remaining deprecation is the
+   development-only `test-exclude -> glob@10.5.0` path, with its upstream removal
+   condition documented rather than hidden by an unsafe major override.
 
 ### P1 — Next Product Verticals
 

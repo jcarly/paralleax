@@ -97,6 +97,7 @@ export function useStoryEditorPersistence(storyId: string) {
   return {
     story,
     setStory,
+    storyRouteInaccessible: persistence.storyRouteInaccessible,
     error: persistence.error,
     loadPhase: persistence.loadPhase,
     saveStatus: persistence.saveStatus,

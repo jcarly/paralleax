@@ -62,6 +62,24 @@ describe('StoryPlayer loading and presentation', () => {
     expect(api.getStory).toHaveBeenCalledTimes(2);
   });
 
+  it('returns to the Story library when the Story cannot be read', async () => {
+    vi.mocked(api.getStory).mockRejectedValue(
+      Object.assign(new Error('Story not found'), { status: 404 }),
+    );
+
+    render(
+      <MemoryRouter initialEntries={['/stories/private-story/play']}>
+        <Routes>
+          <Route path="/" element={<div>Story library route</div>} />
+          <Route path="/stories/:storyId/play" element={<StoryPlayer />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText('Story library route')).toBeInTheDocument();
+    expect(screen.queryByText('Story not found')).not.toBeInTheDocument();
+  });
+
   it('does not let a late response from the previous Story replace the active route', async () => {
     const user = userEvent.setup();
     const firstStory = { ...structuredClone(story), title: 'First delayed Story' };

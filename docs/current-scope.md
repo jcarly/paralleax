@@ -60,7 +60,10 @@ Paralleax currently includes:
   production-oriented API error handling. Story cards, comments, and change
   history project current display names by user id without exposing account
   emails; self-service, administration, and explicit access management retain
-  email where needed.
+  email where needed. An inaccessible or missing direct Story editor, player, or
+  access URL returns to the Story library without rendering the API detail;
+  readable accounts that merely lack edit permission still move from the editor
+  URL to the player.
 - Story review post-its on the graph, interactions, triggers, characters, locations,
   item/stat definitions, and selected title/body/name/description text, with replies,
   open/resolved state, durable quote context, detached-anchor detection, and live

@@ -121,14 +121,14 @@ export function App() {
             </button>
           </>
         ) : (
-          <>
-            <Link className="product-secondary compact" to={signInPath}>
+          <div className="product-auth-actions" role="group" aria-label={t('shell.accountAccess')}>
+            <Link className="product-secondary compact product-auth-signin" to={signInPath}>
               {t('shell.signIn')}
             </Link>
-            <Link className="product-primary compact" to={registerPath}>
+            <Link className="product-primary product-account-create" to={registerPath}>
               {t('shell.register')}
             </Link>
-          </>
+          </div>
         )}
       </header>
       <Suspense fallback={<main className="page">{t('shell.loadingWorkspace')}</main>}>

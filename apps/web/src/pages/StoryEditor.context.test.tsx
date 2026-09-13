@@ -65,6 +65,24 @@ describe('StoryEditor story context', () => {
     expect(await screen.findByText('Story not found')).toBeInTheDocument();
   });
 
+  it('returns to the Story library when the Story route is inaccessible', async () => {
+    vi.mocked(api.getStory).mockRejectedValue(
+      Object.assign(new Error('Story not found'), { status: 404 }),
+    );
+
+    render(
+      <MemoryRouter initialEntries={['/stories/private-story/edit']}>
+        <Routes>
+          <Route path="/" element={<div>Story library route</div>} />
+          <Route path="/stories/:storyId/edit" element={<StoryEditor />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText('Story library route')).toBeInTheDocument();
+    expect(screen.queryByText('Story not found')).not.toBeInTheDocument();
+  });
+
   it('renames the story title', async () => {
     const user = userEvent.setup();
     const renamedStory = cloneStory();

@@ -9,6 +9,7 @@ export default defineConfig({
   },
   test: {
     environment: 'jsdom',
+    maxWorkers: 4,
     include: ['src/**/*.test.{ts,tsx}'],
     exclude: ['src/pages/ParalleaxPrototype*.test.{ts,tsx}'],
     setupFiles: './src/test/setup.ts',

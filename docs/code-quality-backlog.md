@@ -36,8 +36,14 @@ during the August 2026 code review. Production gates remain authoritative in
 - [x] Upgrade `sanitize-html`, DOMPurify, React Router, Nano ID, and safe
       transitive packages. Pin the fixed `js-yaml` patch beneath Swagger with an
       npm override; the production dependency audit reports no known findings.
+- [x] Upgrade Jest and Vitest, review every dependency install hook, and retain a
+      clean full and production npm audit. Keep the classification and evidence
+      in [npm warning triage](npm-warning-triage.md).
 - [ ] Remove the targeted Swagger `js-yaml` override once Swagger declares the
       fixed patch directly, retaining the high-severity CI audit.
+- [ ] Remove the development-only `test-exclude -> glob@10.5.0` deprecation once
+      the Jest/ts-jest coverage chain supports a maintained `glob` release; do
+      not force a transitive major override without an upstream contract.
 - [x] Verify with an automated test that a late response from a previous story
       cannot overwrite the active editor or reader route.
 

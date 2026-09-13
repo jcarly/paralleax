@@ -55,11 +55,18 @@ The character-stat vertical keeps these regressions covered:
 - Web access: a commenter without edit permission is redirected from the graph
   to the player and cannot enable Simulation Mode or a direct starting interaction
   through query parameters.
+- Web direct access: hidden or forbidden editor, player, and access URLs return
+  to the Story library without rendering the API error detail; technical loading
+  failures remain visible and retryable.
 - Reader comments: an authorized signed-in reader can create and reply to a
   thread on the current interaction, while graph-only and other-interaction
   threads are not projected.
 - Browser: an author can register, create a story, sign out, sign back in, and
   find the story again.
+- Anonymous account entry: registration is visually distinct from sign-in, both
+  actions remain in keyboard order and inside a 360 px viewport, their return
+  paths preserve the current page, and the anonymous shell has no automated
+  WCAG A/AA violation.
 - Story library: a failed initial list request shows a distinct recoverable
   error instead of the empty-library message; retry loads the catalogue, and a
   rapid double click during Story creation sends only one request. A temporary

@@ -9,6 +9,17 @@ import {
 } from './editorTestHarness';
 
 test.describe('automated accessibility', () => {
+  test('keeps anonymous account entry free of WCAG A/AA violations', async ({ page }) => {
+    await page.route('**/api/auth/me', (route) =>
+      route.fulfill({ status: 401, json: { message: 'Authentication required' } }),
+    );
+    await page.route('**/api/stories/public**', (route) => route.fulfill({ json: paginated([]) }));
+    await page.goto('/');
+
+    await expect(page.getByRole('group', { name: 'Account access' })).toBeVisible();
+    await expectNoWcagViolations(page);
+  });
+
   test('keeps the Story library and its creation and import dialogs free of WCAG A/AA violations', async ({
     page,
   }) => {

@@ -1,7 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ApiError } from '../../api';
 import {
-  isApiNotFound,
   isRealtimeEditableTarget,
   prioritizeStoryRealtimeInvalidation,
   type StoryRealtimeInvalidation,
@@ -20,13 +18,6 @@ describe('story realtime helpers', () => {
     { current: 'deleted', incoming: 'ready', expected: 'deleted' },
   ])('prioritizes $expected over $current and $incoming', ({ current, incoming, expected }) => {
     expect(prioritizeStoryRealtimeInvalidation(current, incoming)).toBe(expected);
-  });
-
-  it('recognizes only API-style 404 errors as not found', () => {
-    expect(isApiNotFound(new ApiError('Missing', 404))).toBe(true);
-    expect(isApiNotFound(new ApiError('Failure', 500))).toBe(false);
-    expect(isApiNotFound(new Error('Missing'))).toBe(false);
-    expect(isApiNotFound({ status: 404 })).toBe(false);
   });
 
   it('recognizes controls and editable content without matching ordinary elements', () => {

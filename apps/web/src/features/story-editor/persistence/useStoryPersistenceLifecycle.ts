@@ -6,8 +6,8 @@ import {
   type StoryEditorLoadingProjection,
 } from '@paralleax/shared';
 import { useStoryRealtime } from '../../../hooks/useStoryRealtime';
+import { useStoryRouteAccessRecovery } from '../../story/useStoryRouteAccessRecovery';
 import {
-  isApiNotFound,
   prioritizeStoryRealtimeInvalidation,
   type StoryRealtimeInvalidation,
 } from '../../realtime/storyRealtime';
@@ -33,6 +33,8 @@ export function useStoryPersistenceLifecycle({
   story,
   setStory,
 }: StoryPersistenceLifecycleDependencies) {
+  const { storyRouteInaccessible, markStoryInaccessible, recoverFromStoryAccessError } =
+    useStoryRouteAccessRecovery(storyId);
   const [feedback, setFeedback] = useState<StoryPersistenceFeedback>({
     storyId,
     error: '',
@@ -170,9 +172,10 @@ export function useStoryPersistenceLifecycle({
       })
       .catch((caught: Error) => {
         if (attempt !== loadAttemptRef.current) return;
+        if (recoverFromStoryAccessError(caught)) return;
         updateFeedback({ error: caught.message, saveStatus: 'error' });
       });
-  }, [replaceStory, setStory, storyId, updateFeedback]);
+  }, [recoverFromStoryAccessError, replaceStory, setStory, storyId, updateFeedback]);
 
   const retry = useCallback(() => {
     setLoadProgress({ storyId, phase: 'bootstrap' });
@@ -206,16 +209,24 @@ export function useStoryPersistenceLifecycle({
         })
         .catch((caught: unknown) => {
           if (attempt !== loadAttemptRef.current) return;
-          if (invalidation === 'deleted' || isApiNotFound(caught)) {
+          if (invalidation === 'deleted') {
             setStory(undefined);
-            updateFeedback({
-              error: caught instanceof Error ? caught.message : 'Story not found',
-              saveStatus: 'error',
-            });
+            markStoryInaccessible();
+            return;
+          }
+          if (recoverFromStoryAccessError(caught)) {
+            setStory(undefined);
           }
         });
     },
-    [replaceStory, setStory, storyId, updateFeedback],
+    [
+      markStoryInaccessible,
+      recoverFromStoryAccessError,
+      replaceStory,
+      setStory,
+      storyId,
+      updateFeedback,
+    ],
   );
 
   useEffect(() => {
@@ -247,6 +258,7 @@ export function useStoryPersistenceLifecycle({
   }, [load]);
 
   return {
+    storyRouteInaccessible,
     error,
     loadPhase,
     saveStatus,
