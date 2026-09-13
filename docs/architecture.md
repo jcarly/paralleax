@@ -934,9 +934,11 @@ classes directly.
   It isolates browser work by recording first-card and ready times, mounted
   node/edge counts, selection, drag, location/character creation, projection
   request count, response bytes, and per-operation React commit/rendered-fiber
-  counts from a test-only DevTools hook. The weekly/manual stress lane runs it
-  with explicit budgets and retains the structured measurements as a JSON test
-  attachment.
+  counts from a test-only DevTools hook. Each operation boundary waits for a
+  short commit-free window so late loading work and viewport animations are not
+  attributed to the following action. The weekly/manual stress lane records
+  three samples per build with explicit per-sample budgets and retains every
+  structured measurement as a JSON test attachment.
 - Coverage: Jest coverage for the API, Vitest V8 coverage for shared and the web app,
   with per-workspace thresholds enforced by the coverage commands.
 - Bundle contract: the production web build checks the Vite manifest, dynamic

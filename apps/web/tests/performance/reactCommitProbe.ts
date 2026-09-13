@@ -73,6 +73,34 @@ export async function readReactCommitSnapshot(page: Page): Promise<ReactCommitSn
   });
 }
 
+export async function waitForReactCommitQuiescence(
+  page: Page,
+  options: { quietWindowMs?: number; sampleIntervalMs?: number; timeoutMs?: number } = {},
+): Promise<ReactCommitSnapshot> {
+  const quietWindowMs = options.quietWindowMs ?? 250;
+  const sampleIntervalMs = options.sampleIntervalMs ?? 50;
+  const timeoutMs = options.timeoutMs ?? 5_000;
+  const startedAt = Date.now();
+  let quietSince = startedAt;
+  let previous = await readReactCommitSnapshot(page);
+
+  while (Date.now() - startedAt < timeoutMs) {
+    await page.waitForTimeout(sampleIntervalMs);
+    const current = await readReactCommitSnapshot(page);
+    if (
+      current.commits !== previous.commits ||
+      current.renderedFibers !== previous.renderedFibers
+    ) {
+      quietSince = Date.now();
+      previous = current;
+      continue;
+    }
+    if (Date.now() - quietSince >= quietWindowMs) return current;
+  }
+
+  throw new Error(`React did not become quiescent within ${timeoutMs} ms.`);
+}
+
 export function reactCommitDifference(
   after: ReactCommitSnapshot,
   before: ReactCommitSnapshot,

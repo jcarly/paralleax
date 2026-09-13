@@ -10,6 +10,7 @@ import {
   installReactCommitProbe,
   reactCommitDifference,
   readReactCommitSnapshot,
+  waitForReactCommitQuiescence,
 } from './reactCommitProbe';
 
 const interactionCount = positiveInteger(process.env.WEB_PERFORMANCE_INTERACTION_COUNT, 600);
@@ -65,7 +66,7 @@ test('measures large-Story editor loading and common interactions', async ({ pag
   const firstInteractionMs = performance.now() - loadStartedAt;
   await expect(page.getByRole('button', { name: 'Add root' })).toBeEnabled({ timeout: 90_000 });
   const editorReadyMs = performance.now() - loadStartedAt;
-  const loadReact = await readReactCommitSnapshot(page);
+  const loadReact = await waitForReactCommitQuiescence(page);
   const renderedNodeCount = await page.locator('.react-flow__node').count();
   const renderedEdgeCount = await page.locator('.react-flow__edge').count();
 
@@ -78,11 +79,9 @@ test('measures large-Story editor loading and common interactions', async ({ pag
   await page.getByRole('button', { name: 'Next interaction occurrence' }).click();
   const inspector = page.getByRole('complementary', { name: 'Inspector' });
   await expect(inspector.getByLabel('Title')).toHaveValue(selectedTitle);
+  const selectionReactAfter = await waitForReactCommitQuiescence(page);
   const selectionMs = performance.now() - selectionStartedAt;
-  const selectionReact = reactCommitDifference(
-    await readReactCommitSnapshot(page),
-    selectionReactBefore,
-  );
+  const selectionReact = reactCommitDifference(selectionReactAfter, selectionReactBefore);
 
   const selectedNode = page.locator(
     `.react-flow__node[data-id="interaction-${Math.floor(interactionCount / 2)}"]`,
@@ -103,28 +102,25 @@ test('measures large-Story editor loading and common interactions', async ({ pag
   );
   await page.mouse.up();
   await expect.poll(() => savedGraphPositions).toBeDefined();
+  const dragReactAfter = await waitForReactCommitQuiescence(page);
   const dragSaveMs = performance.now() - dragStartedAt;
-  const dragReact = reactCommitDifference(await readReactCommitSnapshot(page), dragReactBefore);
+  const dragReact = reactCommitDifference(dragReactAfter, dragReactBefore);
 
   const locationReactBefore = await readReactCommitSnapshot(page);
   const locationStartedAt = performance.now();
   await page.getByRole('button', { name: 'Add location' }).click();
   await expect(inspector.getByLabel('Name')).toHaveValue('New location');
+  const locationReactAfter = await waitForReactCommitQuiescence(page);
   const locationCreationMs = performance.now() - locationStartedAt;
-  const locationCreationReact = reactCommitDifference(
-    await readReactCommitSnapshot(page),
-    locationReactBefore,
-  );
+  const locationCreationReact = reactCommitDifference(locationReactAfter, locationReactBefore);
 
   const characterReactBefore = await readReactCommitSnapshot(page);
   const characterStartedAt = performance.now();
   await page.getByRole('button', { name: 'Add character' }).click();
   await expect(inspector.getByLabel('Name')).toHaveValue('New character');
+  const characterReactAfter = await waitForReactCommitQuiescence(page);
   const characterCreationMs = performance.now() - characterStartedAt;
-  const characterCreationReact = reactCommitDifference(
-    await readReactCommitSnapshot(page),
-    characterReactBefore,
-  );
+  const characterCreationReact = reactCommitDifference(characterReactAfter, characterReactBefore);
 
   const measurements = {
     project: testInfo.project.name,

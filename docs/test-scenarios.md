@@ -194,7 +194,9 @@ The character-stat vertical keeps these regressions covered:
   bytes. The test also records the number of nodes and edges actually mounted in
   the viewport plus React commit and rendered-fiber counts for each operation,
   so browser rendering cost remains distinguishable from transport and
-  PostgreSQL cost. Structured results are attached to the Playwright report.
+  PostgreSQL cost. Measurements start and finish after a commit-free window;
+  three samples per development and production build are attached to the
+  Playwright report so variance is visible rather than hidden by one run.
 - Editor graph: click an interaction creation control where it overlaps a
   transparent React Flow routing handle and verify that exactly one child is
   created from the intended parent.

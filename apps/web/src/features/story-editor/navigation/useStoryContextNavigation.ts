@@ -150,7 +150,7 @@ export function useStoryContextNavigation({
       window.requestAnimationFrame(() => {
         void flowInstanceRef.current?.fitView({
           nodes: [{ id: interactionId }],
-          duration: 250,
+          duration: 0,
           padding: 0.7,
           maxZoom: 1,
         });

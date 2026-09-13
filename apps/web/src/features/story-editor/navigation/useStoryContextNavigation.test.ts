@@ -30,7 +30,7 @@ describe('story context navigation', () => {
     expect(harness.focusInteraction).not.toHaveBeenCalled();
     expect(harness.fitView).toHaveBeenCalledWith({
       nodes: [{ id: 'source' }],
-      duration: 250,
+      duration: 0,
       padding: 0.7,
       maxZoom: 1,
     });

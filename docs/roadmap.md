@@ -75,8 +75,14 @@ priority, the order below is the intended delivery order.
    focused browser profile also retains per-operation React commits and
    rendered-fiber counts as a CI artifact. Local development/production
    baselines recorded 31–33 load commits, 13–14 selection commits, 21 drag
-   commits, and four commits for each context creation. Stable scheduled CI
-   results remain before this item can be closed.
+   commits, and four commits for each context creation. **Updated 2026-09-13:**
+   search/context navigation now jumps directly to distant results instead of
+   animating through and mounting intermediate graph nodes. Three consecutive
+   runs in each build reduced selection to seven commits and 4,192 rendered
+   fibers, with local production selection between 0.76 and 0.92 s and local
+   development selection between 0.96 and 1.48 s. Operation measurements now
+   wait for React quiescence and the scheduled lane retains three samples per
+   build. Stable scheduled CI results remain before this item can be closed.
 2. **Introduce private display identities.** Story cards, comments, history, and
    collaborative surfaces must show a pseudonym/display name rather than an
    email address. Email remains private account data and may appear only where

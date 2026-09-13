@@ -2,6 +2,12 @@
 
 ## 2026-09-13
 
+- Stabilized the scheduled large-Story browser baseline. Performance operations
+  are now delimited by commit-free React windows, preventing late loading work
+  from being charged to the next action, and the lane retains three independent
+  samples for both development and production builds. Navigating to a search or
+  context result now recenters immediately instead of mounting intermediate
+  graph nodes during an animated traversal across a large canvas.
 - Kept anonymous account actions inside narrow mobile viewports in every
   supported language. Below 520 pixels, the sign-in and registration group now
   uses a full-width header row instead of relying on platform-specific font
