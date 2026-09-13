@@ -2,6 +2,10 @@
 
 ## 2026-09-13
 
+- Kept anonymous account actions inside narrow mobile viewports in every
+  supported language. Below 520 pixels, the sign-in and registration group now
+  uses a full-width header row instead of relying on platform-specific font
+  widths to fit beside secondary controls.
 - Completed the private-alpha npm warning triage. Jest 30 and Vitest 5 replace
   obsolete test dependency chains, all dependency install scripts now have an
   explicit allow/deny decision, and full as well as production npm audits report

@@ -2042,8 +2042,12 @@
 
 @media (max-width: 520px) {
   .product-app-header {
+    height: auto;
+    min-height: 58px;
     padding: 0 0.5rem;
     gap: 0.3rem;
+    flex-wrap: wrap;
+    padding-block: 0.45rem;
   }
 
   .product-app-header > nav {
@@ -2051,11 +2055,14 @@
   }
 
   .product-auth-actions {
+    flex: 1 0 100%;
     gap: 0.25rem;
   }
 
   .product-auth-signin,
   .product-account-create {
+    flex: 1 1 0;
+    min-width: 0;
     min-height: 34px;
     padding: 0.45rem 0.5rem;
     font-size: 0.68rem;
