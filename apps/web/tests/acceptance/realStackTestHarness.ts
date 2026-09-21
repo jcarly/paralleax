@@ -1,4 +1,4 @@
-import { expect, type Page, type Response } from '@playwright/test';
+import { expect, type Locator, type Page, type Response } from '@playwright/test';
 
 interface CreatedInteraction {
   id: string;
@@ -81,7 +81,8 @@ export async function openStoryAccess(page: Page, storyTitle: string) {
   const storyCard = page.locator('.library-card').filter({ hasText: storyTitle });
   await expect(storyCard).toBeVisible();
   await storyCard.getByRole('link', { name: 'Access' }).click();
-  await expect(page.getByRole('heading', { name: 'Access and permissions' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Story settings' })).toBeVisible();
+  await expect(page.getByRole('tab', { name: 'Access' })).toHaveAttribute('aria-selected', 'true');
 }
 
 export async function configureStoryAccess(
@@ -89,12 +90,12 @@ export async function configureStoryAccess(
   storyId: string,
   options: StoryAccessOptions,
 ) {
-  await page.getByLabel('Who can read this story?').selectOption(options.visibility);
-  await page.getByLabel('Who can edit this story?').selectOption(options.editPolicy);
-  await page.getByLabel('Who may comment?').selectOption(options.commentPolicy);
-  await expect(page.getByLabel('Who can read this story?')).toHaveValue(options.visibility);
-  await expect(page.getByLabel('Who can edit this story?')).toHaveValue(options.editPolicy);
-  await expect(page.getByLabel('Who may comment?')).toHaveValue(options.commentPolicy);
+  await page.getByLabel('Reading').selectOption(options.visibility);
+  await page.getByLabel('Editing').selectOption(options.editPolicy);
+  await page.getByLabel('Comments').selectOption(options.commentPolicy);
+  await expect(page.getByLabel('Reading')).toHaveValue(options.visibility);
+  await expect(page.getByLabel('Editing')).toHaveValue(options.editPolicy);
+  await expect(page.getByLabel('Comments')).toHaveValue(options.commentPolicy);
 
   const accessUpdate = waitForApiResponse(
     page,
@@ -112,22 +113,36 @@ export async function inviteStoryCollaborator(
   email: string,
   role: 'viewer' | 'editor' = 'viewer',
 ) {
-  await page.getByLabel('Account email').fill(email);
-  await page.getByLabel('Permission').selectOption(role);
+  await page.getByLabel('User email').fill(email);
+  await page.getByRole('combobox', { name: 'Access', exact: true }).selectOption(role);
   const invitation = waitForApiResponse(
     page,
     'POST',
     new RegExp(`/api/stories/${storyId}/access/collaborators$`),
   );
-  await page.getByRole('button', { name: 'Add invitation' }).click();
+  await page.getByRole('button', { name: 'Add user' }).click();
   await expectSuccessful(invitation);
 
   const grant = page.locator('.access-list li').filter({ hasText: email });
   await expect(grant).toBeVisible();
-  await expect(
-    grant.getByText(role === 'editor' ? 'Editor' : 'Reader', { exact: true }),
-  ).toBeVisible();
+  await expect(grant.getByRole('combobox')).toHaveValue(role);
   return grant;
+}
+
+export async function changeStoryCollaboratorRole(
+  page: Page,
+  storyId: string,
+  grant: Locator,
+  role: 'viewer' | 'editor',
+) {
+  const update = waitForApiResponse(
+    page,
+    'POST',
+    new RegExp(`/api/stories/${storyId}/access/collaborators$`),
+  );
+  await grant.getByRole('combobox').selectOption(role);
+  await expectSuccessful(update);
+  await expect(grant.getByRole('combobox')).toHaveValue(role);
 }
 
 export function interactionNode(page: Page, title: string) {

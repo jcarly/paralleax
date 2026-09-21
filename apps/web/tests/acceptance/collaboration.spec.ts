@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import {
+  changeStoryCollaboratorRole,
   createdInteraction,
   configureStoryAccess,
   expectSuccessful,
@@ -69,16 +70,9 @@ test('an owner grants reader then editor access and receives the collaborator ed
     await collaboratorPage.getByRole('button', { name: 'Shared opening' }).click();
     await expect(collaboratorPage.getByRole('heading', { name: 'Shared opening' })).toBeVisible();
 
-    await inviteStoryCollaborator(ownerPage, storyId, collaborator.email, 'editor');
-    await expect(collaboratorGrant.getByText('Editor', { exact: true })).toBeVisible();
+    await changeStoryCollaboratorRole(ownerPage, storyId, collaboratorGrant, 'editor');
 
-    const ownerEventStream = waitForApiResponse(
-      ownerPage,
-      'GET',
-      new RegExp(`/api/stories/${storyId}/events$`),
-    );
-    await ownerPage.getByRole('link', { name: 'Back to editor' }).click();
-    await expectSuccessful(ownerEventStream);
+    await ownerPage.getByRole('button', { name: 'Close Story settings' }).click();
     await expect(interactionNode(ownerPage, 'Shared opening')).toBeVisible();
     await interactionNode(ownerPage, 'Shared opening').click();
 

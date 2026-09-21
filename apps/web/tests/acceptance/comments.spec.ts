@@ -50,13 +50,7 @@ test('a reader and an author review an interaction through persisted live commen
     });
     await inviteStoryCollaborator(ownerPage, storyId, reader.email);
 
-    const ownerCommentStream = waitForApiResponse(
-      ownerPage,
-      'GET',
-      new RegExp(`/api/stories/${storyId}/comment-threads/events$`),
-    );
-    await ownerPage.getByRole('link', { name: 'Back to editor' }).click();
-    await expectSuccessful(ownerCommentStream);
+    await ownerPage.getByRole('button', { name: 'Close Story settings' }).click();
     await expect(interactionNode(ownerPage, 'Reviewed opening')).toBeVisible();
 
     const readerCommentStream = waitForApiResponse(

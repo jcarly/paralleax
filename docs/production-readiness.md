@@ -93,9 +93,10 @@ small test stories. It is not yet ready for an open public production service.
   selection, drag, and context-creation commits and rendered fibers in both
   builds. The profile waits for commit-free operation boundaries, retains three
   samples per build, and guards direct navigation to distant graph results so
-  virtualized intermediate nodes are not mounted along an animated path. Retain
-  stable scheduled CI baselines before declaring the large-Story performance
-  audit complete.
+  virtualized intermediate nodes are not mounted along an animated path. The
+  revised six-sample profile now passes in scheduled CI, completing the
+  large-Story performance audit baseline; future failures remain release-gating
+  regressions rather than missing evidence.
 - Implemented foundation: common field, graph-position, and entity mutations use
   targeted contracts. Continue removing remaining complete-story reads or
   responses only where those profiles show a meaningful cost.

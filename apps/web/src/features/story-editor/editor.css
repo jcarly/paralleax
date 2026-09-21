@@ -32,17 +32,6 @@
   background: var(--color-surface);
   outline: none;
 }
-.story-time-field {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  color: var(--color-muted);
-  font-size: 0.8rem;
-}
-.story-time-field input {
-  margin: 0;
-  min-width: 11.5rem;
-}
 .save-status {
   min-width: 4.5rem;
   align-self: center;

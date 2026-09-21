@@ -229,13 +229,17 @@ test.describe('Story editor persistence', () => {
     });
 
     await page.goto('/stories/story-1/edit');
+    await page.getByRole('button', { name: 'Story settings' }).click();
     await page.getByLabel('Story start date and time').fill('2026-07-27T09:30');
-    await page.getByLabel('Story start date and time').blur();
+    await page.getByRole('button', { name: 'Save properties' }).click();
+    await page.getByRole('button', { name: 'Close Story settings' }).click();
     await page.getByTestId('interaction-node').filter({ hasText: 'Original title' }).click();
     await page.getByLabel('Duration (minutes)').fill('45');
     await page.getByLabel('Duration (minutes)').blur();
 
+    await page.getByRole('button', { name: 'Story settings' }).click();
     await expect(page.getByLabel('Story start date and time')).toHaveValue('2026-07-27T09:30');
+    await page.getByRole('button', { name: 'Close Story settings' }).click();
     await expect(page.getByLabel('Duration (minutes)')).toHaveValue('45');
   });
 

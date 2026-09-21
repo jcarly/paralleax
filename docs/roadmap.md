@@ -28,18 +28,16 @@ substantial V0.3, V0.4, V0.6, V0.8, and V0.9 foundations, but that does not make
 the later milestones complete: public delivery is still gated by the unfinished
 reliability, conflict, exchange-format, accessibility, and publication work.
 
-The near-term delivery sequence is:
+The private-alpha P0 feedback queue is complete. The near-term delivery sequence is:
 
-1. close the private-alpha P0 feedback queue below, beginning with measured
-   large-Story performance, private display identities, account-entry visibility,
-   inaccessible-route behavior, and build/runtime warning triage;
-2. deliver the P1 Story-settings/access, localization, comment-inspector, graph
-   correctness, and cyclic-layout work as cohesive verticals;
-3. complete V0.3 optimistic concurrency, conflict recovery, history retention,
+1. deliver P1 account safety, Story-settings/access, localization,
+   comment-inspector, graph correctness, and cyclic-layout work as cohesive
+   verticals;
+2. complete V0.3 optimistic concurrency, conflict recovery, history retention,
    and optional gesture grouping;
-4. establish the stable Paralleax backup/import-export contract required by V0.6;
-5. add Story validation, onboarding, and accessibility evidence to reach V0.7;
-6. then deepen world state, dynamic execution, collaboration, and publishing
+3. establish the stable Paralleax backup/import-export contract required by V0.6;
+4. add Story validation, onboarding, and accessibility evidence to reach V0.7;
+5. then deepen world state, dynamic execution, collaboration, and publishing
    according to validated user needs.
 
 Later milestone foundations may continue to be improved when they support these
@@ -82,7 +80,8 @@ priority, the order below is the intended delivery order.
    fibers, with local production selection between 0.76 and 0.92 s and local
    development selection between 0.96 and 1.48 s. Operation measurements now
    wait for React quiescence and the scheduled lane retains three samples per
-   build. Stable scheduled CI results remain before this item can be closed.
+   build. **Completed 2026-09-13:** the revised six-sample performance lane passes
+   in scheduled CI, providing the previously missing shared-runner baseline.
 2. **Introduce private display identities.** Story cards, comments, history, and
    collaborative surfaces must show a pseudonym/display name rather than an
    email address. Email remains private account data and may appear only where
@@ -143,7 +142,12 @@ priority, the order below is the intended delivery order.
    grants access only to existing accounts. Reserve the `Send invitation`
    wording (`Envoyer l'invitation` in French) for a future outbound invitation
    workflow. Allow an existing viewer/editor grant to be changed in place as
-   well as removed.
+   well as removed. **Completed 2026-09-13:** the editor gear opens the shared
+   tabbed configuration modal, Story editors retain the existing `Properties`
+   permission, and only owners/administrators see `Access`. The library opens
+   that tab directly, the legacy access URL redirects compatibly, broad-to-
+   restricted selectors and concise English/French labels are applied, and
+   existing reader/editor grants can be changed in place or removed.
 3. **Localized operational errors.** Map stable API error codes to localized web
    copy and use the server message only as a safe fallback. In particular, the
    existing-account/non-owner collaborator error must never surface in English

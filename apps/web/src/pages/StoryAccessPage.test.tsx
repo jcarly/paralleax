@@ -1,149 +1,26 @@
-import { act, cleanup, render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { StrictMode } from 'react';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { StoryAccessConfiguration } from '@paralleax/shared';
-import { api } from '../api';
-import { i18n } from '../i18n';
+import { cleanup, render, screen } from '@testing-library/react';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
+import { afterEach, describe, expect, it } from 'vitest';
 import { StoryAccessPage } from './StoryAccessPage';
 
-vi.mock('../api', () => ({
-  api: {
-    getStoryAccess: vi.fn(),
-    updateStoryAccess: vi.fn(),
-    setStoryCollaborator: vi.fn(),
-    removeStoryCollaborator: vi.fn(),
-  },
-}));
-
-const access: StoryAccessConfiguration = {
-  visibility: 'private',
-  editPolicy: 'owner',
-  commentPolicy: 'editors',
-  owner: { id: 'owner-1', email: 'owner@example.com', displayName: 'Owner' },
-  collaborators: [],
-};
+function EditorRoute() {
+  const location = useLocation();
+  return <p>{`${location.pathname}${location.search}`}</p>;
+}
 
 describe('StoryAccessPage', () => {
   afterEach(() => cleanup());
-  beforeEach(async () => {
-    vi.resetAllMocks();
-    await i18n.changeLanguage('en');
-    vi.mocked(api.getStoryAccess).mockResolvedValue(structuredClone(access));
-    vi.mocked(api.updateStoryAccess).mockImplementation(async (_, settings) => ({
-      ...structuredClone(access),
-      ...settings,
-    }));
-    vi.mocked(api.setStoryCollaborator).mockResolvedValue({
-      ...structuredClone(access),
-      collaborators: [
-        {
-          userId: 'user-2',
-          email: 'reader@example.com',
-          displayName: 'Reader',
-          role: 'viewer',
-        },
-      ],
-    });
-    vi.mocked(api.removeStoryCollaborator).mockResolvedValue(undefined);
-  });
 
-  function renderPage() {
+  it('keeps legacy access URLs compatible by opening the editor access settings', async () => {
     render(
       <MemoryRouter initialEntries={['/stories/story-1/access']}>
         <Routes>
-          <Route path="/" element={<div>Story library route</div>} />
           <Route path="/stories/:storyId/access" element={<StoryAccessPage />} />
+          <Route path="/stories/:storyId/edit" element={<EditorRoute />} />
         </Routes>
       </MemoryRouter>,
     );
-  }
 
-  it('returns to the Story library when access management is unavailable', async () => {
-    vi.mocked(api.getStoryAccess).mockRejectedValue(
-      Object.assign(new Error('Story not found'), { status: 404 }),
-    );
-
-    renderPage();
-
-    expect(await screen.findByText('Story library route')).toBeInTheDocument();
-    expect(screen.queryByText('Story not found')).not.toBeInTheDocument();
-  });
-
-  it('updates policies and adds an existing account invitation', async () => {
-    const user = userEvent.setup();
-    renderPage();
-    expect(
-      await screen.findByRole('heading', { name: 'Access and permissions' }),
-    ).toBeInTheDocument();
-    expect(screen.getByLabelText('Who may comment?')).toHaveValue('editors');
-    expect(screen.getByRole('option', { name: 'Editors only' })).toBeInTheDocument();
-    expect(screen.getByRole('option', { name: 'Any signed-in reader' })).toBeInTheDocument();
-    expect(screen.queryByRole('option', { name: 'Comments disabled' })).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole('option', { name: 'Any signed-in user who can read' }),
-    ).not.toBeInTheDocument();
-
-    await user.selectOptions(screen.getByLabelText('Who can read this story?'), 'public');
-    await user.selectOptions(screen.getByLabelText('Who can edit this story?'), 'collaborators');
-    await user.selectOptions(screen.getByLabelText('Who may comment?'), 'readers');
-    await user.click(screen.getByRole('button', { name: 'Save access' }));
-    expect(api.updateStoryAccess).toHaveBeenCalledWith(
-      'story-1',
-      expect.objectContaining({
-        visibility: 'public',
-        editPolicy: 'collaborators',
-        commentPolicy: 'readers',
-      }),
-    );
-
-    await user.type(screen.getByLabelText('Account email'), 'reader@example.com');
-    await user.click(screen.getByRole('button', { name: 'Add invitation' }));
-    expect(api.setStoryCollaborator).toHaveBeenCalledWith(
-      'story-1',
-      'reader@example.com',
-      'viewer',
-    );
-    expect(await screen.findByText('reader@example.com')).toBeInTheDocument();
-
-    await user.click(screen.getByRole('button', { name: 'Remove' }));
-    expect(api.removeStoryCollaborator).toHaveBeenCalledWith('story-1', 'user-2');
-    expect(screen.queryByText('reader@example.com')).not.toBeInTheDocument();
-  });
-
-  it('ignores an obsolete Strict Mode access response after editing starts', async () => {
-    const user = userEvent.setup();
-    let resolveObsolete!: (value: StoryAccessConfiguration) => void;
-    let resolveCurrent!: (value: StoryAccessConfiguration) => void;
-    vi.mocked(api.getStoryAccess)
-      .mockReturnValueOnce(
-        new Promise((resolve) => {
-          resolveObsolete = resolve;
-        }),
-      )
-      .mockReturnValueOnce(
-        new Promise((resolve) => {
-          resolveCurrent = resolve;
-        }),
-      );
-
-    render(
-      <StrictMode>
-        <MemoryRouter initialEntries={['/stories/story-1/access']}>
-          <Routes>
-            <Route path="/stories/:storyId/access" element={<StoryAccessPage />} />
-          </Routes>
-        </MemoryRouter>
-      </StrictMode>,
-    );
-
-    await act(async () => resolveCurrent(structuredClone(access)));
-    const visibility = await screen.findByLabelText('Who can read this story?');
-    await user.selectOptions(visibility, 'invitation');
-    expect(visibility).toHaveValue('invitation');
-
-    await act(async () => resolveObsolete(structuredClone(access)));
-    expect(visibility).toHaveValue('invitation');
+    expect(await screen.findByText('/stories/story-1/edit?settings=access')).toBeInTheDocument();
   });
 });

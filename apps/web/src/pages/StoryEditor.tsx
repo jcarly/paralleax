@@ -20,7 +20,7 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import '../features/story-editor/graph/storyGraph.css';
-import { Link, Navigate, useParams } from 'react-router-dom';
+import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   canManageCommentThread as canActorManageCommentThread,
   getTriggerConditions,
@@ -70,6 +70,11 @@ import { getInitialStoryFitViewOptions } from '../features/story-editor/graph/st
 import { StoryHistoryPanel } from '../features/story-editor/history/StoryHistoryPanel';
 import { useStoryContextNavigation } from '../features/story-editor/navigation/useStoryContextNavigation';
 import { useStoryEditorSelection } from '../features/story-editor/selection/useStoryEditorSelection';
+import {
+  StorySettingsDialog,
+  StorySettingsIcon,
+  type StorySettingsTab,
+} from '../features/story-settings/StorySettingsDialog';
 import { useStoryEditorPersistence } from '../hooks/useStoryEditorPersistence';
 import { usePendingSaveGuard } from '../hooks/usePendingSaveGuard';
 import {
@@ -122,6 +127,7 @@ function getInitials(name: string) {
 export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
   const { t } = useTranslation();
   const { storyId = '' } = useParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const {
     story,
     setStory,
@@ -180,6 +186,10 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
   );
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const storySettingsRouteTab: StorySettingsTab | undefined =
+    searchParams.get('settings') === 'access' ? 'access' : undefined;
+  const [storySettingsTab, setStorySettingsTab] = useState<StorySettingsTab>();
+  const openStorySettingsTab = storySettingsRouteTab ?? storySettingsTab;
   const [placingComment, setPlacingComment] = useState(false);
   const [canvasContextMenu, setCanvasContextMenu] = useState<CanvasContextMenuState>();
   const [nodes, setNodes, onNodesChange] = useNodesState<StoryFlowNode>([]);
@@ -202,6 +212,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
   );
   const flowInstance = useRef<ReactFlowInstance<StoryFlowNode, TriggerFlowEdge> | null>(null);
   const pendingFocusInteractionIdRef = useRef<string | undefined>(undefined);
+  const storySettingsTriggerRef = useRef<HTMLButtonElement | null>(null);
   const canvasRef = useRef<HTMLElement | null>(null);
   const {
     selectedId,
@@ -334,6 +345,15 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
     (selectedTargetThreads.length > 0 || contextualDraftAnchor),
   );
   const hasInspector = commentsOpen || hasInspectorSelection;
+
+  function closeStorySettings() {
+    setStorySettingsTab(undefined);
+    window.requestAnimationFrame(() => storySettingsTriggerRef.current?.focus());
+    if (!searchParams.has('settings')) return;
+    const nextSearchParams = new URLSearchParams(searchParams);
+    nextSearchParams.delete('settings');
+    setSearchParams(nextSearchParams, { replace: true });
+  }
 
   useEffect(() => {
     const handleHistoryShortcut = (event: KeyboardEvent) => {
@@ -972,6 +992,9 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
 
   if (storyRouteInaccessible) return <Navigate to="/" replace />;
   if (!story) return <main className="page">{error || t('editor.loading')}</main>;
+  if (storySettingsRouteTab === 'access' && !story.capabilities?.canManage) {
+    return <Navigate to="/" replace />;
+  }
   if (story.capabilities?.canEdit !== true) {
     return <Navigate to={`/stories/${storyId}/play`} replace />;
   }
@@ -1042,39 +1065,38 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
       }}
     >
       <div className="editor-toolbar">
-        <input
-          aria-label={t('editor.storyTitle')}
-          className="story-title-input"
-          value={story.title}
-          readOnly={reviewOnly}
-          onChange={(e) => {
-            if (!reviewOnly) setStory({ ...story, title: e.target.value });
-          }}
-          onBlur={(e) => {
-            if (!reviewOnly) void renameStory(e.target.value);
-          }}
-        />
-        <label className="story-time-field">
-          {t('editor.storyStarts')}
+        <div className="story-title-control">
           <input
-            aria-label={t('editor.storyStartDateTime')}
-            type="datetime-local"
-            value={story.startDateTime ?? '2000-01-03T08:00'}
-            disabled={reviewOnly}
-            onChange={(event) => setStory({ ...story, startDateTime: event.target.value })}
-            onBlur={(event) => void updateStoryStartDateTime(event.target.value)}
+            aria-label={t('editor.storyTitle')}
+            className="story-title-input"
+            value={story.title}
+            readOnly={reviewOnly}
+            onChange={(e) => {
+              if (!reviewOnly) setStory({ ...story, title: e.target.value });
+            }}
+            onBlur={(e) => {
+              if (!reviewOnly) void renameStory(e.target.value);
+            }}
           />
-        </label>
+          {!reviewOnly ? (
+            <button
+              ref={storySettingsTriggerRef}
+              className="story-settings-button"
+              type="button"
+              aria-label={t('storySettings.open')}
+              data-tooltip={t('storySettings.open')}
+              title={t('storySettings.open')}
+              onClick={() => setStorySettingsTab('properties')}
+            >
+              <StorySettingsIcon />
+            </button>
+          ) : null}
+        </div>
         <div className="actions">
           {loadPhase !== 'ready' ? (
             <span className="save-status saving" role="status" aria-live="polite">
               {t(`editor.loadingPhase.${loadPhase}`)}
             </span>
-          ) : null}
-          {story.capabilities?.canManage ? (
-            <Link className="button secondary" to={`/stories/${storyId}/access`}>
-              {t('editor.access')}
-            </Link>
           ) : null}
           {commentAccess ? (
             <button
@@ -1712,6 +1734,16 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
             </div>
           </section>
         </div>
+      ) : null}
+      {openStorySettingsTab ? (
+        <StorySettingsDialog
+          storyId={storyId}
+          startDateTime={story.startDateTime ?? '2000-01-03T08:00'}
+          initialTab={openStorySettingsTab}
+          canManageAccess={story.capabilities?.canManage === true}
+          onSaveStartDateTime={updateStoryStartDateTime}
+          onClose={closeStorySettings}
+        />
       ) : null}
     </main>
   );

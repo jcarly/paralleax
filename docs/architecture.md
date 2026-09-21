@@ -377,6 +377,13 @@ authenticated non-editor to the player. Simulation Mode requires the same
 effective edit capability; player query parameters cannot upgrade a reader to
 author tooling. Comment-capable readers use an interaction-contextual discussion
 panel in `StoryPlayer`, while editors retain the complete graph review layer.
+Story configuration is composed inside the editor by `features/story-settings/`:
+all editors retain access to Story-level properties, while the access-policy tab
+is projected only for accounts with `canManage`. Story-library access links open
+that tab through an editor query parameter, and the former standalone access URL
+redirects to the same surface for compatibility. Policy and collaborator writes
+continue to use the existing access API operations; the modal is not a parallel
+domain or persistence model.
 
 Administrators receive an `Administration` navigation entry backed by the
 protected `/admin/users` route. Its account list, summary, search, role filter,
@@ -462,6 +469,8 @@ component:
   inspector UI for authored frame and text decorations.
 - `features/feedback/`: optional Formbricks configuration, route-context
   normalization, SDK isolation, and the global feedback control.
+- `features/story-settings/`: tabbed Story-property and access configuration,
+  including the reusable access-policy and collaborator-grant form.
 - `storySelection.ts`: selected interaction and trigger lookup helpers.
 - `storyConnection.ts`: canvas connection validation and created-trigger lookup.
 - `storyTriggerInput.ts`: deletion planning for one trigger input link.

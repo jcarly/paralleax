@@ -2,6 +2,12 @@
 
 ## 2026-09-13
 
+- Consolidated Story properties and access in a tabbed editor modal opened by a
+  gear beside the Story title. Access links now open that modal directly, policy
+  selectors use concise broad-to-restricted labels, grant creation aligns with
+  its fields, and existing reader/editor grants can be changed in place. Story
+  editors retain property editing while access management remains limited to
+  owners and administrators; the former access URL redirects compatibly.
 - Stabilized the scheduled large-Story browser baseline. Performance operations
   are now delimited by commit-free React windows, preventing late loading work
   from being charged to the next action, and the lane retains three independent

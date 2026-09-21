@@ -101,20 +101,74 @@ describe('StoryEditor story context', () => {
   });
 
   it('updates the story start date and time', async () => {
+    const user = userEvent.setup();
     const updatedStory = cloneStory();
     updatedStory.startDateTime = '2026-07-27T09:30';
     vi.mocked(api.updateStory).mockResolvedValue(updatedStory);
 
     await renderEditor();
 
-    const start = screen.getByLabelText('Story start date and time');
-    fireEvent.change(start, { target: { value: '2026-07-27T09:30' } });
-    fireEvent.blur(start);
+    fireEvent.click(screen.getByRole('button', { name: 'Story settings' }));
+    expect(await screen.findByRole('dialog', { name: 'Story settings' })).toBeInTheDocument();
+    const start = await screen.findByLabelText('Story start date and time');
+    await user.clear(start);
+    await user.type(start, '2026-07-27T09:30');
+    await user.click(screen.getByRole('button', { name: 'Save properties' }));
 
     expect(api.updateStory).toHaveBeenCalledWith('story-1', {
       startDateTime: '2026-07-27T09:30',
     });
     expect(await screen.findByDisplayValue('2026-07-27T09:30')).toBeInTheDocument();
+  });
+
+  it('opens the access tab from a Story configuration link', async () => {
+    await renderEditor(baseStory, '/stories/story-1/edit?settings=access');
+
+    expect(await screen.findByRole('dialog', { name: 'Story settings' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Access' })).toHaveAttribute('aria-selected', 'true');
+    expect(await screen.findByLabelText('Reading')).toHaveValue('private');
+  });
+
+  it('keeps Story properties available to editors who cannot manage access', async () => {
+    const user = userEvent.setup();
+    const editorStory = cloneStory();
+    editorStory.capabilities = {
+      canRead: true,
+      canEdit: true,
+      canManage: false,
+      canComment: true,
+    };
+
+    await renderEditor(editorStory);
+    await user.click(screen.getByRole('button', { name: 'Story settings' }));
+
+    expect(await screen.findByRole('tab', { name: 'Properties' })).toBeInTheDocument();
+    expect(screen.queryByRole('tab', { name: 'Access' })).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Story start date and time')).toBeInTheDocument();
+    expect(api.getStoryAccess).not.toHaveBeenCalled();
+  });
+
+  it('returns non-managers from a direct Story access configuration URL', async () => {
+    const editorStory = cloneStory();
+    editorStory.capabilities = {
+      canRead: true,
+      canEdit: true,
+      canManage: false,
+      canComment: true,
+    };
+    vi.mocked(api.getStory).mockResolvedValue(editorStory);
+
+    render(
+      <MemoryRouter initialEntries={['/stories/story-1/edit?settings=access']}>
+        <Routes>
+          <Route path="/" element={<div>Story library route</div>} />
+          <Route path="/stories/:storyId/edit" element={<StoryEditor />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText('Story library route')).toBeInTheDocument();
+    expect(api.getStoryAccess).not.toHaveBeenCalled();
   });
 
   it('creates and edits a location from the location panel', async () => {

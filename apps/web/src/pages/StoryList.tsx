@@ -534,7 +534,12 @@ function StoryCard({
           ) : null}
           {story.capabilities?.canManage ? (
             <>
-              <Link className="product-ghost compact" to={`/stories/${story.id}/access`}>
+              <Link
+                className="product-ghost compact"
+                to={`/stories/${story.id}/edit?settings=access`}
+                onMouseEnter={() => void loadStoryEditor()}
+                onFocus={() => void loadStoryEditor()}
+              >
                 {t('library.card.access')}
               </Link>
               <button

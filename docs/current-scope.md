@@ -55,9 +55,13 @@ Paralleax currently includes:
 - Character- or location-rooted item placement and nested item relationships.
 - Authentication, sessions, creator ownership, required non-unique display names,
   self-service display-name editing, global user/admin roles, per-story
-  visibility, editing, and editor/reader comment policies, reader/editor invitations,
+  visibility, editing, and editor/reader comment policies, reader/editor grants,
   authenticated anchored review discussions, health/readiness, migrations, and
-  production-oriented API error handling. Story cards, comments, and change
+  production-oriented API error handling. Story-level properties and access use
+  one tabbed configuration modal opened from the editor title; Story editors can
+  change properties, while owners and administrators can also manage policies and
+  add, update, or remove existing-account reader/editor grants. Story cards open
+  the access tab directly. Story cards, comments, and change
   history project current display names by user id without exposing account
   emails; self-service, administration, and explicit access management retain
   email where needed. An inaccessible or missing direct Story editor, player, or
