@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { handleModalDialogKeyDown } from '../../components/modalDialogKeyboard';
 import { StoryAccessSettings } from './StoryAccessSettings';
@@ -32,9 +32,8 @@ export function StorySettingsDialog({
   );
   const tabs: StorySettingsTab[] = canManageAccess ? ['properties', 'access'] : ['properties'];
 
-  async function saveProperties(event: FormEvent) {
-    event.preventDefault();
-    if (propertiesStatus === 'saving') return;
+  async function saveProperties() {
+    if (propertiesStatus === 'saving' || draftStartDateTime === startDateTime) return;
     setPropertiesStatus('saving');
     setPropertiesStatus((await onSaveStartDateTime(draftStartDateTime)) ? 'saved' : 'error');
   }
@@ -93,7 +92,7 @@ export function StorySettingsDialog({
             >
               <h3>{t('storySettings.properties')}</h3>
               <p>{t('storySettings.propertiesDescription')}</p>
-              <form onSubmit={(event) => void saveProperties(event)}>
+              <div className="story-settings-properties-fields">
                 <label className="product-field">
                   <span>{t('editor.storyStartDateTime')}</span>
                   <input
@@ -106,11 +105,17 @@ export function StorySettingsDialog({
                       setDraftStartDateTime(event.target.value);
                       setPropertiesStatus('idle');
                     }}
+                    onBlur={() => void saveProperties()}
                   />
                 </label>
                 <small id="story-settings-start-date-time-help">
                   {t('storySettings.startDateTimeHelp')}
                 </small>
+                {propertiesStatus === 'saving' ? (
+                  <p className="product-help" role="status">
+                    {t('storySettings.saving')}
+                  </p>
+                ) : null}
                 {propertiesStatus === 'error' ? (
                   <p className="form-error" role="alert">
                     {t('storySettings.saveFailed')}
@@ -121,16 +126,7 @@ export function StorySettingsDialog({
                     {t('storySettings.saved')}
                   </p>
                 ) : null}
-                <div className="settings-card-actions">
-                  <button className="product-primary" disabled={propertiesStatus === 'saving'}>
-                    {t(
-                      propertiesStatus === 'saving'
-                        ? 'storySettings.saving'
-                        : 'storySettings.saveProperties',
-                    )}
-                  </button>
-                </div>
-              </form>
+              </div>
             </section>
           ) : canManageAccess ? (
             <section

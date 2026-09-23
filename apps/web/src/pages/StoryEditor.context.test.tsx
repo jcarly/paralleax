@@ -114,11 +114,14 @@ describe('StoryEditor story context', () => {
     const start = await screen.findByLabelText('Story start date and time');
     await user.clear(start);
     await user.type(start, '2026-07-27T09:30');
-    await user.click(screen.getByRole('button', { name: 'Save properties' }));
+    await user.tab();
 
-    expect(api.updateStory).toHaveBeenCalledWith('story-1', {
-      startDateTime: '2026-07-27T09:30',
-    });
+    await waitFor(() =>
+      expect(api.updateStory).toHaveBeenCalledWith('story-1', {
+        startDateTime: '2026-07-27T09:30',
+      }),
+    );
+    expect(screen.queryByRole('button', { name: 'Save properties' })).not.toBeInTheDocument();
     expect(await screen.findByDisplayValue('2026-07-27T09:30')).toBeInTheDocument();
   });
 

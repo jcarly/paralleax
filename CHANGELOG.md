@@ -2,6 +2,13 @@
 
 ## 2026-09-23
 
+- Removed redundant save buttons from Story properties and access policies.
+  The start date now persists when editing finishes, while each access-policy
+  selection persists immediately and rolls back visibly when its request fails.
+- Reorganized the Story settings modal so its header and tabs never collapse
+  into the form, only its content area scrolls in short viewports, and access
+  cards use the full modal width instead of crowding their controls into two
+  narrow columns. Long labels and compact screens now wrap without overlap.
 - Recorded the accepted semantic comment-slot direction: extend the existing
   anchored-discussion model with shared, typed, translation-independent slots,
   starting with entity-inspector fields and sections before Story headings or

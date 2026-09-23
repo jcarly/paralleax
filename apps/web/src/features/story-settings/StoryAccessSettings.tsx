@@ -24,6 +24,7 @@ export function StoryAccessSettings({ storyId, onInaccessible }: StoryAccessSett
   const [role, setRole] = useState<StoryCollaboratorRole>('viewer');
   const [pending, setPending] = useState(false);
   const [error, setError] = useState('');
+  const [accessStatus, setAccessStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
   useEffect(() => {
     let cancelled = false;
@@ -41,16 +42,25 @@ export function StoryAccessSettings({ storyId, onInaccessible }: StoryAccessSett
     };
   }, [onInaccessible, storyId, t]);
 
-  function updateAccessSetting<Key extends keyof StoryAccessSettings>(
+  async function updateAccessSetting<Key extends keyof StoryAccessSettings>(
     key: Key,
     value: StoryAccessSettings[Key],
   ) {
-    setAccess((current) => (current ? { ...current, [key]: value } : current));
-  }
-
-  async function save() {
     if (!access || pending) return;
-    await runAccessOperation(() => api.updateStoryAccess(storyId, access), t('access.saveFailed'));
+    const previous = access;
+    const next = { ...access, [key]: value };
+    setAccess(next);
+    setAccessStatus('saving');
+    const updated = await runAccessOperation(
+      () => api.updateStoryAccess(storyId, next),
+      t('access.saveFailed'),
+    );
+    if (updated) {
+      setAccessStatus('saved');
+    } else {
+      setAccess(previous);
+      setAccessStatus('error');
+    }
   }
 
   async function addUser(event: FormEvent) {
@@ -133,7 +143,7 @@ export function StoryAccessSettings({ storyId, onInaccessible }: StoryAccessSett
             value={access.visibility}
             disabled={pending}
             onChange={(event) =>
-              updateAccessSetting(
+              void updateAccessSetting(
                 'visibility',
                 event.currentTarget.value as StoryAccessConfiguration['visibility'],
               )
@@ -152,7 +162,7 @@ export function StoryAccessSettings({ storyId, onInaccessible }: StoryAccessSett
             value={access.editPolicy}
             disabled={pending}
             onChange={(event) =>
-              updateAccessSetting(
+              void updateAccessSetting(
                 'editPolicy',
                 event.currentTarget.value as StoryAccessConfiguration['editPolicy'],
               )
@@ -171,7 +181,7 @@ export function StoryAccessSettings({ storyId, onInaccessible }: StoryAccessSett
             value={access.commentPolicy}
             disabled={pending}
             onChange={(event) =>
-              updateAccessSetting(
+              void updateAccessSetting(
                 'commentPolicy',
                 event.currentTarget.value as StoryAccessConfiguration['commentPolicy'],
               )
@@ -185,11 +195,16 @@ export function StoryAccessSettings({ storyId, onInaccessible }: StoryAccessSett
           </select>
         </label>
         <p className="product-help">{t('access.comments.help')}</p>
-        <div className="settings-card-actions">
-          <button className="product-primary" disabled={pending} onClick={() => void save()}>
-            {t(pending ? 'access.saving' : 'access.save')}
-          </button>
-        </div>
+        {accessStatus === 'saving' ? (
+          <p className="product-help" role="status">
+            {t('access.saving')}
+          </p>
+        ) : null}
+        {accessStatus === 'saved' ? (
+          <p className="form-success" role="status">
+            {t('access.saved')}
+          </p>
+        ) : null}
       </section>
       <section className="settings-card">
         <h3>{t('access.collaborators')}</h3>

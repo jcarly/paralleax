@@ -1,4 +1,4 @@
-import { act, cleanup, render, screen, within } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { StrictMode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -107,15 +107,19 @@ describe('StoryAccessSettings', () => {
     await user.selectOptions(screen.getByLabelText('Reading'), 'public');
     await user.selectOptions(screen.getByLabelText('Editing'), 'collaborators');
     await user.selectOptions(screen.getByLabelText('Comments'), 'readers');
-    await user.click(screen.getByRole('button', { name: 'Save access' }));
-    expect(api.updateStoryAccess).toHaveBeenCalledWith(
-      'story-1',
-      expect.objectContaining({
-        visibility: 'public',
-        editPolicy: 'collaborators',
-        commentPolicy: 'readers',
-      }),
+    await waitFor(() =>
+      expect(api.updateStoryAccess).toHaveBeenLastCalledWith(
+        'story-1',
+        expect.objectContaining({
+          visibility: 'public',
+          editPolicy: 'collaborators',
+          commentPolicy: 'readers',
+        }),
+      ),
     );
+    expect(api.updateStoryAccess).toHaveBeenCalledTimes(3);
+    expect(screen.queryByRole('button', { name: 'Save access' })).not.toBeInTheDocument();
+    expect(await screen.findByText('Access saved.')).toBeInTheDocument();
 
     await user.type(screen.getByLabelText('User email'), 'reader@example.com');
     await user.click(screen.getByRole('button', { name: 'Add user' }));
@@ -137,6 +141,18 @@ describe('StoryAccessSettings', () => {
     await user.click(within(grant).getByRole('button', { name: 'Remove' }));
     expect(api.removeStoryCollaborator).toHaveBeenCalledWith('story-1', 'user-2');
     expect(screen.queryByText('reader@example.com')).not.toBeInTheDocument();
+  });
+
+  it('restores a policy when its automatic save fails', async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.updateStoryAccess).mockRejectedValue(new Error('Access unavailable'));
+
+    render(<StoryAccessSettings storyId="story-1" />);
+    const reading = await screen.findByLabelText('Reading');
+    await user.selectOptions(reading, 'public');
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Access unavailable');
+    expect(reading).toHaveValue('private');
   });
 
   it('ignores an obsolete Strict Mode access response after editing starts', async () => {

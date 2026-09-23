@@ -90,21 +90,33 @@ export async function configureStoryAccess(
   storyId: string,
   options: StoryAccessOptions,
 ) {
-  await page.getByLabel('Reading').selectOption(options.visibility);
-  await page.getByLabel('Editing').selectOption(options.editPolicy);
-  await page.getByLabel('Comments').selectOption(options.commentPolicy);
+  await autoSaveAccessOption(page, storyId, 'Reading', options.visibility);
+  await autoSaveAccessOption(page, storyId, 'Editing', options.editPolicy);
+  await autoSaveAccessOption(page, storyId, 'Comments', options.commentPolicy);
   await expect(page.getByLabel('Reading')).toHaveValue(options.visibility);
   await expect(page.getByLabel('Editing')).toHaveValue(options.editPolicy);
   await expect(page.getByLabel('Comments')).toHaveValue(options.commentPolicy);
+}
 
+async function autoSaveAccessOption(
+  page: Page,
+  storyId: string,
+  label: 'Reading' | 'Editing' | 'Comments',
+  value: string,
+) {
+  const field = page.getByLabel(label);
+  if ((await field.inputValue()) === value) return;
   const accessUpdate = waitForApiResponse(
     page,
     'PATCH',
     new RegExp(`/api/stories/${storyId}/access$`),
   );
-  await page.getByRole('button', { name: 'Save access' }).click();
+  await field.selectOption(value);
   const response = await expectSuccessful(accessUpdate);
-  expect(response.request().postDataJSON()).toMatchObject(options);
+  expect(response.request().postDataJSON()).toMatchObject({
+    [label === 'Reading' ? 'visibility' : label === 'Editing' ? 'editPolicy' : 'commentPolicy']:
+      value,
+  });
 }
 
 export async function inviteStoryCollaborator(

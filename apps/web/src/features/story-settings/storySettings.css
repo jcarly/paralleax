@@ -1,7 +1,9 @@
 .story-settings-dialog {
   display: flex;
-  width: min(100%, 920px);
-  min-height: min(680px, calc(100dvh - 3rem));
+  width: min(920px, calc(100vw - 3rem));
+  height: min(680px, calc(100dvh - 3rem));
+  min-width: 0;
+  min-height: 0;
   padding: 0;
   overflow: hidden;
   flex-direction: column;
@@ -10,9 +12,19 @@
 .story-settings-header {
   display: grid;
   grid-template-columns: 44px minmax(0, 1fr) auto;
+  flex: none;
   gap: 1rem;
   align-items: start;
   padding: 1.5rem 1.5rem 1rem;
+}
+
+.story-settings-header > div {
+  min-width: 0;
+}
+
+.story-settings-header h2,
+.story-settings-header p {
+  overflow-wrap: anywhere;
 }
 
 .story-settings-heading-icon {
@@ -63,12 +75,17 @@
 
 .story-settings-tabs {
   display: flex;
+  min-width: 0;
+  flex: none;
   gap: 0.25rem;
   padding: 0 1.5rem;
   border-bottom: 1px solid var(--product-line);
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
 }
 
 .story-settings-tabs button {
+  flex: none;
   padding: 0.7rem 0.85rem;
   border: 0;
   border-bottom: 2px solid transparent;
@@ -77,6 +94,7 @@
   color: var(--product-muted);
   box-shadow: none;
   font-weight: 700;
+  white-space: nowrap;
 }
 
 .story-settings-tabs button.active {
@@ -85,14 +103,20 @@
 }
 
 .story-settings-content {
+  width: 100%;
   min-height: 0;
+  flex: 1 1 auto;
   padding: 1.5rem;
   overflow-y: auto;
   overscroll-behavior: contain;
 }
 
+.story-settings-content > section {
+  min-width: 0;
+}
+
 .story-settings-properties {
-  max-width: 520px;
+  width: min(100%, 520px);
 }
 
 .story-settings-properties h3,
@@ -100,22 +124,34 @@
   margin-top: 0;
 }
 
-.story-settings-properties form {
+.story-settings-properties-fields {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 1rem;
   margin-top: 1.25rem;
 }
 
-.story-settings-properties form > small {
+.story-settings-properties .product-field,
+.story-settings-properties input {
+  min-width: 0;
+}
+
+.story-settings-properties-fields > small {
   margin-top: -0.75rem;
   color: var(--product-muted);
   font-size: 0.72rem;
 }
 
-.settings-card-actions {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 1rem;
+.story-access-settings {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.story-access-settings .settings-card {
+  min-width: 0;
+}
+
+.story-access-settings .collaborator-form {
+  grid-template-columns: minmax(12rem, 1fr) minmax(9rem, 0.45fr) auto;
 }
 
 .form-success {
@@ -131,6 +167,7 @@
 .access-collaborator-identity {
   min-width: 0;
   flex: 1;
+  overflow-wrap: anywhere;
 }
 
 .access-collaborator-role {
@@ -174,15 +211,49 @@
 
 @media (max-width: 760px) {
   .story-settings-dialog {
-    min-height: calc(100dvh - 2rem);
+    width: calc(100vw - 2rem);
+    height: calc(100dvh - 2rem);
   }
 
-  .story-access-settings,
-  .collaborator-form {
+  .story-access-settings .collaborator-form {
     grid-template-columns: 1fr;
   }
 
-  .collaborator-form button {
+  .story-access-settings .collaborator-form button {
     justify-self: stretch;
+  }
+}
+
+@media (max-width: 520px) {
+  .story-settings-header {
+    grid-template-columns: 36px minmax(0, 1fr) auto;
+    gap: 0.75rem;
+    padding: 1rem 1rem 0.75rem;
+  }
+
+  .story-settings-heading-icon {
+    width: 36px;
+    height: 36px;
+  }
+
+  .story-settings-tabs {
+    padding-inline: 1rem;
+  }
+
+  .story-settings-content {
+    padding: 1rem;
+  }
+
+  .story-access-settings .settings-card {
+    padding: 1rem;
+  }
+
+  .story-access-settings .access-list li {
+    align-items: stretch;
+  }
+
+  .access-collaborator-role,
+  .access-collaborator-role select {
+    width: 100%;
   }
 }

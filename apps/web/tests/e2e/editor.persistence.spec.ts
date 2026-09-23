@@ -231,7 +231,9 @@ test.describe('Story editor persistence', () => {
     await page.goto('/stories/story-1/edit');
     await page.getByRole('button', { name: 'Story settings' }).click();
     await page.getByLabel('Story start date and time').fill('2026-07-27T09:30');
-    await page.getByRole('button', { name: 'Save properties' }).click();
+    await page.getByLabel('Story start date and time').blur();
+    await expect(page.getByText('Properties saved.')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Save properties' })).toHaveCount(0);
     await page.getByRole('button', { name: 'Close Story settings' }).click();
     await page.getByTestId('interaction-node').filter({ hasText: 'Original title' }).click();
     await page.getByLabel('Duration (minutes)').fill('45');
