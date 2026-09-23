@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { isValidUserDisplayName, normalizeUserDisplayName } from '@paralleax/shared';
 import { api, type AuthUser } from '../api';
+import { apiErrorMessage } from '../apiErrorMessages';
 import { LanguageSwitcher } from '../components/LanguageSwitcher';
 import './ProductPages.css';
 
@@ -91,7 +92,7 @@ export function AuthPage({
         : await api.login(email, password);
       onAuthenticated(user);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : t('auth.failed'));
+      setError(apiErrorMessage(caught, t, t('auth.failed')));
     } finally {
       setPending(false);
     }

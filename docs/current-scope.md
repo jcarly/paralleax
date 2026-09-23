@@ -27,7 +27,12 @@ Paralleax currently includes:
   while zero-second timers never appear in normal reading.
 - Persisted visual graph decorations: movable, resizable colored frames and movable
   text with configurable color, size, family, weight, and style. Decorations stay
-  behind interactions and trigger markers and have no reader semantics.
+  behind interactions and trigger markers and have no reader semantics. Frame
+  resizing keeps its authored top-left origin.
+- Shared persisted graph actions back inspector controls, the `Delete` shortcut,
+  and element context menus. Interaction and Trigger menus expose review,
+  deletion, automatic placement, and child creation where applicable; decoration
+  menus expose deletion. Keyboard deletion is disabled inside editable fields.
 - Reader execution with authenticated database-backed saves: one reader
   autosave, one editor-only Simulation Mode autosave, and up to 20 named manual
   saves per user and story. Manual saves and both autosaves can be loaded in
@@ -72,9 +77,19 @@ Paralleax currently includes:
   item/stat definitions, and selected title/body/name/description text, with replies,
   open/resolved state, durable quote context, detached-anchor detection, and live
   SSE invalidation/reload for reviewers connected to the same API process. Editors
-  use an inspector-integrated list, contextual discussion rail, navigable anchors,
-  and expandable graph post-its; authorized readers see and create contextual
-  interaction discussions in the player.
+  use an inspector-integrated list, a translucent and explicitly collapsible
+  contextual discussion rail, consistent graph/context-list counts, local
+  title/body/name/description markers, navigable anchors, and expandable graph
+  post-its. Authorized thread managers can move a graph post-it by updating its
+  existing canvas anchor; failed moves restore the persisted position and remain
+  visible as an operational error. A discussion author or Story manager can
+  soft-delete the complete thread from any anchor presentation; deleted threads
+  leave normal badges and views, remain recoverable from the global comment
+  panel, and restore with every reply intact. Discussions remain readable
+  together while only the selected discussion exposes a reply field, which
+  collapses when focus leaves it.
+  Authorized readers see and create contextual interaction discussions in the
+  player.
 - An administrator-only account interface with role summaries, account search and
   filtering, global user/admin assignment, and visible last-administrator protection.
 - A unified story library: anonymous visitors see public stories, while signed-in
@@ -136,7 +151,9 @@ Paralleax currently includes:
   finish before a remote refresh is applied.
 - English and French interface localization with browser detection, a persisted
   user preference, and English fallback. Authored story content is never
-  translated by the interface layer.
+  translated by the interface layer. Operational API failures are presented
+  through localized stable error codes across authentication, access, imports,
+  authoring persistence, comments, administration, reader loading, and saves.
 - Optional Formbricks-powered contextual feedback from the application header,
   with localized controls and non-content route, surface, version, viewport, and
   language context. The integration stays disabled when it is not configured.

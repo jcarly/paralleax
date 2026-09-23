@@ -42,6 +42,13 @@ capability and therefore authentication. Owners, administrators, editors, and a
 thread's creator may resolve or move that thread. The web client uses resolved
 capabilities only to adapt the interface.
 
+Deletion applies to the complete discussion rather than to individual messages.
+It records recoverable deletion metadata on the thread, preserves every reply,
+and removes the thread from normal projections. The thread author or a Story
+manager may delete it and may explicitly load and restore it from the global
+deleted-discussion view. Editors who are neither the author nor a manager retain
+resolve and move capability but cannot delete the discussion.
+
 The editor projects canvas anchors as React Flow comment nodes and entity/text
 anchors as badges and discussion context. Reviewers without edit capability use
 the same graph in a read-only workspace. Comments are never copied into the
@@ -62,6 +69,6 @@ which matches the current single-API-process deployment baseline.
 - Text threads survive nearby edits when their quote/context remains unique and
   fail visibly when it does not.
 - Public reading never exposes reviewer identities or discussion content.
-- Message editing/deletion, mentions, notifications, cross-replica event fan-out,
+- Message editing/individual deletion, mentions, notifications, cross-replica event fan-out,
   suggestions, simultaneous story editing, and reader-facing social comments
   remain separate future work.

@@ -6,6 +6,7 @@ import type {
   StoryCollaboratorRole,
 } from '@paralleax/shared';
 import { api } from '../../api';
+import { apiErrorMessage } from '../../apiErrorMessages';
 
 interface StoryAccessSettingsProps {
   storyId: string;
@@ -33,7 +34,7 @@ export function StoryAccessSettings({ storyId, onInaccessible }: StoryAccessSett
       })
       .catch((caught: unknown) => {
         if (cancelled || onInaccessible?.(caught)) return;
-        setError(caught instanceof Error ? caught.message : t('access.loadFailed'));
+        setError(apiErrorMessage(caught, t, t('access.loadFailed')));
       });
     return () => {
       cancelled = true;
@@ -82,7 +83,7 @@ export function StoryAccessSettings({ storyId, onInaccessible }: StoryAccessSett
       });
     } catch (caught) {
       if (onInaccessible?.(caught)) return;
-      setError(caught instanceof Error ? caught.message : t('access.removeFailed'));
+      setError(apiErrorMessage(caught, t, t('access.removeFailed')));
     } finally {
       setPending(false);
     }
@@ -100,7 +101,7 @@ export function StoryAccessSettings({ storyId, onInaccessible }: StoryAccessSett
       return updated;
     } catch (caught) {
       if (!onInaccessible?.(caught)) {
-        setError(caught instanceof Error ? caught.message : fallbackError);
+        setError(apiErrorMessage(caught, t, fallbackError));
       }
       return undefined;
     } finally {

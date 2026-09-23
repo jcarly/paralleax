@@ -88,6 +88,7 @@ export function InteractionNode({ id, data }: NodeProps) {
             d.onOpenComments?.('trigger', d.rootTriggerId!);
           }}
         >
+          <span aria-hidden="true">◆</span>
           {d.rootTriggerCommentCount}
         </button>
       ) : null}

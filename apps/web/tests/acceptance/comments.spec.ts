@@ -122,6 +122,43 @@ test('a reader and an author review an interaction through persisted live commen
     await reloadedComments.getByRole('button').filter({ hasText: 'Reviewed opening' }).click();
     await expect(reloadedComments.getByText('Yes, I will clarify it.')).toBeVisible();
     await expect(reloadedComments.getByText('Resolved', { exact: true })).toBeVisible();
+
+    const deletion = waitForApiResponse(
+      readerPage,
+      'DELETE',
+      new RegExp(`/api/stories/${storyId}/comment-threads/${thread.id}$`),
+    );
+    readerPage.once('dialog', (dialog) => dialog.accept());
+    await reloadedComments.getByRole('button', { name: 'Delete discussion' }).click();
+    await expectSuccessful(deletion);
+    await expect(reloadedComments.getByText('Could this opening be clearer?')).toHaveCount(0);
+
+    const deletedProjection = readerPage.waitForResponse(
+      (response) => {
+        const request = response.request();
+        const url = new URL(response.url());
+        return (
+          request.method() === 'GET' &&
+          url.pathname === `/api/stories/${storyId}/comment-threads` &&
+          url.searchParams.get('includeDeleted') === 'true'
+        );
+      },
+      { timeout: 60_000 },
+    );
+    await reloadedComments.getByRole('button', { name: 'Deleted' }).click();
+    await expectSuccessful(deletedProjection);
+    await reloadedComments.getByRole('button').filter({ hasText: 'Reviewed opening' }).click();
+    await expect(reloadedComments.getByText('Yes, I will clarify it.')).toBeVisible();
+
+    const restoration = waitForApiResponse(
+      readerPage,
+      'PATCH',
+      new RegExp(`/api/stories/${storyId}/comment-threads/${thread.id}/restore$`),
+    );
+    await reloadedComments.getByRole('button', { name: 'Restore' }).click();
+    await expectSuccessful(restoration);
+    await expect(reloadedComments.getByText('Resolved', { exact: true })).toBeVisible();
+    await expect(reloadedComments.getByText('Yes, I will clarify it.')).toBeVisible();
   } finally {
     await readerContext.close();
   }

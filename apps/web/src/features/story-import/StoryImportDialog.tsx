@@ -9,6 +9,7 @@ import type {
   Story,
 } from '@paralleax/shared';
 import { api } from '../../api';
+import { apiErrorMessage } from '../../apiErrorMessages';
 import { handleModalDialogKeyDown } from '../../components/modalDialogKeyboard';
 import { loadStoryEditor } from '../../pages/storyRouteLoaders';
 
@@ -62,9 +63,11 @@ export function StoryImportDialog({
       onImported(result.story);
     } catch (caught) {
       setRequestError(
-        caught instanceof Error
-          ? caught.message
-          : t(format === 'qsp' ? 'library.import.qsp.failed' : 'library.import.failed'),
+        apiErrorMessage(
+          caught,
+          t,
+          t(format === 'qsp' ? 'library.import.qsp.failed' : 'library.import.failed'),
+        ),
       );
     } finally {
       setPending(false);

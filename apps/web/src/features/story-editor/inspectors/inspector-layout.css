@@ -24,6 +24,20 @@
   padding: 0.42rem 0.58rem;
   font-size: 0.7rem;
 }
+.inspector-comment-actions .inspector-comment-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  min-width: 38px;
+  border-color: var(--color-trigger);
+  color: var(--color-trigger-strong);
+}
+.inspector-comment-toggle.active {
+  background: var(--color-trigger-soft);
+}
+.inspector-comment-toggle small {
+  font-size: 0.64rem;
+}
 .inspector-close {
   width: 32px;
   height: 32px;
@@ -51,4 +65,32 @@
 }
 .review-target-inspector [data-comment-field] {
   user-select: text;
+}
+
+.inspector-commentable-field {
+  position: relative;
+}
+
+.inspector-commentable-field.has-comments > label,
+.inspector-commentable-field.has-comments > [data-comment-field] {
+  padding-right: 2.8rem;
+}
+
+.inspector-field-comment-badge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  min-width: 2.35rem;
+  min-height: 1.6rem;
+  padding: 0.2rem 0.38rem;
+  border: 1px solid color-mix(in srgb, var(--color-trigger) 48%, var(--color-border));
+  border-radius: 999px;
+  background: var(--color-trigger-soft);
+  color: var(--color-trigger-strong);
+  font-size: 0.66rem;
+  line-height: 1;
 }

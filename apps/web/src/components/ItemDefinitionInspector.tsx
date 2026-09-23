@@ -1,5 +1,9 @@
 import { getStatValueType, type ItemDefinition, type StatDefinition } from '@paralleax/shared';
 import { useTranslation } from 'react-i18next';
+import {
+  InspectorCommentField,
+  type InspectorTextCommentProps,
+} from '../features/comments/InspectorCommentField';
 import { CategoryField } from './CategoryField';
 import { ImageUrlField } from './ImageUrlField';
 import { RemoveRowButton } from './RemoveRowButton';
@@ -11,6 +15,8 @@ export function ItemDefinitionInspector({
   statDefinitions,
   onChange,
   onPatch,
+  textCommentCounts,
+  onOpenTextComments,
 }: {
   itemDefinition: ItemDefinition;
   categorySuggestions?: string[];
@@ -22,21 +28,28 @@ export function ItemDefinitionInspector({
       Pick<ItemDefinition, 'name' | 'description' | 'category' | 'imageUrl' | 'stats'>
     >,
   ) => Promise<void>;
-}) {
+} & InspectorTextCommentProps) {
   const { t } = useTranslation();
   const itemStats = itemDefinition.stats ?? [];
   return (
     <div>
       <h3>{t('inspector.item')}</h3>
-      <label>
-        {t('inspector.name')}
-        <input
-          data-comment-field="name"
-          value={itemDefinition.name}
-          onChange={(event) => onChange({ ...itemDefinition, name: event.target.value })}
-          onBlur={(event) => void onPatch(itemDefinition.id, { name: event.target.value })}
-        />
-      </label>
+      <InspectorCommentField
+        field="name"
+        label={t('inspector.name')}
+        textCommentCounts={textCommentCounts}
+        onOpenTextComments={onOpenTextComments}
+      >
+        <label>
+          {t('inspector.name')}
+          <input
+            data-comment-field="name"
+            value={itemDefinition.name}
+            onChange={(event) => onChange({ ...itemDefinition, name: event.target.value })}
+            onBlur={(event) => void onPatch(itemDefinition.id, { name: event.target.value })}
+          />
+        </label>
+      </InspectorCommentField>
       <CategoryField
         category={itemDefinition.category}
         suggestions={categorySuggestions}
@@ -48,16 +61,23 @@ export function ItemDefinitionInspector({
         onChange={(imageUrl) => onChange({ ...itemDefinition, imageUrl })}
         onBlur={(imageUrl) => void onPatch(itemDefinition.id, { imageUrl })}
       />
-      <label>
-        {t('inspector.description')}
-        <textarea
-          data-comment-field="description"
-          rows={7}
-          value={itemDefinition.description}
-          onChange={(event) => onChange({ ...itemDefinition, description: event.target.value })}
-          onBlur={(event) => void onPatch(itemDefinition.id, { description: event.target.value })}
-        />
-      </label>
+      <InspectorCommentField
+        field="description"
+        label={t('inspector.description')}
+        textCommentCounts={textCommentCounts}
+        onOpenTextComments={onOpenTextComments}
+      >
+        <label>
+          {t('inspector.description')}
+          <textarea
+            data-comment-field="description"
+            rows={7}
+            value={itemDefinition.description}
+            onChange={(event) => onChange({ ...itemDefinition, description: event.target.value })}
+            onBlur={(event) => void onPatch(itemDefinition.id, { description: event.target.value })}
+          />
+        </label>
+      </InspectorCommentField>
       <p className="hint">{t('inspector.itemInstanceHelp')}</p>
       <div className="inspector-section-header">
         <h3>{t('inspector.itemStats')}</h3>

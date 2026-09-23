@@ -4,6 +4,7 @@ import type { Request } from 'express';
 import type { RequestUser } from './auth.decorators';
 import { AuthService } from './auth.service';
 import { readSessionCookie } from './session-cookie';
+import { apiErrorResponse } from '../operations/api-error-response';
 
 @Injectable()
 export class SessionGuard implements CanActivate {
@@ -29,7 +30,9 @@ export class SessionGuard implements CanActivate {
     const user = await this.auth.userForToken(readSessionCookie(request.headers.cookie));
     if (!user) {
       if (optional) return true;
-      throw new UnauthorizedException('Authentication required');
+      throw new UnauthorizedException(
+        apiErrorResponse('AUTHENTICATION_REQUIRED', 'Authentication required'),
+      );
     }
     request.user = {
       id: user.id,

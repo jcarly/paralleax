@@ -4,16 +4,20 @@ import { CanvasActionIcon, type CanvasActionIconName } from './StoryCanvasToolba
 
 interface StoryCanvasContextMenuProps {
   position: { x: number; y: number };
+  targetKind: 'canvas' | 'interaction' | 'trigger' | 'graphDecoration';
   canEdit: boolean;
   canComment: boolean;
   canOrganize: boolean;
   organizeSelectionCount: number;
-  onCreateInteraction: () => void;
-  onAddComment: () => void;
-  onAddFrame: () => void;
-  onAddText: () => void;
-  onOrganizeAll: () => void;
-  onOrganizeSelection: () => void;
+  onCreateInteraction?: () => void;
+  onAddComment?: () => void;
+  onAddFrame?: () => void;
+  onAddText?: () => void;
+  onAddChild?: () => void;
+  onDelete?: () => void;
+  onOrganizeAll?: () => void;
+  onOrganizeSelection?: () => void;
+  onOrganizeTarget?: () => void;
   onClose: () => void;
 }
 
@@ -23,6 +27,7 @@ const viewportMargin = 8;
 
 export function StoryCanvasContextMenu({
   position,
+  targetKind,
   canEdit,
   canComment,
   canOrganize,
@@ -31,8 +36,11 @@ export function StoryCanvasContextMenu({
   onAddComment,
   onAddFrame,
   onAddText,
+  onAddChild,
+  onDelete,
   onOrganizeAll,
   onOrganizeSelection,
+  onOrganizeTarget,
   onClose,
 }: StoryCanvasContextMenuProps) {
   const { t } = useTranslation();
@@ -79,38 +87,54 @@ export function StoryCanvasContextMenu({
       onContextMenu={(event) => event.preventDefault()}
       ref={menuRef}
       role="menu"
-      aria-label={t('editor.contextMenu.label')}
+      aria-label={t(
+        targetKind === 'canvas' ? 'editor.contextMenu.label' : 'editor.contextMenu.elementLabel',
+      )}
       style={{ left, top }}
     >
-      {canEdit ? (
+      {targetKind === 'canvas' && canEdit && onCreateInteraction ? (
         <ContextMenuAction
           icon="root"
           label={t('editor.contextMenu.addInteraction')}
           onClick={() => run(onCreateInteraction)}
         />
       ) : null}
-      {canComment ? (
+      {targetKind !== 'graphDecoration' && canComment && onAddComment ? (
         <ContextMenuAction
           icon="postIt"
           label={t('editor.contextMenu.addComment')}
           onClick={() => run(onAddComment)}
         />
       ) : null}
-      {canEdit ? (
+      {targetKind === 'canvas' && canEdit && onAddFrame ? (
         <ContextMenuAction
           icon="frame"
           label={t('decoration.addFrame')}
           onClick={() => run(onAddFrame)}
         />
       ) : null}
-      {canEdit ? (
+      {targetKind === 'canvas' && canEdit && onAddText ? (
         <ContextMenuAction
           icon="text"
           label={t('decoration.addText')}
           onClick={() => run(onAddText)}
         />
       ) : null}
-      {canEdit ? (
+      {targetKind === 'interaction' && canEdit && onAddChild ? (
+        <ContextMenuAction
+          icon="child"
+          label={t('editor.contextMenu.addChild')}
+          onClick={() => run(onAddChild)}
+        />
+      ) : null}
+      {(targetKind === 'interaction' || targetKind === 'trigger') && canEdit && onOrganizeTarget ? (
+        <ContextMenuAction
+          icon="organize"
+          label={t('editor.contextMenu.organizeTarget')}
+          onClick={() => run(onOrganizeTarget)}
+        />
+      ) : null}
+      {targetKind === 'canvas' && canEdit && onOrganizeAll && onOrganizeSelection ? (
         <div className="canvas-context-submenu-trigger">
           <ContextMenuAction
             icon="organize"
@@ -146,6 +170,14 @@ export function StoryCanvasContextMenu({
           ) : null}
         </div>
       ) : null}
+      {targetKind !== 'canvas' && canEdit && onDelete ? (
+        <ContextMenuAction
+          icon="delete"
+          label={t(`editor.contextMenu.delete.${targetKind}`)}
+          danger
+          onClick={() => run(onDelete)}
+        />
+      ) : null}
     </div>
   );
 }
@@ -157,6 +189,7 @@ function ContextMenuAction({
   suffix,
   ariaExpanded,
   ariaHasPopup,
+  danger = false,
   onClick,
   onKeyDown,
 }: {
@@ -166,6 +199,7 @@ function ContextMenuAction({
   suffix?: ReactNode;
   ariaExpanded?: boolean;
   ariaHasPopup?: 'menu';
+  danger?: boolean;
   onClick: () => void;
   onKeyDown?: (event: React.KeyboardEvent<HTMLButtonElement>) => void;
 }) {
@@ -173,6 +207,7 @@ function ContextMenuAction({
     <button
       type="button"
       role="menuitem"
+      className={danger ? 'danger' : undefined}
       disabled={disabled}
       aria-expanded={ariaExpanded}
       aria-haspopup={ariaHasPopup}

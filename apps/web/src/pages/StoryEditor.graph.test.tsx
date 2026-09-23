@@ -70,6 +70,185 @@ describe('StoryEditor graph collaboration and layout', () => {
     ).toHaveClass('selected');
   });
 
+  it('persists an authorized canvas post-it move through its existing anchor', async () => {
+    const user = userEvent.setup();
+    const story = storyWithTwoInteractions();
+    const thread: StoryCommentThread = {
+      id: 'thread-canvas',
+      storyId: story.id,
+      anchor: { kind: 'canvas', position: { x: 120, y: 180 } },
+      anchorLabel: 'Story graph',
+      status: 'open',
+      createdBy: { id: 'user-1', displayName: 'Author' },
+      createdAt: '2026-08-16T09:00:00.000Z',
+      updatedAt: '2026-08-16T09:00:00.000Z',
+      messages: [
+        {
+          id: 'message-canvas',
+          threadId: 'thread-canvas',
+          author: { id: 'user-1', displayName: 'Author' },
+          body: 'Move this note.',
+          createdAt: '2026-08-16T09:00:00.000Z',
+        },
+      ],
+    };
+    vi.mocked(api.listCommentThreads).mockResolvedValue([thread]);
+    vi.mocked(api.updateCommentThreadAnchor).mockImplementation(
+      async (_storyId, _threadId, anchor) => ({ ...thread, anchor }),
+    );
+
+    await renderEditor(story);
+    await screen.findByTestId('flow-node-comment:thread-canvas');
+    await user.click(screen.getByTestId('drag-node-comment:thread-canvas'));
+
+    await waitFor(() =>
+      expect(api.updateCommentThreadAnchor).toHaveBeenCalledWith('story-1', 'thread-canvas', {
+        kind: 'canvas',
+        position: { x: 145, y: 195 },
+      }),
+    );
+  });
+
+  it('reports a failed canvas post-it move without keeping an unpersisted position', async () => {
+    const user = userEvent.setup();
+    const story = storyWithTwoInteractions();
+    const thread: StoryCommentThread = {
+      id: 'thread-failed-canvas',
+      storyId: story.id,
+      anchor: { kind: 'canvas', position: { x: 80, y: 90 } },
+      anchorLabel: 'Story graph',
+      status: 'open',
+      createdBy: { id: 'user-1', displayName: 'Author' },
+      createdAt: '2026-08-16T09:00:00.000Z',
+      updatedAt: '2026-08-16T09:00:00.000Z',
+      messages: [
+        {
+          id: 'message-failed-canvas',
+          threadId: 'thread-failed-canvas',
+          author: { id: 'user-1', displayName: 'Author' },
+          body: 'This move will fail.',
+          createdAt: '2026-08-16T09:00:00.000Z',
+        },
+      ],
+    };
+    vi.mocked(api.listCommentThreads).mockResolvedValue([thread]);
+    vi.mocked(api.updateCommentThreadAnchor).mockRejectedValue(
+      new Error('The connection was interrupted.'),
+    );
+
+    await renderEditor(story);
+    await user.click(await screen.findByTestId('drag-node-comment:thread-failed-canvas'));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('The connection was interrupted.');
+    expect(screen.getByRole('button', { name: 'Reload comments' })).toBeInTheDocument();
+    expect(screen.getByTestId('flow-node-comment:thread-failed-canvas')).toHaveAttribute(
+      'data-node-x',
+      '80',
+    );
+    expect(screen.getByTestId('flow-node-comment:thread-failed-canvas')).toHaveAttribute(
+      'data-node-y',
+      '90',
+    );
+  });
+
+  it('keeps contextual comments collapsed until their inspector control is used', async () => {
+    const user = userEvent.setup();
+    const story = storyWithTwoInteractions();
+    vi.mocked(api.listCommentThreads).mockResolvedValue([
+      {
+        id: 'thread-interaction-2',
+        storyId: story.id,
+        anchor: { kind: 'entity', targetType: 'interaction', targetId: 'interaction-2' },
+        anchorLabel: 'Second interaction',
+        status: 'open',
+        createdBy: { id: 'user-1', displayName: 'Author' },
+        createdAt: '2026-08-16T09:00:00.000Z',
+        updatedAt: '2026-08-16T09:00:00.000Z',
+        messages: [
+          {
+            id: 'message-1',
+            threadId: 'thread-interaction-2',
+            author: { id: 'user-1', displayName: 'Author' },
+            body: 'Keep this collapsed by default.',
+            createdAt: '2026-08-16T09:00:00.000Z',
+          },
+        ],
+      },
+    ]);
+
+    await renderEditor(story);
+    await user.click(screen.getByTestId('flow-node-interaction-2'));
+
+    expect(
+      screen.queryByRole('complementary', { name: 'Comments for the selected element' }),
+    ).not.toBeInTheDocument();
+    const inspector = screen.getByRole('complementary', { name: 'Inspector' });
+    await user.click(
+      within(inspector).getByRole('button', { name: 'Open comments for this element' }),
+    );
+
+    expect(
+      screen.getByRole('complementary', { name: 'Comments for the selected element' }),
+    ).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Collapse comments for this element' }));
+    expect(
+      screen.queryByRole('complementary', { name: 'Comments for the selected element' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('opens an anchored text discussion from its inspector field marker', async () => {
+    const user = userEvent.setup();
+    const story = storyWithTwoInteractions();
+    vi.mocked(api.listCommentThreads).mockResolvedValue([
+      {
+        id: 'thread-interaction-title',
+        storyId: story.id,
+        anchor: {
+          kind: 'text',
+          targetType: 'interaction',
+          targetId: 'interaction-2',
+          field: 'title',
+          selector: {
+            exact: 'Second interaction',
+            prefix: '',
+            suffix: '',
+            start: 0,
+            end: 18,
+            sourceHash: 'title-hash',
+          },
+        },
+        anchorLabel: 'Second interaction',
+        status: 'open',
+        createdBy: { id: 'user-1', displayName: 'Author' },
+        createdAt: '2026-08-16T09:00:00.000Z',
+        updatedAt: '2026-08-16T09:00:00.000Z',
+        messages: [
+          {
+            id: 'message-title',
+            threadId: 'thread-interaction-title',
+            author: { id: 'user-1', displayName: 'Author' },
+            body: 'The title needs more context.',
+            createdAt: '2026-08-16T09:00:00.000Z',
+          },
+        ],
+      },
+    ]);
+
+    await renderEditor(story);
+    await user.click(screen.getByTestId('flow-node-interaction-2'));
+
+    expect(
+      screen.queryByRole('complementary', { name: 'Comments for the selected element' }),
+    ).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Open comments for Title' }));
+
+    expect(
+      screen.getByRole('complementary', { name: 'Comments for the selected element' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('The title needs more context.')).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'Reply' })).toBeInTheDocument();
+  });
+
   it('applies remote story content, positions, context, and decorations without reloading', async () => {
     vi.stubGlobal('EventSource', FakeEventSource);
     await renderEditor();
@@ -345,6 +524,96 @@ describe('StoryEditor graph collaboration and layout', () => {
     expect(screen.getByRole('textbox', { name: 'Comment' })).toBeInTheDocument();
   });
 
+  it('offers interaction actions from the existing graph context menu', async () => {
+    const user = userEvent.setup();
+    const story = storyWithTwoInteractions();
+    const withChild = structuredClone(story);
+    withChild.interactions.push({
+      id: 'interaction-3',
+      title: 'Context child',
+      body: '',
+      position: { x: 80, y: 420 },
+      triggers: [{ id: 'trigger-3', inputInteractionIds: ['interaction-1'], conditions: [] }],
+    });
+    vi.mocked(api.createInteraction).mockResolvedValue(
+      interactionMutation(withChild, 'interaction-3'),
+    );
+
+    await renderEditor(story);
+    fireEvent.contextMenu(screen.getByTestId('flow-node-interaction-1'), {
+      clientX: 320,
+      clientY: 240,
+    });
+
+    const menu = screen.getByRole('menu', { name: 'Graph element actions' });
+    for (const label of [
+      'Add comment',
+      'Add child interaction',
+      'Place automatically',
+      'Delete interaction',
+    ]) {
+      expect(within(menu).getByRole('menuitem', { name: label })).toBeInTheDocument();
+    }
+
+    await user.click(within(menu).getByRole('menuitem', { name: 'Add child interaction' }));
+    expect(api.createInteraction).toHaveBeenCalledWith('story-1', {
+      parentId: 'interaction-1',
+      position: expect.any(Object),
+    });
+  });
+
+  it('targets linked and root triggers from their contextual actions', async () => {
+    const user = userEvent.setup();
+    const story = storyWithTwoInteractions();
+    const withoutLinkedTrigger = structuredClone(story);
+    withoutLinkedTrigger.interactions[1].triggers = [];
+    const withoutRootTrigger = structuredClone(story);
+    withoutRootTrigger.interactions[0].triggers = [];
+    vi.mocked(api.deleteTrigger)
+      .mockResolvedValueOnce(withoutLinkedTrigger)
+      .mockResolvedValueOnce(withoutRootTrigger);
+
+    await renderEditor(story);
+    fireEvent.contextMenu(screen.getByTestId('flow-node-trigger:interaction-2:trigger-2'), {
+      clientX: 440,
+      clientY: 260,
+    });
+
+    let menu = screen.getByRole('menu', { name: 'Graph element actions' });
+    expect(within(menu).getByRole('menuitem', { name: 'Add comment' })).toBeInTheDocument();
+    expect(within(menu).getByRole('menuitem', { name: 'Place automatically' })).toBeInTheDocument();
+    expect(within(menu).queryByRole('menuitem', { name: 'Add child interaction' })).toBeNull();
+    await user.click(within(menu).getByRole('menuitem', { name: 'Delete trigger' }));
+    expect(api.deleteTrigger).toHaveBeenCalledWith('story-1', 'interaction-2', 'trigger-2');
+
+    const rootTrigger = within(screen.getByTestId('flow-node-interaction-1')).getByRole('button', {
+      name: 'Select root trigger',
+    });
+    fireEvent.contextMenu(rootTrigger, { clientX: 320, clientY: 160 });
+    menu = screen.getByRole('menu', { name: 'Graph element actions' });
+    await user.click(within(menu).getByRole('menuitem', { name: 'Delete trigger' }));
+    expect(api.deleteTrigger).toHaveBeenLastCalledWith('story-1', 'interaction-1', 'trigger-1');
+  });
+
+  it('deletes the selected graph element with Delete only outside editable fields', async () => {
+    const user = userEvent.setup();
+    const story = storyWithTwoInteractions();
+    const afterDelete = structuredClone(story);
+    afterDelete.interactions = afterDelete.interactions.filter(({ id }) => id !== 'interaction-1');
+    vi.mocked(api.deleteInteraction).mockResolvedValue(afterDelete);
+
+    await renderEditor(story);
+    await user.click(screen.getByTestId('flow-node-interaction-1'));
+
+    const title = screen.getByLabelText('Title');
+    title.focus();
+    fireEvent.keyDown(title, { key: 'Delete' });
+    expect(api.deleteInteraction).not.toHaveBeenCalled();
+
+    fireEvent.keyDown(document, { key: 'Delete' });
+    expect(api.deleteInteraction).toHaveBeenCalledWith('story-1', 'interaction-1');
+  });
+
   it('organizes the current graph selection from the canvas context submenu', async () => {
     const user = userEvent.setup();
     await renderEditor(storyWithThreeInteractions());
@@ -540,9 +809,12 @@ describe('StoryEditor graph collaboration and layout', () => {
     await user.click(frame);
     await user.click(screen.getByTestId('resize-decoration'));
     expect(api.updateGraphDecoration).toHaveBeenCalledWith('story-1', 'frame-1', {
+      position: { x: -260, y: -160 },
       width: 500,
       height: 320,
     });
+    expect(frame).toHaveAttribute('data-node-x', '-260');
+    expect(frame).toHaveAttribute('data-node-y', '-160');
 
     await user.click(screen.getByTestId('drag-node-frame-1'));
     expect(api.updateGraphDecoration).toHaveBeenCalledWith('story-1', 'frame-1', {
@@ -612,5 +884,36 @@ describe('StoryEditor graph collaboration and layout', () => {
     await user.click(screen.getByRole('button', { name: 'Delete decoration' }));
     expect(api.deleteGraphDecoration).toHaveBeenCalledWith('story-1', 'text-1');
     await waitFor(() => expect(screen.queryByTestId('flow-node-text-1')).not.toBeInTheDocument());
+  });
+
+  it('deletes a graph decoration from its contextual actions', async () => {
+    const user = userEvent.setup();
+    const story = cloneStory();
+    story.graphDecorations = [
+      {
+        id: 'frame-context',
+        kind: 'frame',
+        position: { x: 20, y: 30 },
+        color: '#5b6ee1',
+        width: 420,
+        height: 240,
+      },
+    ];
+    const afterDelete = structuredClone(story);
+    afterDelete.graphDecorations = [];
+    vi.mocked(api.deleteGraphDecoration).mockResolvedValue(afterDelete);
+
+    await renderEditor(story);
+    fireEvent.contextMenu(screen.getByTestId('flow-node-frame-context'), {
+      clientX: 300,
+      clientY: 200,
+    });
+
+    const menu = screen.getByRole('menu', { name: 'Graph element actions' });
+    expect(within(menu).queryByRole('menuitem', { name: 'Add comment' })).toBeNull();
+    await user.click(within(menu).getByRole('menuitem', { name: 'Delete decoration' }));
+
+    expect(api.deleteGraphDecoration).toHaveBeenCalledWith('story-1', 'frame-context');
+    expect(window.confirm).toHaveBeenCalledWith('Delete this graph decoration?');
   });
 });

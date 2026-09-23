@@ -1,20 +1,25 @@
 import { createHash, timingSafeEqual } from 'node:crypto';
 import { ForbiddenException } from '@nestjs/common';
 import type { RegistrationMode } from '../config/app-config.service';
+import { apiErrorResponse } from '../operations/api-error-response';
 
 export function assertRegistrationAllowed(
   mode: RegistrationMode,
   configuredAccessCode: string | undefined,
   suppliedAccessCode: string | undefined,
 ) {
-  if (mode === 'closed') throw new ForbiddenException('Registration is closed');
+  if (mode === 'closed') {
+    throw new ForbiddenException(apiErrorResponse('REGISTRATION_CLOSED', 'Registration is closed'));
+  }
   if (
     mode === 'access-code' &&
     (!configuredAccessCode ||
       !suppliedAccessCode ||
       !secretsEqual(configuredAccessCode, suppliedAccessCode))
   ) {
-    throw new ForbiddenException('A valid invitation code is required');
+    throw new ForbiddenException(
+      apiErrorResponse('INVITATION_CODE_INVALID', 'A valid invitation code is required'),
+    );
   }
 }
 

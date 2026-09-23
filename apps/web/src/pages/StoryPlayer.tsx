@@ -9,6 +9,7 @@ import type {
   Story,
 } from '@paralleax/shared';
 import {
+  canDeleteCommentThread,
   canManageCommentThread,
   doConditionsMatch,
   ensureStoryInteractionPositions,
@@ -22,6 +23,7 @@ import {
   isCommentAnchorDetached,
 } from '@paralleax/shared';
 import { api } from '../api';
+import { apiErrorMessage } from '../apiErrorMessages';
 import { RichTextContent } from '../components/RichTextContent';
 import { RichTextEditor } from '../components/RichTextEditor';
 import { StoryCommentsPanel } from '../features/comments/StoryCommentsPanel';
@@ -245,7 +247,7 @@ export function StoryPlayer({
         if (recoverFromStoryAccessError(caught)) return;
         setLoadError({
           key: loadKey,
-          message: caught instanceof Error ? caught.message : t('player.loadFailed'),
+          message: apiErrorMessage(caught, t, t('player.loadFailed')),
         });
       });
     return () => {
@@ -406,7 +408,7 @@ export function StoryPlayer({
         if (cancelled || recoverFromStoryAccessError(caught)) return;
         setRuntimeOptionsFailure({
           key: requestedRuntimeSliceKey,
-          message: caught instanceof Error ? caught.message : t('player.loadFailed'),
+          message: apiErrorMessage(caught, t, t('player.loadFailed')),
         });
       });
     return () => {
@@ -454,6 +456,10 @@ export function StoryPlayer({
   const canManageSelectedReaderThread = Boolean(
     selectedReaderCommentThread &&
     canManageCommentThread(story?.capabilities, currentUserId, selectedReaderCommentThread),
+  );
+  const canDeleteSelectedReaderThread = Boolean(
+    selectedReaderCommentThread &&
+    canDeleteCommentThread(story?.capabilities, currentUserId, selectedReaderCommentThread),
   );
   const ownedItemDefinitionIds = useMemo(
     () =>
@@ -916,6 +922,11 @@ export function StoryPlayer({
     setCommentsOpen(true);
   }
 
+  async function deleteReaderComment(threadId: string) {
+    if (!window.confirm(t('comments.confirmDelete'))) return;
+    return comments.deleteThread(threadId);
+  }
+
   async function saveChoiceTitle(interaction: Interaction, title: string) {
     setEditingChoiceId(undefined);
     await simulationMutations.run(
@@ -1072,8 +1083,15 @@ export function StoryPlayer({
             onClick={() => setCommentsOpen((open) => !open)}
           >
             {t('comments.title')}
-            {readerCommentThreads.filter(({ status }) => status === 'open').length ? (
-              <small>{readerCommentThreads.filter(({ status }) => status === 'open').length}</small>
+            {readerCommentThreads.filter(({ status, deletedAt }) => status === 'open' && !deletedAt)
+              .length ? (
+              <small>
+                {
+                  readerCommentThreads.filter(
+                    ({ status, deletedAt }) => status === 'open' && !deletedAt,
+                  ).length
+                }
+              </small>
             ) : null}
           </button>
         ) : null}
@@ -1459,6 +1477,8 @@ export function StoryPlayer({
         draftAnchor={comments.draftAnchor}
         canComment={canUseReaderComments}
         canManageThread={canManageSelectedReaderThread}
+        canDeleteThread={canDeleteSelectedReaderThread}
+        deletedLoading={comments.deletedLoading}
         realtimeStatus={comments.realtimeStatus}
         onClose={() => setCommentsOpen(false)}
         onSelect={comments.selectThread}
@@ -1466,6 +1486,9 @@ export function StoryPlayer({
         onCreate={comments.create}
         onReply={comments.reply}
         onStatus={comments.setStatus}
+        onDelete={deleteReaderComment}
+        onRestore={comments.restoreThread}
+        onLoadDeleted={comments.loadDeleted}
       />
       {savesOpen ? (
         <ReaderSaveDialog

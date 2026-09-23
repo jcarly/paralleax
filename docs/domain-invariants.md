@@ -29,6 +29,10 @@ details. They should stay covered by tests as the editor grows.
 - A comment anchor is either a graph position, a same-story target entity, or a
   supported text field on a same-story target. Missing or changed text detaches
   the anchor without deleting its preserved quote or discussion.
+- Deleting a review discussion soft-deletes the whole thread and all of its
+  replies as one unit. Only the thread author or a Story manager may delete or
+  restore it; ordinary comment projections, badges, and reader surfaces exclude
+  deleted threads.
 - An interaction should keep at least one trigger.
 - An interaction should always have a canvas position. Loaded or incoming story
   data with a missing position is normalized with a stable default position.

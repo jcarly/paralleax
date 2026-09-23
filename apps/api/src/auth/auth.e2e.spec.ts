@@ -140,10 +140,11 @@ describe('Auth API', () => {
       .post('/api/auth/register')
       .send({ email: 'invalid', password: 'short', displayName: 'Invalid' })
       .expect(400);
-    await request(httpServer)
+    const invalidCredentials = await request(httpServer)
       .post('/api/auth/login')
       .send({ email: 'missing@example.com', password: 'wrong password' })
       .expect(401);
+    expect(invalidCredentials.body.code).toBe('INVALID_CREDENTIALS');
   });
 
   it('returns one conflict when the same email is registered concurrently', async () => {

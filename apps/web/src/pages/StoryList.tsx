@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { STORY_LIST_PAGE_SIZE, type Story, type StorySummary } from '@paralleax/shared';
 import { api, type AuthUser } from '../api';
+import { apiErrorMessage } from '../apiErrorMessages';
 import { handleModalDialogKeyDown } from '../components/modalDialogKeyboard';
 import { StoryImportDialog } from '../features/story-import/StoryImportDialog';
 import { loadStoryEditor, loadStoryPlayer } from './storyRouteLoaders';
@@ -69,9 +70,9 @@ export function StoryList({ user }: { user: AuthUser | null }) {
         setHasMore(result.hasMore);
         setLoadError('');
       })
-      .catch((caught: Error) => {
+      .catch((caught: unknown) => {
         if (active && requestVersion === listRequestVersion.current) {
-          setLoadError(caught.message);
+          setLoadError(apiErrorMessage(caught, t, t('library.loadFailed')));
         }
       })
       .finally(() => {
@@ -82,7 +83,7 @@ export function StoryList({ user }: { user: AuthUser | null }) {
     return () => {
       active = false;
     };
-  }, [debouncedQuery, filter, isAuthenticated, listRequestKey, sort]);
+  }, [debouncedQuery, filter, isAuthenticated, listRequestKey, sort, t]);
 
   async function loadMoreStories() {
     if (!hasMore || loadingMore) return;
@@ -107,7 +108,7 @@ export function StoryList({ user }: { user: AuthUser | null }) {
       setHasMore(result.hasMore);
     } catch (caught) {
       if (requestVersion === listRequestVersion.current) {
-        setError(caught instanceof Error ? caught.message : t('library.loadMoreFailed'));
+        setError(apiErrorMessage(caught, t, t('library.loadMoreFailed')));
       }
     } finally {
       setLoadingMore(false);
@@ -128,7 +129,7 @@ export function StoryList({ user }: { user: AuthUser | null }) {
       closeCreationDialog();
       resetLibraryView();
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : t('library.createFailed'));
+      setError(apiErrorMessage(caught, t, t('library.createFailed')));
     } finally {
       setPending('');
     }
@@ -147,7 +148,7 @@ export function StoryList({ user }: { user: AuthUser | null }) {
       setTotalCount((count) => count + demos.length);
       resetLibraryView();
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : t('library.demoFailed'));
+      setError(apiErrorMessage(caught, t, t('library.demoFailed')));
     } finally {
       setPending('');
     }
@@ -161,7 +162,7 @@ export function StoryList({ user }: { user: AuthUser | null }) {
       setTotalCount((count) => Math.max(0, count - 1));
       setRefreshVersion((version) => version + 1);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : t('library.deleteFailed'));
+      setError(apiErrorMessage(caught, t, t('library.deleteFailed')));
     }
   }
 

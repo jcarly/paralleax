@@ -10,6 +10,7 @@ import { isValidUserDisplayName, normalizeUserDisplayName, type UserRole } from 
 import { createHash, randomBytes, randomUUID, scrypt as nodeScrypt, timingSafeEqual } from 'crypto';
 import { promisify } from 'util';
 import { AuthRepository, type AuthUser } from './auth.repository';
+import { apiErrorResponse } from '../operations/api-error-response';
 
 const scrypt = promisify(nodeScrypt);
 const sessionDurationMs = 30 * 24 * 60 * 60 * 1000;
@@ -22,10 +23,17 @@ export class AuthService {
     const normalizedEmail = email.trim().toLowerCase();
     const normalizedDisplayName = normalizeUserDisplayName(displayName);
     if (!isValidUserDisplayName(normalizedDisplayName)) {
-      throw new BadRequestException('Display name must contain between 2 and 50 characters');
+      throw new BadRequestException(
+        apiErrorResponse(
+          'DISPLAY_NAME_INVALID',
+          'Display name must contain between 2 and 50 characters',
+        ),
+      );
     }
     if (await this.repository.findUserByEmail(normalizedEmail)) {
-      throw new ConflictException('Email already registered');
+      throw new ConflictException(
+        apiErrorResponse('EMAIL_ALREADY_REGISTERED', 'Email already registered'),
+      );
     }
     const now = new Date().toISOString();
     const candidate: Omit<AuthUser, 'role'> = {
@@ -37,7 +45,9 @@ export class AuthService {
     };
     const user = await this.repository.createUser(candidate);
     if (!user) {
-      throw new ConflictException('Email already registered');
+      throw new ConflictException(
+        apiErrorResponse('EMAIL_ALREADY_REGISTERED', 'Email already registered'),
+      );
     }
     return this.createSession(user);
   }
@@ -45,7 +55,9 @@ export class AuthService {
   async login(email: string, password: string) {
     const user = await this.repository.findUserByEmail(email.trim().toLowerCase());
     if (!user || !(await verifyPassword(password, user.passwordHash))) {
-      throw new UnauthorizedException('Invalid email or password');
+      throw new UnauthorizedException(
+        apiErrorResponse('INVALID_CREDENTIALS', 'Invalid email or password'),
+      );
     }
     return this.createSession(user);
   }
@@ -70,8 +82,12 @@ export class AuthService {
     const updated = await this.repository.updateUserRole(userId, role);
     if (!updated) {
       const users = await this.repository.listUsers();
-      if (!users.some(({ id }) => id === userId)) throw new NotFoundException('User not found');
-      throw new BadRequestException('The last administrator cannot be demoted');
+      if (!users.some(({ id }) => id === userId)) {
+        throw new NotFoundException(apiErrorResponse('USER_NOT_FOUND', 'User not found'));
+      }
+      throw new BadRequestException(
+        apiErrorResponse('LAST_ADMINISTRATOR', 'The last administrator cannot be demoted'),
+      );
     }
     return updated;
   }
@@ -79,15 +95,26 @@ export class AuthService {
   async updateDisplayName(userId: string, displayName: string) {
     const normalizedDisplayName = normalizeUserDisplayName(displayName);
     if (!isValidUserDisplayName(normalizedDisplayName)) {
-      throw new BadRequestException('Display name must contain between 2 and 50 characters');
+      throw new BadRequestException(
+        apiErrorResponse(
+          'DISPLAY_NAME_INVALID',
+          'Display name must contain between 2 and 50 characters',
+        ),
+      );
     }
     const updated = await this.repository.updateDisplayName(userId, normalizedDisplayName);
-    if (!updated) throw new NotFoundException('User not found');
+    if (!updated) {
+      throw new NotFoundException(apiErrorResponse('USER_NOT_FOUND', 'User not found'));
+    }
     return updated;
   }
 
   private assertAdmin(role: UserRole) {
-    if (role !== 'admin') throw new ForbiddenException('Administrator access required');
+    if (role !== 'admin') {
+      throw new ForbiddenException(
+        apiErrorResponse('ADMINISTRATOR_REQUIRED', 'Administrator access required'),
+      );
+    }
   }
 
   private async createSession(user: AuthUser) {

@@ -114,11 +114,12 @@
 }
 .comment-filters {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.35rem;
   margin-bottom: 0.75rem;
 }
 .comment-filters button {
-  flex: 1;
+  flex: 1 1 calc(50% - 0.35rem);
   border-color: var(--color-border);
   padding: 0.4rem 0.55rem;
   background: var(--color-surface-secondary);
@@ -170,6 +171,7 @@
 }
 .comment-thread-heading {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-start;
   justify-content: space-between;
   gap: 0.75rem;
@@ -235,14 +237,46 @@
 }
 .contextual-comments-rail {
   position: relative;
-  z-index: 2;
+  z-index: 4;
+  grid-row: 1;
+  grid-column: 1;
+  justify-self: end;
+  width: min(300px, 100%);
+  height: 100%;
   min-width: 0;
   overflow-x: hidden;
   overflow-y: auto;
   padding: 1rem 0.75rem;
   border-left: 1px solid var(--color-border);
-  background: #f7f4eb;
-  box-shadow: inset -1px 0 var(--color-border);
+  background: rgb(247 244 235 / 78%);
+  box-shadow: -10px 0 28px #2d2d2d0f;
+  backdrop-filter: blur(3px);
+}
+.editor-layout.with-navigation .contextual-comments-rail,
+.editor-layout.with-navigation-collapsed .contextual-comments-rail {
+  grid-column: 2;
+}
+.contextual-comments-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+.contextual-comments-header > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--color-trigger-strong);
+  font-size: 0.72rem;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.contextual-comments-header button {
+  width: 30px;
+  height: 30px;
+  padding: 0;
 }
 .contextual-comments-rail > .comments-error {
   margin: 0 0 0.75rem;
@@ -373,6 +407,10 @@
 .comment-inline-status {
   width: 100%;
   margin-top: 0.45rem;
+}
+.comment-inline-delete {
+  width: 100%;
+  margin-top: 0.35rem;
 }
 .comment-draft-card {
   padding: 0.75rem;

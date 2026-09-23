@@ -2,6 +2,7 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-li
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
+import type { StoryCommentThread } from '@paralleax/shared';
 import {
   api,
   baseStory,
@@ -218,6 +219,42 @@ describe('StoryEditor story context', () => {
       }),
     );
     expect(screen.getByRole('button', { name: 'Harbor' })).toBeInTheDocument();
+  });
+
+  it('shows a consistent comment badge on a commented context entity', async () => {
+    const user = userEvent.setup();
+    const story = cloneStory();
+    story.locations = [{ id: 'harbor', name: 'Harbor', description: 'A quiet harbor.' }];
+    const thread: StoryCommentThread = {
+      id: 'thread-harbor',
+      storyId: story.id,
+      anchor: { kind: 'entity', targetType: 'location', targetId: 'harbor' },
+      anchorLabel: 'Harbor',
+      status: 'open',
+      createdBy: { id: 'user-1', displayName: 'Author' },
+      createdAt: '2026-08-16T09:00:00.000Z',
+      updatedAt: '2026-08-16T09:00:00.000Z',
+      messages: [
+        {
+          id: 'message-harbor',
+          threadId: 'thread-harbor',
+          author: { id: 'user-1', displayName: 'Author' },
+          body: 'Clarify the atmosphere here.',
+          createdAt: '2026-08-16T09:00:00.000Z',
+        },
+      ],
+    };
+    vi.mocked(api.listCommentThreads).mockResolvedValue([thread]);
+
+    await renderEditor(story);
+    await user.click(
+      await screen.findByRole('button', { name: 'Open comments for this element: Harbor' }),
+    );
+
+    expect(
+      screen.getByRole('complementary', { name: 'Comments for the selected element' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Clarify the atmosphere here.')).toBeInTheDocument();
   });
 
   it('assigns locations to interactions and trigger conditions', async () => {

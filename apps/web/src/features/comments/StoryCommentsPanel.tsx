@@ -12,6 +12,8 @@ export function StoryCommentsPanel({
   draftAnchor,
   canComment,
   canManageThread = false,
+  canDeleteThread = false,
+  deletedLoading = false,
   realtimeStatus = 'unavailable',
   placement = 'overlay',
   onClose,
@@ -20,6 +22,9 @@ export function StoryCommentsPanel({
   onCreate,
   onReply,
   onStatus,
+  onDelete,
+  onRestore,
+  onLoadDeleted,
   onReattach,
 }: {
   open: boolean;
@@ -30,6 +35,8 @@ export function StoryCommentsPanel({
   draftAnchor?: CommentAnchor;
   canComment: boolean;
   canManageThread?: boolean;
+  canDeleteThread?: boolean;
+  deletedLoading?: boolean;
   realtimeStatus?: CommentRealtimeStatus;
   placement?: 'overlay' | 'inspector';
   onClose: () => void;
@@ -38,14 +45,22 @@ export function StoryCommentsPanel({
   onCreate: (body: string) => Promise<unknown>;
   onReply: (threadId: string, body: string) => Promise<unknown>;
   onStatus: (threadId: string, status: StoryCommentThread['status']) => Promise<unknown>;
+  onDelete?: (threadId: string) => Promise<unknown> | void;
+  onRestore?: (threadId: string) => Promise<unknown> | void;
+  onLoadDeleted?: () => Promise<unknown> | void;
   onReattach?: (threadId: string) => Promise<unknown>;
 }) {
   const { t, i18n } = useTranslation();
-  const [filter, setFilter] = useState<'open' | 'resolved' | 'all'>('open');
+  const [filter, setFilter] = useState<'open' | 'resolved' | 'deleted' | 'all'>('open');
   const [body, setBody] = useState('');
   const [pending, setPending] = useState(false);
   const visibleThreads = useMemo(
-    () => threads.filter((thread) => filter === 'all' || thread.status === filter),
+    () =>
+      threads.filter((thread) =>
+        filter === 'deleted'
+          ? Boolean(thread.deletedAt)
+          : !thread.deletedAt && (filter === 'all' || thread.status === filter),
+      ),
     [filter, threads],
   );
 
@@ -102,9 +117,15 @@ export function StoryCommentsPanel({
           <div className="comment-thread-heading">
             <div>
               <b>{selectedThread.anchorLabel}</b>
-              <small>{t(`comments.status.${selectedThread.status}`)}</small>
+              <small>
+                {t(
+                  selectedThread.deletedAt
+                    ? 'comments.status.deleted'
+                    : `comments.status.${selectedThread.status}`,
+                )}
+              </small>
             </div>
-            {canManageThread ? (
+            {!selectedThread.deletedAt && canManageThread ? (
               <button
                 className="secondary"
                 type="button"
@@ -118,8 +139,26 @@ export function StoryCommentsPanel({
                 {t(selectedThread.status === 'open' ? 'comments.resolve' : 'comments.reopen')}
               </button>
             ) : null}
+            {!selectedThread.deletedAt && canDeleteThread && onDelete ? (
+              <button
+                className="secondary danger"
+                type="button"
+                onClick={() => void onDelete(selectedThread.id)}
+              >
+                {t('comments.delete')}
+              </button>
+            ) : null}
+            {selectedThread.deletedAt && canDeleteThread && onRestore ? (
+              <button
+                className="secondary"
+                type="button"
+                onClick={() => void onRestore(selectedThread.id)}
+              >
+                {t('comments.restore')}
+              </button>
+            ) : null}
           </div>
-          {selectedThread.detached ? (
+          {!selectedThread.deletedAt && selectedThread.detached ? (
             <div className="comment-detached">
               <p>{t('comments.detached')}</p>
               {onReattach ? (
@@ -155,19 +194,22 @@ export function StoryCommentsPanel({
       ) : (
         <section className="comment-thread-list">
           <div className="comment-filters">
-            {(['open', 'resolved', 'all'] as const).map((value) => (
+            {(['open', 'resolved', 'all', 'deleted'] as const).map((value) => (
               <button
                 type="button"
                 className={filter === value ? 'active' : ''}
                 aria-pressed={filter === value}
-                onClick={() => setFilter(value)}
+                onClick={() => {
+                  setFilter(value);
+                  if (value === 'deleted') void onLoadDeleted?.();
+                }}
                 key={value}
               >
                 {t(`comments.filters.${value}`)}
               </button>
             ))}
           </div>
-          {loading ? (
+          {loading || (filter === 'deleted' && deletedLoading) ? (
             <p>{t('comments.loading')}</p>
           ) : visibleThreads.length ? (
             visibleThreads.map((thread) => (
@@ -192,7 +234,7 @@ export function StoryCommentsPanel({
           )}
         </section>
       )}
-      {(draftAnchor || selectedThread) && canComment ? (
+      {(draftAnchor || (selectedThread && !selectedThread.deletedAt)) && canComment ? (
         <form className="comment-reply-form" onSubmit={(event) => void submit(event)}>
           <label>
             <span>{t(draftAnchor ? 'comments.comment' : 'comments.reply')}</span>

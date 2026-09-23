@@ -9,6 +9,7 @@ import {
   type Story,
 } from '@paralleax/shared';
 import { api } from '../../api';
+import { apiErrorMessage } from '../../apiErrorMessages';
 import { handleModalDialogKeyDown } from '../../components/modalDialogKeyboard';
 
 export function ReaderSaveDialog({
@@ -38,7 +39,9 @@ export function ReaderSaveDialog({
         if (!cancelled) setSaves(nextSaves);
       })
       .catch((caught: unknown) => {
-        if (!cancelled) setError(message(caught, t('player.saves.loadListFailed')));
+        if (!cancelled) {
+          setError(apiErrorMessage(caught, t, t('player.saves.loadListFailed')));
+        }
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -71,7 +74,7 @@ export function ReaderSaveDialog({
       setSaves((current) => [summary(save), ...current]);
       setName('');
     } catch (caught) {
-      setError(message(caught, t('player.saves.createFailed')));
+      setError(apiErrorMessage(caught, t, t('player.saves.createFailed')));
     } finally {
       setPending(undefined);
     }
@@ -84,7 +87,7 @@ export function ReaderSaveDialog({
       await onLoad(await api.getReaderSave(story.id, saveId));
       onClose();
     } catch (caught) {
-      setError(message(caught, t('player.saves.loadFailed')));
+      setError(apiErrorMessage(caught, t, t('player.saves.loadFailed')));
     } finally {
       setPending(undefined);
     }
@@ -101,7 +104,7 @@ export function ReaderSaveDialog({
       });
       setSaves((current) => current.map((item) => (item.id === save.id ? summary(updated) : item)));
     } catch (caught) {
-      setError(message(caught, t('player.saves.overwriteFailed')));
+      setError(apiErrorMessage(caught, t, t('player.saves.overwriteFailed')));
     } finally {
       setPending(undefined);
     }
@@ -115,7 +118,7 @@ export function ReaderSaveDialog({
       await api.deleteReaderSave(story.id, save.id);
       setSaves((current) => current.filter(({ id }) => id !== save.id));
     } catch (caught) {
-      setError(message(caught, t('player.saves.deleteFailed')));
+      setError(apiErrorMessage(caught, t, t('player.saves.deleteFailed')));
     } finally {
       setPending(undefined);
     }
@@ -248,8 +251,4 @@ function summary(save: ReaderSave): ReaderSaveSummary {
     createdAt: save.createdAt,
     updatedAt: save.updatedAt,
   };
-}
-
-function message(caught: unknown, fallback: string): string {
-  return caught instanceof Error ? caught.message : fallback;
 }

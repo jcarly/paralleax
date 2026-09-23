@@ -2,7 +2,12 @@ import { Injectable, type MessageEvent } from '@nestjs/common';
 import { interval, map, merge, of, Subject, filter, type Observable } from 'rxjs';
 
 export type CommentChangeType =
-  'thread-created' | 'message-added' | 'status-changed' | 'anchor-changed';
+  | 'thread-created'
+  | 'message-added'
+  | 'status-changed'
+  | 'anchor-changed'
+  | 'thread-deleted'
+  | 'thread-restored';
 
 export interface CommentChangeEvent {
   storyId: string;

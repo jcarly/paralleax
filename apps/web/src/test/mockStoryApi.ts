@@ -58,5 +58,7 @@ export function createStoryApiMock() {
     addCommentMessage: vi.fn(),
     updateCommentThreadStatus: vi.fn(),
     updateCommentThreadAnchor: vi.fn(),
+    deleteCommentThread: vi.fn(),
+    restoreCommentThread: vi.fn(),
   } satisfies StoryApiMock;
 }

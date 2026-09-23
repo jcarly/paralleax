@@ -9,6 +9,10 @@ import {
 import { useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { getStatTargets, statTargetId, statTargetLabel, type StatTarget } from '../storyStats';
+import {
+  InspectorCommentField,
+  type InspectorTextCommentProps,
+} from '../features/comments/InspectorCommentField';
 import { RichTextEditor } from './RichTextEditor';
 
 function getInitials(name: string) {
@@ -185,6 +189,8 @@ export function InteractionInspector({
   onPatch,
   onDelete,
   onSelectInteraction,
+  textCommentCounts,
+  onOpenTextComments,
 }: {
   story: Story;
   interaction: Interaction;
@@ -192,7 +198,7 @@ export function InteractionInspector({
   onPatch: (id: string, patch: Partial<Interaction>) => Promise<void>;
   onDelete: () => Promise<void>;
   onSelectInteraction?: (interactionId: string) => void;
-}) {
+} & InspectorTextCommentProps) {
   const { t } = useTranslation();
   const characters = story.characters ?? [];
   const interactionLinkTargets = story.interactions.filter(
@@ -276,29 +282,43 @@ export function InteractionInspector({
     <div className="interaction-inspector">
       <section className="interaction-inspector-content">
         <h3>{t('interactionInspector.content')}</h3>
-        <label>
-          {t('interactionInspector.title')}
-          <input
-            data-comment-field="title"
-            value={interaction.title}
-            onChange={(event) => updateLocalInteraction({ title: event.target.value })}
-            onBlur={(event) => void onPatch(interaction.id, { title: event.target.value })}
+        <InspectorCommentField
+          field="title"
+          label={t('interactionInspector.title')}
+          textCommentCounts={textCommentCounts}
+          onOpenTextComments={onOpenTextComments}
+        >
+          <label>
+            {t('interactionInspector.title')}
+            <input
+              data-comment-field="title"
+              value={interaction.title}
+              onChange={(event) => updateLocalInteraction({ title: event.target.value })}
+              onBlur={(event) => void onPatch(interaction.id, { title: event.target.value })}
+            />
+          </label>
+        </InspectorCommentField>
+        <InspectorCommentField
+          field="body"
+          label={t('richText.content')}
+          textCommentCounts={textCommentCounts}
+          onOpenTextComments={onOpenTextComments}
+        >
+          <RichTextEditor
+            interactionId={interaction.id}
+            story={story}
+            value={interaction.body}
+            onChange={(body) => updateLocalInteraction({ body })}
+            onBlur={(body) => void onPatch(interaction.id, { body })}
+            interactionLinkTargets={interactionLinkTargets}
+            conditionalTextBlocks={interaction.conditionalTextBlocks}
+            onConditionalTextChange={(body, conditionalTextBlocks) => {
+              updateLocalInteraction({ body, conditionalTextBlocks });
+              void onPatch(interaction.id, { body, conditionalTextBlocks });
+            }}
+            onConditionalTargetClick={onSelectInteraction}
           />
-        </label>
-        <RichTextEditor
-          interactionId={interaction.id}
-          story={story}
-          value={interaction.body}
-          onChange={(body) => updateLocalInteraction({ body })}
-          onBlur={(body) => void onPatch(interaction.id, { body })}
-          interactionLinkTargets={interactionLinkTargets}
-          conditionalTextBlocks={interaction.conditionalTextBlocks}
-          onConditionalTextChange={(body, conditionalTextBlocks) => {
-            updateLocalInteraction({ body, conditionalTextBlocks });
-            void onPatch(interaction.id, { body, conditionalTextBlocks });
-          }}
-          onConditionalTargetClick={onSelectInteraction}
-        />
+        </InspectorCommentField>
       </section>
       <details className="inspector-accordion" open>
         <summary>

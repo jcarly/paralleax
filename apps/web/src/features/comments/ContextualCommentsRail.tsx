@@ -9,12 +9,15 @@ export function ContextualCommentsRail({
   error,
   canComment,
   canManageThread,
+  canDeleteThread = () => false,
   onSelect,
   onCreate,
   onCancelDraft,
   onReply,
   onStatus,
+  onDelete,
   onReattach,
+  onClose,
 }: {
   threads: StoryCommentThread[];
   selectedThreadId?: string;
@@ -22,17 +25,35 @@ export function ContextualCommentsRail({
   error: string;
   canComment: boolean;
   canManageThread: (thread: StoryCommentThread) => boolean;
-  onSelect: (threadId: string) => void;
+  canDeleteThread?: (thread: StoryCommentThread) => boolean;
+  onSelect: (threadId: string | undefined) => void;
   onCreate: (body: string) => Promise<unknown>;
   onCancelDraft: () => void;
   onReply: (threadId: string, body: string) => Promise<unknown>;
   onStatus: (threadId: string, status: StoryCommentThread['status']) => Promise<unknown>;
+  onDelete?: (threadId: string) => Promise<unknown> | void;
   onReattach?: (threadId: string) => Promise<unknown>;
+  onClose: () => void;
 }) {
   const { t } = useTranslation();
 
   return (
     <aside className="contextual-comments-rail" aria-label={t('comments.contextualPanel')}>
+      <header className="contextual-comments-header">
+        <span>
+          <span aria-hidden="true">◆</span>
+          {t('comments.title')}
+        </span>
+        <button
+          className="ghost"
+          type="button"
+          aria-label={t('comments.close')}
+          title={t('comments.collapseForEntity')}
+          onClick={onClose}
+        >
+          ×
+        </button>
+      </header>
       {error ? (
         <p className="comments-error" role="alert">
           {error}
@@ -52,9 +73,12 @@ export function ContextualCommentsRail({
           expanded={thread.id === selectedThreadId}
           canComment={canComment}
           canManageThread={canManageThread(thread)}
+          canDeleteThread={canDeleteThread(thread)}
           onExpand={() => onSelect(thread.id)}
+          onCollapse={() => onSelect(undefined)}
           onReply={(body) => onReply(thread.id, body)}
           onStatus={(status) => onStatus(thread.id, status)}
+          onDelete={onDelete ? () => onDelete(thread.id) : undefined}
           onReattach={thread.detached && onReattach ? () => onReattach(thread.id) : undefined}
         />
       ))}

@@ -2,7 +2,16 @@ import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 export type CanvasActionIconName =
-  'undo' | 'redo' | 'history' | 'root' | 'frame' | 'text' | 'organize' | 'postIt';
+  | 'undo'
+  | 'redo'
+  | 'history'
+  | 'root'
+  | 'child'
+  | 'frame'
+  | 'text'
+  | 'organize'
+  | 'postIt'
+  | 'delete';
 
 interface StoryCanvasToolbarProps {
   canEdit: boolean;
@@ -155,6 +164,13 @@ export function CanvasActionIcon({ name }: { name: CanvasActionIconName }) {
         <rect x="5" y="14" width="14" height="7" rx="2" />
       </>
     ),
+    child: (
+      <>
+        <rect x="4" y="3" width="7" height="6" rx="1.5" />
+        <rect x="13" y="15" width="7" height="6" rx="1.5" />
+        <path d="M7.5 9v4h9v2M13 12l3.5 3 3.5-3" />
+      </>
+    ),
     frame: (
       <>
         <rect x="4" y="4" width="16" height="16" rx="2" />
@@ -174,6 +190,12 @@ export function CanvasActionIcon({ name }: { name: CanvasActionIconName }) {
       <>
         <path d="M5 3h10l4 4v14H5V3Z" />
         <path d="M15 3v5h4M8 12h8M8 16h5" />
+      </>
+    ),
+    delete: (
+      <>
+        <path d="M4 7h16M9 7V4h6v3M7 7l1 14h8l1-14" />
+        <path d="M10 11v6M14 11v6" />
       </>
     ),
   } satisfies Record<CanvasActionIconName, ReactNode>;

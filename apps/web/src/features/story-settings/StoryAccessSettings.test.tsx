@@ -59,6 +59,27 @@ describe('StoryAccessSettings', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Access unavailable');
   });
 
+  it('localizes a collaborator API error instead of exposing its English server message', async () => {
+    await i18n.changeLanguage('fr');
+    const user = userEvent.setup();
+    vi.mocked(api.setStoryCollaborator).mockRejectedValue(
+      Object.assign(new Error('The collaborator must be an existing non-owner account'), {
+        status: 400,
+        code: 'COLLABORATOR_ACCOUNT_INVALID',
+      }),
+    );
+
+    render(<StoryAccessSettings storyId="story-1" />);
+    await screen.findByLabelText('Lecture');
+    await user.type(screen.getByLabelText('E-mail de l’utilisateur'), 'missing@example.com');
+    await user.click(screen.getByRole('button', { name: 'Ajouter l’utilisateur' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Ce compte n’existe pas ou est déjà propriétaire de l’histoire.',
+    );
+    expect(screen.getByRole('alert')).not.toHaveTextContent('The collaborator must');
+  });
+
   it('updates policies, adds a user, changes their access, and removes them', async () => {
     const user = userEvent.setup();
     const viewerAccess: StoryAccessConfiguration = {

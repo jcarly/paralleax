@@ -110,10 +110,17 @@ function uploadBinary<T>(
       try {
         resolve(xhr.status === 204 ? (undefined as T) : (JSON.parse(xhr.responseText) as T));
       } catch {
-        reject(new ApiError('The server returned an invalid JSON response', xhr.status));
+        reject(
+          new ApiError(
+            'The server returned an invalid JSON response',
+            xhr.status,
+            'INVALID_SERVER_RESPONSE',
+          ),
+        );
       }
     };
-    xhr.onerror = () => reject(new ApiError('The server could not be reached', 0));
+    xhr.onerror = () =>
+      reject(new ApiError('The server could not be reached', 0, 'NETWORK_UNAVAILABLE'));
     xhr.send(content);
   });
 }
@@ -348,8 +355,10 @@ export const api = {
       method: 'PATCH',
       body: JSON.stringify(input),
     }),
-  listCommentThreads: (storyId: string) =>
-    request<StoryCommentThread[]>(`/stories/${storyId}/comment-threads`),
+  listCommentThreads: (storyId: string, includeDeleted = false) =>
+    request<StoryCommentThread[]>(
+      `/stories/${storyId}/comment-threads${includeDeleted ? '?includeDeleted=true' : ''}`,
+    ),
   createCommentThread: (storyId: string, anchor: CommentAnchor, body: string) =>
     request<StoryCommentThread>(`/stories/${storyId}/comment-threads`, {
       method: 'POST',
@@ -373,6 +382,14 @@ export const api = {
     request<StoryCommentThread>(`/stories/${storyId}/comment-threads/${threadId}/anchor`, {
       method: 'PATCH',
       body: JSON.stringify({ anchor }),
+    }),
+  deleteCommentThread: (storyId: string, threadId: string) =>
+    request<StoryCommentThread>(`/stories/${storyId}/comment-threads/${threadId}`, {
+      method: 'DELETE',
+    }),
+  restoreCommentThread: (storyId: string, threadId: string) =>
+    request<StoryCommentThread>(`/stories/${storyId}/comment-threads/${threadId}/restore`, {
+      method: 'PATCH',
     }),
   createInteraction: (storyId: string, input: CreateInteractionInput) =>
     request<InteractionSaveResponse>(`/stories/${storyId}/interactions`, {

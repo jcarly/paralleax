@@ -52,6 +52,8 @@ export interface StoryCommentThread {
   updatedAt: string;
   resolvedBy?: CommentAuthor;
   resolvedAt?: string;
+  deletedBy?: CommentAuthor;
+  deletedAt?: string;
   messages: CommentMessage[];
   detached?: boolean;
 }
@@ -66,6 +68,14 @@ export function canManageCommentThread(
     capabilities?.canEdit ||
     (actorId && thread.createdBy.id === actorId),
   );
+}
+
+export function canDeleteCommentThread(
+  capabilities: Pick<StoryAccessCapabilities, 'canManage'> | undefined,
+  actorId: string | undefined,
+  thread: Pick<StoryCommentThread, 'createdBy'>,
+) {
+  return Boolean(capabilities?.canManage || (actorId && thread.createdBy.id === actorId));
 }
 
 export function isCommentAnchor(value: unknown): value is CommentAnchor {

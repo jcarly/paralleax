@@ -31,11 +31,13 @@ function nodeData(overrides: Partial<CommentPinNodeData> = {}): CommentPinNodeDa
     expanded: false,
     canComment: true,
     canManageThread: true,
+    canDeleteThread: true,
     onOpen: vi.fn(),
     onCreate: vi.fn(),
     onCancelDraft: vi.fn(),
     onReply: vi.fn(),
     onStatus: vi.fn(),
+    onDelete: vi.fn(),
     ...overrides,
   };
 }
@@ -61,6 +63,29 @@ describe('CommentPinNode', () => {
     expect(onOpen).toHaveBeenCalledWith(thread.id);
   });
 
+  it('shows the drag handle only to an actor allowed to manage the thread', () => {
+    const { rerender } = render(
+      <CommentPinNode
+        {...({ id: `comment:${thread.id}`, data: nodeData() } as unknown as ComponentProps<
+          typeof CommentPinNode
+        >)}
+      />,
+    );
+
+    expect(screen.getByTitle('Move this post-it')).toBeInTheDocument();
+
+    rerender(
+      <CommentPinNode
+        {...({
+          id: `comment:${thread.id}`,
+          data: nodeData({ canManageThread: false }),
+        } as unknown as ComponentProps<typeof CommentPinNode>)}
+      />,
+    );
+
+    expect(screen.queryByTitle('Move this post-it')).not.toBeInTheDocument();
+  });
+
   it('offers an inline reply when the post-it is expanded', async () => {
     const user = userEvent.setup();
     const onReply = vi.fn().mockResolvedValue(thread);
@@ -70,6 +95,16 @@ describe('CommentPinNode', () => {
     await user.type(screen.getByRole('textbox', { name: 'Reply' }), 'Done.');
     await user.click(screen.getByRole('button', { name: 'Send' }));
     expect(onReply).toHaveBeenCalledWith(thread.id, 'Done.');
+  });
+
+  it('deletes the whole discussion from an expanded post-it', async () => {
+    const user = userEvent.setup();
+    const onDelete = vi.fn();
+
+    renderNode(nodeData({ expanded: true, onDelete }));
+
+    await user.click(screen.getByRole('button', { name: 'Delete discussion' }));
+    expect(onDelete).toHaveBeenCalledWith(thread.id);
   });
 
   it('creates a new canvas post-it directly on the graph', async () => {

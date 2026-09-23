@@ -1,5 +1,37 @@
 # Changelog
 
+## 2026-09-22
+
+- Added persisted graph-element context actions for Interactions, Triggers,
+  frames, and graph text. Context menus reuse selection, comments, child
+  creation, automatic layout, deletion confirmations, and persistence; the
+  `Delete` key uses the same deletion path outside editable fields. Frame resize
+  controls now preserve the authored top-left origin.
+- Added recoverable review-discussion deletion across canvas post-its,
+  inspector anchors, and the signed-in player. Thread authors and Story managers
+  can remove a whole discussion, including every reply, from normal projections,
+  inspect it in the global deleted view, and restore it without data loss.
+- Integrated entity and anchored-text discussions into the Story inspector. A
+  translucent contextual rail now opens from the global list, consistent graph
+  and context-list badges, or inspector controls without opening during ordinary
+  selection. All discussions stay visible, only the active one exposes its reply
+  field, blur collapses that field without closing the rail, and supported text
+  fields display local comment counts.
+- Made canvas comment post-its draggable for authorized thread managers by
+  reusing the existing anchor update. Failed moves restore the persisted
+  position and surface a reloadable comment error instead of leaving a false
+  local position.
+
+## 2026-09-21
+
+- Localized operational failures through one stable API-code boundary across
+  authentication, Story access, imports, editor and Simulation persistence,
+  comments, administration, reader loading, and saves. Known and generic HTTP
+  failures no longer leak English server copy into the French interface, while
+  local browser diagnostics and future explicit application errors retain a safe
+  fallback. Authentication, collaborator, comment, and QSP import contracts now
+  assert their specific error codes.
+
 ## 2026-09-13
 
 - Consolidated Story properties and access in a tabbed editor modal opened by a

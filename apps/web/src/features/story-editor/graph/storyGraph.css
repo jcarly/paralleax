@@ -44,6 +44,14 @@
   background: var(--color-trigger-strong);
   font-size: 0.62rem;
 }
+.root-trigger-comment-badge,
+.trigger-comment-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.18rem;
+  width: auto;
+}
 .interaction-node.dimmed {
   opacity: 0.24;
 }
@@ -297,8 +305,29 @@
   pointer-events: all;
 }
 .comment-post-it {
+  position: relative;
   width: 250px;
   cursor: default;
+}
+.comment-post-it-drag-handle {
+  position: absolute;
+  top: -13px;
+  left: 50%;
+  z-index: 2;
+  display: grid;
+  width: 34px;
+  height: 22px;
+  place-items: center;
+  border: 1px solid #caa244;
+  border-radius: 999px;
+  background: #f8d878;
+  color: #765922;
+  box-shadow: 0 3px 8px #6a511d2e;
+  cursor: grab;
+  transform: translateX(-50%);
+}
+.react-flow__node-commentPin.dragging .comment-post-it-drag-handle {
+  cursor: grabbing;
 }
 .comment-post-it .comment-discussion-card {
   margin: 0;
@@ -399,6 +428,12 @@
 .graph-frame-resize-line,
 .graph-frame-resize-handle {
   pointer-events: auto;
+}
+.graph-frame-resize-line.left,
+.graph-frame-resize-line.top,
+.graph-frame-resize-handle.left,
+.graph-frame-resize-handle.top {
+  display: none;
 }
 .graph-text-decoration.selected,
 .graph-text-decoration:hover {

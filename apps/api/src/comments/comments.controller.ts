@@ -1,4 +1,15 @@
-import { Body, Controller, Get, Header, Param, Patch, Post, Sse } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Header,
+  Param,
+  Patch,
+  Post,
+  Query,
+  Sse,
+} from '@nestjs/common';
 import { CurrentUser, type RequestUser } from '../auth/auth.decorators';
 import { CommentsService } from './comments.service';
 import {
@@ -13,8 +24,12 @@ export class CommentsController {
   constructor(private readonly comments: CommentsService) {}
 
   @Get()
-  list(@Param('storyId') storyId: string, @CurrentUser() actor: RequestUser) {
-    return this.comments.list(storyId, actor);
+  list(
+    @Param('storyId') storyId: string,
+    @Query('includeDeleted') includeDeleted: string | undefined,
+    @CurrentUser() actor: RequestUser,
+  ) {
+    return this.comments.list(storyId, actor, includeDeleted === 'true');
   }
 
   @Sse('events')
@@ -60,5 +75,23 @@ export class CommentsController {
     @CurrentUser() actor: RequestUser,
   ) {
     return this.comments.updateAnchor(storyId, threadId, input.anchor, actor);
+  }
+
+  @Delete(':threadId')
+  delete(
+    @Param('storyId') storyId: string,
+    @Param('threadId') threadId: string,
+    @CurrentUser() actor: RequestUser,
+  ) {
+    return this.comments.delete(storyId, threadId, actor);
+  }
+
+  @Patch(':threadId/restore')
+  restore(
+    @Param('storyId') storyId: string,
+    @Param('threadId') threadId: string,
+    @CurrentUser() actor: RequestUser,
+  ) {
+    return this.comments.restore(storyId, threadId, actor);
   }
 }

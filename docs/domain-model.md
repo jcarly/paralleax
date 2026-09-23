@@ -463,6 +463,11 @@ the authored `Story`. A thread has an immutable identity, an anchor, an author,
 ordered messages, timestamps, and an open or resolved status. Resolving a thread
 preserves its messages.
 
+A thread author or Story manager may soft-delete the whole discussion. The
+thread and every reply remain stored together, disappear from normal comment
+projections, and can be restored from the global deleted-discussion view.
+Individual messages are not deleted independently.
+
 An anchor targets one of:
 
 - a position on the story graph;

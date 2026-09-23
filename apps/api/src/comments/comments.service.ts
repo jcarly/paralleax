@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import {
+  canDeleteCommentThread,
   canManageCommentThread,
   commentAnchorBelongsToStory,
   commentAnchorLabel,
@@ -19,6 +20,7 @@ import type { RequestUser } from '../auth/auth.decorators';
 import { StoriesRepository } from '../stories/stories.repository';
 import { CommentsRepository } from './comments.repository';
 import { CommentEventsService, type CommentChangeType } from './comments.events';
+import { apiErrorResponse } from '../operations/api-error-response';
 
 @Injectable()
 export class CommentsService {
@@ -28,13 +30,18 @@ export class CommentsService {
     private readonly events: CommentEventsService,
   ) {}
 
-  async list(storyId: string, actor: RequestUser) {
+  async list(storyId: string, actor: RequestUser, includeDeleted = false) {
     const story = await this.storyFor(storyId, actor);
     this.assertCanView(story);
-    return (await this.comments.list(storyId)).map((thread) => ({
-      ...thread,
-      detached: isCommentAnchorDetached(story, thread.anchor),
-    }));
+    return (await this.comments.list(storyId, includeDeleted))
+      .filter(
+        (thread) =>
+          !thread.deletedAt || canDeleteCommentThread(story.capabilities, actor.id, thread),
+      )
+      .map((thread) => ({
+        ...thread,
+        detached: isCommentAnchorDetached(story, thread.anchor),
+      }));
   }
 
   async stream(storyId: string, actor: RequestUser) {
@@ -85,7 +92,9 @@ export class CommentsService {
     const story = await this.storyFor(storyId, actor);
     const thread = await this.threadFor(storyId, threadId);
     if (!canManageCommentThread(story.capabilities, actor.id, thread)) {
-      throw new ForbiddenException('Resolving this comment is not permitted');
+      throw new ForbiddenException(
+        apiErrorResponse('COMMENT_RESOLVE_FORBIDDEN', 'Resolving this comment is not permitted'),
+      );
     }
     const updated = await this.comments.updateStatus(
       storyId,
@@ -101,7 +110,9 @@ export class CommentsService {
     const story = await this.storyFor(storyId, actor);
     const thread = await this.threadFor(storyId, threadId);
     if (!canManageCommentThread(story.capabilities, actor.id, thread)) {
-      throw new ForbiddenException('Moving this comment is not permitted');
+      throw new ForbiddenException(
+        apiErrorResponse('COMMENT_MOVE_FORBIDDEN', 'Moving this comment is not permitted'),
+      );
     }
     this.assertAnchor(story, anchor);
     const updated = await this.comments.updateAnchor(
@@ -112,6 +123,40 @@ export class CommentsService {
       new Date().toISOString(),
     );
     return this.changed(storyId, updated, 'anchor-changed');
+  }
+
+  async delete(storyId: string, threadId: string, actor: RequestUser) {
+    const story = await this.storyFor(storyId, actor);
+    const thread = await this.threadFor(storyId, threadId);
+    if (!canDeleteCommentThread(story.capabilities, actor.id, thread)) {
+      throw new ForbiddenException(
+        apiErrorResponse('COMMENT_DELETE_FORBIDDEN', 'Deleting this comment is not permitted'),
+      );
+    }
+    const deleted = await this.comments.softDelete(
+      storyId,
+      threadId,
+      actor.id,
+      new Date().toISOString(),
+    );
+    return this.changed(storyId, deleted, 'thread-deleted');
+  }
+
+  async restore(storyId: string, threadId: string, actor: RequestUser) {
+    const story = await this.storyFor(storyId, actor);
+    const thread = await this.threadFor(storyId, threadId, true);
+    if (!thread.deletedAt) {
+      throw new BadRequestException(
+        apiErrorResponse('COMMENT_THREAD_NOT_DELETED', 'Comment thread is not deleted'),
+      );
+    }
+    if (!canDeleteCommentThread(story.capabilities, actor.id, thread)) {
+      throw new ForbiddenException(
+        apiErrorResponse('COMMENT_RESTORE_FORBIDDEN', 'Restoring this comment is not permitted'),
+      );
+    }
+    const restored = await this.comments.restore(storyId, threadId, new Date().toISOString());
+    return this.changed(storyId, restored, 'thread-restored');
   }
 
   private changed<T extends { id: string } | undefined>(
@@ -132,13 +177,19 @@ export class CommentsService {
 
   private async storyFor(storyId: string, actor: RequestUser) {
     const story = await this.stories.find(storyId, actor.id);
-    if (!story) throw new NotFoundException('Story not found');
+    if (!story) {
+      throw new NotFoundException(apiErrorResponse('STORY_NOT_FOUND', 'Story not found'));
+    }
     return story;
   }
 
-  private async threadFor(storyId: string, threadId: string) {
-    const thread = await this.comments.find(storyId, threadId);
-    if (!thread) throw new NotFoundException('Comment thread not found');
+  private async threadFor(storyId: string, threadId: string, includeDeleted = false) {
+    const thread = await this.comments.find(storyId, threadId, includeDeleted);
+    if (!thread) {
+      throw new NotFoundException(
+        apiErrorResponse('COMMENT_THREAD_NOT_FOUND', 'Comment thread not found'),
+      );
+    }
     return thread;
   }
 
@@ -148,22 +199,30 @@ export class CommentsService {
       !story.capabilities?.canEdit &&
       !story.capabilities?.canComment
     ) {
-      throw new ForbiddenException('Viewing comments is not permitted');
+      throw new ForbiddenException(
+        apiErrorResponse('COMMENT_VIEW_FORBIDDEN', 'Viewing comments is not permitted'),
+      );
     }
   }
 
   private assertCanComment(story: Story) {
     if (!story.capabilities?.canComment) {
-      throw new ForbiddenException('Commenting is not permitted');
+      throw new ForbiddenException(
+        apiErrorResponse('COMMENT_CREATE_FORBIDDEN', 'Commenting is not permitted'),
+      );
     }
   }
 
   private assertAnchor(story: Story, anchor: CommentAnchor) {
     if (!isCommentAnchor(anchor) || !commentAnchorBelongsToStory(story, anchor)) {
-      throw new NotFoundException('Comment target not found in this story');
+      throw new NotFoundException(
+        apiErrorResponse('COMMENT_TARGET_NOT_FOUND', 'Comment target not found in this story'),
+      );
     }
     if (anchor.kind === 'text' && isCommentAnchorDetached(story, anchor)) {
-      throw new BadRequestException('Selected comment text was not found');
+      throw new BadRequestException(
+        apiErrorResponse('COMMENT_TEXT_NOT_FOUND', 'Selected comment text was not found'),
+      );
     }
   }
 }
@@ -171,7 +230,9 @@ export class CommentsService {
 function cleanBody(body: string) {
   const cleaned = body.trim();
   if (!cleaned || cleaned.length > MAX_COMMENT_BODY_LENGTH) {
-    throw new BadRequestException('Comment body is invalid');
+    throw new BadRequestException(
+      apiErrorResponse('COMMENT_BODY_INVALID', 'Comment body is invalid'),
+    );
   }
   return cleaned;
 }

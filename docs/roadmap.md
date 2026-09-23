@@ -152,7 +152,13 @@ priority, the order below is the intended delivery order.
    copy and use the server message only as a safe fallback. In particular, the
    existing-account/non-owner collaborator error must never surface in English
    while the French interface is active. Audit all access, authentication,
-   import, save, and comment failures for the same leak.
+   import, save, and comment failures for the same leak. **Completed 2026-09-21:**
+   one web localization boundary now maps generic and application-specific API
+   codes for authentication, Story access, imports, persistence, comments,
+   administration, reader loading, and saves. The API emits specific stable codes
+   for the corresponding known failures; browser-side diagnostics remain visible,
+   and only future explicit application codes may temporarily use their safe server
+   message. French collaborator failures are covered by a component regression test.
 4. **Inspector-integrated comments.** Replace the floating comment block with a
    collapsible comment column integrated with the inspector. It is open by
    default when navigation starts from the global comment list or an entity/
@@ -162,11 +168,26 @@ priority, the order below is the intended delivery order.
    indicators beside anchored text. Discussions are expanded; selecting one
    reveals its reply field, which collapses on blur when empty. Reuse the current
    thread, anchor, permission, and SSE model rather than introducing another
-   comment representation.
+   comment representation. **Completed 2026-09-22:** entity and text discussions
+   now share one translucent inspector-side rail. It opens explicitly from the
+   global list, graph/context badges, or inspector controls, stays collapsed for
+   ordinary selection, keeps every discussion readable, and limits the reply
+   editor to the active discussion. Interaction and Trigger badges use the same
+   marker, commented context rows expose their count, and supported inspector
+   fields show local anchored-comment controls. Leaving a reply collapses only
+   that editor; changing the selected target or closing the rail clears its
+   contextual state.
 5. **Complete comment manipulation.** Make graph comment post-its draggable
    through the existing anchor-update operation. Add authorized thread/comment
    deletion only after settling thread-versus-message deletion, audit retention,
    and restoration semantics; cover post-it and non-canvas anchors uniformly.
+   **Completed 2026-09-22:** authorized post-it managers can now drag a canvas
+   discussion through the existing anchor endpoint. Failed persistence restores
+   the authored position and exposes a retryable comment error. A thread author
+   or Story manager can soft-delete the complete discussion from canvas,
+   inspector, or player presentations. Normal projections hide it; the global
+   deleted-discussion view preserves and restores the thread with all replies.
+   Individual message deletion remains outside this milestone.
 6. **Graph correctness and direct actions.** Fix frame resizing so it preserves
    the frame origin. Route keyboard and contextual actions through shared graph
    commands: `Delete` removes the selected element only outside editable fields;
@@ -174,6 +195,11 @@ priority, the order below is the intended delivery order.
    and Interaction child creation where applicable; right-clicking a frame or
    graph text offers deletion. Reuse the existing canvas context menu,
    confirmation behavior, selection controller, and persistence actions.
+   **Completed 2026-09-22:** frame resizing now retains and persists its top-left
+   origin. React Flow local deletion is disabled; inspector, context-menu, and
+   guarded keyboard deletion share the existing persisted operations and
+   confirmations. Element right-click selects the target and exposes the
+   applicable comment, child, automatic-placement, and deletion actions.
 7. **Improve automatic layout for cycles.** Add representative loop and dense
    cyclic fixtures, define expected readability and stability, then improve the
    existing deterministic layout without changing Trigger semantics or making

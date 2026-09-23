@@ -93,6 +93,7 @@ function TestReactFlow({
   onConnectStart,
   onConnectEnd,
   onNodeClick,
+  onNodeContextMenu,
   onNodeDragStart,
   onNodeDrag,
   onPaneClick,
@@ -161,6 +162,7 @@ function TestReactFlow({
             data-node-selected={node.selected ? 'true' : 'false'}
             style={node.style}
             onClick={(event) => onNodeClick?.(event, node)}
+            onContextMenu={(event) => onNodeContextMenu?.(event, node)}
             role="button"
             tabIndex={0}
           >

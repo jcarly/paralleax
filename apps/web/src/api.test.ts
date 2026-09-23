@@ -385,6 +385,27 @@ describe('api client', () => {
         body: JSON.stringify({ anchor: canvasAnchor }),
       },
     );
+
+    await api.listCommentThreads('story-1', true);
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      '/api/stories/story-1/comment-threads?includeDeleted=true',
+      { headers: { 'Content-Type': 'application/json' } },
+    );
+
+    await api.deleteCommentThread('story-1', 'thread-1');
+    expect(fetchMock).toHaveBeenLastCalledWith('/api/stories/story-1/comment-threads/thread-1', {
+      headers: { 'Content-Type': 'application/json' },
+      method: 'DELETE',
+    });
+
+    await api.restoreCommentThread('story-1', 'thread-1');
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      '/api/stories/story-1/comment-threads/thread-1/restore',
+      {
+        headers: { 'Content-Type': 'application/json' },
+        method: 'PATCH',
+      },
+    );
   });
 
   it('calls interaction and trigger endpoints', async () => {

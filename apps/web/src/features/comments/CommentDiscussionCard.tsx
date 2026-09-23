@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useState, type FocusEvent, type FormEvent } from 'react';
 import type { StoryCommentThread } from '@paralleax/shared';
 import { useTranslation } from 'react-i18next';
 
@@ -7,20 +7,26 @@ export function CommentDiscussionCard({
   expanded,
   canComment,
   canManageThread,
+  canDeleteThread = false,
   variant = 'rail',
   onExpand,
+  onCollapse,
   onReply,
   onStatus,
+  onDelete,
   onReattach,
 }: {
   thread: StoryCommentThread;
   expanded: boolean;
   canComment: boolean;
   canManageThread: boolean;
+  canDeleteThread?: boolean;
   variant?: 'rail' | 'post-it';
   onExpand: () => void;
+  onCollapse?: () => void;
   onReply: (body: string) => Promise<unknown>;
   onStatus: (status: StoryCommentThread['status']) => Promise<unknown>;
+  onDelete?: () => Promise<unknown> | void;
   onReattach?: () => Promise<unknown>;
 }) {
   const { t, i18n } = useTranslation();
@@ -37,6 +43,11 @@ export function CommentDiscussionCard({
     setPending(false);
   }
 
+  function collapseReplyOnBlur(event: FocusEvent<HTMLFormElement>) {
+    if (event.currentTarget.contains(event.relatedTarget as Node | null)) return;
+    onCollapse?.();
+  }
+
   return (
     <article
       className={`comment-discussion-card ${variant} ${expanded ? 'expanded' : ''} ${
@@ -46,7 +57,7 @@ export function CommentDiscussionCard({
       <button
         className="comment-discussion-summary"
         type="button"
-        aria-expanded={expanded}
+        aria-pressed={expanded}
         aria-label={t('comments.openThread', { label: thread.anchorLabel })}
         onClick={onExpand}
       >
@@ -59,14 +70,14 @@ export function CommentDiscussionCard({
         ) : variant === 'rail' ? (
           <small className="comment-discussion-anchor">{thread.anchorLabel}</small>
         ) : null}
-        {!expanded ? (
+        {variant === 'post-it' && !expanded ? (
           <span className="comment-discussion-preview">
             {latestMessage?.body ?? t('comments.emptyThread')}
           </span>
         ) : null}
       </button>
 
-      {expanded ? (
+      {variant === 'rail' || expanded ? (
         <div className="comment-discussion-detail">
           {thread.detached ? (
             <div className="comment-detached inline">
@@ -100,12 +111,17 @@ export function CommentDiscussionCard({
               </div>
             ))}
           </div>
-          {canComment ? (
-            <form className="comment-inline-reply" onSubmit={(event) => void submit(event)}>
+          {expanded && canComment ? (
+            <form
+              className="comment-inline-reply"
+              onBlur={collapseReplyOnBlur}
+              onSubmit={(event) => void submit(event)}
+            >
               <label>
                 <span>{t('comments.reply')}</span>
                 <textarea
                   aria-label={t('comments.reply')}
+                  autoFocus
                   value={body}
                   maxLength={4000}
                   rows={3}
@@ -124,6 +140,15 @@ export function CommentDiscussionCard({
               onClick={() => void onStatus(thread.status === 'open' ? 'resolved' : 'open')}
             >
               {t(thread.status === 'open' ? 'comments.resolve' : 'comments.reopen')}
+            </button>
+          ) : null}
+          {canDeleteThread && onDelete ? (
+            <button
+              className="ghost danger comment-inline-delete"
+              type="button"
+              onClick={() => void onDelete()}
+            >
+              {t('comments.delete')}
             </button>
           ) : null}
         </div>

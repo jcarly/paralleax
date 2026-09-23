@@ -1,4 +1,5 @@
 import {
+  canDeleteCommentThread,
   canManageCommentThread,
   commentAnchorBelongsToStory,
   commentAnchorLabel,
@@ -294,5 +295,14 @@ describe('comment anchors', () => {
       false,
     );
     expect(canManageCommentThread(undefined, undefined, thread)).toBe(false);
+  });
+
+  it('limits thread deletion and restoration to the author or a Story manager', () => {
+    const thread = { createdBy: { id: 'creator-1', displayName: 'Creator' } };
+
+    expect(canDeleteCommentThread({ canManage: true }, 'manager-1', thread)).toBe(true);
+    expect(canDeleteCommentThread({ canManage: false }, 'creator-1', thread)).toBe(true);
+    expect(canDeleteCommentThread({ canManage: false }, 'editor-1', thread)).toBe(false);
+    expect(canDeleteCommentThread(undefined, undefined, thread)).toBe(false);
   });
 });

@@ -307,7 +307,13 @@ and duration. They never log request or response bodies.
 Known operational errors may provide a more specific code. Unexpected errors
 return a generic message and never expose exception, stack, or SQL details.
 Production Nest logs use JSON output. The web client preserves status, code, and
-request id on `ApiError` for future support and recovery workflows.
+request id on `ApiError`. User-facing failures pass through one localization
+boundary: known application and generic HTTP codes resolve to bundled interface
+copy, while generated HTTP codes use the operation's localized fallback instead
+of exposing server text. A message may be shown directly only for an explicit,
+unknown application code (forward compatibility) or for a browser-side error;
+React still escapes that text. This keeps transport diagnostics available for
+support without coupling Nest services to an interface language.
 
 The global throttler defaults to 100 requests per minute. Story reads retain
 that limit, while story mutation routes use a stricter 60-per-minute policy.
@@ -360,6 +366,15 @@ interactions and triggers.
 `StoryEditor` is the page-level composition component for the editor. It wires
 React Flow, selection state, inspectors, and focused editor controllers to the
 persistence actions.
+
+React Flow's local deletion shortcut is disabled. Inspector deletion, the
+editor-level `Delete` shortcut, and element context-menu deletion all route
+through the same persisted Story operations and confirmation policy. A contextual
+action first selects its canonical Interaction, Trigger, or graph decoration;
+automatic placement therefore reuses the existing selection-scoped layout.
+Frame resizing exposes only right and bottom resize controls and persists the
+existing top-left position with its new dimensions, so resizing cannot silently
+move the authored frame origin.
 
 The root route renders the unified story library. Without a session it uses the
 anonymous public-summary endpoint; with a session it uses the authorized list of
@@ -860,9 +875,20 @@ Review discussions use `story_comment_threads` and `story_comment_messages`.
 Their JSONB anchor is validated against the current same-story target by the
 application service; it is not inserted into `Story` or React Flow's canonical
 data. The web editor projects canvas anchors as comment nodes and entity/text
-anchors as badges and discussion context. An authorized signed-in player requests
-the same resource but projects only threads on the current interaction; anonymous
-public reading never requests or renders it.
+anchors through one inspector-integrated comment list and one translucent
+contextual rail. Entity badges on graph and context-list entries open that rail
+explicitly; text anchors reuse the same threads through field-local
+title/body/name/description markers. The rail keeps discussions visible together
+and treats the selected thread only as reply-editor state, so a blur can collapse
+the reply without closing its context. Moving a canvas post-it calls the existing
+thread-anchor update and reprojects its returned position; a failed mutation
+restores the prior anchor rather than retaining an unsaved graph coordinate.
+Thread deletion is recoverable: PostgreSQL retains the thread and messages with
+deletion metadata, normal list requests exclude them, and an explicit authorized
+projection feeds the global deleted-discussion view. Only the thread author or a
+Story manager may delete or restore the discussion. An authorized signed-in
+player requests the same resource but projects only active threads on the current
+interaction; anonymous public reading never requests or renders it.
 
 Authenticated editor and authorized reader clients keep one Server-Sent Events
 connection to the story's comment event endpoint. Successful thread mutations

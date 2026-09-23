@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { apiErrorMessage } from '../../apiErrorMessages';
 
 export type SimulationMutationStatus = 'idle' | 'saving' | 'saved' | 'error';
 
@@ -13,6 +15,7 @@ export function useSimulationMutationPersistence({
   storyId: string;
   fallbackError: string;
 }) {
+  const { t } = useTranslation();
   const [status, setStatus] = useState<SimulationMutationStatus>('idle');
   const [error, setError] = useState('');
   const [canRetry, setCanRetry] = useState(false);
@@ -45,7 +48,7 @@ export function useSimulationMutationPersistence({
       } catch (caught: unknown) {
         if (attempt === latestAttemptRef.current) {
           latestOutcomeRef.current = 'error';
-          setError(caught instanceof Error ? caught.message : fallbackError);
+          setError(apiErrorMessage(caught, t, fallbackError));
           if (options.retryable !== false) {
             retryRef.current = () => void persist(operation, applyResult, options);
             setCanRetry(true);
@@ -56,7 +59,7 @@ export function useSimulationMutationPersistence({
         if (activeCountRef.current === 0) setStatus(latestOutcomeRef.current);
       }
     },
-    [fallbackError],
+    [fallbackError, t],
   );
 
   const retry = useCallback(() => {

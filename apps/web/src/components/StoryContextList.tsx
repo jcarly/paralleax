@@ -11,6 +11,30 @@ export function ContextThumbnail({ imageUrl, fallback }: { imageUrl?: string; fa
   );
 }
 
+export function ContextCommentButton({
+  count,
+  entityName,
+  onClick,
+}: {
+  count: number;
+  entityName: string;
+  onClick: () => void;
+}) {
+  const { t } = useTranslation();
+  if (count < 1) return null;
+  return (
+    <button
+      className="context-comment-badge"
+      type="button"
+      aria-label={`${t('comments.openForEntity')}: ${entityName}`}
+      onClick={onClick}
+    >
+      <span aria-hidden="true">◆</span>
+      {count}
+    </button>
+  );
+}
+
 function groupContextEntities<T extends { id: string; category?: string }>(
   items: T[],
   uncategorizedLabel: string,

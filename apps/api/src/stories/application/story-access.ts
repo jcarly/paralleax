@@ -3,6 +3,7 @@ import type { StoryAccessSettings } from '@paralleax/shared';
 import type { SetStoryCollaboratorDto, UpdateStoryAccessDto } from '../dto/stories.dto';
 import { StoriesRepository } from '../stories.repository';
 import { StoryEventsService } from '../story.events';
+import { apiErrorResponse } from '../../operations/api-error-response';
 
 @Injectable()
 export class StoryAccessService {
@@ -13,7 +14,9 @@ export class StoryAccessService {
 
   async get(storyId: string, userId: string) {
     const access = await this.repository.getAccess(storyId, userId);
-    if (!access) throw new NotFoundException('Story not found');
+    if (!access) {
+      throw new NotFoundException(apiErrorResponse('STORY_NOT_FOUND', 'Story not found'));
+    }
     return access;
   }
 
@@ -24,7 +27,7 @@ export class StoryAccessService {
       commentPolicy: input.commentPolicy,
     };
     if (!(await this.repository.updateAccess(storyId, userId, settings))) {
-      throw new NotFoundException('Story not found');
+      throw new NotFoundException(apiErrorResponse('STORY_NOT_FOUND', 'Story not found'));
     }
     this.events.publishChange(storyId, 'access-updated');
     return this.get(storyId, userId);
@@ -34,7 +37,12 @@ export class StoryAccessService {
     await this.get(storyId, userId);
     const email = input.email.trim().toLowerCase();
     if (!(await this.repository.setCollaborator(storyId, userId, email, input.role))) {
-      throw new BadRequestException('The collaborator must be an existing non-owner account');
+      throw new BadRequestException(
+        apiErrorResponse(
+          'COLLABORATOR_ACCOUNT_INVALID',
+          'The collaborator must be an existing non-owner account',
+        ),
+      );
     }
     this.events.publishChange(storyId, 'access-updated');
     return this.get(storyId, userId);

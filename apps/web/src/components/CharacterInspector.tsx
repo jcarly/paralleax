@@ -8,6 +8,10 @@ import type {
   StatValue,
 } from '@paralleax/shared';
 import { getStatValueType } from '@paralleax/shared';
+import {
+  InspectorCommentField,
+  type InspectorTextCommentProps,
+} from '../features/comments/InspectorCommentField';
 import { CategoryField } from './CategoryField';
 import { ImageUrlField } from './ImageUrlField';
 import { ItemInstanceTree } from './ItemInstanceTree';
@@ -27,6 +31,8 @@ export function CharacterInspector({
   onCreateItem,
   onDeleteItem,
   onMoveItem,
+  textCommentCounts,
+  onOpenTextComments,
 }: {
   character: Character;
   categorySuggestions?: string[];
@@ -49,7 +55,7 @@ export function CharacterInspector({
   onCreateItem: (characterId: string, itemDefinitionId: string) => Promise<void>;
   onDeleteItem: (characterId: string, itemId: string) => Promise<void>;
   onMoveItem: (itemId: string, placement: MoveItemInstanceInput) => Promise<void>;
-}) {
+} & InspectorTextCommentProps) {
   const { t } = useTranslation();
   const availableDefinitions = statDefinitions.filter(
     (definition) =>
@@ -67,15 +73,22 @@ export function CharacterInspector({
   return (
     <div>
       <h3>{t('inspector.character')}</h3>
-      <label>
-        {t('inspector.name')}
-        <input
-          data-comment-field="name"
-          value={character.name}
-          onChange={(event) => onChange({ name: event.target.value })}
-          onBlur={(event) => void onPatch(character.id, { name: event.target.value })}
-        />
-      </label>
+      <InspectorCommentField
+        field="name"
+        label={t('inspector.name')}
+        textCommentCounts={textCommentCounts}
+        onOpenTextComments={onOpenTextComments}
+      >
+        <label>
+          {t('inspector.name')}
+          <input
+            data-comment-field="name"
+            value={character.name}
+            onChange={(event) => onChange({ name: event.target.value })}
+            onBlur={(event) => void onPatch(character.id, { name: event.target.value })}
+          />
+        </label>
+      </InspectorCommentField>
       <CategoryField
         category={character.category}
         suggestions={categorySuggestions}
@@ -211,16 +224,23 @@ export function CharacterInspector({
           onDelete={(itemId) => onDeleteItem(character.id, itemId)}
         />
       )}
-      <label>
-        {t('inspector.description')}
-        <textarea
-          data-comment-field="description"
-          rows={7}
-          value={character.description}
-          onChange={(event) => onChange({ description: event.target.value })}
-          onBlur={(event) => void onPatch(character.id, { description: event.target.value })}
-        />
-      </label>
+      <InspectorCommentField
+        field="description"
+        label={t('inspector.description')}
+        textCommentCounts={textCommentCounts}
+        onOpenTextComments={onOpenTextComments}
+      >
+        <label>
+          {t('inspector.description')}
+          <textarea
+            data-comment-field="description"
+            rows={7}
+            value={character.description}
+            onChange={(event) => onChange({ description: event.target.value })}
+            onBlur={(event) => void onPatch(character.id, { description: event.target.value })}
+          />
+        </label>
+      </InspectorCommentField>
     </div>
   );
 }

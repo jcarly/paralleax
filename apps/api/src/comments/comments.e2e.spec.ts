@@ -15,13 +15,17 @@ import { CommentEventsService } from './comments.events';
 class InMemoryCommentsRepository {
   readonly threads = new Map<string, StoryCommentThread>();
 
-  async list(storyId: string) {
-    return [...this.threads.values()].filter((thread) => thread.storyId === storyId);
+  async list(storyId: string, includeDeleted = false) {
+    return [...this.threads.values()].filter(
+      (thread) => thread.storyId === storyId && (includeDeleted || !thread.deletedAt),
+    );
   }
 
-  async find(storyId: string, threadId: string) {
+  async find(storyId: string, threadId: string, includeDeleted = false) {
     const thread = this.threads.get(threadId);
-    return thread?.storyId === storyId ? structuredClone(thread) : undefined;
+    return thread?.storyId === storyId && (includeDeleted || !thread.deletedAt)
+      ? structuredClone(thread)
+      : undefined;
   }
 
   async create(input: {
@@ -108,6 +112,22 @@ class InMemoryCommentsRepository {
     const thread = this.threads.get(threadId)!;
     thread.anchor = anchor;
     thread.anchorLabel = anchorLabel;
+    thread.updatedAt = timestamp;
+    return structuredClone(thread);
+  }
+
+  async softDelete(storyId: string, threadId: string, actorId: string, timestamp: string) {
+    const thread = this.threads.get(threadId)!;
+    thread.deletedBy = { id: actorId, displayName: `User ${actorId}` };
+    thread.deletedAt = timestamp;
+    thread.updatedAt = timestamp;
+    return structuredClone(thread);
+  }
+
+  async restore(storyId: string, threadId: string, timestamp: string) {
+    const thread = this.threads.get(threadId)!;
+    delete thread.deletedBy;
+    delete thread.deletedAt;
     thread.updatedAt = timestamp;
     return structuredClone(thread);
   }
@@ -275,7 +295,7 @@ describe('Comments API', () => {
       .set('Cookie', ownerCookie)
       .send({ visibility: 'authenticated', editPolicy: 'owner', commentPolicy: 'editors' })
       .expect(200);
-    await request(httpServer)
+    const forbiddenComment = await request(httpServer)
       .post(`/api/stories/${storyId}/comment-threads`)
       .set('Cookie', 'paralleax_session=user-2')
       .send({
@@ -283,6 +303,7 @@ describe('Comments API', () => {
         body: 'Readers cannot comment under the editor policy.',
       })
       .expect(403);
+    expect(forbiddenComment.body.code).toBe('COMMENT_CREATE_FORBIDDEN');
     await request(httpServer)
       .post(`/api/stories/${storyId}/comment-threads`)
       .set('Cookie', ownerCookie)
@@ -322,5 +343,85 @@ describe('Comments API', () => {
         body: 'Invalid quote.',
       })
       .expect(400);
+  });
+
+  it('soft-deletes a whole discussion and lets only its author or a manager restore it', async () => {
+    const ownerCookie = 'paralleax_session=user-1';
+    const authorCookie = 'paralleax_session=user-2';
+    const otherReaderCookie = 'paralleax_session=user-3';
+    const createdStory = await request(httpServer)
+      .post('/api/stories')
+      .set('Cookie', ownerCookie)
+      .send({ title: 'Recoverable comments' })
+      .expect(201);
+    const storyId = createdStory.body.id as string;
+    await request(httpServer)
+      .patch(`/api/stories/${storyId}/access`)
+      .set('Cookie', ownerCookie)
+      .send({ visibility: 'authenticated', editPolicy: 'owner', commentPolicy: 'readers' })
+      .expect(200);
+    const created = await request(httpServer)
+      .post(`/api/stories/${storyId}/comment-threads`)
+      .set('Cookie', authorCookie)
+      .send({
+        anchor: { kind: 'canvas', position: { x: 10, y: 20 } },
+        body: 'Delete the whole discussion.',
+      })
+      .expect(201);
+
+    const forbiddenDelete = await request(httpServer)
+      .delete(`/api/stories/${storyId}/comment-threads/${created.body.id}`)
+      .set('Cookie', otherReaderCookie)
+      .expect(403);
+    expect(forbiddenDelete.body.code).toBe('COMMENT_DELETE_FORBIDDEN');
+
+    const deleted = await request(httpServer)
+      .delete(`/api/stories/${storyId}/comment-threads/${created.body.id}`)
+      .set('Cookie', authorCookie)
+      .expect(200);
+    expect(deleted.body).toMatchObject({
+      id: created.body.id,
+      deletedBy: { id: 'user-2' },
+    });
+    expect(deleted.body.deletedAt).toEqual(expect.any(String));
+
+    await request(httpServer)
+      .get(`/api/stories/${storyId}/comment-threads`)
+      .set('Cookie', ownerCookie)
+      .expect(200, []);
+    const managerTrash = await request(httpServer)
+      .get(`/api/stories/${storyId}/comment-threads?includeDeleted=true`)
+      .set('Cookie', ownerCookie)
+      .expect(200);
+    expect(managerTrash.body).toHaveLength(1);
+    const unrelatedTrash = await request(httpServer)
+      .get(`/api/stories/${storyId}/comment-threads?includeDeleted=true`)
+      .set('Cookie', otherReaderCookie)
+      .expect(200);
+    expect(unrelatedTrash.body).toEqual([]);
+
+    await request(httpServer)
+      .post(`/api/stories/${storyId}/comment-threads/${created.body.id}/messages`)
+      .set('Cookie', authorCookie)
+      .send({ body: 'This deleted thread must stay immutable.' })
+      .expect(404);
+    const forbiddenRestore = await request(httpServer)
+      .patch(`/api/stories/${storyId}/comment-threads/${created.body.id}/restore`)
+      .set('Cookie', otherReaderCookie)
+      .expect(403);
+    expect(forbiddenRestore.body.code).toBe('COMMENT_RESTORE_FORBIDDEN');
+    await request(httpServer)
+      .patch(`/api/stories/${storyId}/comment-threads/${created.body.id}/restore`)
+      .set('Cookie', ownerCookie)
+      .expect(200)
+      .expect(({ body }) => {
+        expect(body.deletedAt).toBeUndefined();
+        expect(body.messages).toHaveLength(1);
+      });
+    const active = await request(httpServer)
+      .get(`/api/stories/${storyId}/comment-threads`)
+      .set('Cookie', ownerCookie)
+      .expect(200);
+    expect(active.body).toHaveLength(1);
   });
 });

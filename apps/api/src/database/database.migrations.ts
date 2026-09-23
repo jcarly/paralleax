@@ -1539,4 +1539,17 @@ export const databaseMigrations: DatabaseMigration[] = [
         );
     `,
   },
+  {
+    id: '202609220039_soft_deleted_comment_threads',
+    sql: `
+      ALTER TABLE story_comment_threads
+      ADD COLUMN deleted_by text REFERENCES users(id) ON DELETE SET NULL,
+      ADD COLUMN deleted_at timestamptz,
+      ADD CONSTRAINT story_comment_threads_deletion_consistent
+        CHECK (deleted_at IS NOT NULL OR deleted_by IS NULL);
+
+      CREATE INDEX story_comment_threads_story_deleted_idx
+        ON story_comment_threads(story_id, deleted_at, updated_at DESC);
+    `,
+  },
 ];

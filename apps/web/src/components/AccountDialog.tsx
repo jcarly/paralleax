@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { isValidUserDisplayName, normalizeUserDisplayName } from '@paralleax/shared';
 import { api, type AuthUser } from '../api';
+import { apiErrorMessage } from '../apiErrorMessages';
 import { handleModalDialogKeyDown } from './modalDialogKeyboard';
 
 export function AccountDialog({
@@ -29,7 +30,7 @@ export function AccountDialog({
       onUpdated(await api.updateCurrentUser(normalized));
       onClose();
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : t('account.updateFailed'));
+      setError(apiErrorMessage(caught, t, t('account.updateFailed')));
     } finally {
       setPending(false);
     }

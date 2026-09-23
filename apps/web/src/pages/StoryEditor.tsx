@@ -22,12 +22,14 @@ import '@xyflow/react/dist/style.css';
 import '../features/story-editor/graph/storyGraph.css';
 import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom';
 import {
+  canDeleteCommentThread as canActorDeleteCommentThread,
   canManageCommentThread as canActorManageCommentThread,
   getTriggerConditions,
   isCommentAnchorDetached,
   type Character,
   type CommentAnchor,
   type CommentTargetType,
+  type CommentTextField,
   type GraphDecoration,
   type Interaction,
   type ItemDefinition,
@@ -46,7 +48,11 @@ import { handleModalDialogKeyDown } from '../components/modalDialogKeyboard';
 import { StatDefinitionInspector } from '../components/StatDefinitionInspector';
 import { StoryCanvasContextMenu } from '../components/StoryCanvasContextMenu';
 import { StoryCanvasToolbar } from '../components/StoryCanvasToolbar';
-import { CategorizedContextList, ContextThumbnail } from '../components/StoryContextList';
+import {
+  CategorizedContextList,
+  ContextCommentButton,
+  ContextThumbnail,
+} from '../components/StoryContextList';
 import { StoryGraphSelectionInspector } from '../components/StoryGraphSelectionInspector';
 import { TriggerEdge } from '../components/TriggerEdge';
 import { TriggerInspector } from '../components/TriggerInspector';
@@ -54,6 +60,10 @@ import { TriggerNode } from '../components/TriggerNode';
 import { RichTextContent } from '../components/RichTextContent';
 import { CommentPinNode, type CommentPinFlowNode } from '../features/comments/CommentPinNode';
 import { ContextualCommentsRail } from '../features/comments/ContextualCommentsRail';
+import {
+  InspectorCommentField,
+  type InspectorTextCommentProps,
+} from '../features/comments/InspectorCommentField';
 import { StoryCommentsPanel } from '../features/comments/StoryCommentsPanel';
 import { captureActiveTextSelection } from '../features/comments/textAnchors';
 import { useStoryComments } from '../features/comments/useStoryComments';
@@ -69,7 +79,10 @@ import {
 import { getInitialStoryFitViewOptions } from '../features/story-editor/graph/storyGraphViewport';
 import { StoryHistoryPanel } from '../features/story-editor/history/StoryHistoryPanel';
 import { useStoryContextNavigation } from '../features/story-editor/navigation/useStoryContextNavigation';
-import { useStoryEditorSelection } from '../features/story-editor/selection/useStoryEditorSelection';
+import {
+  useStoryEditorSelection,
+  type StoryEditorExclusiveSelection,
+} from '../features/story-editor/selection/useStoryEditorSelection';
 import {
   StorySettingsDialog,
   StorySettingsIcon,
@@ -109,9 +122,18 @@ const nodeTypes = {
 const edgeTypes = { trigger: TriggerEdge };
 const canvasPanMouseButtons = [1];
 
+type StoryGraphContextTarget =
+  | { kind: 'canvas' }
+  | { kind: 'interaction'; interactionId: string }
+  | { kind: 'trigger'; interactionId: string; triggerId: string }
+  | { kind: 'graphDecoration'; decorationId: string };
+
+type StoryGraphElementContextTarget = Exclude<StoryGraphContextTarget, { kind: 'canvas' }>;
+
 interface CanvasContextMenuState {
   screenPosition: Position;
   flowPosition: Position;
+  target: StoryGraphContextTarget;
 }
 
 function getInitials(name: string) {
@@ -185,6 +207,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
     [t],
   );
   const [commentsOpen, setCommentsOpen] = useState(false);
+  const [contextualCommentsTargetKey, setContextualCommentsTargetKey] = useState<string>();
   const [historyOpen, setHistoryOpen] = useState(false);
   const storySettingsRouteTab: StorySettingsTab | undefined =
     searchParams.get('settings') === 'access' ? 'access' : undefined;
@@ -235,14 +258,43 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
     selectedContextReference,
     selectedCommentTarget,
     hasInspectorSelection,
-    selectExclusive,
-    selectInteraction,
-    focusInteraction,
-    clearSelection: closeInspector,
-    handleGraphSelectionStart,
+    selectExclusive: selectEditorExclusive,
+    selectInteraction: selectEditorInteraction,
+    focusInteraction: focusEditorInteraction,
+    clearSelection: clearEditorSelection,
+    handleGraphSelectionStart: startEditorGraphSelection,
     handleGraphSelectionChange,
     handleGraphSelectionEnd,
   } = useStoryEditorSelection(story);
+  const selectExclusive = useCallback(
+    (selection?: StoryEditorExclusiveSelection) => {
+      setContextualCommentsTargetKey(undefined);
+      selectEditorExclusive(selection);
+    },
+    [selectEditorExclusive],
+  );
+  const selectInteraction = useCallback(
+    (interactionId: string) => {
+      setContextualCommentsTargetKey(undefined);
+      selectEditorInteraction(interactionId);
+    },
+    [selectEditorInteraction],
+  );
+  const focusInteraction = useCallback(
+    (interactionId: string) => {
+      setContextualCommentsTargetKey(undefined);
+      focusEditorInteraction(interactionId);
+    },
+    [focusEditorInteraction],
+  );
+  const closeInspector = useCallback(() => {
+    setContextualCommentsTargetKey(undefined);
+    clearEditorSelection();
+  }, [clearEditorSelection]);
+  const handleGraphSelectionStart = useCallback(() => {
+    setContextualCommentsTargetKey(undefined);
+    startEditorGraphSelection();
+  }, [startEditorGraphSelection]);
   const {
     searchQuery,
     setSearchQuery,
@@ -300,6 +352,9 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
   const comments = useStoryComments(storyId, commentAccess);
   const commentThreads = comments.threads;
   const selectCommentThread = comments.selectThread;
+  const cancelCommentDraft = comments.cancelDraft;
+  const deleteStoredCommentThread = comments.deleteThread;
+  const restoreStoredCommentThread = comments.restoreThread;
   const projectedCommentThreads = useMemo(
     () =>
       story
@@ -310,8 +365,12 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
         : commentThreads,
     [commentThreads, story],
   );
+  const activeCommentThreads = useMemo(
+    () => projectedCommentThreads.filter((thread) => !thread.deletedAt),
+    [projectedCommentThreads],
+  );
   const selectedTargetThreads = selectedCommentTarget
-    ? projectedCommentThreads.filter(
+    ? activeCommentThreads.filter(
         (thread) =>
           thread.anchor.kind !== 'canvas' &&
           thread.anchor.targetType === selectedCommentTarget.targetType &&
@@ -331,18 +390,43 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
       canActorManageCommentThread(story?.capabilities, currentUserId, thread),
     [currentUserId, story?.capabilities],
   );
-  const openCommentCounts = useMemo(() => {
-    const counts = new Map<string, number>();
-    for (const thread of projectedCommentThreads) {
+  const canDeleteCommentThread = useCallback(
+    (thread: StoryCommentThread) =>
+      canActorDeleteCommentThread(story?.capabilities, currentUserId, thread),
+    [currentUserId, story?.capabilities],
+  );
+  const { graphCommentCounts, commentCountsByTarget } = useMemo(() => {
+    const graph = new Map<string, number>();
+    const byTarget = new Map<string, number>();
+    for (const thread of activeCommentThreads) {
       if (thread.status !== 'open' || thread.anchor.kind === 'canvas') continue;
-      counts.set(thread.anchor.targetId, (counts.get(thread.anchor.targetId) ?? 0) + 1);
+      const targetKey = `${thread.anchor.targetType}:${thread.anchor.targetId}`;
+      byTarget.set(targetKey, (byTarget.get(targetKey) ?? 0) + 1);
+      if (thread.anchor.targetType === 'interaction' || thread.anchor.targetType === 'trigger') {
+        graph.set(thread.anchor.targetId, (graph.get(thread.anchor.targetId) ?? 0) + 1);
+      }
     }
+    return { graphCommentCounts: graph, commentCountsByTarget: byTarget };
+  }, [activeCommentThreads]);
+  const selectedTargetCommentCount = selectedCommentTarget
+    ? (commentCountsByTarget.get(
+        `${selectedCommentTarget.targetType}:${selectedCommentTarget.targetId}`,
+      ) ?? 0)
+    : 0;
+  const selectedTextCommentCounts = selectedTargetThreads.reduce<
+    Partial<Record<CommentTextField, number>>
+  >((counts, thread) => {
+    if (thread.status !== 'open' || thread.anchor.kind !== 'text') return counts;
+    counts[thread.anchor.field] = (counts[thread.anchor.field] ?? 0) + 1;
     return counts;
-  }, [projectedCommentThreads]);
+  }, {});
+  const selectedCommentTargetKey = selectedCommentTarget
+    ? `${selectedCommentTarget.targetType}:${selectedCommentTarget.targetId}`
+    : undefined;
   const showContextualComments = Boolean(
     !commentsOpen &&
     selectedCommentTarget &&
-    (selectedTargetThreads.length > 0 || contextualDraftAnchor),
+    (contextualCommentsTargetKey === selectedCommentTargetKey || contextualDraftAnchor),
   );
   const hasInspector = commentsOpen || hasInspectorSelection;
 
@@ -378,13 +462,18 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
 
       selectCommentThread(thread.id);
       setCommentsOpen(false);
+      setContextualCommentsTargetKey(
+        thread.anchor.kind === 'canvas'
+          ? undefined
+          : `${thread.anchor.targetType}:${thread.anchor.targetId}`,
+      );
 
       const graphNodeIds: string[] = [];
       if (thread.anchor.kind === 'canvas') {
         closeInspector();
         graphNodeIds.push(`comment:${thread.id}`);
       } else if (thread.anchor.targetType === 'interaction') {
-        selectExclusive({ type: 'interaction', id: thread.anchor.targetId });
+        selectEditorExclusive({ type: 'interaction', id: thread.anchor.targetId });
         graphNodeIds.push(thread.anchor.targetId);
       } else if (thread.anchor.targetType === 'trigger') {
         const triggerId = thread.anchor.targetId;
@@ -392,14 +481,14 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
           interaction.triggers.some(({ id }) => id === triggerId),
         );
         if (owner) {
-          selectExclusive({
+          selectEditorExclusive({
             type: 'trigger',
             trigger: { interactionId: owner.id, triggerId },
           });
           graphNodeIds.push(owner.id);
         } else closeInspector();
       } else if (thread.anchor.targetType === 'location') {
-        selectExclusive({ type: 'location', id: thread.anchor.targetId });
+        selectEditorExclusive({ type: 'location', id: thread.anchor.targetId });
         graphNodeIds.push(
           ...getReferencedInteractionIds(story, {
             type: 'location',
@@ -407,7 +496,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
           }),
         );
       } else if (thread.anchor.targetType === 'character') {
-        selectExclusive({ type: 'character', id: thread.anchor.targetId });
+        selectEditorExclusive({ type: 'character', id: thread.anchor.targetId });
         graphNodeIds.push(
           ...getReferencedInteractionIds(story, {
             type: 'character',
@@ -415,7 +504,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
           }),
         );
       } else if (thread.anchor.targetType === 'statDefinition') {
-        selectExclusive({ type: 'statDefinition', id: thread.anchor.targetId });
+        selectEditorExclusive({ type: 'statDefinition', id: thread.anchor.targetId });
         graphNodeIds.push(
           ...getReferencedInteractionIds(story, {
             type: 'stat',
@@ -423,7 +512,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
           }),
         );
       } else {
-        selectExclusive({ type: 'itemDefinition', id: thread.anchor.targetId });
+        selectEditorExclusive({ type: 'itemDefinition', id: thread.anchor.targetId });
         graphNodeIds.push(
           ...getReferencedInteractionIds(story, {
             type: 'item',
@@ -443,12 +532,12 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
         });
       }
     },
-    [closeInspector, projectedCommentThreads, selectCommentThread, selectExclusive, story],
+    [closeInspector, projectedCommentThreads, selectCommentThread, selectEditorExclusive, story],
   );
 
   const openCommentsForTarget = useCallback(
     (targetType: CommentTargetType, targetId: string) => {
-      const thread = projectedCommentThreads.find(
+      const thread = activeCommentThreads.find(
         (candidate) =>
           candidate.status === 'open' &&
           candidate.anchor.kind !== 'canvas' &&
@@ -456,17 +545,34 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
           candidate.anchor.targetId === targetId,
       );
       if (!thread) return;
-      selectCommentThread(thread.id);
+      selectCommentThread(undefined);
       setCommentsOpen(false);
+      setContextualCommentsTargetKey(`${targetType}:${targetId}`);
       if (targetType === 'interaction') {
-        selectExclusive({ type: 'interaction', id: targetId });
+        selectEditorExclusive({ type: 'interaction', id: targetId });
+        return;
+      }
+      if (targetType === 'location') {
+        selectEditorExclusive({ type: 'location', id: targetId });
+        return;
+      }
+      if (targetType === 'character') {
+        selectEditorExclusive({ type: 'character', id: targetId });
+        return;
+      }
+      if (targetType === 'statDefinition') {
+        selectEditorExclusive({ type: 'statDefinition', id: targetId });
+        return;
+      }
+      if (targetType === 'itemDefinition') {
+        selectEditorExclusive({ type: 'itemDefinition', id: targetId });
         return;
       }
       const owner = story?.interactions.find((interaction) =>
         interaction.triggers.some(({ id }) => id === targetId),
       );
       if (owner) {
-        selectExclusive({
+        selectEditorExclusive({
           type: 'trigger',
           trigger: { interactionId: owner.id, triggerId: targetId },
         });
@@ -474,11 +580,29 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
     },
     [
       closeInspector,
-      projectedCommentThreads,
+      activeCommentThreads,
       selectCommentThread,
-      selectExclusive,
+      selectEditorExclusive,
       story?.interactions,
     ],
+  );
+
+  const deleteCommentThread = useCallback(
+    async (threadId: string) => {
+      if (!window.confirm(t('comments.confirmDelete'))) return;
+      const deleted = await deleteStoredCommentThread(threadId);
+      if (!deleted) return;
+      cancelCommentDraft();
+      selectCommentThread(undefined);
+      setContextualCommentsTargetKey(undefined);
+      return deleted;
+    },
+    [cancelCommentDraft, deleteStoredCommentThread, selectCommentThread, t],
+  );
+
+  const restoreCommentThread = useCallback(
+    (threadId: string) => restoreStoredCommentThread(threadId),
+    [restoreStoredCommentThread],
   );
 
   const getClickCreationPosition = useCallback(
@@ -540,7 +664,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
           selectExclusive({ type: 'trigger', trigger: { interactionId, triggerId } }),
         occurrenceCounts,
         emphasizedInteractionIds,
-        commentCounts: openCommentCounts,
+        commentCounts: graphCommentCounts,
         onOpenComments: openCommentsForTarget,
       }),
     [
@@ -549,7 +673,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
       isConnecting,
       occurrenceCounts,
       emphasizedInteractionIds,
-      openCommentCounts,
+      graphCommentCounts,
       openCommentsForTarget,
       reviewOnly,
       selectExclusive,
@@ -573,10 +697,10 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
       buildTriggerNodes(story, selectedTrigger, {
         onSelectTrigger: (interactionId, triggerId) =>
           selectExclusive({ type: 'trigger', trigger: { interactionId, triggerId } }),
-        commentCounts: openCommentCounts,
+        commentCounts: graphCommentCounts,
         onOpenComments: openCommentsForTarget,
       }),
-    [openCommentCounts, openCommentsForTarget, selectExclusive, story, selectedTrigger],
+    [graphCommentCounts, openCommentsForTarget, selectExclusive, story, selectedTrigger],
   );
   const initialFitViewOptions = useMemo(() => getInitialStoryFitViewOptions(story), [story]);
   const narrativeNodes = useMemo(
@@ -586,14 +710,14 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
 
   const commentNodes = useMemo<CommentPinFlowNode[]>(
     () => [
-      ...projectedCommentThreads.flatMap((thread) =>
+      ...activeCommentThreads.flatMap((thread) =>
         thread.anchor.kind === 'canvas'
           ? [
               {
                 id: `comment:${thread.id}`,
                 type: 'commentPin' as const,
                 position: thread.anchor.position,
-                draggable: false,
+                draggable: canManageCommentThread(thread),
                 selectable: false,
                 zIndex: 1_000,
                 data: {
@@ -601,6 +725,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
                   expanded: thread.id === comments.selectedThreadId,
                   canComment: story?.capabilities?.canComment === true,
                   canManageThread: canManageCommentThread(thread),
+                  canDeleteThread: canDeleteCommentThread(thread),
                   onOpen: (threadId: string) => {
                     selectCommentThread(threadId);
                     setCommentsOpen(false);
@@ -609,6 +734,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
                   onCancelDraft: comments.cancelDraft,
                   onReply: comments.reply,
                   onStatus: comments.setStatus,
+                  onDelete: deleteCommentThread,
                 },
               },
             ]
@@ -628,11 +754,13 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
                 expanded: true,
                 canComment: story?.capabilities?.canComment === true,
                 canManageThread: false,
+                canDeleteThread: false,
                 onOpen: selectCommentThread,
                 onCreate: comments.create,
                 onCancelDraft: comments.cancelDraft,
                 onReply: comments.reply,
                 onStatus: comments.setStatus,
+                onDelete: deleteCommentThread,
               },
             },
           ]
@@ -640,13 +768,15 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
     ],
     [
       canManageCommentThread,
+      canDeleteCommentThread,
       comments.cancelDraft,
       comments.create,
       comments.draftAnchor,
       comments.reply,
       comments.selectedThreadId,
       comments.setStatus,
-      projectedCommentThreads,
+      deleteCommentThread,
+      activeCommentThreads,
       selectCommentThread,
       story?.capabilities?.canComment,
     ],
@@ -792,6 +922,22 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
     }
   }
 
+  async function persistCanvasCommentDrag(node: CommentPinFlowNode) {
+    const thread = node.data.thread;
+    if (!thread || !node.data.canManageThread || thread.anchor.kind !== 'canvas') return;
+    const originalPosition = thread.anchor.position;
+    const result = await comments.reanchor(thread.id, {
+      kind: 'canvas',
+      position: node.position,
+    });
+    if (result) return;
+    setNodes((current) =>
+      current.map((currentNode) =>
+        currentNode.id === node.id ? { ...currentNode, position: originalPosition } : currentNode,
+      ),
+    );
+  }
+
   const select: NodeMouseHandler = (_, node) => {
     setCanvasContextMenu(undefined);
     if (node.type === 'commentPin') return;
@@ -828,11 +974,57 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
     selectExclusive({ type: 'graphDecoration', id: decorationId });
   }
 
-  function startEntityComment() {
-    if (!selectedCommentTarget || !story?.capabilities?.canComment) return;
-    comments.startThread({ kind: 'entity', ...selectedCommentTarget });
+  function startEntityCommentForTarget(targetType: CommentTargetType, targetId: string) {
+    if (!story?.capabilities?.canComment) return;
+    comments.startThread({ kind: 'entity', targetType, targetId });
     comments.selectThread(undefined);
     setCommentsOpen(false);
+    setContextualCommentsTargetKey(`${targetType}:${targetId}`);
+  }
+
+  function startEntityComment() {
+    if (!selectedCommentTarget) return;
+    startEntityCommentForTarget(selectedCommentTarget.targetType, selectedCommentTarget.targetId);
+  }
+
+  function closeContextualComments() {
+    comments.cancelDraft();
+    comments.selectThread(undefined);
+    setContextualCommentsTargetKey(undefined);
+  }
+
+  function toggleContextualComments() {
+    if (showContextualComments) {
+      closeContextualComments();
+      return;
+    }
+    if (selectedTargetThreads.length > 0) {
+      comments.cancelDraft();
+      comments.selectThread(undefined);
+      setCommentsOpen(false);
+      setContextualCommentsTargetKey(selectedCommentTargetKey);
+      return;
+    }
+    startEntityComment();
+  }
+
+  function openTextComments(field: CommentTextField) {
+    if (!selectedCommentTargetKey) return;
+    const thread =
+      selectedTargetThreads.find(
+        (candidate) =>
+          candidate.status === 'open' &&
+          candidate.anchor.kind === 'text' &&
+          candidate.anchor.field === field,
+      ) ??
+      selectedTargetThreads.find(
+        (candidate) => candidate.anchor.kind === 'text' && candidate.anchor.field === field,
+      );
+    if (!thread) return;
+    comments.cancelDraft();
+    comments.selectThread(thread.id);
+    setCommentsOpen(false);
+    setContextualCommentsTargetKey(selectedCommentTargetKey);
   }
 
   function startTextComment() {
@@ -847,6 +1039,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
     });
     comments.selectThread(undefined);
     setCommentsOpen(false);
+    setContextualCommentsTargetKey(selectedCommentTargetKey);
   }
 
   async function reattachSelectedThread(threadId: string) {
@@ -893,8 +1086,68 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
     setCanvasContextMenu({
       screenPosition: { x: event.clientX, y: event.clientY },
       flowPosition: position,
+      target: { kind: 'canvas' },
     });
   }
+
+  const handleNodeContextMenu: NodeMouseHandler<StoryFlowNode> = (event, node) => {
+    event.preventDefault();
+    if (node.type === 'commentPin') return;
+
+    const position = flowInstance.current?.screenToFlowPosition({
+      x: event.clientX,
+      y: event.clientY,
+    });
+    if (!position) return;
+
+    const triggerElement =
+      event.target instanceof Element
+        ? event.target.closest<HTMLElement>('[data-interaction-id][data-trigger-id]')
+        : null;
+    const rootTriggerId =
+      node.type === 'interaction' ? triggerElement?.dataset.triggerId : undefined;
+    let target: StoryGraphContextTarget;
+    if (rootTriggerId) {
+      target = { kind: 'trigger', interactionId: node.id, triggerId: rootTriggerId };
+    } else if (node.type === 'trigger') {
+      target = {
+        kind: 'trigger',
+        interactionId: node.data.interactionId,
+        triggerId: node.data.triggerId,
+      };
+    } else if (node.type === 'graphDecoration') {
+      target = { kind: 'graphDecoration', decorationId: node.id };
+    } else if (node.type === 'interaction') {
+      target = { kind: 'interaction', interactionId: node.id };
+    } else {
+      return;
+    }
+
+    if (
+      reviewOnly &&
+      (story?.capabilities?.canComment !== true || target.kind === 'graphDecoration')
+    ) {
+      return;
+    }
+
+    setPlacingComment(false);
+    selectCommentThread(undefined);
+    if (target.kind === 'interaction') {
+      selectExclusive({ type: 'interaction', id: target.interactionId });
+    } else if (target.kind === 'trigger') {
+      selectExclusive({
+        type: 'trigger',
+        trigger: { interactionId: target.interactionId, triggerId: target.triggerId },
+      });
+    } else {
+      selectExclusive({ type: 'graphDecoration', id: target.decorationId });
+    }
+    setCanvasContextMenu({
+      screenPosition: { x: event.clientX, y: event.clientY },
+      flowPosition: position,
+      target,
+    });
+  };
 
   function startCanvasComment(position: Position) {
     if (story?.capabilities?.canComment !== true) return;
@@ -907,22 +1160,78 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
     if (!commentsOpen) {
       comments.cancelDraft();
       comments.selectThread(undefined);
+      setContextualCommentsTargetKey(undefined);
     }
     setCommentsOpen((open) => !open);
   }
 
-  async function deleteSelectedTrigger(interactionId: string, triggerId: string) {
-    if (!window.confirm(t('editor.confirmDeleteTrigger'))) return;
-    await deleteTrigger(interactionId, triggerId);
-    closeInspector();
-  }
+  const deleteGraphElement = useCallback(
+    async (target: StoryGraphElementContextTarget) => {
+      setCanvasContextMenu(undefined);
+      if (target.kind === 'interaction') {
+        const interaction = story?.interactions.find(({ id }) => id === target.interactionId);
+        if (!interaction) return;
+        if (!window.confirm(t('editor.confirmDeleteInteraction', { title: interaction.title }))) {
+          return;
+        }
+        await deleteInteraction(interaction.id);
+      } else if (target.kind === 'trigger') {
+        if (!window.confirm(t('editor.confirmDeleteTrigger'))) return;
+        await deleteTrigger(target.interactionId, target.triggerId);
+      } else {
+        if (!window.confirm(t('editor.confirmDeleteDecoration'))) return;
+        await deleteGraphDecoration(target.decorationId);
+      }
+      closeInspector();
+    },
+    [closeInspector, deleteGraphDecoration, deleteInteraction, deleteTrigger, story, t],
+  );
 
-  async function remove() {
-    if (!selected) return;
-    if (!window.confirm(`Delete “${selected.title}” and its trigger links?`)) return;
-    await deleteInteraction(selected.id);
-    closeInspector();
-  }
+  const deleteSelectedTrigger = useCallback(
+    (interactionId: string, triggerId: string) =>
+      deleteGraphElement({ kind: 'trigger', interactionId, triggerId }),
+    [deleteGraphElement],
+  );
+
+  const remove = useCallback(
+    () =>
+      selected
+        ? deleteGraphElement({ kind: 'interaction', interactionId: selected.id })
+        : Promise.resolve(),
+    [deleteGraphElement, selected],
+  );
+
+  useEffect(() => {
+    const handleDeleteShortcut = (event: KeyboardEvent) => {
+      if (
+        event.key !== 'Delete' ||
+        event.defaultPrevented ||
+        event.repeat ||
+        reviewOnly ||
+        isRealtimeEditableTarget(event.target)
+      ) {
+        return;
+      }
+
+      const target: StoryGraphElementContextTarget | undefined = selected
+        ? { kind: 'interaction', interactionId: selected.id }
+        : selectedTriggerTarget
+          ? {
+              kind: 'trigger',
+              interactionId: selectedTriggerTarget.interaction.id,
+              triggerId: selectedTriggerTarget.trigger.id,
+            }
+          : selectedGraphDecoration
+            ? { kind: 'graphDecoration', decorationId: selectedGraphDecoration.id }
+            : undefined;
+      if (!target) return;
+      event.preventDefault();
+      void deleteGraphElement(target);
+    };
+
+    document.addEventListener('keydown', handleDeleteShortcut);
+    return () => document.removeEventListener('keydown', handleDeleteShortcut);
+  }, [deleteGraphElement, reviewOnly, selected, selectedGraphDecoration, selectedTriggerTarget]);
 
   async function addLocation() {
     const locationId = await createLocation();
@@ -1105,8 +1414,15 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
               onClick={toggleCommentsList}
             >
               {t('comments.title')}
-              {comments.threads.filter(({ status }) => status === 'open').length ? (
-                <small>{comments.threads.filter(({ status }) => status === 'open').length}</small>
+              {comments.threads.filter(({ status, deletedAt }) => status === 'open' && !deletedAt)
+                .length ? (
+                <small>
+                  {
+                    comments.threads.filter(
+                      ({ status, deletedAt }) => status === 'open' && !deletedAt,
+                    ).length
+                  }
+                </small>
               ) : null}
             </button>
           ) : null}
@@ -1155,6 +1471,14 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
           <span>{error}</span>
           <button className="secondary" type="button" onClick={() => void retry()}>
             {t('editor.reloadStory')}
+          </button>
+        </div>
+      ) : null}
+      {comments.error && !commentsOpen && !showContextualComments ? (
+        <div className="save-error" role="alert">
+          <span>{comments.error}</span>
+          <button className="secondary" type="button" onClick={() => void comments.reload()}>
+            {t('comments.retry')}
           </button>
         </div>
       ) : null}
@@ -1244,11 +1568,13 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
                 <CategorizedContextList
                   items={filteredLocations}
                   renderItem={(location) => (
-                    <li key={location.id}>
+                    <li className="context-entity-row" key={location.id}>
                       <button
                         type="button"
                         aria-label={location.name}
-                        className={location.id === selectedLocationId ? 'selected' : 'ghost'}
+                        className={`context-entity-select ${
+                          location.id === selectedLocationId ? 'selected' : 'ghost'
+                        }`}
                         onClick={() => {
                           clearSearch();
                           selectExclusive({ type: 'location', id: location.id });
@@ -1265,6 +1591,11 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
                           </small>
                         </span>
                       </button>
+                      <ContextCommentButton
+                        count={commentCountsByTarget.get(`location:${location.id}`) ?? 0}
+                        entityName={location.name}
+                        onClick={() => openCommentsForTarget('location', location.id)}
+                      />
                     </li>
                   )}
                 />
@@ -1300,11 +1631,13 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
                 <CategorizedContextList
                   items={filteredCharacters}
                   renderItem={(character) => (
-                    <li key={character.id}>
+                    <li className="context-entity-row" key={character.id}>
                       <button
                         type="button"
                         aria-label={character.name}
-                        className={character.id === selectedCharacterId ? 'selected' : 'ghost'}
+                        className={`context-entity-select ${
+                          character.id === selectedCharacterId ? 'selected' : 'ghost'
+                        }`}
                         onClick={() => {
                           clearSearch();
                           selectExclusive({ type: 'character', id: character.id });
@@ -1325,6 +1658,11 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
                           </small>
                         </span>
                       </button>
+                      <ContextCommentButton
+                        count={commentCountsByTarget.get(`character:${character.id}`) ?? 0}
+                        entityName={character.name}
+                        onClick={() => openCommentsForTarget('character', character.id)}
+                      />
                     </li>
                   )}
                 />
@@ -1360,13 +1698,13 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
                 <CategorizedContextList
                   items={filteredStatDefinitions}
                   renderItem={(definition) => (
-                    <li key={definition.id}>
+                    <li className="context-entity-row" key={definition.id}>
                       <button
                         type="button"
                         aria-label={definition.name}
-                        className={
+                        className={`context-entity-select ${
                           definition.id === selectedStatDefinitionId ? 'selected' : 'ghost'
-                        }
+                        }`}
                         onClick={() => {
                           clearSearch();
                           selectExclusive({ type: 'statDefinition', id: definition.id });
@@ -1384,6 +1722,11 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
                           </small>
                         </span>
                       </button>
+                      <ContextCommentButton
+                        count={commentCountsByTarget.get(`statDefinition:${definition.id}`) ?? 0}
+                        entityName={definition.name}
+                        onClick={() => openCommentsForTarget('statDefinition', definition.id)}
+                      />
                     </li>
                   )}
                 />
@@ -1419,13 +1762,13 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
                 <CategorizedContextList
                   items={filteredItemDefinitions}
                   renderItem={(definition) => (
-                    <li key={definition.id}>
+                    <li className="context-entity-row" key={definition.id}>
                       <button
                         type="button"
                         aria-label={definition.name}
-                        className={
+                        className={`context-entity-select ${
                           definition.id === selectedItemDefinitionId ? 'selected' : 'ghost'
-                        }
+                        }`}
                         onClick={() => {
                           clearSearch();
                           selectExclusive({ type: 'itemDefinition', id: definition.id });
@@ -1442,6 +1785,11 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
                           </small>
                         </span>
                       </button>
+                      <ContextCommentButton
+                        count={commentCountsByTarget.get(`itemDefinition:${definition.id}`) ?? 0}
+                        entityName={definition.name}
+                        onClick={() => openCommentsForTarget('itemDefinition', definition.id)}
+                      />
                     </li>
                   )}
                 />
@@ -1485,16 +1833,37 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
           {canvasContextMenu ? (
             <StoryCanvasContextMenu
               position={canvasContextMenu.screenPosition}
+              targetKind={canvasContextMenu.target.kind}
               canEdit={!reviewOnly}
               canComment={story.capabilities?.canComment === true}
               canOrganize={story.interactions.length > 0}
               organizeSelectionCount={selectedLayoutTargets.length}
               onCreateInteraction={() => void createRootFromClick(canvasContextMenu.flowPosition)}
-              onAddComment={() => startCanvasComment(canvasContextMenu.flowPosition)}
+              onAddComment={() => {
+                const target = canvasContextMenu.target;
+                if (target.kind === 'canvas') {
+                  startCanvasComment(canvasContextMenu.flowPosition);
+                } else if (target.kind === 'interaction') {
+                  startEntityCommentForTarget('interaction', target.interactionId);
+                } else if (target.kind === 'trigger') {
+                  startEntityCommentForTarget('trigger', target.triggerId);
+                }
+              }}
               onAddFrame={() => void addGraphDecoration('frame', canvasContextMenu.flowPosition)}
               onAddText={() => void addGraphDecoration('text', canvasContextMenu.flowPosition)}
+              onAddChild={() => {
+                const target = canvasContextMenu.target;
+                if (target.kind === 'interaction') {
+                  void createChildFromClick(target.interactionId);
+                }
+              }}
+              onDelete={() => {
+                const target = canvasContextMenu.target;
+                if (target.kind !== 'canvas') void deleteGraphElement(target);
+              }}
               onOrganizeAll={() => void organizeGraph('all')}
               onOrganizeSelection={() => void organizeGraph('selection')}
+              onOrganizeTarget={() => void organizeGraph('selection')}
               onClose={() => setCanvasContextMenu(undefined)}
             />
           ) : null}
@@ -1512,6 +1881,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
             onConnectStart={reviewOnly ? undefined : startCanvasConnection}
             onConnectEnd={reviewOnly ? undefined : endCanvasConnection}
             onNodeClick={select}
+            onNodeContextMenu={handleNodeContextMenu}
             onPaneClick={handlePaneClick}
             onPaneContextMenu={handlePaneContextMenu}
             onSelectionStart={reviewOnly ? undefined : handleGraphSelectionStart}
@@ -1520,6 +1890,10 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
             onNodeDragStart={reviewOnly ? undefined : handleNodeDragStart}
             onNodeDrag={reviewOnly ? undefined : handleNodeDrag}
             onNodeDragStop={(_, node, draggedNodes) => {
+              if (node.type === 'commentPin') {
+                void persistCanvasCommentDrag(node);
+                return;
+              }
               if (reviewOnly) return;
               if (node.type === 'interaction' || node.type === 'trigger') {
                 void persistNodeDrag(node, draggedNodes);
@@ -1537,6 +1911,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
             panActivationKeyCode="Space"
             selectionOnDrag={!reviewOnly}
             selectionMode={SelectionMode.Full}
+            deleteKeyCode={null}
           >
             <Background />
             <Controls />
@@ -1550,12 +1925,15 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
             error={comments.error}
             canComment={story.capabilities?.canComment === true}
             canManageThread={canManageCommentThread}
+            canDeleteThread={canDeleteCommentThread}
             onSelect={comments.selectThread}
             onCreate={comments.create}
             onCancelDraft={comments.cancelDraft}
             onReply={comments.reply}
             onStatus={comments.setStatus}
+            onDelete={deleteCommentThread}
             onReattach={reattachSelectedThread}
+            onClose={closeContextualComments}
           />
         ) : null}
         {commentsOpen ? (
@@ -1565,24 +1943,63 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
             loading={comments.loading}
             error={comments.error}
             threads={projectedCommentThreads}
+            selectedThread={comments.selectedThread}
             canComment={story.capabilities?.canComment === true}
+            canManageThread={Boolean(
+              comments.selectedThread && canManageCommentThread(comments.selectedThread),
+            )}
+            canDeleteThread={Boolean(
+              comments.selectedThread && canDeleteCommentThread(comments.selectedThread),
+            )}
+            deletedLoading={comments.deletedLoading}
             realtimeStatus={comments.realtimeStatus}
             onClose={() => setCommentsOpen(false)}
             onSelect={(threadId) => {
-              if (threadId) focusCommentThread(threadId);
+              if (!threadId) {
+                comments.selectThread(undefined);
+                return;
+              }
+              const thread = projectedCommentThreads.find(({ id }) => id === threadId);
+              if (thread?.deletedAt) comments.selectThread(threadId);
+              else focusCommentThread(threadId);
             }}
             onCancelDraft={comments.cancelDraft}
             onCreate={comments.create}
             onReply={comments.reply}
             onStatus={comments.setStatus}
+            onDelete={deleteCommentThread}
+            onRestore={restoreCommentThread}
+            onLoadDeleted={comments.loadDeleted}
           />
         ) : hasInspectorSelection ? (
           <aside className="inspector" aria-label={t('editor.inspector')}>
             <div className="inspector-header">
               {selectedCommentTarget && story.capabilities?.canComment ? (
                 <div className="inspector-comment-actions">
-                  <button className="secondary" type="button" onClick={startEntityComment}>
-                    {t('comments.commentEntity')}
+                  <button
+                    className={`secondary inspector-comment-toggle ${
+                      showContextualComments ? 'active' : ''
+                    }`}
+                    type="button"
+                    aria-expanded={showContextualComments}
+                    aria-label={t(
+                      showContextualComments
+                        ? 'comments.collapseForEntity'
+                        : selectedTargetCommentCount > 0
+                          ? 'comments.openForEntity'
+                          : 'comments.commentEntity',
+                    )}
+                    title={t(
+                      showContextualComments
+                        ? 'comments.collapseForEntity'
+                        : selectedTargetCommentCount > 0
+                          ? 'comments.openForEntity'
+                          : 'comments.commentEntity',
+                    )}
+                    onClick={toggleContextualComments}
+                  >
+                    <span aria-hidden="true">◆</span>
+                    <small>{selectedTargetCommentCount || '+'}</small>
                   </button>
                   <button
                     className="ghost"
@@ -1612,11 +2029,12 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
               <GraphDecorationInspector
                 decoration={selectedGraphDecoration}
                 onPatch={(patch) => void updateGraphDecoration(selectedGraphDecoration.id, patch)}
-                onDelete={() => {
-                  const decorationId = selectedGraphDecoration.id;
-                  closeInspector();
-                  void deleteGraphDecoration(decorationId);
-                }}
+                onDelete={() =>
+                  void deleteGraphElement({
+                    kind: 'graphDecoration',
+                    decorationId: selectedGraphDecoration.id,
+                  })
+                }
               />
             ) : !reviewOnly && (isCreatingStatDefinition || selectedStatDefinition) ? (
               <StatDefinitionInspector
@@ -1636,6 +2054,8 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
                 onStory={setStory}
                 statDefinition={selectedStatDefinition}
                 story={story}
+                textCommentCounts={selectedTextCommentCounts}
+                onOpenTextComments={openTextComments}
               />
             ) : reviewOnly ? (
               <ReviewTargetInspector
@@ -1645,6 +2065,8 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
                 character={selectedCharacter}
                 statDefinition={selectedStatDefinition}
                 itemDefinition={selectedItemDefinition}
+                textCommentCounts={selectedTextCommentCounts}
+                onOpenTextComments={openTextComments}
               />
             ) : selected ? (
               <InteractionInspector
@@ -1656,6 +2078,8 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
                 onSelectInteraction={(interactionId) =>
                   selectExclusive({ type: 'interaction', id: interactionId })
                 }
+                textCommentCounts={selectedTextCommentCounts}
+                onOpenTextComments={openTextComments}
               />
             ) : selectedTriggerTarget ? (
               <TriggerInspector
@@ -1674,6 +2098,8 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
                 itemDefinitions={story.itemDefinitions ?? []}
                 statDefinitions={story.statDefinitions ?? []}
                 onMoveItem={moveItemInstance}
+                textCommentCounts={selectedTextCommentCounts}
+                onOpenTextComments={openTextComments}
               />
             ) : selectedCharacter ? (
               <CharacterInspector
@@ -1689,6 +2115,8 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
                 onCreateItem={createCharacterItem}
                 onDeleteItem={deleteCharacterItem}
                 onMoveItem={moveItemInstance}
+                textCommentCounts={selectedTextCommentCounts}
+                onOpenTextComments={openTextComments}
               />
             ) : selectedItemDefinition ? (
               <ItemDefinitionInspector
@@ -1697,6 +2125,8 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
                 statDefinitions={story.statDefinitions ?? []}
                 onChange={updateLocalItemDefinition}
                 onPatch={updateItemDefinition}
+                textCommentCounts={selectedTextCommentCounts}
+                onOpenTextComments={openTextComments}
               />
             ) : null}
           </aside>
@@ -1756,6 +2186,8 @@ function ReviewTargetInspector({
   character,
   statDefinition,
   itemDefinition,
+  textCommentCounts,
+  onOpenTextComments,
 }: {
   interaction?: Interaction;
   trigger?: Trigger;
@@ -1763,16 +2195,30 @@ function ReviewTargetInspector({
   character?: Character;
   statDefinition?: StatDefinition;
   itemDefinition?: ItemDefinition;
-}) {
+} & InspectorTextCommentProps) {
   const { t } = useTranslation();
   if (interaction) {
     return (
       <div className="review-target-inspector">
         <h3>{t('inspector.interaction')}</h3>
-        <h2 data-comment-field="title">{interaction.title}</h2>
-        <div data-comment-field="body">
-          <RichTextContent html={interaction.body} />
-        </div>
+        <InspectorCommentField
+          field="title"
+          label={t('interactionInspector.title')}
+          textCommentCounts={textCommentCounts}
+          onOpenTextComments={onOpenTextComments}
+        >
+          <h2 data-comment-field="title">{interaction.title}</h2>
+        </InspectorCommentField>
+        <InspectorCommentField
+          field="body"
+          label={t('richText.content')}
+          textCommentCounts={textCommentCounts}
+          onOpenTextComments={onOpenTextComments}
+        >
+          <div data-comment-field="body">
+            <RichTextContent html={interaction.body} />
+          </div>
+        </InspectorCommentField>
       </div>
     );
   }
@@ -1790,9 +2236,23 @@ function ReviewTargetInspector({
   return (
     <div className="review-target-inspector">
       <h3>{t(`inspector.${type}`)}</h3>
-      <h2 data-comment-field="name">{target.name}</h2>
+      <InspectorCommentField
+        field="name"
+        label={t('inspector.name')}
+        textCommentCounts={textCommentCounts}
+        onOpenTextComments={onOpenTextComments}
+      >
+        <h2 data-comment-field="name">{target.name}</h2>
+      </InspectorCommentField>
       {'description' in target && target.description ? (
-        <p data-comment-field="description">{target.description}</p>
+        <InspectorCommentField
+          field="description"
+          label={t('inspector.description')}
+          textCommentCounts={textCommentCounts}
+          onOpenTextComments={onOpenTextComments}
+        >
+          <p data-comment-field="description">{target.description}</p>
+        </InspectorCommentField>
       ) : null}
     </div>
   );

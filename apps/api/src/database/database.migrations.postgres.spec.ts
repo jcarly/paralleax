@@ -783,6 +783,37 @@ describePostgres('Database migrations PostgreSQL upgrade', () => {
       pool.query("UPDATE users SET display_name = ' ' WHERE id = 'legacy-user-1234'"),
     ).rejects.toMatchObject({ code: '23514' });
   }, 30_000);
+
+  it('adds recoverable deletion metadata to existing comment threads', async () => {
+    await pool.query('DROP SCHEMA public CASCADE');
+    await pool.query('CREATE SCHEMA public');
+    await new DatabaseMigrator({ pool } as DatabaseConnection).run();
+
+    await expect(
+      pool.query(
+        `SELECT column_name, is_nullable
+         FROM information_schema.columns
+         WHERE table_schema = 'public'
+           AND table_name = 'story_comment_threads'
+           AND column_name IN ('deleted_by', 'deleted_at')
+         ORDER BY column_name`,
+      ),
+    ).resolves.toMatchObject({
+      rows: [
+        { column_name: 'deleted_at', is_nullable: 'YES' },
+        { column_name: 'deleted_by', is_nullable: 'YES' },
+      ],
+      rowCount: 2,
+    });
+    await expect(
+      pool.query(
+        `SELECT indexname
+         FROM pg_indexes
+         WHERE schemaname = 'public'
+           AND indexname = 'story_comment_threads_story_deleted_idx'`,
+      ),
+    ).resolves.toMatchObject({ rowCount: 1 });
+  }, 30_000);
 });
 
 async function waitForPostgres(pool: Pool) {

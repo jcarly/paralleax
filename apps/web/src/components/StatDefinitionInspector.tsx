@@ -9,6 +9,11 @@ import {
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { api } from '../api';
+import { apiErrorMessage } from '../apiErrorMessages';
+import {
+  InspectorCommentField,
+  type InspectorTextCommentProps,
+} from '../features/comments/InspectorCommentField';
 import { getStatAssignmentOwners, type StatAssignmentOwner } from '../storyStats';
 import { CategoryField } from './CategoryField';
 import { ImageUrlField } from './ImageUrlField';
@@ -56,7 +61,9 @@ function AssignmentRow({
           void api
             .updateStatAssignment(storyId, assignment.id, { initialValue })
             .then(onStory)
-            .catch((next: Error) => onError(next.message))
+            .catch((caught: unknown) =>
+              onError(apiErrorMessage(caught, t, t('attributes.operationFailed'))),
+            )
         }
       />
       <button
@@ -67,7 +74,9 @@ function AssignmentRow({
           void api
             .deleteStatAssignment(storyId, assignment.id)
             .then(onStory)
-            .catch((next: Error) => onError(next.message))
+            .catch((caught: unknown) =>
+              onError(apiErrorMessage(caught, t, t('attributes.operationFailed'))),
+            )
         }
       >
         x
@@ -93,7 +102,9 @@ function CreateDefinitionForm({
       className="attribute-definition-create"
       onSubmit={(event) => {
         event.preventDefault();
-        void onCreate({ name, valueType }).catch((error: Error) => onError(error.message));
+        void onCreate({ name, valueType }).catch((caught: unknown) =>
+          onError(apiErrorMessage(caught, t, t('attributes.operationFailed'))),
+        );
       }}
     >
       <label>
@@ -131,6 +142,8 @@ export function StatDefinitionInspector({
   onCreate,
   onStory,
   onClose,
+  textCommentCounts,
+  onOpenTextComments,
 }: {
   story: Story;
   statDefinition?: StatDefinition;
@@ -144,7 +157,7 @@ export function StatDefinitionInspector({
   onCreate: (input: CreateStatDefinitionInput) => Promise<string | undefined>;
   onStory: (story: Story) => void;
   onClose: () => void;
-}) {
+} & InspectorTextCommentProps) {
   const { t } = useTranslation();
   const [error, setError] = useState('');
   if (creating) {
@@ -181,7 +194,9 @@ export function StatDefinitionInspector({
       onError={setError}
       onPatch={onPatch}
       onStory={onStory}
+      onOpenTextComments={onOpenTextComments}
       story={story}
+      textCommentCounts={textCommentCounts}
     />
   );
 }
@@ -198,6 +213,8 @@ function StatDefinitionEditor({
   onStory,
   onError,
   onClose,
+  textCommentCounts,
+  onOpenTextComments,
 }: {
   story: Story;
   definition: StatDefinition;
@@ -210,7 +227,7 @@ function StatDefinitionEditor({
   onStory: (story: Story) => void;
   onError: (message: string) => void;
   onClose: () => void;
-}) {
+} & InspectorTextCommentProps) {
   const { t } = useTranslation();
   const [ownerKey, setOwnerKey] = useState(
     availableOwners[0] ? `${availableOwners[0].ownerType}:${availableOwners[0].ownerId ?? ''}` : '',
@@ -225,14 +242,22 @@ function StatDefinitionEditor({
     <div>
       <h3>{t('attributes.inspectorTitle')}</h3>
       {error ? <p className="error">{error}</p> : null}
-      <label>
-        {t('attributes.definitionName')}
-        <input
-          value={definition.name}
-          onChange={(event) => onChange({ ...definition, name: event.target.value })}
-          onBlur={(event) => void onPatch(definition.id, { name: event.target.value })}
-        />
-      </label>
+      <InspectorCommentField
+        field="name"
+        label={t('attributes.definitionName')}
+        textCommentCounts={textCommentCounts}
+        onOpenTextComments={onOpenTextComments}
+      >
+        <label>
+          {t('attributes.definitionName')}
+          <input
+            data-comment-field="name"
+            value={definition.name}
+            onChange={(event) => onChange({ ...definition, name: event.target.value })}
+            onBlur={(event) => void onPatch(definition.id, { name: event.target.value })}
+          />
+        </label>
+      </InspectorCommentField>
       <CategoryField
         category={definition.category}
         suggestions={categorySuggestions}
@@ -321,7 +346,9 @@ function StatDefinitionEditor({
                   initialValue,
                 })
                 .then(onStory)
-                .catch((next: Error) => onError(next.message))
+                .catch((caught: unknown) =>
+                  onError(apiErrorMessage(caught, t, t('attributes.operationFailed'))),
+                )
             }
           >
             {t('attributes.assign')}
@@ -339,7 +366,9 @@ function StatDefinitionEditor({
               onStory(next);
               onClose();
             })
-            .catch((next: Error) => onError(next.message));
+            .catch((caught: unknown) =>
+              onError(apiErrorMessage(caught, t, t('attributes.operationFailed'))),
+            );
         }}
       >
         {t('attributes.deleteDefinition')}
