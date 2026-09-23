@@ -2,7 +2,7 @@
 
 This roadmap describes the progression from the validated narrative core to a public Paralleax platform.
 
-Status reviewed: 2026-09-13.
+Status reviewed: 2026-09-23.
 
 It is organized around **user capabilities** rather than implementation areas. Engineering work supports these milestones but does not define them by itself.
 
@@ -31,8 +31,8 @@ reliability, conflict, exchange-format, accessibility, and publication work.
 The private-alpha P0 feedback queue is complete. The near-term delivery sequence is:
 
 1. deliver P1 account safety, Story-settings/access, localization,
-   comment-inspector, graph correctness, and cyclic-layout work as cohesive
-   verticals;
+   comment-inspector, semantic comment slots, graph correctness, and cyclic-layout
+   work as cohesive verticals;
 2. complete V0.3 optimistic concurrency, conflict recovery, history retention,
    and optional gesture grouping;
 3. establish the stable Paralleax backup/import-export contract required by V0.6;
@@ -176,7 +176,11 @@ priority, the order below is the intended delivery order.
    marker, commented context rows expose their count, and supported inspector
    fields show local anchored-comment controls. Leaving a reply collapses only
    that editor; changing the selected target or closing the rail clears its
-   contextual state.
+   contextual state. **Responsive follow-up 2026-09-23:** the global list now
+   lives inside the standard inspector container, and every narrow comment-rail
+   layout keeps the graph in one full-width column with the inspector overlaid.
+   Selecting an authored element switches that inspector from the global list to
+   the element immediately.
 5. **Complete comment manipulation.** Make graph comment post-its draggable
    through the existing anchor-update operation. Add authorized thread/comment
    deletion only after settling thread-versus-message deletion, audit retention,
@@ -200,7 +204,19 @@ priority, the order below is the intended delivery order.
    guarded keyboard deletion share the existing persisted operations and
    confirmations. Element right-click selects the target and exposes the
    applicable comment, child, automatic-placement, and deletion actions.
-7. **Improve automatic layout for cycles.** Add representative loop and dense
+7. **Add semantic comment slots to entity editing.** Extend the existing
+   `CommentAnchor` family instead of creating another discussion model. Define a
+   shared typed registry of stable entity-field and entity-section slots, validate
+   same-Story targets through the existing API path, and reuse current threads,
+   messages, permissions, deletion/restoration, SSE, counts, and contextual rail.
+   Start with the editing surfaces for Interactions, Triggers, Characters,
+   Locations, Item Definitions, and Stat Definitions. A label and its non-text
+   value share one field slot; precise text selections keep their existing text
+   anchors. Icons stay discreet until hover/focus and persist with a count when a
+   discussion exists. Story-level list headings and dynamic rows are explicitly
+   subsequent increments; no row gets an individual slot without durable
+   identity, and ephemeral UI controls are not commentable.
+8. **Improve automatic layout for cycles.** Add representative loop and dense
    cyclic fixtures, define expected readability and stability, then improve the
    existing deterministic layout without changing Trigger semantics or making
    React Flow canonical.

@@ -80,7 +80,11 @@ Paralleax currently includes:
   use an inspector-integrated list, a translucent and explicitly collapsible
   contextual discussion rail, consistent graph/context-list counts, local
   title/body/name/description markers, navigable anchors, and expandable graph
-  post-its. Authorized thread managers can move a graph post-it by updating its
+  post-its. The global list occupies the existing inspector pane; on narrow
+  screens the pane overlays a full-width, position-stable graph instead of
+  creating compressed off-screen grid columns. Selecting any authored element
+  while that global list is open immediately restores the selected element's
+  inspector. Authorized thread managers can move a graph post-it by updating its
   existing canvas anchor; failed moves restore the persisted position and remain
   visible as an operational error. A discussion author or Story manager can
   soft-delete the complete thread from any anchor presentation; deleted threads

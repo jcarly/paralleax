@@ -58,6 +58,9 @@ describe('StoryEditor graph collaboration and layout', () => {
 
     const commentList = screen.getByRole('complementary', { name: 'Story comments' });
     expect(commentList).toHaveClass('inspector-placement');
+    const commentsInspector = screen.getByTestId('comments-inspector');
+    expect(commentsInspector).toHaveClass('inspector', 'comments-inspector');
+    expect(commentsInspector).toContainElement(commentList);
     await user.click(within(commentList).getByRole('button', { name: /Second interaction/ }));
 
     expect(await screen.findByDisplayValue('Second interaction')).toBeInTheDocument();
@@ -68,6 +71,20 @@ describe('StoryEditor graph collaboration and layout', () => {
     expect(
       screen.getByTestId('flow-node-interaction-2').querySelector('.interaction-node'),
     ).toHaveClass('selected');
+  });
+
+  it('replaces the global comment list with the selected element inspector', async () => {
+    const user = userEvent.setup();
+    await renderEditor(storyWithTwoInteractions());
+
+    await user.click(await screen.findByRole('button', { name: /^Comments/ }));
+    expect(screen.getByTestId('comments-inspector')).toBeInTheDocument();
+
+    await user.click(screen.getByTestId('flow-node-interaction-2'));
+
+    expect(screen.queryByTestId('comments-inspector')).not.toBeInTheDocument();
+    expect(screen.getByRole('complementary', { name: 'Inspector' })).toBeInTheDocument();
+    expect(screen.getByDisplayValue('Second interaction')).toBeInTheDocument();
   });
 
   it('persists an authorized canvas post-it move through its existing anchor', async () => {

@@ -39,21 +39,6 @@ export function ContextualCommentsRail({
 
   return (
     <aside className="contextual-comments-rail" aria-label={t('comments.contextualPanel')}>
-      <header className="contextual-comments-header">
-        <span>
-          <span aria-hidden="true">◆</span>
-          {t('comments.title')}
-        </span>
-        <button
-          className="ghost"
-          type="button"
-          aria-label={t('comments.close')}
-          title={t('comments.collapseForEntity')}
-          onClick={onClose}
-        >
-          ×
-        </button>
-      </header>
       {error ? (
         <p className="comments-error" role="alert">
           {error}

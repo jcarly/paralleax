@@ -483,6 +483,14 @@ thread becomes detached instead of being deleted. Comments are authoring/review
 metadata: the reader engine, reader progress, and future story exports do not
 consume them.
 
+The next review-anchor extension is a typed semantic slot. A slot represents a
+stable authored field or inspector section on a same-story entity, and later a
+curated Story-level authoring section. It never stores translated copy, DOM
+structure, or CSS selectors. Field-label and non-text-value comments share one
+field slot, while precise text selections remain text anchors. The initial scope
+is entity editing; dynamic rows require durable identities before receiving
+individual slots.
+
 Editors use the complete graph-anchored review projection. Authorized signed-in
 readers use a contextual player projection that lists interaction and interaction-
 text threads only for the scene currently being read and creates new threads on

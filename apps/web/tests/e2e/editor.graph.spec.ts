@@ -14,6 +14,71 @@ test.describe('Story editor graph', () => {
     await prepareEditorPage(page);
   });
 
+  test('keeps the graph stable while the comment list opens inside the inspector', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 760, height: 720 });
+    await page.route('**/api/stories/story-1/comment-threads', (route) =>
+      route.fulfill({
+        json: [
+          {
+            id: 'thread-1',
+            storyId: 'story-1',
+            anchor: {
+              kind: 'entity',
+              targetType: 'interaction',
+              targetId: 'interaction-1',
+            },
+            anchorLabel: 'First scene',
+            status: 'open',
+            createdBy: { id: 'user-1', displayName: 'Author' },
+            createdAt: '2026-09-23T08:00:00.000Z',
+            updatedAt: '2026-09-23T08:00:00.000Z',
+            messages: [
+              {
+                id: 'message-1',
+                threadId: 'thread-1',
+                author: { id: 'user-1', displayName: 'Author' },
+                body: 'Review this scene.',
+                createdAt: '2026-09-23T08:00:00.000Z',
+              },
+            ],
+          },
+        ],
+      }),
+    );
+
+    await page.goto('/stories/story-1/edit');
+    const canvas = page.locator('.canvas');
+    const viewport = page.locator('.react-flow__viewport');
+    const canvasBefore = await canvas.boundingBox();
+    const transformBefore = await viewport.evaluate(
+      (element) => getComputedStyle(element).transform,
+    );
+    expect(canvasBefore).not.toBeNull();
+
+    await page.getByRole('button', { name: /^Comments/ }).click();
+
+    const commentsInspector = page.getByTestId('comments-inspector');
+    const comments = commentsInspector.getByRole('complementary', { name: 'Story comments' });
+    await expect(commentsInspector).toBeVisible();
+    await expect(comments.getByText('Review this scene.')).toBeVisible();
+    const inspectorBox = await commentsInspector.boundingBox();
+    const canvasAfter = await canvas.boundingBox();
+    expect(inspectorBox).not.toBeNull();
+    expect(canvasAfter).not.toBeNull();
+    expect(inspectorBox!.x + inspectorBox!.width).toBeLessThanOrEqual(760);
+    expect(canvasAfter!.width).toBeGreaterThanOrEqual(758);
+    expect(await viewport.evaluate((element) => getComputedStyle(element).transform)).toBe(
+      transformBefore,
+    );
+
+    await page.locator('.react-flow__node[data-id="interaction-1"]').click({ force: true });
+    await expect(commentsInspector).toBeHidden();
+    await expect(page.getByRole('complementary', { name: 'Inspector' })).toBeVisible();
+    await expect(page.getByLabel('Title', { exact: true })).toHaveValue('Original title');
+  });
+
   test('keeps child creation controls clickable above invisible routing handles', async ({
     page,
   }) => {

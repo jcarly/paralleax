@@ -880,7 +880,13 @@ contextual rail. Entity badges on graph and context-list entries open that rail
 explicitly; text anchors reuse the same threads through field-local
 title/body/name/description markers. The rail keeps discussions visible together
 and treats the selected thread only as reply-editor state, so a blur can collapse
-the reply without closing its context. Moving a canvas post-it calls the existing
+the reply without closing its context. The global list is nested in the standard
+inspector pane, while explicit grid areas keep navigation, canvas, and inspector
+ordering stable. At the narrow breakpoint, navigation and inspector panes overlay
+a single full-width canvas column, including every contextual-comment layout
+variant. The global list is one inspector mode rather than a competing panel:
+the shared editor selection entry points close it before projecting an element
+inspector. Moving a canvas post-it calls the existing
 thread-anchor update and reprojects its returned position; a failed mutation
 restores the prior anchor rather than retaining an unsaved graph coordinate.
 Thread deletion is recoverable: PostgreSQL retains the thread and messages with

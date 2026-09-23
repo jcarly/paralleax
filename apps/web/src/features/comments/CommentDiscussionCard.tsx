@@ -133,7 +133,7 @@ export function CommentDiscussionCard({
               </button>
             </form>
           ) : null}
-          {canManageThread ? (
+          {expanded && canManageThread ? (
             <button
               className="ghost comment-inline-status"
               type="button"
@@ -142,7 +142,7 @@ export function CommentDiscussionCard({
               {t(thread.status === 'open' ? 'comments.resolve' : 'comments.reopen')}
             </button>
           ) : null}
-          {canDeleteThread && onDelete ? (
+          {expanded && canDeleteThread && onDelete ? (
             <button
               className="ghost danger comment-inline-delete"
               type="button"

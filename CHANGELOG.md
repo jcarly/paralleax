@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-09-23
+
+- Recorded the accepted semantic comment-slot direction: extend the existing
+  anchored-discussion model with shared, typed, translation-independent slots,
+  starting with entity-inspector fields and sections before Story headings or
+  dynamic rows.
+- Kept the global Story comment list inside the standard inspector pane and made
+  editor grid placement explicit. Narrow layouts now preserve a full-width graph
+  and its viewport transform while comments overlay from the visible inspector,
+  instead of compressing the graph into residual desktop columns. Selecting an
+  authored element while the list is open now switches directly to that element's
+  inspector.
+
 ## 2026-09-22
 
 - Added persisted graph-element context actions for Interactions, Triggers,

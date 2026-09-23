@@ -268,6 +268,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
   } = useStoryEditorSelection(story);
   const selectExclusive = useCallback(
     (selection?: StoryEditorExclusiveSelection) => {
+      if (selection) setCommentsOpen(false);
       setContextualCommentsTargetKey(undefined);
       selectEditorExclusive(selection);
     },
@@ -275,6 +276,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
   );
   const selectInteraction = useCallback(
     (interactionId: string) => {
+      setCommentsOpen(false);
       setContextualCommentsTargetKey(undefined);
       selectEditorInteraction(interactionId);
     },
@@ -282,6 +284,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
   );
   const focusInteraction = useCallback(
     (interactionId: string) => {
+      setCommentsOpen(false);
       setContextualCommentsTargetKey(undefined);
       focusEditorInteraction(interactionId);
     },
@@ -292,6 +295,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
     clearEditorSelection();
   }, [clearEditorSelection]);
   const handleGraphSelectionStart = useCallback(() => {
+    setCommentsOpen(false);
     setContextualCommentsTargetKey(undefined);
     startEditorGraphSelection();
   }, [startEditorGraphSelection]);
@@ -942,6 +946,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
     setCanvasContextMenu(undefined);
     if (node.type === 'commentPin') return;
 
+    setCommentsOpen(false);
     selectCommentThread(undefined);
     if (selectedGraphNodeIds.has(node.id)) return;
 
@@ -1937,40 +1942,42 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
           />
         ) : null}
         {commentsOpen ? (
-          <StoryCommentsPanel
-            open
-            placement="inspector"
-            loading={comments.loading}
-            error={comments.error}
-            threads={projectedCommentThreads}
-            selectedThread={comments.selectedThread}
-            canComment={story.capabilities?.canComment === true}
-            canManageThread={Boolean(
-              comments.selectedThread && canManageCommentThread(comments.selectedThread),
-            )}
-            canDeleteThread={Boolean(
-              comments.selectedThread && canDeleteCommentThread(comments.selectedThread),
-            )}
-            deletedLoading={comments.deletedLoading}
-            realtimeStatus={comments.realtimeStatus}
-            onClose={() => setCommentsOpen(false)}
-            onSelect={(threadId) => {
-              if (!threadId) {
-                comments.selectThread(undefined);
-                return;
-              }
-              const thread = projectedCommentThreads.find(({ id }) => id === threadId);
-              if (thread?.deletedAt) comments.selectThread(threadId);
-              else focusCommentThread(threadId);
-            }}
-            onCancelDraft={comments.cancelDraft}
-            onCreate={comments.create}
-            onReply={comments.reply}
-            onStatus={comments.setStatus}
-            onDelete={deleteCommentThread}
-            onRestore={restoreCommentThread}
-            onLoadDeleted={comments.loadDeleted}
-          />
+          <div className="inspector comments-inspector" data-testid="comments-inspector">
+            <StoryCommentsPanel
+              open
+              placement="inspector"
+              loading={comments.loading}
+              error={comments.error}
+              threads={projectedCommentThreads}
+              selectedThread={comments.selectedThread}
+              canComment={story.capabilities?.canComment === true}
+              canManageThread={Boolean(
+                comments.selectedThread && canManageCommentThread(comments.selectedThread),
+              )}
+              canDeleteThread={Boolean(
+                comments.selectedThread && canDeleteCommentThread(comments.selectedThread),
+              )}
+              deletedLoading={comments.deletedLoading}
+              realtimeStatus={comments.realtimeStatus}
+              onClose={() => setCommentsOpen(false)}
+              onSelect={(threadId) => {
+                if (!threadId) {
+                  comments.selectThread(undefined);
+                  return;
+                }
+                const thread = projectedCommentThreads.find(({ id }) => id === threadId);
+                if (thread?.deletedAt) comments.selectThread(threadId);
+                else focusCommentThread(threadId);
+              }}
+              onCancelDraft={comments.cancelDraft}
+              onCreate={comments.create}
+              onReply={comments.reply}
+              onStatus={comments.setStatus}
+              onDelete={deleteCommentThread}
+              onRestore={restoreCommentThread}
+              onLoadDeleted={comments.loadDeleted}
+            />
+          </div>
         ) : hasInspectorSelection ? (
           <aside className="inspector" aria-label={t('editor.inspector')}>
             <div className="inspector-header">
