@@ -112,6 +112,7 @@ import {
   type StoryGraphClickCreation,
 } from '../storyGraphCreationLayout';
 import { getReferencedInteractionIds } from '../storyNavigation';
+import { computeStoryGraphElkLayout } from '../storyGraphElkLayout';
 
 const nodeTypes = {
   interaction: InteractionNode,
@@ -1345,7 +1346,14 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
         ? { kind: 'selection', targets: selectedLayoutTargets }
         : { kind: 'all' };
     const interactionSizes = getMeasuredInteractionSizes(nodes);
-    const layout = computeStoryGraphLayout(story, scope, { interactionSizes });
+    const layout =
+  scope.kind === 'all'
+    ? await computeStoryGraphElkLayout(story, {
+        interactionSizes,
+      })
+    : computeStoryGraphLayout(story, scope, {
+        interactionSizes,
+      });
     const hasPositionUpdates =
       layout.interactionUpdates.length > 0 || layout.triggerUpdates.length > 0;
     if (hasPositionUpdates) beginLocalEdit();
