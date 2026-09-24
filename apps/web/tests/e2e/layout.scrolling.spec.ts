@@ -64,6 +64,83 @@ test.describe('Constrained overlays and editor panels', () => {
     expect(dimensions.scrollTop).toBeGreaterThan(0);
   });
 
+  for (const width of [1280, 760]) {
+    test(`scrolls inspector content while keeping its border comment toggle usable at ${width}px`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: 540 });
+      const current = cloneStory();
+      current.capabilities!.canComment = true;
+      current.interactions[0].body = Array.from(
+        { length: 30 },
+        (_, index) => `<p>Inspector paragraph ${index + 1}.</p>`,
+      ).join('');
+      await prepareEditorPage(page, current);
+      await page.goto('/stories/story-1/edit');
+      await page.locator('.react-flow__node[data-id="interaction-1"]').click();
+
+      const inspector = page.getByRole('complementary', { name: 'Inspector' });
+      const content = inspector.locator('.inspector-content');
+      const toggle = inspector.locator('.inspector-comment-toggle');
+      const rail = page.getByRole('complementary', {
+        name: 'Comments for the selected element',
+      });
+      const canvas = page.locator('.canvas');
+      const viewport = page.locator('.react-flow__viewport');
+      await expect(content).toBeVisible();
+      const inspectorBox = (await inspector.boundingBox())!;
+      const toggleBefore = (await toggle.boundingBox())!;
+      const canvasBefore = await canvas.boundingBox();
+      const transformBefore = await viewport.evaluate(
+        (element) => getComputedStyle(element).transform,
+      );
+      const pageScrollBefore = await page.evaluate(() => ({ x: scrollX, y: scrollY }));
+
+      expect(inspectorBox.y + inspectorBox.height).toBeLessThanOrEqual(540);
+      expect(toggleBefore.x).toBeLessThan(inspectorBox.x);
+      expect(toggleBefore.x + toggleBefore.width).toBeGreaterThan(inspectorBox.x);
+      expect(
+        Math.abs(toggleBefore.x + toggleBefore.width / 2 - inspectorBox.x),
+      ).toBeLessThanOrEqual(1);
+      expect(await content.evaluate((element) => element.scrollHeight > element.clientHeight)).toBe(
+        true,
+      );
+
+      // Click the part extending over the graph so clipping cannot pass unnoticed.
+      const graphSide = { x: 4, y: toggleBefore.height / 2 };
+      await toggle.click({ position: graphSide });
+      await expect(rail).toBeVisible();
+      await toggle.click({ position: graphSide });
+      await expect(rail).toBeHidden();
+
+      const contentBox = (await content.boundingBox())!;
+      await content.hover({ position: { x: contentBox.width - 10, y: contentBox.height / 2 } });
+      await page.mouse.wheel(0, 600);
+      await expect.poll(() => content.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
+      await content.evaluate((element) => {
+        element.scrollTop = element.scrollHeight;
+      });
+      await page.mouse.wheel(0, 600);
+      await page.evaluate(
+        () =>
+          new Promise<void>((resolve) =>
+            requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+          ),
+      );
+
+      expect(await canvas.boundingBox()).toEqual(canvasBefore);
+      expect(await viewport.evaluate((element) => getComputedStyle(element).transform)).toBe(
+        transformBefore,
+      );
+      expect(await page.evaluate(() => ({ x: scrollX, y: scrollY }))).toEqual(pageScrollBefore);
+      expect(await toggle.boundingBox()).toEqual(toggleBefore);
+      await toggle.click({ position: graphSide });
+      await expect(rail).toBeVisible();
+      await toggle.click({ position: graphSide });
+      await expect(rail).toBeHidden();
+    });
+  }
+
   test('keeps Story settings sections separated in a short viewport', async ({ page }) => {
     await page.setViewportSize({ width: 520, height: 320 });
     await prepareEditorPage(page);

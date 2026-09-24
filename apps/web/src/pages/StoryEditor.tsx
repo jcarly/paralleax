@@ -2030,112 +2030,114 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
                 x
               </button>
             </div>
-            {graphSelection ? (
-              <StoryGraphSelectionInspector selection={graphSelection} />
-            ) : selectedGraphDecoration ? (
-              <GraphDecorationInspector
-                decoration={selectedGraphDecoration}
-                onPatch={(patch) => void updateGraphDecoration(selectedGraphDecoration.id, patch)}
-                onDelete={() =>
-                  void deleteGraphElement({
-                    kind: 'graphDecoration',
-                    decorationId: selectedGraphDecoration.id,
-                  })
-                }
-              />
-            ) : !reviewOnly && (isCreatingStatDefinition || selectedStatDefinition) ? (
-              <StatDefinitionInspector
-                categorySuggestions={statCategories}
-                creating={isCreatingStatDefinition}
-                key={selectedStatDefinition?.id ?? 'creating-stat-definition'}
-                onChange={updateLocalStatDefinition}
-                onClose={closeInspector}
-                onCreate={async (input) => {
-                  const definitionId = await createStatDefinition(input);
-                  if (definitionId) {
-                    selectExclusive({ type: 'statDefinition', id: definitionId });
+            <div className="inspector-content">
+              {graphSelection ? (
+                <StoryGraphSelectionInspector selection={graphSelection} />
+              ) : selectedGraphDecoration ? (
+                <GraphDecorationInspector
+                  decoration={selectedGraphDecoration}
+                  onPatch={(patch) => void updateGraphDecoration(selectedGraphDecoration.id, patch)}
+                  onDelete={() =>
+                    void deleteGraphElement({
+                      kind: 'graphDecoration',
+                      decorationId: selectedGraphDecoration.id,
+                    })
                   }
-                  return definitionId;
-                }}
-                onPatch={updateStatDefinition}
-                onStory={setStory}
-                statDefinition={selectedStatDefinition}
-                story={story}
-                textCommentCounts={selectedTextCommentCounts}
-                onOpenTextComments={openTextComments}
-              />
-            ) : reviewOnly ? (
-              <ReviewTargetInspector
-                interaction={selected}
-                trigger={selectedTriggerTarget?.trigger}
-                location={selectedLocation}
-                character={selectedCharacter}
-                statDefinition={selectedStatDefinition}
-                itemDefinition={selectedItemDefinition}
-                textCommentCounts={selectedTextCommentCounts}
-                onOpenTextComments={openTextComments}
-              />
-            ) : selected ? (
-              <InteractionInspector
-                story={story}
-                interaction={selected}
-                onChange={(next) => setStory(next)}
-                onPatch={patchInteraction}
-                onDelete={remove}
-                onSelectInteraction={(interactionId) =>
-                  selectExclusive({ type: 'interaction', id: interactionId })
-                }
-                textCommentCounts={selectedTextCommentCounts}
-                onOpenTextComments={openTextComments}
-              />
-            ) : selectedTriggerTarget ? (
-              <TriggerInspector
-                story={story}
-                interaction={selectedTriggerTarget.interaction}
-                trigger={selectedTriggerTarget.trigger}
-                onSaveTrigger={saveTrigger}
-                onDeleteTrigger={deleteSelectedTrigger}
-              />
-            ) : selectedLocation ? (
-              <LocationInspector
-                location={selectedLocation}
-                categorySuggestions={locationCategories}
-                onLocalChange={updateLocalLocation}
-                onPatch={updateLocation}
-                itemDefinitions={story.itemDefinitions ?? []}
-                statDefinitions={story.statDefinitions ?? []}
-                onMoveItem={moveItemInstance}
-                textCommentCounts={selectedTextCommentCounts}
-                onOpenTextComments={openTextComments}
-              />
-            ) : selectedCharacter ? (
-              <CharacterInspector
-                character={selectedCharacter}
-                categorySuggestions={characterCategories}
-                statDefinitions={story.statDefinitions ?? []}
-                itemDefinitions={story.itemDefinitions ?? []}
-                onChange={updateLocalCharacter}
-                onPatch={updateCharacter}
-                onCreateStat={createCharacterStat}
-                onPatchStat={updateCharacterStat}
-                onDeleteStat={deleteCharacterStat}
-                onCreateItem={createCharacterItem}
-                onDeleteItem={deleteCharacterItem}
-                onMoveItem={moveItemInstance}
-                textCommentCounts={selectedTextCommentCounts}
-                onOpenTextComments={openTextComments}
-              />
-            ) : selectedItemDefinition ? (
-              <ItemDefinitionInspector
-                itemDefinition={selectedItemDefinition}
-                categorySuggestions={itemCategories}
-                statDefinitions={story.statDefinitions ?? []}
-                onChange={updateLocalItemDefinition}
-                onPatch={updateItemDefinition}
-                textCommentCounts={selectedTextCommentCounts}
-                onOpenTextComments={openTextComments}
-              />
-            ) : null}
+                />
+              ) : !reviewOnly && (isCreatingStatDefinition || selectedStatDefinition) ? (
+                <StatDefinitionInspector
+                  categorySuggestions={statCategories}
+                  creating={isCreatingStatDefinition}
+                  key={selectedStatDefinition?.id ?? 'creating-stat-definition'}
+                  onChange={updateLocalStatDefinition}
+                  onClose={closeInspector}
+                  onCreate={async (input) => {
+                    const definitionId = await createStatDefinition(input);
+                    if (definitionId) {
+                      selectExclusive({ type: 'statDefinition', id: definitionId });
+                    }
+                    return definitionId;
+                  }}
+                  onPatch={updateStatDefinition}
+                  onStory={setStory}
+                  statDefinition={selectedStatDefinition}
+                  story={story}
+                  textCommentCounts={selectedTextCommentCounts}
+                  onOpenTextComments={openTextComments}
+                />
+              ) : reviewOnly ? (
+                <ReviewTargetInspector
+                  interaction={selected}
+                  trigger={selectedTriggerTarget?.trigger}
+                  location={selectedLocation}
+                  character={selectedCharacter}
+                  statDefinition={selectedStatDefinition}
+                  itemDefinition={selectedItemDefinition}
+                  textCommentCounts={selectedTextCommentCounts}
+                  onOpenTextComments={openTextComments}
+                />
+              ) : selected ? (
+                <InteractionInspector
+                  story={story}
+                  interaction={selected}
+                  onChange={(next) => setStory(next)}
+                  onPatch={patchInteraction}
+                  onDelete={remove}
+                  onSelectInteraction={(interactionId) =>
+                    selectExclusive({ type: 'interaction', id: interactionId })
+                  }
+                  textCommentCounts={selectedTextCommentCounts}
+                  onOpenTextComments={openTextComments}
+                />
+              ) : selectedTriggerTarget ? (
+                <TriggerInspector
+                  story={story}
+                  interaction={selectedTriggerTarget.interaction}
+                  trigger={selectedTriggerTarget.trigger}
+                  onSaveTrigger={saveTrigger}
+                  onDeleteTrigger={deleteSelectedTrigger}
+                />
+              ) : selectedLocation ? (
+                <LocationInspector
+                  location={selectedLocation}
+                  categorySuggestions={locationCategories}
+                  onLocalChange={updateLocalLocation}
+                  onPatch={updateLocation}
+                  itemDefinitions={story.itemDefinitions ?? []}
+                  statDefinitions={story.statDefinitions ?? []}
+                  onMoveItem={moveItemInstance}
+                  textCommentCounts={selectedTextCommentCounts}
+                  onOpenTextComments={openTextComments}
+                />
+              ) : selectedCharacter ? (
+                <CharacterInspector
+                  character={selectedCharacter}
+                  categorySuggestions={characterCategories}
+                  statDefinitions={story.statDefinitions ?? []}
+                  itemDefinitions={story.itemDefinitions ?? []}
+                  onChange={updateLocalCharacter}
+                  onPatch={updateCharacter}
+                  onCreateStat={createCharacterStat}
+                  onPatchStat={updateCharacterStat}
+                  onDeleteStat={deleteCharacterStat}
+                  onCreateItem={createCharacterItem}
+                  onDeleteItem={deleteCharacterItem}
+                  onMoveItem={moveItemInstance}
+                  textCommentCounts={selectedTextCommentCounts}
+                  onOpenTextComments={openTextComments}
+                />
+              ) : selectedItemDefinition ? (
+                <ItemDefinitionInspector
+                  itemDefinition={selectedItemDefinition}
+                  categorySuggestions={itemCategories}
+                  statDefinitions={story.statDefinitions ?? []}
+                  onChange={updateLocalItemDefinition}
+                  onPatch={updateItemDefinition}
+                  textCommentCounts={selectedTextCommentCounts}
+                  onOpenTextComments={openTextComments}
+                />
+              ) : null}
+            </div>
           </aside>
         ) : null}
       </div>

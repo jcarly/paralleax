@@ -47,7 +47,7 @@ services:
     environment:
       <<: *proxy-environment
       CHOKIDAR_USEPOLLING: 'true'
-      CHOKIDAR_INTERVAL: '100'
+      CHOKIDAR_INTERVAL: '1000'
       PORT: 3000
       NODE_ENV: ${NODE_ENV:-development}
       NODE_OPTIONS: '--max-old-space-size=2048'

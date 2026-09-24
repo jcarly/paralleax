@@ -38,9 +38,11 @@
   }
   .contextual-comments-rail {
     position: absolute;
-    top: 122px;
+    /* Leave the inspector header and its border toggle exposed. */
+    top: calc(122px + 1.2rem + 32px + 0.75rem);
     right: 0;
     bottom: 0;
+    height: auto;
     z-index: 6;
     width: min(390px, 90vw);
   }

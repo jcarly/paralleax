@@ -1,13 +1,16 @@
 /* Inspector */
 
 .inspector {
+  position: relative;
+  display: flex;
+  flex-direction: column;
   grid-row: 1;
   grid-column: 3;
   min-width: 0;
   min-height: 0;
   background: var(--color-surface);
   border-left: 1px solid var(--color-border);
-  padding: 1.2rem;
+  overflow: visible;
   box-shadow: -10px 0 28px #2d2d2d0f;
   z-index: 5;
 }
@@ -18,10 +21,22 @@
 }
 .inspector-header {
   display: flex;
+  flex: none;
   align-items: center;
   gap: 0.5rem;
   justify-content: flex-end;
   margin-bottom: 0.75rem;
+  padding: 1.2rem 1.2rem 0 0;
+}
+/* Keep scrolling below the header so the comment toggle can cross the border. */
+.inspector-content {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 1.2rem 1.2rem;
 }
 .inspector-comment-actions {
   display: flex;
@@ -40,7 +55,7 @@
   min-width: 38px;
   border-color: var(--color-trigger);
   color: var(--color-trigger-strong);
-  margin-left: -45px;
+  transform: translateX(-50%);
 }
 .inspector-comment-toggle.active {
   background: var(--color-trigger-soft);

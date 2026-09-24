@@ -84,7 +84,9 @@ Paralleax currently includes:
   screens the pane overlays a full-width, position-stable graph instead of
   creating compressed off-screen grid columns. Selecting any authored element
   while that global list is open immediately restores the selected element's
-  inspector. Authorized thread managers can move a graph post-it by updating its
+  inspector. Inspector fields scroll independently from the graph; the fixed
+  header keeps its comment toggle visible and clickable across the pane border.
+  Authorized thread managers can move a graph post-it by updating its
   existing canvas anchor; failed moves restore the persisted position and remain
   visible as an operational error. A discussion author or Story manager can
   soft-delete the complete thread from any anchor presentation; deleted threads

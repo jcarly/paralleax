@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-09-24
+
+- Confined inspector scrolling to its fields so long content no longer scrolls
+  the graph out of view. The comment toggle stays fixed across the inspector
+  border and remains fully clickable on desktop and narrow layouts.
+
 ## 2026-09-23
 
 - Removed redundant save buttons from Story properties and access policies.
