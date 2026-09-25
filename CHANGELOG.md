@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-09-25
+
+- Added a deterministic 100-interaction layout-quality reference Story with
+  branching, convergence, long links, cycles, and a disconnected island. A
+  browser audit measures actual rendered routes and node bounds, emits JSON
+  and SVG diagnostics, and records the current zero-defect target as an expected
+  failure for future layout-engine comparisons.
+
 ## 2026-09-24
 
 - Confined inspector scrolling to its fields so long content no longer scrolls

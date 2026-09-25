@@ -425,6 +425,13 @@ The character-stat vertical keeps these regressions covered:
 
 ## Playwright Functional Tests
 
+- Automatic organization quality: run the deterministic 100-interaction tangled
+  Story through the real canvas action and audit every rendered node and SVG
+  route. Record overlaps, edge/node penetrations, edge crossings, and route
+  overlaps in JSON and standalone SVG artifacts. Only the final zero-defect
+  assertion is an expected failure until layout/routing improves; setup and
+  coverage failures remain unexpected. See [Auto layout](auto-layout.md#layout-quality-reference-scenario).
+
 Component and domain regressions supporting these flows also cover:
 
 - WCAG A/AA Axe checks on the Story library, Story-creation and import dialogs,
