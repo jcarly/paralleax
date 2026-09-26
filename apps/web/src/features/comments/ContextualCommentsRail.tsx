@@ -17,7 +17,6 @@ export function ContextualCommentsRail({
   onStatus,
   onDelete,
   onReattach,
-  onClose,
 }: {
   threads: StoryCommentThread[];
   selectedThreadId?: string;

@@ -168,6 +168,89 @@ describe('rendered layout geometry audit', () => {
     ]);
   });
 
+  it('detects a two-interaction cycle returning through both its source and top-input target', () => {
+    const nodes = [
+      { ...node, id: 'interaction-a' },
+      { ...node, id: 'interaction-b', y: 200 },
+    ];
+    const routes = [
+      edge(
+        'forward',
+        [
+          [50, 80],
+          [50, 200],
+        ],
+        'interaction-a',
+        'interaction-b',
+      ),
+      // The return starts at B's bottom output and reaches A's top input by
+      // crossing both cards. Endpoint stub allowances must not hide either.
+      edge(
+        'return',
+        [
+          [50, 280],
+          [50, 0],
+        ],
+        'interaction-b',
+        'interaction-a',
+      ),
+    ];
+    for (const subdivisions of [1, 80]) {
+      const report = analyzeLayoutGeometry(
+        nodes,
+        routes.map((route) => subdividePath(route, subdivisions)),
+      );
+      expect(report.edgeNodeIntersections).toEqual([
+        { edgeId: 'return', nodeId: 'interaction-a' },
+        { edgeId: 'return', nodeId: 'interaction-b' },
+      ]);
+    }
+  });
+
+  it('accepts a two-interaction cycle detouring outside both cards to the top input', () => {
+    const nodes = [
+      { ...node, id: 'interaction-a' },
+      { ...node, id: 'interaction-b', y: 200 },
+    ];
+    const routes = [
+      edge(
+        'forward',
+        [
+          [50, 80],
+          [50, 200],
+        ],
+        'interaction-a',
+        'interaction-b',
+      ),
+      edge(
+        'return',
+        [
+          [50, 280],
+          [50, 320],
+          [140, 320],
+          [140, -40],
+          [50, -40],
+          [50, 0],
+        ],
+        'interaction-b',
+        'interaction-a',
+      ),
+    ];
+    for (const subdivisions of [1, 80]) {
+      expect(
+        analyzeLayoutGeometry(
+          nodes,
+          routes.map((route) => subdividePath(route, subdivisions)),
+        ),
+      ).toEqual({
+        nodeOverlaps: [],
+        edgeNodeIntersections: [],
+        edgeCrossings: [],
+        edgeOverlaps: [],
+      });
+    }
+  });
+
   it('detects transverse intersections at sampled vertices without counting them twice', () => {
     const report = analyzeLayoutGeometry(
       [],
@@ -431,6 +514,28 @@ describe('rendered layout geometry audit', () => {
       expect(
         analyzeLayoutGeometry([], [subdividePath(first, 80), subdividePath(second, 60)]),
       ).toEqual(report);
+    }
+  });
+
+  it('distinguishes short near-perpendicular crossings from coincident routes', () => {
+    const first = edge('long', [
+      [0, 0],
+      [1000, 0],
+    ]);
+    const second = edge('short', [
+      [500, -1],
+      [500.3, 1.2],
+    ]);
+    for (const routes of [
+      [first, second],
+      [second, first],
+      [subdividePath(first, 80), subdividePath(second, 60)],
+    ]) {
+      const report = analyzeLayoutGeometry([], routes);
+      expect(report.edgeCrossings).toHaveLength(1);
+      expect(report.edgeCrossings[0].point.x).toBeCloseTo(500 + 0.3 / 2.2);
+      expect(report.edgeCrossings[0].point.y).toBeCloseTo(0);
+      expect(report.edgeOverlaps).toEqual([]);
     }
   });
 

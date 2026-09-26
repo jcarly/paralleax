@@ -113,6 +113,7 @@ import {
 } from '../storyGraphCreationLayout';
 import { getReferencedInteractionIds } from '../storyNavigation';
 import { computeStoryGraphElkLayout } from '../storyGraphElkLayout';
+import { TriggerEdgeRoutes } from '../triggerEdgeRouting';
 
 const nodeTypes = {
   interaction: InteractionNode,
@@ -218,6 +219,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
   const [canvasContextMenu, setCanvasContextMenu] = useState<CanvasContextMenuState>();
   const [nodes, setNodes, onNodesChange] = useNodesState<StoryFlowNode>([]);
   const [edges, setEdges] = useEdgesState<TriggerFlowEdge>([]);
+  const [elkEdgeRoutes, setElkEdgeRoutes] = useState<TriggerEdgeRoutes>(() => new Map());
   const [interactionSizes, setInteractionSizes] = useState<
     ReadonlyMap<string, { width: number; height: number }>
   >(() => new Map());
@@ -826,10 +828,15 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
   );
   const storyEdges = useMemo(
     () =>
-      buildTriggerEdges(story, selectTriggerData, (interactionId, triggerId, inputId) => {
-        void deleteSelectedTriggerInput(interactionId, triggerId, inputId);
-      }),
-    [deleteSelectedTriggerInput, selectTriggerData, story],
+      buildTriggerEdges(
+        story, 
+        selectTriggerData, 
+        (interactionId, triggerId, inputId) => {
+          void deleteSelectedTriggerInput(interactionId, triggerId, inputId);
+        },
+        elkEdgeRoutes,
+      ),
+    [deleteSelectedTriggerInput, elkEdgeRoutes, selectTriggerData, story],
   );
 
   useEffect(() => {
@@ -878,6 +885,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
   }
 
   function handleNodeDragStart(_: MouseEvent | TouchEvent, node: StoryFlowNode) {
+    setElkEdgeRoutes(new Map());
     if (graphSelection && !selectedGraphNodeIds.has(node.id)) closeInspector();
     beginLocalEdit();
   }
@@ -1347,13 +1355,22 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
         : { kind: 'all' };
     const interactionSizes = getMeasuredInteractionSizes(nodes);
     const layout =
-  scope.kind === 'all'
-    ? await computeStoryGraphElkLayout(story, {
-        interactionSizes,
-      })
-    : computeStoryGraphLayout(story, scope, {
-        interactionSizes,
-      });
+      scope.kind === 'all'
+      ? await computeStoryGraphElkLayout(story, {
+          interactionSizes,
+        })
+      : computeStoryGraphLayout(story, scope, {
+          interactionSizes,
+        });
+    if (scope.kind === 'all') {
+      setElkEdgeRoutes(
+        layout.edgeRoutes ?? new Map(),
+      );
+    } else {
+      // Le layout partiel déplace des nodes sans refaire
+      // le routing ELK global.
+      setElkEdgeRoutes(new Map());
+    }
     const hasPositionUpdates =
       layout.interactionUpdates.length > 0 || layout.triggerUpdates.length > 0;
     if (hasPositionUpdates) beginLocalEdit();

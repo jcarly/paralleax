@@ -303,13 +303,21 @@ function segmentContact(a: Segment, b: Segment): SegmentContact | null {
   const end = Math.min(a.length, Math.max(bStart, bEnd));
   const distanceToB = (offset: number) =>
     Math.abs(cross(subtract(interpolate(a, offset / a.length), b.start), s)) / b.length;
+  const distanceToA = (offset: number) => {
+    const point = interpolate(b, (offset - bStart) / (bEnd - bStart));
+    return Math.abs(cross(subtract(point, a.start), r)) / a.length;
+  };
   // SVG length sampling adds tiny coordinate noise to otherwise identical
   // straight runs. Require proximity along their whole shared projection, not
   // merely a small angle: long, shallow crossings must remain crossings.
   if (
     end - start > numericTolerance &&
     distanceToB(start) <= layoutGeometryTolerance &&
-    distanceToB(end) <= layoutGeometryTolerance
+    distanceToB(end) <= layoutGeometryTolerance &&
+    // Both projected portions must be close: a near-perpendicular short segment
+    // has a tiny projection onto a long route but still crosses that route.
+    distanceToA(start) <= layoutGeometryTolerance &&
+    distanceToA(end) <= layoutGeometryTolerance
   ) {
     const bOffset = (offset: number) => b.offset + ((offset - bStart) / (bEnd - bStart)) * b.length;
     return {

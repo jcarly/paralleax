@@ -8,6 +8,10 @@ import type { InteractionNodeData } from './components/InteractionNode';
 import type { TriggerNodeData } from './components/TriggerNode';
 import type { CommentPinFlowNode } from './features/comments/CommentPinNode';
 import type { GraphDecorationFlowNode } from './features/graph-decorations/GraphDecorationNode';
+import type {
+  TriggerEdgeRoutePoint,
+  TriggerEdgeRoutes,
+} from './triggerEdgeRouting';
 
 export type InteractionFlowNode = Node<InteractionNodeData, 'interaction'>;
 export type TriggerFlowNode = Node<TriggerNodeData, 'trigger'>;
@@ -23,6 +27,7 @@ export interface SelectedTrigger extends Record<string, unknown> {
 export interface TriggerEdgeData extends SelectedTrigger {
   selected: boolean;
   conditionCount: number;
+  elkRoute?: readonly TriggerEdgeRoutePoint[];
   routingLaneIndex?: number;
   routingLaneCount?: number;
   triggerIds?: string[];
@@ -445,6 +450,7 @@ export function buildTriggerEdges(
     triggerId: string,
     inputInteractionId: string,
   ) => void,
+  edgeRoutes?: TriggerEdgeRoutes,
 ): TriggerFlowEdge[] {
   const edges =
     story?.interactions.flatMap((target, targetIndex) =>
@@ -464,22 +470,23 @@ export function buildTriggerEdges(
         const triggerIds = group.triggers.map((trigger) => trigger.id);
         const conditionCount = getTotalConditionCount(group.triggers);
         const inputEdges = group.inputInteractionIds.map((source) => {
+          const edgeId = `${triggerNodeId}-${source}`;
           const sourceEntry = getIndexedStoryInteraction(story, source);
           const sourceCenter = sourceEntry
             ? getInteractionCenter(sourceEntry.interaction, sourceEntry.index)
             : triggerCenter;
           const handles = constrainInteractionOutputHandle(
-            getRoutingHandleIds(sourceCenter, triggerCenter),
-            sourceCenter,
-            triggerCenter,
+            getRoutingHandleIds(sourceCenter, triggerCenter)
           );
           return {
-            id: `${triggerNodeId}-${source}`,
+            id: edgeId,
             type: 'trigger',
             source,
             sourceHandle: handles.sourceHandle,
             target: triggerNodeId,
             targetHandle: handles.targetHandle,
+            markerStart: triggerOutputMarker,
+            markerEnd: triggerOutputMarker,
             className: 'trigger-edge',
             data: {
               interactionId: target.id,
@@ -488,6 +495,7 @@ export function buildTriggerEdges(
               inputInteractionId: source,
               selected: false,
               conditionCount,
+              ...(edgeRoutes?.get(edgeId) ? { elkRoute: edgeRoutes.get(edgeId) } : {}),
               ...(onSelectTrigger ? { onSelectTrigger } : {}),
               ...(onDeleteTriggerInput ? { onDeleteTriggerInput } : {}),
             },
@@ -495,17 +503,17 @@ export function buildTriggerEdges(
         });
         const targetCenter = getInteractionCenter(target, targetIndex);
         const outputHandles = constrainInteractionInputHandle(
-          getRoutingHandleIds(triggerCenter, targetCenter),
-          triggerCenter,
-          targetCenter,
+          getRoutingHandleIds(triggerCenter, targetCenter)
         );
+        const outputEdgeId = `${triggerNodeId}-output`;
         const outputEdge: TriggerFlowEdge = {
-          id: `${triggerNodeId}-output`,
+          id: outputEdgeId,
           type: 'trigger',
           source: triggerNodeId,
           sourceHandle: outputHandles.sourceHandle,
           target: target.id,
           targetHandle: outputHandles.targetHandle,
+          markerStart: triggerOutputMarker,
           markerEnd: triggerOutputMarker,
           className: 'trigger-edge',
           data: {
@@ -514,6 +522,9 @@ export function buildTriggerEdges(
             triggerIds,
             selected: false,
             conditionCount,
+            ...(edgeRoutes?.get(outputEdgeId)
+              ? { elkRoute: edgeRoutes.get(outputEdgeId) }
+              : {}),
             ...(onSelectTrigger ? { onSelectTrigger } : {}),
           },
         };
@@ -736,34 +747,18 @@ export function getRoutingHandleIds(
 
 function constrainInteractionOutputHandle(
   handles: ReturnType<typeof getRoutingHandleIds>,
-  source: { x: number; y: number },
-  target: { x: number; y: number },
 ): ReturnType<typeof getRoutingHandleIds> {
-  const verticalDistance = target.y - source.y;
   return {
     ...handles,
-    sourceHandle: `routing-output-${Position.Bottom}`,
-    ...(Math.abs(verticalDistance) > 1
-      ? {
-          targetHandle: `routing-input-${verticalDistance > 0 ? Position.Top : Position.Bottom}`,
-        }
-      : {}),
+    sourceHandle: `routing-output-${Position.Bottom}`
   };
 }
 
 function constrainInteractionInputHandle(
   handles: ReturnType<typeof getRoutingHandleIds>,
-  source: { x: number; y: number },
-  target: { x: number; y: number },
 ): ReturnType<typeof getRoutingHandleIds> {
-  const verticalDistance = target.y - source.y;
   return {
     ...handles,
-    ...(Math.abs(verticalDistance) > 1
-      ? {
-          sourceHandle: `routing-output-${verticalDistance > 0 ? Position.Bottom : Position.Top}`,
-        }
-      : {}),
     targetHandle: `routing-input-${Position.Top}`,
   };
 }

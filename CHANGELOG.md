@@ -2,6 +2,14 @@
 
 ## 2026-09-25
 
+- Added three direct two-interaction cycles to the layout reference Story and
+  explicit checks that their routes avoid both cards. A focused browser
+  regression reproduces card traversal after reloading organized positions;
+  JSON/SVG diagnostics distinguish ELK routes from the fallback routing defect.
+- Compared twelve ELK layout configurations against actual rendered routes and
+  recorded the missing edge-section integration and libavoid routing fit.
+  Corrected the layout audit so short near-perpendicular crossings are not
+  misclassified as overlapping routes.
 - Added a deterministic 100-interaction layout-quality reference Story with
   branching, convergence, long links, cycles, and a disconnected island. A
   browser audit measures actual rendered routes and node bounds, emits JSON

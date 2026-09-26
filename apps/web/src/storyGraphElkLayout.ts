@@ -9,12 +9,9 @@ import type {
   StoryGraphLayoutOptions,
   StoryGraphLayoutResult,
 } from './storyGraphLayout';
+import type { ElkExtendedEdge, ElkNode } from 'elkjs/lib/elk-api';
 
 const triggerNodeSize = 20;
-
-// Ton algo actuel réserve 80 px horizontalement à un trigger,
-// même si le marqueur visible ne fait que 20 px.
-const triggerLayoutWidth = 80;
 
 interface ElkLayoutVertex {
   key: string;
@@ -58,11 +55,7 @@ export async function computeStoryGraphElkLayout(
   }
 
   const vertices: ElkLayoutVertex[] = [];
-  const edges: Array<{
-    id: string;
-    sources: string[];
-    targets: string[];
-  }> = [];
+  const edges: ElkExtendedEdge[] = [];
 
   const knownInteractionIds = new Set(
     story.interactions.map(({ id }) => id),
@@ -100,6 +93,11 @@ export async function computeStoryGraphElkLayout(
         group.primaryTrigger.id,
       );
 
+      const triggerNodeId = getTriggerNodeId(
+        target.id,
+        group.primaryTrigger.id,
+      );
+
       vertices.push({
         key: triggerKey,
         nodeId: getTriggerNodeId(
@@ -111,7 +109,7 @@ export async function computeStoryGraphElkLayout(
         triggerIds: group.triggers.map(({ id }) => id),
         width: triggerNodeSize,
         height: triggerNodeSize,
-        layoutWidth: triggerLayoutWidth,
+        layoutWidth: triggerNodeSize,
         layoutHeight: triggerNodeSize,
       });
 
@@ -119,16 +117,16 @@ export async function computeStoryGraphElkLayout(
         if (!knownInteractionIds.has(inputId)) continue;
 
         edges.push({
-          id: `layout:${inputId}:${triggerKey}`,
-          sources: [interactionKey(inputId)],
+          id: `${triggerNodeId}-${inputId}`,
+          sources: [`${interactionKey(inputId)}:output`],
           targets: [triggerKey],
         });
       }
 
       edges.push({
-        id: `layout:${triggerKey}:${target.id}`,
+        id: `${triggerNodeId}-output`,
         sources: [triggerKey],
-        targets: [interactionKey(target.id)],
+        targets: [`${interactionKey(target.id)}:input`],
       });
     }
   }
@@ -144,6 +142,9 @@ export async function computeStoryGraphElkLayout(
       // IMPORTANT : ton interface actuelle est verticale.
       'elk.direction': 'DOWN',
 
+      'elk.edgeRouting': 'ORTHOGONAL',
+
+
       // Équivalents approximatifs de tes constantes actuelles.
       'elk.spacing.nodeNode': '140',
       'elk.layered.spacing.nodeNodeBetweenLayers': '120',
@@ -155,11 +156,47 @@ export async function computeStoryGraphElkLayout(
       'elk.layered.nodePlacement.favorStraightEdges': 'true',
     },
 
-    children: vertices.map((vertex) => ({
-      id: vertex.key,
-      width: vertex.layoutWidth,
-      height: vertex.layoutHeight,
-    })),
+    children: vertices.map((vertex): ElkNode => {
+      const width = vertex.layoutWidth;
+      const height = vertex.layoutHeight;
+
+      const node: ElkNode = {
+        id: vertex.key,
+        width,
+        height,
+      };
+
+      if (vertex.kind === 'interaction') {
+        node.layoutOptions = {
+          'elk.portConstraints': 'FIXED_POS',
+        };
+
+        node.ports = [
+          {
+            id: `${vertex.key}:input`,
+            x: width / 2,
+            y: 0,
+            width: 0,
+            height: 0,
+            layoutOptions: {
+              'elk.port.side': 'NORTH',
+            },
+          },
+          {
+            id: `${vertex.key}:output`,
+            x: width / 2,
+            y: height,
+            width: 0,
+            height: 0,
+            layoutOptions: {
+              'elk.port.side': 'SOUTH',
+            },
+          },
+        ];
+      }
+
+      return node;
+    }),
 
     edges,
   });
@@ -177,15 +214,8 @@ export async function computeStoryGraphElkLayout(
     const vertex = vertices.find(({ key }) => key === child.id);
     if (!vertex) continue;
 
-    // Le trigger réserve 80px à ELK mais le marqueur réel
-    // mesure 20px : on le recentre dans cette zone.
-    const triggerOffset =
-      vertex.kind === 'trigger'
-        ? (triggerLayoutWidth - triggerNodeSize) / 2
-        : 0;
-
     elkPositions.set(vertex.key, {
-      x: child.x + triggerOffset,
+      x: child.x,
       y: child.y,
     });
   }
@@ -234,6 +264,35 @@ export async function computeStoryGraphElkLayout(
     x: currentOrigin.x - elkOrigin.x,
     y: currentOrigin.y - elkOrigin.y,
   };
+
+  const edgeRoutes = new Map<
+    string,
+    readonly { x: number; y: number }[]
+  >();
+
+  for (const edge of result.edges ?? []) {
+    const section = edge.sections?.[0];
+
+    if (
+      !section?.startPoint ||
+      !section.endPoint
+    ) {
+      continue;
+    }
+
+    const points = [
+      section.startPoint,
+      ...(section.bendPoints ?? []),
+      section.endPoint,
+    ].map((point) => ({
+      x: Math.round(point.x + offset.x),
+      y: Math.round(point.y + offset.y),
+    }));
+
+    if (points.length >= 2) {
+      edgeRoutes.set(edge.id, points);
+    }
+  }
 
   const positions = new Map(
     [...elkPositions].map(([key, position]) => [
@@ -308,6 +367,7 @@ export async function computeStoryGraphElkLayout(
     interactionUpdates,
     triggerUpdates,
     affectedNodeIds: vertices.map(({ nodeId }) => nodeId),
+    edgeRoutes,
   };
 }
 

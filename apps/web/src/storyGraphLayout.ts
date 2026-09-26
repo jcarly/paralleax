@@ -8,6 +8,7 @@ import {
   interactionNodeWidth,
   type TriggerPositionUpdate,
 } from './storyGraph';
+import type { TriggerEdgeRoutes } from './triggerEdgeRouting';
 
 export type StoryGraphLayoutTarget =
   | { type: 'interaction'; interactionId: string }
@@ -22,6 +23,7 @@ export interface StoryGraphLayoutResult {
   interactionUpdates: InteractionPositionUpdate[];
   triggerUpdates: TriggerPositionUpdate[];
   affectedNodeIds: string[];
+  edgeRoutes?: TriggerEdgeRoutes;
 }
 
 export interface StoryGraphLayoutOptions {
