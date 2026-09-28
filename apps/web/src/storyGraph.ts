@@ -326,7 +326,7 @@ export function applyInteractionMovesEdgePreview(
             getRoutingHandleIds(
               getInteractionCenter(source, sourceIndex, positionOverrides.get(source.id)),
               triggerCenter,
-            )
+            ),
           ),
         );
       });
@@ -337,7 +337,7 @@ export function applyInteractionMovesEdgePreview(
           getRoutingHandleIds(
             triggerCenter,
             getInteractionCenter(target, targetIndex, positionOverrides.get(target.id)),
-          )
+          ),
         ),
       );
     });
