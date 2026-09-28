@@ -3,10 +3,7 @@ export interface TriggerEdgeRoutePoint {
   y: number;
 }
 
-export type TriggerEdgeRoutes = ReadonlyMap<
-  string,
-  readonly TriggerEdgeRoutePoint[]
->;
+export type TriggerEdgeRoutes = ReadonlyMap<string, readonly TriggerEdgeRoutePoint[]>;
 
 export function getTriggerEdgeStepPosition(
   index: number | undefined,

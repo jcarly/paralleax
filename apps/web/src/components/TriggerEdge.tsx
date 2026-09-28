@@ -38,39 +38,23 @@ export function TriggerEdge({
     stepPosition,
   });
 
-  const [fallbackPath, fallbackLabelX, fallbackLabelY] =
-    fallback;
+  const [fallbackPath, fallbackLabelX, fallbackLabelY] = fallback;
 
-  const edgePath = elkRoute
-    ? toPolylinePath(elkRoute)
-    : fallbackPath;
+  const edgePath = elkRoute ? toPolylinePath(elkRoute) : fallbackPath;
 
-  const elkLabel = elkRoute
-    ? getPolylineMidpoint(elkRoute)
-    : undefined;
+  const elkLabel = elkRoute ? getPolylineMidpoint(elkRoute) : undefined;
 
-  const labelX =
-    elkLabel?.x ?? fallbackLabelX;
+  const labelX = elkLabel?.x ?? fallbackLabelX;
 
-  const labelY =
-    elkLabel?.y ?? fallbackLabelY;
+  const labelY = elkLabel?.y ?? fallbackLabelY;
 
-  function toPolylinePath(
-    points: readonly { x: number; y: number }[],
-  ) {
+  function toPolylinePath(points: readonly { x: number; y: number }[]) {
     return points
-      .map(
-        (point, index) =>
-          `${index === 0 ? 'M' : 'L'} ${point.x} ${point.y}`,
-      )
+      .map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x} ${point.y}`)
       .join(' ');
-
-      
   }
 
-  function getPolylineMidpoint(
-    points: readonly { x: number; y: number }[],
-  ) {
+  function getPolylineMidpoint(points: readonly { x: number; y: number }[]) {
     if (points.length === 0) {
       return { x: 0, y: 0 };
     }
@@ -79,25 +63,17 @@ export function TriggerEdge({
       return points[0];
     }
 
-    const segments = points
-      .slice(0, -1)
-      .map((start, index) => {
-        const end = points[index + 1];
+    const segments = points.slice(0, -1).map((start, index) => {
+      const end = points[index + 1];
 
-        return {
-          start,
-          end,
-          length: Math.hypot(
-            end.x - start.x,
-            end.y - start.y,
-          ),
-        };
-      });
+      return {
+        start,
+        end,
+        length: Math.hypot(end.x - start.x, end.y - start.y),
+      };
+    });
 
-    const totalLength = segments.reduce(
-      (total, segment) => total + segment.length,
-      0,
-    );
+    const totalLength = segments.reduce((total, segment) => total + segment.length, 0);
 
     const midpoint = totalLength / 2;
 
@@ -107,16 +83,11 @@ export function TriggerEdge({
       if (travelled + segment.length >= midpoint) {
         if (segment.length === 0) return segment.start;
 
-        const ratio =
-          (midpoint - travelled) / segment.length;
+        const ratio = (midpoint - travelled) / segment.length;
 
         return {
-          x:
-            segment.start.x +
-            (segment.end.x - segment.start.x) * ratio,
-          y:
-            segment.start.y +
-            (segment.end.y - segment.start.y) * ratio,
+          x: segment.start.x + (segment.end.x - segment.start.x) * ratio,
+          y: segment.start.y + (segment.end.y - segment.start.y) * ratio,
         };
       }
 

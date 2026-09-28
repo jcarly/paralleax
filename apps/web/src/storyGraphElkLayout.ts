@@ -5,10 +5,7 @@ import {
   interactionNodeHeight,
   interactionNodeWidth,
 } from './storyGraph';
-import type {
-  StoryGraphLayoutOptions,
-  StoryGraphLayoutResult,
-} from './storyGraphLayout';
+import type { StoryGraphLayoutOptions, StoryGraphLayoutResult } from './storyGraphLayout';
 import type { ElkExtendedEdge, ElkNode } from 'elkjs/lib/elk-api';
 
 const triggerNodeSize = 20;
@@ -57,22 +54,16 @@ export async function computeStoryGraphElkLayout(
   const vertices: ElkLayoutVertex[] = [];
   const edges: ElkExtendedEdge[] = [];
 
-  const knownInteractionIds = new Set(
-    story.interactions.map(({ id }) => id),
-  );
+  const knownInteractionIds = new Set(story.interactions.map(({ id }) => id));
 
   for (const interaction of story.interactions) {
     const measured = options.interactionSizes?.get(interaction.id);
 
     const width =
-      measured?.width && measured.width > 0
-        ? Math.ceil(measured.width)
-        : interactionNodeWidth;
+      measured?.width && measured.width > 0 ? Math.ceil(measured.width) : interactionNodeWidth;
 
     const height =
-      measured?.height && measured.height > 0
-        ? Math.ceil(measured.height)
-        : interactionNodeHeight;
+      measured?.height && measured.height > 0 ? Math.ceil(measured.height) : interactionNodeHeight;
 
     vertices.push({
       key: interactionKey(interaction.id),
@@ -88,22 +79,13 @@ export async function computeStoryGraphElkLayout(
 
   for (const target of story.interactions) {
     for (const group of getLinkedTriggerGroups(target)) {
-      const triggerKey = getTriggerKey(
-        target.id,
-        group.primaryTrigger.id,
-      );
+      const triggerKey = getTriggerKey(target.id, group.primaryTrigger.id);
 
-      const triggerNodeId = getTriggerNodeId(
-        target.id,
-        group.primaryTrigger.id,
-      );
+      const triggerNodeId = getTriggerNodeId(target.id, group.primaryTrigger.id);
 
       vertices.push({
         key: triggerKey,
-        nodeId: getTriggerNodeId(
-          target.id,
-          group.primaryTrigger.id,
-        ),
+        nodeId: getTriggerNodeId(target.id, group.primaryTrigger.id),
         kind: 'trigger',
         interactionId: target.id,
         triggerIds: group.triggers.map(({ id }) => id),
@@ -143,7 +125,6 @@ export async function computeStoryGraphElkLayout(
       'elk.direction': 'DOWN',
 
       'elk.edgeRouting': 'ORTHOGONAL',
-
 
       // Équivalents approximatifs de tes constantes actuelles.
       'elk.spacing.nodeNode': '140',
@@ -204,10 +185,7 @@ export async function computeStoryGraphElkLayout(
   const elkPositions = new Map<string, Position>();
 
   for (const child of result.children ?? []) {
-    if (
-      typeof child.x !== 'number' ||
-      typeof child.y !== 'number'
-    ) {
+    if (typeof child.x !== 'number' || typeof child.y !== 'number') {
       continue;
     }
 
@@ -223,16 +201,12 @@ export async function computeStoryGraphElkLayout(
   // L'ancien layout conserve globalement l'origine du graphe.
   // On reproduit ce comportement pour éviter que "Organize"
   // fasse sauter tout le scénario vers (0, 0).
-  const interactionVertices = vertices.filter(
-    (vertex) => vertex.kind === 'interaction',
-  );
+  const interactionVertices = vertices.filter((vertex) => vertex.kind === 'interaction');
 
-  const layoutInteractionPositions = interactionVertices.flatMap(
-    (vertex) => {
-      const position = elkPositions.get(vertex.key);
-      return position ? [position] : [];
-    },
-  );
+  const layoutInteractionPositions = interactionVertices.flatMap((vertex) => {
+    const position = elkPositions.get(vertex.key);
+    return position ? [position] : [];
+  });
 
   if (layoutInteractionPositions.length === 0) {
     return {
@@ -243,21 +217,13 @@ export async function computeStoryGraphElkLayout(
   }
 
   const currentOrigin = {
-    x: Math.min(
-      ...story.interactions.map(({ position }) => position.x),
-    ),
-    y: Math.min(
-      ...story.interactions.map(({ position }) => position.y),
-    ),
+    x: Math.min(...story.interactions.map(({ position }) => position.x)),
+    y: Math.min(...story.interactions.map(({ position }) => position.y)),
   };
 
   const elkOrigin = {
-    x: Math.min(
-      ...layoutInteractionPositions.map(({ x }) => x),
-    ),
-    y: Math.min(
-      ...layoutInteractionPositions.map(({ y }) => y),
-    ),
+    x: Math.min(...layoutInteractionPositions.map(({ x }) => x)),
+    y: Math.min(...layoutInteractionPositions.map(({ y }) => y)),
   };
 
   const offset = {
@@ -265,29 +231,21 @@ export async function computeStoryGraphElkLayout(
     y: currentOrigin.y - elkOrigin.y,
   };
 
-  const edgeRoutes = new Map<
-    string,
-    readonly { x: number; y: number }[]
-  >();
+  const edgeRoutes = new Map<string, readonly { x: number; y: number }[]>();
 
   for (const edge of result.edges ?? []) {
     const section = edge.sections?.[0];
 
-    if (
-      !section?.startPoint ||
-      !section.endPoint
-    ) {
+    if (!section?.startPoint || !section.endPoint) {
       continue;
     }
 
-    const points = [
-      section.startPoint,
-      ...(section.bendPoints ?? []),
-      section.endPoint,
-    ].map((point) => ({
-      x: Math.round(point.x + offset.x),
-      y: Math.round(point.y + offset.y),
-    }));
+    const points = [section.startPoint, ...(section.bendPoints ?? []), section.endPoint].map(
+      (point) => ({
+        x: Math.round(point.x + offset.x),
+        y: Math.round(point.y + offset.y),
+      }),
+    );
 
     if (points.length >= 2) {
       edgeRoutes.set(edge.id, points);
@@ -304,34 +262,24 @@ export async function computeStoryGraphElkLayout(
     ]),
   );
 
-  const interactionUpdates =
-    interactionVertices.flatMap((vertex) => {
-      const position = positions.get(vertex.key);
-      const interaction = story.interactions.find(
-        ({ id }) => id === vertex.interactionId,
-      );
+  const interactionUpdates = interactionVertices.flatMap((vertex) => {
+    const position = positions.get(vertex.key);
+    const interaction = story.interactions.find(({ id }) => id === vertex.interactionId);
 
-      if (
-        !position ||
-        !interaction ||
-        positionsEqual(position, interaction.position)
-      ) {
-        return [];
-      }
+    if (!position || !interaction || positionsEqual(position, interaction.position)) {
+      return [];
+    }
 
-      return [
-        {
-          interactionId: vertex.interactionId,
-          position,
-        },
-      ];
-    });
+    return [
+      {
+        interactionId: vertex.interactionId,
+        position,
+      },
+    ];
+  });
 
   const interactionById = new Map(
-    story.interactions.map((interaction) => [
-      interaction.id,
-      interaction,
-    ]),
+    story.interactions.map((interaction) => [interaction.id, interaction]),
   );
 
   const triggerUpdates = vertices.flatMap((vertex) => {
@@ -345,9 +293,7 @@ export async function computeStoryGraphElkLayout(
     const owner = interactionById.get(vertex.interactionId);
 
     const changed = vertex.triggerIds.some((triggerId) => {
-      const saved = owner?.triggers.find(
-        ({ id }) => id === triggerId,
-      )?.position;
+      const saved = owner?.triggers.find(({ id }) => id === triggerId)?.position;
 
       return !saved || !positionsEqual(saved, position);
     });
@@ -375,16 +321,10 @@ function interactionKey(interactionId: string) {
   return `interaction:${interactionId}`;
 }
 
-function getTriggerKey(
-  interactionId: string,
-  triggerId: string,
-) {
+function getTriggerKey(interactionId: string, triggerId: string) {
   return `trigger:${interactionId}:${triggerId}`;
 }
 
-function positionsEqual(
-  left: Position,
-  right: Position,
-) {
+function positionsEqual(left: Position, right: Position) {
   return left.x === right.x && left.y === right.y;
 }

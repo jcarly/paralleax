@@ -8,10 +8,7 @@ import type { InteractionNodeData } from './components/InteractionNode';
 import type { TriggerNodeData } from './components/TriggerNode';
 import type { CommentPinFlowNode } from './features/comments/CommentPinNode';
 import type { GraphDecorationFlowNode } from './features/graph-decorations/GraphDecorationNode';
-import type {
-  TriggerEdgeRoutePoint,
-  TriggerEdgeRoutes,
-} from './triggerEdgeRouting';
+import type { TriggerEdgeRoutePoint, TriggerEdgeRoutes } from './triggerEdgeRouting';
 
 export type InteractionFlowNode = Node<InteractionNodeData, 'interaction'>;
 export type TriggerFlowNode = Node<TriggerNodeData, 'trigger'>;
@@ -329,9 +326,7 @@ export function applyInteractionMovesEdgePreview(
             getRoutingHandleIds(
               getInteractionCenter(source, sourceIndex, positionOverrides.get(source.id)),
               triggerCenter,
-            ),
-            getInteractionCenter(source, sourceIndex, positionOverrides.get(source.id)),
-            triggerCenter,
+            )
           ),
         );
       });
@@ -342,9 +337,7 @@ export function applyInteractionMovesEdgePreview(
           getRoutingHandleIds(
             triggerCenter,
             getInteractionCenter(target, targetIndex, positionOverrides.get(target.id)),
-          ),
-          triggerCenter,
-          getInteractionCenter(target, targetIndex, positionOverrides.get(target.id)),
+          )
         ),
       );
     });
@@ -476,7 +469,7 @@ export function buildTriggerEdges(
             ? getInteractionCenter(sourceEntry.interaction, sourceEntry.index)
             : triggerCenter;
           const handles = constrainInteractionOutputHandle(
-            getRoutingHandleIds(sourceCenter, triggerCenter)
+            getRoutingHandleIds(sourceCenter, triggerCenter),
           );
           return {
             id: edgeId,
@@ -503,7 +496,7 @@ export function buildTriggerEdges(
         });
         const targetCenter = getInteractionCenter(target, targetIndex);
         const outputHandles = constrainInteractionInputHandle(
-          getRoutingHandleIds(triggerCenter, targetCenter)
+          getRoutingHandleIds(triggerCenter, targetCenter),
         );
         const outputEdgeId = `${triggerNodeId}-output`;
         const outputEdge: TriggerFlowEdge = {
@@ -522,9 +515,7 @@ export function buildTriggerEdges(
             triggerIds,
             selected: false,
             conditionCount,
-            ...(edgeRoutes?.get(outputEdgeId)
-              ? { elkRoute: edgeRoutes.get(outputEdgeId) }
-              : {}),
+            ...(edgeRoutes?.get(outputEdgeId) ? { elkRoute: edgeRoutes.get(outputEdgeId) } : {}),
             ...(onSelectTrigger ? { onSelectTrigger } : {}),
           },
         };
@@ -750,7 +741,7 @@ function constrainInteractionOutputHandle(
 ): ReturnType<typeof getRoutingHandleIds> {
   return {
     ...handles,
-    sourceHandle: `routing-output-${Position.Bottom}`
+    sourceHandle: `routing-output-${Position.Bottom}`,
   };
 }
 

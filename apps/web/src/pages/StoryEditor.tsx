@@ -829,8 +829,8 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
   const storyEdges = useMemo(
     () =>
       buildTriggerEdges(
-        story, 
-        selectTriggerData, 
+        story,
+        selectTriggerData,
         (interactionId, triggerId, inputId) => {
           void deleteSelectedTriggerInput(interactionId, triggerId, inputId);
         },
@@ -1356,16 +1356,14 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
     const interactionSizes = getMeasuredInteractionSizes(nodes);
     const layout =
       scope.kind === 'all'
-      ? await computeStoryGraphElkLayout(story, {
-          interactionSizes,
-        })
-      : computeStoryGraphLayout(story, scope, {
-          interactionSizes,
-        });
+        ? await computeStoryGraphElkLayout(story, {
+            interactionSizes,
+          })
+        : computeStoryGraphLayout(story, scope, {
+            interactionSizes,
+          });
     if (scope.kind === 'all') {
-      setElkEdgeRoutes(
-        layout.edgeRoutes ?? new Map(),
-      );
+      setElkEdgeRoutes(layout.edgeRoutes ?? new Map());
     } else {
       // Le layout partiel déplace des nodes sans refaire
       // le routing ELK global.
