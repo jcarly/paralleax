@@ -2,6 +2,9 @@
 
 ## 2026-09-28
 
+- Updated graph tests for current Trigger ports and arrows, asynchronous ELK
+  organization, and whole-graph undo. Added coverage for ELK projection and route
+  rendering without relaxing coverage thresholds.
 - Temporarily marked the known two-interaction cycle routing defect after reload
   as an expected Playwright failure. Organization and persistence checks remain
   blocking, and `PARALLEAX_LAYOUT_STRICT=1` restores the strict routing assertion.

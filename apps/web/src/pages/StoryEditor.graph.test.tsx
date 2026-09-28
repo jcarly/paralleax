@@ -3,7 +3,8 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { updateGraphDecorationInStory, type StoryCommentThread } from '@paralleax/shared';
 import { getInteractionDragTriggerPositionUpdates } from '../storyGraph';
-import { computeStoryGraphLayout } from '../storyGraphLayout';
+import * as elkLayout from '../storyGraphElkLayout';
+import { computeStoryGraphLayout, type StoryGraphLayoutResult } from '../storyGraphLayout';
 import {
   api,
   cloneStory,
@@ -652,26 +653,76 @@ describe('StoryEditor graph collaboration and layout', () => {
     );
   });
 
-  it('automatically organizes the complete graph and persists interaction and trigger positions', async () => {
+  it('awaits ELK organization and applies the saved interaction and trigger positions', async () => {
     const user = userEvent.setup();
     const story = storyWithTwoInteractions();
-    const expected = computeStoryGraphLayout(story, { kind: 'all' });
-    await renderEditor(story);
-
-    await user.click(screen.getByRole('button', { name: 'Organize graph' }));
-
-    await waitFor(() =>
-      expect(api.updateStoryGraphPositions).toHaveBeenCalledWith('story-1', {
-        interactionUpdates: expected.interactionUpdates,
-        triggerUpdates: expected.triggerUpdates,
+    const expected: StoryGraphLayoutResult = {
+      interactionUpdates: [
+        { interactionId: 'interaction-1', position: { x: 100, y: 200 } },
+        { interactionId: 'interaction-2', position: { x: 160, y: 620 } },
+      ],
+      triggerUpdates: [
+        {
+          interactionId: 'interaction-2',
+          triggerIds: ['trigger-2'],
+          position: { x: 170, y: 460 },
+        },
+      ],
+      affectedNodeIds: ['interaction-1', 'interaction-2', 'trigger:interaction-2:trigger-2'],
+    };
+    let resolveLayout!: (layout: StoryGraphLayoutResult) => void;
+    const computeLayout = vi.spyOn(elkLayout, 'computeStoryGraphElkLayout').mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveLayout = resolve;
       }),
     );
-    expected.interactionUpdates.forEach(({ interactionId, position }) => {
-      expect(screen.getByTestId(`flow-node-${interactionId}`)).toHaveAttribute(
-        'data-node-y',
-        String(position.y),
+
+    try {
+      await renderEditor(story);
+      await user.click(screen.getByRole('button', { name: 'Organize graph' }));
+
+      expect(computeLayout).toHaveBeenCalledExactlyOnceWith(
+        expect.objectContaining({
+          id: story.id,
+          interactions: story.interactions.map(({ id, position }) =>
+            expect.objectContaining({ id, position }),
+          ),
+        }),
+        { interactionSizes: expect.any(Map) },
       );
-    });
+      expect(api.updateStoryGraphPositions).not.toHaveBeenCalled();
+      expect(screen.getByTestId('flow-node-interaction-2')).toHaveAttribute('data-node-y', '270');
+
+      await act(async () => resolveLayout(expected));
+
+      await waitFor(() =>
+        expect(api.updateStoryGraphPositions).toHaveBeenCalledWith('story-1', {
+          interactionUpdates: expected.interactionUpdates,
+          triggerUpdates: expected.triggerUpdates,
+        }),
+      );
+      await waitFor(() => {
+        const positions = [
+          ...expected.interactionUpdates.map(({ interactionId, position }) => ({
+            id: interactionId,
+            position,
+          })),
+          ...expected.triggerUpdates.flatMap(({ interactionId, triggerIds, position }) =>
+            triggerIds.map((triggerId) => ({
+              id: `trigger:${interactionId}:${triggerId}`,
+              position,
+            })),
+          ),
+        ];
+        for (const { id, position } of positions) {
+          const node = screen.getByTestId(`flow-node-${id}`);
+          expect(node).toHaveAttribute('data-node-x', String(position.x));
+          expect(node).toHaveAttribute('data-node-y', String(position.y));
+        }
+      });
+    } finally {
+      computeLayout.mockRestore();
+    }
   });
 
   it('automatically organizes only the selected interaction', async () => {

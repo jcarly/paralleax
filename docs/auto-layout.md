@@ -13,8 +13,9 @@ selected interaction or linked Trigger marker, or a rectangular multi-selection.
 
 Whole-graph organization currently calls `computeStoryGraphElkLayout`; selection
 organization still uses `computeStoryGraphLayout`. Both return position updates.
-`TriggerEdge` then draws its own smooth-step paths, so ELK's edge sections are
-currently discarded.
+Whole-graph organization also returns ELK edge sections, which `TriggerEdge`
+draws as polylines. These routes are transient: reload, dragging, and selection
+organization use the smooth-step fallback when the ELK route cache is empty.
 
 Current behavior:
 
@@ -82,6 +83,13 @@ Run the browser audit through the existing Playwright suite:
 ```sh
 npm run test:e2e -w @paralleax/web -- editor.layout-quality.spec.ts
 ```
+
+Web unit tests separately cover ELK graph/port projection, measured dimensions,
+position and route offsets, unchanged updates, and polyline rendering with its
+hitbox and deletion control. The editor integration test holds the ELK result
+pending to verify that saving waits for the calculation, then waits for React
+to apply both Interaction and Trigger positions. Whole-graph undo uses an ELK
+reference layout; selection organization retains the existing layout tests.
 
 The test clicks the real organization action, observes its batched position
 save, and checks that those positions are applied to rendered nodes. It then
