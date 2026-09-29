@@ -2,14 +2,19 @@ import type { Story } from '@paralleax/shared';
 import type { ElkNode } from 'elkjs/lib/elk-api';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { interactionNodeHeight, interactionNodeWidth } from './storyGraph';
-import { computeStoryGraphElkLayout } from './storyGraphElkLayout';
+import { computeStoryGraphElkLayout, preloadStoryGraphElk } from './storyGraphElkLayout';
 
-const { layout } = vi.hoisted(() => ({
+const { constructElk, layout } = vi.hoisted(() => ({
+  constructElk: vi.fn(),
   layout: vi.fn<(graph: ElkNode) => Promise<ElkNode>>(),
 }));
 
 vi.mock('elkjs/lib/elk.bundled.js', () => ({
   default: class {
+    constructor() {
+      constructElk();
+    }
+
     layout = layout;
   },
 }));
@@ -51,14 +56,16 @@ function createLayoutStory(): Story {
 
 describe('ELK story graph adapter', () => {
   beforeEach(() => {
+    constructElk.mockClear();
     layout.mockReset();
     layout.mockResolvedValue({ id: 'root' });
   });
 
-  it('keeps alternative triggers distinct and connects each input through its trigger to its owner', async () => {
+  it('preloads the cached ELK instance before connecting alternative triggers to their owner', async () => {
     const story = createLayoutStory();
     const original = structuredClone(story);
 
+    await expect(preloadStoryGraphElk()).resolves.toBeUndefined();
     await computeStoryGraphElkLayout(story, {
       interactionSizes: new Map([
         ['root', { width: 240.2, height: 150.8 }],
@@ -66,6 +73,7 @@ describe('ELK story graph adapter', () => {
       ]),
     });
 
+    expect(constructElk).toHaveBeenCalledOnce();
     const graph = layout.mock.calls[0][0];
     expect(graph.layoutOptions).toMatchObject({
       'elk.algorithm': 'layered',

@@ -112,7 +112,7 @@ import {
   type StoryGraphClickCreation,
 } from '../storyGraphCreationLayout';
 import { getReferencedInteractionIds } from '../storyNavigation';
-import { computeStoryGraphElkLayout } from '../storyGraphElkLayout';
+import { computeStoryGraphElkLayout, preloadStoryGraphElk } from '../storyGraphElkLayout';
 import { TriggerEdgeRoutes } from '../triggerEdgeRouting';
 
 const nodeTypes = {
@@ -136,6 +136,23 @@ interface CanvasContextMenuState {
   screenPosition: Position;
   flowPosition: Position;
   target: StoryGraphContextTarget;
+}
+
+type IdleCallbackWindow = Window & {
+  requestIdleCallback?: (callback: () => void, options?: { timeout?: number }) => number;
+  cancelIdleCallback?: (handle: number) => void;
+};
+
+function scheduleIdleWork(callback: () => void) {
+  const idleWindow = window as IdleCallbackWindow;
+
+  if (idleWindow.requestIdleCallback) {
+    const handle = idleWindow.requestIdleCallback(callback, { timeout: 2_000 });
+    return () => idleWindow.cancelIdleCallback?.(handle);
+  }
+
+  const handle = window.setTimeout(callback, 0);
+  return () => window.clearTimeout(handle);
 }
 
 function getInitials(name: string) {
@@ -220,6 +237,9 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
   const [nodes, setNodes, onNodesChange] = useNodesState<StoryFlowNode>([]);
   const [edges, setEdges] = useEdgesState<TriggerFlowEdge>([]);
   const [elkEdgeRoutes, setElkEdgeRoutes] = useState<TriggerEdgeRoutes>(() => new Map());
+  const [isOrganizing, setIsOrganizing] = useState(false);
+  const organizingRef = useRef(false);
+  const [failedOrganizationScope, setFailedOrganizationScope] = useState<'all' | 'selection'>();
   const [interactionSizes, setInteractionSizes] = useState<
     ReadonlyMap<string, { width: number; height: number }>
   >(() => new Map());
@@ -436,6 +456,14 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
     (contextualCommentsTargetKey === selectedCommentTargetKey || contextualDraftAnchor),
   );
   const hasInspector = commentsOpen || hasInspectorSelection;
+
+  useEffect(() => {
+    if (loadPhase !== 'ready' || !story) return;
+
+    return scheduleIdleWork(() => {
+      void preloadStoryGraphElk().catch(() => undefined);
+    });
+  }, [loadPhase, story?.id]);
 
   function closeStorySettings() {
     setStorySettingsTab(undefined);
@@ -1347,47 +1375,57 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
         ];
   })();
   async function organizeGraph(preference: 'auto' | 'all' | 'selection' = 'auto') {
-    if (!story || story.interactions.length === 0) return;
+    if (organizingRef.current || !story || story.interactions.length === 0) return;
     if (preference === 'selection' && selectedLayoutTargets.length === 0) return;
     const scope: StoryGraphLayoutScope =
       preference !== 'all' && selectedLayoutTargets.length > 0
         ? { kind: 'selection', targets: selectedLayoutTargets }
         : { kind: 'all' };
-    const interactionSizes = getMeasuredInteractionSizes(nodes);
-    const layout =
-      scope.kind === 'all'
-        ? await computeStoryGraphElkLayout(story, {
-            interactionSizes,
-          })
-        : computeStoryGraphLayout(story, scope, {
-            interactionSizes,
-          });
-    if (scope.kind === 'all') {
-      setElkEdgeRoutes(layout.edgeRoutes ?? new Map());
-    } else {
-      // Le layout partiel déplace des nodes sans refaire
-      // le routing ELK global.
-      setElkEdgeRoutes(new Map());
-    }
-    const hasPositionUpdates =
-      layout.interactionUpdates.length > 0 || layout.triggerUpdates.length > 0;
-    if (hasPositionUpdates) beginLocalEdit();
-    window.requestAnimationFrame(() => {
-      if (layout.affectedNodeIds.length === 0) return;
-      void flowInstance.current?.fitView({
-        nodes: layout.affectedNodeIds.map((id) => ({ id })),
-        duration: 250,
-        padding: scope.kind === 'all' ? 0.18 : 0.7,
-        maxZoom: 1,
-      });
-    });
+    organizingRef.current = true;
+    setIsOrganizing(true);
+    setFailedOrganizationScope(undefined);
+    let hasPositionUpdates = false;
     try {
+      // Let the browser paint the busy cursor before layout work runs on its main thread.
+      await new Promise<void>((resolve) => {
+        window.requestAnimationFrame(() => window.requestAnimationFrame(() => resolve()));
+      });
+      const interactionSizes = getMeasuredInteractionSizes(nodes);
+      const layout =
+        scope.kind === 'all'
+          ? await computeStoryGraphElkLayout(story, {
+              interactionSizes,
+            })
+          : computeStoryGraphLayout(story, scope, {
+              interactionSizes,
+            });
+      if (scope.kind === 'all') {
+        setElkEdgeRoutes(layout.edgeRoutes ?? new Map());
+      } else {
+        // A partial layout moves nodes without rebuilding the global ELK routes.
+        setElkEdgeRoutes(new Map());
+      }
+      hasPositionUpdates = layout.interactionUpdates.length > 0 || layout.triggerUpdates.length > 0;
+      if (hasPositionUpdates) beginLocalEdit();
+      window.requestAnimationFrame(() => {
+        if (layout.affectedNodeIds.length === 0) return;
+        void flowInstance.current?.fitView({
+          nodes: layout.affectedNodeIds.map((id) => ({ id })),
+          duration: 250,
+          padding: scope.kind === 'all' ? 0.18 : 0.7,
+          maxZoom: 1,
+        });
+      });
       await saveGraphPositions({
         interactionUpdates: layout.interactionUpdates,
         triggerUpdates: layout.triggerUpdates,
       });
+    } catch {
+      setFailedOrganizationScope(scope.kind);
     } finally {
       if (hasPositionUpdates) endLocalEdit();
+      organizingRef.current = false;
+      setIsOrganizing(false);
     }
   }
 
@@ -1499,6 +1537,18 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
           <span>{error}</span>
           <button className="secondary" type="button" onClick={() => void retry()}>
             {t('editor.reloadStory')}
+          </button>
+        </div>
+      ) : null}
+      {failedOrganizationScope ? (
+        <div className="save-error" role="alert">
+          <span>{t('editor.organizeFailed')}</span>
+          <button
+            className="secondary"
+            type="button"
+            onClick={() => void organizeGraph(failedOrganizationScope)}
+          >
+            {t('editor.retryOrganize')}
           </button>
         </div>
       ) : null}
@@ -1825,11 +1875,11 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
             </div>
           ) : null}
         </nav>
-        <section className="canvas" ref={canvasRef}>
+        <section className="canvas" ref={canvasRef} aria-busy={isOrganizing}>
           <StoryCanvasToolbar
             canEdit={!reviewOnly}
             canComment={story.capabilities?.canComment === true}
-            canOrganize={story.interactions.length > 0}
+            canOrganize={story.interactions.length > 0 && !isOrganizing}
             organizeSelectionCount={selectedLayoutTargets.length}
             placingComment={placingComment}
             canUndo={history.canUndo}
@@ -1864,7 +1914,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
               targetKind={canvasContextMenu.target.kind}
               canEdit={!reviewOnly}
               canComment={story.capabilities?.canComment === true}
-              canOrganize={story.interactions.length > 0}
+              canOrganize={story.interactions.length > 0 && !isOrganizing}
               organizeSelectionCount={selectedLayoutTargets.length}
               onCreateInteraction={() => void createRootFromClick(canvasContextMenu.flowPosition)}
               onAddComment={() => {

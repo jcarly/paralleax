@@ -25,6 +25,13 @@ Current behavior:
 - avoid overlap;
 - reduce unnecessary crossings when possible;
 - keep triggers visible and editable;
+- preload the ELK bundle once after a ready graph has rendered, during browser idle
+  time; whole-graph organization reuses the same initialization promise if it is
+  still pending;
+- show a native wait cursor over the canvas during layout calculation and position
+  saving, and disable organization actions until the operation finishes;
+- clear the busy state after success or failure; layout failures expose a localized
+  error and a retry action;
 - treat the complete organization as one canonical position mutation;
 - be undoable as one durable history step with `Ctrl+Z` or the canvas control.
 
@@ -88,7 +95,10 @@ Web unit tests separately cover ELK graph/port projection, measured dimensions,
 position and route offsets, unchanged updates, and polyline rendering with its
 hitbox and deletion control. The editor integration test holds the ELK result
 pending to verify that saving waits for the calculation, then waits for React
-to apply both Interaction and Trigger positions. Whole-graph undo uses an ELK
+to apply both Interaction and Trigger positions. It also holds persistence pending
+and rejects a layout to check busy-state cleanup and retry. A focused browser
+test verifies the computed wait cursor and prevents duplicate organization while
+the position request is pending. Whole-graph undo uses an ELK
 reference layout; selection organization retains the existing layout tests.
 
 The test clicks the real organization action, observes its batched position

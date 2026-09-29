@@ -131,6 +131,7 @@ export function StoryCanvasContextMenu({
         <ContextMenuAction
           icon="organize"
           label={t('editor.contextMenu.organizeTarget')}
+          disabled={!canOrganize}
           onClick={() => run(onOrganizeTarget)}
         />
       ) : null}

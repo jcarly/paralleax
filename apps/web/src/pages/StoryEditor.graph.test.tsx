@@ -1,6 +1,6 @@
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { updateGraphDecorationInStory, type StoryCommentThread } from '@paralleax/shared';
 import { getInteractionDragTriggerPositionUpdates } from '../storyGraph';
 import * as elkLayout from '../storyGraphElkLayout';
@@ -29,6 +29,31 @@ vi.mock('@xyflow/react', async () => {
 
 describe('StoryEditor graph collaboration and layout', () => {
   setupStoryEditorTestSuite();
+
+  const preloadStoryGraphElk = vi.spyOn(elkLayout, 'preloadStoryGraphElk');
+
+  beforeEach(() => {
+    preloadStoryGraphElk.mockResolvedValue(undefined);
+  });
+
+  it('preloads ELK after the ready graph becomes idle', async () => {
+    let runIdleWork: (() => void) | undefined;
+    const requestIdleCallback = vi.fn((callback: () => void) => {
+      runIdleWork = callback;
+      return 1;
+    });
+    vi.stubGlobal('requestIdleCallback', requestIdleCallback);
+    vi.stubGlobal('cancelIdleCallback', vi.fn());
+
+    await renderEditor(storyWithTwoInteractions());
+
+    await waitFor(() => expect(requestIdleCallback).toHaveBeenCalledOnce());
+    expect(preloadStoryGraphElk).not.toHaveBeenCalled();
+
+    runIdleWork?.();
+
+    await waitFor(() => expect(preloadStoryGraphElk).toHaveBeenCalledOnce());
+  });
 
   it('opens the global comment list in the inspector and navigates to a contextual thread', async () => {
     const user = userEvent.setup();
@@ -676,19 +701,34 @@ describe('StoryEditor graph collaboration and layout', () => {
         resolveLayout = resolve;
       }),
     );
+    let finishSave!: () => void;
+    vi.mocked(api.updateStoryGraphPositions).mockReturnValueOnce(
+      new Promise((resolve) => {
+        finishSave = () => resolve({ revision: 2, updatedAt: '2026-09-28T12:00:00.000Z' });
+      }),
+    );
 
     try {
       await renderEditor(story);
-      await user.click(screen.getByRole('button', { name: 'Organize graph' }));
+      const organize = screen.getByRole('button', { name: 'Organize graph' });
+      const canvas = screen.getByTestId('react-flow').closest('.canvas');
+      expect(canvas).toHaveAttribute('aria-busy', 'false');
+      await user.click(organize);
 
-      expect(computeLayout).toHaveBeenCalledExactlyOnceWith(
-        expect.objectContaining({
-          id: story.id,
-          interactions: story.interactions.map(({ id, position }) =>
-            expect.objectContaining({ id, position }),
-          ),
-        }),
-        { interactionSizes: expect.any(Map) },
+      expect(canvas).toHaveAttribute('aria-busy', 'true');
+      expect(organize).toBeDisabled();
+      fireEvent.click(organize);
+
+      await waitFor(() =>
+        expect(computeLayout).toHaveBeenCalledExactlyOnceWith(
+          expect.objectContaining({
+            id: story.id,
+            interactions: story.interactions.map(({ id, position }) =>
+              expect.objectContaining({ id, position }),
+            ),
+          }),
+          { interactionSizes: expect.any(Map) },
+        ),
       );
       expect(api.updateStoryGraphPositions).not.toHaveBeenCalled();
       expect(screen.getByTestId('flow-node-interaction-2')).toHaveAttribute('data-node-y', '270');
@@ -701,6 +741,8 @@ describe('StoryEditor graph collaboration and layout', () => {
           triggerUpdates: expected.triggerUpdates,
         }),
       );
+      expect(canvas).toHaveAttribute('aria-busy', 'true');
+      expect(organize).toBeDisabled();
       await waitFor(() => {
         const positions = [
           ...expected.interactionUpdates.map(({ interactionId, position }) => ({
@@ -720,6 +762,42 @@ describe('StoryEditor graph collaboration and layout', () => {
           expect(node).toHaveAttribute('data-node-y', String(position.y));
         }
       });
+      await act(async () => finishSave());
+      await waitFor(() => expect(canvas).toHaveAttribute('aria-busy', 'false'));
+      expect(organize).toBeEnabled();
+      expect(api.updateStoryGraphPositions).toHaveBeenCalledTimes(1);
+    } finally {
+      computeLayout.mockRestore();
+    }
+  });
+
+  it('clears the busy state after an ELK failure and allows organization to be retried', async () => {
+    const user = userEvent.setup();
+    const computeLayout = vi
+      .spyOn(elkLayout, 'computeStoryGraphElkLayout')
+      .mockRejectedValueOnce(new Error('Layout engine failed'))
+      .mockResolvedValueOnce({ interactionUpdates: [], triggerUpdates: [], affectedNodeIds: [] });
+
+    try {
+      await renderEditor(storyWithTwoInteractions());
+      const organize = screen.getByRole('button', { name: 'Organize graph' });
+      const canvas = screen.getByTestId('react-flow').closest('.canvas');
+      await user.click(organize);
+
+      expect(await screen.findByRole('alert')).toHaveTextContent(
+        'The graph could not be organized.',
+      );
+      await waitFor(() => expect(canvas).toHaveAttribute('aria-busy', 'false'));
+      expect(organize).toBeEnabled();
+      expect(api.updateStoryGraphPositions).not.toHaveBeenCalled();
+
+      await user.click(screen.getByRole('button', { name: 'Retry' }));
+
+      await waitFor(() => expect(computeLayout).toHaveBeenCalledTimes(2));
+      await waitFor(() => expect(canvas).toHaveAttribute('aria-busy', 'false'));
+      expect(organize).toBeEnabled();
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+      expect(api.updateStoryGraphPositions).not.toHaveBeenCalled();
     } finally {
       computeLayout.mockRestore();
     }

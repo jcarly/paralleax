@@ -39,6 +39,10 @@ function getElk() {
   return elkPromise;
 }
 
+export async function preloadStoryGraphElk(): Promise<void> {
+  await getElk();
+}
+
 export async function computeStoryGraphElkLayout(
   story: Story,
   options: StoryGraphLayoutOptions = {},

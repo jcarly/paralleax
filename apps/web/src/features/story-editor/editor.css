@@ -363,6 +363,10 @@
 .canvas .react-flow {
   background-color: var(--color-canvas);
 }
+.canvas[aria-busy='true'],
+.canvas[aria-busy='true'] * {
+  cursor: wait !important;
+}
 .canvas .react-flow__background {
   opacity: 0.58;
 }

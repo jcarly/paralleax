@@ -1,7 +1,16 @@
 # Changelog
 
+## 2026-09-29
+
+- Preloaded ELK once the ready Story graph is idle, moving bundle download and
+  initialization out of the first whole-graph organization whenever idle time is
+  available.
+
 ## 2026-09-28
 
+- Added a canvas wait cursor during graph organization and position saving,
+  prevented duplicate organization, and restored controls after failures with a
+  localized layout error and retry action.
 - Updated graph tests for current Trigger ports and arrows, asynchronous ELK
   organization, and whole-graph undo. Added coverage for ELK projection and route
   rendering without relaxing coverage thresholds.

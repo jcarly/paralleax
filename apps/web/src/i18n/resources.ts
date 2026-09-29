@@ -544,6 +544,8 @@ export const resources = {
           },
         },
         organizeGraph: 'Organize graph',
+        organizeFailed: 'The graph could not be organized.',
+        retryOrganize: 'Retry',
         organizeSelected_one: 'Organize selected element',
         organizeSelected_other: 'Organize {{count}} selected elements',
         contextMenu: {
@@ -1645,6 +1647,8 @@ export const resources = {
           },
         },
         organizeGraph: 'Réorganiser le graphe',
+        organizeFailed: 'Le graphe n’a pas pu être réorganisé.',
+        retryOrganize: 'Réessayer',
         organizeSelected_one: 'Réorganiser l’élément sélectionné',
         organizeSelected_other: 'Réorganiser les {{count}} éléments sélectionnés',
         contextMenu: {

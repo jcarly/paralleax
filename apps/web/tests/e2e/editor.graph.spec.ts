@@ -14,6 +14,57 @@ test.describe('Story editor graph', () => {
     await prepareEditorPage(page);
   });
 
+  test('keeps a wait cursor and prevents another organization until graph positions are saved', async ({
+    page,
+  }) => {
+    await mockStory(page, storyWithHorizontalLink());
+    let saveRequests = 0;
+    let releaseSave: (() => void) | undefined;
+    const pendingSave = new Promise<void>((resolve) => {
+      releaseSave = resolve;
+    });
+    await mockGraphPositionUpdates(page, async () => {
+      saveRequests += 1;
+      await pendingSave;
+    });
+
+    await page.goto('/stories/story-1/edit');
+    const organize = page.getByRole('button', { name: 'Organize graph', exact: true });
+    const canvas = page.locator('.canvas');
+    const pane = page.locator('.react-flow__pane');
+    await expect(organize).toBeEnabled();
+    const initialButtonCursor = await organize.evaluate(
+      (element) => getComputedStyle(element).cursor,
+    );
+    const initialPaneCursor = await pane.evaluate((element) => getComputedStyle(element).cursor);
+
+    try {
+      await organize.click();
+      await expect.poll(() => saveRequests).toBe(1);
+      await expect(canvas).toHaveAttribute('aria-busy', 'true');
+      await expect(organize).toBeDisabled();
+      await expect(canvas).toHaveCSS('cursor', 'wait');
+      await expect(pane).toHaveCSS('cursor', 'wait');
+      await expect(organize).toHaveCSS('cursor', 'wait');
+
+      const buttonBox = await organize.boundingBox();
+      expect(buttonBox).not.toBeNull();
+      await page.mouse.click(
+        buttonBox!.x + buttonBox!.width / 2,
+        buttonBox!.y + buttonBox!.height / 2,
+      );
+      expect(saveRequests).toBe(1);
+    } finally {
+      releaseSave?.();
+    }
+
+    await expect(canvas).toHaveAttribute('aria-busy', 'false');
+    await expect(organize).toBeEnabled();
+    await expect(organize).toHaveCSS('cursor', initialButtonCursor);
+    await expect(pane).toHaveCSS('cursor', initialPaneCursor);
+    expect(saveRequests).toBe(1);
+  });
+
   test('keeps the graph stable while the comment list opens inside the inspector', async ({
     page,
   }) => {
