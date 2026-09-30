@@ -6,7 +6,7 @@ import {
   updateStoryGraphPositions,
   type StoryHistory,
 } from '@paralleax/shared';
-import { computeStoryGraphLayout } from '../storyGraphLayout';
+import { computeStoryGraphElkLayout } from '../storyGraphElkLayout';
 
 vi.mock('../api', async () => {
   const { createStoryApiMock } = await import('../test/mockStoryApi');
@@ -158,7 +158,7 @@ describe('Story editor history', () => {
   it('restores locally saved graph positions before the durable undo responds', async () => {
     const user = userEvent.setup();
     const original = { ...storyWithTwoInteractions(), revision: 1 };
-    const layout = computeStoryGraphLayout(original, { kind: 'all' });
+    const layout = await computeStoryGraphElkLayout(original);
     const positioned = updateStoryGraphPositions(original, layout);
     const undoPatch = diffStoryGraphPositions(positioned, original);
     vi.mocked(api.updateStoryGraphPositions).mockResolvedValue({

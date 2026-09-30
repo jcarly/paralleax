@@ -1,8 +1,9 @@
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { type Story } from '@paralleax/shared';
 import { getStoryGraphClickCreationPosition } from '../storyGraphCreationLayout';
+import * as elkLayout from '../storyGraphElkLayout';
 import {
   api,
   baseStory,
@@ -27,9 +28,17 @@ vi.mock('@xyflow/react', async () => {
 describe('StoryEditor interactions', () => {
   setupStoryEditorTestSuite();
 
+  beforeEach(() => {
+    vi.spyOn(elkLayout, 'computeStoryGraphElkLayout').mockResolvedValue({
+      interactionUpdates: [],
+      triggerUpdates: [],
+      affectedNodeIds: [],
+    });
+  });
+
   it('creates root and child interactions', async () => {
     const user = userEvent.setup();
-    const rootPosition = getStoryGraphClickCreationPosition(baseStory, { kind: 'root' })!;
+    const rootPosition = (await getStoryGraphClickCreationPosition(baseStory, { kind: 'root' }))!;
     const withRoot = cloneStory();
     withRoot.interactions.push({
       id: 'interaction-root',
@@ -38,10 +47,10 @@ describe('StoryEditor interactions', () => {
       position: rootPosition,
       triggers: [{ id: 'trigger-root', inputInteractionIds: [], conditions: [] }],
     });
-    const childPosition = getStoryGraphClickCreationPosition(withRoot, {
+    const childPosition = (await getStoryGraphClickCreationPosition(withRoot, {
       kind: 'child',
       sourceId: 'interaction-1',
-    })!;
+    }))!;
     const withChild = storyWithTwoInteractions();
     withChild.interactions[1].position = childPosition;
     vi.mocked(api.createInteraction)
@@ -128,10 +137,10 @@ describe('StoryEditor interactions', () => {
   });
 
   it('creates a child interaction from the hovered node action', async () => {
-    const position = getStoryGraphClickCreationPosition(baseStory, {
+    const position = (await getStoryGraphClickCreationPosition(baseStory, {
       kind: 'child',
       sourceId: 'interaction-1',
-    })!;
+    }))!;
     const withNewChild = storyWithTwoInteractions();
     withNewChild.interactions[1].position = position;
     vi.mocked(api.createInteraction).mockResolvedValue(withNewChild);
@@ -144,6 +153,37 @@ describe('StoryEditor interactions', () => {
       expect(api.createInteraction).toHaveBeenCalledWith('story-1', {
         parentId: 'interaction-1',
         position,
+      });
+    });
+  });
+
+  it('uses the ELK coordinate before creating a child interaction', async () => {
+    const elkPosition = { x: 680, y: 540 };
+    vi.mocked(elkLayout.computeStoryGraphElkLayout).mockResolvedValueOnce({
+      interactionUpdates: [
+        {
+          interactionId: '__paralleax_new_interaction__',
+          position: elkPosition,
+        },
+      ],
+      triggerUpdates: [],
+      affectedNodeIds: ['__paralleax_new_interaction__'],
+    });
+    const withNewChild = storyWithTwoInteractions();
+    withNewChild.interactions[1].position = elkPosition;
+    vi.mocked(api.createInteraction).mockResolvedValue(withNewChild);
+
+    await renderEditor();
+    await userEvent.click(
+      within(screen.getByTestId('flow-node-interaction-1')).getByRole('button', {
+        name: 'Create child interaction',
+      }),
+    );
+
+    await waitFor(() => {
+      expect(api.createInteraction).toHaveBeenCalledWith('story-1', {
+        parentId: 'interaction-1',
+        position: elkPosition,
       });
     });
   });
@@ -188,10 +228,10 @@ describe('StoryEditor interactions', () => {
 
   it('creates a parent interaction from the hovered node action', async () => {
     const story = storyWithTwoInteractions();
-    const position = getStoryGraphClickCreationPosition(story, {
+    const position = (await getStoryGraphClickCreationPosition(story, {
       kind: 'parent',
       targetId: 'interaction-2',
-    })!;
+    }))!;
     const withParent = structuredClone(story);
     withParent.interactions.push({
       id: 'interaction-parent',
@@ -230,10 +270,10 @@ describe('StoryEditor interactions', () => {
     const user = userEvent.setup();
     const story = storyWithTwoInteractions();
     story.interactions[1].position = { x: 80, y: 270 };
-    const position = getStoryGraphClickCreationPosition(story, {
+    const position = (await getStoryGraphClickCreationPosition(story, {
       kind: 'child',
       sourceId: 'interaction-1',
-    })!;
+    }))!;
     const withNewChild = structuredClone(story);
     withNewChild.interactions.push({
       id: 'interaction-3',

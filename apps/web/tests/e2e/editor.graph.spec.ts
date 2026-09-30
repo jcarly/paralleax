@@ -14,6 +14,105 @@ test.describe('Story editor graph', () => {
     await prepareEditorPage(page);
   });
 
+  test('keeps a wait cursor and prevents another organization until graph positions are saved', async ({
+    page,
+  }) => {
+    await mockStory(page, storyWithHorizontalLink());
+    let saveRequests = 0;
+    let releaseSave: (() => void) | undefined;
+    const pendingSave = new Promise<void>((resolve) => {
+      releaseSave = resolve;
+    });
+    await mockGraphPositionUpdates(page, async () => {
+      saveRequests += 1;
+      await pendingSave;
+    });
+
+    await page.goto('/stories/story-1/edit');
+    const organize = page.getByRole('button', { name: 'Organize graph', exact: true });
+    const canvas = page.locator('.canvas');
+    const pane = page.locator('.react-flow__pane');
+    await expect(organize).toBeEnabled();
+    const initialButtonCursor = await organize.evaluate(
+      (element) => getComputedStyle(element).cursor,
+    );
+    const initialPaneCursor = await pane.evaluate((element) => getComputedStyle(element).cursor);
+
+    try {
+      await organize.click();
+      await expect.poll(() => saveRequests).toBe(1);
+      await expect(canvas).toHaveAttribute('aria-busy', 'true');
+      await expect(organize).toBeDisabled();
+      await expect(canvas).toHaveCSS('cursor', 'wait');
+      await expect(pane).toHaveCSS('cursor', 'wait');
+      await expect(organize).toHaveCSS('cursor', 'wait');
+
+      const buttonBox = await organize.boundingBox();
+      expect(buttonBox).not.toBeNull();
+      await page.mouse.click(
+        buttonBox!.x + buttonBox!.width / 2,
+        buttonBox!.y + buttonBox!.height / 2,
+      );
+      expect(saveRequests).toBe(1);
+    } finally {
+      releaseSave?.();
+    }
+
+    await expect(canvas).toHaveAttribute('aria-busy', 'false');
+    await expect(organize).toBeEnabled();
+    await expect(organize).toHaveCSS('cursor', initialButtonCursor);
+    await expect(pane).toHaveCSS('cursor', initialPaneCursor);
+    expect(saveRequests).toBe(1);
+  });
+
+  test('organizes selected isolated interactions with ELK without persisting their neighbors', async ({
+    page,
+  }) => {
+    const current = storyWithHorizontalLink();
+    current.interactions.push(
+      {
+        id: 'isolated-1',
+        title: 'Isolated scene one',
+        body: '',
+        position: { x: 180, y: 560 },
+        triggers: [{ id: 'isolated-trigger-1', inputInteractionIds: [], conditions: [] }],
+      },
+      {
+        id: 'isolated-2',
+        title: 'Isolated scene two',
+        body: '',
+        position: { x: 680, y: 560 },
+        triggers: [{ id: 'isolated-trigger-2', inputInteractionIds: [], conditions: [] }],
+      },
+    );
+    let savedInteractionIds: string[] | undefined;
+    await mockStory(page, current);
+    await mockGraphPositionUpdates(page, ({ interactionUpdates }) => {
+      savedInteractionIds = interactionUpdates.map(({ interactionId }) => interactionId).sort();
+    });
+
+    await page.goto('/stories/story-1/edit');
+    const isolatedNodes = ['isolated-1', 'isolated-2'].map((id) =>
+      page.locator(`.react-flow__node[data-id="${id}"]`),
+    );
+    const boxes = await Promise.all(isolatedNodes.map((node) => node.boundingBox()));
+    expect(boxes.every(Boolean)).toBe(true);
+    const left = Math.min(...boxes.map((box) => box!.x)) - 12;
+    const top = Math.min(...boxes.map((box) => box!.y)) - 12;
+    const right = Math.max(...boxes.map((box) => box!.x + box!.width)) + 12;
+    const bottom = Math.max(...boxes.map((box) => box!.y + box!.height)) + 12;
+
+    await page.mouse.move(left, top);
+    await page.mouse.down();
+    await page.mouse.move(right, bottom, { steps: 8 });
+    await page.mouse.up();
+
+    await expect(page.getByText('2 interactions selected')).toBeVisible();
+    await page.getByRole('button', { name: 'Organize 2 selected elements' }).click();
+
+    await expect.poll(() => savedInteractionIds).toEqual(['isolated-1', 'isolated-2']);
+  });
+
   test('keeps the graph stable while the comment list opens inside the inspector', async ({
     page,
   }) => {

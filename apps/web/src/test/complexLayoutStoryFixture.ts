@@ -11,6 +11,9 @@ const longRangeLinks = [
   { source: 18, target: 58 },
 ];
 const cycles = [
+  [0, 1, 0],
+  [24, 25, 24],
+  [96, 97, 96],
   [16, 17, 20, 22, 23, 16],
   [40, 41, 44, 46, 47, 48, 49, 52, 54, 55, 40],
   [80, 81, 84, 86, 87, 80],
@@ -42,6 +45,9 @@ export const complexLayoutStoryMotifs = {
     indexDistance: target - source,
   })),
   cycles: cycles.map((path) => path.map(interactionId)),
+  twoInteractionCycles: cycles
+    .filter((path) => path.length === 3)
+    .map((path) => path.map(interactionId)),
   selfLoop: {
     interactionId: interactionId(72),
     triggerId: 'trigger-self-72',
@@ -57,7 +63,7 @@ export const complexLayoutStoryMotifs = {
 /**
  * A reproducible layout stress story, not a production demo or a planar fixture.
  * Twelve branching stages reconnect through both multi-input and independent
- * Triggers. Sparse shortcuts, return paths, a self-loop, and a disconnected
+ * Triggers. Sparse shortcuts, two-interaction and longer cycles, a self-loop, and a disconnected
  * island exercise routing without turning the fixture into an all-to-all graph.
  * Content and context vary so browser checks use different measured card sizes.
  */

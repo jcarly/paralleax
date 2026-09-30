@@ -1,7 +1,15 @@
-import { describe, expect, it } from 'vitest';
-import { getNextChildPosition, type Story } from '@paralleax/shared';
-import { interactionNodeHeight, interactionNodeWidth } from './storyGraph';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { getNextRootPosition, type Story } from '@paralleax/shared';
 import { getStoryGraphClickCreationPosition } from './storyGraphCreationLayout';
+
+const { computeStoryGraphElkLayout } = vi.hoisted(() => ({
+  computeStoryGraphElkLayout: vi.fn(),
+}));
+
+vi.mock('./storyGraphElkLayout', () => ({ computeStoryGraphElkLayout }));
+
+const placeholderInteractionId = '__paralleax_new_interaction__';
+const placeholderTriggerId = '__paralleax_new_trigger__';
 
 const story: Story = {
   id: 'creation-layout',
@@ -27,71 +35,103 @@ const story: Story = {
 };
 
 describe('story graph click creation layout', () => {
-  it('places a clicked child with the scoped graph layout instead of the legacy next slot', () => {
-    const position = getStoryGraphClickCreationPosition(story, {
-      kind: 'child',
-      sourceId: 'root',
+  beforeEach(() => {
+    computeStoryGraphElkLayout.mockReset();
+  });
+
+  it('uses the ELK position for a projected child and keeps its source link', async () => {
+    const elkPosition = { x: 420, y: 620 };
+    computeStoryGraphElkLayout.mockResolvedValue({
+      interactionUpdates: [{ interactionId: placeholderInteractionId, position: elkPosition }],
+      triggerUpdates: [],
+      affectedNodeIds: [placeholderInteractionId],
     });
 
-    expect(position).toBeDefined();
-    expect(position).not.toEqual(getNextChildPosition(story, story.interactions[0]));
-    expect(position!.y).toBeGreaterThan(story.interactions[0].position.y);
-    expectOverlapsNoInteraction(position!);
+    await expect(
+      getStoryGraphClickCreationPosition(story, { kind: 'child', sourceId: 'root' }),
+    ).resolves.toEqual(elkPosition);
+
+    expect(computeStoryGraphElkLayout).toHaveBeenCalledWith(
+      expect.objectContaining({
+        interactions: expect.arrayContaining([
+          expect.objectContaining({
+            id: placeholderInteractionId,
+            triggers: [expect.objectContaining({ inputInteractionIds: ['root'] })],
+          }),
+        ]),
+      }),
+      {
+        scope: {
+          kind: 'selection',
+          targets: [
+            { type: 'interaction', interactionId: placeholderInteractionId },
+            {
+              type: 'trigger',
+              interactionId: placeholderInteractionId,
+              triggerId: placeholderTriggerId,
+            },
+          ],
+        },
+      },
+    );
   });
 
-  it('places a clicked parent above its target without overlapping an existing interaction', () => {
-    const position = getStoryGraphClickCreationPosition(story, {
-      kind: 'parent',
-      targetId: 'child',
+  it('uses the ELK position for a projected parent and keeps its target link', async () => {
+    const elkPosition = { x: 160, y: 172 };
+    computeStoryGraphElkLayout.mockResolvedValue({
+      interactionUpdates: [{ interactionId: placeholderInteractionId, position: elkPosition }],
+      triggerUpdates: [],
+      affectedNodeIds: [placeholderInteractionId],
     });
 
-    expect(position).toBeDefined();
-    expect(position!.y).toBeLessThan(story.interactions[1].position.y);
-    expectOverlapsNoInteraction(position!);
+    await expect(
+      getStoryGraphClickCreationPosition(story, { kind: 'parent', targetId: 'child' }),
+    ).resolves.toEqual(elkPosition);
+
+    const [projectedStory, options] = computeStoryGraphElkLayout.mock.calls[0];
+    expect(projectedStory.interactions.find(({ id }: { id: string }) => id === 'child')).toEqual(
+      expect.objectContaining({
+        triggers: expect.arrayContaining([
+          expect.objectContaining({ inputInteractionIds: [placeholderInteractionId] }),
+        ]),
+      }),
+    );
+    expect(options).toEqual({
+      scope: {
+        kind: 'selection',
+        targets: [
+          { type: 'interaction', interactionId: placeholderInteractionId },
+          { type: 'trigger', interactionId: 'child', triggerId: placeholderTriggerId },
+        ],
+      },
+    });
   });
 
-  it('places a clicked root in collision-free graph space deterministically', () => {
-    const first = getStoryGraphClickCreationPosition(story, { kind: 'root' });
-    const second = getStoryGraphClickCreationPosition(story, { kind: 'root' });
+  it('keeps the collision-free default position when ELK has no scoped update or fails', async () => {
+    const fallback = getNextRootPosition(story);
+    computeStoryGraphElkLayout.mockResolvedValue({
+      interactionUpdates: [],
+      triggerUpdates: [],
+      affectedNodeIds: [],
+    });
 
-    expect(first).toEqual(second);
-    expect(first).toBeDefined();
-    expectOverlapsNoInteraction(first!);
+    await expect(getStoryGraphClickCreationPosition(story, { kind: 'root' })).resolves.toEqual(
+      fallback,
+    );
+
+    computeStoryGraphElkLayout.mockRejectedValueOnce(new Error('ELK unavailable'));
+    await expect(getStoryGraphClickCreationPosition(story, { kind: 'root' })).resolves.toEqual(
+      fallback,
+    );
   });
 
-  it('ignores a click creation whose referenced interaction no longer exists', () => {
-    expect(
+  it('does not invoke ELK when a referenced interaction no longer exists', async () => {
+    await expect(
       getStoryGraphClickCreationPosition(story, { kind: 'child', sourceId: 'missing' }),
-    ).toBeUndefined();
-    expect(
+    ).resolves.toBeUndefined();
+    await expect(
       getStoryGraphClickCreationPosition(story, { kind: 'parent', targetId: 'missing' }),
-    ).toBeUndefined();
-  });
-
-  it('supports legacy interactions without a stored graph position', () => {
-    const legacyStory = structuredClone(story);
-    delete (legacyStory.interactions[1] as Partial<(typeof story.interactions)[number]>).position;
-
-    const position = getStoryGraphClickCreationPosition(legacyStory, {
-      kind: 'child',
-      sourceId: 'child',
-    });
-
-    expect(position).toEqual({
-      x: expect.any(Number),
-      y: expect.any(Number),
-    });
+    ).resolves.toBeUndefined();
+    expect(computeStoryGraphElkLayout).not.toHaveBeenCalled();
   });
 });
-
-function expectOverlapsNoInteraction(position: { x: number; y: number }) {
-  story.interactions.forEach((interaction) => {
-    const overlaps = !(
-      position.x + interactionNodeWidth <= interaction.position.x ||
-      interaction.position.x + interactionNodeWidth <= position.x ||
-      position.y + interactionNodeHeight <= interaction.position.y ||
-      interaction.position.y + interactionNodeHeight <= position.y
-    );
-    expect(overlaps, `overlaps ${interaction.id}`).toBe(false);
-  });
-}

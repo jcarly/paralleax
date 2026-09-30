@@ -76,6 +76,13 @@ describe('complex layout story fixture', () => {
         expect(hasLink(path[index - 1]!, path[index]!)).toBe(true);
       }
     }
+    expect(motifs.twoInteractionCycles).toHaveLength(3);
+    for (const [first, second, returned] of motifs.twoInteractionCycles) {
+      expect(first).not.toBe(second);
+      expect(returned).toBe(first);
+      expect(hasLink(first!, second!)).toBe(true);
+      expect(hasLink(second!, first!)).toBe(true);
+    }
     expect(hasLink(motifs.selfLoop.interactionId, motifs.selfLoop.interactionId)).toBe(true);
     const variants = interactions
       .get(motifs.sameInputVariants.targetId)!

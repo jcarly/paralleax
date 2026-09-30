@@ -8,6 +8,7 @@ import {
   interactionNodeWidth,
   type TriggerPositionUpdate,
 } from './storyGraph';
+import type { TriggerEdgeRoutes } from './triggerEdgeRouting';
 
 export type StoryGraphLayoutTarget =
   | { type: 'interaction'; interactionId: string }
@@ -22,6 +23,7 @@ export interface StoryGraphLayoutResult {
   interactionUpdates: InteractionPositionUpdate[];
   triggerUpdates: TriggerPositionUpdate[];
   affectedNodeIds: string[];
+  edgeRoutes?: TriggerEdgeRoutes;
 }
 
 export interface StoryGraphLayoutOptions {
@@ -66,8 +68,43 @@ export function computeStoryGraphLayout(
   }
 
   const canonicalPositions = layoutProjection(projection);
+  return projectStoryGraphLayoutScopeFromProjection(story, projection, scope, canonicalPositions);
+}
+
+/**
+ * Limits full-graph coordinates to an editor scope without moving its fixed
+ * neighbors. Both layout engines use this projection so selection semantics stay
+ * independent from the algorithm that supplied the coordinates.
+ */
+export function projectStoryGraphLayoutScope(
+  story: Story,
+  scope: StoryGraphLayoutScope,
+  canonicalPositions: ReadonlyMap<string, Position>,
+  options: StoryGraphLayoutOptions = {},
+): StoryGraphLayoutResult {
+  const projection = buildProjection(story, options);
+  return projectStoryGraphLayoutScopeFromProjection(story, projection, scope, canonicalPositions);
+}
+
+function projectStoryGraphLayoutScopeFromProjection(
+  story: Story,
+  projection: Projection,
+  scope: StoryGraphLayoutScope,
+  canonicalPositions: ReadonlyMap<string, Position>,
+): StoryGraphLayoutResult {
+  if (projection.vertices.length === 0) {
+    return { interactionUpdates: [], triggerUpdates: [], affectedNodeIds: [] };
+  }
+
   const selectedKeys = getSelectedKeys(projection, scope);
   if (selectedKeys.size === 0) {
+    return { interactionUpdates: [], triggerUpdates: [], affectedNodeIds: [] };
+  }
+
+  if (
+    scope.kind === 'selection' &&
+    projection.vertices.some((vertex) => !canonicalPositions.has(vertex.key))
+  ) {
     return { interactionUpdates: [], triggerUpdates: [], affectedNodeIds: [] };
   }
 
@@ -739,7 +776,7 @@ function getSelectedKeys(projection: Projection, scope: StoryGraphLayoutScope): 
 
 function alignSelectionToFixedGraph(
   projection: Projection,
-  canonical: Map<string, Position>,
+  canonical: ReadonlyMap<string, Position>,
   selected: Set<string>,
 ): Map<string, Position> {
   const boundaryKeys = new Set<string>();

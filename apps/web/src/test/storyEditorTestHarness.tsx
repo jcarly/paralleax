@@ -11,6 +11,7 @@ import type {
 } from '@paralleax/shared';
 import { api } from '../api';
 import { StoryEditor } from '../pages/StoryEditor';
+import * as elkLayout from '../storyGraphElkLayout';
 import { FakeEventSource } from './FakeEventSource';
 import {
   storyProjectionBootstrap,
@@ -149,6 +150,7 @@ export function setupStoryEditorTestSuite() {
 
   beforeEach(() => {
     vi.resetAllMocks();
+    vi.spyOn(elkLayout, 'preloadStoryGraphElk').mockResolvedValue(undefined);
     mockProgressiveStoryLoading();
     window.localStorage.clear();
     FakeEventSource.instances = [];
