@@ -101,11 +101,7 @@ import {
   type StoryFlowNode,
   type TriggerFlowEdge,
 } from '../storyGraph';
-import {
-  computeStoryGraphLayout,
-  type StoryGraphLayoutScope,
-  type StoryGraphLayoutTarget,
-} from '../storyGraphLayout';
+import { type StoryGraphLayoutScope, type StoryGraphLayoutTarget } from '../storyGraphLayout';
 import { applyStoryGraphSelection, getStoryGraphSelectionTargets } from '../storyGraphSelection';
 import {
   getStoryGraphClickCreationPosition,
@@ -655,7 +651,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
   const createRootFromClick = useCallback(
     async (position?: Position) => {
       const interactionId = await createRoot(
-        position ?? getClickCreationPosition({ kind: 'root' }),
+        position ?? (await getClickCreationPosition({ kind: 'root' })),
       );
       if (!interactionId) return;
       focusInteractionNode(interactionId);
@@ -666,7 +662,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
     async (sourceId: string) => {
       const interactionId = await createChildFromInteraction(
         sourceId,
-        getClickCreationPosition({ kind: 'child', sourceId }),
+        await getClickCreationPosition({ kind: 'child', sourceId }),
       );
       if (!interactionId) return;
       focusInteractionNode(interactionId);
@@ -677,7 +673,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
     async (targetId: string) => {
       const interactionId = await createParentForInteraction(
         targetId,
-        getClickCreationPosition({ kind: 'parent', targetId }),
+        await getClickCreationPosition({ kind: 'parent', targetId }),
       );
       if (!interactionId) return;
       focusInteractionNode(interactionId);
@@ -1391,14 +1387,10 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
         window.requestAnimationFrame(() => window.requestAnimationFrame(() => resolve()));
       });
       const interactionSizes = getMeasuredInteractionSizes(nodes);
-      const layout =
-        scope.kind === 'all'
-          ? await computeStoryGraphElkLayout(story, {
-              interactionSizes,
-            })
-          : computeStoryGraphLayout(story, scope, {
-              interactionSizes,
-            });
+      const layout = await computeStoryGraphElkLayout(story, {
+        interactionSizes,
+        scope,
+      });
       if (scope.kind === 'all') {
         setElkEdgeRoutes(layout.edgeRoutes ?? new Map());
       } else {

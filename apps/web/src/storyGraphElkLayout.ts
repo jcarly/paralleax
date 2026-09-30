@@ -5,10 +5,19 @@ import {
   interactionNodeHeight,
   interactionNodeWidth,
 } from './storyGraph';
-import type { StoryGraphLayoutOptions, StoryGraphLayoutResult } from './storyGraphLayout';
+import {
+  projectStoryGraphLayoutScope,
+  type StoryGraphLayoutOptions,
+  type StoryGraphLayoutResult,
+  type StoryGraphLayoutScope,
+} from './storyGraphLayout';
 import type { ElkExtendedEdge, ElkNode } from 'elkjs/lib/elk-api';
 
 const triggerNodeSize = 20;
+
+export interface StoryGraphElkLayoutOptions extends StoryGraphLayoutOptions {
+  scope?: StoryGraphLayoutScope;
+}
 
 interface ElkLayoutVertex {
   key: string;
@@ -45,9 +54,18 @@ export async function preloadStoryGraphElk(): Promise<void> {
 
 export async function computeStoryGraphElkLayout(
   story: Story,
-  options: StoryGraphLayoutOptions = {},
+  options: StoryGraphElkLayoutOptions = {},
 ): Promise<StoryGraphLayoutResult> {
   if (story.interactions.length === 0) {
+    return {
+      interactionUpdates: [],
+      triggerUpdates: [],
+      affectedNodeIds: [],
+    };
+  }
+
+  const scope: StoryGraphLayoutScope = options.scope ?? { kind: 'all' };
+  if (scope.kind === 'selection' && scope.targets.length === 0) {
     return {
       interactionUpdates: [],
       triggerUpdates: [],
@@ -266,58 +284,9 @@ export async function computeStoryGraphElkLayout(
     ]),
   );
 
-  const interactionUpdates = interactionVertices.flatMap((vertex) => {
-    const position = positions.get(vertex.key);
-    const interaction = story.interactions.find(({ id }) => id === vertex.interactionId);
-
-    if (!position || !interaction || positionsEqual(position, interaction.position)) {
-      return [];
-    }
-
-    return [
-      {
-        interactionId: vertex.interactionId,
-        position,
-      },
-    ];
-  });
-
-  const interactionById = new Map(
-    story.interactions.map((interaction) => [interaction.id, interaction]),
-  );
-
-  const triggerUpdates = vertices.flatMap((vertex) => {
-    if (vertex.kind !== 'trigger' || !vertex.triggerIds) {
-      return [];
-    }
-
-    const position = positions.get(vertex.key);
-    if (!position) return [];
-
-    const owner = interactionById.get(vertex.interactionId);
-
-    const changed = vertex.triggerIds.some((triggerId) => {
-      const saved = owner?.triggers.find(({ id }) => id === triggerId)?.position;
-
-      return !saved || !positionsEqual(saved, position);
-    });
-
-    if (!changed) return [];
-
-    return [
-      {
-        interactionId: vertex.interactionId,
-        triggerIds: vertex.triggerIds,
-        position,
-      },
-    ];
-  });
-
   return {
-    interactionUpdates,
-    triggerUpdates,
-    affectedNodeIds: vertices.map(({ nodeId }) => nodeId),
-    edgeRoutes,
+    ...projectStoryGraphLayoutScope(story, scope, positions, options),
+    ...(scope.kind === 'all' ? { edgeRoutes } : {}),
   };
 }
 
@@ -327,8 +296,4 @@ function interactionKey(interactionId: string) {
 
 function getTriggerKey(interactionId: string, triggerId: string) {
   return `trigger:${interactionId}:${triggerId}`;
-}
-
-function positionsEqual(left: Position, right: Position) {
-  return left.x === right.x && left.y === right.y;
 }

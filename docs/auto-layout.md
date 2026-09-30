@@ -1,21 +1,31 @@
 # Auto Layout
 
-Auto layout covers commands that reorganize an existing Story Canvas.
+Auto layout covers commands that reorganize an existing Story Canvas and the
+temporary graph projection used to place linked Interactions before they are
+created.
 
-It is different from default placement. Default placement decides where a newly
-created interaction appears. Auto layout rearranges interactions that already
-exist.
+Default placement decides where a newly created Interaction appears. It does not
+persist moves for existing canvas elements.
 
 ## Current Behavior
 
 The canvas exposes one automatic-organization action for the complete graph, a
 selected interaction or linked Trigger marker, or a rectangular multi-selection.
 
-Whole-graph organization currently calls `computeStoryGraphElkLayout`; selection
-organization still uses `computeStoryGraphLayout`. Both return position updates.
-Whole-graph organization also returns ELK edge sections, which `TriggerEdge`
-draws as polylines. These routes are transient: reload, dragging, and selection
-organization use the smooth-step fallback when the ELK route cache is empty.
+Whole-graph and selection organization call `computeStoryGraphElkLayout`.
+Selections pass the full Story to ELK, then retain only their selected position
+updates so nearby elements remain fixed. This also applies to a disconnected
+Interaction and its saved Trigger marker. Complete-graph organization returns
+ELK edge sections, which `TriggerEdge` draws as polylines. These routes are
+transient: reload, dragging, and selection organization use the smooth-step
+fallback when the ELK route cache is empty.
+
+Creating a child or parent Interaction builds a temporary Story that includes
+the pending Interaction and its link, runs the same scoped ELK layout, and uses
+only the pending Interaction position in the create request. Existing elements
+therefore stay in place. A toolbar root and every unavailable or failed ELK
+result retain the collision-free fallback position. Creating a root at an
+explicit canvas coordinate retains that coordinate.
 
 Current behavior:
 

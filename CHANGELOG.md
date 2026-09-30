@@ -5,6 +5,12 @@
 - Preloaded ELK once the ready Story graph is idle, moving bundle download and
   initialization out of the first whole-graph organization whenever idle time is
   available.
+- Routed complete-graph, single-element, and rectangular selection organization
+  through ELK while preserving fixed unselected elements and existing Trigger
+  follow behavior.
+- Used a temporary scoped ELK projection to place newly created child and parent
+  Interactions before their create request, while retaining canvas coordinates
+  and collision-free fallback placement.
 
 ## 2026-09-28
 

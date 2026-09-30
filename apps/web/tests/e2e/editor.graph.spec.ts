@@ -65,6 +65,54 @@ test.describe('Story editor graph', () => {
     expect(saveRequests).toBe(1);
   });
 
+  test('organizes selected isolated interactions with ELK without persisting their neighbors', async ({
+    page,
+  }) => {
+    const current = storyWithHorizontalLink();
+    current.interactions.push(
+      {
+        id: 'isolated-1',
+        title: 'Isolated scene one',
+        body: '',
+        position: { x: 180, y: 560 },
+        triggers: [{ id: 'isolated-trigger-1', inputInteractionIds: [], conditions: [] }],
+      },
+      {
+        id: 'isolated-2',
+        title: 'Isolated scene two',
+        body: '',
+        position: { x: 680, y: 560 },
+        triggers: [{ id: 'isolated-trigger-2', inputInteractionIds: [], conditions: [] }],
+      },
+    );
+    let savedInteractionIds: string[] | undefined;
+    await mockStory(page, current);
+    await mockGraphPositionUpdates(page, ({ interactionUpdates }) => {
+      savedInteractionIds = interactionUpdates.map(({ interactionId }) => interactionId).sort();
+    });
+
+    await page.goto('/stories/story-1/edit');
+    const isolatedNodes = ['isolated-1', 'isolated-2'].map((id) =>
+      page.locator(`.react-flow__node[data-id="${id}"]`),
+    );
+    const boxes = await Promise.all(isolatedNodes.map((node) => node.boundingBox()));
+    expect(boxes.every(Boolean)).toBe(true);
+    const left = Math.min(...boxes.map((box) => box!.x)) - 12;
+    const top = Math.min(...boxes.map((box) => box!.y)) - 12;
+    const right = Math.max(...boxes.map((box) => box!.x + box!.width)) + 12;
+    const bottom = Math.max(...boxes.map((box) => box!.y + box!.height)) + 12;
+
+    await page.mouse.move(left, top);
+    await page.mouse.down();
+    await page.mouse.move(right, bottom, { steps: 8 });
+    await page.mouse.up();
+
+    await expect(page.getByText('2 interactions selected')).toBeVisible();
+    await page.getByRole('button', { name: 'Organize 2 selected elements' }).click();
+
+    await expect.poll(() => savedInteractionIds).toEqual(['isolated-1', 'isolated-2']);
+  });
+
   test('keeps the graph stable while the comment list opens inside the inspector', async ({
     page,
   }) => {

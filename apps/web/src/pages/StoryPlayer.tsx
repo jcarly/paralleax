@@ -888,6 +888,10 @@ export function StoryPlayer({
 
   async function addOption() {
     if (!story) return;
+    const creation = current
+      ? ({ kind: 'child', sourceId: current.id } as const)
+      : ({ kind: 'root' } as const);
+    const position = await getStoryGraphClickCreationPosition(story, creation);
     await simulationMutations.run(
       () =>
         api.createInteraction(
@@ -895,13 +899,10 @@ export function StoryPlayer({
           current
             ? {
                 parentId: current.id,
-                position: getStoryGraphClickCreationPosition(story, {
-                  kind: 'child',
-                  sourceId: current.id,
-                }),
+                position,
               }
             : {
-                position: getStoryGraphClickCreationPosition(story, { kind: 'root' }),
+                position,
               },
         ),
       (result) => {

@@ -161,6 +161,78 @@ describe('ELK story graph adapter', () => {
     );
   });
 
+  it('uses ELK coordinates to organize selected isolated interactions without moving fixed interactions', async () => {
+    const story = createLayoutStory();
+    story.interactions.push({
+      id: 'isolated',
+      title: 'Isolated',
+      body: '',
+      position: { x: 900, y: 900 },
+      triggers: [
+        {
+          id: 'isolated-start',
+          inputInteractionIds: [],
+          conditions: [],
+        },
+      ],
+    });
+    story.interactions.push({
+      id: 'isolated-second',
+      title: 'Second isolated',
+      body: '',
+      position: { x: 1300, y: 1200 },
+      triggers: [{ id: 'isolated-second-start', inputInteractionIds: [], conditions: [] }],
+    });
+    layout.mockResolvedValue({
+      id: 'root',
+      children: [
+        { id: 'interaction:root', x: 0, y: 100 },
+        { id: 'trigger:root:start', x: 0, y: 0 },
+        { id: 'interaction:other', x: 400, y: 100 },
+        { id: 'trigger:other:other-start', x: 400, y: 0 },
+        { id: 'interaction:target', x: 200, y: 500 },
+        { id: 'trigger:target:merge', x: 210, y: 350 },
+        { id: 'trigger:target:alternative', x: 410, y: 350 },
+        { id: 'interaction:isolated', x: 120, y: 100 },
+        { id: 'trigger:isolated:isolated-start', x: 120, y: 0 },
+        { id: 'interaction:isolated-second', x: 620, y: 100 },
+        { id: 'trigger:isolated-second:isolated-second-start', x: 620, y: 0 },
+      ],
+    });
+
+    const result = await computeStoryGraphElkLayout(story, {
+      scope: {
+        kind: 'selection',
+        targets: [
+          { type: 'interaction', interactionId: 'isolated' },
+          { type: 'interaction', interactionId: 'isolated-second' },
+        ],
+      },
+    });
+
+    expect(layout).toHaveBeenCalledOnce();
+    expect(result.interactionUpdates).toEqual([
+      { interactionId: 'isolated', position: { x: 850, y: 1050 } },
+      { interactionId: 'isolated-second', position: { x: 1350, y: 1050 } },
+    ]);
+    expect(result.triggerUpdates).toEqual([]);
+    expect(result.affectedNodeIds).toEqual(['isolated', 'isolated-second']);
+    expect(result.edgeRoutes).toBeUndefined();
+  });
+
+  it('skips ELK for an empty selection', async () => {
+    await expect(
+      computeStoryGraphElkLayout(createLayoutStory(), {
+        scope: { kind: 'selection', targets: [] },
+      }),
+    ).resolves.toEqual({
+      interactionUpdates: [],
+      triggerUpdates: [],
+      affectedNodeIds: [],
+    });
+    expect(layout).not.toHaveBeenCalled();
+  });
+
   it('translates and rounds nodes and routed edges together while preserving the story origin', async () => {
     const story = createLayoutStory();
     const original = structuredClone(story);
