@@ -33,10 +33,15 @@ The character-stat vertical keeps these regressions covered:
 
 ## Authentication and Ownership
 
-- Authentication: registration creates a session that the current-user endpoint
-  can restore.
+- Authentication: registration creates no session until its one-use,
+  expiry-bound verification link succeeds; existing migrated accounts remain
+  verified and can still sign in.
 - Authentication: invalid credentials are rejected and logout revokes the
   server-side session.
+- Authentication: a password-reset request has the same successful response for
+  an unknown email, while an eligible account receives a one-use reset link.
+- Authentication: reset or password change revokes prior sessions and returns a
+  new session; explicit revocation retains only the current session.
 - Authentication: concurrent registration for one normalized email creates one
   account and returns one conflict.
 - Authentication: access-code registration rejects missing and incorrect codes,

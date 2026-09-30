@@ -170,7 +170,7 @@ export function TriggerInspector({
         </div>
         <small>{t('triggerInspector.timerHelp')}</small>
       </label>
-      <hr/>
+      <hr />
       <button
         className="danger trigger-delete-action"
         onClick={() => void onDeleteTrigger(interaction.id, trigger.id)}

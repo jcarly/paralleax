@@ -78,6 +78,53 @@ describe('AuthRepository', () => {
     ]);
   });
 
+  it('stores action tokens by hash and consumes one exactly once in a transaction', async () => {
+    const verifiedRow = {
+      id: user.id,
+      email: user.email,
+      display_name: user.displayName,
+      password_hash: user.passwordHash,
+      role: user.role,
+      created_at: new Date(user.createdAt),
+      email_verified_at: new Date('2026-07-18T01:00:00.000Z'),
+    };
+    query.mockResolvedValue({});
+    clientQuery
+      .mockResolvedValueOnce({})
+      .mockResolvedValueOnce({ rows: [{ user_id: user.id }] })
+      .mockResolvedValueOnce({ rows: [verifiedRow] })
+      .mockResolvedValueOnce({});
+
+    await repository.createOrReplaceAccountActionToken({
+      id: 'verification-1',
+      userId: user.id,
+      kind: 'verify_email',
+      tokenHash: 'hash',
+      createdAt: user.createdAt,
+      expiresAt: '2026-07-19T00:00:00.000Z',
+    });
+    await expect(
+      repository.verifyEmailWithActionToken('hash', '2026-07-18T01:00:00.000Z'),
+    ).resolves.toMatchObject({ email: user.email, emailVerifiedAt: '2026-07-18T01:00:00.000Z' });
+
+    expect(query).toHaveBeenCalledWith(
+      expect.stringContaining('ON CONFLICT (user_id, kind) DO UPDATE'),
+      [
+        'verification-1',
+        user.id,
+        'verify_email',
+        'hash',
+        user.createdAt,
+        '2026-07-19T00:00:00.000Z',
+      ],
+    );
+    expect(clientQuery).toHaveBeenCalledWith(
+      expect.stringContaining('consumed_at IS NULL AND expires_at > $3'),
+      ['hash', 'verify_email', '2026-07-18T01:00:00.000Z'],
+    );
+    expect(clientQuery).toHaveBeenCalledWith('COMMIT');
+  });
+
   it('lists managed users and updates a role transactionally', async () => {
     const row = {
       id: user.id,

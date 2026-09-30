@@ -254,6 +254,12 @@ details. They should stay covered by tests as the editor grows.
 
 - Authentication uses opaque, revocable server-side sessions. Raw session tokens
   and passwords must never be persisted.
+- New password-account registrations remain unauthenticated until email
+  verification succeeds. Verification and password-reset links are random,
+  hashed at rest, purpose-scoped, expiry-bound, and consumable once. A password
+  reset or password change revokes prior sessions before issuing its replacement.
+  Existing accounts upgraded before verification retain access through their
+  migration-time verified timestamp.
 - Every story has exactly one creator. Its creator and a global administrator can
   always read, edit, manage, and delete it.
 - Global roles are limited to operational account roles (`user` and `admin`).

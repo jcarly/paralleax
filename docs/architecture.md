@@ -145,6 +145,9 @@ The API exposes story operations through `StoriesController`.
 The NestJS application is organized by feature rather than technical layer:
 
 - `auth/` owns credentials, sessions, guards, decorators, and auth endpoints;
+- `email/` owns provider-neutral transactional-email delivery through the
+  configured SMTP relay; product features own their templates and delivery
+  timing;
 - `stories/` owns story DTOs, application behavior, persistence, and endpoints;
 - `comments/` owns anchored review-thread endpoints, applies the shared thread
   authorization rule, and persists comments without extending the canonical
@@ -196,7 +199,16 @@ sources when it follows workspace aliases. This keeps the shared package's
 NodeNext-compatible internal imports valid in both its emitted package and the
 API source build.
 
-`AuthController` exposes registration, login, logout, and current-user endpoints.
+`AuthController` exposes registration, verification, credential recovery, login,
+logout, session revocation, and current-user endpoints. New registrations do not
+receive a session until their email-verification action succeeds. The account
+action table stores only SHA-256 hashes of random, URL-safe verification/reset
+values, scopes each value to one purpose, expires it, and consumes it atomically
+with the corresponding user update. Resetting or changing a password deletes
+previous sessions before a fresh session is issued; revoking other sessions keeps
+the cookie that authorized the request. The account-security migration marks
+pre-existing accounts verified at their original creation time so an upgrade does
+not lock out existing users.
 `AuthService` derives password hashes with scrypt and issues random opaque session
 tokens; only token hashes are stored. `SessionGuard` resolves the HTTP-only session
 cookie and protects every route unless it is explicitly public. Expired sessions
@@ -383,9 +395,11 @@ comment, and ownership data. Changing sessions clears the previous projection
 before loading the next one. The former `/stories` workspace redirects to the
 root library for compatibility. Editor, access, and administration routes redirect
 signed-out visitors to authentication. Sign-in and registration carry a validated
-same-origin `returnTo` path, including its query and fragment, and replace the
-authentication history entry after success. The product navigation does not
-expose the internal design-system reference.
+same-origin `returnTo` path, including its query and fragment. Registration ends
+with a verification-email notice rather than an authenticated session; successful
+verification and password reset create the replacement session and replace the
+authentication history entry. The product navigation does not expose the internal
+design-system reference.
 
 The editor route also checks the loaded story capability and redirects any
 authenticated non-editor to the player. Simulation Mode requires the same

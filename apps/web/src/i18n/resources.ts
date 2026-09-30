@@ -39,6 +39,9 @@ export const resources = {
         administratorRequired: 'Administrator access is required.',
         registrationClosed: 'Account creation is currently closed.',
         invitationCodeInvalid: 'A valid invitation code is required.',
+        emailVerificationRequired: 'Verify your email address before signing in.',
+        emailDeliveryUnavailable: 'Email delivery is temporarily unavailable.',
+        accountActionTokenInvalid: 'This account action link is invalid or expired.',
         storyNotFound: 'This story could not be found.',
         collaboratorAccountInvalid: 'This account does not exist or is already the story owner.',
         commentResolveForbidden: 'You cannot change the status of this comment.',
@@ -84,6 +87,7 @@ export const resources = {
           title: 'Sign in to Paralleax',
           description: 'Continue working on your stories and simulations.',
           submit: 'Sign in',
+          forgotPassword: 'Forgot password?',
           switchPrompt: 'New to Paralleax?',
           switchAction: 'Create an account',
         },
@@ -113,6 +117,44 @@ export const resources = {
         invitationHelp: 'Private alpha deployments require the code supplied by the operator.',
         pending: 'Please wait…',
         failed: 'Authentication failed',
+        verification: {
+          title: 'Check your email',
+          description:
+            'We sent a verification link to {{email}}. Open it to finish creating your account.',
+          resend: 'Resend verification email',
+          backToSignIn: 'Back to sign in',
+        },
+        action: {
+          eyebrow: 'Account security',
+          backToSignIn: 'Back to sign in',
+          verify: {
+            eyebrow: 'Email verification',
+            title: 'Verify your email address',
+            description: 'Confirm this action to verify your address and sign in.',
+            submit: 'Verify and sign in',
+            showcaseTitle: 'One last step.',
+            showcaseDescription: 'Verify your address before opening your authoring workspace.',
+          },
+          reset: {
+            eyebrow: 'New password',
+            title: 'Choose a new password',
+            description: 'This link can only be used once.',
+            submit: 'Save new password',
+            showcaseTitle: 'Restore access safely.',
+            showcaseDescription: 'Choose a new password to continue working on your stories.',
+          },
+          requestReset: {
+            eyebrow: 'Password reset',
+            title: 'Reset your password',
+            description:
+              'Enter your email address and we will send instructions if an account exists.',
+            submit: 'Send reset instructions',
+            complete:
+              'If an eligible account exists for this email address, reset instructions have been sent.',
+            showcaseTitle: 'Get back to your stories.',
+            showcaseDescription: 'Use a private reset link to choose a new password.',
+          },
+        },
       },
       account: {
         eyebrow: 'Your account',
@@ -125,6 +167,17 @@ export const resources = {
         save: 'Save',
         saving: 'Saving…',
         updateFailed: 'The account could not be updated.',
+        securityTitle: 'Security',
+        securityDescription: 'Change your password or sign out of your other devices.',
+        currentPassword: 'Current password',
+        newPassword: 'New password',
+        changePassword: 'Change password',
+        changingPassword: 'Changing password…',
+        passwordChanged: 'Password changed. Other sessions were signed out.',
+        revokeOtherSessions: 'Sign out other sessions',
+        revokingOtherSessions: 'Signing out other sessions…',
+        otherSessionsRevoked: 'Other sessions were signed out.',
+        securityUpdateFailed: 'The security settings could not be updated.',
       },
       library: {
         eyebrow: 'Your workspace',
@@ -1097,6 +1150,9 @@ export const resources = {
   fr: {
     translation: {
       apiErrors: {
+        emailVerificationRequired: 'Verifiez votre adresse e-mail avant de vous connecter.',
+        emailDeliveryUnavailable: 'L’envoi d’e-mails est temporairement indisponible.',
+        accountActionTokenInvalid: 'Ce lien d’action est invalide ou expire.',
         badRequest: 'Les informations envoyées ne sont pas valides.',
         authenticationRequired: 'Connectez-vous pour continuer.',
         forbidden: 'Vous n’avez pas l’autorisation d’effectuer cette action.',
@@ -1158,6 +1214,44 @@ export const resources = {
         sessionExpired: 'Votre session a expiré. Reconnectez-vous pour continuer.',
       },
       auth: {
+        verification: {
+          title: 'Verifiez vos e-mails',
+          description:
+            'Nous avons envoye un lien de verification a {{email}}. Ouvrez-le pour terminer la creation du compte.',
+          resend: 'Renvoyer l’e-mail de verification',
+          backToSignIn: 'Retour a la connexion',
+        },
+        action: {
+          eyebrow: 'Securite du compte',
+          backToSignIn: 'Retour a la connexion',
+          verify: {
+            eyebrow: 'Verification e-mail',
+            title: 'Verifiez votre adresse e-mail',
+            description: 'Confirmez cette action pour verifier votre adresse et vous connecter.',
+            submit: 'Verifier et se connecter',
+            showcaseTitle: 'Une derniere etape.',
+            showcaseDescription: 'Verifiez votre adresse avant d’ouvrir votre espace d’ecriture.',
+          },
+          reset: {
+            eyebrow: 'Nouveau mot de passe',
+            title: 'Choisissez un nouveau mot de passe',
+            description: 'Ce lien ne peut etre utilise qu’une seule fois.',
+            submit: 'Enregistrer le mot de passe',
+            showcaseTitle: 'Retrouvez votre acces en securite.',
+            showcaseDescription: 'Choisissez un nouveau mot de passe pour reprendre vos histoires.',
+          },
+          requestReset: {
+            eyebrow: 'Reinitialisation',
+            title: 'Reinitialisez votre mot de passe',
+            description:
+              'Saisissez votre adresse e-mail et nous enverrons des instructions si un compte existe.',
+            submit: 'Envoyer les instructions',
+            complete:
+              'Si un compte eligible existe pour cette adresse e-mail, des instructions ont ete envoyees.',
+            showcaseTitle: 'Retournez a vos histoires.',
+            showcaseDescription: 'Utilisez un lien prive pour choisir un nouveau mot de passe.',
+          },
+        },
         showcase: {
           eyebrow: 'Conception narrative interactive',
           title: 'Chaque chemin reste visible.',
@@ -1180,6 +1274,7 @@ export const resources = {
           title: 'Se connecter à Paralleax',
           description: 'Reprenez la création de vos histoires et de vos simulations.',
           submit: 'Se connecter',
+          forgotPassword: 'Mot de passe oublie ?',
           switchPrompt: 'Vous découvrez Paralleax ?',
           switchAction: 'Créer un compte',
         },
@@ -1211,6 +1306,17 @@ export const resources = {
         failed: 'Échec de l’authentification',
       },
       account: {
+        securityTitle: 'Securite',
+        securityDescription: 'Modifiez votre mot de passe ou deconnectez vos autres appareils.',
+        currentPassword: 'Mot de passe actuel',
+        newPassword: 'Nouveau mot de passe',
+        changePassword: 'Modifier le mot de passe',
+        changingPassword: 'Modification…',
+        passwordChanged: 'Mot de passe modifie. Les autres sessions ont ete deconnectees.',
+        revokeOtherSessions: 'Deconnecter les autres sessions',
+        revokingOtherSessions: 'Deconnexion…',
+        otherSessionsRevoked: 'Les autres sessions ont ete deconnectees.',
+        securityUpdateFailed: 'Les parametres de securite n’ont pas pu etre mis a jour.',
         eyebrow: 'Votre compte',
         title: 'Paramètres du compte',
         description: 'Choisissez le nom affiché sur les histoires, commentaires et historiques.',

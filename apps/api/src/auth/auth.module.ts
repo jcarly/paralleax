@@ -9,11 +9,13 @@ import { AdminController } from './admin.controller';
 import { SessionGuard } from './auth.guard';
 import { AuthRepository } from './auth.repository';
 import { AuthService } from './auth.service';
+import { EmailModule } from '../email/email.module';
 
 @Module({
   imports: [
     ConfigModule,
     DatabaseModule,
+    EmailModule,
     ThrottlerModule.forRootAsync({
       imports: [ConfigModule],
       inject: [AppConfigService],

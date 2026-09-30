@@ -2,7 +2,7 @@
 
 This roadmap describes the progression from the validated narrative core to a public Paralleax platform.
 
-Status reviewed: 2026-09-23.
+Status reviewed: 2026-09-30.
 
 It is organized around **user capabilities** rather than implementation areas. Engineering work supports these milestones but does not define them by itself.
 
@@ -128,7 +128,13 @@ priority, the order below is the intended delivery order.
 
 1. **Account safety.** Add email verification, password recovery/change, and
    session revocation before open registration. Keep external identity providers
-   as the separate P2 decision below.
+   as the separate P2 decision below. **Completed 2026-09-30:** Nodemailer SMTP
+   delivery now sends purpose-specific verification and recovery messages. New
+   registrations cannot sign in before verification; verification and reset
+   tokens are random, hashed at rest, scoped, expiry-bound, and atomic one-use
+   actions. Password reset/change revokes existing sessions, the account dialog
+   can revoke other sessions, unknown reset addresses receive a neutral response,
+   and the forward migration preserves access for pre-existing accounts.
 2. **Story configuration and access.** Put configuration behind a gear beside
    the Story title and reuse the existing controls inside a tabbed modal:
    `Properties` owns Story-level properties including the starting date/time,
@@ -540,6 +546,41 @@ Alice -> Bob
 
 The exact representation requires an ADR before implementation.
 
+#### Multi-participant narratives
+
+**Planned future model increment; not implemented.** Extend the current
+single-playable-character reader toward stories with several logical Player
+seats, several characters, shared scenes, and changes of incarnation. A Player
+is a story-authored narrative seat rather than a user account; a session creates
+its PlayerInstance and may associate it with a user. The existing authored
+Character evolves as the character-definition role, with one lazily created and
+reused CharacterInstance per definition and play session in the first
+increment.
+
+The increment should add an explicit `incarnate Player -> Character` effect and
+interaction participant roles for actors and spectators. A Player participant
+keeps its role across character changes, while a Character participant is
+controlled by whoever currently incarnates that character. Spectators receive a
+point-of-view presentation but cannot choose. Where human actors are present,
+the first human choice resolves the shared interaction; an automatic controller
+may decide only when no human actor participates.
+
+Routes remain derived editor/reader views: an entity's route is the interactions
+where it is an actor or spectator. Do not add a persistent `Path`, `Route`, or
+`Parcours` model, and do not duplicate graph structures for points of view.
+Keep participant controls progressive so a conventional one-player,
+one-character Story stays as simple to author as it is today. Reusable graph
+snippets for character selection and creation are a later authoring layer, not
+new engine primitives.
+
+The first increment excludes several instances of one character template in a
+session, shared control of one character, one Player controlling several
+characters at once, advanced NPC decision making, vote/majority/unanimity and
+simultaneous choices, and distributed multiplayer synchronization. It requires
+an ADR before implementation to define session persistence/versioning, user-to-
+seat assignment, interaction-cast compatibility, reader-save migration,
+authorization, and multi-human disconnect/reconnect semantics.
+
 #### Story organization
 
 Define a neutral grouping concept for quests, chapters, arcs, scene sequences, or author-defined groups.
@@ -562,7 +603,6 @@ Only implement later stages when concrete story requirements justify them.
 
 #### Other increments
 
-- Playable character points of view.
 - Graph filters/focal points for world entities and groups.
 - Explicit final interactions and completed-story semantics.
 

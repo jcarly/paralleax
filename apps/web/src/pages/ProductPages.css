@@ -367,6 +367,40 @@
   font-size: 0.8rem;
 }
 
+.account-security {
+  display: grid;
+  gap: 0.8rem;
+  margin-top: 1.4rem;
+  padding-top: 1.2rem;
+  border-top: 1px solid var(--product-line);
+}
+
+.account-security h3 {
+  margin: 0;
+  color: var(--product-ink);
+  font-size: 0.86rem;
+}
+
+.account-security p {
+  margin: 0;
+  color: var(--product-muted);
+  font-size: 0.72rem;
+}
+
+.account-security-actions,
+.auth-verification-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.auth-recovery-link {
+  display: inline-block;
+  margin-top: 0.9rem;
+  color: var(--product-forest);
+  font-size: 0.74rem;
+}
+
 .library-card-author {
   color: var(--product-muted);
   font-size: 0.68rem;

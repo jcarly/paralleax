@@ -1552,4 +1552,33 @@ export const databaseMigrations: DatabaseMigration[] = [
         ON story_comment_threads(story_id, deleted_at, updated_at DESC);
     `,
   },
+  {
+    id: '202609300040_account_security_actions',
+    sql: `
+      ALTER TABLE users
+      ADD COLUMN email_verified_at timestamptz;
+
+      -- Existing accounts predate verification. Preserve their access while
+      -- requiring every account created after this migration to verify email.
+      UPDATE users
+      SET email_verified_at = created_at
+      WHERE email_verified_at IS NULL;
+
+      CREATE TABLE account_action_tokens (
+        id text PRIMARY KEY,
+        user_id text NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        kind text NOT NULL CHECK (kind IN ('verify_email', 'reset_password')),
+        token_hash text NOT NULL UNIQUE,
+        created_at timestamptz NOT NULL,
+        expires_at timestamptz NOT NULL,
+        consumed_at timestamptz,
+        CHECK (expires_at > created_at),
+        CHECK (consumed_at IS NULL OR consumed_at >= created_at),
+        UNIQUE (user_id, kind)
+      );
+
+      CREATE INDEX account_action_tokens_expiry_idx
+        ON account_action_tokens(expires_at);
+    `,
+  },
 ];

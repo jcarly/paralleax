@@ -49,6 +49,46 @@ describe('api client', () => {
       body: JSON.stringify({ displayName: 'Renamed Author' }),
     });
 
+    await api.verifyEmail('verification-token-value-that-is-long-enough');
+    expect(fetchMock).toHaveBeenLastCalledWith('/api/auth/verify-email', {
+      headers: { 'Content-Type': 'application/json' },
+      method: 'POST',
+      body: JSON.stringify({ token: 'verification-token-value-that-is-long-enough' }),
+    });
+
+    await api.requestPasswordReset('author@example.com');
+    expect(fetchMock).toHaveBeenLastCalledWith('/api/auth/password-reset', {
+      headers: { 'Content-Type': 'application/json' },
+      method: 'POST',
+      body: JSON.stringify({ email: 'author@example.com' }),
+    });
+
+    await api.resetPassword('reset-token-value-that-is-long-enough', 'new-secret-password');
+    expect(fetchMock).toHaveBeenLastCalledWith('/api/auth/password-reset/confirm', {
+      headers: { 'Content-Type': 'application/json' },
+      method: 'POST',
+      body: JSON.stringify({
+        token: 'reset-token-value-that-is-long-enough',
+        password: 'new-secret-password',
+      }),
+    });
+
+    await api.changePassword('current-password', 'new-secret-password');
+    expect(fetchMock).toHaveBeenLastCalledWith('/api/auth/me/password', {
+      headers: { 'Content-Type': 'application/json' },
+      method: 'PATCH',
+      body: JSON.stringify({
+        currentPassword: 'current-password',
+        password: 'new-secret-password',
+      }),
+    });
+
+    await api.revokeOtherSessions();
+    expect(fetchMock).toHaveBeenLastCalledWith('/api/auth/sessions/revoke-others', {
+      headers: { 'Content-Type': 'application/json' },
+      method: 'POST',
+    });
+
     await api.logout();
     expect(fetchMock).toHaveBeenLastCalledWith('/api/auth/logout', {
       headers: { 'Content-Type': 'application/json' },

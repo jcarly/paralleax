@@ -175,6 +175,11 @@ export interface AuthUser {
   displayName: string;
   role: UserRole;
   createdAt: string;
+  emailVerifiedAt?: string;
+}
+export interface RegistrationResult {
+  email: string;
+  verificationRequired: true;
 }
 export interface ManagedUser {
   id: string;
@@ -196,7 +201,7 @@ export interface QspImportResponse {
 export const api = {
   me: () => request<AuthUser>('/auth/me'),
   register: (email: string, password: string, displayName: string, accessCode?: string) =>
-    request<AuthUser>('/auth/register', {
+    request<RegistrationResult>('/auth/register', {
       method: 'POST',
       body: JSON.stringify({
         email,
@@ -210,12 +215,38 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     }),
+  verifyEmail: (token: string) =>
+    request<AuthUser>('/auth/verify-email', {
+      method: 'POST',
+      body: JSON.stringify({ token }),
+    }),
+  resendVerification: (email: string) =>
+    request<void>('/auth/resend-verification', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    }),
+  requestPasswordReset: (email: string) =>
+    request<void>('/auth/password-reset', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    }),
+  resetPassword: (token: string, password: string) =>
+    request<AuthUser>('/auth/password-reset/confirm', {
+      method: 'POST',
+      body: JSON.stringify({ token, password }),
+    }),
   logout: () => request<void>('/auth/logout', { method: 'POST' }),
   updateCurrentUser: (displayName: string) =>
     request<AuthUser>('/auth/me', {
       method: 'PATCH',
       body: JSON.stringify({ displayName }),
     }),
+  changePassword: (currentPassword: string, password: string) =>
+    request<AuthUser>('/auth/me/password', {
+      method: 'PATCH',
+      body: JSON.stringify({ currentPassword, password }),
+    }),
+  revokeOtherSessions: () => request<void>('/auth/sessions/revoke-others', { method: 'POST' }),
   listUsers: () => request<ManagedUser[]>('/admin/users'),
   updateUserRole: (id: string, role: UserRole) =>
     request<ManagedUser>(`/admin/users/${id}`, {

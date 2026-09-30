@@ -204,4 +204,18 @@ describe('DatabaseMigrator', () => {
     expect(migration?.sql).toMatch(/ADD COLUMN conditional_text_blocks jsonb NOT NULL/i);
     expect(migration?.sql).toMatch(/jsonb_typeof\(conditional_text_blocks\) = 'array'/i);
   });
+
+  it('adds one-use, expiring account-action tokens without locking out existing users', () => {
+    const migration = databaseMigrations.find(
+      ({ id }) => id === '202609300040_account_security_actions',
+    );
+
+    expect(migration?.sql).toMatch(/ADD COLUMN email_verified_at timestamptz/i);
+    expect(migration?.sql).toMatch(/UPDATE users\s+SET email_verified_at = created_at/i);
+    expect(migration?.sql).toMatch(/CREATE TABLE account_action_tokens/i);
+    expect(migration?.sql).toMatch(/kind IN \('verify_email', 'reset_password'\)/i);
+    expect(migration?.sql).toMatch(/UNIQUE \(user_id, kind\)/i);
+    expect(migration?.sql).toMatch(/expires_at > created_at/i);
+    expect(migration?.sql).toMatch(/account_action_tokens_expiry_idx/i);
+  });
 });

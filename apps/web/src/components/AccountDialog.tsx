@@ -18,6 +18,11 @@ export function AccountDialog({
   const [displayName, setDisplayName] = useState(user.displayName);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState('');
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [securityPending, setSecurityPending] = useState(false);
+  const [securityError, setSecurityError] = useState('');
+  const [securityNotice, setSecurityNotice] = useState('');
   const normalized = normalizeUserDisplayName(displayName);
   const valid = isValidUserDisplayName(normalized);
 
@@ -33,6 +38,39 @@ export function AccountDialog({
       setError(apiErrorMessage(caught, t, t('account.updateFailed')));
     } finally {
       setPending(false);
+    }
+  }
+
+  async function changePassword(event: FormEvent) {
+    event.preventDefault();
+    if (currentPassword.length < 1 || newPassword.length < 8 || securityPending) return;
+    try {
+      setSecurityPending(true);
+      setSecurityError('');
+      setSecurityNotice('');
+      onUpdated(await api.changePassword(currentPassword, newPassword));
+      setCurrentPassword('');
+      setNewPassword('');
+      setSecurityNotice(t('account.passwordChanged'));
+    } catch (caught) {
+      setSecurityError(apiErrorMessage(caught, t, t('account.securityUpdateFailed')));
+    } finally {
+      setSecurityPending(false);
+    }
+  }
+
+  async function revokeOtherSessions() {
+    if (securityPending) return;
+    try {
+      setSecurityPending(true);
+      setSecurityError('');
+      setSecurityNotice('');
+      await api.revokeOtherSessions();
+      setSecurityNotice(t('account.otherSessionsRevoked'));
+    } catch (caught) {
+      setSecurityError(apiErrorMessage(caught, t, t('account.securityUpdateFailed')));
+    } finally {
+      setSecurityPending(false);
     }
   }
 
@@ -89,6 +127,62 @@ export function AccountDialog({
             </button>
           </div>
         </form>
+        <section className="account-security" aria-labelledby="account-security-title">
+          <h3 id="account-security-title">{t('account.securityTitle')}</h3>
+          <p>{t('account.securityDescription')}</p>
+          <form onSubmit={(event) => void changePassword(event)}>
+            <label className="product-field">
+              <span>{t('account.currentPassword')}</span>
+              <input
+                autoComplete="current-password"
+                type="password"
+                value={currentPassword}
+                onChange={(event) => setCurrentPassword(event.target.value)}
+                required
+              />
+            </label>
+            <label className="product-field">
+              <span>{t('account.newPassword')}</span>
+              <input
+                autoComplete="new-password"
+                type="password"
+                value={newPassword}
+                onChange={(event) => setNewPassword(event.target.value)}
+                minLength={8}
+                required
+              />
+            </label>
+            <div className="account-security-actions">
+              <button
+                className="product-secondary"
+                type="submit"
+                disabled={securityPending || currentPassword.length < 1 || newPassword.length < 8}
+              >
+                {securityPending ? t('account.changingPassword') : t('account.changePassword')}
+              </button>
+              <button
+                className="product-secondary"
+                type="button"
+                disabled={securityPending}
+                onClick={() => void revokeOtherSessions()}
+              >
+                {securityPending
+                  ? t('account.revokingOtherSessions')
+                  : t('account.revokeOtherSessions')}
+              </button>
+            </div>
+          </form>
+          {securityError ? (
+            <p className="form-error" role="alert">
+              {securityError}
+            </p>
+          ) : null}
+          {securityNotice ? (
+            <p className="auth-notice" role="status">
+              {securityNotice}
+            </p>
+          ) : null}
+        </section>
       </section>
     </div>
   );

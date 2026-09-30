@@ -66,6 +66,17 @@ changes`, and whether every non-read permission implies `read`.
   or whether other completion conditions can exist later.
 - Define how a stopped branch differs from a completed story once contextual
   inputless triggers and world state exist.
+- Before implementing the planned multi-participant narrative model, define how
+  a play session assigns authenticated users, guests, and automatic controllers
+  to Player seats; how reconnecting humans resume a pending shared decision; and
+  which recorded event establishes the deterministic first-human choice.
+- Define participant-text precedence and fallback between actor, spectator,
+  Character-specific, and Player-specific text. Preserve a useful default so
+  authors do not need to author every point-of-view variant.
+- Define the compatibility/migration rule between existing interaction character
+  casts (scene context and presence conditions) and future actor/spectator
+  participant roles (decision and viewpoint semantics). They must not be
+  conflated implicitly.
 
 ## World State, Conditions, Effects, and Items
 

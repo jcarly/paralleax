@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-09-30
+
+- Added account safety: verification-required registrations, one-use expiring
+  hashed verification/reset tokens, neutral password-reset requests, signed-in
+  password change, and session revocation. Password reset/change removes prior
+  sessions; upgraded accounts remain verified to avoid lockout. The web now
+  includes verification, recovery, reset, and account-security flows.
+- Added an optional SMTP transactional-email foundation using Nodemailer, with
+  validated configuration, mandatory TLS, a sender default, sanitized message
+  headers, stable delivery failures, and no recipient/content/credential logging.
+- Added a repository instruction requiring agents to evaluate existing
+  dependencies, maintained libraries, and official SDKs before implementing
+  general-purpose capabilities from scratch.
+
 ## 2026-09-29
 
 - Preloaded ELK once the ready Story graph is idle, moving bundle download and

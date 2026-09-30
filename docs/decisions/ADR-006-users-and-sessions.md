@@ -69,3 +69,20 @@ display name by stable user id. They must not expose account email addresses.
 Email remains available to the account itself, global administrators, and the
 explicit Story access-management workflow. This extends the user and session
 model; it does not introduce a parallel profile identity.
+
+## Amendment â€” 2026-09-30
+
+Password-account safety is extended in the existing user/session model rather
+than introducing an identity-provider or profile subsystem. A registration is
+unverified and cannot obtain a session until it consumes an email-verification
+action. Verification and password-reset actions use random URL-safe values; only
+their SHA-256 hashes are stored, each row has one purpose (`verify_email` or
+`reset_password`), a finite expiry, and one atomic consumption. Replacing an
+action for the same user and purpose invalidates the earlier link.
+
+Password resets and signed-in password changes remove all old sessions before a
+new session is issued. A signed-in account can also revoke all sessions except
+the current one. Reset requests have an indistinguishable successful response
+for unknown addresses. The forward migration marks accounts that existed before
+this feature verified at their original `created_at`, preventing an upgrade
+lockout; registrations created after the migration must verify.

@@ -2,7 +2,7 @@
 
 Status: Required operator runbook
 
-Last reviewed: 2026-08-10
+Last reviewed: 2026-09-30
 
 ## Scope
 
@@ -55,6 +55,9 @@ NODE_ENV=production
 CORS_ORIGIN=https://alpha.example.com
 REGISTRATION_MODE=access-code
 REGISTRATION_ACCESS_CODE=<at-least-16-random-characters>
+EMAIL_SMTP_URL=<smtp-or-smtps-url-kept-in-the-secret-manager>
+EMAIL_FROM=Paralleax <accounts@alpha.example.com>
+# EMAIL_REPLY_TO is optional.
 POSTGRES_SSL=true
 ```
 
@@ -203,6 +206,8 @@ Never perform the first restore drill during an incident.
 ## Remaining Boundary
 
 This foundation does not provide provider-managed scheduling, TLS, DNS, secrets,
-monitoring, email delivery, account recovery, account self-service export or
-deletion, or legal approval. Those require the selected operator and provider
+monitoring, account self-service export or deletion, or legal approval.
+Transactional email is required for registration, verification, and recovery;
+selecting and operating the SMTP relay, its sender domain, credentials,
+deliverability monitoring, and retention policy remains an operator responsibility
 before invitations are sent.

@@ -5,7 +5,7 @@ import { api } from '../api';
 import { AuthPage } from './AuthPage';
 
 vi.mock('../api', () => ({
-  api: { login: vi.fn(), register: vi.fn() },
+  api: { login: vi.fn(), register: vi.fn(), resendVerification: vi.fn() },
 }));
 
 describe('AuthPage', () => {
@@ -43,14 +43,10 @@ describe('AuthPage', () => {
 
   it('registers only after both passwords match', async () => {
     const user = userEvent.setup();
-    const authenticated = {
-      id: 'user-2',
+    vi.mocked(api.register).mockResolvedValue({
       email: 'new@example.com',
-      displayName: 'New Author',
-      role: 'user' as const,
-      createdAt: '2026-01-01T00:00:00.000Z',
-    };
-    vi.mocked(api.register).mockResolvedValue(authenticated);
+      verificationRequired: true,
+    });
     const onAuthenticated = vi.fn();
     render(<AuthPage initialMode="register" onAuthenticated={onAuthenticated} />);
 
@@ -75,7 +71,12 @@ describe('AuthPage', () => {
       'New Author',
       'correct-alpha-code',
     );
-    expect(onAuthenticated).toHaveBeenCalledWith(authenticated);
+    expect(onAuthenticated).not.toHaveBeenCalled();
+    expect(screen.getByRole('heading', { name: 'Check your email' })).toBeInTheDocument();
+    expect(screen.getByText(/new@example.com/)).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Resend verification email' }));
+    expect(api.resendVerification).toHaveBeenCalledWith('new@example.com');
   });
 
   it('shows a session notice', () => {

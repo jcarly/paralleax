@@ -11,6 +11,9 @@ describe('AppConfigService', () => {
       nodeEnvironment: 'development',
       registrationMode: 'open',
       authRegistrationRateLimit: 5,
+      emailSmtpUrl: undefined,
+      emailFrom: undefined,
+      emailReplyTo: undefined,
     });
     expect(config.nodeEnvironment).toBe('development');
   });
@@ -54,6 +57,20 @@ describe('AppConfigService', () => {
     expect(config.nodeEnvironment).toBe('production');
   });
 
+  it('accepts a complete SMTP delivery configuration', () => {
+    expect(
+      loadAppConfig({
+        EMAIL_SMTP_URL: 'smtps://user:secret@smtp.example.com:465',
+        EMAIL_FROM: 'Paralleax <no-reply@example.com>',
+        EMAIL_REPLY_TO: 'support@example.com',
+      }),
+    ).toMatchObject({
+      emailSmtpUrl: 'smtps://user:secret@smtp.example.com:465',
+      emailFrom: 'Paralleax <no-reply@example.com>',
+      emailReplyTo: 'support@example.com',
+    });
+  });
+
   it.each([
     [{ DATABASE_URL: 'invalid' }, 'DATABASE_URL must be a valid URL'],
     [{ DATABASE_URL: 'https://example.com' }, 'DATABASE_URL must use postgres: or postgresql:'],
@@ -65,6 +82,19 @@ describe('AppConfigService', () => {
       'TEST_AUTH_REGISTRATION_RATE_LIMIT must be an integer between 1 and 10000',
     ],
     [{ POSTGRES_SSL: 'yes' }, 'POSTGRES_SSL must be true or false'],
+    [{ EMAIL_SMTP_URL: 'https://smtp.example.com' }, 'EMAIL_SMTP_URL must use smtp: or smtps:'],
+    [
+      { EMAIL_SMTP_URL: 'smtp://smtp.example.com' },
+      'EMAIL_SMTP_URL and EMAIL_FROM must be configured together',
+    ],
+    [
+      { EMAIL_FROM: 'no-reply@example.com' },
+      'EMAIL_SMTP_URL and EMAIL_FROM must be configured together',
+    ],
+    [
+      { EMAIL_FROM: 'no-reply@example.com\r\nBcc: attacker@example.com' },
+      'EMAIL_FROM must not contain a line break',
+    ],
     [{ NODE_ENV: 'staging' }, 'NODE_ENV must be one of'],
     [{ REGISTRATION_MODE: 'invite' }, 'REGISTRATION_MODE must be one of'],
     [
