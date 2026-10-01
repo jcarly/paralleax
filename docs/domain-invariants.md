@@ -238,9 +238,9 @@ details. They should stay covered by tests as the editor grows.
   than from the interaction content inspector.
 - Interaction input and output lists should not be duplicated in the inspector
   when the graph already represents them.
-- When connecting interactions, the editor must let the author choose between
-  adding the source as an input to an existing trigger and creating a new trigger
-  when both are possible.
+- When connecting interactions, the graph target must make the author's intent
+  explicit: the input `+` creates a new trigger and an existing Trigger marker
+  adds the source to that Trigger.
 - Adding an input to an existing trigger preserves one trigger with shared
   conditions across several inputs.
 - Creating a new trigger creates a separate condition group for the same output

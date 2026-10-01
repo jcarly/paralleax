@@ -647,13 +647,6 @@ export const resources = {
         confirmDeleteTrigger: 'Delete this trigger?',
         confirmDeleteDecoration: 'Delete this graph decoration?',
         confirmDeleteTriggerVariants: 'Delete all condition groups on this route?',
-        connection: {
-          title: 'Connect interactions',
-          description: 'Should this route share an existing trigger’s conditions?',
-          addToGroup: 'Add to condition group {{number}}',
-          createTrigger: 'Create a new trigger',
-          cancel: 'Cancel',
-        },
       },
       decoration: {
         addFrame: 'Add frame',
@@ -1126,9 +1119,7 @@ export const resources = {
       graph: {
         selectRootTrigger: 'Select root trigger',
         rootTrigger: 'Root trigger',
-        createSource: 'Create source interaction',
-        createTriggerInput: 'Create new trigger input',
-        createTrigger: 'Create new trigger',
+        createSourceOrTrigger: 'Create a source interaction or a new trigger connection',
         occurrences_one: '{{count}} occurrence',
         occurrences_other: '{{count}} occurrences',
         charactersPresent: 'Characters present: {{names}}',
@@ -1804,13 +1795,6 @@ export const resources = {
         confirmDeleteTrigger: 'Supprimer ce déclencheur ?',
         confirmDeleteDecoration: 'Supprimer cette décoration du graphe ?',
         confirmDeleteTriggerVariants: 'Supprimer tous les groupes de conditions de cette route ?',
-        connection: {
-          title: 'Relier les interactions',
-          description: 'Cette route doit-elle partager les conditions d’un déclencheur existant ?',
-          addToGroup: 'Ajouter au groupe de conditions {{number}}',
-          createTrigger: 'Créer un nouveau déclencheur',
-          cancel: 'Annuler',
-        },
       },
       decoration: {
         addFrame: 'Ajouter un cadre',
@@ -2286,9 +2270,7 @@ export const resources = {
       graph: {
         selectRootTrigger: 'Sélectionner le déclencheur racine',
         rootTrigger: 'Déclencheur racine',
-        createSource: 'Créer une interaction source',
-        createTriggerInput: 'Créer une nouvelle entrée de déclencheur',
-        createTrigger: 'Créer un nouveau déclencheur',
+        createSourceOrTrigger: 'Créer une interaction source ou une liaison avec un nouveau déclencheur',
         occurrences_one: '{{count}} occurrence',
         occurrences_other: '{{count}} occurrences',
         charactersPresent: 'Personnages présents : {{names}}',

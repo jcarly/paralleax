@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState, type RefObject } from 'react';
+import { useCallback, useRef, type RefObject } from 'react';
 import type { Position, Story } from '@paralleax/shared';
 import type { Connection, OnConnectEnd, OnConnectStart, ReactFlowInstance } from '@xyflow/react';
 import {
@@ -26,77 +26,34 @@ export function useStoryConnectionController({
   createChildFromInteraction,
   createParentForInteraction,
 }: StoryConnectionControllerDependencies) {
-  const [isConnecting, setIsConnecting] = useState(false);
-  const [pendingConnection, setPendingConnection] = useState<Connection>();
   const pendingConnectionStart = useRef<{
     nodeId: string;
     handleType: 'source' | 'target';
   } | null>(null);
 
-  const pending = useMemo(
-    () => (pendingConnection ? getPendingConnection(story, pendingConnection) : undefined),
-    [pendingConnection, story],
-  );
-  const existingTriggerChoices = useMemo(
-    () =>
-      pending?.target.triggers.filter(
-        (trigger) => !trigger.inputInteractionIds.includes(pending.sourceId),
-      ) ?? [],
-    [pending],
-  );
-
   const requestConnection = useCallback(
     (connection: Connection) => {
-      const candidate = getPendingConnection(story, connection);
-      if (!candidate) return;
-      const canExtendExisting = candidate.target.triggers.some(
-        (trigger) => !trigger.inputInteractionIds.includes(candidate.sourceId),
-      );
-      if (canExtendExisting) {
-        setPendingConnection(connection);
-        return;
-      }
+      if (!getPendingConnection(story, connection)) return;
       void connectInteractions(connection);
     },
     [connectInteractions, story],
   );
 
-  const createPendingTrigger = useCallback(() => {
-    if (!pendingConnection) return;
-    const connection = pendingConnection;
-    setPendingConnection(undefined);
-    void connectInteractions(connection);
-  }, [connectInteractions, pendingConnection]);
-
-  const extendPendingTrigger = useCallback(
-    (triggerId: string) => {
-      if (!pending) return;
-      setPendingConnection(undefined);
-      void connectToExistingTrigger(pending.sourceId, pending.target.id, triggerId);
-    },
-    [connectToExistingTrigger, pending],
-  );
-
-  const cancelPendingConnection = useCallback(() => setPendingConnection(undefined), []);
-
   const startCanvasConnection = useCallback<OnConnectStart>((_, params) => {
     if (!params.nodeId || !params.handleType) {
       pendingConnectionStart.current = null;
-      setIsConnecting(false);
       return;
     }
     pendingConnectionStart.current = {
       nodeId: params.nodeId,
       handleType: params.handleType,
     };
-    setIsConnecting(true);
   }, []);
 
   const endCanvasConnection = useCallback<OnConnectEnd>(
     (event, connectionState) => {
       const start = pendingConnectionStart.current;
       pendingConnectionStart.current = null;
-      setIsConnecting(false);
       const triggerDropTarget = getTriggerDropTarget(event);
       if (
         start?.handleType === 'source' &&
@@ -130,15 +87,9 @@ export function useStoryConnectionController({
   );
 
   return {
-    isConnecting,
-    pending,
-    existingTriggerChoices,
     requestConnection,
     startCanvasConnection,
     endCanvasConnection,
-    createPendingTrigger,
-    extendPendingTrigger,
-    cancelPendingConnection,
   };
 }
 

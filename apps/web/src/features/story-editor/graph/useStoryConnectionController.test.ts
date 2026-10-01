@@ -6,47 +6,25 @@ import type { StoryFlowNode, TriggerFlowEdge } from '../../../storyGraph';
 import { useStoryConnectionController } from './useStoryConnectionController';
 
 describe('story connection controller', () => {
-  it('offers eligible trigger groups before persisting the selected connection strategy', () => {
+  it('immediately creates a dedicated trigger through the input plus handle', () => {
     const { actions, result } = renderController();
     const connection = connect('source', 'target');
 
     act(() => result.current.requestConnection(connection));
 
-    expect(result.current.pending?.target.id).toBe('target');
-    expect(result.current.existingTriggerChoices.map(({ id }) => id)).toEqual(['target-trigger']);
-    expect(actions.connectInteractions).not.toHaveBeenCalled();
-
-    act(() => result.current.extendPendingTrigger('target-trigger'));
-    expect(actions.connectToExistingTrigger).toHaveBeenCalledWith(
-      'source',
-      'target',
-      'target-trigger',
-    );
-    expect(result.current.pending).toBeUndefined();
-
-    act(() => result.current.requestConnection(connection));
-    act(() => result.current.createPendingTrigger());
     expect(actions.connectInteractions).toHaveBeenCalledWith(connection);
-    expect(result.current.pending).toBeUndefined();
+    expect(actions.connectToExistingTrigger).not.toHaveBeenCalled();
   });
 
-  it('connects immediately when the target has no eligible existing trigger', () => {
+  it('ignores a connection that does not target the input plus handle', () => {
     const { actions, result } = renderController();
-    const connection = connect('source', 'empty-target');
+    const connection = {
+      ...connect('source', 'target'),
+      targetHandle: 'routing-input-top',
+    };
 
     act(() => result.current.requestConnection(connection));
 
-    expect(actions.connectInteractions).toHaveBeenCalledWith(connection);
-    expect(result.current.pending).toBeUndefined();
-  });
-
-  it('cancels a pending connection without persisting it', () => {
-    const { actions, result } = renderController();
-
-    act(() => result.current.requestConnection(connect('source', 'target')));
-    act(() => result.current.cancelPendingConnection());
-
-    expect(result.current.pending).toBeUndefined();
     expect(actions.connectInteractions).not.toHaveBeenCalled();
     expect(actions.connectToExistingTrigger).not.toHaveBeenCalled();
   });
@@ -61,14 +39,11 @@ describe('story connection controller', () => {
         handleId: null,
       }),
     );
-    expect(result.current.isConnecting).toBe(true);
     act(() => result.current.endCanvasConnection(mouseEvent(580, 452), emptyConnectionState()));
     expect(actions.createChildFromInteraction).toHaveBeenCalledWith('source', {
       x: 475,
       y: 452,
     });
-    expect(result.current.isConnecting).toBe(false);
-
     act(() =>
       result.current.startCanvasConnection(mouseEvent(320, 328), {
         nodeId: 'target',
@@ -153,7 +128,7 @@ function connect(source: string, target: string): Connection {
     source,
     target,
     sourceHandle: null,
-    targetHandle: 'new-trigger-input',
+    targetHandle: 'create-source-input',
   };
 }
 

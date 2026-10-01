@@ -39,7 +39,6 @@ export interface TriggerEdgeData extends SelectedTrigger {
 export type TriggerFlowEdge = Edge<TriggerEdgeData>;
 
 export interface InteractionNodeActions {
-  showNewTriggerInput?: boolean;
   onCreateChild?: (interactionId: string) => void;
   onCreateParent?: (interactionId: string) => void;
   onSelectRootTrigger?: (interactionId: string, triggerId: string) => void;
@@ -116,7 +115,6 @@ export function buildInteractionNodes(
         ...(actions.emphasizedInteractionIds
           ? { dimmed: !actions.emphasizedInteractionIds.has(item.id) }
           : {}),
-        showNewTriggerInput: actions.showNewTriggerInput ?? false,
         ...(rootTrigger
           ? {
               rootTriggerId: rootTrigger.id,

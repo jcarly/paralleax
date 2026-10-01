@@ -767,10 +767,10 @@ leave an interaction from its bottom-center routing handle and enter an interact
 through its top-center routing handle. Trigger markers are approached vertically
 when their endpoints are on different rows.
 
-When a normal canvas connection can either extend an existing trigger or create
-a separate trigger, the focused Story Editor connection controller presents that
-choice before calling the persistence actions. Dropping directly on a trigger
-marker remains the explicit shortcut for extending that trigger.
+The focused Story Editor connection controller maps a drop on an interaction's
+input `+` directly to the existing new-Trigger persistence action. Dropping on a
+trigger marker remains the explicit shortcut for extending that Trigger; no
+connection-choice dialog is needed.
 
 Every editor mutation passes through the persistence hook's save tracker. The
 toolbar exposes saving, saved, and failed states. A failed mutation leaves a

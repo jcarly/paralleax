@@ -46,7 +46,6 @@ import { InteractionInspector } from '../components/InteractionInspector';
 import { InteractionNode } from '../components/InteractionNode';
 import { ItemDefinitionInspector } from '../components/ItemDefinitionInspector';
 import { LocationInspector } from '../components/LocationInspector';
-import { handleModalDialogKeyDown } from '../components/modalDialogKeyboard';
 import { StatDefinitionInspector } from '../components/StatDefinitionInspector';
 import { StoryCanvasContextMenu } from '../components/StoryCanvasContextMenu';
 import { StoryCanvasToolbar } from '../components/StoryCanvasToolbar';
@@ -361,15 +360,9 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
     createParentForInteraction,
   });
   const {
-    isConnecting,
-    pending,
-    existingTriggerChoices,
     requestConnection,
     startCanvasConnection,
     endCanvasConnection,
-    createPendingTrigger,
-    extendPendingTrigger,
-    cancelPendingConnection,
   } = connectionController;
 
   const commentAccess = loadPhase === 'ready' && story?.capabilities?.canEdit === true;
@@ -699,7 +692,6 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
   const storyNodes = useMemo(
     () =>
       buildInteractionNodes(story, selectedId, selectedTrigger, {
-        showNewTriggerInput: !reviewOnly && isConnecting,
         onCreateChild: reviewOnly
           ? undefined
           : (interactionId) => void createChildFromClick(interactionId),
@@ -716,7 +708,6 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
     [
       createChildFromClick,
       createParentFromClick,
-      isConnecting,
       occurrenceCounts,
       emphasizedInteractionIds,
       graphCommentCounts,
@@ -2277,39 +2268,6 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
           </aside>
         ) : null}
       </div>
-      {pending && existingTriggerChoices.length > 0 ? (
-        <div className="connection-dialog-backdrop">
-          <section
-            className="connection-dialog"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="connection-dialog-title"
-            onKeyDown={(event) => handleModalDialogKeyDown(event, cancelPendingConnection)}
-          >
-            <h2 id="connection-dialog-title">{t('editor.connection.title')}</h2>
-            <p>{t('editor.connection.description')}</p>
-            <div className="connection-dialog-actions">
-              {existingTriggerChoices.map((trigger, index) => (
-                <button
-                  autoFocus={index === 0}
-                  className="secondary"
-                  type="button"
-                  key={trigger.id}
-                  onClick={() => extendPendingTrigger(trigger.id)}
-                >
-                  {t('editor.connection.addToGroup', { number: index + 1 })}
-                </button>
-              ))}
-              <button type="button" onClick={createPendingTrigger}>
-                {t('editor.connection.createTrigger')}
-              </button>
-              <button className="ghost" type="button" onClick={cancelPendingConnection}>
-                {t('editor.connection.cancel')}
-              </button>
-            </div>
-          </section>
-        </div>
-      ) : null}
       {openStorySettingsTab ? (
         <StorySettingsDialog
           storyId={storyId}

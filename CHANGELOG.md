@@ -19,6 +19,10 @@
   workflow, while text selection, dynamic rows, and Story-level headings retain
   their distinct scopes. Inspectors also preserve an explicit entity add-comment
   action beside the existing discussion-count toggle.
+- Simplified graph link creation: the input `+` now directly creates a dedicated
+  Trigger, while dropping on a Trigger marker adds an input to that existing
+  Trigger. The transient input slot and follow-up connection-choice dialog are
+  removed.
 
 ## 2026-09-29
 

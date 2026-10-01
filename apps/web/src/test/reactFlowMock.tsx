@@ -278,7 +278,7 @@ function TestReactFlow({
                   source: source.id,
                   sourceHandle: null,
                   target: target.id,
-                  targetHandle: null,
+                  targetHandle: 'create-source-input',
                 })
               }
             />

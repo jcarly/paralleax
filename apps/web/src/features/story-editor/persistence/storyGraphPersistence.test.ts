@@ -294,13 +294,13 @@ describe('story graph persistence', () => {
       source: 'root',
       target: 'missing',
       sourceHandle: null,
-      targetHandle: 'new-trigger-input',
+      targetHandle: 'create-source-input',
     });
     await harness.actions.connectInteractions({
       source: 'root',
       target: 'child',
       sourceHandle: null,
-      targetHandle: 'new-trigger-input',
+      targetHandle: 'create-source-input',
     });
     await harness.actions.connectToExistingTrigger('missing', 'child', 'alternative-trigger');
     await harness.actions.connectToExistingTrigger('third', 'child', 'alternative-trigger');
@@ -436,7 +436,7 @@ describe('story graph persistence', () => {
       source: 'root',
       target: 'child',
       sourceHandle: null,
-      targetHandle: 'new-trigger-input',
+      targetHandle: 'create-source-input',
     });
     await harness.actions.connectToExistingTrigger('root', 'child', 'child-trigger');
 

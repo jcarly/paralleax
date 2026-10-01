@@ -286,15 +286,12 @@ The character-stat vertical keeps these regressions covered:
 - Editor: interaction and trigger deletion can be cancelled from their
   confirmation prompt.
 - Editor: creating a new canvas connection creates a dedicated trigger and does not mutate existing linked triggers.
-- Editor: a connection to an interaction with an extendable trigger asks whether
-  to add the source to that trigger or create a separate trigger.
 - Editor: creating a connection or OR variant uses one trigger request rather
   than a dependent POST followed by PATCH.
-- Editor: when connecting to an interaction with existing triggers, the author can choose whether to add the source as an input of an existing trigger or create a new trigger.
+- Editor: dropping a connection on an interaction's input `+` creates a separate
+  trigger without opening a follow-up choice dialog.
 - Editor: dropping a connection on an existing trigger marker adds the source as
   another input of that trigger.
-- Editor: dropping a connection on the empty interaction input handle creates a
-  new trigger for that output interaction.
 - Editor: adding a source to an existing trigger keeps the trigger conditions shared by all of its inputs.
 - Editor/Reader: several triggers between the same interactions represent OR
   condition groups, show as one grouped route in the editor, and expose their

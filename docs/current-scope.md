@@ -138,7 +138,10 @@ Paralleax currently includes:
   use an authenticated binary upload without a Paralleax application-level limit.
   The import dialog reports measurable upload percentage, then an indeterminate
   analysis-and-persistence phase after the server has received the file.
-- Editor-only React Flow graph authoring.
+- Editor-only React Flow graph authoring. Dropping a connection on an
+  interaction's input `+` creates a dedicated Trigger; dropping on a visible
+  Trigger marker adds the input to that existing Trigger without a follow-up
+  choice dialog.
 - Rectangular graph multi-selection for interactions and linked trigger markers,
   with a transient count inspector, group drag-and-drop, and outside-click clearing.
 - Deterministic vertical graph auto-layout for the complete graph, one selected

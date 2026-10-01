@@ -60,7 +60,6 @@ describe('story graph mapping', () => {
           title: 'Start',
           body: 'Start body',
           selected: false,
-          showNewTriggerInput: false,
           rootTriggerId: 'trigger-root',
           rootTriggerSelected: false,
         },
@@ -69,13 +68,13 @@ describe('story graph mapping', () => {
         id: 'interaction-2',
         type: 'interaction',
         position: { x: 80, y: 420 },
-        data: { title: 'Choice', body: 'Choice body', selected: true, showNewTriggerInput: false },
+        data: { title: 'Choice', body: 'Choice body', selected: true },
       },
       {
         id: 'interaction-3',
         type: 'interaction',
         position: { x: 320, y: 270 },
-        data: { title: 'Other', body: 'Other body', selected: false, showNewTriggerInput: false },
+        data: { title: 'Other', body: 'Other body', selected: false },
       },
     ]);
   });
@@ -102,14 +101,6 @@ describe('story graph mapping', () => {
         { id: 'mara', name: 'Mara Venn', imageUrl: 'https://example.com/mara.png' },
       ],
     });
-  });
-
-  it('marks new-trigger input handles as visible while a connection is active', () => {
-    expect(
-      buildInteractionNodes(story, undefined, undefined, { showNewTriggerInput: true }).map(
-        (node) => node.data.showNewTriggerInput,
-      ),
-    ).toEqual([true, true, true]);
   });
 
   it('builds one edge per trigger input without selecting links directly', () => {

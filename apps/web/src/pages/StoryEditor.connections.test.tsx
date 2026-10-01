@@ -23,7 +23,7 @@ vi.mock('@xyflow/react', async () => {
 describe('StoryEditor connections', () => {
   setupStoryEditorTestSuite();
 
-  it('persists a canvas connection as a trigger input', async () => {
+  it('creates a dedicated trigger immediately from the input plus', async () => {
     const user = userEvent.setup();
     const story = storyWithThreeInteractions();
     const withTrigger = structuredClone(story);
@@ -38,7 +38,6 @@ describe('StoryEditor connections', () => {
 
     await renderEditor(story);
     await user.click(screen.getByTestId('connect-interaction-1-interaction-3'));
-    await user.click(await screen.findByRole('button', { name: 'Create a new trigger' }));
 
     await waitFor(() => {
       expect(api.addTrigger).toHaveBeenCalledWith('story-1', 'interaction-3', {
@@ -46,6 +45,7 @@ describe('StoryEditor connections', () => {
       });
       expect(api.updateTrigger).not.toHaveBeenCalled();
     });
+    expect(screen.queryByRole('dialog', { name: 'Connect interactions' })).not.toBeInTheDocument();
     expect(await screen.findByTestId('flow-edge-interaction-1-interaction-3')).toBeInTheDocument();
   });
 
@@ -95,7 +95,6 @@ describe('StoryEditor connections', () => {
 
     await renderEditor(story);
     await user.click(screen.getByTestId('connect-interaction-2-interaction-3'));
-    await user.click(await screen.findByRole('button', { name: 'Create a new trigger' }));
 
     await waitFor(() => {
       expect(api.addTrigger).toHaveBeenCalledWith('story-1', 'interaction-3', {
@@ -107,44 +106,28 @@ describe('StoryEditor connections', () => {
     expect(await screen.findByTestId('flow-edge-interaction-2-interaction-3')).toBeInTheDocument();
   });
 
-  it('can add a canvas connection to an existing trigger from the connection choice', async () => {
+  it('does not open a connection-choice dialog when the input plus has eligible triggers', async () => {
     const user = userEvent.setup();
     const story = storyWithThreeInteractions();
     const connectedStory = structuredClone(story);
-    connectedStory.interactions[1].triggers[0].inputInteractionIds.push('interaction-3');
-    vi.mocked(api.updateTrigger).mockResolvedValue(connectedStory);
+    connectedStory.interactions[1].triggers.push({
+      id: 'trigger-new',
+      inputInteractionIds: ['interaction-3'],
+      conditions: [],
+    });
+    vi.mocked(api.addTrigger).mockResolvedValue(connectedStory);
 
     await renderEditor(story);
     await user.click(screen.getByTestId('connect-interaction-3-interaction-2'));
-    expect(await screen.findByRole('dialog', { name: 'Connect interactions' })).toBeInTheDocument();
-    const existingGroup = screen.getByRole('button', { name: 'Add to condition group 1' });
-    expect(existingGroup).toHaveFocus();
-    await user.click(existingGroup);
 
     await waitFor(() => {
-      expect(api.updateTrigger).toHaveBeenCalledWith('story-1', 'interaction-2', 'trigger-2', {
-        inputInteractionIds: ['interaction-1', 'interaction-3'],
-        conditionGroups: [{ id: 'trigger-2', conditions: [] }],
-        appearanceProbability: 100,
+      expect(api.addTrigger).toHaveBeenCalledWith('story-1', 'interaction-2', {
+        inputInteractionIds: ['interaction-3'],
       });
     });
-    expect(api.addTrigger).not.toHaveBeenCalled();
-    expect(await screen.findByTestId('flow-edge-interaction-3-interaction-2')).toBeInTheDocument();
-  });
-
-  it('cancels a pending connection dialog with Escape', async () => {
-    const user = userEvent.setup();
-    const story = storyWithThreeInteractions();
-
-    await renderEditor(story);
-    await user.click(screen.getByTestId('connect-interaction-3-interaction-2'));
-    expect(await screen.findByRole('button', { name: 'Add to condition group 1' })).toHaveFocus();
-
-    await user.keyboard('{Escape}');
-
-    expect(screen.queryByRole('dialog', { name: 'Connect interactions' })).not.toBeInTheDocument();
-    expect(api.addTrigger).not.toHaveBeenCalled();
     expect(api.updateTrigger).not.toHaveBeenCalled();
+    expect(screen.queryByRole('dialog', { name: 'Connect interactions' })).not.toBeInTheDocument();
+    expect(await screen.findByTestId('flow-edge-interaction-3-interaction-2')).toBeInTheDocument();
   });
 
   it('adds a source to an existing trigger when the connection is dropped on its marker', async () => {
