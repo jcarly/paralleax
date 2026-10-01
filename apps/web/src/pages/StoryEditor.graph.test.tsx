@@ -239,6 +239,40 @@ describe('StoryEditor graph collaboration and layout', () => {
     ).not.toBeInTheDocument();
   });
 
+  it('keeps an entity comment action beside the comment toggle when the entity has discussions', async () => {
+    const user = userEvent.setup();
+    const story = storyWithTwoInteractions();
+    vi.mocked(api.listCommentThreads).mockResolvedValue([
+      {
+        id: 'thread-interaction-2',
+        storyId: story.id,
+        anchor: { kind: 'entity', targetType: 'interaction', targetId: 'interaction-2' },
+        anchorLabel: 'Second interaction',
+        status: 'open',
+        createdBy: { id: 'user-1', displayName: 'Author' },
+        createdAt: '2026-08-16T09:00:00.000Z',
+        updatedAt: '2026-08-16T09:00:00.000Z',
+        messages: [],
+      },
+    ]);
+
+    await renderEditor(story);
+    await user.click(screen.getByTestId('flow-node-interaction-2'));
+
+    const inspector = screen.getByRole('complementary', { name: 'Inspector' });
+    expect(
+      within(inspector).getByRole('button', { name: 'Open comments for this element' }),
+    ).toBeInTheDocument();
+    await user.click(
+      within(inspector).getByRole('button', { name: 'Comment on this element' }),
+    );
+
+    expect(
+      screen.getByRole('complementary', { name: 'Comments for the selected element' }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'Comment' })).toBeInTheDocument();
+  });
+
   it('opens an anchored text discussion from its inspector field marker', async () => {
     const user = userEvent.setup();
     const story = storyWithTwoInteractions();
@@ -290,6 +324,57 @@ describe('StoryEditor graph collaboration and layout', () => {
     ).toBeInTheDocument();
     expect(screen.getByText('The title needs more context.')).toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: 'Reply' })).toBeInTheDocument();
+  });
+
+  it('creates a semantic field discussion from an inspector control', async () => {
+    const user = userEvent.setup();
+    const story = storyWithTwoInteractions();
+    vi.mocked(api.createCommentThread).mockImplementation(async (_storyId, anchor, body) => ({
+      id: 'thread-interaction-duration',
+      storyId: story.id,
+      anchor,
+      anchorLabel: 'Second interaction: Duration',
+      status: 'open',
+      createdBy: { id: 'user-1', displayName: 'Author' },
+      createdAt: '2026-08-16T09:00:00.000Z',
+      updatedAt: '2026-08-16T09:00:00.000Z',
+      messages: [
+        {
+          id: 'message-duration',
+          threadId: 'thread-interaction-duration',
+          author: { id: 'user-1', displayName: 'Author' },
+          body,
+          createdAt: '2026-08-16T09:00:00.000Z',
+        },
+      ],
+    }));
+
+    await renderEditor(story);
+    await user.click(screen.getByTestId('flow-node-interaction-2'));
+    await user.click(screen.getByRole('button', { name: 'Comment on Duration' }));
+
+    expect(
+      screen.getByRole('complementary', { name: 'Comments for the selected element' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Interaction: Duration')).toBeInTheDocument();
+    await user.type(screen.getByRole('textbox', { name: 'Comment' }), 'Check the pacing.');
+    await user.click(screen.getByRole('button', { name: 'Send' }));
+
+    await waitFor(() =>
+      expect(api.createCommentThread).toHaveBeenCalledWith(
+        'story-1',
+        {
+          kind: 'field',
+          targetType: 'interaction',
+          targetId: 'interaction-2',
+          field: 'duration',
+        },
+        'Check the pacing.',
+      ),
+    );
+    expect(screen.getByRole('button', { name: 'Open comments for Duration' })).toHaveTextContent(
+      '1',
+    );
   });
 
   it('applies remote story content, positions, context, and decorations without reloading', async () => {

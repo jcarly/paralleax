@@ -7,6 +7,8 @@ import type {
 import { useTranslation } from 'react-i18next';
 import {
   InspectorCommentField,
+  InspectorCommentSlot,
+  type InspectorSemanticCommentProps,
   type InspectorTextCommentProps,
 } from '../features/comments/InspectorCommentField';
 import { CategoryField } from './CategoryField';
@@ -23,6 +25,8 @@ export function LocationInspector({
   onMoveItem,
   textCommentCounts,
   onOpenTextComments,
+  semanticCommentCounts,
+  onOpenSemanticComments,
 }: {
   location: Location;
   categorySuggestions?: string[];
@@ -34,7 +38,8 @@ export function LocationInspector({
   itemDefinitions: ItemDefinition[];
   statDefinitions: StatDefinition[];
   onMoveItem: (itemId: string, placement: MoveItemInstanceInput) => Promise<void>;
-} & InspectorTextCommentProps) {
+} & InspectorTextCommentProps &
+  InspectorSemanticCommentProps) {
   const { t } = useTranslation();
   return (
     <div>
@@ -55,29 +60,50 @@ export function LocationInspector({
           />
         </label>
       </InspectorCommentField>
-      <CategoryField
-        category={location.category}
-        suggestions={categorySuggestions}
-        onChange={(category) => onLocalChange({ ...location, category })}
-        onBlur={(category) => void onPatch(location.id, { category })}
-      />
-      <ImageUrlField
-        imageUrl={location.imageUrl}
-        onChange={(imageUrl) => onLocalChange({ ...location, imageUrl })}
-        onBlur={(imageUrl) => void onPatch(location.id, { imageUrl })}
-      />
-      <h3>{t('inspector.items')}</h3>
-      {(location.items ?? []).length === 0 ? (
-        <p className="hint">{t('inspector.noLocationItems')}</p>
-      ) : (
-        <ItemInstanceTree
-          items={location.items ?? []}
-          itemDefinitions={itemDefinitions}
-          statDefinitions={statDefinitions}
-          rootPlacement={{ locationId: location.id }}
-          onMove={onMoveItem}
+      <InspectorCommentSlot
+        slot={{ kind: 'field', field: 'category' }}
+        label={t('inspector.category')}
+        semanticCommentCounts={semanticCommentCounts}
+        onOpenSemanticComments={onOpenSemanticComments}
+      >
+        <CategoryField
+          category={location.category}
+          suggestions={categorySuggestions}
+          onChange={(category) => onLocalChange({ ...location, category })}
+          onBlur={(category) => void onPatch(location.id, { category })}
         />
-      )}
+      </InspectorCommentSlot>
+      <InspectorCommentSlot
+        slot={{ kind: 'field', field: 'imageUrl' }}
+        label={t('inspector.imageUrl')}
+        semanticCommentCounts={semanticCommentCounts}
+        onOpenSemanticComments={onOpenSemanticComments}
+      >
+        <ImageUrlField
+          imageUrl={location.imageUrl}
+          onChange={(imageUrl) => onLocalChange({ ...location, imageUrl })}
+          onBlur={(imageUrl) => void onPatch(location.id, { imageUrl })}
+        />
+      </InspectorCommentSlot>
+      <InspectorCommentSlot
+        slot={{ kind: 'section', section: 'items' }}
+        label={t('inspector.items')}
+        semanticCommentCounts={semanticCommentCounts}
+        onOpenSemanticComments={onOpenSemanticComments}
+      >
+        <h3>{t('inspector.items')}</h3>
+        {(location.items ?? []).length === 0 ? (
+          <p className="hint">{t('inspector.noLocationItems')}</p>
+        ) : (
+          <ItemInstanceTree
+            items={location.items ?? []}
+            itemDefinitions={itemDefinitions}
+            statDefinitions={statDefinitions}
+            rootPlacement={{ locationId: location.id }}
+            onMove={onMoveItem}
+          />
+        )}
+      </InspectorCommentSlot>
       <InspectorCommentField
         field="description"
         label={t('inspector.description')}

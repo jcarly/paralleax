@@ -1,5 +1,9 @@
 import { useMemo, useState, type FormEvent } from 'react';
-import type { CommentAnchor, StoryCommentThread } from '@paralleax/shared';
+import {
+  commentAnchorSlotLabel,
+  type CommentAnchor,
+  type StoryCommentThread,
+} from '@paralleax/shared';
 import { useTranslation } from 'react-i18next';
 import type { CommentRealtimeStatus } from './useStoryComments';
 
@@ -257,5 +261,8 @@ export function StoryCommentsPanel({
 function anchorDescription(anchor: CommentAnchor, t: (key: string) => string) {
   if (anchor.kind === 'canvas') return t('comments.anchor.canvas');
   if (anchor.kind === 'text') return `“${anchor.selector.exact}”`;
+  if (anchor.kind === 'field' || anchor.kind === 'section') {
+    return `${t(`comments.anchor.${anchor.targetType}`)}: ${commentAnchorSlotLabel(anchor)}`;
+  }
   return t(`comments.anchor.${anchor.targetType}`);
 }

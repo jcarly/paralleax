@@ -1,7 +1,7 @@
 import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { InspectorCommentField } from './InspectorCommentField';
+import { InspectorCommentField, InspectorCommentSlot } from './InspectorCommentField';
 
 describe('InspectorCommentField', () => {
   afterEach(cleanup);
@@ -39,5 +39,29 @@ describe('InspectorCommentField', () => {
     );
 
     expect(screen.queryByRole('button')).not.toBeInTheDocument();
+  });
+
+  it('starts or opens a stable semantic field discussion from the same control', async () => {
+    const user = userEvent.setup();
+    const onOpenSemanticComments = vi.fn();
+
+    render(
+      <InspectorCommentSlot
+        slot={{ kind: 'field', field: 'duration' }}
+        label="Duration"
+        semanticCommentCounts={{ 'field:duration': 2 }}
+        onOpenSemanticComments={onOpenSemanticComments}
+      >
+        <label>
+          Duration
+          <input />
+        </label>
+      </InspectorCommentSlot>,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Open comments for Duration' }));
+
+    expect(onOpenSemanticComments).toHaveBeenCalledWith({ kind: 'field', field: 'duration' });
+    expect(screen.getByText('2')).toBeInTheDocument();
   });
 });

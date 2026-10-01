@@ -10,6 +10,69 @@ export type CommentTargetType =
 
 export type CommentTextField = 'title' | 'name' | 'body' | 'description';
 
+/**
+ * Stable, non-text inspector slots. These are collaboration metadata, not
+ * authored Story fields: a slot identifies a meaningful control or section
+ * without making transient buttons or dynamic rows commentable.
+ */
+export const commentTargetSlots = {
+  interaction: {
+    fields: ['location', 'characters', 'duration'] as const,
+    sections: ['contextAndTiming', 'effects'] as const,
+  },
+  trigger: {
+    fields: ['appearanceProbability', 'timer'] as const,
+    sections: ['conditions'] as const,
+  },
+  character: {
+    fields: ['category', 'imageUrl', 'isPlayable'] as const,
+    sections: ['stats', 'items'] as const,
+  },
+  location: {
+    fields: ['category', 'imageUrl'] as const,
+    sections: ['items'] as const,
+  },
+  itemDefinition: {
+    fields: ['category', 'imageUrl'] as const,
+    sections: ['stats'] as const,
+  },
+  statDefinition: {
+    fields: ['category', 'imageUrl', 'valueType', 'changePerHour'] as const,
+    sections: ['assignments'] as const,
+  },
+} as const;
+
+export type CommentEntityField = {
+  [TargetType in CommentTargetType]: (typeof commentTargetSlots)[TargetType]['fields'][number];
+}[CommentTargetType];
+
+export type CommentEntitySection = {
+  [TargetType in CommentTargetType]: (typeof commentTargetSlots)[TargetType]['sections'][number];
+}[CommentTargetType];
+
+export type CommentSemanticSlot =
+  { kind: 'field'; field: CommentEntityField } | { kind: 'section'; section: CommentEntitySection };
+
+export type CommentFieldAnchor = {
+  [TargetType in CommentTargetType]: {
+    kind: 'field';
+    targetType: TargetType;
+    targetId: string;
+    field: (typeof commentTargetSlots)[TargetType]['fields'][number];
+  };
+}[CommentTargetType];
+
+export type CommentSectionAnchor = {
+  [TargetType in CommentTargetType]: {
+    kind: 'section';
+    targetType: TargetType;
+    targetId: string;
+    section: (typeof commentTargetSlots)[TargetType]['sections'][number];
+  };
+}[CommentTargetType];
+
+export type CommentSemanticAnchor = CommentFieldAnchor | CommentSectionAnchor;
+
 export interface CommentTextSelector {
   exact: string;
   prefix: string;
@@ -22,6 +85,7 @@ export interface CommentTextSelector {
 export type CommentAnchor =
   | { kind: 'canvas'; position: { x: number; y: number } }
   | { kind: 'entity'; targetType: CommentTargetType; targetId: string }
+  | CommentSemanticAnchor
   | {
       kind: 'text';
       targetType: CommentTargetType;
@@ -90,6 +154,20 @@ export function isCommentAnchor(value: unknown): value is CommentAnchor {
   if (value.kind === 'entity') {
     return isTargetType(value.targetType) && isIdentifier(value.targetId);
   }
+  if (value.kind === 'field') {
+    return (
+      isTargetType(value.targetType) &&
+      isIdentifier(value.targetId) &&
+      isCommentEntityField(value.targetType, value.field)
+    );
+  }
+  if (value.kind === 'section') {
+    return (
+      isTargetType(value.targetType) &&
+      isIdentifier(value.targetId) &&
+      isCommentEntitySection(value.targetType, value.section)
+    );
+  }
   if (value.kind !== 'text' || !isTargetType(value.targetType) || !isIdentifier(value.targetId)) {
     return false;
   }
@@ -119,7 +197,7 @@ export function commentAnchorBelongsToStory(story: Story, anchor: CommentAnchor)
   if (anchor.kind === 'canvas') return true;
   const target = findCommentTarget(story, anchor.targetType, anchor.targetId);
   if (!target) return false;
-  if (anchor.kind === 'entity') return true;
+  if (anchor.kind !== 'text') return true;
   return commentTextValue(target, anchor.targetType, anchor.field) !== undefined;
 }
 
@@ -132,6 +210,9 @@ export function commentAnchorLabel(story: Story, anchor: CommentAnchor) {
       : target && 'name' in target
         ? target.name
         : anchor.targetId;
+  if (anchor.kind === 'field' || anchor.kind === 'section') {
+    return `${label}: ${commentAnchorSlotLabel(anchor)}`;
+  }
   return anchor.kind === 'text' ? `${label}: “${anchor.selector.exact}”` : label;
 }
 
@@ -143,6 +224,16 @@ export function isCommentAnchorDetached(story: Story, anchor: CommentAnchor) {
   const value = commentTextValue(target, anchor.targetType, anchor.field);
   if (value === undefined) return true;
   return locateCommentQuote(value, anchor.selector) === undefined;
+}
+
+export function commentSemanticSlotKey(slot: CommentSemanticSlot | CommentSemanticAnchor) {
+  return slot.kind === 'field' ? `field:${slot.field}` : `section:${slot.section}`;
+}
+
+export function commentAnchorSlotLabel(anchor: CommentSemanticAnchor) {
+  return anchor.kind === 'field'
+    ? commentFieldLabels[anchor.field]
+    : commentSectionLabels[anchor.section];
 }
 
 export function locateCommentQuote(value: string, selector: CommentTextSelector) {
@@ -239,3 +330,33 @@ function isTargetType(value: unknown): value is CommentTargetType {
     'statDefinition',
   ].includes(String(value));
 }
+
+function isCommentEntityField(targetType: CommentTargetType, field: unknown) {
+  return (commentTargetSlots[targetType].fields as readonly string[]).includes(String(field));
+}
+
+function isCommentEntitySection(targetType: CommentTargetType, section: unknown) {
+  return (commentTargetSlots[targetType].sections as readonly string[]).includes(String(section));
+}
+
+const commentFieldLabels: Record<CommentEntityField, string> = {
+  location: 'Location',
+  characters: 'Characters',
+  duration: 'Duration',
+  appearanceProbability: 'Appearance probability',
+  timer: 'Timer',
+  category: 'Category',
+  imageUrl: 'Image URL',
+  isPlayable: 'Playable character',
+  valueType: 'Value type',
+  changePerHour: 'Hourly change',
+};
+
+const commentSectionLabels: Record<CommentEntitySection, string> = {
+  contextAndTiming: 'Context and timing',
+  effects: 'Effects',
+  conditions: 'Conditions',
+  stats: 'Stats',
+  items: 'Items',
+  assignments: 'Assignments',
+};

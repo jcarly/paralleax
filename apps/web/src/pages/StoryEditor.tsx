@@ -24,10 +24,12 @@ import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   canDeleteCommentThread as canActorDeleteCommentThread,
   canManageCommentThread as canActorManageCommentThread,
+  commentSemanticSlotKey,
   getTriggerConditions,
   isCommentAnchorDetached,
   type Character,
   type CommentAnchor,
+  type CommentSemanticSlot,
   type CommentTargetType,
   type CommentTextField,
   type GraphDecoration,
@@ -441,6 +443,19 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
   >((counts, thread) => {
     if (thread.status !== 'open' || thread.anchor.kind !== 'text') return counts;
     counts[thread.anchor.field] = (counts[thread.anchor.field] ?? 0) + 1;
+    return counts;
+  }, {});
+  const selectedSemanticCommentCounts = selectedTargetThreads.reduce<
+    Partial<Record<string, number>>
+  >((counts, thread) => {
+    if (
+      thread.status !== 'open' ||
+      (thread.anchor.kind !== 'field' && thread.anchor.kind !== 'section')
+    ) {
+      return counts;
+    }
+    const slotKey = commentSemanticSlotKey(thread.anchor);
+    counts[slotKey] = (counts[slotKey] ?? 0) + 1;
     return counts;
   }, {});
   const selectedCommentTargetKey = selectedCommentTarget
@@ -1061,6 +1076,39 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
     if (!thread) return;
     comments.cancelDraft();
     comments.selectThread(thread.id);
+    setCommentsOpen(false);
+    setContextualCommentsTargetKey(selectedCommentTargetKey);
+  }
+
+  function openSemanticComments(slot: CommentSemanticSlot) {
+    if (!selectedCommentTarget || !story?.capabilities?.canComment) return;
+    const slotKey = commentSemanticSlotKey(slot);
+    const thread =
+      selectedTargetThreads.find(
+        (candidate) =>
+          candidate.status === 'open' &&
+          (candidate.anchor.kind === 'field' || candidate.anchor.kind === 'section') &&
+          candidate.anchor.kind === slot.kind &&
+          commentSemanticSlotKey(candidate.anchor) === slotKey,
+      ) ??
+      selectedTargetThreads.find(
+        (candidate) =>
+          (candidate.anchor.kind === 'field' || candidate.anchor.kind === 'section') &&
+          candidate.anchor.kind === slot.kind &&
+          commentSemanticSlotKey(candidate.anchor) === slotKey,
+      );
+    if (thread) {
+      comments.cancelDraft();
+      comments.selectThread(thread.id);
+    } else {
+      const anchor = (
+        slot.kind === 'field'
+          ? { kind: 'field', ...selectedCommentTarget, field: slot.field }
+          : { kind: 'section', ...selectedCommentTarget, section: slot.section }
+      ) as CommentAnchor;
+      comments.startThread(anchor);
+      comments.selectThread(undefined);
+    }
     setCommentsOpen(false);
     setContextualCommentsTargetKey(selectedCommentTargetKey);
   }
@@ -2073,6 +2121,17 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
                     <span aria-hidden="true">◆</span>
                     <small>{selectedTargetCommentCount || '+'}</small>
                   </button>
+                  {selectedTargetCommentCount > 0 ? (
+                    <button
+                      className="secondary inspector-comment-add"
+                      type="button"
+                      aria-label={t('comments.commentEntity')}
+                      title={t('comments.commentEntity')}
+                      onClick={startEntityComment}
+                    >
+                      <span aria-hidden="true">+</span>
+                    </button>
+                  ) : null}
                   <button
                     className="ghost"
                     type="button"
@@ -2129,6 +2188,8 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
                   story={story}
                   textCommentCounts={selectedTextCommentCounts}
                   onOpenTextComments={openTextComments}
+                  semanticCommentCounts={selectedSemanticCommentCounts}
+                  onOpenSemanticComments={openSemanticComments}
                 />
               ) : reviewOnly ? (
                 <ReviewTargetInspector
@@ -2153,6 +2214,8 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
                   }
                   textCommentCounts={selectedTextCommentCounts}
                   onOpenTextComments={openTextComments}
+                  semanticCommentCounts={selectedSemanticCommentCounts}
+                  onOpenSemanticComments={openSemanticComments}
                 />
               ) : selectedTriggerTarget ? (
                 <TriggerInspector
@@ -2161,6 +2224,8 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
                   trigger={selectedTriggerTarget.trigger}
                   onSaveTrigger={saveTrigger}
                   onDeleteTrigger={deleteSelectedTrigger}
+                  semanticCommentCounts={selectedSemanticCommentCounts}
+                  onOpenSemanticComments={openSemanticComments}
                 />
               ) : selectedLocation ? (
                 <LocationInspector
@@ -2173,6 +2238,8 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
                   onMoveItem={moveItemInstance}
                   textCommentCounts={selectedTextCommentCounts}
                   onOpenTextComments={openTextComments}
+                  semanticCommentCounts={selectedSemanticCommentCounts}
+                  onOpenSemanticComments={openSemanticComments}
                 />
               ) : selectedCharacter ? (
                 <CharacterInspector
@@ -2190,6 +2257,8 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
                   onMoveItem={moveItemInstance}
                   textCommentCounts={selectedTextCommentCounts}
                   onOpenTextComments={openTextComments}
+                  semanticCommentCounts={selectedSemanticCommentCounts}
+                  onOpenSemanticComments={openSemanticComments}
                 />
               ) : selectedItemDefinition ? (
                 <ItemDefinitionInspector
@@ -2200,6 +2269,8 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
                   onPatch={updateItemDefinition}
                   textCommentCounts={selectedTextCommentCounts}
                   onOpenTextComments={openTextComments}
+                  semanticCommentCounts={selectedSemanticCommentCounts}
+                  onOpenSemanticComments={openSemanticComments}
                 />
               ) : null}
             </div>

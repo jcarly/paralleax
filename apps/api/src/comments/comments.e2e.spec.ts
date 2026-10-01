@@ -327,6 +327,41 @@ describe('Comments API', () => {
       .set('Cookie', ownerCookie)
       .send({
         anchor: {
+          kind: 'field',
+          targetType: 'interaction',
+          targetId: interaction.body.interaction.id,
+          field: 'duration',
+        },
+        body: 'Check the pacing.',
+      })
+      .expect(201)
+      .expect(({ body }) => {
+        expect(body.anchor).toEqual({
+          kind: 'field',
+          targetType: 'interaction',
+          targetId: interaction.body.interaction.id,
+          field: 'duration',
+        });
+        expect(body.anchorLabel).toContain('Duration');
+      });
+    await request(httpServer)
+      .post(`/api/stories/${storyId}/comment-threads`)
+      .set('Cookie', ownerCookie)
+      .send({
+        anchor: {
+          kind: 'field',
+          targetType: 'trigger',
+          targetId: interaction.body.interaction.triggers[0].id,
+          field: 'duration',
+        },
+        body: 'Invalid semantic slot.',
+      })
+      .expect(404);
+    await request(httpServer)
+      .post(`/api/stories/${storyId}/comment-threads`)
+      .set('Cookie', ownerCookie)
+      .send({
+        anchor: {
           kind: 'text',
           targetType: 'interaction',
           targetId: interaction.body.interaction.id,

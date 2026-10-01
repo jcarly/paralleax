@@ -12,6 +12,8 @@ import { api } from '../api';
 import { apiErrorMessage } from '../apiErrorMessages';
 import {
   InspectorCommentField,
+  InspectorCommentSlot,
+  type InspectorSemanticCommentProps,
   type InspectorTextCommentProps,
 } from '../features/comments/InspectorCommentField';
 import { getStatAssignmentOwners, type StatAssignmentOwner } from '../storyStats';
@@ -144,6 +146,8 @@ export function StatDefinitionInspector({
   onClose,
   textCommentCounts,
   onOpenTextComments,
+  semanticCommentCounts,
+  onOpenSemanticComments,
 }: {
   story: Story;
   statDefinition?: StatDefinition;
@@ -157,7 +161,8 @@ export function StatDefinitionInspector({
   onCreate: (input: CreateStatDefinitionInput) => Promise<string | undefined>;
   onStory: (story: Story) => void;
   onClose: () => void;
-} & InspectorTextCommentProps) {
+} & InspectorTextCommentProps &
+  InspectorSemanticCommentProps) {
   const { t } = useTranslation();
   const [error, setError] = useState('');
   if (creating) {
@@ -195,7 +200,9 @@ export function StatDefinitionInspector({
       onPatch={onPatch}
       onStory={onStory}
       onOpenTextComments={onOpenTextComments}
+      onOpenSemanticComments={onOpenSemanticComments}
       story={story}
+      semanticCommentCounts={semanticCommentCounts}
       textCommentCounts={textCommentCounts}
     />
   );
@@ -215,6 +222,8 @@ function StatDefinitionEditor({
   onClose,
   textCommentCounts,
   onOpenTextComments,
+  semanticCommentCounts,
+  onOpenSemanticComments,
 }: {
   story: Story;
   definition: StatDefinition;
@@ -227,7 +236,8 @@ function StatDefinitionEditor({
   onStory: (story: Story) => void;
   onError: (message: string) => void;
   onClose: () => void;
-} & InspectorTextCommentProps) {
+} & InspectorTextCommentProps &
+  InspectorSemanticCommentProps) {
   const { t } = useTranslation();
   const [ownerKey, setOwnerKey] = useState(
     availableOwners[0] ? `${availableOwners[0].ownerType}:${availableOwners[0].ownerId ?? ''}` : '',
@@ -258,103 +268,138 @@ function StatDefinitionEditor({
           />
         </label>
       </InspectorCommentField>
-      <CategoryField
-        category={definition.category}
-        suggestions={categorySuggestions}
-        onChange={(category) => onChange({ ...definition, category })}
-        onBlur={(category) => void onPatch(definition.id, { category })}
-      />
-      <ImageUrlField
-        imageUrl={definition.imageUrl}
-        onChange={(imageUrl) => onChange({ ...definition, imageUrl })}
-        onBlur={(imageUrl) => void onPatch(definition.id, { imageUrl })}
-      />
-      <label>
-        {t('attributes.valueType')}
-        <input readOnly value={t(`attributes.type.${valueType}`)} />
-      </label>
-      {valueType === 'number' ? (
+      <InspectorCommentSlot
+        slot={{ kind: 'field', field: 'category' }}
+        label={t('inspector.category')}
+        semanticCommentCounts={semanticCommentCounts}
+        onOpenSemanticComments={onOpenSemanticComments}
+      >
+        <CategoryField
+          category={definition.category}
+          suggestions={categorySuggestions}
+          onChange={(category) => onChange({ ...definition, category })}
+          onBlur={(category) => void onPatch(definition.id, { category })}
+        />
+      </InspectorCommentSlot>
+      <InspectorCommentSlot
+        slot={{ kind: 'field', field: 'imageUrl' }}
+        label={t('inspector.imageUrl')}
+        semanticCommentCounts={semanticCommentCounts}
+        onOpenSemanticComments={onOpenSemanticComments}
+      >
+        <ImageUrlField
+          imageUrl={definition.imageUrl}
+          onChange={(imageUrl) => onChange({ ...definition, imageUrl })}
+          onBlur={(imageUrl) => void onPatch(definition.id, { imageUrl })}
+        />
+      </InspectorCommentSlot>
+      <InspectorCommentSlot
+        slot={{ kind: 'field', field: 'valueType' }}
+        label={t('attributes.valueType')}
+        semanticCommentCounts={semanticCommentCounts}
+        onOpenSemanticComments={onOpenSemanticComments}
+      >
         <label>
-          {t('attributes.changePerHour')}
-          <input
-            step="any"
-            type="number"
-            value={definition.changePerHour ?? 0}
-            onChange={(event) =>
-              onChange({ ...definition, changePerHour: Number(event.target.value) })
-            }
-            onBlur={(event) =>
-              void onPatch(definition.id, { changePerHour: Number(event.target.value) })
-            }
-          />
+          {t('attributes.valueType')}
+          <input readOnly value={t(`attributes.type.${valueType}`)} />
         </label>
+      </InspectorCommentSlot>
+      {valueType === 'number' ? (
+        <InspectorCommentSlot
+          slot={{ kind: 'field', field: 'changePerHour' }}
+          label={t('attributes.changePerHour')}
+          semanticCommentCounts={semanticCommentCounts}
+          onOpenSemanticComments={onOpenSemanticComments}
+        >
+          <label>
+            {t('attributes.changePerHour')}
+            <input
+              step="any"
+              type="number"
+              value={definition.changePerHour ?? 0}
+              onChange={(event) =>
+                onChange({ ...definition, changePerHour: Number(event.target.value) })
+              }
+              onBlur={(event) =>
+                void onPatch(definition.id, { changePerHour: Number(event.target.value) })
+              }
+            />
+          </label>
+        </InspectorCommentSlot>
       ) : null}
 
-      <div className="inspector-section-header">
-        <h3>{t('attributes.assignmentsTitle')}</h3>
-      </div>
-      {assignedOwners.length === 0 ? (
-        <p className="hint">{t('attributes.noAssignments')}</p>
-      ) : (
-        <ul className="attribute-assignment-list">
-          {assignedOwners.map(({ owner, assignment }) => (
-            <AssignmentRow
-              assignment={assignment}
-              definition={definition}
-              key={assignment.id}
-              label={ownerLabel(owner, t)}
-              onError={onError}
-              onStory={onStory}
-              storyId={story.id}
-            />
-          ))}
-        </ul>
-      )}
-      {selectedOwner ? (
-        <div className="attribute-assignment-create">
-          <label>
-            {t('attributes.ownerLabel')}
-            <select value={ownerKey} onChange={(event) => setOwnerKey(event.target.value)}>
-              {availableOwners.map((owner) => {
-                const key = `${owner.ownerType}:${owner.ownerId ?? ''}`;
-                return (
-                  <option key={key} value={key}>
-                    {ownerLabel(owner, t)}
-                  </option>
-                );
-              })}
-            </select>
-          </label>
-          <label>
-            {t('attributes.initialValue')}
-            <StatValueField
-              ariaLabel={t('attributes.initialValue')}
-              valueType={getStatValueType(definition)}
-              value={initialValue}
-              onChange={setInitialValue}
-            />
-          </label>
-          <button
-            className="secondary"
-            type="button"
-            onClick={() =>
-              void api
-                .createStatAssignment(story.id, {
-                  statDefinitionId: definition.id,
-                  ownerType: selectedOwner.ownerType,
-                  ...(selectedOwner.ownerId ? { ownerId: selectedOwner.ownerId } : {}),
-                  initialValue,
-                })
-                .then(onStory)
-                .catch((caught: unknown) =>
-                  onError(apiErrorMessage(caught, t, t('attributes.operationFailed'))),
-                )
-            }
-          >
-            {t('attributes.assign')}
-          </button>
+      <InspectorCommentSlot
+        slot={{ kind: 'section', section: 'assignments' }}
+        label={t('attributes.assignmentsTitle')}
+        semanticCommentCounts={semanticCommentCounts}
+        onOpenSemanticComments={onOpenSemanticComments}
+      >
+        <div className="inspector-section-header">
+          <h3>{t('attributes.assignmentsTitle')}</h3>
         </div>
-      ) : null}
+        {assignedOwners.length === 0 ? (
+          <p className="hint">{t('attributes.noAssignments')}</p>
+        ) : (
+          <ul className="attribute-assignment-list">
+            {assignedOwners.map(({ owner, assignment }) => (
+              <AssignmentRow
+                assignment={assignment}
+                definition={definition}
+                key={assignment.id}
+                label={ownerLabel(owner, t)}
+                onError={onError}
+                onStory={onStory}
+                storyId={story.id}
+              />
+            ))}
+          </ul>
+        )}
+        {selectedOwner ? (
+          <div className="attribute-assignment-create">
+            <label>
+              {t('attributes.ownerLabel')}
+              <select value={ownerKey} onChange={(event) => setOwnerKey(event.target.value)}>
+                {availableOwners.map((owner) => {
+                  const key = `${owner.ownerType}:${owner.ownerId ?? ''}`;
+                  return (
+                    <option key={key} value={key}>
+                      {ownerLabel(owner, t)}
+                    </option>
+                  );
+                })}
+              </select>
+            </label>
+            <label>
+              {t('attributes.initialValue')}
+              <StatValueField
+                ariaLabel={t('attributes.initialValue')}
+                valueType={getStatValueType(definition)}
+                value={initialValue}
+                onChange={setInitialValue}
+              />
+            </label>
+            <button
+              className="secondary"
+              type="button"
+              onClick={() =>
+                void api
+                  .createStatAssignment(story.id, {
+                    statDefinitionId: definition.id,
+                    ownerType: selectedOwner.ownerType,
+                    ...(selectedOwner.ownerId ? { ownerId: selectedOwner.ownerId } : {}),
+                    initialValue,
+                  })
+                  .then(onStory)
+                  .catch((caught: unknown) =>
+                    onError(apiErrorMessage(caught, t, t('attributes.operationFailed'))),
+                  )
+              }
+            >
+              {t('attributes.assign')}
+            </button>
+          </div>
+        ) : null}
+      </InspectorCommentSlot>
       <button
         className="ghost danger"
         type="button"

@@ -1,4 +1,8 @@
-import type { CommentAnchor, StoryCommentThread } from '@paralleax/shared';
+import {
+  commentAnchorSlotLabel,
+  type CommentAnchor,
+  type StoryCommentThread,
+} from '@paralleax/shared';
 import { useTranslation } from 'react-i18next';
 import { CommentDiscussionCard, CommentDraftCard } from './CommentDiscussionCard';
 
@@ -75,5 +79,8 @@ function anchorDescription(
   t: (key: string) => string,
 ) {
   if (anchor.kind === 'text') return `“${anchor.selector.exact}”`;
+  if (anchor.kind === 'field' || anchor.kind === 'section') {
+    return `${t(`comments.anchor.${anchor.targetType}`)}: ${commentAnchorSlotLabel(anchor)}`;
+  }
   return t(`comments.anchor.${anchor.targetType}`);
 }

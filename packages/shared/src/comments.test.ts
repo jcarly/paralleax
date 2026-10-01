@@ -3,6 +3,7 @@ import {
   canManageCommentThread,
   commentAnchorBelongsToStory,
   commentAnchorLabel,
+  commentSemanticSlotKey,
   isCommentAnchor,
   isCommentAnchorDetached,
   locateCommentQuote,
@@ -114,6 +115,46 @@ describe('comment anchors', () => {
     expect(isCommentAnchor(anchor({ end: 0 }))).toBe(false);
     expect(isCommentAnchor(anchor({ sourceHash: 1 }))).toBe(false);
     expect(isCommentAnchor(anchor({ sourceHash: 'x'.repeat(129) }))).toBe(false);
+  });
+
+  it('validates stable semantic field and section slots for their owning target type', () => {
+    const durationAnchor = {
+      kind: 'field' as const,
+      targetType: 'interaction' as const,
+      targetId: 'interaction-1',
+      field: 'duration' as const,
+    };
+    const conditionsAnchor = {
+      kind: 'section' as const,
+      targetType: 'trigger' as const,
+      targetId: 'trigger-1',
+      section: 'conditions' as const,
+    };
+
+    expect(isCommentAnchor(durationAnchor)).toBe(true);
+    expect(isCommentAnchor(conditionsAnchor)).toBe(true);
+    expect(commentAnchorBelongsToStory(story, durationAnchor)).toBe(true);
+    expect(commentAnchorBelongsToStory(story, conditionsAnchor)).toBe(true);
+    expect(isCommentAnchorDetached(story, durationAnchor)).toBe(false);
+    expect(commentSemanticSlotKey(durationAnchor)).toBe('field:duration');
+    expect(commentSemanticSlotKey(conditionsAnchor)).toBe('section:conditions');
+    expect(commentAnchorLabel(story, durationAnchor)).toBe('Arrival: Duration');
+    expect(
+      isCommentAnchor({
+        kind: 'field',
+        targetType: 'trigger',
+        targetId: 'trigger-1',
+        field: 'duration',
+      }),
+    ).toBe(false);
+    expect(
+      isCommentAnchor({
+        kind: 'section',
+        targetType: 'character',
+        targetId: 'character-1',
+        section: 'conditions',
+      }),
+    ).toBe(false);
   });
 
   it('reattaches a quote through its surrounding context after text moves', () => {

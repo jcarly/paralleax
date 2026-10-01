@@ -57,6 +57,12 @@
   color: var(--color-trigger-strong);
   transform: translateX(-50%);
 }
+.inspector-comment-actions .inspector-comment-add {
+  min-width: 28px;
+  padding-inline: 0.42rem;
+  border-color: var(--color-trigger);
+  color: var(--color-trigger-strong);
+}
 .inspector-comment-toggle.active {
   background: var(--color-trigger-soft);
 }
@@ -118,4 +124,17 @@
   color: var(--color-trigger-strong);
   font-size: 0.66rem;
   line-height: 1;
+}
+
+.inspector-commentable-slot .inspector-field-comment-badge {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease;
+}
+
+.inspector-commentable-slot:hover .inspector-field-comment-badge,
+.inspector-commentable-slot:focus-within .inspector-field-comment-badge,
+.inspector-commentable-slot.has-comments .inspector-field-comment-badge {
+  opacity: 1;
+  pointer-events: auto;
 }

@@ -221,7 +221,12 @@ priority, the order below is the intended delivery order.
    anchors. Icons stay discreet until hover/focus and persist with a count when a
    discussion exists. Story-level list headings and dynamic rows are explicitly
    subsequent increments; no row gets an individual slot without durable
-   identity, and ephemeral UI controls are not commentable.
+   identity, and ephemeral UI controls are not commentable. **Completed
+   2026-10-01:** the shared registry now validates stable field and section
+   anchors for each supported target type. The existing comment API, permissions,
+   threads, SSE reload, contextual rail, and count markers are reused across the
+   six entity inspectors; labels and non-text controls share one field slot,
+   while dynamic rows remain section-only.
 8. **Improve automatic layout for cycles.** Add representative loop and dense
    cyclic fixtures, define expected readability and stability, then improve the
    existing deterministic layout without changing Trigger semantics or making

@@ -83,7 +83,8 @@ Paralleax currently includes:
   hashes, expire, and are consumed once; password resets and changes revoke prior
   sessions. Accounts predating this feature migrate as verified to avoid lockout.
 - Story review post-its on the graph, interactions, triggers, characters, locations,
-  item/stat definitions, and selected title/body/name/description text, with replies,
+  item/stat definitions, selected title/body/name/description text, and stable
+  non-text inspector field/section slots, with replies,
   open/resolved state, durable quote context, detached-anchor detection, and live
   SSE invalidation/reload for reviewers connected to the same API process. Editors
   use an inspector-integrated list, a translucent and explicitly collapsible
@@ -94,7 +95,8 @@ Paralleax currently includes:
   creating compressed off-screen grid columns. Selecting any authored element
   while that global list is open immediately restores the selected element's
   inspector. Inspector fields scroll independently from the graph; the fixed
-  header keeps its comment toggle visible and clickable across the pane border.
+  header keeps its comment toggle and, when discussions already exist, a separate
+  add-comment action visible and clickable across the pane border.
   Authorized thread managers can move a graph post-it by updating its
   existing canvas anchor; failed moves restore the persisted position and remain
   visible as an operational error. A discussion author or Story manager can

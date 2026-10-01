@@ -1,10 +1,19 @@
 import type { PropsWithChildren } from 'react';
-import type { CommentTextField } from '@paralleax/shared';
+import {
+  commentSemanticSlotKey,
+  type CommentSemanticSlot,
+  type CommentTextField,
+} from '@paralleax/shared';
 import { useTranslation } from 'react-i18next';
 
 export interface InspectorTextCommentProps {
   textCommentCounts?: Partial<Record<CommentTextField, number>>;
   onOpenTextComments?: (field: CommentTextField) => void;
+}
+
+export interface InspectorSemanticCommentProps {
+  semanticCommentCounts?: Partial<Record<string, number>>;
+  onOpenSemanticComments?: (slot: CommentSemanticSlot) => void;
 }
 
 export function InspectorCommentField({
@@ -35,6 +44,49 @@ export function InspectorCommentField({
         >
           <span aria-hidden="true">◆</span>
           <span>{count}</span>
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
+export function InspectorCommentSlot({
+  slot,
+  label,
+  semanticCommentCounts,
+  onOpenSemanticComments,
+  children,
+}: PropsWithChildren<
+  InspectorSemanticCommentProps & {
+    slot: CommentSemanticSlot;
+    label: string;
+  }
+>) {
+  const { t } = useTranslation();
+  const count = semanticCommentCounts?.[commentSemanticSlotKey(slot)] ?? 0;
+  const hasComments = count > 0;
+
+  return (
+    <div
+      className={`inspector-commentable-field inspector-commentable-slot ${
+        hasComments ? 'has-comments' : ''
+      }`}
+    >
+      {children}
+      {onOpenSemanticComments ? (
+        <button
+          className="inspector-field-comment-badge"
+          type="button"
+          aria-label={t(hasComments ? 'comments.openForField' : 'comments.commentField', {
+            field: label,
+          })}
+          title={t(hasComments ? 'comments.openForField' : 'comments.commentField', {
+            field: label,
+          })}
+          onClick={() => onOpenSemanticComments(slot)}
+        >
+          <span aria-hidden="true">◆</span>
+          {hasComments ? <span>{count}</span> : null}
         </button>
       ) : null}
     </div>

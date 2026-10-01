@@ -2,6 +2,8 @@ import { getStatValueType, type ItemDefinition, type StatDefinition } from '@par
 import { useTranslation } from 'react-i18next';
 import {
   InspectorCommentField,
+  InspectorCommentSlot,
+  type InspectorSemanticCommentProps,
   type InspectorTextCommentProps,
 } from '../features/comments/InspectorCommentField';
 import { CategoryField } from './CategoryField';
@@ -17,6 +19,8 @@ export function ItemDefinitionInspector({
   onPatch,
   textCommentCounts,
   onOpenTextComments,
+  semanticCommentCounts,
+  onOpenSemanticComments,
 }: {
   itemDefinition: ItemDefinition;
   categorySuggestions?: string[];
@@ -28,7 +32,8 @@ export function ItemDefinitionInspector({
       Pick<ItemDefinition, 'name' | 'description' | 'category' | 'imageUrl' | 'stats'>
     >,
   ) => Promise<void>;
-} & InspectorTextCommentProps) {
+} & InspectorTextCommentProps &
+  InspectorSemanticCommentProps) {
   const { t } = useTranslation();
   const itemStats = itemDefinition.stats ?? [];
   return (
@@ -50,17 +55,31 @@ export function ItemDefinitionInspector({
           />
         </label>
       </InspectorCommentField>
-      <CategoryField
-        category={itemDefinition.category}
-        suggestions={categorySuggestions}
-        onChange={(category) => onChange({ ...itemDefinition, category })}
-        onBlur={(category) => void onPatch(itemDefinition.id, { category })}
-      />
-      <ImageUrlField
-        imageUrl={itemDefinition.imageUrl}
-        onChange={(imageUrl) => onChange({ ...itemDefinition, imageUrl })}
-        onBlur={(imageUrl) => void onPatch(itemDefinition.id, { imageUrl })}
-      />
+      <InspectorCommentSlot
+        slot={{ kind: 'field', field: 'category' }}
+        label={t('inspector.category')}
+        semanticCommentCounts={semanticCommentCounts}
+        onOpenSemanticComments={onOpenSemanticComments}
+      >
+        <CategoryField
+          category={itemDefinition.category}
+          suggestions={categorySuggestions}
+          onChange={(category) => onChange({ ...itemDefinition, category })}
+          onBlur={(category) => void onPatch(itemDefinition.id, { category })}
+        />
+      </InspectorCommentSlot>
+      <InspectorCommentSlot
+        slot={{ kind: 'field', field: 'imageUrl' }}
+        label={t('inspector.imageUrl')}
+        semanticCommentCounts={semanticCommentCounts}
+        onOpenSemanticComments={onOpenSemanticComments}
+      >
+        <ImageUrlField
+          imageUrl={itemDefinition.imageUrl}
+          onChange={(imageUrl) => onChange({ ...itemDefinition, imageUrl })}
+          onBlur={(imageUrl) => void onPatch(itemDefinition.id, { imageUrl })}
+        />
+      </InspectorCommentSlot>
       <InspectorCommentField
         field="description"
         label={t('inspector.description')}
@@ -79,93 +98,100 @@ export function ItemDefinitionInspector({
         </label>
       </InspectorCommentField>
       <p className="hint">{t('inspector.itemInstanceHelp')}</p>
-      <div className="inspector-section-header">
-        <h3>{t('inspector.itemStats')}</h3>
-        <button
-          className="secondary"
-          type="button"
-          disabled={itemStats.length >= statDefinitions.length}
-          onClick={() => {
-            const candidate = statDefinitions.find(
-              ({ id }) => !itemStats.some(({ statDefinitionId }) => statDefinitionId === id),
-            )!;
-            const valueType = getStatValueType(candidate);
-            const stats = [
-              ...itemStats,
-              {
-                id: crypto.randomUUID(),
-                statDefinitionId: candidate.id,
-                initialValue: valueType === 'number' ? 0 : valueType === 'boolean' ? false : '',
-              },
-            ];
-            onChange({ ...itemDefinition, stats });
-            void onPatch(itemDefinition.id, { stats });
-          }}
-        >
-          {t('inspector.addStat')}
-        </button>
-      </div>
-      {itemStats.map((stat, index) => (
-        <div className="stat-effect-row" key={stat.statDefinitionId}>
-          <select
-            aria-label={t('inspector.itemStat')}
-            value={stat.statDefinitionId}
-            onChange={(event) => {
-              const definition = statDefinitions.find(({ id }) => id === event.target.value)!;
-              const valueType = getStatValueType(definition);
-              const stats = [...itemStats];
-              stats[index] = {
-                ...stat,
-                statDefinitionId: definition.id,
-                initialValue: valueType === 'number' ? 0 : valueType === 'boolean' ? false : '',
-              };
+      <InspectorCommentSlot
+        slot={{ kind: 'section', section: 'stats' }}
+        label={t('inspector.itemStats')}
+        semanticCommentCounts={semanticCommentCounts}
+        onOpenSemanticComments={onOpenSemanticComments}
+      >
+        <div className="inspector-section-header">
+          <h3>{t('inspector.itemStats')}</h3>
+          <button
+            className="secondary"
+            type="button"
+            disabled={itemStats.length >= statDefinitions.length}
+            onClick={() => {
+              const candidate = statDefinitions.find(
+                ({ id }) => !itemStats.some(({ statDefinitionId }) => statDefinitionId === id),
+              )!;
+              const valueType = getStatValueType(candidate);
+              const stats = [
+                ...itemStats,
+                {
+                  id: crypto.randomUUID(),
+                  statDefinitionId: candidate.id,
+                  initialValue: valueType === 'number' ? 0 : valueType === 'boolean' ? false : '',
+                },
+              ];
               onChange({ ...itemDefinition, stats });
               void onPatch(itemDefinition.id, { stats });
             }}
           >
-            {statDefinitions.map((definition) => (
-              <option
-                key={definition.id}
-                value={definition.id}
-                disabled={itemStats.some(
-                  (candidate, candidateIndex) =>
-                    candidateIndex !== index && candidate.statDefinitionId === definition.id,
-                )}
-              >
-                {definition.name}
-              </option>
-            ))}
-          </select>
-          <StatValueField
-            ariaLabel={t('inspector.itemStatInitialValue')}
-            value={stat.initialValue}
-            valueType={getStatValueType(
-              statDefinitions.find(({ id }) => id === stat.statDefinitionId) ?? {
-                id: stat.statDefinitionId,
-                name: stat.statDefinitionId,
-              },
-            )}
-            onChange={(initialValue) => {
-              const stats = [...itemStats];
-              stats[index] = { ...stat, initialValue };
-              onChange({ ...itemDefinition, stats });
-            }}
-            onBlur={(initialValue) => {
-              const stats = [...itemStats];
-              stats[index] = { ...stat, initialValue };
-              void onPatch(itemDefinition.id, { stats });
-            }}
-          />
-          <RemoveRowButton
-            label={t('inspector.deleteItemStat')}
-            onRemove={() => {
-              const stats = itemStats.filter((_, candidateIndex) => candidateIndex !== index);
-              onChange({ ...itemDefinition, stats });
-              void onPatch(itemDefinition.id, { stats });
-            }}
-          />
+            {t('inspector.addStat')}
+          </button>
         </div>
-      ))}
+        {itemStats.map((stat, index) => (
+          <div className="stat-effect-row" key={stat.statDefinitionId}>
+            <select
+              aria-label={t('inspector.itemStat')}
+              value={stat.statDefinitionId}
+              onChange={(event) => {
+                const definition = statDefinitions.find(({ id }) => id === event.target.value)!;
+                const valueType = getStatValueType(definition);
+                const stats = [...itemStats];
+                stats[index] = {
+                  ...stat,
+                  statDefinitionId: definition.id,
+                  initialValue: valueType === 'number' ? 0 : valueType === 'boolean' ? false : '',
+                };
+                onChange({ ...itemDefinition, stats });
+                void onPatch(itemDefinition.id, { stats });
+              }}
+            >
+              {statDefinitions.map((definition) => (
+                <option
+                  key={definition.id}
+                  value={definition.id}
+                  disabled={itemStats.some(
+                    (candidate, candidateIndex) =>
+                      candidateIndex !== index && candidate.statDefinitionId === definition.id,
+                  )}
+                >
+                  {definition.name}
+                </option>
+              ))}
+            </select>
+            <StatValueField
+              ariaLabel={t('inspector.itemStatInitialValue')}
+              value={stat.initialValue}
+              valueType={getStatValueType(
+                statDefinitions.find(({ id }) => id === stat.statDefinitionId) ?? {
+                  id: stat.statDefinitionId,
+                  name: stat.statDefinitionId,
+                },
+              )}
+              onChange={(initialValue) => {
+                const stats = [...itemStats];
+                stats[index] = { ...stat, initialValue };
+                onChange({ ...itemDefinition, stats });
+              }}
+              onBlur={(initialValue) => {
+                const stats = [...itemStats];
+                stats[index] = { ...stat, initialValue };
+                void onPatch(itemDefinition.id, { stats });
+              }}
+            />
+            <RemoveRowButton
+              label={t('inspector.deleteItemStat')}
+              onRemove={() => {
+                const stats = itemStats.filter((_, candidateIndex) => candidateIndex !== index);
+                onChange({ ...itemDefinition, stats });
+                void onPatch(itemDefinition.id, { stats });
+              }}
+            />
+          </div>
+        ))}
+      </InspectorCommentSlot>
     </div>
   );
 }

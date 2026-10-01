@@ -26,9 +26,11 @@ details. They should stay covered by tests as the editor grows.
   undo history because their ownership and lifecycles differ.
 - Reader-visible discussions are limited to the current interaction. Displaying
   or writing them never changes the ordered journey or runtime evaluation.
-- A comment anchor is either a graph position, a same-story target entity, or a
-  supported text field on a same-story target. Missing or changed text detaches
-  the anchor without deleting its preserved quote or discussion.
+- A comment anchor is either a graph position, a same-story target entity, a
+  registry-defined semantic field or section on a same-story target, or a
+  supported text field on that target. Missing or changed text detaches the
+  anchor without deleting its preserved quote or discussion; semantic anchors
+  stay attached while their target exists.
 - Deleting a review discussion soft-deletes the whole thread and all of its
   replies as one unit. Only the thread author or a Story manager may delete or
   restore it; ordinary comment projections, badges, and reader surfaces exclude

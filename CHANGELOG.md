@@ -13,6 +13,12 @@
 - Added a repository instruction requiring agents to evaluate existing
   dependencies, maintained libraries, and official SDKs before implementing
   general-purpose capabilities from scratch.
+- Completed semantic comment slots for Interaction, Trigger, Character, Location,
+  Item Definition, and Stat Definition inspectors. A shared target-specific
+  registry persists stable field/section anchors through the existing discussion
+  workflow, while text selection, dynamic rows, and Story-level headings retain
+  their distinct scopes. Inspectors also preserve an explicit entity add-comment
+  action beside the existing discussion-count toggle.
 
 ## 2026-09-29
 
