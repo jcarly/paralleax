@@ -974,9 +974,12 @@ classes directly.
   PostgreSQL. Core flows do not intercept Paralleax endpoints; the explicit
   transport-reordering case holds and forwards a real API response without
   fabricating its payload. The project can start a local stack or target a
-  deployed environment through `PARALLEAX_ACCEPTANCE_BASE_URL`. A shared test-only
+  separately configured test stack through `PARALLEAX_ACCEPTANCE_BASE_URL`. A shared test-only
   harness owns registration, Story creation, mutation response checks, and common
-  editor/access interactions without replacing the production HTTP boundary.
+  editor/access interactions without replacing the production HTTP boundary. The
+  locally started stack enables an in-memory email outbox only under `NODE_ENV=test`;
+  an external acceptance target must enable the same test-only outbox. The harness
+  follows its verification link through the normal account-action endpoint.
   Isolated browser contexts exercise account-specific permissions, live
   collaboration, and the anchored reader-to-author review loop without sharing
   authentication state. Small ChoiceScript and QSP `locations` fixtures also

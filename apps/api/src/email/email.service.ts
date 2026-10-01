@@ -2,6 +2,7 @@ import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common'
 import { createTransport, type SendMailOptions, type Transporter } from 'nodemailer';
 import { apiErrorResponse } from '../operations/api-error-response';
 import { AppConfigService } from '../config/app-config.service';
+import { TestEmailOutbox } from './test-email-outbox';
 
 export interface EmailMessage {
   to: string;
@@ -26,18 +27,29 @@ export class EmailService {
   private readonly logger = new Logger(EmailService.name);
   private transporter: Transporter | undefined;
 
-  constructor(private readonly config: AppConfigService) {}
+  constructor(
+    private readonly config: AppConfigService,
+    private readonly testOutbox?: TestEmailOutbox,
+  ) {}
 
   get isConfigured() {
-    return Boolean(this.config.emailSmtpUrl && this.config.emailFrom);
+    return (
+      this.config.testEmailOutbox || Boolean(this.config.emailSmtpUrl && this.config.emailFrom)
+    );
   }
 
   async verifyConnection(): Promise<void> {
+    if (this.config.testEmailOutbox) return;
     await this.smtpTransporter().verify();
   }
 
   async send(message: EmailMessage): Promise<DeliveredEmail> {
-    const mail = normalizeMessage(message, this.config.emailFrom, this.config.emailReplyTo);
+    const normalized = normalizeMessage(message);
+    if (this.config.testEmailOutbox) {
+      if (!this.testOutbox) throw unavailableEmailDelivery();
+      return this.testOutbox.record(normalized);
+    }
+    const mail = toSendMailOptions(normalized, this.config.emailFrom, this.config.emailReplyTo);
     try {
       const result = await this.smtpTransporter().sendMail(mail);
       if ((result.accepted?.length ?? 0) !== 1 || (result.rejected?.length ?? 0) > 0) {
@@ -68,22 +80,26 @@ export class EmailService {
   }
 }
 
-function normalizeMessage(
-  message: EmailMessage,
-  from: string | undefined,
-  replyTo: string | undefined,
-): SendMailOptions {
+function normalizeMessage(message: EmailMessage): EmailMessage {
   const to = nonEmptyHeaderValue('recipient', message.to);
   const subject = nonEmptyHeaderValue('subject', message.subject);
   const text = message.text.trim();
   if (!text) throw new Error('Transactional emails require a text body');
   const html = message.html?.trim();
+  return { to, subject, text, ...(html ? { html } : {}) };
+}
+
+function toSendMailOptions(
+  message: EmailMessage,
+  from: string | undefined,
+  replyTo: string | undefined,
+): SendMailOptions {
   return {
     from,
-    to,
-    subject,
-    text,
-    ...(html ? { html } : {}),
+    to: message.to,
+    subject: message.subject,
+    text: message.text,
+    ...(message.html ? { html: message.html } : {}),
     ...(replyTo ? { replyTo } : {}),
   };
 }

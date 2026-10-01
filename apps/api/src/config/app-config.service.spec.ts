@@ -11,6 +11,7 @@ describe('AppConfigService', () => {
       nodeEnvironment: 'development',
       registrationMode: 'open',
       authRegistrationRateLimit: 5,
+      testEmailOutbox: false,
       emailSmtpUrl: undefined,
       emailFrom: undefined,
       emailReplyTo: undefined,
@@ -18,13 +19,17 @@ describe('AppConfigService', () => {
     expect(config.nodeEnvironment).toBe('development');
   });
 
-  it('allows the registration rate limit only in the test environment', () => {
+  it('allows test-only configuration only in the test environment', () => {
     expect(
       loadAppConfig({
         NODE_ENV: 'test',
         TEST_AUTH_REGISTRATION_RATE_LIMIT: '100',
+        TEST_EMAIL_OUTBOX: 'true',
       }).authRegistrationRateLimit,
     ).toBe(100);
+    expect(loadAppConfig({ NODE_ENV: 'test', TEST_EMAIL_OUTBOX: 'true' }).testEmailOutbox).toBe(
+      true,
+    );
     expect(
       loadAppConfig({
         NODE_ENV: 'production',
@@ -34,6 +39,15 @@ describe('AppConfigService', () => {
         TEST_AUTH_REGISTRATION_RATE_LIMIT: '100',
       }).authRegistrationRateLimit,
     ).toBe(5);
+    expect(() =>
+      loadAppConfig({
+        NODE_ENV: 'production',
+        DATABASE_URL: 'postgres://db/app',
+        CORS_ORIGIN: 'https://app.example.com',
+        REGISTRATION_MODE: 'closed',
+        TEST_EMAIL_OUTBOX: 'true',
+      }),
+    ).toThrow('TEST_EMAIL_OUTBOX is only available in the test environment');
   });
 
   it('normalizes optional configuration and enables production cookies', () => {
@@ -82,6 +96,7 @@ describe('AppConfigService', () => {
       'TEST_AUTH_REGISTRATION_RATE_LIMIT must be an integer between 1 and 10000',
     ],
     [{ POSTGRES_SSL: 'yes' }, 'POSTGRES_SSL must be true or false'],
+    [{ TEST_EMAIL_OUTBOX: 'yes' }, 'TEST_EMAIL_OUTBOX must be true or false'],
     [{ EMAIL_SMTP_URL: 'https://smtp.example.com' }, 'EMAIL_SMTP_URL must use smtp: or smtps:'],
     [
       { EMAIL_SMTP_URL: 'smtp://smtp.example.com' },

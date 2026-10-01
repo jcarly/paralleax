@@ -10,6 +10,7 @@ import { SessionGuard } from './auth.guard';
 import { AuthRepository } from './auth.repository';
 import { AuthService } from './auth.service';
 import { EmailModule } from '../email/email.module';
+import { AuthTestingController } from './auth-testing.controller';
 
 @Module({
   imports: [
@@ -28,7 +29,7 @@ import { EmailModule } from '../email/email.module';
       ],
     }),
   ],
-  controllers: [AuthController, AdminController],
+  controllers: [AuthController, AdminController, AuthTestingController],
   providers: [
     AuthRepository,
     AuthService,

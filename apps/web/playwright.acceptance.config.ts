@@ -42,6 +42,7 @@ export default defineConfig({
             REGISTRATION_ACCESS_CODE: accessCode,
             REGISTRATION_MODE: 'access-code',
             TEST_AUTH_REGISTRATION_RATE_LIMIT: '100',
+            TEST_EMAIL_OUTBOX: 'true',
           },
           url: `http://127.0.0.1:${apiPort}/api/ready`,
           reuseExistingServer: !process.env.CI,

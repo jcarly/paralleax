@@ -198,6 +198,50 @@ describe('Auth API', () => {
     expect(sentMessages).toEqual([]);
   });
 
+  it('resends verification, rotates passwords, and revokes other sessions through the API', async () => {
+    const agent = request.agent(httpServer);
+    await agent
+      .post('/api/auth/register')
+      .send({
+        email: 'security@example.com',
+        password: 'correct horse battery staple',
+        displayName: 'Security Author',
+      })
+      .expect(201);
+    await agent
+      .post('/api/auth/resend-verification')
+      .send({ email: 'security@example.com' })
+      .expect(204);
+    await agent.post('/api/auth/verify-email').send({ token: tokenFromLastEmail() }).expect(200);
+    await agent
+      .post('/api/auth/login')
+      .send({ email: 'security@example.com', password: 'correct horse battery staple' })
+      .expect(200);
+    await agent.post('/api/auth/sessions/revoke-others').expect(204);
+    await agent
+      .patch('/api/auth/me/password')
+      .send({
+        currentPassword: 'correct horse battery staple',
+        password: 'changed horse battery staple',
+      })
+      .expect(200)
+      .expect(({ body }) => expect(body.email).toBe('security@example.com'));
+    await agent
+      .post('/api/auth/password-reset')
+      .send({ email: 'security@example.com' })
+      .expect(204);
+
+    const resetToken = tokenFromLastEmail();
+    await agent
+      .post('/api/auth/password-reset/confirm')
+      .send({ token: resetToken, password: 'replacement horse battery staple' })
+      .expect(200);
+    await agent
+      .post('/api/auth/password-reset/confirm')
+      .send({ token: resetToken, password: 'another replacement password' })
+      .expect(400);
+  });
+
   it('keeps the default registration throttle at five requests per minute', async () => {
     await app.listen(0);
     const responses = await Promise.all(

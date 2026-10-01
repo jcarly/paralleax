@@ -5,8 +5,9 @@ describe('AuthRepository', () => {
   const query = jest.fn();
   const clientQuery = jest.fn();
   const release = jest.fn();
+  const connect = jest.fn();
   const repository = new AuthRepository({
-    pool: { query, connect: jest.fn().mockResolvedValue({ query: clientQuery, release }) },
+    pool: { query, connect },
   } as unknown as DatabaseConnection);
   const user: AuthUser = {
     id: 'user-1',
@@ -17,7 +18,13 @@ describe('AuthRepository', () => {
     createdAt: '2026-07-18T00:00:00.000Z',
   };
 
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => {
+    query.mockReset();
+    clientQuery.mockReset();
+    release.mockReset();
+    connect.mockReset();
+    connect.mockResolvedValue({ query: clientQuery, release });
+  });
 
   it('creates a user atomically and reports email conflicts', async () => {
     const row = {
@@ -36,6 +43,7 @@ describe('AuthRepository', () => {
       .mockResolvedValueOnce({})
       .mockResolvedValueOnce({})
       .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({})
       .mockResolvedValueOnce({});
     await expect(repository.createUser(user)).resolves.toEqual(user);
     await expect(repository.createUser(user)).resolves.toBeUndefined();
@@ -76,6 +84,21 @@ describe('AuthRepository', () => {
     expect(query).toHaveBeenCalledWith('DELETE FROM sessions WHERE token_hash = $1', [
       'token-hash',
     ]);
+  });
+
+  it('removes other sessions and expired account-action tokens', async () => {
+    query.mockResolvedValue({ rowCount: 1 });
+
+    await repository.deleteOtherSessions(user.id, 'current-token-hash');
+    await repository.deleteExpiredAccountActionTokens();
+
+    expect(query).toHaveBeenCalledWith(
+      'DELETE FROM sessions WHERE user_id = $1 AND token_hash <> $2',
+      [user.id, 'current-token-hash'],
+    );
+    expect(query).toHaveBeenCalledWith(
+      'DELETE FROM account_action_tokens WHERE expires_at <= now()',
+    );
   });
 
   it('stores action tokens by hash and consumes one exactly once in a transaction', async () => {
@@ -123,6 +146,79 @@ describe('AuthRepository', () => {
       ['hash', 'verify_email', '2026-07-18T01:00:00.000Z'],
     );
     expect(clientQuery).toHaveBeenCalledWith('COMMIT');
+  });
+
+  it('resets a password transactionally and rejects an already-consumed action token', async () => {
+    const resetRow = {
+      id: user.id,
+      email: user.email,
+      display_name: user.displayName,
+      password_hash: 'scrypt:replacement:hash',
+      role: user.role,
+      created_at: new Date(user.createdAt),
+      email_verified_at: new Date('2026-07-18T01:00:00.000Z'),
+    };
+    clientQuery
+      .mockResolvedValueOnce({})
+      .mockResolvedValueOnce({ rows: [{ user_id: user.id }] })
+      .mockResolvedValueOnce({ rows: [resetRow] })
+      .mockResolvedValueOnce({})
+      .mockResolvedValueOnce({})
+      .mockResolvedValueOnce({})
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({});
+
+    await expect(
+      repository.resetPasswordWithActionToken(
+        'reset-hash',
+        resetRow.password_hash,
+        '2026-07-18T01:00:00.000Z',
+      ),
+    ).resolves.toMatchObject({
+      email: user.email,
+      passwordHash: resetRow.password_hash,
+      emailVerifiedAt: '2026-07-18T01:00:00.000Z',
+    });
+    await expect(
+      repository.resetPasswordWithActionToken(
+        'consumed-reset-hash',
+        resetRow.password_hash,
+        '2026-07-18T02:00:00.000Z',
+      ),
+    ).resolves.toBeUndefined();
+
+    expect(clientQuery).toHaveBeenCalledWith(expect.stringContaining('SET password_hash = $2'), [
+      user.id,
+      resetRow.password_hash,
+    ]);
+    expect(clientQuery).toHaveBeenCalledWith('DELETE FROM sessions WHERE user_id = $1', [user.id]);
+    expect(clientQuery).toHaveBeenCalledWith('COMMIT');
+  });
+
+  it('commits password changes and rolls them back when persistence fails', async () => {
+    const failure = new Error('database unavailable');
+    clientQuery
+      .mockResolvedValueOnce({})
+      .mockResolvedValueOnce({})
+      .mockResolvedValueOnce({})
+      .mockResolvedValueOnce({})
+      .mockResolvedValueOnce({})
+      .mockRejectedValueOnce(failure)
+      .mockResolvedValueOnce({});
+
+    await expect(
+      repository.updatePasswordAndRevokeSessions(user.id, 'scrypt:new:hash'),
+    ).resolves.toBeUndefined();
+    await expect(
+      repository.updatePasswordAndRevokeSessions(user.id, 'scrypt:failed:hash'),
+    ).rejects.toBe(failure);
+
+    expect(clientQuery).toHaveBeenCalledWith('UPDATE users SET password_hash = $2 WHERE id = $1', [
+      user.id,
+      'scrypt:new:hash',
+    ]);
+    expect(clientQuery).toHaveBeenCalledWith('ROLLBACK');
+    expect(release).toHaveBeenCalled();
   });
 
   it('lists managed users and updates a role transactionally', async () => {

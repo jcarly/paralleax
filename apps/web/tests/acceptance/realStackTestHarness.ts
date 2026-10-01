@@ -10,6 +10,10 @@ export interface AcceptanceAccount {
   password: string;
 }
 
+interface TestEmail {
+  text: string;
+}
+
 interface StoryAccessOptions {
   visibility: 'private' | 'authenticated' | 'public' | 'invitation';
   editPolicy: 'owner' | 'collaborators' | 'authenticated';
@@ -49,10 +53,32 @@ export async function registerUser(page: Page, prefix: string): Promise<Acceptan
   await page.getByRole('button', { name: 'Create account' }).click();
   await expectSuccessful(registration);
 
+  await expect(page.getByRole('heading', { name: 'Check your email' })).toBeVisible();
+  const verificationEmail = await latestTestEmail(page, email);
+  const verificationUrl = verificationEmail.text.match(
+    /https?:\/\/[^\s]+\/verify-email\?token=[A-Za-z0-9_-]{43}/,
+  )?.[0];
+  if (!verificationUrl)
+    throw new Error('The verification email did not contain an account action link');
+  await page.goto(verificationUrl);
+  const verification = waitForApiResponse(page, 'POST', /\/api\/auth\/verify-email$/);
+  await page.getByRole('button', { name: 'Verify and sign in' }).click();
+  await expectSuccessful(verification);
+
   await expect(page.getByRole('heading', { name: 'Stories', exact: true })).toBeVisible();
   await expect(page.getByRole('region', { name: 'Loading stories' })).toBeHidden();
 
   return { email, password };
+}
+
+async function latestTestEmail(page: Page, recipient: string): Promise<TestEmail> {
+  const response = await page.request.get(
+    `/api/test/auth/emails/latest?to=${encodeURIComponent(recipient)}`,
+  );
+  if (!response.ok()) {
+    throw new Error(`The test email outbox returned ${response.status()} for ${recipient}`);
+  }
+  return (await response.json()) as TestEmail;
 }
 
 export async function createStory(page: Page, prefix: string) {

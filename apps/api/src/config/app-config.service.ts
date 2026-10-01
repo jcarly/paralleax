@@ -14,6 +14,7 @@ export class AppConfigService {
   readonly registrationMode!: RegistrationMode;
   readonly registrationAccessCode?: string;
   readonly authRegistrationRateLimit!: number;
+  readonly testEmailOutbox!: boolean;
   readonly emailSmtpUrl?: string;
   readonly emailFrom?: string;
   readonly emailReplyTo?: string;
@@ -65,6 +66,13 @@ export function loadAppConfig(environment: NodeJS.ProcessEnv) {
           10_000,
         )
       : 5;
+  const testEmailOutbox = booleanValue(
+    'TEST_EMAIL_OUTBOX',
+    environment.TEST_EMAIL_OUTBOX ?? 'false',
+  );
+  if (testEmailOutbox && nodeEnvironment !== 'test') {
+    throw new Error('TEST_EMAIL_OUTBOX is only available in the test environment');
+  }
   const emailSmtpUrl = optionalSmtpUrl(environment.EMAIL_SMTP_URL);
   const emailFrom = optionalEmailHeaderValue('EMAIL_FROM', environment.EMAIL_FROM);
   const emailReplyTo = optionalEmailHeaderValue('EMAIL_REPLY_TO', environment.EMAIL_REPLY_TO);
@@ -85,6 +93,7 @@ export function loadAppConfig(environment: NodeJS.ProcessEnv) {
     registrationMode,
     registrationAccessCode: registrationMode === 'access-code' ? registrationAccessCode : undefined,
     authRegistrationRateLimit,
+    testEmailOutbox,
     emailSmtpUrl,
     emailFrom,
     emailReplyTo,

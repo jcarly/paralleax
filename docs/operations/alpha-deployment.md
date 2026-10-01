@@ -168,8 +168,11 @@ After every deployment:
 
 1. Confirm the provider reports both containers healthy.
 2. Run `npm run smoke:deployment -- https://alpha.example.com`.
-3. On an isolated staging database, run the real-stack browser acceptance path:
-   `PARALLEAX_ACCEPTANCE_BASE_URL=https://alpha.example.com PARALLEAX_ACCEPTANCE_ACCESS_CODE=... npm run test:acceptance`.
+3. On an isolated test stack and database, run the real-stack browser acceptance
+   path. Its API must run with `NODE_ENV=test` and `TEST_EMAIL_OUTBOX=true` so the
+   harness can follow a verification link without exposing test messages from the
+   production deployment:
+   `PARALLEAX_ACCEPTANCE_BASE_URL=https://acceptance.example.com PARALLEAX_ACCEPTANCE_ACCESS_CODE=... npm run test:acceptance`.
    It creates a uniquely named test account and Story and must not target the
    production user database.
 4. Register with the current invitation code.

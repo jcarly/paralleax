@@ -78,7 +78,8 @@ The character-stat vertical keeps these regressions covered:
   creation failure preserves the completed form, while a failed next-page load
   preserves existing cards and retries the same page without duplicates.
 - Real-stack browser acceptance: with no intercepted Paralleax endpoint, an
-  invited author can create a Story, location, character, Story variable,
+  invited author receives and follows an isolated test-outbox verification link,
+  then can create a Story, location, character, Story variable,
   interactions and Triggers; persist context, an effect, and a condition; reload
   and sign in again; then traverse the conditioned path in Simulation Mode.
 - Real-stack browser acceptance: interaction-content undo and redo update the

@@ -2,9 +2,10 @@ import { expect, test, type Page } from '@playwright/test';
 import type { Story } from '@paralleax/shared';
 import { paginated } from './editorTestHarness';
 
-test('registers, creates a story, signs out, and signs back in', async ({ page }) => {
+test('registers, verifies email, creates a story, signs out, and signs back in', async ({ page }) => {
   let authenticated = false;
   const stories: Story[] = [];
+  const verificationToken = 'v'.repeat(43);
   const user = {
     id: 'user-1',
     email: 'author@example.com',
@@ -21,8 +22,14 @@ test('registers, creates a story, signs out, and signs back in', async ({ page }
     ),
   );
   await page.route('**/api/auth/register', async (route) => {
+    await route.fulfill({
+      status: 201,
+      json: { email: user.email, verificationRequired: true },
+    });
+  });
+  await page.route('**/api/auth/verify-email', async (route) => {
     authenticated = true;
-    await route.fulfill({ status: 201, json: user });
+    await route.fulfill({ json: user });
   });
   await page.route('**/api/auth/logout', async (route) => {
     authenticated = false;
@@ -97,6 +104,12 @@ test('registers, creates a story, signs out, and signs back in', async ({ page }
   await page.getByLabel('Password', { exact: true }).fill('correct horse battery staple');
   await page.getByLabel('Confirm password').fill('correct horse battery staple');
   await page.getByRole('button', { name: 'Create account' }).click();
+
+  await expect(page.getByRole('heading', { name: 'Check your email' })).toBeVisible();
+  await expect(page.getByText(/author@example\.com/)).toBeVisible();
+  await page.goto(`/verify-email?token=${verificationToken}`);
+  await expect(page.getByRole('heading', { name: 'Verify your email address' })).toBeVisible();
+  await page.getByRole('button', { name: 'Verify and sign in' }).click();
 
   await expect(page.getByRole('heading', { name: 'Stories', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'New story' }).click();

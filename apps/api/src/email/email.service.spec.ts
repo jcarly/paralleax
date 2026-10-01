@@ -1,6 +1,7 @@
 import { createTransport } from 'nodemailer';
 import type { AppConfigService } from '../config/app-config.service';
 import { EmailService } from './email.service';
+import { TestEmailOutbox } from './test-email-outbox';
 
 jest.mock('nodemailer', () => ({ createTransport: jest.fn() }));
 
@@ -51,6 +52,38 @@ describe('EmailService', () => {
     const service = new EmailService(configuredEmailConfig());
     expect(service.isConfigured).toBe(true);
     expect(mockCreateTransport).not.toHaveBeenCalled();
+  });
+
+  it('captures normalized messages in the test-only outbox without constructing an SMTP transport', async () => {
+    const outbox = new TestEmailOutbox();
+    const service = new EmailService({ testEmailOutbox: true } as AppConfigService, outbox);
+
+    await expect(
+      service.send({
+        to: ' reader@example.com ',
+        subject: ' Verify your account ',
+        text: ' Verification link ',
+      }),
+    ).resolves.toMatchObject({ messageId: expect.any(String) });
+    await service.verifyConnection();
+
+    expect(service.isConfigured).toBe(true);
+    expect(outbox.latestFor('reader@example.com')).toMatchObject({
+      to: 'reader@example.com',
+      subject: 'Verify your account',
+      text: 'Verification link',
+    });
+    expect(mockCreateTransport).not.toHaveBeenCalled();
+  });
+
+  it('fails closed if test-outbox configuration is missing its in-memory provider', async () => {
+    const service = new EmailService({ testEmailOutbox: true } as AppConfigService);
+
+    await expect(
+      service.send({ to: 'reader@example.com', subject: 'Subject', text: 'Body' }),
+    ).rejects.toMatchObject({
+      response: expect.objectContaining({ code: 'EMAIL_DELIVERY_UNAVAILABLE' }),
+    });
   });
 
   it('fails safely when SMTP delivery is not configured', async () => {

@@ -173,6 +173,21 @@ describe('AuthService', () => {
     expect(email.send).not.toHaveBeenCalled();
   });
 
+  it('resends verification for unverified accounts and uses it for their recovery request', async () => {
+    const auth = service();
+    await auth.register('author@example.com', 'correct horse battery staple', 'Author');
+    const initialMessages = jest.mocked(email.send).mock.calls.length;
+
+    await auth.resendVerification('AUTHOR@example.com');
+    await auth.requestPasswordReset('author@example.com');
+
+    expect(jest.mocked(email.send)).toHaveBeenCalledTimes(initialMessages + 2);
+    expect(emailToken()).toBeTruthy();
+    expect(jest.mocked(repository.createOrReplaceAccountActionToken)).toHaveBeenLastCalledWith(
+      expect.objectContaining({ kind: 'verify_email' }),
+    );
+  });
+
   it('resets a verified password once and revokes existing sessions', async () => {
     const auth = service();
     await registerAndVerify(auth, 'author@example.com');
@@ -223,6 +238,13 @@ describe('AuthService', () => {
       email: 'author@example.com',
     });
     await expect(auth.userForToken(other.token)).resolves.toBeUndefined();
+  });
+
+  it('rejects a session-revocation request that has no current session token', async () => {
+    const auth = service();
+    await expect(auth.revokeOtherSessions('user-1', undefined)).rejects.toBeInstanceOf(
+      UnauthorizedException,
+    );
   });
 
   it('keeps registration unavailable when email delivery is not configured', async () => {
