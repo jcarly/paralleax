@@ -70,9 +70,11 @@ describe('CharacterInspector', () => {
     expect(onPatch).toHaveBeenLastCalledWith('character-1', { name: 'Mira Vale' });
     expect(container.querySelectorAll('img')).toHaveLength(3);
 
+    await user.click(screen.getByRole('button', { name: 'Edit image' }));
     const image = screen.getByLabelText('Image URL');
-    fireEvent.change(image, { target: { value: 'https://images.example/mira-new.png' } });
-    fireEvent.blur(image, { target: { value: 'https://images.example/mira-new.png' } });
+    await user.clear(image);
+    await user.type(image, 'https://images.example/mira-new.png');
+    await user.click(screen.getByRole('button', { name: 'Save image' }));
     expect(onPatch).toHaveBeenLastCalledWith('character-1', {
       imageUrl: 'https://images.example/mira-new.png',
     });

@@ -78,6 +78,18 @@ export function CharacterInspector({
   return (
     <div>
       <h3>{t('inspector.character')}</h3>
+      <InspectorCommentSlot
+        slot={{ kind: 'field', field: 'imageUrl' }}
+        label={t('inspector.imageUrl')}
+        semanticCommentCounts={semanticCommentCounts}
+        onOpenSemanticComments={onOpenSemanticComments}
+      >
+        <ImageUrlField
+          imageUrl={character.imageUrl}
+          onChange={(imageUrl) => onChange({ imageUrl })}
+          onBlur={(imageUrl) => void onPatch(character.id, { imageUrl })}
+        />
+      </InspectorCommentSlot>
       <InspectorCommentField
         field="name"
         label={t('inspector.name')}
@@ -105,18 +117,6 @@ export function CharacterInspector({
           suggestions={categorySuggestions}
           onChange={(category) => onChange({ category })}
           onBlur={(category) => void onPatch(character.id, { category })}
-        />
-      </InspectorCommentSlot>
-      <InspectorCommentSlot
-        slot={{ kind: 'field', field: 'imageUrl' }}
-        label={t('inspector.imageUrl')}
-        semanticCommentCounts={semanticCommentCounts}
-        onOpenSemanticComments={onOpenSemanticComments}
-      >
-        <ImageUrlField
-          imageUrl={character.imageUrl}
-          onChange={(imageUrl) => onChange({ imageUrl })}
-          onBlur={(imageUrl) => void onPatch(character.id, { imageUrl })}
         />
       </InspectorCommentSlot>
       <InspectorCommentSlot

@@ -251,6 +251,18 @@ function StatDefinitionEditor({
   return (
     <div>
       <h3>{t('attributes.inspectorTitle')}</h3>
+      <InspectorCommentSlot
+        slot={{ kind: 'field', field: 'imageUrl' }}
+        label={t('inspector.imageUrl')}
+        semanticCommentCounts={semanticCommentCounts}
+        onOpenSemanticComments={onOpenSemanticComments}
+      >
+        <ImageUrlField
+          imageUrl={definition.imageUrl}
+          onChange={(imageUrl) => onChange({ ...definition, imageUrl })}
+          onBlur={(imageUrl) => void onPatch(definition.id, { imageUrl })}
+        />
+      </InspectorCommentSlot>
       {error ? <p className="error">{error}</p> : null}
       <InspectorCommentField
         field="name"
@@ -279,18 +291,6 @@ function StatDefinitionEditor({
           suggestions={categorySuggestions}
           onChange={(category) => onChange({ ...definition, category })}
           onBlur={(category) => void onPatch(definition.id, { category })}
-        />
-      </InspectorCommentSlot>
-      <InspectorCommentSlot
-        slot={{ kind: 'field', field: 'imageUrl' }}
-        label={t('inspector.imageUrl')}
-        semanticCommentCounts={semanticCommentCounts}
-        onOpenSemanticComments={onOpenSemanticComments}
-      >
-        <ImageUrlField
-          imageUrl={definition.imageUrl}
-          onChange={(imageUrl) => onChange({ ...definition, imageUrl })}
-          onBlur={(imageUrl) => void onPatch(definition.id, { imageUrl })}
         />
       </InspectorCommentSlot>
       <InspectorCommentSlot

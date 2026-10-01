@@ -240,7 +240,10 @@ priority, the order below is the intended delivery order.
 2. **Inspector image editing.** Reuse the existing context thumbnail and image
    URL field for locations, characters, item definitions, and stat definitions.
    Show a larger same-ratio image frame at the top of each inspector; clicking it
-   opens one shared URL-only image dialog until managed uploads exist.
+   opens one shared URL-only image dialog until managed uploads exist. **Completed
+   2026-10-01:** the four inspectors now reuse their existing `imageUrl` field
+   through one large 16:9 frame and shared URL-only dialog; no upload or media
+   persistence model was introduced.
 3. **External sign-in providers.** Evaluate Google and any additional provider
    only after defining provider choice, account linking, verified-email trust,
    duplicate-account recovery, and deployment secrets. Extend the existing user

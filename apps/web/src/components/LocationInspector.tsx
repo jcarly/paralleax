@@ -44,6 +44,18 @@ export function LocationInspector({
   return (
     <div>
       <h3>{t('inspector.location')}</h3>
+      <InspectorCommentSlot
+        slot={{ kind: 'field', field: 'imageUrl' }}
+        label={t('inspector.imageUrl')}
+        semanticCommentCounts={semanticCommentCounts}
+        onOpenSemanticComments={onOpenSemanticComments}
+      >
+        <ImageUrlField
+          imageUrl={location.imageUrl}
+          onChange={(imageUrl) => onLocalChange({ ...location, imageUrl })}
+          onBlur={(imageUrl) => void onPatch(location.id, { imageUrl })}
+        />
+      </InspectorCommentSlot>
       <InspectorCommentField
         field="name"
         label={t('inspector.name')}
@@ -71,18 +83,6 @@ export function LocationInspector({
           suggestions={categorySuggestions}
           onChange={(category) => onLocalChange({ ...location, category })}
           onBlur={(category) => void onPatch(location.id, { category })}
-        />
-      </InspectorCommentSlot>
-      <InspectorCommentSlot
-        slot={{ kind: 'field', field: 'imageUrl' }}
-        label={t('inspector.imageUrl')}
-        semanticCommentCounts={semanticCommentCounts}
-        onOpenSemanticComments={onOpenSemanticComments}
-      >
-        <ImageUrlField
-          imageUrl={location.imageUrl}
-          onChange={(imageUrl) => onLocalChange({ ...location, imageUrl })}
-          onBlur={(imageUrl) => void onPatch(location.id, { imageUrl })}
         />
       </InspectorCommentSlot>
       <InspectorCommentSlot

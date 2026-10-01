@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-10-01
+
+- Completed inspector image editing with shared 16:9 frames and one URL-only
+  dialog for location, character, item-definition, and stat-definition images.
+  This reuses existing `imageUrl` persistence and intentionally leaves managed
+  uploads out of scope.
+
 ## 2026-09-30
 
 - Added account safety: verification-required registrations, one-use expiring

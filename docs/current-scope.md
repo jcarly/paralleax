@@ -44,6 +44,9 @@ Paralleax currently includes:
 - Story-local deterministic calendar time.
 - Locations.
 - Characters.
+- Optional direct image URLs for locations, characters, reusable item definitions,
+  and reusable stat definitions. Their inspectors share a large 16:9 image frame
+  at the top and one URL-only editing dialog; managed media uploads remain out of scope.
 - Reusable typed stat definitions and authored assignments on the Story,
   characters, locations, and item definitions. Number, boolean, and string values
   support deterministic replay, interaction effects, trigger conditions, and
