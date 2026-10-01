@@ -38,7 +38,9 @@ export function ImageUrlDialog({
             onChange={(event) => setNextImageUrl(event.target.value)}
           />
         </label>
-        {nextImageUrl ? <img className="image-url-dialog-preview" src={nextImageUrl} alt="" /> : null}
+        {nextImageUrl ? (
+          <img className="image-url-dialog-preview" src={nextImageUrl} alt="" />
+        ) : null}
         <div className="modal-dialog-actions image-url-dialog-actions">
           <button className="ghost" type="button" onClick={onCancel}>
             {t('inspector.cancelImage')}

@@ -359,11 +359,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
     createChildFromInteraction,
     createParentForInteraction,
   });
-  const {
-    requestConnection,
-    startCanvasConnection,
-    endCanvasConnection,
-  } = connectionController;
+  const { requestConnection, startCanvasConnection, endCanvasConnection } = connectionController;
 
   const commentAccess = loadPhase === 'ready' && story?.capabilities?.canEdit === true;
   const reviewOnly = loadPhase !== 'ready' || story?.capabilities?.canEdit === false;

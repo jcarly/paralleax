@@ -87,7 +87,11 @@ export function StoryPlayer({
   }>();
   const [runtimeSliceKey, setRuntimeSliceKey] = useState('');
   const [loadAttempt, setLoadAttempt] = useState(0);
-  const { session, replay: replaySession, advance: advanceSession } = useReaderSessionState();
+  const {
+    session,
+    replay: replayReaderSession,
+    advance: advanceReaderSession,
+  } = useReaderSessionState();
   const {
     journeyInteractionIds: journey,
     currentInteractionId: currentId,
@@ -121,9 +125,26 @@ export function StoryPlayer({
   const editingChoiceInputRef = useRef<HTMLInputElement>(null);
   const savesDialogTrigger = useRef<HTMLButtonElement>(null);
   const sessionRef = useRef<ReaderProgressState>(session);
+  const replaySession = useCallback(
+    (...args: Parameters<typeof replayReaderSession>) => {
+      const nextSession = replayReaderSession(...args);
+      sessionRef.current = nextSession;
+      return nextSession;
+    },
+    [replayReaderSession],
+  );
+  const advanceSession = useCallback(
+    (...args: Parameters<typeof advanceReaderSession>) => {
+      const nextSession = advanceReaderSession(...args);
+      sessionRef.current = nextSession;
+      return nextSession;
+    },
+    [advanceReaderSession],
+  );
   const [timerNow, setTimerNow] = useState(() => Date.now());
   const directStartAutosavedKey = useRef('');
   const committedChoiceStep = useRef('');
+  const readerNavigationVersion = useRef(0);
   const realtimeLoadAttempt = useRef(0);
   const simulationEditDepth = useRef(0);
   const pendingRealtimeInvalidation = useRef<StoryRealtimeInvalidation | undefined>(undefined);
@@ -146,10 +167,6 @@ export function StoryPlayer({
         (isSimulationMode &&
           (simulationMutations.status === 'saving' || simulationMutations.status === 'error'))),
   );
-
-  useEffect(() => {
-    sessionRef.current = session;
-  }, [session]);
 
   useEffect(() => {
     if (
@@ -326,19 +343,29 @@ export function StoryPlayer({
       }
 
       const attempt = ++realtimeLoadAttempt.current;
-      const currentSession = sessionRef.current;
+      const navigationVersion = readerNavigationVersion.current;
       void api
         .getStoryRuntimeBootstrap(storyId)
         .then((bootstrap) => loadStoryRuntimeContext(storyId, bootstrap))
-        .then((runtimeStory) =>
-          loadStoryRuntimeSlice(
-            runtimeStory,
-            currentSession.currentInteractionId,
-            currentSession.journeyInteractionIds,
-          ),
-        )
+        .then(async (runtimeStory) => {
+          let requestedSession = sessionRef.current;
+          while (true) {
+            const nextStory = await loadStoryRuntimeSlice(
+              runtimeStory,
+              requestedSession.currentInteractionId,
+              requestedSession.journeyInteractionIds,
+            );
+            const latestSession = sessionRef.current;
+            if (hasSameRuntimeSliceRequest(requestedSession, latestSession)) return nextStory;
+            requestedSession = latestSession;
+          }
+        })
         .then((nextStory) => {
           if (attempt !== realtimeLoadAttempt.current) return;
+          if (navigationVersion !== readerNavigationVersion.current) {
+            realtimeRefresh.current(invalidation);
+            return;
+          }
           if (hasActiveSimulationMutations() || simulationEditDepth.current > 0) {
             pendingRealtimeInvalidation.current = prioritizeStoryRealtimeInvalidation(
               pendingRealtimeInvalidation.current,
@@ -770,6 +797,7 @@ export function StoryPlayer({
     const choiceStepKey = `${story.id}:${journey.length}:${current?.id ?? ''}:${currentStepStartedAt ?? ''}`;
     if (committedChoiceStep.current === choiceStepKey) return;
     committedChoiceStep.current = choiceStepKey;
+    readerNavigationVersion.current += 1;
     comments.cancelDraft();
     comments.selectThread(undefined);
     setTimerNow(now);
@@ -782,6 +810,7 @@ export function StoryPlayer({
     comments.selectThread(undefined);
     directStartAutosavedKey.current = '';
     committedChoiceStep.current = '';
+    readerNavigationVersion.current += 1;
     setTimerNow(Date.now());
     if (story) {
       replaySession(
@@ -799,6 +828,7 @@ export function StoryPlayer({
   function stepBack() {
     if (journey.length <= 1) return;
     committedChoiceStep.current = '';
+    readerNavigationVersion.current += 1;
     const nextJourney = journey.slice(0, -1);
     setTimerNow(Date.now());
     if (story) {
@@ -824,6 +854,7 @@ export function StoryPlayer({
   }) {
     if (!story) return;
     committedChoiceStep.current = '';
+    readerNavigationVersion.current += 1;
     setTimerNow(Date.now());
     const loadedStory = await loadStoryRuntimeSlice(
       story,
@@ -1514,4 +1545,15 @@ function runtimeStateKey(
   journeyInteractionIds: readonly string[],
 ) {
   return `${story.revision ?? 1}:${currentInteractionId ?? 'start'}:${journeyInteractionIds.join(',')}`;
+}
+
+function hasSameRuntimeSliceRequest(
+  first: ReaderProgressState,
+  second: ReaderProgressState,
+): boolean {
+  return (
+    first.currentInteractionId === second.currentInteractionId &&
+    first.journeyInteractionIds.length === second.journeyInteractionIds.length &&
+    first.journeyInteractionIds.every((id, index) => id === second.journeyInteractionIds[index])
+  );
 }

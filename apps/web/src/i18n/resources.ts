@@ -2287,7 +2287,8 @@ export const resources = {
       graph: {
         selectRootTrigger: 'Sélectionner le déclencheur racine',
         rootTrigger: 'Déclencheur racine',
-        createSourceOrTrigger: 'Créer une interaction source ou une liaison avec un nouveau déclencheur',
+        createSourceOrTrigger:
+          'Créer une interaction source ou une liaison avec un nouveau déclencheur',
         occurrences_one: '{{count}} occurrence',
         occurrences_other: '{{count}} occurrences',
         charactersPresent: 'Personnages présents : {{names}}',

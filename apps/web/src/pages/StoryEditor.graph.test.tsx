@@ -263,9 +263,7 @@ describe('StoryEditor graph collaboration and layout', () => {
     expect(
       within(inspector).getByRole('button', { name: 'Open comments for this element' }),
     ).toBeInTheDocument();
-    await user.click(
-      within(inspector).getByRole('button', { name: 'Comment on this element' }),
-    );
+    await user.click(within(inspector).getByRole('button', { name: 'Comment on this element' }));
 
     expect(
       screen.getByRole('complementary', { name: 'Comments for the selected element' }),
