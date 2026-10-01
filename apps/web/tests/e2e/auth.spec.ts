@@ -2,7 +2,9 @@ import { expect, test, type Page } from '@playwright/test';
 import type { Story } from '@paralleax/shared';
 import { paginated } from './editorTestHarness';
 
-test('registers, verifies email, creates a story, signs out, and signs back in', async ({ page }) => {
+test('registers, verifies email, creates a story, signs out, and signs back in', async ({
+  page,
+}) => {
   let authenticated = false;
   const stories: Story[] = [];
   const verificationToken = 'v'.repeat(43);
