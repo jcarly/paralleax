@@ -188,16 +188,13 @@ author can delete without having to understand why an action is disabled.
 
 Creating a new canvas connection should create a dedicated linked trigger for that source and output interaction by default. It must not silently mutate an unrelated existing trigger, because existing triggers may carry different conditions.
 
-When an output interaction already has one or more triggers, the editor must let
-the author choose between two actions while connecting:
+The graph affordance makes that choice explicit before the connection is made:
 
-- add the source interaction as another input of an existing trigger;
-- create a new trigger for the same output interaction.
+- dropping on an interaction's input `+` creates a new trigger for that output;
+- dropping on a visible trigger marker adds the source as another input of that
+  existing trigger.
 
-A normal canvas connection opens this choice when at least one existing trigger
-can accept the source. Dropping directly on a visible trigger marker remains an
-intentional shortcut that adds the source to that trigger without opening the
-choice.
+The editor does not open a follow-up connection-choice dialog.
 
 Adding the source to an existing trigger means every input on that trigger shares
 the same condition groups, probability, and timer. Creating a new trigger means
@@ -207,8 +204,8 @@ Graphically, a linked trigger is represented as a circular marker between its
 inputs and its output interaction. When a trigger has several inputs, their links
 all meet at the same marker, then one output link goes from that marker to the
 output interaction. Dropping a connection on an existing trigger marker adds the
-source as another input of that trigger. Dropping a connection on the empty input
-handle of an interaction creates a separate trigger for that output interaction.
+source as another input of that trigger. Dropping a connection on the input `+`
+of an interaction creates a separate trigger for that output interaction.
 
 When an interaction moves, automatically placed linked trigger markers and their
 edge paths are projected from the transient drag position. This live preview does

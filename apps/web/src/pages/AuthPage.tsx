@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { isValidUserDisplayName, normalizeUserDisplayName } from '@paralleax/shared';
 import { api, type AuthUser } from '../api';
+import { apiErrorMessage } from '../apiErrorMessages';
 import { LanguageSwitcher } from '../components/LanguageSwitcher';
 import './ProductPages.css';
 
@@ -69,6 +70,7 @@ export function AuthPage({
   const [showPassword, setShowPassword] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState('');
+  const [verificationEmail, setVerificationEmail] = useState('');
   const mode = onModeChange ? initialMode : localMode;
   const isRegister = mode === 'register';
   const passwordsMatch = !isRegister || password === confirmation;
@@ -86,12 +88,19 @@ export function AuthPage({
     try {
       setError('');
       setPending(true);
-      const user = isRegister
-        ? await api.register(email, password, normalizedDisplayName, accessCode || undefined)
-        : await api.login(email, password);
-      onAuthenticated(user);
+      if (isRegister) {
+        const result = await api.register(
+          email,
+          password,
+          normalizedDisplayName,
+          accessCode || undefined,
+        );
+        setVerificationEmail(result.email);
+      } else {
+        onAuthenticated(await api.login(email, password));
+      }
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : t('auth.failed'));
+      setError(apiErrorMessage(caught, t, t('auth.failed')));
     } finally {
       setPending(false);
     }
@@ -103,6 +112,7 @@ export function AuthPage({
     setConfirmation('');
     setAccessCode('');
     setError('');
+    setVerificationEmail('');
     onModeChange?.(nextMode);
   }
 
@@ -128,104 +138,145 @@ export function AuthPage({
           <span className="product-eyebrow">
             {t(isRegister ? 'auth.register.eyebrow' : 'auth.login.eyebrow')}
           </span>
-          <h2>{t(isRegister ? 'auth.register.title' : 'auth.login.title')}</h2>
-          <p>{t(isRegister ? 'auth.register.description' : 'auth.login.description')}</p>
+          <h2>
+            {verificationEmail
+              ? t('auth.verification.title')
+              : t(isRegister ? 'auth.register.title' : 'auth.login.title')}
+          </h2>
+          <p>
+            {verificationEmail
+              ? t('auth.verification.description', { email: verificationEmail })
+              : t(isRegister ? 'auth.register.description' : 'auth.login.description')}
+          </p>
           {notice ? (
             <p className="auth-notice" role="status">
               {notice}
             </p>
           ) : null}
-          <form onSubmit={(event) => void submit(event)}>
-            {isRegister ? (
-              <label className="product-field">
-                <span>{t('auth.displayName')}</span>
-                <input
-                  aria-label={t('auth.displayName')}
-                  autoComplete="nickname"
-                  placeholder={t('auth.displayNamePlaceholder')}
-                  value={displayName}
-                  onChange={(event) => setDisplayName(event.target.value)}
-                  minLength={2}
-                  maxLength={50}
-                  required
-                />
-                <small>{t('auth.displayNameHelp')}</small>
-              </label>
-            ) : null}
-            <label className="product-field">
-              <span>{t('auth.email')}</span>
-              <input
-                autoComplete="email"
-                type="email"
-                placeholder={t('auth.emailPlaceholder')}
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                required
-              />
-            </label>
-            <label className="product-field">
-              <span>{t('auth.password')}</span>
-              <span className="password-field">
-                <input
-                  aria-label={t('auth.password')}
-                  autoComplete={isRegister ? 'new-password' : 'current-password'}
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder={t(
-                    isRegister ? 'auth.newPasswordPlaceholder' : 'auth.passwordPlaceholder',
-                  )}
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                  minLength={8}
-                  required
-                />
-                <button type="button" onClick={() => setShowPassword((current) => !current)}>
-                  {t(showPassword ? 'auth.hidePassword' : 'auth.showPassword')}
-                </button>
-              </span>
-            </label>
-            {isRegister ? (
-              <>
+          {verificationEmail ? (
+            <div className="auth-verification-actions">
+              <button
+                className="product-primary auth-submit"
+                type="button"
+                disabled={pending}
+                onClick={() =>
+                  void (async () => {
+                    try {
+                      setPending(true);
+                      setError('');
+                      await api.resendVerification(verificationEmail);
+                    } catch (caught) {
+                      setError(apiErrorMessage(caught, t, t('auth.failed')));
+                    } finally {
+                      setPending(false);
+                    }
+                  })()
+                }
+              >
+                {pending ? t('auth.pending') : t('auth.verification.resend')}
+              </button>
+              <button className="product-secondary" type="button" onClick={switchMode}>
+                {t('auth.verification.backToSignIn')}
+              </button>
+            </div>
+          ) : (
+            <form onSubmit={(event) => void submit(event)}>
+              {isRegister ? (
                 <label className="product-field">
-                  <span>{t('auth.confirmPassword')}</span>
+                  <span>{t('auth.displayName')}</span>
                   <input
-                    autoComplete="new-password"
-                    type={showPassword ? 'text' : 'password'}
-                    placeholder={t('auth.confirmPasswordPlaceholder')}
-                    value={confirmation}
-                    onChange={(event) => setConfirmation(event.target.value)}
+                    aria-label={t('auth.displayName')}
+                    autoComplete="nickname"
+                    placeholder={t('auth.displayNamePlaceholder')}
+                    value={displayName}
+                    onChange={(event) => setDisplayName(event.target.value)}
+                    minLength={2}
+                    maxLength={50}
                     required
                   />
-                  {confirmation && !passwordsMatch ? (
-                    <small className="field-error">{t('auth.passwordsDoNotMatch')}</small>
-                  ) : null}
+                  <small>{t('auth.displayNameHelp')}</small>
                 </label>
-                <label className="product-field">
-                  <span>{t('auth.invitationCode')}</span>
+              ) : null}
+              <label className="product-field">
+                <span>{t('auth.email')}</span>
+                <input
+                  autoComplete="email"
+                  type="email"
+                  placeholder={t('auth.emailPlaceholder')}
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  required
+                />
+              </label>
+              <label className="product-field">
+                <span>{t('auth.password')}</span>
+                <span className="password-field">
                   <input
-                    aria-label={t('auth.invitationCode')}
-                    autoComplete="off"
-                    type="password"
-                    placeholder={t('auth.invitationPlaceholder')}
-                    value={accessCode}
-                    onChange={(event) => setAccessCode(event.target.value)}
-                    maxLength={128}
+                    aria-label={t('auth.password')}
+                    autoComplete={isRegister ? 'new-password' : 'current-password'}
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder={t(
+                      isRegister ? 'auth.newPasswordPlaceholder' : 'auth.passwordPlaceholder',
+                    )}
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                    minLength={8}
+                    required
                   />
-                  <small>{t('auth.invitationHelp')}</small>
-                </label>
-              </>
-            ) : null}
-            {error ? (
-              <p className="form-error" role="alert">
-                {error}
-              </p>
-            ) : null}
-            <button className="product-primary auth-submit" type="submit" disabled={!canSubmit}>
-              {pending
-                ? t('auth.pending')
-                : t(isRegister ? 'auth.register.submit' : 'auth.login.submit')}
-              {!pending ? <span aria-hidden="true">→</span> : null}
-            </button>
-          </form>
+                  <button type="button" onClick={() => setShowPassword((current) => !current)}>
+                    {t(showPassword ? 'auth.hidePassword' : 'auth.showPassword')}
+                  </button>
+                </span>
+              </label>
+              {isRegister ? (
+                <>
+                  <label className="product-field">
+                    <span>{t('auth.confirmPassword')}</span>
+                    <input
+                      autoComplete="new-password"
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder={t('auth.confirmPasswordPlaceholder')}
+                      value={confirmation}
+                      onChange={(event) => setConfirmation(event.target.value)}
+                      required
+                    />
+                    {confirmation && !passwordsMatch ? (
+                      <small className="field-error">{t('auth.passwordsDoNotMatch')}</small>
+                    ) : null}
+                  </label>
+                  <label className="product-field">
+                    <span>{t('auth.invitationCode')}</span>
+                    <input
+                      aria-label={t('auth.invitationCode')}
+                      autoComplete="off"
+                      type="password"
+                      placeholder={t('auth.invitationPlaceholder')}
+                      value={accessCode}
+                      onChange={(event) => setAccessCode(event.target.value)}
+                      maxLength={128}
+                    />
+                    <small>{t('auth.invitationHelp')}</small>
+                  </label>
+                </>
+              ) : null}
+              {error ? (
+                <p className="form-error" role="alert">
+                  {error}
+                </p>
+              ) : null}
+              <button className="product-primary auth-submit" type="submit" disabled={!canSubmit}>
+                {pending
+                  ? t('auth.pending')
+                  : t(isRegister ? 'auth.register.submit' : 'auth.login.submit')}
+                {!pending ? <span aria-hidden="true">→</span> : null}
+              </button>
+            </form>
+          )}
+          {!verificationEmail && !isRegister ? (
+            <a className="auth-recovery-link" href="/forgot-password">
+              {t('auth.login.forgotPassword')}
+            </a>
+          ) : null}
           <div className="auth-switch">
             <span>{t(isRegister ? 'auth.register.switchPrompt' : 'auth.login.switchPrompt')}</span>
             <button type="button" onClick={switchMode}>

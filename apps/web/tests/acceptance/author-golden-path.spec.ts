@@ -41,7 +41,7 @@ test('an author creates, persists, resumes, and simulates a conditional story', 
   await inspector.getByLabel('Attach to').selectOption({ label: 'Story' });
   await inspector.getByLabel('Initial value', { exact: true }).fill('0');
   const assignmentCreation = waitForApiResponse(page, 'POST', /\/api\/stories\/[^/]+\/stats$/);
-  await inspector.getByRole('button', { name: 'Assign' }).click();
+  await inspector.getByRole('button', { name: 'Assign', exact: true }).click();
   await expectSuccessful(assignmentCreation);
 
   const rootCreation = waitForApiResponse(page, 'POST', /\/api\/stories\/[^/]+\/interactions$/);
@@ -52,7 +52,8 @@ test('an author creates, persists, resumes, and simulates a conditional story', 
   let openingNode = interactionNode(page, 'Opening');
   await openingNode.click();
   const locationAssignment = waitForInteractionPatch(page);
-  await inspector.getByLabel('Location').selectOption({ label: 'Atrium' });
+  const locationSelect = inspector.getByRole('combobox', { name: /^Location/ });
+  await locationSelect.selectOption({ label: 'Atrium' });
   await expectSuccessful(locationAssignment);
   const characterAssignment = waitForInteractionPatch(page);
   await inspector.getByRole('checkbox', { name: 'Alice' }).check();
@@ -110,7 +111,7 @@ test('an author creates, persists, resumes, and simulates a conditional story', 
   await expect(inspector.getByRole('textbox', { name: 'Content' })).toHaveText(
     'Alice enters the atrium.',
   );
-  await expect(inspector.getByLabel('Location').locator('option:checked')).toHaveText('Atrium');
+  await expect(locationSelect.locator('option:checked')).toHaveText('Atrium');
   await expect(inspector.getByRole('checkbox', { name: 'Alice' })).toBeChecked();
   await interactionNode(page, 'Gain courage').click();
   await expect(inspector.getByLabel('Variable effect target')).toHaveValue(/Courage/);

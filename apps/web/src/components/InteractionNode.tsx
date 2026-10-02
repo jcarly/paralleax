@@ -12,7 +12,6 @@ export interface InteractionNodeData extends Record<string, unknown> {
   rootTriggerId?: string;
   rootTriggerSelected?: boolean;
   rootTriggerCommentCount?: number;
-  showNewTriggerInput?: boolean;
   onCreateChild?: (interactionId: string) => void;
   onCreateParent?: (interactionId: string) => void;
   onSelectRootTrigger?: (interactionId: string, triggerId: string) => void;
@@ -88,6 +87,7 @@ export function InteractionNode({ id, data }: NodeProps) {
             d.onOpenComments?.('trigger', d.rootTriggerId!);
           }}
         >
+          <span aria-hidden="true">◆</span>
           {d.rootTriggerCommentCount}
         </button>
       ) : null}
@@ -114,8 +114,8 @@ export function InteractionNode({ id, data }: NodeProps) {
           className="node-create node-create-parent nodrag nopan"
           role="button"
           tabIndex={0}
-          aria-label={t('graph.createSource')}
-          title={t('graph.createSource')}
+          aria-label={t('graph.createSourceOrTrigger')}
+          title={t('graph.createSourceOrTrigger')}
           onClick={createParent}
           onKeyDown={triggerKeyboardAction(createParent)}
         >
@@ -132,14 +132,6 @@ export function InteractionNode({ id, data }: NodeProps) {
           isConnectable={false}
         />
       ))}
-      <Handle
-        type="target"
-        id="new-trigger-input"
-        position={Position.Top}
-        className={`node-trigger-input nodrag nopan ${d.showNewTriggerInput ? 'is-visible' : ''}`}
-        aria-hidden="true"
-        title={t('graph.createTrigger')}
-      />
       <strong>
         {d.title}
         {d.occurrenceCount ? (

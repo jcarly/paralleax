@@ -7,6 +7,7 @@ import { LanguageSwitcher } from './components/LanguageSwitcher';
 import { AccountDialog } from './components/AccountDialog';
 import { FeedbackButton } from './features/feedback/FeedbackButton';
 import { AuthPage } from './pages/AuthPage';
+import { AccountActionPage, type AccountAction } from './pages/AccountActionPage';
 import { StoryList } from './pages/StoryList';
 import { StoryAccessPage } from './pages/StoryAccessPage';
 import { AdminUsersPage } from './pages/AdminUsersPage';
@@ -66,6 +67,20 @@ export function App() {
   const currentDestination = `${location.pathname}${location.search}${location.hash}`;
   const returnTo = safeReturnTo(new URLSearchParams(location.search).get('returnTo'));
   const isAuthenticationRoute = location.pathname === '/login' || location.pathname === '/register';
+  const accountAction = accountActionForPath(location.pathname);
+
+  if (accountAction)
+    return (
+      <AccountActionPage
+        action={accountAction}
+        onBackToSignIn={() => navigate('/login', { replace: true })}
+        onAuthenticated={(authenticatedUser) => {
+          setSessionExpired(false);
+          setUser(authenticatedUser);
+          navigate('/', { replace: true });
+        }}
+      />
+    );
 
   if (user === null && isAuthenticationRoute)
     return (
@@ -175,4 +190,11 @@ export function App() {
       ) : null}
     </div>
   );
+}
+
+function accountActionForPath(pathname: string): AccountAction | undefined {
+  if (pathname === '/verify-email') return 'verify-email';
+  if (pathname === '/reset-password') return 'reset-password';
+  if (pathname === '/forgot-password') return 'request-password-reset';
+  return undefined;
 }

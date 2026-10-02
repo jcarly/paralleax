@@ -74,6 +74,7 @@ export function TriggerNode({ data }: NodeProps) {
             d.onOpenComments?.('trigger', d.commentTargetId ?? d.triggerId);
           }}
         >
+          <span aria-hidden="true">◆</span>
           {d.commentCount}
         </button>
       ) : null}

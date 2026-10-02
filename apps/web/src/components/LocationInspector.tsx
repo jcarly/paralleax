@@ -5,6 +5,12 @@ import type {
   StatDefinition,
 } from '@paralleax/shared';
 import { useTranslation } from 'react-i18next';
+import {
+  InspectorCommentField,
+  InspectorCommentSlot,
+  type InspectorSemanticCommentProps,
+  type InspectorTextCommentProps,
+} from '../features/comments/InspectorCommentField';
 import { CategoryField } from './CategoryField';
 import { ImageUrlField } from './ImageUrlField';
 import { ItemInstanceTree } from './ItemInstanceTree';
@@ -17,6 +23,10 @@ export function LocationInspector({
   itemDefinitions,
   statDefinitions,
   onMoveItem,
+  textCommentCounts,
+  onOpenTextComments,
+  semanticCommentCounts,
+  onOpenSemanticComments,
 }: {
   location: Location;
   categorySuggestions?: string[];
@@ -28,53 +38,89 @@ export function LocationInspector({
   itemDefinitions: ItemDefinition[];
   statDefinitions: StatDefinition[];
   onMoveItem: (itemId: string, placement: MoveItemInstanceInput) => Promise<void>;
-}) {
+} & InspectorTextCommentProps &
+  InspectorSemanticCommentProps) {
   const { t } = useTranslation();
   return (
     <div>
       <h3>{t('inspector.location')}</h3>
-      <label>
-        {t('inspector.name')}
-        <input
-          data-comment-field="name"
-          value={location.name}
-          onChange={(event) => onLocalChange({ ...location, name: event.target.value })}
-          onBlur={(event) => void onPatch(location.id, { name: event.target.value })}
+      <InspectorCommentSlot
+        slot={{ kind: 'field', field: 'imageUrl' }}
+        label={t('inspector.imageUrl')}
+        semanticCommentCounts={semanticCommentCounts}
+        onOpenSemanticComments={onOpenSemanticComments}
+      >
+        <ImageUrlField
+          imageUrl={location.imageUrl}
+          onChange={(imageUrl) => onLocalChange({ ...location, imageUrl })}
+          onBlur={(imageUrl) => void onPatch(location.id, { imageUrl })}
         />
-      </label>
-      <CategoryField
-        category={location.category}
-        suggestions={categorySuggestions}
-        onChange={(category) => onLocalChange({ ...location, category })}
-        onBlur={(category) => void onPatch(location.id, { category })}
-      />
-      <ImageUrlField
-        imageUrl={location.imageUrl}
-        onChange={(imageUrl) => onLocalChange({ ...location, imageUrl })}
-        onBlur={(imageUrl) => void onPatch(location.id, { imageUrl })}
-      />
-      <h3>{t('inspector.items')}</h3>
-      {(location.items ?? []).length === 0 ? (
-        <p className="hint">{t('inspector.noLocationItems')}</p>
-      ) : (
-        <ItemInstanceTree
-          items={location.items ?? []}
-          itemDefinitions={itemDefinitions}
-          statDefinitions={statDefinitions}
-          rootPlacement={{ locationId: location.id }}
-          onMove={onMoveItem}
+      </InspectorCommentSlot>
+      <InspectorCommentField
+        field="name"
+        label={t('inspector.name')}
+        textCommentCounts={textCommentCounts}
+        onOpenTextComments={onOpenTextComments}
+      >
+        <label>
+          {t('inspector.name')}
+          <input
+            data-comment-field="name"
+            value={location.name}
+            onChange={(event) => onLocalChange({ ...location, name: event.target.value })}
+            onBlur={(event) => void onPatch(location.id, { name: event.target.value })}
+          />
+        </label>
+      </InspectorCommentField>
+      <InspectorCommentSlot
+        slot={{ kind: 'field', field: 'category' }}
+        label={t('inspector.category')}
+        semanticCommentCounts={semanticCommentCounts}
+        onOpenSemanticComments={onOpenSemanticComments}
+      >
+        <CategoryField
+          category={location.category}
+          suggestions={categorySuggestions}
+          onChange={(category) => onLocalChange({ ...location, category })}
+          onBlur={(category) => void onPatch(location.id, { category })}
         />
-      )}
-      <label>
-        {t('inspector.description')}
-        <textarea
-          data-comment-field="description"
-          rows={7}
-          value={location.description}
-          onChange={(event) => onLocalChange({ ...location, description: event.target.value })}
-          onBlur={(event) => void onPatch(location.id, { description: event.target.value })}
-        />
-      </label>
+      </InspectorCommentSlot>
+      <InspectorCommentSlot
+        slot={{ kind: 'section', section: 'items' }}
+        label={t('inspector.items')}
+        semanticCommentCounts={semanticCommentCounts}
+        onOpenSemanticComments={onOpenSemanticComments}
+      >
+        <h3>{t('inspector.items')}</h3>
+        {(location.items ?? []).length === 0 ? (
+          <p className="hint">{t('inspector.noLocationItems')}</p>
+        ) : (
+          <ItemInstanceTree
+            items={location.items ?? []}
+            itemDefinitions={itemDefinitions}
+            statDefinitions={statDefinitions}
+            rootPlacement={{ locationId: location.id }}
+            onMove={onMoveItem}
+          />
+        )}
+      </InspectorCommentSlot>
+      <InspectorCommentField
+        field="description"
+        label={t('inspector.description')}
+        textCommentCounts={textCommentCounts}
+        onOpenTextComments={onOpenTextComments}
+      >
+        <label>
+          {t('inspector.description')}
+          <textarea
+            data-comment-field="description"
+            rows={7}
+            value={location.description}
+            onChange={(event) => onLocalChange({ ...location, description: event.target.value })}
+            onBlur={(event) => void onPatch(location.id, { description: event.target.value })}
+          />
+        </label>
+      </InspectorCommentField>
     </div>
   );
 }

@@ -46,6 +46,9 @@ or rewritten. The API and shared narrative engine remain language-independent.
 - New product copy should be added to both resource sets and rendered through
   `react-i18next`; tests run in English unless a localization behavior is under
   test.
+- Operational API failures use stable error codes. The web localization boundary
+  maps those codes to interface copy and does not render generic server messages;
+  the API remains language-independent.
 - Adding languages increases the web bundle and requires translation review.
 - Local storage means the preference is browser-specific rather than synced
   across a user's devices. Account-level language may be added later without

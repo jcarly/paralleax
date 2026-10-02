@@ -41,6 +41,56 @@ describe('StoryPlayer loading and presentation', () => {
     expect(await screen.findByRole('button', { name: /Secret/ })).toBeEnabled();
   });
 
+  it('keeps the latest simulation slice when a realtime reload began before a choice', async () => {
+    vi.stubGlobal('EventSource', FakeEventSource);
+    const user = userEvent.setup();
+    await renderPlayer('/stories/story-1/play?mode=simulation&startInteractionId=start');
+    expect(await screen.findByDisplayValue('Start')).toBeInTheDocument();
+
+    let source: FakeEventSource | undefined;
+    await waitFor(() => {
+      source = FakeEventSource.instances.find(({ url }) => url === '/api/stories/story-1/events');
+      expect(source).toBeDefined();
+    });
+
+    const loadRuntimeSlice = vi.mocked(api.getStoryRuntimeSlice).getMockImplementation();
+    if (!loadRuntimeSlice) throw new Error('Expected runtime slice loading to be mocked.');
+    let staleSliceRequested = false;
+    let releaseStaleSlice: (() => void) | undefined;
+    vi.mocked(api.getStoryRuntimeSlice).mockImplementation((storyId, request = {}) => {
+      if (!staleSliceRequested && request.currentInteractionId === 'start') {
+        staleSliceRequested = true;
+        return new Promise((resolve) => {
+          releaseStaleSlice = () => {
+            void Promise.resolve(loadRuntimeSlice(storyId, request)).then(resolve);
+          };
+        });
+      }
+      return loadRuntimeSlice(storyId, request);
+    });
+
+    source?.emit('story-changed');
+    await waitFor(() => expect(staleSliceRequested).toBe(true));
+
+    await user.click(screen.getByRole('button', { name: 'Next' }));
+    expect(await screen.findByDisplayValue('Next')).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Secret' })).toBeInTheDocument();
+    const sliceCallsBeforeRelease = vi.mocked(api.getStoryRuntimeSlice).mock.calls.length;
+
+    await act(async () => {
+      releaseStaleSlice?.();
+      await Promise.resolve();
+    });
+
+    await waitFor(() =>
+      expect(vi.mocked(api.getStoryRuntimeSlice).mock.calls.length).toBeGreaterThan(
+        sliceCallsBeforeRelease,
+      ),
+    );
+    expect(screen.getByDisplayValue('Next')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Secret' })).toBeInTheDocument();
+  });
+
   it('shows a recoverable error when the story cannot be loaded', async () => {
     const user = userEvent.setup();
     vi.mocked(api.getStory)

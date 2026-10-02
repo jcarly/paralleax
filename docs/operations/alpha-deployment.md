@@ -2,7 +2,7 @@
 
 Status: Required operator runbook
 
-Last reviewed: 2026-08-10
+Last reviewed: 2026-09-30
 
 ## Scope
 
@@ -55,6 +55,9 @@ NODE_ENV=production
 CORS_ORIGIN=https://alpha.example.com
 REGISTRATION_MODE=access-code
 REGISTRATION_ACCESS_CODE=<at-least-16-random-characters>
+EMAIL_SMTP_URL=<smtp-or-smtps-url-kept-in-the-secret-manager>
+EMAIL_FROM=Paralleax <accounts@alpha.example.com>
+# EMAIL_REPLY_TO is optional.
 POSTGRES_SSL=true
 ```
 
@@ -165,8 +168,11 @@ After every deployment:
 
 1. Confirm the provider reports both containers healthy.
 2. Run `npm run smoke:deployment -- https://alpha.example.com`.
-3. On an isolated staging database, run the real-stack browser acceptance path:
-   `PARALLEAX_ACCEPTANCE_BASE_URL=https://alpha.example.com PARALLEAX_ACCEPTANCE_ACCESS_CODE=... npm run test:acceptance`.
+3. On an isolated test stack and database, run the real-stack browser acceptance
+   path. Its API must run with `NODE_ENV=test` and `TEST_EMAIL_OUTBOX=true` so the
+   harness can follow a verification link without exposing test messages from the
+   production deployment:
+   `PARALLEAX_ACCEPTANCE_BASE_URL=https://acceptance.example.com PARALLEAX_ACCEPTANCE_ACCESS_CODE=... npm run test:acceptance`.
    It creates a uniquely named test account and Story and must not target the
    production user database.
 4. Register with the current invitation code.
@@ -203,6 +209,8 @@ Never perform the first restore drill during an incident.
 ## Remaining Boundary
 
 This foundation does not provide provider-managed scheduling, TLS, DNS, secrets,
-monitoring, email delivery, account recovery, account self-service export or
-deletion, or legal approval. Those require the selected operator and provider
+monitoring, account self-service export or deletion, or legal approval.
+Transactional email is required for registration, verification, and recovery;
+selecting and operating the SMTP relay, its sender domain, credentials,
+deliverability monitoring, and retention policy remains an operator responsibility
 before invitations are sent.

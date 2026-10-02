@@ -14,6 +14,10 @@ export class AppConfigService {
   readonly registrationMode!: RegistrationMode;
   readonly registrationAccessCode?: string;
   readonly authRegistrationRateLimit!: number;
+  readonly testEmailOutbox!: boolean;
+  readonly emailSmtpUrl?: string;
+  readonly emailFrom?: string;
+  readonly emailReplyTo?: string;
 
   constructor() {
     Object.assign(this, loadAppConfig(process.env));
@@ -62,6 +66,19 @@ export function loadAppConfig(environment: NodeJS.ProcessEnv) {
           10_000,
         )
       : 5;
+  const testEmailOutbox = booleanValue(
+    'TEST_EMAIL_OUTBOX',
+    environment.TEST_EMAIL_OUTBOX ?? 'false',
+  );
+  if (testEmailOutbox && nodeEnvironment !== 'test') {
+    throw new Error('TEST_EMAIL_OUTBOX is only available in the test environment');
+  }
+  const emailSmtpUrl = optionalSmtpUrl(environment.EMAIL_SMTP_URL);
+  const emailFrom = optionalEmailHeaderValue('EMAIL_FROM', environment.EMAIL_FROM);
+  const emailReplyTo = optionalEmailHeaderValue('EMAIL_REPLY_TO', environment.EMAIL_REPLY_TO);
+  if (Boolean(emailSmtpUrl) !== Boolean(emailFrom)) {
+    throw new Error('EMAIL_SMTP_URL and EMAIL_FROM must be configured together');
+  }
   return {
     nodeEnvironment,
     databaseUrl: validUrl(
@@ -76,6 +93,10 @@ export function loadAppConfig(environment: NodeJS.ProcessEnv) {
     registrationMode,
     registrationAccessCode: registrationMode === 'access-code' ? registrationAccessCode : undefined,
     authRegistrationRateLimit,
+    testEmailOutbox,
+    emailSmtpUrl,
+    emailFrom,
+    emailReplyTo,
   };
 }
 
@@ -117,6 +138,25 @@ function booleanValue(name: string, value: string) {
   if (value === 'true') return true;
   if (value === 'false') return false;
   throw new Error(`${name} must be true or false`);
+}
+
+function optionalSmtpUrl(value: string | undefined) {
+  const normalized = value?.trim();
+  if (!normalized) return undefined;
+  const url = validUrl('EMAIL_SMTP_URL', normalized, ['smtp:', 'smtps:']);
+  if (!new URL(url).hostname) {
+    throw new Error('EMAIL_SMTP_URL must include an SMTP hostname');
+  }
+  return url;
+}
+
+function optionalEmailHeaderValue(name: string, value: string | undefined) {
+  const normalized = value?.trim();
+  if (!normalized) return undefined;
+  if (/[\r\n]/.test(normalized)) {
+    throw new Error(`${name} must not contain a line break`);
+  }
+  return normalized;
 }
 
 function enumValue<T extends string>(name: string, value: string, allowed: readonly T[]): T {

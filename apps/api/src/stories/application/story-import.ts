@@ -10,6 +10,7 @@ import {
 } from '@paralleax/shared';
 import type { ImportChoiceScriptDto, ImportQspDto, QspSourceMetadataDto } from '../dto/stories.dto';
 import { StoriesRepository } from '../stories.repository';
+import { apiErrorResponse } from '../../operations/api-error-response';
 
 export const CHOICESCRIPT_IMPORT_SOURCE_LIMIT = 96 * 1024;
 export const QSP_IMPORT_SOURCE_LIMIT = 80 * 1024;
@@ -24,7 +25,12 @@ export class StoryImportService {
       0,
     );
     if (sourceSize > CHOICESCRIPT_IMPORT_SOURCE_LIMIT) {
-      throw new BadRequestException('ChoiceScript source files exceed the 96 KiB import limit');
+      throw new BadRequestException(
+        apiErrorResponse(
+          'CHOICESCRIPT_IMPORT_TOO_LARGE',
+          'ChoiceScript source files exceed the 96 KiB import limit',
+        ),
+      );
     }
     return this.persist(importChoiceScript(input.files, importOptions()), 'ChoiceScript', userId);
   }
@@ -47,12 +53,17 @@ export class StoryImportService {
     const expectedFormat = qspFormatForFileName(input.name);
     if (expectedFormat !== input.format) {
       throw new BadRequestException(
-        `The file extension does not match the declared QSP ${input.format} format`,
+        apiErrorResponse(
+          'QSP_IMPORT_FORMAT_MISMATCH',
+          `The file extension does not match the declared QSP ${input.format} format`,
+        ),
       );
     }
     const source = qspImportSource(input, bytes);
     if (sourceLimit !== undefined && qspSourceSize(source) > sourceLimit) {
-      throw new BadRequestException('The QSP source exceeds the 80 KiB import limit');
+      throw new BadRequestException(
+        apiErrorResponse('QSP_IMPORT_TOO_LARGE', 'The QSP source exceeds the 80 KiB import limit'),
+      );
     }
     return this.persist(importQsp(source, importOptions()), 'QSP', userId);
   }
@@ -76,7 +87,12 @@ export class StoryImportService {
             .filter(Boolean)
             .join(': '),
         );
-      throw new BadRequestException(errors.join('; ') || `${sourceLabel} import failed`);
+      throw new BadRequestException(
+        apiErrorResponse(
+          'STORY_IMPORT_FAILED',
+          errors.join('; ') || `${sourceLabel} import failed`,
+        ),
+      );
     }
     await this.repository.save(result.story, userId);
     return { story: structuredClone(result.story), report: result.report };
@@ -111,7 +127,10 @@ function decodeQspLocationBundle(content: string) {
     return parseQspLocationBundle(content);
   } catch (caught) {
     throw new BadRequestException(
-      caught instanceof Error ? caught.message : 'The QSP locations bundle is invalid',
+      apiErrorResponse(
+        'QSP_LOCATION_BUNDLE_INVALID',
+        caught instanceof Error ? caught.message : 'The QSP locations bundle is invalid',
+      ),
     );
   }
 }
@@ -126,7 +145,9 @@ function decodeUtf8(bytes: Uint8Array) {
   try {
     return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
   } catch {
-    throw new BadRequestException('The QSP text source is not valid UTF-8');
+    throw new BadRequestException(
+      apiErrorResponse('QSP_SOURCE_INVALID_UTF8', 'The QSP text source is not valid UTF-8'),
+    );
   }
 }
 

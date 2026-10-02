@@ -1,7 +1,8 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { getStoryGraphClickCreationPosition } from '../storyGraphCreationLayout';
+import * as elkLayout from '../storyGraphElkLayout';
 import {
   api,
   renderPlayer,
@@ -16,6 +17,14 @@ vi.mock('../api', async () => {
 
 describe('StoryPlayer simulation authoring', () => {
   setupStoryPlayerTestSuite();
+
+  beforeEach(() => {
+    vi.spyOn(elkLayout, 'computeStoryGraphElkLayout').mockResolvedValue({
+      interactionUpdates: [],
+      triggerUpdates: [],
+      affectedNodeIds: [],
+    });
+  });
 
   it('shows unavailable interactions in simulation mode and lets authors force them', async () => {
     const user = userEvent.setup();
@@ -159,10 +168,10 @@ describe('StoryPlayer simulation authoring', () => {
 
   it('adds an option in simulation mode and focuses its title', async () => {
     const user = userEvent.setup();
-    const position = getStoryGraphClickCreationPosition(story, {
+    const position = (await getStoryGraphClickCreationPosition(story, {
       kind: 'child',
       sourceId: 'next',
-    })!;
+    }))!;
     const withOption = structuredClone(story);
     withOption.interactions.push({
       id: 'option-1',
@@ -213,10 +222,10 @@ describe('StoryPlayer simulation authoring', () => {
     });
     delete (withOption.interactions[3] as Partial<(typeof withOption.interactions)[number]>)
       .position;
-    const nestedPosition = getStoryGraphClickCreationPosition(withOption, {
+    const nestedPosition = (await getStoryGraphClickCreationPosition(withOption, {
       kind: 'child',
       sourceId: 'option-1',
-    })!;
+    }))!;
     const nestedOption = {
       id: 'option-2',
       title: 'Nested option',
@@ -254,7 +263,7 @@ describe('StoryPlayer simulation authoring', () => {
   it('adds a root option at the beginning of simulation mode', async () => {
     const user = userEvent.setup();
     const runtimeStory = { ...story, interactions: [story.interactions[0]] };
-    const position = getStoryGraphClickCreationPosition(runtimeStory, { kind: 'root' })!;
+    const position = (await getStoryGraphClickCreationPosition(runtimeStory, { kind: 'root' }))!;
     const rootOption = {
       id: 'root-2',
       title: 'New option',

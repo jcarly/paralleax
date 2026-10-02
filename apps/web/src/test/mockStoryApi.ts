@@ -33,6 +33,10 @@ export function createStoryApiMock() {
     createGraphDecoration: vi.fn(),
     updateGraphDecoration: vi.fn(),
     deleteGraphDecoration: vi.fn(),
+    getStoryAccess: vi.fn(),
+    updateStoryAccess: vi.fn(),
+    setStoryCollaborator: vi.fn(),
+    removeStoryCollaborator: vi.fn(),
     renameStory: vi.fn(),
     updateStory: vi.fn(),
     addTrigger: vi.fn(),
@@ -54,5 +58,7 @@ export function createStoryApiMock() {
     addCommentMessage: vi.fn(),
     updateCommentThreadStatus: vi.fn(),
     updateCommentThreadAnchor: vi.fn(),
+    deleteCommentThread: vi.fn(),
+    restoreCommentThread: vi.fn(),
   } satisfies StoryApiMock;
 }

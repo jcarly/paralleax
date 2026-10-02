@@ -130,7 +130,6 @@ button:disabled {
 /* App shell and generic pages */
 
 header {
-  height: 58px;
   background: var(--color-header);
   color: var(--color-text);
   display: flex;

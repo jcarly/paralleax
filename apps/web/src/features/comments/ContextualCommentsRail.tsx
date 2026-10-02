@@ -1,4 +1,8 @@
-import type { CommentAnchor, StoryCommentThread } from '@paralleax/shared';
+import {
+  commentAnchorSlotLabel,
+  type CommentAnchor,
+  type StoryCommentThread,
+} from '@paralleax/shared';
 import { useTranslation } from 'react-i18next';
 import { CommentDiscussionCard, CommentDraftCard } from './CommentDiscussionCard';
 
@@ -9,11 +13,13 @@ export function ContextualCommentsRail({
   error,
   canComment,
   canManageThread,
+  canDeleteThread = () => false,
   onSelect,
   onCreate,
   onCancelDraft,
   onReply,
   onStatus,
+  onDelete,
   onReattach,
 }: {
   threads: StoryCommentThread[];
@@ -22,12 +28,15 @@ export function ContextualCommentsRail({
   error: string;
   canComment: boolean;
   canManageThread: (thread: StoryCommentThread) => boolean;
-  onSelect: (threadId: string) => void;
+  canDeleteThread?: (thread: StoryCommentThread) => boolean;
+  onSelect: (threadId: string | undefined) => void;
   onCreate: (body: string) => Promise<unknown>;
   onCancelDraft: () => void;
   onReply: (threadId: string, body: string) => Promise<unknown>;
   onStatus: (threadId: string, status: StoryCommentThread['status']) => Promise<unknown>;
+  onDelete?: (threadId: string) => Promise<unknown> | void;
   onReattach?: (threadId: string) => Promise<unknown>;
+  onClose: () => void;
 }) {
   const { t } = useTranslation();
 
@@ -52,9 +61,12 @@ export function ContextualCommentsRail({
           expanded={thread.id === selectedThreadId}
           canComment={canComment}
           canManageThread={canManageThread(thread)}
+          canDeleteThread={canDeleteThread(thread)}
           onExpand={() => onSelect(thread.id)}
+          onCollapse={() => onSelect(undefined)}
           onReply={(body) => onReply(thread.id, body)}
           onStatus={(status) => onStatus(thread.id, status)}
+          onDelete={onDelete ? () => onDelete(thread.id) : undefined}
           onReattach={thread.detached && onReattach ? () => onReattach(thread.id) : undefined}
         />
       ))}
@@ -67,5 +79,8 @@ function anchorDescription(
   t: (key: string) => string,
 ) {
   if (anchor.kind === 'text') return `“${anchor.selector.exact}”`;
+  if (anchor.kind === 'field' || anchor.kind === 'section') {
+    return `${t(`comments.anchor.${anchor.targetType}`)}: ${commentAnchorSlotLabel(anchor)}`;
+  }
   return t(`comments.anchor.${anchor.targetType}`);
 }

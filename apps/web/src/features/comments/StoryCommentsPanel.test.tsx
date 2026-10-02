@@ -106,4 +106,92 @@ describe('StoryCommentsPanel', () => {
     await user.click(screen.getByRole('button', { name: 'Reattach here' }));
     expect(onReattach).toHaveBeenCalledWith('thread-1');
   });
+
+  it('loads the deleted filter and restores a recoverable whole discussion', async () => {
+    const user = userEvent.setup();
+    const deletedThread: StoryCommentThread = {
+      ...thread,
+      id: 'thread-deleted',
+      deletedBy: thread.createdBy,
+      deletedAt: '2026-09-22T09:00:00.000Z',
+      messages: [
+        { ...thread.messages[0], threadId: 'thread-deleted', body: 'Recover this thread.' },
+      ],
+    };
+    const onLoadDeleted = vi.fn();
+    const onRestore = vi.fn().mockResolvedValue(thread);
+    const { rerender } = render(
+      <StoryCommentsPanel
+        open
+        loading={false}
+        error=""
+        threads={[thread, deletedThread]}
+        canComment
+        canDeleteThread
+        onClose={vi.fn()}
+        onSelect={vi.fn()}
+        onCancelDraft={vi.fn()}
+        onCreate={vi.fn()}
+        onReply={vi.fn()}
+        onStatus={vi.fn()}
+        onRestore={onRestore}
+        onLoadDeleted={onLoadDeleted}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Deleted' }));
+    expect(onLoadDeleted).toHaveBeenCalledOnce();
+    expect(screen.getByText('Recover this thread.')).toBeInTheDocument();
+    expect(screen.queryByText('Could this be clearer?')).not.toBeInTheDocument();
+
+    rerender(
+      <StoryCommentsPanel
+        open
+        loading={false}
+        error=""
+        threads={[thread, deletedThread]}
+        selectedThread={deletedThread}
+        canComment
+        canDeleteThread
+        onClose={vi.fn()}
+        onSelect={vi.fn()}
+        onCancelDraft={vi.fn()}
+        onCreate={vi.fn()}
+        onReply={vi.fn()}
+        onStatus={vi.fn()}
+        onRestore={onRestore}
+        onLoadDeleted={onLoadDeleted}
+      />,
+    );
+
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Restore' }));
+    expect(onRestore).toHaveBeenCalledWith('thread-deleted');
+  });
+
+  it('deletes the selected discussion as one unit', async () => {
+    const user = userEvent.setup();
+    const onDelete = vi.fn().mockResolvedValue({ ...thread, deletedAt: '2026-09-22T09:00:00Z' });
+    render(
+      <StoryCommentsPanel
+        open
+        loading={false}
+        error=""
+        threads={[thread]}
+        selectedThread={thread}
+        canComment
+        canDeleteThread
+        onClose={vi.fn()}
+        onSelect={vi.fn()}
+        onCancelDraft={vi.fn()}
+        onCreate={vi.fn()}
+        onReply={vi.fn()}
+        onStatus={vi.fn()}
+        onDelete={onDelete}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Delete discussion' }));
+    expect(onDelete).toHaveBeenCalledWith(thread.id);
+  });
 });

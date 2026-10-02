@@ -11,6 +11,7 @@ import type {
 } from '@paralleax/shared';
 import { api } from '../api';
 import { StoryEditor } from '../pages/StoryEditor';
+import * as elkLayout from '../storyGraphElkLayout';
 import { FakeEventSource } from './FakeEventSource';
 import {
   storyProjectionBootstrap,
@@ -116,11 +117,14 @@ export function storyWithThreeInteractions(): Story {
   return story;
 }
 
-export async function renderEditor(story: Story = baseStory) {
+export async function renderEditor(
+  story: Story = baseStory,
+  initialEntry = '/stories/story-1/edit',
+) {
   vi.mocked(api.getStory).mockResolvedValue(cloneStory(story));
 
   render(
-    <MemoryRouter initialEntries={['/stories/story-1/edit']}>
+    <MemoryRouter initialEntries={[initialEntry]}>
       <Routes>
         <Route path="/stories/:storyId/edit" element={<StoryEditor />} />
       </Routes>
@@ -146,11 +150,19 @@ export function setupStoryEditorTestSuite() {
 
   beforeEach(() => {
     vi.resetAllMocks();
+    vi.spyOn(elkLayout, 'preloadStoryGraphElk').mockResolvedValue(undefined);
     mockProgressiveStoryLoading();
     window.localStorage.clear();
     FakeEventSource.instances = [];
     vi.spyOn(window, 'confirm').mockReturnValue(true);
     vi.mocked(api.listCommentThreads).mockResolvedValue([]);
+    vi.mocked(api.getStoryAccess).mockResolvedValue({
+      visibility: 'private',
+      editPolicy: 'owner',
+      commentPolicy: 'editors',
+      owner: { id: 'owner-1', email: 'owner@example.com', displayName: 'Owner' },
+      collaborators: [],
+    });
     vi.mocked(api.getStoryHistory).mockResolvedValue({
       entries: [],
       canUndo: false,

@@ -60,7 +60,6 @@ describe('story graph mapping', () => {
           title: 'Start',
           body: 'Start body',
           selected: false,
-          showNewTriggerInput: false,
           rootTriggerId: 'trigger-root',
           rootTriggerSelected: false,
         },
@@ -69,13 +68,13 @@ describe('story graph mapping', () => {
         id: 'interaction-2',
         type: 'interaction',
         position: { x: 80, y: 420 },
-        data: { title: 'Choice', body: 'Choice body', selected: true, showNewTriggerInput: false },
+        data: { title: 'Choice', body: 'Choice body', selected: true },
       },
       {
         id: 'interaction-3',
         type: 'interaction',
         position: { x: 320, y: 270 },
-        data: { title: 'Other', body: 'Other body', selected: false, showNewTriggerInput: false },
+        data: { title: 'Other', body: 'Other body', selected: false },
       },
     ]);
   });
@@ -104,14 +103,6 @@ describe('story graph mapping', () => {
     });
   });
 
-  it('marks new-trigger input handles as visible while a connection is active', () => {
-    expect(
-      buildInteractionNodes(story, undefined, undefined, { showNewTriggerInput: true }).map(
-        (node) => node.data.showNewTriggerInput,
-      ),
-    ).toEqual([true, true, true]);
-  });
-
   it('builds one edge per trigger input without selecting links directly', () => {
     const triggerNodeId = getTriggerNodeId('interaction-2', 'trigger-linked');
 
@@ -123,6 +114,8 @@ describe('story graph mapping', () => {
         sourceHandle: 'routing-output-bottom',
         target: triggerNodeId,
         targetHandle: 'routing-input-top',
+        markerStart: { type: MarkerType.ArrowClosed, color: '#8d918f' },
+        markerEnd: { type: MarkerType.ArrowClosed, color: '#8d918f' },
         className: 'trigger-edge',
         data: {
           interactionId: 'interaction-2',
@@ -139,7 +132,9 @@ describe('story graph mapping', () => {
         source: 'interaction-3',
         sourceHandle: 'routing-output-bottom',
         target: triggerNodeId,
-        targetHandle: 'routing-input-top',
+        targetHandle: 'routing-input-right',
+        markerStart: { type: MarkerType.ArrowClosed, color: '#8d918f' },
+        markerEnd: { type: MarkerType.ArrowClosed, color: '#8d918f' },
         className: 'trigger-edge',
         data: {
           interactionId: 'interaction-2',
@@ -157,6 +152,7 @@ describe('story graph mapping', () => {
         sourceHandle: 'routing-output-bottom',
         target: 'interaction-2',
         targetHandle: 'routing-input-top',
+        markerStart: { type: MarkerType.ArrowClosed, color: '#8d918f' },
         markerEnd: { type: MarkerType.ArrowClosed, color: '#8d918f' },
         className: 'trigger-edge',
         data: {
@@ -168,6 +164,30 @@ describe('story graph mapping', () => {
         },
       },
     ]);
+  });
+
+  it('attaches ELK routes to their matching input and output edges', () => {
+    const inputRoute = [
+      { x: 10, y: 20 },
+      { x: 30, y: 40 },
+    ];
+    const outputRoute = [
+      { x: 30, y: 40 },
+      { x: 50, y: 60 },
+    ];
+    const edges = buildTriggerEdges(
+      story,
+      undefined,
+      undefined,
+      new Map([
+        ['trigger:interaction-2:trigger-linked-interaction-1', inputRoute],
+        ['trigger:interaction-2:trigger-linked-output', outputRoute],
+      ]),
+    );
+
+    expect(edges[0].data?.elkRoute).toEqual(inputRoute);
+    expect(edges[1].data?.elkRoute).toBeUndefined();
+    expect(edges[2].data?.elkRoute).toEqual(outputRoute);
   });
 
   it('uses separate vertical routing lanes for edges sharing the same graph band', () => {

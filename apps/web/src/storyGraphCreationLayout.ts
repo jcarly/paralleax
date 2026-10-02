@@ -8,7 +8,8 @@ import {
   type Story,
   type Trigger,
 } from '@paralleax/shared';
-import { computeStoryGraphLayout, type StoryGraphLayoutOptions } from './storyGraphLayout';
+import { computeStoryGraphElkLayout } from './storyGraphElkLayout';
+import type { StoryGraphLayoutOptions } from './storyGraphLayout';
 
 export type StoryGraphClickCreation =
   { kind: 'root' } | { kind: 'child'; sourceId: string } | { kind: 'parent'; targetId: string };
@@ -16,11 +17,11 @@ export type StoryGraphClickCreation =
 const placeholderInteractionIdBase = '__paralleax_new_interaction__';
 const placeholderTriggerIdBase = '__paralleax_new_trigger__';
 
-export function getStoryGraphClickCreationPosition(
+export async function getStoryGraphClickCreationPosition(
   story: Story,
   creation: StoryGraphClickCreation,
   options: StoryGraphLayoutOptions = {},
-): Position | undefined {
+): Promise<Position | undefined> {
   const positionedStory = ensureStoryInteractionPositions(story);
   const interactionId = getUnusedId(
     placeholderInteractionIdBase,
@@ -84,12 +85,19 @@ export function getStoryGraphClickCreationPosition(
         ? [{ type: 'trigger' as const, interactionId: target.id, triggerId }]
         : []),
   ];
-  const layout = computeStoryGraphLayout(projectedStory, { kind: 'selection', targets }, options);
+  try {
+    const layout = await computeStoryGraphElkLayout(projectedStory, {
+      ...options,
+      scope: { kind: 'selection', targets },
+    });
 
-  return (
-    layout.interactionUpdates.find((update) => update.interactionId === interactionId)?.position ??
-    fallbackPosition
-  );
+    return (
+      layout.interactionUpdates.find((update) => update.interactionId === interactionId)
+        ?.position ?? fallbackPosition
+    );
+  } catch {
+    return fallbackPosition;
+  }
 }
 
 function getFallbackPosition(

@@ -1,7 +1,142 @@
 # Changelog
 
+## 2026-10-01
+
+- Completed inspector image editing with shared 16:9 frames and one URL-only
+  dialog for location, character, item-definition, and stat-definition images.
+  This reuses existing `imageUrl` persistence and intentionally leaves managed
+  uploads out of scope.
+
+## 2026-09-30
+
+- Added account safety: verification-required registrations, one-use expiring
+  hashed verification/reset tokens, neutral password-reset requests, signed-in
+  password change, and session revocation. Password reset/change removes prior
+  sessions; upgraded accounts remain verified to avoid lockout. The web now
+  includes verification, recovery, reset, and account-security flows.
+- Added an optional SMTP transactional-email foundation using Nodemailer, with
+  validated configuration, mandatory TLS, a sender default, sanitized message
+  headers, stable delivery failures, and no recipient/content/credential logging.
+- Added a repository instruction requiring agents to evaluate existing
+  dependencies, maintained libraries, and official SDKs before implementing
+  general-purpose capabilities from scratch.
+- Completed semantic comment slots for Interaction, Trigger, Character, Location,
+  Item Definition, and Stat Definition inspectors. A shared target-specific
+  registry persists stable field/section anchors through the existing discussion
+  workflow, while text selection, dynamic rows, and Story-level headings retain
+  their distinct scopes. Inspectors also preserve an explicit entity add-comment
+  action beside the existing discussion-count toggle.
+- Simplified graph link creation: the input `+` now directly creates a dedicated
+  Trigger, while dropping on a Trigger marker adds an input to that existing
+  Trigger. The transient input slot and follow-up connection-choice dialog are
+  removed.
+
+## 2026-09-29
+
+- Preloaded ELK once the ready Story graph is idle, moving bundle download and
+  initialization out of the first whole-graph organization whenever idle time is
+  available.
+- Routed complete-graph, single-element, and rectangular selection organization
+  through ELK while preserving fixed unselected elements and existing Trigger
+  follow behavior.
+- Used a temporary scoped ELK projection to place newly created child and parent
+  Interactions before their create request, while retaining canvas coordinates
+  and collision-free fallback placement.
+
+## 2026-09-28
+
+- Added a canvas wait cursor during graph organization and position saving,
+  prevented duplicate organization, and restored controls after failures with a
+  localized layout error and retry action.
+- Updated graph tests for current Trigger ports and arrows, asynchronous ELK
+  organization, and whole-graph undo. Added coverage for ELK projection and route
+  rendering without relaxing coverage thresholds.
+- Temporarily marked the known two-interaction cycle routing defect after reload
+  as an expected Playwright failure. Organization and persistence checks remain
+  blocking, and `PARALLEAX_LAYOUT_STRICT=1` restores the strict routing assertion.
+
+## 2026-09-25
+
+- Added three direct two-interaction cycles to the layout reference Story and
+  explicit checks that their routes avoid both cards. A focused browser
+  regression reproduces card traversal after reloading organized positions;
+  JSON/SVG diagnostics distinguish ELK routes from the fallback routing defect.
+- Compared twelve ELK layout configurations against actual rendered routes and
+  recorded the missing edge-section integration and libavoid routing fit.
+  Corrected the layout audit so short near-perpendicular crossings are not
+  misclassified as overlapping routes.
+- Added a deterministic 100-interaction layout-quality reference Story with
+  branching, convergence, long links, cycles, and a disconnected island. A
+  browser audit measures actual rendered routes and node bounds, emits JSON
+  and SVG diagnostics, and records the current zero-defect target as an expected
+  failure for future layout-engine comparisons.
+
+## 2026-09-24
+
+- Confined inspector scrolling to its fields so long content no longer scrolls
+  the graph out of view. The comment toggle stays fixed across the inspector
+  border and remains fully clickable on desktop and narrow layouts.
+
+## 2026-09-23
+
+- Removed redundant save buttons from Story properties and access policies.
+  The start date now persists when editing finishes, while each access-policy
+  selection persists immediately and rolls back visibly when its request fails.
+- Reorganized the Story settings modal so its header and tabs never collapse
+  into the form, only its content area scrolls in short viewports, and access
+  cards use the full modal width instead of crowding their controls into two
+  narrow columns. Long labels and compact screens now wrap without overlap.
+- Recorded the accepted semantic comment-slot direction: extend the existing
+  anchored-discussion model with shared, typed, translation-independent slots,
+  starting with entity-inspector fields and sections before Story headings or
+  dynamic rows.
+- Kept the global Story comment list inside the standard inspector pane and made
+  editor grid placement explicit. Narrow layouts now preserve a full-width graph
+  and its viewport transform while comments overlay from the visible inspector,
+  instead of compressing the graph into residual desktop columns. Selecting an
+  authored element while the list is open now switches directly to that element's
+  inspector.
+
+## 2026-09-22
+
+- Added persisted graph-element context actions for Interactions, Triggers,
+  frames, and graph text. Context menus reuse selection, comments, child
+  creation, automatic layout, deletion confirmations, and persistence; the
+  `Delete` key uses the same deletion path outside editable fields. Frame resize
+  controls now preserve the authored top-left origin.
+- Added recoverable review-discussion deletion across canvas post-its,
+  inspector anchors, and the signed-in player. Thread authors and Story managers
+  can remove a whole discussion, including every reply, from normal projections,
+  inspect it in the global deleted view, and restore it without data loss.
+- Integrated entity and anchored-text discussions into the Story inspector. A
+  translucent contextual rail now opens from the global list, consistent graph
+  and context-list badges, or inspector controls without opening during ordinary
+  selection. All discussions stay visible, only the active one exposes its reply
+  field, blur collapses that field without closing the rail, and supported text
+  fields display local comment counts.
+- Made canvas comment post-its draggable for authorized thread managers by
+  reusing the existing anchor update. Failed moves restore the persisted
+  position and surface a reloadable comment error instead of leaving a false
+  local position.
+
+## 2026-09-21
+
+- Localized operational failures through one stable API-code boundary across
+  authentication, Story access, imports, editor and Simulation persistence,
+  comments, administration, reader loading, and saves. Known and generic HTTP
+  failures no longer leak English server copy into the French interface, while
+  local browser diagnostics and future explicit application errors retain a safe
+  fallback. Authentication, collaborator, comment, and QSP import contracts now
+  assert their specific error codes.
+
 ## 2026-09-13
 
+- Consolidated Story properties and access in a tabbed editor modal opened by a
+  gear beside the Story title. Access links now open that modal directly, policy
+  selectors use concise broad-to-restricted labels, grant creation aligns with
+  its fields, and existing reader/editor grants can be changed in place. Story
+  editors retain property editing while access management remains limited to
+  owners and administrators; the former access URL redirects compatibly.
 - Stabilized the scheduled large-Story browser baseline. Performance operations
   are now delimited by commit-free React windows, preventing late loading work
   from being charged to the next action, and the lane retains three independent

@@ -58,6 +58,15 @@ test.describe('automated accessibility', () => {
     await expect(page.getByText('Original title', { exact: true })).toBeVisible();
 
     await expectNoWcagViolations(page);
+
+    const settingsButton = page.getByRole('button', { name: 'Story settings' });
+    await settingsButton.click();
+    await expect(page.getByRole('dialog', { name: 'Story settings' })).toBeVisible();
+    await expect(page.getByLabel('Story start date and time')).toBeFocused();
+    await expectNoWcagViolations(page);
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('dialog', { name: 'Story settings' })).toBeHidden();
+    await expect(settingsButton).toBeFocused();
   });
 
   test('keeps the loaded Story Player and save dialog free of WCAG A/AA violations', async ({

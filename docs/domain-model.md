@@ -271,6 +271,109 @@ Pending suggestions are not visible through a per-suggestion setting. Any user
 with review or approval rights on a story can see all pending suggestions for
 that story.
 
+### Future Multi-Participant Narrative Model
+
+This is a planned narrative-runtime direction, not part of the current
+single-playable-character reader contract. It must preserve the separation
+between authored Story data, a real user's account, and play-session state. It
+also must not introduce a stored `Path`, `Route`, or `Parcours` entity: a
+participant's route is a derived view of the interactions in which it takes
+part.
+
+#### Player definition and instance
+
+A future **PlayerDefinition** is an authored logical narrative seat, such as
+`Player 1`, `Detective`, or `Narrator`. It is not a user account. It may have a
+name, player-scoped typed state, and a currently incarnated character during a
+play session.
+
+A **PlayerInstance** is the runtime instance of that seat for one play session.
+It may be associated with a real `User`, but a session must also support an
+unassigned seat or a non-human controller. The account name, the Player's
+narrative label, and the name of the character it currently controls remain
+separate values. Reader and editor presentation may show the incarnated
+character's name as the Player's narrative label when that is clearer.
+
+#### Character definition and instance
+
+The existing authored `Character` concept is the future
+**CharacterDefinition** role; this direction must extend that concept rather
+than create a parallel authored-character model. A definition supplies initial
+name, typed state, inventory, relationships, and other authored values. It can
+also be a known customizable character: for example, `Hero` may receive its
+name and selected attributes during a play session.
+
+A **CharacterInstance** holds that character's actual state for one play
+session. The first increment allows at most one instance of one definition per
+session. When a runtime operation refers to a character, the engine reuses its
+existing instance or creates it from the definition's initial values. Reusing a
+character after a change of incarnation therefore retains its customized name,
+state, inventory, and history. Repeated instantiation of one template (for
+example, several guards) is explicitly later work.
+
+#### Incarnation
+
+`incarnate Player -> Character` is a planned explicit runtime effect. It is
+different from setting a character property: `set Character.name` changes a
+character, whereas `incarnate Player -> Character` changes who controls it.
+
+Initially, a PlayerInstance controls at most one CharacterInstance and a
+CharacterInstance is controlled by at most one PlayerInstance. Switching a
+Player from Alice to Bob leaves Alice in the world; switching back restores the
+same Alice instance. Shared control and one Player controlling several
+characters simultaneously are not in the first increment.
+
+#### Interaction participants and derived routes
+
+An interaction may later list zero or more **actors** and **spectators**. A
+participant reference resolves to either a PlayerDefinition or a
+CharacterDefinition:
+
+- an actor referenced as a Player remains the actor whichever character that
+  Player currently incarnates;
+- an actor referenced as a Character is decided by the Player currently
+  controlling that Character, or by an automatic controller when no human does;
+- a spectator receives the interaction and its point-of-view text but cannot
+  make its choice.
+
+These participant roles are decision and reader-viewpoint semantics. They do
+not silently replace the current interaction character cast, which remains
+scene context and drives existing presence conditions. An implementation must
+define the migration and compatibility relationship explicitly.
+
+The first shared-choice policy is intentionally simple: if one or more human
+actors are present, the first human actor to choose resolves the choice for all
+participants; otherwise an automatic actor may choose. Vote, unanimity,
+majority, independent, and simultaneous choices are later policies. The
+canonical chosen interaction and ordered journey must remain deterministic once
+the decision is recorded.
+
+Reader text should have simple actor and spectator defaults, with optional
+participant-specific overrides later. For example, an actor can read “You open
+the door” while a spectator reads “{{actor.name}} opens the door.” Authors must
+not be required to write a separate version for every participant.
+
+For a Player or Character, its route is derived from interactions where it is
+an actor or spectator. Editor filters may distinguish actor, spectator, and
+absent interactions, enabling shared scenes and parallel points of view without
+duplicating graph structure or storing a Path.
+
+#### Authoring direction and first-increment boundary
+
+Advanced participant controls must stay progressive: a simple one-player,
+one-character story should remain close to the current editor experience. Later
+authoring helpers may generate common graph patterns, including character
+selection, character creation, initial inventory, stat checks, dialogue, and
+standard branches, without adding engine-specific narrative primitives.
+
+Before implementation, an ADR and an implementation contract must settle the
+persisted session shape and version migration, assignment of users to player
+seats, disconnect/reconnect and multi-human synchronization, participant-text
+precedence, interaction-cast compatibility, authorization, and reader-save
+compatibility. This direction deliberately excludes advanced networked
+multiplayer synchronization, sophisticated NPC AI, repeated character-template
+instances, shared character control, and complex concurrent-choice policies.
+
 ### Story Change Proposal
 
 A story change proposal represents a suggested modification that may require
@@ -463,6 +566,11 @@ the authored `Story`. A thread has an immutable identity, an anchor, an author,
 ordered messages, timestamps, and an open or resolved status. Resolving a thread
 preserves its messages.
 
+A thread author or Story manager may soft-delete the whole discussion. The
+thread and every reply remain stored together, disappear from normal comment
+projections, and can be restored from the global deleted-discussion view.
+Individual messages are not deleted independently.
+
 An anchor targets one of:
 
 - a position on the story graph;
@@ -477,6 +585,14 @@ text edits. When the target or quote can no longer be located unambiguously, the
 thread becomes detached instead of being deleted. Comments are authoring/review
 metadata: the reader engine, reader progress, and future story exports do not
 consume them.
+
+The next review-anchor extension is a typed semantic slot. A slot represents a
+stable authored field or inspector section on a same-story entity, and later a
+curated Story-level authoring section. It never stores translated copy, DOM
+structure, or CSS selectors. Field-label and non-text-value comments share one
+field slot, while precise text selections remain text anchors. The initial scope
+is entity editing; dynamic rows require durable identities before receiving
+individual slots.
 
 Editors use the complete graph-anchored review projection. Authorized signed-in
 readers use a contextual player projection that lists interaction and interaction-

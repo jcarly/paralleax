@@ -783,6 +783,87 @@ describePostgres('Database migrations PostgreSQL upgrade', () => {
       pool.query("UPDATE users SET display_name = ' ' WHERE id = 'legacy-user-1234'"),
     ).rejects.toMatchObject({ code: '23514' });
   }, 30_000);
+
+  it('marks upgraded accounts verified and constrains one-use account actions', async () => {
+    await pool.query('DROP SCHEMA public CASCADE');
+    await pool.query('CREATE SCHEMA public');
+    const accountSecurityMigrationIndex = databaseMigrations.findIndex(
+      ({ id }) => id === '202609300040_account_security_actions',
+    );
+    for (const migration of databaseMigrations.slice(0, accountSecurityMigrationIndex)) {
+      await pool.query(migration.sql);
+    }
+
+    await pool.query(`
+      INSERT INTO users (id, email, password_hash, role, created_at)
+      VALUES ('legacy-account', 'legacy@example.test', 'disabled', 'user', '2026-01-01T00:00:00.000Z')
+    `);
+    await pool.query(databaseMigrations[accountSecurityMigrationIndex].sql);
+
+    await expect(
+      pool.query(`SELECT email_verified_at FROM users WHERE id = 'legacy-account'`),
+    ).resolves.toMatchObject({
+      rows: [{ email_verified_at: new Date('2026-01-01T00:00:00.000Z') }],
+      rowCount: 1,
+    });
+    await pool.query(`
+      INSERT INTO users (id, email, password_hash, role, created_at)
+      VALUES ('new-account', 'new@example.test', 'disabled', 'user', now())
+    `);
+    await expect(
+      pool.query(`SELECT email_verified_at FROM users WHERE id = 'new-account'`),
+    ).resolves.toMatchObject({ rows: [{ email_verified_at: null }], rowCount: 1 });
+    await expect(
+      pool.query(`
+        INSERT INTO account_action_tokens
+          (id, user_id, kind, token_hash, created_at, expires_at)
+        VALUES ('invalid-action', 'new-account', 'unknown', 'invalid-hash', now(), now() + interval '1 hour')
+      `),
+    ).rejects.toThrow();
+    await pool.query(`
+      INSERT INTO account_action_tokens
+        (id, user_id, kind, token_hash, created_at, expires_at)
+      VALUES ('verification-action', 'new-account', 'verify_email', 'verification-hash', now(), now() + interval '1 hour')
+    `);
+    await expect(
+      pool.query(`
+        INSERT INTO account_action_tokens
+          (id, user_id, kind, token_hash, created_at, expires_at)
+        VALUES ('other-verification', 'new-account', 'verify_email', 'other-hash', now(), now() + interval '1 hour')
+      `),
+    ).rejects.toThrow();
+  }, 30_000);
+
+  it('adds recoverable deletion metadata to existing comment threads', async () => {
+    await pool.query('DROP SCHEMA public CASCADE');
+    await pool.query('CREATE SCHEMA public');
+    await new DatabaseMigrator({ pool } as DatabaseConnection).run();
+
+    await expect(
+      pool.query(
+        `SELECT column_name, is_nullable
+         FROM information_schema.columns
+         WHERE table_schema = 'public'
+           AND table_name = 'story_comment_threads'
+           AND column_name IN ('deleted_by', 'deleted_at')
+         ORDER BY column_name`,
+      ),
+    ).resolves.toMatchObject({
+      rows: [
+        { column_name: 'deleted_at', is_nullable: 'YES' },
+        { column_name: 'deleted_by', is_nullable: 'YES' },
+      ],
+      rowCount: 2,
+    });
+    await expect(
+      pool.query(
+        `SELECT indexname
+         FROM pg_indexes
+         WHERE schemaname = 'public'
+           AND indexname = 'story_comment_threads_story_deleted_idx'`,
+      ),
+    ).resolves.toMatchObject({ rowCount: 1 });
+  }, 30_000);
 });
 
 async function waitForPostgres(pool: Pool) {

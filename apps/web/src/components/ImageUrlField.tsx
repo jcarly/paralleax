@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { ImageUrlDialog } from './ImageUrlDialog';
 
 export function ImageUrlField({
   imageUrl,
@@ -12,19 +14,35 @@ export function ImageUrlField({
   onBlur: (imageUrl: string) => void;
 }) {
   const { t } = useTranslation();
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const actionLabel = imageUrl ? t('inspector.editImage') : t('inspector.addImage');
+
   return (
     <>
-      <label>
-        {label ?? t('inspector.imageUrl')}
-        <input
-          type="url"
-          value={imageUrl ?? ''}
-          placeholder="https://example.com/image.png"
-          onChange={(event) => onChange(event.target.value)}
-          onBlur={(event) => onBlur(event.target.value)}
+      <button
+        aria-label={actionLabel}
+        className="inspector-image-frame"
+        title={label ?? t('inspector.imageUrl')}
+        type="button"
+        onClick={() => setIsDialogOpen(true)}
+      >
+        {imageUrl ? (
+          <img src={imageUrl} alt="" />
+        ) : (
+          <span aria-hidden="true">{t('inspector.imagePlaceholder')}</span>
+        )}
+      </button>
+      {isDialogOpen ? (
+        <ImageUrlDialog
+          imageUrl={imageUrl}
+          onCancel={() => setIsDialogOpen(false)}
+          onSave={(nextImageUrl) => {
+            onChange(nextImageUrl);
+            onBlur(nextImageUrl);
+            setIsDialogOpen(false);
+          }}
         />
-      </label>
-      {imageUrl ? <img className="context-image-preview" src={imageUrl} alt="" /> : null}
+      ) : null}
     </>
   );
 }

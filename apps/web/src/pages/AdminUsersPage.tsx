@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { UserRole } from '@paralleax/shared';
 import { api, type ManagedUser } from '../api';
+import { apiErrorMessage } from '../apiErrorMessages';
 import './ProductPages.css';
 
 type RoleFilter = 'all' | UserRole;
@@ -20,9 +21,9 @@ export function AdminUsersPage({ currentUserId }: { currentUserId?: string }) {
     api
       .listUsers()
       .then(setUsers)
-      .catch((caught: Error) => setError(caught.message))
+      .catch((caught: unknown) => setError(apiErrorMessage(caught, t, t('admin.loadFailed'))))
       .finally(() => setLoading(false));
-  }, []);
+  }, [t]);
 
   const administratorCount = users.filter(({ role }) => role === 'admin').length;
   const visibleUsers = useMemo(() => {
@@ -50,7 +51,7 @@ export function AdminUsersPage({ currentUserId }: { currentUserId?: string }) {
         }),
       );
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : t('admin.updateFailed'));
+      setError(apiErrorMessage(caught, t, t('admin.updateFailed')));
     } finally {
       setPendingId('');
     }

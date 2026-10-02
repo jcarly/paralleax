@@ -84,6 +84,25 @@ describePostgres('CommentsRepository PostgreSQL integration', () => {
       ownerId,
       '2026-08-13T09:10:00.000Z',
     );
+    const deleted = await comments.softDelete(
+      storyId,
+      'thread-1',
+      ownerId,
+      '2026-08-13T09:15:00.000Z',
+    );
+    expect(deleted).toMatchObject({
+      id: 'thread-1',
+      deletedBy: { id: ownerId },
+      deletedAt: '2026-08-13T09:15:00.000Z',
+      messages: [{ id: 'message-1' }, { id: 'message-2' }],
+    });
+    await expect(comments.list(storyId)).resolves.toEqual([]);
+    await expect(comments.find(storyId, 'thread-1')).resolves.toBeUndefined();
+    await expect(comments.list(storyId, true)).resolves.toHaveLength(1);
+
+    const restored = await comments.restore(storyId, 'thread-1', '2026-08-13T09:20:00.000Z');
+    expect(restored).toMatchObject({ id: 'thread-1', status: 'resolved' });
+    expect(restored?.deletedAt).toBeUndefined();
     await stories.delete(storyId, ownerId);
 
     await expect(pool.query('SELECT id FROM story_comment_threads')).resolves.toMatchObject({

@@ -145,6 +145,9 @@ The API exposes story operations through `StoriesController`.
 The NestJS application is organized by feature rather than technical layer:
 
 - `auth/` owns credentials, sessions, guards, decorators, and auth endpoints;
+- `email/` owns provider-neutral transactional-email delivery through the
+  configured SMTP relay; product features own their templates and delivery
+  timing;
 - `stories/` owns story DTOs, application behavior, persistence, and endpoints;
 - `comments/` owns anchored review-thread endpoints, applies the shared thread
   authorization rule, and persists comments without extending the canonical
@@ -196,7 +199,16 @@ sources when it follows workspace aliases. This keeps the shared package's
 NodeNext-compatible internal imports valid in both its emitted package and the
 API source build.
 
-`AuthController` exposes registration, login, logout, and current-user endpoints.
+`AuthController` exposes registration, verification, credential recovery, login,
+logout, session revocation, and current-user endpoints. New registrations do not
+receive a session until their email-verification action succeeds. The account
+action table stores only SHA-256 hashes of random, URL-safe verification/reset
+values, scopes each value to one purpose, expires it, and consumes it atomically
+with the corresponding user update. Resetting or changing a password deletes
+previous sessions before a fresh session is issued; revoking other sessions keeps
+the cookie that authorized the request. The account-security migration marks
+pre-existing accounts verified at their original creation time so an upgrade does
+not lock out existing users.
 `AuthService` derives password hashes with scrypt and issues random opaque session
 tokens; only token hashes are stored. `SessionGuard` resolves the HTTP-only session
 cookie and protects every route unless it is explicitly public. Expired sessions
@@ -307,7 +319,13 @@ and duration. They never log request or response bodies.
 Known operational errors may provide a more specific code. Unexpected errors
 return a generic message and never expose exception, stack, or SQL details.
 Production Nest logs use JSON output. The web client preserves status, code, and
-request id on `ApiError` for future support and recovery workflows.
+request id on `ApiError`. User-facing failures pass through one localization
+boundary: known application and generic HTTP codes resolve to bundled interface
+copy, while generated HTTP codes use the operation's localized fallback instead
+of exposing server text. A message may be shown directly only for an explicit,
+unknown application code (forward compatibility) or for a browser-side error;
+React still escapes that text. This keeps transport diagnostics available for
+support without coupling Nest services to an interface language.
 
 The global throttler defaults to 100 requests per minute. Story reads retain
 that limit, while story mutation routes use a stricter 60-per-minute policy.
@@ -361,6 +379,15 @@ interactions and triggers.
 React Flow, selection state, inspectors, and focused editor controllers to the
 persistence actions.
 
+React Flow's local deletion shortcut is disabled. Inspector deletion, the
+editor-level `Delete` shortcut, and element context-menu deletion all route
+through the same persisted Story operations and confirmation policy. A contextual
+action first selects its canonical Interaction, Trigger, or graph decoration;
+automatic placement therefore reuses the existing selection-scoped layout.
+Frame resizing exposes only right and bottom resize controls and persists the
+existing top-left position with its new dimensions, so resizing cannot silently
+move the authored frame origin.
+
 The root route renders the unified story library. Without a session it uses the
 anonymous public-summary endpoint; with a session it uses the authorized list of
 every story that account can read and exposes filters derived from resolved edit,
@@ -368,15 +395,24 @@ comment, and ownership data. Changing sessions clears the previous projection
 before loading the next one. The former `/stories` workspace redirects to the
 root library for compatibility. Editor, access, and administration routes redirect
 signed-out visitors to authentication. Sign-in and registration carry a validated
-same-origin `returnTo` path, including its query and fragment, and replace the
-authentication history entry after success. The product navigation does not
-expose the internal design-system reference.
+same-origin `returnTo` path, including its query and fragment. Registration ends
+with a verification-email notice rather than an authenticated session; successful
+verification and password reset create the replacement session and replace the
+authentication history entry. The product navigation does not expose the internal
+design-system reference.
 
 The editor route also checks the loaded story capability and redirects any
 authenticated non-editor to the player. Simulation Mode requires the same
 effective edit capability; player query parameters cannot upgrade a reader to
 author tooling. Comment-capable readers use an interaction-contextual discussion
 panel in `StoryPlayer`, while editors retain the complete graph review layer.
+Story configuration is composed inside the editor by `features/story-settings/`:
+all editors retain access to Story-level properties, while the access-policy tab
+is projected only for accounts with `canManage`. Story-library access links open
+that tab through an editor query parameter, and the former standalone access URL
+redirects to the same surface for compatibility. Policy and collaborator writes
+continue to use the existing access API operations; the modal is not a parallel
+domain or persistence model.
 
 Administrators receive an `Administration` navigation entry backed by the
 protected `/admin/users` route. Its account list, summary, search, role filter,
@@ -462,6 +498,8 @@ component:
   inspector UI for authored frame and text decorations.
 - `features/feedback/`: optional Formbricks configuration, route-context
   normalization, SDK isolation, and the global feedback control.
+- `features/story-settings/`: tabbed Story-property and access configuration,
+  including the reusable access-policy and collaborator-grant form.
 - `storySelection.ts`: selected interaction and trigger lookup helpers.
 - `storyConnection.ts`: canvas connection validation and created-trigger lookup.
 - `storyTriggerInput.ts`: deletion planning for one trigger input link.
@@ -729,10 +767,10 @@ leave an interaction from its bottom-center routing handle and enter an interact
 through its top-center routing handle. Trigger markers are approached vertically
 when their endpoints are on different rows.
 
-When a normal canvas connection can either extend an existing trigger or create
-a separate trigger, the focused Story Editor connection controller presents that
-choice before calling the persistence actions. Dropping directly on a trigger
-marker remains the explicit shortcut for extending that trigger.
+The focused Story Editor connection controller maps a drop on an interaction's
+input `+` directly to the existing new-Trigger persistence action. Dropping on a
+trigger marker remains the explicit shortcut for extending that Trigger; no
+connection-choice dialog is needed.
 
 Every editor mutation passes through the persistence hook's save tracker. The
 toolbar exposes saving, saved, and failed states. A failed mutation leaves a
@@ -851,9 +889,26 @@ Review discussions use `story_comment_threads` and `story_comment_messages`.
 Their JSONB anchor is validated against the current same-story target by the
 application service; it is not inserted into `Story` or React Flow's canonical
 data. The web editor projects canvas anchors as comment nodes and entity/text
-anchors as badges and discussion context. An authorized signed-in player requests
-the same resource but projects only threads on the current interaction; anonymous
-public reading never requests or renders it.
+anchors through one inspector-integrated comment list and one translucent
+contextual rail. Entity badges on graph and context-list entries open that rail
+explicitly; text anchors reuse the same threads through field-local
+title/body/name/description markers. The rail keeps discussions visible together
+and treats the selected thread only as reply-editor state, so a blur can collapse
+the reply without closing its context. The global list is nested in the standard
+inspector pane, while explicit grid areas keep navigation, canvas, and inspector
+ordering stable. At the narrow breakpoint, navigation and inspector panes overlay
+a single full-width canvas column, including every contextual-comment layout
+variant. The global list is one inspector mode rather than a competing panel:
+the shared editor selection entry points close it before projecting an element
+inspector. Moving a canvas post-it calls the existing
+thread-anchor update and reprojects its returned position; a failed mutation
+restores the prior anchor rather than retaining an unsaved graph coordinate.
+Thread deletion is recoverable: PostgreSQL retains the thread and messages with
+deletion metadata, normal list requests exclude them, and an explicit authorized
+projection feeds the global deleted-discussion view. Only the thread author or a
+Story manager may delete or restore the discussion. An authorized signed-in
+player requests the same resource but projects only active threads on the current
+interaction; anonymous public reading never requests or renders it.
 
 Authenticated editor and authorized reader clients keep one Server-Sent Events
 connection to the story's comment event endpoint. Successful thread mutations
@@ -919,9 +974,12 @@ classes directly.
   PostgreSQL. Core flows do not intercept Paralleax endpoints; the explicit
   transport-reordering case holds and forwards a real API response without
   fabricating its payload. The project can start a local stack or target a
-  deployed environment through `PARALLEAX_ACCEPTANCE_BASE_URL`. A shared test-only
+  separately configured test stack through `PARALLEAX_ACCEPTANCE_BASE_URL`. A shared test-only
   harness owns registration, Story creation, mutation response checks, and common
-  editor/access interactions without replacing the production HTTP boundary.
+  editor/access interactions without replacing the production HTTP boundary. The
+  locally started stack enables an in-memory email outbox only under `NODE_ENV=test`;
+  an external acceptance target must enable the same test-only outbox. The harness
+  follows its verification link through the normal account-action endpoint.
   Isolated browser contexts exercise account-specific permissions, live
   collaboration, and the anchored reader-to-author review loop without sharing
   authentication state. Small ChoiceScript and QSP `locations` fixtures also

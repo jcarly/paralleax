@@ -8,6 +8,7 @@ export interface RequestUser {
   displayName: string;
   role: UserRole;
   createdAt: string;
+  emailVerifiedAt?: string;
 }
 
 export const Public = () => SetMetadata('public', true);

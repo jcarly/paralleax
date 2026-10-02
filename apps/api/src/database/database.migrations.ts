@@ -1539,4 +1539,46 @@ export const databaseMigrations: DatabaseMigration[] = [
         );
     `,
   },
+  {
+    id: '202609220039_soft_deleted_comment_threads',
+    sql: `
+      ALTER TABLE story_comment_threads
+      ADD COLUMN deleted_by text REFERENCES users(id) ON DELETE SET NULL,
+      ADD COLUMN deleted_at timestamptz,
+      ADD CONSTRAINT story_comment_threads_deletion_consistent
+        CHECK (deleted_at IS NOT NULL OR deleted_by IS NULL);
+
+      CREATE INDEX story_comment_threads_story_deleted_idx
+        ON story_comment_threads(story_id, deleted_at, updated_at DESC);
+    `,
+  },
+  {
+    id: '202609300040_account_security_actions',
+    sql: `
+      ALTER TABLE users
+      ADD COLUMN email_verified_at timestamptz;
+
+      -- Existing accounts predate verification. Preserve their access while
+      -- requiring every account created after this migration to verify email.
+      UPDATE users
+      SET email_verified_at = created_at
+      WHERE email_verified_at IS NULL;
+
+      CREATE TABLE account_action_tokens (
+        id text PRIMARY KEY,
+        user_id text NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        kind text NOT NULL CHECK (kind IN ('verify_email', 'reset_password')),
+        token_hash text NOT NULL UNIQUE,
+        created_at timestamptz NOT NULL,
+        expires_at timestamptz NOT NULL,
+        consumed_at timestamptz,
+        CHECK (expires_at > created_at),
+        CHECK (consumed_at IS NULL OR consumed_at >= created_at),
+        UNIQUE (user_id, kind)
+      );
+
+      CREATE INDEX account_action_tokens_expiry_idx
+        ON account_action_tokens(expires_at);
+    `,
+  },
 ];

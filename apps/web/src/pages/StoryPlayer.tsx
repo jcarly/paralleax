@@ -9,6 +9,7 @@ import type {
   Story,
 } from '@paralleax/shared';
 import {
+  canDeleteCommentThread,
   canManageCommentThread,
   doConditionsMatch,
   ensureStoryInteractionPositions,
@@ -22,6 +23,7 @@ import {
   isCommentAnchorDetached,
 } from '@paralleax/shared';
 import { api } from '../api';
+import { apiErrorMessage } from '../apiErrorMessages';
 import { RichTextContent } from '../components/RichTextContent';
 import { RichTextEditor } from '../components/RichTextEditor';
 import { StoryCommentsPanel } from '../features/comments/StoryCommentsPanel';
@@ -85,7 +87,11 @@ export function StoryPlayer({
   }>();
   const [runtimeSliceKey, setRuntimeSliceKey] = useState('');
   const [loadAttempt, setLoadAttempt] = useState(0);
-  const { session, replay: replaySession, advance: advanceSession } = useReaderSessionState();
+  const {
+    session,
+    replay: replayReaderSession,
+    advance: advanceReaderSession,
+  } = useReaderSessionState();
   const {
     journeyInteractionIds: journey,
     currentInteractionId: currentId,
@@ -119,9 +125,26 @@ export function StoryPlayer({
   const editingChoiceInputRef = useRef<HTMLInputElement>(null);
   const savesDialogTrigger = useRef<HTMLButtonElement>(null);
   const sessionRef = useRef<ReaderProgressState>(session);
+  const replaySession = useCallback(
+    (...args: Parameters<typeof replayReaderSession>) => {
+      const nextSession = replayReaderSession(...args);
+      sessionRef.current = nextSession;
+      return nextSession;
+    },
+    [replayReaderSession],
+  );
+  const advanceSession = useCallback(
+    (...args: Parameters<typeof advanceReaderSession>) => {
+      const nextSession = advanceReaderSession(...args);
+      sessionRef.current = nextSession;
+      return nextSession;
+    },
+    [advanceReaderSession],
+  );
   const [timerNow, setTimerNow] = useState(() => Date.now());
   const directStartAutosavedKey = useRef('');
   const committedChoiceStep = useRef('');
+  const readerNavigationVersion = useRef(0);
   const realtimeLoadAttempt = useRef(0);
   const simulationEditDepth = useRef(0);
   const pendingRealtimeInvalidation = useRef<StoryRealtimeInvalidation | undefined>(undefined);
@@ -144,10 +167,6 @@ export function StoryPlayer({
         (isSimulationMode &&
           (simulationMutations.status === 'saving' || simulationMutations.status === 'error'))),
   );
-
-  useEffect(() => {
-    sessionRef.current = session;
-  }, [session]);
 
   useEffect(() => {
     if (
@@ -245,7 +264,7 @@ export function StoryPlayer({
         if (recoverFromStoryAccessError(caught)) return;
         setLoadError({
           key: loadKey,
-          message: caught instanceof Error ? caught.message : t('player.loadFailed'),
+          message: apiErrorMessage(caught, t, t('player.loadFailed')),
         });
       });
     return () => {
@@ -324,19 +343,29 @@ export function StoryPlayer({
       }
 
       const attempt = ++realtimeLoadAttempt.current;
-      const currentSession = sessionRef.current;
+      const navigationVersion = readerNavigationVersion.current;
       void api
         .getStoryRuntimeBootstrap(storyId)
         .then((bootstrap) => loadStoryRuntimeContext(storyId, bootstrap))
-        .then((runtimeStory) =>
-          loadStoryRuntimeSlice(
-            runtimeStory,
-            currentSession.currentInteractionId,
-            currentSession.journeyInteractionIds,
-          ),
-        )
+        .then(async (runtimeStory) => {
+          let requestedSession = sessionRef.current;
+          while (true) {
+            const nextStory = await loadStoryRuntimeSlice(
+              runtimeStory,
+              requestedSession.currentInteractionId,
+              requestedSession.journeyInteractionIds,
+            );
+            const latestSession = sessionRef.current;
+            if (hasSameRuntimeSliceRequest(requestedSession, latestSession)) return nextStory;
+            requestedSession = latestSession;
+          }
+        })
         .then((nextStory) => {
           if (attempt !== realtimeLoadAttempt.current) return;
+          if (navigationVersion !== readerNavigationVersion.current) {
+            realtimeRefresh.current(invalidation);
+            return;
+          }
           if (hasActiveSimulationMutations() || simulationEditDepth.current > 0) {
             pendingRealtimeInvalidation.current = prioritizeStoryRealtimeInvalidation(
               pendingRealtimeInvalidation.current,
@@ -406,7 +435,7 @@ export function StoryPlayer({
         if (cancelled || recoverFromStoryAccessError(caught)) return;
         setRuntimeOptionsFailure({
           key: requestedRuntimeSliceKey,
-          message: caught instanceof Error ? caught.message : t('player.loadFailed'),
+          message: apiErrorMessage(caught, t, t('player.loadFailed')),
         });
       });
     return () => {
@@ -454,6 +483,10 @@ export function StoryPlayer({
   const canManageSelectedReaderThread = Boolean(
     selectedReaderCommentThread &&
     canManageCommentThread(story?.capabilities, currentUserId, selectedReaderCommentThread),
+  );
+  const canDeleteSelectedReaderThread = Boolean(
+    selectedReaderCommentThread &&
+    canDeleteCommentThread(story?.capabilities, currentUserId, selectedReaderCommentThread),
   );
   const ownedItemDefinitionIds = useMemo(
     () =>
@@ -764,6 +797,7 @@ export function StoryPlayer({
     const choiceStepKey = `${story.id}:${journey.length}:${current?.id ?? ''}:${currentStepStartedAt ?? ''}`;
     if (committedChoiceStep.current === choiceStepKey) return;
     committedChoiceStep.current = choiceStepKey;
+    readerNavigationVersion.current += 1;
     comments.cancelDraft();
     comments.selectThread(undefined);
     setTimerNow(now);
@@ -776,6 +810,7 @@ export function StoryPlayer({
     comments.selectThread(undefined);
     directStartAutosavedKey.current = '';
     committedChoiceStep.current = '';
+    readerNavigationVersion.current += 1;
     setTimerNow(Date.now());
     if (story) {
       replaySession(
@@ -793,6 +828,7 @@ export function StoryPlayer({
   function stepBack() {
     if (journey.length <= 1) return;
     committedChoiceStep.current = '';
+    readerNavigationVersion.current += 1;
     const nextJourney = journey.slice(0, -1);
     setTimerNow(Date.now());
     if (story) {
@@ -818,6 +854,7 @@ export function StoryPlayer({
   }) {
     if (!story) return;
     committedChoiceStep.current = '';
+    readerNavigationVersion.current += 1;
     setTimerNow(Date.now());
     const loadedStory = await loadStoryRuntimeSlice(
       story,
@@ -882,6 +919,10 @@ export function StoryPlayer({
 
   async function addOption() {
     if (!story) return;
+    const creation = current
+      ? ({ kind: 'child', sourceId: current.id } as const)
+      : ({ kind: 'root' } as const);
+    const position = await getStoryGraphClickCreationPosition(story, creation);
     await simulationMutations.run(
       () =>
         api.createInteraction(
@@ -889,13 +930,10 @@ export function StoryPlayer({
           current
             ? {
                 parentId: current.id,
-                position: getStoryGraphClickCreationPosition(story, {
-                  kind: 'child',
-                  sourceId: current.id,
-                }),
+                position,
               }
             : {
-                position: getStoryGraphClickCreationPosition(story, { kind: 'root' }),
+                position,
               },
         ),
       (result) => {
@@ -914,6 +952,11 @@ export function StoryPlayer({
     comments.selectThread(undefined);
     comments.startThread({ kind: 'entity', targetType: 'interaction', targetId: current.id });
     setCommentsOpen(true);
+  }
+
+  async function deleteReaderComment(threadId: string) {
+    if (!window.confirm(t('comments.confirmDelete'))) return;
+    return comments.deleteThread(threadId);
   }
 
   async function saveChoiceTitle(interaction: Interaction, title: string) {
@@ -1072,8 +1115,15 @@ export function StoryPlayer({
             onClick={() => setCommentsOpen((open) => !open)}
           >
             {t('comments.title')}
-            {readerCommentThreads.filter(({ status }) => status === 'open').length ? (
-              <small>{readerCommentThreads.filter(({ status }) => status === 'open').length}</small>
+            {readerCommentThreads.filter(({ status, deletedAt }) => status === 'open' && !deletedAt)
+              .length ? (
+              <small>
+                {
+                  readerCommentThreads.filter(
+                    ({ status, deletedAt }) => status === 'open' && !deletedAt,
+                  ).length
+                }
+              </small>
             ) : null}
           </button>
         ) : null}
@@ -1459,6 +1509,8 @@ export function StoryPlayer({
         draftAnchor={comments.draftAnchor}
         canComment={canUseReaderComments}
         canManageThread={canManageSelectedReaderThread}
+        canDeleteThread={canDeleteSelectedReaderThread}
+        deletedLoading={comments.deletedLoading}
         realtimeStatus={comments.realtimeStatus}
         onClose={() => setCommentsOpen(false)}
         onSelect={comments.selectThread}
@@ -1466,6 +1518,9 @@ export function StoryPlayer({
         onCreate={comments.create}
         onReply={comments.reply}
         onStatus={comments.setStatus}
+        onDelete={deleteReaderComment}
+        onRestore={comments.restoreThread}
+        onLoadDeleted={comments.loadDeleted}
       />
       {savesOpen ? (
         <ReaderSaveDialog
@@ -1490,4 +1545,15 @@ function runtimeStateKey(
   journeyInteractionIds: readonly string[],
 ) {
   return `${story.revision ?? 1}:${currentInteractionId ?? 'start'}:${journeyInteractionIds.join(',')}`;
+}
+
+function hasSameRuntimeSliceRequest(
+  first: ReaderProgressState,
+  second: ReaderProgressState,
+): boolean {
+  return (
+    first.currentInteractionId === second.currentInteractionId &&
+    first.journeyInteractionIds.length === second.journeyInteractionIds.length &&
+    first.journeyInteractionIds.every((id, index) => id === second.journeyInteractionIds[index])
+  );
 }

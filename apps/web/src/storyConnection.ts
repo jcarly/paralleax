@@ -19,7 +19,7 @@ export function getPendingConnection(
 ): PendingConnection | undefined {
   if (!story || !connection.source || !connection.target) return undefined;
   if (connection.source === connection.target) return undefined;
-  if (connection.targetHandle && connection.targetHandle !== 'new-trigger-input') {
+  if (connection.targetHandle && connection.targetHandle !== 'create-source-input') {
     return undefined;
   }
 

@@ -115,6 +115,21 @@ service, table, endpoint, model, style, or workflow:
    semantic documentation, or an ADR as appropriate, and ask the user first when
    the distinction was not explicit in the request.
 
+### Existing libraries and SDKs
+
+Before implementing a general-purpose capability or protocol from scratch, search
+the installed dependencies, the repository's existing integrations, and
+maintained compatible libraries or official SDKs. Prefer a mature, well-scoped
+library when it already provides the required behavior, particularly for security,
+authentication, email, storage, file formats, and network protocols.
+
+Check compatibility with the supported Node/browser targets, TypeScript support,
+license, maintenance/security posture, operational configuration, and bundle
+impact before adding it. Do not add a wrapper or a parallel implementation when
+the library's normal interface can be used directly. If the project deliberately
+does not use an available library, record the concrete reason in the relevant
+documentation or ADR.
+
 While coding:
 
 - Keep code, tests, UI copy, and technical documentation in English.

@@ -33,10 +33,15 @@ The character-stat vertical keeps these regressions covered:
 
 ## Authentication and Ownership
 
-- Authentication: registration creates a session that the current-user endpoint
-  can restore.
+- Authentication: registration creates no session until its one-use,
+  expiry-bound verification link succeeds; existing migrated accounts remain
+  verified and can still sign in.
 - Authentication: invalid credentials are rejected and logout revokes the
   server-side session.
+- Authentication: a password-reset request has the same successful response for
+  an unknown email, while an eligible account receives a one-use reset link.
+- Authentication: reset or password change revokes prior sessions and returns a
+  new session; explicit revocation retains only the current session.
 - Authentication: concurrent registration for one normalized email creates one
   account and returns one conflict.
 - Authentication: access-code registration rejects missing and incorrect codes,
@@ -73,7 +78,8 @@ The character-stat vertical keeps these regressions covered:
   creation failure preserves the completed form, while a failed next-page load
   preserves existing cards and retries the same page without duplicates.
 - Real-stack browser acceptance: with no intercepted Paralleax endpoint, an
-  invited author can create a Story, location, character, Story variable,
+  invited author receives and follows an isolated test-outbox verification link,
+  then can create a Story, location, character, Story variable,
   interactions and Triggers; persist context, an effect, and a condition; reload
   and sign in again; then traverse the conditioned path in Simulation Mode.
 - Real-stack browser acceptance: interaction-content undo and redo update the
@@ -280,15 +286,12 @@ The character-stat vertical keeps these regressions covered:
 - Editor: interaction and trigger deletion can be cancelled from their
   confirmation prompt.
 - Editor: creating a new canvas connection creates a dedicated trigger and does not mutate existing linked triggers.
-- Editor: a connection to an interaction with an extendable trigger asks whether
-  to add the source to that trigger or create a separate trigger.
 - Editor: creating a connection or OR variant uses one trigger request rather
   than a dependent POST followed by PATCH.
-- Editor: when connecting to an interaction with existing triggers, the author can choose whether to add the source as an input of an existing trigger or create a new trigger.
+- Editor: dropping a connection on an interaction's input `+` creates a separate
+  trigger without opening a follow-up choice dialog.
 - Editor: dropping a connection on an existing trigger marker adds the source as
   another input of that trigger.
-- Editor: dropping a connection on the empty interaction input handle creates a
-  new trigger for that output interaction.
 - Editor: adding a source to an existing trigger keeps the trigger conditions shared by all of its inputs.
 - Editor/Reader: several triggers between the same interactions represent OR
   condition groups, show as one grouped route in the editor, and expose their
@@ -424,6 +427,13 @@ The character-stat vertical keeps these regressions covered:
   source database.
 
 ## Playwright Functional Tests
+
+- Automatic organization quality: run the deterministic 100-interaction tangled
+  Story through the real canvas action and audit every rendered node and SVG
+  route. Record overlaps, edge/node penetrations, edge crossings, and route
+  overlaps in JSON and standalone SVG artifacts. Only the final zero-defect
+  assertion is an expected failure until layout/routing improves; setup and
+  coverage failures remain unexpected. See [Auto layout](auto-layout.md#layout-quality-reference-scenario).
 
 Component and domain regressions supporting these flows also cover:
 

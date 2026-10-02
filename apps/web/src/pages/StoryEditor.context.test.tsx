@@ -2,6 +2,7 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-li
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
+import type { StoryCommentThread } from '@paralleax/shared';
 import {
   api,
   baseStory,
@@ -101,20 +102,77 @@ describe('StoryEditor story context', () => {
   });
 
   it('updates the story start date and time', async () => {
+    const user = userEvent.setup();
     const updatedStory = cloneStory();
     updatedStory.startDateTime = '2026-07-27T09:30';
     vi.mocked(api.updateStory).mockResolvedValue(updatedStory);
 
     await renderEditor();
 
-    const start = screen.getByLabelText('Story start date and time');
-    fireEvent.change(start, { target: { value: '2026-07-27T09:30' } });
-    fireEvent.blur(start);
+    fireEvent.click(screen.getByRole('button', { name: 'Story settings' }));
+    expect(await screen.findByRole('dialog', { name: 'Story settings' })).toBeInTheDocument();
+    const start = await screen.findByLabelText('Story start date and time');
+    await user.clear(start);
+    await user.type(start, '2026-07-27T09:30');
+    await user.tab();
 
-    expect(api.updateStory).toHaveBeenCalledWith('story-1', {
-      startDateTime: '2026-07-27T09:30',
-    });
+    await waitFor(() =>
+      expect(api.updateStory).toHaveBeenCalledWith('story-1', {
+        startDateTime: '2026-07-27T09:30',
+      }),
+    );
+    expect(screen.queryByRole('button', { name: 'Save properties' })).not.toBeInTheDocument();
     expect(await screen.findByDisplayValue('2026-07-27T09:30')).toBeInTheDocument();
+  });
+
+  it('opens the access tab from a Story configuration link', async () => {
+    await renderEditor(baseStory, '/stories/story-1/edit?settings=access');
+
+    expect(await screen.findByRole('dialog', { name: 'Story settings' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Access' })).toHaveAttribute('aria-selected', 'true');
+    expect(await screen.findByLabelText('Reading')).toHaveValue('private');
+  });
+
+  it('keeps Story properties available to editors who cannot manage access', async () => {
+    const user = userEvent.setup();
+    const editorStory = cloneStory();
+    editorStory.capabilities = {
+      canRead: true,
+      canEdit: true,
+      canManage: false,
+      canComment: true,
+    };
+
+    await renderEditor(editorStory);
+    await user.click(screen.getByRole('button', { name: 'Story settings' }));
+
+    expect(await screen.findByRole('tab', { name: 'Properties' })).toBeInTheDocument();
+    expect(screen.queryByRole('tab', { name: 'Access' })).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Story start date and time')).toBeInTheDocument();
+    expect(api.getStoryAccess).not.toHaveBeenCalled();
+  });
+
+  it('returns non-managers from a direct Story access configuration URL', async () => {
+    const editorStory = cloneStory();
+    editorStory.capabilities = {
+      canRead: true,
+      canEdit: true,
+      canManage: false,
+      canComment: true,
+    };
+    vi.mocked(api.getStory).mockResolvedValue(editorStory);
+
+    render(
+      <MemoryRouter initialEntries={['/stories/story-1/edit?settings=access']}>
+        <Routes>
+          <Route path="/" element={<div>Story library route</div>} />
+          <Route path="/stories/:storyId/edit" element={<StoryEditor />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText('Story library route')).toBeInTheDocument();
+    expect(api.getStoryAccess).not.toHaveBeenCalled();
   });
 
   it('creates and edits a location from the location panel', async () => {
@@ -164,6 +222,42 @@ describe('StoryEditor story context', () => {
       }),
     );
     expect(screen.getByRole('button', { name: 'Harbor' })).toBeInTheDocument();
+  });
+
+  it('shows a consistent comment badge on a commented context entity', async () => {
+    const user = userEvent.setup();
+    const story = cloneStory();
+    story.locations = [{ id: 'harbor', name: 'Harbor', description: 'A quiet harbor.' }];
+    const thread: StoryCommentThread = {
+      id: 'thread-harbor',
+      storyId: story.id,
+      anchor: { kind: 'entity', targetType: 'location', targetId: 'harbor' },
+      anchorLabel: 'Harbor',
+      status: 'open',
+      createdBy: { id: 'user-1', displayName: 'Author' },
+      createdAt: '2026-08-16T09:00:00.000Z',
+      updatedAt: '2026-08-16T09:00:00.000Z',
+      messages: [
+        {
+          id: 'message-harbor',
+          threadId: 'thread-harbor',
+          author: { id: 'user-1', displayName: 'Author' },
+          body: 'Clarify the atmosphere here.',
+          createdAt: '2026-08-16T09:00:00.000Z',
+        },
+      ],
+    };
+    vi.mocked(api.listCommentThreads).mockResolvedValue([thread]);
+
+    await renderEditor(story);
+    await user.click(
+      await screen.findByRole('button', { name: 'Open comments for this element: Harbor' }),
+    );
+
+    expect(
+      screen.getByRole('complementary', { name: 'Comments for the selected element' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Clarify the atmosphere here.')).toBeInTheDocument();
   });
 
   it('assigns locations to interactions and trigger conditions', async () => {

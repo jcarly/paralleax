@@ -515,7 +515,7 @@ end
   });
 
   it('keeps the QSP size limit on the standard import route', async () => {
-    await request(httpServer)
+    const response = await request(httpServer)
       .post('/api/stories/imports/qsp')
       .send({
         file: {
@@ -525,6 +525,7 @@ end
         },
       })
       .expect(400);
+    expect(response.body.code).toBe('QSP_IMPORT_TOO_LARGE');
   });
 
   it('validates QSP format metadata and rejects unresolved locations atomically', async () => {
@@ -2191,6 +2192,12 @@ end
       .set('Cookie', ownerCookie)
       .send({ visibility: 'invitation', editPolicy: 'collaborators', commentPolicy: 'readers' })
       .expect(200);
+    const invalidInvitation = await request(httpServer)
+      .post(`/api/stories/${storyId}/access/collaborators`)
+      .set('Cookie', ownerCookie)
+      .send({ email: 'missing@example.com', role: 'viewer' })
+      .expect(400);
+    expect(invalidInvitation.body.code).toBe('COLLABORATOR_ACCOUNT_INVALID');
     const invitation = await request(httpServer)
       .post(`/api/stories/${storyId}/access/collaborators`)
       .set('Cookie', ownerCookie)

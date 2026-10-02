@@ -67,15 +67,17 @@ conversion and persistence finish.
 
 ## Manage Story Access
 
-Select `Access` from a story card or its editor toolbar. The creator or an
-administrator can choose who may read the story: only the owner, every signed-in
-user, anyone with the public link, or invited accounts. Editing can remain with
-the owner, be granted to invited editors, or be opened to every signed-in user.
+Select `Access` from a story card, or open the gear beside the Story title and
+select the `Access` tab. The creator or an administrator can choose who may read
+the story: only the owner, every signed-in user, anyone with the public link, or
+accounts with a direct grant. Editing can remain with the owner, be granted to
+editors, or be opened to every signed-in user.
 
-Invitations target an existing Paralleax account by email and grant either
-reader or editor access. They do not send email or create a secret invitation
-link. Reverting a story to private temporarily disables all collaborator grants
-without deleting them.
+Direct grants target an existing Paralleax account by email and grant either
+reader or editor access. An existing grant can be changed in place or removed.
+These actions do not send email or create a secret invitation link. Reverting a
+story to private temporarily disables all collaborator grants without deleting
+them.
 
 The same screen chooses who may comment: editors, which is the default, or every
 signed-in reader who already has access to the story. This setting does not grant
@@ -166,8 +168,10 @@ available.
 
 Use the title field at the top of the editor. The title is saved when the field loses focus.
 
-Use **Story starts** beside it to choose the initial narrative date and time.
-This is story-local time and does not change with the reader's device timezone.
+Use the gear beside the title, then the **Properties** tab, to choose the initial
+narrative date and time. This remains available to Story editors even when they
+cannot manage access. It is story-local time and does not change with the
+reader's device timezone.
 
 The editor toolbar reports whether a save is pending, complete, or failed. If a
 save is pending or failed, closing/reloading the browser or following an

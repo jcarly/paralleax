@@ -41,6 +41,7 @@ export function GraphDecorationNode({ data }: NodeProps<GraphDecorationFlowNode>
           handleStyle={{ borderColor: decoration.color }}
           onResizeEnd={(_, size) =>
             data.onResize?.(decoration.id, {
+              position: decoration.position,
               width: size.width,
               height: size.height,
             })

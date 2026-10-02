@@ -9,11 +9,14 @@ import { AdminController } from './admin.controller';
 import { SessionGuard } from './auth.guard';
 import { AuthRepository } from './auth.repository';
 import { AuthService } from './auth.service';
+import { EmailModule } from '../email/email.module';
+import { AuthTestingController } from './auth-testing.controller';
 
 @Module({
   imports: [
     ConfigModule,
     DatabaseModule,
+    EmailModule,
     ThrottlerModule.forRootAsync({
       imports: [ConfigModule],
       inject: [AppConfigService],
@@ -26,7 +29,7 @@ import { AuthService } from './auth.service';
       ],
     }),
   ],
-  controllers: [AuthController, AdminController],
+  controllers: [AuthController, AdminController, AuthTestingController],
   providers: [
     AuthRepository,
     AuthService,

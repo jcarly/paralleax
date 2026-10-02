@@ -26,9 +26,15 @@ details. They should stay covered by tests as the editor grows.
   undo history because their ownership and lifecycles differ.
 - Reader-visible discussions are limited to the current interaction. Displaying
   or writing them never changes the ordered journey or runtime evaluation.
-- A comment anchor is either a graph position, a same-story target entity, or a
-  supported text field on a same-story target. Missing or changed text detaches
-  the anchor without deleting its preserved quote or discussion.
+- A comment anchor is either a graph position, a same-story target entity, a
+  registry-defined semantic field or section on a same-story target, or a
+  supported text field on that target. Missing or changed text detaches the
+  anchor without deleting its preserved quote or discussion; semantic anchors
+  stay attached while their target exists.
+- Deleting a review discussion soft-deletes the whole thread and all of its
+  replies as one unit. Only the thread author or a Story manager may delete or
+  restore it; ordinary comment projections, badges, and reader surfaces exclude
+  deleted threads.
 - An interaction should keep at least one trigger.
 - An interaction should always have a canvas position. Loaded or incoming story
   data with a missing position is normalized with a stable default position.
@@ -232,9 +238,9 @@ details. They should stay covered by tests as the editor grows.
   than from the interaction content inspector.
 - Interaction input and output lists should not be duplicated in the inspector
   when the graph already represents them.
-- When connecting interactions, the editor must let the author choose between
-  adding the source as an input to an existing trigger and creating a new trigger
-  when both are possible.
+- When connecting interactions, the graph target must make the author's intent
+  explicit: the input `+` creates a new trigger and an existing Trigger marker
+  adds the source to that Trigger.
 - Adding an input to an existing trigger preserves one trigger with shared
   conditions across several inputs.
 - Creating a new trigger creates a separate condition group for the same output
@@ -250,6 +256,12 @@ details. They should stay covered by tests as the editor grows.
 
 - Authentication uses opaque, revocable server-side sessions. Raw session tokens
   and passwords must never be persisted.
+- New password-account registrations remain unauthenticated until email
+  verification succeeds. Verification and password-reset links are random,
+  hashed at rest, purpose-scoped, expiry-bound, and consumable once. A password
+  reset or password change revokes prior sessions before issuing its replacement.
+  Existing accounts upgraded before verification retain access through their
+  migration-time verified timestamp.
 - Every story has exactly one creator. Its creator and a global administrator can
   always read, edit, manage, and delete it.
 - Global roles are limited to operational account roles (`user` and `admin`).

@@ -2,7 +2,7 @@
 
 This roadmap describes the progression from the validated narrative core to a public Paralleax platform.
 
-Status reviewed: 2026-09-13.
+Status reviewed: 2026-09-30.
 
 It is organized around **user capabilities** rather than implementation areas. Engineering work supports these milestones but does not define them by itself.
 
@@ -28,18 +28,16 @@ substantial V0.3, V0.4, V0.6, V0.8, and V0.9 foundations, but that does not make
 the later milestones complete: public delivery is still gated by the unfinished
 reliability, conflict, exchange-format, accessibility, and publication work.
 
-The near-term delivery sequence is:
+The private-alpha P0 feedback queue is complete. The near-term delivery sequence is:
 
-1. close the private-alpha P0 feedback queue below, beginning with measured
-   large-Story performance, private display identities, account-entry visibility,
-   inaccessible-route behavior, and build/runtime warning triage;
-2. deliver the P1 Story-settings/access, localization, comment-inspector, graph
-   correctness, and cyclic-layout work as cohesive verticals;
-3. complete V0.3 optimistic concurrency, conflict recovery, history retention,
+1. deliver P1 account safety, Story-settings/access, localization,
+   comment-inspector, semantic comment slots, graph correctness, and cyclic-layout
+   work as cohesive verticals;
+2. complete V0.3 optimistic concurrency, conflict recovery, history retention,
    and optional gesture grouping;
-4. establish the stable Paralleax backup/import-export contract required by V0.6;
-5. add Story validation, onboarding, and accessibility evidence to reach V0.7;
-6. then deepen world state, dynamic execution, collaboration, and publishing
+3. establish the stable Paralleax backup/import-export contract required by V0.6;
+4. add Story validation, onboarding, and accessibility evidence to reach V0.7;
+5. then deepen world state, dynamic execution, collaboration, and publishing
    according to validated user needs.
 
 Later milestone foundations may continue to be improved when they support these
@@ -82,7 +80,8 @@ priority, the order below is the intended delivery order.
    fibers, with local production selection between 0.76 and 0.92 s and local
    development selection between 0.96 and 1.48 s. Operation measurements now
    wait for React quiescence and the scheduled lane retains three samples per
-   build. Stable scheduled CI results remain before this item can be closed.
+   build. **Completed 2026-09-13:** the revised six-sample performance lane passes
+   in scheduled CI, providing the previously missing shared-runner baseline.
 2. **Introduce private display identities.** Story cards, comments, history, and
    collaborative surfaces must show a pseudonym/display name rather than an
    email address. Email remains private account data and may appear only where
@@ -129,7 +128,13 @@ priority, the order below is the intended delivery order.
 
 1. **Account safety.** Add email verification, password recovery/change, and
    session revocation before open registration. Keep external identity providers
-   as the separate P2 decision below.
+   as the separate P2 decision below. **Completed 2026-09-30:** Nodemailer SMTP
+   delivery now sends purpose-specific verification and recovery messages. New
+   registrations cannot sign in before verification; verification and reset
+   tokens are random, hashed at rest, scoped, expiry-bound, and atomic one-use
+   actions. Password reset/change revokes existing sessions, the account dialog
+   can revoke other sessions, unknown reset addresses receive a neutral response,
+   and the forward migration preserves access for pre-existing accounts.
 2. **Story configuration and access.** Put configuration behind a gear beside
    the Story title and reuse the existing controls inside a tabbed modal:
    `Properties` owns Story-level properties including the starting date/time,
@@ -143,12 +148,23 @@ priority, the order below is the intended delivery order.
    grants access only to existing accounts. Reserve the `Send invitation`
    wording (`Envoyer l'invitation` in French) for a future outbound invitation
    workflow. Allow an existing viewer/editor grant to be changed in place as
-   well as removed.
+   well as removed. **Completed 2026-09-13:** the editor gear opens the shared
+   tabbed configuration modal, Story editors retain the existing `Properties`
+   permission, and only owners/administrators see `Access`. The library opens
+   that tab directly, the legacy access URL redirects compatibly, broad-to-
+   restricted selectors and concise English/French labels are applied, and
+   existing reader/editor grants can be changed in place or removed.
 3. **Localized operational errors.** Map stable API error codes to localized web
    copy and use the server message only as a safe fallback. In particular, the
    existing-account/non-owner collaborator error must never surface in English
    while the French interface is active. Audit all access, authentication,
-   import, save, and comment failures for the same leak.
+   import, save, and comment failures for the same leak. **Completed 2026-09-21:**
+   one web localization boundary now maps generic and application-specific API
+   codes for authentication, Story access, imports, persistence, comments,
+   administration, reader loading, and saves. The API emits specific stable codes
+   for the corresponding known failures; browser-side diagnostics remain visible,
+   and only future explicit application codes may temporarily use their safe server
+   message. French collaborator failures are covered by a component regression test.
 4. **Inspector-integrated comments.** Replace the floating comment block with a
    collapsible comment column integrated with the inspector. It is open by
    default when navigation starts from the global comment list or an entity/
@@ -158,11 +174,30 @@ priority, the order below is the intended delivery order.
    indicators beside anchored text. Discussions are expanded; selecting one
    reveals its reply field, which collapses on blur when empty. Reuse the current
    thread, anchor, permission, and SSE model rather than introducing another
-   comment representation.
+   comment representation. **Completed 2026-09-22:** entity and text discussions
+   now share one translucent inspector-side rail. It opens explicitly from the
+   global list, graph/context badges, or inspector controls, stays collapsed for
+   ordinary selection, keeps every discussion readable, and limits the reply
+   editor to the active discussion. Interaction and Trigger badges use the same
+   marker, commented context rows expose their count, and supported inspector
+   fields show local anchored-comment controls. Leaving a reply collapses only
+   that editor; changing the selected target or closing the rail clears its
+   contextual state. **Responsive follow-up 2026-09-23:** the global list now
+   lives inside the standard inspector container, and every narrow comment-rail
+   layout keeps the graph in one full-width column with the inspector overlaid.
+   Selecting an authored element switches that inspector from the global list to
+   the element immediately.
 5. **Complete comment manipulation.** Make graph comment post-its draggable
    through the existing anchor-update operation. Add authorized thread/comment
    deletion only after settling thread-versus-message deletion, audit retention,
    and restoration semantics; cover post-it and non-canvas anchors uniformly.
+   **Completed 2026-09-22:** authorized post-it managers can now drag a canvas
+   discussion through the existing anchor endpoint. Failed persistence restores
+   the authored position and exposes a retryable comment error. A thread author
+   or Story manager can soft-delete the complete discussion from canvas,
+   inspector, or player presentations. Normal projections hide it; the global
+   deleted-discussion view preserves and restores the thread with all replies.
+   Individual message deletion remains outside this milestone.
 6. **Graph correctness and direct actions.** Fix frame resizing so it preserves
    the frame origin. Route keyboard and contextual actions through shared graph
    commands: `Delete` removes the selected element only outside editable fields;
@@ -170,7 +205,29 @@ priority, the order below is the intended delivery order.
    and Interaction child creation where applicable; right-clicking a frame or
    graph text offers deletion. Reuse the existing canvas context menu,
    confirmation behavior, selection controller, and persistence actions.
-7. **Improve automatic layout for cycles.** Add representative loop and dense
+   **Completed 2026-09-22:** frame resizing now retains and persists its top-left
+   origin. React Flow local deletion is disabled; inspector, context-menu, and
+   guarded keyboard deletion share the existing persisted operations and
+   confirmations. Element right-click selects the target and exposes the
+   applicable comment, child, automatic-placement, and deletion actions.
+7. **Add semantic comment slots to entity editing.** Extend the existing
+   `CommentAnchor` family instead of creating another discussion model. Define a
+   shared typed registry of stable entity-field and entity-section slots, validate
+   same-Story targets through the existing API path, and reuse current threads,
+   messages, permissions, deletion/restoration, SSE, counts, and contextual rail.
+   Start with the editing surfaces for Interactions, Triggers, Characters,
+   Locations, Item Definitions, and Stat Definitions. A label and its non-text
+   value share one field slot; precise text selections keep their existing text
+   anchors. Icons stay discreet until hover/focus and persist with a count when a
+   discussion exists. Story-level list headings and dynamic rows are explicitly
+   subsequent increments; no row gets an individual slot without durable
+   identity, and ephemeral UI controls are not commentable. **Completed
+   2026-10-01:** the shared registry now validates stable field and section
+   anchors for each supported target type. The existing comment API, permissions,
+   threads, SSE reload, contextual rail, and count markers are reused across the
+   six entity inspectors; labels and non-text controls share one field slot,
+   while dynamic rows remain section-only.
+8. **Improve automatic layout for cycles.** Add representative loop and dense
    cyclic fixtures, define expected readability and stability, then improve the
    existing deterministic layout without changing Trigger semantics or making
    React Flow canonical.
@@ -183,7 +240,10 @@ priority, the order below is the intended delivery order.
 2. **Inspector image editing.** Reuse the existing context thumbnail and image
    URL field for locations, characters, item definitions, and stat definitions.
    Show a larger same-ratio image frame at the top of each inspector; clicking it
-   opens one shared URL-only image dialog until managed uploads exist.
+   opens one shared URL-only image dialog until managed uploads exist. **Completed
+   2026-10-01:** the four inspectors now reuse their existing `imageUrl` field
+   through one large 16:9 frame and shared URL-only dialog; no upload or media
+   persistence model was introduced.
 3. **External sign-in providers.** Evaluate Google and any additional provider
    only after defining provider choice, account linking, verified-email trust,
    duplicate-account recovery, and deployment secrets. Extend the existing user
@@ -494,6 +554,41 @@ Alice -> Bob
 
 The exact representation requires an ADR before implementation.
 
+#### Multi-participant narratives
+
+**Planned future model increment; not implemented.** Extend the current
+single-playable-character reader toward stories with several logical Player
+seats, several characters, shared scenes, and changes of incarnation. A Player
+is a story-authored narrative seat rather than a user account; a session creates
+its PlayerInstance and may associate it with a user. The existing authored
+Character evolves as the character-definition role, with one lazily created and
+reused CharacterInstance per definition and play session in the first
+increment.
+
+The increment should add an explicit `incarnate Player -> Character` effect and
+interaction participant roles for actors and spectators. A Player participant
+keeps its role across character changes, while a Character participant is
+controlled by whoever currently incarnates that character. Spectators receive a
+point-of-view presentation but cannot choose. Where human actors are present,
+the first human choice resolves the shared interaction; an automatic controller
+may decide only when no human actor participates.
+
+Routes remain derived editor/reader views: an entity's route is the interactions
+where it is an actor or spectator. Do not add a persistent `Path`, `Route`, or
+`Parcours` model, and do not duplicate graph structures for points of view.
+Keep participant controls progressive so a conventional one-player,
+one-character Story stays as simple to author as it is today. Reusable graph
+snippets for character selection and creation are a later authoring layer, not
+new engine primitives.
+
+The first increment excludes several instances of one character template in a
+session, shared control of one character, one Player controlling several
+characters at once, advanced NPC decision making, vote/majority/unanimity and
+simultaneous choices, and distributed multiplayer synchronization. It requires
+an ADR before implementation to define session persistence/versioning, user-to-
+seat assignment, interaction-cast compatibility, reader-save migration,
+authorization, and multi-human disconnect/reconnect semantics.
+
 #### Story organization
 
 Define a neutral grouping concept for quests, chapters, arcs, scene sequences, or author-defined groups.
@@ -516,7 +611,6 @@ Only implement later stages when concrete story requirements justify them.
 
 #### Other increments
 
-- Playable character points of view.
 - Graph filters/focal points for world entities and groups.
 - Explicit final interactions and completed-story semantics.
 

@@ -27,7 +27,12 @@ Paralleax currently includes:
   while zero-second timers never appear in normal reading.
 - Persisted visual graph decorations: movable, resizable colored frames and movable
   text with configurable color, size, family, weight, and style. Decorations stay
-  behind interactions and trigger markers and have no reader semantics.
+  behind interactions and trigger markers and have no reader semantics. Frame
+  resizing keeps its authored top-left origin.
+- Shared persisted graph actions back inspector controls, the `Delete` shortcut,
+  and element context menus. Interaction and Trigger menus expose review,
+  deletion, automatic placement, and child creation where applicable; decoration
+  menus expose deletion. Keyboard deletion is disabled inside editable fields.
 - Reader execution with authenticated database-backed saves: one reader
   autosave, one editor-only Simulation Mode autosave, and up to 20 named manual
   saves per user and story. Manual saves and both autosaves can be loaded in
@@ -39,6 +44,9 @@ Paralleax currently includes:
 - Story-local deterministic calendar time.
 - Locations.
 - Characters.
+- Optional direct image URLs for locations, characters, reusable item definitions,
+  and reusable stat definitions. Their inspectors share a large 16:9 image frame
+  at the top and one URL-only editing dialog; managed media uploads remain out of scope.
 - Reusable typed stat definitions and authored assignments on the Story,
   characters, locations, and item definitions. Number, boolean, and string values
   support deterministic replay, interaction effects, trigger conditions, and
@@ -53,24 +61,55 @@ Paralleax currently includes:
 - Reusable item definitions.
 - Exact authored item instances, including nested item relationships.
 - Character- or location-rooted item placement and nested item relationships.
-- Authentication, sessions, creator ownership, required non-unique display names,
+- Authentication, verified email/password accounts, opaque revocable sessions,
+  password recovery/change, self-service revocation of other sessions, creator ownership, required non-unique display names,
   self-service display-name editing, global user/admin roles, per-story
-  visibility, editing, and editor/reader comment policies, reader/editor invitations,
+  visibility, editing, and editor/reader comment policies, reader/editor grants,
   authenticated anchored review discussions, health/readiness, migrations, and
-  production-oriented API error handling. Story cards, comments, and change
+  production-oriented API error handling. Story-level properties and access use
+  one tabbed configuration modal opened from the editor title; Story editors can
+  change properties, while owners and administrators can also manage policies and
+  add, update, or remove existing-account reader/editor grants. Story cards open
+  the access tab directly. Story cards, comments, and change
   history project current display names by user id without exposing account
   emails; self-service, administration, and explicit access management retain
   email where needed. An inaccessible or missing direct Story editor, player, or
   access URL returns to the Story library without rendering the API detail;
   readable accounts that merely lack edit permission still move from the editor
   URL to the player.
+- Transactional-email delivery through a configured SMTP relay for account
+  verification and recovery. The API
+  uses Nodemailer with mandatory TLS and a configured sender, accepts no partial
+  SMTP configuration, and keeps recipients, message content, and credentials out
+  of application logs. New registrations require a verified email before a
+  session is created. Account-action tokens are purpose-bound, stored only as
+  hashes, expire, and are consumed once; password resets and changes revoke prior
+  sessions. Accounts predating this feature migrate as verified to avoid lockout.
 - Story review post-its on the graph, interactions, triggers, characters, locations,
-  item/stat definitions, and selected title/body/name/description text, with replies,
+  item/stat definitions, selected title/body/name/description text, and stable
+  non-text inspector field/section slots, with replies,
   open/resolved state, durable quote context, detached-anchor detection, and live
   SSE invalidation/reload for reviewers connected to the same API process. Editors
-  use an inspector-integrated list, contextual discussion rail, navigable anchors,
-  and expandable graph post-its; authorized readers see and create contextual
-  interaction discussions in the player.
+  use an inspector-integrated list, a translucent and explicitly collapsible
+  contextual discussion rail, consistent graph/context-list counts, local
+  title/body/name/description markers, navigable anchors, and expandable graph
+  post-its. The global list occupies the existing inspector pane; on narrow
+  screens the pane overlays a full-width, position-stable graph instead of
+  creating compressed off-screen grid columns. Selecting any authored element
+  while that global list is open immediately restores the selected element's
+  inspector. Inspector fields scroll independently from the graph; the fixed
+  header keeps its comment toggle and, when discussions already exist, a separate
+  add-comment action visible and clickable across the pane border.
+  Authorized thread managers can move a graph post-it by updating its
+  existing canvas anchor; failed moves restore the persisted position and remain
+  visible as an operational error. A discussion author or Story manager can
+  soft-delete the complete thread from any anchor presentation; deleted threads
+  leave normal badges and views, remain recoverable from the global comment
+  panel, and restore with every reply intact. Discussions remain readable
+  together while only the selected discussion exposes a reply field, which
+  collapses when focus leaves it.
+  Authorized readers see and create contextual interaction discussions in the
+  player.
 - An administrator-only account interface with role summaries, account search and
   filtering, global user/admin assignment, and visible last-administrator protection.
 - A unified story library: anonymous visitors see public stories, while signed-in
@@ -102,7 +141,10 @@ Paralleax currently includes:
   use an authenticated binary upload without a Paralleax application-level limit.
   The import dialog reports measurable upload percentage, then an indeterminate
   analysis-and-persistence phase after the server has received the file.
-- Editor-only React Flow graph authoring.
+- Editor-only React Flow graph authoring. Dropping a connection on an
+  interaction's input `+` creates a dedicated Trigger; dropping on a visible
+  Trigger marker adds the input to that existing Trigger without a follow-up
+  choice dialog.
 - Rectangular graph multi-selection for interactions and linked trigger markers,
   with a transient count inspector, group drag-and-drop, and outside-click clearing.
 - Deterministic vertical graph auto-layout for the complete graph, one selected
@@ -132,7 +174,9 @@ Paralleax currently includes:
   finish before a remote refresh is applied.
 - English and French interface localization with browser detection, a persisted
   user preference, and English fallback. Authored story content is never
-  translated by the interface layer.
+  translated by the interface layer. Operational API failures are presented
+  through localized stable error codes across authentication, access, imports,
+  authoring persistence, comments, administration, reader loading, and saves.
 - Optional Formbricks-powered contextual feedback from the application header,
   with localized controls and non-content route, surface, version, viewport, and
   language context. The integration stays disabled when it is not configured.

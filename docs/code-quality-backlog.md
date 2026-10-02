@@ -3,7 +3,7 @@
 Status: Active
 
 This page records maintainability, reliability, performance, and test work found
-during the August 2026 code review. Production gates remain authoritative in
+during the August 2026 code review and subsequent technical evaluations. Production gates remain authoritative in
 [Production readiness](production-readiness.md).
 
 ## Completed In The First Review Batch
@@ -183,6 +183,71 @@ during the August 2026 code review. Production gates remain authoritative in
       request remains unresolved.
 - [x] Review coverage thresholds after module splits and cover hidden branches.
 - [x] Track bundle size so refactors do not pull React Flow into the initial chunk.
+
+## Library Evaluation Candidates — 2026-09-24
+
+These candidates record the author's library-reuse note and the initial layout
+review. They are evaluation leads, not accepted dependencies or implementation
+commitments. Compare each candidate with the existing implementation and its
+tests before replacing code. The current product baseline remains authoritative.
+
+- [ ] Evaluate **elkjs / ELK Layered** first for automatic graph organization,
+      with **Dagre** as a simpler comparison. Preserve explicit linked Trigger
+      vertices, multiple inputs, measured card dimensions, and bottom-output /
+      top-input attachment points. Compare dense branches, convergence, cycles,
+      disconnected components, repeat-layout stability, selected-only movement,
+      execution time, and bundle cost against the existing fixtures. ELK's
+      interactive options must not be assumed to freeze every unselected node.
+      Reuse the existing batched position mutation and durable undo operation;
+      consider on-demand loading and a worker for expensive computation.
+- [ ] Evaluate **ELK routing**, then **libavoid** if independent obstacle-aware
+      edge routing remains necessary. Node placement and edge routing are
+      separate responsibilities: adopting computed positions does not make the
+      current React Flow edges consume the engine's routed paths automatically.
+- [ ] Evaluate **Graphology** when structural diagnostics require shared graph
+      traversals, components, cycle detection, or path analysis. Use a temporary
+      technical projection of the Story. Structural connectivity alone cannot
+      establish narrative reachability through conditions, stats, items, time,
+      and journey state; that remains the shared Paralleax engine's responsibility.
+- [ ] Assess a separate **layout cleanup** action if authors need overlap
+      removal while retaining deliberate placement. React Flow collision examples
+      are implementation references to inspect, not an assumed built-in cleanup
+      API. Define the permitted displacement and spacing behavior before delivery.
+- [ ] Evaluate **React Hook Form with the existing Zod dependency** where it
+      demonstrably simplifies inspector forms. Preserve current autosave,
+      validation, draft, and optimistic persistence behavior.
+- [ ] Evaluate **Chevrotain** if ChoiceScript or QSP grammar growth justifies
+      replacing parts of the existing parsers. Preserve the staged adapters,
+      source diagnostics, compatibility reports, and canonical mapping; a parser
+      library does not resolve unsupported source runtime semantics.
+- [ ] Evaluate **Fuse.js** only when approximate, multi-field search becomes a
+      concrete requirement beyond the existing filtering and navigation.
+
+Two suggestions in the supplied note require different treatment because their
+underlying features already exist:
+
+- **Undo/redo:** retain the durable, conflict-checked field/entity deltas from
+  [ADR-023](decisions/ADR-023-durable-story-change-history.md). A zundo or React
+  Flow snapshot stack is not a replacement for canonical Story history and may
+  overwrite unrelated collaborative edits.
+- **Collaboration:** live editing already uses authorized SSE invalidation and
+  server persistence under [ADR-020](decisions/ADR-020-live-story-collaboration.md).
+  Yjs, Liveblocks, or another collaboration system would require evaluation for
+  a specific additional need, such as concurrent editing of the same text field,
+  with explicit authorization, persistence, and history integration.
+
+Primary references checked for the layout and structural-analysis candidates:
+
+- [React Flow layout overview](https://reactflow.dev/learn/layouting/layouting)
+- [ELK Layered](https://eclipse.dev/elk/reference/algorithms/org-eclipse-elk-layered.html)
+- [elkjs usage and workers](https://github.com/kieler/elkjs)
+- [ELK interactive constraints](https://eclipse.dev/elk/blog/posts/2023/23-01-09-constraining-the-model.html)
+- [React Flow libavoid routing example](https://reactflow.dev/examples/edges/edge-routing)
+  (the example is distributed under the React Flow Pro license)
+- [Graphology standard library](https://graphology.github.io/standard-library/)
+
+The remaining named libraries are retained from the author's note for later
+evaluation; this entry does not verify their versions or select integrations.
 
 ## Delivery Notes
 

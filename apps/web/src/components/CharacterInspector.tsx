@@ -8,6 +8,12 @@ import type {
   StatValue,
 } from '@paralleax/shared';
 import { getStatValueType } from '@paralleax/shared';
+import {
+  InspectorCommentField,
+  InspectorCommentSlot,
+  type InspectorSemanticCommentProps,
+  type InspectorTextCommentProps,
+} from '../features/comments/InspectorCommentField';
 import { CategoryField } from './CategoryField';
 import { ImageUrlField } from './ImageUrlField';
 import { ItemInstanceTree } from './ItemInstanceTree';
@@ -27,6 +33,10 @@ export function CharacterInspector({
   onCreateItem,
   onDeleteItem,
   onMoveItem,
+  textCommentCounts,
+  onOpenTextComments,
+  semanticCommentCounts,
+  onOpenSemanticComments,
 }: {
   character: Character;
   categorySuggestions?: string[];
@@ -49,7 +59,8 @@ export function CharacterInspector({
   onCreateItem: (characterId: string, itemDefinitionId: string) => Promise<void>;
   onDeleteItem: (characterId: string, itemId: string) => Promise<void>;
   onMoveItem: (itemId: string, placement: MoveItemInstanceInput) => Promise<void>;
-}) {
+} & InspectorTextCommentProps &
+  InspectorSemanticCommentProps) {
   const { t } = useTranslation();
   const availableDefinitions = statDefinitions.filter(
     (definition) =>
@@ -67,160 +78,209 @@ export function CharacterInspector({
   return (
     <div>
       <h3>{t('inspector.character')}</h3>
-      <label>
-        {t('inspector.name')}
-        <input
-          data-comment-field="name"
-          value={character.name}
-          onChange={(event) => onChange({ name: event.target.value })}
-          onBlur={(event) => void onPatch(character.id, { name: event.target.value })}
+      <InspectorCommentSlot
+        slot={{ kind: 'field', field: 'imageUrl' }}
+        label={t('inspector.imageUrl')}
+        semanticCommentCounts={semanticCommentCounts}
+        onOpenSemanticComments={onOpenSemanticComments}
+      >
+        <ImageUrlField
+          imageUrl={character.imageUrl}
+          onChange={(imageUrl) => onChange({ imageUrl })}
+          onBlur={(imageUrl) => void onPatch(character.id, { imageUrl })}
         />
-      </label>
-      <CategoryField
-        category={character.category}
-        suggestions={categorySuggestions}
-        onChange={(category) => onChange({ category })}
-        onBlur={(category) => void onPatch(character.id, { category })}
-      />
-      <ImageUrlField
-        imageUrl={character.imageUrl}
-        onChange={(imageUrl) => onChange({ imageUrl })}
-        onBlur={(imageUrl) => void onPatch(character.id, { imageUrl })}
-      />
-      <label>
-        <input
-          type="checkbox"
-          checked={character.isPlayable ?? false}
-          onChange={(event) => {
-            const isPlayable = event.target.checked;
-            onChange({ isPlayable });
-            void onPatch(character.id, { isPlayable });
-          }}
-        />
-        {t('inspector.playableCharacter')}
-      </label>
-      <div className="inspector-section-header">
-        <h3>{t('inspector.stats')}</h3>
-      </div>
-      {availableDefinitions.length > 0 ? (
-        <div className="stat-assignment">
-          <select
-            aria-label={t('inspector.statToAdd')}
-            value={definitionId}
-            onChange={(event) => setSelectedDefinitionId(event.target.value)}
-          >
-            {availableDefinitions.map((definition) => (
-              <option key={definition.id} value={definition.id}>
-                {definition.name}
-              </option>
-            ))}
-          </select>
-          <button
-            className="secondary"
-            type="button"
-            aria-label={t('inspector.addStat')}
-            onClick={() => void onCreateStat(character.id, definitionId)}
-          >
-            {t('inspector.add')}
-          </button>
-        </div>
-      ) : (
-        <p className="hint">
-          {statDefinitions.length === 0
-            ? t('inspector.createStatFirst')
-            : t('inspector.allStatsAssigned')}
-        </p>
-      )}
-      {(character.stats ?? []).map((stat) => (
-        <div className="stat-row" key={stat.id}>
-          <span className="stat-name">
-            {statDefinitions.find(({ id }) => id === stat.statDefinitionId)?.imageUrl ? (
-              <img
-                className="context-picto"
-                src={statDefinitions.find(({ id }) => id === stat.statDefinitionId)?.imageUrl}
-                alt=""
-              />
-            ) : null}
-            {statDefinitions.find(({ id }) => id === stat.statDefinitionId)?.name ??
-              t('inspector.unknownStat')}
-          </span>
-          <label>
-            {t('inspector.initialValue')}
-            <StatValueField
-              ariaLabel={t('inspector.initialValue')}
-              value={stat.initialValue}
-              valueType={getStatValueType(
-                statDefinitions.find(({ id }) => id === stat.statDefinitionId) ?? {
-                  id: stat.statDefinitionId,
-                  name: stat.statDefinitionId,
-                },
-              )}
-              onChange={(initialValue) =>
-                onChange({
-                  stats: (character.stats ?? []).map((item) =>
-                    item.id === stat.id ? { ...item, initialValue } : item,
-                  ),
-                })
-              }
-              onBlur={(initialValue) => void onPatchStat(character.id, stat.id, { initialValue })}
-            />
-          </label>
-          <RemoveRowButton
-            label={t('inspector.deleteCharacterStat')}
-            onRemove={() => void onDeleteStat(character.id, stat.id)}
+      </InspectorCommentSlot>
+      <InspectorCommentField
+        field="name"
+        label={t('inspector.name')}
+        textCommentCounts={textCommentCounts}
+        onOpenTextComments={onOpenTextComments}
+      >
+        <label>
+          {t('inspector.name')}
+          <input
+            data-comment-field="name"
+            value={character.name}
+            onChange={(event) => onChange({ name: event.target.value })}
+            onBlur={(event) => void onPatch(character.id, { name: event.target.value })}
           />
-        </div>
-      ))}
-      <div className="inspector-section-header">
-        <h3>{t('inspector.items')}</h3>
-      </div>
-      {itemDefinitions.length > 0 ? (
-        <div className="stat-assignment">
-          <select
-            aria-label={t('inspector.itemToAdd')}
-            value={itemDefinitionId}
-            onChange={(event) => setSelectedItemDefinitionId(event.target.value)}
-          >
-            {itemDefinitions.map((definition) => (
-              <option key={definition.id} value={definition.id}>
-                {definition.name}
-              </option>
-            ))}
-          </select>
-          <button
-            className="secondary"
-            type="button"
-            aria-label={t('inspector.addItem')}
-            onClick={() => void onCreateItem(character.id, itemDefinitionId)}
-          >
-            {t('inspector.add')}
-          </button>
-        </div>
-      ) : (
-        <p className="hint">{t('inspector.createItemFirst')}</p>
-      )}
-      {(character.items ?? []).length === 0 ? (
-        <p className="hint">{t('inspector.noOwnedItems')}</p>
-      ) : (
-        <ItemInstanceTree
-          items={character.items ?? []}
-          itemDefinitions={itemDefinitions}
-          statDefinitions={statDefinitions}
-          rootPlacement={{ characterId: character.id }}
-          onMove={onMoveItem}
-          onDelete={(itemId) => onDeleteItem(character.id, itemId)}
+        </label>
+      </InspectorCommentField>
+      <InspectorCommentSlot
+        slot={{ kind: 'field', field: 'category' }}
+        label={t('inspector.category')}
+        semanticCommentCounts={semanticCommentCounts}
+        onOpenSemanticComments={onOpenSemanticComments}
+      >
+        <CategoryField
+          category={character.category}
+          suggestions={categorySuggestions}
+          onChange={(category) => onChange({ category })}
+          onBlur={(category) => void onPatch(character.id, { category })}
         />
-      )}
-      <label>
-        {t('inspector.description')}
-        <textarea
-          data-comment-field="description"
-          rows={7}
-          value={character.description}
-          onChange={(event) => onChange({ description: event.target.value })}
-          onBlur={(event) => void onPatch(character.id, { description: event.target.value })}
-        />
-      </label>
+      </InspectorCommentSlot>
+      <InspectorCommentSlot
+        slot={{ kind: 'field', field: 'isPlayable' }}
+        label={t('inspector.playableCharacter')}
+        semanticCommentCounts={semanticCommentCounts}
+        onOpenSemanticComments={onOpenSemanticComments}
+      >
+        <label>
+          <input
+            type="checkbox"
+            checked={character.isPlayable ?? false}
+            onChange={(event) => {
+              const isPlayable = event.target.checked;
+              onChange({ isPlayable });
+              void onPatch(character.id, { isPlayable });
+            }}
+          />
+          {t('inspector.playableCharacter')}
+        </label>
+      </InspectorCommentSlot>
+      <InspectorCommentSlot
+        slot={{ kind: 'section', section: 'stats' }}
+        label={t('inspector.stats')}
+        semanticCommentCounts={semanticCommentCounts}
+        onOpenSemanticComments={onOpenSemanticComments}
+      >
+        <div className="inspector-section-header">
+          <h3>{t('inspector.stats')}</h3>
+        </div>
+        {availableDefinitions.length > 0 ? (
+          <div className="stat-assignment">
+            <select
+              aria-label={t('inspector.statToAdd')}
+              value={definitionId}
+              onChange={(event) => setSelectedDefinitionId(event.target.value)}
+            >
+              {availableDefinitions.map((definition) => (
+                <option key={definition.id} value={definition.id}>
+                  {definition.name}
+                </option>
+              ))}
+            </select>
+            <button
+              className="secondary"
+              type="button"
+              aria-label={t('inspector.addStat')}
+              onClick={() => void onCreateStat(character.id, definitionId)}
+            >
+              {t('inspector.add')}
+            </button>
+          </div>
+        ) : (
+          <p className="hint">
+            {statDefinitions.length === 0
+              ? t('inspector.createStatFirst')
+              : t('inspector.allStatsAssigned')}
+          </p>
+        )}
+        {(character.stats ?? []).map((stat) => (
+          <div className="stat-row" key={stat.id}>
+            <span className="stat-name">
+              {statDefinitions.find(({ id }) => id === stat.statDefinitionId)?.imageUrl ? (
+                <img
+                  className="context-picto"
+                  src={statDefinitions.find(({ id }) => id === stat.statDefinitionId)?.imageUrl}
+                  alt=""
+                />
+              ) : null}
+              {statDefinitions.find(({ id }) => id === stat.statDefinitionId)?.name ??
+                t('inspector.unknownStat')}
+            </span>
+            <label>
+              {t('inspector.initialValue')}
+              <StatValueField
+                ariaLabel={t('inspector.initialValue')}
+                value={stat.initialValue}
+                valueType={getStatValueType(
+                  statDefinitions.find(({ id }) => id === stat.statDefinitionId) ?? {
+                    id: stat.statDefinitionId,
+                    name: stat.statDefinitionId,
+                  },
+                )}
+                onChange={(initialValue) =>
+                  onChange({
+                    stats: (character.stats ?? []).map((item) =>
+                      item.id === stat.id ? { ...item, initialValue } : item,
+                    ),
+                  })
+                }
+                onBlur={(initialValue) => void onPatchStat(character.id, stat.id, { initialValue })}
+              />
+            </label>
+            <RemoveRowButton
+              label={t('inspector.deleteCharacterStat')}
+              onRemove={() => void onDeleteStat(character.id, stat.id)}
+            />
+          </div>
+        ))}
+      </InspectorCommentSlot>
+      <InspectorCommentSlot
+        slot={{ kind: 'section', section: 'items' }}
+        label={t('inspector.items')}
+        semanticCommentCounts={semanticCommentCounts}
+        onOpenSemanticComments={onOpenSemanticComments}
+      >
+        <div className="inspector-section-header">
+          <h3>{t('inspector.items')}</h3>
+        </div>
+        {itemDefinitions.length > 0 ? (
+          <div className="stat-assignment">
+            <select
+              aria-label={t('inspector.itemToAdd')}
+              value={itemDefinitionId}
+              onChange={(event) => setSelectedItemDefinitionId(event.target.value)}
+            >
+              {itemDefinitions.map((definition) => (
+                <option key={definition.id} value={definition.id}>
+                  {definition.name}
+                </option>
+              ))}
+            </select>
+            <button
+              className="secondary"
+              type="button"
+              aria-label={t('inspector.addItem')}
+              onClick={() => void onCreateItem(character.id, itemDefinitionId)}
+            >
+              {t('inspector.add')}
+            </button>
+          </div>
+        ) : (
+          <p className="hint">{t('inspector.createItemFirst')}</p>
+        )}
+        {(character.items ?? []).length === 0 ? (
+          <p className="hint">{t('inspector.noOwnedItems')}</p>
+        ) : (
+          <ItemInstanceTree
+            items={character.items ?? []}
+            itemDefinitions={itemDefinitions}
+            statDefinitions={statDefinitions}
+            rootPlacement={{ characterId: character.id }}
+            onMove={onMoveItem}
+            onDelete={(itemId) => onDeleteItem(character.id, itemId)}
+          />
+        )}
+      </InspectorCommentSlot>
+      <InspectorCommentField
+        field="description"
+        label={t('inspector.description')}
+        textCommentCounts={textCommentCounts}
+        onOpenTextComments={onOpenTextComments}
+      >
+        <label>
+          {t('inspector.description')}
+          <textarea
+            data-comment-field="description"
+            rows={7}
+            value={character.description}
+            onChange={(event) => onChange({ description: event.target.value })}
+            onBlur={(event) => void onPatch(character.id, { description: event.target.value })}
+          />
+        </label>
+      </InspectorCommentField>
     </div>
   );
 }

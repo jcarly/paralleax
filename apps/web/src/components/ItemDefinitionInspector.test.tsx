@@ -1,10 +1,12 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ItemDefinitionInspector } from './ItemDefinitionInspector';
 
 describe('ItemDefinitionInspector', () => {
   afterEach(cleanup);
-  it('locally edits and persists the item name, image, and description', () => {
+  it('locally edits and persists the item name, image, and description', async () => {
+    const user = userEvent.setup();
     const onChange = vi.fn();
     const onPatch = vi.fn().mockResolvedValue(undefined);
 
@@ -34,15 +36,16 @@ describe('ItemDefinitionInspector', () => {
       name: 'Archive key',
     });
 
+    await user.click(screen.getByRole('button', { name: 'Add image' }));
     const image = screen.getByLabelText('Image URL');
-    fireEvent.change(image, { target: { value: 'https://images.example/key.png' } });
+    await user.type(image, 'https://images.example/key.png');
+    await user.click(screen.getByRole('button', { name: 'Save image' }));
     expect(onChange).toHaveBeenLastCalledWith({
       id: 'item-definition-1',
       name: 'Key',
       description: 'A brass key.',
       imageUrl: 'https://images.example/key.png',
     });
-    fireEvent.blur(image, { target: { value: 'https://images.example/key.png' } });
     expect(onPatch).toHaveBeenLastCalledWith('item-definition-1', {
       imageUrl: 'https://images.example/key.png',
     });

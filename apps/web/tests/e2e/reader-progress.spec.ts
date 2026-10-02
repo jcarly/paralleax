@@ -84,7 +84,7 @@ test('retries a temporary reader bootstrap failure without reloading the browser
 
   await page.goto('/stories/story-1/play');
 
-  await expect(page.getByRole('alert')).toContainText('Temporary runtime failure');
+  await expect(page.getByRole('alert')).toHaveText('The story could not be loaded.');
   const failedBootstrapRequests = bootstrapRequests;
   bootstrapUnavailable = false;
   await page.getByRole('button', { name: 'Retry' }).click();

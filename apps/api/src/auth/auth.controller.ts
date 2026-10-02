@@ -3,7 +3,15 @@ import type { Request, Response } from 'express';
 import { AppConfigService } from '../config/app-config.service';
 import { CurrentUser, Public, type RequestUser } from './auth.decorators';
 import { AuthService } from './auth.service';
-import { CredentialsDto, RegisterDto, UpdateDisplayNameDto } from './dto/credentials.dto';
+import {
+  AccountActionTokenDto,
+  AccountEmailDto,
+  ChangePasswordDto,
+  CredentialsDto,
+  RegisterDto,
+  ResetPasswordDto,
+  UpdateDisplayNameDto,
+} from './dto/credentials.dto';
 import { readSessionCookie, sessionCookieName } from './session-cookie';
 import { assertRegistrationAllowed } from './registration-policy';
 
@@ -16,13 +24,49 @@ export class AuthController {
 
   @Public()
   @Post('register')
-  async register(@Body() input: RegisterDto, @Res({ passthrough: true }) response: Response) {
+  async register(@Body() input: RegisterDto) {
     assertRegistrationAllowed(
       this.config.registrationMode,
       this.config.registrationAccessCode,
       input.accessCode,
     );
-    const result = await this.auth.register(input.email, input.password, input.displayName);
+    return this.auth.register(input.email, input.password, input.displayName);
+  }
+
+  @Public()
+  @Post('verify-email')
+  @HttpCode(200)
+  async verifyEmail(
+    @Body() input: AccountActionTokenDto,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    const result = await this.auth.verifyEmail(input.token);
+    this.setSessionCookie(response, result.token);
+    return result.user;
+  }
+
+  @Public()
+  @Post('resend-verification')
+  @HttpCode(204)
+  async resendVerification(@Body() input: AccountEmailDto) {
+    await this.auth.resendVerification(input.email);
+  }
+
+  @Public()
+  @Post('password-reset')
+  @HttpCode(204)
+  async requestPasswordReset(@Body() input: AccountEmailDto) {
+    await this.auth.requestPasswordReset(input.email);
+  }
+
+  @Public()
+  @Post('password-reset/confirm')
+  @HttpCode(200)
+  async resetPassword(
+    @Body() input: ResetPasswordDto,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    const result = await this.auth.resetPassword(input.token, input.password);
     this.setSessionCookie(response, result.token);
     return result.user;
   }
@@ -51,6 +95,23 @@ export class AuthController {
   @Patch('me')
   updateMe(@CurrentUser() user: RequestUser, @Body() input: UpdateDisplayNameDto) {
     return this.auth.updateDisplayName(user.id, input.displayName);
+  }
+
+  @Patch('me/password')
+  async changePassword(
+    @CurrentUser() user: RequestUser,
+    @Body() input: ChangePasswordDto,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    const result = await this.auth.changePassword(user.id, input.currentPassword, input.password);
+    this.setSessionCookie(response, result.token);
+    return result.user;
+  }
+
+  @Post('sessions/revoke-others')
+  @HttpCode(204)
+  async revokeOtherSessions(@CurrentUser() user: RequestUser, @Req() request: Request) {
+    await this.auth.revokeOtherSessions(user.id, readSessionCookie(request.headers.cookie));
   }
 
   private setSessionCookie(response: Response, token: string) {

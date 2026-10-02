@@ -1,9 +1,10 @@
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { updateGraphDecorationInStory, type StoryCommentThread } from '@paralleax/shared';
 import { getInteractionDragTriggerPositionUpdates } from '../storyGraph';
-import { computeStoryGraphLayout } from '../storyGraphLayout';
+import * as elkLayout from '../storyGraphElkLayout';
+import { type StoryGraphLayoutResult } from '../storyGraphLayout';
 import {
   api,
   cloneStory,
@@ -28,6 +29,31 @@ vi.mock('@xyflow/react', async () => {
 
 describe('StoryEditor graph collaboration and layout', () => {
   setupStoryEditorTestSuite();
+
+  const preloadStoryGraphElk = vi.spyOn(elkLayout, 'preloadStoryGraphElk');
+
+  beforeEach(() => {
+    preloadStoryGraphElk.mockResolvedValue(undefined);
+  });
+
+  it('preloads ELK after the ready graph becomes idle', async () => {
+    let runIdleWork: (() => void) | undefined;
+    const requestIdleCallback = vi.fn((callback: () => void) => {
+      runIdleWork = callback;
+      return 1;
+    });
+    vi.stubGlobal('requestIdleCallback', requestIdleCallback);
+    vi.stubGlobal('cancelIdleCallback', vi.fn());
+
+    await renderEditor(storyWithTwoInteractions());
+
+    await waitFor(() => expect(requestIdleCallback).toHaveBeenCalledOnce());
+    expect(preloadStoryGraphElk).not.toHaveBeenCalled();
+
+    runIdleWork?.();
+
+    await waitFor(() => expect(preloadStoryGraphElk).toHaveBeenCalledOnce());
+  });
 
   it('opens the global comment list in the inspector and navigates to a contextual thread', async () => {
     const user = userEvent.setup();
@@ -58,6 +84,9 @@ describe('StoryEditor graph collaboration and layout', () => {
 
     const commentList = screen.getByRole('complementary', { name: 'Story comments' });
     expect(commentList).toHaveClass('inspector-placement');
+    const commentsInspector = screen.getByTestId('comments-inspector');
+    expect(commentsInspector).toHaveClass('inspector', 'comments-inspector');
+    expect(commentsInspector).toContainElement(commentList);
     await user.click(within(commentList).getByRole('button', { name: /Second interaction/ }));
 
     expect(await screen.findByDisplayValue('Second interaction')).toBeInTheDocument();
@@ -68,6 +97,282 @@ describe('StoryEditor graph collaboration and layout', () => {
     expect(
       screen.getByTestId('flow-node-interaction-2').querySelector('.interaction-node'),
     ).toHaveClass('selected');
+  });
+
+  it('replaces the global comment list with the selected element inspector', async () => {
+    const user = userEvent.setup();
+    await renderEditor(storyWithTwoInteractions());
+
+    await user.click(await screen.findByRole('button', { name: /^Comments/ }));
+    expect(screen.getByTestId('comments-inspector')).toBeInTheDocument();
+
+    await user.click(screen.getByTestId('flow-node-interaction-2'));
+
+    expect(screen.queryByTestId('comments-inspector')).not.toBeInTheDocument();
+    expect(screen.getByRole('complementary', { name: 'Inspector' })).toBeInTheDocument();
+    expect(screen.getByDisplayValue('Second interaction')).toBeInTheDocument();
+  });
+
+  it('persists an authorized canvas post-it move through its existing anchor', async () => {
+    const user = userEvent.setup();
+    const story = storyWithTwoInteractions();
+    const thread: StoryCommentThread = {
+      id: 'thread-canvas',
+      storyId: story.id,
+      anchor: { kind: 'canvas', position: { x: 120, y: 180 } },
+      anchorLabel: 'Story graph',
+      status: 'open',
+      createdBy: { id: 'user-1', displayName: 'Author' },
+      createdAt: '2026-08-16T09:00:00.000Z',
+      updatedAt: '2026-08-16T09:00:00.000Z',
+      messages: [
+        {
+          id: 'message-canvas',
+          threadId: 'thread-canvas',
+          author: { id: 'user-1', displayName: 'Author' },
+          body: 'Move this note.',
+          createdAt: '2026-08-16T09:00:00.000Z',
+        },
+      ],
+    };
+    vi.mocked(api.listCommentThreads).mockResolvedValue([thread]);
+    vi.mocked(api.updateCommentThreadAnchor).mockImplementation(
+      async (_storyId, _threadId, anchor) => ({ ...thread, anchor }),
+    );
+
+    await renderEditor(story);
+    await screen.findByTestId('flow-node-comment:thread-canvas');
+    await user.click(screen.getByTestId('drag-node-comment:thread-canvas'));
+
+    await waitFor(() =>
+      expect(api.updateCommentThreadAnchor).toHaveBeenCalledWith('story-1', 'thread-canvas', {
+        kind: 'canvas',
+        position: { x: 145, y: 195 },
+      }),
+    );
+  });
+
+  it('reports a failed canvas post-it move without keeping an unpersisted position', async () => {
+    const user = userEvent.setup();
+    const story = storyWithTwoInteractions();
+    const thread: StoryCommentThread = {
+      id: 'thread-failed-canvas',
+      storyId: story.id,
+      anchor: { kind: 'canvas', position: { x: 80, y: 90 } },
+      anchorLabel: 'Story graph',
+      status: 'open',
+      createdBy: { id: 'user-1', displayName: 'Author' },
+      createdAt: '2026-08-16T09:00:00.000Z',
+      updatedAt: '2026-08-16T09:00:00.000Z',
+      messages: [
+        {
+          id: 'message-failed-canvas',
+          threadId: 'thread-failed-canvas',
+          author: { id: 'user-1', displayName: 'Author' },
+          body: 'This move will fail.',
+          createdAt: '2026-08-16T09:00:00.000Z',
+        },
+      ],
+    };
+    vi.mocked(api.listCommentThreads).mockResolvedValue([thread]);
+    vi.mocked(api.updateCommentThreadAnchor).mockRejectedValue(
+      new Error('The connection was interrupted.'),
+    );
+
+    await renderEditor(story);
+    await user.click(await screen.findByTestId('drag-node-comment:thread-failed-canvas'));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('The connection was interrupted.');
+    expect(screen.getByRole('button', { name: 'Reload comments' })).toBeInTheDocument();
+    expect(screen.getByTestId('flow-node-comment:thread-failed-canvas')).toHaveAttribute(
+      'data-node-x',
+      '80',
+    );
+    expect(screen.getByTestId('flow-node-comment:thread-failed-canvas')).toHaveAttribute(
+      'data-node-y',
+      '90',
+    );
+  });
+
+  it('keeps contextual comments collapsed until their inspector control is used', async () => {
+    const user = userEvent.setup();
+    const story = storyWithTwoInteractions();
+    vi.mocked(api.listCommentThreads).mockResolvedValue([
+      {
+        id: 'thread-interaction-2',
+        storyId: story.id,
+        anchor: { kind: 'entity', targetType: 'interaction', targetId: 'interaction-2' },
+        anchorLabel: 'Second interaction',
+        status: 'open',
+        createdBy: { id: 'user-1', displayName: 'Author' },
+        createdAt: '2026-08-16T09:00:00.000Z',
+        updatedAt: '2026-08-16T09:00:00.000Z',
+        messages: [
+          {
+            id: 'message-1',
+            threadId: 'thread-interaction-2',
+            author: { id: 'user-1', displayName: 'Author' },
+            body: 'Keep this collapsed by default.',
+            createdAt: '2026-08-16T09:00:00.000Z',
+          },
+        ],
+      },
+    ]);
+
+    await renderEditor(story);
+    await user.click(screen.getByTestId('flow-node-interaction-2'));
+
+    expect(
+      screen.queryByRole('complementary', { name: 'Comments for the selected element' }),
+    ).not.toBeInTheDocument();
+    const inspector = screen.getByRole('complementary', { name: 'Inspector' });
+    await user.click(
+      within(inspector).getByRole('button', { name: 'Open comments for this element' }),
+    );
+
+    expect(
+      screen.getByRole('complementary', { name: 'Comments for the selected element' }),
+    ).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Collapse comments for this element' }));
+    expect(
+      screen.queryByRole('complementary', { name: 'Comments for the selected element' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('keeps an entity comment action beside the comment toggle when the entity has discussions', async () => {
+    const user = userEvent.setup();
+    const story = storyWithTwoInteractions();
+    vi.mocked(api.listCommentThreads).mockResolvedValue([
+      {
+        id: 'thread-interaction-2',
+        storyId: story.id,
+        anchor: { kind: 'entity', targetType: 'interaction', targetId: 'interaction-2' },
+        anchorLabel: 'Second interaction',
+        status: 'open',
+        createdBy: { id: 'user-1', displayName: 'Author' },
+        createdAt: '2026-08-16T09:00:00.000Z',
+        updatedAt: '2026-08-16T09:00:00.000Z',
+        messages: [],
+      },
+    ]);
+
+    await renderEditor(story);
+    await user.click(screen.getByTestId('flow-node-interaction-2'));
+
+    const inspector = screen.getByRole('complementary', { name: 'Inspector' });
+    expect(
+      within(inspector).getByRole('button', { name: 'Open comments for this element' }),
+    ).toBeInTheDocument();
+    await user.click(within(inspector).getByRole('button', { name: 'Comment on this element' }));
+
+    expect(
+      screen.getByRole('complementary', { name: 'Comments for the selected element' }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'Comment' })).toBeInTheDocument();
+  });
+
+  it('opens an anchored text discussion from its inspector field marker', async () => {
+    const user = userEvent.setup();
+    const story = storyWithTwoInteractions();
+    vi.mocked(api.listCommentThreads).mockResolvedValue([
+      {
+        id: 'thread-interaction-title',
+        storyId: story.id,
+        anchor: {
+          kind: 'text',
+          targetType: 'interaction',
+          targetId: 'interaction-2',
+          field: 'title',
+          selector: {
+            exact: 'Second interaction',
+            prefix: '',
+            suffix: '',
+            start: 0,
+            end: 18,
+            sourceHash: 'title-hash',
+          },
+        },
+        anchorLabel: 'Second interaction',
+        status: 'open',
+        createdBy: { id: 'user-1', displayName: 'Author' },
+        createdAt: '2026-08-16T09:00:00.000Z',
+        updatedAt: '2026-08-16T09:00:00.000Z',
+        messages: [
+          {
+            id: 'message-title',
+            threadId: 'thread-interaction-title',
+            author: { id: 'user-1', displayName: 'Author' },
+            body: 'The title needs more context.',
+            createdAt: '2026-08-16T09:00:00.000Z',
+          },
+        ],
+      },
+    ]);
+
+    await renderEditor(story);
+    await user.click(screen.getByTestId('flow-node-interaction-2'));
+
+    expect(
+      screen.queryByRole('complementary', { name: 'Comments for the selected element' }),
+    ).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Open comments for Title' }));
+
+    expect(
+      screen.getByRole('complementary', { name: 'Comments for the selected element' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('The title needs more context.')).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'Reply' })).toBeInTheDocument();
+  });
+
+  it('creates a semantic field discussion from an inspector control', async () => {
+    const user = userEvent.setup();
+    const story = storyWithTwoInteractions();
+    vi.mocked(api.createCommentThread).mockImplementation(async (_storyId, anchor, body) => ({
+      id: 'thread-interaction-duration',
+      storyId: story.id,
+      anchor,
+      anchorLabel: 'Second interaction: Duration',
+      status: 'open',
+      createdBy: { id: 'user-1', displayName: 'Author' },
+      createdAt: '2026-08-16T09:00:00.000Z',
+      updatedAt: '2026-08-16T09:00:00.000Z',
+      messages: [
+        {
+          id: 'message-duration',
+          threadId: 'thread-interaction-duration',
+          author: { id: 'user-1', displayName: 'Author' },
+          body,
+          createdAt: '2026-08-16T09:00:00.000Z',
+        },
+      ],
+    }));
+
+    await renderEditor(story);
+    await user.click(screen.getByTestId('flow-node-interaction-2'));
+    await user.click(screen.getByRole('button', { name: 'Comment on Duration' }));
+
+    expect(
+      screen.getByRole('complementary', { name: 'Comments for the selected element' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Interaction: Duration')).toBeInTheDocument();
+    await user.type(screen.getByRole('textbox', { name: 'Comment' }), 'Check the pacing.');
+    await user.click(screen.getByRole('button', { name: 'Send' }));
+
+    await waitFor(() =>
+      expect(api.createCommentThread).toHaveBeenCalledWith(
+        'story-1',
+        {
+          kind: 'field',
+          targetType: 'interaction',
+          targetId: 'interaction-2',
+          field: 'duration',
+        },
+        'Check the pacing.',
+      ),
+    );
+    expect(screen.getByRole('button', { name: 'Open comments for Duration' })).toHaveTextContent(
+      '1',
+    );
   });
 
   it('applies remote story content, positions, context, and decorations without reloading', async () => {
@@ -345,111 +650,456 @@ describe('StoryEditor graph collaboration and layout', () => {
     expect(screen.getByRole('textbox', { name: 'Comment' })).toBeInTheDocument();
   });
 
-  it('organizes the current graph selection from the canvas context submenu', async () => {
+  it('offers interaction actions from the existing graph context menu', async () => {
     const user = userEvent.setup();
-    await renderEditor(storyWithThreeInteractions());
-    await user.click(screen.getByTestId('box-select-first-branch'));
-
-    fireEvent.contextMenu(screen.getByTestId('flow-pane'), { clientX: 400, clientY: 300 });
-    await user.click(screen.getByRole('menuitem', { name: 'Automatic organization' }));
-    const organizeMenu = screen.getByRole('menu', { name: 'Automatic organization' });
-    const organizeSelection = within(organizeMenu).getByRole('menuitem', {
-      name: 'Current selection',
+    const computeLayout = vi.spyOn(elkLayout, 'computeStoryGraphElkLayout').mockResolvedValue({
+      interactionUpdates: [],
+      triggerUpdates: [],
+      affectedNodeIds: [],
     });
-    expect(organizeSelection).toBeEnabled();
-    await user.click(organizeSelection);
-
-    await waitFor(() => expect(api.updateStoryGraphPositions).toHaveBeenCalled());
-    const updates = vi.mocked(api.updateStoryGraphPositions).mock.calls[0][1];
-    expect(updates.interactionUpdates.map(({ interactionId }) => interactionId)).not.toContain(
-      'interaction-3',
+    const story = storyWithTwoInteractions();
+    const withChild = structuredClone(story);
+    withChild.interactions.push({
+      id: 'interaction-3',
+      title: 'Context child',
+      body: '',
+      position: { x: 80, y: 420 },
+      triggers: [{ id: 'trigger-3', inputInteractionIds: ['interaction-1'], conditions: [] }],
+    });
+    vi.mocked(api.createInteraction).mockResolvedValue(
+      interactionMutation(withChild, 'interaction-3'),
     );
+
+    try {
+      await renderEditor(story);
+      fireEvent.contextMenu(screen.getByTestId('flow-node-interaction-1'), {
+        clientX: 320,
+        clientY: 240,
+      });
+
+      const menu = screen.getByRole('menu', { name: 'Graph element actions' });
+      for (const label of [
+        'Add comment',
+        'Add child interaction',
+        'Place automatically',
+        'Delete interaction',
+      ]) {
+        expect(within(menu).getByRole('menuitem', { name: label })).toBeInTheDocument();
+      }
+
+      await user.click(within(menu).getByRole('menuitem', { name: 'Add child interaction' }));
+      await waitFor(() =>
+        expect(api.createInteraction).toHaveBeenCalledWith('story-1', {
+          parentId: 'interaction-1',
+          position: expect.any(Object),
+        }),
+      );
+    } finally {
+      computeLayout.mockRestore();
+    }
   });
 
-  it('automatically organizes the complete graph and persists interaction and trigger positions', async () => {
+  it('targets linked and root triggers from their contextual actions', async () => {
     const user = userEvent.setup();
     const story = storyWithTwoInteractions();
-    const expected = computeStoryGraphLayout(story, { kind: 'all' });
+    const withoutLinkedTrigger = structuredClone(story);
+    withoutLinkedTrigger.interactions[1].triggers = [];
+    const withoutRootTrigger = structuredClone(story);
+    withoutRootTrigger.interactions[0].triggers = [];
+    vi.mocked(api.deleteTrigger)
+      .mockResolvedValueOnce(withoutLinkedTrigger)
+      .mockResolvedValueOnce(withoutRootTrigger);
+
     await renderEditor(story);
+    fireEvent.contextMenu(screen.getByTestId('flow-node-trigger:interaction-2:trigger-2'), {
+      clientX: 440,
+      clientY: 260,
+    });
 
-    await user.click(screen.getByRole('button', { name: 'Organize graph' }));
+    let menu = screen.getByRole('menu', { name: 'Graph element actions' });
+    expect(within(menu).getByRole('menuitem', { name: 'Add comment' })).toBeInTheDocument();
+    expect(within(menu).getByRole('menuitem', { name: 'Place automatically' })).toBeInTheDocument();
+    expect(within(menu).queryByRole('menuitem', { name: 'Add child interaction' })).toBeNull();
+    await user.click(within(menu).getByRole('menuitem', { name: 'Delete trigger' }));
+    expect(api.deleteTrigger).toHaveBeenCalledWith('story-1', 'interaction-2', 'trigger-2');
 
-    await waitFor(() =>
-      expect(api.updateStoryGraphPositions).toHaveBeenCalledWith('story-1', {
-        interactionUpdates: expected.interactionUpdates,
-        triggerUpdates: expected.triggerUpdates,
+    const rootTrigger = within(screen.getByTestId('flow-node-interaction-1')).getByRole('button', {
+      name: 'Select root trigger',
+    });
+    fireEvent.contextMenu(rootTrigger, { clientX: 320, clientY: 160 });
+    menu = screen.getByRole('menu', { name: 'Graph element actions' });
+    await user.click(within(menu).getByRole('menuitem', { name: 'Delete trigger' }));
+    expect(api.deleteTrigger).toHaveBeenLastCalledWith('story-1', 'interaction-1', 'trigger-1');
+  });
+
+  it('deletes the selected graph element with Delete only outside editable fields', async () => {
+    const user = userEvent.setup();
+    const story = storyWithTwoInteractions();
+    const afterDelete = structuredClone(story);
+    afterDelete.interactions = afterDelete.interactions.filter(({ id }) => id !== 'interaction-1');
+    vi.mocked(api.deleteInteraction).mockResolvedValue(afterDelete);
+
+    await renderEditor(story);
+    await user.click(screen.getByTestId('flow-node-interaction-1'));
+
+    const title = screen.getByLabelText('Title');
+    title.focus();
+    fireEvent.keyDown(title, { key: 'Delete' });
+    expect(api.deleteInteraction).not.toHaveBeenCalled();
+
+    fireEvent.keyDown(document, { key: 'Delete' });
+    expect(api.deleteInteraction).toHaveBeenCalledWith('story-1', 'interaction-1');
+  });
+
+  it('organizes the current graph selection from the canvas context submenu', async () => {
+    const user = userEvent.setup();
+    const computeLayout = vi.spyOn(elkLayout, 'computeStoryGraphElkLayout').mockResolvedValue({
+      interactionUpdates: [{ interactionId: 'interaction-1', position: { x: 160, y: 180 } }],
+      triggerUpdates: [],
+      affectedNodeIds: ['interaction-1'],
+    });
+
+    try {
+      await renderEditor(storyWithThreeInteractions());
+      await user.click(screen.getByTestId('box-select-first-branch'));
+
+      fireEvent.contextMenu(screen.getByTestId('flow-pane'), { clientX: 400, clientY: 300 });
+      await user.click(screen.getByRole('menuitem', { name: 'Automatic organization' }));
+      const organizeMenu = screen.getByRole('menu', { name: 'Automatic organization' });
+      const organizeSelection = within(organizeMenu).getByRole('menuitem', {
+        name: 'Current selection',
+      });
+      expect(organizeSelection).toBeEnabled();
+      await user.click(organizeSelection);
+
+      await waitFor(() =>
+        expect(computeLayout).toHaveBeenCalledWith(
+          expect.anything(),
+          expect.objectContaining({ scope: expect.objectContaining({ kind: 'selection' }) }),
+        ),
+      );
+      await waitFor(() => expect(api.updateStoryGraphPositions).toHaveBeenCalled());
+    } finally {
+      computeLayout.mockRestore();
+    }
+  });
+
+  it('awaits ELK organization and applies the saved interaction and trigger positions', async () => {
+    const user = userEvent.setup();
+    const story = storyWithTwoInteractions();
+    const expected: StoryGraphLayoutResult = {
+      interactionUpdates: [
+        { interactionId: 'interaction-1', position: { x: 100, y: 200 } },
+        { interactionId: 'interaction-2', position: { x: 160, y: 620 } },
+      ],
+      triggerUpdates: [
+        {
+          interactionId: 'interaction-2',
+          triggerIds: ['trigger-2'],
+          position: { x: 170, y: 460 },
+        },
+      ],
+      affectedNodeIds: ['interaction-1', 'interaction-2', 'trigger:interaction-2:trigger-2'],
+    };
+    let resolveLayout!: (layout: StoryGraphLayoutResult) => void;
+    const computeLayout = vi.spyOn(elkLayout, 'computeStoryGraphElkLayout').mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveLayout = resolve;
       }),
     );
-    expected.interactionUpdates.forEach(({ interactionId, position }) => {
-      expect(screen.getByTestId(`flow-node-${interactionId}`)).toHaveAttribute(
-        'data-node-y',
-        String(position.y),
+    let finishSave!: () => void;
+    vi.mocked(api.updateStoryGraphPositions).mockReturnValueOnce(
+      new Promise((resolve) => {
+        finishSave = () => resolve({ revision: 2, updatedAt: '2026-09-28T12:00:00.000Z' });
+      }),
+    );
+
+    try {
+      await renderEditor(story);
+      const organize = screen.getByRole('button', { name: 'Organize graph' });
+      const canvas = screen.getByTestId('react-flow').closest('.canvas');
+      expect(canvas).toHaveAttribute('aria-busy', 'false');
+      await user.click(organize);
+
+      expect(canvas).toHaveAttribute('aria-busy', 'true');
+      expect(organize).toBeDisabled();
+      fireEvent.click(organize);
+
+      await waitFor(() =>
+        expect(computeLayout).toHaveBeenCalledExactlyOnceWith(
+          expect.objectContaining({
+            id: story.id,
+            interactions: story.interactions.map(({ id, position }) =>
+              expect.objectContaining({ id, position }),
+            ),
+          }),
+          { interactionSizes: expect.any(Map), scope: { kind: 'all' } },
+        ),
       );
-    });
+      expect(api.updateStoryGraphPositions).not.toHaveBeenCalled();
+      expect(screen.getByTestId('flow-node-interaction-2')).toHaveAttribute('data-node-y', '270');
+
+      await act(async () => resolveLayout(expected));
+
+      await waitFor(() =>
+        expect(api.updateStoryGraphPositions).toHaveBeenCalledWith('story-1', {
+          interactionUpdates: expected.interactionUpdates,
+          triggerUpdates: expected.triggerUpdates,
+        }),
+      );
+      expect(canvas).toHaveAttribute('aria-busy', 'true');
+      expect(organize).toBeDisabled();
+      await waitFor(() => {
+        const positions = [
+          ...expected.interactionUpdates.map(({ interactionId, position }) => ({
+            id: interactionId,
+            position,
+          })),
+          ...expected.triggerUpdates.flatMap(({ interactionId, triggerIds, position }) =>
+            triggerIds.map((triggerId) => ({
+              id: `trigger:${interactionId}:${triggerId}`,
+              position,
+            })),
+          ),
+        ];
+        for (const { id, position } of positions) {
+          const node = screen.getByTestId(`flow-node-${id}`);
+          expect(node).toHaveAttribute('data-node-x', String(position.x));
+          expect(node).toHaveAttribute('data-node-y', String(position.y));
+        }
+      });
+      await act(async () => finishSave());
+      await waitFor(() => expect(canvas).toHaveAttribute('aria-busy', 'false'));
+      expect(organize).toBeEnabled();
+      expect(api.updateStoryGraphPositions).toHaveBeenCalledTimes(1);
+    } finally {
+      computeLayout.mockRestore();
+    }
+  });
+
+  it('clears the busy state after an ELK failure and allows organization to be retried', async () => {
+    const user = userEvent.setup();
+    const computeLayout = vi
+      .spyOn(elkLayout, 'computeStoryGraphElkLayout')
+      .mockRejectedValueOnce(new Error('Layout engine failed'))
+      .mockResolvedValueOnce({ interactionUpdates: [], triggerUpdates: [], affectedNodeIds: [] });
+
+    try {
+      await renderEditor(storyWithTwoInteractions());
+      const organize = screen.getByRole('button', { name: 'Organize graph' });
+      const canvas = screen.getByTestId('react-flow').closest('.canvas');
+      await user.click(organize);
+
+      expect(await screen.findByRole('alert')).toHaveTextContent(
+        'The graph could not be organized.',
+      );
+      await waitFor(() => expect(canvas).toHaveAttribute('aria-busy', 'false'));
+      expect(organize).toBeEnabled();
+      expect(api.updateStoryGraphPositions).not.toHaveBeenCalled();
+
+      await user.click(screen.getByRole('button', { name: 'Retry' }));
+
+      await waitFor(() => expect(computeLayout).toHaveBeenCalledTimes(2));
+      await waitFor(() => expect(canvas).toHaveAttribute('aria-busy', 'false'));
+      expect(organize).toBeEnabled();
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+      expect(api.updateStoryGraphPositions).not.toHaveBeenCalled();
+    } finally {
+      computeLayout.mockRestore();
+    }
   });
 
   it('automatically organizes only the selected interaction', async () => {
     const user = userEvent.setup();
     const story = storyWithThreeInteractions();
-    const expected = computeStoryGraphLayout(story, {
-      kind: 'selection',
-      targets: [{ type: 'interaction', interactionId: 'interaction-2' }],
-    });
-    await renderEditor(story);
+    const expected: StoryGraphLayoutResult = {
+      interactionUpdates: [{ interactionId: 'interaction-2', position: { x: 360, y: 470 } }],
+      triggerUpdates: [
+        {
+          interactionId: 'interaction-2',
+          triggerIds: ['trigger-2'],
+          position: { x: 370, y: 340 },
+        },
+      ],
+      affectedNodeIds: ['interaction-2'],
+    };
+    const computeLayout = vi
+      .spyOn(elkLayout, 'computeStoryGraphElkLayout')
+      .mockResolvedValue(expected);
 
-    await user.click(screen.getByTestId('flow-node-interaction-2'));
-    await user.click(screen.getByRole('button', { name: 'Organize selected element' }));
+    try {
+      await renderEditor(story);
 
-    await waitFor(() =>
-      expect(api.updateStoryGraphPositions).toHaveBeenCalledWith('story-1', {
-        interactionUpdates: expected.interactionUpdates,
-        triggerUpdates: expected.triggerUpdates,
-      }),
-    );
+      await user.click(screen.getByTestId('flow-node-interaction-2'));
+      await user.click(screen.getByRole('button', { name: 'Organize selected element' }));
+
+      await waitFor(() =>
+        expect(computeLayout).toHaveBeenCalledWith(
+          expect.anything(),
+          expect.objectContaining({
+            scope: {
+              kind: 'selection',
+              targets: [{ type: 'interaction', interactionId: 'interaction-2' }],
+            },
+          }),
+        ),
+      );
+      await waitFor(() =>
+        expect(api.updateStoryGraphPositions).toHaveBeenCalledWith('story-1', {
+          interactionUpdates: expected.interactionUpdates,
+          triggerUpdates: expected.triggerUpdates,
+        }),
+      );
+    } finally {
+      computeLayout.mockRestore();
+    }
   });
 
   it('automatically organizes only the selected linked trigger marker', async () => {
     const user = userEvent.setup();
     const story = storyWithTwoInteractions();
-    const expected = computeStoryGraphLayout(story, {
-      kind: 'selection',
-      targets: [{ type: 'trigger', interactionId: 'interaction-2', triggerId: 'trigger-2' }],
-    });
-    await renderEditor(story);
+    const expected: StoryGraphLayoutResult = {
+      interactionUpdates: [],
+      triggerUpdates: [
+        {
+          interactionId: 'interaction-2',
+          triggerIds: ['trigger-2'],
+          position: { x: 220, y: 390 },
+        },
+      ],
+      affectedNodeIds: ['trigger:interaction-2:trigger-2'],
+    };
+    const computeLayout = vi
+      .spyOn(elkLayout, 'computeStoryGraphElkLayout')
+      .mockResolvedValue(expected);
 
-    await user.click(screen.getByTestId('flow-trigger-interaction-2-trigger-2'));
-    await user.click(screen.getByRole('button', { name: 'Organize selected element' }));
+    try {
+      await renderEditor(story);
 
-    await waitFor(() =>
-      expect(api.updateStoryGraphPositions).toHaveBeenCalledWith('story-1', {
-        interactionUpdates: expected.interactionUpdates,
-        triggerUpdates: expected.triggerUpdates,
-      }),
-    );
+      await user.click(screen.getByTestId('flow-trigger-interaction-2-trigger-2'));
+      await user.click(screen.getByRole('button', { name: 'Organize selected element' }));
+
+      await waitFor(() =>
+        expect(computeLayout).toHaveBeenCalledWith(
+          expect.anything(),
+          expect.objectContaining({
+            scope: {
+              kind: 'selection',
+              targets: [
+                { type: 'trigger', interactionId: 'interaction-2', triggerId: 'trigger-2' },
+              ],
+            },
+          }),
+        ),
+      );
+      await waitFor(() =>
+        expect(api.updateStoryGraphPositions).toHaveBeenCalledWith('story-1', {
+          interactionUpdates: expected.interactionUpdates,
+          triggerUpdates: expected.triggerUpdates,
+        }),
+      );
+    } finally {
+      computeLayout.mockRestore();
+    }
   });
 
   it('automatically organizes every element in a rectangular selection and nothing else', async () => {
     const user = userEvent.setup();
     const story = storyWithThreeInteractions();
-    const expected = computeStoryGraphLayout(story, {
-      kind: 'selection',
-      targets: [
-        { type: 'interaction', interactionId: 'interaction-1' },
-        { type: 'interaction', interactionId: 'interaction-2' },
-        { type: 'trigger', interactionId: 'interaction-2', triggerId: 'trigger-2' },
+    const expected: StoryGraphLayoutResult = {
+      interactionUpdates: [
+        { interactionId: 'interaction-1', position: { x: 140, y: 180 } },
+        { interactionId: 'interaction-2', position: { x: 140, y: 580 } },
       ],
-    });
-    await renderEditor(story);
+      triggerUpdates: [
+        {
+          interactionId: 'interaction-2',
+          triggerIds: ['trigger-2'],
+          position: { x: 150, y: 430 },
+        },
+      ],
+      affectedNodeIds: ['interaction-1', 'interaction-2', 'trigger:interaction-2:trigger-2'],
+    };
+    const computeLayout = vi
+      .spyOn(elkLayout, 'computeStoryGraphElkLayout')
+      .mockResolvedValue(expected);
 
-    await user.click(screen.getByTestId('box-select-first-branch'));
-    await user.click(screen.getByRole('button', { name: 'Organize 3 selected elements' }));
+    try {
+      await renderEditor(story);
 
-    await waitFor(() =>
-      expect(api.updateStoryGraphPositions).toHaveBeenCalledWith('story-1', {
-        interactionUpdates: expected.interactionUpdates,
-        triggerUpdates: expected.triggerUpdates,
-      }),
-    );
+      await user.click(screen.getByTestId('box-select-first-branch'));
+      await user.click(screen.getByRole('button', { name: 'Organize 3 selected elements' }));
+
+      await waitFor(() =>
+        expect(computeLayout).toHaveBeenCalledWith(
+          expect.anything(),
+          expect.objectContaining({
+            scope: {
+              kind: 'selection',
+              targets: [
+                { type: 'interaction', interactionId: 'interaction-1' },
+                { type: 'interaction', interactionId: 'interaction-2' },
+                { type: 'trigger', interactionId: 'interaction-2', triggerId: 'trigger-2' },
+              ],
+            },
+          }),
+        ),
+      );
+      await waitFor(() =>
+        expect(api.updateStoryGraphPositions).toHaveBeenCalledWith('story-1', {
+          interactionUpdates: expected.interactionUpdates,
+          triggerUpdates: expected.triggerUpdates,
+        }),
+      );
+    } finally {
+      computeLayout.mockRestore();
+    }
+  });
+
+  it('organizes an isolated selected interaction through ELK without moving its neighbors', async () => {
+    const user = userEvent.setup();
+    const story = storyWithThreeInteractions();
+    const expected: StoryGraphLayoutResult = {
+      interactionUpdates: [{ interactionId: 'interaction-3', position: { x: 720, y: 260 } }],
+      triggerUpdates: [
+        {
+          interactionId: 'interaction-3',
+          triggerIds: ['trigger-3'],
+          position: { x: 730, y: 140 },
+        },
+      ],
+      affectedNodeIds: ['interaction-3'],
+    };
+    const computeLayout = vi
+      .spyOn(elkLayout, 'computeStoryGraphElkLayout')
+      .mockResolvedValue(expected);
+
+    try {
+      await renderEditor(story);
+
+      await user.click(screen.getByTestId('flow-node-interaction-3'));
+      await user.click(screen.getByRole('button', { name: 'Organize selected element' }));
+
+      await waitFor(() =>
+        expect(computeLayout).toHaveBeenCalledWith(
+          expect.anything(),
+          expect.objectContaining({
+            scope: {
+              kind: 'selection',
+              targets: [{ type: 'interaction', interactionId: 'interaction-3' }],
+            },
+          }),
+        ),
+      );
+      await waitFor(() =>
+        expect(api.updateStoryGraphPositions).toHaveBeenCalledWith('story-1', {
+          interactionUpdates: expected.interactionUpdates,
+          triggerUpdates: expected.triggerUpdates,
+        }),
+      );
+    } finally {
+      computeLayout.mockRestore();
+    }
   });
 
   it('previews automatic trigger placement while an interaction is moving', async () => {
@@ -540,9 +1190,12 @@ describe('StoryEditor graph collaboration and layout', () => {
     await user.click(frame);
     await user.click(screen.getByTestId('resize-decoration'));
     expect(api.updateGraphDecoration).toHaveBeenCalledWith('story-1', 'frame-1', {
+      position: { x: -260, y: -160 },
       width: 500,
       height: 320,
     });
+    expect(frame).toHaveAttribute('data-node-x', '-260');
+    expect(frame).toHaveAttribute('data-node-y', '-160');
 
     await user.click(screen.getByTestId('drag-node-frame-1'));
     expect(api.updateGraphDecoration).toHaveBeenCalledWith('story-1', 'frame-1', {
@@ -612,5 +1265,36 @@ describe('StoryEditor graph collaboration and layout', () => {
     await user.click(screen.getByRole('button', { name: 'Delete decoration' }));
     expect(api.deleteGraphDecoration).toHaveBeenCalledWith('story-1', 'text-1');
     await waitFor(() => expect(screen.queryByTestId('flow-node-text-1')).not.toBeInTheDocument());
+  });
+
+  it('deletes a graph decoration from its contextual actions', async () => {
+    const user = userEvent.setup();
+    const story = cloneStory();
+    story.graphDecorations = [
+      {
+        id: 'frame-context',
+        kind: 'frame',
+        position: { x: 20, y: 30 },
+        color: '#5b6ee1',
+        width: 420,
+        height: 240,
+      },
+    ];
+    const afterDelete = structuredClone(story);
+    afterDelete.graphDecorations = [];
+    vi.mocked(api.deleteGraphDecoration).mockResolvedValue(afterDelete);
+
+    await renderEditor(story);
+    fireEvent.contextMenu(screen.getByTestId('flow-node-frame-context'), {
+      clientX: 300,
+      clientY: 200,
+    });
+
+    const menu = screen.getByRole('menu', { name: 'Graph element actions' });
+    expect(within(menu).queryByRole('menuitem', { name: 'Add comment' })).toBeNull();
+    await user.click(within(menu).getByRole('menuitem', { name: 'Delete decoration' }));
+
+    expect(api.deleteGraphDecoration).toHaveBeenCalledWith('story-1', 'frame-context');
+    expect(window.confirm).toHaveBeenCalledWith('Delete this graph decoration?');
   });
 });

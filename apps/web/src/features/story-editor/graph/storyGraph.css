@@ -44,6 +44,14 @@
   background: var(--color-trigger-strong);
   font-size: 0.62rem;
 }
+.root-trigger-comment-badge,
+.trigger-comment-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.18rem;
+  width: auto;
+}
 .interaction-node.dimmed {
   opacity: 0.24;
 }
@@ -182,27 +190,6 @@
   left: 50%;
   transform: translateX(-50%) scale(1);
 }
-.node-trigger-input {
-  left: calc(50% - 42px);
-  top: -7px;
-  width: 14px;
-  height: 14px;
-  border: 2px solid var(--color-primary);
-  border-radius: 999px;
-  background: var(--color-surface);
-  opacity: 0;
-  pointer-events: none;
-  transform: scale(0.72);
-  transition:
-    opacity 120ms ease,
-    transform 120ms ease,
-    box-shadow 120ms ease;
-}
-.node-trigger-input.is-visible {
-  opacity: 1;
-  pointer-events: all;
-  transform: scale(1);
-}
 .routing-handle.react-flow__handle {
   width: 2px;
   min-width: 2px;
@@ -214,9 +201,7 @@
   pointer-events: none;
 }
 .node-create:hover,
-.node-create:focus-visible,
-.node-trigger-input:hover,
-.node-trigger-input:focus-visible {
+.node-create:focus-visible {
   box-shadow: 0 0 0 5px var(--color-primary-halo-strong);
   outline: none;
 }
@@ -297,8 +282,29 @@
   pointer-events: all;
 }
 .comment-post-it {
+  position: relative;
   width: 250px;
   cursor: default;
+}
+.comment-post-it-drag-handle {
+  position: absolute;
+  top: -13px;
+  left: 50%;
+  z-index: 2;
+  display: grid;
+  width: 34px;
+  height: 22px;
+  place-items: center;
+  border: 1px solid #caa244;
+  border-radius: 999px;
+  background: #f8d878;
+  color: #765922;
+  box-shadow: 0 3px 8px #6a511d2e;
+  cursor: grab;
+  transform: translateX(-50%);
+}
+.react-flow__node-commentPin.dragging .comment-post-it-drag-handle {
+  cursor: grabbing;
 }
 .comment-post-it .comment-discussion-card {
   margin: 0;
@@ -399,6 +405,12 @@
 .graph-frame-resize-line,
 .graph-frame-resize-handle {
   pointer-events: auto;
+}
+.graph-frame-resize-line.left,
+.graph-frame-resize-line.top,
+.graph-frame-resize-handle.left,
+.graph-frame-resize-handle.top {
+  display: none;
 }
 .graph-text-decoration.selected,
 .graph-text-decoration:hover {

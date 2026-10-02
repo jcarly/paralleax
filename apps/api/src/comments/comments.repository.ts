@@ -21,6 +21,9 @@ type ThreadRow = {
   resolved_by: string | null;
   resolved_by_display_name: string | null;
   resolved_at: Date | string | null;
+  deleted_by: string | null;
+  deleted_by_display_name: string | null;
+  deleted_at: Date | string | null;
 };
 
 type MessageRow = {
@@ -37,9 +40,11 @@ type MessageRow = {
 export class CommentsRepository {
   constructor(private readonly database: DatabaseConnection) {}
 
-  async list(storyId: string): Promise<StoryCommentThread[]> {
+  async list(storyId: string, includeDeleted = false): Promise<StoryCommentThread[]> {
     const result = await this.database.pool.query<ThreadRow>(
-      threadSelect('WHERE thread.story_id = $1') + ' ORDER BY thread.updated_at DESC',
+      threadSelect(
+        `WHERE thread.story_id = $1${includeDeleted ? '' : ' AND thread.deleted_at IS NULL'}`,
+      ) + ' ORDER BY thread.updated_at DESC',
       [storyId],
     );
     if (result.rows.length === 0) return [];
@@ -52,9 +57,17 @@ export class CommentsRepository {
     return result.rows.map((row) => mapThread(row, messagesByThread.get(row.id) ?? []));
   }
 
-  async find(storyId: string, threadId: string): Promise<StoryCommentThread | undefined> {
+  async find(
+    storyId: string,
+    threadId: string,
+    includeDeleted = false,
+  ): Promise<StoryCommentThread | undefined> {
     const result = await this.database.pool.query<ThreadRow>(
-      threadSelect('WHERE thread.story_id = $1 AND thread.id = $2'),
+      threadSelect(
+        `WHERE thread.story_id = $1 AND thread.id = $2${
+          includeDeleted ? '' : ' AND thread.deleted_at IS NULL'
+        }`,
+      ),
       [storyId, threadId],
     );
     const row = result.rows[0];
@@ -180,16 +193,39 @@ export class CommentsRepository {
     );
     return this.find(storyId, threadId);
   }
+
+  async softDelete(storyId: string, threadId: string, actorId: string, timestamp: string) {
+    await this.database.pool.query(
+      `UPDATE story_comment_threads
+       SET deleted_by = $3, deleted_at = $4, updated_at = $4, revision = revision + 1
+       WHERE story_id = $1 AND id = $2 AND deleted_at IS NULL`,
+      [storyId, threadId, actorId, timestamp],
+    );
+    return this.find(storyId, threadId, true);
+  }
+
+  async restore(storyId: string, threadId: string, timestamp: string) {
+    await this.database.pool.query(
+      `UPDATE story_comment_threads
+       SET deleted_by = NULL, deleted_at = NULL, updated_at = $3, revision = revision + 1
+       WHERE story_id = $1 AND id = $2 AND deleted_at IS NOT NULL`,
+      [storyId, threadId, timestamp],
+    );
+    return this.find(storyId, threadId);
+  }
 }
 
 function threadSelect(where: string) {
   return `SELECT thread.id, thread.story_id, thread.anchor, thread.anchor_label, thread.status,
                  thread.created_by, creator.display_name AS created_by_display_name,
                  thread.created_at, thread.updated_at, thread.resolved_by,
-                 resolver.display_name AS resolved_by_display_name, thread.resolved_at
+                 resolver.display_name AS resolved_by_display_name, thread.resolved_at,
+                 thread.deleted_by, deleter.display_name AS deleted_by_display_name,
+                 thread.deleted_at
           FROM story_comment_threads AS thread
           JOIN users AS creator ON creator.id = thread.created_by
           LEFT JOIN users AS resolver ON resolver.id = thread.resolved_by
+          LEFT JOIN users AS deleter ON deleter.id = thread.deleted_by
           ${where}`;
 }
 
@@ -231,6 +267,10 @@ function mapThread(row: ThreadRow, messages: MessageRow[]): StoryCommentThread {
       ? { resolvedBy: author(row.resolved_by, row.resolved_by_display_name) }
       : {}),
     ...(row.resolved_at ? { resolvedAt: iso(row.resolved_at) } : {}),
+    ...(row.deleted_by && row.deleted_by_display_name
+      ? { deletedBy: author(row.deleted_by, row.deleted_by_display_name) }
+      : {}),
+    ...(row.deleted_at ? { deletedAt: iso(row.deleted_at) } : {}),
     messages: messages.map(mapMessage),
   };
 }

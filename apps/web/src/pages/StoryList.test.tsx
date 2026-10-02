@@ -110,6 +110,10 @@ describe('StoryList', () => {
       'href',
       '/stories/story-1/play',
     );
+    expect(within(firstCard).getByRole('link', { name: 'Access' })).toHaveAttribute(
+      'href',
+      '/stories/story-1/edit?settings=access',
+    );
     expect(screen.getByRole('button', { name: 'New story' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Generate demos' })).not.toBeInTheDocument();
 

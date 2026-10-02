@@ -14,6 +14,12 @@ vi.mock('./api', () => ({
     register: vi.fn(),
     logout: vi.fn(),
     updateCurrentUser: vi.fn(),
+    verifyEmail: vi.fn(),
+    resendVerification: vi.fn(),
+    requestPasswordReset: vi.fn(),
+    resetPassword: vi.fn(),
+    changePassword: vi.fn(),
+    revokeOtherSessions: vi.fn(),
   },
 }));
 
@@ -47,7 +53,7 @@ describe('App', () => {
     };
     vi.mocked(api.me).mockResolvedValue(user);
     vi.mocked(api.login).mockResolvedValue(user);
-    vi.mocked(api.register).mockResolvedValue(user);
+    vi.mocked(api.register).mockResolvedValue({ email: user.email, verificationRequired: true });
     vi.mocked(api.updateCurrentUser).mockResolvedValue(user);
   });
 

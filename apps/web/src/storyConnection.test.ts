@@ -43,12 +43,12 @@ const story: Story = {
 };
 
 describe('story connection helpers', () => {
-  it('prepares a valid pending connection', () => {
+  it('prepares a valid new-trigger connection through the input plus handle', () => {
     const pending = getPendingConnection(story, {
       source: 'interaction-1',
       target: 'interaction-2',
       sourceHandle: null,
-      targetHandle: 'new-trigger-input',
+      targetHandle: 'create-source-input',
     });
 
     expect(pending?.sourceId).toBe('interaction-1');
@@ -61,7 +61,7 @@ describe('story connection helpers', () => {
       source: 'interaction-3',
       target: 'interaction-2',
       sourceHandle: null,
-      targetHandle: 'new-trigger-input',
+      targetHandle: 'create-source-input',
     });
 
     expect(pending?.sourceId).toBe('interaction-3');
@@ -98,7 +98,7 @@ describe('story connection helpers', () => {
         source: 'interaction-1',
         target: 'interaction-2',
         sourceHandle: null,
-        targetHandle: 'create-source-input',
+        targetHandle: 'new-trigger-input',
       }),
     ).toBeUndefined();
   });

@@ -6,6 +6,8 @@ import {
   type StoryEditorLoadingProjection,
 } from '@paralleax/shared';
 import { useStoryRealtime } from '../../../hooks/useStoryRealtime';
+import { apiErrorMessage } from '../../../apiErrorMessages';
+import { i18n } from '../../../i18n';
 import { useStoryRouteAccessRecovery } from '../../story/useStoryRouteAccessRecovery';
 import {
   prioritizeStoryRealtimeInvalidation,
@@ -123,7 +125,7 @@ export function useStoryPersistenceLifecycle({
         return lifecycleVersion === lifecycleVersionRef.current ? result : undefined;
       } catch (caught) {
         if (lifecycleVersion !== lifecycleVersionRef.current) return undefined;
-        const message = caught instanceof Error ? caught.message : 'The story could not be saved.';
+        const message = apiErrorMessage(caught, i18n.t, i18n.t('editor.saveFailed'));
         saveBatchErrorRef.current = message;
         updateFeedback({ error: message, saveStatus: 'error' });
         return undefined;
@@ -170,10 +172,13 @@ export function useStoryPersistenceLifecycle({
         setLoadProgress({ storyId, phase: 'ready' });
         updateFeedback({ error: '', saveStatus: 'idle' });
       })
-      .catch((caught: Error) => {
+      .catch((caught: unknown) => {
         if (attempt !== loadAttemptRef.current) return;
         if (recoverFromStoryAccessError(caught)) return;
-        updateFeedback({ error: caught.message, saveStatus: 'error' });
+        updateFeedback({
+          error: apiErrorMessage(caught, i18n.t, i18n.t('player.loadFailed')),
+          saveStatus: 'error',
+        });
       });
   }, [recoverFromStoryAccessError, replaceStory, setStory, storyId, updateFeedback]);
 

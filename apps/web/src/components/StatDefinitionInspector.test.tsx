@@ -90,9 +90,10 @@ describe('StatDefinitionInspector', () => {
     fireEvent.blur(category, { target: { value: ' Relationships ' } });
     expect(onPatch).toHaveBeenCalledWith('energy', { category: 'Relationships' });
 
+    await userEvent.click(screen.getByRole('button', { name: 'Add image' }));
     const imageUrl = screen.getByLabelText('Image URL');
-    fireEvent.change(imageUrl, { target: { value: 'https://images.example/energy.svg' } });
-    fireEvent.blur(imageUrl, { target: { value: 'https://images.example/energy.svg' } });
+    await userEvent.type(imageUrl, 'https://images.example/energy.svg');
+    await userEvent.click(screen.getByRole('button', { name: 'Save image' }));
     expect(onPatch).toHaveBeenCalledWith('energy', {
       imageUrl: 'https://images.example/energy.svg',
     });
