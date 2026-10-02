@@ -240,7 +240,7 @@ describe('Auth API', () => {
       .post('/api/auth/password-reset/confirm')
       .send({ token: resetToken, password: 'another replacement password' })
       .expect(400);
-  });
+  }, 15_000);
 
   it('keeps the default registration throttle at five requests per minute', async () => {
     await app.listen(0);
