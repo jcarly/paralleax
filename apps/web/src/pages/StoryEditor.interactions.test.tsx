@@ -94,20 +94,14 @@ describe('StoryEditor interactions', () => {
     );
   });
 
-  it('only reveals new trigger input handles while a connection is being created', async () => {
+  it('does not render transient trigger input handles while a connection is being created', async () => {
     await renderEditor(storyWithTwoInteractions());
 
-    const hiddenHandles = screen.getAllByTitle('Create new trigger');
-    expect(hiddenHandles.length).toBeGreaterThan(0);
-    hiddenHandles.forEach((handle) => expect(handle).not.toHaveClass('is-visible'));
+    expect(screen.queryByTitle('Create new trigger')).not.toBeInTheDocument();
 
     await userEvent.click(screen.getByTestId('begin-source-interaction-1'));
 
-    await waitFor(() => {
-      screen
-        .getAllByTitle('Create new trigger')
-        .forEach((handle) => expect(handle).toHaveClass('is-visible'));
-    });
+    await waitFor(() => expect(screen.queryByTitle('Create new trigger')).not.toBeInTheDocument());
   });
 
   it('creates a child interaction when a source connection is dropped on empty canvas', async () => {
@@ -253,7 +247,11 @@ describe('StoryEditor interactions', () => {
 
     await renderEditor(story);
     const node = screen.getByTestId('flow-node-interaction-2');
-    await userEvent.click(within(node).getByRole('button', { name: 'Create source interaction' }));
+    await userEvent.click(
+      within(node).getByRole('button', {
+        name: 'Create a source interaction or a new trigger connection',
+      }),
+    );
 
     await waitFor(() => {
       expect(api.createInteraction).toHaveBeenCalledWith('story-1', {
