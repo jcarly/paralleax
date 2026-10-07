@@ -421,7 +421,7 @@ changes always use the administrator endpoints; hiding or disabling a control is
 not treated as authorization or concurrency protection.
 
 `apps/web/src/i18n/` owns interface localization through `i18next` and
-`react-i18next`. English and French resources are bundled with the web build,
+`react-i18next`. English, French, and Italian resources are bundled with the web build,
 so rendering does not depend on a translation request. Startup selects a saved
 interface language first, then a supported browser language, and finally the
 English fallback. The selection is stored only in browser local storage and

@@ -15,7 +15,9 @@ export function LanguageSwitcher({ className = '' }: { className?: string }) {
       >
         {supportedLanguages.map((supportedLanguage) => (
           <option key={supportedLanguage} value={supportedLanguage}>
-            {supportedLanguage === 'en' ? t('language.english') : t('language.french')}
+            {t(
+              `language.${supportedLanguage === 'en' ? 'english' : supportedLanguage === 'fr' ? 'french' : 'italian'}`,
+            )}
           </option>
         ))}
       </select>

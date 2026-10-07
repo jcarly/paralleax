@@ -23,8 +23,8 @@ the database.
 6. Configure the recontact behavior so the same visitor can deliberately open
    the feedback box more than once. During testing, remove or shorten the
    Workspace cooldown that would otherwise suppress repeated displays.
-7. Add English and French survey translations if both Paralleax interface
-   languages are in use.
+7. Add English, French, and Italian survey translations for the Paralleax
+   interface languages that are in use.
 
 The code action and hidden-field names are an integration contract. Changing
 them in Formbricks without changing Paralleax prevents the survey trigger or its

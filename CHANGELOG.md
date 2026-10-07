@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Added Italian interface localization, including browser detection, persisted language
+  selection, localized metadata, and Italian UI regression coverage.
+
 ## 2026-10-01
 
 - Completed inspector image editing with shared 16:9 frames and one URL-only

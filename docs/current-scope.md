@@ -172,7 +172,7 @@ Paralleax currently includes:
   editors reload the authoritative story without a page refresh, while simulations
   deterministically replay their current journey. Active local drafts and drags
   finish before a remote refresh is applied.
-- English and French interface localization with browser detection, a persisted
+- English, French, and Italian interface localization with browser detection, a persisted
   user preference, and English fallback. Authored story content is never
   translated by the interface layer. Operational API failures are presented
   through localized stable error codes across authentication, access, imports,

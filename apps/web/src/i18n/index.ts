@@ -2,7 +2,7 @@ import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import { resources } from './resources';
 
-export const supportedLanguages = ['en', 'fr'] as const;
+export const supportedLanguages = ['en', 'fr', 'it'] as const;
 export type SupportedLanguage = (typeof supportedLanguages)[number];
 
 export const languageStorageKey = 'paralleax.interface-language';

@@ -21,6 +21,7 @@ describe('LanguageSwitcher', () => {
   it('normalizes supported regional language codes', () => {
     expect(normalizeLanguage('fr-FR')).toBe('fr');
     expect(normalizeLanguage('EN-us')).toBe('en');
+    expect(normalizeLanguage('it-IT')).toBe('it');
     expect(normalizeLanguage('de-DE')).toBeNull();
   });
 
@@ -35,6 +36,13 @@ describe('LanguageSwitcher', () => {
     expect(screen.getByRole('combobox', { name: 'Langue' })).toHaveValue('fr');
     expect(window.localStorage.getItem(languageStorageKey)).toBe('fr');
     expect(document.documentElement.lang).toBe('fr');
+
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Langue' }), 'it');
+
+    expect(screen.getByText('Storie')).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Lingua' })).toHaveValue('it');
+    expect(window.localStorage.getItem(languageStorageKey)).toBe('it');
+    expect(document.documentElement.lang).toBe('it');
 
     await i18n.changeLanguage('en');
   });

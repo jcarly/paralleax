@@ -134,7 +134,7 @@ and reloads the complete authorized discussion list so missed events are recover
 ## Choose the Interface Language
 
 Use the language selector on the sign-in screen or in the authenticated header
-to switch between English and French. Paralleax initially follows a supported
+to switch between English, French, and Italian. Paralleax initially follows a supported
 browser language and remembers an explicit selection in that browser. English
 is used when the detected language is unsupported or a translation is missing.
 

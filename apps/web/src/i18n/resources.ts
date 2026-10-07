@@ -1,3 +1,5 @@
+import { italianTranslation } from './italian';
+
 export const resources = {
   en: {
     translation: {
@@ -5,6 +7,7 @@ export const resources = {
         label: 'Language',
         english: 'English',
         french: 'Français',
+        italian: 'Italiano',
       },
       shell: {
         mainNavigation: 'Main navigation',
@@ -1198,6 +1201,7 @@ export const resources = {
         label: 'Langue',
         english: 'English',
         french: 'Français',
+        italian: 'Italien',
       },
       shell: {
         mainNavigation: 'Navigation principale',
@@ -2307,5 +2311,8 @@ export const resources = {
         removeLink: 'Retirer le lien',
       },
     },
+  },
+  it: {
+    translation: italianTranslation,
   },
 } as const;
