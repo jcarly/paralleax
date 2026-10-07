@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { normalizeLanguage, supportedLanguages, type SupportedLanguage } from '../i18n';
+import { changeInterfaceLanguage, normalizeLanguage, supportedLanguages } from '../i18n';
 
 export function LanguageSwitcher({ className = '' }: { className?: string }) {
   const { t, i18n } = useTranslation();
@@ -11,7 +11,7 @@ export function LanguageSwitcher({ className = '' }: { className?: string }) {
       <select
         aria-label={t('language.label')}
         value={language}
-        onChange={(event) => void i18n.changeLanguage(event.target.value as SupportedLanguage)}
+        onChange={(event) => void changeInterfaceLanguage(event.target.value)}
       >
         {supportedLanguages.map((supportedLanguage) => (
           <option key={supportedLanguage} value={supportedLanguage}>

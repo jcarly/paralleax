@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { italianTranslation } from './italian';
 import { resources } from './resources';
 
 function collectStrings(value: unknown, path = '', result = new Map<string, string>()) {
@@ -20,7 +21,7 @@ function placeholders(value: string) {
 describe('Italian interface resources', () => {
   it('matches the English catalogue and preserves interpolation variables', () => {
     const english = collectStrings(resources.en.translation);
-    const italian = collectStrings(resources.it.translation);
+    const italian = collectStrings(italianTranslation);
 
     expect([...italian.keys()].sort()).toEqual([...english.keys()].sort());
     for (const [key, englishValue] of english) {

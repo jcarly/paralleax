@@ -1,5 +1,3 @@
-import { italianTranslation } from './italian';
-
 export const resources = {
   en: {
     translation: {
@@ -2311,8 +2309,5 @@ export const resources = {
         removeLink: 'Retirer le lien',
       },
     },
-  },
-  it: {
-    translation: italianTranslation,
   },
 } as const;
