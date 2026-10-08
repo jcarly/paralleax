@@ -4,9 +4,9 @@
 
 - Added Italian interface localization, including browser detection, persisted language
   selection, localized metadata, and Italian UI regression coverage.
-- Added sanitized structured SMTP failure diagnostics for relay error codes, response
-  codes, command stages, and recipient acceptance counts without logging addresses,
-  message content, credentials, or raw provider responses.
+- Replaced outbound SMTP with the official Brevo HTTPS API client for transactional
+  account email, including validated sender configuration, disabled automatic
+  retries, and sanitized structured provider diagnostics.
 
 ## 2026-10-01
 

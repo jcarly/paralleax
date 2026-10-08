@@ -1,7 +1,7 @@
 import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
-import { createTransport, type SendMailOptions, type Transporter } from 'nodemailer';
+import { BrevoClient, BrevoError, BrevoTimeoutError } from '@getbrevo/brevo';
 import { apiErrorResponse } from '../operations/api-error-response';
-import { AppConfigService } from '../config/app-config.service';
+import { AppConfigService, type EmailAddress } from '../config/app-config.service';
 import { TestEmailOutbox } from './test-email-outbox';
 
 export interface EmailMessage {
@@ -16,16 +16,16 @@ export interface DeliveredEmail {
 }
 
 /**
- * Delivers transactional email through the configured SMTP relay.
+ * Delivers transactional email through the Brevo HTTPS API.
  *
  * The service deliberately accepts a single recipient and does not log message
- * content, recipients, or SMTP credentials. Product features own their
+ * content, recipients, or API credentials. Product features own their
  * templates and decide when delivery is required.
  */
 @Injectable()
 export class EmailService {
   private readonly logger = new Logger(EmailService.name);
-  private transporter: Transporter | undefined;
+  private client: BrevoClient | undefined;
 
   constructor(
     private readonly config: AppConfigService,
@@ -33,14 +33,7 @@ export class EmailService {
   ) {}
 
   get isConfigured() {
-    return (
-      this.config.testEmailOutbox || Boolean(this.config.emailSmtpUrl && this.config.emailFrom)
-    );
-  }
-
-  async verifyConnection(): Promise<void> {
-    if (this.config.testEmailOutbox) return;
-    await this.smtpTransporter().verify();
+    return this.config.testEmailOutbox || Boolean(this.config.brevoApiKey && this.config.emailFrom);
   }
 
   async send(message: EmailMessage): Promise<DeliveredEmail> {
@@ -49,38 +42,39 @@ export class EmailService {
       if (!this.testOutbox) throw unavailableEmailDelivery();
       return this.testOutbox.record(normalized);
     }
-    const mail = toSendMailOptions(normalized, this.config.emailFrom, this.config.emailReplyTo);
     try {
-      const result = await this.smtpTransporter().sendMail(mail);
-      if ((result.accepted?.length ?? 0) !== 1 || (result.rejected?.length ?? 0) > 0) {
+      const result = await this.brevoClient().transactionalEmails.sendTransacEmail(
+        toBrevoMessage(normalized, this.config.emailFrom, this.config.emailReplyTo),
+        { maxRetries: 0 },
+      );
+      const messageId = result.messageId ?? result.messageIds?.[0];
+      if (!messageId) {
         this.logger.error({
-          event: 'smtp_delivery_rejected',
-          acceptedCount: result.accepted?.length ?? 0,
-          rejectedCount: result.rejected?.length ?? 0,
+          event: 'email_delivery_rejected',
+          provider: 'brevo',
+          reason: 'missing_message_id',
         });
         throw unavailableEmailDelivery();
       }
-      this.logger.log(`Transactional email accepted by SMTP relay (${result.messageId})`);
-      return { messageId: result.messageId };
+      this.logger.log({ event: 'email_delivery_accepted', provider: 'brevo', messageId });
+      return { messageId };
     } catch (error) {
       if (error instanceof ServiceUnavailableException) throw error;
-      this.logger.error(smtpFailureLog(error));
+      this.logger.error(brevoFailureLog(error));
       throw unavailableEmailDelivery();
     }
   }
 
-  private smtpTransporter() {
-    if (!this.config.emailSmtpUrl || !this.config.emailFrom) {
+  private brevoClient() {
+    if (!this.config.brevoApiKey || !this.config.emailFrom) {
       throw unavailableEmailDelivery();
     }
-    this.transporter ??= createTransport(
-      { url: this.config.emailSmtpUrl, requireTLS: true },
-      {
-        from: this.config.emailFrom,
-        ...(this.config.emailReplyTo ? { replyTo: this.config.emailReplyTo } : {}),
-      },
-    );
-    return this.transporter;
+    this.client ??= new BrevoClient({
+      apiKey: this.config.brevoApiKey,
+      timeoutInSeconds: 10,
+      maxRetries: 0,
+    });
+    return this.client;
   }
 }
 
@@ -93,17 +87,17 @@ function normalizeMessage(message: EmailMessage): EmailMessage {
   return { to, subject, text, ...(html ? { html } : {}) };
 }
 
-function toSendMailOptions(
+function toBrevoMessage(
   message: EmailMessage,
-  from: string | undefined,
-  replyTo: string | undefined,
-): SendMailOptions {
+  sender: EmailAddress | undefined,
+  replyTo: EmailAddress | undefined,
+) {
   return {
-    from,
-    to: message.to,
+    sender,
+    to: [{ email: message.to }],
     subject: message.subject,
-    text: message.text,
-    ...(message.html ? { html: message.html } : {}),
+    textContent: message.text,
+    ...(message.html ? { htmlContent: message.html } : {}),
     ...(replyTo ? { replyTo } : {}),
   };
 }
@@ -122,42 +116,32 @@ function unavailableEmailDelivery() {
   );
 }
 
-function smtpFailureLog(error: unknown) {
-  const details = error !== null && typeof error === 'object' ? error : undefined;
-  const code = safeSmtpErrorCode(details && 'code' in details ? details.code : undefined);
-  const responseCode = safeSmtpResponseCode(
-    details && 'responseCode' in details ? details.responseCode : undefined,
-  );
-  const command = safeSmtpCommand(details && 'command' in details ? details.command : undefined);
+function brevoFailureLog(error: unknown) {
+  const brevoError = error instanceof BrevoError ? error : undefined;
+  const statusCode = safeHttpStatus(brevoError?.statusCode);
+  const providerCode = safeProviderCode(brevoError?.body);
+  const providerRequestId = safeLogToken(brevoError?.requestId);
   return {
-    event: 'smtp_delivery_failed',
-    ...(code ? { code } : {}),
-    ...(responseCode ? { responseCode } : {}),
-    ...(command ? { command } : {}),
+    event: 'email_delivery_failed',
+    provider: 'brevo',
+    errorType: error instanceof BrevoTimeoutError ? 'timeout' : brevoError ? 'api' : 'unexpected',
+    ...(statusCode ? { statusCode } : {}),
+    ...(providerCode ? { providerCode } : {}),
+    ...(providerRequestId ? { providerRequestId } : {}),
   };
 }
 
-function safeSmtpErrorCode(value: unknown) {
-  return typeof value === 'string' && /^[A-Z0-9_+-]{1,32}$/i.test(value) ? value : undefined;
-}
-
-function safeSmtpResponseCode(value: unknown) {
-  return typeof value === 'number' && Number.isInteger(value) && value >= 100 && value <= 599
+function safeHttpStatus(value: unknown) {
+  return typeof value === 'number' && Number.isInteger(value) && value >= 400 && value <= 599
     ? value
     : undefined;
 }
 
-function safeSmtpCommand(value: unknown) {
-  if (typeof value !== 'string') return undefined;
-  const normalized = value.trim().toUpperCase();
-  if (normalized === 'CONN') return 'CONN';
-  if (normalized.startsWith('EHLO')) return 'EHLO';
-  if (normalized.startsWith('HELO')) return 'HELO';
-  if (normalized.startsWith('STARTTLS')) return 'STARTTLS';
-  if (normalized.startsWith('AUTH')) return 'AUTH';
-  if (normalized.startsWith('MAIL FROM')) return 'MAIL FROM';
-  if (normalized.startsWith('RCPT TO')) return 'RCPT TO';
-  if (normalized.startsWith('DATA')) return 'DATA';
-  if (normalized.startsWith('QUIT')) return 'QUIT';
-  return undefined;
+function safeProviderCode(body: unknown) {
+  if (!body || typeof body !== 'object' || !('code' in body)) return undefined;
+  return safeLogToken(body.code);
+}
+
+function safeLogToken(value: unknown) {
+  return typeof value === 'string' && /^[A-Za-z0-9._:-]{1,100}$/.test(value) ? value : undefined;
 }

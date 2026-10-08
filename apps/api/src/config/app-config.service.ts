@@ -2,6 +2,10 @@ import { Injectable } from '@nestjs/common';
 
 export type NodeEnvironment = 'development' | 'test' | 'production';
 export type RegistrationMode = 'open' | 'access-code' | 'closed';
+export interface EmailAddress {
+  email: string;
+  name?: string;
+}
 
 @Injectable()
 export class AppConfigService {
@@ -15,9 +19,9 @@ export class AppConfigService {
   readonly registrationAccessCode?: string;
   readonly authRegistrationRateLimit!: number;
   readonly testEmailOutbox!: boolean;
-  readonly emailSmtpUrl?: string;
-  readonly emailFrom?: string;
-  readonly emailReplyTo?: string;
+  readonly brevoApiKey?: string;
+  readonly emailFrom?: EmailAddress;
+  readonly emailReplyTo?: EmailAddress;
 
   constructor() {
     Object.assign(this, loadAppConfig(process.env));
@@ -73,11 +77,17 @@ export function loadAppConfig(environment: NodeJS.ProcessEnv) {
   if (testEmailOutbox && nodeEnvironment !== 'test') {
     throw new Error('TEST_EMAIL_OUTBOX is only available in the test environment');
   }
-  const emailSmtpUrl = optionalSmtpUrl(environment.EMAIL_SMTP_URL);
-  const emailFrom = optionalEmailHeaderValue('EMAIL_FROM', environment.EMAIL_FROM);
-  const emailReplyTo = optionalEmailHeaderValue('EMAIL_REPLY_TO', environment.EMAIL_REPLY_TO);
-  if (Boolean(emailSmtpUrl) !== Boolean(emailFrom)) {
-    throw new Error('EMAIL_SMTP_URL and EMAIL_FROM must be configured together');
+  if (environment.EMAIL_SMTP_URL?.trim()) {
+    throw new Error('EMAIL_SMTP_URL is no longer supported; configure BREVO_API_KEY instead');
+  }
+  const brevoApiKey = optionalBrevoApiKey(environment.BREVO_API_KEY);
+  const emailFrom = optionalEmailAddress('EMAIL_FROM', environment.EMAIL_FROM);
+  const emailReplyTo = optionalEmailAddress('EMAIL_REPLY_TO', environment.EMAIL_REPLY_TO);
+  if (Boolean(brevoApiKey) !== Boolean(emailFrom)) {
+    throw new Error('BREVO_API_KEY and EMAIL_FROM must be configured together');
+  }
+  if (emailReplyTo && !brevoApiKey) {
+    throw new Error('EMAIL_REPLY_TO requires BREVO_API_KEY and EMAIL_FROM');
   }
   return {
     nodeEnvironment,
@@ -94,7 +104,7 @@ export function loadAppConfig(environment: NodeJS.ProcessEnv) {
     registrationAccessCode: registrationMode === 'access-code' ? registrationAccessCode : undefined,
     authRegistrationRateLimit,
     testEmailOutbox,
-    emailSmtpUrl,
+    brevoApiKey,
     emailFrom,
     emailReplyTo,
   };
@@ -140,23 +150,34 @@ function booleanValue(name: string, value: string) {
   throw new Error(`${name} must be true or false`);
 }
 
-function optionalSmtpUrl(value: string | undefined) {
+function optionalBrevoApiKey(value: string | undefined) {
   const normalized = value?.trim();
   if (!normalized) return undefined;
-  const url = validUrl('EMAIL_SMTP_URL', normalized, ['smtp:', 'smtps:']);
-  if (!new URL(url).hostname) {
-    throw new Error('EMAIL_SMTP_URL must include an SMTP hostname');
+  if (/^xsmtpsib-/i.test(normalized)) {
+    throw new Error('BREVO_API_KEY must contain a Brevo API key, not an SMTP key');
   }
-  return url;
+  if (/\s/.test(normalized)) {
+    throw new Error('BREVO_API_KEY must not contain whitespace');
+  }
+  return normalized;
 }
 
-function optionalEmailHeaderValue(name: string, value: string | undefined) {
+function optionalEmailAddress(name: string, value: string | undefined): EmailAddress | undefined {
   const normalized = value?.trim();
   if (!normalized) return undefined;
   if (/[\r\n]/.test(normalized)) {
     throw new Error(`${name} must not contain a line break`);
   }
-  return normalized;
+  const mailbox = /^(.*?)\s*<([^<>]+)>$/.exec(normalized);
+  const email = (mailbox?.[2] ?? normalized).trim();
+  const displayName = mailbox?.[1].trim();
+  if (!/^[^\s<>@]+@[^\s<>@]+$/.test(email)) {
+    throw new Error(`${name} must contain a valid email address`);
+  }
+  if (displayName && displayName.length > 70) {
+    throw new Error(`${name} display name must contain at most 70 characters`);
+  }
+  return { email, ...(displayName ? { name: displayName } : {}) };
 }
 
 function enumValue<T extends string>(name: string, value: string, allowed: readonly T[]): T {

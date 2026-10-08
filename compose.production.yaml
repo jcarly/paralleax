@@ -9,6 +9,9 @@ x-api-environment: &api-environment
   CORS_ORIGIN: ${CORS_ORIGIN:?CORS_ORIGIN is required}
   REGISTRATION_MODE: ${REGISTRATION_MODE:?REGISTRATION_MODE is required}
   REGISTRATION_ACCESS_CODE: ${REGISTRATION_ACCESS_CODE:-}
+  BREVO_API_KEY: ${BREVO_API_KEY:-}
+  EMAIL_FROM: ${EMAIL_FROM:-}
+  EMAIL_REPLY_TO: ${EMAIL_REPLY_TO:-}
 
 x-api-image: &api-image
   image: ${PARALLEAX_API_IMAGE:-paralleax-api:local}

@@ -1,25 +1,23 @@
 import { Logger } from '@nestjs/common';
-import { createTransport } from 'nodemailer';
+import { BrevoClient, BrevoError, BrevoTimeoutError } from '@getbrevo/brevo';
 import type { AppConfigService } from '../config/app-config.service';
 import { EmailService } from './email.service';
 import { TestEmailOutbox } from './test-email-outbox';
 
-jest.mock('nodemailer', () => ({ createTransport: jest.fn() }));
+jest.mock('@getbrevo/brevo', () => {
+  const actual = jest.requireActual<typeof import('@getbrevo/brevo')>('@getbrevo/brevo');
+  return { ...actual, BrevoClient: jest.fn() };
+});
 
-const mockCreateTransport = jest.mocked(createTransport);
+const mockBrevoClient = jest.mocked(BrevoClient);
 
 describe('EmailService', () => {
   beforeEach(() => jest.resetAllMocks());
   afterEach(() => jest.restoreAllMocks());
 
-  it('sends one normalized transactional message through the configured SMTP relay', async () => {
-    const sendMail = jest.fn().mockResolvedValue({
-      accepted: ['reader@example.com'],
-      rejected: [],
-      messageId: '<message-1@example.com>',
-    });
-    const verify = jest.fn().mockResolvedValue(true);
-    mockCreateTransport.mockReturnValue({ sendMail, verify } as never);
+  it('sends one normalized transactional message through the Brevo API', async () => {
+    const sendTransacEmail = jest.fn().mockResolvedValue({ messageId: '<message-1@example.com>' });
+    mockClient(sendTransacEmail);
     const service = new EmailService(configuredEmailConfig());
 
     await expect(
@@ -30,33 +28,32 @@ describe('EmailService', () => {
         html: ' <p>Verification link</p> ',
       }),
     ).resolves.toEqual({ messageId: '<message-1@example.com>' });
-    await service.verifyConnection();
 
-    expect(mockCreateTransport).toHaveBeenCalledWith(
-      { url: 'smtps://user:pass@smtp.example.com:465', requireTLS: true },
-      {
-        from: 'Paralleax <no-reply@example.com>',
-        replyTo: 'support@example.com',
-      },
-    );
-    expect(sendMail).toHaveBeenCalledWith({
-      from: 'Paralleax <no-reply@example.com>',
-      to: 'reader@example.com',
-      subject: 'Verify your account',
-      text: 'Verification link',
-      html: '<p>Verification link</p>',
-      replyTo: 'support@example.com',
+    expect(mockBrevoClient).toHaveBeenCalledWith({
+      apiKey: 'xkeysib-secret',
+      timeoutInSeconds: 10,
+      maxRetries: 0,
     });
-    expect(verify).toHaveBeenCalledTimes(1);
+    expect(sendTransacEmail).toHaveBeenCalledWith(
+      {
+        sender: { email: 'no-reply@example.com', name: 'Paralleax' },
+        to: [{ email: 'reader@example.com' }],
+        subject: 'Verify your account',
+        textContent: 'Verification link',
+        htmlContent: '<p>Verification link</p>',
+        replyTo: { email: 'support@example.com' },
+      },
+      { maxRetries: 0 },
+    );
   });
 
-  it('does not create a transport until the first delivery attempt', async () => {
+  it('does not create a Brevo client until the first delivery attempt', () => {
     const service = new EmailService(configuredEmailConfig());
     expect(service.isConfigured).toBe(true);
-    expect(mockCreateTransport).not.toHaveBeenCalled();
+    expect(mockBrevoClient).not.toHaveBeenCalled();
   });
 
-  it('captures normalized messages in the test-only outbox without constructing an SMTP transport', async () => {
+  it('captures normalized messages in the test-only outbox without constructing a Brevo client', async () => {
     const outbox = new TestEmailOutbox();
     const service = new EmailService({ testEmailOutbox: true } as AppConfigService, outbox);
 
@@ -67,7 +64,6 @@ describe('EmailService', () => {
         text: ' Verification link ',
       }),
     ).resolves.toMatchObject({ messageId: expect.any(String) });
-    await service.verifyConnection();
 
     expect(service.isConfigured).toBe(true);
     expect(outbox.latestFor('reader@example.com')).toMatchObject({
@@ -75,7 +71,7 @@ describe('EmailService', () => {
       subject: 'Verify your account',
       text: 'Verification link',
     });
-    expect(mockCreateTransport).not.toHaveBeenCalled();
+    expect(mockBrevoClient).not.toHaveBeenCalled();
   });
 
   it('fails closed if test-outbox configuration is missing its in-memory provider', async () => {
@@ -88,7 +84,7 @@ describe('EmailService', () => {
     });
   });
 
-  it('fails safely when SMTP delivery is not configured', async () => {
+  it('fails safely when Brevo delivery is not configured', async () => {
     const service = new EmailService({} as AppConfigService);
     expect(service.isConfigured).toBe(false);
     await expect(
@@ -96,12 +92,13 @@ describe('EmailService', () => {
     ).rejects.toMatchObject({
       response: expect.objectContaining({ code: 'EMAIL_DELIVERY_UNAVAILABLE' }),
     });
-    expect(mockCreateTransport).not.toHaveBeenCalled();
+    expect(mockBrevoClient).not.toHaveBeenCalled();
   });
 
-  it('does not expose SMTP failures to a caller', async () => {
-    const sendMail = jest.fn().mockRejectedValue(new Error('connection refused'));
-    mockCreateTransport.mockReturnValue({ sendMail } as never);
+  it('does not expose unexpected delivery failures to a caller', async () => {
+    const sendTransacEmail = jest.fn().mockRejectedValue(new Error('connection refused'));
+    mockClient(sendTransacEmail);
+    jest.spyOn(Logger.prototype, 'error').mockImplementation();
     const service = new EmailService(configuredEmailConfig());
 
     await expect(
@@ -111,19 +108,18 @@ describe('EmailService', () => {
     });
   });
 
-  it('logs safe SMTP diagnostics without exposing server responses or credentials', async () => {
-    const smtpError = Object.assign(
-      new Error('Authentication failed for secret-user@example.com with secret-password'),
-      {
-        code: 'EAUTH',
-        responseCode: 535,
-        command: 'AUTH PLAIN encoded-secret',
-        response: '535 Authentication failed for secret-user@example.com',
-        smtpUrl: 'smtp://secret-user:secret-password@smtp.example.com:587',
+  it('logs safe Brevo diagnostics without exposing responses or credentials', async () => {
+    const brevoError = new BrevoError({
+      message: 'Authentication failed for reader@example.com with xkeysib-secret',
+      statusCode: 401,
+      body: {
+        code: 'unauthorized',
+        message: 'Invalid API key xkeysib-secret for reader@example.com',
       },
-    );
-    const sendMail = jest.fn().mockRejectedValue(smtpError);
-    mockCreateTransport.mockReturnValue({ sendMail } as never);
+      cause: new Error('xkeysib-secret'),
+    });
+    const sendTransacEmail = jest.fn().mockRejectedValue(brevoError);
+    mockClient(sendTransacEmail);
     const loggerError = jest.spyOn(Logger.prototype, 'error').mockImplementation();
     const service = new EmailService(configuredEmailConfig());
 
@@ -134,23 +130,22 @@ describe('EmailService', () => {
     });
 
     expect(loggerError).toHaveBeenCalledWith({
-      event: 'smtp_delivery_failed',
-      code: 'EAUTH',
-      responseCode: 535,
-      command: 'AUTH',
+      event: 'email_delivery_failed',
+      provider: 'brevo',
+      errorType: 'api',
+      statusCode: 401,
+      providerCode: 'unauthorized',
     });
     expect(JSON.stringify(loggerError.mock.calls)).not.toMatch(
-      /secret-user|secret-password|encoded-secret|reader@example\.com/,
+      /xkeysib-secret|reader@example\.com|Invalid API key/,
     );
   });
 
-  it('logs only delivery counts when the SMTP relay rejects a recipient', async () => {
-    const sendMail = jest.fn().mockResolvedValue({
-      accepted: [],
-      rejected: ['reader@example.com'],
-      messageId: '<message-1@example.com>',
-    });
-    mockCreateTransport.mockReturnValue({ sendMail } as never);
+  it('identifies Brevo timeouts without logging their message', async () => {
+    const sendTransacEmail = jest
+      .fn()
+      .mockRejectedValue(new BrevoTimeoutError('Timed out while sending to reader@example.com'));
+    mockClient(sendTransacEmail);
     const loggerError = jest.spyOn(Logger.prototype, 'error').mockImplementation();
     const service = new EmailService(configuredEmailConfig());
 
@@ -161,14 +156,34 @@ describe('EmailService', () => {
     });
 
     expect(loggerError).toHaveBeenCalledWith({
-      event: 'smtp_delivery_rejected',
-      acceptedCount: 0,
-      rejectedCount: 1,
+      event: 'email_delivery_failed',
+      provider: 'brevo',
+      errorType: 'timeout',
     });
     expect(JSON.stringify(loggerError.mock.calls)).not.toContain('reader@example.com');
   });
 
-  it('rejects header-injection input before it reaches Nodemailer', async () => {
+  it('fails safely when Brevo accepts a request without returning a message id', async () => {
+    const sendTransacEmail = jest.fn().mockResolvedValue({});
+    mockClient(sendTransacEmail);
+    const loggerError = jest.spyOn(Logger.prototype, 'error').mockImplementation();
+    const service = new EmailService(configuredEmailConfig());
+
+    await expect(
+      service.send({ to: 'reader@example.com', subject: 'Subject', text: 'Body' }),
+    ).rejects.toMatchObject({
+      response: expect.objectContaining({ code: 'EMAIL_DELIVERY_UNAVAILABLE' }),
+    });
+
+    expect(loggerError).toHaveBeenCalledWith({
+      event: 'email_delivery_rejected',
+      provider: 'brevo',
+      reason: 'missing_message_id',
+    });
+    expect(JSON.stringify(loggerError.mock.calls)).not.toContain('reader@example.com');
+  });
+
+  it('rejects header-injection input before it reaches Brevo', async () => {
     const service = new EmailService(configuredEmailConfig());
     await expect(
       service.send({
@@ -177,14 +192,20 @@ describe('EmailService', () => {
         text: 'Body',
       }),
     ).rejects.toThrow('Transactional email recipient must be a non-empty single-line value');
-    expect(mockCreateTransport).not.toHaveBeenCalled();
+    expect(mockBrevoClient).not.toHaveBeenCalled();
   });
 });
 
+function mockClient(sendTransacEmail: jest.Mock) {
+  mockBrevoClient.mockImplementation(
+    () => ({ transactionalEmails: { sendTransacEmail } }) as unknown as BrevoClient,
+  );
+}
+
 function configuredEmailConfig() {
   return {
-    emailSmtpUrl: 'smtps://user:pass@smtp.example.com:465',
-    emailFrom: 'Paralleax <no-reply@example.com>',
-    emailReplyTo: 'support@example.com',
+    brevoApiKey: 'xkeysib-secret',
+    emailFrom: { email: 'no-reply@example.com', name: 'Paralleax' },
+    emailReplyTo: { email: 'support@example.com' },
   } as AppConfigService;
 }

@@ -129,7 +129,9 @@ priority, the order below is the intended delivery order.
 1. **Account safety.** Add email verification, password recovery/change, and
    session revocation before open registration. Keep external identity providers
    as the separate P2 decision below. **Completed 2026-09-30:** Nodemailer SMTP
-   delivery now sends purpose-specific verification and recovery messages. New
+   delivery initially sent purpose-specific verification and recovery messages.
+   **Updated 2026-10-08:** the transport now uses the Brevo HTTPS API so restricted
+   hosting plans do not require outbound SMTP access. New
    registrations cannot sign in before verification; verification and reset
    tokens are random, hashed at rest, scoped, expiry-bound, and atomic one-use
    actions. Password reset/change revokes existing sessions, the account dialog

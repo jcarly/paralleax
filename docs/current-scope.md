@@ -77,13 +77,14 @@ Paralleax currently includes:
   access URL returns to the Story library without rendering the API detail;
   readable accounts that merely lack edit permission still move from the editor
   URL to the player.
-- Transactional-email delivery through a configured SMTP relay for account
-  verification and recovery. The API
-  uses Nodemailer with mandatory TLS and a configured sender, accepts no partial
-  SMTP configuration, and keeps recipients, message content, and credentials out
-  of application logs. New registrations require a verified email before a
-  session is created. Account-action tokens are purpose-bound, stored only as
-  hashes, expire, and are consumed once; password resets and changes revoke prior
+- Transactional-email delivery through the Brevo HTTPS API for account
+  verification and recovery. The API uses the official Brevo Node.js SDK with a
+  configured sender, disables automatic delivery retries, accepts no partial
+  configuration, and keeps recipients, message content, credentials, and raw
+  provider responses out of application logs. New registrations require a
+  verified email before a session is created. Account-action tokens are
+  purpose-bound, stored only as hashes, expire, and are consumed once; password
+  resets and changes revoke prior
   sessions. Accounts predating this feature migrate as verified to avoid lockout.
 - Story review post-its on the graph, interactions, triggers, characters, locations,
   item/stat definitions, selected title/body/name/description text, and stable
