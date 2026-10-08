@@ -39,7 +39,7 @@ describe('LanguageSwitcher', () => {
 
     await user.selectOptions(screen.getByRole('combobox', { name: 'Langue' }), 'it');
 
-    expect(screen.getByText('Storie')).toBeInTheDocument();
+    expect(await screen.findByText('Storie')).toBeInTheDocument();
     expect(screen.getByRole('combobox', { name: 'Lingua' })).toHaveValue('it');
     expect(window.localStorage.getItem(languageStorageKey)).toBe('it');
     expect(document.documentElement.lang).toBe('it');
