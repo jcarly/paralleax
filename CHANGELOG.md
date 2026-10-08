@@ -4,6 +4,9 @@
 
 - Added Italian interface localization, including browser detection, persisted language
   selection, localized metadata, and Italian UI regression coverage.
+- Added sanitized structured SMTP failure diagnostics for relay error codes, response
+  codes, command stages, and recipient acceptance counts without logging addresses,
+  message content, credentials, or raw provider responses.
 
 ## 2026-10-01
 

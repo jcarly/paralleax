@@ -53,14 +53,18 @@ export class EmailService {
     try {
       const result = await this.smtpTransporter().sendMail(mail);
       if ((result.accepted?.length ?? 0) !== 1 || (result.rejected?.length ?? 0) > 0) {
-        this.logger.error('SMTP relay did not accept the transactional email');
+        this.logger.error({
+          event: 'smtp_delivery_rejected',
+          acceptedCount: result.accepted?.length ?? 0,
+          rejectedCount: result.rejected?.length ?? 0,
+        });
         throw unavailableEmailDelivery();
       }
       this.logger.log(`Transactional email accepted by SMTP relay (${result.messageId})`);
       return { messageId: result.messageId };
     } catch (error) {
       if (error instanceof ServiceUnavailableException) throw error;
-      this.logger.error('SMTP relay failed to deliver a transactional email');
+      this.logger.error(smtpFailureLog(error));
       throw unavailableEmailDelivery();
     }
   }
@@ -116,4 +120,44 @@ function unavailableEmailDelivery() {
   return new ServiceUnavailableException(
     apiErrorResponse('EMAIL_DELIVERY_UNAVAILABLE', 'Email delivery is unavailable'),
   );
+}
+
+function smtpFailureLog(error: unknown) {
+  const details = error !== null && typeof error === 'object' ? error : undefined;
+  const code = safeSmtpErrorCode(details && 'code' in details ? details.code : undefined);
+  const responseCode = safeSmtpResponseCode(
+    details && 'responseCode' in details ? details.responseCode : undefined,
+  );
+  const command = safeSmtpCommand(details && 'command' in details ? details.command : undefined);
+  return {
+    event: 'smtp_delivery_failed',
+    ...(code ? { code } : {}),
+    ...(responseCode ? { responseCode } : {}),
+    ...(command ? { command } : {}),
+  };
+}
+
+function safeSmtpErrorCode(value: unknown) {
+  return typeof value === 'string' && /^[A-Z0-9_+-]{1,32}$/i.test(value) ? value : undefined;
+}
+
+function safeSmtpResponseCode(value: unknown) {
+  return typeof value === 'number' && Number.isInteger(value) && value >= 100 && value <= 599
+    ? value
+    : undefined;
+}
+
+function safeSmtpCommand(value: unknown) {
+  if (typeof value !== 'string') return undefined;
+  const normalized = value.trim().toUpperCase();
+  if (normalized === 'CONN') return 'CONN';
+  if (normalized.startsWith('EHLO')) return 'EHLO';
+  if (normalized.startsWith('HELO')) return 'HELO';
+  if (normalized.startsWith('STARTTLS')) return 'STARTTLS';
+  if (normalized.startsWith('AUTH')) return 'AUTH';
+  if (normalized.startsWith('MAIL FROM')) return 'MAIL FROM';
+  if (normalized.startsWith('RCPT TO')) return 'RCPT TO';
+  if (normalized.startsWith('DATA')) return 'DATA';
+  if (normalized.startsWith('QUIT')) return 'QUIT';
+  return undefined;
 }

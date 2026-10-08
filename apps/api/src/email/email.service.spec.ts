@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import { createTransport } from 'nodemailer';
 import type { AppConfigService } from '../config/app-config.service';
 import { EmailService } from './email.service';
@@ -9,6 +10,7 @@ const mockCreateTransport = jest.mocked(createTransport);
 
 describe('EmailService', () => {
   beforeEach(() => jest.resetAllMocks());
+  afterEach(() => jest.restoreAllMocks());
 
   it('sends one normalized transactional message through the configured SMTP relay', async () => {
     const sendMail = jest.fn().mockResolvedValue({
@@ -107,6 +109,63 @@ describe('EmailService', () => {
     ).rejects.toMatchObject({
       response: expect.objectContaining({ code: 'EMAIL_DELIVERY_UNAVAILABLE' }),
     });
+  });
+
+  it('logs safe SMTP diagnostics without exposing server responses or credentials', async () => {
+    const smtpError = Object.assign(
+      new Error('Authentication failed for secret-user@example.com with secret-password'),
+      {
+        code: 'EAUTH',
+        responseCode: 535,
+        command: 'AUTH PLAIN encoded-secret',
+        response: '535 Authentication failed for secret-user@example.com',
+        smtpUrl: 'smtp://secret-user:secret-password@smtp.example.com:587',
+      },
+    );
+    const sendMail = jest.fn().mockRejectedValue(smtpError);
+    mockCreateTransport.mockReturnValue({ sendMail } as never);
+    const loggerError = jest.spyOn(Logger.prototype, 'error').mockImplementation();
+    const service = new EmailService(configuredEmailConfig());
+
+    await expect(
+      service.send({ to: 'reader@example.com', subject: 'Subject', text: 'Body' }),
+    ).rejects.toMatchObject({
+      response: expect.objectContaining({ code: 'EMAIL_DELIVERY_UNAVAILABLE' }),
+    });
+
+    expect(loggerError).toHaveBeenCalledWith({
+      event: 'smtp_delivery_failed',
+      code: 'EAUTH',
+      responseCode: 535,
+      command: 'AUTH',
+    });
+    expect(JSON.stringify(loggerError.mock.calls)).not.toMatch(
+      /secret-user|secret-password|encoded-secret|reader@example\.com/,
+    );
+  });
+
+  it('logs only delivery counts when the SMTP relay rejects a recipient', async () => {
+    const sendMail = jest.fn().mockResolvedValue({
+      accepted: [],
+      rejected: ['reader@example.com'],
+      messageId: '<message-1@example.com>',
+    });
+    mockCreateTransport.mockReturnValue({ sendMail } as never);
+    const loggerError = jest.spyOn(Logger.prototype, 'error').mockImplementation();
+    const service = new EmailService(configuredEmailConfig());
+
+    await expect(
+      service.send({ to: 'reader@example.com', subject: 'Subject', text: 'Body' }),
+    ).rejects.toMatchObject({
+      response: expect.objectContaining({ code: 'EMAIL_DELIVERY_UNAVAILABLE' }),
+    });
+
+    expect(loggerError).toHaveBeenCalledWith({
+      event: 'smtp_delivery_rejected',
+      acceptedCount: 0,
+      rejectedCount: 1,
+    });
+    expect(JSON.stringify(loggerError.mock.calls)).not.toContain('reader@example.com');
   });
 
   it('rejects header-injection input before it reaches Nodemailer', async () => {
