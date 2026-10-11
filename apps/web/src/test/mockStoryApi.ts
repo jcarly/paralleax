@@ -31,6 +31,7 @@ export function createStoryApiMock() {
     deleteInteraction: vi.fn(),
     updateStoryGraphPositions: vi.fn(),
     createGraphDecoration: vi.fn(),
+    createGroup: vi.fn(),
     updateGraphDecoration: vi.fn(),
     deleteGraphDecoration: vi.fn(),
     getStoryAccess: vi.fn(),

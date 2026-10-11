@@ -2,7 +2,7 @@
 
 This roadmap describes the progression from the validated narrative core to a public Paralleax platform.
 
-Status reviewed: 2026-09-30.
+Status reviewed: 2026-10-04.
 
 It is organized around **user capabilities** rather than implementation areas. Engineering work supports these milestones but does not define them by itself.
 
@@ -33,11 +33,15 @@ The private-alpha P0 feedback queue is complete. The near-term delivery sequence
 1. deliver P1 account safety, Story-settings/access, localization,
    comment-inspector, semantic comment slots, graph correctness, and cyclic-layout
    work as cohesive verticals;
-2. complete V0.3 optimistic concurrency, conflict recovery, history retention,
+2. make the Workbench the primary product differentiator: improve selection and
+   organization first, then focus, projections, visible logic, dependency
+   explanations, and convergence with Simulation Mode as described in
+   [Workbench product direction](workbench.md);
+3. complete V0.3 optimistic concurrency, conflict recovery, history retention,
    and optional gesture grouping;
-3. establish the stable Paralleax backup/import-export contract required by V0.6;
-4. add Story validation, onboarding, and accessibility evidence to reach V0.7;
-5. then deepen world state, dynamic execution, collaboration, and publishing
+4. establish the stable Paralleax backup/import-export contract required by V0.6;
+5. add Story validation, onboarding, and accessibility evidence to reach V0.7;
+6. then deepen world state, dynamic execution, collaboration, and publishing
    according to validated user needs.
 
 Later milestone foundations may continue to be improved when they support these
@@ -273,6 +277,10 @@ priority, the order below is the intended delivery order.
 - Build collaboration on explicit revisions and conflict semantics.
 - Build imports as adapters; external engines do not define the Paralleax core.
 - Optimize large-story behavior from measurements rather than speculation.
+- Prioritize author comprehension and fluidity as Stories become more complex;
+  a feature-rich model is valuable only when authors can still see and explain it.
+- Keep Workbench views as projections of one canonical Story, with progressive
+  disclosure and preserved spatial orientation.
 - Extract large orchestration modules progressively while related features are changed.
 
 ## V0.1 — Narrative Core — Implemented
@@ -367,8 +375,17 @@ An author can safely create, navigate, edit, test, and recover a large story wit
 
 #### Authoring UX
 
-- Add a focused narrative-neighborhood mode if large-story usability testing
-  confirms that search and reference navigation are insufficient.
+- Deliver the Workbench phases incrementally: improved additive/subtractive
+  selection and connected paths; neutral Groups with multiple Interaction
+  membership; focus and projection controls; visible logic markers; dependency
+  navigation; and actionable availability explanations.
+- Preserve whole-Story orientation through Focused / Context / Background
+  treatment before offering an explicit `Hide unrelated` mode.
+- Add Structure, Character, and Location projections before the more specialized
+  State and Time projections. Reuse one generic query/projection contract rather
+  than building independent editors.
+- Converge Workbench diagnostics with the shared deterministic condition
+  explanations already consumed by Simulation Mode.
 - Improve empty states, contextual actions, keyboard guidance, and shortcuts.
 - Continue search/filter/focal-point improvements where large-story tests justify them.
 - Consolidate dialog, loading, empty, recoverable-error, and save-error behavior.
@@ -593,9 +610,17 @@ authorization, and multi-human disconnect/reconnect semantics.
 
 #### Story organization
 
-Define a neutral grouping concept for quests, chapters, arcs, scene sequences, or author-defined groups.
+Define a neutral Group for chapters, quests, arcs, scene sequences, production
+work packages, or any author-defined organization. Groups are authoring and
+navigation metadata only; they do not own conditions, effects, completion state,
+journal behavior, or other runtime semantics.
 
-First decide whether groups are authoring/navigation metadata only, or executable entities with conditions, completion state, journal behavior, or effects. Do not accidentally turn visual graph grouping into runtime semantics.
+One Interaction may belong to several Groups. The initial Group implementation
+is flat and is created from selected Interactions; Groups can become empty when
+members are deleted. Removing a Group preserves all Interactions. Visual overlap
+with a Graph Decoration never creates membership. Nested Groups, collapse,
+visibility, and per-author view state require a follow-up ADR. See
+[Workbench product direction](workbench.md).
 
 #### Items — staged progression
 
@@ -770,10 +795,15 @@ An author who did not build Paralleax can create, test, save, maintain, export, 
 
 - Coherent onboarding and first-story flow.
 - Mature Story Canvas navigation.
+- A Workbench that preserves whole-Story visibility while projecting structure,
+  characters, locations, state, time, and dependencies at useful levels of focus.
 - Search, filters, and contextual navigation.
 - Clear authoring of conditions and effects.
 - Usable locations, characters, stats, items, and supported world state.
 - Simulation/debugging with actionable explanations.
+- A large-Story comprehension test using a representative 300–600 Interaction
+  project, including character-route isolation, dependency inspection,
+  availability explanation, Simulation, and immediate return to the global view.
 - Story validation with useful error messages.
 - Backup/export and restore/import.
 - User-facing documentation.

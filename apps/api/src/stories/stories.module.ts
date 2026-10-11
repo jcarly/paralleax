@@ -8,6 +8,7 @@ import { StoryImportService } from './application/story-import';
 import { StoryAccessService } from './application/story-access';
 import { StoryContextService } from './application/story-context';
 import { StoryGraphService } from './application/story-graph';
+import { StoryGroupService } from './application/story-groups';
 import { StoryHistoryService } from './application/story-history';
 import { StoryMetadataService } from './application/story-metadata';
 import { StoryMutationService } from './application/story-mutations';
@@ -25,6 +26,7 @@ import { StoryRuntimeService } from './application/story-runtime';
     StoryAccessService,
     StoryContextService,
     StoryGraphService,
+    StoryGroupService,
     StoryHistoryService,
     StoryMetadataService,
     StoryMutationService,

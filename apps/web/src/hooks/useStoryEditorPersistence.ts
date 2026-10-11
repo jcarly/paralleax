@@ -7,6 +7,7 @@ import {
 import { api } from '../api';
 import { useStoryContextPersistence } from '../features/story-editor/persistence/storyContextPersistence';
 import { useStoryGraphPersistence } from '../features/story-editor/persistence/storyGraphPersistence';
+import { useStoryGroupPersistence } from '../features/story-editor/persistence/storyGroupPersistence';
 import { useStoryPersistenceLifecycle } from '../features/story-editor/persistence/useStoryPersistenceLifecycle';
 import type {
   OptimisticGraphHistoryChange,
@@ -69,6 +70,11 @@ export function useStoryEditorPersistence(storyId: string) {
     setStory,
     trackSave: trackAuthoredSave,
   });
+  const groupPersistence = useStoryGroupPersistence({
+    storyId,
+    setStory,
+    trackSave: trackAuthoredSave,
+  });
 
   const applyHistoryGraphPositions = useCallback(
     (patch: StoryGraphPositionPatch, mutation?: { revision: number; updatedAt: string }) => {
@@ -114,6 +120,7 @@ export function useStoryEditorPersistence(storyId: string) {
     renameStory,
     updateStoryStartDateTime,
     ...graphPersistence,
+    ...groupPersistence,
     ...contextPersistence,
   };
 }

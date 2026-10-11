@@ -18,6 +18,7 @@ export const storyHistoryOperations = {
   graphDecorationCreated: 'graph-decoration.created',
   graphDecorationUpdated: 'graph-decoration.updated',
   graphDecorationDeleted: 'graph-decoration.deleted',
+  groupCreated: 'group.created',
   locationCreated: 'location.created',
   locationUpdated: 'location.updated',
   characterCreated: 'character.created',
@@ -140,6 +141,7 @@ const authoredStoryKeys = [
   'stats',
   'statDefinitions',
   'itemDefinitions',
+  'groups',
   'graphDecorations',
   'interactions',
 ] as const;
@@ -290,6 +292,7 @@ function authoredStoryProjection(story: Story): JsonValue {
       ...definition,
       stats: definition.stats ?? [],
     })),
+    groups: story.groups ?? [],
     graphDecorations: story.graphDecorations ?? [],
     interactions: story.interactions.map((interaction) => ({
       ...interaction,

@@ -148,6 +148,9 @@ Paralleax currently includes:
   choice dialog.
 - Rectangular graph multi-selection for interactions and linked trigger markers,
   with a transient count inspector, group drag-and-drop, and outside-click clearing.
+- Flat persisted Groups created from selected Interactions. Groups are neutral
+  authoring/navigation metadata with explicit many-to-many membership; they have
+  no reader semantics, nesting, visual projection, or navigation UI yet.
 - Deterministic vertical graph auto-layout for the complete graph, one selected
   interaction/linked trigger, or a rectangular multi-selection, with grouped
   trigger-marker placement and fixed bottom-output/top-input interaction routing.
@@ -220,6 +223,19 @@ The following remain future or incomplete unless a task explicitly implements th
 - lossless or runtime-equivalent QSP import, QSP re-export, and incremental re-import;
 - executable/Unity/video exports;
 - AI-driven narrative/runtime behavior.
+- nested Group organization and Group-focused Workbench navigation;
+- configurable Workbench views for structure, character, location, time, and
+  state, including combined filters and Focused / Context / Background treatment;
+- connected-path selection, generic Focus, graph-level dependency navigation,
+  and filterable logic markers;
+- Workbench `Why unavailable?` explanations and live Simulation state projected
+  directly on the authored graph. Simulation Mode already exposes deterministic
+  condition diagnostics, but that capability has not yet converged with the
+  Workbench.
+
+The intended direction for these authoring capabilities is documented in
+[Workbench product direction](workbench.md). That page is a product direction,
+not evidence that its phases are implemented.
 
 ## Historical documents
 

@@ -1,4 +1,5 @@
 import 'reflect-metadata';
+import './observability/sentry';
 import { ConsoleLogger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';

@@ -1,5 +1,6 @@
 import type { Character } from './characters.js';
 import type { GraphDecoration } from './graph-decorations.js';
+import type { Group } from './groups.js';
 import type { ConditionalTextBlock, Interaction } from './interactions.js';
 import type { ItemDefinition, ItemEffect, ItemInstance } from './items.js';
 import type { Location } from './locations.js';
@@ -37,6 +38,7 @@ export interface StoryEditorContextCounts {
   statAssignments: number;
   itemDefinitions: number;
   itemInstances: number;
+  groups: number;
   graphDecorations: number;
 }
 
@@ -83,6 +85,7 @@ export interface StoryEditorContextPage extends StoryEditorPageMetadata {
   statAssignments: StoryEditorStatAssignment[];
   itemDefinitions: ItemDefinition[];
   itemInstances: StoryEditorItemInstance[];
+  groups: Group[];
   graphDecorations: GraphDecoration[];
 }
 
@@ -166,6 +169,7 @@ export interface StoryContextAccumulator {
   statAssignments: StoryEditorStatAssignment[];
   itemDefinitions: StoryEditorContextPage['itemDefinitions'];
   itemInstances: StoryEditorItemInstance[];
+  groups: StoryEditorContextPage['groups'];
   graphDecorations: StoryEditorContextPage['graphDecorations'];
 }
 
@@ -177,6 +181,7 @@ export function createStoryContextAccumulator(): StoryContextAccumulator {
     statAssignments: [],
     itemDefinitions: [],
     itemInstances: [],
+    groups: [],
     graphDecorations: [],
   };
 }
@@ -191,6 +196,7 @@ export function appendStoryContextPage(
   context.statAssignments.push(...page.statAssignments);
   context.itemDefinitions.push(...page.itemDefinitions);
   context.itemInstances.push(...page.itemInstances);
+  context.groups.push(...page.groups);
   context.graphDecorations.push(...page.graphDecorations);
 }
 
@@ -218,6 +224,7 @@ export function projectStoryContext(story: Story, context: StoryContextAccumulat
       ...definition,
       stats: stripStatOwners(assignmentsByOwner.get(`itemDefinition:${definition.id}`)),
     })),
+    groups: context.groups,
     graphDecorations: context.graphDecorations,
   };
 }
@@ -238,6 +245,7 @@ export function createStoryLoadingProjection(bootstrap: StoryEditorBootstrap): S
     stats: [],
     statDefinitions: [],
     itemDefinitions: [],
+    groups: [],
     graphDecorations: [],
     interactions: [],
   };

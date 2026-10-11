@@ -18,6 +18,7 @@ import {
 import type { Request } from 'express';
 import {
   CreateInteractionDto,
+  CreateGroupDto,
   CreateStatAssignmentDto,
   CreateGraphDecorationDto,
   CreateCharacterDto,
@@ -369,6 +370,14 @@ export class StoriesController {
     @CurrentUser() user: RequestUser,
   ) {
     return this.stories.createInteraction(id, input, user.id);
+  }
+
+  @Post(':storyId/groups') createGroup(
+    @Param('storyId') id: string,
+    @Body() input: CreateGroupDto,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.stories.createGroup(id, input, user.id);
   }
 
   @Patch(':storyId/graph/positions') updateGraphPositions(

@@ -448,19 +448,33 @@ Possible elements:
 
 ### Group
 
-A group is a neutral logical grouping of interactions.
+A Group is neutral authoring and navigation metadata for organizing
+Interactions. It has no Trigger, reader, completion, journal, condition, or
+effect semantics.
 
 It should not force a specific narrative vocabulary such as chapter, quest, arc,
-or scene sequence. Those labels may be author-facing choices later.
+scene sequence, location, character arc, or work package. Those meanings belong
+to the author.
 
 Possible elements:
 
+- stable id;
 - title;
-- description;
-- included interactions;
-- display order or canvas focus metadata.
+- explicit Interaction membership;
 
-Groups are not part of the MVP implementation.
+The first implementation is deliberately flat: it has no description, nested
+Group membership, display metadata, collapse state, or layout state. A Group is
+created from one or more selected Interactions.
+
+Interaction membership is intentionally many-to-many: one Interaction may
+belong to several Groups at the same time. Group membership is never inferred
+from a Decoration frame or from canvas overlap. Removing a Group must preserve
+every Interaction and only remove the corresponding organizational membership.
+
+There is no Group parentage in the initial contract. Any future nested Group
+relationships must reject cycles; their cardinality and the ownership of
+collapse/visibility state remain implementation-contract decisions. See
+[Workbench product direction](workbench.md).
 
 ### Graph Decoration
 

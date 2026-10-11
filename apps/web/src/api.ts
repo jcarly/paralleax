@@ -15,11 +15,13 @@ import type {
   CreateCharacterStatInput,
   CreateInteractionInput,
   CreateGraphDecorationInput,
+  CreateGroupInput,
   CreateItemDefinitionInput,
   CreateLocationInput,
   CreateStatDefinitionInput,
   InteractionMutationResult,
   GraphDecorationMutationResult,
+  GroupMutationResult,
   ItemDefinitionMutationResult,
   LocationMutationResult,
   MoveItemInstanceInput,
@@ -436,6 +438,11 @@ export const api = {
     request<Story>(`/stories/${storyId}/interactions/${interactionId}`, { method: 'DELETE' }),
   createGraphDecoration: (storyId: string, input: CreateGraphDecorationInput) =>
     request<GraphDecorationMutationResult>(`/stories/${storyId}/graph-decorations`, {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
+  createGroup: (storyId: string, input: CreateGroupInput) =>
+    request<GroupMutationResult>(`/stories/${storyId}/groups`, {
       method: 'POST',
       body: JSON.stringify(input),
     }),

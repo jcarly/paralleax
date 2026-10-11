@@ -8,6 +8,7 @@ import {
 import type { Response } from 'express';
 import { ApiExceptionFilter } from './api-exception.filter';
 import type { RequestWithId } from './request-context';
+import * as sentry from '../observability/sentry';
 
 function host(request: Partial<RequestWithId> = {}) {
   const json = jest.fn();
@@ -89,6 +90,7 @@ describe('ApiExceptionFilter', () => {
   it('hides unexpected error details and logs only safe request metadata', () => {
     const response = host();
     const error = jest.spyOn(Logger.prototype, 'error').mockImplementation();
+    const capture = jest.spyOn(sentry, 'captureApiException').mockImplementation();
 
     new ApiExceptionFilter().catch(
       new Error('password=secret; SELECT sensitive_text'),
@@ -111,5 +113,11 @@ describe('ApiExceptionFilter', () => {
       errorType: 'Error',
     });
     expect(JSON.stringify(error.mock.calls)).not.toContain('password=secret');
+    expect(capture).toHaveBeenCalledWith(expect.any(Error), {
+      requestId: 'request-1',
+      method: 'POST',
+      status: HttpStatus.INTERNAL_SERVER_ERROR,
+      code: 'HTTP_500',
+    });
   });
 });

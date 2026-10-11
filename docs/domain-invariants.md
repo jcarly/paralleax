@@ -294,6 +294,16 @@ details. They should stay covered by tests as the editor grows.
 
 ## Post-MVP Invariants To Preserve
 
+- A Group is authoring and navigation metadata only. Membership never changes
+  Trigger evaluation, reader output, progress replay, or Simulation state.
+- One Interaction may belong to several Groups. Group membership is explicit and
+  is never inferred from Graph Decoration overlap or canvas position.
+- Deleting a Group never deletes its member Interactions. The initial Group
+  implementation has no parentage; any future nested Group relationships must
+  remain story-local and acyclic.
+- Workbench filters, focus, attenuation, collapse, and visibility are projections
+  of the canonical Story. They do not create duplicate Interaction, Trigger,
+  route, or runtime-state models.
 - Pending suggestions are visible to users who can review or approve suggestions
   for that story.
 - Direct edits and pending suggestions should share an event-log foundation.

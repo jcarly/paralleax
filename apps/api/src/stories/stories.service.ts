@@ -5,6 +5,7 @@ import {
   CharacterMutationResult,
   CharacterStatMutationResult,
   GraphDecorationMutationResult,
+  GroupMutationResult,
   InteractionMutationResult,
   ItemDefinitionMutationResult,
   LocationMutationResult,
@@ -22,6 +23,7 @@ import {
 import { StoryAccessService } from './application/story-access';
 import { StoryContextService } from './application/story-context';
 import { StoryGraphService } from './application/story-graph';
+import { StoryGroupService } from './application/story-groups';
 import { StoryHistoryService } from './application/story-history';
 import { StoryMetadataService } from './application/story-metadata';
 import { StoryReaderProgressService } from './application/story-reader-progress';
@@ -31,6 +33,7 @@ import type {
   CreateCharacterItemDto,
   CreateCharacterStatDto,
   CreateGraphDecorationDto,
+  CreateGroupDto,
   CreateInteractionDto,
   CreateItemDefinitionDto,
   CreateLocationDto,
@@ -65,6 +68,7 @@ export class StoriesService {
     private readonly readerProgress: StoryReaderProgressService,
     private readonly runtime: StoryRuntimeService,
     private readonly graph: StoryGraphService,
+    private readonly groups: StoryGroupService,
     private readonly context: StoryContextService,
     private readonly history: StoryHistoryService,
   ) {}
@@ -228,6 +232,14 @@ export class StoriesService {
     userId: string,
   ): Promise<InteractionMutationResult> {
     return this.graph.createInteraction(storyId, input, userId);
+  }
+
+  async createGroup(
+    storyId: string,
+    input: CreateGroupDto,
+    userId: string,
+  ): Promise<GroupMutationResult> {
+    return this.groups.create(storyId, input, userId);
   }
 
   async updateGraphPositions(storyId: string, input: UpdateStoryGraphPositionsDto, userId: string) {

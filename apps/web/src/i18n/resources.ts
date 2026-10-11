@@ -581,6 +581,7 @@ export const resources = {
             graphDecorationCreated: 'Graph decoration created',
             graphDecorationUpdated: 'Graph decoration updated',
             graphDecorationDeleted: 'Graph decoration deleted',
+            groupCreated: 'Group created',
             locationCreated: 'Location created',
             locationUpdated: 'Location updated',
             characterCreated: 'Character created',
@@ -627,6 +628,9 @@ export const resources = {
           interactions_other: '{{count}} interactions selected',
           triggers_one: '{{count}} trigger selected',
           triggers_other: '{{count}} triggers selected',
+          groupTitle: 'Group title',
+          createGroup: 'Create group',
+          groupRequiresInteraction: 'Select at least one interaction to create a group.',
         },
         count: {
           location_one: '{{count}} location',
@@ -1738,6 +1742,7 @@ export const resources = {
             graphDecorationCreated: 'Décoration du graphe créée',
             graphDecorationUpdated: 'Décoration du graphe modifiée',
             graphDecorationDeleted: 'Décoration du graphe supprimée',
+            groupCreated: 'Groupe créé',
             locationCreated: 'Lieu créé',
             locationUpdated: 'Lieu modifié',
             characterCreated: 'Personnage créé',
@@ -1784,6 +1789,10 @@ export const resources = {
           interactions_other: '{{count}} interactions sélectionnées',
           triggers_one: '{{count}} déclencheur sélectionné',
           triggers_other: '{{count}} déclencheurs sélectionnés',
+          groupTitle: 'Titre du groupe',
+          createGroup: 'Créer le groupe',
+          groupRequiresInteraction:
+            'Sélectionnez au moins une interaction pour créer un groupe.',
         },
         count: {
           location_one: '{{count}} lieu',

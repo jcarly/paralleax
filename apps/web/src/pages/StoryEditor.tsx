@@ -188,6 +188,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
     createRoot,
     createChildFromInteraction,
     createParentForInteraction,
+    createGroup,
     patchInteraction,
     deleteInteraction,
     createGraphDecoration,
@@ -2144,7 +2145,10 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
             </div>
             <div className="inspector-content">
               {graphSelection ? (
-                <StoryGraphSelectionInspector selection={graphSelection} />
+                <StoryGraphSelectionInspector
+                  selection={graphSelection}
+                  onCreateGroup={createGroup}
+                />
               ) : selectedGraphDecoration ? (
                 <GraphDecorationInspector
                   decoration={selectedGraphDecoration}

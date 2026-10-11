@@ -182,6 +182,7 @@ export class InMemoryStoriesRepository {
         stats: undefined,
       })),
       itemInstances: pageItems(itemInstances, page, pageSize),
+      groups: pageItems(story.groups ?? [], page, pageSize),
       graphDecorations: pageItems(story.graphDecorations ?? [], page, pageSize),
     };
   }
@@ -286,7 +287,10 @@ export class InMemoryStoriesRepository {
     ownerId?: string,
   ): Promise<StoryRuntimeBootstrap | undefined> {
     const story = await this.find(id, ownerId);
-    return story ? editorBootstrap(story) : undefined;
+    const bootstrap = story ? editorBootstrap(story) : undefined;
+    return bootstrap
+      ? { ...bootstrap, contextCounts: { ...bootstrap.contextCounts, groups: 0 } }
+      : undefined;
   }
 
   async findRuntimeAccess(
@@ -306,7 +310,7 @@ export class InMemoryStoriesRepository {
     pageSize: number,
   ): Promise<StoryRuntimeContextPage | undefined> {
     const result = await this.findEditorContextPage(id, ownerId, page, pageSize);
-    return result ? { ...result, graphDecorations: [] } : undefined;
+    return result ? { ...result, groups: [], graphDecorations: [] } : undefined;
   }
 
   async findRuntimeSlice(
@@ -731,6 +735,7 @@ function editorBootstrap(story: Story): StoryEditorBootstrap {
       statAssignments: statAssignmentCount,
       itemDefinitions: story.itemDefinitions?.length ?? 0,
       itemInstances: itemInstanceCount,
+      groups: story.groups?.length ?? 0,
       graphDecorations: story.graphDecorations?.length ?? 0,
     },
     interactionCount: story.interactions.length,

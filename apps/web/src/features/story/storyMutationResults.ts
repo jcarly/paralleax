@@ -3,6 +3,7 @@ import type {
   CharacterMutationResult,
   CharacterStatMutationResult,
   GraphDecorationMutationResult,
+  GroupMutationResult,
   Interaction,
   InteractionMutationResult,
   ItemDefinitionMutationResult,
@@ -55,6 +56,16 @@ export function applyGraphDecorationResult(
     {
       ...story,
       graphDecorations: upsertById(story.graphDecorations, result.decoration),
+    },
+    result,
+  );
+}
+
+export function applyGroupResult(story: Story, result: GroupMutationResult): Story {
+  return applyStoryMutationMetadata(
+    {
+      ...story,
+      groups: upsertById(story.groups, result.group),
     },
     result,
   );

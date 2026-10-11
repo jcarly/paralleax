@@ -184,7 +184,12 @@ describe('shared story operations', () => {
   });
 
   it('keeps triggers as root triggers when deleting their only input interaction', () => {
-    const updated = deleteInteractionFromStory(storyFixture(), 'root');
+    const story = storyFixture();
+    story.groups = [
+      { id: 'group-1', title: 'Beginning', interactionIds: ['root', 'middle'] },
+      { id: 'group-2', title: 'Shared', interactionIds: ['root'] },
+    ];
+    const updated = deleteInteractionFromStory(story, 'root');
 
     expect(updated.interactions.map((item) => item.id)).toEqual(['middle', 'end']);
     expect(updated.interactions[0].triggers).toEqual([
@@ -201,6 +206,10 @@ describe('shared story operations', () => {
       { id: 'trigger-end', conditions: [] },
     ]);
     expect(updated.interactions[1].triggers[0].appearanceProbability).toBe(100);
+    expect(updated.groups).toEqual([
+      { id: 'group-1', title: 'Beginning', interactionIds: ['middle'] },
+      { id: 'group-2', title: 'Shared', interactionIds: [] },
+    ]);
   });
 
   it('does not restore locally deleted triggers from stale server stories', () => {

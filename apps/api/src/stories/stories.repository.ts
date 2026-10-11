@@ -12,6 +12,7 @@ import {
   resolveStoryAccess,
   storyHistoryOperations,
   type GraphDecoration,
+  type Group,
   type ConditionalTextBlock,
   type ItemRelationshipType,
   type ReaderProgressState,
@@ -89,6 +90,7 @@ type StoryEditorBootstrapRow = StoryRow & {
   stat_assignment_count: number | string;
   item_definition_count: number | string;
   item_instance_count: number | string;
+  group_count: number | string;
   graph_decoration_count: number | string;
   interaction_count: number | string;
   trigger_count: number | string;
@@ -119,6 +121,18 @@ type GraphDecorationRow = {
   font_family: 'sans' | 'serif' | 'monospace' | 'display' | null;
   font_weight: 'normal' | 'bold' | null;
   font_style: 'normal' | 'italic' | null;
+  sort_order: number;
+};
+type GroupRow = {
+  id: string;
+  story_id: string;
+  title: string;
+  sort_order: number;
+};
+type GroupInteractionRow = {
+  story_id: string;
+  group_id: string;
+  interaction_id: string;
   sort_order: number;
 };
 type LocationRow = {
@@ -323,6 +337,7 @@ export class StoriesRepository {
          (SELECT COUNT(*) FROM item_definitions WHERE story_id = accessible.id)
            AS item_definition_count,
          (SELECT COUNT(*) FROM item_instances WHERE story_id = accessible.id) AS item_instance_count,
+         (SELECT COUNT(*) FROM story_groups WHERE story_id = accessible.id) AS group_count,
          (SELECT COUNT(*) FROM graph_decorations WHERE story_id = accessible.id)
            AS graph_decoration_count,
          (SELECT COUNT(*) FROM interactions WHERE story_id = accessible.id) AS interaction_count,
@@ -366,6 +381,7 @@ export class StoriesRepository {
         statAssignments: Number(row.stat_assignment_count),
         itemDefinitions: Number(row.item_definition_count),
         itemInstances: Number(row.item_instance_count),
+        groups: Number(row.group_count),
         graphDecorations: Number(row.graph_decoration_count),
       },
       interactionCount: Number(row.interaction_count),
@@ -457,7 +473,10 @@ export class StoriesRepository {
     id: string,
     userId?: string,
   ): Promise<StoryRuntimeBootstrap | undefined> {
-    return this.findEditorBootstrap(id, userId ?? '');
+    const bootstrap = await this.findEditorBootstrap(id, userId ?? '');
+    return bootstrap
+      ? { ...bootstrap, contextCounts: { ...bootstrap.contextCounts, groups: 0 } }
+      : undefined;
   }
 
   async findRuntimeAccess(
@@ -490,6 +509,7 @@ export class StoriesRepository {
         page,
         pageSize,
       },
+      false,
       false,
     );
   }
@@ -856,6 +876,18 @@ export class StoriesRepository {
          ORDER BY story_id, sort_order`,
       [storyIds],
     );
+    const groups = await queryable.query<GroupRow>(
+      `SELECT id, story_id, title, sort_order
+         FROM story_groups WHERE story_id = ANY($1::text[])
+         ORDER BY story_id, sort_order`,
+      [storyIds],
+    );
+    const groupInteractions = await queryable.query<GroupInteractionRow>(
+      `SELECT story_id, group_id, interaction_id, sort_order
+         FROM story_group_interactions WHERE story_id = ANY($1::text[])
+         ORDER BY story_id, group_id, sort_order`,
+      [storyIds],
+    );
     const locations = await queryable.query<LocationRow>(
       `SELECT id, story_id, name, description, category, image_url, sort_order
          FROM locations WHERE story_id = ANY($1::text[])
@@ -949,6 +981,8 @@ export class StoriesRepository {
     );
     const interactionsByStory = groupBy(interactions.rows, ({ story_id }) => story_id);
     const graphDecorationsByStory = groupBy(graphDecorations.rows, ({ story_id }) => story_id);
+    const groupsByStory = groupBy(groups.rows, ({ story_id }) => story_id);
+    const interactionsByGroup = groupBy(groupInteractions.rows, ({ group_id }) => group_id);
     const locationsByStory = groupBy(locations.rows, ({ story_id }) => story_id);
     const charactersByStory = groupBy(characters.rows, ({ story_id }) => story_id);
     const statDefinitionsByStory = groupBy(statDefinitions.rows, ({ story_id }) => story_id);
@@ -1002,6 +1036,13 @@ export class StoriesRepository {
       ...(storyStats.get(row.id)?.length
         ? { stats: storyStats.get(row.id)!.map(projectStatAssignment) }
         : {}),
+      groups: (groupsByStory.get(row.id) ?? []).map((group): Group => ({
+        id: group.id,
+        title: group.title,
+        interactionIds: (interactionsByGroup.get(group.id) ?? []).map(
+          ({ interaction_id }) => interaction_id,
+        ),
+      })),
       graphDecorations: (graphDecorationsByStory.get(row.id) ?? []).map((decoration) =>
         decoration.kind === 'frame'
           ? {
