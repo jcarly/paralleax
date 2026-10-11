@@ -121,14 +121,13 @@ available at http://localhost:3300/api/docs outside production.
 
 ## Transactional email
 
-The API uses Nodemailer with a standard SMTP relay for transactional email. Set
-`EMAIL_SMTP_URL` and `EMAIL_FROM` together to enable delivery; `EMAIL_REPLY_TO`
-is optional. The SMTP URL is the only provider-specific setting, so an SMTP-
-compatible provider can be changed without changing application code. Account
-registration, verification, and password recovery require `EMAIL_SMTP_URL` and
-`EMAIL_FROM`; without them those account actions return a stable unavailable
-response rather than creating an unreachable account. Keep the URL, including
-its credentials, in deployment secrets rather than source control.
+The API uses Brevo's HTTPS API for transactional email. Set `BREVO_API_KEY` and
+`EMAIL_FROM` together to enable delivery; `EMAIL_REPLY_TO` is optional. Use a
+Brevo API key rather than an SMTP key. Account registration, verification, and
+password recovery require `BREVO_API_KEY` and `EMAIL_FROM`; without them those
+account actions return a stable unavailable response rather than creating an
+unreachable account. Keep the API key in deployment secrets rather than source
+control.
 
 Using Docker Compose is the easiest way to start the API, web app, and local
 database together.

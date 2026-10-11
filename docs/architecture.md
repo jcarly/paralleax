@@ -145,9 +145,9 @@ The API exposes story operations through `StoriesController`.
 The NestJS application is organized by feature rather than technical layer:
 
 - `auth/` owns credentials, sessions, guards, decorators, and auth endpoints;
-- `email/` owns provider-neutral transactional-email delivery through the
-  configured SMTP relay; product features own their templates and delivery
-  timing;
+- `email/` owns transactional-email delivery through a Brevo HTTPS adapter behind
+  the application-owned `EmailService`; product features own their templates and
+  delivery timing without depending directly on the provider SDK;
 - `stories/` owns story DTOs, application behavior, persistence, and endpoints;
 - `comments/` owns anchored review-thread endpoints, applies the shared thread
   authorization rule, and persists comments without extending the canonical
@@ -421,7 +421,7 @@ changes always use the administrator endpoints; hiding or disabling a control is
 not treated as authorization or concurrency protection.
 
 `apps/web/src/i18n/` owns interface localization through `i18next` and
-`react-i18next`. English and French resources are bundled with the web build,
+`react-i18next`. English, French, and Italian resources are bundled with the web build,
 so rendering does not depend on a translation request. Startup selects a saved
 interface language first, then a supported browser language, and finally the
 English fallback. The selection is stored only in browser local storage and

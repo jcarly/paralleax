@@ -458,7 +458,8 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
   const hasInspector = commentsOpen || hasInspectorSelection;
 
   useEffect(() => {
-    if (loadPhase !== 'ready' || !story) return;
+    const storyId = story?.id;
+    if (loadPhase !== 'ready' || !storyId) return;
 
     return scheduleIdleWork(() => {
       void preloadStoryGraphElk().catch(() => undefined);

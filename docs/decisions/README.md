@@ -30,6 +30,8 @@ This folder records accepted architecture and product-shaping decisions.
 - [ADR-024 - Structured Conditional Rich Text](ADR-024-structured-conditional-rich-text.md)
 - [ADR-025 - Trigger Condition Groups and Seeded Probability](ADR-025-trigger-condition-groups-and-seeded-probability.md)
 - [ADR-026 - Persisted Trigger Choice Timers](ADR-026-persisted-trigger-choice-timers.md)
+- [ADR-027 - Paginated Story Read Projections](ADR-027-paginated-story-read-projections.md)
+- [ADR-028 - Brevo HTTPS Transactional Email Delivery](ADR-028-brevo-transactional-email-api.md)
 
 ## Maintenance
 

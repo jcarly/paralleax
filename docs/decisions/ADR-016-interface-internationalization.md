@@ -12,14 +12,14 @@ status messages, accessibility names, and reader diagnostics are product copy;
 story titles, interaction bodies, and entity names and descriptions belong to
 the author.
 
-The first supported interface languages are English and French. The app must be
+The supported interface languages are English, French, and Italian. The app must be
 usable immediately without a translation service or another startup request,
 and a language choice must survive navigation and later browser sessions.
 
 ## Decision
 
-The React application uses `i18next` with `react-i18next`. Versioned English and
-French resources are bundled in `apps/web/src/i18n/`, English is the fallback,
+The React application uses `i18next` with `react-i18next`. Versioned English,
+French, and Italian resources are bundled in `apps/web/src/i18n/`, English is the fallback,
 and product components resolve copy through translation keys.
 
 At startup, the web app selects the first valid source in this order:
@@ -38,7 +38,7 @@ or rewritten. The API and shared narrative engine remain language-independent.
 ## Consequences
 
 - Authentication, library, authoring, simulation, and reader surfaces can
-  switch between English and French without a page reload.
+  switch between English, French, and Italian without a page reload.
 - Translation resources are available offline with the deployed web bundle and
   introduce no translation-service availability or privacy dependency.
 - Dates, numbers, and plurals follow the selected interface language where they

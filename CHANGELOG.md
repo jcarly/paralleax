@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- Added Italian interface localization, including browser detection, persisted language
+  selection, localized metadata, and Italian UI regression coverage.
+- Replaced outbound SMTP with the official Brevo HTTPS API client for transactional
+  account email, including validated sender configuration, disabled automatic
+  retries, and sanitized structured provider diagnostics.
+
 ## 2026-10-01
 
 - Completed inspector image editing with shared 16:9 frames and one URL-only

@@ -12,7 +12,7 @@ describe('AppConfigService', () => {
       registrationMode: 'open',
       authRegistrationRateLimit: 5,
       testEmailOutbox: false,
-      emailSmtpUrl: undefined,
+      brevoApiKey: undefined,
       emailFrom: undefined,
       emailReplyTo: undefined,
     });
@@ -71,17 +71,17 @@ describe('AppConfigService', () => {
     expect(config.nodeEnvironment).toBe('production');
   });
 
-  it('accepts a complete SMTP delivery configuration', () => {
+  it('accepts a complete Brevo delivery configuration', () => {
     expect(
       loadAppConfig({
-        EMAIL_SMTP_URL: 'smtps://user:secret@smtp.example.com:465',
+        BREVO_API_KEY: 'xkeysib-secret',
         EMAIL_FROM: 'Paralleax <no-reply@example.com>',
         EMAIL_REPLY_TO: 'support@example.com',
       }),
     ).toMatchObject({
-      emailSmtpUrl: 'smtps://user:secret@smtp.example.com:465',
-      emailFrom: 'Paralleax <no-reply@example.com>',
-      emailReplyTo: 'support@example.com',
+      brevoApiKey: 'xkeysib-secret',
+      emailFrom: { email: 'no-reply@example.com', name: 'Paralleax' },
+      emailReplyTo: { email: 'support@example.com' },
     });
   });
 
@@ -97,18 +97,39 @@ describe('AppConfigService', () => {
     ],
     [{ POSTGRES_SSL: 'yes' }, 'POSTGRES_SSL must be true or false'],
     [{ TEST_EMAIL_OUTBOX: 'yes' }, 'TEST_EMAIL_OUTBOX must be true or false'],
-    [{ EMAIL_SMTP_URL: 'https://smtp.example.com' }, 'EMAIL_SMTP_URL must use smtp: or smtps:'],
     [
       { EMAIL_SMTP_URL: 'smtp://smtp.example.com' },
-      'EMAIL_SMTP_URL and EMAIL_FROM must be configured together',
+      'EMAIL_SMTP_URL is no longer supported; configure BREVO_API_KEY instead',
+    ],
+    [
+      { BREVO_API_KEY: 'xkeysib-secret' },
+      'BREVO_API_KEY and EMAIL_FROM must be configured together',
+    ],
+    [
+      {
+        BREVO_API_KEY: 'xsmtpsib-secret',
+        EMAIL_FROM: 'no-reply@example.com',
+      },
+      'BREVO_API_KEY must contain a Brevo API key, not an SMTP key',
     ],
     [
       { EMAIL_FROM: 'no-reply@example.com' },
-      'EMAIL_SMTP_URL and EMAIL_FROM must be configured together',
+      'BREVO_API_KEY and EMAIL_FROM must be configured together',
     ],
     [
       { EMAIL_FROM: 'no-reply@example.com\r\nBcc: attacker@example.com' },
       'EMAIL_FROM must not contain a line break',
+    ],
+    [
+      {
+        BREVO_API_KEY: 'xkeysib-secret',
+        EMAIL_FROM: 'not-an-email-address',
+      },
+      'EMAIL_FROM must contain a valid email address',
+    ],
+    [
+      { EMAIL_REPLY_TO: 'support@example.com' },
+      'EMAIL_REPLY_TO requires BREVO_API_KEY and EMAIL_FROM',
     ],
     [{ NODE_ENV: 'staging' }, 'NODE_ENV must be one of'],
     [{ REGISTRATION_MODE: 'invite' }, 'REGISTRATION_MODE must be one of'],

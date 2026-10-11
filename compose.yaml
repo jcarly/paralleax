@@ -55,6 +55,9 @@ services:
       POSTGRES_SSL: ${POSTGRES_SSL:-false}
       CORS_ORIGIN: ${CORS_ORIGIN:-http://127.0.0.1:5173}
       LEGACY_STORY_OWNER_EMAIL: ${LEGACY_STORY_OWNER_EMAIL:-}
+      BREVO_API_KEY: ${BREVO_API_KEY:-}
+      EMAIL_FROM: ${EMAIL_FROM:-}
+      EMAIL_REPLY_TO: ${EMAIL_REPLY_TO:-}
     ports:
       - '127.0.0.1:${API_PORT:-3300}:3000'
     volumes:

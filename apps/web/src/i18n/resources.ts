@@ -5,6 +5,7 @@ export const resources = {
         label: 'Language',
         english: 'English',
         french: 'Français',
+        italian: 'Italiano',
       },
       shell: {
         mainNavigation: 'Main navigation',
@@ -1198,6 +1199,7 @@ export const resources = {
         label: 'Langue',
         english: 'English',
         french: 'Français',
+        italian: 'Italien',
       },
       shell: {
         mainNavigation: 'Navigation principale',

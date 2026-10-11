@@ -55,11 +55,15 @@ NODE_ENV=production
 CORS_ORIGIN=https://alpha.example.com
 REGISTRATION_MODE=access-code
 REGISTRATION_ACCESS_CODE=<at-least-16-random-characters>
-EMAIL_SMTP_URL=<smtp-or-smtps-url-kept-in-the-secret-manager>
+BREVO_API_KEY=<brevo-api-key-kept-in-the-secret-manager>
 EMAIL_FROM=Paralleax <accounts@alpha.example.com>
 # EMAIL_REPLY_TO is optional.
 POSTGRES_SSL=true
 ```
+
+`BREVO_API_KEY` must contain a Brevo API key, not an SMTP key. The API sends
+transactional messages over HTTPS so deployment plans that block outbound SMTP
+do not require a mail-port exception.
 
 To enable the optional contextual feedback button, also set
 `VITE_FORMBRICKS_WORKSPACE_ID` and `VITE_FORMBRICKS_APP_URL` before building the
@@ -211,6 +215,6 @@ Never perform the first restore drill during an incident.
 This foundation does not provide provider-managed scheduling, TLS, DNS, secrets,
 monitoring, account self-service export or deletion, or legal approval.
 Transactional email is required for registration, verification, and recovery;
-selecting and operating the SMTP relay, its sender domain, credentials,
+operating the Brevo account, its authenticated sender domain, API credentials,
 deliverability monitoring, and retention policy remains an operator responsibility
 before invitations are sent.
