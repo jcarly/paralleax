@@ -7,6 +7,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import type { Response } from 'express';
+import { captureApiException } from '../observability/sentry';
 import { getRequestId, type RequestWithId } from './request-context';
 
 type HttpExceptionBody = {
@@ -56,6 +57,7 @@ export class ApiExceptionFilter implements ExceptionFilter {
     const code = body.code ?? statusCodes[status] ?? `HTTP_${status}`;
 
     if ((!isHttpException && !statusError) || status >= 500) {
+      captureApiException(exception, { requestId, method: request.method, status, code });
       this.logger.error({
         event: 'api_error',
         requestId,

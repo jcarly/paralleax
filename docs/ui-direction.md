@@ -75,7 +75,8 @@ A future grouping concept should be neutral enough to represent:
 The author-facing label may be configurable later, but the domain concept should
 not force a book-like or RPG-like structure too early.
 
-Groups are not part of the MVP.
+The first flat Group increment is available from a selected set of Interactions.
+Nested Groups, Group navigation, and Group-focused views remain post-MVP work.
 
 ## Inspector
 

@@ -41,6 +41,7 @@ export function storyProjectionBootstrap(
       statAssignments: statAssignmentCount,
       itemDefinitions: story.itemDefinitions?.length ?? 0,
       itemInstances: getStoryItemEntries(story).length,
+      groups: story.groups?.length ?? 0,
       graphDecorations: includeGraphDecorations ? (story.graphDecorations?.length ?? 0) : 0,
     },
     interactionCount: story.interactions.length,
@@ -70,6 +71,7 @@ export function storyProjectionContextPage(
     ownerId,
   }));
   const graphDecorations = includeGraphDecorations ? (story.graphDecorations ?? []) : [];
+  const groups = story.groups ?? [];
   const collections = [
     story.locations ?? [],
     story.characters ?? [],
@@ -77,6 +79,7 @@ export function storyProjectionContextPage(
     statAssignments,
     story.itemDefinitions ?? [],
     itemInstances,
+    groups,
     graphDecorations,
   ];
   return {
@@ -98,6 +101,7 @@ export function storyProjectionContextPage(
       ({ stats: _stats, ...definition }) => definition,
     ),
     itemInstances: pageItems(itemInstances, page, pageSize),
+    groups: pageItems(groups, page, pageSize),
     graphDecorations: pageItems(graphDecorations, page, pageSize),
   };
 }

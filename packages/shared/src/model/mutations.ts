@@ -2,6 +2,7 @@ import type { Character } from './characters.js';
 import type { Position } from './common.js';
 import type { Interaction } from './interactions.js';
 import type { GraphDecoration } from './graph-decorations.js';
+import type { Group } from './groups.js';
 import type { ItemDefinition, ItemEffect, ItemInstance, ItemRelationshipType } from './items.js';
 import type { Location } from './locations.js';
 import type {
@@ -29,6 +30,10 @@ export interface TriggerMutationResult extends StoryMutationMetadata {
 
 export interface GraphDecorationMutationResult extends StoryMutationMetadata {
   decoration: GraphDecoration;
+}
+
+export interface GroupMutationResult extends StoryMutationMetadata {
+  group: Group;
 }
 
 export interface LocationMutationResult extends StoryMutationMetadata {
@@ -75,6 +80,11 @@ export interface UpdateStoryInput {
 export interface CreateInteractionInput {
   parentId?: string;
   position?: Position;
+}
+
+export interface CreateGroupInput {
+  title: string;
+  interactionIds: string[];
 }
 
 export interface UpdateInteractionInput {

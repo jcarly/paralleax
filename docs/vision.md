@@ -3,6 +3,11 @@
 Paralleax is a collaborative platform for designing, exploring, testing, and
 sharing interactive stories.
 
+Its central product promise is to make complex interactive narrative worlds
+fluid to manipulate and clear to understand. An author should be able to create
+hundreds of Interactions without losing the global structure, the path of one
+character, or the reason an event can or cannot occur.
+
 The name combines "parallel" and "parallax": several narrative paths can coexist, cross each other, and be read from different points of view.
 
 ## Problem to Solve
@@ -29,6 +34,18 @@ The graph is one useful representation of the story. It helps authors inspect
 links, triggers, roots, and branches, but it must not become the product itself.
 The real product is the structured narrative model and the different ways to
 explore, edit, test, review, and share it.
+
+The Workbench is the main authoring expression of this direction. It should
+progress from a complete graph canvas toward configurable projections of the
+narrative world: structure, character, location, time, state, dependencies, and
+Simulation diagnostics. Those projections must preserve global orientation and
+reuse the same canonical Story rather than introducing parallel models or
+separate editors.
+
+Paralleax does not need to hide or remove narrative complexity. It should make
+that complexity understandable through progressive controls, focus, context,
+visual logic markers, and actionable explanations. See
+[Workbench product direction](workbench.md).
 
 The interaction is the central building block of the system. It represents a narrative moment: a choice, a scene, an action, a dialogue, a video, or a game state.
 

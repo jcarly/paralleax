@@ -6,6 +6,7 @@ import {
   isStoryGraphPositionDelta,
   type Character,
   type GraphDecoration,
+  type Group,
   type Interaction,
   type ItemDefinition,
   type Location,
@@ -17,6 +18,7 @@ import {
 import type { Queryable } from './stories.persistence.types';
 
 export async function replaceStoryGraph(client: Queryable, story: Story) {
+  await client.query('DELETE FROM story_groups WHERE story_id = $1', [story.id]);
   await client.query('DELETE FROM graph_decorations WHERE story_id = $1', [story.id]);
   await client.query('DELETE FROM interactions WHERE story_id = $1', [story.id]);
   await client.query('DELETE FROM characters WHERE story_id = $1', [story.id]);
@@ -49,6 +51,9 @@ export async function replaceStoryGraph(client: Queryable, story: Story) {
   }
   await insertStatAssignments(client, story);
   await insertInteractionGraph(client, story);
+  for (const [index, group] of (story.groups ?? []).entries()) {
+    await insertGroup(client, story.id, group, index);
+  }
 }
 
 async function insertInteractionGraph(client: Queryable, story: Story) {
@@ -278,6 +283,69 @@ export async function persistStoryDifference(
   }
   if (statAssignmentsChanged) {
     await insertInteractionStatEffects(client, after);
+  }
+  await persistGroupDifference(client, before, after);
+}
+
+async function insertGroup(client: Queryable, storyId: string, group: Group, sortOrder: number) {
+  await client.query(
+    `INSERT INTO story_groups (id, story_id, title, sort_order)
+     VALUES ($1, $2, $3, $4)`,
+    [group.id, storyId, group.title, sortOrder],
+  );
+  await replaceGroupInteractions(client, storyId, group);
+}
+
+async function replaceGroupInteractions(client: Queryable, storyId: string, group: Group) {
+  await client.query('DELETE FROM story_group_interactions WHERE group_id = $1 AND story_id = $2', [
+    group.id,
+    storyId,
+  ]);
+  await insertJsonRows(
+    client,
+    `INSERT INTO story_group_interactions (story_id, group_id, interaction_id, sort_order)
+     SELECT story_id, group_id, interaction_id, sort_order
+     FROM jsonb_to_recordset($1::jsonb) AS row(
+       story_id text, group_id text, interaction_id text, sort_order integer
+     )`,
+    group.interactionIds.map((interactionId, sortOrder) => ({
+      story_id: storyId,
+      group_id: group.id,
+      interaction_id: interactionId,
+      sort_order: sortOrder,
+    })),
+  );
+}
+
+async function persistGroupDifference(client: Queryable, before: Story, after: Story) {
+  const beforeGroups = new Map((before.groups ?? []).map((group) => [group.id, group]));
+  const afterGroups = new Map((after.groups ?? []).map((group) => [group.id, group]));
+
+  for (const group of before.groups ?? []) {
+    if (!afterGroups.has(group.id)) {
+      await client.query('DELETE FROM story_groups WHERE id = $1 AND story_id = $2', [
+        group.id,
+        after.id,
+      ]);
+    }
+  }
+
+  for (const [sortOrder, group] of (after.groups ?? []).entries()) {
+    const previous = beforeGroups.get(group.id);
+    if (!previous) {
+      await insertGroup(client, after.id, group, sortOrder);
+      continue;
+    }
+
+    if (previous.title !== group.title || (before.groups ?? []).indexOf(previous) !== sortOrder) {
+      await client.query(
+        'UPDATE story_groups SET title = $1, sort_order = $2 WHERE id = $3 AND story_id = $4',
+        [group.title, sortOrder, group.id, after.id],
+      );
+    }
+    if (JSON.stringify(previous.interactionIds) !== JSON.stringify(group.interactionIds)) {
+      await replaceGroupInteractions(client, after.id, group);
+    }
   }
 }
 

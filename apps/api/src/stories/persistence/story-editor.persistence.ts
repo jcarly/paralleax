@@ -71,6 +71,16 @@ type GraphDecorationRow = {
   font_style: 'normal' | 'italic' | null;
   sort_order: number;
 };
+type GroupRow = {
+  id: string;
+  title: string;
+  sort_order: number;
+};
+type GroupInteractionRow = {
+  group_id: string;
+  interaction_id: string;
+  sort_order: number;
+};
 type InteractionSummaryRow = {
   id: string;
   title: string;
@@ -133,6 +143,7 @@ export async function readStoryEditorContextPage(
   queryable: Queryable,
   options: ReadPageOptions,
   includeGraphDecorations = true,
+  includeGroups = true,
 ): Promise<StoryEditorContextPage> {
   const { storyId, revision, page, pageSize } = options;
   const offset = (page - 1) * pageSize;
@@ -145,6 +156,7 @@ export async function readStoryEditorContextPage(
     itemDefinitions,
     itemInstances,
     graphDecorations,
+    groups,
   ] = await Promise.all([
     queryable.query<ContextRow>(
       `SELECT id, name, description, category, image_url, sort_order
@@ -197,7 +209,26 @@ export async function readStoryEditorContextPage(
           parameters,
         )
       : Promise.resolve({ rows: [] as GraphDecorationRow[] }),
+    includeGroups
+      ? queryable.query<GroupRow>(
+          `SELECT id, title, sort_order
+             FROM story_groups WHERE story_id = $1
+             ORDER BY sort_order, id LIMIT $2 OFFSET $3`,
+          parameters,
+        )
+      : Promise.resolve({ rows: [] as GroupRow[] }),
   ]);
+  const groupRows = pageRows(groups.rows, pageSize);
+  const groupInteractions = groupRows.length
+    ? await queryable.query<GroupInteractionRow>(
+        `SELECT group_id, interaction_id, sort_order
+           FROM story_group_interactions
+           WHERE story_id = $1 AND group_id = ANY($2::text[])
+           ORDER BY group_id, sort_order`,
+        [storyId, groupRows.map(({ id }) => id)],
+      )
+    : { rows: [] as GroupInteractionRow[] };
+  const interactionsByGroup = groupBy(groupInteractions.rows, ({ group_id }) => group_id);
 
   return {
     revision,
@@ -211,6 +242,7 @@ export async function readStoryEditorContextPage(
       itemDefinitions,
       itemInstances,
       graphDecorations,
+      groups,
     ].some((result) => hasPageLookahead(result.rows, pageSize)),
     locations: pageRows(locations.rows, pageSize).map((row) => ({
       id: row.id,
@@ -260,6 +292,13 @@ export async function readStoryEditorContextPage(
       ...(row.parent_item_id ? { parentItemId: row.parent_item_id } : {}),
       ...(row.relationship_type ? { relationshipType: row.relationship_type } : {}),
       ...(row.slot_key ? { slotKey: row.slot_key } : {}),
+    })),
+    groups: groupRows.map((group) => ({
+      id: group.id,
+      title: group.title,
+      interactionIds: (interactionsByGroup.get(group.id) ?? []).map(
+        ({ interaction_id }) => interaction_id,
+      ),
     })),
     graphDecorations: pageRows(graphDecorations.rows, pageSize).map((row) =>
       row.kind === 'frame'

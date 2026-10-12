@@ -45,6 +45,7 @@
   "allowScripts": {
     "@parcel/watcher@2.6.0": false,
     "@scarf/scarf@1.4.0": false,
+    "@sentry/cli@2.58.6": false,
     "esbuild@0.28.1": true,
     "unrs-resolver@1.12.2": false
   },
@@ -58,6 +59,8 @@
     "source-map-js": "1.2.2"
   },
   "dependencies": {
+    "@sentry/nestjs": "^11.6.0",
+    "@sentry/profiling-node": "^11.6.0",
     "elkjs": "^0.12.0"
   }
 }

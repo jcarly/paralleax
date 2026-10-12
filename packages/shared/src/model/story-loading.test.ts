@@ -29,6 +29,7 @@ const bootstrap: StoryEditorBootstrap = {
     statAssignments: 4,
     itemDefinitions: 2,
     itemInstances: 6,
+    groups: 1,
     graphDecorations: 1,
   },
   interactionCount: 2,
@@ -50,6 +51,7 @@ describe('story loading projections', () => {
       stats: [],
       statDefinitions: [],
       itemDefinitions: [],
+      groups: [],
       graphDecorations: [],
       interactions: [],
     });
@@ -122,6 +124,7 @@ describe('story loading projections', () => {
         { id: 'cycle-a', itemDefinitionId: 'note-definition', parentItemId: 'cycle-b' },
         { id: 'cycle-b', itemDefinitionId: 'note-definition', parentItemId: 'cycle-a' },
       ],
+      groups: [{ id: 'group-1', title: 'Opening', interactionIds: ['interaction-1'] }],
       graphDecorations: [{ id: 'text-1', type: 'text', position: { x: 1, y: 2 }, text: 'Note' }],
     };
 
@@ -137,6 +140,7 @@ describe('story loading projections', () => {
       statAssignments: [],
       itemDefinitions: [],
       itemInstances: [],
+      groups: [],
       graphDecorations: [
         { id: 'text-2', type: 'text', position: { x: 3, y: 4 }, text: 'Second note' },
       ],
@@ -170,6 +174,9 @@ describe('story loading projections', () => {
       { id: 'item-stat', statDefinitionId: 'stat-1', initialValue: 4 },
     ]);
     expect(projected.graphDecorations).toHaveLength(2);
+    expect(projected.groups).toEqual([
+      { id: 'group-1', title: 'Opening', interactionIds: ['interaction-1'] },
+    ]);
   });
 });
 

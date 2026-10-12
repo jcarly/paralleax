@@ -111,6 +111,37 @@ describe('Stories API', () => {
     });
   });
 
+  it('creates a flat Group from selected Interactions without changing reader structure', async () => {
+    const created = await createStory('Grouped story');
+    const withRoot = await createInteraction(created.id);
+    const withChild = await createInteraction(created.id, { parentId: withRoot.interactions[0].id });
+    const [root, child] = withChild.interactions;
+
+    const opening = await request(httpServer)
+      .post(`/api/stories/${created.id}/groups`)
+      .send({ title: 'Opening', interactionIds: [root.id, child.id] })
+      .expect(201);
+    await request(httpServer)
+      .post(`/api/stories/${created.id}/groups`)
+      .send({ title: 'Root only', interactionIds: [root.id] })
+      .expect(201);
+
+    expect(opening.body).toMatchObject({
+      group: { title: 'Opening', interactionIds: [root.id, child.id] },
+    });
+    const reloaded = await request(httpServer).get(`/api/stories/${created.id}`).expect(200);
+    expect(reloaded.body.groups).toEqual([
+      expect.objectContaining({ title: 'Opening', interactionIds: [root.id, child.id] }),
+      expect.objectContaining({ title: 'Root only', interactionIds: [root.id] }),
+    ]);
+    expect(reloaded.body.interactions).toEqual(withChild.interactions);
+
+    await request(httpServer)
+      .post(`/api/stories/${created.id}/groups`)
+      .send({ title: 'Invalid', interactionIds: ['another-story-interaction'] })
+      .expect(400);
+  });
+
   it('persists authored Story history and supports undo and redo', async () => {
     const created = await createStory('Original title');
     await request(httpServer)

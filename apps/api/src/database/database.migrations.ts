@@ -1581,4 +1581,35 @@ export const databaseMigrations: DatabaseMigration[] = [
         ON account_action_tokens(expires_at);
     `,
   },
+  {
+    id: '202610060041_flat_story_groups',
+    sql: `
+      CREATE TABLE story_groups (
+        id text PRIMARY KEY,
+        story_id text NOT NULL REFERENCES stories(id) ON DELETE CASCADE,
+        title text NOT NULL,
+        sort_order integer NOT NULL,
+        CONSTRAINT story_groups_story_id_id_unique UNIQUE (story_id, id),
+        CONSTRAINT story_groups_title_non_blank CHECK (char_length(btrim(title)) BETWEEN 1 AND 200)
+      );
+
+      CREATE TABLE story_group_interactions (
+        story_id text NOT NULL,
+        group_id text NOT NULL,
+        interaction_id text NOT NULL,
+        sort_order integer NOT NULL,
+        PRIMARY KEY (group_id, interaction_id),
+        CONSTRAINT story_group_interactions_group_fkey
+          FOREIGN KEY (story_id, group_id)
+          REFERENCES story_groups(story_id, id) ON DELETE CASCADE,
+        CONSTRAINT story_group_interactions_interaction_fkey
+          FOREIGN KEY (story_id, interaction_id)
+          REFERENCES interactions(story_id, id) ON DELETE CASCADE
+      );
+
+      CREATE INDEX story_groups_story_order_idx ON story_groups(story_id, sort_order);
+      CREATE INDEX story_group_interactions_story_interaction_idx
+        ON story_group_interactions(story_id, interaction_id);
+    `,
+  },
 ];

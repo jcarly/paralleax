@@ -32,6 +32,8 @@ This folder records accepted architecture and product-shaping decisions.
 - [ADR-026 - Persisted Trigger Choice Timers](ADR-026-persisted-trigger-choice-timers.md)
 - [ADR-027 - Paginated Story Read Projections](ADR-027-paginated-story-read-projections.md)
 - [ADR-028 - Brevo HTTPS Transactional Email Delivery](ADR-028-brevo-transactional-email-api.md)
+- [ADR-029 - Flat Persisted Groups](ADR-029-flat-persisted-groups.md)
+- [ADR-030 - Optional Privacy-Preserving Sentry Monitoring](ADR-030-sentry-observability.md)
 
 ## Maintenance
 

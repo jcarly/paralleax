@@ -583,6 +583,25 @@ itself. Other surfaces, such as simulation, navigation, filtering, review, or a
 future reader platform, must be able to use the same story model without
 duplicating it.
 
+### Planned Workbench projection direction
+
+The next product direction extends this boundary rather than replacing it. Future
+Structure, Character, Location, Time, State, Group, and dependency views should
+reuse one generic Workbench query/projection layer over the canonical Story. A
+projection should return stable domain identifiers classified as focused,
+contextual, or background, plus lightweight logic markers and optional layout
+hints. React Flow remains the renderer for graph-shaped projections and never
+becomes the query model or persistence source.
+
+An Interaction may belong to several neutral Groups. Group membership
+is authored organization metadata, not a consequence of canvas overlap and not a
+reader rule. The initial persisted model is deliberately flat, with no Group
+parentage. Per-author collapse, visibility, and combined-filter state must not
+be inserted into the canonical Story until an ADR establishes their ownership and
+collaboration semantics. Separate `CharacterView`, `LocationView`, `StateView`,
+and `TimeView` implementations with duplicated filtering rules are explicitly not
+the intended architecture. See [Workbench product direction](workbench.md).
+
 Current trigger rendering is a projection: a linked trigger is shown as a small
 React Flow trigger node between its input interactions and its output
 interaction. Each input edge connects an interaction to that trigger node, and

@@ -361,6 +361,13 @@ describePostgres('StoriesRepository PostgreSQL integration', () => {
 
   it('reads paginated editor projections and a targeted runtime slice', async () => {
     const story = persistedStory();
+    story.groups = [
+      {
+        id: 'group-1',
+        title: 'Opening',
+        interactionIds: ['interaction-1', 'interaction-2'],
+      },
+    ];
     await repository.save(story, ownerId);
 
     const bootstrap = await repository.findEditorBootstrap(story.id, ownerId);
@@ -387,7 +394,11 @@ describePostgres('StoriesRepository PostgreSQL integration', () => {
     });
 
     expect(bootstrap).toMatchObject({ interactionCount: 2, triggerCount: 2 });
+    expect(bootstrap?.contextCounts.groups).toBe(1);
     expect(context).toMatchObject({ page: 1, pageSize: 1, hasMore: true });
+    expect(context?.groups).toEqual([
+      { id: 'group-1', title: 'Opening', interactionIds: ['interaction-1', 'interaction-2'] },
+    ]);
     expect(interactionPage).toMatchObject({
       hasMore: true,
       interactions: [expect.objectContaining({ id: 'interaction-1', title: 'Original title' })],

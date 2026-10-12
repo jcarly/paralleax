@@ -22,6 +22,7 @@ describe('StoryRuntimeService', () => {
         statAssignments: 0,
         itemDefinitions: 0,
         itemInstances: 0,
+        groups: 0,
         graphDecorations: 0,
       },
       interactionCount: 2,
@@ -38,6 +39,7 @@ describe('StoryRuntimeService', () => {
       statAssignments: [],
       itemDefinitions: [],
       itemInstances: [],
+      groups: [],
       graphDecorations: [],
     });
     repository.findRuntimeSlice.mockResolvedValue({
@@ -89,6 +91,7 @@ describe('StoryRuntimeService', () => {
       statAssignments: [],
       itemDefinitions: [],
       itemInstances: [],
+      groups: [],
       graphDecorations: [],
     });
 

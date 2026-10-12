@@ -59,6 +59,13 @@ BREVO_API_KEY=<brevo-api-key-kept-in-the-secret-manager>
 EMAIL_FROM=Paralleax <accounts@alpha.example.com>
 # EMAIL_REPLY_TO is optional.
 POSTGRES_SSL=true
+
+# Optional Sentry monitoring. Set both DSNs to enable API/browser error reports.
+# Use one immutable commit or image digest in both release values.
+SENTRY_DSN=https://<api-public-key>@o<organization>.ingest.sentry.io/<project>
+SENTRY_RELEASE=<immutable-commit-or-image-digest>
+VITE_SENTRY_DSN=https://<web-public-key>@o<organization>.ingest.sentry.io/<project>
+VITE_SENTRY_RELEASE=<immutable-commit-or-image-digest>
 ```
 
 `BREVO_API_KEY` must contain a Brevo API key, not an SMTP key. The API sends
@@ -127,6 +134,8 @@ POSTGRES_SSL=true
 CORS_ORIGIN=https://${{web.RAILWAY_PUBLIC_DOMAIN}}
 REGISTRATION_MODE=access-code
 REGISTRATION_ACCESS_CODE=<at-least-16-random-characters>
+SENTRY_DSN=<api-sentry-dsn>
+SENTRY_RELEASE=<immutable-commit-or-image-digest>
 ```
 
 The `Postgres` and `web` names in reference variables are case-sensitive and
@@ -151,6 +160,12 @@ API_PORT=3000
 If Formbricks feedback is enabled, add its two `VITE_FORMBRICKS_*` values to the
 web service so Railway makes them available to the Docker build and the runtime
 Content Security Policy.
+
+To enable browser reports, add `VITE_SENTRY_DSN` and `VITE_SENTRY_RELEASE` to
+the `web` service build environment. To upload browser source maps, also add the
+web-build-only `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, and `SENTRY_PROJECT` values.
+The token needs Sentry project write/release administration access and must not
+be exposed as a `VITE_*` value or copied into the final web image.
 
 Nginx listens on `PORT`, and both image and Railway healthchecks use that same
 value. Keep the public-domain target port and `PORT` aligned; `8080` is the
@@ -196,6 +211,28 @@ backups, and disk or connection exhaustion.
 Application logs contain request ids but intentionally exclude request bodies,
 cookies, tokens, and query strings. Configure an error-reporting service to keep
 the request id while applying the same redaction rules.
+
+### Sentry
+
+Sentry is optional and disabled until its DSN is configured. Use separate API
+and browser projects where practical, and set the same immutable release value
+for both so an incident can be tied to one deployed image. The integration sends
+only error type, stack location, release, environment, request id, method,
+status, and stable application error code. It removes users, story content,
+request/response data, cookies, headers, query parameters, breadcrumbs, local
+variables, source context, and exception messages before delivery.
+
+Tracing is off unless `SENTRY_TRACES_SAMPLE_RATE` or
+`VITE_SENTRY_TRACES_SAMPLE_RATE` is explicitly set to a number from `0` to `1`.
+Begin with a small rate such as `0.05`, review the resulting data and volume,
+then adjust deliberately. Browser trace headers are restricted to same-origin
+`/api` requests.
+
+Browser source maps are generated and uploaded only when all of
+`SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, and `SENTRY_PROJECT` are present during the
+web build. The build fails if only a subset is configured, deletes `.map` files
+after a successful upload, and disables the plugin's own telemetry. Do not serve
+source maps publicly.
 
 ## Rollback And Recovery
 

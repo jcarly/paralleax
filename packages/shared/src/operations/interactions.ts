@@ -17,6 +17,14 @@ export function updateInteractionInStory(
 export function deleteInteractionFromStory(story: Story, interactionId: string): Story {
   return {
     ...story,
+    ...(story.groups
+      ? {
+          groups: story.groups.map((group) => ({
+            ...group,
+            interactionIds: group.interactionIds.filter((id) => id !== interactionId),
+          })),
+        }
+      : {}),
     interactions: story.interactions
       .filter((item) => item.id !== interactionId)
       .map((item) => ({

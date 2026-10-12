@@ -29,6 +29,7 @@ describe('story editor loader', () => {
       statAssignments: [],
       itemDefinitions: [],
       itemInstances: [],
+      groups: [],
       graphDecorations: [],
     });
     vi.mocked(api.getStoryEditorInteractionPage).mockResolvedValue({
@@ -119,6 +120,7 @@ describe('story editor loader', () => {
         statAssignments: [],
         itemDefinitions: [],
         itemInstances: [],
+        groups: [],
         graphDecorations: [],
       })
       .mockResolvedValueOnce({
@@ -132,6 +134,7 @@ describe('story editor loader', () => {
         statAssignments: [],
         itemDefinitions: [],
         itemInstances: [],
+        groups: [],
         graphDecorations: [],
       });
 
@@ -153,6 +156,7 @@ describe('story editor loader', () => {
       statAssignments: [],
       itemDefinitions: [],
       itemInstances: [],
+      groups: [],
       graphDecorations: [],
     });
 
@@ -208,6 +212,7 @@ function bootstrap(): StoryEditorBootstrap {
       statAssignments: 0,
       itemDefinitions: 0,
       itemInstances: 0,
+      groups: 0,
       graphDecorations: 0,
     },
     interactionCount: 1,

@@ -2,11 +2,32 @@
 
 ## Unreleased
 
+- Added optional privacy-preserving Sentry error monitoring for the NestJS API
+  and React application, with release-aware source-map upload when build secrets
+  are configured. Error events exclude authored content, account data, request
+  data, breadcrumbs, local variables, source context, and error messages.
 - Added Italian interface localization, including browser detection, persisted language
   selection, localized metadata, and Italian UI regression coverage.
 - Replaced outbound SMTP with the official Brevo HTTPS API client for transactional
   account email, including validated sender configuration, disabled automatic
   retries, and sanitized structured provider diagnostics.
+
+## 2026-10-06
+
+- Implemented the first flat Group increment: authors can create a titled Group
+  from selected Interactions. Membership is explicit, many-to-many, persisted,
+  reversible in Story history, and has no reader/runtime semantics. Group
+  parentage, collapse, navigation, and visual projection remain out of scope.
+
+## 2026-10-04
+
+- Recentered the documented product direction on a fluid Workbench for creating,
+  understanding, and testing complex narrative worlds. Added phased guidance for
+  selection, Groups, focus, projections, visible logic, dependency explanations,
+  and Simulation convergence.
+- Defined future Groups as neutral authoring/navigation metadata with explicit
+  many-to-many Interaction membership, safe deletion, acyclic nesting, and no
+  reader semantics. Group implementation remains deliberately out of scope.
 
 ## 2026-10-01
 

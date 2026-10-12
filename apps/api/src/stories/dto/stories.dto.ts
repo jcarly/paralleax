@@ -37,6 +37,7 @@ import {
   Max,
   ArrayMaxSize,
   ArrayMinSize,
+  ArrayUnique,
   MaxLength,
   ValidateIf,
   ValidateNested,
@@ -226,6 +227,15 @@ export class CreateInteractionDto {
   @ValidateNested()
   @Type(() => PositionDto)
   position?: PositionDto;
+}
+export class CreateGroupDto {
+  @IsString() @IsNotEmpty() @MaxLength(200) title!: string;
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(500)
+  @ArrayUnique()
+  @IsString({ each: true })
+  interactionIds!: string[];
 }
 export class CreateGraphDecorationDto {
   @IsIn(['frame', 'text']) kind!: 'frame' | 'text';

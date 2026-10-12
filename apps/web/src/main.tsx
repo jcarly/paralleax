@@ -11,6 +11,10 @@ import './features/story-player/storySimulation.css';
 import './responsive.css';
 import './i18n';
 import { App } from './App';
+import { initializeSentry } from './observability/sentry';
+
+initializeSentry();
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <BrowserRouter>
