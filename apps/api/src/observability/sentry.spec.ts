@@ -23,10 +23,10 @@ afterEach(() => {
 });
 
 describe('Sentry observability', () => {
-  it('removes request and exception details from Sentry events', () => {
+  it('removes request and exception details from Sentry events', async () => {
     setEnvironmentValue('NODE_ENV', 'test');
     setEnvironmentValue('SENTRY_DSN', undefined);
-    const { redactSentryEvent } = require('./sentry') as typeof import('./sentry');
+    const { redactSentryEvent } = await import('./sentry');
     const event = {
       request: { cookies: 'secret' },
       user: { email: 'author@example.com' },
@@ -67,7 +67,7 @@ describe('Sentry observability', () => {
     });
   });
 
-  it('initializes and records only safe API metadata when enabled', () => {
+  it('initializes and records only safe API metadata when enabled', async () => {
     const init = jest.fn();
     const setTags = jest.fn();
     const captureException = jest.fn();
@@ -81,8 +81,8 @@ describe('Sentry observability', () => {
     setEnvironmentValue('SENTRY_TRACES_SAMPLE_RATE', '0.25');
 
     let captureApiException: typeof import('./sentry').captureApiException | undefined;
-    jest.isolateModules(() => {
-      ({ captureApiException } = require('./sentry') as typeof import('./sentry'));
+    await jest.isolateModulesAsync(async () => {
+      ({ captureApiException } = await import('./sentry'));
     });
     if (!captureApiException) throw new Error('Expected Sentry capture function to be available');
 
