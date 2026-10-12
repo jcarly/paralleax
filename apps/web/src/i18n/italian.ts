@@ -599,6 +599,7 @@ export const italianTranslation = {
         graphDecorationCreated: 'Decorazione del grafico creata',
         graphDecorationUpdated: 'Decorazione del grafico aggiornata',
         graphDecorationDeleted: 'Decorazione del grafico eliminata',
+        groupCreated: 'Gruppo creato',
         locationCreated: 'Posizione creata',
         locationUpdated: 'Posizione aggiornata',
         characterCreated: 'Personaggio creato',
@@ -645,6 +646,9 @@ export const italianTranslation = {
       interactions_other: '{{count}} interazioni selezionate',
       triggers_one: 'Attivatore {{count}} selezionato',
       triggers_other: '{{count}} trigger selezionati',
+      groupTitle: 'Titolo del gruppo',
+      createGroup: 'Crea gruppo',
+      groupRequiresInteraction: "Seleziona almeno un'interazione per creare un gruppo.",
     },
     count: {
       location_one: '{{count}} posizione',
