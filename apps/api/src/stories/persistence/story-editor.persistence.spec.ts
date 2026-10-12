@@ -125,6 +125,19 @@ describe('Story editor persistence projections', () => {
           ],
         });
       }
+      if (sql.includes('FROM story_groups')) {
+        return Promise.resolve({
+          rows: [{ id: 'group-1', title: 'Opening', sort_order: 0 }],
+        });
+      }
+      if (sql.includes('FROM story_group_interactions')) {
+        return Promise.resolve({
+          rows: [
+            { group_id: 'group-1', interaction_id: 'interaction-1', sort_order: 0 },
+            { group_id: 'group-1', interaction_id: 'interaction-2', sort_order: 1 },
+          ],
+        });
+      }
       throw new Error(`Unexpected query: ${sql}`);
     });
 
@@ -254,9 +267,16 @@ describe('Story editor persistence projections', () => {
           fontStyle: 'italic',
         },
       ],
+      groups: [
+        {
+          id: 'group-1',
+          title: 'Opening',
+          interactionIds: ['interaction-1', 'interaction-2'],
+        },
+      ],
     });
 
-    expect(query).toHaveBeenCalledTimes(7);
+    expect(query).toHaveBeenCalledTimes(9);
     expect(query.mock.calls[0][1]).toEqual(['story-1', 5, 0]);
   });
 
@@ -271,8 +291,9 @@ describe('Story editor persistence projections', () => {
 
     expect(result.hasMore).toBe(false);
     expect(result.graphDecorations).toEqual([]);
-    expect(query).toHaveBeenCalledTimes(6);
+    expect(query).toHaveBeenCalledTimes(7);
     expect(query.mock.calls.some(([sql]) => String(sql).includes('graph_decorations'))).toBe(false);
+    expect(query.mock.calls.some(([sql]) => String(sql).includes('story_groups'))).toBe(true);
   });
 
   it('maps interaction and trigger structure pages', async () => {

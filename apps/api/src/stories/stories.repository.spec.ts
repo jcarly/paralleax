@@ -522,6 +522,7 @@ describe('StoriesRepository', () => {
       access: { visibility: 'private', editPolicy: 'owner', commentPolicy: 'editors' },
       capabilities: { canRead: true, canEdit: true, canManage: true, canComment: true },
       owner: { id: ownerId, displayName: 'Owner' },
+      groups: saved.groups ?? [],
       characters: saved.characters,
       interactions: saved.interactions.map((interaction) => ({
         ...interaction,
