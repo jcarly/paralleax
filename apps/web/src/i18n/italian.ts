@@ -34,7 +34,6 @@ export const italianTranslation = {
     lastAdministrator: "L'ultimo amministratore non può essere retrocesso.",
     administratorRequired: "È richiesto l'accesso come amministratore.",
     registrationClosed: "La creazione dell'account è attualmente chiusa.",
-    invitationCodeInvalid: 'È richiesto un codice invito valido.',
     emailVerificationRequired: 'Verifica il tuo indirizzo email prima di accedere.',
     emailDeliveryUnavailable: 'La consegna delle email è temporaneamente non disponibile.',
     accountActionTokenInvalid:
@@ -111,9 +110,6 @@ export const italianTranslation = {
     confirmPassword: 'Conferma la password',
     confirmPasswordPlaceholder: 'Ripeti la tua password',
     passwordsDoNotMatch: 'Le password non corrispondono.',
-    invitationCode: 'Codice invito (se richiesto)',
-    invitationPlaceholder: 'Invito alfa privato',
-    invitationHelp: "Le distribuzioni alpha private richiedono il codice fornito dall'operatore.",
     pending: 'Per favore aspetta...',
     failed: 'Autenticazione non riuscita',
     verification: {

@@ -1,10 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
-import {
-  storyHistoryOperations,
-  type GroupMutationResult,
-  type Story,
-} from '@paralleax/shared';
+import { storyHistoryOperations, type GroupMutationResult, type Story } from '@paralleax/shared';
 import type { CreateGroupDto } from '../dto/stories.dto';
 import { storyMutationMetadata } from './story-mutation-results';
 import { StoryMutationService } from './story-mutations';

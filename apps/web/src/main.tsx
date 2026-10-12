@@ -11,9 +11,12 @@ import './features/story-player/storySimulation.css';
 import './responsive.css';
 import './i18n';
 import { App } from './App';
-import { initializeSentry } from './observability/sentry';
 
-initializeSentry();
+if (import.meta.env.VITE_SENTRY_DSN?.trim()) {
+  void import('./observability/sentry')
+    .then(({ initializeSentry }) => initializeSentry())
+    .catch(() => undefined);
+}
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

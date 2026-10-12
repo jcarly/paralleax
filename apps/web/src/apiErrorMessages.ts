@@ -23,7 +23,6 @@ const localizedErrorKeys: Record<string, string> = {
   LAST_ADMINISTRATOR: 'apiErrors.lastAdministrator',
   ADMINISTRATOR_REQUIRED: 'apiErrors.administratorRequired',
   REGISTRATION_CLOSED: 'apiErrors.registrationClosed',
-  INVITATION_CODE_INVALID: 'apiErrors.invitationCodeInvalid',
   EMAIL_VERIFICATION_REQUIRED: 'apiErrors.emailVerificationRequired',
   EMAIL_DELIVERY_UNAVAILABLE: 'apiErrors.emailDeliveryUnavailable',
   ACCOUNT_ACTION_TOKEN_INVALID: 'apiErrors.accountActionTokenInvalid',

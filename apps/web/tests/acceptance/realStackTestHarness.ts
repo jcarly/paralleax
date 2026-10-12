@@ -25,8 +25,6 @@ interface AcceptanceStorySession extends AcceptanceAccount {
   storyTitle: string;
 }
 
-const accessCode = process.env.PARALLEAX_ACCEPTANCE_ACCESS_CODE ?? 'playwright-alpha-access-code';
-
 export async function registerAndCreateStory(
   page: Page,
   prefix: string,
@@ -48,7 +46,6 @@ export async function registerUser(page: Page, prefix: string): Promise<Acceptan
   await page.getByLabel('Email address').fill(email);
   await page.getByLabel('Password', { exact: true }).fill(password);
   await page.getByLabel('Confirm password').fill(password);
-  await page.getByLabel('Invitation code').fill(accessCode);
   const registration = waitForApiResponse(page, 'POST', /\/api\/auth\/register$/);
   await page.getByRole('button', { name: 'Create account' }).click();
   await expectSuccessful(registration);

@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 
 export type NodeEnvironment = 'development' | 'test' | 'production';
-export type RegistrationMode = 'open' | 'access-code' | 'closed';
+export type RegistrationMode = 'open' | 'closed';
 export interface EmailAddress {
   email: string;
   name?: string;
@@ -16,7 +16,6 @@ export class AppConfigService {
   readonly nodeEnvironment!: NodeEnvironment;
   readonly postgresSslCa?: string;
   readonly registrationMode!: RegistrationMode;
-  readonly registrationAccessCode?: string;
   readonly authRegistrationRateLimit!: number;
   readonly testEmailOutbox!: boolean;
   readonly brevoApiKey?: string;
@@ -47,20 +46,15 @@ export function loadAppConfig(environment: NodeJS.ProcessEnv) {
   if (nodeEnvironment === 'production' && !environment.REGISTRATION_MODE) {
     throw new Error('REGISTRATION_MODE is required in production');
   }
-  const registrationMode = enumValue('REGISTRATION_MODE', environment.REGISTRATION_MODE ?? 'open', [
-    'open',
-    'access-code',
-    'closed',
-  ] as const);
-  const registrationAccessCode = environment.REGISTRATION_ACCESS_CODE;
-  if (
-    registrationMode === 'access-code' &&
-    (!registrationAccessCode || registrationAccessCode.length < 16)
-  ) {
+  if (environment.REGISTRATION_ACCESS_CODE?.trim()) {
     throw new Error(
-      'REGISTRATION_ACCESS_CODE must contain at least 16 characters in access-code mode',
+      'REGISTRATION_ACCESS_CODE is no longer supported; use REGISTRATION_MODE=open or closed',
     );
   }
+  const registrationMode = enumValue('REGISTRATION_MODE', environment.REGISTRATION_MODE ?? 'open', [
+    'open',
+    'closed',
+  ] as const);
   const authRegistrationRateLimit =
     nodeEnvironment === 'test'
       ? integerValue(
@@ -101,7 +95,6 @@ export function loadAppConfig(environment: NodeJS.ProcessEnv) {
     postgresSsl: booleanValue('POSTGRES_SSL', environment.POSTGRES_SSL ?? 'false'),
     postgresSslCa: environment.POSTGRES_SSL_CA?.replace(/\\n/g, '\n'),
     registrationMode,
-    registrationAccessCode: registrationMode === 'access-code' ? registrationAccessCode : undefined,
     authRegistrationRateLimit,
     testEmailOutbox,
     brevoApiKey,

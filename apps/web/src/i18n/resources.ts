@@ -36,7 +36,6 @@ export const resources = {
         lastAdministrator: 'The last administrator cannot be demoted.',
         administratorRequired: 'Administrator access is required.',
         registrationClosed: 'Account creation is currently closed.',
-        invitationCodeInvalid: 'A valid invitation code is required.',
         emailVerificationRequired: 'Verify your email address before signing in.',
         emailDeliveryUnavailable: 'Email delivery is temporarily unavailable.',
         accountActionTokenInvalid: 'This account action link is invalid or expired.',
@@ -110,9 +109,6 @@ export const resources = {
         confirmPassword: 'Confirm password',
         confirmPasswordPlaceholder: 'Repeat your password',
         passwordsDoNotMatch: 'Passwords do not match.',
-        invitationCode: 'Invitation code (if required)',
-        invitationPlaceholder: 'Private alpha invitation',
-        invitationHelp: 'Private alpha deployments require the code supplied by the operator.',
         pending: 'Please wait…',
         failed: 'Authentication failed',
         verification: {
@@ -1172,7 +1168,6 @@ export const resources = {
         lastAdministrator: 'Le dernier administrateur ne peut pas être rétrogradé.',
         administratorRequired: 'Un accès administrateur est requis.',
         registrationClosed: 'La création de comptes est actuellement fermée.',
-        invitationCodeInvalid: 'Un code d’invitation valide est requis.',
         storyNotFound: 'Cette histoire est introuvable.',
         collaboratorAccountInvalid:
           'Ce compte n’existe pas ou est déjà propriétaire de l’histoire.',
@@ -1299,9 +1294,6 @@ export const resources = {
         confirmPassword: 'Confirmer le mot de passe',
         confirmPasswordPlaceholder: 'Répétez votre mot de passe',
         passwordsDoNotMatch: 'Les mots de passe ne correspondent pas.',
-        invitationCode: 'Code d’invitation (si nécessaire)',
-        invitationPlaceholder: 'Invitation à l’alpha privée',
-        invitationHelp: 'Les déploiements en alpha privée exigent le code fourni par l’opérateur.',
         pending: 'Veuillez patienter…',
         failed: 'Échec de l’authentification',
       },
@@ -1785,8 +1777,7 @@ export const resources = {
           triggers_other: '{{count}} déclencheurs sélectionnés',
           groupTitle: 'Titre du groupe',
           createGroup: 'Créer le groupe',
-          groupRequiresInteraction:
-            'Sélectionnez au moins une interaction pour créer un groupe.',
+          groupRequiresInteraction: 'Sélectionnez au moins une interaction pour créer un groupe.',
         },
         count: {
           location_one: '{{count}} lieu',

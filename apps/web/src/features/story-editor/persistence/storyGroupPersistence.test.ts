@@ -12,10 +12,15 @@ describe('story group persistence', () => {
     vi.mocked(api.createGroup).mockResolvedValue({
       revision: 2,
       updatedAt: '2026-10-06T10:00:00.000Z',
-      group: { id: 'group-1', title: 'Opening', interactionIds: ['interaction-1', 'interaction-2'] },
+      group: {
+        id: 'group-1',
+        title: 'Opening',
+        interactionIds: ['interaction-1', 'interaction-2'],
+      },
     });
     const { result } = renderHook(() => {
-      const [story, setStory] = useState(storyFixture());
+      const [story, setStory] = useState<Story | undefined>(storyFixture());
+      if (!story) throw new Error('Expected the story fixture to be available');
       const actions = useStoryGroupPersistence({
         storyId: story.id,
         setStory,
@@ -39,7 +44,9 @@ describe('story group persistence', () => {
     });
     expect(result.current.story).toMatchObject({
       revision: 2,
-      groups: [{ id: 'group-1', title: 'Opening', interactionIds: ['interaction-1', 'interaction-2'] }],
+      groups: [
+        { id: 'group-1', title: 'Opening', interactionIds: ['interaction-1', 'interaction-2'] },
+      ],
     });
   });
 });

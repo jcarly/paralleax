@@ -1,16 +1,17 @@
-# Private Alpha Deployment
+# Creator Alpha Deployment
 
 Status: Required operator runbook
 
-Last reviewed: 2026-09-30
+Last reviewed: 2026-10-12
 
 ## Scope
 
-This runbook prepares Paralleax for a small, invitation-only creator alpha. It
-does not authorize open registration, public story publication, or anonymous
+This runbook prepares Paralleax for a small creator alpha. Account creation is
+open while enabled, but every new account must verify its email address before
+sign-in. This runbook does not authorize public story publication or anonymous
 reading. The deployment remains provider-neutral: a hosting provider, managed
 PostgreSQL service, public domain, and operator contact must be selected before
-real users are invited.
+registration is enabled for real users.
 
 ## Required Topology
 
@@ -53,8 +54,7 @@ For the private alpha, use:
 ```dotenv
 NODE_ENV=production
 CORS_ORIGIN=https://alpha.example.com
-REGISTRATION_MODE=access-code
-REGISTRATION_ACCESS_CODE=<at-least-16-random-characters>
+REGISTRATION_MODE=open
 BREVO_API_KEY=<brevo-api-key-kept-in-the-secret-manager>
 EMAIL_FROM=Paralleax <accounts@alpha.example.com>
 # EMAIL_REPLY_TO is optional.
@@ -78,9 +78,11 @@ web image. They are public build inputs, not server secrets. Follow the
 [Formbricks feedback runbook](formbricks-feedback.md) before collecting tester
 responses.
 
-Distribute the invitation code separately from the application URL. Rotate it
-if it is disclosed. Set `REGISTRATION_MODE=closed` when no more accounts should
-be created. `REGISTRATION_MODE=open` is not appropriate for the private alpha.
+Open registration does not grant a session immediately: the user must consume
+the verification link delivered to their email address. Set
+`REGISTRATION_MODE=closed` whenever no more accounts should be created. The API
+rejects the removed `access-code` mode and `REGISTRATION_ACCESS_CODE` setting;
+delete both legacy values from the deployment environment before release.
 
 ## Build And Release
 
@@ -132,8 +134,7 @@ NODE_ENV=production
 DATABASE_URL=${{Postgres.DATABASE_URL}}
 POSTGRES_SSL=true
 CORS_ORIGIN=https://${{web.RAILWAY_PUBLIC_DOMAIN}}
-REGISTRATION_MODE=access-code
-REGISTRATION_ACCESS_CODE=<at-least-16-random-characters>
+REGISTRATION_MODE=open
 SENTRY_DSN=<api-sentry-dsn>
 SENTRY_RELEASE=<immutable-commit-or-image-digest>
 ```
@@ -191,10 +192,11 @@ After every deployment:
    path. Its API must run with `NODE_ENV=test` and `TEST_EMAIL_OUTBOX=true` so the
    harness can follow a verification link without exposing test messages from the
    production deployment:
-   `PARALLEAX_ACCEPTANCE_BASE_URL=https://acceptance.example.com PARALLEAX_ACCEPTANCE_ACCESS_CODE=... npm run test:acceptance`.
+   `PARALLEAX_ACCEPTANCE_BASE_URL=https://acceptance.example.com npm run test:acceptance`.
    It creates a uniquely named test account and Story and must not target the
    production user database.
-4. Register with the current invitation code.
+4. Register a new account and confirm that its verification link is required
+   before sign-in.
 5. Create a story, add and edit an interaction, and reload the editor.
 6. Run Simulation Mode and confirm it does not alter reader progress.
 7. Sign out, sign in again, and confirm the story and reader progress persist.
@@ -254,4 +256,4 @@ monitoring, account self-service export or deletion, or legal approval.
 Transactional email is required for registration, verification, and recovery;
 operating the Brevo account, its authenticated sender domain, API credentials,
 deliverability monitoring, and retention policy remains an operator responsibility
-before invitations are sent.
+before registration is enabled.

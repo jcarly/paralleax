@@ -58,15 +58,14 @@ describe('AppConfigService', () => {
       CORS_ORIGIN: 'https://app.example.com',
       NODE_ENV: 'production',
       POSTGRES_SSL_CA: 'certificate\\nline',
-      REGISTRATION_MODE: 'access-code',
-      REGISTRATION_ACCESS_CODE: 'correct-alpha-code',
+      REGISTRATION_MODE: 'open',
     });
     expect(config).toMatchObject({
       postgresSsl: true,
       port: 8080,
       postgresSslCa: 'certificate\nline',
       corsOrigin: 'https://app.example.com',
-      registrationMode: 'access-code',
+      registrationMode: 'open',
     });
     expect(config.nodeEnvironment).toBe('production');
   });
@@ -133,9 +132,10 @@ describe('AppConfigService', () => {
     ],
     [{ NODE_ENV: 'staging' }, 'NODE_ENV must be one of'],
     [{ REGISTRATION_MODE: 'invite' }, 'REGISTRATION_MODE must be one of'],
+    [{ REGISTRATION_MODE: 'access-code' }, 'REGISTRATION_MODE must be one of: open, closed'],
     [
-      { REGISTRATION_MODE: 'access-code', REGISTRATION_ACCESS_CODE: 'short' },
-      'REGISTRATION_ACCESS_CODE must contain at least 16 characters',
+      { REGISTRATION_ACCESS_CODE: 'legacy-alpha-access-code' },
+      'REGISTRATION_ACCESS_CODE is no longer supported',
     ],
   ])('rejects invalid environment values', (environment, message) => {
     expect(() => loadAppConfig(environment)).toThrow(message);

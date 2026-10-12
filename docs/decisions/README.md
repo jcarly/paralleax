@@ -34,6 +34,7 @@ This folder records accepted architecture and product-shaping decisions.
 - [ADR-028 - Brevo HTTPS Transactional Email Delivery](ADR-028-brevo-transactional-email-api.md)
 - [ADR-029 - Flat Persisted Groups](ADR-029-flat-persisted-groups.md)
 - [ADR-030 - Optional Privacy-Preserving Sentry Monitoring](ADR-030-sentry-observability.md)
+- [ADR-031 - Verified-Email Registration Without a Shared Access Code](ADR-031-verified-email-registration.md)
 
 ## Maintenance
 

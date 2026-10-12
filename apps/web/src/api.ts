@@ -202,15 +202,10 @@ export interface QspImportResponse {
 }
 export const api = {
   me: () => request<AuthUser>('/auth/me'),
-  register: (email: string, password: string, displayName: string, accessCode?: string) =>
+  register: (email: string, password: string, displayName: string) =>
     request<RegistrationResult>('/auth/register', {
       method: 'POST',
-      body: JSON.stringify({
-        email,
-        password,
-        displayName,
-        ...(accessCode ? { accessCode } : {}),
-      }),
+      body: JSON.stringify({ email, password, displayName }),
     }),
   login: (email: string, password: string) =>
     request<AuthUser>('/auth/login', {

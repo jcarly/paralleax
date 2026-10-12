@@ -56,6 +56,10 @@ returned to the browser. Production mutations also require an exact match
 between the request `Origin` and the configured public origin. This supplements
 `SameSite=Lax` cookies for the documented same-origin deployment topology.
 
+The `access-code` registration portion of this amendment is superseded by
+[ADR-031](ADR-031-verified-email-registration.md). The explicit production mode
+and exact-origin requirements remain in effect.
+
 ## Amendment — 2026-09-12
 
 The existing user record also owns one required, non-unique display name. New

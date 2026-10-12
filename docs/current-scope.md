@@ -202,8 +202,9 @@ Paralleax currently includes:
   search navigation, editing, reload durability, and Simulation while retaining
   timing measurements in CI logs.
 - Provider-neutral production API/web images, a migration-first Compose shape,
-  exact production-origin enforcement, invitation-code registration, deployment
-  smoke checks, and operator runbooks for a private alpha.
+  exact production-origin enforcement, verified-email registration with an
+  operator-controlled open/closed mode, deployment smoke checks, and operator
+  runbooks for a creator alpha.
 
 ## Not yet a stable product contract
 

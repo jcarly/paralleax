@@ -62,14 +62,13 @@ describe('AuthPage', () => {
       screen.getByPlaceholderText('Repeat your password'),
       'correct horse battery staple',
     );
-    await user.type(screen.getByLabelText('Invitation code (if required)'), 'correct-alpha-code');
+    expect(screen.queryByLabelText(/Invitation code/i)).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Create account' }));
 
     expect(api.register).toHaveBeenCalledWith(
       'new@example.com',
       'correct horse battery staple',
       'New Author',
-      'correct-alpha-code',
     );
     expect(onAuthenticated).not.toHaveBeenCalled();
     expect(screen.getByRole('heading', { name: 'Check your email' })).toBeInTheDocument();

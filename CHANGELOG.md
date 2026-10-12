@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Removed the private-alpha registration access code from the API, web form,
+  deployment configuration, and acceptance flow. Registration now uses only
+  explicit `open`/`closed` operation and requires email verification before
+  sign-in.
 - Added optional privacy-preserving Sentry error monitoring for the NestJS API
   and React application, with release-aware source-map upload when build secrets
   are configured. Error events exclude authored content, account data, request

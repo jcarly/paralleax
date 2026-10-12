@@ -119,6 +119,11 @@ The API also validates `PORT`, `POSTGRES_SSL`, `POSTGRES_SSL_CA`, `CORS_ORIGIN`,
 and `REGISTRATION_MODE` must be explicit in production. OpenAPI documentation is
 available at http://localhost:3300/api/docs outside production.
 
+`REGISTRATION_MODE` accepts `open` or `closed`. Open registration creates an
+unverified account and requires the emailed verification link before sign-in.
+The removed `access-code` mode and `REGISTRATION_ACCESS_CODE` setting are
+rejected so stale deployments fail visibly.
+
 ## Transactional email
 
 The API uses Brevo's HTTPS API for transactional email. Set `BREVO_API_KEY` and
@@ -253,7 +258,7 @@ Then open http://127.0.0.1:5173. The API is exposed at http://127.0.0.1:3300/api
 PostgreSQL is exposed at `127.0.0.1:5432` and stores data in the
 `postgres-data` Docker volume.
 
-## Private Alpha Deployment
+## Creator Alpha Deployment
 
 The repository includes separate production targets for the API and web app,
 plus a migration-first Compose topology connected to an external managed
@@ -267,8 +272,8 @@ docker compose --env-file .env.production -f compose.production.yaml up
 
 Start from `.env.production.example`, but store real values in the deployment
 provider's secret manager. Production account creation must explicitly use
-`open`, `access-code`, or `closed`; `access-code` is recommended for a private
-alpha.
+`open` or `closed`. Open registration still requires email verification before
+the first session is issued.
 
 For Railway, deploy the API and web targets as separate services and use the
 service-specific config files in `deploy/`. The exact private-network variables
@@ -282,5 +287,5 @@ and migration state:
 npm run smoke:deployment -- https://alpha.example.com
 ```
 
-Do not invite users until the provider-specific gates in the
-[private alpha runbook](docs/operations/alpha-deployment.md) are complete.
+Do not enable registration until the provider-specific gates in the
+[creator alpha runbook](docs/operations/alpha-deployment.md) are complete.

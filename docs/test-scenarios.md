@@ -44,8 +44,8 @@ The character-stat vertical keeps these regressions covered:
   new session; explicit revocation retains only the current session.
 - Authentication: concurrent registration for one normalized email creates one
   account and returns one conflict.
-- Authentication: access-code registration rejects missing and incorrect codes,
-  accepts the configured code, and closed registration creates no account.
+- Authentication: open registration creates an unverified account and sends its
+  verification action, while closed registration creates no account.
 - Production security: safe requests remain available, while every mutative
   request without the exact configured `Origin` is rejected.
 - Authentication: an expired session during a protected request returns the UI

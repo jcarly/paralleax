@@ -44,7 +44,11 @@ describe('StoryGroupService', () => {
 
   it('rejects selections that reference an interaction from another Story', async () => {
     await expect(
-      service.create('story-1', { title: 'Invalid', interactionIds: ['foreign-interaction'] }, 'user-1'),
+      service.create(
+        'story-1',
+        { title: 'Invalid', interactionIds: ['foreign-interaction'] },
+        'user-1',
+      ),
     ).rejects.toThrow('Group members must belong to the same Story');
   });
 

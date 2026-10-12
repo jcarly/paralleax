@@ -84,8 +84,7 @@ jobs:
         env:
           DATABASE_URL: postgresql://paralleax:ci-only@db.example:5432/paralleax
           CORS_ORIGIN: https://alpha.example.com
-          REGISTRATION_MODE: access-code
-          REGISTRATION_ACCESS_CODE: ci-only-access-code
+          REGISTRATION_MODE: open
         run: docker compose -f compose.production.yaml config --quiet
 
       - name: Build production API image
@@ -217,7 +216,6 @@ jobs:
           --health-timeout 5s
           --health-retries 5
     env:
-      PARALLEAX_ACCEPTANCE_ACCESS_CODE: playwright-alpha-access-code
       PARALLEAX_ACCEPTANCE_DATABASE_URL: postgres://paralleax:paralleax@127.0.0.1:5432/paralleax_acceptance
       RUN_LARGE_STORY_ACCEPTANCE: ${{ (github.event_name == 'schedule' || inputs.run_scheduled_stress) && 'true' || 'false' }}
     steps:

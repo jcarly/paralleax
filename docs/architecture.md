@@ -219,10 +219,11 @@ projections join the current name by stable user id and omit email, while
 self-service, administration, and explicit Story access management retain it.
 Renaming therefore updates future reads without rewriting Story, comment, or
 history rows and without introducing a separate profile model.
-Production chooses an explicit registration mode; private alpha registration can
-require a server-validated invitation code before user creation. A global origin
-guard rejects mutative production requests unless their `Origin` exactly matches
-the configured public origin, while safe and local/test requests remain unchanged.
+Production chooses an explicit `open` or `closed` registration mode. Open
+registration creates an unverified account; the emailed verification action must
+be consumed before a session can be issued. A global origin guard rejects
+mutative production requests unless their `Origin` exactly matches the configured
+public origin, while safe and local/test requests remain unchanged.
 
 `StoriesRepository` owns PostgreSQL reads and writes. Every query, including a
 transactional mutation, resolves creator ownership, global administrator status,

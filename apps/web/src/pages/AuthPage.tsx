@@ -66,7 +66,6 @@ export function AuthPage({
   const [displayName, setDisplayName] = useState('');
   const [password, setPassword] = useState('');
   const [confirmation, setConfirmation] = useState('');
-  const [accessCode, setAccessCode] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState('');
@@ -89,12 +88,7 @@ export function AuthPage({
       setError('');
       setPending(true);
       if (isRegister) {
-        const result = await api.register(
-          email,
-          password,
-          normalizedDisplayName,
-          accessCode || undefined,
-        );
+        const result = await api.register(email, password, normalizedDisplayName);
         setVerificationEmail(result.email);
       } else {
         onAuthenticated(await api.login(email, password));
@@ -110,7 +104,6 @@ export function AuthPage({
     const nextMode = isRegister ? 'login' : 'register';
     if (!onModeChange) setLocalMode(nextMode);
     setConfirmation('');
-    setAccessCode('');
     setError('');
     setVerificationEmail('');
     onModeChange?.(nextMode);
@@ -229,35 +222,20 @@ export function AuthPage({
                 </span>
               </label>
               {isRegister ? (
-                <>
-                  <label className="product-field">
-                    <span>{t('auth.confirmPassword')}</span>
-                    <input
-                      autoComplete="new-password"
-                      type={showPassword ? 'text' : 'password'}
-                      placeholder={t('auth.confirmPasswordPlaceholder')}
-                      value={confirmation}
-                      onChange={(event) => setConfirmation(event.target.value)}
-                      required
-                    />
-                    {confirmation && !passwordsMatch ? (
-                      <small className="field-error">{t('auth.passwordsDoNotMatch')}</small>
-                    ) : null}
-                  </label>
-                  <label className="product-field">
-                    <span>{t('auth.invitationCode')}</span>
-                    <input
-                      aria-label={t('auth.invitationCode')}
-                      autoComplete="off"
-                      type="password"
-                      placeholder={t('auth.invitationPlaceholder')}
-                      value={accessCode}
-                      onChange={(event) => setAccessCode(event.target.value)}
-                      maxLength={128}
-                    />
-                    <small>{t('auth.invitationHelp')}</small>
-                  </label>
-                </>
+                <label className="product-field">
+                  <span>{t('auth.confirmPassword')}</span>
+                  <input
+                    autoComplete="new-password"
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder={t('auth.confirmPasswordPlaceholder')}
+                    value={confirmation}
+                    onChange={(event) => setConfirmation(event.target.value)}
+                    required
+                  />
+                  {confirmation && !passwordsMatch ? (
+                    <small className="field-error">{t('auth.passwordsDoNotMatch')}</small>
+                  ) : null}
+                </label>
               ) : null}
               {error ? (
                 <p className="form-error" role="alert">

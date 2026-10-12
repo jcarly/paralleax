@@ -25,11 +25,7 @@ export class AuthController {
   @Public()
   @Post('register')
   async register(@Body() input: RegisterDto) {
-    assertRegistrationAllowed(
-      this.config.registrationMode,
-      this.config.registrationAccessCode,
-      input.accessCode,
-    );
+    assertRegistrationAllowed(this.config.registrationMode);
     return this.auth.register(input.email, input.password, input.displayName);
   }
 

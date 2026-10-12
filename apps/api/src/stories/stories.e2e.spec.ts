@@ -114,7 +114,9 @@ describe('Stories API', () => {
   it('creates a flat Group from selected Interactions without changing reader structure', async () => {
     const created = await createStory('Grouped story');
     const withRoot = await createInteraction(created.id);
-    const withChild = await createInteraction(created.id, { parentId: withRoot.interactions[0].id });
+    const withChild = await createInteraction(created.id, {
+      parentId: withRoot.interactions[0].id,
+    });
     const [root, child] = withChild.interactions;
 
     const opening = await request(httpServer)

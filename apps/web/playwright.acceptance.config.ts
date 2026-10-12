@@ -6,7 +6,6 @@ const apiPort = localPort(process.env.PARALLEAX_ACCEPTANCE_API_PORT, 3300);
 const webPort = localPort(process.env.PARALLEAX_ACCEPTANCE_WEB_PORT, 5173);
 const baseURL = externalBaseUrl ?? `http://127.0.0.1:${webPort}`;
 const repositoryRoot = resolve(import.meta.dirname, '../..');
-const accessCode = process.env.PARALLEAX_ACCEPTANCE_ACCESS_CODE ?? 'playwright-alpha-access-code';
 
 export default defineConfig({
   testDir: './tests/acceptance',
@@ -39,8 +38,7 @@ export default defineConfig({
             NODE_ENV: 'test',
             PORT: String(apiPort),
             POSTGRES_SSL: 'false',
-            REGISTRATION_ACCESS_CODE: accessCode,
-            REGISTRATION_MODE: 'access-code',
+            REGISTRATION_MODE: 'open',
             TEST_AUTH_REGISTRATION_RATE_LIMIT: '100',
             TEST_EMAIL_OUTBOX: 'true',
           },

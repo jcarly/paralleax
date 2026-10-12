@@ -47,7 +47,9 @@ export function StoryGraphSelectionInspector({
         <button type="submit" disabled={interactionIds.length === 0 || !title.trim() || isCreating}>
           {t('editor.graphSelection.createGroup')}
         </button>
-        {interactionIds.length === 0 ? <p>{t('editor.graphSelection.groupRequiresInteraction')}</p> : null}
+        {interactionIds.length === 0 ? (
+          <p>{t('editor.graphSelection.groupRequiresInteraction')}</p>
+        ) : null}
       </form>
     </div>
   );

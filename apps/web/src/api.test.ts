@@ -30,7 +30,7 @@ describe('api client', () => {
       headers: { 'Content-Type': 'application/json' },
     });
 
-    await api.register('author@example.com', 'secret-password', 'Author', 'alpha-access-code');
+    await api.register('author@example.com', 'secret-password', 'Author');
     expect(fetchMock).toHaveBeenLastCalledWith('/api/auth/register', {
       headers: { 'Content-Type': 'application/json' },
       method: 'POST',
@@ -38,7 +38,6 @@ describe('api client', () => {
         email: 'author@example.com',
         password: 'secret-password',
         displayName: 'Author',
-        accessCode: 'alpha-access-code',
       }),
     });
 
