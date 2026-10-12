@@ -4,6 +4,11 @@ import { resources } from './resources';
 
 export const supportedLanguages = ['en', 'fr', 'it'] as const;
 export type SupportedLanguage = (typeof supportedLanguages)[number];
+export const languageEndonyms: Record<SupportedLanguage, string> = {
+  en: 'English',
+  fr: 'Français',
+  it: 'Italiano',
+};
 
 export const languageStorageKey = 'paralleax.interface-language';
 

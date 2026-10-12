@@ -1,9 +1,6 @@
 export const italianTranslation = {
   language: {
     label: 'Lingua',
-    english: 'Inglese',
-    french: 'Francese',
-    italian: 'Italiano',
   },
   shell: {
     mainNavigation: 'Navigazione principale',

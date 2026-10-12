@@ -1,5 +1,10 @@
 import { useTranslation } from 'react-i18next';
-import { changeInterfaceLanguage, normalizeLanguage, supportedLanguages } from '../i18n';
+import {
+  changeInterfaceLanguage,
+  languageEndonyms,
+  normalizeLanguage,
+  supportedLanguages,
+} from '../i18n';
 
 export function LanguageSwitcher({ className = '' }: { className?: string }) {
   const { t, i18n } = useTranslation();
@@ -15,9 +20,7 @@ export function LanguageSwitcher({ className = '' }: { className?: string }) {
       >
         {supportedLanguages.map((supportedLanguage) => (
           <option key={supportedLanguage} value={supportedLanguage}>
-            {t(
-              `language.${supportedLanguage === 'en' ? 'english' : supportedLanguage === 'fr' ? 'french' : 'italian'}`,
-            )}
+            {languageEndonyms[supportedLanguage]}
           </option>
         ))}
       </select>

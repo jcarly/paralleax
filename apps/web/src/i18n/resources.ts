@@ -3,9 +3,6 @@ export const resources = {
     translation: {
       language: {
         label: 'Language',
-        english: 'English',
-        french: 'Français',
-        italian: 'Italiano',
       },
       shell: {
         mainNavigation: 'Main navigation',
@@ -1197,9 +1194,6 @@ export const resources = {
       },
       language: {
         label: 'Langue',
-        english: 'English',
-        french: 'Français',
-        italian: 'Italien',
       },
       shell: {
         mainNavigation: 'Navigation principale',

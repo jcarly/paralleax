@@ -15,6 +15,14 @@ function Harness() {
   );
 }
 
+function expectLanguageEndonyms() {
+  expect(screen.getAllByRole('option').map((option) => option.textContent)).toEqual([
+    'English',
+    'Français',
+    'Italiano',
+  ]);
+}
+
 describe('LanguageSwitcher', () => {
   afterEach(() => cleanup());
 
@@ -30,10 +38,12 @@ describe('LanguageSwitcher', () => {
     render(<Harness />);
 
     expect(screen.getByText('Stories')).toBeInTheDocument();
+    expectLanguageEndonyms();
     await user.selectOptions(screen.getByRole('combobox', { name: 'Language' }), 'fr');
 
     expect(screen.getByText('Histoires')).toBeInTheDocument();
     expect(screen.getByRole('combobox', { name: 'Langue' })).toHaveValue('fr');
+    expectLanguageEndonyms();
     expect(window.localStorage.getItem(languageStorageKey)).toBe('fr');
     expect(document.documentElement.lang).toBe('fr');
 
@@ -41,6 +51,7 @@ describe('LanguageSwitcher', () => {
 
     expect(await screen.findByText('Storie')).toBeInTheDocument();
     expect(screen.getByRole('combobox', { name: 'Lingua' })).toHaveValue('it');
+    expectLanguageEndonyms();
     expect(window.localStorage.getItem(languageStorageKey)).toBe('it');
     expect(document.documentElement.lang).toBe('it');
 
