@@ -547,35 +547,33 @@ end
     ).not.toThrow();
   });
 
-  
-it('reports import progress without changing the result', () => {
-  const events: QspImportProgress[] = [];
-  let id = 0;
+  it('reports import progress without changing the result', () => {
+    const events: QspImportProgress[] = [];
+    let id = 0;
 
-  const result = importQsp(
-    {
-      name: 'progress.qsps',
-      format: 'text',
-      content: "# Start\n'Hello'\n--- Start ---",
-    },
-    {
-      storyId: 'story-progress',
-      timestamp: '2026-09-02T10:00:00.000Z',
-      createId: () => `generated-${++id}`,
-      onProgress: (progress) => {
-        events.push(progress);
+    const result = importQsp(
+      {
+        name: 'progress.qsps',
+        format: 'text',
+        content: "# Start\n'Hello'\n--- Start ---",
       },
-    },
-  );
+      {
+        storyId: 'story-progress',
+        timestamp: '2026-09-02T10:00:00.000Z',
+        createId: () => `generated-${++id}`,
+        onProgress: (progress) => {
+          events.push(progress);
+        },
+      },
+    );
 
-  expect(result.story).toBeDefined();
+    expect(result.story).toBeDefined();
 
-  expect(events).toEqual([
-    { phase: 'parsing', completed: 0 },
-    { phase: 'parsing', completed: 1, total: 1 },
-    { phase: 'mapping', completed: 0, total: 1 },
-    { phase: 'mapping', completed: 1, total: 1 },
-  ]);
-});
-
+    expect(events).toEqual([
+      { phase: 'parsing', completed: 0 },
+      { phase: 'parsing', completed: 1, total: 1 },
+      { phase: 'mapping', completed: 0, total: 1 },
+      { phase: 'mapping', completed: 1, total: 1 },
+    ]);
+  });
 });

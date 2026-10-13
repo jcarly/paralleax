@@ -1,22 +1,10 @@
 import { mapQspLocationsToStory } from './mapping.js';
 import { parseQspSource } from './parser.js';
-import {
-  createQspImportReport,
-  hasQspImportErrors,
-} from './report.js';
-import type {
-  QspImportOptions,
-  QspImportResult,
-  QspImportSource,
-} from './types.js';
+import { createQspImportReport, hasQspImportErrors } from './report.js';
+import type { QspImportOptions, QspImportResult, QspImportSource } from './types.js';
 
-export function importQsp(
-  source: QspImportSource,
-  options: QspImportOptions,
-): QspImportResult {
-  const report = createQspImportReport(
-    source.format === 'locations' ? source.content.length : 1,
-  );
+export function importQsp(source: QspImportSource, options: QspImportOptions): QspImportResult {
+  const report = createQspImportReport(source.format === 'locations' ? source.content.length : 1);
 
   // Phase 1 : parsing
   options.onProgress?.({
@@ -43,12 +31,7 @@ export function importQsp(
     total: locations.length,
   });
 
-  const story = mapQspLocationsToStory(
-    locations,
-    source.name,
-    report,
-    options,
-  );
+  const story = mapQspLocationsToStory(locations, source.name, report, options);
 
   options.onProgress?.({
     phase: 'mapping',
@@ -56,7 +39,5 @@ export function importQsp(
     total: locations.length,
   });
 
-  return hasQspImportErrors(report)
-    ? { report }
-    : { story, report };
+  return hasQspImportErrors(report) ? { report } : { story, report };
 }
