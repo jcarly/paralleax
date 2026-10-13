@@ -6,25 +6,19 @@ import type { QspImportOptions, QspImportResult, QspImportSource } from './types
 export function importQsp(source: QspImportSource, options: QspImportOptions): QspImportResult {
   const report = createQspImportReport(source.format === 'locations' ? source.content.length : 1);
 
-  // Phase 1 : parsing
   options.onProgress?.({
-    phase: 'parsing',
+    phase: 'decoding',
     completed: 0,
+    total: source.format === 'locations' ? source.content.length : 1,
   });
 
-  const locations = parseQspSource(source, report);
-
-  options.onProgress?.({
-    phase: 'parsing',
-    completed: locations.length,
-    total: locations.length,
-  });
+  const locations = parseQspSource(source, report, options.onProgress);
 
   if (locations.length === 0 || hasQspImportErrors(report)) {
     return { report };
   }
 
-  // Phase 2 : mapping
+  // Phase 3 : mapping
   options.onProgress?.({
     phase: 'mapping',
     completed: 0,

@@ -82,12 +82,13 @@ export interface QspImportResult {
   report: QspImportReport;
 }
 
-export type QspImportPhase = 'parsing' | 'mapping';
+export type QspImportPhase = 'decoding' | 'parsing' | 'mapping';
 
 export interface QspImportProgress {
   phase: QspImportPhase;
   completed: number;
   total?: number;
+  currentFile?: string;
 }
 
 export interface QspImportOptions {

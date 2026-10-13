@@ -11,13 +11,20 @@ import {
   parseQspConditionExpression,
 } from './expressions.js';
 import { addQspImportIssue, addQspSourceIssue, touchQspFeature } from './report.js';
-import type { QspImportReport, QspImportSource } from './types.js';
+import type { QspImportOptions, QspImportReport, QspImportSource } from './types.js';
+
+const PROGRESS_REPORT_INTERVAL = 25;
+
+function shouldReportProgress(completed: number, total: number): boolean {
+  return completed === 1 || completed % PROGRESS_REPORT_INTERVAL === 0 || completed === total;
+}
 
 export function parseQspSource(
   source: QspImportSource,
   report: QspImportReport,
+  onProgress?: QspImportOptions['onProgress'],
 ): ParsedQspLocation[] {
-  const decodedFiles = decodeQspFiles(source, report);
+  const decodedFiles = decodeQspFiles(source, report, onProgress);
   if (decodedFiles.length === 0) return [];
 
   const decodedLocations = decodedFiles.flatMap((file) =>
@@ -39,79 +46,97 @@ export function parseQspSource(
 
   const orderedLocations =
     source.format === 'locations' ? putLikelyEntryFirst(decodedLocations) : decodedLocations;
+  onProgress?.({
+    phase: 'parsing',
+    completed: 0,
+    total: orderedLocations.length,
+  });
   const names = new Set<string>();
   const parsed = orderedLocations.flatMap(({ location, fileName, codeLine }, locationIndex) => {
-    const name = location.name.trim();
-    if (!name) {
-      addQspImportIssue(report, {
-        severity: 'error',
-        code: 'empty_location_name',
-        message: 'A QSP location has no name.',
-        fileName,
-      });
-      return [];
-    }
-    const normalizedName = normalizeQspName(name);
-    if (names.has(normalizedName)) {
-      addQspImportIssue(report, {
-        severity: 'error',
-        code: 'duplicate_location',
-        message: `The QSP location "${name}" is defined more than once.`,
-        fileName,
-        locationName: name,
-      });
-      return [];
-    }
-    names.add(normalizedName);
-    const sourcePosition = { fileName, locationName: name, line: codeLine };
-    const variants = extractLocationArgumentVariants(location.code, sourcePosition, report);
-    const extracted = extractActBlocks(variants.baseCode, sourcePosition, report);
-    const compiledActions = location.actions.map((action) => ({
-      ...action,
-      source: sourcePosition,
-    }));
-    const sourceActions = extracted.blocks.map(({ action, sourceLine, conditionGroups }) => ({
-      ...action,
-      source: { ...sourcePosition, line: sourceLine },
-      ...(conditionGroups ? { conditionGroups } : {}),
-    }));
-    const locations: ParsedQspLocation[] = [
-      {
-        name,
-        description: location.description,
-        code: extracted.remainingCode,
-        actions: deduplicateActions([...compiledActions, ...sourceActions]),
+    try {
+      const name = location.name.trim();
+      if (!name) {
+        addQspImportIssue(report, {
+          severity: 'error',
+          code: 'empty_location_name',
+          message: 'A QSP location has no name.',
+          fileName,
+        });
+        return [];
+      }
+      const normalizedName = normalizeQspName(name);
+      if (names.has(normalizedName)) {
+        addQspImportIssue(report, {
+          severity: 'error',
+          code: 'duplicate_location',
+          message: `The QSP location "${name}" is defined more than once.`,
+          fileName,
+          locationName: name,
+        });
+        return [];
+      }
+      names.add(normalizedName);
+      const sourcePosition = { fileName, locationName: name, line: codeLine };
+      const variants = extractLocationArgumentVariants(location.code, sourcePosition, report);
+      const extracted = extractActBlocks(variants.baseCode, sourcePosition, report);
+      const compiledActions = location.actions.map((action) => ({
+        ...action,
         source: sourcePosition,
-      },
-    ];
-    for (const variant of variants.variants) {
-      const variantExtracted = extractActBlocks(variant.code, variant.source, report);
-      locations.push({
-        name,
-        entryArgument: variant.argument,
-        description: [],
-        code: variantExtracted.remainingCode,
-        actions: variantExtracted.blocks.map(({ action, sourceLine, conditionGroups }) => ({
-          ...action,
-          source: { ...variant.source, line: sourceLine },
-          ...(conditionGroups ? { conditionGroups } : {}),
-        })),
-        source: variant.source,
-      });
+      }));
+      const sourceActions = extracted.blocks.map(({ action, sourceLine, conditionGroups }) => ({
+        ...action,
+        source: { ...sourcePosition, line: sourceLine },
+        ...(conditionGroups ? { conditionGroups } : {}),
+      }));
+      const locations: ParsedQspLocation[] = [
+        {
+          name,
+          description: location.description,
+          code: extracted.remainingCode,
+          actions: deduplicateActions([...compiledActions, ...sourceActions]),
+          source: sourcePosition,
+        },
+      ];
+      for (const variant of variants.variants) {
+        const variantExtracted = extractActBlocks(variant.code, variant.source, report);
+        locations.push({
+          name,
+          entryArgument: variant.argument,
+          description: [],
+          code: variantExtracted.remainingCode,
+          actions: variantExtracted.blocks.map(({ action, sourceLine, conditionGroups }) => ({
+            ...action,
+            source: { ...variant.source, line: sourceLine },
+            ...(conditionGroups ? { conditionGroups } : {}),
+          })),
+          source: variant.source,
+        });
+      }
+      if (/^\$/.test(name)) {
+        addQspSourceIssue(
+          report,
+          sourcePosition,
+          locationIndex === 0 ? 'service_location_as_entry' : 'service_location_semantics',
+          locationIndex === 0
+            ? 'The first QSP location looks like a service location but is imported as the Story entry.'
+            : `The service-like location "${name}" is imported without its QSP runtime event semantics.`,
+        );
+        report.approximatedStatementCount += 1;
+        touchQspFeature(report, 'runtime_events');
+      }
+      return locations;
+    } finally {
+      const completed = locationIndex + 1;
+
+      if (shouldReportProgress(completed, orderedLocations.length)) {
+        onProgress?.({
+          phase: 'parsing',
+          completed,
+          total: orderedLocations.length,
+          currentFile: fileName,
+        });
+      }
     }
-    if (/^\$/.test(name)) {
-      addQspSourceIssue(
-        report,
-        sourcePosition,
-        locationIndex === 0 ? 'service_location_as_entry' : 'service_location_semantics',
-        locationIndex === 0
-          ? 'The first QSP location looks like a service location but is imported as the Story entry.'
-          : `The service-like location "${name}" is imported without its QSP runtime event semantics.`,
-      );
-      report.approximatedStatementCount += 1;
-      touchQspFeature(report, 'runtime_events');
-    }
-    return locations;
   });
   report.locationCount = orderedLocations.length;
   report.actionCount = parsed.reduce((total, location) => total + location.actions.length, 0);
@@ -123,20 +148,34 @@ export function parseQspSource(
 function decodeQspFiles(
   source: QspImportSource,
   report: QspImportReport,
+  onProgress?: QspImportOptions['onProgress'],
 ): Array<{ name: string; locations: QspSourceLocation[]; codeLines: number[] }> {
   if (source.format === 'locations') {
-    return source.content.flatMap((file) => {
-      const decoded = decodeTextQspFile(file.name, file.content, report);
-      if (decoded[0]?.locations.length === 0) {
-        addQspImportIssue(report, {
-          severity: 'error',
-          code: 'no_locations_in_source_file',
-          message: 'The selected .qsrc file does not contain a readable QSP location.',
-          fileName: file.name,
-        });
-        return [];
+    return source.content.flatMap((file, index) => {
+      try {
+        const decoded = decodeTextQspFile(file.name, file.content, report);
+        if (decoded[0]?.locations.length === 0) {
+          addQspImportIssue(report, {
+            severity: 'error',
+            code: 'no_locations_in_source_file',
+            message: 'The selected .qsrc file does not contain a readable QSP location.',
+            fileName: file.name,
+          });
+          return [];
+        }
+        return decoded;
+      } finally {
+        const completed = index + 1;
+
+        if (shouldReportProgress(completed, source.content.length)) {
+          onProgress?.({
+            phase: 'decoding',
+            completed,
+            total: source.content.length,
+            currentFile: file.name,
+          });
+        }
       }
-      return decoded;
     });
   }
   try {
@@ -154,6 +193,13 @@ function decodeQspFiles(
       fileName: source.name,
     });
     return [];
+  } finally {
+    onProgress?.({
+      phase: 'decoding',
+      completed: 1,
+      total: 1,
+      currentFile: source.name,
+    });
   }
 }
 

@@ -570,10 +570,56 @@ end
     expect(result.story).toBeDefined();
 
     expect(events).toEqual([
-      { phase: 'parsing', completed: 0 },
-      { phase: 'parsing', completed: 1, total: 1 },
+      { phase: 'decoding', completed: 0, total: 1 },
+      {
+        phase: 'decoding',
+        completed: 1,
+        total: 1,
+        currentFile: 'progress.qsps',
+      },
+      { phase: 'parsing', completed: 0, total: 1 },
+      {
+        phase: 'parsing',
+        completed: 1,
+        total: 1,
+        currentFile: 'progress.qsps',
+      },
       { phase: 'mapping', completed: 0, total: 1 },
       { phase: 'mapping', completed: 1, total: 1 },
     ]);
+  });
+
+  it('reports incremental progress for many QSRC files', () => {
+    const events: QspImportProgress[] = [];
+    let id = 0;
+
+    const files = Array.from({ length: 52 }, (_, index) => ({
+      name: `location-${index}.qsrc`,
+      content: `# location_${index}\n--- location_${index} ---`,
+    }));
+
+    const result = importQsp(
+      {
+        name: 'large.qsrc',
+        format: 'locations',
+        content: files,
+      },
+      {
+        storyId: 'story-progress',
+        timestamp: '2026-09-02T10:00:00.000Z',
+        createId: () => `generated-${++id}`,
+        onProgress: (progress) => events.push(progress),
+      },
+    );
+
+    expect(result.story).toBeDefined();
+    expect(result.report.locationCount).toBe(52);
+
+    const decoding = events.filter((event) => event.phase === 'decoding' && event.completed > 0);
+
+    const parsing = events.filter((event) => event.phase === 'parsing' && event.completed > 0);
+
+    expect(decoding.map(({ completed }) => completed)).toEqual([1, 25, 50, 52]);
+    expect(parsing.map(({ completed }) => completed)).toEqual([1, 25, 50, 52]);
   });
 });

@@ -37,10 +37,12 @@ warning, and the rest of the game remains importable for inspection.
 
 For administrator uploads, the dialog displays the measured percentage of bytes
 sent. Once the upload reaches 100%, it switches to an indeterminate analysis
-indicator until the server operation completes. Confirming a warning report
-uploads and analyses the source again before Story creation. Paralleax does not
-present server-side analysis or persistence as a percentage because the current
-importer does not expose those work units.
+indicator until the server operation completes. The shared importer exposes
+synchronous progress callbacks for decoding source files and parsing locations,
+reported on the first item, every 25 items, and the final item, followed by
+mapping start and completion. These events are not yet forwarded through the API
+or displayed in React, and they do not yield the Node.js event loop. Confirming a
+warning report uploads and analyses the source again before Story creation.
 
 Compiled and text formats are decoded with the official MIT-licensed
 `@qsp/converters` package. Text-source command analysis remains Paralleax code so
