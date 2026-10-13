@@ -102,12 +102,57 @@ test('imports and plays repository QSP location fixtures through the real stack'
   ]);
 
   const qspImport = waitForApiResponse(page, 'POST', /\/api\/stories\/imports\/qsp(?:\/admin)?$/);
-  await page.getByRole('button', { name: 'Import story' }).click();
-  const qspResponse = await expectSuccessful(qspImport);
-  const qspResult = (await qspResponse.json()) as { story: { id: string } };
 
-  const qspDialog = page.getByRole('dialog', { name: 'QSP story imported' });
+  await page.getByRole('button', { name: 'Import story' }).click();
+
+  const firstResponse = await expectSuccessful(qspImport);
+  const firstResult = (await firstResponse.json()) as {
+    status: string;
+    report: {
+      issues: Array<{ code: string; severity: string }>;
+    };
+  };
+
+  expect(firstResult.status).toBe('confirmation_required');
+  expect(firstResult.report.issues).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        code: 'automatic_navigation_requires_choice',
+        severity: 'warning',
+      }),
+    ]),
+  );
+
+  const reviewDialog = page.getByRole('dialog', {
+    name: 'Review the import report',
+  });
+
+  await expect(reviewDialog.getByText('QSP compatibility coverage')).toBeVisible();
+
+  // Confirm the compatibility warnings.
+  const confirmedImport = waitForApiResponse(
+    page,
+    'POST',
+    /\/api\/stories\/imports\/qsp(?:\/admin)?$/,
+  );
+
+  await reviewDialog.getByRole('button', { name: 'Confirm import' }).click();
+
+  const confirmedResponse = await expectSuccessful(confirmedImport);
+
+  const qspResult = (await confirmedResponse.json()) as {
+    status: string;
+    story: { id: string };
+  };
+
+  expect(qspResult.status).toBe('imported');
+
+  const qspDialog = page.getByRole('dialog', {
+    name: 'QSP story imported',
+  });
+
   await expect(qspDialog.getByText('QSP compatibility coverage')).toBeVisible();
+
   await qspDialog.getByRole('link', { name: 'Open in editor' }).click();
 
   await expect(page.locator('.story-title-input')).toHaveValue('QSP locations');

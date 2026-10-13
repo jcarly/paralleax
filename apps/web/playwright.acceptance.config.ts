@@ -2,8 +2,8 @@ import { defineConfig, devices } from '@playwright/test';
 import { resolve } from 'node:path';
 
 const externalBaseUrl = process.env.PARALLEAX_ACCEPTANCE_BASE_URL;
-const apiPort = localPort(process.env.PARALLEAX_ACCEPTANCE_API_PORT, 3300);
-const webPort = localPort(process.env.PARALLEAX_ACCEPTANCE_WEB_PORT, 5173);
+const apiPort = localPort(process.env.PARALLEAX_ACCEPTANCE_API_PORT, 3331);
+const webPort = localPort(process.env.PARALLEAX_ACCEPTANCE_WEB_PORT, 5174);
 const baseURL = externalBaseUrl ?? `http://127.0.0.1:${webPort}`;
 const repositoryRoot = resolve(import.meta.dirname, '../..');
 
@@ -43,7 +43,7 @@ export default defineConfig({
             TEST_EMAIL_OUTBOX: 'true',
           },
           url: `http://127.0.0.1:${apiPort}/api/ready`,
-          reuseExistingServer: !process.env.CI,
+          reuseExistingServer: false,
           timeout: 240_000,
         },
         {
@@ -54,7 +54,7 @@ export default defineConfig({
             VITE_API_PROXY_TARGET: `http://127.0.0.1:${apiPort}`,
           },
           url: `http://127.0.0.1:${webPort}`,
-          reuseExistingServer: !process.env.CI,
+          reuseExistingServer: false,
           timeout: 120_000,
         },
       ],
