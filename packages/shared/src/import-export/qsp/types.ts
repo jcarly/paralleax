@@ -82,8 +82,18 @@ export interface QspImportResult {
   report: QspImportReport;
 }
 
+export type QspImportPhase = 'parsing' | 'mapping';
+
+export interface QspImportProgress {
+  phase: QspImportPhase;
+  completed: number;
+  total?: number;
+}
+
 export interface QspImportOptions {
   storyId: string;
   timestamp: string;
   createId: () => string;
+
+  onProgress?: (progress: QspImportProgress) => void;
 }
