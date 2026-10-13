@@ -100,7 +100,7 @@ npm run dev
 Local URLs:
 
 - Web: http://127.0.0.1:5173
-- API: http://localhost:3300/api
+- API: http://localhost:3000/api
 
 Contextual Formbricks feedback is optional and disabled by default. Set both
 `VITE_FORMBRICKS_WORKSPACE_ID` and `VITE_FORMBRICKS_APP_URL` before starting the
@@ -108,11 +108,15 @@ web app to enable it. See the
 [Formbricks feedback runbook](docs/operations/formbricks-feedback.md) for the
 required action, hidden fields, deployment settings, and privacy boundary.
 
-The API expects PostgreSQL. By default it uses:
+The API expects PostgreSQL. When running with `npm run dev`, its default URL is:
 
 ```dotenv
 DATABASE_URL=postgres://paralleax:paralleax@localhost:5432/paralleax
 ```
+
+Docker Compose uses `COMPOSE_DATABASE_URL` instead, defaulting to the Compose
+database service at `db:5432`. Set it in `.env` only when the containers should
+connect to a different PostgreSQL server.
 
 The API also validates `PORT`, `POSTGRES_SSL`, `POSTGRES_SSL_CA`, `CORS_ORIGIN`,
 `REGISTRATION_MODE`, and `NODE_ENV` at startup. `DATABASE_URL`, `CORS_ORIGIN`,
