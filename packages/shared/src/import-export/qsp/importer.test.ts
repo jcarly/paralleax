@@ -123,7 +123,7 @@ end
     expect(parseQspLocationBundle(serializeQspLocationBundle(files))).toEqual(files);
   });
 
-  it('bounds detailed warnings without losing large-import occurrence counts', () => {
+  it('keeps every detailed warning in large import reports', () => {
     const statements = Array.from({ length: 2_050 }, (_, index) => `unknown_${index}`).join('\n');
     const result = importSource({
       name: 'large-report.qsps',
@@ -133,8 +133,11 @@ end
 
     expect(result.story).toBeDefined();
     expect(result.report.unsupportedStatementCount).toBe(2_050);
-    expect(result.report.issues).toHaveLength(2_000);
-    expect(result.report.omittedWarningCount).toBe(50);
+    expect(result.report.issues).toHaveLength(2_050);
+    expect(result.report.issues.at(-1)).toMatchObject({
+      severity: 'warning',
+      code: 'unsupported_statement',
+    });
   });
 
   it('maps text locations, static actions, text output, and navigation', () => {

@@ -240,6 +240,20 @@ describe('api client', () => {
       method: 'POST',
       body: JSON.stringify({ files }),
     });
+    await api.importChoiceScript(files, true);
+    expect(fetchMock).toHaveBeenLastCalledWith('/api/stories/imports/choicescript', {
+      headers: { 'Content-Type': 'application/json' },
+      method: 'POST',
+      body: JSON.stringify({ files, confirmWarnings: true }),
+    });
+
+    const qspFile = { name: 'game.qsps', format: 'text' as const, contentBase64: 'U291cmNl' };
+    await api.importQsp(qspFile, true);
+    expect(fetchMock).toHaveBeenLastCalledWith('/api/stories/imports/qsp', {
+      headers: { 'Content-Type': 'application/json' },
+      method: 'POST',
+      body: JSON.stringify({ file: qspFile, confirmWarnings: true }),
+    });
 
     await api.createGraphDecoration('story-1', {
       kind: 'frame',
@@ -330,6 +344,7 @@ describe('api client', () => {
     const content = new Blob(['QSP source']);
     const onProgress = vi.fn();
     const result = {
+      status: 'imported' as const,
       story: {
         id: 'story-qsp',
         title: 'Large game',
@@ -354,12 +369,13 @@ describe('api client', () => {
     const importPromise = api.importUnlimitedQsp(
       { name: 'large game.qsps', format: 'text', content },
       onProgress,
+      true,
     );
     const xhr = FakeXmlHttpRequest.latest;
 
     expect(xhr.open).toHaveBeenCalledWith(
       'POST',
-      '/api/stories/imports/qsp/admin?name=large%20game.qsps&format=text',
+      '/api/stories/imports/qsp/admin?name=large%20game.qsps&format=text&confirmWarnings=true',
     );
     expect(xhr.setRequestHeader).toHaveBeenCalledWith('Content-Type', 'application/octet-stream');
     expect(xhr.send).toHaveBeenCalledWith(content);
@@ -734,6 +750,7 @@ describe('api client', () => {
           code: 'STORY_REVISION_CONFLICT',
           message: 'The story changed elsewhere.',
           requestId: 'request-1',
+          details: { revision: 4 },
         },
         { ok: false, status: 409 },
       ),
@@ -747,6 +764,7 @@ describe('api client', () => {
       status: 409,
       code: 'STORY_REVISION_CONFLICT',
       requestId: 'request-1',
+      details: { revision: 4 },
     });
   });
 

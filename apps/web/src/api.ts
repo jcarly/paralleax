@@ -73,6 +73,7 @@ export class ApiError extends Error {
     readonly status: number,
     readonly code?: string,
     readonly requestId?: string,
+    readonly details?: unknown,
   ) {
     super(message);
     this.name = 'ApiError';
@@ -134,20 +135,23 @@ function apiError(path: string, status: number, body: string) {
   let message = body || `HTTP ${status}`;
   let code: string | undefined;
   let requestId: string | undefined;
+  let details: unknown;
   try {
     const error = JSON.parse(body) as {
       code?: string;
       message?: string | string[];
       requestId?: string;
+      details?: unknown;
     };
     if (Array.isArray(error.message)) message = error.message.join(', ');
     else if (error.message) message = error.message;
     code = error.code;
     requestId = error.requestId;
+    details = error.details;
   } catch {
     // Preserve plain-text and non-JSON error responses.
   }
-  return new ApiError(message, status, code, requestId);
+  return new ApiError(message, status, code, requestId, details);
 }
 
 function readerProgressPath(storyId: string, mode: ReaderAutosaveMode): string {
@@ -192,14 +196,11 @@ export interface ManagedUser {
 }
 type InteractionSaveResponse = InteractionMutationResult | Story;
 type TriggerSaveResponse = TriggerMutationResult | Story;
-export interface ChoiceScriptImportResponse {
-  story: Story;
-  report: ChoiceScriptImportReport;
-}
-export interface QspImportResponse {
-  story: Story;
-  report: QspImportReport;
-}
+export type StoryImportResponse<TReport> =
+  | { status: 'confirmation_required'; report: TReport }
+  | { status: 'imported'; story: Story; report: TReport };
+export type ChoiceScriptImportResponse = StoryImportResponse<ChoiceScriptImportReport>;
+export type QspImportResponse = StoryImportResponse<QspImportReport>;
 export const api = {
   me: () => request<AuthUser>('/auth/me'),
   register: (email: string, password: string, displayName: string) =>
@@ -354,22 +355,26 @@ export const api = {
     request<Story>('/stories', { method: 'POST', body: JSON.stringify({ title }) }),
   createDemoStories: () =>
     request<Story[]>('/stories/demo', { method: 'POST', body: JSON.stringify({}) }),
-  importChoiceScript: (files: ChoiceScriptSourceFile[]) =>
+  importChoiceScript: (files: ChoiceScriptSourceFile[], confirmWarnings = false) =>
     request<ChoiceScriptImportResponse>('/stories/imports/choicescript', {
       method: 'POST',
-      body: JSON.stringify({ files }),
+      body: JSON.stringify({ files, ...(confirmWarnings ? { confirmWarnings: true } : {}) }),
     }),
-  importQsp: (file: { name: string; format: QspSourceFormat; contentBase64: string }) =>
+  importQsp: (
+    file: { name: string; format: QspSourceFormat; contentBase64: string },
+    confirmWarnings = false,
+  ) =>
     request<QspImportResponse>('/stories/imports/qsp', {
       method: 'POST',
-      body: JSON.stringify({ file }),
+      body: JSON.stringify({ file, ...(confirmWarnings ? { confirmWarnings: true } : {}) }),
     }),
   importUnlimitedQsp: (
     file: { name: string; format: QspSourceFormat; content: Blob },
     onUploadProgress?: (percentage: number) => void,
+    confirmWarnings = false,
   ) =>
     uploadBinary<QspImportResponse>(
-      `/stories/imports/qsp/admin?name=${encodeURIComponent(file.name)}&format=${file.format}`,
+      `/stories/imports/qsp/admin?name=${encodeURIComponent(file.name)}&format=${file.format}${confirmWarnings ? '&confirmWarnings=true' : ''}`,
       file.content,
       onUploadProgress,
     ),

@@ -35,6 +35,7 @@ This folder records accepted architecture and product-shaping decisions.
 - [ADR-029 - Flat Persisted Groups](ADR-029-flat-persisted-groups.md)
 - [ADR-030 - Optional Privacy-Preserving Sentry Monitoring](ADR-030-sentry-observability.md)
 - [ADR-031 - Verified-Email Registration Without a Shared Access Code](ADR-031-verified-email-registration.md)
+- [ADR-032 - Complete Import Reports and Warning Confirmation](ADR-032-import-report-confirmation.md)
 
 ## Maintenance
 

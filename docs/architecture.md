@@ -117,6 +117,13 @@ runtime. Source state that shares Paralleax semantics must use generic typed sta
 items, effects, and Trigger conditions instead of parallel models. API
 orchestration supplies IDs and persists the complete mapped Story in one
 transaction; web code owns only local file selection and report presentation.
+An import with warnings returns its complete report and a
+`confirmation_required` status without persistence. Confirmation reuses the same
+endpoint and source payload with `confirmWarnings`, reruns deterministic analysis,
+and atomically persists the new result. No preview Story, source payload, or
+confirmation token is stored server-side. Blocking conversion failures attach the
+complete structured report to the explicit API error details. The browser can
+download any returned report as JSON.
 The standard QSP route retains its small JSON/base64 request boundary. An
 administrator-only binary route streams larger source files past the global JSON
 parser and reuses the same QSP mapping and persistence service. The production
@@ -124,8 +131,9 @@ Nginx proxy disables its otherwise global 128 KiB body limit and request bufferi
 only for that exact authenticated route, with extended transfer and processing
 timeouts. A hosting platform in front of Nginx may still impose its own transport
 limit. The browser uses upload progress events for this route, then presents
-server-side analysis and atomic persistence as an indeterminate phase rather than
-inventing a completion estimate.
+server-side analysis and any atomic persistence as an indeterminate phase rather
+than inventing a completion estimate. Warning confirmation repeats the upload and
+analysis because no source or preview is retained server-side.
 
 Runtime reconstruction lives in `packages/shared/src/reader/`.
 Its replay pipeline derives progress, location, typed stat values, and owned item
@@ -327,6 +335,11 @@ of exposing server text. A message may be shown directly only for an explicit,
 unknown application code (forward compatibility) or for a browser-side error;
 React still escapes that text. This keeps transport diagnostics available for
 support without coupling Nest services to an interface language.
+
+External-story conversion failures keep the same localized stable-code summary,
+but the import dialog additionally renders the complete structured report carried
+in explicit `STORY_IMPORT_FAILED` error details. Arbitrary generic server messages
+remain hidden.
 
 The global throttler defaults to 100 requests per minute. Story reads retain
 that limit, while story mutation routes use a stricter 60-per-minute policy.

@@ -8,14 +8,19 @@ import type {
   QspSourceFormat,
   Story,
 } from '@paralleax/shared';
-import { api } from '../../api';
-import { apiErrorMessage } from '../../apiErrorMessages';
+import { api, type StoryImportResponse } from '../../api';
+import { apiErrorMessage, isApiErrorLike } from '../../apiErrorMessages';
 import { handleModalDialogKeyDown } from '../../components/modalDialogKeyboard';
 import { loadStoryEditor } from '../../pages/storyRouteLoaders';
 
 type StoryImportFormat = 'choicescript' | 'qsp';
 type StoryImportReport = ChoiceScriptImportReport | QspImportReport;
+type StoryImportOutcome = StoryImportResponse<StoryImportReport>;
 type StoryImportProgress = { phase: 'uploading'; percentage: number } | { phase: 'processing' };
+type StoryImportRequestError = {
+  summary: string;
+  report?: StoryImportReport;
+};
 
 export function StoryImportDialog({
   isAdministrator,
@@ -29,18 +34,22 @@ export function StoryImportDialog({
   const { t } = useTranslation();
   const [format, setFormat] = useState<StoryImportFormat>('choicescript');
   const [files, setFiles] = useState<File[]>([]);
-  const [requestError, setRequestError] = useState('');
+  const [requestError, setRequestError] = useState<StoryImportRequestError>();
   const [pending, setPending] = useState(false);
   const [progress, setProgress] = useState<StoryImportProgress>();
-  const [outcome, setOutcome] = useState<{ story: Story; report: StoryImportReport }>();
+  const [outcome, setOutcome] = useState<StoryImportOutcome>();
   const sourceSize = files.reduce((total, file) => total + file.size, 0);
   const selectionError = importSelectionError(format, files, sourceSize, isAdministrator, t);
 
   async function runImport(event: FormEvent) {
     event.preventDefault();
     if (pending || files.length === 0 || selectionError) return;
+    await requestImport(false);
+  }
+
+  async function requestImport(confirmWarnings: boolean) {
     try {
-      setRequestError('');
+      setRequestError(undefined);
       setPending(true);
       setProgress(
         format === 'qsp' && isAdministrator
@@ -49,26 +58,34 @@ export function StoryImportDialog({
       );
       const result =
         format === 'qsp'
-          ? await importQspFiles(files, isAdministrator, (percentage) => {
-              setProgress(
-                percentage >= 100 ? { phase: 'processing' } : { phase: 'uploading', percentage },
-              );
-            })
+          ? await importQspFiles(
+              files,
+              isAdministrator,
+              (percentage) => {
+                setProgress(
+                  percentage >= 100 ? { phase: 'processing' } : { phase: 'uploading', percentage },
+                );
+              },
+              confirmWarnings,
+            )
           : await api.importChoiceScript(
               await Promise.all(
                 files.map(async (file) => ({ name: file.name, content: await file.text() })),
               ),
+              confirmWarnings,
             );
       setOutcome(result);
-      onImported(result.story);
+      if (result.status === 'imported') onImported(result.story);
     } catch (caught) {
-      setRequestError(
-        apiErrorMessage(
+      const report = storyImportFailureReport(caught);
+      setRequestError({
+        summary: apiErrorMessage(
           caught,
           t,
           t(format === 'qsp' ? 'library.import.qsp.failed' : 'library.import.failed'),
         ),
-      );
+        report,
+      });
     } finally {
       setPending(false);
       setProgress(undefined);
@@ -94,17 +111,22 @@ export function StoryImportDialog({
         <span className="product-eyebrow">{t('library.import.eyebrow')}</span>
         <h2 id="story-import-title">
           {t(
-            outcome
-              ? format === 'qsp'
-                ? 'library.import.qsp.resultTitle'
-                : 'library.import.resultTitle'
-              : format === 'qsp'
-                ? 'library.import.qsp.title'
-                : 'library.import.title',
+            outcome?.status === 'confirmation_required'
+              ? 'library.import.reviewTitle'
+              : outcome
+                ? format === 'qsp'
+                  ? 'library.import.qsp.resultTitle'
+                  : 'library.import.resultTitle'
+                : format === 'qsp'
+                  ? 'library.import.qsp.title'
+                  : 'library.import.title',
           )}
         </h2>
         {outcome ? (
-          <StoryImportResult report={outcome.report} />
+          <StoryImportReportView
+            mode={outcome.status === 'imported' ? 'imported' : 'review'}
+            report={outcome.report}
+          />
         ) : (
           <>
             <label className="product-field">
@@ -114,7 +136,7 @@ export function StoryImportDialog({
                 onChange={(event) => {
                   setFormat(event.currentTarget.value as StoryImportFormat);
                   setFiles([]);
-                  setRequestError('');
+                  setRequestError(undefined);
                 }}
               >
                 <option value="choicescript">{t('library.import.formats.choicescript')}</option>
@@ -145,7 +167,7 @@ export function StoryImportDialog({
                   type="file"
                   onChange={(event) => {
                     setFiles(Array.from(event.currentTarget.files ?? []));
-                    setRequestError('');
+                    setRequestError(undefined);
                   }}
                 />
               </label>
@@ -166,9 +188,7 @@ export function StoryImportDialog({
                 </div>
               ) : null}
               {selectionError || requestError ? (
-                <p className="library-error choicescript-import-error" role="alert">
-                  {selectionError || requestError}
-                </p>
+                <ImportRequestError selectionError={selectionError} error={requestError} />
               ) : null}
               <p className="choicescript-import-notice">
                 {t(format === 'qsp' ? 'library.import.qsp.notice' : 'library.import.notice')}
@@ -195,22 +215,59 @@ export function StoryImportDialog({
           </>
         )}
         {outcome ? (
-          <div className="dialog-actions">
-            <button className="product-secondary" type="button" onClick={onClose}>
-              {t('library.import.close')}
-            </button>
-            <Link
-              className="product-primary"
-              to={`/stories/${outcome.story.id}/edit`}
-              onMouseEnter={() => void loadStoryEditor()}
-              onFocus={() => void loadStoryEditor()}
-            >
-              {t('library.import.open')}
-            </Link>
-          </div>
+          <>
+            {requestError ? <ImportRequestError error={requestError} /> : null}
+            {pending && progress ? <ImportProgress progress={progress} /> : null}
+            <div className="dialog-actions">
+              <button
+                className="product-secondary"
+                type="button"
+                disabled={pending}
+                onClick={onClose}
+              >
+                {t('library.import.close')}
+              </button>
+              {outcome.status === 'confirmation_required' ? (
+                <button
+                  className="product-primary"
+                  type="button"
+                  disabled={pending}
+                  onClick={() => void requestImport(true)}
+                >
+                  {t(pending ? 'library.import.importing' : 'library.import.confirm')}
+                </button>
+              ) : (
+                <Link
+                  className="product-primary"
+                  to={`/stories/${outcome.story.id}/edit`}
+                  onMouseEnter={() => void loadStoryEditor()}
+                  onFocus={() => void loadStoryEditor()}
+                >
+                  {t('library.import.open')}
+                </Link>
+              )}
+            </div>
+          </>
         ) : null}
       </section>
     </div>
+  );
+}
+
+function ImportRequestError({
+  selectionError,
+  error,
+}: {
+  selectionError?: string;
+  error?: StoryImportRequestError;
+}) {
+  return (
+    <>
+      <div className="library-error choicescript-import-error" role="alert">
+        <p>{selectionError || error?.summary}</p>
+      </div>
+      {error?.report ? <StoryImportReportView mode="failure" report={error.report} /> : null}
+    </>
   );
 }
 
@@ -237,15 +294,29 @@ function ImportProgress({ progress }: { progress: StoryImportProgress }) {
   );
 }
 
-function StoryImportResult({ report }: { report: StoryImportReport }) {
+function StoryImportReportView({
+  report,
+  mode,
+}: {
+  report: StoryImportReport;
+  mode: 'failure' | 'review' | 'imported';
+}) {
   const { t } = useTranslation();
   const warnings = report.issues.filter(({ severity }) => severity === 'warning');
-  const warningCount =
-    warnings.length + (report.format === 'qsp' ? (report.omittedWarningCount ?? 0) : 0);
+  const errors = report.issues.filter(({ severity }) => severity === 'error');
   const sourceCount = report.format === 'qsp' ? report.locationCount : report.sceneCount;
   return (
     <div className="choicescript-import-result">
-      <p>{t('library.import.resultDescription')}</p>
+      <div className="story-import-report-heading">
+        <p>{t(`library.import.${mode}Description`)}</p>
+        <button
+          className="product-secondary"
+          type="button"
+          onClick={() => downloadImportReport(report)}
+        >
+          {t('library.import.downloadReport')}
+        </button>
+      </div>
       <dl>
         <div>
           <dt>
@@ -259,14 +330,18 @@ function StoryImportResult({ report }: { report: StoryImportReport }) {
         </div>
         <div>
           <dt>{t('library.import.warnings')}</dt>
-          <dd>{warningCount}</dd>
+          <dd>{warnings.length}</dd>
+        </div>
+        <div>
+          <dt>{t('library.import.errors')}</dt>
+          <dd>{errors.length}</dd>
         </div>
       </dl>
-      {warnings.length > 0 ? (
-        <div className="choicescript-import-warnings">
-          <b>{t('library.import.reviewWarnings')}</b>
+      {report.issues.length > 0 ? (
+        <div className={`choicescript-import-warnings${errors.length ? ' has-errors' : ''}`}>
+          <b>{t(errors.length ? 'library.import.errorReport' : 'library.import.reviewWarnings')}</b>
           <ul>
-            {warnings.slice(0, 8).map((issue, index) => (
+            {report.issues.map((issue, index) => (
               <li key={`${issue.fileName ?? ''}:${issue.line ?? ''}:${issue.code}:${index}`}>
                 <span>
                   {[
@@ -277,13 +352,13 @@ function StoryImportResult({ report }: { report: StoryImportReport }) {
                     .filter(Boolean)
                     .join(' · ')}
                 </span>
-                {issue.message}
+                <span className={`story-import-issue-severity severity-${issue.severity}`}>
+                  {t(`library.import.severity.${issue.severity}`)}
+                </span>
+                <p>{issue.message}</p>
               </li>
             ))}
           </ul>
-          {warningCount > 8 ? (
-            <small>{t('library.import.moreWarnings', { count: warningCount - 8 })}</small>
-          ) : null}
         </div>
       ) : (
         <p className="choicescript-import-clean">{t('library.import.noWarnings')}</p>
@@ -347,15 +422,19 @@ async function importQspFiles(
   files: File[],
   isAdministrator: boolean,
   onUploadProgress: (percentage: number) => void,
+  confirmWarnings: boolean,
 ) {
   const source = await prepareQspSource(files);
   return isAdministrator
-    ? api.importUnlimitedQsp(source, onUploadProgress)
-    : api.importQsp({
-        name: source.name,
-        format: source.format,
-        contentBase64: await readBlobAsBase64(source.content),
-      });
+    ? api.importUnlimitedQsp(source, onUploadProgress, confirmWarnings)
+    : api.importQsp(
+        {
+          name: source.name,
+          format: source.format,
+          contentBase64: await readBlobAsBase64(source.content),
+        },
+        confirmWarnings,
+      );
 }
 
 async function prepareQspSource(files: File[]): Promise<{
@@ -399,4 +478,34 @@ async function readBlobAsBase64(file: Blob) {
   let binary = '';
   for (const byte of bytes) binary += String.fromCharCode(byte);
   return btoa(binary);
+}
+
+function storyImportFailureReport(caught: unknown): StoryImportReport | undefined {
+  if (!isApiErrorLike(caught) || caught.code !== 'STORY_IMPORT_FAILED') return undefined;
+  if (!isRecord(caught.details) || !isRecord(caught.details.report)) return undefined;
+  const report = caught.details.report;
+  if (
+    (report.format !== 'choicescript' && report.format !== 'qsp') ||
+    !Array.isArray(report.issues)
+  ) {
+    return undefined;
+  }
+  return report as unknown as StoryImportReport;
+}
+
+function downloadImportReport(report: StoryImportReport) {
+  const url = URL.createObjectURL(
+    new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' }),
+  );
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = `${report.format}-import-report.json`;
+  document.body.append(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
 }

@@ -73,7 +73,6 @@ export interface QspImportReport {
   convertedStatementCount: number;
   approximatedStatementCount: number;
   unsupportedStatementCount: number;
-  omittedWarningCount?: number;
   coverage: QspFeatureCoverage[];
   issues: QspImportIssue[];
 }

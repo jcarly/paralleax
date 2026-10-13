@@ -48,7 +48,11 @@ or rewritten. The API and shared narrative engine remain language-independent.
   test.
 - Operational API failures use stable error codes. The web localization boundary
   maps those codes to interface copy and does not render generic server messages;
-  the API remains language-independent.
+  the API remains language-independent. Failed external-story conversions are a
+  narrow exception: the localized failure summary may be followed by the complete
+  structured source report returned for `STORY_IMPORT_FAILED`, because those
+  diagnostics are authored-source compatibility results rather than an internal
+  failure.
 - Adding languages increases the web bundle and requires translation review.
 - Local storage means the preference is browser-specific rather than synced
   across a user's devices. Account-level language may be added later without

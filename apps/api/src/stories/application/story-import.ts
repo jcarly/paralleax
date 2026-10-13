@@ -19,7 +19,7 @@ export const QSP_IMPORT_SOURCE_LIMIT = 80 * 1024;
 export class StoryImportService {
   constructor(private readonly repository: StoriesRepository) {}
 
-  async createChoiceScript(input: ImportChoiceScriptDto, userId: string) {
+  async createChoiceScript(input: ImportChoiceScriptDto, userId: string, confirmWarnings = false) {
     const sourceSize = input.files.reduce(
       (total, file) => total + Buffer.byteLength(file.content, 'utf8'),
       0,
@@ -32,22 +32,39 @@ export class StoryImportService {
         ),
       );
     }
-    return this.persist(importChoiceScript(input.files, importOptions()), 'ChoiceScript', userId);
+    return this.completeImport(
+      importChoiceScript(input.files, importOptions()),
+      'ChoiceScript',
+      userId,
+      confirmWarnings,
+    );
   }
 
-  async createQsp(input: ImportQspDto, userId: string) {
+  async createQsp(input: ImportQspDto, userId: string, confirmWarnings = false) {
     const bytes = Buffer.from(input.file.contentBase64, 'base64');
-    return this.createQspFromBytes(input.file, bytes, userId, QSP_IMPORT_SOURCE_LIMIT);
+    return this.createQspFromBytes(
+      input.file,
+      bytes,
+      userId,
+      confirmWarnings,
+      QSP_IMPORT_SOURCE_LIMIT,
+    );
   }
 
-  createUnlimitedQsp(input: QspSourceMetadataDto, bytes: Buffer, userId: string) {
-    return this.createQspFromBytes(input, bytes, userId);
+  createUnlimitedQsp(
+    input: QspSourceMetadataDto,
+    bytes: Buffer,
+    userId: string,
+    confirmWarnings = false,
+  ) {
+    return this.createQspFromBytes(input, bytes, userId, confirmWarnings);
   }
 
   private createQspFromBytes(
     input: QspSourceMetadataDto,
     bytes: Buffer,
     userId: string,
+    confirmWarnings: boolean,
     sourceLimit?: number,
   ) {
     const expectedFormat = qspFormatForFileName(input.name);
@@ -65,37 +82,31 @@ export class StoryImportService {
         apiErrorResponse('QSP_IMPORT_TOO_LARGE', 'The QSP source exceeds the 80 KiB import limit'),
       );
     }
-    return this.persist(importQsp(source, importOptions()), 'QSP', userId);
+    return this.completeImport(importQsp(source, importOptions()), 'QSP', userId, confirmWarnings);
   }
 
-  private async persist(
+  private async completeImport(
     result: ChoiceScriptImportResult | QspImportResult,
     sourceLabel: string,
     userId: string,
+    confirmWarnings: boolean,
   ) {
     if (!result.story) {
-      const errors = result.report.issues
-        .filter(({ severity }) => severity === 'error')
-        .slice(0, 3)
-        .map((issue) =>
-          [
-            issue.fileName,
-            'locationName' in issue ? issue.locationName : '',
-            issue.line ? `line ${issue.line}` : '',
-            issue.message,
-          ]
-            .filter(Boolean)
-            .join(': '),
-        );
       throw new BadRequestException(
-        apiErrorResponse(
-          'STORY_IMPORT_FAILED',
-          errors.join('; ') || `${sourceLabel} import failed`,
-        ),
+        apiErrorResponse('STORY_IMPORT_FAILED', `${sourceLabel} import failed`, {
+          report: result.report,
+        }),
       );
     }
+    if (!confirmWarnings && result.report.issues.some(({ severity }) => severity === 'warning')) {
+      return { status: 'confirmation_required' as const, report: result.report };
+    }
     await this.repository.save(result.story, userId);
-    return { story: structuredClone(result.story), report: result.report };
+    return {
+      status: 'imported' as const,
+      story: structuredClone(result.story),
+      report: result.report,
+    };
   }
 }
 

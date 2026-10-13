@@ -3,6 +3,7 @@ import type { TFunction } from 'i18next';
 type ApiErrorLike = Error & {
   status: number;
   code?: string;
+  details?: unknown;
 };
 
 const localizedErrorKeys: Record<string, string> = {

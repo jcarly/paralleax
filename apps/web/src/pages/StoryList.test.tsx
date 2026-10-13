@@ -70,7 +70,10 @@ const stories: StorySummary[] = [
 ];
 
 describe('StoryList', () => {
-  afterEach(() => cleanup());
+  afterEach(() => {
+    cleanup();
+    vi.restoreAllMocks();
+  });
 
   beforeEach(() => {
     vi.resetAllMocks();
@@ -242,7 +245,7 @@ describe('StoryList', () => {
     expect(api.createDemoStories).toHaveBeenCalledOnce();
   });
 
-  it('imports ChoiceScript scene files and displays the compatibility report', async () => {
+  it('imports ChoiceScript scene files with a clean compatibility report', async () => {
     const user = userEvent.setup();
     const importedStory: Story = {
       id: 'story-imported',
@@ -261,6 +264,7 @@ describe('StoryList', () => {
     };
     vi.mocked(api.listStories).mockResolvedValue(storyPage([]));
     vi.mocked(api.importChoiceScript).mockResolvedValue({
+      status: 'imported',
       story: importedStory,
       report: {
         format: 'choicescript',
@@ -268,17 +272,9 @@ describe('StoryList', () => {
         sceneCount: 2,
         interactionCount: 1,
         convertedCommandCount: 2,
-        approximatedCommandCount: 1,
-        ignoredCommandCount: 1,
-        issues: [
-          {
-            severity: 'warning',
-            code: 'unsupported_set',
-            message: 'The *set command was ignored.',
-            fileName: 'startup.txt',
-            line: 3,
-          },
-        ],
+        approximatedCommandCount: 0,
+        ignoredCommandCount: 0,
+        issues: [],
       },
     });
 
@@ -301,11 +297,16 @@ describe('StoryList', () => {
     expect(
       await screen.findByRole('heading', { name: 'ChoiceScript story imported' }),
     ).toBeInTheDocument();
-    expect(api.importChoiceScript).toHaveBeenCalledWith([
-      { name: 'startup.txt', content: '*title Imported story\n*set score 1\nStart.' },
-      { name: 'ending.txt', content: 'The end.\n*ending' },
-    ]);
-    expect(screen.getByText('The *set command was ignored.')).toBeInTheDocument();
+    expect(api.importChoiceScript).toHaveBeenCalledWith(
+      [
+        { name: 'startup.txt', content: '*title Imported story\n*set score 1\nStart.' },
+        { name: 'ending.txt', content: 'The end.\n*ending' },
+      ],
+      false,
+    );
+    expect(
+      screen.getByText('No compatibility warning was reported for this import.'),
+    ).toBeVisible();
     expect(screen.getByRole('link', { name: 'Open in editor' })).toHaveAttribute(
       'href',
       '/stories/story-imported/edit',
@@ -331,24 +332,33 @@ describe('StoryList', () => {
       ],
     };
     vi.mocked(api.listStories).mockResolvedValue(storyPage([]));
-    vi.mocked(api.importQsp).mockResolvedValue({
-      story: importedStory,
-      report: {
-        format: 'qsp',
-        sourceFileCount: 1,
-        locationCount: 1,
-        actionCount: 0,
-        interactionCount: 1,
-        convertedStatementCount: 1,
-        approximatedStatementCount: 0,
-        unsupportedStatementCount: 0,
-        coverage: [
-          { feature: 'locations', support: 'supported', occurrences: 1 },
-          { feature: 'variables', support: 'partial', occurrences: 0 },
-        ],
-        issues: [],
-      },
-    });
+    const report = {
+      format: 'qsp' as const,
+      sourceFileCount: 1,
+      locationCount: 1,
+      actionCount: 0,
+      interactionCount: 1,
+      convertedStatementCount: 1,
+      approximatedStatementCount: 1,
+      unsupportedStatementCount: 0,
+      coverage: [
+        { feature: 'locations' as const, support: 'supported' as const, occurrences: 1 },
+        { feature: 'variables' as const, support: 'partial' as const, occurrences: 0 },
+      ],
+      issues: [
+        {
+          severity: 'warning' as const,
+          code: 'automatic_navigation_requires_choice',
+          message: 'Automatic navigation was converted into an explicit choice.',
+          fileName: 'sample.qsps',
+          locationName: 'Start',
+          line: 2,
+        },
+      ],
+    };
+    vi.mocked(api.importQsp)
+      .mockResolvedValueOnce({ status: 'confirmation_required', report })
+      .mockResolvedValueOnce({ status: 'imported', story: importedStory, report });
 
     render(
       <MemoryRouter>
@@ -365,15 +375,108 @@ describe('StoryList', () => {
     );
     await user.click(screen.getByRole('button', { name: 'Import story' }));
 
-    expect(await screen.findByRole('heading', { name: 'QSP story imported' })).toBeInTheDocument();
-    expect(api.importQsp).toHaveBeenCalledWith({
-      name: 'sample.qsps',
-      format: 'text',
-      contentBase64: btoa(source),
-    });
+    expect(
+      await screen.findByRole('heading', { name: 'Review the import report' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('Automatic navigation was converted into an explicit choice.'),
+    ).toBeInTheDocument();
     expect(screen.getByText('QSP compatibility coverage')).toBeInTheDocument();
     expect(screen.getByText('Variables, arrays, and expressions')).toBeInTheDocument();
     expect(screen.getByText('Partial')).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'QSP story' })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Confirm import' }));
+
+    expect(await screen.findByRole('heading', { name: 'QSP story imported' })).toBeInTheDocument();
+    expect(api.importQsp).toHaveBeenNthCalledWith(
+      1,
+      { name: 'sample.qsps', format: 'text', contentBase64: btoa(source) },
+      false,
+    );
+    expect(api.importQsp).toHaveBeenNthCalledWith(
+      2,
+      { name: 'sample.qsps', format: 'text', contentBase64: btoa(source) },
+      true,
+    );
+    expect(screen.getByRole('heading', { name: 'QSP story' })).toBeInTheDocument();
+  });
+
+  it('displays the QSP conversion error report returned by the API', async () => {
+    const user = userEvent.setup();
+    const createObjectUrl = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:qsp-report');
+    const revokeObjectUrl = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
+    let downloadedFileName = '';
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (
+      this: HTMLAnchorElement,
+    ) {
+      downloadedFileName = this.download;
+    });
+    vi.mocked(api.listStories).mockResolvedValue(storyPage([]));
+    vi.mocked(api.importQsp).mockRejectedValue(
+      Object.assign(new Error('QSP import failed'), {
+        status: 400,
+        code: 'STORY_IMPORT_FAILED',
+        details: {
+          report: {
+            format: 'qsp',
+            sourceFileCount: 1,
+            locationCount: 0,
+            actionCount: 0,
+            interactionCount: 0,
+            convertedStatementCount: 0,
+            approximatedStatementCount: 0,
+            unsupportedStatementCount: 0,
+            coverage: [],
+            issues: [
+              {
+                severity: 'error',
+                code: 'malformed_statement',
+                message: 'The QSP statement is malformed.',
+                fileName: 'broken.qsps',
+                locationName: 'Start',
+                line: 12,
+              },
+              {
+                severity: 'error',
+                code: 'missing_location',
+                message: 'The location cannot be resolved.',
+                fileName: 'broken.qsps',
+                locationName: 'Missing target',
+                line: 28,
+              },
+            ],
+          },
+        },
+      }),
+    );
+
+    render(
+      <MemoryRouter>
+        <StoryList user={standardUser} />
+      </MemoryRouter>,
+    );
+    await screen.findByRole('heading', { name: 'No stories found' });
+    await user.click(screen.getByRole('button', { name: 'Import a story' }));
+    await user.selectOptions(screen.getByLabelText('Source format'), 'qsp');
+    await user.upload(
+      screen.getByLabelText('QSP game or location files'),
+      new File(["# Start\n*pl 'unterminated\n---"], 'broken.qsps', { type: 'text/plain' }),
+    );
+    await user.click(screen.getByRole('button', { name: 'Import story' }));
+
+    const alert = await screen.findByRole('alert');
+    expect(
+      within(alert).getByText('The source could not be converted into a story.'),
+    ).toBeVisible();
+    expect(screen.getByText('Error report')).toBeVisible();
+    expect(screen.getByText('The QSP statement is malformed.')).toBeVisible();
+    expect(screen.getByText('The location cannot be resolved.')).toBeVisible();
+    await user.click(screen.getByRole('button', { name: 'Download report' }));
+    expect(createObjectUrl).toHaveBeenCalledWith(expect.any(Blob));
+    expect(downloadedFileName).toBe('qsp-import-report.json');
+    expect(revokeObjectUrl).toHaveBeenCalledWith('blob:qsp-report');
+    expect(screen.queryByRole('button', { name: 'Confirm import' })).not.toBeInTheDocument();
   });
 
   it('bundles multiple qsrc location files for the QSP importer', async () => {
@@ -387,6 +490,7 @@ describe('StoryList', () => {
     };
     vi.mocked(api.listStories).mockResolvedValue(storyPage([]));
     vi.mocked(api.importQsp).mockResolvedValue({
+      status: 'imported',
       story: importedStory,
       report: {
         format: 'qsp',
@@ -446,6 +550,7 @@ describe('StoryList', () => {
       ],
     };
     const importResult: QspImportResponse = {
+      status: 'imported',
       story: importedStory,
       report: {
         format: 'qsp' as const,
@@ -496,6 +601,7 @@ describe('StoryList', () => {
         content: source,
       },
       expect.any(Function),
+      false,
     );
     act(() => reportUploadProgress?.(42));
     expect(screen.getByText('Uploading the file… 42%')).toBeInTheDocument();

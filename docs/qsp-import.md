@@ -24,18 +24,23 @@ an authenticated binary upload with no Paralleax application-level size limit;
 the bundled production Nginx proxy disables its normal 128 KiB boundary only for
 this exact route and forwards the body without request buffering. Infrastructure
 in front of that container may still enforce its own request limit. A successful
-import creates one private Story atomically and displays both source-specific
-warnings and a stable coverage matrix. An invalid game, duplicate location name,
-or unresolved static `GOTO` target rejects the import before anything is persisted.
+analysis displays every source-specific issue and a stable coverage matrix. When
+the report contains warnings but no blocking error, no Story is persisted until
+the author explicitly confirms the import. Confirmation resubmits and reanalyses
+the same source before creating one private Story atomically. A clean report is
+persisted immediately. An invalid game, duplicate location name, or unresolved
+static `GOTO` target rejects the import before anything is persisted and still
+returns the complete report. Reports from every outcome can be downloaded as JSON.
 An interpolated or otherwise calculated navigation target is not treated as a
 missing static location: it is skipped, retained as a localized compatibility
 warning, and the rest of the game remains importable for inspection.
 
 For administrator uploads, the dialog displays the measured percentage of bytes
-sent. Once the upload reaches 100%, it switches to an indeterminate analysis and
-Story-creation indicator until the atomic server operation completes. Paralleax
-does not present that second phase as a percentage because the current importer
-does not expose parser or persistence work units.
+sent. Once the upload reaches 100%, it switches to an indeterminate analysis
+indicator until the server operation completes. Confirming a warning report
+uploads and analyses the source again before Story creation. Paralleax does not
+present server-side analysis or persistence as a percentage because the current
+importer does not expose those work units.
 
 Compiled and text formats are decoded with the official MIT-licensed
 `@qsp/converters` package. Text-source command analysis remains Paralleax code so
@@ -49,6 +54,7 @@ QSP game file or .qsrc location collection
   -> locations, static actions, and statement analysis
   -> compatibility issues and coverage matrix
   -> Paralleax interactions and triggers
+  -> author confirmation when warnings exist
   -> API validation and atomic persistence
 ```
 
@@ -56,6 +62,9 @@ The deterministic adapter lives in `packages/shared/src/import-export/qsp/`.
 It depends on no React, NestJS, browser, PostgreSQL, or QSP runtime. The API
 decodes the request, supplies IDs and timestamps, and persists the complete
 Story. The web library reuses the existing import modal and report presentation.
+Warning confirmation does not create temporary server state: the existing import
+endpoint accepts `confirmWarnings`, reanalyses the submitted source, and persists
+only that confirmed result.
 
 No QSP identity map or foreign runtime state is persisted. Incremental re-import,
 QSP re-export, and lossless round-tripping are not part of this adapter.
@@ -103,10 +112,10 @@ interaction, and reported as an approximation.
 ## Coverage report
 
 The returned `QspImportReport` contains source counts, converted/approximated/
-unsupported statement counts, localized issues, and a stable feature matrix.
-To keep very large source collections bounded, it retains at most 2,000 detailed
-warnings and reports the remaining number in `omittedWarningCount`; blocking
-errors are never omitted. Statement and feature occurrence counters remain exact.
+unsupported statement counts, source-positioned issues, and a stable feature
+matrix. Every detected warning and blocking error is retained: Paralleax applies
+no issue-count limit to the report. Statement and feature occurrence counters
+remain exact.
 The matrix reports three states:
 
 - `supported`: locations and entry discovery;
@@ -155,7 +164,7 @@ have equivalent import behavior:
   of `.qsrc` location files is supported, but project build configuration and
   dependencies are not resolved;
 - QSP save/load compatibility and migration into deterministic Paralleax journeys;
-- a dry-run/downloadable full report and background uploads for very large games;
+- background uploads for very large games;
 - licensed compatibility corpora that exercise every supported command family.
 
 Simple global variables, literal-index array cells, and action conditions now

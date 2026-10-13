@@ -381,6 +381,7 @@ Night falls.
       title: 'Imported mystery',
       access: { visibility: 'private', editPolicy: 'owner', commentPolicy: 'editors' },
     });
+    expect(response.body.status).toBe('imported');
     expect(response.body.story.interactions).toHaveLength(4);
     expect(response.body.report).toMatchObject({
       format: 'choicescript',
@@ -431,21 +432,36 @@ elseif score[2] >= 2:
 else:
   act 'Stop': goto 'Ending'
 end
+unknown_command
 --- Start ---
 # Ending
 *pl 'The end.'
 --- Ending ---`;
-    const response = await request(httpServer)
+    const importRequest = {
+      file: {
+        name: 'corridor.qsps',
+        format: 'text',
+        contentBase64: Buffer.from(source, 'utf8').toString('base64'),
+      },
+    };
+    const preview = await request(httpServer)
       .post('/api/stories/imports/qsp')
-      .send({
-        file: {
-          name: 'corridor.qsps',
-          format: 'text',
-          contentBase64: Buffer.from(source, 'utf8').toString('base64'),
-        },
-      })
+      .send(importRequest)
       .expect(201);
 
+    expect(preview.body.status).toBe('confirmation_required');
+    expect(preview.body.story).toBeUndefined();
+    expect(preview.body.report.issues).toEqual(
+      expect.arrayContaining([expect.objectContaining({ severity: 'warning' })]),
+    );
+    expect((await request(httpServer).get('/api/stories').expect(200)).body.items).toEqual([]);
+
+    const response = await request(httpServer)
+      .post('/api/stories/imports/qsp')
+      .send({ ...importRequest, confirmWarnings: true })
+      .expect(201);
+
+    expect(response.body.status).toBe('imported');
     expect(response.body.story).toMatchObject({
       title: 'corridor',
       access: { visibility: 'private', editPolicy: 'owner', commentPolicy: 'editors' },
@@ -493,7 +509,7 @@ end
   });
 
   it('allows administrators to stream QSP files beyond the standard import limit', async () => {
-    const source = `# Start\n*pl 'Large import.'\n--- Start ---\n${' '.repeat(81 * 1024)}`;
+    const source = `# Start\n*pl 'Large import.'\nunknown_command\n--- Start ---\n${' '.repeat(81 * 1024)}`;
     const path = '/api/stories/imports/qsp/admin?name=large.qsps&format=text';
 
     await request(httpServer)
@@ -503,13 +519,24 @@ end
       .send(Buffer.from(source, 'utf8'))
       .expect(403);
 
-    const response = await request(httpServer)
+    const preview = await request(httpServer)
       .post(path)
       .set('Cookie', 'paralleax_session=admin')
       .set('Content-Type', 'application/octet-stream')
       .send(Buffer.from(source, 'utf8'))
       .expect(201);
 
+    expect(preview.body.status).toBe('confirmation_required');
+    expect(preview.body.story).toBeUndefined();
+
+    const response = await request(httpServer)
+      .post(`${path}&confirmWarnings=true`)
+      .set('Cookie', 'paralleax_session=admin')
+      .set('Content-Type', 'application/octet-stream')
+      .send(Buffer.from(source, 'utf8'))
+      .expect(201);
+
+    expect(response.body.status).toBe('imported');
     expect(response.body.story).toMatchObject({ title: 'large' });
     expect(response.body.report).toMatchObject({
       format: 'qsp',
@@ -535,6 +562,7 @@ end
           format: 'locations',
           contentBase64: Buffer.from(bundle, 'utf8').toString('base64'),
         },
+        confirmWarnings: true,
       })
       .expect(201);
 
@@ -572,7 +600,8 @@ end
         },
       })
       .expect(400);
-    await request(httpServer)
+
+    const unresolved = await request(httpServer)
       .post('/api/stories/imports/qsp')
       .send({
         file: {
@@ -582,6 +611,14 @@ end
         },
       })
       .expect(400);
+
+    expect(unresolved.body.code).toBe('STORY_IMPORT_FAILED');
+    expect(unresolved.body.details.report).toMatchObject({ format: 'qsp' });
+    expect(unresolved.body.details.report.issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ severity: 'error', code: 'missing_location_target' }),
+      ]),
+    );
 
     const listResponse = await request(httpServer).get('/api/stories').expect(200);
     expect(listResponse.body.items).toEqual([]);

@@ -13,6 +13,7 @@ import { getRequestId, type RequestWithId } from './request-context';
 type HttpExceptionBody = {
   code?: string;
   message?: string | string[];
+  details?: unknown;
 };
 type StatusError = Error & { status?: unknown; statusCode?: unknown };
 
@@ -69,6 +70,12 @@ export class ApiExceptionFilter implements ExceptionFilter {
       });
     }
 
-    response.status(status).json({ status, code, message, requestId });
+    response.status(status).json({
+      status,
+      code,
+      message,
+      requestId,
+      ...(body.details === undefined ? {} : { details: body.details }),
+    });
   }
 }

@@ -33,7 +33,7 @@ import {
   CreateStoryDto,
   ImportChoiceScriptDto,
   ImportQspDto,
-  QspSourceMetadataDto,
+  QspImportQueryDto,
   CreateTriggerDto,
   SaveReaderProgressDto,
   StoryListQueryDto,
@@ -94,17 +94,17 @@ export class StoriesController {
 
   @Post('imports/choicescript')
   importChoiceScript(@Body() input: ImportChoiceScriptDto, @CurrentUser() user: RequestUser) {
-    return this.storyImports.createChoiceScript(input, user.id);
+    return this.storyImports.createChoiceScript(input, user.id, input.confirmWarnings);
   }
 
   @Post('imports/qsp')
   importQsp(@Body() input: ImportQspDto, @CurrentUser() user: RequestUser) {
-    return this.storyImports.createQsp(input, user.id);
+    return this.storyImports.createQsp(input, user.id, input.confirmWarnings);
   }
 
   @Post('imports/qsp/admin')
   async importUnlimitedQsp(
-    @Query() input: QspSourceMetadataDto,
+    @Query() input: QspImportQueryDto,
     @Headers('content-type') contentType: string | undefined,
     @Req() request: Request,
     @CurrentUser() user: RequestUser,
@@ -117,6 +117,7 @@ export class StoriesController {
       input,
       await readBinaryRequestBody(request),
       user.id,
+      input.confirmWarnings,
     );
   }
 

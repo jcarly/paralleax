@@ -1,4 +1,4 @@
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   MAX_GRAPH_DECORATION_TEXT_LENGTH,
   MAX_GRAPH_TEXT_SIZE,
@@ -147,6 +147,10 @@ export class ImportChoiceScriptDto {
   @ValidateNested({ each: true })
   @Type(() => ChoiceScriptSourceFileDto)
   files!: ChoiceScriptSourceFileDto[];
+
+  @IsOptional()
+  @IsBoolean()
+  confirmWarnings = false;
 }
 export class QspSourceMetadataDto {
   @IsString()
@@ -157,6 +161,13 @@ export class QspSourceMetadataDto {
 
   @IsIn(['binary', 'text', 'locations'])
   format!: 'binary' | 'text' | 'locations';
+}
+
+export class QspImportQueryDto extends QspSourceMetadataDto {
+  @IsOptional()
+  @Transform(({ value }) => (value === 'true' ? true : value === 'false' ? false : value))
+  @IsBoolean()
+  confirmWarnings = false;
 }
 
 export class QspSourceFileDto extends QspSourceMetadataDto {
@@ -171,6 +182,10 @@ export class ImportQspDto {
   @ValidateNested()
   @Type(() => QspSourceFileDto)
   file!: QspSourceFileDto;
+
+  @IsOptional()
+  @IsBoolean()
+  confirmWarnings = false;
 }
 export class UpdateStoryDto {
   @ValidateIf((_, value) => value !== undefined)

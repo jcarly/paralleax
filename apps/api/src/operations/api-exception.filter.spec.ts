@@ -70,6 +70,28 @@ describe('ApiExceptionFilter', () => {
     });
   });
 
+  it('preserves explicit structured error details', () => {
+    const response = host();
+    const report = { format: 'qsp', issues: [{ severity: 'error', code: 'invalid_qsp_file' }] };
+
+    new ApiExceptionFilter().catch(
+      new BadRequestException({
+        code: 'STORY_IMPORT_FAILED',
+        message: 'QSP import failed',
+        details: { report },
+      }),
+      response.host,
+    );
+
+    expect(response.json).toHaveBeenCalledWith({
+      status: HttpStatus.BAD_REQUEST,
+      code: 'STORY_IMPORT_FAILED',
+      message: 'QSP import failed',
+      requestId: 'request-1',
+      details: { report },
+    });
+  });
+
   it('normalizes parser payload limits without exposing parser details', () => {
     const response = host();
     const error = Object.assign(new Error('entity.too.large: raw parser detail'), {
