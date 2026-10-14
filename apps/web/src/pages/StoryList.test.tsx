@@ -299,6 +299,7 @@ describe('StoryList', () => {
     vi.mocked(api.listStories).mockResolvedValue(storyPage([]));
     vi.mocked(api.importChoiceScript).mockResolvedValue({
       status: 'imported',
+      importId: '00000000-0000-4000-8000-000000000002',
       story: importedStory,
       report: {
         format: 'choicescript',
@@ -401,8 +402,17 @@ describe('StoryList', () => {
       ],
     };
     vi.mocked(api.importQsp)
-      .mockResolvedValueOnce({ status: 'confirmation_required', report })
-      .mockResolvedValueOnce({ status: 'imported', story: importedStory, report });
+      .mockResolvedValueOnce({
+        status: 'confirmation_required',
+        importId: '00000000-0000-4000-8000-000000000003',
+        report,
+      })
+      .mockResolvedValueOnce({
+        status: 'imported',
+        importId: '00000000-0000-4000-8000-000000000004',
+        story: importedStory,
+        report,
+      });
 
     render(
       <MemoryRouter>
@@ -506,6 +516,7 @@ describe('StoryList', () => {
     await act(async () =>
       finishImport({
         status: 'confirmation_required',
+        importId: '00000000-0000-4000-8000-000000000005',
         report: {
           format: 'qsp',
           warningCount: 0,
@@ -618,6 +629,7 @@ describe('StoryList', () => {
     vi.mocked(api.listStories).mockResolvedValue(storyPage([]));
     vi.mocked(api.importQsp).mockResolvedValue({
       status: 'imported',
+      importId: '00000000-0000-4000-8000-000000000006',
       story: importedStory,
       report: {
         format: 'qsp',
@@ -680,6 +692,7 @@ describe('StoryList', () => {
     };
     const importResult: QspImportResponse = {
       status: 'imported',
+      importId: '00000000-0000-4000-8000-000000000007',
       story: importedStory,
       report: {
         format: 'qsp' as const,

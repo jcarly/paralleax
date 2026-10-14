@@ -358,6 +358,7 @@ describe('api client', () => {
     const onProgress = vi.fn();
     const result = {
       status: 'imported' as const,
+      importId: '00000000-0000-4000-8000-000000000001',
       story: {
         id: 'story-qsp',
         title: 'Large game',

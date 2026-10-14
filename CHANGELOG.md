@@ -9,12 +9,17 @@
   mapping, including source counts and filenames. Importers can cancel an active
   analysis from the dialog, which aborts and terminates its worker without
   persisting an import job or source data.
-- Kept QSP import reports available when the analysis worker fails, transferred
-  binary source buffers to that worker without an additional full copy, and
-  terminate active workers during graceful API shutdown.
-- Added complete downloadable reports for QSP and ChoiceScript imports. Blocking
-  failures expose every source diagnostic, while non-blocking warnings pause before
-  persistence and require explicit confirmation; clean imports remain immediate.
+- Connected ChoiceScript and QSP conversions to the common report capture. Every
+  diagnostic is written in order to a private JSONL file with bounded memory;
+  responses retain complete counts/statistics without an issue preview. QSP
+  writes from its worker using a file path rather than transferring callbacks.
+- Added owner-checked, UUID-validated `GET /api/imports/:importId/report` streaming
+  with an NDJSON attachment response. Import execution and report-write failures
+  now surface explicitly instead of being replaced with fabricated source errors.
+- Kept warning confirmation as a second conversion for now; reusable retained
+  results and persistent jobs remain follow-up work. Production report storage must
+  use a durable volume or an object-storage adapter, not an ephemeral container
+  filesystem.
 - Removed the private-alpha registration access code from the API, web form,
   deployment configuration, and acceptance flow. Registration now uses only
   explicit `open`/`closed` operation and requires email verification before

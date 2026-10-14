@@ -1,4 +1,5 @@
 import { Injectable, type MessageEvent } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
 import { Observable, Subject } from 'rxjs';
 import type { ImportProgress } from '@paralleax/shared';
 
@@ -96,7 +97,5 @@ export class ImportJobService {
 }
 
 function cryptoRandomId(): string {
-  return typeof crypto !== 'undefined' && 'randomUUID' in crypto
-    ? crypto.randomUUID()
-    : `import-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  return randomUUID();
 }

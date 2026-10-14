@@ -215,8 +215,8 @@ export interface ManagedUser {
 type InteractionSaveResponse = InteractionMutationResult | Story;
 type TriggerSaveResponse = TriggerMutationResult | Story;
 export type StoryImportResponse<TReport> =
-  | { status: 'confirmation_required'; report: TReport }
-  | { status: 'imported'; story: Story; report: TReport };
+  | { status: 'confirmation_required'; importId: string; report: TReport }
+  | { status: 'imported'; importId: string; story: Story; report: TReport };
 export type ChoiceScriptImportResponse = StoryImportResponse<ChoiceScriptImportReport>;
 export type QspImportResponse = StoryImportResponse<QspImportReport>;
 export const api = {

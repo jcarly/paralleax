@@ -1,8 +1,9 @@
 import { randomUUID } from 'node:crypto';
 import { parentPort, workerData } from 'node:worker_threads';
 
-import { createQspImportFailureResult, importQsp } from '@paralleax/shared';
+import { importQsp } from '@paralleax/shared';
 
+import { ImportReportWriter } from '../../imports/import-report-writer.js';
 import type { QspWorkerInput, QspWorkerMessage } from './qsp-import.worker-protocol.js';
 
 const port = parentPort;
@@ -11,29 +12,37 @@ if (!port) {
   throw new Error('QSP worker must run in a worker thread.');
 }
 
-try {
-  const input = workerData as QspWorkerInput;
+const input = workerData as QspWorkerInput;
+const writer = new ImportReportWriter({ reportPath: input.reportPath });
 
-  const result = importQsp(input.source, {
-    storyId: input.storyId,
-    timestamp: input.timestamp,
-    createId: randomUUID,
-
-    onProgress: (progress) => {
-      port.postMessage({
-        type: 'progress',
-        progress,
-      } satisfies QspWorkerMessage);
-    },
-  });
-
-  port.postMessage({
-    type: 'result',
-    result,
-  } satisfies QspWorkerMessage);
-} catch {
-  port.postMessage({
-    type: 'result',
-    result: createQspImportFailureResult((workerData as QspWorkerInput).source),
-  } satisfies QspWorkerMessage);
-}
+void (async () => {
+  try {
+    await writer.start();
+    let result;
+    try {
+      result = importQsp(input.source, {
+        storyId: input.storyId,
+        timestamp: input.timestamp,
+        createId: randomUUID,
+        maxPreviewIssues: 0,
+        onIssue: (issue) => writer.writeIssue(issue),
+        onProgress: (progress) => {
+          port.postMessage({ type: 'progress', progress } satisfies QspWorkerMessage);
+        },
+      });
+    } finally {
+      await writer.close();
+    }
+    port.postMessage({ type: 'result', result } satisfies QspWorkerMessage);
+  } catch (caught) {
+    try {
+      await writer.close();
+    } catch (closeError) {
+      caught = new AggregateError([caught, closeError], 'QSP import report finalization failed.');
+    }
+    port.postMessage({
+      type: 'error',
+      message: caught instanceof Error ? caught.message : String(caught),
+    } satisfies QspWorkerMessage);
+  }
+})();

@@ -4,7 +4,6 @@ import { resolve } from 'node:path';
 import { Worker } from 'node:worker_threads';
 
 import {
-  createQspImportFailureResult,
   type QspImportProgress,
   type QspImportResult,
   type QspImportSource,
@@ -22,6 +21,7 @@ export class QspImportWorkerService implements OnModuleDestroy {
     source: QspImportSource,
     onProgress?: (progress: QspImportProgress) => void,
     abortSignal?: AbortSignal,
+    reportPath?: string,
   ): Promise<QspImportResult> {
     if (this.isShuttingDown) {
       throw new ServiceUnavailableException(
@@ -31,9 +31,8 @@ export class QspImportWorkerService implements OnModuleDestroy {
     if (this.activeImports >= 1) {
       throw new ServiceUnavailableException('Another QSP import is already running.');
     }
-    if (abortSignal?.aborted) {
-      return createQspImportFailureResult(source);
-    }
+    if (!reportPath) throw new Error('A report path is required for QSP import execution.');
+    if (abortSignal?.aborted) throw new Error('QSP import was cancelled before execution.');
 
     this.activeImports += 1;
 
@@ -42,13 +41,9 @@ export class QspImportWorkerService implements OnModuleDestroy {
         source,
         storyId: randomUUID(),
         timestamp: new Date().toISOString(),
+        reportPath,
       };
-
-      try {
-        return await this.execute(input, onProgress, abortSignal);
-      } catch {
-        return createQspImportFailureResult(source);
-      }
+      return await this.execute(input, onProgress, abortSignal);
     } finally {
       this.activeImports -= 1;
     }
@@ -113,6 +108,11 @@ export class QspImportWorkerService implements OnModuleDestroy {
           settled = true;
           removeAbortListener();
           resolvePromise(message.result);
+          return;
+        }
+
+        if (message.type === 'error') {
+          fail(new Error(message.message));
         }
       });
 

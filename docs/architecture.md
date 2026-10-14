@@ -117,13 +117,19 @@ runtime. Source state that shares Paralleax semantics must use generic typed sta
 items, effects, and Trigger conditions instead of parallel models. API
 orchestration supplies IDs and persists the complete mapped Story in one
 transaction; web code owns only local file selection and report presentation.
-An import with warnings returns its complete report and a
-`confirmation_required` status without persistence. Confirmation reuses the same
-endpoint and source payload with `confirmWarnings`, reruns deterministic analysis,
-and atomically persists the new result. No preview Story, source payload, or
-confirmation token is stored server-side. Blocking conversion failures attach the
-complete structured report to the explicit API error details. The browser can
-download any returned report as JSON.
+The API creates an owner-scoped import id and writes every diagnostic as ordered
+JSONL through the shared `onIssue` capture with an empty in-memory preview. QSP
+receives only the report path in worker data and writes the file in its worker;
+ChoiceScript uses the same capture contract in the API process. API responses
+retain format statistics and complete warning/error counts without embedding the
+diagnostic sequence. `GET /api/imports/:importId/report` validates the UUID and
+owner before streaming `application/x-ndjson` as an attachment. Infrastructure
+failures are surfaced as explicit import errors rather than fabricated source
+diagnostics. Warning confirmation still repeats deterministic analysis and
+atomically persists the new result; server-side result retention is a later
+workflow change. The local storage implementation uses private file permissions,
+but production requires durable storage and job metadata that survive container
+replacement.
 The standard QSP route retains its small JSON/base64 request boundary. An
 administrator-only binary route streams larger source files past the global JSON
 parser and reuses the same QSP mapping and persistence service. The production
