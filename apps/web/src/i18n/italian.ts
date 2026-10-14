@@ -296,6 +296,13 @@ export const italianTranslation = {
       progress: {
         uploading: 'Caricamento del file… {{percentage}}%',
         processing: 'File ricevuto. Analizzare e creare la storia...',
+        analyzing: '{{phase}} — {{completed}} / {{total}}',
+        currentFile: 'File corrente: {{file}}',
+        phases: {
+          decoding: 'Decodifica dei file QSP',
+          parsing: 'Analisi delle posizioni QSP',
+          mapping: 'Conversione in una storia Paralleax',
+        },
       },
       failed: 'Impossibile importare questo progetto ChoiceScript',
       reviewTitle: 'Esamina il rapporto di importazione',
