@@ -9,6 +9,8 @@ export interface ImportIssue {
   fileName?: string;
   locationName?: string;
   line?: number;
+  /** Whether `line` is a physical text-file line or a decoded location-code offset. */
+  lineKind?: 'text' | 'location-code';
 }
 
 export interface ImportDiagnostics {

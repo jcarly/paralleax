@@ -106,11 +106,9 @@ export function mapQspLocationsToStory(
         from: locationKey,
         targetName: target.locationName,
         ...(target.argument !== undefined ? { argument: target.argument } : {}),
-        source: location.source,
+        source: target.source,
       });
-    }
-    if (locationAnalysis.navigationTargets.length > 0) {
-      reportAutomaticNavigationApproximation(report, location.source);
+      reportAutomaticNavigationApproximation(report, target.source);
     }
     actions.forEach(({ action, analysis: actionAnalysis }, actionIndex) => {
       const actionKey = `action:${locationIndex}:${actionIndex}`;
@@ -138,11 +136,9 @@ export function mapQspLocationsToStory(
           from: actionKey,
           targetName: target.locationName,
           ...(target.argument !== undefined ? { argument: target.argument } : {}),
-          source: action.source,
+          source: target.source,
         });
-      }
-      if (actionAnalysis.navigationTargets.length > 0) {
-        reportAutomaticNavigationApproximation(report, action.source);
+        reportAutomaticNavigationApproximation(report, target.source);
       }
     });
   });

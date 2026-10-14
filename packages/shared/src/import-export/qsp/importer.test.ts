@@ -310,6 +310,93 @@ gt 'End', $variant
     );
   });
 
+  it('analyzes only executable QSP outside comments and multiline dynamic strings', () => {
+    const result = importSource({
+      name: 'lexical-boundaries.qsps',
+      format: 'text',
+      content: `# Start
+!! if condition: act 'Commented': gt 'comment_line'
+! comment & gt 'comment_separator'
+!{
+act 'Commented block':
+  gt 'comment_block'
+end
+!}
+dynamic "
+  gs 'shop_utils', 'cleanup'
+  gt '<<$shop_display[''return_loc'']>>'
+"
+*pl 'Text & with ''quotes''' & *pl 'Second line'
+act 'Continue': gt 'End' ! & gt 'comment_tail'
+--- Start ---
+# End
+--- End ---`,
+    });
+
+    expect(result.story?.interactions.map(({ title }) => title)).toEqual([
+      'Start',
+      'Continue',
+      'End',
+    ]);
+    expect(result.story?.interactions[0].body).toBe(
+      '<p>Text &amp; with &#39;quotes&#39;</p><p>Second line</p>',
+    );
+    expect(result.story?.interactions[2].triggers[0].inputInteractionIds).toEqual([
+      result.story?.interactions[1].id,
+    ]);
+    expect(result.report.issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: 'unsupported_dynamic_code', line: 9 }),
+      ]),
+    );
+    expect(result.report.issues).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: 'missing_location_target' }),
+        expect.objectContaining({ code: 'dynamic_navigation_target' }),
+        expect.objectContaining({ code: 'unsupported_subroutine' }),
+        expect.objectContaining({ code: 'unsupported_dynamic_action' }),
+      ]),
+    );
+  });
+
+  it('keeps real missing static navigation source positions while distinguishing decoded code offsets', () => {
+    const textResult = importSource({
+      name: 'missing-position.qsps',
+      format: 'text',
+      content: `# Start
+'Before'
+! comment
+gt 'Missing'
+--- Start ---`,
+    });
+
+    expect(textResult.story).toBeUndefined();
+    expect(textResult.report.issues).toContainEqual(
+      expect.objectContaining({
+        severity: 'error',
+        code: 'missing_location_target',
+        line: 4,
+        lineKind: 'text',
+      }),
+    );
+
+    const binaryResult = importSource({
+      name: 'missing-position.qsp',
+      format: 'binary',
+      content: writeQsp([{ name: 'Start', description: [], code: ["gt 'Missing'"], actions: [] }]),
+    });
+
+    expect(binaryResult.story).toBeUndefined();
+    expect(binaryResult.report.issues).toContainEqual(
+      expect.objectContaining({
+        severity: 'error',
+        code: 'missing_location_target',
+        line: 1,
+        lineKind: 'location-code',
+      }),
+    );
+  });
+
   it('reports unsupported runtime features and keeps the surrounding graph inspectable', () => {
     const result = importSource({
       name: 'runtime.qsps',

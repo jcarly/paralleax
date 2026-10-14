@@ -127,6 +127,14 @@ as QSP location names are. Targets containing QSP runtime interpolation such as
 `'room_<<$state>>'` cannot be resolved statically, so no speculative graph edge
 is created for them and the report identifies the source line.
 
+Before statement analysis, the adapter runs one lexical pass across each location
+or action. It preserves physical line slots while excluding line comments,
+`!{ ... !}` block comments, quoted strings (including strings spanning lines),
+and command separators inside quoted text. This prevents examples embedded in
+comments or `DYNAMIC` source from becoming navigation or actions. Diagnostic
+`lineKind` is `text` for decoded text source and `location-code` for compiled
+QSP, where the converter only exposes a position relative to the location code.
+
 QSP executes `GOTO` immediately. Paralleax currently has no automatic transition,
 so the mapped destination appears as an additional reader choice. The report
 always marks this semantic difference where it occurs. A QSP location with no

@@ -11,6 +11,7 @@ import {
   parseQspConditionExpression,
 } from './expressions.js';
 import { addQspImportIssue, addQspSourceIssue, touchQspFeature } from './report.js';
+import { lexQspLines } from './lexer.js';
 import type { QspImportOptions, QspImportReport, QspImportSource } from './types.js';
 
 const PROGRESS_REPORT_INTERVAL = 25;
@@ -31,7 +32,7 @@ export function parseQspSource(
     file.locations.map((location, locationIndex) => ({
       location,
       fileName: file.name,
-      codeLine: file.codeLines[locationIndex] ?? 1,
+      codeLine: file.codeLines.at(locationIndex),
     })),
   );
   if (decodedLocations.length === 0) {
@@ -76,11 +77,21 @@ export function parseQspSource(
         return [];
       }
       names.add(normalizedName);
-      const sourcePosition = { fileName, locationName: name, line: codeLine };
-      const variants = extractLocationArgumentVariants(location.code, sourcePosition, report);
+      const sourcePosition = {
+        fileName,
+        locationName: name,
+        line: codeLine ?? 1,
+        lineKind: codeLine === undefined ? ('location-code' as const) : ('text' as const),
+      };
+      const variants = extractLocationArgumentVariants(
+        lexQspLines(location.code),
+        sourcePosition,
+        report,
+      );
       const extracted = extractActBlocks(variants.baseCode, sourcePosition, report);
       const compiledActions = location.actions.map((action) => ({
         ...action,
+        code: lexQspLines(action.code),
         source: sourcePosition,
       }));
       const sourceActions = extracted.blocks.map(({ action, sourceLine, conditionGroups }) => ({
@@ -236,14 +247,24 @@ function putLikelyEntryFirst<T extends { location: QspSourceLocation }>(location
 
 function extractLocationArgumentVariants(
   lines: string[],
-  source: { fileName: string; locationName: string; line: number },
+  source: {
+    fileName: string;
+    locationName: string;
+    line: number;
+    lineKind?: 'text' | 'location-code';
+  },
   report: QspImportReport,
 ) {
   const baseCode = [...lines];
   const variants: Array<{
     argument: string;
     code: string[];
-    source: { fileName: string; locationName: string; line: number };
+    source: {
+      fileName: string;
+      locationName: string;
+      line: number;
+      lineKind?: 'text' | 'location-code';
+    };
   }> = [];
   const variantsByArgument = new Map<string, (typeof variants)[number]>();
   let outerBlockDepth = 0;
@@ -306,7 +327,12 @@ function parseLocationArgumentSelector(expression: string): string | undefined {
 
 function extractActBlocks(
   lines: string[],
-  source: { fileName: string; locationName: string; line: number },
+  source: {
+    fileName: string;
+    locationName: string;
+    line: number;
+    lineKind?: 'text' | 'location-code';
+  },
   report: QspImportReport,
 ): { blocks: ParsedActBlock[]; remainingCode: string[] } {
   const blocks: ParsedActBlock[] = [];
@@ -378,7 +404,12 @@ function extractActBlocks(
 function tryParseConditionalActions(
   lines: string[],
   startIndex: number,
-  source: { fileName: string; locationName: string; line: number },
+  source: {
+    fileName: string;
+    locationName: string;
+    line: number;
+    lineKind?: 'text' | 'location-code';
+  },
 ):
   | {
       blocks: ParsedActBlock[];
@@ -425,7 +456,12 @@ function parseConditionalBranches(
   lines: string[],
   startIndex: number,
   endIndex: number,
-  source: { fileName: string; locationName: string; line: number },
+  source: {
+    fileName: string;
+    locationName: string;
+    line: number;
+    lineKind?: 'text' | 'location-code';
+  },
   openingExpression: string,
 ) {
   const openingGroups = parseQspConditionExpression(openingExpression, {
@@ -476,7 +512,12 @@ function readActionOnlyBranch(
   lines: string[],
   startIndex: number,
   endIndex: number,
-  source: { fileName: string; locationName: string; line: number },
+  source: {
+    fileName: string;
+    locationName: string;
+    line: number;
+    lineKind?: 'text' | 'location-code';
+  },
 ) {
   const blocks: ParsedActBlock[] = [];
   for (let index = startIndex; index < endIndex; index += 1) {
@@ -496,7 +537,12 @@ function readActBlock(
   lines: string[],
   startIndex: number,
   limit: number,
-  source: { fileName: string; locationName: string; line: number },
+  source: {
+    fileName: string;
+    locationName: string;
+    line: number;
+    lineKind?: 'text' | 'location-code';
+  },
   header: { name?: string; image?: string; inlineCode?: string },
 ): { block: ParsedActBlock; nextIndex: number } | undefined {
   if (!header.name) return undefined;

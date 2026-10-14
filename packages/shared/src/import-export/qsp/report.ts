@@ -71,5 +71,6 @@ export function addQspSourceIssue(
     fileName: source.fileName,
     locationName: source.locationName,
     line: source.line,
+    ...(source.lineKind ? { lineKind: source.lineKind } : {}),
   });
 }

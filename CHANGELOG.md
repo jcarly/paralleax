@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Fixed QSP lexical analysis so line/block comments, multiline quoted dynamic
+  source, and `&` inside text no longer create false navigation or actions.
+  QSP diagnostics now distinguish physical text lines from decoded location-code
+  offsets.
+
 - Closed import-progress SSE subscriptions when their job completes, preventing
   completed imports from retaining idle event streams.
 - Standardized ChoiceScript and QSP diagnostics on shared warning/error counts
