@@ -603,6 +603,125 @@ end
     });
   });
 
+  it('flattens nested action-only condition branches with sequential exclusivity', () => {
+    const result = importSource({
+      name: 'nested-actions.qsps',
+      format: 'text',
+      content: `# Start
+if score >= 10:
+  if $rank = 'captain':
+    act 'Elite': gt 'End'
+  elseif score ! 20:
+    act 'Qualified': gt 'End'
+  else:
+    act 'Top score': gt 'End'
+  end
+elseif score >= 5:
+  act 'Regular': gt 'End'
+else:
+  act 'New': gt 'End'
+end
+--- Start ---
+# End
+--- End ---`,
+    });
+
+    const story = result.story!;
+    const score = story.stats!.find((stat) =>
+      story.statDefinitions!.some(
+        (definition) => definition.id === stat.statDefinitionId && definition.name === 'Score',
+      ),
+    )!;
+    const rank = story.stats!.find((stat) =>
+      story.statDefinitions!.some(
+        (definition) => definition.id === stat.statDefinitionId && definition.name === 'Rank',
+      ),
+    )!;
+    const conditionsFor = (title: string) =>
+      getTriggerConditionGroups(
+        story.interactions.find((interaction) => interaction.title === title)!.triggers[0],
+      );
+
+    expect(story.interactions.map(({ title }) => title)).toEqual([
+      'Start',
+      'Elite',
+      'Qualified',
+      'Top score',
+      'Regular',
+      'New',
+      'End',
+    ]);
+    expect(conditionsFor('Elite')).toEqual([
+      {
+        id: expect.any(String),
+        conditions: [
+          { statId: score.id, operator: 'gte', value: 10 },
+          { statId: rank.id, operator: 'eq', value: 'captain' },
+        ],
+      },
+    ]);
+    expect(conditionsFor('Qualified')).toEqual([
+      {
+        id: expect.any(String),
+        conditions: [
+          { statId: score.id, operator: 'gte', value: 10 },
+          { statId: rank.id, operator: 'neq', value: 'captain' },
+          { statId: score.id, operator: 'neq', value: 20 },
+        ],
+      },
+    ]);
+    expect(conditionsFor('Top score')).toEqual([
+      {
+        id: expect.any(String),
+        conditions: [
+          { statId: score.id, operator: 'gte', value: 10 },
+          { statId: rank.id, operator: 'neq', value: 'captain' },
+          { statId: score.id, operator: 'eq', value: 20 },
+        ],
+      },
+    ]);
+    expect(conditionsFor('Regular')).toEqual([
+      {
+        id: expect.any(String),
+        conditions: [
+          { statId: score.id, operator: 'lt', value: 10 },
+          { statId: score.id, operator: 'gte', value: 5 },
+        ],
+      },
+    ]);
+    expect(conditionsFor('New')).toEqual([
+      {
+        id: expect.any(String),
+        conditions: [
+          { statId: score.id, operator: 'lt', value: 10 },
+          { statId: score.id, operator: 'lt', value: 5 },
+        ],
+      },
+    ]);
+  });
+
+  it('keeps a nested conditional branch with a direct effect in the gap report', () => {
+    const result = importSource({
+      name: 'nested-effect.qsps',
+      format: 'text',
+      content: `# Start
+if score > 1:
+  if score > 2:
+    score += 1
+    act 'Unsafe': gt 'End'
+  end
+end
+--- Start ---
+# End
+--- End ---`,
+    });
+
+    expect(result.story?.interactions.map(({ title }) => title)).not.toContain('Unsafe');
+    expect(result.report.issues).toEqual(
+      expect.arrayContaining([expect.objectContaining({ code: 'unsupported_variable_statement' })]),
+    );
+  });
+
   it('keeps calculated assignments and conditional side effects in the gap report', () => {
     const result = importSource({
       name: 'calculated.qsps',

@@ -6,6 +6,8 @@
   conditions, including parentheses, unary signs, arithmetic precedence, and
   integer division. Runtime-variable expressions remain explicit compatibility
   gaps rather than becoming speculative Story state.
+- Nested action-only QSP condition branches now lower to exclusive Trigger
+  condition groups, while branches with direct effects remain explicit gaps.
 
 - Fixed QSP lexical analysis so line/block comments, multiline quoted dynamic
   source, and `&` inside text no longer create false navigation or actions.

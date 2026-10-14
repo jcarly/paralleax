@@ -410,6 +410,7 @@ function tryParseConditionalActions(
     line: number;
     lineKind?: 'text' | 'location-code';
   },
+  limit = lines.length,
 ):
   | {
       blocks: ParsedActBlock[];
@@ -420,13 +421,14 @@ function tryParseConditionalActions(
   | undefined {
   const opening = /^\s*if\b\s*(.+):\s*$/i.exec(lines[startIndex]);
   if (!opening) return undefined;
-  const endIndex = findMultilineBlockEnd(lines, startIndex, lines.length);
+  const endIndex = findMultilineBlockEnd(lines, startIndex, limit);
   if (endIndex === undefined) return undefined;
   const branches = parseConditionalBranches(lines, startIndex, endIndex, source, opening[1]);
   if (!branches) return undefined;
   const blocks: ParsedActBlock[] = [];
   let excludedGroups: NonNullable<ParsedActBlock['conditionGroups']> = [[]];
   let conditionCount = 0;
+  let controlStatementCount = branches.length;
   for (const branch of branches) {
     let effectiveGroups = excludedGroups;
     if (branch.conditionGroups) {
@@ -439,16 +441,24 @@ function tryParseConditionalActions(
       if (!nextExcluded) return undefined;
       excludedGroups = nextExcluded;
     }
-    const branchBlocks = readActionOnlyBranch(lines, branch.startIndex, branch.endIndex, source);
-    if (!branchBlocks) return undefined;
-    blocks.push(...branchBlocks.map((block) => ({ ...block, conditionGroups: effectiveGroups })));
+    const branchResult = readActionOnlyBranch(
+      lines,
+      branch.startIndex,
+      branch.endIndex,
+      source,
+      effectiveGroups,
+    );
+    if (!branchResult) return undefined;
+    blocks.push(...branchResult.blocks);
+    conditionCount += branchResult.conditionCount;
+    controlStatementCount += branchResult.controlStatementCount;
   }
   if (blocks.length === 0) return undefined;
   return {
     blocks,
     endIndex,
     conditionCount,
-    controlStatementCount: branches.length,
+    controlStatementCount,
   };
 }
 
@@ -518,19 +528,40 @@ function readActionOnlyBranch(
     line: number;
     lineKind?: 'text' | 'location-code';
   },
-) {
+  parentGroups: NonNullable<ParsedActBlock['conditionGroups']>,
+):
+  | {
+      blocks: ParsedActBlock[];
+      conditionCount: number;
+      controlStatementCount: number;
+    }
+  | undefined {
   const blocks: ParsedActBlock[] = [];
+  let conditionCount = 0;
+  let controlStatementCount = 0;
   for (let index = startIndex; index < endIndex; index += 1) {
     const trimmed = lines[index].trim();
     if (!trimmed || trimmed.startsWith('!')) continue;
+    const conditional = tryParseConditionalActions(lines, index, source, endIndex);
+    if (conditional) {
+      for (const block of conditional.blocks) {
+        const conditionGroups = andQspConditionGroups(parentGroups, block.conditionGroups ?? [[]]);
+        if (!conditionGroups) return undefined;
+        blocks.push({ ...block, conditionGroups });
+      }
+      conditionCount += conditional.conditionCount;
+      controlStatementCount += conditional.controlStatementCount;
+      index = conditional.endIndex;
+      continue;
+    }
     const header = parseActHeader(lines[index]);
     if (!header?.name) return undefined;
     const parsed = readActBlock(lines, index, endIndex, source, header);
     if (!parsed) return undefined;
-    blocks.push(parsed.block);
+    blocks.push({ ...parsed.block, conditionGroups: parentGroups });
     index = parsed.nextIndex;
   }
-  return blocks;
+  return { blocks, conditionCount, controlStatementCount };
 }
 
 function readActBlock(

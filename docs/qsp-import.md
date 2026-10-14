@@ -111,9 +111,9 @@ The first vertical slice converts:
   separate typed stats. Cell `[0]` aliases the unindexed variable as it does in QSP;
 - simple variable truthiness and comparisons with literal strings or constant
   numeric expressions in action-only `IF` / `ELSEIF` / `ELSE` blocks to Trigger
-  conditions, including parenthesized `NO`, `AND`, and `OR` expressions. Earlier
-  branches are negated for every later branch so QSP's sequential exclusivity is
-  preserved;
+  conditions, including nested blocks and parenthesized `NO`, `AND`, and `OR`
+  expressions. Earlier branches are negated for every later branch so QSP's
+  sequential exclusivity is preserved;
 - static `GOTO` and `GT` destinations to graph reachability;
 - top-level literal `IF $ARGS[0] = 'value'` blocks to separate interactions, and
   the first literal `GOTO`/`GT` argument to the corresponding interaction. An
@@ -183,7 +183,7 @@ have equivalent import behavior:
 - general `IF` / `ELSEIF` / `ELSE` execution, apart from top-level literal
   `ARGS[0]` location variants, including conditional prose, assignments or
   navigation, dynamically declared actions, and branches with side effects.
-  Only action-only branches with reducible stat expressions are currently
+  Only nested action-only branches with reducible stat expressions are currently
   lowered to Trigger condition groups;
 - `GOSUB`, `GS`, `FUNC`, arguments, local scope, return values, recursion, and
   call-stack behavior;

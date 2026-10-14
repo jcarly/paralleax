@@ -118,6 +118,9 @@ The character-stat vertical keeps these regressions covered:
   preserve QSP precedence and integer division, reject variable-dependent
   expressions, and produce reader-observable stat effects and action
   availability.
+- Shared QSP import: nested action-only `IF` / `ELSEIF` / `ELSE` branches map
+  every action to an exclusive Trigger condition group; branches with direct
+  effects remain reported as unsupported.
 - Scheduled real-stack browser acceptance: a generated QSP source imports 300
   linked locations into 599 interactions; the browser loads the complete staged
   projection, finds the final one through search, edits and moves it, creates a
