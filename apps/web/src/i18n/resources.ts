@@ -288,6 +288,13 @@ export const resources = {
           progress: {
             uploading: 'Uploading the file… {{percentage}}%',
             processing: 'File received. Analysing and creating the story…',
+            analyzing: '{{phase}} — {{completed}} / {{total}}',
+            currentFile: 'Current file: {{file}}',
+            phases: {
+              decoding: 'Decoding QSP files',
+              parsing: 'Parsing QSP locations',
+              mapping: 'Mapping to a Paralleax story',
+            },
           },
           failed: 'Could not import this ChoiceScript project',
           reviewTitle: 'Review the import report',
@@ -1445,6 +1452,13 @@ export const resources = {
           progress: {
             uploading: 'Envoi du fichier… {{percentage}} %',
             processing: 'Fichier reçu. Analyse et création de l’histoire…',
+            analyzing: '{{phase}} — {{completed}} / {{total}}',
+            currentFile: 'Fichier en cours : {{file}}',
+            phases: {
+              decoding: 'Décodage des fichiers QSP',
+              parsing: 'Analyse des lieux QSP',
+              mapping: 'Conversion en histoire Paralleax',
+            },
           },
           failed: 'Impossible d’importer ce projet ChoiceScript',
           reviewTitle: 'Vérifier le rapport d’import',

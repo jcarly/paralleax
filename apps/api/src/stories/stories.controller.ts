@@ -8,14 +8,16 @@ import {
   Headers,
   HttpCode,
   Param,
+  ParseUUIDPipe,
   Patch,
   Post,
   Query,
   Req,
+  Res,
   Sse,
   UnsupportedMediaTypeException,
 } from '@nestjs/common';
-import type { Request } from 'express';
+import type { Request, Response } from 'express';
 import {
   CreateInteractionDto,
   CreateGroupDto,
@@ -55,6 +57,7 @@ import {
 } from './dto/stories.dto';
 import { StoriesService } from './stories.service';
 import { StoryImportService } from './application/story-import';
+import { QspImportProgressService } from './application/qsp-import-progress.service';
 import { CurrentUser, OptionalAuth, Public, type RequestUser } from '../auth/auth.decorators';
 import { Throttle } from '@nestjs/throttler';
 import { readBinaryRequestBody } from '../operations/request-body';
@@ -68,6 +71,7 @@ export class StoriesController {
   constructor(
     private readonly stories: StoriesService,
     private readonly storyImports: StoryImportService,
+    private readonly qspProgress: QspImportProgressService,
   ) {}
 
   @Get()
@@ -98,8 +102,26 @@ export class StoriesController {
   }
 
   @Post('imports/qsp')
-  importQsp(@Body() input: ImportQspDto, @CurrentUser() user: RequestUser) {
-    return this.storyImports.createQsp(input, user.id, input.confirmWarnings);
+  importQsp(
+    @Body() input: ImportQspDto,
+    @CurrentUser() user: RequestUser,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    return this.storyImports.createQsp(
+      input,
+      user.id,
+      input.confirmWarnings,
+      responseAbortSignal(response),
+    );
+  }
+
+  @Sse('imports/qsp/progress/:progressId')
+  @Header('X-Accel-Buffering', 'no')
+  streamQspImportProgress(
+    @Param('progressId', new ParseUUIDPipe({ version: '4' })) progressId: string,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.qspProgress.stream(user.id, progressId);
   }
 
   @Post('imports/qsp/admin')
@@ -108,6 +130,7 @@ export class StoriesController {
     @Headers('content-type') contentType: string | undefined,
     @Req() request: Request,
     @CurrentUser() user: RequestUser,
+    @Res({ passthrough: true }) response: Response,
   ) {
     if (user.role !== 'admin') throw new ForbiddenException('Administrator access required');
     if (!contentType?.toLocaleLowerCase().startsWith('application/octet-stream')) {
@@ -118,6 +141,8 @@ export class StoriesController {
       await readBinaryRequestBody(request),
       user.id,
       input.confirmWarnings,
+      input.progressId,
+      responseAbortSignal(response),
     );
   }
 
@@ -614,4 +639,12 @@ export class StoriesController {
   ) {
     return this.stories.deleteTrigger(storyId, interactionId, triggerId, user.id);
   }
+}
+
+function responseAbortSignal(response: Response): AbortSignal {
+  const controller = new AbortController();
+  response.once('close', () => {
+    if (!response.writableEnded) controller.abort();
+  });
+  return controller.signal;
 }

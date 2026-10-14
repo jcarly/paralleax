@@ -35,20 +35,7 @@ export function importQsp(source: QspImportSource, options: QspImportOptions): Q
     return { report };
   }
 
-  // Phase 3 : mapping
-  options.onProgress?.({
-    phase: 'mapping',
-    completed: 0,
-    total: locations.length,
-  });
-
   const story = mapQspLocationsToStory(locations, source.name, report, options);
-
-  options.onProgress?.({
-    phase: 'mapping',
-    completed: locations.length,
-    total: locations.length,
-  });
 
   return hasQspImportErrors(report) ? { report } : { story, report };
 }

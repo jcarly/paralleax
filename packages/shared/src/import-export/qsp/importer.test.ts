@@ -605,8 +605,19 @@ end
         total: 1,
         currentFile: 'progress.qsps',
       },
-      { phase: 'mapping', completed: 0, total: 1 },
-      { phase: 'mapping', completed: 1, total: 1 },
+      { phase: 'mapping', completed: 0, total: 3 },
+      {
+        phase: 'mapping',
+        completed: 1,
+        total: 3,
+        currentFile: 'progress.qsps',
+      },
+      {
+        phase: 'mapping',
+        completed: 3,
+        total: 3,
+        currentFile: 'progress.qsps',
+      },
     ]);
   });
 
@@ -642,5 +653,10 @@ end
 
     expect(decoding.map(({ completed }) => completed)).toEqual([1, 25, 50, 52]);
     expect(parsing.map(({ completed }) => completed)).toEqual([1, 25, 50, 52]);
+
+    const mapping = events.filter((event) => event.phase === 'mapping' && event.completed > 0);
+
+    expect(mapping.map(({ completed }) => completed)).toEqual([1, 25, 50, 75, 100, 125, 150, 156]);
+    expect(mapping.every(({ total }) => total === 156)).toBe(true);
   });
 });

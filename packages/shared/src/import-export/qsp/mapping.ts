@@ -19,13 +19,36 @@ import { normalizeQspName } from './parser.js';
 import { addQspSourceIssue } from './report.js';
 import type { QspImportOptions, QspImportReport } from './types.js';
 
+const PROGRESS_REPORT_INTERVAL = 25;
+
 export function mapQspLocationsToStory(
   locations: ParsedQspLocation[],
   sourceName: string,
   report: QspImportReport,
   options: QspImportOptions,
 ): Story {
+  const totalMappingWork =
+    locations.reduce((total, location) => total + 1 + location.actions.length, 0) * 3;
+  let completedMappingWork = 0;
+  const reportMappingProgress = (currentFile: string) => {
+    completedMappingWork += 1;
+    if (
+      completedMappingWork === 1 ||
+      completedMappingWork % PROGRESS_REPORT_INTERVAL === 0 ||
+      completedMappingWork === totalMappingWork
+    ) {
+      options.onProgress?.({
+        phase: 'mapping',
+        completed: completedMappingWork,
+        total: totalMappingWork,
+        currentFile,
+      });
+    }
+  };
+
+  options.onProgress?.({ phase: 'mapping', completed: 0, total: totalMappingWork });
   const nodes: QspDraftNode[] = [];
+  const nodeFiles = new Map<string, string>();
   const edges: QspDraftEdge[] = [];
   const edgeKeys = new Set<string>();
   const addEdge = (from: string, to: string) => {
@@ -41,14 +64,19 @@ export function mapQspLocationsToStory(
     argument?: string;
     source: ParsedQspLocation['source'];
   }> = [];
-  const analyzedLocations = locations.map((location) => ({
-    location,
-    analysis: analyzeQspCode(location.code, location.source, report),
-    actions: location.actions.map((action) => ({
-      action,
-      analysis: analyzeQspCode(action.code, action.source, report),
-    })),
-  }));
+  const analyzedLocations = locations.map((location) => {
+    const analysis = analyzeQspCode(location.code, location.source, report);
+    reportMappingProgress(location.source.fileName);
+    return {
+      location,
+      analysis,
+      actions: location.actions.map((action) => {
+        const actionAnalysis = analyzeQspCode(action.code, action.source, report);
+        reportMappingProgress(action.source.fileName);
+        return { action, analysis: actionAnalysis };
+      }),
+    };
+  });
   const variables = collectQspVariables(analyzedLocations);
   const variableIds = new Map(
     variables.map((variable) => [
@@ -71,6 +99,8 @@ export function mapQspLocationsToStory(
       body: renderQspBody([...location.description, ...locationAnalysis.text]),
       effects: locationAnalysis.effects,
     });
+    nodeFiles.set(locationKey, location.source.fileName);
+    reportMappingProgress(location.source.fileName);
     for (const target of locationAnalysis.navigationTargets) {
       pendingTargets.push({
         from: locationKey,
@@ -91,6 +121,8 @@ export function mapQspLocationsToStory(
         effects: actionAnalysis.effects,
         ...(action.conditionGroups ? { conditionGroups: action.conditionGroups } : {}),
       });
+      nodeFiles.set(actionKey, action.source.fileName);
+      reportMappingProgress(action.source.fileName);
       addEdge(locationKey, actionKey);
       if (action.image) {
         addQspSourceIssue(
@@ -163,7 +195,7 @@ export function mapQspLocationsToStory(
   const interactions: Interaction[] = nodes.map((node) => {
     const triggerId = options.createId();
     const statEffects = mapQspEffects(node.effects, variableIds);
-    return {
+    const interaction = {
       id: ids.get(node.key)!,
       title: node.title,
       body: node.body,
@@ -183,6 +215,8 @@ export function mapQspLocationsToStory(
         ),
       ],
     };
+    reportMappingProgress(nodeFiles.get(node.key) ?? sourceName);
+    return interaction;
   });
   report.interactionCount = interactions.length;
   return {

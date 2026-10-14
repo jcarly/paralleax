@@ -21,6 +21,7 @@ export class QspImportWorkerService implements OnModuleDestroy {
   async run(
     source: QspImportSource,
     onProgress?: (progress: QspImportProgress) => void,
+    abortSignal?: AbortSignal,
   ): Promise<QspImportResult> {
     if (this.isShuttingDown) {
       throw new ServiceUnavailableException(
@@ -29,6 +30,9 @@ export class QspImportWorkerService implements OnModuleDestroy {
     }
     if (this.activeImports >= 1) {
       throw new ServiceUnavailableException('Another QSP import is already running.');
+    }
+    if (abortSignal?.aborted) {
+      return createQspImportFailureResult(source);
     }
 
     this.activeImports += 1;
@@ -41,7 +45,7 @@ export class QspImportWorkerService implements OnModuleDestroy {
       };
 
       try {
-        return await this.execute(input, onProgress);
+        return await this.execute(input, onProgress, abortSignal);
       } catch {
         return createQspImportFailureResult(source);
       }
@@ -58,6 +62,7 @@ export class QspImportWorkerService implements OnModuleDestroy {
   private execute(
     input: QspWorkerInput,
     onProgress?: (progress: QspImportProgress) => void,
+    abortSignal?: AbortSignal,
   ): Promise<QspImportResult> {
     return new Promise((resolvePromise, rejectPromise) => {
       const workerPath = resolve(__dirname, 'qsp-import.worker.js');
@@ -69,13 +74,27 @@ export class QspImportWorkerService implements OnModuleDestroy {
       this.workers.add(worker);
 
       let settled = false;
+      let abort: () => void = () => undefined;
+
+      const removeAbortListener = () => abortSignal?.removeEventListener('abort', abort);
 
       const fail = (error: Error) => {
         if (settled) return;
 
         settled = true;
+        removeAbortListener();
         rejectPromise(error);
       };
+
+      abort = () => {
+        if (settled) return;
+
+        void worker
+          .terminate()
+          .catch(() => undefined)
+          .finally(() => fail(new Error('QSP import worker cancelled.')));
+      };
+      abortSignal?.addEventListener('abort', abort, { once: true });
 
       worker.on('message', (message: QspWorkerMessage) => {
         if (settled) return;
@@ -92,6 +111,7 @@ export class QspImportWorkerService implements OnModuleDestroy {
 
         if (message.type === 'result') {
           settled = true;
+          removeAbortListener();
           resolvePromise(message.result);
         }
       });

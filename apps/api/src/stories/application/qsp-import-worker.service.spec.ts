@@ -92,6 +92,31 @@ describe('QspImportWorkerService', () => {
     });
   });
 
+  it('forwards worker progress to the import orchestration', async () => {
+    const progress = jest.fn();
+    const service = new QspImportWorkerService();
+    const pending = service.run(textSource(), progress);
+
+    workers[0].emit('message', {
+      type: 'progress',
+      progress: {
+        phase: 'parsing',
+        completed: 25,
+        total: 40,
+        currentFile: 'locations/room.qsrc',
+      },
+    });
+    workers[0].emit('message', { type: 'result', result: emptyResult() });
+
+    await expect(pending).resolves.toEqual(emptyResult());
+    expect(progress).toHaveBeenCalledWith({
+      phase: 'parsing',
+      completed: 25,
+      total: 40,
+      currentFile: 'locations/room.qsrc',
+    });
+  });
+
   it('keeps only one active worker import', async () => {
     const service = new QspImportWorkerService();
     const first = service.run(textSource());
@@ -100,6 +125,21 @@ describe('QspImportWorkerService', () => {
 
     workers[0].emit('message', { type: 'result', result: emptyResult() });
     await expect(first).resolves.toEqual(emptyResult());
+  });
+
+  it('terminates a worker when the importing request is cancelled', async () => {
+    const controller = new AbortController();
+    const service = new QspImportWorkerService();
+    const pending = service.run(textSource(), undefined, controller.signal);
+
+    controller.abort();
+
+    expect(workers[0].terminate).toHaveBeenCalledTimes(1);
+    await expect(pending).resolves.toMatchObject({
+      report: {
+        issues: [expect.objectContaining({ code: 'import_execution_failed' })],
+      },
+    });
   });
 
   it('terminates active workers during graceful shutdown', async () => {

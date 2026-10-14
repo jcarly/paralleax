@@ -42,6 +42,37 @@ const administrator: AuthUser = {
   role: 'admin',
 };
 
+class FakeEventSource {
+  static readonly instances: FakeEventSource[] = [];
+
+  readonly listeners = new Map<string, Set<EventListener>>();
+  closed = false;
+
+  constructor(readonly url: string) {
+    FakeEventSource.instances.push(this);
+    queueMicrotask(() => this.emit('ready'));
+  }
+
+  addEventListener(type: string, listener: EventListener) {
+    const listeners = this.listeners.get(type) ?? new Set<EventListener>();
+    listeners.add(listener);
+    this.listeners.set(type, listeners);
+  }
+
+  removeEventListener(type: string, listener: EventListener) {
+    this.listeners.get(type)?.delete(listener);
+  }
+
+  close() {
+    this.closed = true;
+  }
+
+  emit(type: string, data = '') {
+    const event = new MessageEvent(type, { data });
+    for (const listener of this.listeners.get(type) ?? []) listener(event);
+  }
+}
+
 const stories: StorySummary[] = [
   {
     id: 'story-1',
@@ -73,10 +104,13 @@ describe('StoryList', () => {
   afterEach(() => {
     cleanup();
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
   });
 
   beforeEach(() => {
     vi.resetAllMocks();
+    FakeEventSource.instances.length = 0;
+    vi.stubGlobal('EventSource', FakeEventSource);
   });
 
   it('loads and displays stories with edit and play links', async () => {
@@ -393,13 +427,88 @@ describe('StoryList', () => {
       1,
       { name: 'sample.qsps', format: 'text', contentBase64: btoa(source) },
       false,
+      expect.any(String),
+      expect.objectContaining({ aborted: false }),
     );
     expect(api.importQsp).toHaveBeenNthCalledWith(
       2,
       { name: 'sample.qsps', format: 'text', contentBase64: btoa(source) },
       true,
+      expect.any(String),
+      expect.objectContaining({ aborted: false }),
     );
     expect(screen.getByRole('heading', { name: 'QSP story' })).toBeInTheDocument();
+  });
+
+  it('displays streamed QSP analysis progress while the import is running', async () => {
+    const user = userEvent.setup();
+    let finishImport!: (result: QspImportResponse) => void;
+    vi.mocked(api.listStories).mockResolvedValue(storyPage([]));
+    vi.mocked(api.importQsp).mockImplementation(
+      () =>
+        new Promise<QspImportResponse>((resolve) => {
+          finishImport = resolve;
+        }),
+    );
+
+    render(
+      <MemoryRouter>
+        <StoryList user={standardUser} />
+      </MemoryRouter>,
+    );
+    await screen.findByRole('heading', { name: 'No stories found' });
+    await user.click(screen.getByRole('button', { name: 'Import a story' }));
+    await user.selectOptions(screen.getByLabelText('Source format'), 'qsp');
+    await user.upload(
+      screen.getByLabelText('QSP game or location files'),
+      new File(["# Start\n'Hello'\n--- Start ---"], 'progress.qsps', { type: 'text/plain' }),
+    );
+    await user.click(screen.getByRole('button', { name: 'Import story' }));
+    await waitFor(() => expect(api.importQsp).toHaveBeenCalledOnce());
+
+    act(() =>
+      FakeEventSource.instances[0].emit(
+        'progress',
+        JSON.stringify({
+          phase: 'parsing',
+          completed: 12,
+          total: 42,
+          currentFile: 'locations/room.qsrc',
+        }),
+      ),
+    );
+
+    expect(screen.getByText(/Parsing QSP locations/)).toBeVisible();
+    expect(screen.getByText('Current file: locations/room.qsrc')).toBeVisible();
+    expect(screen.getByRole('progressbar', { name: /Parsing QSP locations/ })).toHaveAttribute(
+      'aria-valuenow',
+      '12',
+    );
+    expect(screen.getByRole('progressbar', { name: /Parsing QSP locations/ })).toHaveAttribute(
+      'aria-valuemax',
+      '42',
+    );
+
+    await act(async () =>
+      finishImport({
+        status: 'confirmation_required',
+        report: {
+          format: 'qsp',
+          sourceFileCount: 1,
+          locationCount: 1,
+          actionCount: 0,
+          interactionCount: 1,
+          convertedStatementCount: 0,
+          approximatedStatementCount: 0,
+          unsupportedStatementCount: 0,
+          coverage: [],
+          issues: [],
+        },
+      }),
+    );
+
+    expect(await screen.findByRole('heading', { name: 'Review the import report' })).toBeVisible();
+    expect(FakeEventSource.instances[0].closed).toBe(true);
   });
 
   it('displays the QSP conversion error report returned by the API', async () => {
@@ -602,6 +711,8 @@ describe('StoryList', () => {
       },
       expect.any(Function),
       false,
+      expect.any(String),
+      expect.objectContaining({ aborted: false }),
     );
     act(() => reportUploadProgress?.(42));
     expect(screen.getByText('Uploading the file… 42%')).toBeInTheDocument();

@@ -11,6 +11,7 @@ import type { ImportChoiceScriptDto, ImportQspDto, QspSourceMetadataDto } from '
 import { StoriesRepository } from '../stories.repository';
 import { apiErrorResponse } from '../../operations/api-error-response';
 import { QspImportWorkerService } from './qsp-import-worker.service';
+import { QspImportProgressService } from './qsp-import-progress.service';
 
 export const CHOICESCRIPT_IMPORT_SOURCE_LIMIT = 96 * 1024;
 export const QSP_IMPORT_SOURCE_LIMIT = 80 * 1024;
@@ -20,6 +21,7 @@ export class StoryImportService {
   constructor(
     private readonly repository: StoriesRepository,
     private readonly qspWorkers: QspImportWorkerService,
+    private readonly qspProgress: QspImportProgressService,
   ) {}
 
   async createChoiceScript(input: ImportChoiceScriptDto, userId: string, confirmWarnings = false) {
@@ -43,7 +45,12 @@ export class StoryImportService {
     );
   }
 
-  async createQsp(input: ImportQspDto, userId: string, confirmWarnings = false) {
+  async createQsp(
+    input: ImportQspDto,
+    userId: string,
+    confirmWarnings = false,
+    abortSignal?: AbortSignal,
+  ) {
     const bytes = Buffer.from(input.file.contentBase64, 'base64');
     return this.createQspFromBytes(
       input.file,
@@ -51,6 +58,8 @@ export class StoryImportService {
       userId,
       confirmWarnings,
       QSP_IMPORT_SOURCE_LIMIT,
+      input.progressId,
+      abortSignal,
     );
   }
 
@@ -59,8 +68,18 @@ export class StoryImportService {
     bytes: Buffer,
     userId: string,
     confirmWarnings = false,
+    progressId?: string,
+    abortSignal?: AbortSignal,
   ) {
-    return this.createQspFromBytes(input, bytes, userId, confirmWarnings);
+    return this.createQspFromBytes(
+      input,
+      bytes,
+      userId,
+      confirmWarnings,
+      undefined,
+      progressId,
+      abortSignal,
+    );
   }
 
   private async createQspFromBytes(
@@ -69,6 +88,8 @@ export class StoryImportService {
     userId: string,
     confirmWarnings: boolean,
     sourceLimit?: number,
+    progressId?: string,
+    abortSignal?: AbortSignal,
   ) {
     const expectedFormat = qspFormatForFileName(input.name);
     if (expectedFormat !== input.format) {
@@ -85,9 +106,19 @@ export class StoryImportService {
         apiErrorResponse('QSP_IMPORT_TOO_LARGE', 'The QSP source exceeds the 80 KiB import limit'),
       );
     }
-    const result = await this.qspWorkers.run(source);
+    try {
+      const result = await this.qspWorkers.run(
+        source,
+        (progress) => {
+          this.qspProgress.publish(userId, progressId, progress);
+        },
+        abortSignal,
+      );
 
-    return this.completeImport(result, 'QSP', userId, confirmWarnings);
+      return await this.completeImport(result, 'QSP', userId, confirmWarnings);
+    } finally {
+      this.qspProgress.complete(userId, progressId);
+    }
   }
 
   private async completeImport(

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Added live, user-private QSP import progress for decoding, parsing, and
+  mapping, including source counts and filenames. Importers can cancel an active
+  analysis from the dialog, which aborts and terminates its worker without
+  persisting an import job or source data.
 - Kept QSP import reports available when the analysis worker fails, transferred
   binary source buffers to that worker without an additional full copy, and
   terminate active workers during graceful API shutdown.

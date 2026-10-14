@@ -36,15 +36,16 @@ missing static location: it is skipped, retained as a localized compatibility
 warning, and the rest of the game remains importable for inspection.
 
 For administrator uploads, the dialog displays the measured percentage of bytes
-sent. Once the upload reaches 100%, it switches to an indeterminate analysis
-indicator until the server operation completes. The shared importer exposes
-synchronous progress callbacks for decoding source files and parsing locations,
-reported on the first item, every 25 items, and the final item, followed by
-mapping start and completion. The API runs that synchronous analysis in a worker
-thread, so the API thread can continue serving requests. Progress messages are
-received in-process but are not yet exposed over HTTP or displayed in React; the
-worker itself does not yield its event loop. Confirming a warning report uploads
-and analyses the source again before Story creation.
+sent. Once the upload reaches 100%, and for all standard imports, it displays
+the current QSP analysis phase, its completed/total work count, and source
+file when available. The shared importer reports decoding, location parsing,
+and mapping work on the first item, every 25 items, and the final item. The API
+runs that synchronous analysis in a worker thread, so the API thread can
+continue serving requests. An authenticated, user-private SSE stream relays
+those worker messages to the import dialog; its random identifier is ephemeral
+and is never persisted. Closing the dialog aborts the request and terminates
+the active worker. Confirming a warning report opens a new stream, uploads, and
+analyses the source again before Story creation.
 
 Compiled and text formats are decoded with the official MIT-licensed
 `@qsp/converters` package. Text-source command analysis remains Paralleax code so
@@ -77,7 +78,8 @@ visible and downloadable. Binary source buffers are transferred to the worker
 rather than cloned; active workers are terminated during graceful API shutdown.
 Warning confirmation does not create temporary server state: the existing import
 endpoint accepts `confirmWarnings`, reanalyses the submitted source, and persists
-only that confirmed result.
+only that confirmed result. The progress stream is transport-only state: it does
+not retain a source, report, job, or imported Story.
 
 No QSP identity map or foreign runtime state is persisted. Incremental re-import,
 QSP re-export, and lossless round-tripping are not part of this adapter.

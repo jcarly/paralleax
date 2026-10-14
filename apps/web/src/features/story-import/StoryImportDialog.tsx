@@ -1,9 +1,10 @@
-import { useState, type FormEvent } from 'react';
+import { useRef, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { serializeQspLocationBundle } from '@paralleax/shared';
 import type {
   ChoiceScriptImportReport,
+  QspImportProgress,
   QspImportReport,
   QspSourceFormat,
   Story,
@@ -16,11 +17,15 @@ import { loadStoryEditor } from '../../pages/storyRouteLoaders';
 type StoryImportFormat = 'choicescript' | 'qsp';
 type StoryImportReport = ChoiceScriptImportReport | QspImportReport;
 type StoryImportOutcome = StoryImportResponse<StoryImportReport>;
-type StoryImportProgress = { phase: 'uploading'; percentage: number } | { phase: 'processing' };
+type StoryImportProgress =
+  | { phase: 'uploading'; percentage: number }
+  | { phase: 'processing' }
+  | { phase: 'qsp-analysis'; progress: QspImportProgress };
 type StoryImportRequestError = {
   summary: string;
   report?: StoryImportReport;
 };
+type QspImportProgressSession = { progressId?: string; close: () => void };
 
 export function StoryImportDialog({
   isAdministrator,
@@ -38,6 +43,7 @@ export function StoryImportDialog({
   const [pending, setPending] = useState(false);
   const [progress, setProgress] = useState<StoryImportProgress>();
   const [outcome, setOutcome] = useState<StoryImportOutcome>();
+  const importAbort = useRef<AbortController | undefined>(undefined);
   const sourceSize = files.reduce((total, file) => total + file.size, 0);
   const selectionError = importSelectionError(format, files, sourceSize, isAdministrator, t);
 
@@ -48,35 +54,47 @@ export function StoryImportDialog({
   }
 
   async function requestImport(confirmWarnings: boolean) {
+    const controller = format === 'qsp' ? new AbortController() : undefined;
+    let progressSession: QspImportProgressSession | undefined;
     try {
       setRequestError(undefined);
       setPending(true);
+      importAbort.current = controller;
       setProgress(
         format === 'qsp' && isAdministrator
           ? { phase: 'uploading', percentage: 0 }
           : { phase: 'processing' },
       );
-      const result =
-        format === 'qsp'
-          ? await importQspFiles(
-              files,
-              isAdministrator,
-              (percentage) => {
-                setProgress(
-                  percentage >= 100 ? { phase: 'processing' } : { phase: 'uploading', percentage },
-                );
-              },
-              confirmWarnings,
-            )
-          : await api.importChoiceScript(
-              await Promise.all(
-                files.map(async (file) => ({ name: file.name, content: await file.text() })),
-              ),
-              confirmWarnings,
+      let result: StoryImportOutcome;
+      if (format === 'qsp') {
+        progressSession = await openQspImportProgress(
+          (qspProgress) => setProgress({ phase: 'qsp-analysis', progress: qspProgress }),
+          controller?.signal,
+        );
+        result = await importQspFiles(
+          files,
+          isAdministrator,
+          (percentage) => {
+            setProgress(
+              percentage >= 100 ? { phase: 'processing' } : { phase: 'uploading', percentage },
             );
+          },
+          confirmWarnings,
+          progressSession.progressId,
+          controller?.signal,
+        );
+      } else {
+        result = await api.importChoiceScript(
+          await Promise.all(
+            files.map(async (file) => ({ name: file.name, content: await file.text() })),
+          ),
+          confirmWarnings,
+        );
+      }
       setOutcome(result);
       if (result.status === 'imported') onImported(result.story);
     } catch (caught) {
+      if (isImportRequestCancelled(caught)) return;
       const report = storyImportFailureReport(caught);
       setRequestError({
         summary: apiErrorMessage(
@@ -87,9 +105,16 @@ export function StoryImportDialog({
         report,
       });
     } finally {
+      progressSession?.close();
+      if (importAbort.current === controller) importAbort.current = undefined;
       setPending(false);
       setProgress(undefined);
     }
+  }
+
+  function cancelImport() {
+    importAbort.current?.abort();
+    onClose();
   }
 
   return (
@@ -195,12 +220,7 @@ export function StoryImportDialog({
               </p>
               {pending && progress ? <ImportProgress progress={progress} /> : null}
               <div className="dialog-actions">
-                <button
-                  className="product-secondary"
-                  type="button"
-                  disabled={pending}
-                  onClick={onClose}
-                >
+                <button className="product-secondary" type="button" onClick={cancelImport}>
                   {t('library.import.cancel')}
                 </button>
                 <button
@@ -219,12 +239,7 @@ export function StoryImportDialog({
             {requestError ? <ImportRequestError error={requestError} /> : null}
             {pending && progress ? <ImportProgress progress={progress} /> : null}
             <div className="dialog-actions">
-              <button
-                className="product-secondary"
-                type="button"
-                disabled={pending}
-                onClick={onClose}
-              >
+              <button className="product-secondary" type="button" onClick={cancelImport}>
                 {t('library.import.close')}
               </button>
               {outcome.status === 'confirmation_required' ? (
@@ -274,21 +289,40 @@ function ImportRequestError({
 function ImportProgress({ progress }: { progress: StoryImportProgress }) {
   const { t } = useTranslation();
   const uploading = progress.phase === 'uploading';
+  const analysis = progress.phase === 'qsp-analysis' ? progress.progress : undefined;
+  const total = analysis?.total;
+  const determinate = uploading || (total !== undefined && total > 0);
+  const value = uploading ? progress.percentage : analysis?.completed;
+  const maximum = uploading ? 100 : total;
+  const ariaMaximum = maximum ?? 100;
+  const percentage =
+    determinate && value !== undefined && maximum !== undefined
+      ? Math.min(100, (value / maximum) * 100)
+      : undefined;
   const label = uploading
     ? t('library.import.progress.uploading', { percentage: progress.percentage })
-    : t('library.import.progress.processing');
+    : analysis
+      ? t('library.import.progress.analyzing', {
+          phase: t(`library.import.progress.phases.${analysis.phase}`),
+          completed: analysis.completed,
+          total: analysis.total ?? '?',
+        })
+      : t('library.import.progress.processing');
   return (
     <div className="story-import-progress" aria-live="polite">
       <span>{label}</span>
+      {analysis?.currentFile ? (
+        <small>{t('library.import.progress.currentFile', { file: analysis.currentFile })}</small>
+      ) : null}
       <div
         aria-label={label}
-        aria-valuemax={100}
+        aria-valuemax={determinate ? ariaMaximum : 100}
         aria-valuemin={0}
-        aria-valuenow={uploading ? progress.percentage : undefined}
-        className={`story-import-progress-track${uploading ? '' : ' is-indeterminate'}`}
+        aria-valuenow={determinate ? value : undefined}
+        className={`story-import-progress-track${determinate ? '' : ' is-indeterminate'}`}
         role="progressbar"
       >
-        <span style={uploading ? { width: `${progress.percentage}%` } : undefined} />
+        <span style={percentage === undefined ? undefined : { width: `${percentage}%` }} />
       </div>
     </div>
   );
@@ -418,15 +452,74 @@ function qspFormatForFileName(name: string): QspSourceFormat {
   return /\.qsrc$/i.test(name) ? 'locations' : 'text';
 }
 
+async function openQspImportProgress(
+  onProgress: (progress: QspImportProgress) => void,
+  signal?: AbortSignal,
+): Promise<QspImportProgressSession> {
+  if (typeof EventSource === 'undefined') return { close: () => undefined };
+  if (signal?.aborted) throw new DOMException('The QSP import was cancelled.', 'AbortError');
+
+  const progressId = crypto.randomUUID();
+  const stream = new EventSource(`/api/stories/imports/qsp/progress/${progressId}`);
+
+  return new Promise((resolve, reject) => {
+    let ready = false;
+    const close = () => {
+      signal?.removeEventListener('abort', abort);
+      stream.removeEventListener('ready', receiveReady);
+      stream.removeEventListener('progress', receiveProgress);
+      stream.removeEventListener('error', rejectUnavailableStream);
+      stream.close();
+    };
+    const abort = () => {
+      close();
+      reject(new DOMException('The QSP import was cancelled.', 'AbortError'));
+    };
+    const receiveReady = () => {
+      if (ready) return;
+
+      ready = true;
+      signal?.removeEventListener('abort', abort);
+      stream.removeEventListener('ready', receiveReady);
+      stream.removeEventListener('error', rejectUnavailableStream);
+      resolve({ progressId, close });
+    };
+    const receiveProgress = (event: Event) => {
+      try {
+        onProgress(JSON.parse((event as MessageEvent<string>).data) as QspImportProgress);
+      } catch {
+        // Ignore malformed transient progress events; the import response remains authoritative.
+      }
+    };
+    const rejectUnavailableStream = () => {
+      if (ready) return;
+
+      close();
+      resolve({ close: () => undefined });
+    };
+
+    if (signal?.aborted) {
+      abort();
+      return;
+    }
+    stream.addEventListener('ready', receiveReady);
+    stream.addEventListener('progress', receiveProgress);
+    stream.addEventListener('error', rejectUnavailableStream);
+    signal?.addEventListener('abort', abort, { once: true });
+  });
+}
+
 async function importQspFiles(
   files: File[],
   isAdministrator: boolean,
   onUploadProgress: (percentage: number) => void,
   confirmWarnings: boolean,
+  progressId?: string,
+  signal?: AbortSignal,
 ) {
   const source = await prepareQspSource(files);
   return isAdministrator
-    ? api.importUnlimitedQsp(source, onUploadProgress, confirmWarnings)
+    ? api.importUnlimitedQsp(source, onUploadProgress, confirmWarnings, progressId, signal)
     : api.importQsp(
         {
           name: source.name,
@@ -434,6 +527,8 @@ async function importQspFiles(
           contentBase64: await readBlobAsBase64(source.content),
         },
         confirmWarnings,
+        progressId,
+        signal,
       );
 }
 
@@ -491,6 +586,13 @@ function storyImportFailureReport(caught: unknown): StoryImportReport | undefine
     return undefined;
   }
   return report as unknown as StoryImportReport;
+}
+
+function isImportRequestCancelled(caught: unknown) {
+  return (
+    (caught instanceof DOMException && caught.name === 'AbortError') ||
+    (isApiErrorLike(caught) && caught.code === 'REQUEST_CANCELLED')
+  );
 }
 
 function downloadImportReport(report: StoryImportReport) {

@@ -32,6 +32,7 @@ import {
   IsInt,
   IsISO8601,
   IsString,
+  IsUUID,
   Matches,
   Min,
   Max,
@@ -168,6 +169,10 @@ export class QspImportQueryDto extends QspSourceMetadataDto {
   @Transform(({ value }) => (value === 'true' ? true : value === 'false' ? false : value))
   @IsBoolean()
   confirmWarnings = false;
+
+  @IsOptional()
+  @IsUUID('4')
+  progressId?: string;
 }
 
 export class QspSourceFileDto extends QspSourceMetadataDto {
@@ -186,6 +191,10 @@ export class ImportQspDto {
   @IsOptional()
   @IsBoolean()
   confirmWarnings = false;
+
+  @IsOptional()
+  @IsUUID('4')
+  progressId?: string;
 }
 export class UpdateStoryDto {
   @ValidateIf((_, value) => value !== undefined)
