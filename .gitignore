@@ -10,3 +10,5 @@ test-results
 .DS_Store
 *.log
 *.dump
+# Local stress corpora, including third-party QSP sources and generated reports.
+test-data/local/
