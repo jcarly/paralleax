@@ -18,6 +18,10 @@
 - Added owner-checked, UUID-validated `GET /api/imports/:importId/report` streaming
   with an NDJSON attachment response. Import execution and report-write failures
   now surface explicitly instead of being replaced with fabricated source errors.
+- Import HTTP responses now return only Story summary metadata, avoiding transfer
+  and browser deserialization of the converted Story. The library uses report
+  warning/error totals and links to the streamed JSONL file for both successful
+  and failed conversions instead of rendering captured issues in React.
 - Kept warning confirmation as a second conversion for now; reusable retained
   results and persistent jobs remain follow-up work. Production report storage must
   use a durable volume or an object-storage adapter, not an ephemeral container

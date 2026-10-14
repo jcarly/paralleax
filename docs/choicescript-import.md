@@ -56,8 +56,10 @@ ChoiceScript and QSP reports extend the same `ImportDiagnostics` contract. With
 no capture options, every issue remains in the report as before. An adapter may
 also send every issue to `onIssue` while retaining only `maxPreviewIssues` in
 memory; warning and error counts remain complete even when the preview is empty
-or truncated. File-backed report writing and HTTP job management are separate
-future API responsibilities.
+or truncated. The API writes all issues to a private JSONL report file. Import
+responses include report counts and conversion statistics but no issue preview;
+the authenticated `GET /api/imports/:importId/report` endpoint streams the full
+report as a download.
 
 `models.ts` and `helpers.ts` are internal to this adapter. They are not exported
 as Paralleax domain concepts.

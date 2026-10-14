@@ -413,11 +413,17 @@ Night falls.
       .expect(201);
 
     expect(response.body.story).toMatchObject({
+      id: expect.any(String),
       title: 'Imported mystery',
+      interactionCount: 4,
       access: { visibility: 'private', editPolicy: 'owner', commentPolicy: 'editors' },
     });
     expect(response.body.status).toBe('imported');
-    expect(response.body.story.interactions).toHaveLength(4);
+    expect(response.body.story).not.toHaveProperty('interactions');
+    const importedStory = await request(httpServer)
+      .get(`/api/stories/${response.body.story.id}`)
+      .expect(200);
+    expect(importedStory.body.interactions).toHaveLength(4);
     expect(response.body.report).toMatchObject({
       format: 'choicescript',
       sourceFileCount: 1,
@@ -543,27 +549,33 @@ unknown_command
 
     expect(response.body.status).toBe('imported');
     expect(response.body.story).toMatchObject({
+      id: expect.any(String),
       title: 'corridor',
+      interactionCount: 5,
       access: { visibility: 'private', editPolicy: 'owner', commentPolicy: 'editors' },
     });
-    expect(response.body.story.interactions.map(({ title }: { title: string }) => title)).toEqual([
+    expect(response.body.story).not.toHaveProperty('interactions');
+    const importedStory = await request(httpServer)
+      .get(`/api/stories/${response.body.story.id}`)
+      .expect(200);
+    expect(importedStory.body.interactions.map(({ title }: { title: string }) => title)).toEqual([
       'Start',
       'Wait',
       'Continue',
       'Stop',
       'Ending',
     ]);
-    expect(response.body.story.statDefinitions).toEqual([
+    expect(importedStory.body.statDefinitions).toEqual([
       expect.objectContaining({ name: 'Score [2]', valueType: 'number', category: 'QSP' }),
     ]);
-    expect(response.body.story.interactions[0].statEffects).toEqual([
+    expect(importedStory.body.interactions[0].statEffects).toEqual([
       expect.objectContaining({ operation: 'set', value: 2 }),
     ]);
-    expect(response.body.story.interactions[2].triggers[0].conditionGroups[0].conditions).toEqual([
+    expect(importedStory.body.interactions[2].triggers[0].conditionGroups[0].conditions).toEqual([
       expect.objectContaining({ operator: 'lt', value: 3 }),
       expect.objectContaining({ operator: 'gte', value: 2 }),
     ]);
-    expect(response.body.story.interactions[3].triggers[0].conditionGroups[0].conditions).toEqual([
+    expect(importedStory.body.interactions[3].triggers[0].conditionGroups[0].conditions).toEqual([
       expect.objectContaining({ operator: 'lt', value: 3 }),
       expect.objectContaining({ operator: 'lt', value: 2 }),
     ]);
@@ -638,7 +650,12 @@ unknown_command
       .expect(201);
 
     expect(response.body.status).toBe('imported');
-    expect(response.body.story).toMatchObject({ title: 'large' });
+    expect(response.body.story).toMatchObject({
+      id: expect.any(String),
+      title: 'large',
+      interactionCount: 1,
+    });
+    expect(response.body.story).not.toHaveProperty('interactions');
     expect(response.body.report).toMatchObject({
       format: 'qsp',
       sourceFileCount: 1,
@@ -667,7 +684,12 @@ unknown_command
       })
       .expect(201);
 
-    expect(response.body.story.interactions.map(({ title }: { title: string }) => title)).toEqual([
+    expect(response.body.story).toMatchObject({ interactionCount: 4 });
+    expect(response.body.story).not.toHaveProperty('interactions');
+    const importedStory = await request(httpServer)
+      .get(`/api/stories/${response.body.story.id}`)
+      .expect(200);
+    expect(importedStory.body.interactions.map(({ title }: { title: string }) => title)).toEqual([
       'start',
       'start · menu',
       'Finish',

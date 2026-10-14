@@ -3,9 +3,12 @@ import { randomUUID } from 'node:crypto';
 import {
   importChoiceScript,
   parseQspLocationBundle,
+  defaultStoryAccess,
+  resolveStoryAccess,
   type ChoiceScriptImportResult,
   type QspImportResult,
   type QspImportSource,
+  type StorySummary,
 } from '@paralleax/shared';
 import type { ImportChoiceScriptDto, ImportQspDto, QspSourceMetadataDto } from '../dto/stories.dto';
 import { StoriesRepository } from '../stories.repository';
@@ -251,10 +254,25 @@ export class StoryImportService {
       storyId: result.story.id,
     });
     this.jobs.complete(importId);
+    const access = result.story.access ?? defaultStoryAccess;
+    const story: StorySummary = {
+      id: result.story.id,
+      revision: result.story.revision,
+      title: result.story.title,
+      interactionCount: result.story.interactions.length,
+      startDateTime: result.story.startDateTime,
+      access,
+      capabilities:
+        result.story.capabilities ??
+        resolveStoryAccess(access, { authenticated: true, isOwner: true }),
+      owner: result.story.owner,
+      createdAt: result.story.createdAt,
+      updatedAt: result.story.updatedAt,
+    };
     return {
       status: 'imported' as const,
       importId,
-      story: structuredClone(result.story),
+      story,
       report,
     };
   }

@@ -7,7 +7,7 @@ import type {
   QspImportProgress,
   QspImportReport,
   QspSourceFormat,
-  Story,
+  StorySummary,
 } from '@paralleax/shared';
 import { api, type StoryImportResponse } from '../../api';
 import { apiErrorMessage, isApiErrorLike } from '../../apiErrorMessages';
@@ -24,10 +24,9 @@ type StoryImportProgress =
 type StoryImportRequestError = {
   summary: string;
   report?: StoryImportReport;
+  importId?: string;
 };
 type QspImportProgressSession = { progressId?: string; close: () => void };
-
-const REPORT_ISSUE_PAGE_SIZE = 100;
 
 export function StoryImportDialog({
   isAdministrator,
@@ -36,7 +35,7 @@ export function StoryImportDialog({
 }: {
   isAdministrator: boolean;
   onClose: () => void;
-  onImported: (story: Story) => void;
+  onImported: (story: StorySummary) => void;
 }) {
   const { t } = useTranslation();
   const [format, setFormat] = useState<StoryImportFormat>('choicescript');
@@ -105,6 +104,7 @@ export function StoryImportDialog({
           t(format === 'qsp' ? 'library.import.qsp.failed' : 'library.import.failed'),
         ),
         report,
+        importId: storyImportFailureId(caught),
       });
     } finally {
       progressSession?.close();
@@ -154,6 +154,7 @@ export function StoryImportDialog({
             key={outcome.status}
             mode={outcome.status === 'imported' ? 'imported' : 'review'}
             report={outcome.report}
+            importId={outcome.importId}
           />
         ) : (
           <>
@@ -284,7 +285,9 @@ function ImportRequestError({
       <div className="library-error choicescript-import-error" role="alert">
         <p>{selectionError || error?.summary}</p>
       </div>
-      {error?.report ? <StoryImportReportView mode="failure" report={error.report} /> : null}
+      {error?.report ? (
+        <StoryImportReportView mode="failure" report={error.report} importId={error.importId} />
+      ) : null}
     </>
   );
 }
@@ -336,27 +339,23 @@ function ImportProgress({ progress }: { progress: StoryImportProgress }) {
 function StoryImportReportView({
   report,
   mode,
+  importId,
 }: {
   report: StoryImportReport;
   mode: 'failure' | 'review' | 'imported';
+  importId?: string;
 }) {
   const { t } = useTranslation();
-  const [visibleIssueCount, setVisibleIssueCount] = useState(REPORT_ISSUE_PAGE_SIZE);
-  const warnings = report.issues.filter(({ severity }) => severity === 'warning');
-  const errors = report.issues.filter(({ severity }) => severity === 'error');
-  const visibleIssues = report.issues.slice(0, visibleIssueCount);
   const sourceCount = report.format === 'qsp' ? report.locationCount : report.sceneCount;
   return (
     <div className="choicescript-import-result">
       <div className="story-import-report-heading">
         <p>{t(`library.import.${mode}Description`)}</p>
-        <button
-          className="product-secondary"
-          type="button"
-          onClick={() => downloadImportReport(report)}
-        >
-          {t('library.import.downloadReport')}
-        </button>
+        {importId ? (
+          <a className="product-secondary" href={api.importReportUrl(importId)}>
+            {t('library.import.downloadReport')}
+          </a>
+        ) : null}
       </div>
       <dl>
         <div>
@@ -371,54 +370,16 @@ function StoryImportReportView({
         </div>
         <div>
           <dt>{t('library.import.warnings')}</dt>
-          <dd>{warnings.length}</dd>
+          <dd>{report.warningCount}</dd>
         </div>
         <div>
           <dt>{t('library.import.errors')}</dt>
-          <dd>{errors.length}</dd>
+          <dd>{report.errorCount}</dd>
         </div>
       </dl>
-      {report.issues.length > 0 ? (
-        <div className={`choicescript-import-warnings${errors.length ? ' has-errors' : ''}`}>
-          <b>{t(errors.length ? 'library.import.errorReport' : 'library.import.reviewWarnings')}</b>
-          <ul>
-            {visibleIssues.map((issue, index) => (
-              <li key={`${issue.fileName ?? ''}:${issue.line ?? ''}:${issue.code}:${index}`}>
-                <span>
-                  {[
-                    issue.fileName,
-                    'locationName' in issue ? issue.locationName : '',
-                    issue.line ? t('library.import.line', { line: issue.line }) : '',
-                  ]
-                    .filter(Boolean)
-                    .join(' · ')}
-                </span>
-                <span className={`story-import-issue-severity severity-${issue.severity}`}>
-                  {t(`library.import.severity.${issue.severity}`)}
-                </span>
-                <p>{issue.message}</p>
-              </li>
-            ))}
-          </ul>
-          {visibleIssueCount < report.issues.length ? (
-            <button
-              className="product-secondary"
-              type="button"
-              onClick={() =>
-                setVisibleIssueCount((count) =>
-                  Math.min(count + REPORT_ISSUE_PAGE_SIZE, report.issues.length),
-                )
-              }
-            >
-              {t('library.import.showMoreIssues', {
-                count: report.issues.length - visibleIssueCount,
-              })}
-            </button>
-          ) : null}
-        </div>
-      ) : (
+      {report.warningCount === 0 && report.errorCount === 0 ? (
         <p className="choicescript-import-clean">{t('library.import.noWarnings')}</p>
-      )}
+      ) : null}
       {report.format === 'qsp' ? <QspCoverage report={report} /> : null}
     </div>
   );
@@ -603,11 +564,18 @@ function storyImportFailureReport(caught: unknown): StoryImportReport | undefine
   const report = caught.details.report;
   if (
     (report.format !== 'choicescript' && report.format !== 'qsp') ||
-    !Array.isArray(report.issues)
+    typeof report.warningCount !== 'number' ||
+    typeof report.errorCount !== 'number'
   ) {
     return undefined;
   }
   return report as unknown as StoryImportReport;
+}
+
+function storyImportFailureId(caught: unknown) {
+  if (!isApiErrorLike(caught) || caught.code !== 'STORY_IMPORT_FAILED') return undefined;
+  if (!isRecord(caught.details) || typeof caught.details.importId !== 'string') return undefined;
+  return caught.details.importId;
 }
 
 function isImportRequestCancelled(caught: unknown) {
@@ -615,19 +583,6 @@ function isImportRequestCancelled(caught: unknown) {
     (caught instanceof DOMException && caught.name === 'AbortError') ||
     (isApiErrorLike(caught) && caught.code === 'REQUEST_CANCELLED')
   );
-}
-
-function downloadImportReport(report: StoryImportReport) {
-  const url = URL.createObjectURL(
-    new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' }),
-  );
-  const anchor = document.createElement('a');
-  anchor.href = url;
-  anchor.download = `${report.format}-import-report.json`;
-  document.body.append(anchor);
-  anchor.click();
-  anchor.remove();
-  URL.revokeObjectURL(url);
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

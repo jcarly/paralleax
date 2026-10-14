@@ -216,7 +216,7 @@ type InteractionSaveResponse = InteractionMutationResult | Story;
 type TriggerSaveResponse = TriggerMutationResult | Story;
 export type StoryImportResponse<TReport> =
   | { status: 'confirmation_required'; importId: string; report: TReport }
-  | { status: 'imported'; importId: string; story: Story; report: TReport };
+  | { status: 'imported'; importId: string; story: StorySummary; report: TReport };
 export type ChoiceScriptImportResponse = StoryImportResponse<ChoiceScriptImportReport>;
 export type QspImportResponse = StoryImportResponse<QspImportReport>;
 export const api = {
@@ -378,6 +378,7 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ files, ...(confirmWarnings ? { confirmWarnings: true } : {}) }),
     }),
+  importReportUrl: (importId: string) => `/api/imports/${encodeURIComponent(importId)}/report`,
   importQsp: (
     file: { name: string; format: QspSourceFormat; contentBase64: string },
     confirmWarnings = false,

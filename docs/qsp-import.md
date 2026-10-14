@@ -24,22 +24,25 @@ an authenticated binary upload with no Paralleax application-level size limit;
 the bundled production Nginx proxy disables its normal 128 KiB boundary only for
 this exact route and forwards the body without request buffering. Infrastructure
 in front of that container may still enforce its own request limit. A successful
-analysis displays every source-specific issue and a stable coverage matrix. When
+analysis displays report counts and a stable coverage matrix. When
 the report contains warnings but no blocking error, no Story is persisted until
 the author explicitly confirms the import. Confirmation resubmits and reanalyses
 the same source before creating one private Story atomically. A clean report is
 persisted immediately. An invalid game, duplicate location name, or unresolved
 static `GOTO` target rejects the import before anything is persisted and still
-returns the complete report. Reports from every outcome can be downloaded as JSON.
+returns the report counts and statistics. Successful responses contain Story
+summary metadata rather than the complete Story. The interface displays the
+warning and error counts, and the full JSONL report from any outcome is available
+through the authenticated `GET /api/imports/:importId/report` download endpoint.
 An interpolated or otherwise calculated navigation target is not treated as a
 missing static location: it is skipped, retained as a localized compatibility
 warning, and the rest of the game remains importable for inspection.
 
 QSP and ChoiceScript use the shared `ImportDiagnostics` contract for warning
-and error counts. With no capture options, QSP retains every issue in its report
-as before. A future report writer can receive every issue through `onIssue`
-while `maxPreviewIssues` bounds the in-memory preview; counts remain complete
-even when some issues are not retained in that preview.
+and error counts. The API sends each issue to the file-backed report writer
+through `onIssue`, while `maxPreviewIssues: 0` prevents the import response from
+retaining detailed diagnostics in memory. Counts remain complete when the issue
+preview is empty.
 
 For administrator uploads, the dialog displays the measured percentage of bytes
 sent. Once the upload reaches 100%, and for all standard imports, it displays
@@ -132,11 +135,11 @@ interaction, and reported as an approximation.
 
 ## Coverage report
 
-The returned `QspImportReport` contains source counts, converted/approximated/
-unsupported statement counts, source-positioned issues, and a stable feature
-matrix. Every detected warning and blocking error is retained: Paralleax applies
-no issue-count limit to the report. Statement and feature occurrence counters
-remain exact.
+The import response contains source counts, converted/approximated/unsupported
+statement counts, warning/error totals, and a stable feature matrix. The full
+source-positioned issues are streamed to the downloadable JSONL report. Every
+detected warning and blocking error is retained without an issue-count limit;
+statement and feature occurrence counters remain exact.
 The matrix reports three states:
 
 - `supported`: locations and entry discovery;

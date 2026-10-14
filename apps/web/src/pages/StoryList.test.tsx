@@ -16,6 +16,7 @@ vi.mock('../api', () => ({
     createStory: vi.fn(),
     createDemoStories: vi.fn(),
     importChoiceScript: vi.fn(),
+    importReportUrl: vi.fn((importId: string) => `/api/imports/${importId}/report`),
     importQsp: vi.fn(),
     importUnlimitedQsp: vi.fn(),
     deleteStory: vi.fn(),
@@ -99,6 +100,18 @@ const stories: StorySummary[] = [
     owner: { id: 'user-2', displayName: 'Reviewer' },
   },
 ];
+
+function importedStorySummary(story: Story): StorySummary {
+  return {
+    id: story.id,
+    title: story.title,
+    interactionCount: story.interactions.length,
+    access: { visibility: 'private', editPolicy: 'owner', commentPolicy: 'editors' },
+    capabilities: { canRead: true, canEdit: true, canManage: true, canComment: true },
+    createdAt: story.createdAt,
+    updatedAt: story.updatedAt,
+  };
+}
 
 describe('StoryList', () => {
   afterEach(() => {
@@ -300,7 +313,7 @@ describe('StoryList', () => {
     vi.mocked(api.importChoiceScript).mockResolvedValue({
       status: 'imported',
       importId: '00000000-0000-4000-8000-000000000002',
-      story: importedStory,
+      story: importedStorySummary(importedStory),
       report: {
         format: 'choicescript',
         warningCount: 0,
@@ -348,7 +361,10 @@ describe('StoryList', () => {
       'href',
       '/stories/story-imported/edit',
     );
-    expect(screen.getByRole('heading', { name: 'Imported story' })).toBeInTheDocument();
+    const importedCard = screen
+      .getByRole('heading', { name: 'Imported story' })
+      .closest('article')!;
+    expect(within(importedCard).getByText('1')).toBeInTheDocument();
   });
 
   it('imports a QSP game and displays the compatibility coverage matrix', async () => {
@@ -384,22 +400,7 @@ describe('StoryList', () => {
         { feature: 'locations' as const, support: 'supported' as const, occurrences: 1 },
         { feature: 'variables' as const, support: 'partial' as const, occurrences: 0 },
       ],
-      issues: [
-        {
-          severity: 'warning' as const,
-          code: 'automatic_navigation_requires_choice',
-          message: 'Automatic navigation was converted into an explicit choice.',
-          fileName: 'sample.qsps',
-          locationName: 'Start',
-          line: 2,
-        },
-        ...Array.from({ length: 100 }, (_, index) => ({
-          severity: 'warning' as const,
-          code: `fixture_warning_${index + 1}`,
-          message: `Fixture warning ${index + 1}`,
-          fileName: 'sample.qsps',
-        })),
-      ],
+      issues: [],
     };
     vi.mocked(api.importQsp)
       .mockResolvedValueOnce({
@@ -410,7 +411,7 @@ describe('StoryList', () => {
       .mockResolvedValueOnce({
         status: 'imported',
         importId: '00000000-0000-4000-8000-000000000004',
-        story: importedStory,
+        story: importedStorySummary(importedStory),
         report,
       });
 
@@ -432,13 +433,15 @@ describe('StoryList', () => {
     expect(
       await screen.findByRole('heading', { name: 'Review the import report' }),
     ).toBeInTheDocument();
+    expect(screen.getByText('101')).toBeInTheDocument();
     expect(
-      screen.getByText('Automatic navigation was converted into an explicit choice.'),
-    ).toBeInTheDocument();
-    expect(screen.getByText('Fixture warning 99')).toBeInTheDocument();
-    expect(screen.queryByText('Fixture warning 100')).not.toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Show more issues (1 remaining)' }));
-    expect(screen.getByText('Fixture warning 100')).toBeInTheDocument();
+      screen.queryByText('Automatic navigation was converted into an explicit choice.'),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Download report' })).toHaveAttribute(
+      'href',
+      '/api/imports/00000000-0000-4000-8000-000000000003/report',
+    );
+    expect(screen.queryByRole('button', { name: /Show more issues/ })).not.toBeInTheDocument();
     expect(screen.getByText('QSP compatibility coverage')).toBeInTheDocument();
     expect(screen.getByText('Variables, arrays, and expressions')).toBeInTheDocument();
     expect(screen.getByText('Partial')).toBeInTheDocument();
@@ -540,20 +543,13 @@ describe('StoryList', () => {
 
   it('displays the QSP conversion error report returned by the API', async () => {
     const user = userEvent.setup();
-    const createObjectUrl = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:qsp-report');
-    const revokeObjectUrl = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
-    let downloadedFileName = '';
-    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (
-      this: HTMLAnchorElement,
-    ) {
-      downloadedFileName = this.download;
-    });
     vi.mocked(api.listStories).mockResolvedValue(storyPage([]));
     vi.mocked(api.importQsp).mockRejectedValue(
       Object.assign(new Error('QSP import failed'), {
         status: 400,
         code: 'STORY_IMPORT_FAILED',
         details: {
+          importId: '00000000-0000-4000-8000-000000000008',
           report: {
             format: 'qsp',
             warningCount: 0,
@@ -566,24 +562,7 @@ describe('StoryList', () => {
             approximatedStatementCount: 0,
             unsupportedStatementCount: 0,
             coverage: [],
-            issues: [
-              {
-                severity: 'error',
-                code: 'malformed_statement',
-                message: 'The QSP statement is malformed.',
-                fileName: 'broken.qsps',
-                locationName: 'Start',
-                line: 12,
-              },
-              {
-                severity: 'error',
-                code: 'missing_location',
-                message: 'The location cannot be resolved.',
-                fileName: 'broken.qsps',
-                locationName: 'Missing target',
-                line: 28,
-              },
-            ],
+            issues: [],
           },
         },
       }),
@@ -607,13 +586,17 @@ describe('StoryList', () => {
     expect(
       within(alert).getByText('The source could not be converted into a story.'),
     ).toBeVisible();
-    expect(screen.getByText('Error report')).toBeVisible();
-    expect(screen.getByText('The QSP statement is malformed.')).toBeVisible();
-    expect(screen.getByText('The location cannot be resolved.')).toBeVisible();
-    await user.click(screen.getByRole('button', { name: 'Download report' }));
-    expect(createObjectUrl).toHaveBeenCalledWith(expect.any(Blob));
-    expect(downloadedFileName).toBe('qsp-import-report.json');
-    expect(revokeObjectUrl).toHaveBeenCalledWith('blob:qsp-report');
+    const errorReport = screen
+      .getByRole('link', { name: 'Download report' })
+      .closest<HTMLElement>('.choicescript-import-result')!;
+    expect(within(errorReport).getByText('2')).toBeVisible();
+    expect(
+      within(errorReport).queryByText('The QSP statement is malformed.'),
+    ).not.toBeInTheDocument();
+    expect(within(errorReport).getByRole('link', { name: 'Download report' })).toHaveAttribute(
+      'href',
+      '/api/imports/00000000-0000-4000-8000-000000000008/report',
+    );
     expect(screen.queryByRole('button', { name: 'Confirm import' })).not.toBeInTheDocument();
   });
 
@@ -630,7 +613,7 @@ describe('StoryList', () => {
     vi.mocked(api.importQsp).mockResolvedValue({
       status: 'imported',
       importId: '00000000-0000-4000-8000-000000000006',
-      story: importedStory,
+      story: importedStorySummary(importedStory),
       report: {
         format: 'qsp',
         warningCount: 0,
@@ -693,7 +676,7 @@ describe('StoryList', () => {
     const importResult: QspImportResponse = {
       status: 'imported',
       importId: '00000000-0000-4000-8000-000000000007',
-      story: importedStory,
+      story: importedStorySummary(importedStory),
       report: {
         format: 'qsp' as const,
         warningCount: 0,
