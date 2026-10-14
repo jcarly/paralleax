@@ -103,14 +103,17 @@ The first vertical slice converts:
   titled option interactions;
 - compiled descriptions, bare literal strings, and literal `P`, `PL`, `*P`,
   `*PL`, and `NL` output to escaped rich text;
-- literal numeric and `$`-prefixed string assignments using `=`, plus numeric
-  `+=` and `-=`, to existing Story-assigned typed stats and interaction effects;
+- literal strings and constant numeric assignments using `=`, plus constant
+  numeric `+=` and `-=`, to existing Story-assigned typed stats and interaction
+  effects. Numeric constants support parentheses, unary signs, `+`, `-`, `*`,
+  and QSP integer `/` division;
 - numeric and string array cells with literal numeric or string indices to
   separate typed stats. Cell `[0]` aliases the unindexed variable as it does in QSP;
-- simple variable truthiness and literal comparisons in action-only `IF` /
-  `ELSEIF` / `ELSE` blocks to Trigger conditions, including parenthesized `NO`,
-  `AND`, and `OR` expressions. Earlier branches are negated for every later
-  branch so QSP's sequential exclusivity is preserved;
+- simple variable truthiness and comparisons with literal strings or constant
+  numeric expressions in action-only `IF` / `ELSEIF` / `ELSE` blocks to Trigger
+  conditions, including parenthesized `NO`, `AND`, and `OR` expressions. Earlier
+  branches are negated for every later branch so QSP's sequential exclusivity is
+  preserved;
 - static `GOTO` and `GT` destinations to graph reachability;
 - top-level literal `IF $ARGS[0] = 'value'` blocks to separate interactions, and
   the first literal `GOTO`/`GT` argument to the corresponding interaction. An
@@ -172,10 +175,11 @@ have equivalent import behavior:
 
 - ordered imperative execution within locations and actions, including immediate
   automatic transitions and early `EXIT` behavior;
-- calculated assignments, local variables, dynamic or last-cell array indices,
-  array-wide lookup/mutation/reordering, tuples and multidimensional indices,
-  calculated names, system variables, string concatenation,
-  multiplication/division effects, and the complete QSP coercion rules;
+- assignments or comparisons that read runtime variables, local variables,
+  dynamic or last-cell array indices, array-wide lookup/mutation/reordering,
+  tuples and multidimensional indices, calculated names, system variables,
+  string concatenation, multiplication/division effects, and the complete QSP
+  coercion rules;
 - general `IF` / `ELSEIF` / `ELSE` execution, apart from top-level literal
   `ARGS[0]` location variants, including conditional prose, assignments or
   navigation, dynamically declared actions, and branches with side effects.

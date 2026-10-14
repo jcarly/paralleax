@@ -23,4 +23,10 @@ describe('QSP lexical analysis', () => {
       '',
     ]);
   });
+
+  it('keeps QSP not-equal operators while recognizing a comment as a statement', () => {
+    expect(lexQspLines(["if fatigue ! energy: act 'Rest': gt 'Room' ! explanation"])).toEqual([
+      "if fatigue ! energy: act 'Rest': gt 'Room' ",
+    ]);
+  });
 });

@@ -1,6 +1,7 @@
 import { writeQsp } from './converter.js';
 import { describe, expect, it } from 'vitest';
-import { getTriggerConditionGroups } from '../../triggers/index.js';
+import { getJourneyStatValues } from '../../reader/index.js';
+import { getAvailableInteractions, getTriggerConditionGroups } from '../../triggers/index.js';
 import { createQspImportFailureResult, importQsp } from './importer.js';
 import { parseQspLocationBundle, serializeQspLocationBundle } from './source-bundle.js';
 import type { QspImportProgress } from './types.js';
@@ -327,7 +328,7 @@ dynamic "
   gt '<<$shop_display[''return_loc'']>>'
 "
 *pl 'Text & with ''quotes''' & *pl 'Second line'
-act 'Continue': gt 'End' ! & gt 'comment_tail'
+act 'Continue': gt 'End' ! comment & gt 'comment_tail'
 --- Start ---
 # End
 --- End ---`,
@@ -492,6 +493,40 @@ end
         expect.objectContaining({ feature: 'conditions', support: 'partial' }),
       ]),
     );
+  });
+
+  it('imports constant arithmetic into reader-observable stat effects and action conditions', () => {
+    const result = importSource({
+      name: 'constant-arithmetic.qsps',
+      format: 'text',
+      content: `# Start
+score = 2 + 3 * 4
+if score > (10 + 1):
+  act 'Continue': gt 'End'
+end
+--- Start ---
+# End
+--- End ---`,
+    });
+
+    expect(result.report.errorCount).toBe(0);
+    expect(result.report.issues).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: 'unsupported_variable_statement' }),
+        expect.objectContaining({ code: 'unsupported_condition' }),
+      ]),
+    );
+    const story = result.story!;
+    const [score] = story.stats!;
+    const [start, continueInteraction] = story.interactions;
+    const statValues = getJourneyStatValues(story, [start.id]);
+
+    expect(statValues).toEqual({ [score.id]: 14 });
+    expect(
+      getAvailableInteractions(story, start.id, [start.id], null, [], statValues).map(
+        ({ title }) => title,
+      ),
+    ).toContain(continueInteraction.title);
   });
 
   it('flattens literal array cells and keeps ELSEIF and ELSE actions exclusive', () => {

@@ -44,7 +44,7 @@ export function lexQspLines(lines: readonly string[]): string[] {
         index += 1;
         continue;
       }
-      if (character === '!') break;
+      if (character === '!' && !isQspNotEqualOperator(line, index)) break;
 
       executable += character;
       if (character === "'" || character === '"') stringQuote = character;
@@ -54,4 +54,11 @@ export function lexQspLines(lines: readonly string[]): string[] {
   }
 
   return executableLines;
+}
+
+function isQspNotEqualOperator(line: string, index: number) {
+  const statementStart =
+    Math.max(line.lastIndexOf('&', index - 1), line.lastIndexOf(':', index - 1)) + 1;
+  if (!/^\s*(?:if|elseif)\b/i.test(line.slice(statementStart, index))) return false;
+  return line.slice(index + 1).includes(':');
 }

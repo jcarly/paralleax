@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- QSP imports now reduce constant numeric expressions in assignments and action
+  conditions, including parentheses, unary signs, arithmetic precedence, and
+  integer division. Runtime-variable expressions remain explicit compatibility
+  gaps rather than becoming speculative Story state.
+
 - Fixed QSP lexical analysis so line/block comments, multiline quoted dynamic
   source, and `&` inside text no longer create false navigation or actions.
   QSP diagnostics now distinguish physical text lines from decoded location-code
