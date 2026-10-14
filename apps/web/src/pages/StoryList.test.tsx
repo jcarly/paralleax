@@ -600,6 +600,42 @@ describe('StoryList', () => {
     expect(screen.queryByRole('button', { name: 'Confirm import' })).not.toBeInTheDocument();
   });
 
+  it('downloads the report after a Story save failure', async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.listStories).mockResolvedValue(storyPage([]));
+    vi.mocked(api.importChoiceScript).mockRejectedValue(
+      Object.assign(new Error('The converted Story could not be saved.'), {
+        status: 500,
+        code: 'STORY_IMPORT_SAVE_FAILED',
+        details: {
+          importId: '00000000-0000-4000-8000-000000000009',
+          format: 'choicescript',
+          warningCount: 2,
+          errorCount: 0,
+          reportAvailable: true,
+        },
+      }),
+    );
+
+    render(
+      <MemoryRouter>
+        <StoryList user={standardUser} />
+      </MemoryRouter>,
+    );
+    await screen.findByRole('heading', { name: 'No stories found' });
+    await user.click(screen.getByRole('button', { name: 'Import a story' }));
+    await user.upload(
+      screen.getByLabelText('ChoiceScript scene files'),
+      new File(['A chapter begins.'], 'startup.txt', { type: 'text/plain' }),
+    );
+    await user.click(screen.getByRole('button', { name: 'Import story' }));
+
+    expect(await screen.findByRole('link', { name: 'Download report' })).toHaveAttribute(
+      'href',
+      '/api/imports/00000000-0000-4000-8000-000000000009/report',
+    );
+  });
+
   it('bundles multiple qsrc location files for the QSP importer', async () => {
     const user = userEvent.setup();
     const importedStory: Story = {

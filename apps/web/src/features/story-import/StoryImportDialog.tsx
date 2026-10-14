@@ -25,6 +25,7 @@ type StoryImportRequestError = {
   summary: string;
   report?: StoryImportReport;
   importId?: string;
+  reportAvailable?: boolean;
 };
 type QspImportProgressSession = { progressId?: string; close: () => void };
 
@@ -97,6 +98,7 @@ export function StoryImportDialog({
     } catch (caught) {
       if (isImportRequestCancelled(caught)) return;
       const report = storyImportFailureReport(caught);
+      const reportAvailable = storyImportReportAvailable(caught);
       setRequestError({
         summary: apiErrorMessage(
           caught,
@@ -105,6 +107,7 @@ export function StoryImportDialog({
         ),
         report,
         importId: storyImportFailureId(caught),
+        reportAvailable,
       });
     } finally {
       progressSession?.close();
@@ -280,6 +283,7 @@ function ImportRequestError({
   selectionError?: string;
   error?: StoryImportRequestError;
 }) {
+  const { t } = useTranslation();
   return (
     <>
       <div className="library-error choicescript-import-error" role="alert">
@@ -287,6 +291,12 @@ function ImportRequestError({
       </div>
       {error?.report ? (
         <StoryImportReportView mode="failure" report={error.report} importId={error.importId} />
+      ) : error?.reportAvailable && error.importId ? (
+        <div className="story-import-report-heading">
+          <a className="product-secondary" href={api.importReportUrl(error.importId)}>
+            {t('library.import.downloadReport')}
+          </a>
+        </div>
       ) : null}
     </>
   );
@@ -559,7 +569,7 @@ async function readBlobAsBase64(file: Blob) {
 }
 
 function storyImportFailureReport(caught: unknown): StoryImportReport | undefined {
-  if (!isApiErrorLike(caught) || caught.code !== 'STORY_IMPORT_FAILED') return undefined;
+  if (!isStoryImportFailure(caught)) return undefined;
   if (!isRecord(caught.details) || !isRecord(caught.details.report)) return undefined;
   const report = caught.details.report;
   if (
@@ -572,10 +582,24 @@ function storyImportFailureReport(caught: unknown): StoryImportReport | undefine
   return report as unknown as StoryImportReport;
 }
 
+function storyImportReportAvailable(caught: unknown) {
+  if (!isStoryImportFailure(caught) || !isRecord(caught.details)) return false;
+  return caught.details.reportAvailable === true || storyImportFailureReport(caught) !== undefined;
+}
+
 function storyImportFailureId(caught: unknown) {
-  if (!isApiErrorLike(caught) || caught.code !== 'STORY_IMPORT_FAILED') return undefined;
+  if (!isStoryImportFailure(caught) || !storyImportReportAvailable(caught)) return undefined;
   if (!isRecord(caught.details) || typeof caught.details.importId !== 'string') return undefined;
   return caught.details.importId;
+}
+
+function isStoryImportFailure(
+  caught: unknown,
+): caught is Error & { status: number; code: string; details?: unknown } {
+  return (
+    isApiErrorLike(caught) &&
+    (caught.code === 'STORY_IMPORT_FAILED' || caught.code === 'STORY_IMPORT_SAVE_FAILED')
+  );
 }
 
 function isImportRequestCancelled(caught: unknown) {
