@@ -40,9 +40,11 @@ sent. Once the upload reaches 100%, it switches to an indeterminate analysis
 indicator until the server operation completes. The shared importer exposes
 synchronous progress callbacks for decoding source files and parsing locations,
 reported on the first item, every 25 items, and the final item, followed by
-mapping start and completion. These events are not yet forwarded through the API
-or displayed in React, and they do not yield the Node.js event loop. Confirming a
-warning report uploads and analyses the source again before Story creation.
+mapping start and completion. The API runs that synchronous analysis in a worker
+thread, so the API thread can continue serving requests. Progress messages are
+received in-process but are not yet exposed over HTTP or displayed in React; the
+worker itself does not yield its event loop. Confirming a warning report uploads
+and analyses the source again before Story creation.
 
 Compiled and text formats are decoded with the official MIT-licensed
 `@qsp/converters` package. Text-source command analysis remains Paralleax code so
@@ -52,18 +54,27 @@ it can produce source locations and compatibility issues before canonical mappin
 
 ```text
 QSP game file or .qsrc location collection
-  -> official format decoding per game/source file
-  -> locations, static actions, and statement analysis
+  -> API request validation and source decoding
+  -> QSP worker thread: official format decoding per game/source file
+  -> QSP worker thread: locations, static actions, and statement analysis
   -> compatibility issues and coverage matrix
   -> Paralleax interactions and triggers
+  -> worker result returned to the API
   -> author confirmation when warnings exist
-  -> API validation and atomic persistence
+  -> API-owned atomic persistence
 ```
 
 The deterministic adapter lives in `packages/shared/src/import-export/qsp/`.
 It depends on no React, NestJS, browser, PostgreSQL, or QSP runtime. The API
-decodes the request, supplies IDs and timestamps, and persists the complete
-Story. The web library reuses the existing import modal and report presentation.
+validates and decodes the request, then delegates decoding, analysis, and mapping
+to a Node.js worker thread. It receives the complete result and remains
+responsible for warning confirmation and PostgreSQL persistence. A temporary
+per-API-instance limit allows one active QSP worker import. The web library
+reuses the existing import modal and report presentation.
+If a worker cannot complete an import, the API returns the same complete QSP
+report shape with a blocking `import_execution_failed` issue, so it remains
+visible and downloadable. Binary source buffers are transferred to the worker
+rather than cloned; active workers are terminated during graceful API shutdown.
 Warning confirmation does not create temporary server state: the existing import
 endpoint accepts `confirmWarnings`, reanalyses the submitted source, and persists
 only that confirmed result.

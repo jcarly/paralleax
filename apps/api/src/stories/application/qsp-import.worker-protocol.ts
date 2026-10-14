@@ -14,8 +14,4 @@ export type QspWorkerMessage =
   | {
       type: 'result';
       result: QspImportResult;
-    }
-  | {
-      type: 'error';
-      message: string;
     };

@@ -1,4 +1,5 @@
 import 'reflect-metadata';
+import { randomUUID } from 'node:crypto';
 import { ValidationPipe, type INestApplication } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
 import * as request from 'supertest';
@@ -17,6 +18,7 @@ import type {
 import {
   getTriggerConditionGroups,
   getTriggerConditions,
+  importQsp,
   MAX_INTERACTION_BODY_LENGTH,
   serializeQspLocationBundle,
 } from '@paralleax/shared';
@@ -27,6 +29,7 @@ import { InMemoryStoriesRepository } from './stories.repository.memory';
 import { StoriesRepository } from './stories.repository';
 import { STORY_MUTATION_RATE_LIMIT } from './stories.controller';
 import { StoryEventsService } from './story.events';
+import { QspImportWorkerService } from './application/qsp-import-worker.service';
 import { ApiExceptionFilter } from '../operations/api-exception.filter';
 import { configureRequestBodyParsing } from '../operations/request-body';
 import { requestContextMiddleware } from '../operations/request-context';
@@ -41,6 +44,16 @@ describe('Stories API', () => {
     })
       .overrideProvider(StoriesRepository)
       .useClass(InMemoryStoriesRepository)
+      .overrideProvider(QspImportWorkerService)
+      .useValue({
+        run: jest.fn(async (source: Parameters<typeof importQsp>[0]) =>
+          importQsp(source, {
+            storyId: randomUUID(),
+            timestamp: new Date().toISOString(),
+            createId: randomUUID,
+          }),
+        ),
+      })
       .overrideProvider(DatabaseMigrator)
       .useValue({ run: jest.fn().mockResolvedValue(undefined) })
       .overrideProvider(AuthService)

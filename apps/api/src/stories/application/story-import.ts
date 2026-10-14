@@ -2,7 +2,6 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import {
   importChoiceScript,
-  importQsp,
   parseQspLocationBundle,
   type ChoiceScriptImportResult,
   type QspImportResult,
@@ -11,13 +10,17 @@ import {
 import type { ImportChoiceScriptDto, ImportQspDto, QspSourceMetadataDto } from '../dto/stories.dto';
 import { StoriesRepository } from '../stories.repository';
 import { apiErrorResponse } from '../../operations/api-error-response';
+import { QspImportWorkerService } from './qsp-import-worker.service';
 
 export const CHOICESCRIPT_IMPORT_SOURCE_LIMIT = 96 * 1024;
 export const QSP_IMPORT_SOURCE_LIMIT = 80 * 1024;
 
 @Injectable()
 export class StoryImportService {
-  constructor(private readonly repository: StoriesRepository) {}
+  constructor(
+    private readonly repository: StoriesRepository,
+    private readonly qspWorkers: QspImportWorkerService,
+  ) {}
 
   async createChoiceScript(input: ImportChoiceScriptDto, userId: string, confirmWarnings = false) {
     const sourceSize = input.files.reduce(
@@ -60,7 +63,7 @@ export class StoryImportService {
     return this.createQspFromBytes(input, bytes, userId, confirmWarnings);
   }
 
-  private createQspFromBytes(
+  private async createQspFromBytes(
     input: QspSourceMetadataDto,
     bytes: Buffer,
     userId: string,
@@ -82,7 +85,9 @@ export class StoryImportService {
         apiErrorResponse('QSP_IMPORT_TOO_LARGE', 'The QSP source exceeds the 80 KiB import limit'),
       );
     }
-    return this.completeImport(importQsp(source, importOptions()), 'QSP', userId, confirmWarnings);
+    const result = await this.qspWorkers.run(source);
+
+    return this.completeImport(result, 'QSP', userId, confirmWarnings);
   }
 
   private async completeImport(

@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { parentPort, workerData } from 'node:worker_threads';
 
-import { importQsp } from '@paralleax/shared';
+import { createQspImportFailureResult, importQsp } from '@paralleax/shared';
 
 import type { QspWorkerInput, QspWorkerMessage } from './qsp-import.worker-protocol.js';
 
@@ -31,9 +31,9 @@ try {
     type: 'result',
     result,
   } satisfies QspWorkerMessage);
-} catch (error) {
+} catch {
   port.postMessage({
-    type: 'error',
-    message: error instanceof Error ? error.message : 'Unknown QSP import error',
+    type: 'result',
+    result: createQspImportFailureResult((workerData as QspWorkerInput).source),
   } satisfies QspWorkerMessage);
 }

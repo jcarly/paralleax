@@ -14,6 +14,7 @@ import { StoryMetadataService } from './application/story-metadata';
 import { StoryMutationService } from './application/story-mutations';
 import { StoryReaderProgressService } from './application/story-reader-progress';
 import { StoryRuntimeService } from './application/story-runtime';
+import { QspImportWorkerService } from './application/qsp-import-worker.service';
 
 @Module({
   imports: [DatabaseModule],
@@ -23,6 +24,7 @@ import { StoryRuntimeService } from './application/story-runtime';
     StoriesService,
     StoryEventsService,
     StoryImportService,
+    QspImportWorkerService,
     StoryAccessService,
     StoryContextService,
     StoryGraphService,

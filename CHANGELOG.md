@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Kept QSP import reports available when the analysis worker fails, transferred
+  binary source buffers to that worker without an additional full copy, and
+  terminate active workers during graceful API shutdown.
 - Added complete downloadable reports for QSP and ChoiceScript imports. Blocking
   failures expose every source diagnostic, while non-blocking warnings pause before
   persistence and require explicit confirmation; clean imports remain immediate.

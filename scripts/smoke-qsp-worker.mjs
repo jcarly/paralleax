@@ -1,7 +1,9 @@
 import { Worker } from 'node:worker_threads';
-import { resolve } from 'node:path';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const workerPath = resolve('apps/api/dist/qsp-import.worker.js');
+const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const workerPath = resolve(repositoryRoot, 'apps/api/dist/qsp-import.worker.js');
 
 const worker = new Worker(workerPath, {
   workerData: {

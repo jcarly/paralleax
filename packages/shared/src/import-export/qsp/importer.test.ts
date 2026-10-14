@@ -1,7 +1,7 @@
 import { writeQsp } from './converter.js';
 import { describe, expect, it } from 'vitest';
 import { getTriggerConditionGroups } from '../../triggers/index.js';
-import { importQsp } from './importer.js';
+import { createQspImportFailureResult, importQsp } from './importer.js';
 import { parseQspLocationBundle, serializeQspLocationBundle } from './source-bundle.js';
 import type { QspImportProgress } from './types.js';
 
@@ -138,6 +138,27 @@ end
     expect(result.report.issues.at(-1)).toMatchObject({
       severity: 'warning',
       code: 'unsupported_statement',
+    });
+  });
+
+  it('returns a blocking report when an import execution boundary fails', () => {
+    const result = createQspImportFailureResult({
+      name: 'failed.qsps',
+      format: 'text',
+      content: "# Start\n'Hello'\n--- Start ---",
+    });
+
+    expect(result.story).toBeUndefined();
+    expect(result.report).toMatchObject({
+      format: 'qsp',
+      sourceFileCount: 1,
+      issues: [
+        expect.objectContaining({
+          severity: 'error',
+          code: 'import_execution_failed',
+          fileName: 'failed.qsps',
+        }),
+      ],
     });
   });
 
