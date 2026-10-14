@@ -57,6 +57,19 @@ export default tseslint.config(
     },
   },
   {
+    files: ['**/*.cjs'],
+    languageOptions: {
+      globals: {
+        ...nodeGlobals,
+        __dirname: 'readonly',
+        require: 'readonly',
+      },
+    },
+    rules: {
+      '@typescript-eslint/no-require-imports': 'off',
+    },
+  },
+  {
     rules: {
       '@typescript-eslint/no-explicit-any': 'warn',
       '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
