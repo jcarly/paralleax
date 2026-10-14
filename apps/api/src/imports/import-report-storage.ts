@@ -1,8 +1,9 @@
-import { mkdir, readFile, readdir, rm, stat } from 'node:fs/promises';
+import { chmod, lstat, mkdir, open, readdir, rm } from 'node:fs/promises';
 import { createReadStream, createWriteStream } from 'node:fs';
 import { join } from 'node:path';
 import { pipeline } from 'node:stream/promises';
 import type { Readable } from 'node:stream';
+import type { OnModuleInit } from '@nestjs/common';
 
 export interface ImportReportMetadata {
   importId: string;
@@ -29,25 +30,33 @@ export abstract class ImportReportStorage {
     let entries: string[];
     try {
       entries = await readdir(dir);
-    } catch {
-      return;
+    } catch (caught) {
+      if (isMissingPath(caught)) return;
+      throw caught;
     }
     const now = Date.now();
     for (const entry of entries) {
+      if (
+        !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.(?:choicescript|qsp)\.jsonl$/i.test(
+          entry,
+        )
+      ) {
+        continue;
+      }
       try {
         const fullPath = join(dir, entry);
-        const statResult = await stat(fullPath);
+        const statResult = await lstat(fullPath);
         if (statResult.isFile() && now - statResult.mtimeMs > ttlMs) {
           await rm(fullPath, { force: true });
         }
-      } catch {
-        // Ignore stale files or races while cleaning up.
+      } catch (caught) {
+        if (!isMissingPath(caught)) throw caught;
       }
     }
   }
 }
 
-export class LocalImportReportStorage extends ImportReportStorage {
+export class LocalImportReportStorage extends ImportReportStorage implements OnModuleInit {
   private readonly directory: string;
 
   constructor(
@@ -62,25 +71,42 @@ export class LocalImportReportStorage extends ImportReportStorage {
     return this.directory;
   }
 
+  async onModuleInit(): Promise<void> {
+    await mkdir(this.directory, { recursive: true, mode: 0o700 });
+    await chmod(this.directory, 0o700);
+    await this.cleanupExpiredReports();
+  }
+
   async createReportFile(importId: string, format: string): Promise<string> {
-    await mkdir(this.directory, { recursive: true });
+    validateImportId(importId);
+    if (format !== 'choicescript' && format !== 'qsp') {
+      throw new Error('Unsupported import report format.');
+    }
+    await mkdir(this.directory, { recursive: true, mode: 0o700 });
+    await chmod(this.directory, 0o700);
     const fileName = `${importId}.${format}.jsonl`;
     const filePath = join(this.directory, fileName);
+    const handle = await open(filePath, 'wx', 0o600);
+    await handle.close();
     return filePath;
   }
 
   async getReportPath(importId: string): Promise<string | undefined> {
+    validateImportId(importId);
     const dir = this.getBaseDirectory();
+    let entries;
     try {
-      const entries = await readdir(dir);
-      const match = entries.find(
-        (entry) => entry.startsWith(`${importId}.`) && entry.endsWith('.jsonl'),
-      );
-      if (!match) return undefined;
-      return join(dir, match);
-    } catch {
-      return undefined;
+      entries = await readdir(dir, { withFileTypes: true });
+    } catch (caught) {
+      if (isMissingPath(caught)) return undefined;
+      throw caught;
     }
+    const match = entries.find(
+      (entry) =>
+        entry.isFile() &&
+        new RegExp(`^${importId}\\.(?:choicescript|qsp)\\.jsonl$`).test(entry.name),
+    );
+    return match ? join(dir, match.name) : undefined;
   }
 
   async streamReport(importId: string): Promise<Readable | undefined> {
@@ -90,22 +116,14 @@ export class LocalImportReportStorage extends ImportReportStorage {
   }
 
   async deleteReport(importId: string): Promise<void> {
+    validateImportId(importId);
     const filePath = await this.getReportPath(importId);
     if (!filePath) return;
-    await rm(filePath, { force: true });
-  }
-}
-
-export async function readImportReportFile(
-  storage: ImportReportStorage,
-  importId: string,
-): Promise<string | undefined> {
-  const filePath = await storage.getReportPath(importId);
-  if (!filePath) return undefined;
-  try {
-    return await readFile(filePath, 'utf8');
-  } catch {
-    return undefined;
+    try {
+      await rm(filePath, { force: true });
+    } catch (caught) {
+      if (!isMissingPath(caught)) throw caught;
+    }
   }
 }
 
@@ -121,4 +139,14 @@ export async function copyImportReportFile(
     createReadStream(source),
     createWriteStream(join(destination, `${importId}.jsonl`)),
   );
+}
+
+function validateImportId(importId: string): void {
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(importId)) {
+    throw new Error('Invalid import id.');
+  }
+}
+
+function isMissingPath(error: unknown): boolean {
+  return typeof error === 'object' && error !== null && 'code' in error && error.code === 'ENOENT';
 }

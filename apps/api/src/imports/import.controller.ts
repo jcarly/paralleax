@@ -4,31 +4,32 @@ import {
   ForbiddenException,
   Get,
   Header,
+  NotFoundException,
+  ParseUUIDPipe,
+  StreamableFile,
   type MessageEvent,
   Param,
-  Req,
-  Res,
   Sse,
 } from '@nestjs/common';
-import type { Request, Response } from 'express';
 import { Observable } from 'rxjs';
 import { CurrentUser, type RequestUser } from '../auth/auth.decorators';
 import { ImportJobService } from './import-job.service';
-import { LocalImportReportStorage } from './import-report-storage';
+import { ImportReportStorage } from './import-report-storage';
 
 @Controller('imports')
 export class ImportController {
   constructor(
     private readonly jobs: ImportJobService,
-    private readonly reportStorage: LocalImportReportStorage,
+    private readonly reportStorage: ImportReportStorage,
   ) {}
 
   @Get(':importId')
-  getJob(@Param('importId') importId: string, @CurrentUser() user: RequestUser) {
+  getJob(
+    @Param('importId', new ParseUUIDPipe({ version: '4' })) importId: string,
+    @CurrentUser() user: RequestUser,
+  ) {
     const job = this.jobs.get(importId);
-    if (!job) {
-      return undefined;
-    }
+    if (!job) throw new NotFoundException('The import job does not exist.');
     if (job.ownerId !== user.id && user.role !== 'admin') {
       throw new ForbiddenException('You do not have access to this import job.');
     }
@@ -38,7 +39,7 @@ export class ImportController {
   @Sse(':importId/events')
   @Header('X-Accel-Buffering', 'no')
   streamEvents(
-    @Param('importId') importId: string,
+    @Param('importId', new ParseUUIDPipe({ version: '4' })) importId: string,
     @CurrentUser() user: RequestUser,
   ): Observable<MessageEvent> {
     const job = this.jobs.get(importId);
@@ -52,36 +53,30 @@ export class ImportController {
   }
 
   @Get(':importId/report')
-  @Header('Content-Type', 'application/jsonl; charset=utf-8')
   async getReport(
-    @Param('importId') importId: string,
+    @Param('importId', new ParseUUIDPipe({ version: '4' })) importId: string,
     @CurrentUser() user: RequestUser,
-    @Req() request: Request,
-    @Res({ passthrough: true }) response: Response,
   ) {
     const job = this.jobs.get(importId);
-    if (!job) {
-      throw new ForbiddenException('The import job does not exist.');
-    }
+    if (!job) throw new NotFoundException('The import job does not exist.');
     if (job.ownerId !== user.id && user.role !== 'admin') {
       throw new ForbiddenException('You do not have access to this import report.');
     }
-    const filePath = await this.reportStorage.getReportPath(importId);
-    if (!filePath) {
-      response.status(404);
-      return { message: 'No report is available for this import.' };
-    }
+    if (!job.reportAvailable)
+      throw new NotFoundException('No report is available for this import.');
     const stream = await this.reportStorage.streamReport(importId);
-    if (!stream) {
-      response.status(404);
-      return { message: 'No report is available for this import.' };
-    }
-    response.setHeader('Content-Disposition', `attachment; filename="${importId}.jsonl"`);
-    return stream;
+    if (!stream) throw new NotFoundException('No report is available for this import.');
+    return new StreamableFile(stream, {
+      type: 'application/x-ndjson; charset=utf-8',
+      disposition: `attachment; filename="${importId}.jsonl"`,
+    });
   }
 
   @Delete(':importId')
-  cancel(@Param('importId') importId: string, @CurrentUser() user: RequestUser) {
+  cancel(
+    @Param('importId', new ParseUUIDPipe({ version: '4' })) importId: string,
+    @CurrentUser() user: RequestUser,
+  ) {
     const job = this.jobs.get(importId);
     if (!job) {
       return;

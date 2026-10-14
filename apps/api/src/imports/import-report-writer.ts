@@ -1,115 +1,93 @@
-import { createWriteStream, type WriteStream } from 'node:fs';
+import { closeSync, openSync, writeSync } from 'node:fs';
 import type { ImportIssue, ImportDiagnostics } from '@paralleax/shared';
 import type { ImportReportStorage } from './import-report-storage';
 
 export interface ImportReportWriterOptions {
-  importId: string;
-  format: string;
-  storage: ImportReportStorage;
-  maxBufferedWrites?: number;
-  flushIntervalMs?: number;
+  importId?: string;
+  format?: string;
+  storage?: ImportReportStorage;
+  reportPath?: string;
 }
 
 export class ImportReportWriter {
-  private readonly storage: ImportReportStorage;
-  private readonly importId: string;
-  private readonly format: string;
-  private readonly maxBufferedWrites: number;
-  private readonly flushIntervalMs: number;
-  private queue: string[] = [];
-  private writeStream?: WriteStream;
-  private flushTimer?: NodeJS.Timeout;
+  private readonly storage?: ImportReportStorage;
+  private readonly importId?: string;
+  private readonly format?: string;
+  private readonly reportPath?: string;
+  private fileDescriptor?: number;
+  private activePath?: string;
   private closed = false;
+  private failure?: Error;
 
   constructor(options: ImportReportWriterOptions) {
     this.storage = options.storage;
     this.importId = options.importId;
     this.format = options.format;
-    this.maxBufferedWrites = options.maxBufferedWrites ?? 128;
-    this.flushIntervalMs = options.flushIntervalMs ?? 250;
+    this.reportPath = options.reportPath;
+    if (!this.reportPath && (!this.storage || !this.importId || !this.format)) {
+      throw new Error('A report path or storage, import id, and format are required.');
+    }
   }
 
   async start(): Promise<string> {
-    if (this.closed) {
-      throw new Error('This report writer is already closed.');
-    }
-    if (this.writeStream) {
-      return this.writeStream.path.toString();
-    }
-    const reportPath = await this.storage.createReportFile(this.importId, this.format);
-    this.writeStream = createWriteStream(reportPath, { flags: 'a', encoding: 'utf8' });
-    this.flushTimer = setInterval(() => {
-      void this.flush();
-    }, this.flushIntervalMs);
-    return reportPath;
-  }
-
-  attachToReport(report: ImportDiagnostics): ImportDiagnostics {
-    const capture = {
-      onIssue: (issue: ImportIssue) => this.writeIssue(issue),
-      maxPreviewIssues: 0,
-    };
-    const reportCapture = (report as ImportDiagnostics & { __reportWriterCapture?: typeof capture })
-      .__reportWriterCapture;
-    if (reportCapture) {
-      return report;
-    }
-    (
-      report as ImportDiagnostics & { __reportWriterCapture?: typeof capture }
-    ).__reportWriterCapture = capture;
-    return report;
+    if (this.closed) throw new Error('This report writer is already closed.');
+    if (this.fileDescriptor !== undefined) return this.activePath!;
+    const path =
+      this.reportPath ?? (await this.storage!.createReportFile(this.importId!, this.format!));
+    this.fileDescriptor = openSync(path, 'a', 0o600);
+    this.activePath = path;
+    return path;
   }
 
   writeIssue(issue: ImportIssue): void {
-    if (this.closed) return;
-    const payload = {
-      ...issue,
-      file: issue.fileName,
-      location: issue.locationName,
-    };
+    if (this.closed || this.fileDescriptor === undefined) {
+      throw new Error('The report writer must be started before writing diagnostics.');
+    }
+    if (this.failure) throw this.failure;
+
+    const payload: Record<string, unknown> = { ...issue };
+    if (issue.fileName !== undefined) payload.file = issue.fileName;
+    if (issue.locationName !== undefined) payload.location = issue.locationName;
     delete payload.fileName;
     delete payload.locationName;
-    this.queue.push(`${JSON.stringify(payload)}\n`);
-    if (this.queue.length >= this.maxBufferedWrites) {
-      void this.flush();
-    }
-  }
 
-  async flush(): Promise<void> {
-    const stream = this.writeStream;
-    if (!stream || this.queue.length === 0) return;
-    const queue = this.queue;
-    this.queue = [];
-    for (const chunk of queue) stream.write(chunk);
+    try {
+      const line = Buffer.from(`${JSON.stringify(payload)}\n`, 'utf8');
+      let offset = 0;
+      while (offset < line.length) {
+        const written = writeSync(this.fileDescriptor, line, offset, line.length - offset);
+        if (written === 0) throw new Error('The import report write made no progress.');
+        offset += written;
+      }
+    } catch (caught) {
+      this.failure = caught instanceof Error ? caught : new Error(String(caught));
+      throw this.failure;
+    }
   }
 
   async close(): Promise<void> {
-    if (this.closed) return;
-    this.closed = true;
-    if (this.flushTimer) {
-      clearInterval(this.flushTimer);
-      this.flushTimer = undefined;
+    if (this.closed) {
+      if (this.failure) throw this.failure;
+      return;
     }
-    await this.flush();
-    await new Promise<void>((resolve, reject) => {
-      if (!this.writeStream) {
-        resolve();
-        return;
+    this.closed = true;
+    if (this.fileDescriptor !== undefined) {
+      try {
+        closeSync(this.fileDescriptor);
+      } catch (caught) {
+        this.failure ??= caught instanceof Error ? caught : new Error(String(caught));
       }
-      this.writeStream.end((error: Error | null | undefined) => {
-        if (error) reject(error);
-        else resolve();
-      });
-    });
-    this.writeStream = undefined;
+      this.fileDescriptor = undefined;
+    }
+    if (this.failure) throw this.failure;
   }
 
   async persistSnapshot(report: ImportDiagnostics): Promise<void> {
     await this.start();
-    for (const issue of report.issues ?? []) {
-      this.writeIssue(issue);
+    try {
+      for (const issue of report.issues) this.writeIssue(issue);
+    } finally {
+      await this.close();
     }
-    await this.flush();
-    await this.close();
   }
 }

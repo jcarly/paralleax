@@ -116,6 +116,10 @@ small test stories. It is not yet ready for an open public production service.
   Compose shape, smoke checks, and CI image builds are available. Connect them to
   the selected provider and complete a recorded rollback drill.
 - Add quotas and scheduled expired-session cleanup.
+- Before production imports, replace the API container's ephemeral report
+  directory with durable storage configured through `PARALLEAX_IMPORT_REPORT_DIR`
+  or an `ImportReportStorage` object-store adapter. Persist import-job metadata
+  before claiming reports survive API restarts or multiple instances.
 
 ### P2 — Before Public Story Reading
 

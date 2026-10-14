@@ -1,4 +1,5 @@
-import { beforeEach, describe, expect, it } from '@jest/globals';
+import { afterEach, beforeEach, describe, expect, it } from '@jest/globals';
+import { randomUUID } from 'node:crypto';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -15,7 +16,8 @@ describe('import report writer', () => {
 
   it('writes every issue to a JSONL report and retains the file path', async () => {
     const storage = new LocalImportReportStorage(tempDir);
-    const writer = new ImportReportWriter({ importId: 'reported-import', format: 'qsp', storage });
+    const importId = randomUUID();
+    const writer = new ImportReportWriter({ importId, format: 'qsp', storage });
     await writer.start();
     writer.writeIssue({
       severity: 'warning',
@@ -34,7 +36,7 @@ describe('import report writer', () => {
     });
     await writer.close();
 
-    const filePath = await storage.getReportPath('reported-import');
+    const filePath = await storage.getReportPath(importId);
     expect(filePath).toBeDefined();
     const content = await readFile(filePath!, 'utf8');
     const rows = content.trim().split('\n').filter(Boolean);
@@ -52,6 +54,35 @@ describe('import report writer', () => {
       file: 'start.qsp',
       line: 12,
     });
+  });
+
+  it('writes a large diagnostic sequence in stable order', async () => {
+    const storage = new LocalImportReportStorage(tempDir);
+    const importId = randomUUID();
+    const writer = new ImportReportWriter({ importId, format: 'choicescript', storage });
+    await writer.start();
+
+    for (let index = 0; index < 10_000; index += 1) {
+      writer.writeIssue({
+        severity: 'warning',
+        code: `warning_${index}`,
+        message: `Issue ${index}`,
+      });
+    }
+    await writer.close();
+
+    const filePath = await storage.getReportPath(importId);
+    const rows = (await readFile(filePath!, 'utf8')).trim().split('\n');
+    expect(rows).toHaveLength(10_000);
+    expect(JSON.parse(rows[0])).toMatchObject({ code: 'warning_0' });
+    expect(JSON.parse(rows[9_999])).toMatchObject({ code: 'warning_9999' });
+  });
+
+  it('rejects report identifiers that could escape the storage directory', async () => {
+    const storage = new LocalImportReportStorage(tempDir);
+    await expect(storage.createReportFile('../outside', 'qsp')).rejects.toThrow(
+      'Invalid import id.',
+    );
   });
 
   it('tracks import jobs and emits progress state to their owner stream', async () => {
@@ -80,6 +111,9 @@ describe('import report writer', () => {
     expect(events.some((event) => event.data?.status === 'awaiting_confirmation')).toBe(true);
 
     subscription.unsubscribe();
+  });
+
+  afterEach(async () => {
     await rm(tempDir, { recursive: true, force: true });
   });
 });
