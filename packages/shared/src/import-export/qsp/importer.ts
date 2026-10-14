@@ -21,7 +21,10 @@ export function createQspImportFailureResult(source: QspImportSource): QspImport
 }
 
 export function importQsp(source: QspImportSource, options: QspImportOptions): QspImportResult {
-  const report = createQspImportReport(source.format === 'locations' ? source.content.length : 1);
+  const report = createQspImportReport(
+    source.format === 'locations' ? source.content.length : 1,
+    options,
+  );
 
   options.onProgress?.({
     phase: 'decoding',

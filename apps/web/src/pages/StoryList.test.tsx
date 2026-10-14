@@ -302,6 +302,8 @@ describe('StoryList', () => {
       story: importedStory,
       report: {
         format: 'choicescript',
+        warningCount: 0,
+        errorCount: 0,
         sourceFileCount: 2,
         sceneCount: 2,
         interactionCount: 1,
@@ -368,6 +370,8 @@ describe('StoryList', () => {
     vi.mocked(api.listStories).mockResolvedValue(storyPage([]));
     const report = {
       format: 'qsp' as const,
+      warningCount: 101,
+      errorCount: 0,
       sourceFileCount: 1,
       locationCount: 1,
       actionCount: 0,
@@ -388,6 +392,12 @@ describe('StoryList', () => {
           locationName: 'Start',
           line: 2,
         },
+        ...Array.from({ length: 100 }, (_, index) => ({
+          severity: 'warning' as const,
+          code: `fixture_warning_${index + 1}`,
+          message: `Fixture warning ${index + 1}`,
+          fileName: 'sample.qsps',
+        })),
       ],
     };
     vi.mocked(api.importQsp)
@@ -415,6 +425,10 @@ describe('StoryList', () => {
     expect(
       screen.getByText('Automatic navigation was converted into an explicit choice.'),
     ).toBeInTheDocument();
+    expect(screen.getByText('Fixture warning 99')).toBeInTheDocument();
+    expect(screen.queryByText('Fixture warning 100')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Show more issues (1 remaining)' }));
+    expect(screen.getByText('Fixture warning 100')).toBeInTheDocument();
     expect(screen.getByText('QSP compatibility coverage')).toBeInTheDocument();
     expect(screen.getByText('Variables, arrays, and expressions')).toBeInTheDocument();
     expect(screen.getByText('Partial')).toBeInTheDocument();
@@ -494,6 +508,8 @@ describe('StoryList', () => {
         status: 'confirmation_required',
         report: {
           format: 'qsp',
+          warningCount: 0,
+          errorCount: 0,
           sourceFileCount: 1,
           locationCount: 1,
           actionCount: 0,
@@ -529,6 +545,8 @@ describe('StoryList', () => {
         details: {
           report: {
             format: 'qsp',
+            warningCount: 0,
+            errorCount: 2,
             sourceFileCount: 1,
             locationCount: 0,
             actionCount: 0,
@@ -603,6 +621,8 @@ describe('StoryList', () => {
       story: importedStory,
       report: {
         format: 'qsp',
+        warningCount: 0,
+        errorCount: 0,
         sourceFileCount: 2,
         locationCount: 2,
         actionCount: 0,
@@ -663,6 +683,8 @@ describe('StoryList', () => {
       story: importedStory,
       report: {
         format: 'qsp' as const,
+        warningCount: 0,
+        errorCount: 0,
         sourceFileCount: 1,
         locationCount: 1,
         actionCount: 0,

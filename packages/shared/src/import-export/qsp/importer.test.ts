@@ -15,6 +15,28 @@ function importSource(source: Parameters<typeof importQsp>[0]) {
 }
 
 describe('QSP importer', () => {
+  it('captures every diagnostic when the in-memory preview is disabled', () => {
+    const captured: Array<{ code: string; severity: string }> = [];
+    const result = importQsp(
+      {
+        name: 'captured.qsps',
+        format: 'text',
+        content: '# Start\nunknown_command\n--- Start ---',
+      },
+      {
+        storyId: 'story-captured',
+        timestamp: '2026-09-02T10:00:00.000Z',
+        createId: () => 'generated-id',
+        maxPreviewIssues: 0,
+        onIssue: ({ code, severity }) => captured.push({ code, severity }),
+      },
+    );
+
+    expect(result.story).toBeDefined();
+    expect(result.report).toMatchObject({ warningCount: 1, errorCount: 0, issues: [] });
+    expect(captured).toEqual([{ code: 'unsupported_statement', severity: 'warning' }]);
+  });
+
   it('combines qsrc location files and connects literal ARGS[0] variants', () => {
     const result = importSource({
       name: 'Girl Life.qsrc',

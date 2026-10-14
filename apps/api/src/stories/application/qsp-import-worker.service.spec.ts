@@ -31,6 +31,8 @@ function emptyResult(): QspImportResult {
       convertedStatementCount: 0,
       approximatedStatementCount: 0,
       unsupportedStatementCount: 0,
+      warningCount: 0,
+      errorCount: 0,
       coverage: [],
       issues: [],
     },

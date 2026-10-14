@@ -27,6 +27,8 @@ type StoryImportRequestError = {
 };
 type QspImportProgressSession = { progressId?: string; close: () => void };
 
+const REPORT_ISSUE_PAGE_SIZE = 100;
+
 export function StoryImportDialog({
   isAdministrator,
   onClose,
@@ -149,6 +151,7 @@ export function StoryImportDialog({
         </h2>
         {outcome ? (
           <StoryImportReportView
+            key={outcome.status}
             mode={outcome.status === 'imported' ? 'imported' : 'review'}
             report={outcome.report}
           />
@@ -302,11 +305,13 @@ function ImportProgress({ progress }: { progress: StoryImportProgress }) {
   const label = uploading
     ? t('library.import.progress.uploading', { percentage: progress.percentage })
     : analysis
-      ? t('library.import.progress.analyzing', {
-          phase: t(`library.import.progress.phases.${analysis.phase}`),
-          completed: analysis.completed,
-          total: analysis.total ?? '?',
-        })
+      ? analysis.total === undefined
+        ? t(`library.import.progress.phases.${analysis.phase}`)
+        : t('library.import.progress.analyzing', {
+            phase: t(`library.import.progress.phases.${analysis.phase}`),
+            completed: analysis.completed,
+            total: analysis.total,
+          })
       : t('library.import.progress.processing');
   return (
     <div className="story-import-progress" aria-live="polite">
@@ -336,8 +341,10 @@ function StoryImportReportView({
   mode: 'failure' | 'review' | 'imported';
 }) {
   const { t } = useTranslation();
+  const [visibleIssueCount, setVisibleIssueCount] = useState(REPORT_ISSUE_PAGE_SIZE);
   const warnings = report.issues.filter(({ severity }) => severity === 'warning');
   const errors = report.issues.filter(({ severity }) => severity === 'error');
+  const visibleIssues = report.issues.slice(0, visibleIssueCount);
   const sourceCount = report.format === 'qsp' ? report.locationCount : report.sceneCount;
   return (
     <div className="choicescript-import-result">
@@ -375,7 +382,7 @@ function StoryImportReportView({
         <div className={`choicescript-import-warnings${errors.length ? ' has-errors' : ''}`}>
           <b>{t(errors.length ? 'library.import.errorReport' : 'library.import.reviewWarnings')}</b>
           <ul>
-            {report.issues.map((issue, index) => (
+            {visibleIssues.map((issue, index) => (
               <li key={`${issue.fileName ?? ''}:${issue.line ?? ''}:${issue.code}:${index}`}>
                 <span>
                   {[
@@ -393,6 +400,21 @@ function StoryImportReportView({
               </li>
             ))}
           </ul>
+          {visibleIssueCount < report.issues.length ? (
+            <button
+              className="product-secondary"
+              type="button"
+              onClick={() =>
+                setVisibleIssueCount((count) =>
+                  Math.min(count + REPORT_ISSUE_PAGE_SIZE, report.issues.length),
+                )
+              }
+            >
+              {t('library.import.showMoreIssues', {
+                count: report.issues.length - visibleIssueCount,
+              })}
+            </button>
+          ) : null}
         </div>
       ) : (
         <p className="choicescript-import-clean">{t('library.import.noWarnings')}</p>

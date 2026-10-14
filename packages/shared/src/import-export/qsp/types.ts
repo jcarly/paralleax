@@ -1,4 +1,11 @@
 import type { Story } from '../../model/stories.js';
+import type {
+  ImportDiagnostics,
+  ImportIssue,
+  ImportIssueSeverity,
+  ImportProgress,
+  ImportReportCapture,
+} from '../common/types.js';
 
 export type QspSourceFormat = 'binary' | 'text' | 'locations';
 
@@ -28,16 +35,9 @@ interface QspLocationsImportSource {
 export type QspImportSource =
   QspBinaryImportSource | QspTextImportSource | QspLocationsImportSource;
 
-export type QspImportIssueSeverity = 'warning' | 'error';
+export type QspImportIssueSeverity = ImportIssueSeverity;
 
-export interface QspImportIssue {
-  severity: QspImportIssueSeverity;
-  code: string;
-  message: string;
-  fileName?: string;
-  locationName?: string;
-  line?: number;
-}
+export type QspImportIssue = ImportIssue;
 
 export type QspFeatureId =
   | 'locations'
@@ -64,7 +64,7 @@ export interface QspFeatureCoverage {
   occurrences: number;
 }
 
-export interface QspImportReport {
+export interface QspImportReport extends ImportDiagnostics {
   format: 'qsp';
   sourceFileCount: number;
   locationCount: number;
@@ -74,7 +74,6 @@ export interface QspImportReport {
   approximatedStatementCount: number;
   unsupportedStatementCount: number;
   coverage: QspFeatureCoverage[];
-  issues: QspImportIssue[];
 }
 
 export interface QspImportResult {
@@ -82,16 +81,14 @@ export interface QspImportResult {
   report: QspImportReport;
 }
 
-export type QspImportPhase = 'decoding' | 'parsing' | 'mapping';
+export type QspImportPhase = Exclude<ImportProgress['phase'], 'uploading' | 'finalizing'>;
 
-export interface QspImportProgress {
+export interface QspImportProgress extends Omit<ImportProgress, 'phase' | 'completed'> {
   phase: QspImportPhase;
   completed: number;
-  total?: number;
-  currentFile?: string;
 }
 
-export interface QspImportOptions {
+export interface QspImportOptions extends ImportReportCapture {
   storyId: string;
   timestamp: string;
   createId: () => string;

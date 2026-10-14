@@ -521,6 +521,35 @@ unknown_command
     );
   });
 
+  it('requires QSP warning confirmation when the issue preview is empty', async () => {
+    const source = '# Start\nunknown_command\n--- Start ---';
+    jest.spyOn(app.get(QspImportWorkerService), 'run').mockImplementationOnce(async (input) =>
+      importQsp(input, {
+        storyId: randomUUID(),
+        timestamp: new Date().toISOString(),
+        createId: randomUUID,
+        maxPreviewIssues: 0,
+      }),
+    );
+
+    const response = await request(httpServer)
+      .post('/api/stories/imports/qsp')
+      .send({
+        file: {
+          name: 'warning-preview.qsps',
+          format: 'text',
+          contentBase64: Buffer.from(source, 'utf8').toString('base64'),
+        },
+      })
+      .expect(201);
+
+    expect(response.body).toMatchObject({
+      status: 'confirmation_required',
+      report: { warningCount: 1, errorCount: 0, issues: [] },
+    });
+    expect((await request(httpServer).get('/api/stories').expect(200)).body.items).toEqual([]);
+  });
+
   it('allows administrators to stream QSP files beyond the standard import limit', async () => {
     const source = `# Start\n*pl 'Large import.'\nunknown_command\n--- Start ---\n${' '.repeat(81 * 1024)}`;
     const path = '/api/stories/imports/qsp/admin?name=large.qsps&format=text';

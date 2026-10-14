@@ -19,7 +19,7 @@ export function importChoiceScript(
   sourceFiles: ChoiceScriptSourceFile[],
   options: ChoiceScriptImportOptions,
 ): ChoiceScriptImportResult {
-  const report = createChoiceScriptImportReport(sourceFiles.length);
+  const report = createChoiceScriptImportReport(sourceFiles.length, options);
   const scenes = parseChoiceScriptScenes(sourceFiles, report);
   report.sceneCount = scenes.length;
   if (scenes.length === 0 || hasChoiceScriptImportErrors(report)) {

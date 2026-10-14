@@ -1,21 +1,21 @@
 import type { Story } from '../../model/stories.js';
+import type {
+  ImportDiagnostics,
+  ImportIssue,
+  ImportIssueSeverity,
+  ImportReportCapture,
+} from '../common/types.js';
 
 export interface ChoiceScriptSourceFile {
   name: string;
   content: string;
 }
 
-export type ChoiceScriptImportIssueSeverity = 'warning' | 'error';
+export type ChoiceScriptImportIssueSeverity = ImportIssueSeverity;
 
-export interface ChoiceScriptImportIssue {
-  severity: ChoiceScriptImportIssueSeverity;
-  code: string;
-  message: string;
-  fileName?: string;
-  line?: number;
-}
+export type ChoiceScriptImportIssue = ImportIssue;
 
-export interface ChoiceScriptImportReport {
+export interface ChoiceScriptImportReport extends ImportDiagnostics {
   format: 'choicescript';
   sourceFileCount: number;
   sceneCount: number;
@@ -23,7 +23,6 @@ export interface ChoiceScriptImportReport {
   convertedCommandCount: number;
   approximatedCommandCount: number;
   ignoredCommandCount: number;
-  issues: ChoiceScriptImportIssue[];
 }
 
 export interface ChoiceScriptImportResult {
@@ -31,7 +30,7 @@ export interface ChoiceScriptImportResult {
   report: ChoiceScriptImportReport;
 }
 
-export interface ChoiceScriptImportOptions {
+export interface ChoiceScriptImportOptions extends ImportReportCapture {
   storyId: string;
   timestamp: string;
   createId: () => string;

@@ -115,7 +115,26 @@ export class StoryImportService {
         abortSignal,
       );
 
-      return await this.completeImport(result, 'QSP', userId, confirmWarnings);
+      const willPersist =
+        result.story !== undefined &&
+        result.report.errorCount === 0 &&
+        (confirmWarnings || result.report.warningCount === 0);
+      if (willPersist) {
+        this.qspProgress.publish(userId, progressId, {
+          phase: 'saving',
+          completed: 0,
+        });
+      }
+
+      const outcome = await this.completeImport(result, 'QSP', userId, confirmWarnings);
+      if (outcome.status === 'imported') {
+        this.qspProgress.publish(userId, progressId, {
+          phase: 'saving',
+          completed: 1,
+          total: 1,
+        });
+      }
+      return outcome;
     } finally {
       this.qspProgress.complete(userId, progressId);
     }
@@ -127,14 +146,14 @@ export class StoryImportService {
     userId: string,
     confirmWarnings: boolean,
   ) {
-    if (!result.story) {
+    if (!result.story || result.report.errorCount > 0) {
       throw new BadRequestException(
         apiErrorResponse('STORY_IMPORT_FAILED', `${sourceLabel} import failed`, {
           report: result.report,
         }),
       );
     }
-    if (!confirmWarnings && result.report.issues.some(({ severity }) => severity === 'warning')) {
+    if (!confirmWarnings && result.report.warningCount > 0) {
       return { status: 'confirmation_required' as const, report: result.report };
     }
     await this.repository.save(result.story, userId);

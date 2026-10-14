@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Standardized ChoiceScript and QSP diagnostics on shared warning/error counts
+  and issue capture, while preserving complete in-memory reports by default and
+  allowing adapters to bound previews independently of captured diagnostics.
 - Added live, user-private QSP import progress for decoding, parsing, and
   mapping, including source counts and filenames. Importers can cancel an active
   analysis from the dialog, which aborts and terminates its worker without

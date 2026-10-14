@@ -35,6 +35,12 @@ An interpolated or otherwise calculated navigation target is not treated as a
 missing static location: it is skipped, retained as a localized compatibility
 warning, and the rest of the game remains importable for inspection.
 
+QSP and ChoiceScript use the shared `ImportDiagnostics` contract for warning
+and error counts. With no capture options, QSP retains every issue in its report
+as before. A future report writer can receive every issue through `onIssue`
+while `maxPreviewIssues` bounds the in-memory preview; counts remain complete
+even when some issues are not retained in that preview.
+
 For administrator uploads, the dialog displays the measured percentage of bytes
 sent. Once the upload reaches 100%, and for all standard imports, it displays
 the current QSP analysis phase, its completed/total work count, and source
