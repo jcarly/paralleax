@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Closed import-progress SSE subscriptions when their job completes, preventing
+  completed imports from retaining idle event streams.
 - Standardized ChoiceScript and QSP diagnostics on shared warning/error counts
   and issue capture, while preserving complete in-memory reports by default and
   allowing adapters to bound previews independently of captured diagnostics.

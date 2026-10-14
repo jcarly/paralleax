@@ -78,6 +78,51 @@ describe('import report writer', () => {
     expect(JSON.parse(rows[9_999])).toMatchObject({ code: 'warning_9999' });
   });
 
+  it('supports an explicit report path and closes idempotently', async () => {
+    const reportPath = join(tempDir, 'explicit.jsonl');
+    const writer = new ImportReportWriter({ reportPath });
+
+    await expect(writer.start()).resolves.toBe(reportPath);
+    await expect(writer.start()).resolves.toBe(reportPath);
+    writer.writeIssue({
+      severity: 'warning',
+      code: 'explicit_path',
+      message: 'Stored through an explicit path.',
+    });
+    await expect(writer.close()).resolves.toBeUndefined();
+    await expect(writer.close()).resolves.toBeUndefined();
+    await expect(writer.start()).rejects.toThrow('already closed');
+
+    expect(await readFile(reportPath, 'utf8')).toContain('explicit_path');
+  });
+
+  it('validates its lifecycle and persists an entire diagnostic snapshot', async () => {
+    const reportPath = join(tempDir, 'snapshot.jsonl');
+    const writer = new ImportReportWriter({ reportPath });
+
+    expect(() =>
+      writer.writeIssue({ severity: 'error', code: 'before_start', message: 'Not yet started.' }),
+    ).toThrow('must be started');
+
+    await writer.persistSnapshot({
+      warningCount: 1,
+      errorCount: 1,
+      issues: [
+        { severity: 'warning', code: 'first', message: 'First issue.' },
+        { severity: 'error', code: 'second', message: 'Second issue.' },
+      ],
+    });
+
+    expect((await readFile(reportPath, 'utf8')).trim().split('\n')).toHaveLength(2);
+    expect(() =>
+      writer.writeIssue({ severity: 'error', code: 'after_close', message: 'Already closed.' }),
+    ).toThrow('must be started');
+  });
+
+  it('requires either an explicit path or complete storage metadata', () => {
+    expect(() => new ImportReportWriter({})).toThrow('report path or storage');
+  });
+
   it('rejects report identifiers that could escape the storage directory', async () => {
     const storage = new LocalImportReportStorage(tempDir);
     await expect(storage.createReportFile('../outside', 'qsp')).rejects.toThrow(

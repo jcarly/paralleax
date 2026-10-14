@@ -35,14 +35,15 @@ void (async () => {
     }
     port.postMessage({ type: 'result', result } satisfies QspWorkerMessage);
   } catch (caught) {
+    let error: unknown = caught;
     try {
       await writer.close();
     } catch (closeError) {
-      caught = new AggregateError([caught, closeError], 'QSP import report finalization failed.');
+      error = new AggregateError([caught, closeError], 'QSP import report finalization failed.');
     }
     port.postMessage({
       type: 'error',
-      message: caught instanceof Error ? caught.message : String(caught),
+      message: error instanceof Error ? error.message : String(error),
     } satisfies QspWorkerMessage);
   }
 })();

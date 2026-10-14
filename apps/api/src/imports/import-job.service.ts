@@ -72,11 +72,14 @@ export class ImportJobService {
       if (current) {
         subscriber.next({ type: 'state', data: current });
       }
-      const sub = stream.subscribe((event) => {
-        const payload = event.data as { ownerId?: string; id?: string } | undefined;
-        if (payload?.ownerId === ownerId || payload?.id === id) {
-          subscriber.next(event);
-        }
+      const sub = stream.subscribe({
+        next: (event) => {
+          const payload = event.data as { ownerId?: string; id?: string } | undefined;
+          if (payload?.ownerId === ownerId || payload?.id === id) {
+            subscriber.next(event);
+          }
+        },
+        complete: () => subscriber.complete(),
       });
       return () => sub.unsubscribe();
     });
