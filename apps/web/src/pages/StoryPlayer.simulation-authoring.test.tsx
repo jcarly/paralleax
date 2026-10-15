@@ -120,7 +120,7 @@ describe('StoryPlayer simulation authoring', () => {
     vi.mocked(api.createInteraction).mockRejectedValueOnce(new Error('Response lost'));
 
     await renderPlayer('/stories/story-1/play?mode=simulation&startInteractionId=next');
-    vi.mocked(api.getStory).mockClear();
+    vi.mocked(api.getStoryRuntimeBootstrap).mockClear();
     vi.mocked(api.getStory).mockResolvedValue(story);
     await user.click(screen.getByRole('button', { name: 'Add option' }));
 
@@ -129,7 +129,7 @@ describe('StoryPlayer simulation authoring', () => {
     expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Reload Story' }));
 
-    await waitFor(() => expect(api.getStory).toHaveBeenCalledOnce());
+    await waitFor(() => expect(api.getStoryRuntimeBootstrap).toHaveBeenCalledOnce());
     expect(await screen.findByText('Story changes saved')).toBeInTheDocument();
     expect(api.createInteraction).toHaveBeenCalledOnce();
   });

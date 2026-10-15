@@ -141,7 +141,9 @@ function TestReactFlow({
           data-testid="box-select-first-branch"
           onClick={(event) => {
             const selectedNodes = nodes.filter((node) =>
-              ['interaction-1', 'interaction-2', 'trigger:interaction-2:trigger-2'].includes(node.id),
+              ['interaction-1', 'interaction-2', 'trigger:interaction-2:trigger-2'].includes(
+                node.id,
+              ),
             );
             onSelectionStart?.(event);
             onSelectionChange?.({ nodes: selectedNodes, edges: [] });
@@ -149,123 +151,123 @@ function TestReactFlow({
           }}
         />
         {nodes.map((node) => {
-        const NodeComponent = nodeTypes[node.type ?? 'default'] as
-          ComponentType<NodeProps<TestFlowNode>> | undefined;
-        if (!NodeComponent) return null;
+          const NodeComponent = nodeTypes[node.type ?? 'default'] as
+            ComponentType<NodeProps<TestFlowNode>> | undefined;
+          if (!NodeComponent) return null;
 
-        return (
-          <div
-            key={node.id}
-            data-testid={`flow-node-${node.id}`}
-            data-z-index={node.zIndex}
-            data-node-x={node.position.x}
-            data-node-y={node.position.y}
-            data-node-selected={node.selected ? 'true' : 'false'}
-            style={node.style}
-            onClick={(event) => onNodeClick?.(event, node)}
-            onContextMenu={(event) => onNodeContextMenu?.(event, node)}
-            role="button"
-            tabIndex={0}
-          >
-            <NodeComponent
-              id={node.id}
-              data={node.data}
-              type={node.type ?? 'default'}
-              selected={node.selected ?? false}
-              dragging={node.dragging ?? false}
-              draggable={node.draggable ?? true}
-              selectable={node.selectable ?? true}
-              deletable={node.deletable ?? true}
-              isConnectable={node.connectable ?? true}
-              positionAbsoluteX={node.position.x}
-              positionAbsoluteY={node.position.y}
-              zIndex={node.zIndex ?? 0}
-              parentId={node.parentId}
-              width={node.measured?.width}
-              height={node.measured?.height}
-              sourcePosition={node.sourcePosition}
-              targetPosition={node.targetPosition}
-            />
-            <span
-              data-testid={`preview-drag-node-${node.id}`}
-              onClick={(event) => {
-                event.stopPropagation();
-                const movedNodes = (
-                  node.selected ? nodes.filter((candidate) => candidate.selected) : [node]
-                ).map((candidate) => ({
-                  ...candidate,
-                  position: {
-                    x: candidate.position.x + 100,
-                    y: candidate.position.y + 80,
-                  },
-                }));
-                const movedNode = movedNodes.find((candidate) => candidate.id === node.id);
-                if (movedNode) onNodeDrag?.(event.nativeEvent, movedNode, movedNodes);
-              }}
-            />
-            <span
-              data-testid={`drag-node-${node.id}`}
-              onClick={(event) => {
-                event.stopPropagation();
-                const selectedNodes = node.selected
-                  ? nodes.filter((candidate) => candidate.selected)
-                  : [node];
-                const movedNodes = selectedNodes.map((candidate) => ({
-                  ...candidate,
-                  position: {
-                    x: candidate.position.x + 25,
-                    y: candidate.position.y + 15,
-                  },
-                }));
-                const movedNode = movedNodes.find((candidate) => candidate.id === node.id);
-                if (!movedNode) return;
-                onNodeDragStart?.(event.nativeEvent, node, selectedNodes);
-                onNodeDragStop?.(event.nativeEvent, movedNode, movedNodes);
-              }}
-            />
-            <span
-              data-testid={`drop-source-${node.id}`}
-              onClick={(event) => {
-                event.stopPropagation();
-                onConnectStart?.(event.nativeEvent, {
-                  nodeId: node.id,
-                  handleId: null,
-                  handleType: 'source',
-                });
-                onConnectEnd?.(event.nativeEvent, {
-                  ...disconnectedState,
-                  pointer: { x: 580, y: 452 },
-                } as FinalConnectionState);
-              }}
-            />
-            <span
-              data-testid={`begin-source-${node.id}`}
-              onClick={(event) => {
-                event.stopPropagation();
-                onConnectStart?.(event.nativeEvent, {
-                  nodeId: node.id,
-                  handleId: null,
-                  handleType: 'source',
-                });
-              }}
-            />
-            <span
-              data-testid={`drop-target-${node.id}`}
-              onClick={(event) => {
-                event.stopPropagation();
-                onConnectStart?.(event.nativeEvent, {
-                  nodeId: node.id,
-                  handleId: null,
-                  handleType: 'target',
-                });
-                onConnectEnd?.(event.nativeEvent, {
-                  ...disconnectedState,
-                  pointer: { x: 320, y: 328 },
-                } as FinalConnectionState);
-              }}
-            />
-          </div>
-        );
+          return (
+            <div
+              key={node.id}
+              data-testid={`flow-node-${node.id}`}
+              data-z-index={node.zIndex}
+              data-node-x={node.position.x}
+              data-node-y={node.position.y}
+              data-node-selected={node.selected ? 'true' : 'false'}
+              style={node.style}
+              onClick={(event) => onNodeClick?.(event, node)}
+              onContextMenu={(event) => onNodeContextMenu?.(event, node)}
+              role="button"
+              tabIndex={0}
+            >
+              <NodeComponent
+                id={node.id}
+                data={node.data}
+                type={node.type ?? 'default'}
+                selected={node.selected ?? false}
+                dragging={node.dragging ?? false}
+                draggable={node.draggable ?? true}
+                selectable={node.selectable ?? true}
+                deletable={node.deletable ?? true}
+                isConnectable={node.connectable ?? true}
+                positionAbsoluteX={node.position.x}
+                positionAbsoluteY={node.position.y}
+                zIndex={node.zIndex ?? 0}
+                parentId={node.parentId}
+                width={node.measured?.width}
+                height={node.measured?.height}
+                sourcePosition={node.sourcePosition}
+                targetPosition={node.targetPosition}
+              />
+              <span
+                data-testid={`preview-drag-node-${node.id}`}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  const movedNodes = (
+                    node.selected ? nodes.filter((candidate) => candidate.selected) : [node]
+                  ).map((candidate) => ({
+                    ...candidate,
+                    position: {
+                      x: candidate.position.x + 100,
+                      y: candidate.position.y + 80,
+                    },
+                  }));
+                  const movedNode = movedNodes.find((candidate) => candidate.id === node.id);
+                  if (movedNode) onNodeDrag?.(event.nativeEvent, movedNode, movedNodes);
+                }}
+              />
+              <span
+                data-testid={`drag-node-${node.id}`}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  const selectedNodes = node.selected
+                    ? nodes.filter((candidate) => candidate.selected)
+                    : [node];
+                  const movedNodes = selectedNodes.map((candidate) => ({
+                    ...candidate,
+                    position: {
+                      x: candidate.position.x + 25,
+                      y: candidate.position.y + 15,
+                    },
+                  }));
+                  const movedNode = movedNodes.find((candidate) => candidate.id === node.id);
+                  if (!movedNode) return;
+                  onNodeDragStart?.(event.nativeEvent, node, selectedNodes);
+                  onNodeDragStop?.(event.nativeEvent, movedNode, movedNodes);
+                }}
+              />
+              <span
+                data-testid={`drop-source-${node.id}`}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onConnectStart?.(event.nativeEvent, {
+                    nodeId: node.id,
+                    handleId: null,
+                    handleType: 'source',
+                  });
+                  onConnectEnd?.(event.nativeEvent, {
+                    ...disconnectedState,
+                    pointer: { x: 580, y: 452 },
+                  } as FinalConnectionState);
+                }}
+              />
+              <span
+                data-testid={`begin-source-${node.id}`}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onConnectStart?.(event.nativeEvent, {
+                    nodeId: node.id,
+                    handleId: null,
+                    handleType: 'source',
+                  });
+                }}
+              />
+              <span
+                data-testid={`drop-target-${node.id}`}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onConnectStart?.(event.nativeEvent, {
+                    nodeId: node.id,
+                    handleId: null,
+                    handleType: 'target',
+                  });
+                  onConnectEnd?.(event.nativeEvent, {
+                    ...disconnectedState,
+                    pointer: { x: 320, y: 328 },
+                  } as FinalConnectionState);
+                }}
+              />
+            </div>
+          );
         })}
       </div>
       {nodes.flatMap((source) =>
