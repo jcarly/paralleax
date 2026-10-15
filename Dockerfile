@@ -59,6 +59,9 @@ RUN npm ci --omit=dev --audit=false --no-update-notifier \
 
 COPY --from=build /workspace/apps/api/dist apps/api/dist
 
+RUN mkdir -p /app/storage/imports \
+  && chown -R node:node /app/storage
+
 USER node
 EXPOSE 3000
 
