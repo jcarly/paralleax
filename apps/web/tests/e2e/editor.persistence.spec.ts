@@ -230,8 +230,10 @@ test.describe('Story editor persistence', () => {
 
     await page.goto('/stories/story-1/edit');
     await page.getByRole('button', { name: 'Story settings' }).click();
-    await page.getByLabel('Story start date and time').fill('2026-07-27T09:30');
-    await page.getByLabel('Story start date and time').blur();
+    await page
+      .getByLabel('Story start date and time', { exact: true })
+      .fill('2026-07-27T09:30');
+    await page.getByLabel('Story start date and time', { exact: true }).blur();
     await expect(page.getByText('Properties saved.')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Save properties' })).toHaveCount(0);
     await page.getByRole('button', { name: 'Close Story settings' }).click();
@@ -240,7 +242,9 @@ test.describe('Story editor persistence', () => {
     await page.getByLabel('Duration (minutes)').blur();
 
     await page.getByRole('button', { name: 'Story settings' }).click();
-    await expect(page.getByLabel('Story start date and time')).toHaveValue('2026-07-27T09:30');
+    await expect(page.getByLabel('Story start date and time', { exact: true })).toHaveValue(
+      '2026-07-27T09:30',
+    );
     await page.getByRole('button', { name: 'Close Story settings' }).click();
     await expect(page.getByLabel('Duration (minutes)')).toHaveValue('45');
   });
