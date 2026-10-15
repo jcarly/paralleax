@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Replaced static field help copy with accessible “?” tooltips across authoring, Story settings,
+  access, and account forms, keeping inspectors visually focused while preserving keyboard access.
+
 - Trigger and conditional-text variable conditions can now compare one typed
   variable with another compatible variable, including exact item-instance
   variables, while preserving literal comparisons.

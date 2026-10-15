@@ -1,5 +1,6 @@
 import { useId } from 'react';
 import { useTranslation } from 'react-i18next';
+import { FieldHelpTooltip } from './FieldHelpTooltip';
 
 export function CategoryField({
   category,
@@ -14,11 +15,16 @@ export function CategoryField({
 }) {
   const { t } = useTranslation();
   const suggestionsId = useId();
+  const inputId = useId();
 
   return (
-    <label>
-      {t('inspector.category')}
+    <div className="field">
+      <div className="field-label-with-help">
+        <label htmlFor={inputId}>{t('inspector.category')}</label>
+        <FieldHelpTooltip label={t('inspector.category')} help={t('inspector.categoryHelp')} />
+      </div>
       <input
+        id={inputId}
         aria-label={t('inspector.category')}
         value={category ?? ''}
         list={suggestions.length > 0 ? suggestionsId : undefined}
@@ -38,7 +44,6 @@ export function CategoryField({
           ))}
         </datalist>
       ) : null}
-      <small className="field-help">{t('inspector.categoryHelp')}</small>
-    </label>
+    </div>
   );
 }

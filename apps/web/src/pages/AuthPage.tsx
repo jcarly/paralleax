@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { isValidUserDisplayName, normalizeUserDisplayName } from '@paralleax/shared';
 import { api, type AuthUser } from '../api';
 import { apiErrorMessage } from '../apiErrorMessages';
+import { FieldHelpTooltip } from '../components/FieldHelpTooltip';
 import { LanguageSwitcher } from '../components/LanguageSwitcher';
 import './ProductPages.css';
 
@@ -175,9 +176,16 @@ export function AuthPage({
           ) : (
             <form onSubmit={(event) => void submit(event)}>
               {isRegister ? (
-                <label className="product-field">
-                  <span>{t('auth.displayName')}</span>
+                <div className="product-field">
+                  <div className="field-label-with-help">
+                    <label htmlFor="auth-display-name">{t('auth.displayName')}</label>
+                    <FieldHelpTooltip
+                      label={t('auth.displayName')}
+                      help={t('auth.displayNameHelp')}
+                    />
+                  </div>
                   <input
+                    id="auth-display-name"
                     aria-label={t('auth.displayName')}
                     autoComplete="nickname"
                     placeholder={t('auth.displayNamePlaceholder')}
@@ -187,8 +195,7 @@ export function AuthPage({
                     maxLength={50}
                     required
                   />
-                  <small>{t('auth.displayNameHelp')}</small>
-                </label>
+                </div>
               ) : null}
               <label className="product-field">
                 <span>{t('auth.email')}</span>

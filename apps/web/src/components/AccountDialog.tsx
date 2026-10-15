@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { isValidUserDisplayName, normalizeUserDisplayName } from '@paralleax/shared';
 import { api, type AuthUser } from '../api';
 import { apiErrorMessage } from '../apiErrorMessages';
+import { FieldHelpTooltip } from './FieldHelpTooltip';
 import { handleModalDialogKeyDown } from './modalDialogKeyboard';
 
 export function AccountDialog({
@@ -90,9 +91,16 @@ export function AccountDialog({
         <h2 id="account-dialog-title">{t('account.title')}</h2>
         <p>{t('account.description')}</p>
         <form onSubmit={(event) => void submit(event)}>
-          <label className="product-field">
-            <span>{t('account.displayName')}</span>
+          <div className="product-field">
+            <div className="field-label-with-help">
+              <label htmlFor="account-display-name">{t('account.displayName')}</label>
+              <FieldHelpTooltip
+                label={t('account.displayName')}
+                help={t('account.displayNameHelp')}
+              />
+            </div>
             <input
+              id="account-display-name"
               autoFocus
               aria-label={t('account.displayName')}
               autoComplete="nickname"
@@ -102,8 +110,7 @@ export function AccountDialog({
               maxLength={50}
               required
             />
-            <small>{t('account.displayNameHelp')}</small>
-          </label>
+          </div>
           <div className="account-email">
             <span>{t('account.email')}</span>
             <b>{user.email}</b>

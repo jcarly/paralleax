@@ -459,6 +459,29 @@ describe('StoryEditor graph collaboration and layout', () => {
     expect(screen.getByTestId('react-flow')).toHaveAttribute('data-selection-mode', 'full');
   });
 
+  it('reserves one-finger canvas gestures for rectangular selection', async () => {
+    await renderEditor();
+
+    const renderer = screen
+      .getByTestId('react-flow')
+      .querySelector<HTMLElement>('.react-flow__renderer');
+    expect(renderer).not.toBeNull();
+    const receiveReactFlowTouchPan = vi.fn();
+    renderer?.addEventListener('touchstart', receiveReactFlowTouchPan);
+
+    const oneFingerStart = new Event('touchstart', { bubbles: true, cancelable: true });
+    Object.defineProperty(oneFingerStart, 'touches', { value: [{ identifier: 1 }] });
+    renderer?.dispatchEvent(oneFingerStart);
+    expect(receiveReactFlowTouchPan).not.toHaveBeenCalled();
+
+    const twoFingerStart = new Event('touchstart', { bubbles: true, cancelable: true });
+    Object.defineProperty(twoFingerStart, 'touches', {
+      value: [{ identifier: 1 }, { identifier: 2 }],
+    });
+    renderer?.dispatchEvent(twoFingerStart);
+    expect(receiveReactFlowTouchPan).toHaveBeenCalledOnce();
+  });
+
   it('selects contained interactions and triggers with a rectangle and summarizes them', async () => {
     const user = userEvent.setup();
     await renderEditor(storyWithThreeInteractions());

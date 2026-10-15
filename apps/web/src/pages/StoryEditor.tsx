@@ -73,6 +73,7 @@ import { GraphDecorationNode } from '../features/graph-decorations/GraphDecorati
 import { buildGraphDecorationNodes } from '../features/graph-decorations/graphDecorationNodes';
 import { isRealtimeEditableTarget } from '../features/realtime/storyRealtime';
 import { useStoryConnectionController } from '../features/story-editor/graph/useStoryConnectionController';
+import { useTwoFingerCanvasPan } from '../features/story-editor/graph/useTwoFingerCanvasPan';
 import {
   reconcileStoryFlowEdges,
   reconcileStoryFlowNodes,
@@ -258,6 +259,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
   const pendingFocusInteractionIdRef = useRef<string | undefined>(undefined);
   const storySettingsTriggerRef = useRef<HTMLButtonElement | null>(null);
   const canvasRef = useRef<HTMLElement | null>(null);
+  useTwoFingerCanvasPan(canvasRef, story?.id);
   const {
     selectedId,
     selectedTrigger,

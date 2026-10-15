@@ -40,6 +40,30 @@ function renderInspector(story: Story, onSaveTrigger = vi.fn().mockResolvedValue
 }
 
 describe('TriggerInspector temporal conditions', () => {
+  it('moves Trigger explanations into labeled help tooltips', () => {
+    renderInspector(storyWithConditions([]));
+
+    const conditionsHelp = screen.getByRole('button', { name: '? — Path conditions' });
+    const probabilityHelp = screen.getByRole('button', { name: '? — Appearance probability' });
+    const timerHelp = screen.getByRole('button', { name: '? — Availability timer' });
+
+    expect(conditionsHelp).toHaveTextContent('?');
+    expect(conditionsHelp).toHaveAccessibleDescription(
+      'Groups are alternatives (OR); conditions inside a group must all match (AND).',
+    );
+    expect(probabilityHelp).toHaveTextContent('?');
+    expect(probabilityHelp).toHaveAccessibleDescription(
+      'One deterministic roll is made for this Trigger at each step.',
+    );
+    expect(timerHelp).toHaveTextContent('?');
+    expect(timerHelp).toHaveAccessibleDescription(
+      'Leave empty for no timer. Zero seconds keeps the option hidden.',
+    );
+    const tooltips = screen.getAllByRole('tooltip');
+    expect(tooltips).toHaveLength(3);
+    expect(tooltips[0].parentElement).toBe(document.body);
+  });
+
   it('sets and clears the Trigger availability timer', () => {
     const story = storyWithConditions([]);
     const onSaveTrigger = renderInspector(story);

@@ -136,18 +136,19 @@ function TestReactFlow({
         onClick={(event) => onPaneClick?.(event)}
         onContextMenu={(event) => onPaneContextMenu?.(event)}
       />
-      <button
-        data-testid="box-select-first-branch"
-        onClick={(event) => {
-          const selectedNodes = nodes.filter((node) =>
-            ['interaction-1', 'interaction-2', 'trigger:interaction-2:trigger-2'].includes(node.id),
-          );
-          onSelectionStart?.(event);
-          onSelectionChange?.({ nodes: selectedNodes, edges: [] });
-          onSelectionEnd?.(event);
-        }}
-      />
-      {nodes.map((node) => {
+      <div className="react-flow__renderer">
+        <button
+          data-testid="box-select-first-branch"
+          onClick={(event) => {
+            const selectedNodes = nodes.filter((node) =>
+              ['interaction-1', 'interaction-2', 'trigger:interaction-2:trigger-2'].includes(node.id),
+            );
+            onSelectionStart?.(event);
+            onSelectionChange?.({ nodes: selectedNodes, edges: [] });
+            onSelectionEnd?.(event);
+          }}
+        />
+        {nodes.map((node) => {
         const NodeComponent = nodeTypes[node.type ?? 'default'] as
           ComponentType<NodeProps<TestFlowNode>> | undefined;
         if (!NodeComponent) return null;
@@ -265,7 +266,8 @@ function TestReactFlow({
             />
           </div>
         );
-      })}
+        })}
+      </div>
       {nodes.flatMap((source) =>
         nodes
           .filter((target) => target.id !== source.id)
