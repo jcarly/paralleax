@@ -116,9 +116,9 @@ export async function configureStoryAccess(
   await autoSaveAccessOption(page, storyId, 'Reading', options.visibility);
   await autoSaveAccessOption(page, storyId, 'Editing', options.editPolicy);
   await autoSaveAccessOption(page, storyId, 'Comments', options.commentPolicy);
-  await expect(page.getByLabel('Reading')).toHaveValue(options.visibility);
-  await expect(page.getByLabel('Editing')).toHaveValue(options.editPolicy);
-  await expect(page.getByLabel('Comments')).toHaveValue(options.commentPolicy);
+  await expect(page.getByRole('combobox', { name: 'Reading' })).toHaveValue(options.visibility);
+  await expect(page.getByRole('combobox', { name: 'Editing' })).toHaveValue(options.editPolicy);
+  await expect(page.getByRole('combobox', { name: 'Comments' })).toHaveValue(options.commentPolicy);
 }
 
 async function autoSaveAccessOption(
@@ -127,7 +127,7 @@ async function autoSaveAccessOption(
   label: 'Reading' | 'Editing' | 'Comments',
   value: string,
 ) {
-  const field = page.getByLabel(label, { exact: true });
+  const field = page.getByRole('combobox', { name: label });
   if ((await field.inputValue()) === value) return;
   const accessUpdate = waitForApiResponse(
     page,

@@ -230,9 +230,7 @@ test.describe('Story editor persistence', () => {
 
     await page.goto('/stories/story-1/edit');
     await page.getByRole('button', { name: 'Story settings' }).click();
-    await page
-      .getByLabel('Story start date and time', { exact: true })
-      .fill('2026-07-27T09:30');
+    await page.getByLabel('Story start date and time', { exact: true }).fill('2026-07-27T09:30');
     await page.getByLabel('Story start date and time', { exact: true }).blur();
     await expect(page.getByText('Properties saved.')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Save properties' })).toHaveCount(0);
