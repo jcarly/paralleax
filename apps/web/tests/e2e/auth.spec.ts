@@ -101,7 +101,7 @@ test('registers, verifies email, creates a story, signs out, and signs back in',
   await page.getByLabel('Langue').selectOption('en');
 
   await createAccount.click();
-  await page.getByLabel('Display name').fill('Author');
+  await page.getByLabel('Display name', { exact: true }).fill('Author');
   await page.getByLabel('Email address').fill('author@example.com');
   await page.getByLabel('Password', { exact: true }).fill('correct horse battery staple');
   await page.getByLabel('Confirm password').fill('correct horse battery staple');

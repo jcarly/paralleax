@@ -18,12 +18,22 @@ export interface CharacterCondition {
 
 export type StatComparisonOperator = 'eq' | 'neq' | 'lt' | 'lte' | 'gt' | 'gte';
 
-export interface StatCondition {
+interface StatConditionBase {
   statId: string;
   itemId?: string;
   operator: StatComparisonOperator;
+}
+
+export interface StatLiteralCondition extends StatConditionBase {
   value: StatValue;
 }
+
+export interface StatAssignmentCondition extends StatConditionBase {
+  comparisonStatId: string;
+  comparisonItemId?: string;
+}
+
+export type StatCondition = StatLiteralCondition | StatAssignmentCondition;
 
 export interface ItemCondition {
   itemDefinitionId: string;

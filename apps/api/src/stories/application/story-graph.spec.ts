@@ -193,6 +193,36 @@ describe('StoryGraphService', () => {
     expect(cleared.trigger.timerSeconds).toBeNull();
   });
 
+  it('stores a typed stat comparison with another same-Story stat', async () => {
+    const result = await service.updateTrigger(
+      'story-1',
+      'child',
+      'child-trigger',
+      {
+        conditionGroups: [
+          {
+            id: 'energy-check',
+            conditions: [
+              {
+                statId: 'energy',
+                operator: 'gte',
+                comparisonStatId: 'mira-energy',
+              },
+            ],
+          },
+        ],
+      },
+      'user-1',
+    );
+
+    expect(result.trigger.conditionGroups).toEqual([
+      {
+        id: 'energy-check',
+        conditions: [{ statId: 'energy', operator: 'gte', comparisonStatId: 'mira-energy' }],
+      },
+    ]);
+  });
+
   it('creates graph decorations through the existing decoration builder', async () => {
     const result = await service.createGraphDecoration(
       'story-1',

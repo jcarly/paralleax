@@ -74,9 +74,10 @@ For conditions:
   interaction;
 - every `isPresent: false` condition must reference a character absent from the
   current interaction;
-- typed stat conditions compare matching values with `=` or `!=`; numeric stats
-  additionally support `<`, `<=`, `>`, and `>=`. A missing or
-  mismatched value fails the condition;
+- typed stat conditions compare their current value with a typed literal or a
+  same-Story stat target. Matching values support `=` or `!=`; numeric stats
+  additionally support `<`, `<=`, `>`, and `>=`. A missing or mismatched value
+  fails the condition;
 - temporal conditions compare the current story-local date, weekday, and time
   with their authored alternatives;
 - conditions inside one group are evaluated as AND;

@@ -62,7 +62,7 @@ test.describe('automated accessibility', () => {
     const settingsButton = page.getByRole('button', { name: 'Story settings' });
     await settingsButton.click();
     await expect(page.getByRole('dialog', { name: 'Story settings' })).toBeVisible();
-    await expect(page.getByLabel('Story start date and time')).toBeFocused();
+    await expect(page.getByLabel('Story start date and time', { exact: true })).toBeFocused();
     await expectNoWcagViolations(page);
     await page.keyboard.press('Escape');
     await expect(page.getByRole('dialog', { name: 'Story settings' })).toBeHidden();

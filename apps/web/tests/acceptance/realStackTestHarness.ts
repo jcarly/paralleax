@@ -42,7 +42,7 @@ export async function registerUser(page: Page, prefix: string): Promise<Acceptan
   const password = 'acceptance-test-password';
 
   await page.goto('/register');
-  await page.getByLabel('Display name').fill(`${prefix} author`);
+  await page.getByLabel('Display name', { exact: true }).fill(`${prefix} author`);
   await page.getByLabel('Email address').fill(email);
   await page.getByLabel('Password', { exact: true }).fill(password);
   await page.getByLabel('Confirm password').fill(password);
@@ -116,9 +116,9 @@ export async function configureStoryAccess(
   await autoSaveAccessOption(page, storyId, 'Reading', options.visibility);
   await autoSaveAccessOption(page, storyId, 'Editing', options.editPolicy);
   await autoSaveAccessOption(page, storyId, 'Comments', options.commentPolicy);
-  await expect(page.getByLabel('Reading')).toHaveValue(options.visibility);
-  await expect(page.getByLabel('Editing')).toHaveValue(options.editPolicy);
-  await expect(page.getByLabel('Comments')).toHaveValue(options.commentPolicy);
+  await expect(page.getByRole('combobox', { name: 'Reading' })).toHaveValue(options.visibility);
+  await expect(page.getByRole('combobox', { name: 'Editing' })).toHaveValue(options.editPolicy);
+  await expect(page.getByRole('combobox', { name: 'Comments' })).toHaveValue(options.commentPolicy);
 }
 
 async function autoSaveAccessOption(
@@ -127,7 +127,7 @@ async function autoSaveAccessOption(
   label: 'Reading' | 'Editing' | 'Comments',
   value: string,
 ) {
-  const field = page.getByLabel(label);
+  const field = page.getByRole('combobox', { name: label });
   if ((await field.inputValue()) === value) return;
   const accessUpdate = waitForApiResponse(
     page,

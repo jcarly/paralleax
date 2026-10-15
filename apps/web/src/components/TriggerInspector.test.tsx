@@ -40,6 +40,30 @@ function renderInspector(story: Story, onSaveTrigger = vi.fn().mockResolvedValue
 }
 
 describe('TriggerInspector temporal conditions', () => {
+  it('moves Trigger explanations into labeled help tooltips', () => {
+    renderInspector(storyWithConditions([]));
+
+    const conditionsHelp = screen.getByRole('button', { name: '? — Path conditions' });
+    const probabilityHelp = screen.getByRole('button', { name: '? — Appearance probability' });
+    const timerHelp = screen.getByRole('button', { name: '? — Availability timer' });
+
+    expect(conditionsHelp).toHaveTextContent('?');
+    expect(conditionsHelp).toHaveAccessibleDescription(
+      'Groups are alternatives (OR); conditions inside a group must all match (AND).',
+    );
+    expect(probabilityHelp).toHaveTextContent('?');
+    expect(probabilityHelp).toHaveAccessibleDescription(
+      'One deterministic roll is made for this Trigger at each step.',
+    );
+    expect(timerHelp).toHaveTextContent('?');
+    expect(timerHelp).toHaveAccessibleDescription(
+      'Leave empty for no timer. Zero seconds keeps the option hidden.',
+    );
+    const tooltips = screen.getAllByRole('tooltip');
+    expect(tooltips).toHaveLength(3);
+    expect(tooltips[0].parentElement).toBe(document.body);
+  });
+
   it('sets and clears the Trigger availability timer', () => {
     const story = storyWithConditions([]);
     const onSaveTrigger = renderInspector(story);
@@ -78,6 +102,27 @@ describe('TriggerInspector temporal conditions', () => {
     expect(onSaveTrigger).toHaveBeenLastCalledWith('interaction-1', 'trigger-1', {
       conditionGroups: [
         { id: 'trigger-1', conditions: [{ statId: 'open', operator: 'eq', value: false }] },
+      ],
+    });
+  });
+
+  it('compares a variable condition with another compatible variable', () => {
+    const story: Story = storyWithConditions([{ statId: 'courage', operator: 'gte', value: 1 }]);
+    story.statDefinitions = [{ id: 'number-definition', name: 'Number', valueType: 'number' }];
+    story.stats = [
+      { id: 'courage', statDefinitionId: 'number-definition', initialValue: 1 },
+      { id: 'fear', statDefinitionId: 'number-definition', initialValue: 2 },
+    ];
+    const onSaveTrigger = renderInspector(story);
+
+    fireEvent.change(screen.getByLabelText('Comparison value type'), { target: { value: 'stat' } });
+
+    expect(onSaveTrigger).toHaveBeenLastCalledWith('interaction-1', 'trigger-1', {
+      conditionGroups: [
+        {
+          id: 'trigger-1',
+          conditions: [{ statId: 'courage', operator: 'gte', comparisonStatId: 'fear' }],
+        },
       ],
     });
   });

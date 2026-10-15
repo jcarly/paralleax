@@ -260,6 +260,19 @@ function StatConditionFields({
     (target) => target.assignment.id === condition.statId && target.itemId === condition.itemId,
   );
   const valueType = selectedTarget ? statTargetValueType(selectedTarget) : 'number';
+  const comparisonTargets = targets.filter((target) => statTargetValueType(target) === valueType);
+  const initialComparisonTarget =
+    comparisonTargets.find(
+      (target) => target.assignment.id !== condition.statId || target.itemId !== condition.itemId,
+    ) ?? comparisonTargets[0];
+  const comparisonTarget =
+    'comparisonStatId' in condition
+      ? comparisonTargets.find(
+          (target) =>
+            target.assignment.id === condition.comparisonStatId &&
+            target.itemId === condition.comparisonItemId,
+        )
+      : undefined;
   return (
     <>
       <select
@@ -303,7 +316,58 @@ function StatConditionFields({
           </>
         ) : null}
       </select>
-      {valueType === 'boolean' ? (
+      <select
+        aria-label={t('triggerInspector.statComparisonKind')}
+        value={'comparisonStatId' in condition ? 'stat' : 'literal'}
+        onChange={(event) => {
+          if (event.target.value === 'stat') {
+            const target = initialComparisonTarget;
+            if (!target) return;
+            onChange({
+              statId: condition.statId,
+              ...(condition.itemId ? { itemId: condition.itemId } : {}),
+              operator: condition.operator,
+              comparisonStatId: target.assignment.id,
+              ...(target.itemId ? { comparisonItemId: target.itemId } : {}),
+            });
+            return;
+          }
+          onChange({
+            statId: condition.statId,
+            ...(condition.itemId ? { itemId: condition.itemId } : {}),
+            operator: condition.operator,
+            value: selectedTarget?.assignment.initialValue ?? 0,
+          });
+        }}
+      >
+        <option value="literal">{t('triggerInspector.statComparisonLiteral')}</option>
+        <option value="stat">{t('triggerInspector.statComparisonVariable')}</option>
+      </select>
+      {'comparisonStatId' in condition ? (
+        <select
+          aria-label={t('triggerInspector.comparisonStat')}
+          value={comparisonTarget ? statTargetId(comparisonTarget) : ''}
+          onChange={(event) => {
+            const target = comparisonTargets.find(
+              (candidate) => statTargetId(candidate) === event.target.value,
+            );
+            if (!target) return;
+            onChange({
+              statId: condition.statId,
+              ...(condition.itemId ? { itemId: condition.itemId } : {}),
+              operator: condition.operator,
+              comparisonStatId: target.assignment.id,
+              ...(target.itemId ? { comparisonItemId: target.itemId } : {}),
+            });
+          }}
+        >
+          {comparisonTargets.map((target) => (
+            <option key={statTargetId(target)} value={statTargetId(target)}>
+              {statTargetLabel(target, storyLabel)}
+            </option>
+          ))}
+        </select>
+      ) : valueType === 'boolean' ? (
         <select
           aria-label={t('triggerInspector.statValue')}
           value={String(condition.value)}

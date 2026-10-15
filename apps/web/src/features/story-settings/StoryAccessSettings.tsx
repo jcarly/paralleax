@@ -7,6 +7,7 @@ import type {
 } from '@paralleax/shared';
 import { api } from '../../api';
 import { apiErrorMessage } from '../../apiErrorMessages';
+import { FieldHelpTooltip } from '../../components/FieldHelpTooltip';
 
 interface StoryAccessSettingsProps {
   storyId: string;
@@ -175,9 +176,13 @@ export function StoryAccessSettings({ storyId, onInaccessible }: StoryAccessSett
             ))}
           </select>
         </label>
-        <label className="product-field">
-          <span>{t('access.comments.label')}</span>
+        <div className="product-field">
+          <div className="field-label-with-help">
+            <label htmlFor="story-access-comments">{t('access.comments.label')}</label>
+            <FieldHelpTooltip label={t('access.comments.label')} help={t('access.comments.help')} />
+          </div>
           <select
+            id="story-access-comments"
             value={access.commentPolicy}
             disabled={pending}
             onChange={(event) =>
@@ -193,8 +198,7 @@ export function StoryAccessSettings({ storyId, onInaccessible }: StoryAccessSett
               </option>
             ))}
           </select>
-        </label>
-        <p className="product-help">{t('access.comments.help')}</p>
+        </div>
         {accessStatus === 'saving' ? (
           <p className="product-help" role="status">
             {t('access.saving')}
@@ -207,8 +211,13 @@ export function StoryAccessSettings({ storyId, onInaccessible }: StoryAccessSett
         ) : null}
       </section>
       <section className="settings-card">
-        <h3>{t('access.collaborators')}</h3>
-        <p>{t('access.collaboratorsHelp')}</p>
+        <div className="field-heading-with-help">
+          <h3>{t('access.collaborators')}</h3>
+          <FieldHelpTooltip
+            label={t('access.collaborators')}
+            help={t('access.collaboratorsHelp')}
+          />
+        </div>
         <form className="collaborator-form" onSubmit={(event) => void addUser(event)}>
           <label className="product-field">
             <span>{t('access.email')}</span>

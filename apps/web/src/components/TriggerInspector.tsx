@@ -15,6 +15,7 @@ import {
 } from '../features/comments/InspectorCommentField';
 import { conditionUnavailableReasons, createTriggerCondition } from '../triggerConditionAuthoring';
 import { AddConditionControl, TriggerConditionFields } from './TriggerConditionEditor';
+import { FieldHelpTooltip } from './FieldHelpTooltip';
 
 export function TriggerInspector({
   story,
@@ -50,8 +51,13 @@ export function TriggerInspector({
 
   return (
     <div>
-      <h3>{t('triggerInspector.title')}</h3>
-      <p className="hint">{t('triggerInspector.variantsHelp')}</p>
+      <div className="field-heading-with-help">
+        <h3>{t('triggerInspector.title')}</h3>
+        <FieldHelpTooltip
+          label={t('triggerInspector.title')}
+          help={t('triggerInspector.variantsHelp')}
+        />
+      </div>
       <InspectorCommentSlot
         slot={{ kind: 'section', section: 'conditions' }}
         label={t('triggerInspector.title')}
@@ -139,8 +145,14 @@ export function TriggerInspector({
         semanticCommentCounts={semanticCommentCounts}
         onOpenSemanticComments={onOpenSemanticComments}
       >
-        <label className="field">
-          <span>{t('triggerInspector.appearanceProbability')}</span>
+        <div className="field">
+          <div className="field-label-with-help">
+            <span>{t('triggerInspector.appearanceProbability')}</span>
+            <FieldHelpTooltip
+              label={t('triggerInspector.appearanceProbability')}
+              help={t('triggerInspector.appearanceProbabilityHelp')}
+            />
+          </div>
           <div className="trigger-probability-field">
             <input
               aria-label={t('triggerInspector.appearanceProbability')}
@@ -162,8 +174,7 @@ export function TriggerInspector({
             />
             <span aria-hidden="true">%</span>
           </div>
-          <small>{t('triggerInspector.appearanceProbabilityHelp')}</small>
-        </label>
+        </div>
       </InspectorCommentSlot>
       <InspectorCommentSlot
         slot={{ kind: 'field', field: 'timer' }}
@@ -171,8 +182,14 @@ export function TriggerInspector({
         semanticCommentCounts={semanticCommentCounts}
         onOpenSemanticComments={onOpenSemanticComments}
       >
-        <label className="field">
-          <span>{t('triggerInspector.timer')}</span>
+        <div className="field">
+          <div className="field-label-with-help">
+            <span>{t('triggerInspector.timer')}</span>
+            <FieldHelpTooltip
+              label={t('triggerInspector.timer')}
+              help={t('triggerInspector.timerHelp')}
+            />
+          </div>
           <div className="trigger-probability-field">
             <input
               aria-label={t('triggerInspector.timer')}
@@ -194,8 +211,7 @@ export function TriggerInspector({
             />
             <span aria-hidden="true">s</span>
           </div>
-          <small>{t('triggerInspector.timerHelp')}</small>
-        </label>
+        </div>
       </InspectorCommentSlot>
       <hr />
       <button

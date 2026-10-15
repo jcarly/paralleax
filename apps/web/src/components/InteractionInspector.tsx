@@ -15,6 +15,7 @@ import {
   type InspectorSemanticCommentProps,
   type InspectorTextCommentProps,
 } from '../features/comments/InspectorCommentField';
+import { FieldHelpTooltip } from './FieldHelpTooltip';
 import { RichTextEditor } from './RichTextEditor';
 
 function getInitials(name: string) {
@@ -347,9 +348,14 @@ export function InteractionInspector({
             >
               <div className="interaction-timing-block">
                 <strong>{t('interactionInspector.durationTitle')}</strong>
-                <p className="hint">{t('interactionInspector.durationHelp')}</p>
-                <label>
-                  {t('interactionInspector.duration')}
+                <div className="field">
+                  <div className="field-label-with-help">
+                    <span>{t('interactionInspector.duration')}</span>
+                    <FieldHelpTooltip
+                      label={t('interactionInspector.duration')}
+                      help={t('interactionInspector.durationHelp')}
+                    />
+                  </div>
                   <span className="interaction-duration-input">
                     <input
                       aria-label={t('interactionInspector.durationMinutes')}
@@ -374,7 +380,7 @@ export function InteractionInspector({
                     />
                     <small>{t('interactionInspector.minutes')}</small>
                   </span>
-                </label>
+                </div>
               </div>
             </InspectorCommentSlot>
             <InspectorCommentSlot

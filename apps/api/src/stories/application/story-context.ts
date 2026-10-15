@@ -452,7 +452,10 @@ export class StoryContextService {
             trigger.conditionGroups = getTriggerConditionGroups(trigger).map((group) => ({
               ...group,
               conditions: group.conditions.filter(
-                (condition) => !('statId' in condition) || condition.itemId !== itemId,
+                (condition) =>
+                  !('statId' in condition) ||
+                  (condition.itemId !== itemId &&
+                    !('comparisonItemId' in condition && condition.comparisonItemId === itemId)),
               ),
             }));
             trigger.appearanceProbability = getTriggerAppearanceProbability(trigger);

@@ -172,16 +172,46 @@ export function buildStatCondition(
     statId: string;
     itemId?: string;
     operator: StatComparisonOperator;
-    value: unknown;
+    value?: unknown;
+    comparisonStatId?: string;
+    comparisonItemId?: string;
   },
 ): StatCondition {
   const reference = validateStatAssignmentReference(story, input.statId);
   assertItemTarget(story, reference, input.itemId);
   const definition = findStatDefinition(story, reference.assignment.statDefinitionId);
-  const value = assertStatValue(input.value, definition);
+  const hasLiteralValue = input.value !== undefined;
+  const hasComparisonTarget = input.comparisonStatId !== undefined;
+  if (hasLiteralValue === hasComparisonTarget) {
+    throw new BadRequestException(
+      'A stat condition must compare with one literal value or stat target',
+    );
+  }
+  if (input.comparisonItemId !== undefined && !hasComparisonTarget) {
+    throw new BadRequestException('A comparison item requires a comparison stat target');
+  }
   if (getStatValueType(definition) !== 'number' && !['eq', 'neq'].includes(input.operator)) {
     throw new BadRequestException('Boolean and string stats only support equality checks');
   }
+  if (hasComparisonTarget) {
+    const comparisonReference = validateStatAssignmentReference(story, input.comparisonStatId!);
+    assertItemTarget(story, comparisonReference, input.comparisonItemId);
+    const comparisonDefinition = findStatDefinition(
+      story,
+      comparisonReference.assignment.statDefinitionId,
+    );
+    if (getStatValueType(comparisonDefinition) !== getStatValueType(definition)) {
+      throw new BadRequestException('Compared stats must have the same value type');
+    }
+    return {
+      statId: reference.assignment.id,
+      ...(input.itemId ? { itemId: input.itemId } : {}),
+      operator: input.operator,
+      comparisonStatId: comparisonReference.assignment.id,
+      ...(input.comparisonItemId ? { comparisonItemId: input.comparisonItemId } : {}),
+    };
+  }
+  const value = assertStatValue(input.value, definition);
   return {
     statId: reference.assignment.id,
     ...(input.itemId ? { itemId: input.itemId } : {}),
@@ -303,7 +333,10 @@ function removeStatAssignments(story: Story, assignmentIds: ReadonlySet<string>)
       trigger.conditionGroups = getTriggerConditionGroups(trigger).map((group) => ({
         ...group,
         conditions: group.conditions.filter(
-          (condition) => !('statId' in condition) || !assignmentIds.has(condition.statId),
+          (condition) =>
+            !('statId' in condition) ||
+            (!assignmentIds.has(condition.statId) &&
+              !('comparisonStatId' in condition && assignmentIds.has(condition.comparisonStatId))),
         ),
       }));
       trigger.appearanceProbability = getTriggerAppearanceProbability(trigger);

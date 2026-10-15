@@ -123,9 +123,11 @@ details. They should stay covered by tests as the editor grows.
 - A story has at most one playable character in the current reader vertical.
   Selecting a new playable character clears the previous selection.
 - Removing a stat assignment or definition removes interaction stat effects and
-  trigger conditions that reference it.
+  trigger conditions that reference it, including as a comparison target.
 - `set` stat effects preserve the declared type. `add` and ordered
   comparisons are numeric only; equality and inequality require matching types.
+  A stat condition compares its target with exactly one typed literal or another
+  same-Story stat target; an item-definition target always includes its exact item instance.
   Missing or ill-typed runtime values never default to zero.
 - Effects and conditions target an assignment id. An item-definition assignment
   additionally requires an exact instance of that definition.

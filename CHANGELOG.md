@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+- Replaced verbose variable-condition comparison labels with the standard
+  `=`, `≠`, `<`, `≤`, `>`, and `≥` symbols across authoring, reader, and Simulation views.
+- Split the English, French, and Italian interface catalogues into consistent
+  language-specific modules while retaining lazy loading for Italian.
+
+- Replaced static field help copy with accessible “?” tooltips across authoring, Story settings,
+  access, and account forms, keeping inspectors visually focused while preserving keyboard access.
+
+- Trigger and conditional-text variable conditions can now compare one typed
+  variable with another compatible variable, including exact item-instance
+  variables, while preserving literal comparisons.
+
 - QSP imports now reduce constant numeric expressions in assignments and action
   conditions, including parentheses, unary signs, arithmetic precedence, and
   integer division. Runtime-variable expressions remain explicit compatibility

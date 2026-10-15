@@ -7,6 +7,7 @@ import {
   type InspectorTextCommentProps,
 } from '../features/comments/InspectorCommentField';
 import { CategoryField } from './CategoryField';
+import { FieldHelpTooltip } from './FieldHelpTooltip';
 import { ImageUrlField } from './ImageUrlField';
 import { RemoveRowButton } from './RemoveRowButton';
 import { StatValueField } from './StatValueField';
@@ -38,7 +39,10 @@ export function ItemDefinitionInspector({
   const itemStats = itemDefinition.stats ?? [];
   return (
     <div>
-      <h3>{t('inspector.item')}</h3>
+      <div className="field-heading-with-help">
+        <h3>{t('inspector.item')}</h3>
+        <FieldHelpTooltip label={t('inspector.item')} help={t('inspector.itemInstanceHelp')} />
+      </div>
       <InspectorCommentSlot
         slot={{ kind: 'field', field: 'imageUrl' }}
         label={t('inspector.imageUrl')}
@@ -97,7 +101,6 @@ export function ItemDefinitionInspector({
           />
         </label>
       </InspectorCommentField>
-      <p className="hint">{t('inspector.itemInstanceHelp')}</p>
       <InspectorCommentSlot
         slot={{ kind: 'section', section: 'stats' }}
         label={t('inspector.itemStats')}
