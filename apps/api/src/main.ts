@@ -14,6 +14,7 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bodyParser: false });
+  app.enableShutdownHooks();
   const config = app.get(AppConfigService);
   configureRequestBodyParsing(app);
   app.useLogger(new ConsoleLogger({ json: config.nodeEnvironment === 'production' }));

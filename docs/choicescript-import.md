@@ -46,9 +46,20 @@ The adapter is split by pipeline responsibility:
   and edges, then assigns deterministic initial positions;
 - `mapping.ts` allocates Paralleax IDs and maps the draft graph, variables,
   effects, and conditions into the canonical Story model;
-- `report.ts` owns report construction and issue/error handling;
+- `report.ts` initializes ChoiceScript statistics and source-positioned issues;
+- `packages/shared/src/import-export/common/report.ts` owns shared warning/error
+  counts, diagnostic capture, and optional in-memory preview limits;
 - `importer.ts` is the thin public orchestrator and stops the pipeline before
   persistence whenever a structural error is present.
+
+ChoiceScript and QSP reports extend the same `ImportDiagnostics` contract. With
+no capture options, every issue remains in the report as before. An adapter may
+also send every issue to `onIssue` while retaining only `maxPreviewIssues` in
+memory; warning and error counts remain complete even when the preview is empty
+or truncated. The API writes all issues to a private JSONL report file. Import
+responses include report counts and conversion statistics but no issue preview;
+the authenticated `GET /api/imports/:importId/report` endpoint streams the full
+report as a download.
 
 `models.ts` and `helpers.ts` are internal to this adapter. They are not exported
 as Paralleax domain concepts.

@@ -95,9 +95,16 @@ function uploadBinary<T>(
   path: string,
   content: Blob,
   onUploadProgress?: (percentage: number) => void,
+  signal?: AbortSignal,
 ): Promise<T> {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
+    const abort = () => xhr.abort();
+    const cleanup = () => signal?.removeEventListener('abort', abort);
+    const rejectCancelled = () => {
+      cleanup();
+      reject(new ApiError('The request was cancelled', 0, 'REQUEST_CANCELLED'));
+    };
     xhr.open('POST', `/api${path}`);
     xhr.setRequestHeader('Content-Type', 'application/octet-stream');
     xhr.upload.onprogress = (event) => {
@@ -107,12 +114,15 @@ function uploadBinary<T>(
     xhr.upload.onload = () => onUploadProgress?.(100);
     xhr.onload = () => {
       if (xhr.status < 200 || xhr.status >= 300) {
+        cleanup();
         reject(apiError(path, xhr.status, xhr.responseText));
         return;
       }
       try {
+        cleanup();
         resolve(xhr.status === 204 ? (undefined as T) : (JSON.parse(xhr.responseText) as T));
       } catch {
+        cleanup();
         reject(
           new ApiError(
             'The server returned an invalid JSON response',
@@ -122,8 +132,16 @@ function uploadBinary<T>(
         );
       }
     };
-    xhr.onerror = () =>
+    xhr.onerror = () => {
+      cleanup();
       reject(new ApiError('The server could not be reached', 0, 'NETWORK_UNAVAILABLE'));
+    };
+    xhr.onabort = rejectCancelled;
+    if (signal?.aborted) {
+      rejectCancelled();
+      return;
+    }
+    signal?.addEventListener('abort', abort, { once: true });
     xhr.send(content);
   });
 }
@@ -197,8 +215,8 @@ export interface ManagedUser {
 type InteractionSaveResponse = InteractionMutationResult | Story;
 type TriggerSaveResponse = TriggerMutationResult | Story;
 export type StoryImportResponse<TReport> =
-  | { status: 'confirmation_required'; report: TReport }
-  | { status: 'imported'; story: Story; report: TReport };
+  | { status: 'confirmation_required'; importId: string; report: TReport }
+  | { status: 'imported'; importId: string; story: StorySummary; report: TReport };
 export type ChoiceScriptImportResponse = StoryImportResponse<ChoiceScriptImportReport>;
 export type QspImportResponse = StoryImportResponse<QspImportReport>;
 export const api = {
@@ -360,23 +378,34 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ files, ...(confirmWarnings ? { confirmWarnings: true } : {}) }),
     }),
+  importReportUrl: (importId: string) => `/api/imports/${encodeURIComponent(importId)}/report`,
   importQsp: (
     file: { name: string; format: QspSourceFormat; contentBase64: string },
     confirmWarnings = false,
+    progressId?: string,
+    signal?: AbortSignal,
   ) =>
     request<QspImportResponse>('/stories/imports/qsp', {
       method: 'POST',
-      body: JSON.stringify({ file, ...(confirmWarnings ? { confirmWarnings: true } : {}) }),
+      body: JSON.stringify({
+        file,
+        ...(confirmWarnings ? { confirmWarnings: true } : {}),
+        ...(progressId ? { progressId } : {}),
+      }),
+      signal,
     }),
   importUnlimitedQsp: (
     file: { name: string; format: QspSourceFormat; content: Blob },
     onUploadProgress?: (percentage: number) => void,
     confirmWarnings = false,
+    progressId?: string,
+    signal?: AbortSignal,
   ) =>
     uploadBinary<QspImportResponse>(
-      `/stories/imports/qsp/admin?name=${encodeURIComponent(file.name)}&format=${file.format}${confirmWarnings ? '&confirmWarnings=true' : ''}`,
+      `/stories/imports/qsp/admin?name=${encodeURIComponent(file.name)}&format=${file.format}${confirmWarnings ? '&confirmWarnings=true' : ''}${progressId ? `&progressId=${encodeURIComponent(progressId)}` : ''}`,
       file.content,
       onUploadProgress,
+      signal,
     ),
   renameStory: (id: string, title: string) =>
     request<Story>(`/stories/${id}`, { method: 'PATCH', body: JSON.stringify({ title }) }),

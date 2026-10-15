@@ -1,8 +1,10 @@
 import { writeQsp } from './converter.js';
 import { describe, expect, it } from 'vitest';
-import { getTriggerConditionGroups } from '../../triggers/index.js';
-import { importQsp } from './importer.js';
+import { getJourneyStatValues } from '../../reader/index.js';
+import { getAvailableInteractions, getTriggerConditionGroups } from '../../triggers/index.js';
+import { createQspImportFailureResult, importQsp } from './importer.js';
 import { parseQspLocationBundle, serializeQspLocationBundle } from './source-bundle.js';
+import type { QspImportProgress } from './types.js';
 
 function importSource(source: Parameters<typeof importQsp>[0]) {
   let id = 0;
@@ -14,6 +16,28 @@ function importSource(source: Parameters<typeof importQsp>[0]) {
 }
 
 describe('QSP importer', () => {
+  it('captures every diagnostic when the in-memory preview is disabled', () => {
+    const captured: Array<{ code: string; severity: string }> = [];
+    const result = importQsp(
+      {
+        name: 'captured.qsps',
+        format: 'text',
+        content: '# Start\nunknown_command\n--- Start ---',
+      },
+      {
+        storyId: 'story-captured',
+        timestamp: '2026-09-02T10:00:00.000Z',
+        createId: () => 'generated-id',
+        maxPreviewIssues: 0,
+        onIssue: ({ code, severity }) => captured.push({ code, severity }),
+      },
+    );
+
+    expect(result.story).toBeDefined();
+    expect(result.report).toMatchObject({ warningCount: 1, errorCount: 0, issues: [] });
+    expect(captured).toEqual([{ code: 'unsupported_statement', severity: 'warning' }]);
+  });
+
   it('combines qsrc location files and connects literal ARGS[0] variants', () => {
     const result = importSource({
       name: 'Girl Life.qsrc',
@@ -137,6 +161,27 @@ end
     expect(result.report.issues.at(-1)).toMatchObject({
       severity: 'warning',
       code: 'unsupported_statement',
+    });
+  });
+
+  it('returns a blocking report when an import execution boundary fails', () => {
+    const result = createQspImportFailureResult({
+      name: 'failed.qsps',
+      format: 'text',
+      content: "# Start\n'Hello'\n--- Start ---",
+    });
+
+    expect(result.story).toBeUndefined();
+    expect(result.report).toMatchObject({
+      format: 'qsp',
+      sourceFileCount: 1,
+      issues: [
+        expect.objectContaining({
+          severity: 'error',
+          code: 'import_execution_failed',
+          fileName: 'failed.qsps',
+        }),
+      ],
     });
   });
 
@@ -266,6 +311,93 @@ gt 'End', $variant
     );
   });
 
+  it('analyzes only executable QSP outside comments and multiline dynamic strings', () => {
+    const result = importSource({
+      name: 'lexical-boundaries.qsps',
+      format: 'text',
+      content: `# Start
+!! if condition: act 'Commented': gt 'comment_line'
+! comment & gt 'comment_separator'
+!{
+act 'Commented block':
+  gt 'comment_block'
+end
+!}
+dynamic "
+  gs 'shop_utils', 'cleanup'
+  gt '<<$shop_display[''return_loc'']>>'
+"
+*pl 'Text & with ''quotes''' & *pl 'Second line'
+act 'Continue': gt 'End' ! comment & gt 'comment_tail'
+--- Start ---
+# End
+--- End ---`,
+    });
+
+    expect(result.story?.interactions.map(({ title }) => title)).toEqual([
+      'Start',
+      'Continue',
+      'End',
+    ]);
+    expect(result.story?.interactions[0].body).toBe(
+      '<p>Text &amp; with &#39;quotes&#39;</p><p>Second line</p>',
+    );
+    expect(result.story?.interactions[2].triggers[0].inputInteractionIds).toEqual([
+      result.story?.interactions[1].id,
+    ]);
+    expect(result.report.issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: 'unsupported_dynamic_code', line: 9 }),
+      ]),
+    );
+    expect(result.report.issues).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: 'missing_location_target' }),
+        expect.objectContaining({ code: 'dynamic_navigation_target' }),
+        expect.objectContaining({ code: 'unsupported_subroutine' }),
+        expect.objectContaining({ code: 'unsupported_dynamic_action' }),
+      ]),
+    );
+  });
+
+  it('keeps real missing static navigation source positions while distinguishing decoded code offsets', () => {
+    const textResult = importSource({
+      name: 'missing-position.qsps',
+      format: 'text',
+      content: `# Start
+'Before'
+! comment
+gt 'Missing'
+--- Start ---`,
+    });
+
+    expect(textResult.story).toBeUndefined();
+    expect(textResult.report.issues).toContainEqual(
+      expect.objectContaining({
+        severity: 'error',
+        code: 'missing_location_target',
+        line: 4,
+        lineKind: 'text',
+      }),
+    );
+
+    const binaryResult = importSource({
+      name: 'missing-position.qsp',
+      format: 'binary',
+      content: writeQsp([{ name: 'Start', description: [], code: ["gt 'Missing'"], actions: [] }]),
+    });
+
+    expect(binaryResult.story).toBeUndefined();
+    expect(binaryResult.report.issues).toContainEqual(
+      expect.objectContaining({
+        severity: 'error',
+        code: 'missing_location_target',
+        line: 1,
+        lineKind: 'location-code',
+      }),
+    );
+  });
+
   it('reports unsupported runtime features and keeps the surrounding graph inspectable', () => {
     const result = importSource({
       name: 'runtime.qsps',
@@ -363,6 +495,40 @@ end
     );
   });
 
+  it('imports constant arithmetic into reader-observable stat effects and action conditions', () => {
+    const result = importSource({
+      name: 'constant-arithmetic.qsps',
+      format: 'text',
+      content: `# Start
+score = 2 + 3 * 4
+if score > (10 + 1):
+  act 'Continue': gt 'End'
+end
+--- Start ---
+# End
+--- End ---`,
+    });
+
+    expect(result.report.errorCount).toBe(0);
+    expect(result.report.issues).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: 'unsupported_variable_statement' }),
+        expect.objectContaining({ code: 'unsupported_condition' }),
+      ]),
+    );
+    const story = result.story!;
+    const [score] = story.stats!;
+    const [start, continueInteraction] = story.interactions;
+    const statValues = getJourneyStatValues(story, [start.id]);
+
+    expect(statValues).toEqual({ [score.id]: 14 });
+    expect(
+      getAvailableInteractions(story, start.id, [start.id], null, [], statValues).map(
+        ({ title }) => title,
+      ),
+    ).toContain(continueInteraction.title);
+  });
+
   it('flattens literal array cells and keeps ELSEIF and ELSE actions exclusive', () => {
     const result = importSource({
       name: 'branches.qsps',
@@ -435,6 +601,125 @@ end
       support: 'partial',
       occurrences: 2,
     });
+  });
+
+  it('flattens nested action-only condition branches with sequential exclusivity', () => {
+    const result = importSource({
+      name: 'nested-actions.qsps',
+      format: 'text',
+      content: `# Start
+if score >= 10:
+  if $rank = 'captain':
+    act 'Elite': gt 'End'
+  elseif score ! 20:
+    act 'Qualified': gt 'End'
+  else:
+    act 'Top score': gt 'End'
+  end
+elseif score >= 5:
+  act 'Regular': gt 'End'
+else:
+  act 'New': gt 'End'
+end
+--- Start ---
+# End
+--- End ---`,
+    });
+
+    const story = result.story!;
+    const score = story.stats!.find((stat) =>
+      story.statDefinitions!.some(
+        (definition) => definition.id === stat.statDefinitionId && definition.name === 'Score',
+      ),
+    )!;
+    const rank = story.stats!.find((stat) =>
+      story.statDefinitions!.some(
+        (definition) => definition.id === stat.statDefinitionId && definition.name === 'Rank',
+      ),
+    )!;
+    const conditionsFor = (title: string) =>
+      getTriggerConditionGroups(
+        story.interactions.find((interaction) => interaction.title === title)!.triggers[0],
+      );
+
+    expect(story.interactions.map(({ title }) => title)).toEqual([
+      'Start',
+      'Elite',
+      'Qualified',
+      'Top score',
+      'Regular',
+      'New',
+      'End',
+    ]);
+    expect(conditionsFor('Elite')).toEqual([
+      {
+        id: expect.any(String),
+        conditions: [
+          { statId: score.id, operator: 'gte', value: 10 },
+          { statId: rank.id, operator: 'eq', value: 'captain' },
+        ],
+      },
+    ]);
+    expect(conditionsFor('Qualified')).toEqual([
+      {
+        id: expect.any(String),
+        conditions: [
+          { statId: score.id, operator: 'gte', value: 10 },
+          { statId: rank.id, operator: 'neq', value: 'captain' },
+          { statId: score.id, operator: 'neq', value: 20 },
+        ],
+      },
+    ]);
+    expect(conditionsFor('Top score')).toEqual([
+      {
+        id: expect.any(String),
+        conditions: [
+          { statId: score.id, operator: 'gte', value: 10 },
+          { statId: rank.id, operator: 'neq', value: 'captain' },
+          { statId: score.id, operator: 'eq', value: 20 },
+        ],
+      },
+    ]);
+    expect(conditionsFor('Regular')).toEqual([
+      {
+        id: expect.any(String),
+        conditions: [
+          { statId: score.id, operator: 'lt', value: 10 },
+          { statId: score.id, operator: 'gte', value: 5 },
+        ],
+      },
+    ]);
+    expect(conditionsFor('New')).toEqual([
+      {
+        id: expect.any(String),
+        conditions: [
+          { statId: score.id, operator: 'lt', value: 10 },
+          { statId: score.id, operator: 'lt', value: 5 },
+        ],
+      },
+    ]);
+  });
+
+  it('keeps a nested conditional branch with a direct effect in the gap report', () => {
+    const result = importSource({
+      name: 'nested-effect.qsps',
+      format: 'text',
+      content: `# Start
+if score > 1:
+  if score > 2:
+    score += 1
+    act 'Unsafe': gt 'End'
+  end
+end
+--- Start ---
+# End
+--- End ---`,
+    });
+
+    expect(result.story?.interactions.map(({ title }) => title)).not.toContain('Unsafe');
+    expect(result.report.issues).toEqual(
+      expect.arrayContaining([expect.objectContaining({ code: 'unsupported_variable_statement' })]),
+    );
   });
 
   it('keeps calculated assignments and conditional side effects in the gap report', () => {
@@ -544,5 +829,97 @@ end
     expect(() =>
       importSource({ name: 'deep.qsps', format: 'text', content: source }),
     ).not.toThrow();
+  });
+
+  it('reports import progress without changing the result', () => {
+    const events: QspImportProgress[] = [];
+    let id = 0;
+
+    const result = importQsp(
+      {
+        name: 'progress.qsps',
+        format: 'text',
+        content: "# Start\n'Hello'\n--- Start ---",
+      },
+      {
+        storyId: 'story-progress',
+        timestamp: '2026-09-02T10:00:00.000Z',
+        createId: () => `generated-${++id}`,
+        onProgress: (progress) => {
+          events.push(progress);
+        },
+      },
+    );
+
+    expect(result.story).toBeDefined();
+
+    expect(events).toEqual([
+      { phase: 'decoding', completed: 0, total: 1 },
+      {
+        phase: 'decoding',
+        completed: 1,
+        total: 1,
+        currentFile: 'progress.qsps',
+      },
+      { phase: 'parsing', completed: 0, total: 1 },
+      {
+        phase: 'parsing',
+        completed: 1,
+        total: 1,
+        currentFile: 'progress.qsps',
+      },
+      { phase: 'mapping', completed: 0, total: 3 },
+      {
+        phase: 'mapping',
+        completed: 1,
+        total: 3,
+        currentFile: 'progress.qsps',
+      },
+      {
+        phase: 'mapping',
+        completed: 3,
+        total: 3,
+        currentFile: 'progress.qsps',
+      },
+    ]);
+  });
+
+  it('reports incremental progress for many QSRC files', () => {
+    const events: QspImportProgress[] = [];
+    let id = 0;
+
+    const files = Array.from({ length: 52 }, (_, index) => ({
+      name: `location-${index}.qsrc`,
+      content: `# location_${index}\n--- location_${index} ---`,
+    }));
+
+    const result = importQsp(
+      {
+        name: 'large.qsrc',
+        format: 'locations',
+        content: files,
+      },
+      {
+        storyId: 'story-progress',
+        timestamp: '2026-09-02T10:00:00.000Z',
+        createId: () => `generated-${++id}`,
+        onProgress: (progress) => events.push(progress),
+      },
+    );
+
+    expect(result.story).toBeDefined();
+    expect(result.report.locationCount).toBe(52);
+
+    const decoding = events.filter((event) => event.phase === 'decoding' && event.completed > 0);
+
+    const parsing = events.filter((event) => event.phase === 'parsing' && event.completed > 0);
+
+    expect(decoding.map(({ completed }) => completed)).toEqual([1, 25, 50, 52]);
+    expect(parsing.map(({ completed }) => completed)).toEqual([1, 25, 50, 52]);
+
+    const mapping = events.filter((event) => event.phase === 'mapping' && event.completed > 0);
+
+    expect(mapping.map(({ completed }) => completed)).toEqual([1, 25, 50, 75, 100, 125, 150, 156]);
+    expect(mapping.every(({ total }) => total === 156)).toBe(true);
   });
 });

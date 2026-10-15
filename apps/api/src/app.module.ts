@@ -3,6 +3,7 @@ import { AuthModule } from './auth/auth.module';
 import { ConfigModule } from './config/config.module';
 import { DatabaseModule } from './database/database.module';
 import { HealthModule } from './health/health.module';
+import { ImportsModule } from './imports/imports.module';
 import { StoriesModule } from './stories/stories.module';
 import { SecurityModule } from './security/security.module';
 import { CommentsModule } from './comments/comments.module';
@@ -14,6 +15,7 @@ import { CommentsModule } from './comments/comments.module';
     HealthModule,
     SecurityModule,
     AuthModule,
+    ImportsModule,
     StoriesModule,
     CommentsModule,
   ],

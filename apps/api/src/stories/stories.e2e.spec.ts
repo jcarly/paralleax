@@ -1,4 +1,8 @@
 import 'reflect-metadata';
+import { randomUUID } from 'node:crypto';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { ValidationPipe, type INestApplication } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
 import * as request from 'supertest';
@@ -17,6 +21,7 @@ import type {
 import {
   getTriggerConditionGroups,
   getTriggerConditions,
+  importQsp,
   MAX_INTERACTION_BODY_LENGTH,
   serializeQspLocationBundle,
 } from '@paralleax/shared';
@@ -27,6 +32,9 @@ import { InMemoryStoriesRepository } from './stories.repository.memory';
 import { StoriesRepository } from './stories.repository';
 import { STORY_MUTATION_RATE_LIMIT } from './stories.controller';
 import { StoryEventsService } from './story.events';
+import { QspImportWorkerService } from './application/qsp-import-worker.service';
+import { ImportReportWriter } from '../imports/import-report-writer';
+import { LocalImportReportStorage } from '../imports/import-report-storage';
 import { ApiExceptionFilter } from '../operations/api-exception.filter';
 import { configureRequestBodyParsing } from '../operations/request-body';
 import { requestContextMiddleware } from '../operations/request-context';
@@ -34,13 +42,39 @@ import { requestContextMiddleware } from '../operations/request-context';
 describe('Stories API', () => {
   let app: INestApplication;
   let httpServer: Parameters<typeof request>[0];
+  let reportDirectory: string;
 
   beforeEach(async () => {
+    reportDirectory = await mkdtemp(join(tmpdir(), 'paralleax-import-api-'));
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     })
       .overrideProvider(StoriesRepository)
       .useClass(InMemoryStoriesRepository)
+      .overrideProvider(QspImportWorkerService)
+      .useValue({
+        run: jest.fn(async (...args: Parameters<QspImportWorkerService['run']>) => {
+          const source = args[0];
+          const reportPath = args[3];
+          if (!reportPath) throw new Error('A test QSP report path is required.');
+          const writer = new ImportReportWriter({ reportPath });
+          await writer.start();
+          try {
+            return importQsp(source, {
+              storyId: randomUUID(),
+              timestamp: new Date().toISOString(),
+              createId: randomUUID,
+              maxPreviewIssues: 0,
+              onIssue: (issue) => writer.writeIssue(issue),
+              onProgress: args[1],
+            });
+          } finally {
+            await writer.close();
+          }
+        }),
+      })
+      .overrideProvider(LocalImportReportStorage)
+      .useValue(new LocalImportReportStorage(reportDirectory))
       .overrideProvider(DatabaseMigrator)
       .useValue({ run: jest.fn().mockResolvedValue(undefined) })
       .overrideProvider(AuthService)
@@ -81,6 +115,7 @@ describe('Stories API', () => {
 
   afterEach(async () => {
     await app.close();
+    await rm(reportDirectory, { recursive: true, force: true });
   });
 
   async function createStory(title = 'Test story'): Promise<Story> {
@@ -378,17 +413,24 @@ Night falls.
       .expect(201);
 
     expect(response.body.story).toMatchObject({
+      id: expect.any(String),
       title: 'Imported mystery',
+      interactionCount: 4,
       access: { visibility: 'private', editPolicy: 'owner', commentPolicy: 'editors' },
     });
     expect(response.body.status).toBe('imported');
-    expect(response.body.story.interactions).toHaveLength(4);
+    expect(response.body.story).not.toHaveProperty('interactions');
+    const importedStory = await request(httpServer)
+      .get(`/api/stories/${response.body.story.id}`)
+      .expect(200);
+    expect(importedStory.body.interactions).toHaveLength(4);
     expect(response.body.report).toMatchObject({
       format: 'choicescript',
       sourceFileCount: 1,
       sceneCount: 1,
       interactionCount: 4,
     });
+    expect(response.body.importId).toEqual(expect.any(String));
 
     const listResponse = await request(httpServer).get('/api/stories').expect(200);
     expect(listResponse.body.items).toHaveLength(1);
@@ -396,6 +438,23 @@ Night falls.
       id: response.body.story.id,
       interactionCount: 4,
     });
+  });
+
+  it('writes ChoiceScript warnings to the downloadable JSONL report', async () => {
+    const response = await request(httpServer)
+      .post('/api/stories/imports/choicescript')
+      .send({ files: [{ name: 'chapter.txt', content: 'A chapter begins.' }] })
+      .expect(201);
+
+    expect(response.body).toMatchObject({
+      status: 'confirmation_required',
+      report: { format: 'choicescript', warningCount: 1, errorCount: 0, issues: [] },
+    });
+    const report = await request(httpServer)
+      .get(`/api/imports/${response.body.importId}/report`)
+      .expect(200);
+    expect(report.text).toContain('missing_startup_scene');
+    expect((await request(httpServer).get('/api/stories').expect(200)).body.items).toEqual([]);
   });
 
   it('validates ChoiceScript import files and rejects unresolved flow', async () => {
@@ -451,9 +510,36 @@ unknown_command
 
     expect(preview.body.status).toBe('confirmation_required');
     expect(preview.body.story).toBeUndefined();
-    expect(preview.body.report.issues).toEqual(
+    expect(preview.body.report).toMatchObject({
+      warningCount: expect.any(Number),
+      errorCount: 0,
+      issues: [],
+    });
+    expect(preview.body.report.warningCount).toBeGreaterThan(0);
+    expect(preview.body.importId).toEqual(expect.any(String));
+
+    const report = await request(httpServer)
+      .get(`/api/imports/${preview.body.importId}/report`)
+      .expect(200)
+      .expect('content-type', /application\/x-ndjson/)
+      .expect(
+        'content-disposition',
+        new RegExp(`attachment; filename="${preview.body.importId}\\.jsonl"`),
+      );
+    const issues = report.text
+      .split('\n')
+      .filter(Boolean)
+      .map((line: string) => JSON.parse(line));
+    expect(issues).toHaveLength(preview.body.report.warningCount + preview.body.report.errorCount);
+    expect(issues).toEqual(
       expect.arrayContaining([expect.objectContaining({ severity: 'warning' })]),
     );
+    await request(httpServer)
+      .get(`/api/imports/${preview.body.importId}/report`)
+      .set('Cookie', 'paralleax_session=user-two')
+      .expect(403);
+    await request(httpServer).get('/api/imports/not-a-uuid/report').expect(400);
+    await request(httpServer).get(`/api/imports/${randomUUID()}/report`).expect(404);
     expect((await request(httpServer).get('/api/stories').expect(200)).body.items).toEqual([]);
 
     const response = await request(httpServer)
@@ -463,27 +549,33 @@ unknown_command
 
     expect(response.body.status).toBe('imported');
     expect(response.body.story).toMatchObject({
+      id: expect.any(String),
       title: 'corridor',
+      interactionCount: 5,
       access: { visibility: 'private', editPolicy: 'owner', commentPolicy: 'editors' },
     });
-    expect(response.body.story.interactions.map(({ title }: { title: string }) => title)).toEqual([
+    expect(response.body.story).not.toHaveProperty('interactions');
+    const importedStory = await request(httpServer)
+      .get(`/api/stories/${response.body.story.id}`)
+      .expect(200);
+    expect(importedStory.body.interactions.map(({ title }: { title: string }) => title)).toEqual([
       'Start',
       'Wait',
       'Continue',
       'Stop',
       'Ending',
     ]);
-    expect(response.body.story.statDefinitions).toEqual([
+    expect(importedStory.body.statDefinitions).toEqual([
       expect.objectContaining({ name: 'Score [2]', valueType: 'number', category: 'QSP' }),
     ]);
-    expect(response.body.story.interactions[0].statEffects).toEqual([
+    expect(importedStory.body.interactions[0].statEffects).toEqual([
       expect.objectContaining({ operation: 'set', value: 2 }),
     ]);
-    expect(response.body.story.interactions[2].triggers[0].conditionGroups[0].conditions).toEqual([
+    expect(importedStory.body.interactions[2].triggers[0].conditionGroups[0].conditions).toEqual([
       expect.objectContaining({ operator: 'lt', value: 3 }),
       expect.objectContaining({ operator: 'gte', value: 2 }),
     ]);
-    expect(response.body.story.interactions[3].triggers[0].conditionGroups[0].conditions).toEqual([
+    expect(importedStory.body.interactions[3].triggers[0].conditionGroups[0].conditions).toEqual([
       expect.objectContaining({ operator: 'lt', value: 3 }),
       expect.objectContaining({ operator: 'lt', value: 2 }),
     ]);
@@ -506,6 +598,27 @@ unknown_command
         expect.objectContaining({ id: response.body.story.id, interactionCount: 5 }),
       ]),
     );
+  });
+
+  it('requires QSP warning confirmation when the issue preview is empty', async () => {
+    const source = '# Start\nunknown_command\n--- Start ---';
+
+    const response = await request(httpServer)
+      .post('/api/stories/imports/qsp')
+      .send({
+        file: {
+          name: 'warning-preview.qsps',
+          format: 'text',
+          contentBase64: Buffer.from(source, 'utf8').toString('base64'),
+        },
+      })
+      .expect(201);
+
+    expect(response.body).toMatchObject({
+      status: 'confirmation_required',
+      report: { warningCount: 1, errorCount: 0, issues: [] },
+    });
+    expect((await request(httpServer).get('/api/stories').expect(200)).body.items).toEqual([]);
   });
 
   it('allows administrators to stream QSP files beyond the standard import limit', async () => {
@@ -537,7 +650,12 @@ unknown_command
       .expect(201);
 
     expect(response.body.status).toBe('imported');
-    expect(response.body.story).toMatchObject({ title: 'large' });
+    expect(response.body.story).toMatchObject({
+      id: expect.any(String),
+      title: 'large',
+      interactionCount: 1,
+    });
+    expect(response.body.story).not.toHaveProperty('interactions');
     expect(response.body.report).toMatchObject({
       format: 'qsp',
       sourceFileCount: 1,
@@ -566,7 +684,12 @@ unknown_command
       })
       .expect(201);
 
-    expect(response.body.story.interactions.map(({ title }: { title: string }) => title)).toEqual([
+    expect(response.body.story).toMatchObject({ interactionCount: 4 });
+    expect(response.body.story).not.toHaveProperty('interactions');
+    const importedStory = await request(httpServer)
+      .get(`/api/stories/${response.body.story.id}`)
+      .expect(200);
+    expect(importedStory.body.interactions.map(({ title }: { title: string }) => title)).toEqual([
       'start',
       'start · menu',
       'Finish',
@@ -614,11 +737,11 @@ unknown_command
 
     expect(unresolved.body.code).toBe('STORY_IMPORT_FAILED');
     expect(unresolved.body.details.report).toMatchObject({ format: 'qsp' });
-    expect(unresolved.body.details.report.issues).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ severity: 'error', code: 'missing_location_target' }),
-      ]),
-    );
+    expect(unresolved.body.details.report).toMatchObject({ errorCount: 1, issues: [] });
+    const report = await request(httpServer)
+      .get(`/api/imports/${unresolved.body.details.importId}/report`)
+      .expect(200);
+    expect(report.text).toContain('missing_location_target');
 
     const listResponse = await request(httpServer).get('/api/stories').expect(200);
     expect(listResponse.body.items).toEqual([]);

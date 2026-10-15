@@ -112,6 +112,7 @@ export function analyzeQspCode(
         analysis.navigationTargets.push({
           locationName: target,
           ...(argumentResult.argument !== undefined ? { argument: argumentResult.argument } : {}),
+          source: sourceAtLine,
         });
         report.convertedStatementCount += 1;
         touchQspFeature(report, 'navigation');

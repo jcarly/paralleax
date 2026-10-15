@@ -446,7 +446,15 @@ export function StoryList({ user }: { user: AuthUser | null }) {
           isAdministrator={isAdministrator}
           onClose={closeImportDialog}
           onImported={(story) => {
-            setStories((items) => [summarizeStory(story, user), ...items]);
+            setStories((items) => [
+              {
+                ...story,
+                owner:
+                  story.owner ??
+                  (user ? { id: user.id, displayName: user.displayName } : undefined),
+              },
+              ...items,
+            ]);
             setTotalCount((count) => count + 1);
             resetLibraryView();
           }}

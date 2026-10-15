@@ -2,9 +2,42 @@
 
 ## Unreleased
 
-- Added complete downloadable reports for QSP and ChoiceScript imports. Blocking
-  failures expose every source diagnostic, while non-blocking warnings pause before
-  persistence and require explicit confirmation; clean imports remain immediate.
+- QSP imports now reduce constant numeric expressions in assignments and action
+  conditions, including parentheses, unary signs, arithmetic precedence, and
+  integer division. Runtime-variable expressions remain explicit compatibility
+  gaps rather than becoming speculative Story state.
+- Nested action-only QSP condition branches now lower to exclusive Trigger
+  condition groups, while branches with direct effects remain explicit gaps.
+
+- Fixed QSP lexical analysis so line/block comments, multiline quoted dynamic
+  source, and `&` inside text no longer create false navigation or actions.
+  QSP diagnostics now distinguish physical text lines from decoded location-code
+  offsets.
+
+- Closed import-progress SSE subscriptions when their job completes, preventing
+  completed imports from retaining idle event streams.
+- Standardized ChoiceScript and QSP diagnostics on shared warning/error counts
+  and issue capture, while preserving complete in-memory reports by default and
+  allowing adapters to bound previews independently of captured diagnostics.
+- Added live, user-private QSP import progress for decoding, parsing, and
+  mapping, including source counts and filenames. Importers can cancel an active
+  analysis from the dialog, which aborts and terminates its worker without
+  persisting an import job or source data.
+- Connected ChoiceScript and QSP conversions to the common report capture. Every
+  diagnostic is written in order to a private JSONL file with bounded memory;
+  responses retain complete counts/statistics without an issue preview. QSP
+  writes from its worker using a file path rather than transferring callbacks.
+- Added owner-checked, UUID-validated `GET /api/imports/:importId/report` streaming
+  with an NDJSON attachment response. Import execution and report-write failures
+  now surface explicitly instead of being replaced with fabricated source errors.
+- Import HTTP responses now return only Story summary metadata, avoiding transfer
+  and browser deserialization of the converted Story. The library uses report
+  warning/error totals and links to the streamed JSONL file for both successful
+  and failed conversions instead of rendering captured issues in React.
+- Kept warning confirmation as a second conversion for now; reusable retained
+  results and persistent jobs remain follow-up work. Production report storage must
+  use a durable volume or an object-storage adapter, not an ephemeral container
+  filesystem.
 - Removed the private-alpha registration access code from the API, web form,
   deployment configuration, and acceptance flow. Registration now uses only
   explicit `open`/`closed` operation and requires email verification before

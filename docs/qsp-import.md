@@ -24,23 +24,37 @@ an authenticated binary upload with no Paralleax application-level size limit;
 the bundled production Nginx proxy disables its normal 128 KiB boundary only for
 this exact route and forwards the body without request buffering. Infrastructure
 in front of that container may still enforce its own request limit. A successful
-analysis displays every source-specific issue and a stable coverage matrix. When
+analysis displays report counts and a stable coverage matrix. When
 the report contains warnings but no blocking error, no Story is persisted until
 the author explicitly confirms the import. Confirmation resubmits and reanalyses
 the same source before creating one private Story atomically. A clean report is
 persisted immediately. An invalid game, duplicate location name, or unresolved
 static `GOTO` target rejects the import before anything is persisted and still
-returns the complete report. Reports from every outcome can be downloaded as JSON.
+returns the report counts and statistics. Successful responses contain Story
+summary metadata rather than the complete Story. The interface displays the
+warning and error counts, and the full JSONL report from any outcome is available
+through the authenticated `GET /api/imports/:importId/report` download endpoint.
 An interpolated or otherwise calculated navigation target is not treated as a
 missing static location: it is skipped, retained as a localized compatibility
 warning, and the rest of the game remains importable for inspection.
 
+QSP and ChoiceScript use the shared `ImportDiagnostics` contract for warning
+and error counts. The API sends each issue to the file-backed report writer
+through `onIssue`, while `maxPreviewIssues: 0` prevents the import response from
+retaining detailed diagnostics in memory. Counts remain complete when the issue
+preview is empty.
+
 For administrator uploads, the dialog displays the measured percentage of bytes
-sent. Once the upload reaches 100%, it switches to an indeterminate analysis
-indicator until the server operation completes. Confirming a warning report
-uploads and analyses the source again before Story creation. Paralleax does not
-present server-side analysis or persistence as a percentage because the current
-importer does not expose those work units.
+sent. Once the upload reaches 100%, and for all standard imports, it displays
+the current QSP analysis phase, its completed/total work count, and source
+file when available. The shared importer reports decoding, location parsing,
+and mapping work on the first item, every 25 items, and the final item. The API
+runs that synchronous analysis in a worker thread, so the API thread can
+continue serving requests. An authenticated, user-private SSE stream relays
+those worker messages to the import dialog; its random identifier is ephemeral
+and is never persisted. Closing the dialog aborts the request and terminates
+the active worker. Confirming a warning report opens a new stream, uploads, and
+analyses the source again before Story creation.
 
 Compiled and text formats are decoded with the official MIT-licensed
 `@qsp/converters` package. Text-source command analysis remains Paralleax code so
@@ -50,21 +64,31 @@ it can produce source locations and compatibility issues before canonical mappin
 
 ```text
 QSP game file or .qsrc location collection
-  -> official format decoding per game/source file
-  -> locations, static actions, and statement analysis
+  -> API request validation and source decoding
+  -> QSP worker thread: official format decoding per game/source file
+  -> QSP worker thread: locations, static actions, and statement analysis
   -> compatibility issues and coverage matrix
   -> Paralleax interactions and triggers
+  -> worker result returned to the API
   -> author confirmation when warnings exist
-  -> API validation and atomic persistence
+  -> API-owned atomic persistence
 ```
 
 The deterministic adapter lives in `packages/shared/src/import-export/qsp/`.
 It depends on no React, NestJS, browser, PostgreSQL, or QSP runtime. The API
-decodes the request, supplies IDs and timestamps, and persists the complete
-Story. The web library reuses the existing import modal and report presentation.
+validates and decodes the request, then delegates decoding, analysis, and mapping
+to a Node.js worker thread. It receives the complete result and remains
+responsible for warning confirmation and PostgreSQL persistence. A temporary
+per-API-instance limit allows one active QSP worker import. The web library
+reuses the existing import modal and report presentation.
+If a worker cannot complete an import, the API returns the same complete QSP
+report shape with a blocking `import_execution_failed` issue, so it remains
+visible and downloadable. Binary source buffers are transferred to the worker
+rather than cloned; active workers are terminated during graceful API shutdown.
 Warning confirmation does not create temporary server state: the existing import
 endpoint accepts `confirmWarnings`, reanalyses the submitted source, and persists
-only that confirmed result.
+only that confirmed result. The progress stream is transport-only state: it does
+not retain a source, report, job, or imported Story.
 
 No QSP identity map or foreign runtime state is persisted. Incremental re-import,
 QSP re-export, and lossless round-tripping are not part of this adapter.
@@ -79,14 +103,17 @@ The first vertical slice converts:
   titled option interactions;
 - compiled descriptions, bare literal strings, and literal `P`, `PL`, `*P`,
   `*PL`, and `NL` output to escaped rich text;
-- literal numeric and `$`-prefixed string assignments using `=`, plus numeric
-  `+=` and `-=`, to existing Story-assigned typed stats and interaction effects;
+- literal strings and constant numeric assignments using `=`, plus constant
+  numeric `+=` and `-=`, to existing Story-assigned typed stats and interaction
+  effects. Numeric constants support parentheses, unary signs, `+`, `-`, `*`,
+  and QSP integer `/` division;
 - numeric and string array cells with literal numeric or string indices to
   separate typed stats. Cell `[0]` aliases the unindexed variable as it does in QSP;
-- simple variable truthiness and literal comparisons in action-only `IF` /
-  `ELSEIF` / `ELSE` blocks to Trigger conditions, including parenthesized `NO`,
-  `AND`, and `OR` expressions. Earlier branches are negated for every later
-  branch so QSP's sequential exclusivity is preserved;
+- simple variable truthiness and comparisons with literal strings or constant
+  numeric expressions in action-only `IF` / `ELSEIF` / `ELSE` blocks to Trigger
+  conditions, including nested blocks and parenthesized `NO`, `AND`, and `OR`
+  expressions. Earlier branches are negated for every later branch so QSP's
+  sequential exclusivity is preserved;
 - static `GOTO` and `GT` destinations to graph reachability;
 - top-level literal `IF $ARGS[0] = 'value'` blocks to separate interactions, and
   the first literal `GOTO`/`GT` argument to the corresponding interaction. An
@@ -103,6 +130,14 @@ as QSP location names are. Targets containing QSP runtime interpolation such as
 `'room_<<$state>>'` cannot be resolved statically, so no speculative graph edge
 is created for them and the report identifies the source line.
 
+Before statement analysis, the adapter runs one lexical pass across each location
+or action. It preserves physical line slots while excluding line comments,
+`!{ ... !}` block comments, quoted strings (including strings spanning lines),
+and command separators inside quoted text. This prevents examples embedded in
+comments or `DYNAMIC` source from becoming navigation or actions. Diagnostic
+`lineKind` is `text` for decoded text source and `location-code` for compiled
+QSP, where the converter only exposes a position relative to the location code.
+
 QSP executes `GOTO` immediately. Paralleax currently has no automatic transition,
 so the mapped destination appears as an additional reader choice. The report
 always marks this semantic difference where it occurs. A QSP location with no
@@ -111,11 +146,11 @@ interaction, and reported as an approximation.
 
 ## Coverage report
 
-The returned `QspImportReport` contains source counts, converted/approximated/
-unsupported statement counts, source-positioned issues, and a stable feature
-matrix. Every detected warning and blocking error is retained: Paralleax applies
-no issue-count limit to the report. Statement and feature occurrence counters
-remain exact.
+The import response contains source counts, converted/approximated/unsupported
+statement counts, warning/error totals, and a stable feature matrix. The full
+source-positioned issues are streamed to the downloadable JSONL report. Every
+detected warning and blocking error is retained without an issue-count limit;
+statement and feature occurrence counters remain exact.
 The matrix reports three states:
 
 - `supported`: locations and entry discovery;
@@ -140,14 +175,15 @@ have equivalent import behavior:
 
 - ordered imperative execution within locations and actions, including immediate
   automatic transitions and early `EXIT` behavior;
-- calculated assignments, local variables, dynamic or last-cell array indices,
-  array-wide lookup/mutation/reordering, tuples and multidimensional indices,
-  calculated names, system variables, string concatenation,
-  multiplication/division effects, and the complete QSP coercion rules;
+- assignments or comparisons that read runtime variables, local variables,
+  dynamic or last-cell array indices, array-wide lookup/mutation/reordering,
+  tuples and multidimensional indices, calculated names, system variables,
+  string concatenation, multiplication/division effects, and the complete QSP
+  coercion rules;
 - general `IF` / `ELSEIF` / `ELSE` execution, apart from top-level literal
   `ARGS[0]` location variants, including conditional prose, assignments or
   navigation, dynamically declared actions, and branches with side effects.
-  Only action-only branches with reducible stat expressions are currently
+  Only nested action-only branches with reducible stat expressions are currently
   lowered to Trigger condition groups;
 - `GOSUB`, `GS`, `FUNC`, arguments, local scope, return values, recursion, and
   call-stack behavior;

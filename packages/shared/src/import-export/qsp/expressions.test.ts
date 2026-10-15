@@ -112,4 +112,37 @@ describe('QSP simple expressions', () => {
       expect.objectContaining({ kind: 'unsupported' }),
     );
   });
+
+  it('evaluates finite constant numeric expressions with QSP precedence and integer division', () => {
+    expect(parseQspAssignment('energy = 10 + 5 * 2', source)).toEqual({
+      kind: 'parsed',
+      effect: { variableName: 'energy', operation: 'set', value: 20, source },
+    });
+    expect(parseQspAssignment('energy += -(3 + 4) * +2', source)).toEqual({
+      kind: 'parsed',
+      effect: { variableName: 'energy', operation: 'add', value: -14, source },
+    });
+    expect(parseQspAssignment('energy = -17 / 5', source)).toEqual({
+      kind: 'parsed',
+      effect: { variableName: 'energy', operation: 'set', value: -3, source },
+    });
+    expect(parseQspAssignment('energy = 1 / 0', source)).toEqual(
+      expect.objectContaining({ kind: 'unsupported' }),
+    );
+    expect(parseQspAssignment('energy = maximum - 10', source)).toEqual(
+      expect.objectContaining({ kind: 'unsupported' }),
+    );
+  });
+
+  it('evaluates constant numeric comparison operands without treating stat comparisons as constants', () => {
+    expect(parseQspConditionExpression('fatigue > 10 + 5 * 2', source)).toEqual([
+      [{ variableName: 'fatigue', operator: 'gt', value: 20, source }],
+    ]);
+    expect(parseQspConditionExpression('fatigue ! -(2 + 3)', source)).toEqual([
+      [{ variableName: 'fatigue', operator: 'neq', value: -5, source }],
+    ]);
+    expect(parseQspConditionExpression('fatigue > energy', source)).toBeUndefined();
+    expect(parseQspConditionExpression('$rank > 2', source)).toBeUndefined();
+    expect(parseQspConditionExpression('$counter > 2', source)).toBeUndefined();
+  });
 });

@@ -16,6 +16,8 @@ type ExpressionNode =
 
 const MAX_CONDITION_GROUPS = 100;
 const MAX_TRIGGER_CONDITIONS = 500;
+const MAX_EXPRESSION_DEPTH = 100;
+const MAX_EXPRESSION_TOKENS = 1_000;
 
 export type QspAssignmentParseResult =
   | { kind: 'not_assignment' }
@@ -46,11 +48,15 @@ export function parseQspAssignment(
       message: `The QSP ${sourceOperation} assignment cannot be represented by a Paralleax stat effect.`,
     };
   }
-  const value = parseCompleteLiteral(valueExpression.trim());
+  const value =
+    qspVariableValueType(name) === 'number'
+      ? parseQspConstantNumberExpression(valueExpression.trim())
+      : parseCompleteLiteral(valueExpression.trim());
   if (value === undefined) {
     return {
       kind: 'unsupported',
-      message: 'Only literal QSP variable assignments are currently imported.',
+      message:
+        'Only literal strings or constant numeric QSP expressions are currently imported as stat effects.',
     };
   }
   const valueType = qspVariableValueType(name);
@@ -264,6 +270,7 @@ function hasSupportedConditionSize(groups: ReadonlyArray<ReadonlyArray<unknown>>
 function tokenize(expression: string): Token[] | undefined {
   const tokens: Token[] = [];
   for (let index = 0; index < expression.length;) {
+    if (tokens.length >= MAX_EXPRESSION_TOKENS) return undefined;
     const remainder = expression.slice(index);
     const whitespace = /^\s+/.exec(remainder);
     if (whitespace) {
@@ -286,16 +293,24 @@ function tokenize(expression: string): Token[] | undefined {
       index += string.length;
       continue;
     }
-    const number = /^-?\d+(?:\.\d+)?/.exec(remainder);
+    const number = /^\d+(?:\.\d+)?/.exec(remainder);
     if (number) {
-      tokens.push({ kind: 'literal', value: Number(number[0]) });
+      const value = Number(number[0]);
+      if (!Number.isFinite(value)) return undefined;
+      tokens.push({ kind: 'literal', value });
       index += number[0].length;
       continue;
     }
-    const comparison = /^(<>|<=|>=|=<|=>|=|<|>)/.exec(remainder);
+    const comparison = /^(<>|<=|>=|=<|=>|=|<|>|!)/.exec(remainder);
     if (comparison) {
       tokens.push({ kind: 'operator', value: comparison[0] });
       index += comparison[0].length;
+      continue;
+    }
+    const arithmetic = /^[+\-*/]/.exec(remainder);
+    if (arithmetic) {
+      tokens.push({ kind: 'operator', value: arithmetic[0] });
+      index += arithmetic[0].length;
       continue;
     }
     const identifier = /^[$%]?[a-z_][a-z0-9_.]*/i.exec(remainder);
@@ -336,8 +351,114 @@ function readStringToken(value: string): { value: string; length: number } | und
   return undefined;
 }
 
+function parseQspConstantNumberExpression(expression: string): number | undefined {
+  const tokens = tokenize(expression);
+  if (!tokens) return undefined;
+  return new ConstantNumberParser(tokens).parseComplete();
+}
+
+class ConstantNumberParser {
+  private index: number;
+  private depth = 0;
+
+  constructor(
+    private readonly tokens: Token[],
+    startIndex = 0,
+  ) {
+    this.index = startIndex;
+  }
+
+  get position() {
+    return this.index;
+  }
+
+  parseComplete(): number | undefined {
+    const value = this.parseAdditive();
+    return value !== undefined && this.index === this.tokens.length ? value : undefined;
+  }
+
+  parsePrefix(): number | undefined {
+    return this.parseAdditive();
+  }
+
+  private parseAdditive(): number | undefined {
+    let value = this.parseMultiplicative();
+    while (value !== undefined) {
+      if (this.matchOperator('+')) {
+        const right = this.parseMultiplicative();
+        if (right === undefined) return undefined;
+        value += right;
+      } else if (this.matchOperator('-')) {
+        const right = this.parseMultiplicative();
+        if (right === undefined) return undefined;
+        value -= right;
+      } else {
+        return Number.isFinite(value) ? value : undefined;
+      }
+      if (!Number.isFinite(value)) return undefined;
+    }
+    return undefined;
+  }
+
+  private parseMultiplicative(): number | undefined {
+    let value = this.parseUnary();
+    while (value !== undefined) {
+      if (this.matchOperator('*')) {
+        const right = this.parseUnary();
+        if (right === undefined) return undefined;
+        value *= right;
+      } else if (this.matchOperator('/')) {
+        const right = this.parseUnary();
+        if (right === undefined || right === 0) return undefined;
+        value = Math.trunc(value / right);
+      } else {
+        return Number.isFinite(value) ? value : undefined;
+      }
+      if (!Number.isFinite(value)) return undefined;
+    }
+    return undefined;
+  }
+
+  private parseUnary(): number | undefined {
+    if (this.matchOperator('+')) return this.withDepth(() => this.parseUnary());
+    if (this.matchOperator('-')) {
+      const value = this.withDepth(() => this.parseUnary());
+      return value === undefined ? undefined : -value;
+    }
+    const token = this.tokens[this.index];
+    if (token?.kind === 'literal' && typeof token.value === 'number') {
+      this.index += 1;
+      return token.value;
+    }
+    if (token?.kind !== 'leftParen') return undefined;
+    this.index += 1;
+    const value = this.withDepth(() => this.parseAdditive());
+    if (value === undefined || this.tokens[this.index]?.kind !== 'rightParen') return undefined;
+    this.index += 1;
+    return value;
+  }
+
+  private matchOperator(value: string) {
+    const token = this.tokens[this.index];
+    if (token?.kind !== 'operator' || token.value !== value) return false;
+    this.index += 1;
+    return true;
+  }
+
+  private withDepth<T>(parse: () => T): T | undefined {
+    if (this.depth >= MAX_EXPRESSION_DEPTH) return undefined;
+    this.depth += 1;
+    try {
+      return parse();
+    } finally {
+      this.depth -= 1;
+    }
+  }
+}
+
 class ConditionParser {
   private index = 0;
+  private depth = 0;
 
   constructor(private readonly tokens: Token[]) {}
 
@@ -368,12 +489,12 @@ class ConditionParser {
 
   private parseUnary(): ExpressionNode | undefined {
     if (this.matchOperator('no')) {
-      const operand = this.parseUnary();
+      const operand = this.withDepth(() => this.parseUnary());
       return operand ? { kind: 'not', operand } : undefined;
     }
     if (this.tokens[this.index]?.kind === 'leftParen') {
       this.index += 1;
-      const node = this.parseOr();
+      const node = this.withDepth(() => this.parseOr());
       if (!node || this.tokens[this.index]?.kind !== 'rightParen') return undefined;
       this.index += 1;
       return node;
@@ -399,10 +520,16 @@ class ConditionParser {
       };
     }
     this.index += 1;
-    const literal = this.tokens[this.index];
-    if (literal?.kind !== 'literal') return undefined;
-    if (typeof literal.value !== qspVariableValueType(variable.value)) return undefined;
-    this.index += 1;
+    const valueType = qspVariableValueType(variable.value);
+    let value: number | string | undefined;
+    if (valueType === 'string') {
+      value = this.parseStringLiteral();
+    } else {
+      const numberParser = new ConstantNumberParser(this.tokens, this.index);
+      value = numberParser.parsePrefix();
+      this.index = numberParser.position;
+    }
+    if (value === undefined || typeof value !== valueType) return undefined;
     const mappedOperator = mapComparisonOperator(operator.value);
     if (
       qspVariableValueType(variable.value) === 'string' &&
@@ -416,7 +543,7 @@ class ConditionParser {
       condition: {
         variableName: variable.value,
         operator: mappedOperator,
-        value: literal.value,
+        value,
       },
     };
   }
@@ -426,6 +553,23 @@ class ConditionParser {
     if (token?.kind !== 'operator' || token.value !== value) return false;
     this.index += 1;
     return true;
+  }
+
+  private parseStringLiteral(): string | undefined {
+    const token = this.tokens[this.index];
+    if (token?.kind !== 'literal' || typeof token.value !== 'string') return undefined;
+    this.index += 1;
+    return token.value;
+  }
+
+  private withDepth<T>(parse: () => T): T | undefined {
+    if (this.depth >= MAX_EXPRESSION_DEPTH) return undefined;
+    this.depth += 1;
+    try {
+      return parse();
+    } finally {
+      this.depth -= 1;
+    }
   }
 }
 
@@ -466,12 +610,12 @@ function negateCondition<T extends Omit<QspSourceCondition, 'source'>>(condition
 }
 
 function isComparison(value: string) {
-  return ['=', '<>', '<', '<=', '=<', '>', '>=', '=>'].includes(value);
+  return ['=', '!', '<>', '<', '<=', '=<', '>', '>=', '=>'].includes(value);
 }
 
 function mapComparisonOperator(value: string): StatComparisonOperator {
   if (value === '=') return 'eq';
-  if (value === '<>') return 'neq';
+  if (value === '<>' || value === '!') return 'neq';
   if (value === '<') return 'lt';
   if (value === '<=' || value === '=<') return 'lte';
   if (value === '>') return 'gt';

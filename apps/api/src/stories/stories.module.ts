@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { DatabaseModule } from '../database/database.module';
+import { ImportsModule } from '../imports/imports.module';
 import { StoriesController } from './stories.controller';
 import { StoriesRepository } from './stories.repository';
 import { StoriesService } from './stories.service';
@@ -14,15 +15,19 @@ import { StoryMetadataService } from './application/story-metadata';
 import { StoryMutationService } from './application/story-mutations';
 import { StoryReaderProgressService } from './application/story-reader-progress';
 import { StoryRuntimeService } from './application/story-runtime';
+import { QspImportWorkerService } from './application/qsp-import-worker.service';
+import { QspImportProgressService } from './application/qsp-import-progress.service';
 
 @Module({
-  imports: [DatabaseModule],
+  imports: [DatabaseModule, ImportsModule],
   controllers: [StoriesController],
   providers: [
     StoriesRepository,
     StoriesService,
     StoryEventsService,
     StoryImportService,
+    QspImportWorkerService,
+    QspImportProgressService,
     StoryAccessService,
     StoryContextService,
     StoryGraphService,

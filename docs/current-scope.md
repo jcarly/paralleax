@@ -128,8 +128,11 @@ Paralleax currently includes:
   library. It converts prose, scenes, choices, labels, and jumps in one atomic
   Story creation. Simple declarations, assignments, comparisons, and variable
   substitutions map to Paralleax typed stats, while unsupported expressions
-  and runtime commands remain explicit in the complete downloadable compatibility
-  report. Non-blocking warnings require explicit confirmation before persistence.
+  and runtime commands are written to an owner-protected JSONL report. The API
+  response retains conversion statistics and complete warning/error counts with
+  an empty issue preview. Non-blocking warnings require explicit confirmation
+  before persistence; confirmation still repeats conversion. ChoiceScript
+  conversion currently runs synchronously in the API process.
 - An experimental QSP importer in the same story-import workflow. It reads
   compiled `.qsp`/`.gam`, UTF-8 QSP text formats, or a selected collection of
   `.qsrc` location files. It converts locations and literal `ARGS[0]` variants,
@@ -137,17 +140,21 @@ Paralleax currently includes:
   cells), action-only `IF` / `ELSEIF` / `ELSE` branches, and static navigation;
   a literal first navigation argument is connected to the matching imported
   `ARGS[0]` variant. It then returns occurrence-aware warnings and a complete
-  feature coverage matrix. Reports are not limited by issue count and can be
-  downloaded as JSON. A failed conversion displays every available source file,
-  location, line, and diagnostic; a conversion with non-blocking warnings requires
-  explicit confirmation before any Story is persisted. QSP state reuses Story
+  feature coverage matrix. Every diagnostic is written in order to an
+  owner-protected JSONL report and streamed from `GET /api/imports/:importId/report`;
+  API import responses contain counts/statistics rather than the diagnostic list.
+  A failed conversion leaves its complete diagnostic report available; a conversion
+  with non-blocking warnings requires explicit confirmation before any Story is
+  persisted. QSP state reuses Story
   stats, effects, and Trigger condition groups; unsupported runtime semantics do
   not become Paralleax engine behavior. Standard accounts retain the 80 KiB
   request limit; administrators
   use an authenticated binary upload without a Paralleax application-level limit.
-  The import dialog reports measurable upload percentage, then an indeterminate
-  analysis phase after the server has received the file; warning confirmation
-  repeats that upload and analysis before atomic persistence.
+  The import dialog reports measurable upload percentage, then live decoding,
+  parsing, and mapping counts (with the current source file when available)
+  through a user-private ephemeral stream. Closing the dialog cancels the
+  active analysis worker; warning confirmation repeats that upload and analysis
+  before atomic persistence.
 - Editor-only React Flow graph authoring. Dropping a connection on an
   interaction's input `+` creates a dedicated Trigger; dropping on a visible
   Trigger marker adds the input to that existing Trigger without a follow-up

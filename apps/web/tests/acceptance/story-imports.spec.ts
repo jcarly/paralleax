@@ -108,16 +108,31 @@ test('imports and plays repository QSP location fixtures through the real stack'
   const firstResponse = await expectSuccessful(qspImport);
   const firstResult = (await firstResponse.json()) as {
     status: string;
+    importId: string;
     report: {
-      issues: Array<{ code: string; severity: string }>;
+      warningCount: number;
+      errorCount: number;
     };
   };
 
   expect(firstResult.status).toBe('confirmation_required');
-  expect(firstResult.report.issues).toEqual(
+  expect(firstResult.report).toMatchObject({ warningCount: 2, errorCount: 0 });
+
+  const reportResponse = await page.request.get(`/api/imports/${firstResult.importId}/report`);
+  expect(reportResponse.ok()).toBe(true);
+  expect(reportResponse.headers()['content-type']).toContain('application/x-ndjson');
+  const reportIssues = (await reportResponse.text())
+    .split('\n')
+    .filter(Boolean)
+    .map((line) => JSON.parse(line) as { code: string; severity: string });
+  expect(reportIssues).toEqual(
     expect.arrayContaining([
       expect.objectContaining({
         code: 'automatic_navigation_requires_choice',
+        severity: 'warning',
+      }),
+      expect.objectContaining({
+        code: 'unreachable_location_imported_as_root',
         severity: 'warning',
       }),
     ]),

@@ -12,6 +12,21 @@ function importFiles(files: Array<{ name: string; content: string }>) {
 }
 
 describe('ChoiceScript importer', () => {
+  it('captures all diagnostics while keeping an empty report preview', () => {
+    const captured: Array<{ code: string; severity: string }> = [];
+    const result = importChoiceScript([{ name: 'chapter.txt', content: 'A chapter begins.' }], {
+      storyId: 'story-captured',
+      timestamp: '2026-08-22T10:00:00.000Z',
+      createId: () => 'generated-id',
+      maxPreviewIssues: 0,
+      onIssue: ({ code, severity }) => captured.push({ code, severity }),
+    });
+
+    expect(result.story).toBeDefined();
+    expect(result.report).toMatchObject({ warningCount: 1, errorCount: 0, issues: [] });
+    expect(captured).toEqual([{ code: 'missing_startup_scene', severity: 'warning' }]);
+  });
+
   it('maps prose, choices, labels and jumps to interactions and triggers', () => {
     const result = importFiles([
       {

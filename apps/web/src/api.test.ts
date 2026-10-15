@@ -248,11 +248,22 @@ describe('api client', () => {
     });
 
     const qspFile = { name: 'game.qsps', format: 'text' as const, contentBase64: 'U291cmNl' };
-    await api.importQsp(qspFile, true);
+    const qspImportController = new AbortController();
+    await api.importQsp(
+      qspFile,
+      true,
+      'b460f576-c40a-4d94-9cd0-c96e6bf63619',
+      qspImportController.signal,
+    );
     expect(fetchMock).toHaveBeenLastCalledWith('/api/stories/imports/qsp', {
       headers: { 'Content-Type': 'application/json' },
       method: 'POST',
-      body: JSON.stringify({ file: qspFile, confirmWarnings: true }),
+      body: JSON.stringify({
+        file: qspFile,
+        confirmWarnings: true,
+        progressId: 'b460f576-c40a-4d94-9cd0-c96e6bf63619',
+      }),
+      signal: qspImportController.signal,
     });
 
     await api.createGraphDecoration('story-1', {
@@ -332,9 +343,11 @@ describe('api client', () => {
       };
       onload: (() => void) | null = null;
       onerror: (() => void) | null = null;
+      onabort: (() => void) | null = null;
       open = vi.fn();
       setRequestHeader = vi.fn();
       send = vi.fn();
+      abort = vi.fn(() => this.onabort?.());
 
       constructor() {
         FakeXmlHttpRequest.latest = this;
@@ -345,6 +358,7 @@ describe('api client', () => {
     const onProgress = vi.fn();
     const result = {
       status: 'imported' as const,
+      importId: '00000000-0000-4000-8000-000000000001',
       story: {
         id: 'story-qsp',
         title: 'Large game',
@@ -389,6 +403,19 @@ describe('api client', () => {
     xhr.responseText = JSON.stringify(result);
     xhr.onload?.();
     await expect(importPromise).resolves.toEqual(result);
+
+    const controller = new AbortController();
+    const cancelledImport = api.importUnlimitedQsp(
+      { name: 'large game.qsps', format: 'text', content },
+      undefined,
+      false,
+      undefined,
+      controller.signal,
+    );
+
+    controller.abort();
+    expect(FakeXmlHttpRequest.latest.abort).toHaveBeenCalledOnce();
+    await expect(cancelledImport).rejects.toMatchObject({ code: 'REQUEST_CANCELLED' });
   });
 
   it('calls anchored comment thread endpoints', async () => {

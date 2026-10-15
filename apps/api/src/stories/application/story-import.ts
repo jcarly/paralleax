@@ -1,23 +1,36 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, InternalServerErrorException } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import {
   importChoiceScript,
-  importQsp,
   parseQspLocationBundle,
+  defaultStoryAccess,
+  resolveStoryAccess,
   type ChoiceScriptImportResult,
   type QspImportResult,
   type QspImportSource,
+  type StorySummary,
 } from '@paralleax/shared';
 import type { ImportChoiceScriptDto, ImportQspDto, QspSourceMetadataDto } from '../dto/stories.dto';
 import { StoriesRepository } from '../stories.repository';
 import { apiErrorResponse } from '../../operations/api-error-response';
+import { ImportJobService } from '../../imports/import-job.service';
+import { ImportReportStorage } from '../../imports/import-report-storage';
+import { ImportReportWriter } from '../../imports/import-report-writer';
+import { QspImportWorkerService } from './qsp-import-worker.service';
+import { QspImportProgressService } from './qsp-import-progress.service';
 
 export const CHOICESCRIPT_IMPORT_SOURCE_LIMIT = 96 * 1024;
 export const QSP_IMPORT_SOURCE_LIMIT = 80 * 1024;
 
 @Injectable()
 export class StoryImportService {
-  constructor(private readonly repository: StoriesRepository) {}
+  constructor(
+    private readonly repository: StoriesRepository,
+    private readonly qspWorkers: QspImportWorkerService,
+    private readonly qspProgress: QspImportProgressService,
+    private readonly jobs: ImportJobService,
+    private readonly reportStorage: ImportReportStorage,
+  ) {}
 
   async createChoiceScript(input: ImportChoiceScriptDto, userId: string, confirmWarnings = false) {
     const sourceSize = input.files.reduce(
@@ -32,15 +45,41 @@ export class StoryImportService {
         ),
       );
     }
-    return this.completeImport(
-      importChoiceScript(input.files, importOptions()),
-      'ChoiceScript',
-      userId,
-      confirmWarnings,
-    );
+    const job = this.jobs.create(userId, 'choicescript');
+    const writer = new ImportReportWriter({
+      reportPath: await this.createReportFile(job.id, 'choicescript'),
+    });
+    let result: ChoiceScriptImportResult;
+    this.jobs.update(job.id, { status: 'running', phase: 'parsing' });
+    try {
+      await writer.start();
+      result = importChoiceScript(input.files, {
+        ...importOptions(),
+        maxPreviewIssues: 0,
+        onIssue: (issue) => writer.writeIssue(issue),
+      });
+      await writer.close();
+    } catch (caught) {
+      let failure = caught;
+      try {
+        await writer.close();
+      } catch (closeError) {
+        failure = new AggregateError(
+          [caught, closeError],
+          'ChoiceScript report finalization failed.',
+        );
+      }
+      return this.failInfrastructureImport(job.id, 'choicescript', failure);
+    }
+    return this.completeImport(result, 'ChoiceScript', userId, confirmWarnings, job.id);
   }
 
-  async createQsp(input: ImportQspDto, userId: string, confirmWarnings = false) {
+  async createQsp(
+    input: ImportQspDto,
+    userId: string,
+    confirmWarnings = false,
+    abortSignal?: AbortSignal,
+  ) {
     const bytes = Buffer.from(input.file.contentBase64, 'base64');
     return this.createQspFromBytes(
       input.file,
@@ -48,6 +87,8 @@ export class StoryImportService {
       userId,
       confirmWarnings,
       QSP_IMPORT_SOURCE_LIMIT,
+      input.progressId,
+      abortSignal,
     );
   }
 
@@ -56,16 +97,28 @@ export class StoryImportService {
     bytes: Buffer,
     userId: string,
     confirmWarnings = false,
+    progressId?: string,
+    abortSignal?: AbortSignal,
   ) {
-    return this.createQspFromBytes(input, bytes, userId, confirmWarnings);
+    return this.createQspFromBytes(
+      input,
+      bytes,
+      userId,
+      confirmWarnings,
+      undefined,
+      progressId,
+      abortSignal,
+    );
   }
 
-  private createQspFromBytes(
+  private async createQspFromBytes(
     input: QspSourceMetadataDto,
     bytes: Buffer,
     userId: string,
     confirmWarnings: boolean,
     sourceLimit?: number,
+    progressId?: string,
+    abortSignal?: AbortSignal,
   ) {
     const expectedFormat = qspFormatForFileName(input.name);
     if (expectedFormat !== input.format) {
@@ -82,7 +135,51 @@ export class StoryImportService {
         apiErrorResponse('QSP_IMPORT_TOO_LARGE', 'The QSP source exceeds the 80 KiB import limit'),
       );
     }
-    return this.completeImport(importQsp(source, importOptions()), 'QSP', userId, confirmWarnings);
+    const job = this.jobs.create(userId, 'qsp');
+    let result: QspImportResult;
+    try {
+      const reportPath = await this.createReportFile(job.id, 'qsp');
+      this.jobs.update(job.id, { status: 'running', phase: 'decoding' });
+      result = await this.qspWorkers.run(
+        source,
+        (progress) => {
+          this.qspProgress.publish(userId, progressId, progress);
+          this.jobs.update(job.id, {
+            phase: progress.phase,
+            progress: progress.total ? Math.floor((progress.completed / progress.total) * 100) : 0,
+            total: progress.total,
+            currentFile: progress.currentFile,
+          });
+        },
+        abortSignal,
+        reportPath,
+      );
+    } catch (caught) {
+      return this.failInfrastructureImport(job.id, 'qsp', caught);
+    }
+
+    try {
+      const willPersist =
+        result.story !== undefined &&
+        result.report.errorCount === 0 &&
+        (confirmWarnings || result.report.warningCount === 0);
+      if (willPersist) {
+        this.qspProgress.publish(userId, progressId, { phase: 'saving', completed: 0 });
+        this.jobs.update(job.id, { phase: 'saving' });
+      }
+
+      const outcome = await this.completeImport(result, 'QSP', userId, confirmWarnings, job.id);
+      if (outcome.status === 'imported') {
+        this.qspProgress.publish(userId, progressId, {
+          phase: 'saving',
+          completed: 1,
+          total: 1,
+        });
+      }
+      return outcome;
+    } finally {
+      this.qspProgress.complete(userId, progressId);
+    }
   }
 
   private async completeImport(
@@ -90,23 +187,135 @@ export class StoryImportService {
     sourceLabel: string,
     userId: string,
     confirmWarnings: boolean,
+    importId: string,
   ) {
-    if (!result.story) {
+    const report = { ...result.report, issues: [] };
+    if (!result.story || result.report.errorCount > 0) {
+      this.jobs.update(importId, {
+        status: 'failed',
+        phase: 'finalizing',
+        warningCount: result.report.warningCount,
+        errorCount: result.report.errorCount,
+        reportAvailable: true,
+      });
+      this.jobs.complete(importId);
       throw new BadRequestException(
         apiErrorResponse('STORY_IMPORT_FAILED', `${sourceLabel} import failed`, {
-          report: result.report,
+          importId,
+          report,
         }),
       );
     }
-    if (!confirmWarnings && result.report.issues.some(({ severity }) => severity === 'warning')) {
-      return { status: 'confirmation_required' as const, report: result.report };
+    if (!confirmWarnings && result.report.warningCount > 0) {
+      this.jobs.update(importId, {
+        status: 'awaiting_confirmation',
+        phase: 'finalizing',
+        warningCount: result.report.warningCount,
+        errorCount: result.report.errorCount,
+        reportAvailable: true,
+      });
+      this.jobs.complete(importId);
+      return { status: 'confirmation_required' as const, importId, report };
     }
-    await this.repository.save(result.story, userId);
+    this.jobs.update(importId, {
+      status: 'running',
+      phase: 'saving',
+      warningCount: result.report.warningCount,
+      errorCount: result.report.errorCount,
+      reportAvailable: true,
+    });
+    try {
+      await this.repository.save(result.story, userId);
+    } catch (caught) {
+      this.jobs.update(importId, { status: 'failed', phase: 'finalizing' });
+      this.jobs.complete(importId);
+      throw new InternalServerErrorException(
+        apiErrorResponse(
+          'STORY_IMPORT_SAVE_FAILED',
+          'The converted Story could not be saved; its diagnostic report remains available.',
+          {
+            importId,
+            format: result.report.format,
+            warningCount: result.report.warningCount,
+            errorCount: result.report.errorCount,
+            reportAvailable: true,
+          },
+        ),
+        { cause: caught },
+      );
+    }
+    this.jobs.update(importId, {
+      status: 'completed',
+      phase: 'finalizing',
+      progress: 100,
+      warningCount: result.report.warningCount,
+      errorCount: result.report.errorCount,
+      reportAvailable: true,
+      storyId: result.story.id,
+    });
+    this.jobs.complete(importId);
+    const access = result.story.access ?? defaultStoryAccess;
+    const story: StorySummary = {
+      id: result.story.id,
+      revision: result.story.revision,
+      title: result.story.title,
+      interactionCount: result.story.interactions.length,
+      startDateTime: result.story.startDateTime,
+      access,
+      capabilities:
+        result.story.capabilities ??
+        resolveStoryAccess(access, { authenticated: true, isOwner: true }),
+      owner: result.story.owner,
+      createdAt: result.story.createdAt,
+      updatedAt: result.story.updatedAt,
+    };
     return {
       status: 'imported' as const,
-      story: structuredClone(result.story),
-      report: result.report,
+      importId,
+      story,
+      report,
     };
+  }
+
+  private async createReportFile(importId: string, format: 'choicescript' | 'qsp') {
+    try {
+      return await this.reportStorage.createReportFile(importId, format);
+    } catch (caught) {
+      this.jobs.update(importId, { status: 'failed', phase: 'finalizing' });
+      this.jobs.complete(importId);
+      throw this.importInfrastructureError(importId, format, caught);
+    }
+  }
+
+  private async failInfrastructureImport(
+    importId: string,
+    format: 'choicescript' | 'qsp',
+    caught: unknown,
+  ): Promise<never> {
+    this.jobs.update(importId, { status: 'failed', phase: 'finalizing', reportAvailable: false });
+    this.jobs.complete(importId);
+    try {
+      await this.reportStorage.deleteReport(importId);
+    } catch (cleanupError) {
+      throw this.importInfrastructureError(
+        importId,
+        format,
+        new AggregateError([caught, cleanupError], 'Import report cleanup also failed.'),
+      );
+    }
+    throw this.importInfrastructureError(importId, format, caught);
+  }
+
+  private importInfrastructureError(importId: string, format: string, caught: unknown) {
+    const errorType = caught instanceof Error ? caught.name : 'UnknownError';
+    return new InternalServerErrorException(
+      apiErrorResponse(
+        'STORY_IMPORT_EXECUTION_FAILED',
+        `${format} import execution failed while creating or finalizing its diagnostic report.`,
+        { importId, format, errorType },
+      ),
+      { cause: caught instanceof Error ? caught : undefined },
+    );
   }
 }
 

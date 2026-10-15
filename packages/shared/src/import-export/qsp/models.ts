@@ -15,6 +15,7 @@ export interface QspSourcePosition {
   fileName: string;
   locationName: string;
   line: number;
+  lineKind?: 'text' | 'location-code';
 }
 
 export interface ParsedQspAction {
@@ -40,6 +41,7 @@ export interface QspCodeAnalysis {
 export interface QspNavigationTarget {
   locationName: string;
   argument?: string;
+  source: QspSourcePosition;
 }
 
 export interface QspVariableEffect {
