@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Replaced verbose variable-condition comparison labels with the standard
+  `=`, `≠`, `<`, `≤`, `>`, and `≥` symbols across authoring, reader, and Simulation views.
+- Split the English, French, and Italian interface catalogues into consistent
+  language-specific modules while retaining lazy loading for Italian.
+
 - Replaced static field help copy with accessible “?” tooltips across authoring, Story settings,
   access, and account forms, keeping inspectors visually focused while preserving keyboard access.
 
