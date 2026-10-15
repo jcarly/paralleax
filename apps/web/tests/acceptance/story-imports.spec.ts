@@ -116,7 +116,7 @@ test('imports and plays repository QSP location fixtures through the real stack'
   };
 
   expect(firstResult.status).toBe('confirmation_required');
-  expect(firstResult.report).toMatchObject({ warningCount: 1, errorCount: 0 });
+  expect(firstResult.report).toMatchObject({ warningCount: 2, errorCount: 0 });
 
   const reportResponse = await page.request.get(`/api/imports/${firstResult.importId}/report`);
   expect(reportResponse.ok()).toBe(true);
@@ -129,6 +129,10 @@ test('imports and plays repository QSP location fixtures through the real stack'
     expect.arrayContaining([
       expect.objectContaining({
         code: 'automatic_navigation_requires_choice',
+        severity: 'warning',
+      }),
+      expect.objectContaining({
+        code: 'unreachable_location_imported_as_root',
         severity: 'warning',
       }),
     ]),
