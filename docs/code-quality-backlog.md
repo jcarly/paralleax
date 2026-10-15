@@ -184,6 +184,50 @@ during the August 2026 code review and subsequent technical evaluations. Product
 - [x] Review coverage thresholds after module splits and cover hidden branches.
 - [x] Track bundle size so refactors do not pull React Flow into the initial chunk.
 
+## P1 — Additional 2026-10-15 Audit Follow-Ups
+
+These follow-ups came from the October 2026 static audit and should be tracked
+as incremental, behavior-preserving improvements. Keep the existing product
+rules authoritative; treat these as sequencing and measurement work rather than a
+rewrite.
+
+- [ ] Replace the broad scenario mutation flow with focused persistence commands
+      such as story metadata, interaction content, and graph-position updates,
+      then measure SQL query counts and latency for 100, 600, and 2,000
+      interaction stories before broadening the pattern.
+- [ ] Centralize import job lifecycle management so cancellation is an actual
+      stop signal and the API cannot mark a cancelled job as completed after the
+      active job keeps running; add concurrency checks before any persistence and
+      add visible cleanup for long-lived in-memory import metadata.
+- [ ] Make ELK the canonical graph-layout strategy while keeping the historic
+      custom layout as an explicit fallback or removing it after validation;
+      update the large-graph stress benchmark to use the active engine and keep
+      the measured baseline aligned with production behavior.
+- [ ] Reduce repeated graph-layout work by indexing ELK results by node id and
+      by avoiding repeated array spreads in lane assignment while preserving
+      deterministic ordering for existing graph mutations.
+- [ ] Consolidate trigger and interaction evaluation behind a single shared
+      evaluation context so the reader, Simulation Mode, and unavailable-reason
+      projections all reuse one deterministic result object instead of repeated
+      bespoke calculations.
+- [ ] Make journey-date recalculation incremental during normal reader
+      progression, while retaining the full reconstruction path for saves,
+      rewinds, and replays; validate the optimization against long loops and
+      large journeys.
+- [ ] Break `RichTextEditor` into focused modules for selection handling,
+      token serialization, conditional-content decoration, and editing actions
+      before adopting a richer editing engine; keep the existing storage format
+      compatible throughout the refactor.
+- [ ] Share client and server import validation rules for QSP and other import
+      families in `packages/shared` while retaining the server as the final
+      authority for persisted-story acceptance.
+- [ ] Define one explicit optimistic-mutation recovery policy for failed
+      authoring updates: targeted rollback, preserved draft state, or canonical
+      reload according to mutation type and user impact.
+- [ ] Split the remaining orchestration responsibilities in `StoryEditor` and
+      `StoryPlayer` into focused feature modules without duplicating narrative
+      runtime state or changing the public behavior of the reader engine.
+
 ## Library Evaluation Candidates — 2026-09-24
 
 These candidates record the author's library-reuse note and the initial layout
