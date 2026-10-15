@@ -512,6 +512,12 @@ export class TriggerConditionDto {
   @ValidateIf((condition, value) => condition.statId !== undefined && value !== undefined)
   @IsString()
   itemId?: string;
+  @ValidateIf((condition, value) => condition.statId !== undefined && value !== undefined)
+  @IsString()
+  comparisonStatId?: string;
+  @ValidateIf((condition, value) => condition.comparisonStatId !== undefined && value !== undefined)
+  @IsString()
+  comparisonItemId?: string;
   @ValidateIf(
     (condition) =>
       condition.interactionId === undefined &&
@@ -523,12 +529,7 @@ export class TriggerConditionDto {
   @IsIn(['eq', 'neq', 'lt', 'lte', 'gt', 'gte'])
   operator?: 'eq' | 'neq' | 'lt' | 'lte' | 'gt' | 'gte';
   @ValidateIf(
-    (condition) =>
-      condition.interactionId === undefined &&
-      condition.locationId === undefined &&
-      condition.characterId === undefined &&
-      condition.itemDefinitionId === undefined &&
-      condition.temporal === undefined,
+    (condition) => condition.statId !== undefined && condition.comparisonStatId === undefined,
   )
   @IsDefined()
   value?: unknown;

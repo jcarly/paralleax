@@ -140,7 +140,7 @@ function storyFixture(): Story {
       },
     ],
     statDefinitions: [{ id: 'energy-definition', name: 'Energy', valueType: 'number' }],
-    stats: [],
+    stats: [{ id: 'story-energy', statDefinitionId: 'energy-definition', initialValue: 1 }],
     itemDefinitions: [
       { id: 'bag-definition', name: 'Bag', description: '', stats: [] },
       {
@@ -162,7 +162,15 @@ function storyFixture(): Story {
           {
             id: 'root-trigger',
             inputInteractionIds: [],
-            conditions: [{ statId: 'key-energy', itemId: 'key', operator: 'gte', value: 1 }],
+            conditions: [
+              { statId: 'key-energy', itemId: 'key', operator: 'gte', value: 1 },
+              {
+                statId: 'story-energy',
+                operator: 'gte',
+                comparisonStatId: 'key-energy',
+                comparisonItemId: 'key',
+              },
+            ],
           },
         ],
       },

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Trigger and conditional-text variable conditions can now compare one typed
+  variable with another compatible variable, including exact item-instance
+  variables, while preserving literal comparisons.
+
 - QSP imports now reduce constant numeric expressions in assignments and action
   conditions, including parentheses, unary signs, arithmetic precedence, and
   integer division. Runtime-variable expressions remain explicit compatibility

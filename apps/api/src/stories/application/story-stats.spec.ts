@@ -166,6 +166,12 @@ describe('story stats application rules', () => {
     story.interactions[0].triggers[0].conditions = [
       { statId: storyStat.id, operator: 'gte', value: 1 },
       { statId: itemStat.id, itemId: 'key-1', operator: 'gte', value: 1 },
+      {
+        statId: itemStat.id,
+        itemId: 'key-1',
+        operator: 'gte',
+        comparisonStatId: storyStat.id,
+      },
     ];
 
     deleteStatAssignment(story, storyStat.id);
@@ -262,8 +268,34 @@ describe('story stats application rules', () => {
       operator: 'gte',
       value: 5,
     });
+    const threshold = createStatAssignment(story, 'durability-threshold', {
+      statDefinitionId: durabilityDefinition.id,
+      ownerType: 'story',
+      initialValue: 5,
+    });
+    expect(
+      buildStatCondition(story, {
+        statId: durability.id,
+        itemId: 'key-1',
+        operator: 'gte',
+        comparisonStatId: threshold.id,
+      }),
+    ).toEqual({
+      statId: durability.id,
+      itemId: 'key-1',
+      operator: 'gte',
+      comparisonStatId: threshold.id,
+    });
     expect(() =>
       buildStatCondition(story, { statId: mood.id, operator: 'gt', value: 'calm' }),
+    ).toThrow(BadRequestException);
+    expect(() =>
+      buildStatCondition(story, {
+        statId: mood.id,
+        operator: 'eq',
+        comparisonStatId: durability.id,
+        comparisonItemId: 'key-1',
+      }),
     ).toThrow(BadRequestException);
   });
 });

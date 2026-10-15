@@ -40,10 +40,23 @@ export function describeTriggerCondition(
       (candidate) =>
         candidate.assignment.id === condition.statId && candidate.itemId === condition.itemId,
     );
+    const comparisonTarget =
+      'comparisonStatId' in condition
+        ? getStatTargets(story).find(
+            (candidate) =>
+              candidate.assignment.id === condition.comparisonStatId &&
+              candidate.itemId === condition.comparisonItemId,
+          )
+        : undefined;
     return t('player.condition.stat', {
       label: target ? statTargetLabel(target, t('attributes.owner.story')) : condition.statId,
       operator: t(`player.condition.operator.${condition.operator}`),
-      value: condition.value,
+      value:
+        'comparisonStatId' in condition
+          ? comparisonTarget
+            ? statTargetLabel(comparisonTarget, t('attributes.owner.story'))
+            : condition.comparisonStatId
+          : condition.value,
     });
   }
   return t('player.condition.temporal');

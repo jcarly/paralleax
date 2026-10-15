@@ -82,6 +82,27 @@ describe('TriggerInspector temporal conditions', () => {
     });
   });
 
+  it('compares a variable condition with another compatible variable', () => {
+    const story: Story = storyWithConditions([{ statId: 'courage', operator: 'gte', value: 1 }]);
+    story.statDefinitions = [{ id: 'number-definition', name: 'Number', valueType: 'number' }];
+    story.stats = [
+      { id: 'courage', statDefinitionId: 'number-definition', initialValue: 1 },
+      { id: 'fear', statDefinitionId: 'number-definition', initialValue: 2 },
+    ];
+    const onSaveTrigger = renderInspector(story);
+
+    fireEvent.change(screen.getByLabelText('Comparison value type'), { target: { value: 'stat' } });
+
+    expect(onSaveTrigger).toHaveBeenLastCalledWith('interaction-1', 'trigger-1', {
+      conditionGroups: [
+        {
+          id: 'trigger-1',
+          conditions: [{ statId: 'courage', operator: 'gte', comparisonStatId: 'fear' }],
+        },
+      ],
+    });
+  });
+
   it('adds an item ownership condition', async () => {
     const story: Story = storyWithConditions([]);
     story.itemDefinitions = [

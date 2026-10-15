@@ -20,6 +20,37 @@ describe('condition group evaluation', () => {
     expect(doConditionsMatch(conditions, new Set(['intro']), null, [], { score: 4 })).toBe(false);
     expect(doConditionsMatch(conditions, new Set(), null, [], { score: 5 })).toBe(false);
   });
+
+  it('compares one stat value with another stat value', () => {
+    const condition = {
+      statId: 'courage',
+      operator: 'gte' as const,
+      comparisonStatId: 'fear',
+    };
+
+    expect(doConditionsMatch([condition], new Set(), null, [], { courage: 6, fear: 4 })).toBe(true);
+    expect(doConditionsMatch([condition], new Set(), null, [], { courage: 3, fear: 4 })).toBe(
+      false,
+    );
+    expect(doConditionsMatch([condition], new Set(), null, [], { courage: 3 })).toBe(false);
+  });
+
+  it('resolves exact item-instance values on either side of a comparison', () => {
+    const condition = {
+      statId: 'charge',
+      itemId: 'battery-a',
+      operator: 'lt' as const,
+      comparisonStatId: 'charge',
+      comparisonItemId: 'battery-b',
+    };
+
+    expect(
+      doConditionsMatch([condition], new Set(), null, [], {}, undefined, [], {
+        'battery-a': { charge: 2 },
+        'battery-b': { charge: 4 },
+      }),
+    ).toBe(true);
+  });
 });
 
 describe('Trigger groups and probability', () => {

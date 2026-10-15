@@ -131,10 +131,23 @@ export function getUnavailableReason(
       (candidate) =>
         candidate.assignment.id === firstFailure.statId && candidate.itemId === firstFailure.itemId,
     );
+    const comparisonTarget =
+      'comparisonStatId' in firstFailure
+        ? getStatTargets(story).find(
+            (candidate) =>
+              candidate.assignment.id === firstFailure.comparisonStatId &&
+              candidate.itemId === firstFailure.comparisonItemId,
+          )
+        : undefined;
     return t('player.requirement.stat', {
       label: target ? statTargetLabel(target, t('attributes.owner.story')) : firstFailure.statId,
       operator: t(`player.requirement.operator.${firstFailure.operator}`),
-      value: firstFailure.value,
+      value:
+        'comparisonStatId' in firstFailure
+          ? comparisonTarget
+            ? statTargetLabel(comparisonTarget, t('attributes.owner.story'))
+            : firstFailure.comparisonStatId
+          : firstFailure.value,
     });
   }
   if ('itemDefinitionId' in firstFailure) {

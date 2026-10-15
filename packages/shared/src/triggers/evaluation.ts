@@ -449,15 +449,42 @@ function conditionMatches(
     return condition.isOwned ? isOwned : !isOwned;
   }
   if ('temporal' in condition) return temporalConditionMatches(condition, currentDateTime);
-  const currentValue = condition.itemId
-    ? itemStatValues[condition.itemId]?.[condition.statId]
-    : statValues[condition.statId];
-  if (currentValue === undefined || typeof currentValue !== typeof condition.value) return false;
-  if (condition.operator === 'eq') return currentValue === condition.value;
-  if (condition.operator === 'neq') return currentValue !== condition.value;
-  if (typeof currentValue !== 'number' || typeof condition.value !== 'number') return false;
-  if (condition.operator === 'lt') return currentValue < condition.value;
-  if (condition.operator === 'lte') return currentValue <= condition.value;
-  if (condition.operator === 'gt') return currentValue > condition.value;
-  return currentValue >= condition.value;
+  const currentValue = getStatConditionValue(
+    condition.statId,
+    condition.itemId,
+    statValues,
+    itemStatValues,
+  );
+  const comparisonValue =
+    'comparisonStatId' in condition
+      ? getStatConditionValue(
+          condition.comparisonStatId,
+          condition.comparisonItemId,
+          statValues,
+          itemStatValues,
+        )
+      : condition.value;
+  if (
+    currentValue === undefined ||
+    comparisonValue === undefined ||
+    typeof currentValue !== typeof comparisonValue
+  ) {
+    return false;
+  }
+  if (condition.operator === 'eq') return currentValue === comparisonValue;
+  if (condition.operator === 'neq') return currentValue !== comparisonValue;
+  if (typeof currentValue !== 'number' || typeof comparisonValue !== 'number') return false;
+  if (condition.operator === 'lt') return currentValue < comparisonValue;
+  if (condition.operator === 'lte') return currentValue <= comparisonValue;
+  if (condition.operator === 'gt') return currentValue > comparisonValue;
+  return currentValue >= comparisonValue;
+}
+
+function getStatConditionValue(
+  statId: string,
+  itemId: string | undefined,
+  statValues: Readonly<Record<string, StatValue>>,
+  itemStatValues: Readonly<Record<string, Readonly<Record<string, StatValue>>>>,
+): StatValue | undefined {
+  return itemId ? itemStatValues[itemId]?.[statId] : statValues[statId];
 }

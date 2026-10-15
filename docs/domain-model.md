@@ -140,9 +140,10 @@ definition id, is the effect and condition target.
 
 An interaction may `set` any assigned stat or `add` to a numeric one.
 Trigger conditions support equality and inequality for all matching types and
-ordered comparisons for numbers. A missing or ill-typed runtime value never
-silently becomes zero. Item-definition assignments are templates: every exact
-item instance receives an independent runtime value.
+ordered comparisons for numbers. They compare a stat target with either a typed
+literal or another same-Story stat target of the same type. A missing or
+ill-typed runtime value never silently becomes zero. Item-definition assignments
+are templates: every exact item instance receives an independent runtime value.
 
 The body sanitizer permits inert `span` markers that identify an assignment and,
 for item stats, an exact instance. The reader replaces their text content
