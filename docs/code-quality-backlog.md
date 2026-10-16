@@ -228,6 +228,46 @@ rewrite.
       `StoryPlayer` into focused feature modules without duplicating narrative
       runtime state or changing the public behavior of the reader engine.
 
+## P2 — UX, Editor Workflow, And Readability Follow-Ups
+
+These ideas came from the 2026-10-15 review of the authoring workflow and
+reader/editor usability. They are follow-up items for product polish and
+operational clarity, not a sign that the existing model is incorrect.
+
+- [ ] Adapt the editor layout to narrow windows by preventing top-bar overflow
+      and keeping side panels from obscuring the graph canvas.
+- [ ] Make conditions easier to read by avoiding truncated fields, using a
+      vertical rule layout, exposing ET / OU connectors explicitly, and
+      providing a clear summary of the combined rule.
+- [ ] Distinguish creation from connection by separating "Add interaction" from
+      "Link to an existing interaction" and adding destination search.
+- [ ] Improve graph readability with a more suitable working zoom, selection
+      centering, explicit condition / chance / delay markers, and easier loop
+      tracking for large graphs.
+- [ ] Add a reader preview in Simulation Mode with on-demand editing and a
+      condition diagnostic panel showing the result, current value, and reason a
+      block is unavailable.
+- [ ] Uniformize entity creation by naming before creation, using consistent
+      user-facing labels in English/French-friendly terminology, and allowing
+      variables and items to be created directly from their detail views.
+- [ ] Clarify rule scope by making object ownership explicit and distinguishing
+      story-level variables from character-level fields or attributes.
+- [ ] Lighten the inspector by compacting the formatting toolbar, collapsing
+      secondary settings, and reducing the visual dominance of comments.
+- [ ] Improve conditional text editing with easier insertion, spacing,
+      keyboard navigation, and visible block-boundary cues.
+- [ ] Lighten the reader by hiding empty panels and reducing generic banners so
+      the text and choices sit closer together.
+- [ ] Streamline the home/creation flow by opening the editor immediately after
+      creating a story, compacting cards, and moving demos into an explicit
+      Examples section.
+- [ ] Harmonize terminology and translations across the product, including
+      story/story, variable/characteristic, graph commands, and technical
+      vocabulary.
+- [ ] Validate the following scenarios after the UX fixes: very large graphs,
+      time and delay handling, probability behavior, multiplayer editing,
+      and save integrity after story modifications.
+
 ## Library Evaluation Candidates — 2026-09-24
 
 These candidates record the author's library-reuse note and the initial layout
