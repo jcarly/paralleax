@@ -82,24 +82,22 @@ describe('Stories API', () => {
       })
       .overrideProvider(ChoiceScriptImportWorkerService)
       .useValue({
-        run: jest.fn(
-          async (...args: Parameters<ChoiceScriptImportWorkerService['run']>) => {
-            const [files, options, , reportPath] = args;
-            if (!reportPath) throw new Error('A test ChoiceScript report path is required.');
-            const writer = new ImportReportWriter({ reportPath });
-            await writer.start();
-            try {
-              return importChoiceScript(files, {
-                ...options,
-                createId: randomUUID,
-                maxPreviewIssues: 0,
-                onIssue: (issue) => writer.writeIssue(issue),
-              });
-            } finally {
-              await writer.close();
-            }
-          },
-        ),
+        run: jest.fn(async (...args: Parameters<ChoiceScriptImportWorkerService['run']>) => {
+          const [files, options, , reportPath] = args;
+          if (!reportPath) throw new Error('A test ChoiceScript report path is required.');
+          const writer = new ImportReportWriter({ reportPath });
+          await writer.start();
+          try {
+            return importChoiceScript(files, {
+              ...options,
+              createId: randomUUID,
+              maxPreviewIssues: 0,
+              onIssue: (issue) => writer.writeIssue(issue),
+            });
+          } finally {
+            await writer.close();
+          }
+        }),
       })
       .overrideProvider(LocalImportReportStorage)
       .useValue(new LocalImportReportStorage(reportDirectory))

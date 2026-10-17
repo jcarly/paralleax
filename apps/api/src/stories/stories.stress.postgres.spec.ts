@@ -98,7 +98,9 @@ describeStress('StoriesRepository PostgreSQL stress', () => {
       repository.list(ownerId, { page: 1, pageSize: summaryStoryCount }),
     );
     const authenticatedQueryCount = queryCounter.value();
-    const authenticatedPayloadBytes = Buffer.byteLength(JSON.stringify(authenticatedListing.result));
+    const authenticatedPayloadBytes = Buffer.byteLength(
+      JSON.stringify(authenticatedListing.result),
+    );
 
     queryCounter.reset();
     const publicListing = await measureResult(() =>
@@ -133,9 +135,7 @@ describeStress('StoriesRepository PostgreSQL stress', () => {
         budget('STORY_SUMMARY_LATENCY_BUDGET_MS', 5_000),
       );
     }
-    expect(authenticatedQueryCount).toBeLessThanOrEqual(
-      budget('STORY_SUMMARY_QUERY_BUDGET', 2),
-    );
+    expect(authenticatedQueryCount).toBeLessThanOrEqual(budget('STORY_SUMMARY_QUERY_BUDGET', 2));
     expect(publicQueryCount).toBeLessThanOrEqual(budget('STORY_SUMMARY_QUERY_BUDGET', 2));
     expect(authenticatedPayloadBytes).toBeLessThanOrEqual(
       budget('STORY_SUMMARY_PAYLOAD_BUDGET_BYTES', 32 * 1024),

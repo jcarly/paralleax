@@ -1,4 +1,9 @@
-import { Injectable, type MessageEvent, type OnModuleDestroy, type OnModuleInit } from '@nestjs/common';
+import {
+  Injectable,
+  type MessageEvent,
+  type OnModuleDestroy,
+  type OnModuleInit,
+} from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { Observable, Subject } from 'rxjs';
 import type { ImportProgress } from '@paralleax/shared';
@@ -163,7 +168,12 @@ export class ImportJobService implements OnModuleInit, OnModuleDestroy {
 }
 
 function isTerminal(status: ImportJobStatus): boolean {
-  return status === 'awaiting_confirmation' || status === 'completed' || status === 'failed' || status === 'cancelled';
+  return (
+    status === 'awaiting_confirmation' ||
+    status === 'completed' ||
+    status === 'failed' ||
+    status === 'cancelled'
+  );
 }
 
 function cryptoRandomId(): string {

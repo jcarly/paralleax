@@ -5,8 +5,10 @@ import type {
 } from '@paralleax/shared';
 import type { ImportWorkerMessage } from './abortable-import-worker.service.js';
 
-export interface ChoiceScriptWorkerInput
-  extends Pick<ChoiceScriptImportOptions, 'storyId' | 'timestamp'> {
+export interface ChoiceScriptWorkerInput extends Pick<
+  ChoiceScriptImportOptions,
+  'storyId' | 'timestamp'
+> {
   files: ChoiceScriptSourceFile[];
   reportPath: string;
 }

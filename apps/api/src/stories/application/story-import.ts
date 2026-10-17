@@ -19,7 +19,6 @@ import { StoriesRepository } from '../stories.repository';
 import { apiErrorResponse } from '../../operations/api-error-response';
 import { ImportJobService } from '../../imports/import-job.service';
 import { ImportReportStorage } from '../../imports/import-report-storage';
-import { ImportReportWriter } from '../../imports/import-report-writer';
 import { QspImportWorkerService } from './qsp-import-worker.service';
 import { ChoiceScriptImportWorkerService } from './choicescript-import-worker.service';
 import { QspImportProgressService } from './qsp-import-progress.service';
@@ -58,9 +57,10 @@ export class StoryImportService {
     }
     const job = this.jobs.create(userId, 'choicescript');
     const jobSignal = this.jobs.getAbortSignal(job.id);
-    const effectiveAbortSignal = abortSignal && jobSignal
-      ? AbortSignal.any([abortSignal, jobSignal])
-      : (abortSignal ?? jobSignal);
+    const effectiveAbortSignal =
+      abortSignal && jobSignal
+        ? AbortSignal.any([abortSignal, jobSignal])
+        : (abortSignal ?? jobSignal);
     let result: ChoiceScriptImportResult;
     try {
       const reportPath = await this.createReportFile(job.id, 'choicescript');
@@ -151,9 +151,10 @@ export class StoryImportService {
     }
     const job = this.jobs.create(userId, 'qsp');
     const jobSignal = this.jobs.getAbortSignal(job.id);
-    const effectiveAbortSignal = abortSignal && jobSignal
-      ? AbortSignal.any([abortSignal, jobSignal])
-      : (abortSignal ?? jobSignal);
+    const effectiveAbortSignal =
+      abortSignal && jobSignal
+        ? AbortSignal.any([abortSignal, jobSignal])
+        : (abortSignal ?? jobSignal);
     let result: QspImportResult;
     try {
       const reportPath = await this.createReportFile(job.id, 'qsp');
@@ -254,11 +255,13 @@ export class StoryImportService {
     if (this.jobs.isCancelled(importId)) {
       return this.finishCancelledImport(importId);
     }
-    if (!this.jobs.beginPersistence(importId, {
-      warningCount: result.report.warningCount,
-      errorCount: result.report.errorCount,
-      reportAvailable: true,
-    })) {
+    if (
+      !this.jobs.beginPersistence(importId, {
+        warningCount: result.report.warningCount,
+        errorCount: result.report.errorCount,
+        reportAvailable: true,
+      })
+    ) {
       return this.finishCancelledImport(importId);
     }
     onSaving?.();

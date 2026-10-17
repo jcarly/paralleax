@@ -92,7 +92,9 @@ export abstract class AbortableImportWorkerService implements OnModuleDestroy {
       worker.once('exit', (code) => {
         this.workers.delete(worker);
         if (!settled) {
-          fail(new Error(`${options.name} worker exited before returning a result (code ${code}).`));
+          fail(
+            new Error(`${options.name} worker exited before returning a result (code ${code}).`),
+          );
         }
       });
     });

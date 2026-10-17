@@ -35,16 +35,12 @@ export class QspImportWorkerService extends AbortableImportWorkerService {
         timestamp: new Date().toISOString(),
         reportPath,
       };
-      return await this.executeWorker(
-        resolve(__dirname, 'qsp-import.worker.js'),
-        input,
-        {
-          name: 'QSP import',
-          onProgress,
-          abortSignal,
-          transferList: input.source.format === 'binary' ? [input.source.content] : [],
-        },
-      );
+      return await this.executeWorker(resolve(__dirname, 'qsp-import.worker.js'), input, {
+        name: 'QSP import',
+        onProgress,
+        abortSignal,
+        transferList: input.source.format === 'binary' ? [input.source.content] : [],
+      });
     } finally {
       this.activeImports -= 1;
     }
