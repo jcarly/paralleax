@@ -125,7 +125,9 @@ small test stories. It is not yet ready for an open public production service.
 ### P2 — Before Public Story Reading
 
 - Separate editable drafts from immutable published versions.
-- Add explicit private, unlisted, and public visibility.
+- Implement `unlisted` visibility as link-readable but absent from public
+  discovery, distinct from `public` and `invitation`; see
+  [ADR-033](decisions/ADR-033-unlisted-story-visibility.md).
 - Validate a story before publication and expose stable public reader URLs.
 - Keep author simulation and public reading as separate product surfaces.
 - Add publication metadata, reporting, moderation, and content licensing rules.
@@ -135,8 +137,12 @@ small test stories. It is not yet ready for an open public production service.
 - Implemented foundation: Story reader/editor grants, comment policies,
   process-local live invalidation, anchored review discussions, and durable
   authored change history with undo/redo.
-- Add entity- or field-level optimistic concurrency with `409 Conflict`.
-- Define compare, reload, overwrite, and merge behavior for concurrent drafts.
+- Implement field-scoped concurrency so unrelated fields can change independently;
+  merge concurrent text edits and explicitly resolve overlapping atomic values.
+- Add durable offline authoring for the already-open Story, with local mutation
+  recovery and reconnect synchronization. Follow
+  [ADR-034](decisions/ADR-034-collaborative-offline-authoring.md); its transport,
+  text protocol, and persistence implementation remain to be selected.
 - Add proposal/approval workflows and any contributor roles they demonstrably require.
 
 ## Architecture Constraints

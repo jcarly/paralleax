@@ -9,6 +9,10 @@
 - Recorded the proposed native Interaction-inclusion model and its unresolved
   ordered-execution, action, argument, safety, persistence, and QSP `GS` / `GOSUB`
   mapping decisions without presenting it as implemented scope.
+- Extracted rich-text token serialization and temporary editor-DOM cleanup from
+  `RichTextEditor` into a focused tested module while preserving stored markup.
+- Extracted rich-text selection capture, restoration, and inline conditional-frame
+  insertion into a focused tested hook without changing editor behavior.
 
 - Reduced repeated graph-layout projection work by indexing ELK vertices and
   accumulating routing lanes without repeated array copies, while preserving

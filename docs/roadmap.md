@@ -472,15 +472,15 @@ Stories have reliable ownership and revision semantics so multiple people and fu
 
 #### Revision model
 
-- Require an expected Story or entity revision on every mutable operation where
-  an obsolete write could destroy newer canonical work.
-- Reject obsolete writes with a stable `409 Conflict` response and request id.
-- Define and implement the editor choices for reload, retry, overwrite, or merge
-  according to mutation type.
-- Preserve active drafts across recoverable conflicts and test concurrent edits
-  from separate clients.
-- Decide whether conflict scope remains Story-wide or becomes entity/field-level
-  for common independent mutations.
+- Implement field-scoped concurrency so edits to unrelated fields can proceed
+  independently; preserve the canonical Story revision and reject stale writes
+  where needed.
+- Merge simultaneous text edits as collaborative operations. Resolve concurrent
+  edits to the same atomic field explicitly, preserving both values.
+- Preserve active drafts across recoverable API errors and queued offline edits;
+  classify retries, reloads, and user recovery by stable error code.
+- Implement durable offline authoring and reconnect synchronization for the
+  already-open Story, following [ADR-034](decisions/ADR-034-collaborative-offline-authoring.md).
 - Define snapshot cadence, event compaction, and retention for long-lived large
   Stories without weakening the append-only audit contract.
 - Decide whether adjacent low-level events should support optional gesture
@@ -492,8 +492,9 @@ Stories have reliable ownership and revision semantics so multiple people and fu
 
 - Finish consolidating repeated SQL/application access expressions behind one
   explicit policy contract without weakening query-level authorization.
-- Decide whether an explicit unlisted visibility differs from invitation and
-  public visibility before adding it.
+- Implement accepted `unlisted` visibility as a distinct link-readable,
+  non-discoverable policy per
+  [ADR-033](decisions/ADR-033-unlisted-story-visibility.md).
 - Add account export/deletion before open registration. Password change/reset,
   email verification, and session revocation are implemented.
 - Add external identity providers only when operationally required.
@@ -918,7 +919,8 @@ versioned publication workflow.
 - Separate mutable drafts from immutable published versions.
 - Validate before publication.
 - Stable public reader URLs.
-- Private, unlisted, and public visibility.
+- Private, authenticated, invitation, public, and accepted unlisted visibility,
+  with unlisted Stories excluded from general library discovery.
 - Separate author simulation from public reader UX.
 - Reporting and moderation foundations.
 - Ownership and content-licensing rules.

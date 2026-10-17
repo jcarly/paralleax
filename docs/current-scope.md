@@ -194,7 +194,10 @@ Paralleax currently includes:
   and graph-decoration change invalidates open editor and Simulation Mode clients;
   editors reload the authoritative story without a page refresh, while simulations
   deterministically replay their current journey. Active local drafts and drags
-  finish before a remote refresh is applied.
+  finish before a remote refresh is applied. This is the current invalidation-and-
+  reload implementation; collaborative text merging and a durable offline authoring
+  queue are accepted future direction in [ADR-034](decisions/ADR-034-collaborative-offline-authoring.md),
+  not implemented behavior.
 - English, French, and Italian interface localization with browser detection, a persisted
   user preference, and English fallback. Authored story content is never
   translated by the interface layer. Operational API failures are presented
@@ -232,10 +235,13 @@ The following remain future or incomplete unless a task explicitly implements th
 - calculated stats/variables, formulas, and dependency graphs;
 - automatic choices and probabilistic automatic execution;
 - explicit final/completed story semantics;
-- anonymous or offline saves;
+- anonymous or offline reader-progress saves;
+- collaborative text merging and durable offline authoring for an already-open
+  Story, accepted as future direction in [ADR-034](decisions/ADR-034-collaborative-offline-authoring.md);
+- unlisted link visibility, accepted as future direction in
+  [ADR-033](decisions/ADR-033-unlisted-story-visibility.md);
 - managed media upload/storage;
-- presence, remote cursors/selections, conflict-free same-field editing, and
-  horizontally distributed story events;
+- presence, remote cursors/selections, and horizontally distributed story events;
 - suggestion workflow, message editing, mentions, notifications, and horizontally
   distributed comment events;
 - stable public import/export format;

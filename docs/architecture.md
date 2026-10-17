@@ -364,16 +364,17 @@ values. It validates database and browser origins, port, verified SSL settings,
 and environment during startup. Production endpoints must be explicit. Consumers
 do not read `process.env` directly.
 
-Story mutations execute inside a transaction and lock their story row before
-reading the graph. The repository compares the loaded
-domain snapshot with the mutated result, then updates only changed story or
-interaction fields and changed trigger structures. Independent concurrent field
-updates therefore do not rewrite an unrelated story document. A later save to
-the same field or trigger structure is authoritative; richer conflict
-presentation remains future work.
+Story mutations currently execute inside a transaction and lock their story row
+before reading the graph. The repository compares the loaded domain snapshot
+with the mutated result, then updates only changed story or interaction fields
+and changed trigger structures. Independent concurrent field updates therefore
+do not rewrite an unrelated story document. A later same-field save is currently
+authoritative. The accepted target replaces this behavior with collaborative
+text merging, explicit resolution for overlapping atomic fields, and durable
+offline authoring; see [ADR-034](decisions/ADR-034-collaborative-offline-authoring.md).
 
-Every successful authored-story transaction publishes a process-local SSE
-invalidation after persistence. The editor and Simulation Mode subscribe only
+Every successful authored-story transaction currently publishes a process-local
+SSE invalidation after persistence. The editor and Simulation Mode subscribe only
 with effective edit permission, coalesce short mutation bursts, and reload the
 normal authorized `Story` projection. The event contains no authored payload and
 cannot bypass repository authorization. A ready event recovers changes missed

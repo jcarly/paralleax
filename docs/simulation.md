@@ -29,17 +29,14 @@ Simulation Mode should answer:
 Simulation state should distinguish:
 
 - journey: interactions actually selected during the current simulation;
-- simulated preconditions: interactions manually marked as already visited for
-  this simulation;
-- future variables or world state, once they exist after the MVP;
-- future time state, once timing exists after the MVP.
+- replayed reader state, including typed stats, inventory, location, and
+  story-local time;
+- interactions forced by the author for debugging, without changing the Story.
 
-MVP trigger evaluation may use the union of journey and simulated preconditions.
-
-The first UI does not need to visually distinguish real journey entries from
-simulated preconditions. The important behavior is that forcing or simulating an
-interaction makes the test behave as if the relevant conditions had been
-satisfied beforehand.
+Reusable named test fixtures with explicit preconditions are not part of the
+current simulation contract. Named manual saves preserve a journey and can be
+loaded from either Reader or Simulation Mode; they are not a separate fixture
+model.
 
 ## Start From Anywhere
 
@@ -51,11 +48,13 @@ interaction has been visited.
 
 ## Resume With Assumptions
 
-Authors should also be able to resume from an interaction with simulated
-preconditions.
+Authors may eventually be able to resume from an interaction with simulated
+preconditions. This is not implemented by the current named journey saves.
 
 This is useful for testing a late branch without replaying the whole story.
 Preconditions are temporary and do not modify the story.
+Whether reusable fixtures with explicit preconditions are valuable is tracked in
+[Open questions](open-questions.md#simulation).
 
 ## Availability Explanations
 
@@ -118,15 +117,19 @@ create the underlying interaction and trigger without making the author leave
 the writing flow. At the beginning of the simulation, before any current
 interaction is selected, the same action creates a root interaction.
 
-After editing the current interaction, the simulation does not need a special
-restart. Later stats or world-state changes can be applied when leaving the
-interaction, so the current view remains stable while the author edits.
+The behavior of already-replayed effects after editing an interaction remains to
+be defined. In particular, decide whether the displayed state changes
+immediately, on later steps, or only after replay; see
+[Open questions](open-questions.md#simulation).
 
 The simulation journey should support simple backtracking, such as a back arrow
 above the reader area, so authors can try another branch without restarting the
 whole test.
 
-## First Useful Version
+## Initial Product Direction
+
+The following describes the original first-version target, not the current
+implementation contract.
 
 A first implementation can focus on:
 
@@ -173,16 +176,16 @@ Current behavior:
   remains stable;
 - restart resets the simulation to the original starting interaction.
 
-This first slice only explains MVP visited / not visited conditions. Richer hover
-diagnostics and trigger editing remain next steps.
+Simulation diagnostics use the shared deterministic reader evaluation. Full
+Trigger editing inside Simulation Mode and automatic exploration of every path
+remain out of scope.
 
-Out of scope for the first version:
+Not currently supported:
 
 - full trigger editing inside Simulation Mode;
-- variables, places, characters, or world state;
-- saved simulation profiles;
+- reusable named test fixtures with explicit preconditions;
 - automatic exploration of every path.
 
-Saving named simulation states is an open question. It may mean something close
-to player saves, and should not be designed before play-session persistence is
-clearer.
+Whether reusable simulation fixtures are valuable beyond the existing
+cross-mode manual saves remains an open question; see
+[Open questions](open-questions.md).

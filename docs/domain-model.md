@@ -228,9 +228,9 @@ Later elements:
 - optional profile information beyond the implemented display name;
 - authored changes and suggestions.
 
-Local accounts, server-side sessions, administration, story visibility, and
-delegated reading/editing are implemented. Suggestions and review remain later
-work.
+Local accounts, server-side sessions, administration, story visibility,
+delegated reading/editing, and anchored review discussions are implemented.
+Change proposals that require approval remain future work.
 
 ### Story Permissions
 
@@ -246,6 +246,10 @@ Implemented visibility settings:
 - authenticated: every signed-in user can read;
 - public: anonymous and authenticated users can read;
 - invitation: explicitly granted users can read.
+
+[ADR-033](decisions/ADR-033-unlisted-story-visibility.md) accepts a fifth,
+unlisted policy that is readable by URL but excluded from general library
+discovery. It remains future work and is not part of the implemented policy set.
 
 Specific permissions are stored in `story_user_permissions`, with a `userId`, a
 `storyId`, and a `viewer` or `editor` role.
@@ -265,12 +269,8 @@ signed-in account.
 The effective permission is resolved from administrator status, story ownership,
 story policies, authentication, and the direct grant. All API object operations
 apply that resolution. New stories default to private owner-only editing with
-comments enabled for editors. Choosing the reader policy extends comments to
-every signed-in account that can read the story.
-
-Pending suggestions are not visible through a per-suggestion setting. Any user
-with review or approval rights on a story can see all pending suggestions for
-that story.
+comments disabled, as specified by ADR-017. Suggestion visibility and review or
+approval rights are not implemented; define them before adding change proposals.
 
 ### Future Multi-Participant Narrative Model
 

@@ -168,8 +168,6 @@ promotes them.
 - [x] Add retry and empty states to story listing and prevent duplicate submits.
 - [ ] Standardize loading, empty, recoverable-error, save-error, and expired-
       session presentation across frontend routes.
-- [ ] Decide whether failed optimistic mutations should reload or restore the
-      last confirmed entity value automatically.
 - [ ] Make API request identifiers available in optional support details.
 
 ## P2 — Testing And Accessibility
@@ -247,6 +245,12 @@ rewrite.
       token serialization, conditional-content decoration, and editing actions
       before adopting a richer editing engine; keep the existing storage format
       compatible throughout the refactor.
+  - [x] Extract token-source recovery, temporary editor-control construction, and
+        canonical HTML serialization into a focused tested module.
+  - [x] Extract selection capture/restoration and inline conditional-frame
+        insertion behind a focused hook.
+  - [ ] Extract conditional-content decoration and editing actions without
+        changing persisted markup or keyboard behavior.
 - [ ] Share client and server import validation rules for QSP and other import
       families in `packages/shared` while retaining the server as the final
       authority for persisted-story acceptance.

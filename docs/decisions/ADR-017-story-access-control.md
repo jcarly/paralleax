@@ -1,11 +1,14 @@
 # ADR-017: Global Administration and Story Access Control
 
-Status: Accepted
+Status: Accepted; visibility extended by ADR-033
 
 Comment-policy values and defaults are superseded by
 [ADR-019](ADR-019-editor-graph-reader-comments.md).
 
 Date: 2026-08-13
+
+Amendment (2026-10-17): [ADR-033](ADR-033-unlisted-story-visibility.md)
+adds `unlisted` as a fifth accepted visibility policy. It is not yet implemented.
 
 ## Context
 
