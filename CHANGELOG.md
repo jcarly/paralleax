@@ -6,6 +6,9 @@
   baseline, separated historical feedback from current delivery priorities, and
   refreshed production-readiness status for account safety, collaboration,
   accessibility, layout, and reliability work.
+- Recorded the proposed native Interaction-inclusion model and its unresolved
+  ordered-execution, action, argument, safety, persistence, and QSP `GS` / `GOSUB`
+  mapping decisions without presenting it as implemented scope.
 
 - Reduced repeated graph-layout projection work by indexing ELK vertices and
   accumulating routing lanes without repeated array copies, while preserving

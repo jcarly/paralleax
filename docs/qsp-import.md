@@ -186,7 +186,8 @@ have equivalent import behavior:
   Only nested action-only branches with reducible stat expressions are currently
   lowered to Trigger condition groups;
 - `GOSUB`, `GS`, `FUNC`, arguments, local scope, return values, recursion, and
-  call-stack behavior;
+  call-stack behavior. A possible native, ordered Interaction-inclusion model is
+  recorded as an unaccepted [product proposal](interaction-inclusion-proposal.md);
 - local labels, `JUMP`, loops, and dynamic code evaluation;
 - mutable action lists (`ACT`, `DELACT`, `CLA`) and actions generated conditionally
   or dynamically;

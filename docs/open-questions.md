@@ -78,6 +78,17 @@ changes`, and whether every non-read permission implies `read`.
   participant roles (decision and viewpoint semantics). They must not be
   conflated implicitly.
 
+## Interaction Inclusion
+
+- Decide whether the ordered execution representation proposed in
+  [Interaction inclusion](interaction-inclusion-proposal.md) extends the current
+  rich-content model or introduces an explicit ordered authored-operation layer.
+- Define action identity and evaluation timing when an included Interaction
+  contributes actions without becoming a visited journey step.
+- Define typed call arguments, scoped restoration, cycle rejection, defensive
+  execution limits, referenced-target deletion, and reader-progress compatibility
+  before mapping QSP `GS` or `GOSUB` into the canonical Story model.
+
 ## World State, Conditions, Effects, and Items
 
 - Define the first typed condition and effect families before broad world-state

@@ -64,6 +64,9 @@ When documents disagree, follow the precedence documented in the repository
 ## Planning Sources
 
 - [Roadmap](roadmap.md) orders user capabilities and durable product milestones.
+- [Interaction inclusion proposal](interaction-inclusion-proposal.md) records the
+  unaccepted native composition direction behind possible QSP `GS` / `GOSUB`
+  support.
 - [Production readiness](production-readiness.md) owns release and operational gates.
 - [Code quality backlog](code-quality-backlog.md) owns implementation debt,
   measurements, dependency watches, and incremental maintainability work.

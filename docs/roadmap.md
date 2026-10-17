@@ -746,6 +746,12 @@ source inventory
 
 ### Remaining scope
 
+- Decide and, if accepted, implement native ordered Interaction inclusion before
+  mapping QSP `GS` / `GOSUB`. Reuse ordinary Interactions by reference, keep
+  inclusion dependencies out of the narrative graph, preserve deterministic
+  journey semantics, and retain diagnostics for unrepresentable QSP behavior.
+  The proposal and unresolved model decisions are recorded in
+  [Interaction inclusion](interaction-inclusion-proposal.md).
 - Define a source-neutral retained representation for unsupported source and
   richer expressions; the current draft graph remains ChoiceScript-specific.
 - Separate dry-run compatibility analysis from Story creation and make the full
