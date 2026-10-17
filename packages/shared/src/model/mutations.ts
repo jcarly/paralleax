@@ -23,13 +23,27 @@ export interface InteractionMutationResult extends StoryMutationMetadata {
   interaction: Interaction;
 }
 
+export interface InteractionDeletionResult extends StoryMutationMetadata {
+  interactionId: string;
+}
+
 export interface TriggerMutationResult extends StoryMutationMetadata {
   interactionId: string;
   trigger: Trigger;
 }
 
+export interface TriggerDeletionResult extends StoryMutationMetadata {
+  interactionId: string;
+  triggerId: string;
+  triggerRemoved: boolean;
+}
+
 export interface GraphDecorationMutationResult extends StoryMutationMetadata {
   decoration: GraphDecoration;
+}
+
+export interface GraphDecorationDeletionResult extends StoryMutationMetadata {
+  decorationId: string;
 }
 
 export interface GroupMutationResult extends StoryMutationMetadata {
@@ -49,6 +63,11 @@ export interface CharacterStatMutationResult extends StoryMutationMetadata {
   stat: StatAssignment;
 }
 
+export interface CharacterStatDeletionResult extends StoryMutationMetadata {
+  characterId: string;
+  statId: string;
+}
+
 export interface StatAssignmentMutationResult extends StoryMutationMetadata {
   ownerType: 'story' | 'character' | 'location' | 'itemDefinition';
   ownerId?: string;
@@ -66,6 +85,11 @@ export interface ItemDefinitionMutationResult extends StoryMutationMetadata {
 export interface CharacterItemMutationResult extends StoryMutationMetadata {
   characterId: string;
   item: ItemInstance;
+}
+
+export interface CharacterItemDeletionResult extends StoryMutationMetadata {
+  characterId: string;
+  itemId: string;
 }
 
 export interface CreateStoryInput {

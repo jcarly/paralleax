@@ -507,8 +507,10 @@ component:
 - `features/realtime/`: invalidation priority, API-not-found recognition, and
   editable-target detection shared by editor and Simulation Mode.
 - `features/story/storyMutationResults.ts`: pure mutation metadata and entity
-  adapters shared by persistence and Simulation Mode; complete-story legacy
-  responses retain their caller-specific merge policy.
+  adapters shared by persistence and Simulation Mode. Graph, character-stat,
+  and leaf-item deletions return compact identifier/metadata contracts and reuse
+  the same `packages/shared` cleanup operations on both sides; remaining
+  complete-story legacy responses retain their caller-specific merge policy.
 - `features/story/storyProjectionLoading.ts`: framework-light assembly of
   paginated context rows into the existing Story model, plus revision mismatch
   signaling shared by editor and player loaders.
@@ -755,10 +757,12 @@ Trigger link behavior crosses the graph projection and the domain model, so it i
 split deliberately:
 
 - `storyGraph.ts` decides how triggers appear as trigger nodes and edges.
-- `storyGraphLayout.ts` computes deterministic, cycle-tolerant vertical placement
-  for interaction and grouped trigger-marker projections. It accepts either the
-  complete graph or an explicit target list so future multi-selection can reuse
-  the same operation without changing persistence semantics.
+- `storyGraphElkLayout.ts` is the canonical automatic-layout adapter. It asks ELK
+  for deterministic, cycle-tolerant vertical placement and routed edges for the
+  complete graph or an explicit target list.
+- `storyGraphLayout.ts` owns the engine-independent scope projection shared by
+  ELK and the explicitly named historic fallback. The fallback remains covered
+  for comparison and emergency reuse, but production authoring does not call it.
 - `storyGraphCreationLayout.ts` projects a temporary interaction and its linked
   trigger, then asks the scoped layout for their creation position. Click-based
   root, child, parent, and Simulation Mode option creation use this projection;

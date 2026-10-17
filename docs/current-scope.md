@@ -152,9 +152,11 @@ Paralleax currently includes:
   use an authenticated binary upload without a Paralleax application-level limit.
   The import dialog reports measurable upload percentage, then live decoding,
   parsing, and mapping counts (with the current source file when available)
-  through a user-private ephemeral stream. Closing the dialog cancels the
-  active analysis worker; warning confirmation repeats that upload and analysis
-  before atomic persistence.
+  through a user-private ephemeral stream. Closing the dialog aborts the client
+  operation and requests cancellation of the active analysis worker; centralized
+  server-side lifecycle arbitration and long-lived metadata cleanup remain open
+  reliability work. Warning confirmation repeats that upload and analysis before
+  atomic persistence.
 - Editor-only React Flow graph authoring. Dropping a connection on an
   interaction's input `+` creates a dedicated Trigger; dropping on a visible
   Trigger marker adds the input to that existing Trigger without a follow-up
@@ -164,9 +166,11 @@ Paralleax currently includes:
 - Flat persisted Groups created from selected Interactions. Groups are neutral
   authoring/navigation metadata with explicit many-to-many membership; they have
   no reader semantics, nesting, visual projection, or navigation UI yet.
-- Deterministic vertical graph auto-layout for the complete graph, one selected
-  interaction/linked trigger, or a rectangular multi-selection, with grouped
-  trigger-marker placement and fixed bottom-output/top-input interaction routing.
+- Deterministic ELK-backed vertical graph auto-layout for the complete graph, one
+  selected interaction/linked trigger, or a rectangular multi-selection, with
+  grouped trigger-marker placement and fixed bottom-output/top-input interaction
+  routing. Whole-graph organization renders transient ELK routes; reload and
+  manual movement use the documented fallback renderer.
 - Durable authored Story change history. Every new content mutation stores a
   reversible field/entity delta with its actor and revision in the same database
   transaction. Authors can undo their latest compatible change with the canvas

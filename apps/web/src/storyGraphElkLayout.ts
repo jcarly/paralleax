@@ -204,6 +204,7 @@ export async function computeStoryGraphElkLayout(
     edges,
   });
 
+  const verticesByKey = new Map(vertices.map((vertex) => [vertex.key, vertex]));
   const elkPositions = new Map<string, Position>();
 
   for (const child of result.children ?? []) {
@@ -211,7 +212,7 @@ export async function computeStoryGraphElkLayout(
       continue;
     }
 
-    const vertex = vertices.find(({ key }) => key === child.id);
+    const vertex = verticesByKey.get(child.id);
     if (!vertex) continue;
 
     elkPositions.set(vertex.key, {

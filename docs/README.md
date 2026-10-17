@@ -61,6 +61,15 @@ When documents disagree, follow the precedence documented in the repository
   `reader-semantics.md`, accepted ADRs, and current tests.
 - React Flow is a projection of the story model, not a second canonical model.
 
+## Planning Sources
+
+- [Roadmap](roadmap.md) orders user capabilities and durable product milestones.
+- [Production readiness](production-readiness.md) owns release and operational gates.
+- [Code quality backlog](code-quality-backlog.md) owns implementation debt,
+  measurements, dependency watches, and incremental maintainability work.
+- Historical feedback queues remain in the roadmap for context, but completed
+  entries are not an active delivery queue.
+
 ## Maintenance
 
 - Update [the changelog](../CHANGELOG.md) for notable changes.

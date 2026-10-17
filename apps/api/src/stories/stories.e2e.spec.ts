@@ -8,15 +8,20 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import * as request from 'supertest';
 import type {
   CharacterMutationResult,
+  CharacterItemDeletionResult,
   CharacterItemMutationResult,
+  CharacterStatDeletionResult,
   CharacterStatMutationResult,
   GraphDecorationMutationResult,
+  GraphDecorationDeletionResult,
+  InteractionDeletionResult,
   InteractionMutationResult,
   ItemDefinitionMutationResult,
   LocationMutationResult,
   StatDefinitionMutationResult,
   Story,
   TriggerMutationResult,
+  TriggerDeletionResult,
 } from '@paralleax/shared';
 import {
   getTriggerConditionGroups,
@@ -1120,9 +1125,15 @@ unknown_command
     expect(loaded.body.graphDecorations).toHaveLength(2);
     expect(loaded.body.interactions).toEqual(interactionGraph.interactions);
 
-    await request(httpServer)
+    const deletion = await request(httpServer)
       .delete(`/api/stories/${story.id}/graph-decorations/${frameResult.decoration.id}`)
       .expect(200);
+    expect(deletion.body as GraphDecorationDeletionResult).toMatchObject({
+      decorationId: frameResult.decoration.id,
+      revision: expect.any(Number),
+      updatedAt: expect.any(String),
+    });
+    expect(deletion.body).not.toHaveProperty('interactions');
     const afterDelete = await request(httpServer).get(`/api/stories/${story.id}`).expect(200);
     expect(afterDelete.body.graphDecorations).toEqual([textResult.decoration]);
   });
@@ -1320,9 +1331,16 @@ unknown_command
       .delete(`/api/stories/${story.id}/interactions/${parent.id}`)
       .expect(200);
 
-    expect(response.body.interactions).toHaveLength(1);
-    expect(response.body.interactions[0].id).toBe(child.id);
-    expect(response.body.interactions[0].triggers[0]).toMatchObject({
+    expect(response.body as InteractionDeletionResult).toMatchObject({
+      interactionId: parent.id,
+      revision: expect.any(Number),
+      updatedAt: expect.any(String),
+    });
+    expect(response.body).not.toHaveProperty('interactions');
+    const afterDelete = await request(httpServer).get(`/api/stories/${story.id}`).expect(200);
+    expect(afterDelete.body.interactions).toHaveLength(1);
+    expect(afterDelete.body.interactions[0].id).toBe(child.id);
+    expect(afterDelete.body.interactions[0].triggers[0]).toMatchObject({
       inputInteractionIds: [],
       conditionGroups: [{ conditions: [] }],
     });
@@ -1352,7 +1370,11 @@ unknown_command
       .delete(`/api/stories/${story.id}/interactions/${firstParent.id}`)
       .expect(200);
 
-    const updatedChild = (response.body as Story).interactions.find(
+    expect(response.body as InteractionDeletionResult).toMatchObject({
+      interactionId: firstParent.id,
+    });
+    const afterDelete = await request(httpServer).get(`/api/stories/${story.id}`).expect(200);
+    const updatedChild = (afterDelete.body as Story).interactions.find(
       (item) => item.id === child.id,
     )!;
     expect(updatedChild.triggers).toHaveLength(1);
@@ -2216,20 +2238,32 @@ unknown_command
         `/api/stories/${story.id}/characters/${character.body.character.id}/stats/${stat.body.stat.id}`,
       )
       .expect(200);
-    expect(withoutStat.body.characters[0].stats).toEqual([]);
-    expect(withoutStat.body.interactions[0].statEffects).toEqual([
+    expect(withoutStat.body as CharacterStatDeletionResult).toMatchObject({
+      characterId: character.body.character.id,
+      statId: stat.body.stat.id,
+    });
+    expect(withoutStat.body).not.toHaveProperty('interactions');
+    const afterStatDelete = await request(httpServer).get(`/api/stories/${story.id}`).expect(200);
+    expect(afterStatDelete.body.characters[0].stats).toEqual([]);
+    expect(afterStatDelete.body.interactions[0].statEffects).toEqual([
       expect.objectContaining({ itemId: item.body.item.id }),
     ]);
-    expect(getTriggerConditions(withoutStat.body.interactions[0].triggers[0])).toEqual([]);
+    expect(getTriggerConditions(afterStatDelete.body.interactions[0].triggers[0])).toEqual([]);
 
     const withoutItem = await request(httpServer)
       .delete(
         `/api/stories/${story.id}/characters/${character.body.character.id}/items/${item.body.item.id}`,
       )
       .expect(200);
-    expect(withoutItem.body.characters[0].items).toEqual([]);
-    expect(withoutItem.body.interactions[0].itemEffects).toEqual([]);
-    expect(withoutItem.body.interactions[0].statEffects).toEqual([]);
+    expect(withoutItem.body as CharacterItemDeletionResult).toMatchObject({
+      characterId: character.body.character.id,
+      itemId: item.body.item.id,
+    });
+    expect(withoutItem.body).not.toHaveProperty('interactions');
+    const afterItemDelete = await request(httpServer).get(`/api/stories/${story.id}`).expect(200);
+    expect(afterItemDelete.body.characters[0].items).toEqual([]);
+    expect(afterItemDelete.body.interactions[0].itemEffects).toEqual([]);
+    expect(afterItemDelete.body.interactions[0].statEffects).toEqual([]);
   });
 
   it('rejects foreign stat references and duplicate effects', async () => {
@@ -2323,8 +2357,15 @@ unknown_command
       .delete(`/api/stories/${story.id}/interactions/${interaction.id}/triggers/${trigger.id}`)
       .expect(200);
 
-    expect(response.body.interactions[0].triggers).toHaveLength(1);
-    expect(response.body.interactions[0].triggers[0].id).toBe(createdTrigger.id);
+    expect(response.body as TriggerDeletionResult).toMatchObject({
+      interactionId: interaction.id,
+      triggerId: trigger.id,
+      triggerRemoved: true,
+    });
+    expect(response.body).not.toHaveProperty('interactions');
+    const afterDelete = await request(httpServer).get(`/api/stories/${story.id}`).expect(200);
+    expect(afterDelete.body.interactions[0].triggers).toHaveLength(1);
+    expect(afterDelete.body.interactions[0].triggers[0].id).toBe(createdTrigger.id);
   });
 
   it('DELETE /api/stories/:storyId/interactions/:interactionId/triggers/:triggerId turns the last trigger into a root trigger', async () => {
@@ -2341,7 +2382,13 @@ unknown_command
       .delete(`/api/stories/${story.id}/interactions/${interaction.id}/triggers/${trigger.id}`)
       .expect(200);
 
-    const updatedInteraction = (response.body as Story).interactions.find(
+    expect(response.body as TriggerDeletionResult).toMatchObject({
+      interactionId: interaction.id,
+      triggerId: trigger.id,
+      triggerRemoved: false,
+    });
+    const afterDelete = await request(httpServer).get(`/api/stories/${story.id}`).expect(200);
+    const updatedInteraction = (afterDelete.body as Story).interactions.find(
       (item) => item.id === interaction.id,
     )!;
     expect(updatedInteraction.triggers).toEqual([{ ...trigger, inputInteractionIds: [] }]);

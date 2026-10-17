@@ -2,6 +2,24 @@
 
 ## Unreleased
 
+- Re-triaged the active quality backlog and roadmap against the implemented
+  baseline, separated historical feedback from current delivery priorities, and
+  refreshed production-readiness status for account safety, collaboration,
+  accessibility, layout, and reliability work.
+
+- Reduced repeated graph-layout projection work by indexing ELK vertices and
+  accumulating routing lanes without repeated array copies, while preserving
+  deterministic positions and edge ordering.
+- Made ELK the explicitly canonical graph-layout strategy, renamed the historic
+  custom implementation as a fallback, and aligned the 2,000-interaction stress
+  benchmark with the production engine.
+- Replaced complete-Story responses for Interaction, Trigger, and graph-decoration
+  deletion with compact cleanup results; the editor now applies the existing
+  shared deletion operations and reconciles only mutation metadata.
+- Centralized character-stat and leaf-item cleanup in the shared domain, including
+  authored effect and condition cleanup, and replaced their complete-Story delete
+  responses with compact identifiers and mutation metadata.
+
 - Replaced verbose variable-condition comparison labels with the standard
   `=`, `≠`, `<`, `≤`, `>`, and `≥` symbols across authoring, reader, and Simulation views.
 - Split the English, French, and Italian interface catalogues into consistent

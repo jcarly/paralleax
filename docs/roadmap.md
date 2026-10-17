@@ -2,7 +2,7 @@
 
 This roadmap describes the progression from the validated narrative core to a public Paralleax platform.
 
-Status reviewed: 2026-10-04.
+Status reviewed: 2026-10-17.
 
 It is organized around **user capabilities** rather than implementation areas. Engineering work supports these milestones but does not define them by itself.
 
@@ -28,11 +28,13 @@ substantial V0.3, V0.4, V0.6, V0.8, and V0.9 foundations, but that does not make
 the later milestones complete: public delivery is still gated by the unfinished
 reliability, conflict, exchange-format, accessibility, and publication work.
 
-The private-alpha P0 feedback queue is complete. The near-term delivery sequence is:
+The private-alpha P0 queue and the first seven P1 verticals are complete. Automatic
+layout now uses ELK canonically, with reload/manual-routing quality retained as a
+focused follow-up. The near-term delivery sequence is:
 
-1. deliver P1 account safety, Story-settings/access, localization,
-   comment-inspector, semantic comment slots, graph correctness, and cyclic-layout
-   work as cohesive verticals;
+1. close the remaining reliability gates: Story/entity quotas, browser-history
+   navigation blocking through a data router, import cancellation/lifecycle
+   correctness, durable import-report storage, and a recorded provider restore drill;
 2. make the Workbench the primary product differentiator: improve selection and
    organization first, then focus, projections, visible logic, dependency
    explanations, and convergence with Simulation Mode as described in
@@ -47,13 +49,12 @@ The private-alpha P0 feedback queue is complete. The near-term delivery sequence
 Later milestone foundations may continue to be improved when they support these
 steps, but they must not bypass their production dependencies.
 
-## Private-Alpha Feedback Queue — 2026-09-11
+## Historical Private-Alpha Feedback Queue — 2026-09-11
 
-This queue records observed product feedback without replacing the milestone
-roadmap. P0 items block or materially undermine the current private-alpha
-experience. P1 items are the next coherent product verticals after P0. P2 items
-are useful follow-ups that should not interrupt those verticals. Within a
-priority, the order below is the intended delivery order.
+This queue records the feedback sequence that shaped the current product. It is
+retained as delivery history rather than used as the active work queue; current
+engineering priorities live in [Code quality backlog](code-quality-backlog.md)
+and operational gates in [Production readiness](production-readiness.md).
 
 ### P0 — Address First
 
@@ -236,7 +237,10 @@ priority, the order below is the intended delivery order.
 8. **Improve automatic layout for cycles.** Add representative loop and dense
    cyclic fixtures, define expected readability and stability, then improve the
    existing deterministic layout without changing Trigger semantics or making
-   React Flow canonical.
+   React Flow canonical. **Advanced 2026-10-17:** ELK is the canonical placement
+   engine, dense/cyclic fixtures and a 2,000-interaction ELK budget are retained,
+   and whole-graph ELK routes are rendered. The remaining route-quality defect is
+   explicitly limited to reload/manual layouts that use the fallback renderer.
 
 ### P2 — Follow-Up Improvements
 
@@ -360,7 +364,7 @@ An author can safely create, navigate, edit, test, and recover a large story wit
 - Recoverable reader loading, visible progress-save state, and editor unload/
   navigation guards while saves are pending or failed.
 - Deterministic demo-story fixtures and a 2,000-interaction graph baseline.
-- English/French interface localization and a reusable design-system foundation.
+- English, French, and Italian interface localization and a reusable design-system foundation.
 - Durable per-author Story-content history with atomic reversible deltas,
   conflict-safe inverse revisions, vertical undo/redo controls, and global
   `Ctrl+Z`, `Ctrl+Shift+Z`, and `Ctrl+Y` shortcuts outside editable fields.
@@ -389,8 +393,10 @@ An author can safely create, navigate, edit, test, and recover a large story wit
 - Improve empty states, contextual actions, keyboard guidance, and shortcuts.
 - Continue search/filter/focal-point improvements where large-story tests justify them.
 - Consolidate dialog, loading, empty, recoverable-error, and save-error behavior.
-- Complete automated accessibility checks and a manual keyboard/focus audit.
-- Extend interface internationalization only as remaining authoring flows stabilize.
+- Complete the manual keyboard/focus audit; automated WCAG A/AA checks already
+  cover the critical library, creation/import, editor, reader, and save surfaces.
+- Extend the English, French, and Italian interface catalogues only as remaining
+  authoring flows stabilize.
 
 #### Reliability and scale
 
@@ -401,8 +407,9 @@ An author can safely create, navigate, edit, test, and recover a large story wit
 - Complete a recorded backup restoration drill in the selected deployment
   environment; keep the existing CI restore verification green.
 - Maintain reproducible stress-test fixtures and recorded baselines.
-- Add a real-browser regression for late route responses and unresolved-save
-  navigation guards.
+- Retain the existing real-browser coverage for late route responses and
+  unresolved-save navigation guards while migrating browser-history blocking to
+  a data router.
 
 ### Exit criteria
 
@@ -485,8 +492,8 @@ Stories have reliable ownership and revision semantics so multiple people and fu
   explicit policy contract without weakening query-level authorization.
 - Decide whether an explicit unlisted visibility differs from invitation and
   public visibility before adding it.
-- Add password change/reset, email verification, session revocation, and account
-  export/deletion before open registration.
+- Add account export/deletion before open registration. Password change/reset,
+  email verification, and session revocation are implemented.
 - Add external identity providers only when operationally required.
 
 ### Exit criteria
@@ -788,7 +795,7 @@ An author who did not build Paralleax can create, test, save, maintain, export, 
   inspectors for the implemented narrative model.
 - Simulation diagnostics, forced-path testing, inline editing, and separate
   simulation saves.
-- English/French interface and an extensive English user guide.
+- English, French, and Italian interface catalogues and an extensive English user guide.
 - Broad unit, API, PostgreSQL, component, coverage, stress, and Playwright suites.
 
 ### Scope

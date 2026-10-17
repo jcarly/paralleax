@@ -1,0 +1,51 @@
+import type { Story } from '../model/index.js';
+import {
+  getTriggerAppearanceProbability,
+  getTriggerConditionGroups,
+  getTriggerTimerSeconds,
+  toCanonicalTrigger,
+} from '../triggers/model.js';
+
+export function deleteStatAssignmentsFromStory(
+  story: Story,
+  assignmentIds: ReadonlySet<string>,
+): Story {
+  return {
+    ...story,
+    stats: (story.stats ?? []).filter(({ id }) => !assignmentIds.has(id)),
+    characters: (story.characters ?? []).map((character) => ({
+      ...character,
+      stats: (character.stats ?? []).filter(({ id }) => !assignmentIds.has(id)),
+    })),
+    locations: (story.locations ?? []).map((location) => ({
+      ...location,
+      stats: (location.stats ?? []).filter(({ id }) => !assignmentIds.has(id)),
+    })),
+    itemDefinitions: (story.itemDefinitions ?? []).map((definition) => ({
+      ...definition,
+      stats: (definition.stats ?? []).filter(({ id }) => !assignmentIds.has(id)),
+    })),
+    interactions: story.interactions.map((interaction) => ({
+      ...interaction,
+      statEffects: (interaction.statEffects ?? []).filter(
+        ({ statId }) => !assignmentIds.has(statId),
+      ),
+      triggers: interaction.triggers.map((trigger) => ({
+        ...toCanonicalTrigger(trigger),
+        conditionGroups: getTriggerConditionGroups(trigger).map((group) => ({
+          ...group,
+          conditions: group.conditions.filter(
+            (condition) =>
+              !('statId' in condition) ||
+              (!assignmentIds.has(condition.statId) &&
+                !(
+                  'comparisonStatId' in condition && assignmentIds.has(condition.comparisonStatId)
+                )),
+          ),
+        })),
+        appearanceProbability: getTriggerAppearanceProbability(trigger),
+        timerSeconds: getTriggerTimerSeconds(trigger),
+      })),
+    })),
+  };
+}

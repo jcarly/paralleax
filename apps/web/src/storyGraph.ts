@@ -555,7 +555,12 @@ function assignRoutingLanes(story: Story | undefined, edges: TriggerFlowEdge[]) 
       edge.sourceHandle,
       edge.targetHandle,
     ].join(':');
-    groups.set(key, [...(groups.get(key) ?? []), { edge, source, target }]);
+    const group = groups.get(key);
+    if (group) {
+      group.push({ edge, source, target });
+    } else {
+      groups.set(key, [{ edge, source, target }]);
+    }
   }
 
   const lanes = new Map<string, { index: number; count: number }>();

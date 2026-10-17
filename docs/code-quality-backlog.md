@@ -2,9 +2,32 @@
 
 Status: Active
 
+Last triaged: 2026-10-17
+
 This page records maintainability, reliability, performance, and test work found
 during the August 2026 code review and subsequent technical evaluations. Production gates remain authoritative in
 [Production readiness](production-readiness.md).
+
+## Active Delivery View
+
+This backlog is intentionally broader than the near-term delivery queue. Use the
+following order when choosing incremental quality work:
+
+1. **Reliability gates:** Story/entity quotas, data-router navigation blocking,
+   cancellable import-job lifecycle, and an explicit optimistic-mutation recovery
+   policy.
+2. **Measured persistence/performance:** Story-summary budgets, focused repository
+   commands, long-journey/item measurements, and retained React Flow latency budgets.
+3. **Author-facing consistency:** shared loading/error/session-expiry presentation,
+   request-id support details, and the manual keyboard/focus audit.
+4. **Incremental module work:** shared evaluation context, incremental journey time,
+   Rich Text Editor extraction, shared import validation, and smaller editor/player
+   orchestration modules.
+
+Dependency-watch entries such as the Swagger `js-yaml` override and the
+development-only `glob@10.5.0` warning are removal conditions, not active feature
+work. UX ideas and library candidates remain discovery inputs until a product task
+promotes them.
 
 ## Completed In The First Review Batch
 
@@ -57,6 +80,12 @@ during the August 2026 code review and subsequent technical evaluations. Product
       filtering the complete message result for every thread.
 - [ ] Replace remaining complete-story delete responses with explicit cleanup
       result contracts where the client can apply them safely.
+  - [x] Return compact cleanup results for Interaction, Trigger, and graph-decoration
+        deletion and apply their shared domain operations locally.
+  - [x] Centralize character-stat and leaf-item cleanup in `packages/shared`, then
+        return compact deletion results and apply the same operations in the editor.
+  - [ ] Review the unused generic stat-definition and stat-assignment deletion
+        endpoints separately before changing their compatibility contracts.
 - [ ] Measure long-journey replay and large item graphs, then add interaction and
       item lookup maps only where the measurements confirm repeated linear costs.
 - [ ] Retain React Flow projection and interaction-latency budgets after the
@@ -199,11 +228,11 @@ rewrite.
       stop signal and the API cannot mark a cancelled job as completed after the
       active job keeps running; add concurrency checks before any persistence and
       add visible cleanup for long-lived in-memory import metadata.
-- [ ] Make ELK the canonical graph-layout strategy while keeping the historic
+- [x] Make ELK the canonical graph-layout strategy while keeping the historic
       custom layout as an explicit fallback or removing it after validation;
       update the large-graph stress benchmark to use the active engine and keep
       the measured baseline aligned with production behavior.
-- [ ] Reduce repeated graph-layout work by indexing ELK results by node id and
+- [x] Reduce repeated graph-layout work by indexing ELK results by node id and
       by avoiding repeated array spreads in lane assignment while preserving
       deterministic ordering for existing graph mutations.
 - [ ] Consolidate trigger and interaction evaluation behind a single shared
@@ -275,7 +304,7 @@ review. They are evaluation leads, not accepted dependencies or implementation
 commitments. Compare each candidate with the existing implementation and its
 tests before replacing code. The current product baseline remains authoritative.
 
-- [ ] Evaluate **elkjs / ELK Layered** first for automatic graph organization,
+- [x] Evaluate **elkjs / ELK Layered** first for automatic graph organization,
       with **Dagre** as a simpler comparison. Preserve explicit linked Trigger
       vertices, multiple inputs, measured card dimensions, and bottom-output /
       top-input attachment points. Compare dense branches, convergence, cycles,
@@ -284,10 +313,13 @@ tests before replacing code. The current product baseline remains authoritative.
       interactive options must not be assumed to freeze every unselected node.
       Reuse the existing batched position mutation and durable undo operation;
       consider on-demand loading and a worker for expensive computation.
-- [ ] Evaluate **ELK routing**, then **libavoid** if independent obstacle-aware
+- [x] Evaluate **ELK routing**, then **libavoid** if independent obstacle-aware
       edge routing remains necessary. Node placement and edge routing are
       separate responsibilities: adopting computed positions does not make the
       current React Flow edges consume the engine's routed paths automatically.
+      ELK routes are now consumed after whole-graph organization; reload and
+      manually moved layouts still use the documented fallback, so libavoid remains
+      a future option rather than an accepted dependency.
 - [ ] Evaluate **Graphology** when structural diagnostics require shared graph
       traversals, components, cycle detection, or path analysis. Use a temporary
       technical projection of the Story. Structural connectivity alone cannot

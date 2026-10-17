@@ -7,7 +7,9 @@ import type {
   QspSourceFormat,
   CommentAnchor,
   CharacterItemMutationResult,
+  CharacterItemDeletionResult,
   CharacterStatMutationResult,
+  CharacterStatDeletionResult,
   CreateReaderSaveInput,
   CreateCharacterInput,
   CreateStatAssignmentInput,
@@ -20,7 +22,9 @@ import type {
   CreateLocationInput,
   CreateStatDefinitionInput,
   InteractionMutationResult,
+  InteractionDeletionResult,
   GraphDecorationMutationResult,
+  GraphDecorationDeletionResult,
   GroupMutationResult,
   ItemDefinitionMutationResult,
   LocationMutationResult,
@@ -51,6 +55,7 @@ import type {
   StorySummary,
   StoryListOptions,
   TriggerMutationResult,
+  TriggerDeletionResult,
   UpdateInteractionInput,
   UpdateStatAssignmentInput,
   UpdateGraphDecorationInput,
@@ -464,7 +469,9 @@ export const api = {
       body: JSON.stringify(input),
     }),
   deleteInteraction: (storyId: string, interactionId: string) =>
-    request<Story>(`/stories/${storyId}/interactions/${interactionId}`, { method: 'DELETE' }),
+    request<InteractionDeletionResult>(`/stories/${storyId}/interactions/${interactionId}`, {
+      method: 'DELETE',
+    }),
   createGraphDecoration: (storyId: string, input: CreateGraphDecorationInput) =>
     request<GraphDecorationMutationResult>(`/stories/${storyId}/graph-decorations`, {
       method: 'POST',
@@ -485,9 +492,12 @@ export const api = {
       { method: 'PATCH', body: JSON.stringify(input) },
     ),
   deleteGraphDecoration: (storyId: string, decorationId: string) =>
-    request<Story>(`/stories/${storyId}/graph-decorations/${decorationId}`, {
-      method: 'DELETE',
-    }),
+    request<GraphDecorationDeletionResult>(
+      `/stories/${storyId}/graph-decorations/${decorationId}`,
+      {
+        method: 'DELETE',
+      },
+    ),
   createLocation: (storyId: string, input: CreateLocationInput) =>
     request<LocationMutationResult>(`/stories/${storyId}/locations`, {
       method: 'POST',
@@ -573,18 +583,22 @@ export const api = {
       },
     ),
   deleteCharacterStat: (storyId: string, characterId: string, statId: string) =>
-    request<Story>(`/stories/${storyId}/characters/${characterId}/stats/${statId}`, {
-      method: 'DELETE',
-    }),
+    request<CharacterStatDeletionResult>(
+      `/stories/${storyId}/characters/${characterId}/stats/${statId}`,
+      {
+        method: 'DELETE',
+      },
+    ),
   createCharacterItem: (storyId: string, characterId: string, input: CreateCharacterItemInput) =>
     request<CharacterItemMutationResult>(`/stories/${storyId}/characters/${characterId}/items`, {
       method: 'POST',
       body: JSON.stringify(input),
     }),
   deleteCharacterItem: (storyId: string, characterId: string, itemId: string) =>
-    request<Story>(`/stories/${storyId}/characters/${characterId}/items/${itemId}`, {
-      method: 'DELETE',
-    }),
+    request<CharacterItemDeletionResult>(
+      `/stories/${storyId}/characters/${characterId}/items/${itemId}`,
+      { method: 'DELETE' },
+    ),
   moveItemInstance: (storyId: string, itemId: string, input: MoveItemInstanceInput) =>
     request<Story>(`/stories/${storyId}/items/${itemId}/placement`, {
       method: 'PATCH',
@@ -613,7 +627,8 @@ export const api = {
       },
     ),
   deleteTrigger: (storyId: string, interactionId: string, triggerId: string) =>
-    request<Story>(`/stories/${storyId}/interactions/${interactionId}/triggers/${triggerId}`, {
-      method: 'DELETE',
-    }),
+    request<TriggerDeletionResult>(
+      `/stories/${storyId}/interactions/${interactionId}/triggers/${triggerId}`,
+      { method: 'DELETE' },
+    ),
 };

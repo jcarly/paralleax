@@ -16,11 +16,14 @@ import {
   updateStoryGraphPositions,
   updateTriggerInStory,
   type GraphDecorationMutationResult,
+  type GraphDecorationDeletionResult,
+  type InteractionDeletionResult,
   type InteractionMutationResult,
   type Story,
   type TriggerCondition,
   type TriggerConditionGroup,
   type TriggerMutationResult,
+  type TriggerDeletionResult,
 } from '@paralleax/shared';
 import type {
   CreateGraphDecorationDto,
@@ -201,8 +204,12 @@ export class StoryGraphService {
     return storyMutationMetadata(story);
   }
 
-  deleteInteraction(storyId: string, interactionId: string, userId: string): Promise<Story> {
-    return this.mutations.update(
+  async deleteInteraction(
+    storyId: string,
+    interactionId: string,
+    userId: string,
+  ): Promise<InteractionDeletionResult> {
+    const story = await this.mutations.update(
       storyId,
       (story) => {
         this.interaction(story, interactionId);
@@ -211,6 +218,7 @@ export class StoryGraphService {
       userId,
       storyHistoryOperations.interactionDeleted,
     );
+    return { ...storyMutationMetadata(story), interactionId };
   }
 
   async createGraphDecoration(
@@ -249,8 +257,12 @@ export class StoryGraphService {
     return this.graphDecorationResult(story, decorationId);
   }
 
-  deleteGraphDecoration(storyId: string, decorationId: string, userId: string): Promise<Story> {
-    return this.mutations.update(
+  async deleteGraphDecoration(
+    storyId: string,
+    decorationId: string,
+    userId: string,
+  ): Promise<GraphDecorationDeletionResult> {
+    const story = await this.mutations.update(
       storyId,
       (story) => {
         this.graphDecoration(story, decorationId);
@@ -259,6 +271,7 @@ export class StoryGraphService {
       userId,
       storyHistoryOperations.graphDecorationDeleted,
     );
+    return { ...storyMutationMetadata(story), decorationId };
   }
 
   async updateTrigger(
@@ -324,24 +337,27 @@ export class StoryGraphService {
     return this.triggerResult(story, interactionId, triggerId);
   }
 
-  deleteTrigger(
+  async deleteTrigger(
     storyId: string,
     interactionId: string,
     triggerId: string,
     userId: string,
-  ): Promise<Story> {
-    return this.mutations.update(
+  ): Promise<TriggerDeletionResult> {
+    let triggerRemoved = false;
+    const story = await this.mutations.update(
       storyId,
       (story) => {
         const interaction = this.interaction(story, interactionId);
         if (!interaction.triggers.some((item) => item.id === triggerId)) {
           throw new NotFoundException('Trigger not found');
         }
+        triggerRemoved = interaction.triggers.length > 1;
         return deleteTriggerInStory(story, interactionId, triggerId);
       },
       userId,
       storyHistoryOperations.triggerDeleted,
     );
+    return { ...storyMutationMetadata(story), interactionId, triggerId, triggerRemoved };
   }
 
   private interaction(story: Story, id: string) {
