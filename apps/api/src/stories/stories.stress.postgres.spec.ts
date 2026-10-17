@@ -9,6 +9,8 @@ const connectionString = process.env.POSTGRES_TEST_DATABASE_URL;
 const runStressTests = process.env.RUN_POSTGRES_STRESS_TESTS === 'true';
 const describeStress = connectionString && runStressTests ? describe : describe.skip;
 const interactionCount = positiveInteger(process.env.STRESS_INTERACTION_COUNT, 1_000);
+const summaryStoryCount = positiveInteger(process.env.STORY_SUMMARY_STORY_COUNT, 25);
+const summaryInteractionCount = positiveInteger(process.env.STORY_SUMMARY_INTERACTION_COUNT, 1_000);
 
 describeStress('StoriesRepository PostgreSQL stress', () => {
   const pool = new Pool({ connectionString });
@@ -84,6 +86,64 @@ describeStress('StoriesRepository PostgreSQL stress', () => {
     expect(loadQueryCount).toBeLessThan(budget('STRESS_LOAD_QUERY_BUDGET', 100));
     expect(mutationQueryCount).toBeLessThan(budget('STRESS_MUTATION_QUERY_BUDGET', 250));
   }, 120_000);
+
+  it(`lists ${summaryStoryCount} stories with ${summaryInteractionCount} interactions within summary budgets`, async () => {
+    const stories = Array.from({ length: summaryStoryCount }, (_, index) =>
+      summaryStressStory(index, summaryInteractionCount),
+    );
+    await repository.saveMany(stories, ownerId);
+
+    queryCounter.reset();
+    const authenticatedListing = await measureResult(() =>
+      repository.list(ownerId, { page: 1, pageSize: summaryStoryCount }),
+    );
+    const authenticatedQueryCount = queryCounter.value();
+    const authenticatedPayloadBytes = Buffer.byteLength(JSON.stringify(authenticatedListing.result));
+
+    queryCounter.reset();
+    const publicListing = await measureResult(() =>
+      repository.listPublic({ page: 1, pageSize: summaryStoryCount }),
+    );
+    const publicQueryCount = queryCounter.value();
+    const publicPayloadBytes = Buffer.byteLength(JSON.stringify(publicListing.result));
+    const measurements = {
+      stories: summaryStoryCount,
+      interactionsPerStory: summaryInteractionCount,
+      totalInteractions: summaryStoryCount * summaryInteractionCount,
+      authenticated: {
+        payloadBytes: authenticatedPayloadBytes,
+        latencyMs: round(authenticatedListing.durationMs),
+        queryCount: authenticatedQueryCount,
+      },
+      public: {
+        payloadBytes: publicPayloadBytes,
+        latencyMs: round(publicListing.durationMs),
+        queryCount: publicQueryCount,
+      },
+    };
+    console.info(`POSTGRES_STORY_SUMMARY_STRESS ${JSON.stringify(measurements)}`);
+
+    for (const listing of [authenticatedListing, publicListing]) {
+      expect(listing.result.items).toHaveLength(summaryStoryCount);
+      expect(
+        listing.result.items.every((story) => story.interactionCount === summaryInteractionCount),
+      ).toBe(true);
+      expect(listing.result.items.every((story) => !('interactions' in story))).toBe(true);
+      expect(listing.durationMs).toBeLessThanOrEqual(
+        budget('STORY_SUMMARY_LATENCY_BUDGET_MS', 5_000),
+      );
+    }
+    expect(authenticatedQueryCount).toBeLessThanOrEqual(
+      budget('STORY_SUMMARY_QUERY_BUDGET', 2),
+    );
+    expect(publicQueryCount).toBeLessThanOrEqual(budget('STORY_SUMMARY_QUERY_BUDGET', 2));
+    expect(authenticatedPayloadBytes).toBeLessThanOrEqual(
+      budget('STORY_SUMMARY_PAYLOAD_BUDGET_BYTES', 32 * 1024),
+    );
+    expect(publicPayloadBytes).toBeLessThanOrEqual(
+      budget('STORY_SUMMARY_PAYLOAD_BUDGET_BYTES', 32 * 1024),
+    );
+  }, 180_000);
 });
 
 function createQueryCounter(pool: Pool) {
@@ -180,6 +240,32 @@ function largeStory(count: number): Story {
             index > 0 && index % 10 === 0
               ? [{ interactionId: `interaction-${index - 1}`, hasBeenVisited: true }]
               : [],
+        },
+      ],
+    })),
+  };
+}
+
+function summaryStressStory(storyIndex: number, interactionCount: number): Story {
+  const now = new Date().toISOString();
+  const interactionPrefix = `summary-${storyIndex}`;
+  return {
+    id: `summary-stress-story-${randomUUID()}`,
+    title: `Summary stress story ${storyIndex}`,
+    createdAt: now,
+    updatedAt: now,
+    startDateTime: '2026-08-02T09:00',
+    access: { visibility: 'public', editPolicy: 'owner', commentPolicy: 'editors' },
+    interactions: Array.from({ length: interactionCount }, (_, index) => ({
+      id: `${interactionPrefix}-interaction-${index}`,
+      title: `Interaction ${index}`,
+      body: `<p>${`Narrative content for story ${storyIndex}, interaction ${index}. `.repeat(12)}</p>`,
+      position: { x: (index % 20) * 260 + 80, y: Math.floor(index / 20) * 150 + 80 },
+      triggers: [
+        {
+          id: `${interactionPrefix}-trigger-${index}`,
+          inputInteractionIds: index === 0 ? [] : [`${interactionPrefix}-interaction-${index - 1}`],
+          conditions: [],
         },
       ],
     })),

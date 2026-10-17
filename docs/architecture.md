@@ -119,8 +119,8 @@ orchestration supplies IDs and persists the complete mapped Story in one
 transaction; web code owns only local file selection and report presentation.
 The API creates an owner-scoped import id and writes every diagnostic as ordered
 JSONL through the shared `onIssue` capture with an empty in-memory preview. QSP
-receives only the report path in worker data and writes the file in its worker;
-ChoiceScript uses the same capture contract in the API process. API responses
+and ChoiceScript each run in cancellable workers, receive the report path with
+their source input, and write diagnostics from the worker. API responses
 retain format statistics and complete warning/error counts without embedding the
 diagnostic sequence. `GET /api/imports/:importId/report` validates the UUID and
 owner before streaming `application/x-ndjson` as an attachment. Infrastructure

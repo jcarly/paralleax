@@ -74,6 +74,11 @@ promotes them.
 
 - [ ] Record story-summary query count, payload size, and latency with many
       large stories, then retain a regression budget.
+  - [x] Add authenticated and public stress measurements for 25 Stories with
+        1,000 Interactions each, including structured metrics and query, payload,
+        and latency budgets.
+  - [ ] Run the scheduled/manual PostgreSQL stress lane and retain its measured
+        baseline before closing this item.
 - [ ] Add direct repository commands for story metadata, interaction text, and
       node positions so common updates avoid a complete graph read and lock.
 - [x] Group comment messages by thread once when listing discussions instead of
@@ -222,13 +227,13 @@ rewrite.
       such as story metadata, interaction content, and graph-position updates,
       then measure SQL query counts and latency for 100, 600, and 2,000
       interaction stories before broadening the pattern.
-- [ ] Centralize import job lifecycle management so cancellation is an actual
+- [x] Centralize import job lifecycle management so cancellation is an actual
       stop signal and the API cannot mark a cancelled job as completed after the
       active job keeps running; add concurrency checks before any persistence and
       add visible cleanup for long-lived in-memory import metadata.
   - [x] Route QSP job cancellation to the worker abort signal, guard the
         persistence boundary, and expire terminal in-memory metadata.
-  - [ ] Make ChoiceScript parsing cancellable without blocking the API event loop.
+      - [x] Make ChoiceScript parsing cancellable without blocking the API event loop.
 - [ ] Persist import compatibility reports durably so completed, failed, and
       cancelled imports retain their diagnostics across process restarts; define
       retention and ownership before exposing the report as a user-facing

@@ -378,10 +378,15 @@ export const api = {
     request<Story>('/stories', { method: 'POST', body: JSON.stringify({ title }) }),
   createDemoStories: () =>
     request<Story[]>('/stories/demo', { method: 'POST', body: JSON.stringify({}) }),
-  importChoiceScript: (files: ChoiceScriptSourceFile[], confirmWarnings = false) =>
+  importChoiceScript: (
+    files: ChoiceScriptSourceFile[],
+    confirmWarnings = false,
+    signal?: AbortSignal,
+  ) =>
     request<ChoiceScriptImportResponse>('/stories/imports/choicescript', {
       method: 'POST',
       body: JSON.stringify({ files, ...(confirmWarnings ? { confirmWarnings: true } : {}) }),
+      ...(signal ? { signal } : {}),
     }),
   importReportUrl: (importId: string) => `/api/imports/${encodeURIComponent(importId)}/report`,
   importQsp: (

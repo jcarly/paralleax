@@ -56,7 +56,7 @@ export function StoryImportDialog({
   }
 
   async function requestImport(confirmWarnings: boolean) {
-    const controller = format === 'qsp' ? new AbortController() : undefined;
+    const controller = new AbortController();
     let progressSession: QspImportProgressSession | undefined;
     try {
       setRequestError(undefined);
@@ -91,6 +91,7 @@ export function StoryImportDialog({
             files.map(async (file) => ({ name: file.name, content: await file.text() })),
           ),
           confirmWarnings,
+          controller.signal,
         );
       }
       setOutcome(result);

@@ -353,6 +353,7 @@ describe('StoryList', () => {
         { name: 'ending.txt', content: 'The end.\n*ending' },
       ],
       false,
+      expect.any(AbortSignal),
     );
     expect(
       screen.getByText('No compatibility warning was reported for this import.'),

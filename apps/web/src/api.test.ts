@@ -246,6 +246,14 @@ describe('api client', () => {
       method: 'POST',
       body: JSON.stringify({ files, confirmWarnings: true }),
     });
+    const choiceScriptAbortController = new AbortController();
+    await api.importChoiceScript(files, false, choiceScriptAbortController.signal);
+    expect(fetchMock).toHaveBeenLastCalledWith('/api/stories/imports/choicescript', {
+      headers: { 'Content-Type': 'application/json' },
+      method: 'POST',
+      body: JSON.stringify({ files }),
+      signal: choiceScriptAbortController.signal,
+    });
 
     const qspFile = { name: 'game.qsps', format: 'text' as const, contentBase64: 'U291cmNl' };
     const qspImportController = new AbortController();

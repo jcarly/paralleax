@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Moved ChoiceScript analysis into a cancellable worker thread, so closing an
+  import no longer blocks the API event loop or allows the cancelled result to
+  be saved.
+
 - Migrated web routing to a React Router data router and protected browser
   back/forward, links, and code navigation while editor, reader, or Simulation
   saves are pending or failed. Added an accessible leave confirmation and kept

@@ -26,6 +26,7 @@ import type {
 import {
   getTriggerConditionGroups,
   getTriggerConditions,
+  importChoiceScript,
   importQsp,
   MAX_INTERACTION_BODY_LENGTH,
   serializeQspLocationBundle,
@@ -38,6 +39,7 @@ import { StoriesRepository } from './stories.repository';
 import { STORY_MUTATION_RATE_LIMIT } from './stories.controller';
 import { StoryEventsService } from './story.events';
 import { QspImportWorkerService } from './application/qsp-import-worker.service';
+import { ChoiceScriptImportWorkerService } from './application/choicescript-import-worker.service';
 import { ImportReportWriter } from '../imports/import-report-writer';
 import { LocalImportReportStorage } from '../imports/import-report-storage';
 import { ApiExceptionFilter } from '../operations/api-exception.filter';
@@ -77,6 +79,27 @@ describe('Stories API', () => {
             await writer.close();
           }
         }),
+      })
+      .overrideProvider(ChoiceScriptImportWorkerService)
+      .useValue({
+        run: jest.fn(
+          async (...args: Parameters<ChoiceScriptImportWorkerService['run']>) => {
+            const [files, options, , reportPath] = args;
+            if (!reportPath) throw new Error('A test ChoiceScript report path is required.');
+            const writer = new ImportReportWriter({ reportPath });
+            await writer.start();
+            try {
+              return importChoiceScript(files, {
+                ...options,
+                createId: randomUUID,
+                maxPreviewIssues: 0,
+                onIssue: (issue) => writer.writeIssue(issue),
+              });
+            } finally {
+              await writer.close();
+            }
+          },
+        ),
       })
       .overrideProvider(LocalImportReportStorage)
       .useValue(new LocalImportReportStorage(reportDirectory))

@@ -97,8 +97,17 @@ export class StoriesController {
   }
 
   @Post('imports/choicescript')
-  importChoiceScript(@Body() input: ImportChoiceScriptDto, @CurrentUser() user: RequestUser) {
-    return this.storyImports.createChoiceScript(input, user.id, input.confirmWarnings);
+  importChoiceScript(
+    @Body() input: ImportChoiceScriptDto,
+    @CurrentUser() user: RequestUser,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    return this.storyImports.createChoiceScript(
+      input,
+      user.id,
+      input.confirmWarnings,
+      responseAbortSignal(response),
+    );
   }
 
   @Post('imports/qsp')
