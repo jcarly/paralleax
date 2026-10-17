@@ -25,7 +25,7 @@ describe('large story graph projection', () => {
     expect(durationMs).toBeLessThan(5_000);
   });
 
-  it('automatically lays out 2,000 linked interactions with the canonical ELK engine within the editor budget', async () => {
+  it('automatically lays out 2,000 linked interactions through the canonical adapter within the editor budget', async () => {
     const story = createLargeEditorStoryFixture(2_000, { columns: 25 });
     const startedAt = performance.now();
     const layout = await computeStoryGraphElkLayout(story);

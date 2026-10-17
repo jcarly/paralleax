@@ -170,7 +170,9 @@ Paralleax currently includes:
   selected interaction/linked trigger, or a rectangular multi-selection, with
   grouped trigger-marker placement and fixed bottom-output/top-input interaction
   routing. Whole-graph organization renders transient ELK routes; reload and
-  manual movement use the documented fallback renderer.
+  manual movement use the documented fallback renderer. Exceptionally large or
+  deep graphs retain deterministic placement through the historic layout before
+  ELK exceeds its synchronous budget or if it exhausts the JavaScript call stack.
 - Durable authored Story change history. Every new content mutation stores a
   reversible field/entity delta with its actor and revision in the same database
   transaction. Authors can undo their latest compatible change with the canvas

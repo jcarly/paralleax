@@ -12,7 +12,9 @@
   deterministic positions and edge ordering.
 - Made ELK the explicitly canonical graph-layout strategy, renamed the historic
   custom implementation as a fallback, and aligned the 2,000-interaction stress
-  benchmark with the production engine.
+  benchmark with the production adapter. Exceptionally large or deep graphs now
+  use that deterministic fallback before ELK exceeds its safe synchronous budget,
+  or recover through it if ELK exhausts the JavaScript call stack.
 - Replaced complete-Story responses for Interaction, Trigger, and graph-decoration
   deletion with compact cleanup results; the editor now applies the existing
   shared deletion operations and reconciles only mutation metadata.

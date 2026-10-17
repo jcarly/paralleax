@@ -762,7 +762,10 @@ split deliberately:
   complete graph or an explicit target list.
 - `storyGraphLayout.ts` owns the engine-independent scope projection shared by
   ELK and the explicitly named historic fallback. The fallback remains covered
-  for comparison and emergency reuse, but production authoring does not call it.
+  for comparison and emergency reuse. The canonical adapter invokes it for an
+  exceptionally large projection that would exceed ELK's safe synchronous budget,
+  or when ELK still exhausts the JavaScript call stack; other ELK failures remain
+  visible to the author.
 - `storyGraphCreationLayout.ts` projects a temporary interaction and its linked
   trigger, then asks the scoped layout for their creation position. Click-based
   root, child, parent, and Simulation Mode option creation use this projection;

@@ -238,7 +238,9 @@ and operational gates in [Production readiness](production-readiness.md).
    cyclic fixtures, define expected readability and stability, then improve the
    existing deterministic layout without changing Trigger semantics or making
    React Flow canonical. **Advanced 2026-10-17:** ELK is the canonical placement
-   engine, dense/cyclic fixtures and a 2,000-interaction ELK budget are retained,
+   engine, dense/cyclic fixtures and a 2,000-interaction canonical-adapter budget
+   are retained (with deterministic recovery beyond ELK's safe synchronous size
+   or if ELK exhausts the call stack),
    and whole-graph ELK routes are rendered. The remaining route-quality defect is
    explicitly limited to reload/manual layouts that use the fallback renderer.
 
