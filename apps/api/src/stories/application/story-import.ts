@@ -141,6 +141,10 @@ export class StoryImportService {
       );
     }
     const job = this.jobs.create(userId, 'qsp');
+    const jobSignal = this.jobs.getAbortSignal(job.id);
+    const effectiveAbortSignal = abortSignal && jobSignal
+      ? AbortSignal.any([abortSignal, jobSignal])
+      : (abortSignal ?? jobSignal);
     let result: QspImportResult;
     try {
       const reportPath = await this.createReportFile(job.id, 'qsp');
@@ -156,10 +160,14 @@ export class StoryImportService {
             currentFile: progress.currentFile,
           });
         },
-        abortSignal,
+        effectiveAbortSignal,
         reportPath,
       );
     } catch (caught) {
+      if (effectiveAbortSignal?.aborted || this.jobs.isCancelled(job.id)) {
+        this.jobs.cancel(job.id);
+        return this.finishCancelledImport(job.id);
+      }
       return this.failInfrastructureImport(job.id, 'qsp', caught);
     }
 
@@ -168,12 +176,17 @@ export class StoryImportService {
         result.story !== undefined &&
         result.report.errorCount === 0 &&
         (confirmWarnings || result.report.warningCount === 0);
-      if (willPersist) {
-        this.qspProgress.publish(userId, progressId, { phase: 'saving', completed: 0 });
-        this.jobs.update(job.id, { phase: 'saving' });
-      }
-
-      const outcome = await this.completeImport(result, 'QSP', userId, confirmWarnings, job.id);
+      const outcome = await this.completeImport(
+        result,
+        'QSP',
+        userId,
+        confirmWarnings,
+        job.id,
+        effectiveAbortSignal,
+        willPersist
+          ? () => this.qspProgress.publish(userId, progressId, { phase: 'saving', completed: 0 })
+          : undefined,
+      );
       if (outcome.status === 'imported') {
         this.qspProgress.publish(userId, progressId, {
           phase: 'saving',
@@ -193,7 +206,13 @@ export class StoryImportService {
     userId: string,
     confirmWarnings: boolean,
     importId: string,
+    abortSignal?: AbortSignal,
+    onSaving?: () => void,
   ) {
+    if (abortSignal?.aborted) this.jobs.cancel(importId);
+    if (this.jobs.isCancelled(importId)) {
+      return this.finishCancelledImport(importId);
+    }
     const report = { ...result.report, issues: [] };
     if (!result.story || result.report.errorCount > 0) {
       this.jobs.update(importId, {
@@ -222,13 +241,18 @@ export class StoryImportService {
       this.jobs.complete(importId);
       return { status: 'confirmation_required' as const, importId, report };
     }
-    this.jobs.update(importId, {
-      status: 'running',
-      phase: 'saving',
+    if (abortSignal?.aborted) this.jobs.cancel(importId);
+    if (this.jobs.isCancelled(importId)) {
+      return this.finishCancelledImport(importId);
+    }
+    if (!this.jobs.beginPersistence(importId, {
       warningCount: result.report.warningCount,
       errorCount: result.report.errorCount,
       reportAvailable: true,
-    });
+    })) {
+      return this.finishCancelledImport(importId);
+    }
+    onSaving?.();
     try {
       await this.repository.save(result.story, userId);
     } catch (caught) {
@@ -281,6 +305,12 @@ export class StoryImportService {
       story,
       report,
     };
+  }
+
+  private async finishCancelledImport(importId: string) {
+    this.jobs.complete(importId);
+    await this.reportStorage.deleteReport(importId);
+    return { status: 'cancelled' as const, importId };
   }
 
   private async createReportFile(importId: string, format: 'choicescript' | 'qsp') {

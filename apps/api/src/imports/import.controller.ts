@@ -84,8 +84,7 @@ export class ImportController {
     if (job.ownerId !== user.id && user.role !== 'admin') {
       throw new ForbiddenException('You do not have access to this import job.');
     }
-    this.jobs.setStatus(importId, 'cancelled');
-    void this.reportStorage.deleteReport(importId);
+    if (!this.jobs.cancel(importId)) return { status: job.status };
     return { status: 'cancelled' };
   }
 }

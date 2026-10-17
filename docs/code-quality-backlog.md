@@ -226,6 +226,9 @@ rewrite.
       stop signal and the API cannot mark a cancelled job as completed after the
       active job keeps running; add concurrency checks before any persistence and
       add visible cleanup for long-lived in-memory import metadata.
+  - [x] Route QSP job cancellation to the worker abort signal, guard the
+        persistence boundary, and expire terminal in-memory metadata.
+  - [ ] Make ChoiceScript parsing cancellable without blocking the API event loop.
 - [ ] Persist import compatibility reports durably so completed, failed, and
       cancelled imports retain their diagnostics across process restarts; define
       retention and ownership before exposing the report as a user-facing
