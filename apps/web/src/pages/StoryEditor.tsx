@@ -215,7 +215,10 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
     undo,
     redo,
   } = useStoryEditorPersistence(storyId);
-  usePendingSaveGuard(Boolean(story) && (saveStatus === 'saving' || saveStatus === 'error'));
+  const pendingSaveGuard = usePendingSaveGuard(
+    Boolean(story) && (saveStatus === 'saving' || saveStatus === 'error'),
+    'editor',
+  );
   const formatCount = useCallback(
     (
       count: number,
@@ -1470,6 +1473,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
         if (!reviewOnly && isRealtimeEditableTarget(event.target)) endLocalEdit();
       }}
     >
+      {pendingSaveGuard}
       <div className="editor-toolbar">
         <div className="story-title-control">
           <input

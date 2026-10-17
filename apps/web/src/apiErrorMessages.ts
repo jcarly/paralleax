@@ -47,6 +47,7 @@ const localizedErrorKeys: Record<string, string> = {
   QSP_SOURCE_INVALID_UTF8: 'apiErrors.qspSourceInvalidUtf8',
   STORY_IMPORT_FAILED: 'apiErrors.storyImportFailed',
   STORY_REVISION_CONFLICT: 'apiErrors.storyRevisionConflict',
+  STORY_QUOTA_EXCEEDED: 'apiErrors.storyQuotaExceeded',
 };
 
 /**

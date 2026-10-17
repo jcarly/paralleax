@@ -1,6 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { BrowserRouter } from 'react-router-dom';
+import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import './styles.css';
 import './features/story-editor/editor.css';
 import './features/story-editor/inspectors/inspector-layout.css';
@@ -12,6 +12,8 @@ import './responsive.css';
 import './i18n';
 import { App } from './App';
 
+const router = createBrowserRouter([{ path: '*', element: <App /> }]);
+
 if (import.meta.env.VITE_SENTRY_DSN?.trim()) {
   void import('./observability/sentry')
     .then(({ initializeSentry }) => initializeSentry())
@@ -20,8 +22,6 @@ if (import.meta.env.VITE_SENTRY_DSN?.trim()) {
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <BrowserRouter>
-      <App />
-    </BrowserRouter>
+    <RouterProvider router={router} />
   </React.StrictMode>,
 );

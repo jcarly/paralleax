@@ -1,6 +1,7 @@
 import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { Link, MemoryRouter, Route, Routes } from 'react-router-dom';
+import { Link, Route, Routes } from 'react-router-dom';
+import { TestDataRouter } from '../test/TestDataRouter';
 import { describe, expect, it, vi } from 'vitest';
 import {
   api,
@@ -99,11 +100,11 @@ describe('StoryPlayer loading and presentation', () => {
     vi.mocked(api.getReaderProgress).mockResolvedValue(null);
 
     render(
-      <MemoryRouter initialEntries={['/stories/story-1/play']}>
+      <TestDataRouter initialEntry="/stories/story-1/play">
         <Routes>
           <Route path="/stories/:storyId/play" element={<StoryPlayer />} />
         </Routes>
-      </MemoryRouter>,
+      </TestDataRouter>,
     );
 
     expect(await screen.findByRole('alert')).toHaveTextContent('API unavailable');
@@ -118,12 +119,12 @@ describe('StoryPlayer loading and presentation', () => {
     );
 
     render(
-      <MemoryRouter initialEntries={['/stories/private-story/play']}>
+      <TestDataRouter initialEntry="/stories/private-story/play">
         <Routes>
           <Route path="/" element={<div>Story library route</div>} />
           <Route path="/stories/:storyId/play" element={<StoryPlayer />} />
         </Routes>
-      </MemoryRouter>,
+      </TestDataRouter>,
     );
 
     expect(await screen.findByText('Story library route')).toBeInTheDocument();
@@ -148,12 +149,12 @@ describe('StoryPlayer loading and presentation', () => {
     vi.mocked(api.getReaderProgress).mockResolvedValue(null);
 
     render(
-      <MemoryRouter initialEntries={['/stories/story-1/play']}>
+      <TestDataRouter initialEntry="/stories/story-1/play">
         <Link to="/stories/story-2/play">Open second Story</Link>
         <Routes>
           <Route path="/stories/:storyId/play" element={<StoryPlayer />} />
         </Routes>
-      </MemoryRouter>,
+      </TestDataRouter>,
     );
 
     await user.click(screen.getByRole('link', { name: 'Open second Story' }));
@@ -178,11 +179,11 @@ describe('StoryPlayer loading and presentation', () => {
     };
     vi.mocked(api.getStory).mockResolvedValue(publicStory);
     render(
-      <MemoryRouter initialEntries={['/stories/story-1/play']}>
+      <TestDataRouter initialEntry="/stories/story-1/play">
         <Routes>
           <Route path="/stories/:storyId/play" element={<StoryPlayer authenticated={false} />} />
         </Routes>
-      </MemoryRouter>,
+      </TestDataRouter>,
     );
 
     expect(await screen.findByText('Sign in to save progress')).toBeInTheDocument();

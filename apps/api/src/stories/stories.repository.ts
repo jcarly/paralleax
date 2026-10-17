@@ -42,6 +42,7 @@ import {
 } from '@paralleax/shared';
 import type { PoolClient } from 'pg';
 import { DatabaseConnection } from '../database/database.connection';
+import { assertStoryWithinQuotas } from './story-quotas';
 import type { Queryable } from './persistence/stories.persistence.types';
 import {
   persistStoryDifference,
@@ -544,6 +545,7 @@ export class StoriesRepository {
 
   async saveMany(stories: readonly Story[], ownerId: string): Promise<void> {
     await this.transaction(async (client) => {
+      for (const story of stories) assertStoryWithinQuotas(story);
       for (const story of stories) await this.saveWith(client, story, ownerId);
     });
   }
@@ -559,6 +561,7 @@ export class StoriesRepository {
       const current = await this.findWith(client, id, ownerId);
       if (!current) return undefined;
       const updated = await mutation(structuredClone(current));
+      assertStoryWithinQuotas(updated, current);
       const changes = createStoryChangeDelta(current, updated);
       await persistStoryDifference(client, current, updated, changes);
       if (changes && updated.revision !== current.revision && updated.revision !== undefined) {
@@ -607,6 +610,7 @@ export class StoriesRepository {
         updated.id = id;
         updated.updatedAt = new Date().toISOString();
         updated.revision = (current.revision ?? 1) + 1;
+        assertStoryWithinQuotas(updated, current);
         const changes = invertStoryChangeDelta(event.changes);
 
         await persistStoryDifference(client, current, updated, changes);
@@ -1192,6 +1196,7 @@ export class StoriesRepository {
   }
 
   private async saveWith(client: PoolClient, story: Story, ownerId: string): Promise<void> {
+    assertStoryWithinQuotas(story);
     await client.query(
       `INSERT INTO stories
        (id, revision, title, start_date_time, created_at, updated_at, creator_user_id,

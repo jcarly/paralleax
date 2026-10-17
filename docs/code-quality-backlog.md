@@ -48,13 +48,13 @@ promotes them.
       content that cannot be saved above the limit.
 - [x] Configure an explicit 128 KiB global HTTP request-body limit and normalize
       parser rejection as a stable `413 PAYLOAD_TOO_LARGE` response.
-- [ ] Add story-level size and entity-count quotas.
+- [x] Add story-level size and entity-count quotas.
 - [x] Apply a 60-per-minute rate limit to story mutations while retaining a
       separate 100-per-minute read limit and stable `429` responses.
 - [x] Protect browser closing/reloading and internal link clicks while editor
       saves are pending or failed, with confirmation and cleanup tests.
-- [ ] Migrate from declarative `BrowserRouter` to a data router before blocking
-      browser back/forward navigation; do not emulate this by mutating history after
+- [x] Migrate from declarative `BrowserRouter` to a data router and block browser
+      back/forward navigation with `useBlocker`, without mutating history after
       `popstate`.
 - [x] Upgrade `sanitize-html`, DOMPurify, React Router, Nano ID, and safe
       transitive packages. Pin the fixed `js-yaml` patch beneath Swagger with an
@@ -226,6 +226,10 @@ rewrite.
       stop signal and the API cannot mark a cancelled job as completed after the
       active job keeps running; add concurrency checks before any persistence and
       add visible cleanup for long-lived in-memory import metadata.
+- [ ] Persist import compatibility reports durably so completed, failed, and
+      cancelled imports retain their diagnostics across process restarts; define
+      retention and ownership before exposing the report as a user-facing
+      recovery surface.
 - [x] Make ELK the canonical graph-layout strategy while keeping the historic
       custom layout as an explicit fallback or removing it after validation;
       update the large-graph stress benchmark to use the active engine and keep

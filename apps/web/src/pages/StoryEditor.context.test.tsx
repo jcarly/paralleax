@@ -1,6 +1,7 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { Route, Routes } from 'react-router-dom';
+import { TestDataRouter } from '../test/TestDataRouter';
 import { describe, expect, it, vi } from 'vitest';
 import type { StoryCommentThread } from '@paralleax/shared';
 import {
@@ -39,12 +40,12 @@ describe('StoryEditor story context', () => {
     };
     vi.mocked(api.getStory).mockResolvedValue(reviewStory);
     render(
-      <MemoryRouter initialEntries={['/stories/story-1/edit']}>
+      <TestDataRouter initialEntry="/stories/story-1/edit">
         <Routes>
           <Route path="/stories/:storyId/edit" element={<StoryEditor />} />
           <Route path="/stories/:storyId/play" element={<div>Reader route</div>} />
         </Routes>
-      </MemoryRouter>,
+      </TestDataRouter>,
     );
 
     expect(await screen.findByText('Reader route')).toBeInTheDocument();
@@ -56,11 +57,11 @@ describe('StoryEditor story context', () => {
     vi.mocked(api.getStory).mockRejectedValue(new Error('Story not found'));
 
     render(
-      <MemoryRouter initialEntries={['/stories/story-1/edit']}>
+      <TestDataRouter initialEntry="/stories/story-1/edit">
         <Routes>
           <Route path="/stories/:storyId/edit" element={<StoryEditor />} />
         </Routes>
-      </MemoryRouter>,
+      </TestDataRouter>,
     );
 
     expect(await screen.findByText('Story not found')).toBeInTheDocument();
@@ -72,12 +73,12 @@ describe('StoryEditor story context', () => {
     );
 
     render(
-      <MemoryRouter initialEntries={['/stories/private-story/edit']}>
+      <TestDataRouter initialEntry="/stories/private-story/edit">
         <Routes>
           <Route path="/" element={<div>Story library route</div>} />
           <Route path="/stories/:storyId/edit" element={<StoryEditor />} />
         </Routes>
-      </MemoryRouter>,
+      </TestDataRouter>,
     );
 
     expect(await screen.findByText('Story library route')).toBeInTheDocument();
@@ -163,12 +164,12 @@ describe('StoryEditor story context', () => {
     vi.mocked(api.getStory).mockResolvedValue(editorStory);
 
     render(
-      <MemoryRouter initialEntries={['/stories/story-1/edit?settings=access']}>
+      <TestDataRouter initialEntry="/stories/story-1/edit?settings=access">
         <Routes>
           <Route path="/" element={<div>Story library route</div>} />
           <Route path="/stories/:storyId/edit" element={<StoryEditor />} />
         </Routes>
-      </MemoryRouter>,
+      </TestDataRouter>,
     );
 
     expect(await screen.findByText('Story library route')).toBeInTheDocument();

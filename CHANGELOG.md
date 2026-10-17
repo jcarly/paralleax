@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- Migrated web routing to a React Router data router and protected browser
+  back/forward, links, and code navigation while editor, reader, or Simulation
+  saves are pending or failed. Added an accessible leave confirmation and kept
+  browser unload protection; adjusted the initial bundle budget for the router.
+
+- Enforced configurable per-Story size and entity quotas across authoring,
+  imports, and undo/redo with atomic HTTP 422 responses and localized feedback;
+  existing oversized stories can still reduce their content.
+
 - Re-triaged the active quality backlog and roadmap against the implemented
   baseline, separated historical feedback from current delivery priorities, and
   refreshed production-readiness status for account safety, collaboration,

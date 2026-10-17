@@ -188,7 +188,9 @@ Paralleax currently includes:
   simulation expose saving, saved, and failed states. Safe updates can be retried;
   uncertain creations recover by reloading the canonical Story so a timeout cannot
   duplicate content. Navigation and unload protection includes unresolved authored
-  simulation mutations as well as reader-progress saves.
+  simulation mutations as well as reader-progress saves. Internal links, code
+  navigation, and browser back/forward use data-router blocking with an accessible
+  stay/leave confirmation; browser reload and external departure use `beforeunload`.
 - Live simultaneous editing for clients connected to the same API process. Every
   committed interaction, trigger, position, context entity, item/stat structure,
   and graph-decoration change invalidates open editor and Simulation Mode clients;

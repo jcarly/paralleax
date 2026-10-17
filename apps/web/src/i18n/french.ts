@@ -40,6 +40,8 @@ export const frenchTranslation = {
     qspSourceInvalidUtf8: 'La source texte QSP n’est pas encodée correctement en UTF-8.',
     storyImportFailed: 'La source n’a pas pu être convertie en histoire.',
     storyRevisionConflict: 'L’histoire a été modifiée ailleurs. Rechargez-la avant de réessayer.',
+    storyQuotaExceeded:
+      'Cette histoire dépasse sa limite de taille ou d’entités. Réduisez son contenu et réessayez.',
   },
   language: {
     label: 'Langue',
@@ -57,6 +59,14 @@ export const frenchTranslation = {
     loading: 'Chargement…',
     loadingWorkspace: 'Chargement de l’espace de travail…',
     sessionExpired: 'Votre session a expiré. Reconnectez-vous pour continuer.',
+  },
+  pendingSave: {
+    title: 'Modifications non enregistrées',
+    description:
+      'Cette histoire contient des modifications non enregistrées. Quitter et les perdre ?',
+    stay: 'Rester sur cette page',
+    close: 'Fermer la confirmation',
+    leave: 'Quitter la page',
   },
   auth: {
     verification: {

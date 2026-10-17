@@ -1259,6 +1259,102 @@ unknown_command
       .expect(400);
   });
 
+  it('rejects an over-quota edit atomically with a stable 422 response, while allowing deletion', async () => {
+    const story = await createStory();
+    const first = await createInteraction(story.id);
+    const second = await createInteraction(story.id);
+    const previous = process.env.PARALLEAX_STORY_QUOTA_INTERACTIONS;
+    process.env.PARALLEAX_STORY_QUOTA_INTERACTIONS = '1';
+    try {
+      const rejected = await request(httpServer)
+        .post(`/api/stories/${story.id}/interactions`)
+        .send({})
+        .expect(422);
+      expect(rejected.body).toMatchObject({
+        code: 'STORY_QUOTA_EXCEEDED',
+        details: { resource: 'interactions', limit: 1, current: 2, attempted: 3 },
+      });
+      const unchanged = await request(httpServer).get(`/api/stories/${story.id}`).expect(200);
+      expect(unchanged.body.interactions).toHaveLength(2);
+      expect(unchanged.body.revision).toBe(second.revision);
+
+      await request(httpServer)
+        .delete(`/api/stories/${story.id}/interactions/${first.interactions[0].id}`)
+        .expect(200);
+      const reduced = await request(httpServer).get(`/api/stories/${story.id}`).expect(200);
+      expect(reduced.body.interactions).toHaveLength(1);
+
+      const undo = await request(httpServer)
+        .post(`/api/stories/${story.id}/history/undo`)
+        .expect(422);
+      expect(undo.body).toMatchObject({
+        code: 'STORY_QUOTA_EXCEEDED',
+        details: { resource: 'interactions', limit: 1, current: 1, attempted: 2 },
+      });
+      const afterUndo = await request(httpServer).get(`/api/stories/${story.id}`).expect(200);
+      expect(afterUndo.body).toMatchObject({ revision: reduced.body.revision });
+      expect(afterUndo.body.interactions).toHaveLength(1);
+    } finally {
+      if (previous === undefined) delete process.env.PARALLEAX_STORY_QUOTA_INTERACTIONS;
+      else process.env.PARALLEAX_STORY_QUOTA_INTERACTIONS = previous;
+    }
+  });
+
+  it('rejects an over-quota ChoiceScript import without creating a Story', async () => {
+    const previous = process.env.PARALLEAX_STORY_QUOTA_INTERACTIONS;
+    process.env.PARALLEAX_STORY_QUOTA_INTERACTIONS = '1';
+    try {
+      const rejected = await request(httpServer)
+        .post('/api/stories/imports/choicescript')
+        .send({
+          files: [
+            {
+              name: 'startup.txt',
+              content:
+                '*title Quota import\nOpening.\n*choice\n  #Continue\n    Ending.\n    *ending',
+            },
+          ],
+        })
+        .expect(422);
+      expect(rejected.body).toMatchObject({
+        code: 'STORY_QUOTA_EXCEEDED',
+        details: { resource: 'interactions', limit: 1, current: 0 },
+      });
+      expect(rejected.body.details.attempted).toBeGreaterThan(1);
+      const stories = await request(httpServer).get('/api/stories').expect(200);
+      expect(stories.body.totalCount).toBe(0);
+    } finally {
+      if (previous === undefined) delete process.env.PARALLEAX_STORY_QUOTA_INTERACTIONS;
+      else process.env.PARALLEAX_STORY_QUOTA_INTERACTIONS = previous;
+    }
+  });
+
+  it('rejects redo when it would restore an over-quota entity', async () => {
+    const story = await createStory();
+    await createInteraction(story.id);
+    await createInteraction(story.id);
+    await request(httpServer).post(`/api/stories/${story.id}/history/undo`).expect(201);
+
+    const previous = process.env.PARALLEAX_STORY_QUOTA_INTERACTIONS;
+    process.env.PARALLEAX_STORY_QUOTA_INTERACTIONS = '1';
+    try {
+      const before = await request(httpServer).get(`/api/stories/${story.id}`).expect(200);
+      const rejected = await request(httpServer)
+        .post(`/api/stories/${story.id}/history/redo`)
+        .expect(422);
+      expect(rejected.body).toMatchObject({
+        code: 'STORY_QUOTA_EXCEEDED',
+        details: { resource: 'interactions', limit: 1, current: 1, attempted: 2 },
+      });
+      const after = await request(httpServer).get(`/api/stories/${story.id}`).expect(200);
+      expect(after.body).toMatchObject({ revision: before.body.revision });
+      expect(after.body.interactions).toHaveLength(1);
+    } finally {
+      if (previous === undefined) delete process.env.PARALLEAX_STORY_QUOTA_INTERACTIONS;
+      else process.env.PARALLEAX_STORY_QUOTA_INTERACTIONS = previous;
+    }
+  });
+
   it('rejects raw request bodies above the global HTTP limit', async () => {
     const response = await request(httpServer)
       .post('/api/stories')

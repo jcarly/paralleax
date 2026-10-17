@@ -48,6 +48,19 @@ describe('apiErrorMessage', () => {
     ).toBe('Vous ne pouvez pas supprimer cette discussion.');
   });
 
+  it('localizes Story quota failures', async () => {
+    await i18n.changeLanguage('fr');
+    expect(
+      apiErrorMessage(
+        new ApiError('The Story exceeds its limit', 422, 'STORY_QUOTA_EXCEEDED'),
+        i18n.t,
+        'Échec',
+      ),
+    ).toBe(
+      'Cette histoire dépasse sa limite de taille ou d’entités. Réduisez son contenu et réessayez.',
+    );
+  });
+
   it('keeps a future explicit application message as a compatibility fallback', () => {
     expect(
       apiErrorMessage(

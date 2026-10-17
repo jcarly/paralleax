@@ -16,6 +16,13 @@ export const italianTranslation = {
     loadingWorkspace: "Caricamento dell'area di lavoro…",
     sessionExpired: 'La tua sessione è scaduta. Accedi nuovamente per continuare.',
   },
+  pendingSave: {
+    title: 'Modifiche non salvate',
+    description: 'Questa storia contiene modifiche non salvate. Uscire e perderle?',
+    stay: 'Resta su questa pagina',
+    close: 'Chiudi la conferma',
+    leave: 'Esci dalla pagina',
+  },
   apiErrors: {
     badRequest: 'Le informazioni inviate non sono valide.',
     authenticationRequired: 'Accedi per continuare.',
@@ -60,6 +67,8 @@ export const italianTranslation = {
     storyImportFailed: 'Impossibile convertire la fonte in una storia.',
     storyRevisionConflict:
       'La storia è cambiata altrove. Ricaricarlo prima di applicare nuovamente questa modifica.',
+    storyQuotaExceeded:
+      'Questa storia supera il limite di dimensione o di entità. Riduci il contenuto e riprova.',
   },
   auth: {
     showcase: {

@@ -37,6 +37,7 @@ import {
   type StoryHistoryEventKind,
   type StoryHistoryMutationResult,
 } from '@paralleax/shared';
+import { assertStoryWithinQuotas } from './story-quotas';
 
 interface MemoryStoryHistoryEvent {
   id: string;
@@ -379,11 +380,13 @@ export class InMemoryStoriesRepository {
   }
 
   async save(story: Story, ownerId: string): Promise<void> {
+    assertStoryWithinQuotas(story);
     this.stories.set(story.id, structuredClone(story));
     this.owners.set(story.id, ownerId);
   }
 
   async saveMany(stories: readonly Story[], ownerId: string): Promise<void> {
+    for (const story of stories) assertStoryWithinQuotas(story);
     for (const story of stories) await this.save(story, ownerId);
   }
 
@@ -398,6 +401,7 @@ export class InMemoryStoriesRepository {
       const story = candidate && this.can(candidate, id, ownerId).canEdit ? candidate : undefined;
       if (!story) return undefined;
       const updated = await mutation(structuredClone(story));
+      assertStoryWithinQuotas(updated, story);
       const changes = createStoryChangeDelta(story, updated);
       this.stories.set(id, structuredClone(updated));
       if (changes && updated.revision !== story.revision && updated.revision !== undefined) {
@@ -456,6 +460,7 @@ export class InMemoryStoriesRepository {
       const updated = reverted.story;
       updated.updatedAt = new Date().toISOString();
       updated.revision = (current.revision ?? 1) + 1;
+      assertStoryWithinQuotas(updated, current);
       const changes = invertStoryChangeDelta(candidate.changes);
       this.stories.set(id, structuredClone(updated));
       this.appendHistory(id, {

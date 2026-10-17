@@ -16,6 +16,13 @@ export const englishTranslation = {
     loadingWorkspace: 'Loading workspace…',
     sessionExpired: 'Your session expired. Sign in again to continue.',
   },
+  pendingSave: {
+    title: 'Unsaved changes',
+    description: 'This story still has unsaved changes. Leave and discard them?',
+    stay: 'Stay on this page',
+    close: 'Close confirmation',
+    leave: 'Leave page',
+  },
   apiErrors: {
     badRequest: 'The submitted information is invalid.',
     authenticationRequired: 'Sign in to continue.',
@@ -58,6 +65,8 @@ export const englishTranslation = {
     storyImportFailed: 'The source could not be converted into a story.',
     storyRevisionConflict:
       'The story changed elsewhere. Reload it before applying this change again.',
+    storyQuotaExceeded:
+      'This story exceeds its size or entity limit. Reduce its content and try again.',
   },
   auth: {
     showcase: {

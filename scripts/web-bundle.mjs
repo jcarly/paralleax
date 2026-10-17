@@ -6,7 +6,7 @@ export const WEB_BUNDLE_ROUTE_SOURCES = Object.freeze({
 });
 
 export const WEB_BUNDLE_BUDGETS = Object.freeze({
-  initialJavaScriptBytes: 135 * 1024,
+  initialJavaScriptBytes: 150 * 1024,
   initialStylesheetBytes: 24 * 1024,
   editorIncrementalBytes: 145 * 1024,
   playerIncrementalBytes: 95 * 1024,

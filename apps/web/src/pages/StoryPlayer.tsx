@@ -160,12 +160,13 @@ export function StoryPlayer({
     window.requestAnimationFrame(() => savesDialogTrigger.current?.focus());
   }, []);
 
-  usePendingSaveGuard(
+  const pendingSaveGuard = usePendingSaveGuard(
     authenticated &&
       (progressStatus === 'saving' ||
         progressStatus === 'error' ||
         (isSimulationMode &&
           (simulationMutations.status === 'saving' || simulationMutations.status === 'error'))),
+    'player',
   );
 
   useEffect(() => {
@@ -1024,6 +1025,7 @@ export function StoryPlayer({
         if (isSimulationMode && isRealtimeEditableTarget(event.target)) endSimulationEdit();
       }}
     >
+      {pendingSaveGuard}
       <div className="player-top">
         <div className="player-context">
           <span className="player-mark" aria-hidden="true">

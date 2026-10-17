@@ -1,6 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 import { cleanup, render, screen } from '@testing-library/react';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import { afterEach, beforeEach, vi } from 'vitest';
 import type { Story } from '@paralleax/shared';
 import { api } from '../api';
@@ -72,11 +72,12 @@ export async function renderPlayer(initialEntry = '/stories/story-1/play', story
   vi.mocked(api.listReaderSaves).mockResolvedValue([]);
 
   render(
-    <MemoryRouter initialEntries={[initialEntry]}>
-      <Routes>
-        <Route path="/stories/:storyId/play" element={<StoryPlayer currentUserId="owner-1" />} />
-      </Routes>
-    </MemoryRouter>,
+    <RouterProvider
+      router={createMemoryRouter(
+        [{ path: '/stories/:storyId/play', element: <StoryPlayer currentUserId="owner-1" /> }],
+        { initialEntries: [initialEntry] },
+      )}
+    />,
   );
 
   await screen.findByText(/Paralleax (Reader|Preview)/);

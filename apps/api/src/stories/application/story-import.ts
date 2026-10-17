@@ -1,4 +1,9 @@
-import { BadRequestException, Injectable, InternalServerErrorException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  InternalServerErrorException,
+  UnprocessableEntityException,
+} from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import {
   importChoiceScript,
@@ -229,6 +234,7 @@ export class StoryImportService {
     } catch (caught) {
       this.jobs.update(importId, { status: 'failed', phase: 'finalizing' });
       this.jobs.complete(importId);
+      if (caught instanceof UnprocessableEntityException) throw caught;
       throw new InternalServerErrorException(
         apiErrorResponse(
           'STORY_IMPORT_SAVE_FAILED',

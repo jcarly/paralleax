@@ -827,11 +827,31 @@ mutations form one pending batch: the tracker reports saved only after every
 request completes, and any failure in that batch remains visible even if a later
 request succeeded first.
 
-While that tracker reports a pending or failed save, `usePendingSaveGuard`
-protects browser closing/reloading and internal anchor navigation with native
-confirmation. Declarative `BrowserRouter` does not provide transactional
-back/forward blocking; covering browser history requires the planned migration
-to a React Router data router rather than fragile `popstate` reversal.
+Story writes, imports, and history reversals validate configurable aggregate
+quotas on the in-memory Story already assembled for the operation, before any
+relational write. The defaults are 2,000 Interactions, 8,000 Triggers, 1,000
+Characters, 1,000 Locations, 2,000 stat definitions, 8,000 stat assignments,
+2,000 item definitions, 10,000 exact item instances, 1,000 Groups, 2,000 graph
+decorations, and 32 MiB of authored Story JSON encoded as UTF-8. The serialized
+size excludes response-only owner and capability projections. Each default can
+be overridden by `PARALLEAX_STORY_QUOTA_<UPPER_SNAKE_CASE_RESOURCE>` using a
+positive integer; the byte limit is `PARALLEAX_STORY_QUOTA_SERIALIZED_BYTES`.
+Exceeding a quota returns HTTP 422 with `STORY_QUOTA_EXCEEDED` and the resource,
+limit, current, and attempted measurements. A preexisting Story above a limit
+may keep or reduce that resource, but cannot increase it. The existing per-body
+and HTTP request limits remain independent.
+
+The web entry uses `createBrowserRouter` and `RouterProvider`; the existing
+component routes, authentication decisions, Story projection loading, and lazy
+editor/player imports remain in place. While an editor save or reader/simulation
+save is pending or failed, `usePendingSaveGuard` uses the data router's
+`useBlocker` for internal links, code navigation, and browser back/forward. An
+accessible shared dialog lets the user stay or leave. The guard also retains
+`beforeunload` for browser reload, closing, and external navigation. Editor URL
+query changes do not discard its Story; player changes to the requested mode or
+simulation start interaction do reload the runtime session and are guarded.
+The initial JavaScript budget is 150 KiB compressed to account for the data
+router's history-blocking code; the editor and player remain lazy entries.
 
 ### Running the Reader
 
