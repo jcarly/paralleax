@@ -86,14 +86,13 @@ test('a network failure is visible, blocks navigation, and can be recovered safe
   await expect(page.getByLabel('Story save status')).toHaveText('Save failed');
   await expect(page.getByRole('button', { name: 'Reload story' })).toBeVisible();
 
-  const dialogPromise = page.waitForEvent('dialog');
-  const navigationAttempt = page.getByRole('link', { name: 'Stories', exact: true }).click();
-  const dialog = await dialogPromise;
-  expect(dialog.message()).toBe(
-    'This story still has unsaved changes. Leave this page and discard them?',
+  await page.getByRole('link', { name: 'Stories', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'Unsaved changes' });
+  await expect(dialog).toBeVisible();
+  await expect(dialog).toContainText(
+    'This story still has unsaved changes. Leave and discard them?',
   );
-  await dialog.dismiss();
-  await navigationAttempt;
+  await dialog.getByRole('button', { name: 'Stay on this page' }).click();
   await expect(page).toHaveURL(/\/stories\/[^/]+\/edit$/);
 
   await context.setOffline(false);
