@@ -68,6 +68,36 @@ describe('story editor selection', () => {
     expect(result.current.selectedLocation).toBeUndefined();
   });
 
+  it('adds and subtracts rectangle selections with Shift and Alt', () => {
+    const story = storyFixture();
+    const { result } = renderHook(() => useStoryEditorSelection(story));
+    const nodes = buildInteractionNodes(story, undefined);
+    act(() => result.current.selectGraphInteractions(['source']));
+    act(() => result.current.handleGraphSelectionStart({ shiftKey: true, altKey: false }));
+    act(() => result.current.handleGraphSelectionChange({ nodes: [nodes[1]], edges: [] }));
+    act(() => result.current.handleGraphSelectionEnd());
+    expect(result.current.graphSelection?.interactionIds).toEqual(['source', 'target']);
+    act(() => result.current.handleGraphSelectionStart({ shiftKey: false, altKey: true }));
+    act(() => result.current.handleGraphSelectionChange({ nodes: [nodes[0]], edges: [] }));
+    act(() => result.current.handleGraphSelectionEnd());
+    expect(result.current.graphSelection?.interactionIds).toEqual(['target']);
+  });
+
+  it('highlights recursive group membership without opening an inspector or selecting draggable nodes', () => {
+    const story = storyFixture();
+    story.groups = [
+      { id: 'group', title: 'Group', interactionIds: ['source'] },
+      { id: 'child', title: 'Child', interactionIds: ['target'], parentGroupId: 'group' },
+    ];
+    const { result } = renderHook(() => useStoryEditorSelection(story));
+    act(() => result.current.selectExclusive({ type: 'group', id: 'group' }));
+    expect([...result.current.groupInteractionIds!]).toEqual(['source', 'target']);
+    expect(result.current.hasInspectorSelection).toBe(false);
+    expect(result.current.selectedGraphNodeIds.size).toBe(0);
+    act(() => result.current.selectInteraction('source'));
+    expect(result.current.groupInteractionIds).toBeUndefined();
+  });
+
   it('captures only interaction and trigger nodes during an active rectangle gesture', () => {
     const story = storyFixture();
     const { result } = renderHook(() => useStoryEditorSelection(story));

@@ -38,6 +38,9 @@ This folder records accepted architecture and product-shaping decisions.
 - [ADR-032 - Complete Import Reports and Warning Confirmation](ADR-032-import-report-confirmation.md)
 - [ADR-033 - Unlisted Story Visibility](ADR-033-unlisted-story-visibility.md)
 - [ADR-034 - Collaborative Editing and Offline Authoring](ADR-034-collaborative-offline-authoring.md)
+- [ADR-035 - Nested Group Navigation](ADR-035-nested-group-navigation.md)
+
+- [ADR-036 - Exclusive Direct Group Membership](ADR-036-exclusive-group-membership.md)
 
 ## Maintenance
 

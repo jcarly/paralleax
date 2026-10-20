@@ -125,6 +125,7 @@ type GraphDecorationRow = {
   sort_order: number;
 };
 type GroupRow = {
+  parent_group_id: string | null;
   id: string;
   story_id: string;
   title: string;
@@ -881,7 +882,7 @@ export class StoriesRepository {
       [storyIds],
     );
     const groups = await queryable.query<GroupRow>(
-      `SELECT id, story_id, title, sort_order
+      `SELECT id, story_id, title, parent_group_id, sort_order
          FROM story_groups WHERE story_id = ANY($1::text[])
          ORDER BY story_id, sort_order`,
       [storyIds],
@@ -1043,6 +1044,7 @@ export class StoriesRepository {
       groups: (groupsByStory.get(row.id) ?? []).map((group): Group => ({
         id: group.id,
         title: group.title,
+        ...(group.parent_group_id ? { parentGroupId: group.parent_group_id } : {}),
         interactionIds: (interactionsByGroup.get(group.id) ?? []).map(
           ({ interaction_id }) => interaction_id,
         ),

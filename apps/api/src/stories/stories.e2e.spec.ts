@@ -172,7 +172,7 @@ describe('Stories API', () => {
     });
   });
 
-  it('creates a flat Group from selected Interactions without changing reader structure', async () => {
+  it('creates a Group and moves selected Interactions from their previous Group without changing reader structure', async () => {
     const created = await createStory('Grouped story');
     const withRoot = await createInteraction(created.id);
     const withChild = await createInteraction(created.id, {
@@ -184,7 +184,7 @@ describe('Stories API', () => {
       .post(`/api/stories/${created.id}/groups`)
       .send({ title: 'Opening', interactionIds: [root.id, child.id] })
       .expect(201);
-    await request(httpServer)
+    const rootOnly = await request(httpServer)
       .post(`/api/stories/${created.id}/groups`)
       .send({ title: 'Root only', interactionIds: [root.id] })
       .expect(201);
@@ -194,15 +194,94 @@ describe('Stories API', () => {
     });
     const reloaded = await request(httpServer).get(`/api/stories/${created.id}`).expect(200);
     expect(reloaded.body.groups).toEqual([
-      expect.objectContaining({ title: 'Opening', interactionIds: [root.id, child.id] }),
+      expect.objectContaining({ title: 'Opening', interactionIds: [child.id] }),
       expect.objectContaining({ title: 'Root only', interactionIds: [root.id] }),
     ]);
     expect(reloaded.body.interactions).toEqual(withChild.interactions);
+    await request(httpServer)
+      .patch(`/api/stories/${created.id}/groups/${rootOnly.body.group.id}`)
+      .send({ parentGroupId: opening.body.group.id })
+      .expect(200);
+    await request(httpServer)
+      .patch(`/api/stories/${created.id}/groups/${opening.body.group.id}`)
+      .send({ interactionIds: [root.id, child.id] })
+      .expect(200);
+    const transferred = await request(httpServer).get(`/api/stories/${created.id}`).expect(200);
+    expect(transferred.body.groups[0].interactionIds).toEqual([root.id, child.id]);
+    expect(transferred.body.groups[1]).toMatchObject({
+      parentGroupId: opening.body.group.id,
+      interactionIds: [],
+    });
+    const undoTransfer = await request(httpServer)
+      .post(`/api/stories/${created.id}/history/undo`)
+      .expect(201);
+    expect(undoTransfer.body.story.groups[0].interactionIds).toEqual([child.id]);
+    expect(undoTransfer.body.story.groups[1]).toMatchObject({
+      parentGroupId: opening.body.group.id,
+      interactionIds: [root.id],
+    });
 
     await request(httpServer)
       .post(`/api/stories/${created.id}/groups`)
       .send({ title: 'Invalid', interactionIds: ['another-story-interaction'] })
       .expect(400);
+  });
+
+  it('manages nested groups with isolation, validation, reload and undo', async () => {
+    const story = await createStory('Groups');
+    const other = await createStory('Other');
+    const withInteraction = await createInteraction(story.id);
+    const id = withInteraction.interactions[0].id;
+    const parent = await request(httpServer)
+      .post(`/api/stories/${story.id}/groups`)
+      .send({ title: 'Parent', interactionIds: [id] })
+      .expect(201);
+    const child = await request(httpServer)
+      .post(`/api/stories/${story.id}/groups`)
+      .send({ title: 'Child', interactionIds: [id] })
+      .expect(201);
+    await request(httpServer)
+      .patch(`/api/stories/${story.id}/groups/${child.body.group.id}`)
+      .send({ title: 'Renamed', parentGroupId: parent.body.group.id, interactionIds: [] })
+      .expect(200);
+    await request(httpServer)
+      .patch(`/api/stories/${story.id}/groups/${parent.body.group.id}`)
+      .send({ parentGroupId: child.body.group.id })
+      .expect(400);
+    await request(httpServer)
+      .patch(`/api/stories/${other.id}/groups/${child.body.group.id}`)
+      .send({ title: 'Foreign' })
+      .expect(404);
+    await request(httpServer)
+      .patch(`/api/stories/${story.id}/groups/${child.body.group.id}`)
+      .send({ title: '  ' })
+      .expect(400);
+    await request(httpServer)
+      .patch(`/api/stories/${story.id}/groups/${child.body.group.id}`)
+      .send({ interactionIds: [id, id] })
+      .expect(400);
+    const loaded = await request(httpServer).get(`/api/stories/${story.id}`).expect(200);
+    expect(loaded.body.groups[1]).toMatchObject({
+      title: 'Renamed',
+      parentGroupId: parent.body.group.id,
+      interactionIds: [],
+    });
+    const deleted = await request(httpServer)
+      .delete(`/api/stories/${story.id}/groups/${parent.body.group.id}`)
+      .expect(200);
+    expect(deleted.body.groupId).toBe(parent.body.group.id);
+    const afterDelete = await request(httpServer).get(`/api/stories/${story.id}`).expect(200);
+    expect(afterDelete.body.groups).toEqual([
+      { id: child.body.group.id, title: 'Renamed', interactionIds: [] },
+    ]);
+    const undone = await request(httpServer)
+      .post(`/api/stories/${story.id}/history/undo`)
+      .expect(201);
+    expect(undone.body.story.groups).toEqual(loaded.body.groups);
+    await request(httpServer).delete(`/api/stories/${story.id}/interactions/${id}`).expect(200);
+    const cleaned = await request(httpServer).get(`/api/stories/${story.id}`).expect(200);
+    expect(cleaned.body.groups[0].interactionIds).toEqual([]);
+    expect(cleaned.body.groups).toHaveLength(2);
   });
 
   it('persists authored Story history and supports undo and redo', async () => {

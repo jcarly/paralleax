@@ -124,6 +124,33 @@
   padding: 0;
   background: var(--color-surface);
 }
+.story-group-row {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  align-items: center;
+}
+.story-group-toggle {
+  min-width: 0;
+  padding: 0;
+}
+.story-groups-panel .story-group-contents > ul {
+  padding-left: 0.75rem;
+  list-style: none;
+}
+.story-groups-panel fieldset {
+  min-width: 0;
+  margin: 0.5rem 0;
+  padding: 0;
+  border: 0;
+}
+.story-groups-panel label {
+  display: block;
+}
+.story-groups-panel input,
+.story-groups-panel select {
+  width: 100%;
+  min-width: 0;
+}
 .location-panel.collapsed {
   padding: 0;
   overflow: visible;
@@ -281,6 +308,9 @@
   color: var(--color-ghost);
   text-align: left;
   box-shadow: none;
+}
+.location-panel .context-entity-select.context-entity-select-text {
+  grid-template-columns: minmax(0, 1fr);
 }
 .location-panel .context-entity-select:hover {
   background: var(--color-surface-secondary);

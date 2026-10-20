@@ -72,6 +72,7 @@ type GraphDecorationRow = {
   sort_order: number;
 };
 type GroupRow = {
+  parent_group_id: string | null;
   id: string;
   title: string;
   sort_order: number;
@@ -211,7 +212,7 @@ export async function readStoryEditorContextPage(
       : Promise.resolve({ rows: [] as GraphDecorationRow[] }),
     includeGroups
       ? queryable.query<GroupRow>(
-          `SELECT id, title, sort_order
+          `SELECT id, title, parent_group_id, sort_order
              FROM story_groups WHERE story_id = $1
              ORDER BY sort_order, id LIMIT $2 OFFSET $3`,
           parameters,
@@ -296,6 +297,7 @@ export async function readStoryEditorContextPage(
     groups: groupRows.map((group) => ({
       id: group.id,
       title: group.title,
+      ...(group.parent_group_id ? { parentGroupId: group.parent_group_id } : {}),
       interactionIds: (interactionsByGroup.get(group.id) ?? []).map(
         ({ interaction_id }) => interaction_id,
       ),

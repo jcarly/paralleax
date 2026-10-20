@@ -106,6 +106,16 @@ export interface CreateInteractionInput {
   position?: Position;
 }
 
+export interface GroupDeletionResult extends StoryMutationMetadata {
+  groupId: string;
+}
+
+export interface UpdateGroupInput {
+  title?: string;
+  interactionIds?: string[];
+  parentGroupId?: string | null;
+}
+
 export interface CreateGroupInput {
   title: string;
   interactionIds: string[];

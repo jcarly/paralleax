@@ -616,10 +616,18 @@ contextual, or background, plus lightweight logic markers and optional layout
 hints. React Flow remains the renderer for graph-shaped projections and never
 becomes the query model or persistence source.
 
-An Interaction may belong to several neutral Groups. Group membership
+An Interaction has at most one direct neutral Group. Creating or updating a
+Group transfers its assigned Interactions through shared operations, and the web
+applies the same operation to compact mutation results. Transfers form one
+reversible authored mutation across all affected Groups. A deferred unique
+constraint on `(story_id, interaction_id)` enforces direct membership at commit;
+migration `202610190043` retains the first persisted Group for legacy duplicates,
+regardless of nesting depth. Group membership
 is authored organization metadata, not a consequence of canvas overlap and not a
-reader rule. The initial persisted model is deliberately flat, with no Group
-parentage. Per-author collapse, visibility, and combined-filter state must not
+reader rule. Groups support one optional same-Story parent through a deferred
+composite foreign key; shared validation rejects cycles, including history replay.
+Group mutations reuse Story authorization, history and invalidation. Per-author
+collapse, visibility, and combined-filter state must not
 be inserted into the canonical Story until an ADR establishes their ownership and
 collaboration semantics. Separate `CharacterView`, `LocationView`, `StateView`,
 and `TimeView` implementations with duplicated filtering rules are explicitly not

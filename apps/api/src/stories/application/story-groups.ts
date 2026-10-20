@@ -1,7 +1,15 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
-import { storyHistoryOperations, type GroupMutationResult, type Story } from '@paralleax/shared';
-import type { CreateGroupDto } from '../dto/stories.dto';
+import {
+  removeStoryGroup,
+  setStoryGroupInteractions,
+  validateStoryGroups,
+  storyHistoryOperations,
+  type GroupDeletionResult,
+  type GroupMutationResult,
+  type Story,
+} from '@paralleax/shared';
+import type { CreateGroupDto, UpdateGroupDto } from '../dto/stories.dto';
 import { storyMutationMetadata } from './story-mutation-results';
 import { StoryMutationService } from './story-mutations';
 
@@ -16,24 +24,18 @@ export class StoryGroupService {
   ): Promise<GroupMutationResult> {
     const groupId = randomUUID();
     const title = input.title.trim();
-    if (!title) throw new BadRequestException('Group title cannot be blank');
 
     const story = await this.mutations.update(
       storyId,
       (story) => {
-        if (new Set(input.interactionIds).size !== input.interactionIds.length) {
-          throw new BadRequestException('Group Interaction members must be unique');
-        }
-        const interactionIds = new Set(story.interactions.map(({ id }) => id));
-        if (input.interactionIds.some((id) => !interactionIds.has(id))) {
-          throw new BadRequestException('Group members must belong to the same Story');
-        }
         (story.groups ??= []).push({
           id: groupId,
           title,
           interactionIds: [...input.interactionIds],
         });
-        return story;
+        const next = setStoryGroupInteractions(story, groupId, input.interactionIds);
+        this.validate(next);
+        return next;
       },
       userId,
       storyHistoryOperations.groupCreated,
@@ -42,6 +44,50 @@ export class StoryGroupService {
       ...storyMutationMetadata(story),
       group: this.group(story, groupId),
     };
+  }
+
+  async update(
+    storyId: string,
+    groupId: string,
+    input: UpdateGroupDto,
+    userId: string,
+  ): Promise<GroupMutationResult> {
+    const story = await this.mutations.update(
+      storyId,
+      (story) => {
+        const group = this.group(story, groupId);
+        if (input.title !== undefined) group.title = input.title.trim();
+        if (input.parentGroupId === null) delete group.parentGroupId;
+        else if (input.parentGroupId !== undefined) group.parentGroupId = input.parentGroupId;
+        const next =
+          input.interactionIds === undefined
+            ? story
+            : setStoryGroupInteractions(story, groupId, input.interactionIds);
+        this.validate(next);
+        return next;
+      },
+      userId,
+      storyHistoryOperations.groupUpdated,
+    );
+    return { ...storyMutationMetadata(story), group: this.group(story, groupId) };
+  }
+
+  async delete(storyId: string, groupId: string, userId: string): Promise<GroupDeletionResult> {
+    const story = await this.mutations.update(
+      storyId,
+      (story) => {
+        this.group(story, groupId);
+        return removeStoryGroup(story, groupId);
+      },
+      userId,
+      storyHistoryOperations.groupDeleted,
+    );
+    return { ...storyMutationMetadata(story), groupId };
+  }
+
+  private validate(story: Story) {
+    const error = validateStoryGroups(story);
+    if (error) throw new BadRequestException(error);
   }
 
   private group(story: Story, groupId: string) {

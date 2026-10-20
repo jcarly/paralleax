@@ -261,6 +261,20 @@ export class CreateGroupDto {
   @IsString({ each: true })
   interactionIds!: string[];
 }
+export class UpdateGroupDto {
+  @ValidateIf((_, value) => value !== undefined)
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(200)
+  title?: string;
+  @ValidateIf((_, value) => value !== undefined)
+  @IsArray()
+  @ArrayMaxSize(500)
+  @ArrayUnique()
+  @IsString({ each: true })
+  interactionIds?: string[];
+  @IsOptional() @IsString() @IsNotEmpty() parentGroupId?: string | null;
+}
 export class CreateGraphDecorationDto {
   @IsIn(['frame', 'text']) kind!: 'frame' | 'text';
   @IsObject()

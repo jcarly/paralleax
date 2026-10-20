@@ -1,3 +1,4 @@
+import { validateStoryGroups } from '../operations/groups.js';
 import type { Story } from '../model/stories.js';
 import { diffStoryGraphPositions, type StoryGraphPositionPatch } from '../graph/positions.js';
 import { toCanonicalTrigger } from '../triggers/model.js';
@@ -19,6 +20,8 @@ export const storyHistoryOperations = {
   graphDecorationUpdated: 'graph-decoration.updated',
   graphDecorationDeleted: 'graph-decoration.deleted',
   groupCreated: 'group.created',
+  groupUpdated: 'group.updated',
+  groupDeleted: 'group.deleted',
   locationCreated: 'location.created',
   locationUpdated: 'location.updated',
   characterCreated: 'character.created',
@@ -268,6 +271,7 @@ export function applyStoryChangeDelta(
   const story = structuredClone(current) as Story & Record<string, unknown>;
   for (const key of authoredStoryKeys) delete story[key];
   Object.assign(story, result.value);
+  if (validateStoryGroups(story)) return { applied: false, conflicts: [{ path: '$.groups' }] };
   return { applied: true, story };
 }
 

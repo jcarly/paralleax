@@ -1,5 +1,10 @@
 import { randomUUID } from 'node:crypto';
-import { buildReaderProgressState, createDemoStories, type Story } from '@paralleax/shared';
+import {
+  buildReaderProgressState,
+  createDemoStories,
+  setStoryGroupInteractions,
+  type Story,
+} from '@paralleax/shared';
 import { Pool } from 'pg';
 import type { DatabaseConnection } from '../database/database.connection';
 import { DatabaseMigrator } from '../database/database.migrator';
@@ -357,6 +362,65 @@ describePostgres('StoriesRepository PostgreSQL integration', () => {
       appearanceProbability: 100,
       timerSeconds: 12,
     });
+  });
+
+  it('round trips nested groups, promotes children and preserves same-Story parent constraints', async () => {
+    const story = persistedStory();
+    // Children can precede parents in the persisted authoring order.
+    story.groups = [
+      {
+        id: 'child-group',
+        title: 'Child',
+        parentGroupId: 'parent-group',
+        interactionIds: ['interaction-1'],
+      },
+      { id: 'parent-group', title: 'Parent', interactionIds: ['interaction-2'] },
+    ];
+    await repository.save(story, ownerId);
+    const freshRepository = new StoriesRepository(database);
+    expect((await freshRepository.find(story.id, ownerId))?.groups).toEqual(story.groups);
+    expect(
+      (await freshRepository.findEditorContextPage(story.id, ownerId, 1, 100))?.groups,
+    ).toEqual(story.groups);
+    await expect(
+      pool.query(
+        `INSERT INTO story_group_interactions
+        (story_id, group_id, interaction_id, sort_order)
+        VALUES ($1, 'child-group', 'interaction-2', 1)`,
+        [story.id],
+      ),
+    ).rejects.toMatchObject({ code: '23505' });
+    // The destination precedes the source; checks must wait until transaction commit.
+    await repository.mutate(
+      story.id,
+      (current) =>
+        setStoryGroupInteractions(current, 'child-group', ['interaction-1', 'interaction-2']),
+      ownerId,
+    );
+    expect(
+      (await freshRepository.find(story.id, ownerId))?.groups?.map(
+        ({ interactionIds }) => interactionIds,
+      ),
+    ).toEqual([['interaction-1', 'interaction-2'], []]);
+    await repository.mutate(
+      story.id,
+      (current) => ({
+        ...current,
+        groups: [{ ...current.groups![0], title: 'Moved', parentGroupId: undefined }],
+      }),
+      ownerId,
+    );
+    expect((await freshRepository.find(story.id, ownerId))?.groups).toEqual([
+      { id: 'child-group', title: 'Moved', interactionIds: ['interaction-1', 'interaction-2'] },
+    ]);
+    await expect(
+      pool.query('UPDATE story_groups SET parent_group_id = $1 WHERE id = $2', [
+        'foreign-group',
+        'child-group',
+      ]),
+    ).rejects.toMatchObject({ code: '23503' });
+    const loaded = await freshRepository.find(story.id, ownerId);
+    expect(loaded?.interactions).toHaveLength(2);
   });
 
   it('reads paginated editor projections and a targeted runtime slice', async () => {

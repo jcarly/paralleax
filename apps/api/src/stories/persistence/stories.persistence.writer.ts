@@ -289,9 +289,9 @@ export async function persistStoryDifference(
 
 async function insertGroup(client: Queryable, storyId: string, group: Group, sortOrder: number) {
   await client.query(
-    `INSERT INTO story_groups (id, story_id, title, sort_order)
-     VALUES ($1, $2, $3, $4)`,
-    [group.id, storyId, group.title, sortOrder],
+    `INSERT INTO story_groups (id, story_id, title, sort_order, parent_group_id)
+     VALUES ($1, $2, $3, $4, $5)`,
+    [group.id, storyId, group.title, sortOrder, group.parentGroupId ?? null],
   );
   await replaceGroupInteractions(client, storyId, group);
 }
@@ -337,10 +337,14 @@ async function persistGroupDifference(client: Queryable, before: Story, after: S
       continue;
     }
 
-    if (previous.title !== group.title || (before.groups ?? []).indexOf(previous) !== sortOrder) {
+    if (
+      previous.title !== group.title ||
+      previous.parentGroupId !== group.parentGroupId ||
+      (before.groups ?? []).indexOf(previous) !== sortOrder
+    ) {
       await client.query(
-        'UPDATE story_groups SET title = $1, sort_order = $2 WHERE id = $3 AND story_id = $4',
-        [group.title, sortOrder, group.id, after.id],
+        'UPDATE story_groups SET title = $1, sort_order = $2, parent_group_id = $5 WHERE id = $3 AND story_id = $4',
+        [group.title, sortOrder, group.id, after.id, group.parentGroupId ?? null],
       );
     }
     if (JSON.stringify(previous.interactionIds) !== JSON.stringify(group.interactionIds)) {

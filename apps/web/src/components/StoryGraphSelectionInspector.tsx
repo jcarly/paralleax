@@ -14,6 +14,7 @@ export function StoryGraphSelectionInspector({
   const { t } = useTranslation();
   const [title, setTitle] = useState('New group');
   const [isCreating, setIsCreating] = useState(false);
+  const [created, setCreated] = useState(false);
   const interactionIds = selection.interactionIds;
 
   async function createGroup(event: FormEvent<HTMLFormElement>) {
@@ -21,9 +22,13 @@ export function StoryGraphSelectionInspector({
     const nextTitle = title.trim();
     if (!nextTitle || interactionIds.length === 0 || isCreating) return;
     setIsCreating(true);
+    setCreated(false);
     try {
       const created = await onCreateGroup(nextTitle, interactionIds);
-      if (created) setTitle('New group');
+      if (created) {
+        setTitle('New group');
+        setCreated(true);
+      }
     } finally {
       setIsCreating(false);
     }
@@ -38,6 +43,7 @@ export function StoryGraphSelectionInspector({
         <label>
           {t('editor.graphSelection.groupTitle')}
           <input
+            data-group-title-input
             value={title}
             onChange={(event) => setTitle(event.target.value)}
             maxLength={200}
@@ -51,6 +57,7 @@ export function StoryGraphSelectionInspector({
           <p>{t('editor.graphSelection.groupRequiresInteraction')}</p>
         ) : null}
       </form>
+      {created ? <p role="status">{t('editor.groups.created')}</p> : null}
     </div>
   );
 }

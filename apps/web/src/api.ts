@@ -26,6 +26,8 @@ import type {
   GraphDecorationMutationResult,
   GraphDecorationDeletionResult,
   GroupMutationResult,
+  GroupDeletionResult,
+  UpdateGroupInput,
   ItemDefinitionMutationResult,
   LocationMutationResult,
   MoveItemInstanceInput,
@@ -487,6 +489,13 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(input),
     }),
+  updateGroup: (storyId: string, groupId: string, input: UpdateGroupInput) =>
+    request<GroupMutationResult>(`/stories/${storyId}/groups/${groupId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(input),
+    }),
+  deleteGroup: (storyId: string, groupId: string) =>
+    request<GroupDeletionResult>(`/stories/${storyId}/groups/${groupId}`, { method: 'DELETE' }),
   updateGraphDecoration: (
     storyId: string,
     decorationId: string,

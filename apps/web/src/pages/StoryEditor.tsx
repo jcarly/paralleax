@@ -54,6 +54,7 @@ import {
   ContextCommentButton,
   ContextThumbnail,
 } from '../components/StoryContextList';
+import { StoryGroupsPanel } from '../features/story-editor/navigation/StoryGroupsPanel';
 import { StoryGraphSelectionInspector } from '../components/StoryGraphSelectionInspector';
 import { TriggerEdge } from '../components/TriggerEdge';
 import { TriggerInspector } from '../components/TriggerInspector';
@@ -190,6 +191,8 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
     createChildFromInteraction,
     createParentForInteraction,
     createGroup,
+    updateGroup,
+    deleteGroup,
     patchInteraction,
     deleteInteraction,
     createGraphDecoration,
@@ -264,6 +267,9 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
   const canvasRef = useRef<HTMLElement | null>(null);
   useTwoFingerCanvasPan(canvasRef, story?.id);
   const {
+    selectedGroupId,
+    groupInteractionIds,
+    selectGraphInteractions,
     selectedId,
     selectedTrigger,
     selectedGraphDecorationId,
@@ -320,11 +326,14 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
     setContextualCommentsTargetKey(undefined);
     clearEditorSelection();
   }, [clearEditorSelection]);
-  const handleGraphSelectionStart = useCallback(() => {
-    setCommentsOpen(false);
-    setContextualCommentsTargetKey(undefined);
-    startEditorGraphSelection();
-  }, [startEditorGraphSelection]);
+  const handleGraphSelectionStart = useCallback(
+    (event: ReactMouseEvent) => {
+      setCommentsOpen(false);
+      setContextualCommentsTargetKey(undefined);
+      startEditorGraphSelection(event);
+    },
+    [startEditorGraphSelection],
+  );
   const {
     searchQuery,
     setSearchQuery,
@@ -338,7 +347,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
     occurrenceCounts,
     navigationInteractionIds,
     currentNavigationIndex,
-    emphasizedInteractionIds,
+    emphasizedInteractionIds: contextEmphasizedInteractionIds,
     filteredLocations,
     filteredCharacters,
     filteredStatDefinitions,
@@ -357,6 +366,8 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
     selectInteraction,
     focusInteraction,
   });
+  const emphasizedInteractionIds = groupInteractionIds ?? contextEmphasizedInteractionIds;
+
   const connectionController = useStoryConnectionController({
     story,
     flowInstanceRef: flowInstance,
@@ -984,9 +995,18 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
     );
   }
 
-  const select: NodeMouseHandler = (_, node) => {
+  const select: NodeMouseHandler = (event, node) => {
     setCanvasContextMenu(undefined);
     if (node.type === 'commentPin') return;
+    if (!reviewOnly && node.type === 'interaction' && (event.ctrlKey || event.metaKey)) {
+      const current = graphSelection?.interactionIds ?? (selectedId ? [selectedId] : []);
+      selectGraphInteractions(
+        current.includes(node.id) ? current.filter((id) => id !== node.id) : [...current, node.id],
+        graphSelection?.triggers,
+      );
+      setCommentsOpen(false);
+      return;
+    }
 
     setCommentsOpen(false);
     selectCommentThread(undefined);
@@ -1002,6 +1022,32 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
 
     selectExclusive({ type: 'interaction', id: node.id });
   };
+
+  useEffect(() => {
+    function handleGroupShortcut(event: KeyboardEvent) {
+      if (
+        reviewOnly ||
+        isRealtimeEditableTarget(event.target) ||
+        !(event.ctrlKey || event.metaKey) ||
+        event.altKey ||
+        event.shiftKey ||
+        event.key.toLowerCase() !== 'g'
+      )
+        return;
+      const ids = graphSelection?.interactionIds ?? (selectedId ? [selectedId] : []);
+      if (!ids.length) return;
+      event.preventDefault();
+      setCommentsOpen(false);
+      if (!graphSelection) selectGraphInteractions(ids);
+      window.requestAnimationFrame(() => {
+        const input = document.querySelector<HTMLInputElement>('[data-group-title-input]');
+        input?.focus();
+        input?.select();
+      });
+    }
+    document.addEventListener('keydown', handleGroupShortcut);
+    return () => document.removeEventListener('keydown', handleGroupShortcut);
+  }, [graphSelection, reviewOnly, selectedId, selectGraphInteractions]);
 
   async function addGraphDecoration(kind: GraphDecoration['kind'], anchorPosition?: Position) {
     const bounds = canvasRef.current?.getBoundingClientRect();
@@ -1650,6 +1696,28 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
                     : `${currentNavigationIndex + 1} / ${navigationInteractionIds.length}`}
                 </span>
               </div>
+              <StoryGroupsPanel
+                key={story.id}
+                story={story}
+                selectedGroupId={selectedGroupId}
+                selectionIds={graphSelection?.interactionIds ?? (selectedId ? [selectedId] : [])}
+                readOnly={reviewOnly}
+                onSelect={(id) => {
+                  clearSearch();
+                  selectExclusive({ type: 'group', id });
+                }}
+                onFocus={(ids) => {
+                  void flowInstance.current?.fitView({
+                    nodes: ids.map((id) => ({ id })),
+                    padding: 0.3,
+                    maxZoom: 1,
+                    duration: 250,
+                  });
+                }}
+                onInteraction={selectInteraction}
+                onUpdate={updateGroup}
+                onDelete={deleteGroup}
+              />
               <div className="location-panel-header">
                 <button
                   className="ghost context-heading"
@@ -2022,6 +2090,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
             minZoom={0.05}
             panOnDrag={canvasPanMouseButtons}
             panActivationKeyCode="Space"
+            multiSelectionKeyCode={null}
             selectionOnDrag={!reviewOnly}
             selectionMode={SelectionMode.Full}
             deleteKeyCode={null}
@@ -2153,7 +2222,11 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
               {graphSelection ? (
                 <StoryGraphSelectionInspector
                   selection={graphSelection}
-                  onCreateGroup={createGroup}
+                  onCreateGroup={async (title, ids) => {
+                    const created = await createGroup(title, ids);
+                    if (created) openContextPanel();
+                    return created;
+                  }}
                 />
               ) : selectedGraphDecoration ? (
                 <GraphDecorationInspector

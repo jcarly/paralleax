@@ -120,6 +120,13 @@ Triggers available for emphasis, focus, layout, and later inspection.
 
 ### Groups
 
+Implemented baseline: the left navigation now manages persisted, single-parent
+Group trees, explicit Interaction membership, recursive highlighting and explicit
+centering. Ctrl+G opens creation from selected Interactions; moving a Group uses
+its parent picker. Collapse remains transient editor state. See
+[ADR-035](decisions/ADR-035-nested-group-navigation.md). The broader projection
+and combined-selection direction below remains a target.
+
 A Group is neutral authoring and navigation metadata. It can represent a chapter,
 quest, arc, scene sequence, work package, or any author-defined organization. It
 has no reader or runtime semantics.
@@ -128,21 +135,22 @@ The target behavior is:
 
 - a Group may be empty;
 - a Group may include Interactions and nested Groups;
-- an Interaction may belong to several Groups at the same time;
+- an Interaction may have at most one direct Group, plus indirect membership in its ancestors;
 - membership is explicit and never inferred from visual overlap;
 - removing a Group never removes an Interaction;
 - Group nesting must not contain cycles;
 - Graph Decorations remain independent presentation metadata and never become
   Groups because they surround the same cards visually.
 
-Multiple membership is intentional. The same Interaction may simultaneously
-belong to a chapter, a character arc, a location-oriented organization, and a
-production work package.
+Direct membership is exclusive. Assigning an Interaction to another Group moves
+it from its previous direct Group. Ancestor Groups expose it through navigation
+without storing additional memberships. Groups can mix direct Interactions and
+child Groups. See [ADR-036](decisions/ADR-036-exclusive-group-membership.md).
 
 Collapse, expansion, visibility, colors, nesting cardinality, and persistence of
 per-author view state require a focused implementation contract before coding.
 In particular, collapsing one Group must not destructively hide an Interaction
-that remains relevant through another Group or through the complete Story view.
+that remains relevant through an ancestor Group or through the complete Story view.
 
 ### Connected path selection
 
@@ -215,7 +223,7 @@ The exact persisted and web contracts require an ADR before implementation.
 
 - additive and subtractive multi-selection;
 - connected-path selection;
-- explicit Groups with multiple Interaction membership;
+- explicit Groups with exclusive direct Interaction membership;
 - nested Group navigation;
 - collapse, expand, show, hide, and focus behavior;
 - a Groups section in the left navigation;

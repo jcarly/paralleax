@@ -39,6 +39,7 @@ import type {
   CreateCharacterStatDto,
   CreateGraphDecorationDto,
   CreateGroupDto,
+  UpdateGroupDto,
   CreateInteractionDto,
   CreateItemDefinitionDto,
   CreateLocationDto,
@@ -245,6 +246,14 @@ export class StoriesService {
     userId: string,
   ): Promise<GroupMutationResult> {
     return this.groups.create(storyId, input, userId);
+  }
+
+  updateGroup(storyId: string, groupId: string, input: UpdateGroupDto, userId: string) {
+    return this.groups.update(storyId, groupId, input, userId);
+  }
+
+  deleteGroup(storyId: string, groupId: string, userId: string) {
+    return this.groups.delete(storyId, groupId, userId);
   }
 
   async updateGraphPositions(storyId: string, input: UpdateStoryGraphPositionsDto, userId: string) {

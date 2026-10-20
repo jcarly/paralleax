@@ -163,9 +163,15 @@ Paralleax currently includes:
   choice dialog.
 - Rectangular graph multi-selection for interactions and linked trigger markers,
   with a transient count inspector, group drag-and-drop, and outside-click clearing.
-- Flat persisted Groups created from selected Interactions. Groups are neutral
-  authoring/navigation metadata with explicit many-to-many membership; they have
-  no reader semantics, nesting, visual projection, or navigation UI yet.
+- Persisted Groups created from selected Interactions with immediate confirmation
+  and a left-panel tree. Authors can rename, delete, add/remove members and move
+  Groups under one acyclic same-Story parent. Each Interaction has at most one
+  direct Group; creation and membership edits transfer it from its previous Group.
+  A Group can contain both direct Interactions and child Groups. Deletion promotes children without
+  deleting Interactions. Selection highlights recursive members; explicit centering
+  adjusts only the viewport. Ctrl+G focuses group creation, Ctrl+click toggles
+  interaction selection, and Shift/Alt rectangles add/remove selection. Groups
+  have no reader semantics or React Flow parent-node structure.
 - Deterministic ELK-backed vertical graph auto-layout for the complete graph, one
   selected interaction/linked trigger, or a rectangular multi-selection, with
   grouped trigger-marker placement and fixed bottom-output/top-input interaction
@@ -251,7 +257,7 @@ The following remain future or incomplete unless a task explicitly implements th
 - lossless or runtime-equivalent QSP import, QSP re-export, and incremental re-import;
 - executable/Unity/video exports;
 - AI-driven narrative/runtime behavior.
-- nested Group organization and Group-focused Workbench navigation;
+- combined Group filters and advanced Group-focused Workbench projections;
 - configurable Workbench views for structure, character, location, time, and
   state, including combined filters and Focused / Context / Background treatment;
 - connected-path selection, generic Focus, graph-level dependency navigation,

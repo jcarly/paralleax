@@ -298,11 +298,17 @@ details. They should stay covered by tests as the editor grows.
 
 - A Group is authoring and navigation metadata only. Membership never changes
   Trigger evaluation, reader output, progress replay, or Simulation state.
-- One Interaction may belong to several Groups. Group membership is explicit and
-  is never inferred from Graph Decoration overlap or canvas position.
-- Deleting a Group never deletes its member Interactions. The initial Group
-  implementation has no parentage; any future nested Group relationships must
-  remain story-local and acyclic.
+- One Interaction may belong directly to zero or one Group. Assigning it to a
+  Group removes its previous direct membership atomically. Group membership is
+  explicit and is never inferred from Graph Decoration overlap or canvas position.
+- A Group may simultaneously contain direct Interactions and child Groups. Parent
+  Groups include descendant Interactions for navigation without duplicating their
+  direct membership.
+- Deleting a Group never deletes its member Interactions or subgroups. Direct
+  child Groups are promoted to the deleted Group's parent, or to the root.
+- A Group has at most one optional same-Story parent. Parentage is acyclic.
+  Recursive navigation deduplicates Interaction membership; it does not create
+  inherited canonical membership or runtime behavior.
 - Workbench filters, focus, attenuation, collapse, and visibility are projections
   of the canonical Story. They do not create duplicate Interaction, Trigger,
   route, or runtime-state models.

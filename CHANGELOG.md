@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+- Changed Interaction Groups to exclusive direct membership. Creating a Group or
+  assigning members now moves Interactions from their previous Groups atomically,
+  including immediate web projection and undo/redo. Groups still support mixed
+  direct Interactions and nested child Groups. Migration `202610190043` keeps
+  the first persisted Group for legacy multiple memberships, irrespective of
+  depth, and enforces uniqueness with a deferred database constraint.
+
+- Completed interaction Groups with visible creation feedback, a left navigation
+  tree, rename/delete and membership controls, recursive highlighting and explicit
+  centering. Added acyclic single-parent nesting with child promotion on deletion,
+  migration `202610190042`, and selection shortcuts without changing narrative
+  or ELK semantics.
+
 - Moved ChoiceScript analysis into a cancellable worker thread, so closing an
   import no longer blocks the API event loop or allows the cancelled result to
   be saved.

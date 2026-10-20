@@ -463,18 +463,24 @@ Possible elements:
 - title;
 - explicit Interaction membership;
 
-The first implementation is deliberately flat: it has no description, nested
-Group membership, display metadata, collapse state, or layout state. A Group is
-created from one or more selected Interactions.
+A Group is created from one or more selected Interactions. It may have one
+optional `parentGroupId` referencing a Group in the same Story. This forms an
+acyclic organizational tree. Existing flat Groups remain roots. Collapse state
+is transient editor state, separate from authored metadata.
 
-Interaction membership is intentionally many-to-many: one Interaction may
-belong to several Groups at the same time. Group membership is never inferred
-from a Decoration frame or from canvas overlap. Removing a Group must preserve
-every Interaction and only remove the corresponding organizational membership.
+An Interaction has at most one direct Group. Assigning selected Interactions to
+a new or existing Group transfers them from their previous direct Groups in one
+authored mutation. An Interaction may also be ungrouped. A Group may contain both
+direct Interactions and child Groups; its navigation includes all descendants.
+Group membership is never inferred from a Decoration frame or canvas overlap.
+Removing a Group preserves every Interaction and removes only its direct
+organizational membership. See [ADR-036](decisions/ADR-036-exclusive-group-membership.md).
 
-There is no Group parentage in the initial contract. Any future nested Group
-relationships must reject cycles; their cardinality and the ownership of
-collapse/visibility state remain implementation-contract decisions. See
+Deleting a Group promotes its direct children to its parent (or the root),
+without deleting any Interaction or subgroup. The left navigation lists Groups,
+allows membership and title editing, and highlights unique recursive members.
+Centering on those members is an explicit action separate from selection.
+See [ADR-035](decisions/ADR-035-nested-group-navigation.md) and
 [Workbench product direction](workbench.md).
 
 ### Graph Decoration
