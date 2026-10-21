@@ -138,10 +138,14 @@ that definition to the Story, a character, a location, or an item definition and
 provides its authored initial value. The assignment id, not the reusable
 definition id, is the effect and condition target.
 
-An interaction may `set` any assigned stat or `add` to a numeric one.
+An interaction may `set` any assigned stat or `add` to a numeric one. The effect
+value may be a matching typed literal or a deterministic typed expression over
+stable same-Story assignment and exact-item references.
 Trigger conditions support equality and inequality for all matching types and
 ordered comparisons for numbers. They compare a stat target with either a typed
-literal or another same-Story stat target of the same type. A missing or
+literal, another same-Story stat target of the same type, or a matching typed
+expression. Expressions are evaluated in ordered replay and do not define
+reactive or persisted calculated stats. A missing or
 ill-typed runtime value never silently becomes zero. Item-definition assignments
 are templates: every exact item instance receives an independent runtime value.
 
@@ -152,7 +156,8 @@ Authors may type `{{owner.variable}}` in interaction content. On save, a unique
 Story, character, location, or exact authored item-instance reference is lowered
 to the same stable marker. Unknown or ambiguous references remain visible for
 correction in the editor and render as empty text in the reader.
-See [ADR-021](decisions/ADR-021-typed-story-stats.md).
+See [ADR-021](decisions/ADR-021-typed-story-stats.md) and
+[ADR-038](decisions/ADR-038-typed-stat-expressions.md).
 
 ### Item Definition
 
@@ -524,9 +529,9 @@ character-specific narrative paths.
 
 ### Future Calculated Stats
 
-Stored typed stats are implemented. A later increment may add read-only values
-calculated from other stats and explicit factors. Formula validation,
-dependency ordering, cycle detection, and rounding rules must be defined before
+Stored typed stats and expressions inside effects and conditions are implemented.
+A later increment may add read-only values calculated reactively from other stats
+and explicit factors. Dependency ordering, cycle detection, and rounding rules must be defined before
 those values become part of the runtime contract.
 
 ### Future Item Definition

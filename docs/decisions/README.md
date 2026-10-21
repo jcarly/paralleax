@@ -42,6 +42,7 @@ This folder records accepted architecture and product-shaping decisions.
 
 - [ADR-036 - Exclusive Direct Group Membership](ADR-036-exclusive-group-membership.md)
 - [ADR-037 - Group Tree Authoring](ADR-037-group-tree-authoring.md)
+- [ADR-038 - Deterministic Typed Stat Expressions](ADR-038-typed-stat-expressions.md)
 
 ## Maintenance
 

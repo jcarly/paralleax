@@ -106,6 +106,16 @@ describe('TriggerInspector temporal conditions', () => {
     });
   });
 
+  it('uses the shared variable picker for variable conditions', async () => {
+    const story: Story = storyWithConditions([{ statId: 'open', operator: 'eq', value: false }]);
+    story.statDefinitions = [{ id: 'open-definition', name: 'Open', valueType: 'boolean' }];
+    story.stats = [{ id: 'open', statDefinitionId: 'open-definition', initialValue: false }];
+    renderInspector(story);
+
+    expect(screen.getByLabelText('Variable owner')).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Story — Timed story' })).toBeInTheDocument();
+  });
+
   it('compares a variable condition with another compatible variable', () => {
     const story: Story = storyWithConditions([{ statId: 'courage', operator: 'gte', value: 1 }]);
     story.statDefinitions = [{ id: 'number-definition', name: 'Number', valueType: 'number' }];
@@ -309,7 +319,10 @@ describe('TriggerInspector temporal conditions', () => {
     fireEvent.change(screen.getByLabelText('Item condition operator'), {
       target: { value: 'not-owned' },
     });
-    fireEvent.change(screen.getByLabelText('Condition variable'), { target: { value: ':mood' } });
+    fireEvent.change(
+      within(screen.getByLabelText('Condition variable')).getAllByRole('combobox')[1],
+      { target: { value: 'variable:story:mood' } },
+    );
     fireEvent.change(screen.getByLabelText('Variable condition operator'), {
       target: { value: 'neq' },
     });
@@ -317,7 +330,7 @@ describe('TriggerInspector temporal conditions', () => {
       target: { value: '7' },
     });
 
-    expect(onSaveTrigger).toHaveBeenCalledTimes(11);
+    expect(onSaveTrigger).toHaveBeenCalledTimes(10);
     expect(onSaveTrigger).toHaveBeenLastCalledWith('interaction-1', 'trigger-1', {
       conditionGroups: [
         {

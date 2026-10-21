@@ -924,7 +924,29 @@ describe('StoriesRepository', () => {
     );
     expect(mockClientQuery).toHaveBeenCalledWith(
       expect.stringContaining('INSERT INTO interaction_stat_effects'),
-      [saved.id, 'interaction-1', 'story-stat-1', null, 'set', JSON.stringify(5), 0],
+      [saved.id, 'interaction-1', 'story-stat-1', null, 'set', JSON.stringify(5), null, 0],
+    );
+  });
+
+  it('writes expression stat effects through the relational mutation path', async () => {
+    const saved = graphStory();
+    saved.stats = [{ id: 'story-stat-1', statDefinitionId: 'definition-1', initialValue: 0 }];
+    relationalRead(mockClientQuery, saved);
+
+    await repository().mutate(
+      saved.id,
+      (value) => {
+        value.interactions[0].statEffects = [
+          { statId: 'story-stat-1', operation: 'set', expression: '@{story-stat-1} + 1' },
+        ];
+        return value;
+      },
+      ownerId,
+    );
+
+    expect(mockClientQuery).toHaveBeenCalledWith(
+      expect.stringContaining('INSERT INTO interaction_stat_effects'),
+      [saved.id, 'interaction-1', 'story-stat-1', null, 'set', null, '@{story-stat-1} + 1', 0],
     );
   });
 

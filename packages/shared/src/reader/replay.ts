@@ -7,6 +7,7 @@ import type {
   Story,
 } from '../model/index.js';
 import { getStatValueType, isStatValueOfType } from '../model/index.js';
+import { evaluateExpression } from '../expressions/index.js';
 import { getStructurallyPlacedItemInstances } from '../items/index.js';
 import { getJourneyDateTime } from '../time/index.js';
 
@@ -55,15 +56,27 @@ function initialValuesForAssignments(
   );
 }
 
+function resolveEffectValue(
+  currentValue: StatValue | undefined,
+  effect: { operation: 'add' | 'set'; value?: StatValue; expression?: string },
+  values: Readonly<Record<string, StatValue | undefined>>,
+): StatValue | undefined {
+  if (effect.expression) {
+    const result = evaluateExpression(effect.expression, values);
+    if (typeof result === 'object' && result && 'ok' in result && !result.ok) return undefined;
+    return result as StatValue;
+  }
+  return effect.value ?? currentValue;
+}
+
 function applyEffect(
   currentValue: StatValue | undefined,
   operation: 'add' | 'set',
-  value: StatValue,
+  value: StatValue | undefined,
 ) {
-  if (operation === 'set') return value;
-  return typeof currentValue === 'number' && typeof value === 'number'
-    ? currentValue + value
-    : currentValue;
+  if (operation === 'set') return value ?? currentValue;
+  if (typeof currentValue !== 'number' || typeof value !== 'number') return currentValue;
+  return currentValue + value;
 }
 
 export function getInitialStatValues(story: Story): Record<string, StatValue> {
@@ -73,11 +86,19 @@ export function getInitialStatValues(story: Story): Record<string, StatValue> {
 export function applyInteractionStatEffects(
   values: Readonly<Record<string, StatValue>>,
   interaction: Interaction,
+  itemStatValues: Readonly<Record<string, Readonly<Record<string, StatValue>>>> = {},
 ): Record<string, StatValue> {
   const next = { ...values };
   for (const effect of interaction.statEffects ?? []) {
     if (effect.itemId) continue;
-    const changed = applyEffect(next[effect.statId], effect.operation, effect.value);
+    const expressionContext: Record<string, StatValue | undefined> = { ...next };
+    for (const [itemId, itemValues] of Object.entries(itemStatValues)) {
+      for (const [statId, value] of Object.entries(itemValues)) {
+        expressionContext[`${statId}|${itemId}`] = value;
+      }
+    }
+    const resolvedValue = resolveEffectValue(next[effect.statId], effect, expressionContext);
+    const changed = applyEffect(next[effect.statId], effect.operation, resolvedValue);
     if (changed !== undefined) next[effect.statId] = changed;
   }
   return next;
@@ -111,18 +132,50 @@ export function applyInteractionStatChanges(
   story: Story,
   values: Readonly<Record<string, StatValue>>,
   interaction: Interaction,
+  itemStatValues: Readonly<Record<string, Readonly<Record<string, StatValue>>>> = {},
 ): Record<string, StatValue> {
   return applyInteractionStatEffects(
     applyInteractionTimeStatChanges(story, values, interaction),
     interaction,
+    itemStatValues,
   );
 }
 
 export function getJourneyStatValues(story: Story, journey: string[]): Record<string, StatValue> {
-  return journey.reduce((values, interactionId) => {
-    const interaction = story.interactions.find(({ id }) => id === interactionId);
-    return interaction ? applyInteractionStatChanges(story, values, interaction) : values;
-  }, getInitialStatValues(story));
+  return journey.reduce(
+    (state, interactionId, journeyIndex) => {
+      const interaction = story.interactions.find(({ id }) => id === interactionId);
+      if (!interaction) return state;
+      const ownedItemIds = applyInteractionItemEffects(
+        story,
+        state.ownedItemIds,
+        interaction,
+        journeyIndex,
+      );
+      const statValues = applyInteractionStatChanges(
+        story,
+        state.statValues,
+        interaction,
+        state.itemStatValues,
+      );
+      return {
+        ownedItemIds,
+        statValues,
+        itemStatValues: applyInteractionItemStatChanges(
+          story,
+          state.itemStatValues,
+          interaction,
+          ownedItemIds,
+          statValues,
+        ),
+      };
+    },
+    {
+      ownedItemIds: [] as string[],
+      statValues: getInitialStatValues(story),
+      itemStatValues: getInitialItemStatValues(story),
+    },
+  ).statValues;
 }
 
 export function applyInteractionItemEffects(
@@ -214,6 +267,7 @@ export function applyInteractionItemStatChanges(
   values: Readonly<Record<string, Readonly<Record<string, StatValue>>>>,
   interaction: Interaction,
   ownedItemIds: readonly string[] = [],
+  statValues: Readonly<Record<string, StatValue | undefined>> = {},
 ): Record<string, Record<string, StatValue>> {
   const next = cloneItemStatValues(values);
   const definitions = getStatDefinitions(story);
@@ -249,7 +303,22 @@ export function applyInteractionItemStatChanges(
       definitions,
       getItemStatAssignments(story, effect.itemId),
     );
-    const changed = applyEffect(next[effect.itemId][effect.statId], effect.operation, effect.value);
+    const expressionContext = { ...statValues };
+    for (const [itemId, itemValues] of Object.entries(next)) {
+      for (const [statId, value] of Object.entries(itemValues)) {
+        expressionContext[`${statId}|${itemId}`] = value;
+      }
+    }
+    const resolvedValue = resolveEffectValue(
+      next[effect.itemId][effect.statId],
+      effect,
+      expressionContext,
+    );
+    const changed = applyEffect(
+      next[effect.itemId][effect.statId],
+      effect.operation,
+      resolvedValue,
+    );
     if (changed !== undefined) next[effect.itemId][effect.statId] = changed;
   }
   return next;
@@ -269,12 +338,29 @@ export function getJourneyItemStatValues(
         interaction,
         journeyIndex,
       );
+      const statValues = applyInteractionStatChanges(
+        story,
+        state.statValues,
+        interaction,
+        state.values,
+      );
       return {
         ownedItemIds,
-        values: applyInteractionItemStatChanges(story, state.values, interaction, ownedItemIds),
+        statValues,
+        values: applyInteractionItemStatChanges(
+          story,
+          state.values,
+          interaction,
+          ownedItemIds,
+          statValues,
+        ),
       };
     },
-    { ownedItemIds: [] as string[], values: getInitialItemStatValues(story) },
+    {
+      ownedItemIds: [] as string[],
+      statValues: getInitialStatValues(story),
+      values: getInitialItemStatValues(story),
+    },
   ).values;
 }
 

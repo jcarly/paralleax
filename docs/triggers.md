@@ -45,7 +45,9 @@ represent an OR:
 - every "not current location" condition must not match it.
 - every "present character" condition must belong to the current interaction's cast;
 - every "absent character" condition must not belong to that cast.
-- every typed stat comparison must use a matching runtime type. Numbers
+- every typed stat comparison must use a matching runtime type. Its comparison
+  side may be a literal, another same-Story assignment, or a validated
+  deterministic expression over stable assignment ids. Numbers
   support `=`, `!=`, `<`, `<=`, `>`, and `>=`; booleans and strings support
   `=` and `!=`. A missing value never defaults to zero.
 - every temporal condition must match each non-empty calendar category; entries

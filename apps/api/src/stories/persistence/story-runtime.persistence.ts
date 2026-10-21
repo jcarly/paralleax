@@ -62,7 +62,8 @@ type RuntimeStatEffectRow = {
   stat_id: string;
   item_id: string | null;
   operation: 'add' | 'set';
-  value: StatValue;
+  value: StatValue | null;
+  expression: string | null;
   sort_order: number;
 };
 
@@ -209,7 +210,7 @@ export async function readStoryRuntimeSlice(
       [options.storyId, selectedInteractionIds],
     ),
     queryable.query<RuntimeStatEffectRow>(
-      `SELECT interaction_id, stat_id, item_id, operation, value, sort_order
+      `SELECT interaction_id, stat_id, item_id, operation, value, expression, sort_order
            FROM interaction_stat_effects
            WHERE story_id = $1 AND interaction_id = ANY($2::text[])
            ORDER BY interaction_id, sort_order`,
@@ -282,7 +283,9 @@ export async function readStoryRuntimeSlice(
         statId: effect.stat_id,
         ...(effect.item_id ? { itemId: effect.item_id } : {}),
         operation: effect.operation,
-        value: effect.value,
+        ...(typeof effect.expression === 'string'
+          ? { expression: effect.expression }
+          : { value: effect.value! }),
       })),
       itemEffects: (itemEffectsByInteraction.get(interaction.id) ?? []).map((effect) => ({
         ...(effect.item_id ? { itemId: effect.item_id } : {}),

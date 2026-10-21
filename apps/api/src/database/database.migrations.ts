@@ -1653,4 +1653,19 @@ export const databaseMigrations: DatabaseMigration[] = [
         UNIQUE (story_id, interaction_id) DEFERRABLE INITIALLY DEFERRED;
     `,
   },
+  {
+    id: '202610210044_stat_effect_expressions',
+    sql: `
+      ALTER TABLE interaction_stat_effects
+        ALTER COLUMN value DROP NOT NULL,
+        ADD COLUMN expression text,
+        DROP CONSTRAINT interaction_stat_effects_primitive_value,
+        ADD CONSTRAINT interaction_stat_effects_value_source
+          CHECK ((value IS NULL) <> (expression IS NULL)),
+        ADD CONSTRAINT interaction_stat_effects_primitive_value
+          CHECK (value IS NULL OR jsonb_typeof(value) IN ('number', 'boolean', 'string')),
+        ADD CONSTRAINT interaction_stat_effects_expression_non_blank
+          CHECK (expression IS NULL OR char_length(btrim(expression)) BETWEEN 1 AND 4000);
+    `,
+  },
 ];

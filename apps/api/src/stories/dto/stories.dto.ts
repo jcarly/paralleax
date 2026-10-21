@@ -403,7 +403,14 @@ export class StatEffectDto {
   @IsNotEmpty()
   itemId?: string;
   @IsIn(['add', 'set']) operation!: 'add' | 'set';
-  @IsDefined() value!: unknown;
+  @ValidateIf((effect) => effect.expression === undefined)
+  @IsDefined()
+  value?: unknown;
+  @ValidateIf((effect, value) => effect.value === undefined && value !== undefined)
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(4000)
+  expression?: string;
 }
 export class ItemEffectDto {
   @ValidateIf((_, value) => value !== undefined)
@@ -534,6 +541,17 @@ export class TriggerConditionDto {
   @IsString()
   comparisonItemId?: string;
   @ValidateIf(
+    (condition, value) =>
+      condition.statId !== undefined &&
+      condition.value === undefined &&
+      condition.comparisonStatId === undefined &&
+      value !== undefined,
+  )
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(4000)
+  expression?: string;
+  @ValidateIf(
     (condition) =>
       condition.interactionId === undefined &&
       condition.locationId === undefined &&
@@ -544,7 +562,10 @@ export class TriggerConditionDto {
   @IsIn(['eq', 'neq', 'lt', 'lte', 'gt', 'gte'])
   operator?: 'eq' | 'neq' | 'lt' | 'lte' | 'gt' | 'gte';
   @ValidateIf(
-    (condition) => condition.statId !== undefined && condition.comparisonStatId === undefined,
+    (condition) =>
+      condition.statId !== undefined &&
+      condition.comparisonStatId === undefined &&
+      condition.expression === undefined,
   )
   @IsDefined()
   value?: unknown;

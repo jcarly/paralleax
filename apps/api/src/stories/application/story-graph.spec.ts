@@ -223,6 +223,42 @@ describe('StoryGraphService', () => {
     ]);
   });
 
+  it('stores a validated typed expression comparison', async () => {
+    const result = await service.updateTrigger(
+      'story-1',
+      'child',
+      'child-trigger',
+      {
+        conditionGroups: [
+          {
+            id: 'energy-expression',
+            conditions: [
+              {
+                statId: 'energy',
+                operator: 'gte',
+                expression: '(@{mira-energy} + 2) * 3',
+              },
+            ],
+          },
+        ],
+      },
+      'user-1',
+    );
+
+    expect(result.trigger.conditionGroups).toEqual([
+      {
+        id: 'energy-expression',
+        conditions: [
+          {
+            statId: 'energy',
+            operator: 'gte',
+            expression: '(@{mira-energy} + 2) * 3',
+          },
+        ],
+      },
+    ]);
+  });
+
   it('creates graph decorations through the existing decoration builder', async () => {
     const result = await service.createGraphDecoration(
       'story-1',

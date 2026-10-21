@@ -1,9 +1,10 @@
-import type {
-  StatCondition,
-  Story,
-  TemporalCondition,
-  TriggerCondition,
-  Weekday,
+import {
+  variableReference,
+  type StatCondition,
+  type Story,
+  type TemporalCondition,
+  type TriggerCondition,
+  type Weekday,
 } from '@paralleax/shared';
 import { useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -15,6 +16,8 @@ import {
   type StatTarget,
 } from '../storyStats';
 import type { ConditionType } from '../triggerConditionAuthoring';
+import { ExpressionEditor } from './ExpressionEditor';
+import { VariablePicker } from './VariablePicker';
 
 export function TriggerConditionFields({
   condition,
@@ -115,6 +118,7 @@ export function TriggerConditionFields({
     return (
       <StatConditionFields
         condition={condition}
+        story={story}
         storyLabel={t('attributes.owner.story')}
         targets={getStatTargets(story)}
         onChange={onChange}
@@ -246,11 +250,13 @@ export function AddConditionControl({
 
 function StatConditionFields({
   condition,
+  story,
   targets,
   storyLabel,
   onChange,
 }: {
   condition: StatCondition;
+  story: Story;
   targets: StatTarget[];
   storyLabel: string;
   onChange: (condition: StatCondition) => void;
@@ -275,29 +281,22 @@ function StatConditionFields({
       : undefined;
   return (
     <>
-      <select
-        aria-label={t('triggerInspector.conditionStat')}
-        value={`${condition.itemId ?? ''}:${condition.statId}`}
-        onChange={(event) => {
-          const target = targets.find(
-            (candidate) => statTargetId(candidate) === event.target.value,
-          );
-          if (!target) return;
-          const nextValueType = statTargetValueType(target);
-          onChange({
-            statId: target.assignment.id,
-            ...(target.itemId ? { itemId: target.itemId } : {}),
-            operator: nextValueType === 'number' ? 'gte' : 'eq',
-            value: target.assignment.initialValue,
-          });
-        }}
-      >
-        {targets.map((target) => (
-          <option key={statTargetId(target)} value={statTargetId(target)}>
-            {statTargetLabel(target, storyLabel)}
-          </option>
-        ))}
-      </select>
+      <div aria-label={t('triggerInspector.conditionStat')}>
+        <VariablePicker
+          story={story}
+          selectedTarget={selectedTarget}
+          filter={(target) => statTargetValueType(target) === valueType || !selectedTarget}
+          onSelect={({ target }) => {
+            const nextValueType = statTargetValueType(target);
+            onChange({
+              statId: target.assignment.id,
+              ...(target.itemId ? { itemId: target.itemId } : {}),
+              operator: nextValueType === 'number' ? 'gte' : 'eq',
+              value: target.assignment.initialValue,
+            });
+          }}
+        />
+      </div>
       <select
         aria-label={t('triggerInspector.statOperator')}
         value={condition.operator}
@@ -318,7 +317,13 @@ function StatConditionFields({
       </select>
       <select
         aria-label={t('triggerInspector.statComparisonKind')}
-        value={'comparisonStatId' in condition ? 'stat' : 'literal'}
+        value={
+          'comparisonStatId' in condition
+            ? 'stat'
+            : 'expression' in condition
+              ? 'expression'
+              : 'literal'
+        }
         onChange={(event) => {
           if (event.target.value === 'stat') {
             const target = initialComparisonTarget;
@@ -332,6 +337,17 @@ function StatConditionFields({
             });
             return;
           }
+          if (event.target.value === 'expression') {
+            onChange({
+              statId: condition.statId,
+              ...(condition.itemId ? { itemId: condition.itemId } : {}),
+              operator: condition.operator,
+              expression: selectedTarget
+                ? variableReference(selectedTarget.assignment.id, selectedTarget.itemId)
+                : '@{}',
+            });
+            return;
+          }
           onChange({
             statId: condition.statId,
             ...(condition.itemId ? { itemId: condition.itemId } : {}),
@@ -341,6 +357,7 @@ function StatConditionFields({
         }}
       >
         <option value="literal">{t('triggerInspector.statComparisonLiteral')}</option>
+        <option value="expression">{t('triggerInspector.statComparisonExpression')}</option>
         <option value="stat">{t('triggerInspector.statComparisonVariable')}</option>
       </select>
       {'comparisonStatId' in condition ? (
@@ -367,6 +384,19 @@ function StatConditionFields({
             </option>
           ))}
         </select>
+      ) : 'expression' in condition ? (
+        <ExpressionEditor
+          story={story}
+          value={condition.expression ?? ''}
+          onChange={(expression) =>
+            onChange({
+              statId: condition.statId,
+              ...(condition.itemId ? { itemId: condition.itemId } : {}),
+              operator: condition.operator,
+              expression,
+            })
+          }
+        />
       ) : valueType === 'boolean' ? (
         <select
           aria-label={t('triggerInspector.statValue')}

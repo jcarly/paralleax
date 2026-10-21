@@ -72,6 +72,12 @@ export function useReaderSessionState() {
         interaction,
         session.journeyInteractionIds.length,
       );
+      const statValues = applyInteractionStatChanges(
+        story,
+        session.statValues,
+        interaction,
+        session.itemStatValues,
+      );
       const nextSession: ReaderProgressState = {
         ...session,
         version: 4,
@@ -84,13 +90,14 @@ export function useReaderSessionState() {
           : [...session.visitedInteractionIds, interaction.id],
         currentDateTime: getJourneyDateTime(story, journeyInteractionIds),
         currentLocationId: interaction.locationId ?? session.currentLocationId,
-        statValues: applyInteractionStatChanges(story, session.statValues, interaction),
+        statValues,
         ownedItemIds,
         itemStatValues: applyInteractionItemStatChanges(
           story,
           session.itemStatValues ?? {},
           interaction,
           ownedItemIds,
+          statValues,
         ),
       };
       setSession(nextSession);

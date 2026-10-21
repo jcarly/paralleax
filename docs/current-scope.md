@@ -56,6 +56,10 @@ Paralleax currently includes:
   replaceable and movable authoring tokens, with direct inline removal and
   readable paths projected from stable ids so target renames appear immediately;
   exact item instances keep independent values.
+  Effects and Trigger comparisons may use deterministic typed expressions over
+  stable same-Story assignment references, including exact item instances,
+  arithmetic, comparisons, and parentheses. Expression results are replayed in
+  journey order and are not stored as calculated variables.
   A stat assigned to a character is presented as a character characteristic,
   without creating a separate persistence or runtime model.
 - Reusable item definitions.
@@ -251,7 +255,7 @@ Paralleax currently includes:
 
 The following remain future or incomplete unless a task explicitly implements them:
 
-- calculated stats/variables, formulas, and dependency graphs;
+- calculated/read-only stats, reactive formulas, and dependency graphs;
 - automatic choices and probabilistic automatic execution;
 - explicit final/completed story semantics;
 - anonymous or offline reader-progress saves;

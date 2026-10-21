@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Added deterministic typed expressions to variable effects and Trigger
+  comparisons, with stable Story/exact-item references, arithmetic, comparisons,
+  parentheses, typed API validation, ordered reader replay, PostgreSQL migration
+  `202610210044`, and a shared hierarchical variable picker.
+
 - Reworked Group organization into a compact searchable tree with contextual
   actions, inline rename, subgroup creation, mouse/touch drag-and-drop and
   equivalent keyboard moves. Hierarchy and sibling order persist atomically

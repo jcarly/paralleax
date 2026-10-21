@@ -1,4 +1,5 @@
 import type { Story } from '../model/index.js';
+import { expressionReferencesAny } from '../expressions/index.js';
 import {
   getTriggerAppearanceProbability,
   getTriggerConditionGroups,
@@ -28,20 +29,26 @@ export function deleteStatAssignmentsFromStory(
     interactions: story.interactions.map((interaction) => ({
       ...interaction,
       statEffects: (interaction.statEffects ?? []).filter(
-        ({ statId }) => !assignmentIds.has(statId),
+        ({ statId, expression }) =>
+          !assignmentIds.has(statId) && !expressionReferencesAny(expression, assignmentIds),
       ),
       triggers: interaction.triggers.map((trigger) => ({
         ...toCanonicalTrigger(trigger),
         conditionGroups: getTriggerConditionGroups(trigger).map((group) => ({
           ...group,
-          conditions: group.conditions.filter(
-            (condition) =>
-              !('statId' in condition) ||
-              (!assignmentIds.has(condition.statId) &&
-                !(
-                  'comparisonStatId' in condition && assignmentIds.has(condition.comparisonStatId)
-                )),
-          ),
+          conditions: group.conditions.filter((condition) => {
+            if (!('statId' in condition)) return true;
+            const comparisonStatId =
+              'comparisonStatId' in condition ? condition.comparisonStatId : undefined;
+            return (
+              !assignmentIds.has(condition.statId) &&
+              !(comparisonStatId !== undefined && assignmentIds.has(comparisonStatId)) &&
+              !expressionReferencesAny(
+                'expression' in condition ? condition.expression : undefined,
+                assignmentIds,
+              )
+            );
+          }),
         })),
         appearanceProbability: getTriggerAppearanceProbability(trigger),
         timerSeconds: getTriggerTimerSeconds(trigger),

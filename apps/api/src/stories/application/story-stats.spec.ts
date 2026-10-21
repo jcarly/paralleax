@@ -274,6 +274,46 @@ describe('story stats application rules', () => {
       initialValue: 5,
     });
     expect(
+      validateStatEffects(story, [
+        {
+          statId: durability.id,
+          itemId: 'key-1',
+          operation: 'set',
+          expression: '@{durability-threshold} + 2',
+        },
+      ]),
+    ).toEqual([
+      {
+        statId: durability.id,
+        itemId: 'key-1',
+        operation: 'set',
+        expression: '@{durability-threshold} + 2',
+      },
+    ]);
+    expect(
+      buildStatCondition(story, {
+        statId: durability.id,
+        itemId: 'key-1',
+        operator: 'gte',
+        expression: '@{durability-threshold} + 2',
+      }),
+    ).toEqual({
+      statId: durability.id,
+      itemId: 'key-1',
+      operator: 'gte',
+      expression: '@{durability-threshold} + 2',
+    });
+    expect(() =>
+      validateStatEffects(story, [
+        { statId: mood.id, operation: 'set', expression: '@{durability-threshold}' },
+      ]),
+    ).toThrow(BadRequestException);
+    expect(() =>
+      validateStatEffects(story, [
+        { statId: mood.id, operation: 'set', expression: '@{outside-story}' },
+      ]),
+    ).toThrow(BadRequestException);
+    expect(
       buildStatCondition(story, {
         statId: durability.id,
         itemId: 'key-1',

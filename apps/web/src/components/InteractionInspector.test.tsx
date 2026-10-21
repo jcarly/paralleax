@@ -172,7 +172,7 @@ describe('InteractionInspector time', () => {
     );
   });
 
-  it('selects a searchable assigned variable target', () => {
+  it('selects an assigned variable target from the shared hierarchy', () => {
     const interaction: Story['interactions'][number] = {
       id: 'interaction-1',
       title: 'Build trust',
@@ -223,18 +223,68 @@ describe('InteractionInspector time', () => {
 
     const target = screen.getByLabelText('Variable effect target');
     expect(screen.getByRole('heading', { name: 'Variable effects' })).toBeInTheDocument();
-    expect(target).toHaveValue('Mira — Trust');
+    expect(within(target).getAllByRole('combobox')[0]).toHaveValue('owner:character:mira');
+    expect(within(target).getAllByRole('combobox')[1]).toHaveValue('variable:character:mira-trust');
 
-    fireEvent.change(target, { target: { value: 'Luc — Trust' } });
+    fireEvent.change(within(target).getAllByRole('combobox')[0], {
+      target: { value: 'owner:character:luc' },
+    });
+    fireEvent.change(within(target).getAllByRole('combobox')[1], {
+      target: { value: 'variable:character:luc-trust' },
+    });
     expect(onPatch).toHaveBeenLastCalledWith('interaction-1', {
       statEffects: [{ ...interaction.statEffects![0], statId: 'luc-trust' }],
     });
 
-    fireEvent.change(target, {
-      target: { value: 'Mira — Health' },
+    fireEvent.change(within(target).getAllByRole('combobox')[0], {
+      target: { value: 'owner:character:mira' },
+    });
+    fireEvent.change(within(target).getAllByRole('combobox')[1], {
+      target: { value: 'variable:character:mira-health' },
     });
     expect(onPatch).toHaveBeenLastCalledWith('interaction-1', {
       statEffects: [{ ...interaction.statEffects![0], statId: 'mira-health' }],
+    });
+  });
+
+  it('edits an expression-based variable effect', () => {
+    const interaction: Story['interactions'][number] = {
+      id: 'interaction-1',
+      title: 'Complicate the score',
+      body: '',
+      position: { x: 0, y: 0 },
+      statEffects: [{ statId: 'score', operation: 'add', expression: '@{score} + 2' }],
+      triggers: [{ id: 'trigger-1', inputInteractionIds: [], conditions: [] }],
+    };
+    const story: Story = {
+      id: 'story-1',
+      title: 'Story',
+      statDefinitions: [{ id: 'score-definition', name: 'Score', valueType: 'number' }],
+      stats: [{ id: 'score', statDefinitionId: 'score-definition', initialValue: 1 }],
+      interactions: [interaction],
+      createdAt: '2026-07-26T00:00:00.000Z',
+      updatedAt: '2026-07-26T00:00:00.000Z',
+    };
+    const onPatch = vi.fn().mockResolvedValue(undefined);
+
+    render(
+      <InteractionInspector
+        story={story}
+        interaction={interaction}
+        onChange={vi.fn()}
+        onPatch={onPatch}
+        onDelete={vi.fn()}
+      />,
+    );
+
+    const expressionField = screen.getByLabelText('Variable effect expression');
+    expect(expressionField).toHaveValue('@{score} + 2');
+
+    fireEvent.change(expressionField, { target: { value: '@{score} * 3' } });
+    fireEvent.blur(expressionField);
+
+    expect(onPatch).toHaveBeenLastCalledWith('interaction-1', {
+      statEffects: [{ ...interaction.statEffects![0], expression: '@{score} * 3' }],
     });
   });
 
@@ -379,7 +429,7 @@ describe('InteractionInspector time', () => {
       updatedAt: '2026-07-26T00:00:00.000Z',
     };
     const onPatch = vi.fn().mockResolvedValue(undefined);
-    const { container, rerender } = render(
+    const { rerender } = render(
       <InteractionInspector
         story={story}
         interaction={interaction}
@@ -428,22 +478,22 @@ describe('InteractionInspector time', () => {
     );
     expect(screen.getByText('Variable change 1')).toBeInTheDocument();
     const target = screen.getByLabelText('Variable effect target');
-    expect(target).toHaveValue('Mira — Key #1 — Durability');
-    expect(screen.getByLabelText('Variable effect target')).toHaveAttribute(
-      'list',
-      expect.any(String),
-    );
-    expect(
-      container.querySelector('datalist option[value="Home — Key — Durability"]'),
-    ).toBeInTheDocument();
-    fireEvent.change(target, {
-      target: { value: 'Mira — Key #2 — Durability' },
+    expect(within(target).getAllByRole('combobox')[1]).toHaveValue('item:key-1');
+    expect(within(target).getAllByRole('combobox')[2]).toHaveValue('variable:key-1:key-durability');
+    fireEvent.change(within(target).getAllByRole('combobox')[1], {
+      target: { value: 'item:key-2' },
+    });
+    fireEvent.change(within(target).getAllByRole('combobox')[2], {
+      target: { value: 'variable:key-2:key-durability' },
     });
     expect(onPatch).toHaveBeenLastCalledWith('interaction-1', {
       statEffects: [{ ...withEffect.statEffects[0], itemId: 'key-2' }],
     });
-    fireEvent.change(target, {
-      target: { value: 'Mira — Key #1 — Charge' },
+    fireEvent.change(within(target).getAllByRole('combobox')[1], {
+      target: { value: 'item:key-1' },
+    });
+    fireEvent.change(within(target).getAllByRole('combobox')[2], {
+      target: { value: 'variable:key-1:key-charge' },
     });
     expect(onPatch).toHaveBeenLastCalledWith('interaction-1', {
       statEffects: [{ ...withEffect.statEffects[0], statId: 'key-charge' }],

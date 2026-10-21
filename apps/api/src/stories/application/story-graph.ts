@@ -426,7 +426,11 @@ export class StoryGraphService {
       const isStatCondition =
         condition.statId !== undefined &&
         condition.operator !== undefined &&
-        (condition.value !== undefined) !== (condition.comparisonStatId !== undefined);
+        [
+          condition.value !== undefined,
+          condition.comparisonStatId !== undefined,
+          condition.expression !== undefined,
+        ].filter(Boolean).length === 1;
       const isItemCondition =
         condition.itemDefinitionId !== undefined && condition.isOwned !== undefined;
       const isTemporalCondition = condition.temporal !== undefined;
@@ -491,7 +495,9 @@ export class StoryGraphService {
                   ? { comparisonItemId: condition.comparisonItemId }
                   : {}),
               }
-            : { value: condition.value }),
+            : condition.expression !== undefined
+              ? { expression: condition.expression }
+              : { value: condition.value }),
         });
       }
       if (isTemporalCondition) {
