@@ -16,13 +16,19 @@ export function useStoryGroupPersistence({
   trackSave,
 }: StoryGroupPersistenceDependencies) {
   const createGroup = useCallback(
-    async (title: string, interactionIds: string[]) => {
-      const result = await trackSave(() => api.createGroup(storyId, { title, interactionIds }));
+    async (title: string, interactionIds: string[], parentGroupId?: string) => {
+      const result = await trackSave(() =>
+        api.createGroup(storyId, {
+          title,
+          interactionIds,
+          ...(parentGroupId ? { parentGroupId } : {}),
+        }),
+      );
       if (!result) return false;
       setStory((current) =>
         current?.id === storyId ? applyGroupResult(current, result) : current,
       );
-      return true;
+      return result.group.id;
     },
     [setStory, storyId, trackSave],
   );

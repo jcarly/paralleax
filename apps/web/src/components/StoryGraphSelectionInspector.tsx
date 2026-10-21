@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { StoryGraphSelection } from '../storyGraphSelection';
 
@@ -12,21 +12,17 @@ export function StoryGraphSelectionInspector({
   onCreateGroup,
 }: StoryGraphSelectionInspectorProps) {
   const { t } = useTranslation();
-  const [title, setTitle] = useState('New group');
   const [isCreating, setIsCreating] = useState(false);
   const [created, setCreated] = useState(false);
   const interactionIds = selection.interactionIds;
 
-  async function createGroup(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const nextTitle = title.trim();
-    if (!nextTitle || interactionIds.length === 0 || isCreating) return;
+  async function createGroup() {
+    if (interactionIds.length === 0 || isCreating) return;
     setIsCreating(true);
     setCreated(false);
     try {
-      const created = await onCreateGroup(nextTitle, interactionIds);
+      const created = await onCreateGroup(t('editor.groups.newGroup'), interactionIds);
       if (created) {
-        setTitle('New group');
         setCreated(true);
       }
     } finally {
@@ -39,24 +35,16 @@ export function StoryGraphSelectionInspector({
       <h2>{t('editor.graphSelection.title')}</h2>
       <p>{t('editor.graphSelection.interactions', { count: selection.interactionIds.length })}</p>
       <p>{t('editor.graphSelection.triggers', { count: selection.triggers.length })}</p>
-      <form onSubmit={createGroup}>
-        <label>
-          {t('editor.graphSelection.groupTitle')}
-          <input
-            data-group-title-input
-            value={title}
-            onChange={(event) => setTitle(event.target.value)}
-            maxLength={200}
-            disabled={isCreating}
-          />
-        </label>
-        <button type="submit" disabled={interactionIds.length === 0 || !title.trim() || isCreating}>
-          {t('editor.graphSelection.createGroup')}
-        </button>
-        {interactionIds.length === 0 ? (
-          <p>{t('editor.graphSelection.groupRequiresInteraction')}</p>
-        ) : null}
-      </form>
+      <button
+        type="button"
+        onClick={() => void createGroup()}
+        disabled={interactionIds.length === 0 || isCreating}
+      >
+        {t('editor.graphSelection.createGroup')}
+      </button>
+      {interactionIds.length === 0 ? (
+        <p>{t('editor.graphSelection.groupRequiresInteraction')}</p>
+      ) : null}
       {created ? <p role="status">{t('editor.groups.created')}</p> : null}
     </div>
   );

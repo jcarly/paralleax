@@ -463,7 +463,8 @@ Possible elements:
 - title;
 - explicit Interaction membership;
 
-A Group is created from one or more selected Interactions. It may have one
+A root Group is created from one or more selected Interactions; an empty subgroup
+can also be created directly beneath an existing Group. A Group may have one
 optional `parentGroupId` referencing a Group in the same Story. This forms an
 acyclic organizational tree. Existing flat Groups remain roots. Collapse state
 is transient editor state, separate from authored metadata.
@@ -480,6 +481,12 @@ Deleting a Group promotes its direct children to its parent (or the root),
 without deleting any Interaction or subgroup. The left navigation lists Groups,
 allows membership and title editing, and highlights unique recursive members.
 Centering on those members is an explicit action separate from selection.
+Sibling order follows canonical `Story.groups` list order and the existing
+persisted `sort_order`. Moving a Group changes its parent and ordering together
+in one reversible authored mutation. Tree expansion never affects valid parents.
+The compact tree supports drag-and-drop, keyboard navigation and move commands,
+search, contextual actions and inline rename without a Group inspector. See
+[ADR-037](decisions/ADR-037-group-tree-authoring.md).
 See [ADR-035](decisions/ADR-035-nested-group-navigation.md) and
 [Workbench product direction](workbench.md).
 

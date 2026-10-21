@@ -6,6 +6,7 @@ import {
   applyCharacterResult,
   applyCharacterStatResult,
   applyGraphDecorationResult,
+  applyGroupResult,
   applyInteractionMutationResult,
   applyLocationPatchResult,
   applyLocationResult,
@@ -25,6 +26,32 @@ import {
 const updatedAt = '2026-08-25T12:00:00.000Z';
 
 describe('story mutation result adapters', () => {
+  it('projects committed Group order and preserves newer authoritative order against late responses', () => {
+    const story = storyFixture();
+    story.revision = 2;
+    story.groups = [
+      { id: 'first', title: 'First', interactionIds: [] },
+      { id: 'second', title: 'Second', interactionIds: [] },
+      { id: 'local', title: 'Unrelated', interactionIds: [] },
+    ];
+    const result = {
+      group: { ...story.groups[1], parentGroupId: 'first' },
+      groupOrder: ['second', 'first'],
+      revision: 3,
+      updatedAt,
+    };
+    const next = applyGroupResult(story, result);
+    expect(next.groups!.map(({ id }) => id)).toEqual(['second', 'first', 'local']);
+    expect(next.groups![0].parentGroupId).toBe('first');
+    expect(next.revision).toBe(3);
+    const newer = { ...story, revision: 4 };
+    expect(applyGroupResult(newer, result).groups!.map(({ id }) => id)).toEqual([
+      'first',
+      'second',
+      'local',
+    ]);
+    expect(applyGroupResult(newer, result).revision).toBe(4);
+  });
   it('reads revision metadata from successful Story mutation results', () => {
     expect(getStoryMutationRevision({ revision: 4, updatedAt })).toBe(4);
     expect(getStoryMutationRevision({ revision: '4' })).toBeUndefined();

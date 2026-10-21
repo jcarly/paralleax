@@ -48,6 +48,8 @@ export interface GraphDecorationDeletionResult extends StoryMutationMetadata {
 
 export interface GroupMutationResult extends StoryMutationMetadata {
   group: Group;
+  /** Canonical list order after an explicit move, using existing Story.groups ordering. */
+  groupOrder?: string[];
 }
 
 export interface LocationMutationResult extends StoryMutationMetadata {
@@ -114,11 +116,14 @@ export interface UpdateGroupInput {
   title?: string;
   interactionIds?: string[];
   parentGroupId?: string | null;
+  /** Insert before this sibling; null appends at the destination level. */
+  beforeGroupId?: string | null;
 }
 
 export interface CreateGroupInput {
   title: string;
   interactionIds: string[];
+  parentGroupId?: string;
 }
 
 export interface UpdateInteractionInput {

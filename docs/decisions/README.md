@@ -41,6 +41,7 @@ This folder records accepted architecture and product-shaping decisions.
 - [ADR-035 - Nested Group Navigation](ADR-035-nested-group-navigation.md)
 
 - [ADR-036 - Exclusive Direct Group Membership](ADR-036-exclusive-group-membership.md)
+- [ADR-037 - Group Tree Authoring](ADR-037-group-tree-authoring.md)
 
 ## Maintenance
 

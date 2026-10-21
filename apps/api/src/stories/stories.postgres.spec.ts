@@ -3,6 +3,7 @@ import {
   buildReaderProgressState,
   createDemoStories,
   setStoryGroupInteractions,
+  moveStoryGroup,
   type Story,
 } from '@paralleax/shared';
 import { Pool } from 'pg';
@@ -421,6 +422,62 @@ describePostgres('StoriesRepository PostgreSQL integration', () => {
     ).rejects.toMatchObject({ code: '23503' });
     const loaded = await freshRepository.find(story.id, ownerId);
     expect(loaded?.interactions).toHaveLength(2);
+  });
+
+  it('persists moved sibling order through the existing sort_order column and editor reload', async () => {
+    const story = persistedStory();
+    story.groups = [
+      { id: 'first', title: 'First', interactionIds: ['interaction-1'] },
+      { id: 'second', title: 'Second', interactionIds: ['interaction-2'] },
+      { id: 'child', title: 'Child', interactionIds: [], parentGroupId: 'first' },
+    ];
+    await repository.save(story, ownerId);
+    await repository.mutate(
+      story.id,
+      (current) => ({
+        ...moveStoryGroup(current, 'second', 'first', 'child'),
+        revision: (current.revision ?? 1) + 1,
+      }),
+      ownerId,
+      'group.updated',
+    );
+    const fresh = new StoriesRepository(database);
+    const loaded = await fresh.find(story.id, ownerId);
+    expect(loaded?.groups?.map(({ id }) => id)).toEqual(['first', 'second', 'child']);
+    expect(loaded?.groups?.[1].parentGroupId).toBe('first');
+    expect((await fresh.findEditorContextPage(story.id, ownerId, 1, 100))?.groups).toEqual(
+      loaded?.groups,
+    );
+    expect(loaded?.interactions.map(({ position }) => position)).toEqual(
+      story.interactions.map(({ position }) => position),
+    );
+    await repository.mutate(
+      story.id,
+      (current) => ({
+        ...moveStoryGroup(current, 'second', null, 'first'),
+        revision: (current.revision ?? 1) + 1,
+      }),
+      ownerId,
+      'group.updated',
+    );
+    expect(
+      (await fresh.find(story.id, ownerId))?.groups?.map(({ id, parentGroupId }) => ({
+        id,
+        parentGroupId,
+      })),
+    ).toEqual([
+      { id: 'second', parentGroupId: undefined },
+      { id: 'first', parentGroupId: undefined },
+      { id: 'child', parentGroupId: 'first' },
+    ]);
+    expect((await fresh.revertHistory(story.id, ownerId, 'undo'))?.kind).toBe('applied');
+    expect((await fresh.find(story.id, ownerId))?.groups).toEqual(loaded?.groups);
+    expect((await fresh.revertHistory(story.id, ownerId, 'redo'))?.kind).toBe('applied');
+    expect((await fresh.find(story.id, ownerId))?.groups?.map(({ id }) => id)).toEqual([
+      'second',
+      'first',
+      'child',
+    ]);
   });
 
   it('reads paginated editor projections and a targeted runtime slice', async () => {

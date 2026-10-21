@@ -132,6 +132,80 @@ describe('StoryGroupService', () => {
       service.create('story-1', { title: '   ', interactionIds: ['interaction-1'] }, 'user-1'),
     ).rejects.toBeInstanceOf(BadRequestException);
   });
+
+  it('creates an empty subgroup through the existing Group mutation and rejects empty roots', async () => {
+    const current = storyFixture();
+    current.groups = [{ id: 'parent', title: 'Parent', interactionIds: [] }];
+    mutations.update.mockImplementation(async (_id: string, mutation: (story: Story) => Story) =>
+      mutation(structuredClone(current)),
+    );
+    const result = await service.create(
+      'story-1',
+      { title: 'Child', interactionIds: [], parentGroupId: 'parent' },
+      'user-1',
+    );
+    expect(result.group).toMatchObject({
+      title: 'Child',
+      interactionIds: [],
+      parentGroupId: 'parent',
+    });
+    await expect(
+      service.create('story-1', { title: 'Empty', interactionIds: [] }, 'user-1'),
+    ).rejects.toThrow('at least one');
+    await expect(
+      service.create(
+        'story-1',
+        { title: 'Child', interactionIds: [], parentGroupId: 'foreign' },
+        'user-1',
+      ),
+    ).rejects.toThrow('same Story');
+  });
+
+  it('updates hierarchy and sibling order in one history mutation, with canonical order in the compact result', async () => {
+    const current = storyFixture();
+    current.groups = [
+      { id: 'parent', title: 'Parent', interactionIds: [] },
+      { id: 'child', title: 'Child', interactionIds: [], parentGroupId: 'parent' },
+      { id: 'other', title: 'Other', interactionIds: [] },
+    ];
+    mutations.update.mockImplementation(async (_id: string, mutation: (story: Story) => Story) =>
+      mutation(structuredClone(current)),
+    );
+    const result = await service.update(
+      'story-1',
+      'other',
+      { parentGroupId: 'parent', beforeGroupId: 'child' },
+      'user-1',
+    );
+    expect(result.group).toMatchObject({ id: 'other', parentGroupId: 'parent' });
+    expect(result.groupOrder).toEqual(['parent', 'other', 'child']);
+    expect(mutations.update).toHaveBeenCalledTimes(1);
+    expect(mutations.update).toHaveBeenCalledWith(
+      'story-1',
+      expect.any(Function),
+      'user-1',
+      'group.updated',
+    );
+    await expect(
+      service.update(
+        'story-1',
+        'parent',
+        { parentGroupId: 'child', beforeGroupId: null },
+        'user-1',
+      ),
+    ).rejects.toThrow('cycles');
+    await expect(
+      service.update('story-1', 'other', { parentGroupId: null, beforeGroupId: 'child' }, 'user-1'),
+    ).rejects.toThrow('sibling');
+    const root = await service.update(
+      'story-1',
+      'child',
+      { parentGroupId: null, beforeGroupId: 'parent' },
+      'user-1',
+    );
+    expect(root.group.parentGroupId).toBeUndefined();
+    expect(root.groupOrder).toEqual(['child', 'parent', 'other']);
+  });
 });
 
 function storyFixture(): Story {

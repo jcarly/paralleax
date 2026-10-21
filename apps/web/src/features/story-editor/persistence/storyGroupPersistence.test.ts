@@ -141,7 +141,7 @@ describe('story group persistence', () => {
       return { story, actions };
     });
 
-    let created = false;
+    let created: string | false = false;
     await act(async () => {
       created = await result.current.actions.createGroup('Opening', [
         'interaction-1',
@@ -149,7 +149,7 @@ describe('story group persistence', () => {
       ]);
     });
 
-    expect(created).toBe(true);
+    expect(created).toBe('group-1');
     expect(api.createGroup).toHaveBeenCalledWith('story-1', {
       title: 'Opening',
       interactionIds: ['interaction-1', 'interaction-2'],

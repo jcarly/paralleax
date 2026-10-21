@@ -36,6 +36,22 @@ export interface QspCodeAnalysis {
   text: string[];
   navigationTargets: QspNavigationTarget[];
   effects: QspVariableEffect[];
+  statements: QspAnalyzedStatement[];
+}
+
+/** Import-only ordering; never stored as a script in the canonical Story. */
+export type QspAnalyzedStatement =
+  | { kind: 'text'; text: string }
+  | { kind: 'effect'; effect: QspVariableEffect }
+  | { kind: 'call'; target?: QspNavigationTarget; source: QspSourcePosition }
+  | { kind: 'navigation'; target?: QspNavigationTarget }
+  | { kind: 'exit'; source: QspSourcePosition }
+  | { kind: 'barrier'; source: QspSourcePosition };
+
+export interface AnalyzedQspLocation {
+  location: ParsedQspLocation;
+  analysis: QspCodeAnalysis;
+  actions: Array<{ action: ParsedQspAction; analysis: QspCodeAnalysis }>;
 }
 
 export interface QspNavigationTarget {
@@ -69,6 +85,7 @@ export interface QspDraftNode {
 export interface QspDraftEdge {
   from: string;
   to: string;
+  conditionGroups?: QspSourceCondition[][];
 }
 
 export interface ParsedActBlock {

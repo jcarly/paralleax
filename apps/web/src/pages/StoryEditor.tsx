@@ -230,6 +230,8 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
     ) => t(`editor.count.${entity}`, { count }),
     [t],
   );
+  const [editingGroupId, setEditingGroupId] = useState<string>();
+  const creatingGroup = useRef(false);
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [contextualCommentsTargetKey, setContextualCommentsTargetKey] = useState<string>();
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -1023,6 +1025,27 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
     selectExclusive({ type: 'interaction', id: node.id });
   };
 
+  const createEditorGroup = useCallback(
+    async (title: string, ids: string[], parentGroupId?: string) => {
+      if (creatingGroup.current) return false;
+      creatingGroup.current = true;
+      try {
+        const id = await createGroup(title, ids, parentGroupId);
+        if (id) {
+          clearSearch();
+          openContextPanel();
+          setCommentsOpen(false);
+          selectExclusive({ type: 'group', id });
+          setEditingGroupId(id);
+        }
+        return id;
+      } finally {
+        creatingGroup.current = false;
+      }
+    },
+    [createGroup, clearSearch, openContextPanel, selectExclusive],
+  );
+
   useEffect(() => {
     function handleGroupShortcut(event: KeyboardEvent) {
       if (
@@ -1038,16 +1061,11 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
       if (!ids.length) return;
       event.preventDefault();
       setCommentsOpen(false);
-      if (!graphSelection) selectGraphInteractions(ids);
-      window.requestAnimationFrame(() => {
-        const input = document.querySelector<HTMLInputElement>('[data-group-title-input]');
-        input?.focus();
-        input?.select();
-      });
+      void createEditorGroup(t('editor.groups.newGroup'), ids);
     }
     document.addEventListener('keydown', handleGroupShortcut);
     return () => document.removeEventListener('keydown', handleGroupShortcut);
-  }, [graphSelection, reviewOnly, selectedId, selectGraphInteractions]);
+  }, [graphSelection, reviewOnly, selectedId, createEditorGroup, t]);
 
   async function addGraphDecoration(kind: GraphDecoration['kind'], anchorPosition?: Position) {
     const bounds = canvasRef.current?.getBoundingClientRect();
@@ -1700,10 +1718,15 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
                 key={story.id}
                 story={story}
                 selectedGroupId={selectedGroupId}
+                editingGroupId={editingGroupId}
+                onEditingChange={setEditingGroupId}
+                onCreate={createEditorGroup}
+                onSelectInteractions={selectGraphInteractions}
                 selectionIds={graphSelection?.interactionIds ?? (selectedId ? [selectedId] : [])}
                 readOnly={reviewOnly}
                 onSelect={(id) => {
                   clearSearch();
+                  setCommentsOpen(false);
                   selectExclusive({ type: 'group', id });
                 }}
                 onFocus={(ids) => {
@@ -1714,7 +1737,6 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
                     duration: 250,
                   });
                 }}
-                onInteraction={selectInteraction}
                 onUpdate={updateGroup}
                 onDelete={deleteGroup}
               />
@@ -2222,11 +2244,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
               {graphSelection ? (
                 <StoryGraphSelectionInspector
                   selection={graphSelection}
-                  onCreateGroup={async (title, ids) => {
-                    const created = await createGroup(title, ids);
-                    if (created) openContextPanel();
-                    return created;
-                  }}
+                  onCreateGroup={async (title, ids) => Boolean(await createEditorGroup(title, ids))}
                 />
               ) : selectedGraphDecoration ? (
                 <GraphDecorationInspector

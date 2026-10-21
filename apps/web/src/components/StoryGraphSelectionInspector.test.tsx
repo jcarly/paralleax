@@ -24,12 +24,9 @@ describe('StoryGraphSelectionInspector', () => {
       />,
     );
 
-    const title = screen.getByLabelText('Group title');
-    await user.clear(title);
-    await user.type(title, 'Opening');
     await user.click(screen.getByRole('button', { name: 'Create group' }));
 
-    expect(onCreateGroup).toHaveBeenCalledWith('Opening', ['interaction-1', 'interaction-2']);
+    expect(onCreateGroup).toHaveBeenCalledWith('New group', ['interaction-1', 'interaction-2']);
   });
 
   it('does not allow a Trigger-only selection to create a Group', () => {

@@ -69,6 +69,12 @@ export function applyGroupResult(story: Story, result: GroupMutationResult): Sto
     result.group.id,
     result.group.interactionIds,
   );
+  if (result.groupOrder && (story.revision ?? 0) <= result.revision) {
+    const order = new Map(result.groupOrder.map((id, index) => [id, index]));
+    next.groups = [...next.groups!].sort(
+      (left, right) => (order.get(left.id) ?? Infinity) - (order.get(right.id) ?? Infinity),
+    );
+  }
   // A compact Group result can follow an unrelated mutation with a newer revision.
   return (story.revision ?? 0) > result.revision ? next : applyStoryMutationMetadata(next, result);
 }

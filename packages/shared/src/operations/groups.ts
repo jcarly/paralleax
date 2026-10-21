@@ -1,5 +1,54 @@
 import type { Group, Story } from '../model/index.js';
 
+/** Includes the group itself, independently of any editor expansion state. */
+export function getGroupDescendantIds(groups: readonly Group[], groupId: string): Set<string> {
+  const children = new Map<string, string[]>();
+  for (const group of groups) {
+    if (!group.parentGroupId) continue;
+    const siblings = children.get(group.parentGroupId) ?? [];
+    siblings.push(group.id);
+    children.set(group.parentGroupId, siblings);
+  }
+  const result = new Set<string>();
+  const pending = [groupId];
+  while (pending.length) {
+    const id = pending.pop()!;
+    if (result.has(id)) continue;
+    result.add(id);
+    pending.push(...(children.get(id) ?? []));
+  }
+  return result;
+}
+
+/** Move within canonical list order. The caller persists this as one authored mutation. */
+export function moveStoryGroup(
+  story: Story,
+  groupId: string,
+  parentGroupId: string | null,
+  beforeGroupId: string | null,
+): Story {
+  const groups = story.groups ?? [];
+  const group = groups.find(({ id }) => id === groupId);
+  if (!group) throw new Error('Group not found');
+  if (parentGroupId !== null) {
+    if (!groups.some(({ id }) => id === parentGroupId))
+      throw new Error('Group parent must belong to the same Story');
+    if (getGroupDescendantIds(groups, groupId).has(parentGroupId))
+      throw new Error('Group hierarchy must not contain cycles');
+  }
+  const remaining = groups.filter(({ id }) => id !== groupId);
+  const sibling =
+    beforeGroupId === null ? undefined : remaining.find(({ id }) => id === beforeGroupId);
+  if (beforeGroupId !== null && (!sibling || (sibling.parentGroupId ?? null) !== parentGroupId))
+    throw new Error('Group destination must be a sibling in the same Story');
+  const moved = { ...group };
+  delete moved.parentGroupId;
+  if (parentGroupId !== null) moved.parentGroupId = parentGroupId;
+  const index = sibling ? remaining.indexOf(sibling) : remaining.length;
+  remaining.splice(index, 0, moved);
+  return { ...story, groups: remaining };
+}
+
 /** Validate canonical organization, including after history replay. */
 export function validateStoryGroups(story: Story): string | undefined {
   const groups = story.groups ?? [];

@@ -140,7 +140,12 @@ Paralleax currently includes:
   cells), action-only `IF` / `ELSEIF` / `ELSE` branches, and static navigation;
   a literal first navigation argument is connected to the matching imported
   `ARGS[0]` variant. It then returns occurrence-aware warnings and a complete
-  feature coverage matrix. Every diagnostic is written in order to an
+  feature coverage matrix. Static acyclic `GS` / `GOSUB` calls reuse shared
+  interaction paths with ordered call-site effects, dedicated string return
+  stats, and conditional continuation Triggers. This is interactive traversal,
+  with explicit screen-composition and action-lifetime approximations; general
+  arguments, local scope, conditional calls, recursion, and `FUNC` remain gaps.
+  Every diagnostic is written in order to an
   owner-protected JSONL report and streamed from `GET /api/imports/:importId/report`;
   API import responses contain counts/statistics rather than the diagnostic list.
   A failed conversion leaves its complete diagnostic report available; a conversion
@@ -163,14 +168,20 @@ Paralleax currently includes:
   choice dialog.
 - Rectangular graph multi-selection for interactions and linked trigger markers,
   with a transient count inspector, group drag-and-drop, and outside-click clearing.
-- Persisted Groups created from selected Interactions with immediate confirmation
-  and a left-panel tree. Authors can rename, delete, add/remove members and move
+- Persisted Groups created directly from selected Interactions with Ctrl+G and
+  an immediately selected inline name in a compact searchable left-panel tree.
+  Context menus, mouse/touch dragging and equivalent keyboard commands support
+  renaming, subgroup creation, membership edits, nesting and sibling reordering.
+  Parent and order changes reuse one authored mutation and existing relational
+  sort order, history and collaboration; no migration is needed. Authors can move
   Groups under one acyclic same-Story parent. Each Interaction has at most one
   direct Group; creation and membership edits transfer it from its previous Group.
-  A Group can contain both direct Interactions and child Groups. Deletion promotes children without
+  A Group can contain both direct Interactions and child Groups. Deletion promotes
+  children without
   deleting Interactions. Selection highlights recursive members; explicit centering
-  adjusts only the viewport. Ctrl+G focuses group creation, Ctrl+click toggles
-  interaction selection, and Shift/Alt rectangles add/remove selection. Groups
+  adjusts only the viewport. Group selection never opens a right inspector.
+  Ctrl+click toggles interaction selection, and Shift/Alt rectangles add/remove
+  selection. Groups
   have no reader semantics or React Flow parent-node structure.
 - Deterministic ELK-backed vertical graph auto-layout for the complete graph, one
   selected interaction/linked trigger, or a rectangular multi-selection, with

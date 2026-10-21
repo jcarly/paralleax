@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { randomUUID } from 'node:crypto';
 import {
   removeStoryGroup,
+  moveStoryGroup,
   setStoryGroupInteractions,
   validateStoryGroups,
   storyHistoryOperations,
@@ -22,6 +23,8 @@ export class StoryGroupService {
     input: CreateGroupDto,
     userId: string,
   ): Promise<GroupMutationResult> {
+    if (input.interactionIds.length === 0 && !input.parentGroupId)
+      throw new BadRequestException('Select at least one Interaction to create a root Group');
     const groupId = randomUUID();
     const title = input.title.trim();
 
@@ -32,6 +35,7 @@ export class StoryGroupService {
           id: groupId,
           title,
           interactionIds: [...input.interactionIds],
+          ...(input.parentGroupId ? { parentGroupId: input.parentGroupId } : {}),
         });
         const next = setStoryGroupInteractions(story, groupId, input.interactionIds);
         this.validate(next);
@@ -59,17 +63,30 @@ export class StoryGroupService {
         if (input.title !== undefined) group.title = input.title.trim();
         if (input.parentGroupId === null) delete group.parentGroupId;
         else if (input.parentGroupId !== undefined) group.parentGroupId = input.parentGroupId;
-        const next =
+        let next =
           input.interactionIds === undefined
             ? story
             : setStoryGroupInteractions(story, groupId, input.interactionIds);
+        if (input.beforeGroupId !== undefined) {
+          try {
+            next = moveStoryGroup(next, groupId, group.parentGroupId ?? null, input.beforeGroupId);
+          } catch (error) {
+            throw new BadRequestException((error as Error).message);
+          }
+        }
         this.validate(next);
         return next;
       },
       userId,
       storyHistoryOperations.groupUpdated,
     );
-    return { ...storyMutationMetadata(story), group: this.group(story, groupId) };
+    return {
+      ...storyMutationMetadata(story),
+      group: this.group(story, groupId),
+      ...(input.beforeGroupId !== undefined
+        ? { groupOrder: story.groups!.map(({ id }) => id) }
+        : {}),
+    };
   }
 
   async delete(storyId: string, groupId: string, userId: string): Promise<GroupDeletionResult> {

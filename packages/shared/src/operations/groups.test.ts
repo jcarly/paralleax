@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import type { Story } from '../model/index.js';
 import { applyStoryChangeDelta, createStoryChangeDelta } from '../history/story-history.js';
 import {
+  getGroupDescendantIds,
+  moveStoryGroup,
   getGroupInteractionIds,
   removeStoryGroup,
   setStoryGroupInteractions,
@@ -28,6 +30,40 @@ function fixture(): Story {
 }
 
 describe('authored groups', () => {
+  it('moves and reorders in canonical list order without moving Interactions, and reverses atomically', () => {
+    const before = fixture();
+    const after = moveStoryGroup(before, 'leaf', null, 'root');
+    expect(after.groups!.map(({ id }) => id)).toEqual(['leaf', 'root', 'child']);
+    expect(after.groups![0].parentGroupId).toBeUndefined();
+    expect(after.interactions).toBe(before.interactions);
+    expect(before.groups![2].parentGroupId).toBe('child');
+    const delta = createStoryChangeDelta(before, after)!;
+    const undo = applyStoryChangeDelta(after, delta, 'backward');
+    expect(undo.applied).toBe(true);
+    if (undo.applied) {
+      expect(undo.story.groups).toEqual(before.groups);
+      const redo = applyStoryChangeDelta(undo.story, delta, 'forward');
+      expect(redo.applied).toBe(true);
+      if (redo.applied) expect(redo.story.groups).toEqual(after.groups);
+    }
+    const nested = moveStoryGroup(after, 'leaf', 'root', 'child');
+    expect(
+      nested.groups!.filter(({ parentGroupId }) => parentGroupId === 'root').map(({ id }) => id),
+    ).toEqual(['leaf', 'child']);
+  });
+
+  it('rejects invalid move references and cycles even for deep descendants', () => {
+    const story = fixture();
+    expect(getGroupDescendantIds(story.groups!, 'root')).toEqual(
+      new Set(['root', 'child', 'leaf']),
+    );
+    expect(() => moveStoryGroup(story, 'root', 'leaf', null)).toThrow('cycles');
+    expect(() => moveStoryGroup(story, 'root', 'root', null)).toThrow('cycles');
+    expect(() => moveStoryGroup(story, 'leaf', 'foreign', null)).toThrow('same Story');
+    expect(() => moveStoryGroup(story, 'leaf', null, 'child')).toThrow('sibling');
+    expect(() => moveStoryGroup(story, 'leaf', null, 'foreign')).toThrow('sibling');
+    expect(() => moveStoryGroup(story, 'missing', null, null)).toThrow('not found');
+  });
   it('accepts old Stories and includes direct Interactions and child Groups in recursive navigation', () => {
     expect(validateStoryGroups({ ...fixture(), groups: undefined })).toBeUndefined();
     const story = fixture();

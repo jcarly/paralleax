@@ -1,4 +1,5 @@
 export const englishTranslation = {
+  rename: { empty: 'Enter a name.', failed: 'The name could not be saved. Try again.' },
   language: {
     label: 'Language',
   },
@@ -639,6 +640,24 @@ export const englishTranslation = {
     inspector: 'Inspector',
     closeInspector: 'Close inspector',
     groups: {
+      removeSelection: 'Remove selected interactions from group',
+      newGroup: 'New group',
+      actions: 'Actions for {{title}}',
+      search: 'Find a group',
+      noMatches: 'No matching groups.',
+      createChild: 'Create subgroup',
+      selectInteractions: 'Select group interactions',
+      moveUp: 'Move up',
+      moveDown: 'Move down',
+      moveIn: 'Move into previous group',
+      moveOut: 'Move to parent level',
+      moveToRoot: 'Move to root',
+      keyboardHelp:
+        'Use arrows to navigate, Enter to select, F2 to rename, Shift+F10 for actions. Ctrl+Up/Down reorders; Ctrl+Right nests under the previous sibling; Ctrl+Left moves to the parent level. Escape cancels dragging.',
+      dragStarted: 'Moving group. Escape cancels.',
+      dropPreview: 'Drop destination highlighted.',
+      dragEnded: 'Drag finished.',
+      dragCancelled: 'Move cancelled.',
       title: 'Groups',
       empty: 'Select interactions on the graph to create a group.',
       emptyGroup: 'No interactions in this group.',

@@ -76,7 +76,9 @@ need an explicit answer before the affected capability is implemented.
   contributes actions without becoming a visited journey step.
 - Define typed call arguments, scoped restoration, cycle rejection, defensive
   execution limits, referenced-target deletion, and reader-progress compatibility
-  before mapping QSP `GS` or `GOSUB` into the canonical Story model.
+  before any native inclusion-based QSP mapping. The current
+  [QSP adapter](qsp-import.md#static-subroutine-paths) uses ordinary interaction
+  traversal, stats, and Triggers and does not require or settle these proposals.
 
 ## World State, Conditions, Effects, and Items
 

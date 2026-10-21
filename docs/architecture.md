@@ -633,6 +633,14 @@ collaboration semantics. Separate `CharacterView`, `LocationView`, `StateView`,
 and `TimeView` implementations with duplicated filtering rules are explicitly not
 the intended architecture. See [Workbench product direction](workbench.md).
 
+Group tree moves extend that same mutation with a destination sibling, changing
+parent and `Story.groups` order atomically. Existing `sort_order` persistence and
+entity-order history deltas retain both across reload and Undo/Redo. The compact
+response projects committed order without a drag-specific canonical store. The
+web loads the tree and its `@dnd-kit/core` mechanics only for Stories containing
+Groups; empty Stories keep the lightweight navigation state. See
+[ADR-037](decisions/ADR-037-group-tree-authoring.md).
+
 Current trigger rendering is a projection: a linked trigger is shown as a small
 React Flow trigger node between its input interactions and its output
 interaction. Each input edge connects an interaction to that trigger node, and

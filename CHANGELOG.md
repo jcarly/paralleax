@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+- Reworked Group organization into a compact searchable tree with contextual
+  actions, inline rename, subgroup creation, mouse/touch drag-and-drop and
+  equivalent keyboard moves. Hierarchy and sibling order persist atomically
+  through existing Group history/collaboration, without a schema migration or
+  Group inspector. Fixed descendant-cycle protection for collapsed Groups and
+  shared Enter/blur/Escape name editing across Groups and context entities.
+
+- Added partial static QSP `GS` / `GOSUB` import through shared interaction
+  paths, ordered call-site effects, string return stats, and conditional
+  continuation Triggers. Supports action calls, sequential/repeated calls,
+  acyclic nesting, static exits, and safe literal `ARGS[0]` variants without
+  changing the narrative engine or persistence schema. Reports recursive,
+  dynamic, and unsupported call contexts and the interactive-traversal and
+  action-lifetime approximations. Preserves source lines across action
+  extraction and adjusts import progress for generated segments.
+
 - Changed Interaction Groups to exclusive direct membership. Creating a Group or
   assigning members now moves Interactions from their previous Groups atomically,
   including immediate web projection and undo/redo. Groups still support mixed

@@ -2,6 +2,11 @@
 
 Status: proposed, not implemented or accepted as a domain decision.
 
+The current [QSP adapter](qsp-import.md#static-subroutine-paths) maps a limited
+static `GS` / `GOSUB` subset through ordinary interactions, typed return stats,
+and conditional Triggers. That interactive traversal does not implement this
+proposal or provide QSP screen composition.
+
 ## Goal
 
 Allow authored content to include an existing Interaction at an exact position
