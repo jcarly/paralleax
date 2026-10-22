@@ -371,11 +371,17 @@ unchanged snapshot.
       Existing component tests cover token removal, conditional-frame unwrapping,
       contenteditable ownership, and clean authored serialization. Resolution
       commit: `7dbd8ec`.
-- [ ] **DS-04 — Resolve tokens outside product-page scope** (D4). Reuse semantic
+- [x] **DS-04 — Resolve tokens outside product-page scope** (D4). Reuse semantic
       root tokens for shared badges and story settings; do not add a second
       palette. Acceptance: no production CSS consumer outside the product-page
       scope depends on `--product-*`; simulation badge and story settings resolve
-      to the current approved colors. Resolution commit: TBD.
+      to the current approved colors. **Completed 2026-10-22:** the shared
+      `.product-eyebrow` selector now uses root `--color-accent`, so reader and
+      editor history labels no longer depend on `--product-accent` from
+      `.product-page`. D1's `aaead01` had already moved the Simulation badge and
+      Story Settings styling to common semantic tokens. Playwright regression
+      coverage verifies those colors in direct Simulation, editor navigation,
+      Story Settings, and editor history. Implementation commit: `c45b3b6`.
 
 ### P1 — Shared styling and verified behavior
 
