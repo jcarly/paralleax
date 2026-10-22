@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Fixed product dialogs appearing below the application header and allowed
+  background controls to receive keyboard focus while a dialog was open.
+  Dialogs now share a body portal that isolates the background, preserves the
+  selected initial focus target, supports nested dialogs, and restores focus on
+  close.
+
 - Improved Trigger condition readability with concise click-to-edit rules,
   uniform vertical field spacing, Enter/outside-focus collapse, explicit AND/OR
   connectors, and a combined-rule tooltip on graph markers. Removed redundant

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
 import {
   getStatTargets,
   hasStatTargets,
@@ -240,7 +241,7 @@ export function RichTextEditor({
         editButton.setAttribute('aria-label', t('richText.editConditionToken'));
         const removeButton = document.createElement('button');
         removeButton.type = 'button';
-        removeButton.className = 'trigger-link-delete rich-text-condition-remove';
+        removeButton.className = 'rich-text-condition-remove';
         removeButton.dataset.richTextConditionRemove = String(conditionIndex);
         removeButton.textContent = 'x';
         removeButton.title = t('richText.removeConditionToken');
@@ -407,6 +408,8 @@ export function RichTextEditor({
   }
 
   function commitCondition(condition: TriggerCondition) {
+    // Release modal isolation before focusing or changing the underlying contenteditable.
+    flushSync(() => setConditionDialogOpen(false));
     const blockId = editingCondition?.blockId;
     const conditionIndex = editingCondition?.conditionIndex;
     if (!blockId) {
@@ -430,7 +433,6 @@ export function RichTextEditor({
     }
     pendingConditionalFrameRef.current = undefined;
     conditionDialogActiveRef.current = false;
-    setConditionDialogOpen(false);
     setEditingCondition(undefined);
     editorRef.current?.focus();
   }
@@ -470,6 +472,7 @@ export function RichTextEditor({
   }
 
   function commitVariable(target: StatTarget, reference: string) {
+    flushSync(() => setVariableDialogOpen(false));
     const existingMarker = editingVariableElementRef.current;
     if (existingMarker && editorRef.current?.contains(existingMarker)) {
       existingMarker.dataset.statValue = target.assignment.id;
@@ -478,7 +481,6 @@ export function RichTextEditor({
       existingMarker.textContent = `{{${reference}}}`;
       editingVariableElementRef.current = undefined;
       setEditingVariable(undefined);
-      setVariableDialogOpen(false);
       editorRef.current.focus();
       onChange(editorHtml());
       return;
@@ -492,7 +494,6 @@ export function RichTextEditor({
     );
     editingVariableElementRef.current = undefined;
     setEditingVariable(undefined);
-    setVariableDialogOpen(false);
   }
 
   function openVariableEditor(marker: HTMLElement) {
@@ -525,13 +526,13 @@ export function RichTextEditor({
   }
 
   function commitInteractionLink(link: RichTextInteractionLinkValue) {
+    flushSync(() => setInteractionLinkDialogOpen(false));
     const existingMarker = editingInteractionLinkElementRef.current;
     if (existingMarker && editorRef.current?.contains(existingMarker)) {
       existingMarker.dataset.interactionLinkTarget = link.targetId;
       existingMarker.textContent = link.text;
       editingInteractionLinkElementRef.current = undefined;
       setEditingInteractionLink(undefined);
-      setInteractionLinkDialogOpen(false);
       setCreatingInteractionLinkText('');
       editorRef.current.focus();
       onChange(editorHtml());
@@ -543,7 +544,6 @@ export function RichTextEditor({
     );
     editingInteractionLinkElementRef.current = undefined;
     setEditingInteractionLink(undefined);
-    setInteractionLinkDialogOpen(false);
     setCreatingInteractionLinkText('');
   }
 

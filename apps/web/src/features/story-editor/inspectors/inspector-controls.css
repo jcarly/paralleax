@@ -1,4 +1,5 @@
 .inspector label,
+.rich-text-editor-dialog label,
 .story-groups-panel label {
   display: block;
   font-size: 0.78rem;
@@ -6,19 +7,22 @@
   margin-bottom: 1rem;
   color: var(--color-muted);
 }
-.inspector fieldset {
+.inspector fieldset,
+.rich-text-editor-dialog fieldset {
   margin: 0 0 1rem;
   border: 1px solid var(--color-border);
   border-radius: 8px;
   padding: 0.75rem;
 }
-.inspector fieldset legend {
+.inspector fieldset legend,
+.rich-text-editor-dialog fieldset legend {
   padding: 0 0.35rem;
   font-size: 0.78rem;
   font-weight: 650;
   color: var(--color-muted);
 }
-.inspector fieldset label {
+.inspector fieldset label,
+.rich-text-editor-dialog fieldset label {
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -29,6 +33,11 @@
 .inspector input:not([type]),
 .inspector textarea,
 .inspector select,
+.rich-text-editor-dialog input[type='text'],
+.rich-text-editor-dialog input[type='number'],
+.rich-text-editor-dialog input:not([type]),
+.rich-text-editor-dialog textarea,
+.rich-text-editor-dialog select,
 .story-groups-panel input,
 .story-groups-panel select {
   width: 100%;
@@ -40,7 +49,8 @@
   color: var(--color-text);
   font: inherit;
 }
-.inspector textarea {
+.inspector textarea,
+.rich-text-editor-dialog textarea {
   line-height: 1.55;
   resize: vertical;
 }
@@ -228,14 +238,29 @@
   transform: none;
 }
 
-.rich-text-token-remove.trigger-link-delete {
+.rich-text-token-remove,
+.rich-text-condition-remove {
+  position: absolute;
   z-index: 1;
-  top: -9px;
-  right: -9px;
   width: 18px;
   height: 18px;
+  padding: 0;
+  border: 2px solid var(--color-surface);
+  border-radius: 999px;
+  background: var(--color-danger);
+  box-shadow: 0 0 0 3px #c53d4f22;
+  font-size: 0.76rem;
+  line-height: 1;
   opacity: 1;
   transform: none;
+  pointer-events: all;
+  cursor: pointer;
+  transition: box-shadow 120ms ease;
+}
+
+.rich-text-token-remove {
+  top: -9px;
+  right: -9px;
 }
 
 .rich-text-surface :is([data-interaction-link-target], [data-stat-value]):hover,
@@ -291,14 +316,17 @@
   white-space: normal;
 }
 
-.rich-text-condition-remove.trigger-link-delete {
-  z-index: 1;
+.rich-text-condition-remove {
   top: -8px;
   right: -8px;
-  width: 18px;
-  height: 18px;
-  opacity: 1;
-  transform: none;
+}
+
+.rich-text-token-remove:hover,
+.rich-text-token-remove:focus-visible,
+.rich-text-condition-remove:hover,
+.rich-text-condition-remove:focus-visible {
+  background: var(--color-danger);
+  box-shadow: 0 0 0 3px #c53d4f22;
 }
 
 .rich-text-condition-add {

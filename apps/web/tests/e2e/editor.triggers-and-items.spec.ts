@@ -11,6 +11,24 @@ test.describe('Story editor triggers and items', () => {
     await prepareEditorPage(page);
   });
 
+  test('keeps trigger marker geometry stable through hover, focus, and selection', async ({ page }) => {
+    await mockStory(page, storyWithConditionCandidate());
+    await page.goto('/stories/story-1/edit');
+    const marker = page
+      .getByTestId('interaction-node')
+      .filter({ hasText: 'Original title' })
+      .getByRole('button', { name: 'Select root trigger' });
+
+    const initial = await marker.evaluate((element) => getComputedStyle(element).transform);
+    await marker.hover();
+    await expect.poll(() => marker.evaluate((element) => getComputedStyle(element).transform)).toBe(initial);
+    await marker.focus();
+    await expect.poll(() => marker.evaluate((element) => getComputedStyle(element).transform)).toBe(initial);
+    await marker.click();
+    await expect(marker).toHaveClass(/selected/);
+    await expect.poll(() => marker.evaluate((element) => getComputedStyle(element).transform)).toBe(initial);
+  });
+
   test('edits root trigger path conditions from the root trigger marker', async ({ page }) => {
     const initialStory = storyWithConditionCandidate();
     await mockStory(page, initialStory);

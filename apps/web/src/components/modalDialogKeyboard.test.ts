@@ -19,14 +19,27 @@ describe('modal dialog keyboard handling', () => {
     expect(onCancel).toHaveBeenCalledOnce();
   });
 
-  it('does nothing when a dialog has no visible focus target', () => {
+  it('keeps focus in the dialog when no control is available', () => {
     const dialog = document.createElement('div');
     dialog.innerHTML = '<button disabled>Disabled</button><button hidden>Hidden</button>';
+    document.body.append(dialog);
     const tab = keyboardEvent(dialog, 'Tab');
 
     handleModalDialogKeyDown(tab.event, vi.fn());
 
-    expect(tab.preventDefault).not.toHaveBeenCalled();
+    expect(tab.preventDefault).toHaveBeenCalledOnce();
+    expect(dialog).toHaveFocus();
+  });
+
+  it('ignores hidden ancestors and disabled fieldsets when wrapping focus', () => {
+    const { dialog, first, last } = focusableDialog();
+    dialog.insertAdjacentHTML(
+      'beforeend',
+      '<div hidden><button>Hidden descendant</button></div><fieldset disabled><input /></fieldset>',
+    );
+    last.focus();
+    handleModalDialogKeyDown(keyboardEvent(dialog, 'Tab').event, vi.fn());
+    expect(first).toHaveFocus();
   });
 
   it('wraps focus backwards from the first control', () => {

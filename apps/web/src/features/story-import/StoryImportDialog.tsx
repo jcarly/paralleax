@@ -12,6 +12,7 @@ import type {
 import { api, type StoryImportResponse } from '../../api';
 import { apiErrorMessage, isApiErrorLike } from '../../apiErrorMessages';
 import { handleModalDialogKeyDown } from '../../components/modalDialogKeyboard';
+import { ModalPortal } from '../../components/ModalPortal';
 import { loadStoryEditor } from '../../pages/storyRouteLoaders';
 
 type StoryImportFormat = 'choicescript' | 'qsp';
@@ -124,156 +125,163 @@ export function StoryImportDialog({
   }
 
   return (
-    <div className="modal-backdrop" role="presentation">
-      <section
-        className="new-story-dialog choicescript-import-dialog"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="story-import-title"
-        onKeyDown={(event) =>
-          handleModalDialogKeyDown(event, () => {
-            if (!pending) onClose();
-          })
-        }
-      >
-        <div className="dialog-icon" aria-hidden="true">
-          ⇧
-        </div>
-        <span className="product-eyebrow">{t('library.import.eyebrow')}</span>
-        <h2 id="story-import-title">
-          {t(
-            outcome?.status === 'confirmation_required'
-              ? 'library.import.reviewTitle'
-              : outcome
-                ? format === 'qsp'
-                  ? 'library.import.qsp.resultTitle'
-                  : 'library.import.resultTitle'
-                : format === 'qsp'
-                  ? 'library.import.qsp.title'
-                  : 'library.import.title',
-          )}
-        </h2>
-        {outcome ? (
-          <StoryImportReportView
-            key={outcome.status}
-            mode={outcome.status === 'imported' ? 'imported' : 'review'}
-            report={outcome.report}
-            importId={outcome.importId}
-          />
-        ) : (
-          <>
-            <label className="product-field">
-              <span>{t('library.import.formatLabel')}</span>
-              <select
-                value={format}
-                onChange={(event) => {
-                  setFormat(event.currentTarget.value as StoryImportFormat);
-                  setFiles([]);
-                  setRequestError(undefined);
-                }}
-              >
-                <option value="choicescript">{t('library.import.formats.choicescript')}</option>
-                <option value="qsp">{t('library.import.formats.qsp')}</option>
-              </select>
-            </label>
-            <p>
-              {t(
-                format === 'qsp' ? 'library.import.qsp.description' : 'library.import.description',
-              )}
-            </p>
-            <form onSubmit={(event) => void runImport(event)}>
-              <label className="product-field choicescript-file-field">
-                <span>
-                  {t(
-                    format === 'qsp'
-                      ? 'library.import.qsp.filesLabel'
-                      : 'library.import.filesLabel',
-                  )}
-                </span>
-                <input
-                  key={format}
-                  autoFocus
-                  multiple
-                  accept={
-                    format === 'qsp' ? '.qsp,.gam,.qsps,.qsp-txt,.txt-qsp,.qsrc' : '.txt,text/plain'
-                  }
-                  type="file"
+    <ModalPortal>
+      <div className="modal-backdrop product-page" role="presentation">
+        <section
+          className="new-story-dialog choicescript-import-dialog"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="story-import-title"
+          onKeyDown={(event) =>
+            handleModalDialogKeyDown(event, () => {
+              if (!pending) onClose();
+            })
+          }
+        >
+          <div className="dialog-icon" aria-hidden="true">
+            ⇧
+          </div>
+          <span className="product-eyebrow">{t('library.import.eyebrow')}</span>
+          <h2 id="story-import-title">
+            {t(
+              outcome?.status === 'confirmation_required'
+                ? 'library.import.reviewTitle'
+                : outcome
+                  ? format === 'qsp'
+                    ? 'library.import.qsp.resultTitle'
+                    : 'library.import.resultTitle'
+                  : format === 'qsp'
+                    ? 'library.import.qsp.title'
+                    : 'library.import.title',
+            )}
+          </h2>
+          {outcome ? (
+            <StoryImportReportView
+              key={outcome.status}
+              mode={outcome.status === 'imported' ? 'imported' : 'review'}
+              report={outcome.report}
+              importId={outcome.importId}
+            />
+          ) : (
+            <>
+              <label className="product-field">
+                <span>{t('library.import.formatLabel')}</span>
+                <select
+                  value={format}
                   onChange={(event) => {
-                    setFiles(Array.from(event.currentTarget.files ?? []));
+                    setFormat(event.currentTarget.value as StoryImportFormat);
+                    setFiles([]);
                     setRequestError(undefined);
                   }}
-                />
+                >
+                  <option value="choicescript">{t('library.import.formats.choicescript')}</option>
+                  <option value="qsp">{t('library.import.formats.qsp')}</option>
+                </select>
               </label>
-              {files.length > 0 ? (
-                <div className="choicescript-file-summary" aria-live="polite">
-                  <b>{t('library.import.selected', { count: files.length })}</b>
-                  <span>{summarizeFileNames(files, t)}</span>
-                  <small>
+              <p>
+                {t(
+                  format === 'qsp'
+                    ? 'library.import.qsp.description'
+                    : 'library.import.description',
+                )}
+              </p>
+              <form onSubmit={(event) => void runImport(event)}>
+                <label className="product-field choicescript-file-field">
+                  <span>
                     {t(
                       format === 'qsp'
-                        ? isAdministrator
-                          ? 'library.import.qsp.sizeAdministrator'
-                          : 'library.import.qsp.size'
-                        : 'library.import.size',
-                      { size: Math.ceil(sourceSize / 1024) },
+                        ? 'library.import.qsp.filesLabel'
+                        : 'library.import.filesLabel',
                     )}
-                  </small>
+                  </span>
+                  <input
+                    key={format}
+                    autoFocus
+                    data-modal-autofocus
+                    multiple
+                    accept={
+                      format === 'qsp'
+                        ? '.qsp,.gam,.qsps,.qsp-txt,.txt-qsp,.qsrc'
+                        : '.txt,text/plain'
+                    }
+                    type="file"
+                    onChange={(event) => {
+                      setFiles(Array.from(event.currentTarget.files ?? []));
+                      setRequestError(undefined);
+                    }}
+                  />
+                </label>
+                {files.length > 0 ? (
+                  <div className="choicescript-file-summary" aria-live="polite">
+                    <b>{t('library.import.selected', { count: files.length })}</b>
+                    <span>{summarizeFileNames(files, t)}</span>
+                    <small>
+                      {t(
+                        format === 'qsp'
+                          ? isAdministrator
+                            ? 'library.import.qsp.sizeAdministrator'
+                            : 'library.import.qsp.size'
+                          : 'library.import.size',
+                        { size: Math.ceil(sourceSize / 1024) },
+                      )}
+                    </small>
+                  </div>
+                ) : null}
+                {selectionError || requestError ? (
+                  <ImportRequestError selectionError={selectionError} error={requestError} />
+                ) : null}
+                <p className="choicescript-import-notice">
+                  {t(format === 'qsp' ? 'library.import.qsp.notice' : 'library.import.notice')}
+                </p>
+                {pending && progress ? <ImportProgress progress={progress} /> : null}
+                <div className="dialog-actions">
+                  <button className="product-secondary" type="button" onClick={cancelImport}>
+                    {t('library.import.cancel')}
+                  </button>
+                  <button
+                    className="product-primary"
+                    type="submit"
+                    disabled={files.length === 0 || Boolean(selectionError) || pending}
+                  >
+                    {t(pending ? 'library.import.importing' : 'library.import.submit')}
+                  </button>
                 </div>
-              ) : null}
-              {selectionError || requestError ? (
-                <ImportRequestError selectionError={selectionError} error={requestError} />
-              ) : null}
-              <p className="choicescript-import-notice">
-                {t(format === 'qsp' ? 'library.import.qsp.notice' : 'library.import.notice')}
-              </p>
+              </form>
+            </>
+          )}
+          {outcome ? (
+            <>
+              {requestError ? <ImportRequestError error={requestError} /> : null}
               {pending && progress ? <ImportProgress progress={progress} /> : null}
               <div className="dialog-actions">
                 <button className="product-secondary" type="button" onClick={cancelImport}>
-                  {t('library.import.cancel')}
+                  {t('library.import.close')}
                 </button>
-                <button
-                  className="product-primary"
-                  type="submit"
-                  disabled={files.length === 0 || Boolean(selectionError) || pending}
-                >
-                  {t(pending ? 'library.import.importing' : 'library.import.submit')}
-                </button>
+                {outcome.status === 'confirmation_required' ? (
+                  <button
+                    className="product-primary"
+                    type="button"
+                    disabled={pending}
+                    onClick={() => void requestImport(true)}
+                  >
+                    {t(pending ? 'library.import.importing' : 'library.import.confirm')}
+                  </button>
+                ) : (
+                  <Link
+                    className="product-primary"
+                    to={`/stories/${outcome.story.id}/edit`}
+                    onMouseEnter={() => void loadStoryEditor()}
+                    onFocus={() => void loadStoryEditor()}
+                  >
+                    {t('library.import.open')}
+                  </Link>
+                )}
               </div>
-            </form>
-          </>
-        )}
-        {outcome ? (
-          <>
-            {requestError ? <ImportRequestError error={requestError} /> : null}
-            {pending && progress ? <ImportProgress progress={progress} /> : null}
-            <div className="dialog-actions">
-              <button className="product-secondary" type="button" onClick={cancelImport}>
-                {t('library.import.close')}
-              </button>
-              {outcome.status === 'confirmation_required' ? (
-                <button
-                  className="product-primary"
-                  type="button"
-                  disabled={pending}
-                  onClick={() => void requestImport(true)}
-                >
-                  {t(pending ? 'library.import.importing' : 'library.import.confirm')}
-                </button>
-              ) : (
-                <Link
-                  className="product-primary"
-                  to={`/stories/${outcome.story.id}/edit`}
-                  onMouseEnter={() => void loadStoryEditor()}
-                  onFocus={() => void loadStoryEditor()}
-                >
-                  {t('library.import.open')}
-                </Link>
-              )}
-            </div>
-          </>
-        ) : null}
-      </section>
-    </div>
+            </>
+          ) : null}
+        </section>
+      </div>
+    </ModalPortal>
   );
 }
 

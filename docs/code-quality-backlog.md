@@ -2,7 +2,7 @@
 
 Status: Active
 
-Last triaged: 2026-10-17
+Last triaged: 2026-10-22
 
 This page records maintainability, reliability, performance, and test work found
 during the August 2026 code review and subsequent technical evaluations. Production gates remain authoritative in
@@ -23,6 +23,11 @@ following order when choosing incremental quality work:
 4. **Incremental module work:** shared evaluation context, incremental journey time,
    Rich Text Editor extraction, shared import validation, and smaller editor/player
    orchestration modules.
+5. **Design-system defects:** address the reproducible P0 layering, graph hover,
+   rich-text CSS ownership and token-scope defects recorded in the
+   [2026-10-22 audit](audits/design-system-2026-10-22.md), then take its P1/P2
+   work in the existing consistency/accessibility order. This does not displace
+   reliability gates or authorize open visual decisions.
 
 Dependency-watch entries such as the Swagger `js-yaml` override and the
 development-only `glob@10.5.0` warning are removal conditions, not active feature
@@ -318,6 +323,113 @@ operational clarity, not a sign that the existing model is incorrect.
 - [ ] Validate the following scenarios after the UX fixes: very large graphs,
       time and delay handling, probability behavior, multiplayer editing,
       and save integrity after story modifications.
+
+## Design-System Audit Follow-Ups — 2026-10-22
+
+These tasks preserve the priorities and open decisions from
+[the historical audit](audits/design-system-2026-10-22.md). They are additive
+only where existing backlog items do not already cover the work. Update each
+resolution field with the correcting commit hash; the audit itself remains an
+unchanged snapshot.
+
+### P0 — Reproducible defects
+
+- [ ] **DS-01 — Isolate modal layers and preserve keyboard focus** (D1). Portal
+      the affected modal through the existing modal patterns and use a shared
+      layer token; do not solve the defect with ad hoc z-index escalation.
+      Acceptance: hit-testing over the app header reaches the modal layer;
+      background controls cannot be activated by pointer or Tab/Shift+Tab;
+      Escape closes when allowed and focus returns to the opener. Add a browser
+      regression for the reader save dialog. Depends on the existing modal
+      keyboard/focus behavior; does not replace the broader manual dialog audit.
+      Implementation prepared in the current worktree: shared modal portal and
+      isolation helper, wired to product and rich-text dialogs; commit reference
+      remains pending until the change is committed.
+      Resolution commit: TBD.
+- [ ] **DS-02 — Keep Trigger geometry stable on hover** (D2). Remove the common
+      button hover transform that changes graph markers. Acceptance: root and
+      linked Trigger transforms remain stable at rest, hover, focus and selection;
+      React Flow selection, connection and drag behavior still pass. Depends on
+      existing graph test fixtures. Resolution commit: TBD.
+- [ ] **DS-03 — Make rich-text token controls own their presentation** (D3).
+      Remove reliance on graph-only classes for rich-text and conditional-text
+      removal controls. Acceptance: same computed placement, color, shape and
+      focus treatment in editor, direct reader and direct Simulation routes;
+      edit/remove, selection, contenteditable and serialization behavior remain
+      unchanged. Depends on existing rich-text token helpers/tests. Resolution
+      commit: TBD.
+- [ ] **DS-04 — Resolve tokens outside product-page scope** (D4). Reuse semantic
+      root tokens for shared badges and story settings; do not add a second
+      palette. Acceptance: no production CSS consumer outside the product-page
+      scope depends on `--product-*`; simulation badge and story settings resolve
+      to the current approved colors. Resolution commit: TBD.
+
+### P1 — Shared styling and verified behavior
+
+- [ ] **DS-05 — Separate common reader styles from simulation-only styles**
+      (D5). Keep the current reader appearance and Simulation behavior while
+      removing accidental cascade overrides. Depends on DS-04 token scope.
+      Acceptance: normal reader computed card/layout styles match the approved
+      baseline; simulation editing, choices, timers and saves are unchanged.
+      Resolution commit: TBD.
+- [ ] **DS-06 — Make help tooltips dismissible and usable** (D6, D7). Extend the
+      existing `FieldHelpTooltip`; do not add a parallel tooltip system.
+      Acceptance: Escape dismisses focused help, hover content remains reachable
+      while the pointer is over it, focus and pointer states are both usable,
+      and essential actions remain available without hover. Resolution commit:
+      TBD.
+- [ ] **DS-07 — Evaluate contrast and focus indicators by semantic role** (D8,
+      D15). First record component/state pairs and proposed values for human
+      review; then implement only approved changes. Acceptance: applicable text
+      and non-text WCAG criteria pass for enabled states; disabled exceptions and
+      graph zoom/target exceptions are documented rather than guessed. Depends
+      on human approval of colors. Resolution commit: TBD.
+- [ ] **DS-08 — Reconcile typography after product review** (D9). Do not select
+      or bundle a new font as part of mechanical cleanup. Acceptance: UI and
+      reader families, fallbacks, label/value sizing and catalogue examples are
+      agreed and documented; only then align code. Depends on human visual
+      approval. Resolution commit: TBD.
+- [ ] **DS-09 — Synchronize design documentation with accepted implementation**
+      (D11). Preserve historical rationale and resolve contradictions against
+      domain invariants/accepted ADRs; update docs alongside the relevant code.
+      Acceptance: graph ownership, trigger OR groups, current entities and
+      palette statements are accurate; no unapproved visual decision is recorded
+      as settled. Resolution commit: TBD.
+- [ ] **DS-10 — Clarify CSS ownership and consolidate proven duplicates** (D12, D13).
+      Continue the existing feature stylesheet split incrementally. Consolidate
+      only patterns with the same semantics/lifecycle and preserve intentional
+      post-it, graph, reader and inspector variants. Acceptance: no cascade-order
+      regression; duplicated state logic is removed only where callers share the
+      same behavior. Resolution commit: TBD.
+
+### P2 — Catalogue, automation and remaining state consistency
+
+- [ ] **DS-11 — Make the design catalogue a live reference** (D10). After the
+      relevant components/tokens migrate, render those real components and states
+      instead of copied swatch values and claims. Acceptance: each sample matches
+      its production owner, the route is discoverable, and examples do not mutate
+      stories. Depends on DS-04 and incremental component migration. Resolution
+      commit: TBD.
+- [ ] **DS-12 — Align remaining action and status variants** (D14). Follow DS-01
+      for direct defects, then review only combinations with demonstrated
+      conflicts (for example ghost-danger and secondary focus/hover). Acceptance:
+      destructive/disabled/selected meaning remains distinguishable and no broad
+      palette redesign is included. Depends on human approval where color changes
+      are involved. Resolution commit: TBD.
+- [ ] **DS-13 — Add staged CSS quality rules without noisy global bans** (D16).
+      Evaluate Stylelint against Node 24 and current CI, then enable structural
+      rules on migrated CSS and expand by explicit file ownership. Acceptance:
+      authored decoration colors, runtime CSS properties, graph geometry and
+      intentional fallbacks do not create broad false positives; lint runs in CI
+      without auto-fixing source. Depends on DS-10 and token ownership. Resolution
+      commit: TBD.
+- [ ] **DS-14 — Complete targeted graph and visual regression coverage** (D15, D16).
+      Extend existing graph geometry/DND/performance and accessibility coverage
+      only for migrated states; retain the existing manual keyboard/focus audit
+      item above as the single cross-dialog checklist. Acceptance: graph hit areas,
+      React Flow projection, drag thresholds, keyboard alternatives, inspector
+      scrolling, reader appearance and bundle budgets remain within baseline.
+      Depends on the relevant component migration. Resolution commit: TBD.
 
 ## Library Evaluation Candidates — 2026-09-24
 

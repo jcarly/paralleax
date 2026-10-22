@@ -39,7 +39,7 @@ export function ensureRichTextTokenControls(
     removeButton = document.createElement('button');
     removeButton.type = 'button';
     removeButton.contentEditable = 'false';
-    removeButton.className = 'trigger-link-delete rich-text-token-remove';
+    removeButton.className = 'rich-text-token-remove';
     removeButton.setAttribute(removeDataAttribute, '');
     removeButton.textContent = 'x';
     marker.append(editButton, removeButton);

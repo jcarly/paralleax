@@ -489,7 +489,7 @@ describe('StoryEditor story context', () => {
     const comparisonValue = screen.getByLabelText('Variable condition value');
     await user.clear(comparisonValue);
     await user.type(comparisonValue, '5');
-    await user.click(screen.getByRole('button', { name: '\u00d7' }));
+    await user.click(screen.getByRole('button', { name: 'Delete condition 1' }));
   }, 30_000);
 
   it('creates an item definition and gives separate copies to a character', async () => {

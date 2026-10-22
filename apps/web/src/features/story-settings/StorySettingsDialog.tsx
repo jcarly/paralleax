@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FieldHelpTooltip } from '../../components/FieldHelpTooltip';
 import { handleModalDialogKeyDown } from '../../components/modalDialogKeyboard';
+import { ModalPortal } from '../../components/ModalPortal';
 import { StoryAccessSettings } from './StoryAccessSettings';
 import '../../pages/ProductPages.css';
 import './storySettings.css';
@@ -40,112 +41,116 @@ export function StorySettingsDialog({
   }
 
   return (
-    <div className="modal-backdrop product-page" role="presentation">
-      <section
-        className="new-story-dialog story-settings-dialog"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="story-settings-title"
-        onKeyDown={(event) => handleModalDialogKeyDown(event, onClose)}
-      >
-        <header className="story-settings-header">
-          <span className="story-settings-heading-icon" aria-hidden="true">
-            <StorySettingsIcon />
-          </span>
-          <div>
-            <span className="product-eyebrow">{t('storySettings.eyebrow')}</span>
-            <h2 id="story-settings-title">{t('storySettings.title')}</h2>
-            <p>{t('storySettings.description')}</p>
-          </div>
-          <button
-            className="product-ghost compact story-settings-close"
-            type="button"
-            aria-label={t('storySettings.close')}
-            onClick={onClose}
-          >
-            ×
-          </button>
-        </header>
-        <div className="story-settings-tabs" role="tablist" aria-label={t('storySettings.tabs')}>
-          {tabs.map((tab) => (
+    <ModalPortal>
+      <div className="modal-backdrop product-page" role="presentation">
+        <section
+          className="new-story-dialog story-settings-dialog"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="story-settings-title"
+          onKeyDown={(event) => handleModalDialogKeyDown(event, onClose)}
+        >
+          <header className="story-settings-header">
+            <span className="story-settings-heading-icon" aria-hidden="true">
+              <StorySettingsIcon />
+            </span>
+            <div>
+              <span className="product-eyebrow">{t('storySettings.eyebrow')}</span>
+              <h2 id="story-settings-title">{t('storySettings.title')}</h2>
+              <p>{t('storySettings.description')}</p>
+            </div>
             <button
-              key={tab}
-              id={`story-settings-${tab}-tab`}
+              className="product-ghost compact story-settings-close"
               type="button"
-              role="tab"
-              aria-controls={`story-settings-${tab}-panel`}
-              aria-selected={activeTab === tab}
-              className={activeTab === tab ? 'active' : ''}
-              autoFocus={initialTab === 'access' && tab === 'access'}
-              onClick={() => setActiveTab(tab)}
+              aria-label={t('storySettings.close')}
+              onClick={onClose}
             >
-              {t(`storySettings.${tab}`)}
+              ×
             </button>
-          ))}
-        </div>
-        <div className="story-settings-content">
-          {activeTab === 'properties' ? (
-            <section
-              id="story-settings-properties-panel"
-              role="tabpanel"
-              aria-labelledby="story-settings-properties-tab"
-              className="story-settings-properties"
-            >
-              <h3>{t('storySettings.properties')}</h3>
-              <p>{t('storySettings.propertiesDescription')}</p>
-              <div className="story-settings-properties-fields">
-                <div className="product-field">
-                  <div className="field-label-with-help">
-                    <label htmlFor="story-settings-start-date-time">
-                      {t('editor.storyStartDateTime')}
-                    </label>
-                    <FieldHelpTooltip
-                      label={t('editor.storyStartDateTime')}
-                      help={t('storySettings.startDateTimeHelp')}
+          </header>
+          <div className="story-settings-tabs" role="tablist" aria-label={t('storySettings.tabs')}>
+            {tabs.map((tab) => (
+              <button
+                key={tab}
+                id={`story-settings-${tab}-tab`}
+                type="button"
+                role="tab"
+                aria-controls={`story-settings-${tab}-panel`}
+                aria-selected={activeTab === tab}
+                className={activeTab === tab ? 'active' : ''}
+                autoFocus={initialTab === 'access' && tab === 'access'}
+                data-modal-autofocus={initialTab === 'access' && tab === 'access' ? '' : undefined}
+                onClick={() => setActiveTab(tab)}
+              >
+                {t(`storySettings.${tab}`)}
+              </button>
+            ))}
+          </div>
+          <div className="story-settings-content">
+            {activeTab === 'properties' ? (
+              <section
+                id="story-settings-properties-panel"
+                role="tabpanel"
+                aria-labelledby="story-settings-properties-tab"
+                className="story-settings-properties"
+              >
+                <h3>{t('storySettings.properties')}</h3>
+                <p>{t('storySettings.propertiesDescription')}</p>
+                <div className="story-settings-properties-fields">
+                  <div className="product-field">
+                    <div className="field-label-with-help">
+                      <label htmlFor="story-settings-start-date-time">
+                        {t('editor.storyStartDateTime')}
+                      </label>
+                      <FieldHelpTooltip
+                        label={t('editor.storyStartDateTime')}
+                        help={t('storySettings.startDateTimeHelp')}
+                      />
+                    </div>
+                    <input
+                      id="story-settings-start-date-time"
+                      autoFocus
+                      data-modal-autofocus
+                      type="datetime-local"
+                      value={draftStartDateTime}
+                      disabled={propertiesStatus === 'saving'}
+                      onChange={(event) => {
+                        setDraftStartDateTime(event.target.value);
+                        setPropertiesStatus('idle');
+                      }}
+                      onBlur={() => void saveProperties()}
                     />
                   </div>
-                  <input
-                    id="story-settings-start-date-time"
-                    autoFocus
-                    type="datetime-local"
-                    value={draftStartDateTime}
-                    disabled={propertiesStatus === 'saving'}
-                    onChange={(event) => {
-                      setDraftStartDateTime(event.target.value);
-                      setPropertiesStatus('idle');
-                    }}
-                    onBlur={() => void saveProperties()}
-                  />
+                  {propertiesStatus === 'saving' ? (
+                    <p className="product-help" role="status">
+                      {t('storySettings.saving')}
+                    </p>
+                  ) : null}
+                  {propertiesStatus === 'error' ? (
+                    <p className="form-error" role="alert">
+                      {t('storySettings.saveFailed')}
+                    </p>
+                  ) : null}
+                  {propertiesStatus === 'saved' ? (
+                    <p className="form-success" role="status">
+                      {t('storySettings.saved')}
+                    </p>
+                  ) : null}
                 </div>
-                {propertiesStatus === 'saving' ? (
-                  <p className="product-help" role="status">
-                    {t('storySettings.saving')}
-                  </p>
-                ) : null}
-                {propertiesStatus === 'error' ? (
-                  <p className="form-error" role="alert">
-                    {t('storySettings.saveFailed')}
-                  </p>
-                ) : null}
-                {propertiesStatus === 'saved' ? (
-                  <p className="form-success" role="status">
-                    {t('storySettings.saved')}
-                  </p>
-                ) : null}
-              </div>
-            </section>
-          ) : canManageAccess ? (
-            <section
-              id="story-settings-access-panel"
-              role="tabpanel"
-              aria-labelledby="story-settings-access-tab"
-            >
-              <StoryAccessSettings storyId={storyId} />
-            </section>
-          ) : null}
-        </div>
-      </section>
-    </div>
+              </section>
+            ) : canManageAccess ? (
+              <section
+                id="story-settings-access-panel"
+                role="tabpanel"
+                aria-labelledby="story-settings-access-tab"
+              >
+                <StoryAccessSettings storyId={storyId} />
+              </section>
+            ) : null}
+          </div>
+        </section>
+      </div>
+    </ModalPortal>
   );
 }
 

@@ -239,8 +239,8 @@
 }
 
 .product-badge.accent {
-  background: var(--product-accent-soft);
-  color: var(--product-accent-strong);
+  background: var(--color-primary-soft);
+  color: var(--color-primary-strong);
 }
 
 .product-badge.warning {

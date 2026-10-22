@@ -88,6 +88,21 @@ describe('StoryPlayer runtime state', () => {
     await waitFor(() => expect(openingControl).toHaveFocus());
   });
 
+  it('isolates the save dialog above the application header', async () => {
+    const user = userEvent.setup();
+    await renderPlayer();
+    const openingControl = screen.getByRole('button', { name: 'Saves' });
+    await user.click(openingControl);
+
+    const dialog = screen.getByRole('dialog', { name: 'Manage saves' });
+    expect(dialog.closest('.modal-portal')?.parentElement).toBe(document.body);
+    expect(openingControl.closest('[inert]')).not.toBeNull();
+    expect(screen.getByRole('textbox', { name: 'Save name' })).toHaveFocus();
+    await user.keyboard('{Escape}');
+    expect(openingControl.closest('[inert]')).toBeNull();
+    await waitFor(() => expect(openingControl).toHaveFocus());
+  });
+
   it('shows failed Trigger probability rolls in simulation and allows forcing the path', async () => {
     const user = userEvent.setup();
     const probabilityStory = structuredClone(story);

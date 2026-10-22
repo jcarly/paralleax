@@ -1030,6 +1030,15 @@ shell, generic pages, and story-list rules. Feature styles live beside editor,
 inspector, graph, review-comment, reader, and Simulation Mode code, while
 `responsive.css` contains the final cross-feature media overrides.
 
+Product dialogs render through `apps/web/src/components/ModalPortal.tsx` into a
+shared body-level layer. `modalDialogIsolation.ts` makes the other body roots
+inert, locks page scrolling, keeps focus within the active dialog, and restores
+the opening control when it closes. Nested dialogs share the same layer and
+restore the underlying dialog as the active surface. `modalDialogKeyboard.ts`
+owns Tab wrapping and Escape handling; feature styles continue to own each
+dialog's appearance. The shared `--z-modal` token places the portal above the
+application shell without relying on feature stacking contexts.
+
 `main.tsx` imports these sheets in their deliberate cascade order. Inspector
 layout and inspector controls remain two files around the review-comment sheet
 because those rule groups were separated in the original cascade; regrouping
@@ -1050,9 +1059,10 @@ classes directly.
 - Functional UI: fast Playwright suites with controlled API responses.
 - Accessibility: strict Axe WCAG A/AA checks cover representative loaded states
   of the Story library, editor, and reader, including creation, import, and save
-  dialogs. Shared modal keyboard behavior owns focus containment and Escape
-  handling across product dialogs; browser flows also verify restoration to the
-  opening control where one exists.
+  dialogs. `ModalPortal` tests cover background isolation, nested dialogs,
+  late-added body portals, scroll restoration, focus containment, and opener
+  restoration. Browser flows verify pointer hit-testing, Tab/Shift+Tab, Escape,
+  and restoration to the opening control where one exists.
 - Alpha acceptance: a small sequential Playwright suite against the real API and
   PostgreSQL. Core flows do not intercept Paralleax endpoints; the explicit
   transport-reordering case holds and forwards a real API response without

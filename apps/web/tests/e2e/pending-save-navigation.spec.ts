@@ -115,8 +115,10 @@ test('guards a failed editor save and allows navigation after a successful retry
   await page.goForward();
   await expect(page.getByRole('dialog', { name: 'Unsaved changes' })).toBeVisible();
   await page.getByRole('button', { name: 'Stay on this page' }).click();
+  await expect(page.locator('#root')).not.toHaveAttribute('inert');
   await page.getByLabel('Title', { exact: true }).fill('Saved title');
   await page.getByLabel('Title', { exact: true }).blur();
+  await expect.poll(() => attempts).toBe(2);
   await expect(page.getByLabel('Story save status')).toContainText('Saved');
   await page.reload();
   await expect(page.getByTestId('interaction-node')).toBeVisible();

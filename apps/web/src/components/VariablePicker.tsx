@@ -94,6 +94,7 @@ export function VariablePicker({
             <select
               aria-label={label}
               autoFocus={autoFocus && depth === 0}
+              data-modal-autofocus={autoFocus && depth === 0 ? '' : undefined}
               value={selectedId}
               onChange={(event) => {
                 const selected = nodes.find(({ id }) => id === event.target.value);

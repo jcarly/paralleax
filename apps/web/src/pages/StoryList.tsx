@@ -5,6 +5,7 @@ import { STORY_LIST_PAGE_SIZE, type Story, type StorySummary } from '@paralleax/
 import { api, type AuthUser } from '../api';
 import { apiErrorMessage } from '../apiErrorMessages';
 import { handleModalDialogKeyDown } from '../components/modalDialogKeyboard';
+import { ModalPortal } from '../components/ModalPortal';
 import { StoryImportDialog } from '../features/story-import/StoryImportDialog';
 import { loadStoryEditor, loadStoryPlayer } from './storyRouteLoaders';
 import './ProductPages.css';
@@ -391,54 +392,57 @@ export function StoryList({ user }: { user: AuthUser | null }) {
       )}
 
       {creating && isAuthenticated ? (
-        <div className="modal-backdrop" role="presentation">
-          <section
-            className="new-story-dialog"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="new-story-title"
-            onKeyDown={(event) =>
-              handleModalDialogKeyDown(event, () => {
-                if (pending !== 'story') closeCreationDialog();
-              })
-            }
-          >
-            <div className="dialog-icon" aria-hidden="true">
-              ◇
-            </div>
-            <span className="product-eyebrow">{t('library.dialog.eyebrow')}</span>
-            <h2 id="new-story-title">{t('library.dialog.title')}</h2>
-            <p>{t('library.dialog.description')}</p>
-            <form onSubmit={(event) => void create(event)}>
-              <label className="product-field">
-                <span>{t('library.dialog.storyTitle')}</span>
-                <input
-                  autoFocus
-                  placeholder={t('library.dialog.placeholder')}
-                  value={newTitle}
-                  onChange={(event) => setNewTitle(event.target.value)}
-                />
-              </label>
-              <div className="dialog-actions">
-                <button
-                  className="product-secondary"
-                  type="button"
-                  disabled={pending === 'story'}
-                  onClick={closeCreationDialog}
-                >
-                  {t('library.dialog.cancel')}
-                </button>
-                <button
-                  className="product-primary"
-                  type="submit"
-                  disabled={!newTitle.trim() || pending === 'story'}
-                >
-                  {t(pending === 'story' ? 'library.dialog.creating' : 'library.dialog.submit')}
-                </button>
+        <ModalPortal>
+          <div className="modal-backdrop product-page" role="presentation">
+            <section
+              className="new-story-dialog"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="new-story-title"
+              onKeyDown={(event) =>
+                handleModalDialogKeyDown(event, () => {
+                  if (pending !== 'story') closeCreationDialog();
+                })
+              }
+            >
+              <div className="dialog-icon" aria-hidden="true">
+                ◇
               </div>
-            </form>
-          </section>
-        </div>
+              <span className="product-eyebrow">{t('library.dialog.eyebrow')}</span>
+              <h2 id="new-story-title">{t('library.dialog.title')}</h2>
+              <p>{t('library.dialog.description')}</p>
+              <form onSubmit={(event) => void create(event)}>
+                <label className="product-field">
+                  <span>{t('library.dialog.storyTitle')}</span>
+                  <input
+                    autoFocus
+                    data-modal-autofocus
+                    placeholder={t('library.dialog.placeholder')}
+                    value={newTitle}
+                    onChange={(event) => setNewTitle(event.target.value)}
+                  />
+                </label>
+                <div className="dialog-actions">
+                  <button
+                    className="product-secondary"
+                    type="button"
+                    disabled={pending === 'story'}
+                    onClick={closeCreationDialog}
+                  >
+                    {t('library.dialog.cancel')}
+                  </button>
+                  <button
+                    className="product-primary"
+                    type="submit"
+                    disabled={!newTitle.trim() || pending === 'story'}
+                  >
+                    {t(pending === 'story' ? 'library.dialog.creating' : 'library.dialog.submit')}
+                  </button>
+                </div>
+              </form>
+            </section>
+          </div>
+        </ModalPortal>
       ) : null}
 
       {importing && isAuthenticated ? (
