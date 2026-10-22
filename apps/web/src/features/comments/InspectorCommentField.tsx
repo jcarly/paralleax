@@ -103,10 +103,7 @@ function useCommentBadgeVisibility() {
       onFocus: () => setHovered(true),
       onBlur: (event: FocusEvent<HTMLDivElement>) => {
         const target = event.relatedTarget;
-        if (
-          !event.currentTarget.contains(target as Node | null) &&
-          !isCommentBadgeTarget(target)
-        ) {
+        if (!event.currentTarget.contains(target as Node | null) && !isCommentBadgeTarget(target)) {
           setHovered(false);
         }
       },

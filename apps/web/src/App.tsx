@@ -5,7 +5,6 @@ import { api, type AuthUser } from './api';
 import { authenticationPath, safeReturnTo } from './authNavigation';
 import { LanguageSwitcher } from './components/LanguageSwitcher';
 import { AccountDialog } from './components/AccountDialog';
-import { FeedbackButton } from './features/feedback/FeedbackButton';
 import { AuthPage } from './pages/AuthPage';
 import { AccountActionPage, type AccountAction } from './pages/AccountActionPage';
 import { StoryList } from './pages/StoryList';
@@ -26,6 +25,11 @@ const StoryEditor = lazy(() =>
 );
 const StoryPlayer = lazy(() =>
   loadStoryPlayer().then(({ StoryPlayer }) => ({ default: StoryPlayer })),
+);
+const FeedbackButton = lazy(() =>
+  import('./features/feedback/FeedbackButton').then(({ FeedbackButton }) => ({
+    default: FeedbackButton,
+  })),
 );
 
 export function App() {
@@ -115,7 +119,9 @@ export function App() {
           ) : null}
         </nav>
         <span className="product-app-spacer" />
-        <FeedbackButton />
+        <Suspense fallback={null}>
+          <FeedbackButton />
+        </Suspense>
         <LanguageSwitcher className="language-switcher-header" />
         {user ? (
           <>

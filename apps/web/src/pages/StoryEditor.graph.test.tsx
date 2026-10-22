@@ -350,9 +350,7 @@ describe('StoryEditor graph collaboration and layout', () => {
 
     await renderEditor(story);
     await user.click(screen.getByTestId('flow-node-interaction-2'));
-    fireEvent.mouseEnter(
-      screen.getByText('Duration').closest('.inspector-commentable-field')!,
-    );
+    fireEvent.mouseEnter(screen.getByText('Duration').closest('.inspector-commentable-field')!);
     fireEvent.click(screen.getByRole('button', { name: 'Comment on Duration' }));
 
     expect(
