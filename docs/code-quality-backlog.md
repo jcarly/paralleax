@@ -334,7 +334,7 @@ unchanged snapshot.
 
 ### P0 — Reproducible defects
 
-- [ ] **DS-01 — Isolate modal layers and preserve keyboard focus** (D1). Portal
+- [x] **DS-01 — Isolate modal layers and preserve keyboard focus** (D1). Portal
       the affected modal through the existing modal patterns and use a shared
       layer token; do not solve the defect with ad hoc z-index escalation.
       Acceptance: hit-testing over the app header reaches the modal layer;
@@ -342,15 +342,20 @@ unchanged snapshot.
       Escape closes when allowed and focus returns to the opener. Add a browser
       regression for the reader save dialog. Depends on the existing modal
       keyboard/focus behavior; does not replace the broader manual dialog audit.
-      Implementation prepared in the current worktree: shared modal portal and
-      isolation helper, wired to product and rich-text dialogs; commit reference
-      remains pending until the change is committed.
-      Resolution commit: TBD.
-- [ ] **DS-02 — Keep Trigger geometry stable on hover** (D2). Remove the common
+      **Completed 2026-10-22:** a shared modal portal and background-isolation
+      helper are wired to product and rich-text dialogs. Resolution commit:
+      `aaead01`.
+- [x] **DS-02 — Keep Trigger geometry stable on hover** (D2). Remove the common
       button hover transform that changes graph markers. Acceptance: root and
       linked Trigger transforms remain stable at rest, hover, focus and selection;
       React Flow selection, connection and drag behavior still pass. Depends on
-      existing graph test fixtures. Resolution commit: TBD.
+      existing graph test fixtures. **Completed 2026-10-22:** the shared button
+      hover keeps its shadow feedback but no longer assigns `transform`; Playwright
+      now checks computed transforms and rendered bounds for root and linked
+      markers at rest, hover, focus and selection. Graph selection/drag and the
+      existing connection-controller tests pass. The CSS correction and original
+      root-marker regression landed in `aaead01`; linked-marker coverage is added
+      in this D2 change. Resolution commit: `aaead01`.
 - [ ] **DS-03 — Make rich-text token controls own their presentation** (D3).
       Remove reliance on graph-only classes for rich-text and conditional-text
       removal controls. Acceptance: same computed placement, color, shape and

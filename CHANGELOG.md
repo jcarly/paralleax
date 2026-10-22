@@ -8,6 +8,11 @@
   selected initial focus target, supports nested dialogs, and restores focus on
   close.
 
+- Kept root and linked Trigger markers at a stable rotated geometry through
+  hover, keyboard focus, and selection by removing transforms from the shared
+  button hover state. Existing React Flow selection, connection, and drag
+  behavior remains covered by the graph tests.
+
 - Improved Trigger condition readability with concise click-to-edit rules,
   uniform vertical field spacing, Enter/outside-focus collapse, explicit AND/OR
   connectors, and a combined-rule tooltip on graph markers. Removed redundant

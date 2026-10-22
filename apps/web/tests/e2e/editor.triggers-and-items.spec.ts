@@ -4,6 +4,7 @@ import {
   prepareEditorPage,
   story,
   storyWithConditionCandidate,
+  storyWithHorizontalLink,
 } from './editorTestHarness';
 
 test.describe('Story editor triggers and items', () => {
@@ -11,22 +12,45 @@ test.describe('Story editor triggers and items', () => {
     await prepareEditorPage(page);
   });
 
-  test('keeps trigger marker geometry stable through hover, focus, and selection', async ({ page }) => {
-    await mockStory(page, storyWithConditionCandidate());
+  test('keeps root and linked trigger marker geometry stable across interaction states', async ({
+    page,
+  }) => {
+    await mockStory(page, storyWithHorizontalLink());
     await page.goto('/stories/story-1/edit');
-    const marker = page
+    const rootMarker = page
       .getByTestId('interaction-node')
       .filter({ hasText: 'Original title' })
       .getByRole('button', { name: 'Select root trigger' });
+    const linkedMarker = page.getByTestId('flow-trigger-interaction-2-trigger-2');
 
-    const initial = await marker.evaluate((element) => getComputedStyle(element).transform);
-    await marker.hover();
-    await expect.poll(() => marker.evaluate((element) => getComputedStyle(element).transform)).toBe(initial);
-    await marker.focus();
-    await expect.poll(() => marker.evaluate((element) => getComputedStyle(element).transform)).toBe(initial);
-    await marker.click();
-    await expect(marker).toHaveClass(/selected/);
-    await expect.poll(() => marker.evaluate((element) => getComputedStyle(element).transform)).toBe(initial);
+    for (const marker of [rootMarker, linkedMarker]) {
+      const geometry = () =>
+        marker.evaluate((element) => {
+          const { x, y, width, height } = element.getBoundingClientRect();
+          return {
+            transform: getComputedStyle(element).transform,
+            bounds: { x, y, width, height },
+          };
+        });
+
+      const atRest = await geometry();
+      await marker.hover();
+      await expect.poll(geometry).toEqual(atRest);
+
+      await page.mouse.move(0, 0);
+      await marker.focus();
+      await page.keyboard.press('Shift+Tab');
+      await page.keyboard.press('Tab');
+      await expect(marker).toBeFocused();
+      await expect
+        .poll(() => marker.evaluate((element) => element.matches(':focus-visible')))
+        .toBe(true);
+      await expect.poll(geometry).toEqual(atRest);
+
+      await marker.click();
+      await expect(marker).toHaveClass(/selected/);
+      await expect.poll(geometry).toEqual(atRest);
+    }
   });
 
   test('edits root trigger path conditions from the root trigger marker', async ({ page }) => {
