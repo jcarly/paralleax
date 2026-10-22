@@ -13,6 +13,11 @@
   button hover state. Existing React Flow selection, connection, and drag
   behavior remains covered by the graph tests.
 
+- Moved rich-text surface and token-control styles into the rich-text editor
+  component stylesheet, so direct Simulation routes keep the same removal
+  control geometry and focus treatment without depending on graph styles.
+  Token removal and authored markup serialization remain unchanged.
+
 - Improved Trigger condition readability with concise click-to-edit rules,
   uniform vertical field spacing, Enter/outside-focus collapse, explicit AND/OR
   connectors, and a combined-rule tooltip on graph markers. Removed redundant

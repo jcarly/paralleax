@@ -270,7 +270,10 @@ describe('RichTextEditor', () => {
       [{ id: 'block-1', conditions: [{ interactionId: 'next', hasBeenVisited: false }] }],
     );
 
-    await user.click(within(container).getByRole('button', { name: 'Remove condition' }));
+    const removeCondition = within(container).getByRole('button', { name: 'Remove condition' });
+    expect(removeCondition).toHaveClass('rich-text-condition-remove');
+    expect(removeCondition).not.toHaveClass('trigger-link-delete');
+    await user.click(removeCondition);
     expect(onConditionalTextChange).toHaveBeenLastCalledWith('<p>Secret text</p>', []);
   });
 
@@ -383,6 +386,8 @@ describe('RichTextEditor', () => {
       name: 'Remove variable Mira -> Health',
     });
     expect(removeVariable).toHaveClass('rich-text-token-remove');
+    expect(removeVariable).not.toHaveClass('trigger-link-delete');
+    expect(removeVariable.closest('[data-stat-value]')).toHaveAttribute('contenteditable', 'false');
     await user.click(removeVariable);
 
     expect(onChange).toHaveBeenLastCalledWith('<p>Value: </p>');
