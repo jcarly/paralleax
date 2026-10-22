@@ -39,7 +39,50 @@ function renderInspector(story: Story, onSaveTrigger = vi.fn().mockResolvedValue
   return onSaveTrigger;
 }
 
+function openConditionEditor(index = 0) {
+  fireEvent.click(screen.getAllByTestId('condition-summary')[index]);
+}
+
 describe('TriggerInspector temporal conditions', () => {
+  it('shows concise condition rules and opens their controls on click', () => {
+    const story = storyWithConditions([
+      { interactionId: 'source-1', hasBeenVisited: true },
+      { statId: 'score', operator: 'gte', value: 3 },
+    ]);
+    story.interactions[0].triggers[0].conditionGroups = [
+      { id: 'first', conditions: story.interactions[0].triggers[0].conditions ?? [] },
+      { id: 'second', conditions: [{ itemDefinitionId: 'key', isOwned: true }] },
+    ];
+    story.interactions.push({
+      id: 'source-1',
+      title: 'First source',
+      body: '',
+      position: { x: 0, y: 0 },
+      triggers: [],
+    });
+    story.statDefinitions = [{ id: 'score-definition', name: 'Score', valueType: 'number' }];
+    story.stats = [{ id: 'score', statDefinitionId: 'score-definition', initialValue: 0 }];
+    story.itemDefinitions = [{ id: 'key', name: 'Key', description: '' }];
+
+    renderInspector(story);
+
+    expect(screen.getAllByTestId('condition-summary')[0]).toHaveTextContent(
+      '"First source" has been visited',
+    );
+    expect(screen.queryByLabelText('Condition interaction')).not.toBeInTheDocument();
+    expect(screen.getAllByLabelText('AND')).toHaveLength(1);
+    expect(screen.getByText('OR')).toBeInTheDocument();
+    expect(screen.getAllByTestId('condition-summary')).toHaveLength(3);
+
+    fireEvent.click(screen.getAllByTestId('condition-summary')[0]);
+
+    const interaction = screen.getByLabelText('Condition interaction');
+    expect(interaction).toBeInTheDocument();
+    expect(screen.queryByTestId('condition-summary')).not.toBeInTheDocument();
+    fireEvent.keyUp(screen.getByLabelText('Condition interaction'), { key: 'Enter' });
+    expect(screen.queryByLabelText('Condition interaction')).not.toBeInTheDocument();
+  });
+
   it('saves an expression comparison only after a valid draft loses focus', () => {
     const story = storyWithConditions([
       { statId: 'score', operator: 'gte', expression: '@{score}' },
@@ -47,12 +90,13 @@ describe('TriggerInspector temporal conditions', () => {
     story.statDefinitions = [{ id: 'number', name: 'Score', valueType: 'number' }];
     story.stats = [{ id: 'score', statDefinitionId: 'number', initialValue: 2 }];
     const onSave = renderInspector(story);
+    openConditionEditor();
     const field = screen.getByLabelText('Variable effect expression');
     fireEvent.change(field, { target: { value: '@{score} +' } });
-    fireEvent.blur(field);
+    fireEvent.blur(field, { relatedTarget: screen.getByLabelText('Comparison value type') });
     expect(onSave).not.toHaveBeenCalled();
     fireEvent.change(field, { target: { value: '@{score} + 2' } });
-    fireEvent.blur(field);
+    fireEvent.blur(field, { relatedTarget: screen.getByLabelText('Comparison value type') });
     expect(onSave).toHaveBeenLastCalledWith('interaction-1', 'trigger-1', {
       conditionGroups: [
         {
@@ -84,6 +128,7 @@ describe('TriggerInspector temporal conditions', () => {
   it('moves Trigger explanations into labeled help tooltips', () => {
     renderInspector(storyWithConditions([]));
 
+    expect(screen.getByText('Always matches')).toBeInTheDocument();
     const conditionsHelp = screen.getByRole('button', { name: '? — Path conditions' });
     const probabilityHelp = screen.getByRole('button', { name: '? — Appearance probability' });
     const timerHelp = screen.getByRole('button', { name: '? — Availability timer' });
@@ -152,9 +197,10 @@ describe('TriggerInspector temporal conditions', () => {
     story.statDefinitions = [{ id: 'open-definition', name: 'Open', valueType: 'boolean' }];
     story.stats = [{ id: 'open', statDefinitionId: 'open-definition', initialValue: false }];
     renderInspector(story);
+    openConditionEditor();
 
     expect(screen.getByLabelText('Variable owner')).toBeInTheDocument();
-    expect(screen.getByRole('option', { name: 'Story — Timed story' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Monde -> Timed story' })).toBeInTheDocument();
   });
 
   it('compares a variable condition with another compatible variable', () => {
@@ -166,6 +212,7 @@ describe('TriggerInspector temporal conditions', () => {
     ];
     const onSaveTrigger = renderInspector(story);
 
+    openConditionEditor();
     fireEvent.change(screen.getByLabelText('Comparison value type'), { target: { value: 'stat' } });
 
     expect(onSaveTrigger).toHaveBeenLastCalledWith('interaction-1', 'trigger-1', {
@@ -197,6 +244,22 @@ describe('TriggerInspector temporal conditions', () => {
         { id: 'trigger-1', conditions: [{ itemDefinitionId: 'key', isOwned: true }] },
       ],
     });
+    expect(screen.getByLabelText('Condition item')).toBeInTheDocument();
+    expect(screen.queryByTestId('condition-summary')).not.toBeInTheDocument();
+  });
+
+  it('places group delete control over its card and keeps it out of its content flow', async () => {
+    const story = storyWithConditions([]);
+    story.interactions[0].triggers[0].conditionGroups = [
+      { id: 'first', conditions: [] },
+      { id: 'second', conditions: [] },
+    ];
+    renderInspector(story);
+
+    const deleteButtons = screen.getAllByRole('button', { name: 'Delete condition group' });
+    expect(deleteButtons).toHaveLength(2);
+    expect(deleteButtons[0]).toHaveClass('trigger-variant-delete');
+    expect(deleteButtons[0].parentElement).toHaveClass('trigger-variant-header');
   });
 
   it('adds a date and time condition', async () => {
@@ -241,6 +304,7 @@ describe('TriggerInspector temporal conditions', () => {
     ]);
     const onSaveTrigger = renderInspector(story);
 
+    openConditionEditor();
     await userEvent.click(screen.getByLabelText('Tue'));
     expect(onSaveTrigger).toHaveBeenLastCalledWith('interaction-1', 'trigger-1', {
       conditionGroups: [
@@ -338,28 +402,33 @@ describe('TriggerInspector temporal conditions', () => {
     ];
     const onSaveTrigger = renderInspector(story);
 
+    openConditionEditor(0);
     fireEvent.change(screen.getByLabelText('Condition interaction'), {
       target: { value: 'source-2' },
     });
     fireEvent.change(screen.getByLabelText('Interaction condition operator'), {
       target: { value: 'not-visited' },
     });
+    openConditionEditor(1);
     fireEvent.change(screen.getByLabelText('Condition location'), {
       target: { value: 'location-2' },
     });
     fireEvent.change(screen.getByLabelText('Location condition operator'), {
       target: { value: 'not-current' },
     });
+    openConditionEditor(2);
     fireEvent.change(screen.getByLabelText('Condition character'), {
       target: { value: 'character-2' },
     });
     fireEvent.change(screen.getByLabelText('Character condition operator'), {
       target: { value: 'absent' },
     });
+    openConditionEditor(3);
     fireEvent.change(screen.getByLabelText('Condition item'), { target: { value: 'item-2' } });
     fireEvent.change(screen.getByLabelText('Item condition operator'), {
       target: { value: 'not-owned' },
     });
+    openConditionEditor(4);
     fireEvent.change(
       within(screen.getByLabelText('Condition variable')).getAllByRole('combobox')[1],
       { target: { value: 'variable:story:mood' } },

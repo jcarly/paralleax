@@ -371,7 +371,7 @@
   display: grid;
   gap: 0.65rem;
   margin-top: 0.8rem;
-  padding: 0.8rem;
+  padding: 0.8rem 1.2rem 0.8rem 0.8rem;
   border: 1px solid var(--color-border);
   border-radius: 10px;
   background: var(--color-surface-secondary);
@@ -399,6 +399,21 @@
   font-size: 1.25rem;
   line-height: 1;
 }
+.trigger-variant-delete {
+  position: absolute;
+  top: -0.55rem;
+  right: -0.55rem;
+  z-index: 2;
+  width: 1.35rem;
+  height: 1.35rem;
+  min-height: 0;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+  font-size: 0.8rem;
+}
 .or-divider {
   position: absolute;
   top: -2rem;
@@ -420,19 +435,110 @@
   background: var(--color-border);
 }
 .condition {
+  position: relative;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr)) 32px;
-  gap: 0.4rem;
-  align-items: center;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.5rem;
+  align-items: start;
+  padding: 0.65rem 1.2rem 0.65rem 0.65rem;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface);
+}
+.condition-fields {
+  display: flex;
+  flex-direction: column;
+  grid-column: 1;
+  gap: 0.5rem;
+  min-width: 0;
+}
+.condition-fields > * {
+  display: block;
+  flex: 0 0 auto;
+  min-width: 0;
+  margin: 0 !important;
+}
+.condition-fields > :is(select, input, textarea) {
+  width: 100%;
+}
+.condition-fields .rich-text-variable-picker {
+  gap: 0.5rem;
+  margin: 0;
+}
+.condition-fields .rich-text-variable-field {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+}
+.condition-row-wrap {
+  min-width: 0;
+}
+.condition-empty {
+  margin: 0.2rem 0;
+  color: var(--color-muted);
+  font-size: 0.8rem;
+}
+.condition > *:not(.ghost) {
+  grid-column: 1;
+  min-width: 0;
+}
+.condition-summary {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  padding: 0.2rem 0.1rem;
+  border: 0;
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+.condition-summary:hover,
+.condition-summary:focus-visible {
+  color: var(--color-primary-strong);
+  text-decoration: underline;
 }
 .condition > .ghost {
-  grid-column: -2;
+  position: absolute;
+  top: -0.5rem;
+  right: -0.5rem;
+  z-index: 2;
+  display: grid;
+  width: 1.25rem;
+  height: 1.25rem;
+  min-height: 0;
+  padding: 0;
+  place-items: center;
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+  font-size: 0.75rem;
+  line-height: 1;
+}
+.condition-connector {
+  width: max-content;
+  margin: 0.1rem auto;
+  padding: 0.12rem 0.55rem;
+  border-radius: 999px;
+  background: var(--color-border);
+  color: var(--color-muted);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
 }
 .condition select {
   margin: 0;
 }
 .condition input {
   margin: 0;
+  min-width: 0;
+}
+.condition [aria-label='Condition variable'] {
+  grid-column: 1;
   min-width: 0;
 }
 .trigger-add-condition {

@@ -3,6 +3,7 @@ import {
   getTriggerConditions,
   type Story,
   type StoryGraphTriggerPositionUpdate,
+  type Trigger,
 } from '@paralleax/shared';
 import type { InteractionNodeData } from './components/InteractionNode';
 import type { TriggerNodeData } from './components/TriggerNode';
@@ -50,6 +51,7 @@ export interface InteractionNodeActions {
 
 export interface TriggerNodeActions {
   onSelectTrigger?: (interactionId: string, triggerId: string) => void;
+  conditionSummary?: (triggers: readonly Trigger[]) => string;
   commentCounts?: ReadonlyMap<string, number>;
   onOpenComments?: (targetType: 'trigger', targetId: string) => void;
 }
@@ -168,6 +170,9 @@ export function buildTriggerNodes(
             conditionCount: getTotalConditionCount(group.triggers),
             inputCount: group.inputInteractionIds.length,
             orGroupCount: group.triggers.length,
+            ...(actions.conditionSummary
+              ? { conditionSummary: actions.conditionSummary(group.triggers) }
+              : {}),
             ...(triggerIds.reduce(
               (total, triggerId) => total + (actions.commentCounts?.get(triggerId) ?? 0),
               0,

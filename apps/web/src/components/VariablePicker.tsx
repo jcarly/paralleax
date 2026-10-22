@@ -91,7 +91,6 @@ export function VariablePicker({
           : t('richText.variableOwner');
         return (
           <label className="rich-text-variable-field" key={parent?.id ?? 'owner'}>
-            {label}
             <select
               aria-label={label}
               autoFocus={autoFocus && depth === 0}

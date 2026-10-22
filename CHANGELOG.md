@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Improved Trigger condition readability with concise click-to-edit rules,
+  uniform vertical field spacing, Enter/outside-focus collapse, explicit AND/OR
+  connectors, and a combined-rule tooltip on graph markers. Removed redundant
+  condition-group headings and changed compact variable ownership copy to use
+  World/Monde terminology and directional arrows. Added repository guidance for
+  concise copy, punctuation, and compact authoring typography.
+
 - Added deterministic typed expressions to variable effects and Trigger
   comparisons, with stable Story/exact-item references, arithmetic, comparisons,
   parentheses, typed API validation, ordered reader replay, PostgreSQL migration

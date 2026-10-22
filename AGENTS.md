@@ -40,6 +40,15 @@ this duty or authorize silently choosing a new product rule.
 
 ## Architectural boundaries
 
+### Concise interface copy
+
+- Keep default interface copy and repeated explanations concise. Prefer a clear,
+  readable label or rule over a persistent explanatory paragraph.
+- Put optional detail in an accessible tooltip or infobulle on hover and keyboard
+  focus. Essential meaning and actions must remain available without hover.
+- Use progressive disclosure for controls: show the readable authored value by
+  default and expose editing controls when the user asks to edit it.
+
 ### `packages/shared`
 
 Owns framework-independent domain concepts and deterministic behavior shared across
@@ -128,6 +137,17 @@ and task priority, even for otherwise fully specified requests.
   without new evidence. Mechanical changes, documented bug fixes, and fully
   specified tasks need no clarification round when no material choice or conflict
   remains; this exception does not authorize inventing feature requirements.
+
+### Interface writing and typography
+
+- Keep interface copy concise; put optional precision in tooltips or infobulles.
+- Avoid the em dash (—) in most interface copy. Use `->` for directional or
+  ownership relationships and a simple hyphen for short separators.
+- Use 12 px for compact authoring labels and secondary hints, and 14 px for
+  field values and ordinary compact controls. This is not a global cap: reader
+  prose and prominent headings keep context-appropriate sizes.
+- Keep related condition fields in one consistent vertical layout with uniform
+  gaps; concise condition rules wrap instead of truncating.
 
 ### Model recommendation
 

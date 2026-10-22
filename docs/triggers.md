@@ -158,6 +158,12 @@ Expected editor behavior:
 
 The inspector exposes one **Add condition** action per condition group. It then
 asks for the condition type and renders only the fields relevant to that type.
+Each condition is shown as a concise readable rule by default; selecting it opens
+its vertically stacked controls, which keeps long names and values readable.
+Conditions have an explicit **AND** connector, and alternative groups have an
+explicit **OR** connector. The graph marker tooltip shows the combined rule using
+the same condition descriptions as the reader. An empty group is identified as
+always matching, consistent with its existing semantics.
 Alternative OR groups use a prominent plus action; when several groups exist,
 **OR** appears between them and each group has an accessible delete cross in its
 top-right corner. A new alternative group is added to the selected Trigger and

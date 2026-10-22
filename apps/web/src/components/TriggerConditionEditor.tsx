@@ -379,7 +379,7 @@ function StatConditionFields({
         >
           {comparisonTargets.map((target) => (
             <option key={statTargetId(target)} value={statTargetId(target)}>
-              {statTargetLabel(target, storyLabel)}
+              {statTargetLabel(target, storyLabel, { separator: ' -> ' })}
             </option>
           ))}
         </select>

@@ -306,7 +306,7 @@ export const italianTranslation = {
       progress: {
         uploading: 'Caricamento del file… {{percentage}}%',
         processing: 'File ricevuto. Analizzare e creare la storia...',
-        analyzing: '{{phase}} — {{completed}} / {{total}}',
+        analyzing: '{{phase}} - {{completed}} / {{total}}',
         currentFile: 'File corrente: {{file}}',
         phases: {
           decoding: 'Decodifica dei file QSP',
@@ -531,7 +531,6 @@ export const italianTranslation = {
     clickCanvas: 'Fare clic sul grafico',
     commentEntity: 'Commenta questo elemento',
     commentScene: 'Commenta questa scena',
-    commentSelection: 'Testo selezionato',
     selectTextHelp:
       'Seleziona il testo in un titolo o in una descrizione, quindi utilizza questa azione.',
     triggerSummary_one: 'Condizione {{count}} in questo trigger.',
@@ -1063,6 +1062,10 @@ export const italianTranslation = {
   },
   triggerInspector: {
     title: 'Condizioni del percorso',
+    noConditions: 'Sempre valida',
+    editCondition: 'Modifica condizione',
+    and: 'E',
+    deleteCondition: 'Elimina condizione {{number}}',
     appearanceProbability: 'Probabilità di apparizione',
     appearanceProbabilityHelp:
       'Per questo Innesco viene effettuato un tiro deterministico ad ogni passo.',
@@ -1071,7 +1074,6 @@ export const italianTranslation = {
     variantsHelp:
       "I gruppi sono alternativi (OR); le condizioni all'interno di un gruppo devono corrispondere tutte (AND).",
     or: 'O',
-    group: 'Gruppo di condizioni {{number}}',
     unknownStat: 'Variabile sconosciuta',
     conditionInteraction: 'Interazione condizionale',
     interactionOperator: 'Operatore della condizione di interazione',
@@ -1223,11 +1225,11 @@ export const italianTranslation = {
     variableOrItemFor: 'Variabile o elemento in {{name}}',
     chooseVariableOwner: 'Scegli un elemento della storia',
     chooseVariableOrItem: 'Scegli una variabile o un elemento',
-    storyVariableOwner: 'Storia — {{name}}',
-    characterVariableOwner: 'Carattere — {{name}}',
-    locationVariableOwner: 'Posizione — {{name}}',
-    itemVariableOwner: 'Articolo — {{name}}',
-    variableOption: 'Variabile — {{name}}',
+    storyVariableOwner: 'Mondo -> {{name}}',
+    characterVariableOwner: 'Personaggio -> {{name}}',
+    locationVariableOwner: 'Luogo -> {{name}}',
+    itemVariableOwner: 'Oggetto -> {{name}}',
+    variableOption: 'Variabile -> {{name}}',
     contentLength: 'Lunghezza del contenuto',
   },
   graph: {

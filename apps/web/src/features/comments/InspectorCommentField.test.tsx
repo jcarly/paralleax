@@ -24,6 +24,7 @@ describe('InspectorCommentField', () => {
       </InspectorCommentField>,
     );
 
+    await user.hover(screen.getByText('Title').closest('.inspector-commentable-field')!);
     await user.click(screen.getByRole('button', { name: 'Open comments for Title' }));
 
     expect(onOpenTextComments).toHaveBeenCalledOnce();
@@ -59,6 +60,7 @@ describe('InspectorCommentField', () => {
       </InspectorCommentSlot>,
     );
 
+    await user.hover(screen.getByText('Duration').closest('.inspector-commentable-field')!);
     await user.click(screen.getByRole('button', { name: 'Open comments for Duration' }));
 
     expect(onOpenSemanticComments).toHaveBeenCalledWith({ kind: 'field', field: 'duration' });

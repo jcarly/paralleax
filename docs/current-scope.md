@@ -25,6 +25,9 @@ Paralleax currently includes:
   and narrative step. A nullable non-negative timer limits how long an otherwise
   eligible Trigger exposes its option; active timers render as draining bars,
   while zero-second timers never appear in normal reading.
+  In the editor, authored condition rules are concise multi-line buttons that
+  open uniform vertically stacked controls on click; Enter or focus leaving a
+  condition closes its editor. AND/OR connectors stay explicit.
 - Persisted visual graph decorations: movable, resizable colored frames and movable
   text with configurable color, size, family, weight, and style. Decorations stay
   behind interactions and trigger markers and have no reader semantics. Frame
@@ -170,6 +173,9 @@ Paralleax currently includes:
   interaction's input `+` creates a dedicated Trigger; dropping on a visible
   Trigger marker adds the input to that existing Trigger without a follow-up
   choice dialog.
+- Trigger condition inspectors show concise readable rules by default and open
+  vertically stacked, full-width editing fields on demand. AND/OR connectors
+  remain visible, and the combined rule appears on the graph marker's tooltip.
 - Rectangular graph multi-selection for interactions and linked trigger markers,
   with a transient count inspector, group drag-and-drop, and outside-click clearing.
 - Persisted Groups created directly from selected Interactions with Ctrl+G and

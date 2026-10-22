@@ -8,12 +8,14 @@ import {
   type TriggerConditionGroup,
   type UpdateTriggerInput,
 } from '@paralleax/shared';
+import { useLayoutEffect, useRef, useState, type FocusEvent, type KeyboardEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   InspectorCommentSlot,
   type InspectorSemanticCommentProps,
 } from '../features/comments/InspectorCommentField';
 import { conditionUnavailableReasons, createTriggerCondition } from '../triggerConditionAuthoring';
+import { describeTriggerCondition } from '../triggerConditionPresentation';
 import { AddConditionControl, TriggerConditionFields } from './TriggerConditionEditor';
 import { FieldHelpTooltip } from './FieldHelpTooltip';
 
@@ -38,6 +40,19 @@ export function TriggerInspector({
 } & InspectorSemanticCommentProps) {
   const { t } = useTranslation();
   const groups = getTriggerConditionGroups(trigger);
+  const [editingConditionKey, setEditingConditionKey] = useState<string | null>(null);
+  const activeConditionRef = useRef<HTMLDivElement>(null);
+  const pendingConditionFocusRef = useRef(false);
+
+  useLayoutEffect(() => {
+    if (!editingConditionKey || !pendingConditionFocusRef.current) return;
+    const editor = activeConditionRef.current;
+    pendingConditionFocusRef.current = false;
+    (
+      editor?.querySelector<HTMLElement>('select, input, textarea') ??
+      editor?.querySelector<HTMLElement>('button:not(.condition-summary)')
+    )?.focus();
+  }, [editingConditionKey]);
 
   function saveGroups(conditionGroups: TriggerConditionGroup[]) {
     return onSaveTrigger(interaction.id, trigger.id, { conditionGroups });
@@ -47,6 +62,21 @@ export function TriggerInspector({
     return saveGroups(
       groups.map((group) => (group.id === groupId ? { ...group, conditions } : group)),
     );
+  }
+
+  function collapseWhenFocusLeaves(
+    event: FocusEvent<HTMLDivElement>,
+    conditionKey: string,
+  ) {
+    if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+      setEditingConditionKey((current) => (current === conditionKey ? null : current));
+    }
+  }
+
+  function collapseOnEnter(event: KeyboardEvent<HTMLDivElement>, conditionKey: string) {
+    if (event.key === 'Enter') {
+      setEditingConditionKey((current) => (current === conditionKey ? null : current));
+    }
   }
 
   return (
@@ -67,9 +97,8 @@ export function TriggerInspector({
         {groups.map((group, groupIndex) => (
           <div className="trigger-variant" key={group.id}>
             {groupIndex > 0 ? <div className="or-divider">{t('triggerInspector.or')}</div> : null}
-            <div className="trigger-variant-header">
-              <h4>{t('triggerInspector.group', { number: groupIndex + 1 })}</h4>
-              {groups.length > 1 ? (
+            {groups.length > 1 ? (
+              <div className="trigger-variant-header">
                 <button
                   aria-label={t('triggerInspector.deleteGroup')}
                   className="ghost danger trigger-variant-delete"
@@ -79,40 +108,92 @@ export function TriggerInspector({
                 >
                   ×
                 </button>
+              </div>
+            ) : null}
+            <div
+              className="conditions"
+              role="group"
+              aria-label={t('triggerInspector.title')}
+            >
+              {group.conditions.length === 0 ? (
+                <p className="condition-empty" role="status">
+                  {t('triggerInspector.noConditions')}
+                </p>
               ) : null}
-            </div>
-            <div className="conditions">
-              {group.conditions.map((condition, index) => (
-                <div className="condition" key={`${group.id}-${index}`}>
-                  <TriggerConditionFields
-                    condition={condition}
-                    currentInteractionId={interaction.id}
-                    story={story}
-                    onChange={(nextCondition) => {
-                      const next = [...group.conditions];
-                      next[index] = nextCondition;
-                      void updateGroup(group.id, next);
-                    }}
-                  />
-                  <button
-                    className="ghost danger"
-                    onClick={() =>
-                      void updateGroup(
-                        group.id,
-                        group.conditions.filter((_, itemIndex) => itemIndex !== index),
-                      )
+              {group.conditions.map((condition, index) => {
+                const conditionKey = `${group.id}:${index}`;
+                const isEditing = editingConditionKey === conditionKey;
+                const description = describeTriggerCondition(story, condition, t);
+                return (
+                  <div
+                    className="condition-row-wrap"
+                    key={conditionKey}
+                    ref={isEditing ? activeConditionRef : undefined}
+                    onBlur={
+                      isEditing ? (event) => collapseWhenFocusLeaves(event, conditionKey) : undefined
+                    }
+                    onKeyUp={
+                      isEditing ? (event) => collapseOnEnter(event, conditionKey) : undefined
                     }
                   >
-                    ×
-                  </button>
-                </div>
-              ))}
+                    {index > 0 ? (
+                      <div className="condition-connector" aria-label={t('triggerInspector.and')}>
+                        {t('triggerInspector.and')}
+                      </div>
+                    ) : null}
+                    <div className="condition">
+                      {isEditing ? (
+                        <div className="condition-fields">
+                          <TriggerConditionFields
+                            condition={condition}
+                            currentInteractionId={interaction.id}
+                            story={story}
+                            onChange={(nextCondition) => {
+                              const next = [...group.conditions];
+                              next[index] = nextCondition;
+                              void updateGroup(group.id, next);
+                            }}
+                          />
+                        </div>
+                      ) : (
+                        <button
+                          aria-expanded={isEditing}
+                          aria-label={`${t('triggerInspector.editCondition')}: ${description}`}
+                          className="condition-summary"
+                          data-testid="condition-summary"
+                          type="button"
+                          onClick={() => setEditingConditionKey(conditionKey)}
+                        >
+                          {description}
+                        </button>
+                      )}
+                      <button
+                        aria-label={t('triggerInspector.deleteCondition', { number: index + 1 })}
+                        className="ghost danger"
+                        type="button"
+                        onClick={() =>
+                          void updateGroup(
+                            group.id,
+                            group.conditions.filter((_, itemIndex) => itemIndex !== index),
+                          )
+                        }
+                      >
+                        ×
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
             <AddConditionControl
               unavailableReasons={conditionUnavailableReasons(story, interaction.id, t)}
               onAdd={(type) => {
                 const condition = createTriggerCondition(story, interaction.id, type);
-                if (condition) void updateGroup(group.id, [...group.conditions, condition]);
+                if (!condition) return;
+                const nextConditions = [...group.conditions, condition];
+                pendingConditionFocusRef.current = true;
+                setEditingConditionKey(`${group.id}:${nextConditions.length - 1}`);
+                void updateGroup(group.id, nextConditions);
               }}
             />
           </div>

@@ -298,7 +298,7 @@ export const frenchTranslation = {
       progress: {
         uploading: 'Envoi du fichier… {{percentage}} %',
         processing: 'Fichier reçu. Analyse et création de l’histoire…',
-        analyzing: '{{phase}} — {{completed}} / {{total}}',
+        analyzing: '{{phase}} - {{completed}} / {{total}}',
         currentFile: 'Fichier en cours : {{file}}',
         phases: {
           decoding: 'Décodage des fichiers QSP',
@@ -511,7 +511,6 @@ export const frenchTranslation = {
     clickCanvas: 'Cliquez sur le graphe',
     commentEntity: 'Commenter cet élément',
     commentScene: 'Commenter cette scène',
-    commentSelection: 'Texte sélectionné',
     selectTextHelp:
       'Sélectionnez du texte dans un titre ou une description, puis utilisez cette action.',
     triggerSummary_one: '{{count}} condition dans ce trigger.',
@@ -971,7 +970,7 @@ export const frenchTranslation = {
     deleteConfirm: 'Supprimer "{{name}}", ses rattachements, ses effets et ses conditions ?',
     type: { number: 'Nombre', boolean: 'Booléen', string: 'Texte' },
     owner: {
-      story: 'Histoire',
+      story: 'Monde',
       character: 'Personnage',
       location: 'Lieu',
       itemDefinition: "Définition d'objet",
@@ -1039,7 +1038,11 @@ export const frenchTranslation = {
     deleteInteraction: 'Supprimer l’interaction',
   },
   triggerInspector: {
-    title: 'Conditions du chemin',
+    title: 'Conditions',
+    noConditions: 'Toujours vraie',
+    editCondition: 'Modifier la condition',
+    and: 'ET',
+    deleteCondition: 'Supprimer la condition {{number}}',
     appearanceProbability: 'Probabilité d’apparition',
     appearanceProbabilityHelp:
       'Un seul tirage déterministe est effectué pour ce déclencheur à chaque étape.',
@@ -1048,7 +1051,6 @@ export const frenchTranslation = {
     variantsHelp:
       'Les groupes sont alternatifs (OU) ; toutes les conditions d’un groupe doivent être vraies (ET).',
     or: 'OU',
-    group: 'Groupe de conditions {{number}}',
     unknownStat: 'Variable inconnue',
     conditionInteraction: 'Interaction de la condition',
     interactionOperator: 'Opérateur de la condition d’interaction',
@@ -1200,11 +1202,11 @@ export const frenchTranslation = {
     variableOrItemFor: 'Variable ou item dans {{name}}',
     chooseVariableOwner: 'Choisissez un élément de la story',
     chooseVariableOrItem: 'Choisissez une variable ou un item',
-    storyVariableOwner: 'Histoire — {{name}}',
-    characterVariableOwner: 'Personnage — {{name}}',
-    locationVariableOwner: 'Lieu — {{name}}',
-    itemVariableOwner: 'Item — {{name}}',
-    variableOption: 'Variable — {{name}}',
+    storyVariableOwner: 'Monde',
+    characterVariableOwner: '{{name}}',
+    locationVariableOwner: '{{name}}',
+    itemVariableOwner: '{{name}}',
+    variableOption: '{{name}}',
     contentLength: 'Longueur du contenu',
   },
   graph: {

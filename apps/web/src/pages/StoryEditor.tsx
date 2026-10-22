@@ -25,6 +25,7 @@ import {
   canDeleteCommentThread as canActorDeleteCommentThread,
   canManageCommentThread as canActorManageCommentThread,
   commentSemanticSlotKey,
+  getTriggerConditionGroups,
   getTriggerConditions,
   isCommentAnchorDetached,
   type Character,
@@ -59,6 +60,7 @@ import { StoryGraphSelectionInspector } from '../components/StoryGraphSelectionI
 import { TriggerEdge } from '../components/TriggerEdge';
 import { TriggerInspector } from '../components/TriggerInspector';
 import { TriggerNode } from '../components/TriggerNode';
+import { describeTriggerCondition } from '../triggerConditionPresentation';
 import { RichTextContent } from '../components/RichTextContent';
 import { CommentPinNode, type CommentPinFlowNode } from '../features/comments/CommentPinNode';
 import { ContextualCommentsRail } from '../features/comments/ContextualCommentsRail';
@@ -750,10 +752,22 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
       buildTriggerNodes(story, selectedTrigger, {
         onSelectTrigger: (interactionId, triggerId) =>
           selectExclusive({ type: 'trigger', trigger: { interactionId, triggerId } }),
+        conditionSummary: (triggers) =>
+          triggers
+            .flatMap((trigger) =>
+              getTriggerConditionGroups(trigger).map(({ conditions }) =>
+                conditions.length === 0
+                  ? t('triggerInspector.noConditions')
+                  : conditions
+                      .map((condition) => describeTriggerCondition(story!, condition, t))
+                      .join(` ${t('triggerInspector.and')} `),
+              ),
+            )
+            .join(` ${t('triggerInspector.or')} `),
         commentCounts: graphCommentCounts,
         onOpenComments: openCommentsForTarget,
       }),
-    [graphCommentCounts, openCommentsForTarget, selectExclusive, story, selectedTrigger],
+    [graphCommentCounts, openCommentsForTarget, selectExclusive, story, selectedTrigger, t],
   );
   const initialFitViewOptions = useMemo(() => getInitialStoryFitViewOptions(story), [story]);
   const narrativeNodes = useMemo(
@@ -2222,12 +2236,13 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
                     className="ghost"
                     type="button"
                     title={t('comments.selectTextHelp')}
+                    aria-label={t('comments.selectTextHelp')}
                     onMouseDown={(event) => {
                       event.preventDefault();
                       startTextComment();
                     }}
                   >
-                    {t('comments.commentSelection')}
+                    <span aria-hidden="true">✎</span>
                   </button>
                 </div>
               ) : null}

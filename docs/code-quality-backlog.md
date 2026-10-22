@@ -281,9 +281,15 @@ operational clarity, not a sign that the existing model is incorrect.
 
 - [ ] Adapt the editor layout to narrow windows by preventing top-bar overflow
       and keeping side panels from obscuring the graph canvas.
-- [ ] Make conditions easier to read by avoiding truncated fields, using a
+- [x] Make conditions easier to read by avoiding truncated fields, using a
       vertical rule layout, exposing ET / OU connectors explicitly, and
-      providing a clear summary of the combined rule.
+      keeping the combined-rule summary available without persistent copy.
+      **Completed 2026-10-22:** Trigger conditions now show concise readable
+      rules by default and reveal vertically stacked controls on demand. The
+      editor has uniform field spacing and collapses on Enter or focus leaving
+      the condition. Explicit AND/OR connectors remain visible, and the combined
+      rule is available from the graph marker tooltip. Empty groups are identified
+      as always matching, preserving their existing semantics.
 - [ ] Distinguish creation from connection by separating "Add interaction" from
       "Link to an existing interaction" and adding destination search.
 - [ ] Improve graph readability with a more suitable working zoom, selection
