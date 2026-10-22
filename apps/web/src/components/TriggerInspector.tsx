@@ -64,10 +64,7 @@ export function TriggerInspector({
     );
   }
 
-  function collapseWhenFocusLeaves(
-    event: FocusEvent<HTMLDivElement>,
-    conditionKey: string,
-  ) {
+  function collapseWhenFocusLeaves(event: FocusEvent<HTMLDivElement>, conditionKey: string) {
     if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
       setEditingConditionKey((current) => (current === conditionKey ? null : current));
     }
@@ -110,11 +107,7 @@ export function TriggerInspector({
                 </button>
               </div>
             ) : null}
-            <div
-              className="conditions"
-              role="group"
-              aria-label={t('triggerInspector.title')}
-            >
+            <div className="conditions" role="group" aria-label={t('triggerInspector.title')}>
               {group.conditions.length === 0 ? (
                 <p className="condition-empty" role="status">
                   {t('triggerInspector.noConditions')}
@@ -130,7 +123,9 @@ export function TriggerInspector({
                     key={conditionKey}
                     ref={isEditing ? activeConditionRef : undefined}
                     onBlur={
-                      isEditing ? (event) => collapseWhenFocusLeaves(event, conditionKey) : undefined
+                      isEditing
+                        ? (event) => collapseWhenFocusLeaves(event, conditionKey)
+                        : undefined
                     }
                     onKeyUp={
                       isEditing ? (event) => collapseOnEnter(event, conditionKey) : undefined

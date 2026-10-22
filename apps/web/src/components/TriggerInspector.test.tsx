@@ -39,8 +39,15 @@ function renderInspector(story: Story, onSaveTrigger = vi.fn().mockResolvedValue
   return onSaveTrigger;
 }
 
-function openConditionEditor(index = 0) {
-  fireEvent.click(screen.getAllByTestId('condition-summary')[index]);
+function openConditionEditor(indexOrText: number | string = 0) {
+  const summary =
+    typeof indexOrText === 'number'
+      ? screen.getAllByTestId('condition-summary')[indexOrText]
+      : screen
+          .getAllByTestId('condition-summary')
+          .find((candidate) => candidate.textContent?.includes(indexOrText));
+  expect(summary).toBeDefined();
+  fireEvent.click(summary!);
 }
 
 describe('TriggerInspector temporal conditions', () => {
@@ -78,9 +85,10 @@ describe('TriggerInspector temporal conditions', () => {
 
     const interaction = screen.getByLabelText('Condition interaction');
     expect(interaction).toBeInTheDocument();
-    expect(screen.queryByTestId('condition-summary')).not.toBeInTheDocument();
+    expect(screen.getAllByTestId('condition-summary')).toHaveLength(2);
     fireEvent.keyUp(screen.getByLabelText('Condition interaction'), { key: 'Enter' });
     expect(screen.queryByLabelText('Condition interaction')).not.toBeInTheDocument();
+    expect(screen.getAllByTestId('condition-summary')).toHaveLength(3);
   });
 
   it('saves an expression comparison only after a valid draft loses focus', () => {
@@ -200,7 +208,7 @@ describe('TriggerInspector temporal conditions', () => {
     openConditionEditor();
 
     expect(screen.getByLabelText('Variable owner')).toBeInTheDocument();
-    expect(screen.getByRole('option', { name: 'Monde -> Timed story' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'World -> Timed story' })).toBeInTheDocument();
   });
 
   it('compares a variable condition with another compatible variable', () => {
@@ -244,8 +252,7 @@ describe('TriggerInspector temporal conditions', () => {
         { id: 'trigger-1', conditions: [{ itemDefinitionId: 'key', isOwned: true }] },
       ],
     });
-    expect(screen.getByLabelText('Condition item')).toBeInTheDocument();
-    expect(screen.queryByTestId('condition-summary')).not.toBeInTheDocument();
+    expect(screen.queryByRole('group', { name: 'Condition type' })).not.toBeInTheDocument();
   });
 
   it('places group delete control over its card and keeps it out of its content flow', async () => {
@@ -256,7 +263,7 @@ describe('TriggerInspector temporal conditions', () => {
     ];
     renderInspector(story);
 
-    const deleteButtons = screen.getAllByRole('button', { name: 'Delete condition group' });
+    const deleteButtons = screen.getAllByRole('button', { name: 'Delete this OR group' });
     expect(deleteButtons).toHaveLength(2);
     expect(deleteButtons[0]).toHaveClass('trigger-variant-delete');
     expect(deleteButtons[0].parentElement).toHaveClass('trigger-variant-header');
@@ -402,33 +409,33 @@ describe('TriggerInspector temporal conditions', () => {
     ];
     const onSaveTrigger = renderInspector(story);
 
-    openConditionEditor(0);
+    openConditionEditor('First source');
     fireEvent.change(screen.getByLabelText('Condition interaction'), {
       target: { value: 'source-2' },
     });
     fireEvent.change(screen.getByLabelText('Interaction condition operator'), {
       target: { value: 'not-visited' },
     });
-    openConditionEditor(1);
+    openConditionEditor('Harbor');
     fireEvent.change(screen.getByLabelText('Condition location'), {
       target: { value: 'location-2' },
     });
     fireEvent.change(screen.getByLabelText('Location condition operator'), {
       target: { value: 'not-current' },
     });
-    openConditionEditor(2);
+    openConditionEditor('Mira');
     fireEvent.change(screen.getByLabelText('Condition character'), {
       target: { value: 'character-2' },
     });
     fireEvent.change(screen.getByLabelText('Character condition operator'), {
       target: { value: 'absent' },
     });
-    openConditionEditor(3);
+    openConditionEditor('Key');
     fireEvent.change(screen.getByLabelText('Condition item'), { target: { value: 'item-2' } });
     fireEvent.change(screen.getByLabelText('Item condition operator'), {
       target: { value: 'not-owned' },
     });
-    openConditionEditor(4);
+    openConditionEditor('Story -> Score');
     fireEvent.change(
       within(screen.getByLabelText('Condition variable')).getAllByRole('combobox')[1],
       { target: { value: 'variable:story:mood' } },

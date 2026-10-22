@@ -315,7 +315,8 @@ describe('StoryEditor graph collaboration and layout', () => {
     expect(
       screen.queryByRole('complementary', { name: 'Comments for the selected element' }),
     ).not.toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Open comments for Title' }));
+    fireEvent.mouseEnter(screen.getByLabelText('Title').closest('.inspector-commentable-field')!);
+    fireEvent.click(screen.getByRole('button', { name: 'Open comments for Title' }));
 
     expect(
       screen.getByRole('complementary', { name: 'Comments for the selected element' }),
@@ -349,7 +350,10 @@ describe('StoryEditor graph collaboration and layout', () => {
 
     await renderEditor(story);
     await user.click(screen.getByTestId('flow-node-interaction-2'));
-    await user.click(screen.getByRole('button', { name: 'Comment on Duration' }));
+    fireEvent.mouseEnter(
+      screen.getByText('Duration').closest('.inspector-commentable-field')!,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Comment on Duration' }));
 
     expect(
       screen.getByRole('complementary', { name: 'Comments for the selected element' }),

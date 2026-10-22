@@ -88,6 +88,9 @@ function CommentBadge({
 function useCommentBadgeVisibility() {
   const badgeId = useId();
   const [hovered, setHovered] = useState(false);
+  const isCommentBadgeTarget = (target: EventTarget | null) =>
+    target instanceof Element && Boolean(target.closest(`[data-comment-badge="${badgeId}"]`));
+
   return {
     badgeId,
     hovered,
@@ -95,14 +98,17 @@ function useCommentBadgeVisibility() {
     fieldHandlers: {
       onMouseEnter: () => setHovered(true),
       onMouseLeave: (event: MouseEvent<HTMLDivElement>) => {
-        const target = event.relatedTarget;
-        if (!(target instanceof Element) || !target.closest(`[data-comment-badge="${badgeId}"]`)) {
-          setHovered(false);
-        }
+        if (!isCommentBadgeTarget(event.relatedTarget)) setHovered(false);
       },
       onFocus: () => setHovered(true),
       onBlur: (event: FocusEvent<HTMLDivElement>) => {
-        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setHovered(false);
+        const target = event.relatedTarget;
+        if (
+          !event.currentTarget.contains(target as Node | null) &&
+          !isCommentBadgeTarget(target)
+        ) {
+          setHovered(false);
+        }
       },
     },
   };

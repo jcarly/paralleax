@@ -187,8 +187,7 @@ describe('StoryEditor triggers', () => {
 
     await user.click(screen.getByTestId('flow-trigger-interaction-2-trigger-a'));
 
-    expect(screen.getByText('Condition group 1')).toBeInTheDocument();
-    expect(screen.getByText('Condition group 2')).toBeInTheDocument();
+    expect(screen.getAllByRole('group', { name: 'Path conditions' })).toHaveLength(2);
     expect(screen.getByText('OR')).toHaveClass('or-divider');
     const deleteGroupButtons = screen.getAllByRole('button', { name: 'Delete this OR group' });
     expect(deleteGroupButtons).toHaveLength(2);
@@ -306,7 +305,7 @@ describe('StoryEditor triggers', () => {
     });
     expect(api.addTrigger).not.toHaveBeenCalled();
     expect(await screen.findByText('OR')).toHaveClass('or-divider');
-    expect(screen.getByText('Condition group 2')).toBeInTheDocument();
+    expect(screen.getAllByRole('group', { name: 'Path conditions' })).toHaveLength(2);
   });
 
   it('allows adding an OR condition group to a root trigger', async () => {
@@ -391,7 +390,7 @@ describe('StoryEditor triggers', () => {
       });
     });
 
-    await user.click(screen.getByRole('button', { name: '\u00d7' }));
+    await user.click(screen.getByRole('button', { name: 'Delete condition 1' }));
     await waitFor(() => {
       expect(api.updateTrigger).toHaveBeenLastCalledWith('story-1', 'interaction-1', 'trigger-1', {
         conditionGroups: [{ id: 'trigger-1', conditions: [] }],
