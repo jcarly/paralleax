@@ -40,6 +40,47 @@ function renderInspector(story: Story, onSaveTrigger = vi.fn().mockResolvedValue
 }
 
 describe('TriggerInspector temporal conditions', () => {
+  it('saves an expression comparison only after a valid draft loses focus', () => {
+    const story = storyWithConditions([
+      { statId: 'score', operator: 'gte', expression: '@{score}' },
+    ]);
+    story.statDefinitions = [{ id: 'number', name: 'Score', valueType: 'number' }];
+    story.stats = [{ id: 'score', statDefinitionId: 'number', initialValue: 2 }];
+    const onSave = renderInspector(story);
+    const field = screen.getByLabelText('Variable effect expression');
+    fireEvent.change(field, { target: { value: '@{score} +' } });
+    fireEvent.blur(field);
+    expect(onSave).not.toHaveBeenCalled();
+    fireEvent.change(field, { target: { value: '@{score} + 2' } });
+    fireEvent.blur(field);
+    expect(onSave).toHaveBeenLastCalledWith('interaction-1', 'trigger-1', {
+      conditionGroups: [
+        {
+          id: 'trigger-1',
+          conditions: [{ statId: 'score', operator: 'gte', expression: '@{score} + 2' }],
+        },
+      ],
+    });
+    fireEvent.change(screen.getByLabelText('Comparison value type'), {
+      target: { value: 'literal' },
+    });
+    expect(onSave).toHaveBeenLastCalledWith('interaction-1', 'trigger-1', {
+      conditionGroups: [
+        { id: 'trigger-1', conditions: [{ statId: 'score', operator: 'gte', value: 2 }] },
+      ],
+    });
+    fireEvent.change(screen.getByLabelText('Comparison value type'), {
+      target: { value: 'expression' },
+    });
+    expect(onSave).toHaveBeenLastCalledWith('interaction-1', 'trigger-1', {
+      conditionGroups: [
+        {
+          id: 'trigger-1',
+          conditions: [{ statId: 'score', operator: 'gte', expression: '@{score}' }],
+        },
+      ],
+    });
+  });
   it('moves Trigger explanations into labeled help tooltips', () => {
     renderInspector(storyWithConditions([]));
 
@@ -330,7 +371,7 @@ describe('TriggerInspector temporal conditions', () => {
       target: { value: '7' },
     });
 
-    expect(onSaveTrigger).toHaveBeenCalledTimes(10);
+    expect(onSaveTrigger).toHaveBeenCalledTimes(11);
     expect(onSaveTrigger).toHaveBeenLastCalledWith('interaction-1', 'trigger-1', {
       conditionGroups: [
         {

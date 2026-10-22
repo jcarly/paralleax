@@ -531,6 +531,11 @@ describe('character stats', () => {
     ];
 
     expect(getJourneyStatValues(story, ['root'])).toEqual({ score: 5, bonus: 10 });
+    story.interactions[0].statEffects = [
+      { statId: 'score', operation: 'set', expression: '@{bonus} / 0' },
+      { statId: 'bonus', operation: 'set', expression: 'true' },
+    ];
+    expect(getJourneyStatValues(story, ['root'])).toEqual({ score: 2, bonus: 3 });
   });
 });
 
@@ -691,6 +696,23 @@ describe('typed stats', () => {
       'battery-1': { 'battery-charge': 12 },
       'battery-2': { 'battery-charge': 10 },
     });
+    story.interactions[0].statEffects = [
+      { statId: 'battery-charge', itemId: 'battery-1', operation: 'set', value: 7 },
+      { statId: 'bonus', operation: 'set', expression: '@{battery-charge|battery-1} * 2' },
+      {
+        statId: 'battery-charge',
+        itemId: 'battery-2',
+        operation: 'set',
+        expression: '@{bonus} + @{battery-charge|battery-1}',
+      },
+    ];
+    const ordered = buildReaderProgressState(story, ['root']);
+    expect(ordered.statValues).toEqual({ bonus: 14 });
+    expect(ordered.itemStatValues).toEqual({
+      'battery-1': { 'battery-charge': 7 },
+      'battery-2': { 'battery-charge': 21 },
+    });
+    expect(getJourneyStatValues(story, ['root'])).toEqual(ordered.statValues);
   });
 
   it('evaluates trigger conditions against the targeted item instance value', () => {

@@ -1,5 +1,12 @@
 import { useState } from 'react';
-import { parseExpression, variableReference, type Story } from '@paralleax/shared';
+import {
+  getStatTargets,
+  getStatValueType,
+  inferExpressionType,
+  variableReference,
+  type StatValueType,
+  type Story,
+} from '@paralleax/shared';
 import { useTranslation } from 'react-i18next';
 import { VariablePicker } from './VariablePicker';
 
@@ -8,29 +15,44 @@ export function ExpressionEditor({
   value,
   onChange,
   onBlur,
+  expectedType,
 }: {
   story: Story;
   value: string;
   onChange: (nextValue: string) => void;
   onBlur?: (nextValue: string) => void;
+  expectedType?: StatValueType;
 }) {
   const { t } = useTranslation();
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [draft, setDraft] = useState(value);
-
-  const isValid = draft.trim() === '' || Boolean(parseExpression(draft));
+  const [editing, setEditing] = useState({ source: value, draft: value });
+  const draft = editing.source === value ? editing.draft : value;
+  const setDraft = (nextValue: string) => setEditing({ source: value, draft: nextValue });
+  const targets = getStatTargets(story);
+  const isValidExpression = (expression: string) => {
+    const resultType = inferExpressionType(expression, ({ id, itemId }) => {
+      const target = targets.find(
+        (candidate) => candidate.assignment.id === id && candidate.itemId === itemId,
+      );
+      return target?.definition ? getStatValueType(target.definition) : undefined;
+    });
+    return resultType !== undefined && (!expectedType || resultType === expectedType);
+  };
+  const isValid = isValidExpression(draft);
 
   return (
     <div className="expression-editor-field">
       <textarea
         aria-label={t('interactionInspector.variableEffectExpression')}
+        aria-invalid={!isValid}
+        maxLength={4000}
         value={draft}
         onChange={(event) => {
           setDraft(event.target.value);
           onChange(event.target.value);
         }}
         onBlur={(event) => {
-          onBlur?.(event.target.value);
+          if (isValidExpression(event.target.value)) onBlur?.(event.target.value);
         }}
       />
       <button type="button" onClick={() => setPickerOpen((open) => !open)}>
@@ -47,11 +69,12 @@ export function ExpressionEditor({
               : reference;
             setDraft(nextValue);
             onChange(nextValue);
+            if (isValidExpression(nextValue)) onBlur?.(nextValue);
             setPickerOpen(false);
           }}
         />
       ) : null}
-      {!isValid ? <small>{t('interactionInspector.invalidExpression')}</small> : null}
+      {!isValid ? <small role="alert">{t('interactionInspector.invalidExpression')}</small> : null}
     </div>
   );
 }

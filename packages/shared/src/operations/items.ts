@@ -1,4 +1,9 @@
 import type { Story } from '../model/index.js';
+import { expressionReferencesAny } from '../expressions/index.js';
+import {
+  cleanStatConditionalTextReferences,
+  removeStatConditionsReferencing,
+} from '../stats/references.js';
 import {
   getTriggerAppearanceProbability,
   getTriggerConditionGroups,
@@ -7,6 +12,8 @@ import {
 } from '../triggers/model.js';
 
 export function deleteItemInstanceFromStory(story: Story, itemId: string): Story {
+  const referencesDeletedItem = (expression?: string) =>
+    expressionReferencesAny(expression, new Set(), new Set([itemId]));
   return {
     ...story,
     characters: (story.characters ?? []).map((character) => ({
@@ -23,17 +30,18 @@ export function deleteItemInstanceFromStory(story: Story, itemId: string): Story
         ({ itemId: affectedItemId }) => affectedItemId !== itemId,
       ),
       statEffects: (interaction.statEffects ?? []).filter(
-        ({ itemId: affectedItemId }) => affectedItemId !== itemId,
+        ({ itemId: affectedItemId, expression }) =>
+          affectedItemId !== itemId && !referencesDeletedItem(expression),
       ),
+      ...cleanStatConditionalTextReferences(interaction, new Set(), new Set([itemId])),
       triggers: interaction.triggers.map((trigger) => ({
         ...toCanonicalTrigger(trigger),
         conditionGroups: getTriggerConditionGroups(trigger).map((group) => ({
           ...group,
-          conditions: group.conditions.filter(
-            (condition) =>
-              !('statId' in condition) ||
-              (condition.itemId !== itemId &&
-                !('comparisonItemId' in condition && condition.comparisonItemId === itemId)),
+          conditions: removeStatConditionsReferencing(
+            group.conditions,
+            new Set(),
+            new Set([itemId]),
           ),
         })),
         appearanceProbability: getTriggerAppearanceProbability(trigger),

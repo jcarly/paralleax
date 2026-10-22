@@ -83,4 +83,38 @@ describe('shared Story cleanup operations', () => {
     ]);
     expect(story.characters?.[0].items).toHaveLength(1);
   });
+
+  it('cleans expressions that reference a removed assignment or exact item', () => {
+    const story = storyFixture();
+    story.interactions[0].statEffects = [
+      { statId: 'durability', itemId: 'key', operation: 'set', expression: '@{energy} + 1' },
+      { statId: 'energy', operation: 'set', expression: '@{durability|key} + 1' },
+    ];
+    story.interactions[0].triggers[0].conditions = [
+      { statId: 'energy', operator: 'gte', expression: '@{durability|key}' },
+      { statId: 'durability', itemId: 'key', operator: 'gte', expression: '@{energy}' },
+    ];
+    story.interactions[0].conditionalTextBlocks = [
+      {
+        id: 'frame',
+        conditions: [...story.interactions[0].triggers[0].conditions],
+      },
+      { id: 'other', conditions: [{ interactionId: 'root', hasBeenVisited: true }] },
+    ];
+    story.interactions[0].body =
+      '<div data-conditional-text-block="frame"><p>Preserved <span data-conditional-text-block="other">content</span></p></div>';
+    for (const cleaned of [
+      deleteStatAssignmentsFromStory(story, new Set(['energy'])),
+      deleteItemInstanceFromStory(story, 'key'),
+    ]) {
+      expect(cleaned.interactions[0].statEffects).toEqual([]);
+      expect(getTriggerConditions(cleaned.interactions[0].triggers[0])).toEqual([]);
+      expect(cleaned.interactions[0].conditionalTextBlocks).toEqual([
+        { id: 'other', conditions: [{ interactionId: 'root', hasBeenVisited: true }] },
+      ]);
+      expect(cleaned.interactions[0].body).toBe(
+        '<div><p>Preserved <span data-conditional-text-block="other">content</span></p></div>',
+      );
+    }
+  });
 });

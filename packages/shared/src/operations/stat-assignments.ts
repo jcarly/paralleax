@@ -1,6 +1,10 @@
 import type { Story } from '../model/index.js';
 import { expressionReferencesAny } from '../expressions/index.js';
 import {
+  cleanStatConditionalTextReferences,
+  removeStatConditionsReferencing,
+} from '../stats/references.js';
+import {
   getTriggerAppearanceProbability,
   getTriggerConditionGroups,
   getTriggerTimerSeconds,
@@ -32,23 +36,12 @@ export function deleteStatAssignmentsFromStory(
         ({ statId, expression }) =>
           !assignmentIds.has(statId) && !expressionReferencesAny(expression, assignmentIds),
       ),
+      ...cleanStatConditionalTextReferences(interaction, assignmentIds),
       triggers: interaction.triggers.map((trigger) => ({
         ...toCanonicalTrigger(trigger),
         conditionGroups: getTriggerConditionGroups(trigger).map((group) => ({
           ...group,
-          conditions: group.conditions.filter((condition) => {
-            if (!('statId' in condition)) return true;
-            const comparisonStatId =
-              'comparisonStatId' in condition ? condition.comparisonStatId : undefined;
-            return (
-              !assignmentIds.has(condition.statId) &&
-              !(comparisonStatId !== undefined && assignmentIds.has(comparisonStatId)) &&
-              !expressionReferencesAny(
-                'expression' in condition ? condition.expression : undefined,
-                assignmentIds,
-              )
-            );
-          }),
+          conditions: removeStatConditionsReferencing(group.conditions, assignmentIds),
         })),
         appearanceProbability: getTriggerAppearanceProbability(trigger),
         timerSeconds: getTriggerTimerSeconds(trigger),

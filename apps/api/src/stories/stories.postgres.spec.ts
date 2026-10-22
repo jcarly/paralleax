@@ -242,6 +242,40 @@ describePostgres('StoriesRepository PostgreSQL integration', () => {
     };
   }
 
+  it('round-trips expressions through full, editor and runtime PostgreSQL projections', async () => {
+    const story = persistedStory();
+    const effects: NonNullable<Story['interactions'][number]['statEffects']> = [
+      { statId: 'stat-1', operation: 'set', expression: '@{stat-1} + 3' },
+      { statId: 'charge-stat', itemId: 'item-1', operation: 'set', expression: '@{stat-1} * 2' },
+    ];
+    story.interactions[0].statEffects = effects;
+    await repository.save(story, ownerId);
+    const fresh = new StoriesRepository(database);
+    expect((await fresh.find(story.id, ownerId))?.interactions[0].statEffects).toEqual(effects);
+    expect(
+      (await fresh.findEditorInteractionContentPage(story.id, ownerId, 1, 100))?.interactions[0]
+        .statEffects,
+    ).toEqual(effects);
+    const runtime = await fresh.findRuntimeSlice(story.id, ownerId, {
+      currentInteractionId: null,
+      interactionIds: ['interaction-1'],
+      page: 1,
+      pageSize: 100,
+    });
+    expect(runtime?.interactions[0].statEffects).toEqual(effects);
+    await fresh.mutate(
+      story.id,
+      (current) => {
+        current.interactions[0].statEffects = [{ ...effects[0], expression: '5 + 6' }];
+        return current;
+      },
+      ownerId,
+    );
+    expect((await fresh.find(story.id, ownerId))?.interactions[0].statEffects).toEqual([
+      { ...effects[0], expression: '5 + 6' },
+    ]);
+  });
+
   it('persists interaction and trigger moves across repository instances', async () => {
     const story = persistedStory();
     await repository.save(story, ownerId);

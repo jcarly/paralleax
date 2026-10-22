@@ -2,8 +2,7 @@ import { useCallback, useRef, useState } from 'react';
 import type { Interaction, ReaderProgressState, Story } from '@paralleax/shared';
 import {
   applyInteractionItemEffects,
-  applyInteractionItemStatChanges,
-  applyInteractionStatChanges,
+  applyInteractionVariableChanges,
   buildReaderProgressState,
   getJourneyDateTime,
 } from '@paralleax/shared';
@@ -72,11 +71,12 @@ export function useReaderSessionState() {
         interaction,
         session.journeyInteractionIds.length,
       );
-      const statValues = applyInteractionStatChanges(
+      const variables = applyInteractionVariableChanges(
         story,
         session.statValues,
+        session.itemStatValues ?? {},
         interaction,
-        session.itemStatValues,
+        ownedItemIds,
       );
       const nextSession: ReaderProgressState = {
         ...session,
@@ -90,15 +90,8 @@ export function useReaderSessionState() {
           : [...session.visitedInteractionIds, interaction.id],
         currentDateTime: getJourneyDateTime(story, journeyInteractionIds),
         currentLocationId: interaction.locationId ?? session.currentLocationId,
-        statValues,
+        ...variables,
         ownedItemIds,
-        itemStatValues: applyInteractionItemStatChanges(
-          story,
-          session.itemStatValues ?? {},
-          interaction,
-          ownedItemIds,
-          statValues,
-        ),
       };
       setSession(nextSession);
       return nextSession;

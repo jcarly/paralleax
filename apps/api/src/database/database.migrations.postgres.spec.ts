@@ -23,6 +23,37 @@ describePostgres('Database migrations PostgreSQL upgrade', () => {
     await pool.end();
   }, 60_000);
 
+  it('upgrades literal effects and enforces exactly one expression or literal value', async () => {
+    await pool.query('DROP SCHEMA public CASCADE');
+    await pool.query('CREATE SCHEMA public');
+    await pool.query(`CREATE TABLE interaction_stat_effects (
+      value jsonb NOT NULL,
+      CONSTRAINT interaction_stat_effects_primitive_value
+        CHECK (jsonb_typeof(value) IN ('number', 'boolean', 'string'))
+    )`);
+    await pool.query(`INSERT INTO interaction_stat_effects(value) VALUES ('2'::jsonb)`);
+    const migration = databaseMigrations.find(
+      ({ id }) => id === '202610210044_stat_effect_expressions',
+    )!;
+    await pool.query(migration.sql);
+    expect(
+      (await pool.query('SELECT value, expression FROM interaction_stat_effects')).rows,
+    ).toEqual([{ value: 2, expression: null }]);
+    await pool.query(`INSERT INTO interaction_stat_effects(expression) VALUES ('1 + 2')`);
+    for (const [value, expression] of [
+      [null, null],
+      ['2', '1 + 2'],
+      [null, ' '],
+    ]) {
+      await expect(
+        pool.query('INSERT INTO interaction_stat_effects(value, expression) VALUES ($1, $2)', [
+          value,
+          expression,
+        ]),
+      ).rejects.toMatchObject({ code: '23514' });
+    }
+  });
+
   it('upgrades flat Groups without losing membership or changing existing Stories', async () => {
     await pool.query('DROP SCHEMA public CASCADE');
     await pool.query('CREATE SCHEMA public');

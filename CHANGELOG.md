@@ -5,7 +5,10 @@
 - Added deterministic typed expressions to variable effects and Trigger
   comparisons, with stable Story/exact-item references, arithmetic, comparisons,
   parentheses, typed API validation, ordered reader replay, PostgreSQL migration
-  `202610210044`, and a shared hierarchical variable picker.
+  `202610210044`, and a shared hierarchical variable picker. Replay preserves
+  interleaved global/item effect order, rejects non-finite results, and cleans
+  expression references when assignments or exact items are removed. Invalid
+  editor expressions remain editable drafts until corrected.
 
 - Reworked Group organization into a compact searchable tree with contextual
   actions, inline rename, subgroup creation, mouse/touch drag-and-drop and

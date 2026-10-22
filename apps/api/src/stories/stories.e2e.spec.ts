@@ -1897,6 +1897,56 @@ unknown_command
     ]);
   });
 
+  it('validates expressions over HTTP and reconstructs their results from the journey', async () => {
+    const story = await createStory();
+    const root = (await createInteraction(story.id)).interactions[0];
+    const definition = await request(httpServer)
+      .post(`/api/stories/${story.id}/stat-definitions`)
+      .send({ name: 'Score', valueType: 'number' })
+      .expect(201);
+    const assigned = await request(httpServer)
+      .post(`/api/stories/${story.id}/stats`)
+      .send({
+        statDefinitionId: definition.body.statDefinition.id,
+        ownerType: 'story',
+        initialValue: 2,
+      })
+      .expect(201);
+    const statId = assigned.body.stats[0].id as string;
+    const effect = { statId, operation: 'set', expression: `(@{${statId}} + 3) * 2` };
+    const interactionUrl = `/api/stories/${story.id}/interactions/${root.id}`;
+    await request(httpServer)
+      .patch(interactionUrl)
+      .send({ statEffects: [effect] })
+      .expect(200);
+    for (const invalid of [
+      { ...effect, expression: true },
+      { ...effect, expression: '@{other-story}' },
+      { ...effect, expression: 'true' },
+      { ...effect, expression: '' },
+      { ...effect, value: 2 },
+    ]) {
+      await request(httpServer)
+        .patch(interactionUrl)
+        .send({ statEffects: [invalid] })
+        .expect(400);
+    }
+    const loaded = await request(httpServer).get(`/api/stories/${story.id}`).expect(200);
+    expect(loaded.body.interactions[0].statEffects).toEqual([effect]);
+    const progress = await request(httpServer)
+      .patch(`/api/stories/${story.id}/progress`)
+      .send({ journeyInteractionIds: [root.id] })
+      .expect(200);
+    expect(progress.body.state.statValues).toEqual({ [statId]: 10 });
+    const condition = { statId, operator: 'gte', expression: `@{${statId}} - 1` };
+    await request(httpServer)
+      .patch(`${interactionUrl}/triggers/${root.triggers[0].id}`)
+      .send({ conditions: [condition] })
+      .expect(200);
+    const reloaded = await request(httpServer).get(`/api/stories/${story.id}`).expect(200);
+    expect(getTriggerConditions(reloaded.body.interactions[0].triggers[0])).toEqual([condition]);
+  });
+
   it('creates typed stats, attaches them, and replays effects and conditions', async () => {
     const story = await createStory();
     const withRoot = await createInteraction(story.id);

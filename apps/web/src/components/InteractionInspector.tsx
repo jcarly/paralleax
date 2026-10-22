@@ -9,7 +9,7 @@ import {
 } from '@paralleax/shared';
 import { useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { getStatTargets, statTargetValueType, type StatTarget } from '../storyStats';
+import { getStatTargets, type StatTarget } from '../storyStats';
 import {
   InspectorCommentField,
   InspectorCommentSlot,
@@ -503,7 +503,10 @@ export function InteractionInspector({
                             story={story}
                             selectedTarget={selectedTarget}
                             filter={(target) =>
-                              statTargetValueType(target) === valueType || !selectedTarget
+                              !statEffects.some(
+                                (candidate, candidateIndex) =>
+                                  candidateIndex !== index && isSameStatTarget(candidate, target),
+                              )
                             }
                             onSelect={({ target }) => {
                               const nextEffects = [...statEffects];
@@ -519,6 +522,10 @@ export function InteractionInspector({
                                   target,
                                 ),
                               };
+                              if (effect.expression !== undefined && nextValueType === valueType) {
+                                delete nextEffects[index].value;
+                                nextEffects[index].expression = effect.expression;
+                              }
                               saveStatEffects(nextEffects);
                             }}
                           />
@@ -572,7 +579,7 @@ export function InteractionInspector({
                                   : '@{}',
                                 value: undefined,
                               };
-                              saveStatEffects(nextEffects, false);
+                              saveStatEffects(nextEffects);
                             }}
                           >
                             {effect.expression !== undefined
@@ -581,8 +588,10 @@ export function InteractionInspector({
                           </button>
                           {effect.expression !== undefined ? (
                             <ExpressionEditor
+                              key={`${effect.statId}:${effect.itemId ?? ''}`}
                               story={story}
                               value={effect.expression}
+                              expectedType={valueType}
                               onChange={(expression) => {
                                 const nextEffects = [...statEffects];
                                 const nextEffect = { ...effect };

@@ -11,6 +11,22 @@ import {
 } from './index.js';
 
 describe('expression engine', () => {
+  it('rejects malformed, excessive, non-finite and incorrectly scoped expressions', () => {
+    for (const source of [
+      '@{x|}',
+      '@{x|y|z}',
+      '@{x y}',
+      '('.repeat(1000) + '1' + ')'.repeat(1000),
+    ]) {
+      expect(parseExpression(source)).toBeUndefined();
+    }
+    expect(parseExpression('1'.repeat(4001))).toBeUndefined();
+    expect(evaluateExpression('@{score|missing}', { score: 4 })).toMatchObject({ ok: false });
+    expect(evaluateExpression('@{toString}', {})).toMatchObject({ ok: false });
+    expect(evaluateExpression(' 1 + - 2 ', {})).toBe(-1);
+    expect(evaluateExpression('true != 1', {})).toMatchObject({ ok: false });
+    expect(evaluateExpression('9'.repeat(309), {})).toMatchObject({ ok: false });
+  });
   it('parses and serializes a canonical arithmetic expression', () => {
     const expr = '@{health} - @{damage} + 10 * 2';
     const parsed = parseExpression(expr);

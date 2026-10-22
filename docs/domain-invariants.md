@@ -123,16 +123,23 @@ details. They should stay covered by tests as the editor grows.
 - A story has at most one playable character in the current reader vertical.
   Selecting a new playable character clears the previous selection.
 - Removing a stat assignment or definition removes interaction stat effects and
-  trigger conditions that reference it, including as a comparison target.
+  conditions that reference it, including as a comparison target or inside an
+  expression. Conditional text retains its content when cleanup removes its
+  final condition.
 - `set` stat effects preserve the declared type. `add` and ordered
   comparisons are numeric only; equality and inequality require matching types.
-  A stat condition compares its target with exactly one typed literal or another
-  same-Story stat target; an item-definition target always includes its exact item instance.
+  A stat condition compares its target with exactly one typed literal, another
+  same-Story stat target, or a validated expression of the matching scalar type;
+  an item-definition target always includes its exact item instance.
   Missing or ill-typed runtime values never default to zero.
 - Effects and conditions target an assignment id. An item-definition assignment
   additionally requires an exact instance of that definition.
 - Removing an item instance also removes stat effects and conditions targeting
-  that exact instance.
+  that exact instance or referencing it inside an expression.
+- Expressions use stable same-Story assignment references and exact item ids for
+  item assignments. They evaluate in authored order across global and item
+  targets after hourly changes. Invalid, missing, ill-typed, or non-finite
+  results do not mutate a target and cannot satisfy a condition.
 - Reader and Simulation progress preserve the probability seed. Reloading or
   stepping backward replays the same rolls; starting a new run creates a new seed.
 - Version 4 Reader and Simulation progress preserve one wall-clock start for the

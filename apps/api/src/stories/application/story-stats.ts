@@ -9,6 +9,8 @@ import {
   inferExpressionType,
   isStatValueOfType,
   expressionReferencesAny,
+  removeStatConditionsReferencing,
+  cleanStatConditionalTextReferences,
   type StatAssignment,
   type StatComparisonOperator,
   type StatCondition,
@@ -379,6 +381,7 @@ function removeStatAssignments(story: Story, assignmentIds: ReadonlySet<string>)
     definition.stats = (definition.stats ?? []).filter(({ id }) => !assignmentIds.has(id));
   }
   for (const interaction of story.interactions) {
+    Object.assign(interaction, cleanStatConditionalTextReferences(interaction, assignmentIds));
     interaction.statEffects = (interaction.statEffects ?? []).filter(
       ({ statId, expression }) =>
         !assignmentIds.has(statId) && !expressionReferencesAny(expression, assignmentIds),
@@ -386,19 +389,7 @@ function removeStatAssignments(story: Story, assignmentIds: ReadonlySet<string>)
     for (const trigger of interaction.triggers) {
       trigger.conditionGroups = getTriggerConditionGroups(trigger).map((group) => ({
         ...group,
-        conditions: group.conditions.filter((condition) => {
-          if (!('statId' in condition)) return true;
-          const comparisonStatId =
-            'comparisonStatId' in condition ? condition.comparisonStatId : undefined;
-          return (
-            !assignmentIds.has(condition.statId) &&
-            !(comparisonStatId !== undefined && assignmentIds.has(comparisonStatId)) &&
-            !expressionReferencesAny(
-              'expression' in condition ? condition.expression : undefined,
-              assignmentIds,
-            )
-          );
-        }),
+        conditions: removeStatConditionsReferencing(group.conditions, assignmentIds),
       }));
       trigger.appearanceProbability = getTriggerAppearanceProbability(trigger);
       trigger.timerSeconds = getTriggerTimerSeconds(trigger);

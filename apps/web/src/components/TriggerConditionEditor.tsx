@@ -285,7 +285,6 @@ function StatConditionFields({
         <VariablePicker
           story={story}
           selectedTarget={selectedTarget}
-          filter={(target) => statTargetValueType(target) === valueType || !selectedTarget}
           onSelect={({ target }) => {
             const nextValueType = statTargetValueType(target);
             onChange({
@@ -386,9 +385,12 @@ function StatConditionFields({
         </select>
       ) : 'expression' in condition ? (
         <ExpressionEditor
+          key={`${condition.statId}:${condition.itemId ?? ''}`}
           story={story}
           value={condition.expression ?? ''}
-          onChange={(expression) =>
+          expectedType={valueType}
+          onChange={() => undefined}
+          onBlur={(expression) =>
             onChange({
               statId: condition.statId,
               ...(condition.itemId ? { itemId: condition.itemId } : {}),

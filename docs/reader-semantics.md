@@ -77,8 +77,7 @@ For conditions:
 - typed stat conditions compare their current value with a typed literal, a
   same-Story assignment, or a deterministic typed expression. Expressions see
   the replay state at that journey step and exact-item references resolve only
-  against the identified item instance;
-  same-Story stat target. Matching values support `=` or `!=`; numeric stats
+  against the identified item instance. Matching values support `=` or `!=`; numeric stats
   additionally support `<`, `<=`, `>`, and `>=`. A missing or mismatched value
   fails the condition;
 - temporal conditions compare the current story-local date, weekday, and time

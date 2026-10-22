@@ -55,9 +55,24 @@ export function variableReference(id: string, itemId?: string): string {
 }
 
 export function parseExpression(expression: string): ExpressionNode | undefined {
-  const parser = new ExpressionParser(expression);
+  if (typeof expression !== 'string' || expression.length > 4000) return undefined;
+  const parser = new ExpressionParser(expression.trim());
   const node = parser.parseComparison();
   if (!node || !parser.isAtEnd()) return undefined;
+  const pending = [{ node, depth: 0 }];
+  while (pending.length) {
+    const entry = pending.pop()!;
+    if (entry.depth > 64) return undefined;
+    const children =
+      entry.node.kind === 'binary'
+        ? [entry.node.left, entry.node.right]
+        : entry.node.kind === 'unary'
+          ? [entry.node.operand]
+          : entry.node.kind === 'group'
+            ? [entry.node.expression]
+            : [];
+    pending.push(...children.map((child) => ({ node: child, depth: entry.depth + 1 })));
+  }
   return node;
 }
 
@@ -86,9 +101,14 @@ export function inferExpressionType(
 export function expressionReferencesAny(
   expression: string | undefined,
   assignmentIds: ReadonlySet<string>,
+  itemIds: ReadonlySet<string> = new Set(),
 ): boolean {
   if (!expression) return false;
-  return getExpressionReferences(expression)?.some(({ id }) => assignmentIds.has(id)) ?? false;
+  return (
+    getExpressionReferences(expression)?.some(
+      ({ id, itemId }) => assignmentIds.has(id) || (itemId !== undefined && itemIds.has(itemId)),
+    ) ?? false
+  );
 }
 
 export function serializeExpression(node: ExpressionNode): string {
@@ -121,7 +141,10 @@ export function evaluateExpression(
   if (!parsed) {
     return { ok: false, error: 'Unable to parse expression' };
   }
-  return evaluateNode(parsed, values);
+  const result = evaluateNode(parsed, values);
+  return typeof result === 'number' && !Number.isFinite(result)
+    ? { ok: false, error: 'Expression result must be finite' }
+    : result;
 }
 
 function evaluateNode(
@@ -133,8 +156,8 @@ function evaluateNode(
       return node.value;
     case 'variable': {
       const key = node.itemId ? `${node.id}|${node.itemId}` : node.id;
-      const value = values[key] ?? values[node.id];
-      if (value === undefined) {
+      const value = Object.hasOwn(values, key) ? values[key] : undefined;
+      if (value === undefined || (typeof value === 'number' && !Number.isFinite(value))) {
         return { ok: false, error: `Unknown variable reference: ${getReferenceName(node)}` };
       }
       return value;
@@ -155,11 +178,14 @@ function evaluateNode(
       if (typeof left === 'object' && left && 'ok' in left && !left.ok) return left;
       const right = evaluateNode(node.right, values);
       if (typeof right === 'object' && right && 'ok' in right && !right.ok) return right;
-      return applyBinaryOperator(
+      const result = applyBinaryOperator(
         node.operator,
         left as ExpressionLiteral,
         right as ExpressionLiteral,
       );
+      return typeof result === 'number' && !Number.isFinite(result)
+        ? { ok: false, error: 'Expression result must be finite' }
+        : result;
     }
     default:
       return { ok: false, error: 'Invalid expression node' };
@@ -229,6 +255,9 @@ function applyBinaryOperator(
 
   const leftNumber = left as number;
   const rightNumber = right as number;
+  if ((operator === '==' || operator === '!=') && typeof left !== typeof right) {
+    return { ok: false, error: 'Equality requires matching operand types' };
+  }
 
   switch (operator) {
     case '+':
@@ -273,6 +302,7 @@ function serializeLiteral(value: ExpressionLiteral): string {
 class ExpressionParser {
   private readonly source: string;
   private index = 0;
+  private depth = 0;
 
   constructor(source: string) {
     this.source = source;
@@ -346,6 +376,17 @@ class ExpressionParser {
   }
 
   private parseUnary(): ExpressionNode | undefined {
+    if (this.depth >= 64) return undefined;
+    this.depth += 1;
+    try {
+      return this.parseUnaryOperand();
+    } finally {
+      this.depth -= 1;
+    }
+  }
+
+  private parseUnaryOperand(): ExpressionNode | undefined {
+    this.skipWhitespace();
     const current = this.peek();
     if (current === '+' || current === '-') {
       this.index += 1;
@@ -376,8 +417,10 @@ class ExpressionParser {
       this.index += 1;
       const rawReference = this.readUntil('}');
       if (!rawReference) return undefined;
-      const [id, itemId] = rawReference.split('|');
-      if (!id) return undefined;
+      const parts = rawReference.split('|');
+      const [id, itemId] = parts;
+      if (parts.length > 2 || !id || (parts.length === 2 && !itemId)) return undefined;
+      if (parts.some((part) => /[\s{}]/.test(part))) return undefined;
       const node: VariableReferenceNode = { kind: 'variable', id, ...(itemId ? { itemId } : {}) };
       this.index += 1;
       return node;
@@ -424,7 +467,7 @@ class ExpressionParser {
         while (this.isDigit()) this.index += 1;
       }
       const raw = this.source.slice(start, this.index);
-      if (!NUMBER_PATTERN.test(raw)) return undefined;
+      if (!NUMBER_PATTERN.test(raw) || !Number.isFinite(Number(raw))) return undefined;
       return { kind: 'literal', value: Number(raw) };
     }
 

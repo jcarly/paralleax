@@ -1,11 +1,84 @@
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { useState } from 'react';
 import type { Story } from '@paralleax/shared';
 import { InteractionInspector } from './InteractionInspector';
 
 afterEach(cleanup);
 
 describe('InteractionInspector time', () => {
+  it.each(['number', 'boolean', 'string'] as const)(
+    'switches a %s effect between a literal and an expression',
+    (valueType) => {
+      const initialValue = valueType === 'number' ? 2 : valueType === 'boolean' ? false : 'calm';
+      const initial: Story = {
+        id: 'story-1',
+        title: 'Story',
+        createdAt: '2026-10-21T08:00:00Z',
+        updatedAt: '2026-10-21T08:00:00Z',
+        statDefinitions: [{ id: 'definition', name: 'State', valueType }],
+        stats: [{ id: 'state', statDefinitionId: 'definition', initialValue }],
+        interactions: [
+          {
+            id: 'root',
+            title: 'Start',
+            body: '',
+            position: { x: 0, y: 0 },
+            triggers: [],
+            statEffects: [{ statId: 'state', operation: 'set', value: initialValue }],
+          },
+        ],
+      };
+      const onPatch = vi.fn().mockResolvedValue(undefined);
+      function Editor() {
+        const [story, setStory] = useState(initial);
+        return (
+          <InteractionInspector
+            story={story}
+            interaction={story.interactions[0]}
+            onChange={setStory}
+            onPatch={onPatch}
+            onDelete={vi.fn()}
+          />
+        );
+      }
+      render(<Editor />);
+      fireEvent.click(screen.getByRole('button', { name: 'Use expression' }));
+      expect(onPatch).toHaveBeenLastCalledWith('root', {
+        statEffects: [
+          { statId: 'state', operation: 'set', value: undefined, expression: '@{state}' },
+        ],
+      });
+      fireEvent.change(screen.getByLabelText('Variable effect expression'), {
+        target: {
+          value:
+            valueType === 'number' ? '@{state} + 1' : valueType === 'boolean' ? 'true' : '"alert"',
+        },
+      });
+      fireEvent.blur(screen.getByLabelText('Variable effect expression'));
+      expect(onPatch).toHaveBeenCalledTimes(2);
+      fireEvent.click(screen.getByRole('button', { name: 'Use literal value' }));
+      expect(onPatch).toHaveBeenLastCalledWith('root', {
+        statEffects: [{ statId: 'state', operation: 'set', value: initialValue }],
+      });
+      const field = screen.getByLabelText('Variable effect value');
+      fireEvent.change(field, {
+        target: {
+          value: valueType === 'number' ? '7' : valueType === 'boolean' ? 'true' : 'alert',
+        },
+      });
+      fireEvent.blur(field);
+      expect(onPatch).toHaveBeenLastCalledWith('root', {
+        statEffects: [
+          {
+            statId: 'state',
+            operation: 'set',
+            value: valueType === 'number' ? 7 : valueType === 'boolean' ? true : 'alert',
+          },
+        ],
+      });
+    },
+  );
   it('adds a typed variable assignment effect', () => {
     const interaction: Story['interactions'][number] = {
       id: 'interaction-1',
