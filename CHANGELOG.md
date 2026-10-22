@@ -18,6 +18,9 @@
   control geometry and focus treatment without depending on graph styles.
   Token removal and authored markup serialization remain unchanged.
 
+- Bound shared eyebrow labels to the root accent token so editor history and
+  reader surfaces keep their intended color outside product-page scopes.
+
 - Improved Trigger condition readability with concise click-to-edit rules,
   uniform vertical field spacing, Enter/outside-focus collapse, explicit AND/OR
   connectors, and a combined-rule tooltip on graph markers. Removed redundant
