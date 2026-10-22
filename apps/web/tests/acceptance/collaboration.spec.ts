@@ -5,6 +5,7 @@ import {
   configureStoryAccess,
   expectSuccessful,
   interactionNode,
+  interactionTitleField,
   inviteStoryCollaborator,
   openStoryAccess,
   registerAndCreateStory,
@@ -32,9 +33,11 @@ test('an owner grants reader then editor access and receives the collaborator ed
 
   await interactionNode(ownerPage, 'New interaction').click();
   const ownerInspector = ownerPage.getByRole('complementary', { name: 'Inspector' });
+  const ownerTitleField = interactionTitleField(ownerInspector);
+  await expect(ownerTitleField).toBeVisible();
   const initialTitleUpdate = waitForInteractionPatch(ownerPage);
-  await ownerInspector.getByLabel('Title').fill('Shared opening');
-  await ownerInspector.getByLabel('Title').blur();
+  await ownerTitleField.fill('Shared opening');
+  await ownerTitleField.blur();
   await expectSuccessful(initialTitleUpdate);
 
   const collaboratorContext = await browser.newContext({
@@ -90,13 +93,15 @@ test('an owner grants reader then editor access and receives the collaborator ed
     const collaboratorInspector = collaboratorPage.getByRole('complementary', {
       name: 'Inspector',
     });
+    const collaboratorTitleField = interactionTitleField(collaboratorInspector);
+    await expect(collaboratorTitleField).toBeVisible();
     const collaboratorUpdate = waitForInteractionPatch(collaboratorPage);
-    await collaboratorInspector.getByLabel('Title').fill('Changed by collaborator');
-    await collaboratorInspector.getByLabel('Title').blur();
+    await collaboratorTitleField.fill('Changed by collaborator');
+    await collaboratorTitleField.blur();
     await expectSuccessful(collaboratorUpdate);
 
     await expect(interactionNode(ownerPage, 'Changed by collaborator')).toBeVisible();
-    await expect(ownerInspector.getByLabel('Title')).toHaveValue('Changed by collaborator');
+    await expect(interactionTitleField(ownerInspector)).toHaveValue('Changed by collaborator');
 
     await ownerPage.reload();
     await collaboratorPage.reload();

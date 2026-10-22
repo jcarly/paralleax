@@ -1,6 +1,7 @@
 import { expect, test, type Page, type Response } from '@playwright/test';
 import {
   expectSuccessful,
+  interactionTitleField,
   registerUser,
   waitForApiResponse,
   waitForInteractionPatch,
@@ -69,12 +70,14 @@ test('opens, navigates, edits, reloads, and simulates a realistically sized Stor
   await page.getByRole('button', { name: 'Next interaction occurrence' }).click();
 
   const inspector = page.getByRole('complementary', { name: 'Inspector' });
-  await expect(inspector.getByLabel('Title')).toHaveValue(finalTitle);
+  const titleField = interactionTitleField(inspector);
+  await expect(titleField).toHaveValue(finalTitle);
   const selectionMs = performance.now() - selectionStartedAt;
   const persistedTitle = `${finalTitle} verified`;
+  await expect(titleField).toBeVisible();
   const titleUpdate = waitForInteractionPatch(page);
-  await inspector.getByLabel('Title').fill(persistedTitle);
-  await inspector.getByLabel('Title').blur();
+  await titleField.fill(persistedTitle);
+  await titleField.blur();
   await expectSuccessful(titleUpdate);
 
   const selectedNode = page.getByTestId('interaction-node').filter({ hasText: persistedTitle });
@@ -126,7 +129,7 @@ test('opens, navigates, edits, reloads, and simulates a realistically sized Stor
     .fill(persistedTitle);
   await page.getByRole('button', { name: 'Next interaction occurrence' }).click();
   await expect(
-    page.getByRole('complementary', { name: 'Inspector' }).getByLabel('Title'),
+    interactionTitleField(page.getByRole('complementary', { name: 'Inspector' })),
   ).toHaveValue(persistedTitle);
 
   await page
@@ -134,7 +137,7 @@ test('opens, navigates, edits, reloads, and simulates a realistically sized Stor
     .fill('Location 0');
   await page.getByRole('button', { name: 'Next interaction occurrence' }).click();
   await expect(
-    page.getByRole('complementary', { name: 'Inspector' }).getByLabel('Title'),
+    interactionTitleField(page.getByRole('complementary', { name: 'Inspector' })),
   ).toHaveValue('Location 0');
   await page.getByRole('link', { name: 'Test from current interaction' }).click();
   await expect(page.getByLabel('Current interaction title')).toHaveValue('Location 0');

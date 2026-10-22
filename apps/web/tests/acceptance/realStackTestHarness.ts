@@ -184,6 +184,10 @@ export function interactionNode(page: Page, title: string) {
   return page.getByTestId('interaction-node').filter({ hasText: title });
 }
 
+export function interactionTitleField(inspector: Locator) {
+  return inspector.getByRole('textbox', { name: 'Title', exact: true });
+}
+
 export async function editInteraction(
   page: Page,
   currentTitle: string,
@@ -192,9 +196,11 @@ export async function editInteraction(
 ) {
   await interactionNode(page, currentTitle).last().click();
   const inspector = page.getByRole('complementary', { name: 'Inspector' });
+  const titleField = interactionTitleField(inspector);
+  await expect(titleField).toBeVisible();
   const titleUpdate = waitForInteractionPatch(page);
-  await inspector.getByLabel('Title').fill(title);
-  await inspector.getByLabel('Title').blur();
+  await titleField.fill(title);
+  await titleField.blur();
   await expectSuccessful(titleUpdate);
 
   const bodyUpdate = waitForInteractionPatch(page);
