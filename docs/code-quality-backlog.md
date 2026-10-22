@@ -356,13 +356,21 @@ unchanged snapshot.
       existing connection-controller tests pass. The CSS correction and original
       root-marker regression landed in `aaead01`; linked-marker coverage is added
       in this D2 change. Resolution commit: `aaead01`.
-- [ ] **DS-03 — Make rich-text token controls own their presentation** (D3).
+- [x] **DS-03 — Make rich-text token controls own their presentation** (D3).
       Remove reliance on graph-only classes for rich-text and conditional-text
       removal controls. Acceptance: same computed placement, color, shape and
       focus treatment in editor, direct reader and direct Simulation routes;
       edit/remove, selection, contenteditable and serialization behavior remain
       unchanged. Depends on existing rich-text token helpers/tests. Resolution
-      commit: TBD.
+      **Completed 2026-10-22:** rich-text surface, interaction/stat token, and
+      conditional-text control rules now live in `apps/web/src/components/richTextEditor.css`
+      and load through the shared web entry stylesheet. A direct Simulation
+      browser test confirms the graph stylesheet is absent while the link and
+      condition removal controls retain their computed placement, color, shape,
+      hover, and keyboard-focus treatment; the same values match in the editor.
+      Existing component tests cover token removal, conditional-frame unwrapping,
+      contenteditable ownership, and clean authored serialization. Resolution
+      commit: `7dbd8ec`.
 - [ ] **DS-04 — Resolve tokens outside product-page scope** (D4). Reuse semantic
       root tokens for shared badges and story settings; do not add a second
       palette. Acceptance: no production CSS consumer outside the product-page
