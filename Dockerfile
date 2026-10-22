@@ -4,7 +4,7 @@
 # such as Railway, can set RUNTIME_TARGET=api for the API service.
 ARG RUNTIME_TARGET=web
 
-FROM node:24-alpine AS build
+FROM node:25-alpine AS build
 
 ARG VITE_FORMBRICKS_WORKSPACE_ID=
 ARG VITE_FORMBRICKS_APP_URL=
@@ -40,7 +40,7 @@ COPY . .
 
 RUN npm run build
 
-FROM node:24-alpine AS api
+FROM node:25-alpine AS api
 
 ENV NODE_ENV=production
 ENV PORT=3000
