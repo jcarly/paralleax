@@ -69,9 +69,8 @@ test('an owner grants reader then editor access and receives the collaborator ed
 
     await collaboratorPage.goto(`/stories/${storyId}/edit`);
     await expect(collaboratorPage).toHaveURL(new RegExp(`/stories/${storyId}/play$`));
-    await expect(collaboratorPage.getByRole('button', { name: 'Shared opening' })).toBeVisible();
-    await collaboratorPage.getByRole('button', { name: 'Shared opening' }).click();
     await expect(collaboratorPage.getByRole('heading', { name: 'Shared opening' })).toBeVisible();
+    await expect(collaboratorPage.getByRole('button', { name: 'Shared opening' })).toHaveCount(0);
 
     await changeStoryCollaboratorRole(ownerPage, storyId, collaboratorGrant, 'editor');
 
