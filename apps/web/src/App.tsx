@@ -139,10 +139,10 @@ export function App() {
             <button
               className="product-user"
               type="button"
-              aria-label={`${t('shell.account')}: ${user.displayName}`}
+              aria-label={`${user.displayName.slice(0, 2).toUpperCase()} ${user.displayName}: ${t('shell.account')}`}
               onClick={() => setAccountOpen(true)}
             >
-              <span aria-hidden="true">{user.displayName.slice(0, 2).toUpperCase()}</span>
+              <span aria-hidden="true">{user.displayName.slice(0, 2).toUpperCase()}</span>{' '}
               <span>{user.displayName}</span>
             </button>
             <button

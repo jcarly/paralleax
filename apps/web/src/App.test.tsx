@@ -96,7 +96,7 @@ describe('App', () => {
       </MemoryRouter>,
     );
 
-    await user.click(await screen.findByRole('button', { name: 'Account settings: Author' }));
+    await user.click(await screen.findByRole('button', { name: 'AU Author: Account settings' }));
     const input = await screen.findByLabelText('Display name');
     await user.clear(input);
     await user.type(input, '  Alice   Cooper  ');
@@ -105,7 +105,7 @@ describe('App', () => {
     expect(api.updateCurrentUser).toHaveBeenCalledWith('Alice Cooper');
     expect(await screen.findByText('Alice Cooper')).toBeInTheDocument();
     expect(
-      screen.getByRole('button', { name: 'Account settings: Alice Cooper' }),
+      screen.getByRole('button', { name: 'AL Alice Cooper: Account settings' }),
     ).toBeInTheDocument();
     expect(screen.queryByText('author@example.com')).not.toBeInTheDocument();
   });

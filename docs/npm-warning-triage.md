@@ -57,18 +57,18 @@ testing packages to 11.2.7. Keep the pins until the API and its Nest integration
 are deliberately upgraded together.
 
 The web fixes address two independent checks. The account button's accessible
-name now includes its visible account label and the signed-in user's display
-name. The story import dialog loads on demand, bringing the production initial
-JavaScript bundle to 131.9/135 KiB while keeping editor and player budgets within
-their existing limits.
+name includes its visible initials and display name before the account action
+label, satisfying axe's visible text name check. The story import dialog loads
+on demand, bringing the production initial JavaScript bundle to 131.9/135 KiB
+while keeping editor and player budgets within their existing limits.
 
 After these fixes, the full shared, API, and web coverage command passed (shared:
 148 tests; API: 45 suites and 320 passing tests; web: 84 files and 561 passing
 tests, with statements at the 90% threshold). Lint, formatting, typecheck,
-operations tests (15 passing), and production build passed as well. The local
-browser acceptance suite was not rerun because the Playwright Chromium binary is
-unavailable in this environment; the CI browser job should verify the updated
-accessibility and editor flows.
+operations tests (15 passing), production build, and the full web Playwright
+suite (40 tests with two workers) passed as well. Two layout-quality cases still
+exercise documented routing defects under Playwright's expected-failure mode;
+they do not fail the suite.
 
 `npm audit --omit=dev` reports zero production vulnerabilities. The full audit
 reports 20 moderate findings, all in the development-only Jest coverage chain:
