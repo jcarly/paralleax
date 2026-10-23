@@ -25,6 +25,7 @@ import {
 import { api } from '../api';
 import { apiErrorMessage } from '../apiErrorMessages';
 import { RichTextContent } from '../components/RichTextContent';
+import { hasVisibleRichTextContent } from '../components/richTextProjection';
 import { RichTextEditor } from '../components/RichTextEditor';
 import { StoryCommentsPanel } from '../features/comments/StoryCommentsPanel';
 import { useStoryComments } from '../features/comments/useStoryComments';
@@ -144,6 +145,16 @@ export function StoryPlayer({
   const [timerNow, setTimerNow] = useState(() => Date.now());
   const directStartAutosavedKey = useRef('');
   const committedChoiceStep = useRef('');
+  const automaticTransitionPath = useRef<
+    | {
+        storyId: string;
+        journeyLength: number;
+        interactionId: string;
+        interactionIds: Set<string>;
+      }
+    | undefined
+  >(undefined);
+  const blockedAutomaticChoiceStep = useRef('');
   const readerNavigationVersion = useRef(0);
   const realtimeLoadAttempt = useRef(0);
   const simulationEditDepth = useRef(0);
@@ -217,6 +228,8 @@ export function StoryPlayer({
       .then(({ positioned, progress, effectiveStartInteractionId, loadedProgressMode }) => {
         if (cancelled) return;
         committedChoiceStep.current = '';
+        automaticTransitionPath.current = undefined;
+        blockedAutomaticChoiceStep.current = '';
         setTimerNow(Date.now());
         const reconciledProgress = progress
           ? replaySession(
@@ -772,8 +785,12 @@ export function StoryPlayer({
   }, [editingChoiceId]);
 
   const choose = useCallback(
-    (interaction: Interaction) => {
+    (interaction: Interaction, automaticTransition = false) => {
       if (!story) return;
+      if (!automaticTransition) {
+        automaticTransitionPath.current = undefined;
+        blockedAutomaticChoiceStep.current = '';
+      }
       const now = Date.now();
       if (!(isSimulationMode && forceUnavailableOptions)) {
         const startedAt = currentStepStartedAt ? Date.parse(currentStepStartedAt) : now;
@@ -859,11 +876,98 @@ export function StoryPlayer({
     runtimeSliceReady,
   ]);
 
+  useEffect(() => {
+    if (
+      isSimulationMode ||
+      loadedKey !== loadKey ||
+      !runtimeSliceReady ||
+      !current ||
+      journey.length === 0 ||
+      (playableCharacters.length > 0 && !playedCharacter)
+    ) {
+      return;
+    }
+
+    const stepKey = [
+      story?.id ?? '',
+      story?.revision ?? 0,
+      journey.length,
+      current.id,
+      currentStepStartedAt ?? '',
+      choices.map(({ id }) => id).join(','),
+    ].join(':');
+    if (blockedAutomaticChoiceStep.current === stepKey) return;
+
+    if (
+      !story ||
+      hasVisibleRichTextContent(
+        current.body,
+        conditionalTextState,
+        conditionalTextBlockState,
+        statValues,
+        itemStatValues,
+      ) ||
+      choices.length !== 1
+    ) {
+      automaticTransitionPath.current = undefined;
+      return;
+    }
+
+    const previousPath = automaticTransitionPath.current;
+    const interactionIds =
+      previousPath?.storyId === story.id &&
+      previousPath.journeyLength === journey.length &&
+      previousPath.interactionId === current.id
+        ? new Set(previousPath.interactionIds)
+        : new Set([current.id]);
+    const destination = choices[0];
+    if (interactionIds.has(destination.id)) {
+      blockedAutomaticChoiceStep.current = stepKey;
+      automaticTransitionPath.current = undefined;
+      return;
+    }
+
+    interactionIds.add(destination.id);
+    automaticTransitionPath.current = {
+      storyId: story.id,
+      journeyLength: journey.length + 1,
+      interactionId: destination.id,
+      interactionIds,
+    };
+
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (!cancelled) choose(destination, true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    choices,
+    choose,
+    conditionalTextBlockState,
+    conditionalTextState,
+    current,
+    currentStepStartedAt,
+    isSimulationMode,
+    journey.length,
+    loadKey,
+    loadedKey,
+    playableCharacters.length,
+    playedCharacter,
+    runtimeSliceReady,
+    statValues,
+    itemStatValues,
+    story,
+  ]);
+
   function restart() {
     comments.cancelDraft();
     comments.selectThread(undefined);
     directStartAutosavedKey.current = '';
     committedChoiceStep.current = '';
+    automaticTransitionPath.current = undefined;
+    blockedAutomaticChoiceStep.current = '';
     readerNavigationVersion.current += 1;
     setTimerNow(Date.now());
     if (story) {
@@ -908,6 +1012,8 @@ export function StoryPlayer({
   }) {
     if (!story) return;
     committedChoiceStep.current = '';
+    automaticTransitionPath.current = undefined;
+    blockedAutomaticChoiceStep.current = '';
     readerNavigationVersion.current += 1;
     setTimerNow(Date.now());
     const loadedStory = await loadStoryRuntimeSlice(

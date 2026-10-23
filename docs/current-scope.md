@@ -47,6 +47,12 @@ Paralleax currently includes:
 - Reader mode starts its single available opening Interaction automatically
   after any playable-character selection. Multiple opening choices remain
   selectable, and Simulation Mode keeps explicit start selection.
+- In Reader mode, an Interaction whose body has no visible output in its current
+  state advances automatically when exactly one destination is currently
+  available. The normal Trigger rules and selection path still apply, so effects,
+  duration, location changes, journey entries, and saves remain consistent.
+  The Reader continues through such Interactions until content, a branch, an
+  ending, or a repeated destination. Simulation Mode keeps them selectable.
 - Story-local deterministic calendar time.
 - Locations.
 - Characters.
@@ -265,7 +271,7 @@ Paralleax currently includes:
 The following remain future or incomplete unless a task explicitly implements them:
 
 - calculated/read-only stats, reactive formulas, and dependency graphs;
-- automatic choices and probabilistic automatic execution;
+- delayed or probabilistic automatic choices;
 - explicit final/completed story semantics;
 - anonymous or offline reader-progress saves;
 - collaborative text merging and durable offline authoring for an already-open

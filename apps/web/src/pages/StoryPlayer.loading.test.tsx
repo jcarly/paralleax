@@ -225,6 +225,124 @@ describe('StoryPlayer loading and presentation', () => {
     expect(screen.getByText('Start')).toBeInTheDocument();
   });
 
+  it('automatically passes through a body with no visible content and applies its state changes', async () => {
+    const user = userEvent.setup();
+    const passThroughStory = structuredClone(story);
+    passThroughStory.startDateTime = '2026-07-27T09:00';
+    passThroughStory.locations = [{ id: 'harbor', name: 'Harbor', description: '' }];
+    passThroughStory.statDefinitions = [
+      { id: 'score-definition', name: 'Score', valueType: 'number' },
+    ];
+    passThroughStory.stats = [
+      { id: 'score', statDefinitionId: 'score-definition', initialValue: 0 },
+    ];
+    passThroughStory.interactions[1] = {
+      ...passThroughStory.interactions[1],
+      body: '<div data-conditional-text-block="hidden-only"><p>Hidden text</p></div>',
+      conditionalTextBlocks: [
+        {
+          id: 'hidden-only',
+          conditions: [{ interactionId: 'hidden', hasBeenVisited: true }],
+        },
+      ],
+      durationMinutes: 60,
+      locationId: 'harbor',
+      statEffects: [{ statId: 'score', operation: 'set', value: 3 }],
+    };
+    passThroughStory.interactions[2].triggers[0].conditions = [
+      { statId: 'score', operator: 'gte', value: 3 },
+      { locationId: 'harbor', isCurrentLocation: true },
+    ];
+    passThroughStory.interactions[2].triggers.push({
+      ...passThroughStory.interactions[2].triggers[0],
+      id: 'trigger-hidden-alternative',
+    });
+
+    await renderPlayer('/stories/story-1/play', passThroughStory);
+    expect(await screen.findByRole('heading', { name: 'Start' })).toBeInTheDocument();
+    await user.click(await screen.findByRole('button', { name: 'Next' }));
+
+    expect(await screen.findByRole('heading', { name: 'Secret' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Next' })).not.toBeInTheDocument();
+    expect(screen.getByText('Harbor')).toBeInTheDocument();
+    expect(screen.getByText('2026-07-27 10:00')).toBeInTheDocument();
+    await waitFor(() =>
+      expect(api.saveReaderProgress).toHaveBeenLastCalledWith(
+        'story-1',
+        expect.objectContaining({ journeyInteractionIds: ['start', 'next', 'hidden'] }),
+        'reader',
+      ),
+    );
+  });
+
+  it('keeps an empty interaction visible when its only destination is unavailable', async () => {
+    const user = userEvent.setup();
+    const gatedStory = structuredClone(story);
+    gatedStory.interactions[1].body = '<p><br></p>';
+    gatedStory.interactions[2].triggers[0].conditions = [
+      { interactionId: 'hidden', hasBeenVisited: true },
+    ];
+
+    await renderPlayer('/stories/story-1/play', gatedStory);
+    await user.click(await screen.findByRole('button', { name: 'Next' }));
+
+    expect(await screen.findByRole('heading', { name: 'Next' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Secret' })).not.toBeInTheDocument();
+  });
+
+  it('keeps an empty interaction visible when more than one destination is available', async () => {
+    const user = userEvent.setup();
+    const branchingStory = structuredClone(story);
+    branchingStory.interactions[1].body = '<p><br></p>';
+    branchingStory.interactions.push({
+      id: 'alternative',
+      title: 'Alternative',
+      body: 'Another path.',
+      position: { x: 300, y: 0 },
+      triggers: [{ id: 'trigger-alternative', inputInteractionIds: ['next'], conditions: [] }],
+    });
+
+    await renderPlayer('/stories/story-1/play', branchingStory);
+    await user.click(await screen.findByRole('button', { name: 'Next' }));
+
+    expect(await screen.findByRole('heading', { name: 'Next' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Secret' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Alternative' })).toBeInTheDocument();
+  });
+
+  it('stops automatic pass-through before repeating an interaction in a cycle', async () => {
+    const user = userEvent.setup();
+    const cyclicStory = structuredClone(story);
+    cyclicStory.interactions[1].body = '<p><br></p>';
+    cyclicStory.interactions[2].body = '<p></p>';
+    cyclicStory.interactions[1].triggers[0].inputInteractionIds.push('hidden');
+
+    await renderPlayer('/stories/story-1/play', cyclicStory);
+    await user.click(await screen.findByRole('button', { name: 'Next' }));
+
+    expect(await screen.findByRole('heading', { name: 'Secret' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Next' })).toBeInTheDocument();
+    await waitFor(() =>
+      expect(api.saveReaderProgress).toHaveBeenLastCalledWith(
+        'story-1',
+        expect.objectContaining({ journeyInteractionIds: ['start', 'next', 'hidden'] }),
+        'reader',
+      ),
+    );
+  });
+
+  it('keeps empty interactions selectable in Simulation Mode', async () => {
+    const user = userEvent.setup();
+    const emptyOpening = structuredClone(story);
+    emptyOpening.interactions[0].body = '<p><br></p>';
+
+    await renderPlayer('/stories/story-1/play?mode=simulation', emptyOpening);
+    await user.click(await screen.findByRole('button', { name: 'Start' }));
+
+    expect(await screen.findByDisplayValue('Start')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Next' })).toBeInTheDocument();
+  });
+
   it('keeps the opening choices when more than one interaction is available', async () => {
     const multipleOpenings = structuredClone(story);
     multipleOpenings.interactions.push({

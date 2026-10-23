@@ -6,6 +6,11 @@
   after any playable-character selection. Multiple starts remain selectable, and
   Simulation Mode keeps its explicit start choice.
 
+- Reader mode now passes through Interactions with no visible body output when
+  one unique destination is available. Normal Trigger evaluation and selection
+  apply each step's effects, duration, location, journey entry, and save; a cycle
+  guard stops before repeating a destination. Simulation Mode remains explicit.
+
 - Fixed product dialogs appearing below the application header and allowed
   background controls to receive keyboard focus while a dialog was open.
   Dialogs now share a body portal that isolates the background, preserves the
