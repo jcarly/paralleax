@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Creating an Interaction by clicking a creation action or dropping a
+  connection on empty canvas now selects it and opens its inspector.
+
 - Reader mode now opens a unique available starting Interaction directly,
   after any playable-character selection. Multiple starts remain selectable, and
   Simulation Mode keeps its explicit start choice.

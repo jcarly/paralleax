@@ -372,13 +372,46 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
   });
   const emphasizedInteractionIds = groupInteractionIds ?? contextEmphasizedInteractionIds;
 
+  const getClickCreationPosition = useCallback(
+    (creation: StoryGraphClickCreation) =>
+      story ? getStoryGraphClickCreationPosition(story, creation, { interactionSizes }) : undefined,
+    [interactionSizes, story],
+  );
+  const focusInteractionNode = useCallback(
+    (interactionId: string) => {
+      pendingFocusInteractionIdRef.current = interactionId;
+      selectInteraction(interactionId);
+    },
+    [selectInteraction],
+  );
+  const createChildAndFocus = useCallback(
+    async (sourceId: string, position?: Position) => {
+      const interactionId = await createChildFromInteraction(
+        sourceId,
+        position ?? (await getClickCreationPosition({ kind: 'child', sourceId })),
+      );
+      if (interactionId) focusInteractionNode(interactionId);
+    },
+    [createChildFromInteraction, focusInteractionNode, getClickCreationPosition],
+  );
+  const createParentAndFocus = useCallback(
+    async (targetId: string, position?: Position) => {
+      const interactionId = await createParentForInteraction(
+        targetId,
+        position ?? (await getClickCreationPosition({ kind: 'parent', targetId })),
+      );
+      if (interactionId) focusInteractionNode(interactionId);
+    },
+    [createParentForInteraction, focusInteractionNode, getClickCreationPosition],
+  );
+
   const connectionController = useStoryConnectionController({
     story,
     flowInstanceRef: flowInstance,
     connectInteractions,
     connectToExistingTrigger,
-    createChildFromInteraction,
-    createParentForInteraction,
+    createChildFromInteraction: createChildAndFocus,
+    createParentForInteraction: createParentAndFocus,
   });
   const { requestConnection, startCanvasConnection, endCanvasConnection } = connectionController;
 
@@ -662,18 +695,6 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
     [restoreStoredCommentThread],
   );
 
-  const getClickCreationPosition = useCallback(
-    (creation: StoryGraphClickCreation) =>
-      story ? getStoryGraphClickCreationPosition(story, creation, { interactionSizes }) : undefined,
-    [interactionSizes, story],
-  );
-  const focusInteractionNode = useCallback(
-    (interactionId: string) => {
-      pendingFocusInteractionIdRef.current = interactionId;
-      selectInteraction(interactionId);
-    },
-    [selectInteraction],
-  );
   const createRootFromClick = useCallback(
     async (position?: Position) => {
       const interactionId = await createRoot(
@@ -684,38 +705,15 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
     },
     [createRoot, focusInteractionNode, getClickCreationPosition],
   );
-  const createChildFromClick = useCallback(
-    async (sourceId: string) => {
-      const interactionId = await createChildFromInteraction(
-        sourceId,
-        await getClickCreationPosition({ kind: 'child', sourceId }),
-      );
-      if (!interactionId) return;
-      focusInteractionNode(interactionId);
-    },
-    [createChildFromInteraction, focusInteractionNode, getClickCreationPosition],
-  );
-  const createParentFromClick = useCallback(
-    async (targetId: string) => {
-      const interactionId = await createParentForInteraction(
-        targetId,
-        await getClickCreationPosition({ kind: 'parent', targetId }),
-      );
-      if (!interactionId) return;
-      focusInteractionNode(interactionId);
-    },
-    [createParentForInteraction, focusInteractionNode, getClickCreationPosition],
-  );
-
   const storyNodes = useMemo(
     () =>
       buildInteractionNodes(story, selectedId, selectedTrigger, {
         onCreateChild: reviewOnly
           ? undefined
-          : (interactionId) => void createChildFromClick(interactionId),
+          : (interactionId) => void createChildAndFocus(interactionId),
         onCreateParent: reviewOnly
           ? undefined
-          : (interactionId) => void createParentFromClick(interactionId),
+          : (interactionId) => void createParentAndFocus(interactionId),
         onSelectRootTrigger: (interactionId, triggerId) =>
           selectExclusive({ type: 'trigger', trigger: { interactionId, triggerId } }),
         occurrenceCounts,
@@ -724,8 +722,8 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
         onOpenComments: openCommentsForTarget,
       }),
     [
-      createChildFromClick,
-      createParentFromClick,
+      createChildAndFocus,
+      createParentAndFocus,
       occurrenceCounts,
       emphasizedInteractionIds,
       graphCommentCounts,
@@ -2071,7 +2069,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
               onAddChild={() => {
                 const target = canvasContextMenu.target;
                 if (target.kind === 'interaction') {
-                  void createChildFromClick(target.interactionId);
+                  void createChildAndFocus(target.interactionId);
                 }
               }}
               onDelete={() => {

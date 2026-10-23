@@ -181,7 +181,9 @@ Paralleax currently includes:
 - Editor-only React Flow graph authoring. Dropping a connection on an
   interaction's input `+` creates a dedicated Trigger; dropping on a visible
   Trigger marker adds the input to that existing Trigger without a follow-up
-  choice dialog.
+  choice dialog. Creating an Interaction by clicking a creation action or
+  dropping an unfinished connection on the canvas selects it and opens its
+  inspector.
 - Trigger condition inspectors show concise readable rules by default and open
   vertically stacked, full-width editing fields on demand. AND/OR connectors
   remain visible, and the combined rule appears on the graph marker's tooltip.
