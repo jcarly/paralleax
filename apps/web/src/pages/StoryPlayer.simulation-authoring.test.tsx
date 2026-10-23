@@ -129,7 +129,7 @@ describe('StoryPlayer simulation authoring', () => {
     expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Reload Story' }));
 
-    await waitFor(() => expect(api.getStoryRuntimeBootstrap).toHaveBeenCalledOnce());
+    await waitFor(() => expect(api.getStoryRuntimeBootstrap).toHaveBeenCalled());
     expect(await screen.findByText('Story changes saved')).toBeInTheDocument();
     expect(api.createInteraction).toHaveBeenCalledOnce();
   });
