@@ -96,7 +96,7 @@ describe('App', () => {
       </MemoryRouter>,
     );
 
-    await user.click(await screen.findByRole('button', { name: 'Account settings' }));
+    await user.click(await screen.findByRole('button', { name: 'Account settings: Author' }));
     const input = await screen.findByLabelText('Display name');
     await user.clear(input);
     await user.type(input, '  Alice   Cooper  ');
@@ -104,6 +104,9 @@ describe('App', () => {
 
     expect(api.updateCurrentUser).toHaveBeenCalledWith('Alice Cooper');
     expect(await screen.findByText('Alice Cooper')).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Account settings: Alice Cooper' }),
+    ).toBeInTheDocument();
     expect(screen.queryByText('author@example.com')).not.toBeInTheDocument();
   });
 
@@ -183,6 +186,16 @@ describe('App', () => {
     expect(await screen.findByText('Lecteur mock')).toBeInTheDocument();
   });
 
+  it('routes Story access links through the editor access settings', async () => {
+    render(
+      <MemoryRouter initialEntries={['/stories/story-1/access']}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText('Editeur mock')).toBeInTheDocument();
+  });
+
   it('shows the anonymous story library and authentication actions without a session', async () => {
     vi.mocked(api.me).mockRejectedValue(new Error('Unauthorized'));
     render(
@@ -241,6 +254,21 @@ describe('App', () => {
     expect(api.login).toHaveBeenCalledWith('author@example.com', 'secret-password');
   });
 
+  it('keeps the protected destination when switching from sign in to registration', async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.me).mockRejectedValue(new Error('Unauthorized'));
+    render(
+      <MemoryRouter initialEntries={['/login?returnTo=%2Fstories%2Fstory-1%2Fedit']}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    await user.click(await screen.findByRole('button', { name: 'Create an account' }));
+
+    expect(await screen.findByRole('heading', { name: 'Create your account' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Display name')).toBeInTheDocument();
+  });
+
   it('opens registration directly from its public route', async () => {
     vi.mocked(api.me).mockRejectedValue(new Error('Unauthorized'));
     render(
@@ -250,6 +278,96 @@ describe('App', () => {
     );
 
     expect(await screen.findByRole('heading', { name: 'Create your account' })).toBeInTheDocument();
+  });
+
+  it('verifies an email from its account action link and returns to the library', async () => {
+    const user = userEvent.setup();
+    const verifiedUser = {
+      id: 'verified-user',
+      email: 'verified@example.com',
+      displayName: 'Verified Author',
+      role: 'user' as const,
+      createdAt: '2026-01-01T00:00:00.000Z',
+    };
+    const token = '0123456789abcdef0123456789abcdef';
+    vi.mocked(api.verifyEmail).mockResolvedValue(verifiedUser);
+
+    render(
+      <MemoryRouter initialEntries={[`/verify-email?token=${token}`]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    await user.click(await screen.findByRole('button', { name: 'Verify and sign in' }));
+
+    expect(api.verifyEmail).toHaveBeenCalledWith(token);
+    expect(await screen.findByText('Stories mock for verified-user')).toBeInTheDocument();
+  });
+
+  it('resets a password from its account action link and returns to the library', async () => {
+    const user = userEvent.setup();
+    const resetUser = {
+      id: 'reset-user',
+      email: 'reset@example.com',
+      displayName: 'Reset Author',
+      role: 'user' as const,
+      createdAt: '2026-01-01T00:00:00.000Z',
+    };
+    const token = 'abcdef0123456789abcdef0123456789';
+    vi.mocked(api.resetPassword).mockResolvedValue(resetUser);
+
+    render(
+      <MemoryRouter initialEntries={[`/reset-password?token=${token}`]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    await user.type(await screen.findByLabelText('Password'), 'a-secure-password');
+    await user.type(screen.getByLabelText('Confirm password'), 'a-secure-password');
+    await user.click(screen.getByRole('button', { name: 'Save new password' }));
+
+    expect(api.resetPassword).toHaveBeenCalledWith(token, 'a-secure-password');
+    expect(await screen.findByText('Stories mock for reset-user')).toBeInTheDocument();
+  });
+
+  it('requests a password reset and returns to sign in', async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.me).mockRejectedValue(new Error('Unauthorized'));
+    vi.mocked(api.requestPasswordReset).mockResolvedValue(undefined);
+
+    render(
+      <MemoryRouter initialEntries={['/forgot-password']}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    await user.type(await screen.findByLabelText('Email address'), 'author@example.com');
+    await user.click(screen.getByRole('button', { name: 'Send reset instructions' }));
+    expect(
+      await screen.findByText(
+        'If an eligible account exists for this email address, reset instructions have been sent.',
+      ),
+    ).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Back to sign in' }));
+
+    expect(
+      await screen.findByRole('heading', { name: 'Sign in to Paralleax' }),
+    ).toBeInTheDocument();
+  });
+
+  it('signs out and returns to the anonymous library', async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.logout).mockResolvedValue(undefined);
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    await user.click(await screen.findByRole('button', { name: 'Sign out' }));
+
+    expect(api.logout).toHaveBeenCalledOnce();
+    expect(await screen.findByText('Anonymous stories mock')).toBeInTheDocument();
   });
 
   it('returns to sign in with a clear notice when the session expires', async () => {

@@ -340,7 +340,7 @@ describe('StoryList', () => {
       type: 'text/plain',
     });
     const ending = new File(['The end.\n*ending'], 'ending.txt', { type: 'text/plain' });
-    await user.upload(screen.getByLabelText('ChoiceScript scene files'), [startup, ending]);
+    await user.upload(await screen.findByLabelText('ChoiceScript scene files'), [startup, ending]);
     expect(screen.getByText('2 files selected')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Import story' }));
 
@@ -422,6 +422,7 @@ describe('StoryList', () => {
     );
     await screen.findByRole('heading', { name: 'No stories found' });
     await user.click(screen.getByRole('button', { name: 'Import a story' }));
+    await screen.findByLabelText('Source format');
     await user.selectOptions(screen.getByLabelText('Source format'), 'qsp');
     const source = "# Start\n*pl 'Start.'\n---";
     await user.upload(
@@ -485,6 +486,7 @@ describe('StoryList', () => {
     );
     await screen.findByRole('heading', { name: 'No stories found' });
     await user.click(screen.getByRole('button', { name: 'Import a story' }));
+    await screen.findByLabelText('Source format');
     await user.selectOptions(screen.getByLabelText('Source format'), 'qsp');
     await user.upload(
       screen.getByLabelText('QSP game or location files'),
@@ -575,6 +577,7 @@ describe('StoryList', () => {
     );
     await screen.findByRole('heading', { name: 'No stories found' });
     await user.click(screen.getByRole('button', { name: 'Import a story' }));
+    await screen.findByLabelText('Source format');
     await user.selectOptions(screen.getByLabelText('Source format'), 'qsp');
     await user.upload(
       screen.getByLabelText('QSP game or location files'),
@@ -625,7 +628,7 @@ describe('StoryList', () => {
     await screen.findByRole('heading', { name: 'No stories found' });
     await user.click(screen.getByRole('button', { name: 'Import a story' }));
     await user.upload(
-      screen.getByLabelText('ChoiceScript scene files'),
+      await screen.findByLabelText('ChoiceScript scene files'),
       new File(['A chapter begins.'], 'startup.txt', { type: 'text/plain' }),
     );
     await user.click(screen.getByRole('button', { name: 'Import story' }));
@@ -673,6 +676,7 @@ describe('StoryList', () => {
     );
     await screen.findByRole('heading', { name: 'No stories found' });
     await user.click(screen.getByRole('button', { name: 'Import a story' }));
+    await screen.findByLabelText('Source format');
     await user.selectOptions(screen.getByLabelText('Source format'), 'qsp');
     await user.upload(screen.getByLabelText('QSP game or location files'), [
       new File(['# start\n--- start ---'], 'start.qsrc', { type: 'text/plain' }),
@@ -745,6 +749,7 @@ describe('StoryList', () => {
     );
     await screen.findByRole('heading', { name: 'No stories found' });
     await user.click(screen.getByRole('button', { name: 'Import a story' }));
+    await screen.findByLabelText('Source format');
     await user.selectOptions(screen.getByLabelText('Source format'), 'qsp');
     const source = new File([' '.repeat(81 * 1024)], 'large.qsps', {
       type: 'text/plain',
@@ -942,7 +947,7 @@ describe('StoryList', () => {
 
     await user.click(openingControl);
 
-    expect(screen.getByLabelText('ChoiceScript scene files')).toHaveFocus();
+    expect(await screen.findByLabelText('ChoiceScript scene files')).toHaveFocus();
     await user.keyboard('{Escape}');
 
     expect(
@@ -963,7 +968,7 @@ describe('StoryList', () => {
     );
     await screen.findByRole('heading', { name: 'No stories found' });
     await user.click(screen.getByRole('button', { name: 'Import a story' }));
-    const dialog = screen.getByRole('dialog', { name: 'Import a ChoiceScript project' });
+    const dialog = await screen.findByRole('dialog', { name: 'Import a ChoiceScript project' });
     const fileInput = within(dialog).getByLabelText('ChoiceScript scene files');
     await user.upload(
       fileInput,
