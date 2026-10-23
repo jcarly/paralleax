@@ -44,7 +44,8 @@ export function CommentDiscussionCard({
   }
 
   function collapseReplyOnBlur(event: FocusEvent<HTMLFormElement>) {
-    if (event.currentTarget.contains(event.relatedTarget as Node | null)) return;
+    const discussion = event.currentTarget.closest('.comment-discussion-card');
+    if (discussion?.contains(event.relatedTarget as Node | null)) return;
     onCollapse?.();
   }
 

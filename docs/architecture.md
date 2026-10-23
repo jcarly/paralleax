@@ -211,7 +211,9 @@ this responsibility to the focused service.
 The API Webpack build maps emitted `.js` module specifiers back to TypeScript
 sources when it follows workspace aliases. This keeps the shared package's
 NodeNext-compatible internal imports valid in both its emitted package and the
-API source build.
+API source build. Nest packages remain external to the bundle so the application
+and its Express adapter use the same framework classes, including streamed-file
+responses.
 
 `AuthController` exposes registration, verification, credential recovery, login,
 logout, session revocation, and current-user endpoints. New registrations do not

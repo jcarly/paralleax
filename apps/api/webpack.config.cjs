@@ -3,6 +3,23 @@ const path = require('node:path');
 module.exports = (options) => ({
   ...options,
 
+  // Keep one Nest runtime copy so StreamableFile and other framework classes
+  // retain their identity across the bundled application and Express adapter.
+  externals: [
+    ...(Array.isArray(options.externals)
+      ? options.externals
+      : options.externals
+        ? [options.externals]
+        : []),
+    ({ request }, callback) => {
+      if (request?.startsWith('@nestjs/')) {
+        callback(null, `commonjs ${request}`);
+        return;
+      }
+      callback();
+    },
+  ],
+
   entry: {
     ...(typeof options.entry === 'object' ? options.entry : { main: options.entry }),
 
