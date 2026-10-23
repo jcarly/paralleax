@@ -2,6 +2,7 @@ import { useCallback, useRef } from 'react';
 import type { Connection } from '@xyflow/react';
 import {
   deleteGraphDecorationFromStory,
+  deleteInteractionFromStory,
   deleteTriggerInStory,
   diffStoryGraphPositions,
   getNextChildPosition,
@@ -52,7 +53,6 @@ export function useStoryGraphPersistence({
   story,
   setStory,
   trackSave,
-  mergeIncomingStory,
   deletedTriggerIdsRef,
   deletedTriggerInputKeysRef,
 }: StoryGraphPersistenceDependencies) {
@@ -134,7 +134,7 @@ export function useStoryGraphPersistence({
     );
     const next = await trackSave(() => api.deleteTrigger(storyId, interactionId, triggerId));
     if (!next) return;
-    setStory((current) => (current ? mergeIncomingStory(current, next) : next));
+    setStory((current) => (current ? applyStoryMutationMetadata(current, next) : current));
   }
 
   const deleteTriggerInput = useCallback(
@@ -301,9 +301,16 @@ export function useStoryGraphPersistence({
   }
 
   async function deleteInteraction(interactionId: string) {
-    const next = await trackSave(() => api.deleteInteraction(storyId, interactionId));
-    if (!next) return;
-    setStory((current) => (current ? mergeIncomingStory(current, next) : next));
+    const result = await trackSave(() => api.deleteInteraction(storyId, interactionId));
+    if (!result) return;
+    setStory((current) =>
+      current
+        ? applyStoryMutationMetadata(
+            deleteInteractionFromStory(current, result.interactionId),
+            result,
+          )
+        : current,
+    );
   }
 
   const createGraphDecoration = useCallback(
@@ -335,9 +342,9 @@ export function useStoryGraphPersistence({
       );
       const result = await trackSave(() => api.deleteGraphDecoration(storyId, decorationId));
       if (!result) return;
-      setStory((current) => (current ? mergeIncomingStory(current, result) : result));
+      setStory((current) => (current ? applyStoryMutationMetadata(current, result) : current));
     },
-    [mergeIncomingStory, setStory, storyId, trackSave],
+    [setStory, storyId, trackSave],
   );
 
   return {

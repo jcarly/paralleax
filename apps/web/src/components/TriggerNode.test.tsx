@@ -21,6 +21,7 @@ describe('TriggerNode', () => {
       triggerId: 'trigger-1',
       triggerIds: ['trigger-1'],
       conditionCount: 2,
+      conditionSummary: '"Start" has been visited AND Owns "Key"',
       inputCount: 1,
       orGroupCount: 1,
       selected: true,
@@ -32,6 +33,10 @@ describe('TriggerNode', () => {
     const props = { data } as unknown as Parameters<typeof TriggerNode>[0];
 
     const { container } = render(<TriggerNode {...props} />);
+    expect(screen.getByTestId('flow-trigger-interaction-1-trigger-1')).toHaveAttribute(
+      'title',
+      '1 input, "Start" has been visited AND Owns "Key", 1 trigger variant',
+    );
     fireEvent.click(screen.getByTestId('flow-trigger-interaction-1-trigger-1'));
     fireEvent.click(container.querySelector('.trigger-comment-badge')!);
 

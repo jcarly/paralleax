@@ -8,6 +8,7 @@ const sentrySourceMapUpload = sentrySourceMapUploadConfig(process.env);
 export default defineConfig({
   plugins: [react(), ...(sentrySourceMapUpload ? [sentryVitePlugin(sentrySourceMapUpload)] : [])],
   build: {
+    minify: 'terser',
     manifest: true,
     sourcemap: Boolean(sentrySourceMapUpload),
   },

@@ -532,6 +532,14 @@ describe('story graph mapping', () => {
     expect(buildTriggerEdges(groupedStory)).toHaveLength(6);
   });
 
+  it('projects a formatted condition summary onto a Trigger marker', () => {
+    const nodes = buildTriggerNodes(story, undefined, {
+      conditionSummary: (triggers) => triggers.map(({ id }) => id).join(' OR '),
+    });
+
+    expect(nodes[0].data.conditionSummary).toBe('trigger-linked');
+  });
+
   it('points each Trigger badge at its own open comments', () => {
     const groupedStory = structuredClone(story);
     groupedStory.interactions[1].triggers.push({

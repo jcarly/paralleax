@@ -1612,4 +1612,60 @@ export const databaseMigrations: DatabaseMigration[] = [
         ON story_group_interactions(story_id, interaction_id);
     `,
   },
+  {
+    id: '202610190042_nested_story_groups',
+    sql: `
+      ALTER TABLE story_groups ADD COLUMN parent_group_id text;
+      ALTER TABLE story_groups ADD CONSTRAINT story_groups_parent_fkey
+        FOREIGN KEY (story_id, parent_group_id) REFERENCES story_groups(story_id, id)
+        DEFERRABLE INITIALLY DEFERRED;
+      ALTER TABLE story_groups ADD CONSTRAINT story_groups_not_own_parent
+        CHECK (parent_group_id IS NULL OR parent_group_id <> id);
+      CREATE INDEX story_groups_parent_idx ON story_groups(story_id, parent_group_id);
+    `,
+  },
+  {
+    id: '202610190043_exclusive_group_membership',
+    sql: `
+      -- Retain the first Group in persisted list order, regardless of depth.
+      -- Stable ids break ties only for historical rows with equal sort_order.
+      WITH ranked_memberships AS (
+        SELECT membership.story_id, membership.group_id, membership.interaction_id,
+          row_number() OVER (
+            PARTITION BY membership.story_id, membership.interaction_id
+            ORDER BY groups.sort_order, groups.id COLLATE "C"
+          ) AS membership_rank
+        FROM story_group_interactions AS membership
+        JOIN story_groups AS groups
+          ON groups.story_id = membership.story_id AND groups.id = membership.group_id
+      )
+      DELETE FROM story_group_interactions AS membership
+      USING ranked_memberships AS ranked
+      WHERE ranked.membership_rank > 1
+        AND membership.story_id = ranked.story_id
+        AND membership.group_id = ranked.group_id
+        AND membership.interaction_id = ranked.interaction_id;
+
+      -- Defer checks so a transfer may insert into an earlier Group before
+      -- removing the old membership later in the same Story transaction.
+      ALTER TABLE story_group_interactions
+        ADD CONSTRAINT story_group_interactions_one_direct_group
+        UNIQUE (story_id, interaction_id) DEFERRABLE INITIALLY DEFERRED;
+    `,
+  },
+  {
+    id: '202610210044_stat_effect_expressions',
+    sql: `
+      ALTER TABLE interaction_stat_effects
+        ALTER COLUMN value DROP NOT NULL,
+        ADD COLUMN expression text,
+        DROP CONSTRAINT interaction_stat_effects_primitive_value,
+        ADD CONSTRAINT interaction_stat_effects_value_source
+          CHECK ((value IS NULL) <> (expression IS NULL)),
+        ADD CONSTRAINT interaction_stat_effects_primitive_value
+          CHECK (value IS NULL OR jsonb_typeof(value) IN ('number', 'boolean', 'string')),
+        ADD CONSTRAINT interaction_stat_effects_expression_non_blank
+          CHECK (expression IS NULL OR char_length(btrim(expression)) BETWEEN 1 AND 4000);
+    `,
+  },
 ];

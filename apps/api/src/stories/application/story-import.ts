@@ -1,7 +1,11 @@
-import { BadRequestException, Injectable, InternalServerErrorException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  InternalServerErrorException,
+  UnprocessableEntityException,
+} from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import {
-  importChoiceScript,
   parseQspLocationBundle,
   defaultStoryAccess,
   resolveStoryAccess,
@@ -15,8 +19,8 @@ import { StoriesRepository } from '../stories.repository';
 import { apiErrorResponse } from '../../operations/api-error-response';
 import { ImportJobService } from '../../imports/import-job.service';
 import { ImportReportStorage } from '../../imports/import-report-storage';
-import { ImportReportWriter } from '../../imports/import-report-writer';
 import { QspImportWorkerService } from './qsp-import-worker.service';
+import { ChoiceScriptImportWorkerService } from './choicescript-import-worker.service';
 import { QspImportProgressService } from './qsp-import-progress.service';
 
 export const CHOICESCRIPT_IMPORT_SOURCE_LIMIT = 96 * 1024;
@@ -27,12 +31,18 @@ export class StoryImportService {
   constructor(
     private readonly repository: StoriesRepository,
     private readonly qspWorkers: QspImportWorkerService,
+    private readonly choiceScriptWorkers: ChoiceScriptImportWorkerService,
     private readonly qspProgress: QspImportProgressService,
     private readonly jobs: ImportJobService,
     private readonly reportStorage: ImportReportStorage,
   ) {}
 
-  async createChoiceScript(input: ImportChoiceScriptDto, userId: string, confirmWarnings = false) {
+  async createChoiceScript(
+    input: ImportChoiceScriptDto,
+    userId: string,
+    confirmWarnings = false,
+    abortSignal?: AbortSignal,
+  ) {
     const sourceSize = input.files.reduce(
       (total, file) => total + Buffer.byteLength(file.content, 'utf8'),
       0,
@@ -46,32 +56,36 @@ export class StoryImportService {
       );
     }
     const job = this.jobs.create(userId, 'choicescript');
-    const writer = new ImportReportWriter({
-      reportPath: await this.createReportFile(job.id, 'choicescript'),
-    });
+    const jobSignal = this.jobs.getAbortSignal(job.id);
+    const effectiveAbortSignal =
+      abortSignal && jobSignal
+        ? AbortSignal.any([abortSignal, jobSignal])
+        : (abortSignal ?? jobSignal);
     let result: ChoiceScriptImportResult;
-    this.jobs.update(job.id, { status: 'running', phase: 'parsing' });
     try {
-      await writer.start();
-      result = importChoiceScript(input.files, {
-        ...importOptions(),
-        maxPreviewIssues: 0,
-        onIssue: (issue) => writer.writeIssue(issue),
-      });
-      await writer.close();
+      const reportPath = await this.createReportFile(job.id, 'choicescript');
+      this.jobs.update(job.id, { status: 'running', phase: 'parsing' });
+      result = await this.choiceScriptWorkers.run(
+        input.files,
+        importOptions(),
+        effectiveAbortSignal,
+        reportPath,
+      );
     } catch (caught) {
-      let failure = caught;
-      try {
-        await writer.close();
-      } catch (closeError) {
-        failure = new AggregateError(
-          [caught, closeError],
-          'ChoiceScript report finalization failed.',
-        );
+      if (effectiveAbortSignal?.aborted || this.jobs.isCancelled(job.id)) {
+        this.jobs.cancel(job.id);
+        return this.finishCancelledImport(job.id);
       }
-      return this.failInfrastructureImport(job.id, 'choicescript', failure);
+      return this.failInfrastructureImport(job.id, 'choicescript', caught);
     }
-    return this.completeImport(result, 'ChoiceScript', userId, confirmWarnings, job.id);
+    return this.completeImport(
+      result,
+      'ChoiceScript',
+      userId,
+      confirmWarnings,
+      job.id,
+      effectiveAbortSignal,
+    );
   }
 
   async createQsp(
@@ -136,6 +150,11 @@ export class StoryImportService {
       );
     }
     const job = this.jobs.create(userId, 'qsp');
+    const jobSignal = this.jobs.getAbortSignal(job.id);
+    const effectiveAbortSignal =
+      abortSignal && jobSignal
+        ? AbortSignal.any([abortSignal, jobSignal])
+        : (abortSignal ?? jobSignal);
     let result: QspImportResult;
     try {
       const reportPath = await this.createReportFile(job.id, 'qsp');
@@ -151,10 +170,14 @@ export class StoryImportService {
             currentFile: progress.currentFile,
           });
         },
-        abortSignal,
+        effectiveAbortSignal,
         reportPath,
       );
     } catch (caught) {
+      if (effectiveAbortSignal?.aborted || this.jobs.isCancelled(job.id)) {
+        this.jobs.cancel(job.id);
+        return this.finishCancelledImport(job.id);
+      }
       return this.failInfrastructureImport(job.id, 'qsp', caught);
     }
 
@@ -163,12 +186,17 @@ export class StoryImportService {
         result.story !== undefined &&
         result.report.errorCount === 0 &&
         (confirmWarnings || result.report.warningCount === 0);
-      if (willPersist) {
-        this.qspProgress.publish(userId, progressId, { phase: 'saving', completed: 0 });
-        this.jobs.update(job.id, { phase: 'saving' });
-      }
-
-      const outcome = await this.completeImport(result, 'QSP', userId, confirmWarnings, job.id);
+      const outcome = await this.completeImport(
+        result,
+        'QSP',
+        userId,
+        confirmWarnings,
+        job.id,
+        effectiveAbortSignal,
+        willPersist
+          ? () => this.qspProgress.publish(userId, progressId, { phase: 'saving', completed: 0 })
+          : undefined,
+      );
       if (outcome.status === 'imported') {
         this.qspProgress.publish(userId, progressId, {
           phase: 'saving',
@@ -188,7 +216,13 @@ export class StoryImportService {
     userId: string,
     confirmWarnings: boolean,
     importId: string,
+    abortSignal?: AbortSignal,
+    onSaving?: () => void,
   ) {
+    if (abortSignal?.aborted) this.jobs.cancel(importId);
+    if (this.jobs.isCancelled(importId)) {
+      return this.finishCancelledImport(importId);
+    }
     const report = { ...result.report, issues: [] };
     if (!result.story || result.report.errorCount > 0) {
       this.jobs.update(importId, {
@@ -217,18 +251,26 @@ export class StoryImportService {
       this.jobs.complete(importId);
       return { status: 'confirmation_required' as const, importId, report };
     }
-    this.jobs.update(importId, {
-      status: 'running',
-      phase: 'saving',
-      warningCount: result.report.warningCount,
-      errorCount: result.report.errorCount,
-      reportAvailable: true,
-    });
+    if (abortSignal?.aborted) this.jobs.cancel(importId);
+    if (this.jobs.isCancelled(importId)) {
+      return this.finishCancelledImport(importId);
+    }
+    if (
+      !this.jobs.beginPersistence(importId, {
+        warningCount: result.report.warningCount,
+        errorCount: result.report.errorCount,
+        reportAvailable: true,
+      })
+    ) {
+      return this.finishCancelledImport(importId);
+    }
+    onSaving?.();
     try {
       await this.repository.save(result.story, userId);
     } catch (caught) {
       this.jobs.update(importId, { status: 'failed', phase: 'finalizing' });
       this.jobs.complete(importId);
+      if (caught instanceof UnprocessableEntityException) throw caught;
       throw new InternalServerErrorException(
         apiErrorResponse(
           'STORY_IMPORT_SAVE_FAILED',
@@ -275,6 +317,12 @@ export class StoryImportService {
       story,
       report,
     };
+  }
+
+  private async finishCancelledImport(importId: string) {
+    this.jobs.complete(importId);
+    await this.reportStorage.deleteReport(importId);
+    return { status: 'cancelled' as const, importId };
   }
 
   private async createReportFile(importId: string, format: 'choicescript' | 'qsp') {

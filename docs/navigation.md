@@ -49,11 +49,8 @@ selecting `Alice` adds an `Alice` filter tag, selecting `Village` adds a
 `Village` tag, and each tag can be removed independently. The exact semantics
 still need validation.
 
-Open questions:
-
-- whether combining several filters is useful at first;
-- whether combined filters should use AND or OR semantics;
-- whether a separate isolation mode is needed later.
+Filter-combination and isolation decisions are tracked in
+[Open questions](open-questions.md#story-canvas-ux).
 
 ## Navigation In The Story
 

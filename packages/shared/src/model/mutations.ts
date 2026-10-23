@@ -23,17 +23,33 @@ export interface InteractionMutationResult extends StoryMutationMetadata {
   interaction: Interaction;
 }
 
+export interface InteractionDeletionResult extends StoryMutationMetadata {
+  interactionId: string;
+}
+
 export interface TriggerMutationResult extends StoryMutationMetadata {
   interactionId: string;
   trigger: Trigger;
+}
+
+export interface TriggerDeletionResult extends StoryMutationMetadata {
+  interactionId: string;
+  triggerId: string;
+  triggerRemoved: boolean;
 }
 
 export interface GraphDecorationMutationResult extends StoryMutationMetadata {
   decoration: GraphDecoration;
 }
 
+export interface GraphDecorationDeletionResult extends StoryMutationMetadata {
+  decorationId: string;
+}
+
 export interface GroupMutationResult extends StoryMutationMetadata {
   group: Group;
+  /** Canonical list order after an explicit move, using existing Story.groups ordering. */
+  groupOrder?: string[];
 }
 
 export interface LocationMutationResult extends StoryMutationMetadata {
@@ -47,6 +63,11 @@ export interface CharacterMutationResult extends StoryMutationMetadata {
 export interface CharacterStatMutationResult extends StoryMutationMetadata {
   characterId: string;
   stat: StatAssignment;
+}
+
+export interface CharacterStatDeletionResult extends StoryMutationMetadata {
+  characterId: string;
+  statId: string;
 }
 
 export interface StatAssignmentMutationResult extends StoryMutationMetadata {
@@ -68,6 +89,11 @@ export interface CharacterItemMutationResult extends StoryMutationMetadata {
   item: ItemInstance;
 }
 
+export interface CharacterItemDeletionResult extends StoryMutationMetadata {
+  characterId: string;
+  itemId: string;
+}
+
 export interface CreateStoryInput {
   title: string;
 }
@@ -82,9 +108,22 @@ export interface CreateInteractionInput {
   position?: Position;
 }
 
+export interface GroupDeletionResult extends StoryMutationMetadata {
+  groupId: string;
+}
+
+export interface UpdateGroupInput {
+  title?: string;
+  interactionIds?: string[];
+  parentGroupId?: string | null;
+  /** Insert before this sibling; null appends at the destination level. */
+  beforeGroupId?: string | null;
+}
+
 export interface CreateGroupInput {
   title: string;
   interactionIds: string[];
+  parentGroupId?: string;
 }
 
 export interface UpdateInteractionInput {

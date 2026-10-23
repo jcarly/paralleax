@@ -7,7 +7,7 @@ import {
   buildTriggerNodes,
   type StoryFlowNode,
 } from './storyGraph';
-import { computeStoryGraphLayout } from './storyGraphLayout';
+import { computeStoryGraphElkLayout } from './storyGraphElkLayout';
 import { createLargeEditorStoryFixture } from './test/largeEditorStoryFixture';
 
 describe('large story graph projection', () => {
@@ -25,10 +25,10 @@ describe('large story graph projection', () => {
     expect(durationMs).toBeLessThan(5_000);
   });
 
-  it('automatically lays out 2,000 linked interactions within the editor budget', () => {
+  it('automatically lays out 2,000 linked interactions through the canonical adapter within the editor budget', async () => {
     const story = createLargeEditorStoryFixture(2_000, { columns: 25 });
     const startedAt = performance.now();
-    const layout = computeStoryGraphLayout(story, { kind: 'all' });
+    const layout = await computeStoryGraphElkLayout(story);
     const durationMs = performance.now() - startedAt;
 
     expect(layout.interactionUpdates.length).toBeGreaterThan(1_900);

@@ -24,10 +24,31 @@ describe('useReaderSessionState', () => {
 
   it('advances incrementally to the same deterministic state as a full replay', () => {
     const story = storyFixture();
+    story.statDefinitions = [
+      { id: 'number', name: 'Number', valueType: 'number', changePerHour: 2 },
+    ];
+    story.stats = [{ id: 'score', statDefinitionId: 'number', initialValue: 2 }];
+    story.itemDefinitions = [
+      {
+        id: 'battery',
+        name: 'Battery',
+        description: '',
+        stats: [{ id: 'charge', statDefinitionId: 'number', initialValue: 5 }],
+      },
+    ];
+    story.locations![0].items = [{ id: 'battery-1', itemDefinitionId: 'battery' }];
+    story.interactions[1].durationMinutes = 30;
+    story.interactions[1].statEffects = [
+      { statId: 'charge', itemId: 'battery-1', operation: 'add', value: 1 },
+      { statId: 'score', operation: 'set', expression: '@{charge|battery-1} * 2' },
+    ];
     const { result } = renderHook(() => useReaderSessionState());
 
     act(() => result.current.replay(story, ['start'], [], 'saved-seed'));
     act(() => result.current.advance(story, story.interactions[1]));
+
+    expect(result.current.session.statValues).toEqual({ score: 14 });
+    expect(result.current.session.itemStatValues).toEqual({ 'battery-1': { charge: 7 } });
 
     expect(result.current.session).toEqual(
       buildReaderProgressState(

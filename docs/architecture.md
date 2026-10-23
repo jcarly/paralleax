@@ -119,8 +119,8 @@ orchestration supplies IDs and persists the complete mapped Story in one
 transaction; web code owns only local file selection and report presentation.
 The API creates an owner-scoped import id and writes every diagnostic as ordered
 JSONL through the shared `onIssue` capture with an empty in-memory preview. QSP
-receives only the report path in worker data and writes the file in its worker;
-ChoiceScript uses the same capture contract in the API process. API responses
+and ChoiceScript each run in cancellable workers, receive the report path with
+their source input, and write diagnostics from the worker. API responses
 retain format statistics and complete warning/error counts without embedding the
 diagnostic sequence. `GET /api/imports/:importId/report` validates the UUID and
 owner before streaming `application/x-ndjson` as an attachment. Infrastructure
@@ -366,16 +366,17 @@ values. It validates database and browser origins, port, verified SSL settings,
 and environment during startup. Production endpoints must be explicit. Consumers
 do not read `process.env` directly.
 
-Story mutations execute inside a transaction and lock their story row before
-reading the graph. The repository compares the loaded
-domain snapshot with the mutated result, then updates only changed story or
-interaction fields and changed trigger structures. Independent concurrent field
-updates therefore do not rewrite an unrelated story document. A later save to
-the same field or trigger structure is authoritative; richer conflict
-presentation remains future work.
+Story mutations currently execute inside a transaction and lock their story row
+before reading the graph. The repository compares the loaded domain snapshot
+with the mutated result, then updates only changed story or interaction fields
+and changed trigger structures. Independent concurrent field updates therefore
+do not rewrite an unrelated story document. A later same-field save is currently
+authoritative. The accepted target replaces this behavior with collaborative
+text merging, explicit resolution for overlapping atomic fields, and durable
+offline authoring; see [ADR-034](decisions/ADR-034-collaborative-offline-authoring.md).
 
-Every successful authored-story transaction publishes a process-local SSE
-invalidation after persistence. The editor and Simulation Mode subscribe only
+Every successful authored-story transaction currently publishes a process-local
+SSE invalidation after persistence. The editor and Simulation Mode subscribe only
 with effective edit permission, coalesce short mutation bursts, and reload the
 normal authorized `Story` projection. The event contains no authored payload and
 cannot bypass repository authorization. A ready event recovers changes missed
@@ -509,8 +510,10 @@ component:
 - `features/realtime/`: invalidation priority, API-not-found recognition, and
   editable-target detection shared by editor and Simulation Mode.
 - `features/story/storyMutationResults.ts`: pure mutation metadata and entity
-  adapters shared by persistence and Simulation Mode; complete-story legacy
-  responses retain their caller-specific merge policy.
+  adapters shared by persistence and Simulation Mode. Graph, character-stat,
+  and leaf-item deletions return compact identifier/metadata contracts and reuse
+  the same `packages/shared` cleanup operations on both sides; remaining
+  complete-story legacy responses retain their caller-specific merge policy.
 - `features/story/storyProjectionLoading.ts`: framework-light assembly of
   paginated context rows into the existing Story model, plus revision mismatch
   signaling shared by editor and player loaders.
@@ -576,8 +579,9 @@ The React Flow stylesheet is imported by the two graphical routes rather than
 the application entry. Each route imports its local graph overrides after the
 library stylesheet so custom handle positioning and hit-testing remain the last
 word in the CSS cascade. Vite emits a production manifest, and every web build
-checks its complete static import graph using compressed asset sizes. The
-initial JavaScript and stylesheet budgets are 135 KiB and 24 KiB; incremental
+checks its complete static import graph using compressed asset sizes. Production
+JavaScript uses Terser minification to stay within the entry and route budgets. The
+initial JavaScript and stylesheet budgets are 150 KiB and 24 KiB; incremental
 Story Editor and Story Player assets are limited to 145 KiB and 95 KiB. The
 contract also fails if either route stops being a dynamic entry or becomes a
 static dependency of the application entry.
@@ -615,14 +619,30 @@ contextual, or background, plus lightweight logic markers and optional layout
 hints. React Flow remains the renderer for graph-shaped projections and never
 becomes the query model or persistence source.
 
-An Interaction may belong to several neutral Groups. Group membership
+An Interaction has at most one direct neutral Group. Creating or updating a
+Group transfers its assigned Interactions through shared operations, and the web
+applies the same operation to compact mutation results. Transfers form one
+reversible authored mutation across all affected Groups. A deferred unique
+constraint on `(story_id, interaction_id)` enforces direct membership at commit;
+migration `202610190043` retains the first persisted Group for legacy duplicates,
+regardless of nesting depth. Group membership
 is authored organization metadata, not a consequence of canvas overlap and not a
-reader rule. The initial persisted model is deliberately flat, with no Group
-parentage. Per-author collapse, visibility, and combined-filter state must not
+reader rule. Groups support one optional same-Story parent through a deferred
+composite foreign key; shared validation rejects cycles, including history replay.
+Group mutations reuse Story authorization, history and invalidation. Per-author
+collapse, visibility, and combined-filter state must not
 be inserted into the canonical Story until an ADR establishes their ownership and
 collaboration semantics. Separate `CharacterView`, `LocationView`, `StateView`,
 and `TimeView` implementations with duplicated filtering rules are explicitly not
 the intended architecture. See [Workbench product direction](workbench.md).
+
+Group tree moves extend that same mutation with a destination sibling, changing
+parent and `Story.groups` order atomically. Existing `sort_order` persistence and
+entity-order history deltas retain both across reload and Undo/Redo. The compact
+response projects committed order without a drag-specific canonical store. The
+web loads the tree and its `@dnd-kit/core` mechanics only for Stories containing
+Groups; empty Stories keep the lightweight navigation state. See
+[ADR-037](decisions/ADR-037-group-tree-authoring.md).
 
 Current trigger rendering is a projection: a linked trigger is shown as a small
 React Flow trigger node between its input interactions and its output
@@ -757,10 +777,15 @@ Trigger link behavior crosses the graph projection and the domain model, so it i
 split deliberately:
 
 - `storyGraph.ts` decides how triggers appear as trigger nodes and edges.
-- `storyGraphLayout.ts` computes deterministic, cycle-tolerant vertical placement
-  for interaction and grouped trigger-marker projections. It accepts either the
-  complete graph or an explicit target list so future multi-selection can reuse
-  the same operation without changing persistence semantics.
+- `storyGraphElkLayout.ts` is the canonical automatic-layout adapter. It asks ELK
+  for deterministic, cycle-tolerant vertical placement and routed edges for the
+  complete graph or an explicit target list.
+- `storyGraphLayout.ts` owns the engine-independent scope projection shared by
+  ELK and the explicitly named historic fallback. The fallback remains covered
+  for comparison and emergency reuse. The canonical adapter invokes it for an
+  exceptionally large projection that would exceed ELK's safe synchronous budget,
+  or when ELK still exhausts the JavaScript call stack; other ELK failures remain
+  visible to the author.
 - `storyGraphCreationLayout.ts` projects a temporary interaction and its linked
   trigger, then asks the scoped layout for their creation position. Click-based
   root, child, parent, and Simulation Mode option creation use this projection;
@@ -821,11 +846,31 @@ mutations form one pending batch: the tracker reports saved only after every
 request completes, and any failure in that batch remains visible even if a later
 request succeeded first.
 
-While that tracker reports a pending or failed save, `usePendingSaveGuard`
-protects browser closing/reloading and internal anchor navigation with native
-confirmation. Declarative `BrowserRouter` does not provide transactional
-back/forward blocking; covering browser history requires the planned migration
-to a React Router data router rather than fragile `popstate` reversal.
+Story writes, imports, and history reversals validate configurable aggregate
+quotas on the in-memory Story already assembled for the operation, before any
+relational write. The defaults are 2,000 Interactions, 8,000 Triggers, 1,000
+Characters, 1,000 Locations, 2,000 stat definitions, 8,000 stat assignments,
+2,000 item definitions, 10,000 exact item instances, 1,000 Groups, 2,000 graph
+decorations, and 32 MiB of authored Story JSON encoded as UTF-8. The serialized
+size excludes response-only owner and capability projections. Each default can
+be overridden by `PARALLEAX_STORY_QUOTA_<UPPER_SNAKE_CASE_RESOURCE>` using a
+positive integer; the byte limit is `PARALLEAX_STORY_QUOTA_SERIALIZED_BYTES`.
+Exceeding a quota returns HTTP 422 with `STORY_QUOTA_EXCEEDED` and the resource,
+limit, current, and attempted measurements. A preexisting Story above a limit
+may keep or reduce that resource, but cannot increase it. The existing per-body
+and HTTP request limits remain independent.
+
+The web entry uses `createBrowserRouter` and `RouterProvider`; the existing
+component routes, authentication decisions, Story projection loading, and lazy
+editor/player imports remain in place. While an editor save or reader/simulation
+save is pending or failed, `usePendingSaveGuard` uses the data router's
+`useBlocker` for internal links, code navigation, and browser back/forward. An
+accessible shared dialog lets the user stay or leave. The guard also retains
+`beforeunload` for browser reload, closing, and external navigation. Editor URL
+query changes do not discard its Story; player changes to the requested mode or
+simulation start interaction do reload the runtime session and are guarded.
+The initial JavaScript budget is 150 KiB compressed to account for the data
+router's history-blocking code; the editor and player remain lazy entries.
 
 ### Running the Reader
 
@@ -988,6 +1033,15 @@ shell, generic pages, and story-list rules. Feature styles live beside editor,
 inspector, graph, review-comment, reader, and Simulation Mode code, while
 `responsive.css` contains the final cross-feature media overrides.
 
+Product dialogs render through `apps/web/src/components/ModalPortal.tsx` into a
+shared body-level layer. `modalDialogIsolation.ts` makes the other body roots
+inert, locks page scrolling, keeps focus within the active dialog, and restores
+the opening control when it closes. Nested dialogs share the same layer and
+restore the underlying dialog as the active surface. `modalDialogKeyboard.ts`
+owns Tab wrapping and Escape handling; feature styles continue to own each
+dialog's appearance. The shared `--z-modal` token places the portal above the
+application shell without relying on feature stacking contexts.
+
 `main.tsx` imports these sheets in their deliberate cascade order. Inspector
 layout and inspector controls remain two files around the review-comment sheet
 because those rule groups were separated in the original cascade; regrouping
@@ -1008,9 +1062,10 @@ classes directly.
 - Functional UI: fast Playwright suites with controlled API responses.
 - Accessibility: strict Axe WCAG A/AA checks cover representative loaded states
   of the Story library, editor, and reader, including creation, import, and save
-  dialogs. Shared modal keyboard behavior owns focus containment and Escape
-  handling across product dialogs; browser flows also verify restoration to the
-  opening control where one exists.
+  dialogs. `ModalPortal` tests cover background isolation, nested dialogs,
+  late-added body portals, scroll restoration, focus containment, and opener
+  restoration. Browser flows verify pointer hit-testing, Tab/Shift+Tab, Escape,
+  and restoration to the opening control where one exists.
 - Alpha acceptance: a small sequential Playwright suite against the real API and
   PostgreSQL. Core flows do not intercept Paralleax endpoints; the explicit
   transport-reordering case holds and forwards a real API response without

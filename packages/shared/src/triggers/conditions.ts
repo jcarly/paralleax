@@ -26,14 +26,24 @@ interface StatConditionBase {
 
 export interface StatLiteralCondition extends StatConditionBase {
   value: StatValue;
+  expression?: never;
 }
 
 export interface StatAssignmentCondition extends StatConditionBase {
   comparisonStatId: string;
   comparisonItemId?: string;
+  expression?: never;
 }
 
-export type StatCondition = StatLiteralCondition | StatAssignmentCondition;
+export interface StatExpressionCondition extends StatConditionBase {
+  expression: string;
+  value?: never;
+  comparisonStatId?: never;
+  comparisonItemId?: never;
+}
+
+export type StatCondition =
+  StatLiteralCondition | StatAssignmentCondition | StatExpressionCondition;
 
 export interface ItemCondition {
   itemDefinitionId: string;

@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useState } from 'react';
+import { ContextMenu, ContextMenuAction as BaseContextMenuAction } from './ContextMenu';
 import { useTranslation } from 'react-i18next';
 import { CanvasActionIcon, type CanvasActionIconName } from './StoryCanvasToolbar';
 
@@ -44,7 +45,6 @@ export function StoryCanvasContextMenu({
   onClose,
 }: StoryCanvasContextMenuProps) {
   const { t } = useTranslation();
-  const menuRef = useRef<HTMLDivElement>(null);
   const [organizeOpen, setOrganizeOpen] = useState(false);
   const left = Math.max(
     viewportMargin,
@@ -56,41 +56,18 @@ export function StoryCanvasContextMenu({
   );
   const submenuOpensLeft = left + menuWidth * 2 + viewportMargin > window.innerWidth;
 
-  useEffect(() => {
-    menuRef.current?.querySelector<HTMLButtonElement>('button:not(:disabled)')?.focus();
-    const handlePointerDown = (event: PointerEvent) => {
-      if (!menuRef.current?.contains(event.target as Node)) onClose();
-    };
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
-    };
-    document.addEventListener('pointerdown', handlePointerDown);
-    document.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('blur', onClose);
-    window.addEventListener('resize', onClose);
-    return () => {
-      document.removeEventListener('pointerdown', handlePointerDown);
-      document.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('blur', onClose);
-      window.removeEventListener('resize', onClose);
-    };
-  }, [onClose]);
-
   function run(action: () => void) {
     onClose();
     action();
   }
 
   return (
-    <div
-      className="canvas-context-menu"
-      onContextMenu={(event) => event.preventDefault()}
-      ref={menuRef}
-      role="menu"
-      aria-label={t(
+    <ContextMenu
+      position={{ x: left, y: top }}
+      onClose={onClose}
+      label={t(
         targetKind === 'canvas' ? 'editor.contextMenu.label' : 'editor.contextMenu.elementLabel',
       )}
-      style={{ left, top }}
     >
       {targetKind === 'canvas' && canEdit && onCreateInteraction ? (
         <ContextMenuAction
@@ -179,45 +156,15 @@ export function StoryCanvasContextMenu({
           onClick={() => run(onDelete)}
         />
       ) : null}
-    </div>
+    </ContextMenu>
   );
 }
 
 function ContextMenuAction({
   icon,
-  label,
-  disabled = false,
-  suffix,
-  ariaExpanded,
-  ariaHasPopup,
-  danger = false,
-  onClick,
-  onKeyDown,
-}: {
-  icon?: CanvasActionIconName;
-  label: string;
-  disabled?: boolean;
-  suffix?: ReactNode;
-  ariaExpanded?: boolean;
-  ariaHasPopup?: 'menu';
-  danger?: boolean;
-  onClick: () => void;
-  onKeyDown?: (event: React.KeyboardEvent<HTMLButtonElement>) => void;
-}) {
+  ...props
+}: Omit<Parameters<typeof BaseContextMenuAction>[0], 'icon'> & { icon?: CanvasActionIconName }) {
   return (
-    <button
-      type="button"
-      role="menuitem"
-      className={danger ? 'danger' : undefined}
-      disabled={disabled}
-      aria-expanded={ariaExpanded}
-      aria-haspopup={ariaHasPopup}
-      onClick={onClick}
-      onKeyDown={onKeyDown}
-    >
-      {icon ? <CanvasActionIcon name={icon} /> : <span className="canvas-context-icon-spacer" />}
-      <span>{label}</span>
-      {suffix}
-    </button>
+    <BaseContextMenuAction {...props} icon={icon ? <CanvasActionIcon name={icon} /> : undefined} />
   );
 }

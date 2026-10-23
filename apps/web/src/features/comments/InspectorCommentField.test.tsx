@@ -1,13 +1,11 @@
-import { cleanup, render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { InspectorCommentField, InspectorCommentSlot } from './InspectorCommentField';
 
 describe('InspectorCommentField', () => {
   afterEach(cleanup);
 
-  it('opens the anchored discussions for the marked field', async () => {
-    const user = userEvent.setup();
+  it('opens the anchored discussions for the marked field', () => {
     const onOpenTextComments = vi.fn();
 
     render(
@@ -24,7 +22,12 @@ describe('InspectorCommentField', () => {
       </InspectorCommentField>,
     );
 
-    await user.click(screen.getByRole('button', { name: 'Open comments for Title' }));
+    const field = screen.getByText('Title').closest('.inspector-commentable-field')!;
+    fireEvent.mouseEnter(field);
+    const badge = screen.getByRole('button', { name: 'Open comments for Title' });
+    fireEvent.mouseLeave(field, { relatedTarget: badge });
+    expect(badge).toBeInTheDocument();
+    fireEvent.click(badge);
 
     expect(onOpenTextComments).toHaveBeenCalledOnce();
     expect(onOpenTextComments).toHaveBeenCalledWith('title');
@@ -41,8 +44,7 @@ describe('InspectorCommentField', () => {
     expect(screen.queryByRole('button')).not.toBeInTheDocument();
   });
 
-  it('starts or opens a stable semantic field discussion from the same control', async () => {
-    const user = userEvent.setup();
+  it('starts or opens a stable semantic field discussion from the same control', () => {
     const onOpenSemanticComments = vi.fn();
 
     render(
@@ -59,7 +61,12 @@ describe('InspectorCommentField', () => {
       </InspectorCommentSlot>,
     );
 
-    await user.click(screen.getByRole('button', { name: 'Open comments for Duration' }));
+    const field = screen.getByText('Duration').closest('.inspector-commentable-field')!;
+    fireEvent.focus(field.querySelector('input')!);
+    const badge = screen.getByRole('button', { name: 'Open comments for Duration' });
+    fireEvent.blur(screen.getByRole('textbox'), { relatedTarget: badge });
+    expect(badge).toBeInTheDocument();
+    fireEvent.click(badge);
 
     expect(onOpenSemanticComments).toHaveBeenCalledWith({ kind: 'field', field: 'duration' });
     expect(screen.getByText('2')).toBeInTheDocument();

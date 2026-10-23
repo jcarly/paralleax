@@ -1,11 +1,12 @@
 # Design System
 
-This document is the future home of Paralleax visual identity and reusable UI
-rules.
+This document describes Paralleax visual direction and reusable UI rules. A
+design-system foundation and shared tokens are implemented; the remaining work
+is to validate consistency and settle specific visual choices as product needs
+become clearer.
 
-The MVP does not need a complete design system before the narrative core is
-validated, but the editor already needs enough visual consistency to make graph
-authoring feel deliberate and readable.
+The system should evolve with the editor without blocking product work on a
+complete visual identity pass.
 
 ## Goals
 
@@ -58,9 +59,10 @@ captures the current visual direction: warm neutral surfaces, restrained
 component styling, contextual concept colors, a calm canvas, and a right-side
 inspector.
 
-## Visual Identity To Define
+## Visual Decisions To Validate
 
-The project still needs a visual identity pass covering:
+Review these areas for consistency and make new decisions only where current
+product surfaces leave a genuine gap:
 
 - color palette;
 - typography;
@@ -75,10 +77,10 @@ The project still needs a visual identity pass covering:
 - reader style;
 - empty, loading, disabled, error, and selected states.
 
-## Initial Visual Direction
+## Visual Direction References
 
-The following values are not final implementation tokens yet, but they define a
-strong starting point for visual exploration.
+The following values are references for the intended direction, not a complete
+or authoritative token specification.
 
 Neutral palette:
 

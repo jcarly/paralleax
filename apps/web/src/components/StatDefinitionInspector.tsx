@@ -1,3 +1,4 @@
+import { EntityNameInput } from './EntityNameInput';
 import {
   getStatValueType,
   type CreateStatDefinitionInput,
@@ -272,11 +273,11 @@ function StatDefinitionEditor({
       >
         <label>
           {t('attributes.definitionName')}
-          <input
+          <EntityNameInput
             data-comment-field="name"
             value={definition.name}
-            onChange={(event) => onChange({ ...definition, name: event.target.value })}
-            onBlur={(event) => void onPatch(definition.id, { name: event.target.value })}
+            onChange={(name) => onChange({ ...definition, name })}
+            onCommit={(name) => onPatch(definition.id, { name })}
           />
         </label>
       </InspectorCommentField>

@@ -11,6 +11,7 @@ import {
 import { api } from '../../api';
 import { apiErrorMessage } from '../../apiErrorMessages';
 import { handleModalDialogKeyDown } from '../../components/modalDialogKeyboard';
+import { ModalPortal } from '../../components/ModalPortal';
 
 export function ReaderSaveDialog({
   story,
@@ -125,110 +126,114 @@ export function ReaderSaveDialog({
   }
 
   return (
-    <div className="modal-dialog-backdrop" role="presentation" onMouseDown={onClose}>
-      <section
-        className="modal-dialog reader-save-dialog"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="reader-save-dialog-title"
-        onKeyDown={(event) => handleModalDialogKeyDown(event, onClose)}
-        onMouseDown={(event) => event.stopPropagation()}
-      >
-        <div className="reader-save-dialog-header">
-          <div>
-            <span className="product-eyebrow">{t('player.saves.eyebrow')}</span>
-            <h2 id="reader-save-dialog-title">{t('player.saves.title')}</h2>
+    <ModalPortal>
+      <div className="modal-dialog-backdrop" role="presentation" onMouseDown={onClose}>
+        <section
+          className="modal-dialog reader-save-dialog"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="reader-save-dialog-title"
+          onKeyDown={(event) => handleModalDialogKeyDown(event, onClose)}
+          onMouseDown={(event) => event.stopPropagation()}
+        >
+          <div className="reader-save-dialog-header">
+            <div>
+              <span className="product-eyebrow">{t('player.saves.eyebrow')}</span>
+              <h2 id="reader-save-dialog-title">{t('player.saves.title')}</h2>
+            </div>
+            <button type="button" onClick={onClose} aria-label={t('player.saves.close')}>
+              ×
+            </button>
           </div>
-          <button type="button" onClick={onClose} aria-label={t('player.saves.close')}>
-            ×
-          </button>
-        </div>
 
-        <form className="reader-save-create" onSubmit={(event) => void create(event)}>
-          <label>
-            <span>{t('player.saves.name')}</span>
-            <input
-              autoFocus
-              value={name}
-              maxLength={MAX_READER_SAVE_NAME_LENGTH}
-              placeholder={t('player.saves.namePlaceholder')}
-              onChange={(event) => setName(event.target.value)}
-            />
-          </label>
-          <button
-            type="submit"
-            disabled={
-              !name.trim() || pending !== undefined || manualCount >= MAX_MANUAL_READER_SAVES
-            }
-          >
-            {pending === 'create' ? t('player.saves.saving') : t('player.saves.create')}
-          </button>
-        </form>
-        <small className="reader-save-limit">
-          {t('player.saves.limit', { count: manualCount, max: MAX_MANUAL_READER_SAVES })}
-        </small>
+          <form className="reader-save-create" onSubmit={(event) => void create(event)}>
+            <label>
+              <span>{t('player.saves.name')}</span>
+              <input
+                autoFocus
+                data-modal-autofocus
+                value={name}
+                maxLength={MAX_READER_SAVE_NAME_LENGTH}
+                placeholder={t('player.saves.namePlaceholder')}
+                onChange={(event) => setName(event.target.value)}
+              />
+            </label>
+            <button
+              type="submit"
+              disabled={
+                !name.trim() || pending !== undefined || manualCount >= MAX_MANUAL_READER_SAVES
+              }
+            >
+              {pending === 'create' ? t('player.saves.saving') : t('player.saves.create')}
+            </button>
+          </form>
+          <small className="reader-save-limit">
+            {t('player.saves.limit', { count: manualCount, max: MAX_MANUAL_READER_SAVES })}
+          </small>
 
-        {error ? (
-          <p className="error" role="alert">
-            {error}
-          </p>
-        ) : null}
-        {loading ? <p>{t('player.saves.loading')}</p> : null}
-        {!loading && saves.length === 0 ? <p>{t('player.saves.empty')}</p> : null}
-        {!loading && saves.length > 0 ? (
-          <div className="reader-save-list">
-            {saves.map((save) => {
-              const currentTitle = save.currentInteractionId
-                ? (save.currentInteractionTitle ?? interactionTitles.get(save.currentInteractionId))
-                : undefined;
-              return (
-                <article key={save.id}>
-                  <div>
-                    <strong>{saveLabel(save, t)}</strong>
-                    <small>
-                      {currentTitle ?? t('player.saves.beforeStart')} ·{' '}
-                      {t('player.saves.steps', { count: save.journeyLength })}
-                    </small>
-                    <time dateTime={save.updatedAt}>
-                      {new Date(save.updatedAt).toLocaleString()}
-                    </time>
-                  </div>
-                  <div className="reader-save-actions">
-                    <button
-                      type="button"
-                      disabled={pending !== undefined}
-                      onClick={() => void load(save.id)}
-                    >
-                      {pending === `load:${save.id}`
-                        ? t('player.saves.loadingSave')
-                        : t('player.saves.load')}
-                    </button>
-                    {save.kind === 'manual' ? (
-                      <>
-                        <button
-                          type="button"
-                          disabled={pending !== undefined}
-                          onClick={() => void overwrite(save)}
-                        >
-                          {t('player.saves.overwrite')}
-                        </button>
-                        <button
-                          type="button"
-                          disabled={pending !== undefined}
-                          onClick={() => void remove(save)}
-                        >
-                          {t('player.saves.delete')}
-                        </button>
-                      </>
-                    ) : null}
-                  </div>
-                </article>
-              );
-            })}
-          </div>
-        ) : null}
-      </section>
-    </div>
+          {error ? (
+            <p className="error" role="alert">
+              {error}
+            </p>
+          ) : null}
+          {loading ? <p>{t('player.saves.loading')}</p> : null}
+          {!loading && saves.length === 0 ? <p>{t('player.saves.empty')}</p> : null}
+          {!loading && saves.length > 0 ? (
+            <div className="reader-save-list">
+              {saves.map((save) => {
+                const currentTitle = save.currentInteractionId
+                  ? (save.currentInteractionTitle ??
+                    interactionTitles.get(save.currentInteractionId))
+                  : undefined;
+                return (
+                  <article key={save.id}>
+                    <div>
+                      <strong>{saveLabel(save, t)}</strong>
+                      <small>
+                        {currentTitle ?? t('player.saves.beforeStart')} ·{' '}
+                        {t('player.saves.steps', { count: save.journeyLength })}
+                      </small>
+                      <time dateTime={save.updatedAt}>
+                        {new Date(save.updatedAt).toLocaleString()}
+                      </time>
+                    </div>
+                    <div className="reader-save-actions">
+                      <button
+                        type="button"
+                        disabled={pending !== undefined}
+                        onClick={() => void load(save.id)}
+                      >
+                        {pending === `load:${save.id}`
+                          ? t('player.saves.loadingSave')
+                          : t('player.saves.load')}
+                      </button>
+                      {save.kind === 'manual' ? (
+                        <>
+                          <button
+                            type="button"
+                            disabled={pending !== undefined}
+                            onClick={() => void overwrite(save)}
+                          >
+                            {t('player.saves.overwrite')}
+                          </button>
+                          <button
+                            type="button"
+                            disabled={pending !== undefined}
+                            onClick={() => void remove(save)}
+                          >
+                            {t('player.saves.delete')}
+                          </button>
+                        </>
+                      ) : null}
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          ) : null}
+        </section>
+      </div>
+    </ModalPortal>
   );
 }
 

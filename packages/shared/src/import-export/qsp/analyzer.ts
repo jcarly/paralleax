@@ -9,7 +9,12 @@ export function analyzeQspCode(
   source: QspSourcePosition,
   report: QspImportReport,
 ): QspCodeAnalysis {
-  const analysis: QspCodeAnalysis = { text: [], navigationTargets: [], effects: [] };
+  const analysis: QspCodeAnalysis = {
+    text: [],
+    navigationTargets: [],
+    effects: [],
+    statements: [],
+  };
   let unsupportedBlockDepth = 0;
   for (let lineIndex = 0; lineIndex < lines.length; lineIndex += 1) {
     const sourceAtLine = { ...source, line: source.line + lineIndex };
@@ -35,18 +40,23 @@ export function analyzeQspCode(
       continue;
     }
     if (/^(?:if|loop)\b.*:\s*$/i.test(trimmedLine)) {
+      analysis.statements.push({ kind: 'barrier', source: sourceAtLine });
       const category = classifyUnsupportedCommand(trimmedLine);
       unsupported(report, sourceAtLine, category.feature, category.code, category.message);
       unsupportedBlockDepth = 1;
       continue;
     }
-    const commands = splitQspCommands(lines[lineIndex]);
+    // Splitting an inline IF would promote its later commands to unconditional code.
+    const commands = /^(?:if|elseif|else|loop)\b/i.test(trimmedLine)
+      ? [trimmedLine]
+      : splitQspCommands(lines[lineIndex]);
     for (const command of commands) {
       const trimmed = command.trim();
       if (!trimmed || trimmed.startsWith('!')) continue;
       const assignment = parseQspAssignment(trimmed, sourceAtLine);
       if (assignment.kind === 'parsed') {
         analysis.effects.push(assignment.effect);
+        analysis.statements.push({ kind: 'effect', effect: assignment.effect });
         report.convertedStatementCount += 1;
         touchQspFeature(report, 'variables');
         continue;
@@ -65,6 +75,7 @@ export function analyzeQspCode(
       if (output) {
         if (output[1].toLocaleLowerCase() === 'nl' && !output[2]) {
           analysis.text.push('');
+          analysis.statements.push({ kind: 'text', text: '' });
           report.convertedStatementCount += 1;
           touchQspFeature(report, 'text_output');
           continue;
@@ -72,6 +83,7 @@ export function analyzeQspCode(
         const literal = parseQspStringLiteral(output[2]);
         if (literal !== undefined && consumedLiteralLength(output[2]) === output[2].trim().length) {
           analysis.text.push(literal);
+          analysis.statements.push({ kind: 'text', text: literal });
           report.convertedStatementCount += 1;
           touchQspFeature(report, 'text_output');
         } else {
@@ -88,8 +100,37 @@ export function analyzeQspCode(
       const bareLiteral = parseQspStringLiteral(trimmed);
       if (bareLiteral !== undefined && consumedLiteralLength(trimmed) === trimmed.length) {
         analysis.text.push(bareLiteral);
+        analysis.statements.push({ kind: 'text', text: bareLiteral });
         report.convertedStatementCount += 1;
         touchQspFeature(report, 'text_output');
+        continue;
+      }
+      const call = /^(?:gs|gosub)\b\s*(.*)$/i.exec(trimmed);
+      if (call) {
+        touchQspFeature(report, 'subroutines');
+        const expression = call[1].trim();
+        const locationName = parseQspStringLiteral(expression);
+        const length = consumedLiteralLength(expression);
+        const argument = parseNavigationArgument(expression.slice(length).trim());
+        const dynamic = !locationName || containsQspInterpolation(expression.slice(0, length));
+        if (dynamic || argument.ignored) {
+          addQspSourceIssue(
+            report,
+            sourceAtLine,
+            dynamic ? 'dynamic_subroutine_target' : 'unsupported_subroutine_arguments',
+            dynamic
+              ? 'A calculated QSP subroutine target was not connected.'
+              : 'This QSP subroutine call requires unsupported argument expressions or scope.',
+          );
+          report.unsupportedStatementCount += 1;
+          analysis.statements.push({ kind: 'call', source: sourceAtLine });
+        } else {
+          analysis.statements.push({
+            kind: 'call',
+            target: { locationName, argument: argument.argument, source: sourceAtLine },
+            source: sourceAtLine,
+          });
+        }
         continue;
       }
       const navigation = /^(?:goto|gt)\b\s*(.*)$/i.exec(trimmed);
@@ -98,6 +139,7 @@ export function analyzeQspCode(
         const target = parseQspStringLiteral(targetExpression);
         const targetLength = consumedLiteralLength(targetExpression);
         if (!target || containsQspInterpolation(targetExpression.slice(0, targetLength))) {
+          analysis.statements.push({ kind: 'navigation' });
           unsupported(
             report,
             { ...source, line: source.line + lineIndex },
@@ -114,6 +156,10 @@ export function analyzeQspCode(
           ...(argumentResult.argument !== undefined ? { argument: argumentResult.argument } : {}),
           source: sourceAtLine,
         });
+        analysis.statements.push({
+          kind: 'navigation',
+          target: analysis.navigationTargets.at(-1)!,
+        });
         report.convertedStatementCount += 1;
         touchQspFeature(report, 'navigation');
         if (argumentResult.ignored) {
@@ -127,7 +173,14 @@ export function analyzeQspCode(
         }
         continue;
       }
-      if (/^(?:exit|end)\b/i.test(trimmed)) continue;
+      if (/^exit\s*$/i.test(trimmed)) {
+        analysis.statements.push({ kind: 'exit', source: sourceAtLine });
+        continue;
+      }
+      if (/^end\b/i.test(trimmed)) continue;
+      if (/^(?:if|elseif|else|loop|jump|dynamic|func|return)\b|^:/i.test(trimmed)) {
+        analysis.statements.push({ kind: 'barrier', source: sourceAtLine });
+      }
       const category = classifyUnsupportedCommand(trimmed);
       unsupported(
         report,
@@ -136,6 +189,15 @@ export function analyzeQspCode(
         category.code,
         category.message,
       );
+      if (/^(?:if|elseif|else)\b.*:\s*(?:gs|gosub)\b/i.test(trimmed)) {
+        unsupported(
+          report,
+          sourceAtLine,
+          'subroutines',
+          'unsupported_subroutine',
+          'A call in an unsupported QSP conditional was not connected.',
+        );
+      }
     }
   }
   if (analysis.navigationTargets.length > 1) {
@@ -166,24 +228,19 @@ function containsQspInterpolation(value: string) {
   return /<<[\s\S]*?>>/.test(value);
 }
 
-function splitQspCommands(line: string): string[] {
+export function splitQspCommands(line: string): string[] {
   // QSP also uses `&` as an expression operator. Until calculated expressions are
   // supported, keep an entire assignment together so it is reported instead of
   // silently importing only the literal prefix as the assigned value.
-  if (
-    findOutsideQuotes(line, '&') >= 0 &&
-    /^\s*(?:(?:set|let)\s+)?[$%]?[a-z_][a-z0-9_.]*(?:\s*\[[^\]]*\])?\s*(?:=|\+=|-=|\*=|\/=)/i.test(
-      line,
-    )
-  ) {
-    return [line];
-  }
-
+  const assignment =
+    /^\s*(?:(?:set|let)\s+)?[$%]?[a-z_][a-z0-9_.]*(?:\s*\[[^\]]*\])?\s*(?:=|\+=|-=|\*=|\/=)/i;
   const commands: string[] = [];
   let remaining = line;
   while (remaining) {
     const delimiter = findOutsideQuotes(remaining, '&');
     if (delimiter < 0) break;
+    const next = remaining.slice(delimiter + 1);
+    if (assignment.test(remaining) && !/^\s*(?:gs|gosub|gt|goto|exit)\b/i.test(next)) break;
     commands.push(remaining.slice(0, delimiter));
     remaining = remaining.slice(delimiter + 1);
   }
@@ -219,7 +276,7 @@ function classifyUnsupportedCommand(command: string): {
       feature: 'subroutines',
       code: 'unsupported_subroutine',
       message:
-        'QSP location calls, arguments, return values, and call stacks are not yet imported.',
+        'This QSP call context, function return value, or call-stack behavior is unsupported.',
     };
   if (/^(?:jump)\b|^:/i.test(command))
     return {

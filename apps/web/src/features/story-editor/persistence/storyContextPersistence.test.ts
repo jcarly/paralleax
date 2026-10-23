@@ -92,13 +92,9 @@ describe('story context persistence', () => {
       ...metadata(5),
     });
     vi.mocked(api.deleteCharacterStat).mockResolvedValue({
-      ...storyFixture(),
-      revision: 6,
-      updatedAt: metadata(6).updatedAt,
-      characters: storyFixture().characters?.map((character) => ({
-        ...character,
-        stats: [],
-      })),
+      characterId: 'mira',
+      statId: 'trust',
+      ...metadata(6),
     });
 
     await expect(
@@ -126,7 +122,9 @@ describe('story context persistence', () => {
     );
 
     await harness.actions.deleteCharacterStat('mira', 'trust');
-    expect(harness.story().characters?.[0].stats).toEqual([]);
+    expect(harness.story().characters?.[0].stats).toEqual([
+      { id: 'awake', statDefinitionId: 'awake-definition', initialValue: false },
+    ]);
   });
 
   it('uses number, boolean, and string defaults for character stats', async () => {
@@ -180,9 +178,9 @@ describe('story context persistence', () => {
       ...metadata(4),
     });
     vi.mocked(api.deleteCharacterItem).mockResolvedValue({
-      ...storyFixture(),
-      revision: 5,
-      updatedAt: metadata(5).updatedAt,
+      characterId: 'mira',
+      itemId: 'key',
+      ...metadata(5),
     });
     vi.mocked(api.moveItemInstance).mockResolvedValue({
       ...storyFixture(),
@@ -289,7 +287,11 @@ describe('story context persistence', () => {
       stat: { id: 'stat', statDefinitionId: 'trust-definition', initialValue: 1 },
       ...metadata(2),
     });
-    vi.mocked(api.deleteCharacterStat).mockResolvedValue(storyFixture());
+    vi.mocked(api.deleteCharacterStat).mockResolvedValue({
+      characterId: 'mira',
+      statId: 'stat',
+      ...metadata(2),
+    });
     vi.mocked(api.updateStatDefinition).mockResolvedValue({
       statDefinition: { id: 'trust-definition', name: 'Updated' },
       ...metadata(2),
@@ -303,7 +305,11 @@ describe('story context persistence', () => {
       item: { id: 'key', itemDefinitionId: 'key-definition' },
       ...metadata(2),
     });
-    vi.mocked(api.deleteCharacterItem).mockResolvedValue(storyFixture());
+    vi.mocked(api.deleteCharacterItem).mockResolvedValue({
+      characterId: 'mira',
+      itemId: 'key',
+      ...metadata(2),
+    });
     vi.mocked(api.moveItemInstance).mockResolvedValue(storyFixture());
 
     await harness.actions.createLocation();

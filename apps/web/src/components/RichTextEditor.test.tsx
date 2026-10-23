@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Story } from '@paralleax/shared';
@@ -7,6 +7,7 @@ import { RichTextEditor } from './RichTextEditor';
 
 describe('RichTextEditor', () => {
   afterEach(() => {
+    cleanup();
     vi.restoreAllMocks();
     Reflect.deleteProperty(document, 'caretRangeFromPoint');
   });
@@ -45,7 +46,9 @@ describe('RichTextEditor', () => {
       expect(execCommand).toHaveBeenCalledWith(commandName, false, commandValue);
     }
 
-    await user.click(screen.getByRole('button', { name: 'Add image or GIF' }));
+    const addImageButton = screen.getByRole('button', { name: /Add image or GIF/ });
+    expect(addImageButton).toHaveAccessibleName('Image/GIF: Add image or GIF');
+    await user.click(addImageButton);
     expect(execCommand).toHaveBeenCalledWith(
       'insertImage',
       false,
@@ -129,14 +132,12 @@ describe('RichTextEditor', () => {
     });
     expect(addButton).toHaveAttribute('title', 'Add interaction link');
     await user.click(addButton);
-    expect(
-      within(container).getByRole('dialog', { name: 'Add an interaction link' }),
-    ).toBeInTheDocument();
-    await user.type(within(container).getByLabelText('Text to display'), 'Continue');
-    await user.selectOptions(within(container).getByLabelText('Target interaction'), 'next');
+    expect(screen.getByRole('dialog', { name: 'Add an interaction link' })).toBeInTheDocument();
+    await user.type(screen.getByLabelText('Text to display'), 'Continue');
+    await user.selectOptions(screen.getByLabelText('Target interaction'), 'next');
 
     expect(execCommand).not.toHaveBeenCalled();
-    await user.click(within(container).getByRole('button', { name: 'Insert' }));
+    await user.click(screen.getByRole('button', { name: 'Insert' }));
     expect(execCommand).toHaveBeenLastCalledWith(
       'insertHTML',
       false,
@@ -166,7 +167,7 @@ describe('RichTextEditor', () => {
 
     await user.click(within(container).getByRole('button', { name: 'Add interaction link' }));
 
-    expect(within(container).getByLabelText('Text to display')).toHaveValue('Continue');
+    expect(screen.getByLabelText('Text to display')).toHaveValue('Continue');
   });
 
   it('creates a conditional frame around the selected rich text with a Trigger condition', async () => {
@@ -193,8 +194,8 @@ describe('RichTextEditor', () => {
     fireEvent.mouseUp(editor);
 
     await user.click(within(container).getByRole('button', { name: 'Add conditional text' }));
-    await user.click(within(container).getByRole('button', { name: 'Interaction' }));
-    await user.click(within(container).getByRole('button', { name: 'Insert' }));
+    await user.click(screen.getByRole('button', { name: 'Interaction' }));
+    await user.click(screen.getByRole('button', { name: 'Insert' }));
 
     expect(onConditionalTextChange).toHaveBeenCalledWith(
       expect.stringMatching(
@@ -232,7 +233,7 @@ describe('RichTextEditor', () => {
 
     await user.click(within(container).getByRole('button', { name: 'Add conditional text' }));
     expect(editor.querySelector('[data-conditional-text-block]')).not.toBeNull();
-    await user.click(within(container).getByRole('button', { name: 'Cancel' }));
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
 
     expect(editor.innerHTML).toBe('<p>Before <strong>selected text</strong> after</p>');
     expect(onConditionalTextChange).not.toHaveBeenCalled();
@@ -262,16 +263,19 @@ describe('RichTextEditor', () => {
 
     await user.click(within(container).getByRole('button', { name: 'Edit condition' }));
     await user.selectOptions(
-      within(container).getByLabelText('Interaction condition operator'),
+      screen.getByLabelText('Interaction condition operator'),
       'not-visited',
     );
-    await user.click(within(container).getByRole('button', { name: 'Update' }));
+    await user.click(screen.getByRole('button', { name: 'Update' }));
     expect(onConditionalTextChange).toHaveBeenLastCalledWith(
       expect.stringContaining('data-conditional-text-block="block-1"'),
       [{ id: 'block-1', conditions: [{ interactionId: 'next', hasBeenVisited: false }] }],
     );
 
-    await user.click(within(container).getByRole('button', { name: 'Remove condition' }));
+    const removeCondition = within(container).getByRole('button', { name: 'Remove condition' });
+    expect(removeCondition).toHaveClass('rich-text-condition-remove');
+    expect(removeCondition).not.toHaveClass('trigger-link-delete');
+    await user.click(removeCondition);
     expect(onConditionalTextChange).toHaveBeenLastCalledWith('<p>Secret text</p>', []);
   });
 
@@ -287,39 +291,39 @@ describe('RichTextEditor', () => {
       <RichTextEditor value="" onChange={vi.fn()} onBlur={vi.fn()} story={story} />,
     );
 
-    const addVariable = within(container).getByRole('button', { name: 'Add variable' });
+    const addVariable = within(container).getByRole('button', { name: /Add variable/ });
+    expect(addVariable).toHaveAccessibleName('{x}: Add variable');
     await user.click(addVariable);
-    expect(within(container).getByRole('dialog', { name: 'Add a variable' })).toBeInTheDocument();
-    const owner = within(container).getByLabelText('Variable owner');
-    expect(within(owner).getByRole('option', { name: 'Story — Demo' })).toBeInTheDocument();
-    expect(within(owner).getByRole('option', { name: 'Character — Mira' })).toBeInTheDocument();
-    expect(within(owner).getByRole('option', { name: 'Location — Lab' })).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'Add a variable' })).toBeInTheDocument();
+    const owner = screen.getByLabelText('Variable owner');
+    expect(within(owner).getByRole('option', { name: 'World -> Demo' })).toBeInTheDocument();
+    expect(within(owner).getByRole('option', { name: 'Character -> Mira' })).toBeInTheDocument();
+    expect(within(owner).getByRole('option', { name: 'Location -> Lab' })).toBeInTheDocument();
 
     await user.selectOptions(owner, 'owner:character:mira');
-    const characterContent = within(container).getByLabelText('Variable or item in Mira');
+    const characterContent = screen.getByLabelText('Variable or item in Mira');
     expect(
-      within(characterContent).getByRole('option', { name: 'Variable — Health' }),
+      within(characterContent).getByRole('option', { name: 'Variable -> Health' }),
     ).toBeInTheDocument();
     expect(
-      within(characterContent).getByRole('option', { name: 'Item — Bag' }),
+      within(characterContent).getByRole('option', { name: 'Item -> Bag' }),
     ).toBeInTheDocument();
     await user.selectOptions(characterContent, 'item:bag');
+    await user.selectOptions(screen.getByLabelText('Variable or item in Bag'), 'item:battery');
     await user.selectOptions(
-      within(container).getByLabelText('Variable or item in Bag'),
-      'item:battery',
-    );
-    await user.selectOptions(
-      within(container).getByLabelText('Variable or item in Battery'),
+      screen.getByLabelText('Variable or item in Battery'),
       'variable:battery:charge',
     );
-    expect(within(container).getByText('Mira → Bag → Battery → Charge')).toBeInTheDocument();
+    expect(
+      within(screen.getByRole('dialog')).getByText('Mira -> Bag -> Battery -> Charge'),
+    ).toBeInTheDocument();
 
     expect(execCommand).not.toHaveBeenCalledWith(
       'insertHTML',
       false,
       expect.stringContaining('data-stat-value="charge"'),
     );
-    await user.click(within(container).getByRole('button', { name: 'Insert' }));
+    await user.click(screen.getByRole('button', { name: 'Insert' }));
 
     expect(execCommand).toHaveBeenLastCalledWith(
       'insertHTML',
@@ -328,15 +332,12 @@ describe('RichTextEditor', () => {
     );
 
     await user.click(addVariable);
+    await user.selectOptions(screen.getByLabelText('Variable owner'), 'owner:story:demo');
     await user.selectOptions(
-      within(container).getByLabelText('Variable owner'),
-      'owner:story:demo',
-    );
-    await user.selectOptions(
-      within(container).getByLabelText('Variable or item in Demo'),
+      screen.getByLabelText('Variable or item in Demo'),
       'variable:story:score',
     );
-    await user.click(within(container).getByRole('button', { name: 'Insert' }));
+    await user.click(screen.getByRole('button', { name: 'Insert' }));
     expect(execCommand).toHaveBeenLastCalledWith(
       'insertHTML',
       false,
@@ -359,27 +360,22 @@ describe('RichTextEditor', () => {
     );
 
     const token = within(container).getByRole('button', {
-      name: 'Edit variable Story → Score',
+      name: 'Edit variable Story -> Score',
     });
     await user.click(token);
-    expect(within(container).getByRole('dialog', { name: 'Edit variable' })).toBeInTheDocument();
-    expect(within(container).getByLabelText('Variable owner')).toHaveValue('owner:story:demo');
-    expect(within(container).getByLabelText('Variable or item in Demo')).toHaveValue(
-      'variable:story:score',
-    );
+    expect(screen.getByRole('dialog', { name: 'Edit variable' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Variable owner')).toHaveValue('owner:story:demo');
+    expect(screen.getByLabelText('Variable or item in Demo')).toHaveValue('variable:story:score');
 
+    await user.selectOptions(screen.getByLabelText('Variable owner'), 'owner:character:mira');
     await user.selectOptions(
-      within(container).getByLabelText('Variable owner'),
-      'owner:character:mira',
-    );
-    await user.selectOptions(
-      within(container).getByLabelText('Variable or item in Mira'),
+      screen.getByLabelText('Variable or item in Mira'),
       'variable:character:health',
     );
-    expect(within(container).getByText('Mira → Health')).toBeInTheDocument();
+    expect(within(screen.getByRole('dialog')).getByText('Mira -> Health')).toBeInTheDocument();
 
     expect(onChange).not.toHaveBeenCalled();
-    await user.click(within(container).getByRole('button', { name: 'Update' }));
+    await user.click(screen.getByRole('button', { name: 'Update' }));
 
     expect(onChange).toHaveBeenLastCalledWith(
       '<p>Value: <span contenteditable="false" data-stat-value="health">{{Mira.Health}}</span></p>',
@@ -390,9 +386,11 @@ describe('RichTextEditor', () => {
     expect(onChange.mock.lastCall?.[0]).not.toContain('trigger-link-delete');
 
     const removeVariable = within(container).getByRole('button', {
-      name: 'Remove variable Mira → Health',
+      name: 'Remove variable Mira -> Health',
     });
-    expect(removeVariable).toHaveClass('trigger-link-delete', 'rich-text-token-remove');
+    expect(removeVariable).toHaveClass('rich-text-token-remove');
+    expect(removeVariable).not.toHaveClass('trigger-link-delete');
+    expect(removeVariable.closest('[data-stat-value]')).toHaveAttribute('contenteditable', 'false');
     await user.click(removeVariable);
 
     expect(onChange).toHaveBeenLastCalledWith('<p>Value: </p>');
@@ -412,7 +410,7 @@ describe('RichTextEditor', () => {
     );
 
     expect(
-      within(container).getByRole('button', { name: 'Edit variable Mira → Health' }),
+      within(container).getByRole('button', { name: 'Edit variable Mira -> Health' }),
     ).toBeInTheDocument();
 
     const renamedStory = variableStoryFixture();
@@ -423,9 +421,9 @@ describe('RichTextEditor', () => {
     );
 
     expect(
-      within(container).getByRole('button', { name: 'Edit variable Alice → Force' }),
+      within(container).getByRole('button', { name: 'Edit variable Alice -> Force' }),
     ).toBeInTheDocument();
-    expect(container.querySelector('[data-stat-value]')).toHaveTextContent('Alice → Force');
+    expect(container.querySelector('[data-stat-value]')).toHaveTextContent('Alice -> Force');
     expect(container.querySelector('[data-stat-value]')).not.toHaveTextContent('{{');
   });
 
@@ -443,7 +441,7 @@ describe('RichTextEditor', () => {
     );
     const editor = within(container).getByRole('textbox', { name: 'Content' });
     const token = within(container).getByRole('button', {
-      name: 'Edit variable Story → Score',
+      name: 'Edit variable Story -> Score',
     });
     const marker = token.closest<HTMLElement>('[data-stat-value]')!;
     const targetText = [...editor.querySelector('p')!.childNodes].find(
@@ -466,7 +464,7 @@ describe('RichTextEditor', () => {
     fireEvent.dragStart(token, { dataTransfer });
     expect(marker).toHaveClass('rich-text-token-dragging');
     expect(dataTransfer.effectAllowed).toBe('move');
-    expect(dataTransfer.setData).toHaveBeenCalledWith('text/plain', 'Story → Score');
+    expect(dataTransfer.setData).toHaveBeenCalledWith('text/plain', 'Story -> Score');
 
     fireEvent.dragOver(editor, { clientX: 80, clientY: 20, dataTransfer });
     expect(dataTransfer.dropEffect).toBe('move');
@@ -504,16 +502,14 @@ describe('RichTextEditor', () => {
     expect(token).toHaveTextContent('🔗 Continue | Next scene');
     expect(token).toHaveAttribute('draggable', 'true');
     await user.click(token);
-    expect(
-      within(container).getByRole('dialog', { name: 'Edit interaction link' }),
-    ).toBeInTheDocument();
-    expect(within(container).getByLabelText('Text to display')).toHaveValue('Continue');
-    expect(within(container).getByLabelText('Target interaction')).toHaveValue('next');
+    expect(screen.getByRole('dialog', { name: 'Edit interaction link' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Text to display')).toHaveValue('Continue');
+    expect(screen.getByLabelText('Target interaction')).toHaveValue('next');
 
-    await user.clear(within(container).getByLabelText('Text to display'));
-    await user.type(within(container).getByLabelText('Text to display'), 'Finish');
-    await user.selectOptions(within(container).getByLabelText('Target interaction'), 'ending');
-    await user.click(within(container).getByRole('button', { name: 'Update' }));
+    await user.clear(screen.getByLabelText('Text to display'));
+    await user.type(screen.getByLabelText('Text to display'), 'Finish');
+    await user.selectOptions(screen.getByLabelText('Target interaction'), 'ending');
+    await user.click(screen.getByRole('button', { name: 'Update' }));
 
     expect(onChange).toHaveBeenLastCalledWith(
       '<p><span contenteditable="false" data-interaction-link-target="ending">Finish</span></p>',

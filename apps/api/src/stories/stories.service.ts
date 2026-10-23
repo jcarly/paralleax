@@ -2,11 +2,15 @@ import { Injectable } from '@nestjs/common';
 import {
   STORY_LIST_PAGE_SIZE,
   type CharacterItemMutationResult,
+  CharacterItemDeletionResult,
   CharacterMutationResult,
   CharacterStatMutationResult,
+  CharacterStatDeletionResult,
   GraphDecorationMutationResult,
+  GraphDecorationDeletionResult,
   GroupMutationResult,
   InteractionMutationResult,
+  InteractionDeletionResult,
   ItemDefinitionMutationResult,
   LocationMutationResult,
   ReaderAutosaveMode,
@@ -18,6 +22,7 @@ import {
   StoryListOptions,
   StoryRuntimeSliceRequest,
   TriggerMutationResult,
+  TriggerDeletionResult,
   UserRole,
 } from '@paralleax/shared';
 import { StoryAccessService } from './application/story-access';
@@ -34,6 +39,7 @@ import type {
   CreateCharacterStatDto,
   CreateGraphDecorationDto,
   CreateGroupDto,
+  UpdateGroupDto,
   CreateInteractionDto,
   CreateItemDefinitionDto,
   CreateLocationDto,
@@ -242,6 +248,14 @@ export class StoriesService {
     return this.groups.create(storyId, input, userId);
   }
 
+  updateGroup(storyId: string, groupId: string, input: UpdateGroupDto, userId: string) {
+    return this.groups.update(storyId, groupId, input, userId);
+  }
+
+  deleteGroup(storyId: string, groupId: string, userId: string) {
+    return this.groups.delete(storyId, groupId, userId);
+  }
+
   async updateGraphPositions(storyId: string, input: UpdateStoryGraphPositionsDto, userId: string) {
     return this.graph.updatePositions(storyId, input, userId);
   }
@@ -255,7 +269,11 @@ export class StoriesService {
     return this.graph.updateInteraction(storyId, interactionId, input, userId);
   }
 
-  async deleteInteraction(storyId: string, interactionId: string, userId: string): Promise<Story> {
+  async deleteInteraction(
+    storyId: string,
+    interactionId: string,
+    userId: string,
+  ): Promise<InteractionDeletionResult> {
     return this.graph.deleteInteraction(storyId, interactionId, userId);
   }
 
@@ -280,7 +298,7 @@ export class StoriesService {
     storyId: string,
     decorationId: string,
     userId: string,
-  ): Promise<Story> {
+  ): Promise<GraphDecorationDeletionResult> {
     return this.graph.deleteGraphDecoration(storyId, decorationId, userId);
   }
 
@@ -308,7 +326,7 @@ export class StoriesService {
     interactionId: string,
     triggerId: string,
     userId: string,
-  ): Promise<Story> {
+  ): Promise<TriggerDeletionResult> {
     return this.graph.deleteTrigger(storyId, interactionId, triggerId, userId);
   }
 
@@ -433,7 +451,7 @@ export class StoriesService {
     characterId: string,
     statId: string,
     userId: string,
-  ): Promise<Story> {
+  ): Promise<CharacterStatDeletionResult> {
     return this.context.deleteCharacterStat(storyId, characterId, statId, userId);
   }
 
@@ -460,7 +478,7 @@ export class StoriesService {
     characterId: string,
     itemId: string,
     userId: string,
-  ): Promise<Story> {
+  ): Promise<CharacterItemDeletionResult> {
     return this.context.deleteCharacterItem(storyId, characterId, itemId, userId);
   }
 }

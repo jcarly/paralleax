@@ -138,10 +138,14 @@ that definition to the Story, a character, a location, or an item definition and
 provides its authored initial value. The assignment id, not the reusable
 definition id, is the effect and condition target.
 
-An interaction may `set` any assigned stat or `add` to a numeric one.
+An interaction may `set` any assigned stat or `add` to a numeric one. The effect
+value may be a matching typed literal or a deterministic typed expression over
+stable same-Story assignment and exact-item references.
 Trigger conditions support equality and inequality for all matching types and
 ordered comparisons for numbers. They compare a stat target with either a typed
-literal or another same-Story stat target of the same type. A missing or
+literal, another same-Story stat target of the same type, or a matching typed
+expression. Expressions are evaluated in ordered replay and do not define
+reactive or persisted calculated stats. A missing or
 ill-typed runtime value never silently becomes zero. Item-definition assignments
 are templates: every exact item instance receives an independent runtime value.
 
@@ -152,7 +156,8 @@ Authors may type `{{owner.variable}}` in interaction content. On save, a unique
 Story, character, location, or exact authored item-instance reference is lowered
 to the same stable marker. Unknown or ambiguous references remain visible for
 correction in the editor and render as empty text in the reader.
-See [ADR-021](decisions/ADR-021-typed-story-stats.md).
+See [ADR-021](decisions/ADR-021-typed-story-stats.md) and
+[ADR-038](decisions/ADR-038-typed-stat-expressions.md).
 
 ### Item Definition
 
@@ -228,9 +233,9 @@ Later elements:
 - optional profile information beyond the implemented display name;
 - authored changes and suggestions.
 
-Local accounts, server-side sessions, administration, story visibility, and
-delegated reading/editing are implemented. Suggestions and review remain later
-work.
+Local accounts, server-side sessions, administration, story visibility,
+delegated reading/editing, and anchored review discussions are implemented.
+Change proposals that require approval remain future work.
 
 ### Story Permissions
 
@@ -246,6 +251,10 @@ Implemented visibility settings:
 - authenticated: every signed-in user can read;
 - public: anonymous and authenticated users can read;
 - invitation: explicitly granted users can read.
+
+[ADR-033](decisions/ADR-033-unlisted-story-visibility.md) accepts a fifth,
+unlisted policy that is readable by URL but excluded from general library
+discovery. It remains future work and is not part of the implemented policy set.
 
 Specific permissions are stored in `story_user_permissions`, with a `userId`, a
 `storyId`, and a `viewer` or `editor` role.
@@ -265,12 +274,8 @@ signed-in account.
 The effective permission is resolved from administrator status, story ownership,
 story policies, authentication, and the direct grant. All API object operations
 apply that resolution. New stories default to private owner-only editing with
-comments enabled for editors. Choosing the reader policy extends comments to
-every signed-in account that can read the story.
-
-Pending suggestions are not visible through a per-suggestion setting. Any user
-with review or approval rights on a story can see all pending suggestions for
-that story.
+comments disabled, as specified by ADR-017. Suggestion visibility and review or
+approval rights are not implemented; define them before adding change proposals.
 
 ### Future Multi-Participant Narrative Model
 
@@ -463,18 +468,31 @@ Possible elements:
 - title;
 - explicit Interaction membership;
 
-The first implementation is deliberately flat: it has no description, nested
-Group membership, display metadata, collapse state, or layout state. A Group is
-created from one or more selected Interactions.
+A root Group is created from one or more selected Interactions; an empty subgroup
+can also be created directly beneath an existing Group. A Group may have one
+optional `parentGroupId` referencing a Group in the same Story. This forms an
+acyclic organizational tree. Existing flat Groups remain roots. Collapse state
+is transient editor state, separate from authored metadata.
 
-Interaction membership is intentionally many-to-many: one Interaction may
-belong to several Groups at the same time. Group membership is never inferred
-from a Decoration frame or from canvas overlap. Removing a Group must preserve
-every Interaction and only remove the corresponding organizational membership.
+An Interaction has at most one direct Group. Assigning selected Interactions to
+a new or existing Group transfers them from their previous direct Groups in one
+authored mutation. An Interaction may also be ungrouped. A Group may contain both
+direct Interactions and child Groups; its navigation includes all descendants.
+Group membership is never inferred from a Decoration frame or canvas overlap.
+Removing a Group preserves every Interaction and removes only its direct
+organizational membership. See [ADR-036](decisions/ADR-036-exclusive-group-membership.md).
 
-There is no Group parentage in the initial contract. Any future nested Group
-relationships must reject cycles; their cardinality and the ownership of
-collapse/visibility state remain implementation-contract decisions. See
+Deleting a Group promotes its direct children to its parent (or the root),
+without deleting any Interaction or subgroup. The left navigation lists Groups,
+allows membership and title editing, and highlights unique recursive members.
+Centering on those members is an explicit action separate from selection.
+Sibling order follows canonical `Story.groups` list order and the existing
+persisted `sort_order`. Moving a Group changes its parent and ordering together
+in one reversible authored mutation. Tree expansion never affects valid parents.
+The compact tree supports drag-and-drop, keyboard navigation and move commands,
+search, contextual actions and inline rename without a Group inspector. See
+[ADR-037](decisions/ADR-037-group-tree-authoring.md).
+See [ADR-035](decisions/ADR-035-nested-group-navigation.md) and
 [Workbench product direction](workbench.md).
 
 ### Graph Decoration
@@ -511,9 +529,9 @@ character-specific narrative paths.
 
 ### Future Calculated Stats
 
-Stored typed stats are implemented. A later increment may add read-only values
-calculated from other stats and explicit factors. Formula validation,
-dependency ordering, cycle detection, and rounding rules must be defined before
+Stored typed stats and expressions inside effects and conditions are implemented.
+A later increment may add read-only values calculated reactively from other stats
+and explicit factors. Dependency ordering, cycle detection, and rounding rules must be defined before
 those values become part of the runtime contract.
 
 ### Future Item Definition

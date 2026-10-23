@@ -223,6 +223,42 @@ describe('StoryGraphService', () => {
     ]);
   });
 
+  it('stores a validated typed expression comparison', async () => {
+    const result = await service.updateTrigger(
+      'story-1',
+      'child',
+      'child-trigger',
+      {
+        conditionGroups: [
+          {
+            id: 'energy-expression',
+            conditions: [
+              {
+                statId: 'energy',
+                operator: 'gte',
+                expression: '(@{mira-energy} + 2) * 3',
+              },
+            ],
+          },
+        ],
+      },
+      'user-1',
+    );
+
+    expect(result.trigger.conditionGroups).toEqual([
+      {
+        id: 'energy-expression',
+        conditions: [
+          {
+            statId: 'energy',
+            operator: 'gte',
+            expression: '(@{mira-energy} + 2) * 3',
+          },
+        ],
+      },
+    ]);
+  });
+
   it('creates graph decorations through the existing decoration builder', async () => {
     const result = await service.createGraphDecoration(
       'story-1',
@@ -264,6 +300,52 @@ describe('StoryGraphService', () => {
     const updated = mutation(storyFixture());
     expect(updated.interactions[0].position).toEqual({ x: 200, y: 300 });
     expect(updated.interactions[1].triggers[0].position).toEqual({ x: 210, y: 220 });
+  });
+
+  it('returns compact cleanup results for graph deletions', async () => {
+    await expect(service.deleteInteraction('story-1', 'child', 'user-1')).resolves.toEqual({
+      interactionId: 'child',
+      revision: 4,
+      updatedAt: '2026-08-25T16:00:00.000Z',
+    });
+    await expect(service.deleteGraphDecoration('story-1', 'frame', 'user-1')).rejects.toThrow(
+      'Graph decoration not found',
+    );
+
+    const story = storyFixture();
+    story.graphDecorations = [
+      {
+        id: 'frame',
+        kind: 'frame',
+        position: { x: 0, y: 0 },
+        color: '#5b6ee1',
+        width: 420,
+        height: 240,
+      },
+    ];
+    mutations.update.mockImplementationOnce(
+      async (_storyId: string, mutation: (value: Story) => Story) => {
+        const updated = mutation(story);
+        updated.revision = 5;
+        updated.updatedAt = '2026-08-25T17:00:00.000Z';
+        return updated;
+      },
+    );
+    await expect(service.deleteGraphDecoration('story-1', 'frame', 'user-1')).resolves.toEqual({
+      decorationId: 'frame',
+      revision: 5,
+      updatedAt: '2026-08-25T17:00:00.000Z',
+    });
+
+    await expect(
+      service.deleteTrigger('story-1', 'child', 'child-trigger', 'user-1'),
+    ).resolves.toEqual({
+      interactionId: 'child',
+      triggerId: 'child-trigger',
+      triggerRemoved: false,
+      revision: 4,
+      updatedAt: '2026-08-25T16:00:00.000Z',
+    });
   });
 });
 

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
 import {
   getStatTargets,
   hasStatTargets,
@@ -18,6 +19,14 @@ import {
   type RichTextInteractionLinkValue,
 } from './RichTextInteractionLinkDialog';
 import { RichTextVariableDialog } from './RichTextVariableDialog';
+import {
+  ensureRichTextTokenControls,
+  getInteractionLinkText,
+  getVariableMarkerExpression,
+  getVariableMarkerSource,
+  serializeRichTextEditorHtml,
+} from './richTextEditorTokens';
+import { useRichTextEditorSelection } from './useRichTextEditorSelection';
 
 function escapeHtmlText(value: string): string {
   return value.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
@@ -51,69 +60,6 @@ function conditionalTextFrameTagName(content: string): 'div' | 'span' {
   const template = document.createElement('template');
   template.innerHTML = content;
   return template.content.querySelector(RICH_TEXT_BLOCK_SELECTOR) ? 'div' : 'span';
-}
-
-function getVariableMarkerSource(marker: HTMLElement): string {
-  return (
-    marker.querySelector<HTMLElement>('[data-rich-text-variable-edit]')?.dataset
-      .richTextVariableSource ??
-    marker.textContent ??
-    ''
-  );
-}
-
-function getVariableMarkerExpression(marker: HTMLElement): string {
-  const source = getVariableMarkerSource(marker).trim();
-  const match = /^\{\{([\s\S]*)\}\}$/.exec(source);
-  return match?.[1] ?? source;
-}
-
-function getInteractionLinkText(marker: HTMLElement): string {
-  return (
-    marker.querySelector<HTMLElement>('[data-rich-text-interaction-link-edit]')?.dataset
-      .richTextInteractionLinkText ??
-    marker.textContent ??
-    ''
-  );
-}
-
-function restoreRichTextTokenMarker(
-  marker: HTMLElement,
-  source: string,
-  selectedClassName: string,
-) {
-  marker.textContent = source;
-  marker.classList.remove('rich-text-token-dragging', selectedClassName);
-  marker.removeAttribute('draggable');
-  marker.removeAttribute('aria-label');
-  marker.removeAttribute('role');
-  marker.removeAttribute('tabindex');
-  if (marker.classList.length === 0) marker.removeAttribute('class');
-}
-
-function ensureRichTextTokenControls(
-  marker: HTMLElement,
-  editDataAttribute: string,
-  removeDataAttribute: string,
-) {
-  let editButton = marker.querySelector<HTMLButtonElement>(`[${editDataAttribute}]`);
-  let removeButton = marker.querySelector<HTMLButtonElement>(`[${removeDataAttribute}]`);
-  if (!editButton || !removeButton) {
-    marker.textContent = '';
-    editButton = document.createElement('button');
-    editButton.type = 'button';
-    editButton.contentEditable = 'false';
-    editButton.className = 'rich-text-token-edit';
-    editButton.setAttribute(editDataAttribute, '');
-    removeButton = document.createElement('button');
-    removeButton.type = 'button';
-    removeButton.contentEditable = 'false';
-    removeButton.className = 'trigger-link-delete rich-text-token-remove';
-    removeButton.setAttribute(removeDataAttribute, '');
-    removeButton.textContent = 'x';
-    marker.append(editButton, removeButton);
-  }
-  return { editButton, removeButton };
 }
 
 function getCaretRangeFromPoint(x: number, y: number): Range | undefined {
@@ -200,7 +146,13 @@ export function RichTextEditor({
 }) {
   const { t, i18n } = useTranslation();
   const editorRef = useRef<HTMLDivElement>(null);
-  const editorSelectionRef = useRef<Range | undefined>(undefined);
+  const {
+    focusAtRememberedSelection: focusEditorAtRememberedSelection,
+    insertInlineConditionalTextFrame,
+    rememberSelection: rememberEditorSelection,
+    rememberedSelectionHtml,
+    rememberedSelectionText,
+  } = useRichTextEditorSelection(editorRef);
   const editingVariableElementRef = useRef<HTMLElement | undefined>(undefined);
   const editingInteractionLinkElementRef = useRef<HTMLElement | undefined>(undefined);
   const draggedRichTextTokenRef = useRef<HTMLElement | undefined>(undefined);
@@ -229,90 +181,7 @@ export function RichTextEditor({
           });
 
   function editorHtml() {
-    const clone = editorRef.current?.cloneNode(true) as HTMLDivElement | undefined;
-    clone
-      ?.querySelectorAll<HTMLElement>(
-        '[data-conditional-text-target], [data-conditional-text-block]',
-      )
-      .forEach((frame) => {
-        frame.classList.remove('conditional-text', 'conditional-text-unavailable');
-        if (frame.classList.length === 0) frame.removeAttribute('class');
-        frame.removeAttribute('title');
-        frame.querySelector('.conditional-text-reason')?.remove();
-        frame.querySelector('[data-rich-text-conditional-controls]')?.remove();
-      });
-    clone?.querySelectorAll<HTMLElement>('[data-stat-value]').forEach((marker) => {
-      restoreRichTextTokenMarker(
-        marker,
-        getVariableMarkerSource(marker),
-        'rich-text-variable-selected',
-      );
-    });
-    clone?.querySelectorAll<HTMLElement>('[data-interaction-link-target]').forEach((marker) => {
-      restoreRichTextTokenMarker(
-        marker,
-        getInteractionLinkText(marker),
-        'rich-text-interaction-link-selected',
-      );
-    });
-    return clone?.innerHTML ?? '';
-  }
-
-  function rememberEditorSelection() {
-    const editor = editorRef.current;
-    const selection = window.getSelection();
-    if (!editor || !selection || selection.rangeCount === 0) return;
-    const range = selection.getRangeAt(0);
-    if (editor.contains(range.commonAncestorContainer)) {
-      editorSelectionRef.current = range.cloneRange();
-    }
-  }
-
-  function focusEditorAtRememberedSelection() {
-    const editor = editorRef.current;
-    const range = editorSelectionRef.current;
-    editor?.focus();
-    if (!editor || !range || !editor.contains(range.commonAncestorContainer)) return;
-    const selection = window.getSelection();
-    selection?.removeAllRanges();
-    selection?.addRange(range);
-  }
-
-  function rememberedSelectionText() {
-    const editor = editorRef.current;
-    const range = editorSelectionRef.current;
-    return editor && range && editor.contains(range.commonAncestorContainer)
-      ? range.toString().trim()
-      : '';
-  }
-
-  function rememberedSelectionHtml() {
-    const editor = editorRef.current;
-    const range = editorSelectionRef.current;
-    if (!editor || !range || !editor.contains(range.commonAncestorContainer) || range.collapsed) {
-      return '';
-    }
-    const container = document.createElement('div');
-    container.append(range.cloneContents());
-    return container.innerHTML;
-  }
-
-  function insertInlineConditionalTextFrame(id: string, placeholder: string) {
-    const editor = editorRef.current;
-    const range = editorSelectionRef.current;
-    if (!editor || !range || !editor.contains(range.commonAncestorContainer)) return false;
-    const frame = document.createElement('span');
-    frame.dataset.conditionalTextBlock = id;
-    if (range.collapsed) frame.textContent = placeholder;
-    else frame.append(range.extractContents());
-    range.insertNode(frame);
-    range.setStartAfter(frame);
-    range.collapse(true);
-    const selection = window.getSelection();
-    selection?.removeAllRanges();
-    selection?.addRange(range);
-    editorSelectionRef.current = range.cloneRange();
-    return true;
+    return serializeRichTextEditorHtml(editorRef.current);
   }
 
   useEffect(() => {
@@ -372,7 +241,7 @@ export function RichTextEditor({
         editButton.setAttribute('aria-label', t('richText.editConditionToken'));
         const removeButton = document.createElement('button');
         removeButton.type = 'button';
-        removeButton.className = 'trigger-link-delete rich-text-condition-remove';
+        removeButton.className = 'rich-text-condition-remove';
         removeButton.dataset.richTextConditionRemove = String(conditionIndex);
         removeButton.textContent = 'x';
         removeButton.title = t('richText.removeConditionToken');
@@ -539,6 +408,8 @@ export function RichTextEditor({
   }
 
   function commitCondition(condition: TriggerCondition) {
+    // Release modal isolation before focusing or changing the underlying contenteditable.
+    flushSync(() => setConditionDialogOpen(false));
     const blockId = editingCondition?.blockId;
     const conditionIndex = editingCondition?.conditionIndex;
     if (!blockId) {
@@ -562,7 +433,6 @@ export function RichTextEditor({
     }
     pendingConditionalFrameRef.current = undefined;
     conditionDialogActiveRef.current = false;
-    setConditionDialogOpen(false);
     setEditingCondition(undefined);
     editorRef.current?.focus();
   }
@@ -602,6 +472,7 @@ export function RichTextEditor({
   }
 
   function commitVariable(target: StatTarget, reference: string) {
+    flushSync(() => setVariableDialogOpen(false));
     const existingMarker = editingVariableElementRef.current;
     if (existingMarker && editorRef.current?.contains(existingMarker)) {
       existingMarker.dataset.statValue = target.assignment.id;
@@ -610,7 +481,6 @@ export function RichTextEditor({
       existingMarker.textContent = `{{${reference}}}`;
       editingVariableElementRef.current = undefined;
       setEditingVariable(undefined);
-      setVariableDialogOpen(false);
       editorRef.current.focus();
       onChange(editorHtml());
       return;
@@ -624,7 +494,6 @@ export function RichTextEditor({
     );
     editingVariableElementRef.current = undefined;
     setEditingVariable(undefined);
-    setVariableDialogOpen(false);
   }
 
   function openVariableEditor(marker: HTMLElement) {
@@ -657,13 +526,13 @@ export function RichTextEditor({
   }
 
   function commitInteractionLink(link: RichTextInteractionLinkValue) {
+    flushSync(() => setInteractionLinkDialogOpen(false));
     const existingMarker = editingInteractionLinkElementRef.current;
     if (existingMarker && editorRef.current?.contains(existingMarker)) {
       existingMarker.dataset.interactionLinkTarget = link.targetId;
       existingMarker.textContent = link.text;
       editingInteractionLinkElementRef.current = undefined;
       setEditingInteractionLink(undefined);
-      setInteractionLinkDialogOpen(false);
       setCreatingInteractionLinkText('');
       editorRef.current.focus();
       onChange(editorHtml());
@@ -675,7 +544,6 @@ export function RichTextEditor({
     );
     editingInteractionLinkElementRef.current = undefined;
     setEditingInteractionLink(undefined);
-    setInteractionLinkDialogOpen(false);
     setCreatingInteractionLinkText('');
   }
 
@@ -819,7 +687,7 @@ export function RichTextEditor({
         </button>
         <button
           type="button"
-          aria-label={t('richText.addImage')}
+          aria-label={`${t('richText.image')}: ${t('richText.addImage')}`}
           onMouseDown={(e) => e.preventDefault()}
           onClick={insertImage}
         >
@@ -863,7 +731,7 @@ export function RichTextEditor({
         </button>
         <button
           type="button"
-          aria-label={t('richText.addVariable')}
+          aria-label={`{x}: ${t('richText.addVariable')}`}
           title={t('richText.addVariable')}
           disabled={!hasVariables}
           onMouseDown={(event) => event.preventDefault()}

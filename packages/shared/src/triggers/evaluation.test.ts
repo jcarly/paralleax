@@ -35,6 +35,17 @@ describe('condition group evaluation', () => {
     expect(doConditionsMatch([condition], new Set(), null, [], { courage: 3 })).toBe(false);
   });
 
+  it('supports complex expression comparisons against an evaluated target value', () => {
+    const condition = {
+      statId: 'score',
+      operator: 'gte' as const,
+      expression: '@{bonus} + 10',
+    };
+
+    expect(doConditionsMatch([condition], new Set(), null, [], { score: 15, bonus: 2 })).toBe(true);
+    expect(doConditionsMatch([condition], new Set(), null, [], { score: 9, bonus: 2 })).toBe(false);
+  });
+
   it('resolves exact item-instance values on either side of a comparison', () => {
     const condition = {
       statId: 'charge',

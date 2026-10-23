@@ -1,4 +1,5 @@
 import type { QspImportProgress, QspImportResult, QspImportSource } from '@paralleax/shared';
+import type { ImportWorkerMessage } from './abortable-import-worker.service.js';
 
 export interface QspWorkerInput {
   source: QspImportSource;
@@ -7,16 +8,4 @@ export interface QspWorkerInput {
   reportPath: string;
 }
 
-export type QspWorkerMessage =
-  | {
-      type: 'progress';
-      progress: QspImportProgress;
-    }
-  | {
-      type: 'result';
-      result: QspImportResult;
-    }
-  | {
-      type: 'error';
-      message: string;
-    };
+export type QspWorkerMessage = ImportWorkerMessage<QspImportProgress, QspImportResult>;

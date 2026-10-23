@@ -42,6 +42,9 @@ Current behavior:
   saving, and disable organization actions until the operation finishes;
 - clear the busy state after success or failure; layout failures expose a localized
   error and a retry action;
+- fall back to the deterministic historic placement when a projection exceeds
+  ELK's safe synchronous size or ELK reports a JavaScript call-stack overflow;
+  other ELK errors remain visible and retryable;
 - treat the complete organization as one canonical position mutation;
 - be undoable as one durable history step with `Ctrl+Z` or the canvas control.
 

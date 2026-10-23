@@ -3,27 +3,33 @@
 ## Goal
 
 Use AI agents as implementation accelerators without allowing individual agents to
-redefine Paralleax architecture or product semantics.
+redefine Paralleax architecture or product semantics. `AGENTS.md` owns the working
+rules; this document provides the execution sequence, task template, and examples.
 
 ## Recommended loop
 
+Start with the start-of-task checklist in `AGENTS.md`, including model suitability
+and working-tree inspection. For model recommendations, consult
+[official model guidance](https://learn.chatgpt.com/docs/models).
+
 ### 1. Architecture/product pass
 
-Use the reasoning agent to turn a feature idea into a short implementation contract:
+Turn the feature idea into the short contract below. Use the clarification and
+product decisions rule in `AGENTS.md` to settle behavior, challenge the approach
+and priority, and resolve documentation conflicts with the user.
 
-- user-facing goal;
-- domain behavior;
-- invariants;
-- non-goals;
-- affected layers;
-- migration needs;
-- acceptance tests.
-
-For ambiguous domain changes, create or update an ADR before implementation.
+For significant editor interaction changes, bring a concrete user journey or
+lightweight mockup into that discussion before building the full implementation.
+Record agreed decisions in the existing appropriate documentation, with rationale
+and consequences; settle architectural decisions in an ADR before implementation.
 
 ### 2. Implementation pass
 
 Give one coding agent one coherent vertical slice.
+
+Preserve existing local work and keep edits and formatting within the slice. If
+discoveries materially expand the task, return to the product pass before pursuing
+the expanded scope, following `AGENTS.md`.
 
 Good examples:
 

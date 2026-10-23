@@ -23,6 +23,131 @@ describePostgres('Database migrations PostgreSQL upgrade', () => {
     await pool.end();
   }, 60_000);
 
+  it('upgrades literal effects and enforces exactly one expression or literal value', async () => {
+    await pool.query('DROP SCHEMA public CASCADE');
+    await pool.query('CREATE SCHEMA public');
+    await pool.query(`CREATE TABLE interaction_stat_effects (
+      value jsonb NOT NULL,
+      CONSTRAINT interaction_stat_effects_primitive_value
+        CHECK (jsonb_typeof(value) IN ('number', 'boolean', 'string'))
+    )`);
+    await pool.query(`INSERT INTO interaction_stat_effects(value) VALUES ('2'::jsonb)`);
+    const migration = databaseMigrations.find(
+      ({ id }) => id === '202610210044_stat_effect_expressions',
+    )!;
+    await pool.query(migration.sql);
+    expect(
+      (await pool.query('SELECT value, expression FROM interaction_stat_effects')).rows,
+    ).toEqual([{ value: 2, expression: null }]);
+    await pool.query(`INSERT INTO interaction_stat_effects(expression) VALUES ('1 + 2')`);
+    for (const [value, expression] of [
+      [null, null],
+      ['2', '1 + 2'],
+      [null, ' '],
+    ]) {
+      await expect(
+        pool.query('INSERT INTO interaction_stat_effects(value, expression) VALUES ($1, $2)', [
+          value,
+          expression,
+        ]),
+      ).rejects.toMatchObject({ code: '23514' });
+    }
+  });
+
+  it('upgrades flat Groups without losing membership or changing existing Stories', async () => {
+    await pool.query('DROP SCHEMA public CASCADE');
+    await pool.query('CREATE SCHEMA public');
+    const groupUpgradeIndex = databaseMigrations.findIndex(
+      ({ id }) => id === '202610190042_nested_story_groups',
+    );
+    for (const migration of databaseMigrations.slice(0, groupUpgradeIndex)) {
+      await pool.query(migration.sql);
+    }
+    await pool.query(`INSERT INTO users (id, email, password_hash, role, created_at)
+      VALUES ('group-owner', 'groups@example.test', 'test-only', 'user', now())`);
+    await pool.query(`INSERT INTO stories (id, title, creator_user_id, created_at, updated_at)
+      VALUES ('group-story', 'Existing', 'group-owner', now(), now())`);
+    await pool.query(`INSERT INTO interactions (id, story_id, title, body, position_x, position_y, sort_order)
+      VALUES ('group-interaction', 'group-story', 'Existing interaction', '', 1, 2, 0)`);
+    await pool.query(`INSERT INTO story_groups (id, story_id, title, sort_order)
+      VALUES ('old-group', 'group-story', 'Old group', 0)`);
+    await pool.query(`INSERT INTO story_group_interactions (story_id, group_id, interaction_id, sort_order)
+      VALUES ('group-story', 'old-group', 'group-interaction', 0)`);
+    for (const migration of databaseMigrations.slice(groupUpgradeIndex)) {
+      await pool.query(migration.sql);
+    }
+    expect((await pool.query('SELECT id, title, parent_group_id FROM story_groups')).rows).toEqual([
+      { id: 'old-group', title: 'Old group', parent_group_id: null },
+    ]);
+    expect((await pool.query('SELECT interaction_id FROM story_group_interactions')).rows).toEqual([
+      { interaction_id: 'group-interaction' },
+    ]);
+  });
+
+  it('keeps the first persisted Group membership regardless of depth and enforces uniqueness', async () => {
+    await pool.query('DROP SCHEMA public CASCADE');
+    await pool.query('CREATE SCHEMA public');
+    await pool.query(`CREATE TABLE schema_migrations (
+      id text PRIMARY KEY, applied_at timestamptz NOT NULL DEFAULT now()
+    )`);
+    const exclusiveIndex = databaseMigrations.findIndex(
+      ({ id }) => id === '202610190043_exclusive_group_membership',
+    );
+    for (const migration of databaseMigrations.slice(0, exclusiveIndex)) {
+      await pool.query(migration.sql);
+      await pool.query('INSERT INTO schema_migrations (id) VALUES ($1)', [migration.id]);
+    }
+    await pool.query(`
+      INSERT INTO users (id, email, password_hash, role, created_at)
+        VALUES ('group-owner', 'groups@example.test', 'test-only', 'user', now());
+      INSERT INTO stories (id, title, creator_user_id, created_at, updated_at)
+        VALUES ('first-story', 'First', 'group-owner', now(), now()),
+               ('second-story', 'Second', 'group-owner', now(), now());
+      INSERT INTO interactions (id, story_id, title, body, position_x, position_y, sort_order)
+        VALUES ('one', 'first-story', 'One', '', 1, 2, 0),
+               ('two', 'first-story', 'Two', '', 3, 4, 1),
+               ('ungrouped', 'first-story', 'Ungrouped', '', 5, 6, 2),
+               ('other', 'second-story', 'Other', '', 7, 8, 0);
+      INSERT INTO story_groups (id, story_id, title, sort_order, parent_group_id)
+        VALUES ('a-child', 'first-story', 'Child', 1, 'z-root'),
+               ('z-root', 'first-story', 'Root first in list', 0, NULL),
+               ('later-root', 'first-story', 'Later root', 2, NULL),
+               ('tie-b', 'second-story', 'Tie B', 0, NULL),
+               ('tie-a', 'second-story', 'Tie A', 0, NULL);
+      INSERT INTO story_group_interactions (story_id, group_id, interaction_id, sort_order)
+        VALUES ('first-story', 'z-root', 'one', 7),
+               ('first-story', 'a-child', 'one', 0),
+               ('first-story', 'a-child', 'two', 9),
+               ('first-story', 'later-root', 'two', 0),
+               ('second-story', 'tie-b', 'other', 0),
+               ('second-story', 'tie-a', 'other', 4);
+    `);
+    const before = await pool.query('SELECT * FROM interactions ORDER BY id');
+    const groupsBefore = await pool.query('SELECT * FROM story_groups ORDER BY id');
+
+    await new DatabaseMigrator({ pool } as DatabaseConnection).run();
+
+    expect(
+      (
+        await pool.query(`SELECT story_id, group_id, interaction_id, sort_order
+      FROM story_group_interactions ORDER BY interaction_id`)
+      ).rows,
+    ).toEqual([
+      { story_id: 'first-story', group_id: 'z-root', interaction_id: 'one', sort_order: 7 },
+      { story_id: 'second-story', group_id: 'tie-a', interaction_id: 'other', sort_order: 4 },
+      { story_id: 'first-story', group_id: 'a-child', interaction_id: 'two', sort_order: 9 },
+    ]);
+    expect((await pool.query('SELECT * FROM interactions ORDER BY id')).rows).toEqual(before.rows);
+    expect((await pool.query('SELECT * FROM story_groups ORDER BY id')).rows).toEqual(
+      groupsBefore.rows,
+    );
+    await expect(
+      pool.query(`INSERT INTO story_group_interactions
+      (story_id, group_id, interaction_id, sort_order)
+      VALUES ('first-story', 'z-root', 'two', 8)`),
+    ).rejects.toMatchObject({ code: '23505' });
+  });
+
   it('preserves a legacy JSON story, graph, conditions, and owner', async () => {
     await pool.query('DROP SCHEMA public CASCADE');
     await pool.query('CREATE SCHEMA public');

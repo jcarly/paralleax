@@ -29,6 +29,8 @@ const operationTranslationKeys = {
   [storyHistoryOperations.graphDecorationUpdated]: 'graphDecorationUpdated',
   [storyHistoryOperations.graphDecorationDeleted]: 'graphDecorationDeleted',
   [storyHistoryOperations.groupCreated]: 'groupCreated',
+  [storyHistoryOperations.groupUpdated]: 'groupUpdated',
+  [storyHistoryOperations.groupDeleted]: 'groupDeleted',
   [storyHistoryOperations.locationCreated]: 'locationCreated',
   [storyHistoryOperations.locationUpdated]: 'locationUpdated',
   [storyHistoryOperations.characterCreated]: 'characterCreated',

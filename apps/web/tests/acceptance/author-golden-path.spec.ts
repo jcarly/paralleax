@@ -71,7 +71,12 @@ test('an author creates, persists, resumes, and simulates a conditional story', 
     .getByRole('button', { name: 'Variable' })
     .click();
   await expectSuccessful(effectCreation);
-  await expect(inspector.getByLabel('Variable effect target')).toHaveValue(/Courage/);
+  const selectedEffectTarget = inspector
+    .getByLabel('Variable effect target')
+    .getByRole('combobox')
+    .last()
+    .locator('option:checked');
+  await expect(selectedEffectTarget).toHaveText(/Courage/);
   await expect(inspector.getByLabel('Variable effect value')).toHaveValue('1');
   await expect(page.getByLabel('Story save status')).toHaveText('Saved');
 
@@ -114,10 +119,12 @@ test('an author creates, persists, resumes, and simulates a conditional story', 
   await expect(locationSelect.locator('option:checked')).toHaveText('Atrium');
   await expect(inspector.getByRole('checkbox', { name: 'Alice' })).toBeChecked();
   await interactionNode(page, 'Gain courage').click();
-  await expect(inspector.getByLabel('Variable effect target')).toHaveValue(/Courage/);
+  await expect(selectedEffectTarget).toHaveText(/Courage/);
   await expect(inspector.getByLabel('Variable effect value')).toHaveValue('1');
   await page.getByTestId(`flow-trigger-${final.id}-${finalTriggerId}`).click();
-  await expect(inspector.getByLabel('Variable condition value')).toHaveValue('1');
+  await expect(
+    inspector.getByRole('button', { name: /Edit condition:.*Courage.*≥ 1/ }),
+  ).toBeVisible();
 
   await page.getByRole('link', { name: 'Stories', exact: true }).click();
   await expect(page.getByRole('region', { name: 'Loading stories' })).toBeHidden();

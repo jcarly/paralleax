@@ -4,6 +4,7 @@ import {
   createdInteraction,
   expectSuccessful,
   interactionNode,
+  interactionTitleField,
   inviteStoryCollaborator,
   openStoryAccess,
   registerAndCreateStory,
@@ -28,9 +29,11 @@ test('a reader and an author review an interaction through persisted live commen
 
   await interactionNode(ownerPage, 'New interaction').click();
   const ownerInspector = ownerPage.getByRole('complementary', { name: 'Inspector' });
+  const ownerTitleField = interactionTitleField(ownerInspector);
+  await expect(ownerTitleField).toBeVisible();
   const titleUpdate = waitForInteractionPatch(ownerPage);
-  await ownerInspector.getByLabel('Title').fill('Reviewed opening');
-  await ownerInspector.getByLabel('Title').blur();
+  await ownerTitleField.fill('Reviewed opening');
+  await ownerTitleField.blur();
   await expectSuccessful(titleUpdate);
 
   const readerContext = await browser.newContext({
@@ -87,7 +90,7 @@ test('a reader and an author review an interaction through persisted live commen
       .filter({ hasText: 'Could this opening be clearer?' })
       .click();
 
-    await expect(ownerInspector.getByLabel('Title')).toHaveValue('Reviewed opening');
+    await expect(interactionTitleField(ownerInspector)).toHaveValue('Reviewed opening');
     const contextualComments = ownerPage.getByRole('complementary', {
       name: 'Comments for the selected element',
     });

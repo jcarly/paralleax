@@ -1,6 +1,7 @@
 # ADR-029: Flat Persisted Groups
 
-Status: Accepted
+Status: Accepted; parentage extended by [ADR-035](ADR-035-nested-group-navigation.md),
+direct membership revised by [ADR-036](ADR-036-exclusive-group-membership.md)
 
 Date: 2026-10-06
 

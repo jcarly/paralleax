@@ -144,6 +144,60 @@ test.describe('Story editor persistence', () => {
     await expect(content.locator('img')).toHaveAttribute('src', 'https://media.example/scene.gif');
   });
 
+  test('restores rich-text selection before insertion after an isolated dialog closes', async ({
+    page,
+  }) => {
+    const current = storyWithConditionCandidate();
+    await mockStory(page, current);
+    const patches: Array<Record<string, unknown>> = [];
+    await page.route('**/api/stories/story-1/interactions/interaction-1', async (route) => {
+      const patch = route.request().postDataJSON() as Record<string, unknown>;
+      patches.push(patch);
+      await route.fulfill({
+        json: {
+          interaction: { ...current.interactions[0], ...patch },
+          revision: patches.length + 1,
+          updatedAt: current.updatedAt,
+        },
+      });
+    });
+    await page.goto('/stories/story-1/edit');
+    await page.getByTestId('interaction-node').filter({ hasText: 'Original title' }).click();
+    const content = page.getByRole('textbox', { name: 'Content' });
+    await content.evaluate((element) => {
+      element.focus();
+      const range = document.createRange();
+      range.selectNodeContents(element);
+      const selection = window.getSelection();
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+      element.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+    });
+    await page.getByRole('button', { name: 'Add interaction link' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Add an interaction link' });
+    await expect(page.locator('#root')).toHaveAttribute('inert', '');
+    await dialog.getByLabel('Text to display').fill('Continue');
+    await dialog.getByLabel('Target interaction').selectOption('interaction-2');
+    await dialog.getByRole('button', { name: 'Insert', exact: true }).click();
+    await expect(dialog).toBeHidden();
+    await expect(page.locator('#root')).not.toHaveAttribute('inert');
+    await expect(content).toBeFocused();
+    await expect(content.locator('[data-interaction-link-target="interaction-2"]')).toContainText(
+      'Continue',
+    );
+    const token = content.getByRole('button', { name: /Edit link Continue/ });
+    await token.click();
+    await page
+      .getByRole('dialog', { name: 'Edit interaction link' })
+      .getByRole('button', { name: 'Cancel', exact: true })
+      .click();
+    await expect(token).toBeFocused();
+    await page.getByTestId('interaction-node').filter({ hasText: 'Original title' }).click();
+    await expect
+      .poll(() => patches.filter((patch) => typeof patch.body === 'string').at(-1)?.body)
+      .toContain('data-interaction-link-target="interaction-2"');
+  });
+
   test('wraps selected text in a structured conditional frame and preserves it on removal', async ({
     page,
   }) => {

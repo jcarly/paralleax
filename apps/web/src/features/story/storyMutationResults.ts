@@ -1,9 +1,11 @@
+import { removeStoryGroup, setStoryGroupInteractions } from '@paralleax/shared';
 import type {
   CharacterItemMutationResult,
   CharacterMutationResult,
   CharacterStatMutationResult,
   GraphDecorationMutationResult,
   GroupMutationResult,
+  GroupDeletionResult,
   Interaction,
   InteractionMutationResult,
   ItemDefinitionMutationResult,
@@ -62,13 +64,24 @@ export function applyGraphDecorationResult(
 }
 
 export function applyGroupResult(story: Story, result: GroupMutationResult): Story {
-  return applyStoryMutationMetadata(
-    {
-      ...story,
-      groups: upsertById(story.groups, result.group),
-    },
-    result,
+  const next = setStoryGroupInteractions(
+    { ...story, groups: upsertById(story.groups, result.group) },
+    result.group.id,
+    result.group.interactionIds,
   );
+  if (result.groupOrder && (story.revision ?? 0) <= result.revision) {
+    const order = new Map(result.groupOrder.map((id, index) => [id, index]));
+    next.groups = [...next.groups!].sort(
+      (left, right) => (order.get(left.id) ?? Infinity) - (order.get(right.id) ?? Infinity),
+    );
+  }
+  // A compact Group result can follow an unrelated mutation with a newer revision.
+  return (story.revision ?? 0) > result.revision ? next : applyStoryMutationMetadata(next, result);
+}
+
+export function applyGroupDeletionResult(story: Story, result: GroupDeletionResult): Story {
+  const next = removeStoryGroup(story, result.groupId);
+  return (story.revision ?? 0) > result.revision ? next : applyStoryMutationMetadata(next, result);
 }
 
 export function applyLocationResult(story: Story, result: LocationMutationResult): Story {

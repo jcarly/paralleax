@@ -72,6 +72,7 @@ type GraphDecorationRow = {
   sort_order: number;
 };
 type GroupRow = {
+  parent_group_id: string | null;
   id: string;
   title: string;
   sort_order: number;
@@ -119,7 +120,8 @@ type StatEffectRow = {
   stat_id: string;
   item_id: string | null;
   operation: 'add' | 'set';
-  value: StatValue;
+  value: StatValue | null;
+  expression: string | null;
   sort_order: number;
 };
 type ItemEffectRow = {
@@ -211,7 +213,7 @@ export async function readStoryEditorContextPage(
       : Promise.resolve({ rows: [] as GraphDecorationRow[] }),
     includeGroups
       ? queryable.query<GroupRow>(
-          `SELECT id, title, sort_order
+          `SELECT id, title, parent_group_id, sort_order
              FROM story_groups WHERE story_id = $1
              ORDER BY sort_order, id LIMIT $2 OFFSET $3`,
           parameters,
@@ -296,6 +298,7 @@ export async function readStoryEditorContextPage(
     groups: groupRows.map((group) => ({
       id: group.id,
       title: group.title,
+      ...(group.parent_group_id ? { parentGroupId: group.parent_group_id } : {}),
       interactionIds: (interactionsByGroup.get(group.id) ?? []).map(
         ({ interaction_id }) => interaction_id,
       ),
@@ -421,7 +424,7 @@ export async function readStoryEditorInteractionContentPage(
           [interactionIds],
         ),
         queryable.query<StatEffectRow>(
-          `SELECT interaction_id, stat_id, item_id, operation, value, sort_order
+          `SELECT interaction_id, stat_id, item_id, operation, value, expression, sort_order
              FROM interaction_stat_effects WHERE interaction_id = ANY($1::text[])
              ORDER BY interaction_id, sort_order`,
           [interactionIds],
@@ -465,7 +468,9 @@ export async function readStoryEditorInteractionContentPage(
         statId: effect.stat_id,
         ...(effect.item_id ? { itemId: effect.item_id } : {}),
         operation: effect.operation,
-        value: effect.value,
+        ...(typeof effect.expression === 'string'
+          ? { expression: effect.expression }
+          : { value: effect.value! }),
       })),
       itemEffects: (itemEffectsByInteraction.get(row.id) ?? []).map((effect) => ({
         ...(effect.item_id ? { itemId: effect.item_id } : {}),

@@ -4,6 +4,7 @@ import {
   editInteraction,
   expectSuccessful,
   interactionNode,
+  interactionTitleField,
   registerAndCreateStory,
   requestApiJson,
   waitForApiResponse,
@@ -80,20 +81,21 @@ test('a network failure is visible, blocks navigation, and can be recovered safe
 
   await interactionNode(page, 'Persisted interaction').click();
   await context.setOffline(true);
-  await inspector.getByLabel('Title').fill('Unsaved interaction');
-  await inspector.getByLabel('Title').blur();
+  const titleField = interactionTitleField(inspector);
+  await expect(titleField).toBeVisible();
+  await titleField.fill('Unsaved interaction');
+  await titleField.blur();
 
   await expect(page.getByLabel('Story save status')).toHaveText('Save failed');
   await expect(page.getByRole('button', { name: 'Reload story' })).toBeVisible();
 
-  const dialogPromise = page.waitForEvent('dialog');
-  const navigationAttempt = page.getByRole('link', { name: 'Stories', exact: true }).click();
-  const dialog = await dialogPromise;
-  expect(dialog.message()).toBe(
-    'This story still has unsaved changes. Leave this page and discard them?',
+  await page.getByRole('link', { name: 'Stories', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'Unsaved changes' });
+  await expect(dialog).toBeVisible();
+  await expect(dialog).toContainText(
+    'This story still has unsaved changes. Leave and discard them?',
   );
-  await dialog.dismiss();
-  await navigationAttempt;
+  await dialog.getByRole('button', { name: 'Stay on this page' }).click();
   await expect(page).toHaveURL(/\/stories\/[^/]+\/edit$/);
 
   await context.setOffline(false);
@@ -102,9 +104,11 @@ test('a network failure is visible, blocks navigation, and can be recovered safe
   await expect(interactionNode(page, 'Unsaved interaction')).toHaveCount(0);
 
   await interactionNode(page, 'Persisted interaction').click();
+  const recoveredTitleField = interactionTitleField(inspector);
+  await expect(recoveredTitleField).toBeVisible();
   const recoveredSave = waitForInteractionPatch(page);
-  await inspector.getByLabel('Title').fill('Recovered interaction');
-  await inspector.getByLabel('Title').blur();
+  await recoveredTitleField.fill('Recovered interaction');
+  await recoveredTitleField.blur();
   await expectSuccessful(recoveredSave);
   await expect(page.getByLabel('Story save status')).toHaveText('Saved');
 
