@@ -6,7 +6,6 @@ import { api, type AuthUser } from '../api';
 import { apiErrorMessage } from '../apiErrorMessages';
 import { handleModalDialogKeyDown } from '../components/modalDialogKeyboard';
 import { ModalPortal } from '../components/ModalPortal';
-import { StoryImportDialog } from '../features/story-import/StoryImportDialog';
 import { loadStoryEditor, loadStoryPlayer } from './storyRouteLoaders';
 import './ProductPages.css';
 

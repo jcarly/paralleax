@@ -579,8 +579,9 @@ The React Flow stylesheet is imported by the two graphical routes rather than
 the application entry. Each route imports its local graph overrides after the
 library stylesheet so custom handle positioning and hit-testing remain the last
 word in the CSS cascade. Vite emits a production manifest, and every web build
-checks its complete static import graph using compressed asset sizes. The
-initial JavaScript and stylesheet budgets are 135 KiB and 24 KiB; incremental
+checks its complete static import graph using compressed asset sizes. Production
+JavaScript uses Terser minification to stay within the entry and route budgets. The
+initial JavaScript and stylesheet budgets are 150 KiB and 24 KiB; incremental
 Story Editor and Story Player assets are limited to 145 KiB and 95 KiB. The
 contract also fails if either route stops being a dynamic entry or becomes a
 static dependency of the application entry.
