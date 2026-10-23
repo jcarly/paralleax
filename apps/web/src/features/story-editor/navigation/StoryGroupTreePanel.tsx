@@ -48,6 +48,7 @@ export function StoryGroupTreePanel(props: StoryGroupsPanelProps) {
   const [query, setQuery] = useState('');
   const [busy, setBusy] = useState(false);
   const locked = useRef(false);
+  const restoreFocusId = useRef<string | undefined>(undefined);
   const [message, setMessage] = useState('');
   const [menu, setMenu] = useState<{ groupId: string; position: { x: number; y: number } }>();
   const [activeId, setActiveId] = useState<string>();
@@ -112,6 +113,11 @@ export function StoryGroupTreePanel(props: StoryGroupsPanelProps) {
     [...(panel.current?.querySelectorAll<HTMLElement>('[data-group-id]') ?? [])]
       .find((row) => row.dataset.groupId === props.editingGroupId)
       ?.scrollIntoView?.({ block: 'nearest' });
+  }, [props.editingGroupId]);
+  useEffect(() => {
+    if (props.editingGroupId || !restoreFocusId.current) return;
+    focusRow(restoreFocusId.current);
+    restoreFocusId.current = undefined;
   }, [props.editingGroupId]);
 
   async function mutate(action: () => Promise<unknown>) {
@@ -359,8 +365,8 @@ export function StoryGroupTreePanel(props: StoryGroupsPanelProps) {
                   onMenu={(position) => setMenu({ groupId: group.id, position })}
                   onRename={(title) => mutate(() => props.onUpdate(group.id, { title }))}
                   onRenameComplete={(restoreFocus) => {
+                    if (restoreFocus) restoreFocusId.current = group.id;
                     props.onEditingChange(undefined);
-                    if (restoreFocus) window.requestAnimationFrame(() => focusRow(group.id));
                   }}
                   onKeyDown={(event) => keyDown(event, group)}
                 />
