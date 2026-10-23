@@ -32,6 +32,7 @@ export function ImageUrlDialog({
           {t('inspector.imageUrl')}
           <input
             autoFocus
+            data-modal-autofocus
             placeholder="https://example.com/image.png"
             type="url"
             value={nextImageUrl}

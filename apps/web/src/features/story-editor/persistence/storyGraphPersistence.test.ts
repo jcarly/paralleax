@@ -84,14 +84,14 @@ describe('story graph persistence', () => {
     });
   });
 
-  it('retains trigger deletion tombstones when a complete response is stale', async () => {
+  it('retains trigger deletion tombstones with a compact deletion response', async () => {
     const harness = createHarness();
-    const staleResponse = {
-      ...storyFixture(),
-      revision: 2,
-      updatedAt: metadata(2).updatedAt,
-    };
-    vi.mocked(api.deleteTrigger).mockResolvedValue(staleResponse);
+    vi.mocked(api.deleteTrigger).mockResolvedValue({
+      interactionId: 'child',
+      triggerId: 'alternative-trigger',
+      triggerRemoved: true,
+      ...metadata(2),
+    });
 
     await harness.actions.deleteTrigger('child', 'alternative-trigger');
 
@@ -124,9 +124,8 @@ describe('story graph persistence', () => {
       ...metadata(3),
     });
     vi.mocked(api.deleteGraphDecoration).mockResolvedValue({
-      ...storyFixture(),
-      revision: 4,
-      updatedAt: metadata(4).updatedAt,
+      decorationId: 'frame',
+      ...metadata(4),
     });
 
     await expect(harness.actions.createGraphDecoration('frame', { x: 10, y: 20 })).resolves.toBe(
@@ -333,10 +332,8 @@ describe('story graph persistence', () => {
       ...metadata(5),
     });
     vi.mocked(api.deleteInteraction).mockResolvedValue({
-      ...storyFixture(),
-      revision: 6,
-      updatedAt: metadata(6).updatedAt,
-      interactions: storyFixture().interactions.filter(({ id }) => id !== 'child'),
+      interactionId: 'child',
+      ...metadata(6),
     });
 
     await expect(harness.actions.createRoot({ x: 500, y: 0 })).resolves.toBe('new-root');

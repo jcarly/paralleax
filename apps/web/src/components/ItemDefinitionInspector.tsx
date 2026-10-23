@@ -1,3 +1,4 @@
+import { EntityNameInput } from './EntityNameInput';
 import { getStatValueType, type ItemDefinition, type StatDefinition } from '@paralleax/shared';
 import { useTranslation } from 'react-i18next';
 import {
@@ -63,11 +64,11 @@ export function ItemDefinitionInspector({
       >
         <label>
           {t('inspector.name')}
-          <input
+          <EntityNameInput
             data-comment-field="name"
             value={itemDefinition.name}
-            onChange={(event) => onChange({ ...itemDefinition, name: event.target.value })}
-            onBlur={(event) => void onPatch(itemDefinition.id, { name: event.target.value })}
+            onChange={(name) => onChange({ ...itemDefinition, name })}
+            onCommit={(name) => onPatch(itemDefinition.id, { name })}
           />
         </label>
       </InspectorCommentField>

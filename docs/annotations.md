@@ -1,6 +1,9 @@
 # Annotations
 
-Annotations are authoring notes attached to the story model or canvas.
+Standalone annotations would be authoring notes attached to the Story model or
+canvas. They are not currently implemented. The existing anchored review
+discussions and graph post-its are collaboration comments, not a separate
+private-note model.
 
 They are not part of story execution. They should never affect reader
 availability, trigger evaluation, or exported runtime behavior unless a future
@@ -46,9 +49,8 @@ Collaborative notes or suggestions may need states, such as open, resolved, or
 review-related statuses. This should be aligned with the future suggestion and
 review workflow rather than implemented as an isolated notes system.
 
-## MVP Boundary
+## Scope Boundary
 
-Annotations are not part of V0.
-
-They are documented as a target authoring concept because they may become useful
-for collaboration, review, and planning.
+Do not treat this proposal as the specification for the implemented review
+discussion system. Any future standalone notes should have an explicit purpose
+and lifecycle before implementation.

@@ -1,7 +1,8 @@
 # Open Questions
 
-This page tracks design questions that are intentionally postponed. They should
-not block the MVP unless a future implementation touches the affected area.
+This page tracks unresolved product and domain decisions. The roadmap and code
+quality backlog track delivery work; this page should contain decisions that
+need an explicit answer before the affected capability is implemented.
 
 ## Users and Permissions
 
@@ -11,19 +12,9 @@ not block the MVP unless a future implementation touches the affected area.
 - Define external identity-provider account linking before adding Google or
   another provider: trusted verified-email claims, collisions with password
   accounts, unlinking, recovery, and behavior when a provider is unavailable.
-- Define whether `StoryAccessPolicy` evaluates only persisted grants or also
-  public defaults, creator ownership, and future invitation state.
-- Define stale-revision behavior for each mutation: automatic retry for
-  independent fields, explicit conflict UI for structural trigger changes, or a
-  common merge policy.
-- Define the permission hierarchy: decide whether `manage story settings`
-  includes every other permission, whether `edit directly` includes `suggest
-changes`, and whether every non-read permission implies `read`.
-- ADR-017 makes public Stories anonymously readable. Decide whether a future
-  unlisted visibility is distinct from public and invitation visibility.
-- Define approval rules: decide who can approve pending suggestions, whether the
-  creator always has override rights, whether several approvals can be required,
-  and whether some permissions allow automatic approval.
+- Before implementing change proposals, define who may propose, review, and
+  approve them; whether creator override or multiple approvals are supported;
+  and how those rights relate to direct editing and story management.
 
 ## Change History and Suggestions
 
@@ -43,12 +34,10 @@ changes`, and whether every non-read permission implies `read`.
 
 ## Comments and Review
 
-- Define deletion semantics before adding comment deletion: deleting a complete
-  thread versus one message, author/editor/owner/administrator authority,
-  hard-delete versus tombstone, audit/history retention, replies whose parent is
-  removed, live invalidation, and whether deletion can be undone. Canvas post-its
-  and entity/text threads must share the same rule because they are projections
-  of one comment-thread model.
+- Thread deletion is settled: an authorized thread manager soft-deletes and can
+  restore the complete discussion. Before adding individual message deletion,
+  define its authority, reply handling, retention, live updates, and undo
+  behavior; see [Current scope](current-scope.md).
 
 ## Story Format and Examples
 
@@ -78,22 +67,34 @@ changes`, and whether every non-read permission implies `read`.
   participant roles (decision and viewpoint semantics). They must not be
   conflated implicitly.
 
+## Interaction Inclusion
+
+- Decide whether the ordered execution representation proposed in
+  [Interaction inclusion](interaction-inclusion-proposal.md) extends the current
+  rich-content model or introduces an explicit ordered authored-operation layer.
+- Define action identity and evaluation timing when an included Interaction
+  contributes actions without becoming a visited journey step.
+- Define typed call arguments, scoped restoration, cycle rejection, defensive
+  execution limits, referenced-target deletion, and reader-progress compatibility
+  before any native inclusion-based QSP mapping. The current
+  [QSP adapter](qsp-import.md#static-subroutine-paths) uses ordinary interaction
+  traversal, stats, and Triggers and does not require or settle these proposals.
+
 ## World State, Conditions, Effects, and Items
 
-- Define the first typed condition and effect families before broad world-state
-  entities depend on them. Keep their payloads validated and versionable.
-- Decide which values are authored definitions, persisted play-session state, or
-  deterministic derived values.
+- For future state concepts beyond typed stat assignments and deterministic
+  reader replay, define whether values are authored, persisted per play session,
+  or derived.
 - Define item-definition deletion behavior when authored conditions or existing
   play-session item instances reference it. Authored item effects currently
   cascade with deletion of their exact item instance.
 - Define item transfer rules, stack identity, quantities, and equipment-slot
   conflict behavior. The current reader starts with an empty inventory and
   tracks exact authored item instances.
-- ADR-013 settles the recursive instance and relationship direction. Remaining
-  choices are slot schema/versioning, capacity units, quantity stacks versus
-  exact-instance identity, deletion policies for non-empty subtrees, and the
-  maximum tree depth shown by the authoring UI.
+- ADR-013 settles the recursive instance and relationship direction, including
+  rejecting deletion of a non-empty container. Remaining choices are slot
+  schema/versioning, capacity units, quantity stacks versus exact-instance
+  identity, and the maximum tree depth shown by the authoring UI.
 - Decide whether extension properties are schema-backed per item type or limited
   to validated plugin-owned namespaces; avoid unrestricted business logic in
   arbitrary JSON.
@@ -110,14 +111,15 @@ changes`, and whether every non-read permission implies `read`.
 
 ## Editor Technology
 
-- Keep React Flow as a rendering and interaction layer while it fits the editor.
-- Revisit the integration if trigger semantics or story operations start changing
-  only to satisfy React Flow constraints.
+- Revisit the React Flow integration only if trigger semantics or story
+  operations start changing solely to satisfy rendering constraints, as required
+  by [ADR-004](decisions/ADR-004-react-flow-boundary.md).
+- Before implementing [ADR-034](decisions/ADR-034-collaborative-offline-authoring.md),
+  select a maintained text-collaboration protocol/library and define durable
+  local queue recovery, atomic-field conflict presentation, and reconnect
+  behavior against the existing rich-text tokens and history model.
 - Refine the grouped-edge inspector UX for several triggers that connect the same
   source and target as part of the MVP editor work.
-- Define the connection gesture for multi-input triggers: decide whether existing
-  triggers appear as temporary drop targets, split handles, menu choices, or
-  another affordance while the author is dragging a new link.
 - Define how the graph visually separates several inputs that feed the same
   trigger before reaching one output interaction.
 
@@ -160,10 +162,11 @@ changes`, and whether every non-read permission implies `read`.
 
 ## Simulation
 
-- Define whether named simulation states are useful or whether they overlap too
-  much with future player saves.
-- Define how future stats or world-state changes apply when the current
-  interaction is edited during simulation.
+- Named manual saves are available in both Reader and Simulation Mode. Decide
+  whether reusable simulation test fixtures with explicit preconditions are
+  useful in addition to those journey saves.
+- Define whether editing an already-visited interaction's effects changes the
+  displayed simulated state immediately, only on later steps, or after replay.
 - Validate how much inline editing belongs in Simulation Mode before it becomes
   confusing or duplicates the main inspector.
 

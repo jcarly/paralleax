@@ -12,6 +12,10 @@ module.exports = (options) => ({
     ...(typeof options.entry === 'object' ? options.entry : { main: options.entry }),
 
     'qsp-import.worker': path.resolve(__dirname, 'src/stories/application/qsp-import.worker.ts'),
+    'choicescript-import.worker': path.resolve(
+      __dirname,
+      'src/stories/application/choicescript-import.worker.ts',
+    ),
   },
 
   output: {

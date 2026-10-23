@@ -1,4 +1,6 @@
 import {
+  deleteItemInstanceFromStory,
+  deleteStatAssignmentsFromStory,
   getStatValueType,
   mergeServerStory,
   type CreateStatDefinitionInput,
@@ -116,7 +118,14 @@ export function useStoryContextPersistence({
   async function deleteCharacterStat(characterId: string, statId: string) {
     const result = await trackSave(() => api.deleteCharacterStat(storyId, characterId, statId));
     if (!result) return;
-    setStory((current) => (current ? mergeServerStory(current, result) : current));
+    setStory((current) =>
+      current
+        ? applyStoryMutationMetadata(
+            deleteStatAssignmentsFromStory(current, new Set([result.statId])),
+            result,
+          )
+        : current,
+    );
   }
 
   async function createStatDefinition(input: CreateStatDefinitionInput) {
@@ -176,7 +185,11 @@ export function useStoryContextPersistence({
   async function deleteCharacterItem(characterId: string, itemId: string) {
     const result = await trackSave(() => api.deleteCharacterItem(storyId, characterId, itemId));
     if (!result) return;
-    setStory((current) => (current ? mergeServerStory(current, result) : current));
+    setStory((current) =>
+      current
+        ? applyStoryMutationMetadata(deleteItemInstanceFromStory(current, result.itemId), result)
+        : current,
+    );
   }
 
   async function moveItemInstance(itemId: string, placement: MoveItemInstanceInput) {

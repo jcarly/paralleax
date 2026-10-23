@@ -141,14 +141,9 @@ test('keeps the reader open when navigation is rejected during an unresolved aut
   await page.getByRole('button', { name: 'Start', exact: true }).click();
   await saveStarted;
 
-  const dialogPromise = page.waitForEvent('dialog');
-  const navigationPromise = page.getByRole('link', { name: 'Stories', exact: true }).click();
-  const dialog = await dialogPromise;
-  expect(dialog.message()).toBe(
-    'This story still has unsaved changes. Leave this page and discard them?',
-  );
-  await dialog.dismiss();
-  await navigationPromise;
+  await page.getByRole('link', { name: 'Stories', exact: true }).click();
+  await expect(page.getByRole('dialog', { name: 'Unsaved changes' })).toBeVisible();
+  await page.getByRole('button', { name: 'Stay on this page' }).click();
 
   await expect(page).toHaveURL('/stories/story-1/play');
   await expect(page.getByRole('heading', { name: 'Start' })).toBeVisible();

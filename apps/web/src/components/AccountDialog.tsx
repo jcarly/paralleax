@@ -5,6 +5,7 @@ import { api, type AuthUser } from '../api';
 import { apiErrorMessage } from '../apiErrorMessages';
 import { FieldHelpTooltip } from './FieldHelpTooltip';
 import { handleModalDialogKeyDown } from './modalDialogKeyboard';
+import { ModalPortal } from './ModalPortal';
 
 export function AccountDialog({
   user,
@@ -76,121 +77,124 @@ export function AccountDialog({
   }
 
   return (
-    <div className="modal-backdrop product-page" role="presentation">
-      <section
-        className="new-story-dialog account-dialog"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="account-dialog-title"
-        onKeyDown={(event) => handleModalDialogKeyDown(event, onClose)}
-      >
-        <div className="dialog-icon" aria-hidden="true">
-          â—‡
-        </div>
-        <span className="product-eyebrow">{t('account.eyebrow')}</span>
-        <h2 id="account-dialog-title">{t('account.title')}</h2>
-        <p>{t('account.description')}</p>
-        <form onSubmit={(event) => void submit(event)}>
-          <div className="product-field">
-            <div className="field-label-with-help">
-              <label htmlFor="account-display-name">{t('account.displayName')}</label>
-              <FieldHelpTooltip
-                label={t('account.displayName')}
-                help={t('account.displayNameHelp')}
+    <ModalPortal>
+      <div className="modal-backdrop product-page" role="presentation">
+        <section
+          className="new-story-dialog account-dialog"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="account-dialog-title"
+          onKeyDown={(event) => handleModalDialogKeyDown(event, onClose)}
+        >
+          <div className="dialog-icon" aria-hidden="true">
+            â—‡
+          </div>
+          <span className="product-eyebrow">{t('account.eyebrow')}</span>
+          <h2 id="account-dialog-title">{t('account.title')}</h2>
+          <p>{t('account.description')}</p>
+          <form onSubmit={(event) => void submit(event)}>
+            <div className="product-field">
+              <div className="field-label-with-help">
+                <label htmlFor="account-display-name">{t('account.displayName')}</label>
+                <FieldHelpTooltip
+                  label={t('account.displayName')}
+                  help={t('account.displayNameHelp')}
+                />
+              </div>
+              <input
+                id="account-display-name"
+                autoFocus
+                data-modal-autofocus
+                aria-label={t('account.displayName')}
+                autoComplete="nickname"
+                value={displayName}
+                onChange={(event) => setDisplayName(event.target.value)}
+                minLength={2}
+                maxLength={50}
+                required
               />
             </div>
-            <input
-              id="account-display-name"
-              autoFocus
-              aria-label={t('account.displayName')}
-              autoComplete="nickname"
-              value={displayName}
-              onChange={(event) => setDisplayName(event.target.value)}
-              minLength={2}
-              maxLength={50}
-              required
-            />
-          </div>
-          <div className="account-email">
-            <span>{t('account.email')}</span>
-            <b>{user.email}</b>
-          </div>
-          {error ? (
-            <p className="form-error" role="alert">
-              {error}
-            </p>
-          ) : null}
-          <div className="dialog-actions">
-            <button
-              className="product-secondary"
-              type="button"
-              onClick={onClose}
-              disabled={pending}
-            >
-              {t('account.cancel')}
-            </button>
-            <button className="product-primary" type="submit" disabled={!valid || pending}>
-              {pending ? t('account.saving') : t('account.save')}
-            </button>
-          </div>
-        </form>
-        <section className="account-security" aria-labelledby="account-security-title">
-          <h3 id="account-security-title">{t('account.securityTitle')}</h3>
-          <p>{t('account.securityDescription')}</p>
-          <form onSubmit={(event) => void changePassword(event)}>
-            <label className="product-field">
-              <span>{t('account.currentPassword')}</span>
-              <input
-                autoComplete="current-password"
-                type="password"
-                value={currentPassword}
-                onChange={(event) => setCurrentPassword(event.target.value)}
-                required
-              />
-            </label>
-            <label className="product-field">
-              <span>{t('account.newPassword')}</span>
-              <input
-                autoComplete="new-password"
-                type="password"
-                value={newPassword}
-                onChange={(event) => setNewPassword(event.target.value)}
-                minLength={8}
-                required
-              />
-            </label>
-            <div className="account-security-actions">
-              <button
-                className="product-secondary"
-                type="submit"
-                disabled={securityPending || currentPassword.length < 1 || newPassword.length < 8}
-              >
-                {securityPending ? t('account.changingPassword') : t('account.changePassword')}
-              </button>
+            <div className="account-email">
+              <span>{t('account.email')}</span>
+              <b>{user.email}</b>
+            </div>
+            {error ? (
+              <p className="form-error" role="alert">
+                {error}
+              </p>
+            ) : null}
+            <div className="dialog-actions">
               <button
                 className="product-secondary"
                 type="button"
-                disabled={securityPending}
-                onClick={() => void revokeOtherSessions()}
+                onClick={onClose}
+                disabled={pending}
               >
-                {securityPending
-                  ? t('account.revokingOtherSessions')
-                  : t('account.revokeOtherSessions')}
+                {t('account.cancel')}
+              </button>
+              <button className="product-primary" type="submit" disabled={!valid || pending}>
+                {pending ? t('account.saving') : t('account.save')}
               </button>
             </div>
           </form>
-          {securityError ? (
-            <p className="form-error" role="alert">
-              {securityError}
-            </p>
-          ) : null}
-          {securityNotice ? (
-            <p className="auth-notice" role="status">
-              {securityNotice}
-            </p>
-          ) : null}
+          <section className="account-security" aria-labelledby="account-security-title">
+            <h3 id="account-security-title">{t('account.securityTitle')}</h3>
+            <p>{t('account.securityDescription')}</p>
+            <form onSubmit={(event) => void changePassword(event)}>
+              <label className="product-field">
+                <span>{t('account.currentPassword')}</span>
+                <input
+                  autoComplete="current-password"
+                  type="password"
+                  value={currentPassword}
+                  onChange={(event) => setCurrentPassword(event.target.value)}
+                  required
+                />
+              </label>
+              <label className="product-field">
+                <span>{t('account.newPassword')}</span>
+                <input
+                  autoComplete="new-password"
+                  type="password"
+                  value={newPassword}
+                  onChange={(event) => setNewPassword(event.target.value)}
+                  minLength={8}
+                  required
+                />
+              </label>
+              <div className="account-security-actions">
+                <button
+                  className="product-secondary"
+                  type="submit"
+                  disabled={securityPending || currentPassword.length < 1 || newPassword.length < 8}
+                >
+                  {securityPending ? t('account.changingPassword') : t('account.changePassword')}
+                </button>
+                <button
+                  className="product-secondary"
+                  type="button"
+                  disabled={securityPending}
+                  onClick={() => void revokeOtherSessions()}
+                >
+                  {securityPending
+                    ? t('account.revokingOtherSessions')
+                    : t('account.revokeOtherSessions')}
+                </button>
+              </div>
+            </form>
+            {securityError ? (
+              <p className="form-error" role="alert">
+                {securityError}
+              </p>
+            ) : null}
+            {securityNotice ? (
+              <p className="auth-notice" role="status">
+                {securityNotice}
+              </p>
+            ) : null}
+          </section>
         </section>
-      </section>
-    </div>
+      </div>
+    </ModalPortal>
   );
 }

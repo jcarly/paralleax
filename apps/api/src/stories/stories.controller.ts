@@ -21,6 +21,7 @@ import type { Request, Response } from 'express';
 import {
   CreateInteractionDto,
   CreateGroupDto,
+  UpdateGroupDto,
   CreateStatAssignmentDto,
   CreateGraphDecorationDto,
   CreateCharacterDto,
@@ -97,8 +98,17 @@ export class StoriesController {
   }
 
   @Post('imports/choicescript')
-  importChoiceScript(@Body() input: ImportChoiceScriptDto, @CurrentUser() user: RequestUser) {
-    return this.storyImports.createChoiceScript(input, user.id, input.confirmWarnings);
+  importChoiceScript(
+    @Body() input: ImportChoiceScriptDto,
+    @CurrentUser() user: RequestUser,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    return this.storyImports.createChoiceScript(
+      input,
+      user.id,
+      input.confirmWarnings,
+      responseAbortSignal(response),
+    );
   }
 
   @Post('imports/qsp')
@@ -404,6 +414,23 @@ export class StoriesController {
     @CurrentUser() user: RequestUser,
   ) {
     return this.stories.createGroup(id, input, user.id);
+  }
+
+  @Patch(':storyId/groups/:groupId') updateGroup(
+    @Param('storyId') id: string,
+    @Param('groupId') groupId: string,
+    @Body() input: UpdateGroupDto,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.stories.updateGroup(id, groupId, input, user.id);
+  }
+
+  @Delete(':storyId/groups/:groupId') deleteGroup(
+    @Param('storyId') id: string,
+    @Param('groupId') groupId: string,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.stories.deleteGroup(id, groupId, user.id);
   }
 
   @Patch(':storyId/graph/positions') updateGraphPositions(

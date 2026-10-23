@@ -1,17 +1,18 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import {
+  deleteItemInstanceFromStory,
+  deleteStatAssignmentsFromStory,
   getItemDescendantIds,
   getStatValueType,
   getStoryItemEntries,
-  getTriggerAppearanceProbability,
-  getTriggerConditionGroups,
-  getTriggerTimerSeconds,
   isStatValueOfType,
   storyHistoryOperations,
   type CharacterItemMutationResult,
+  type CharacterItemDeletionResult,
   type CharacterMutationResult,
   type CharacterStatMutationResult,
+  type CharacterStatDeletionResult,
   type ItemDefinitionMutationResult,
   type LocationMutationResult,
   type StatDefinitionMutationResult,
@@ -368,17 +369,17 @@ export class StoryContextService {
     characterId: string,
     statId: string,
     userId: string,
-  ): Promise<Story> {
-    return this.mutations.update(
+  ): Promise<CharacterStatDeletionResult> {
+    const story = await this.mutations.update(
       storyId,
       (story) => {
         this.stat(story, characterId, statId);
-        deleteStatAssignment(story, statId);
-        return story;
+        return deleteStatAssignmentsFromStory(story, new Set([statId]));
       },
       userId,
       storyHistoryOperations.statAssignmentDeleted,
     );
+    return { ...storyMutationMetadata(story), characterId, statId };
   }
 
   async createCharacterItem(
@@ -424,11 +425,11 @@ export class StoryContextService {
     characterId: string,
     itemId: string,
     userId: string,
-  ): Promise<Story> {
-    return this.mutations.update(
+  ): Promise<CharacterItemDeletionResult> {
+    const story = await this.mutations.update(
       storyId,
       (story) => {
-        const character = this.character(story, characterId);
+        this.character(story, characterId);
         this.item(story, characterId, itemId);
         if (
           getItemDescendantIds(
@@ -440,34 +441,12 @@ export class StoryContextService {
             'Move or remove contained items before deleting a container',
           );
         }
-        character.items = (character.items ?? []).filter(({ id }) => id !== itemId);
-        for (const interaction of story.interactions) {
-          interaction.itemEffects = (interaction.itemEffects ?? []).filter(
-            ({ itemId: affectedItemId }) => affectedItemId !== itemId,
-          );
-          interaction.statEffects = (interaction.statEffects ?? []).filter(
-            ({ itemId: affectedItemId }) => affectedItemId !== itemId,
-          );
-          for (const trigger of interaction.triggers) {
-            trigger.conditionGroups = getTriggerConditionGroups(trigger).map((group) => ({
-              ...group,
-              conditions: group.conditions.filter(
-                (condition) =>
-                  !('statId' in condition) ||
-                  (condition.itemId !== itemId &&
-                    !('comparisonItemId' in condition && condition.comparisonItemId === itemId)),
-              ),
-            }));
-            trigger.appearanceProbability = getTriggerAppearanceProbability(trigger);
-            trigger.timerSeconds = getTriggerTimerSeconds(trigger);
-            delete trigger.conditions;
-          }
-        }
-        return story;
+        return deleteItemInstanceFromStory(story, itemId);
       },
       userId,
       storyHistoryOperations.itemInstanceDeleted,
     );
+    return { ...storyMutationMetadata(story), characterId, itemId };
   }
 
   private location(story: Story, id: string) {

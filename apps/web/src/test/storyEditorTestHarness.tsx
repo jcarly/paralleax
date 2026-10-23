@@ -1,7 +1,7 @@
 /* eslint-disable react-refresh/only-export-components */
 import { cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import { afterEach, beforeEach, vi } from 'vitest';
 import type {
   GraphDecorationMutationResult,
@@ -124,11 +124,11 @@ export async function renderEditor(
   vi.mocked(api.getStory).mockResolvedValue(cloneStory(story));
 
   render(
-    <MemoryRouter initialEntries={[initialEntry]}>
-      <Routes>
-        <Route path="/stories/:storyId/edit" element={<StoryEditor />} />
-      </Routes>
-    </MemoryRouter>,
+    <RouterProvider
+      router={createMemoryRouter([{ path: '/stories/:storyId/edit', element: <StoryEditor /> }], {
+        initialEntries: [initialEntry],
+      })}
+    />,
   );
 
   await screen.findByText('Original title', undefined, { timeout: 5_000 });

@@ -1,4 +1,5 @@
 export const italianTranslation = {
+  rename: { empty: 'Inserisci un nome.', failed: 'Impossibile salvare il nome. Riprova.' },
   language: {
     label: 'Lingua',
   },
@@ -15,6 +16,13 @@ export const italianTranslation = {
     loading: 'Caricamento…',
     loadingWorkspace: "Caricamento dell'area di lavoro…",
     sessionExpired: 'La tua sessione è scaduta. Accedi nuovamente per continuare.',
+  },
+  pendingSave: {
+    title: 'Modifiche non salvate',
+    description: 'Questa storia contiene modifiche non salvate. Uscire e perderle?',
+    stay: 'Resta su questa pagina',
+    close: 'Chiudi la conferma',
+    leave: 'Esci dalla pagina',
   },
   apiErrors: {
     badRequest: 'Le informazioni inviate non sono valide.',
@@ -60,6 +68,8 @@ export const italianTranslation = {
     storyImportFailed: 'Impossibile convertire la fonte in una storia.',
     storyRevisionConflict:
       'La storia è cambiata altrove. Ricaricarlo prima di applicare nuovamente questa modifica.',
+    storyQuotaExceeded:
+      'Questa storia supera il limite di dimensione o di entità. Riduci il contenuto e riprova.',
   },
   auth: {
     showcase: {
@@ -296,7 +306,7 @@ export const italianTranslation = {
       progress: {
         uploading: 'Caricamento del file… {{percentage}}%',
         processing: 'File ricevuto. Analizzare e creare la storia...',
-        analyzing: '{{phase}} — {{completed}} / {{total}}',
+        analyzing: '{{phase}} - {{completed}} / {{total}}',
         currentFile: 'File corrente: {{file}}',
         phases: {
           decoding: 'Decodifica dei file QSP',
@@ -521,7 +531,6 @@ export const italianTranslation = {
     clickCanvas: 'Fare clic sul grafico',
     commentEntity: 'Commenta questo elemento',
     commentScene: 'Commenta questa scena',
-    commentSelection: 'Testo selezionato',
     selectTextHelp:
       'Seleziona il testo in un titolo o in una descrizione, quindi utilizza questa azione.',
     triggerSummary_one: 'Condizione {{count}} in questo trigger.',
@@ -617,6 +626,8 @@ export const italianTranslation = {
         graphDecorationUpdated: 'Decorazione del grafico aggiornata',
         graphDecorationDeleted: 'Decorazione del grafico eliminata',
         groupCreated: 'Gruppo creato',
+        groupUpdated: 'Group updated',
+        groupDeleted: 'Group deleted',
         locationCreated: 'Posizione creata',
         locationUpdated: 'Posizione aggiornata',
         characterCreated: 'Personaggio creato',
@@ -657,6 +668,44 @@ export const italianTranslation = {
     },
     inspector: 'Ispettore',
     closeInspector: 'Chiudi ispettore',
+    groups: {
+      removeSelection: 'Rimuovi le interazioni selezionate dal gruppo',
+      newGroup: 'Nuovo gruppo',
+      actions: 'Azioni per {{title}}',
+      search: 'Cerca un gruppo',
+      noMatches: 'Nessun gruppo corrispondente.',
+      createChild: 'Crea sottogruppo',
+      selectInteractions: 'Seleziona interazioni del gruppo',
+      moveUp: 'Sposta su',
+      moveDown: 'Sposta giù',
+      moveIn: 'Sposta nel gruppo precedente',
+      moveOut: 'Sposta al livello superiore',
+      moveToRoot: 'Sposta alla radice',
+      keyboardHelp:
+        'Usa le frecce per navigare, Invio per selezionare, F2 per rinominare, Maiusc+F10 per le azioni. Ctrl+Su/Giù riordina; Ctrl+Destra sposta nel gruppo precedente; Ctrl+Sinistra sposta al livello superiore. Esc annulla il trascinamento.',
+      dragStarted: 'Spostamento del gruppo. Esc per annullare.',
+      dropPreview: 'Destinazione evidenziata.',
+      dragEnded: 'Trascinamento terminato.',
+      dragCancelled: 'Spostamento annullato.',
+      title: 'Gruppi',
+      empty: 'Seleziona interazioni sul grafo per creare un gruppo.',
+      emptyGroup: 'Nessuna interazione in questo gruppo.',
+      count_one: '{{count}} interazione',
+      count_other: '{{count}} interazioni',
+      focus: 'Centra sul gruppo',
+      toggle: 'Espandi o comprimi {{title}}',
+      rename: 'Rinomina gruppo',
+      parent: 'Gruppo superiore',
+      root: 'Nessun gruppo superiore',
+      addSelection: 'Sposta qui le interazioni selezionate',
+      membershipHint:
+        'Ogni interazione appartiene direttamente al massimo a un gruppo. Aggiungerla qui la sposta dal gruppo precedente.',
+      delete: 'Elimina gruppo',
+      remove: 'Rimuovi {{title}} dal gruppo',
+      saved: 'Gruppo salvato.',
+      failed: 'Impossibile salvare il gruppo. Controlla lo stato del salvataggio e riprova.',
+      created: 'Gruppo creato nel pannello sinistro.',
+    },
     graphSelection: {
       title: 'Elementi selezionati',
       interactions_one: 'Interazione {{count}} selezionata',
@@ -994,6 +1043,11 @@ export const italianTranslation = {
     setOperation: 'impostato su',
     value: 'Valore',
     statEffectValue: "Valore dell'effetto variabile",
+    variableEffectExpression: "Espressione dell'effetto variabile",
+    expressionValue: 'Usa espressione',
+    literalValue: 'Usa valore letterale',
+    insertVariableExpression: 'Inserisci variabile',
+    invalidExpression: 'Espressione non valida',
     itemEffects: 'Effetti degli oggetti',
     inventoryChange: 'Modifica inventario {{number}}',
     deleteItemEffect: 'Elimina effetto oggetto',
@@ -1008,6 +1062,10 @@ export const italianTranslation = {
   },
   triggerInspector: {
     title: 'Condizioni del percorso',
+    noConditions: 'Sempre valida',
+    editCondition: 'Modifica condizione',
+    and: 'E',
+    deleteCondition: 'Elimina condizione {{number}}',
     appearanceProbability: 'Probabilità di apparizione',
     appearanceProbabilityHelp:
       'Per questo Innesco viene effettuato un tiro deterministico ad ogni passo.',
@@ -1016,7 +1074,6 @@ export const italianTranslation = {
     variantsHelp:
       "I gruppi sono alternativi (OR); le condizioni all'interno di un gruppo devono corrispondere tutte (AND).",
     or: 'O',
-    group: 'Gruppo di condizioni {{number}}',
     unknownStat: 'Variabile sconosciuta',
     conditionInteraction: 'Interazione condizionale',
     interactionOperator: 'Operatore della condizione di interazione',
@@ -1045,6 +1102,7 @@ export const italianTranslation = {
     statValue: 'Valore della condizione variabile',
     statComparisonKind: 'Tipo di valore di confronto',
     statComparisonLiteral: 'Un valore fisso',
+    statComparisonExpression: 'Un’espressione complessa',
     statComparisonVariable: "Un'altra variabile",
     comparisonStat: 'Variabile di confronto',
     addCondition: 'Aggiungi condizione',
@@ -1167,11 +1225,11 @@ export const italianTranslation = {
     variableOrItemFor: 'Variabile o elemento in {{name}}',
     chooseVariableOwner: 'Scegli un elemento della storia',
     chooseVariableOrItem: 'Scegli una variabile o un elemento',
-    storyVariableOwner: 'Storia — {{name}}',
-    characterVariableOwner: 'Carattere — {{name}}',
-    locationVariableOwner: 'Posizione — {{name}}',
-    itemVariableOwner: 'Articolo — {{name}}',
-    variableOption: 'Variabile — {{name}}',
+    storyVariableOwner: 'Mondo -> {{name}}',
+    characterVariableOwner: 'Personaggio -> {{name}}',
+    locationVariableOwner: 'Luogo -> {{name}}',
+    itemVariableOwner: 'Oggetto -> {{name}}',
+    variableOption: 'Variabile -> {{name}}',
     contentLength: 'Lunghezza del contenuto',
   },
   graph: {

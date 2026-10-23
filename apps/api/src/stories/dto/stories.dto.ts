@@ -255,11 +255,26 @@ export class CreateInteractionDto {
 export class CreateGroupDto {
   @IsString() @IsNotEmpty() @MaxLength(200) title!: string;
   @IsArray()
-  @ArrayMinSize(1)
   @ArrayMaxSize(500)
   @ArrayUnique()
   @IsString({ each: true })
   interactionIds!: string[];
+  @IsOptional() @IsString() @IsNotEmpty() parentGroupId?: string;
+}
+export class UpdateGroupDto {
+  @ValidateIf((_, value) => value !== undefined)
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(200)
+  title?: string;
+  @ValidateIf((_, value) => value !== undefined)
+  @IsArray()
+  @ArrayMaxSize(500)
+  @ArrayUnique()
+  @IsString({ each: true })
+  interactionIds?: string[];
+  @IsOptional() @IsString() @IsNotEmpty() parentGroupId?: string | null;
+  @IsOptional() @IsString() @IsNotEmpty() beforeGroupId?: string | null;
 }
 export class CreateGraphDecorationDto {
   @IsIn(['frame', 'text']) kind!: 'frame' | 'text';
@@ -388,7 +403,14 @@ export class StatEffectDto {
   @IsNotEmpty()
   itemId?: string;
   @IsIn(['add', 'set']) operation!: 'add' | 'set';
-  @IsDefined() value!: unknown;
+  @ValidateIf((effect) => effect.expression === undefined)
+  @IsDefined()
+  value?: unknown;
+  @ValidateIf((effect, value) => effect.value === undefined && value !== undefined)
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(4000)
+  expression?: string;
 }
 export class ItemEffectDto {
   @ValidateIf((_, value) => value !== undefined)
@@ -519,6 +541,17 @@ export class TriggerConditionDto {
   @IsString()
   comparisonItemId?: string;
   @ValidateIf(
+    (condition, value) =>
+      condition.statId !== undefined &&
+      condition.value === undefined &&
+      condition.comparisonStatId === undefined &&
+      value !== undefined,
+  )
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(4000)
+  expression?: string;
+  @ValidateIf(
     (condition) =>
       condition.interactionId === undefined &&
       condition.locationId === undefined &&
@@ -529,7 +562,10 @@ export class TriggerConditionDto {
   @IsIn(['eq', 'neq', 'lt', 'lte', 'gt', 'gte'])
   operator?: 'eq' | 'neq' | 'lt' | 'lte' | 'gt' | 'gte';
   @ValidateIf(
-    (condition) => condition.statId !== undefined && condition.comparisonStatId === undefined,
+    (condition) =>
+      condition.statId !== undefined &&
+      condition.comparisonStatId === undefined &&
+      condition.expression === undefined,
   )
   @IsDefined()
   value?: unknown;

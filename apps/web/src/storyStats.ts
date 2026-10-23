@@ -20,7 +20,7 @@ export function statTargetLabel(
   target: StatTarget,
   storyLabel: string,
   {
-    separator = ' — ',
+    separator = ' -> ',
     includeItemPath = false,
   }: { separator?: string; includeItemPath?: boolean } = {},
 ) {
@@ -37,5 +37,5 @@ export function statTargetLabel(
 }
 
 export function statTargetPathLabel(target: StatTarget, storyLabel: string) {
-  return statTargetLabel(target, storyLabel, { separator: ' → ', includeItemPath: true });
+  return statTargetLabel(target, storyLabel, { separator: ' -> ', includeItemPath: true });
 }

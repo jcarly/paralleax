@@ -118,3 +118,28 @@ test('rejects eager routes, missing chunks, and exceeded budgets with explicit e
   );
   assert.match(formatWebBundleReport(metrics), /Story Editor incremental assets: 0.0 KiB/);
 });
+
+test('measures a named dynamic route when Rollup omits its source facade', () => {
+  const generated = structuredClone(manifest);
+  const route = generated['src/pages/StoryEditor.tsx'];
+  delete route.src;
+  route.name = 'StoryEditor';
+  generated['_StoryEditor-hash.js'] = route;
+  delete generated['src/pages/StoryEditor.tsx'];
+  generated['index.html'].dynamicImports[0] = '_StoryEditor-hash.js';
+  assert.deepEqual(
+    analyzeWebBundle(generated, compressedAssetBytes),
+    analyzeWebBundle(manifest, compressedAssetBytes),
+  );
+  const ambiguous = structuredClone(generated);
+  ambiguous['_StoryEditor-other.js'] = { ...route, file: 'assets/other.js' };
+  assert.throws(
+    () => analyzeWebBundle(ambiguous, compressedAssetBytes),
+    /identify one dynamic route/,
+  );
+  generated['index.html'].imports.push('_StoryEditor-hash.js');
+  assert.throws(
+    () => analyzeWebBundle(generated, compressedAssetBytes),
+    /pulled into the initial chunk graph/,
+  );
+});

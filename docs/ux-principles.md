@@ -53,6 +53,23 @@ Examples:
 This does not mean hiding important capabilities. It means exposing them where
 authors expect them, with the least possible conceptual overhead.
 
+## Concise Copy And Progressive Disclosure
+
+Keep default interface copy short and avoid repeating explanations already
+clear from the current context. Show authored rules in a readable form and open
+their controls on demand. Put optional precision in a tooltip or infobulle that
+works on hover and keyboard focus; never make essential meaning or actions
+available only through hover.
+
+Avoid the em dash in most interface copy. Use `->` for directional or ownership
+relationships and a simple hyphen for short separators. In compact authoring
+controls, use 12 px for labels and secondary hints and 14 px for field values;
+reader prose and prominent headings retain sizes suited to their context.
+
+Condition fields use a consistent vertical stack and uniform spacing. Their
+concise authored rule wraps to multiple lines rather than truncating, opens for
+editing on click, and collapses on Enter or when focus leaves the condition.
+
 ## Navigation First
 
 Large stories are hard because authors need to find the right object, not only

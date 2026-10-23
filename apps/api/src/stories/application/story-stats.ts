@@ -5,7 +5,12 @@ import {
   getTriggerConditionGroups,
   getTriggerTimerSeconds,
   getStatValueType,
+  getStatTargets,
+  inferExpressionType,
   isStatValueOfType,
+  expressionReferencesAny,
+  removeStatConditionsReferencing,
+  cleanStatConditionalTextReferences,
   type StatAssignment,
   type StatComparisonOperator,
   type StatCondition,
@@ -141,13 +146,45 @@ export function deleteStatAssignment(story: Story, id: string) {
 
 export function validateStatEffects(
   story: Story,
-  effects: Array<{ statId: string; itemId?: string; operation: 'add' | 'set'; value: unknown }>,
+  effects: Array<{
+    statId: string;
+    itemId?: string;
+    operation: 'add' | 'set';
+    value?: unknown;
+    expression?: string;
+  }>,
 ): StatEffect[] {
   const targets = new Set<string>();
   return effects.map((effect) => {
+    if ((effect.value !== undefined) === (effect.expression !== undefined)) {
+      throw new BadRequestException('A stat effect requires one literal value or expression');
+    }
     const reference = validateStatAssignmentReference(story, effect.statId);
     assertItemTarget(story, reference, effect.itemId);
     const definition = findStatDefinition(story, reference.assignment.statDefinitionId);
+
+    if (effect.expression !== undefined) {
+      const expressionType = validateExpression(story, effect.expression);
+      const targetType = getStatValueType(definition);
+      if (expressionType !== targetType) {
+        throw new BadRequestException(`Stat expression must evaluate to a ${targetType}`);
+      }
+      if (effect.operation === 'add' && targetType !== 'number') {
+        throw new BadRequestException('Only numeric stats support add effects');
+      }
+      const target = `${effect.itemId ?? ''}:${reference.assignment.id}`;
+      if (targets.has(target)) {
+        throw new BadRequestException('An interaction can affect each stat target at most once');
+      }
+      targets.add(target);
+      return {
+        statId: reference.assignment.id,
+        ...(effect.itemId ? { itemId: effect.itemId } : {}),
+        operation: effect.operation,
+        expression: effect.expression,
+      };
+    }
+
     const value = assertStatValue(effect.value, definition);
     if (effect.operation === 'add' && getStatValueType(definition) !== 'number') {
       throw new BadRequestException('Only numeric stats support add effects');
@@ -175,6 +212,7 @@ export function buildStatCondition(
     value?: unknown;
     comparisonStatId?: string;
     comparisonItemId?: string;
+    expression?: string;
   },
 ): StatCondition {
   const reference = validateStatAssignmentReference(story, input.statId);
@@ -182,13 +220,30 @@ export function buildStatCondition(
   const definition = findStatDefinition(story, reference.assignment.statDefinitionId);
   const hasLiteralValue = input.value !== undefined;
   const hasComparisonTarget = input.comparisonStatId !== undefined;
-  if (hasLiteralValue === hasComparisonTarget) {
+  const hasExpression = input.expression !== undefined;
+  if ([hasLiteralValue, hasComparisonTarget, hasExpression].filter(Boolean).length !== 1) {
     throw new BadRequestException(
-      'A stat condition must compare with one literal value or stat target',
+      'A stat condition must compare with one literal value, stat target, or expression',
     );
   }
   if (input.comparisonItemId !== undefined && !hasComparisonTarget) {
     throw new BadRequestException('A comparison item requires a comparison stat target');
+  }
+  if (hasExpression) {
+    const expressionType = validateExpression(story, input.expression!);
+    const targetType = getStatValueType(definition);
+    if (expressionType !== targetType) {
+      throw new BadRequestException(`Stat comparison expression must evaluate to a ${targetType}`);
+    }
+    if (targetType !== 'number' && !['eq', 'neq'].includes(input.operator)) {
+      throw new BadRequestException('Boolean and string stats only support equality checks');
+    }
+    return {
+      statId: reference.assignment.id,
+      ...(input.itemId ? { itemId: input.itemId } : {}),
+      operator: input.operator,
+      expression: input.expression!,
+    };
   }
   if (getStatValueType(definition) !== 'number' && !['eq', 'neq'].includes(input.operator)) {
     throw new BadRequestException('Boolean and string stats only support equality checks');
@@ -326,22 +381,35 @@ function removeStatAssignments(story: Story, assignmentIds: ReadonlySet<string>)
     definition.stats = (definition.stats ?? []).filter(({ id }) => !assignmentIds.has(id));
   }
   for (const interaction of story.interactions) {
+    Object.assign(interaction, cleanStatConditionalTextReferences(interaction, assignmentIds));
     interaction.statEffects = (interaction.statEffects ?? []).filter(
-      ({ statId }) => !assignmentIds.has(statId),
+      ({ statId, expression }) =>
+        !assignmentIds.has(statId) && !expressionReferencesAny(expression, assignmentIds),
     );
     for (const trigger of interaction.triggers) {
       trigger.conditionGroups = getTriggerConditionGroups(trigger).map((group) => ({
         ...group,
-        conditions: group.conditions.filter(
-          (condition) =>
-            !('statId' in condition) ||
-            (!assignmentIds.has(condition.statId) &&
-              !('comparisonStatId' in condition && assignmentIds.has(condition.comparisonStatId))),
-        ),
+        conditions: removeStatConditionsReferencing(group.conditions, assignmentIds),
       }));
       trigger.appearanceProbability = getTriggerAppearanceProbability(trigger);
       trigger.timerSeconds = getTriggerTimerSeconds(trigger);
       delete trigger.conditions;
     }
   }
+}
+
+function validateExpression(story: Story, expression: string): StatValueType {
+  const targets = getStatTargets(story);
+  const type = inferExpressionType(expression, ({ id, itemId }) => {
+    const target = targets.find(
+      (candidate) => candidate.assignment.id === id && candidate.itemId === itemId,
+    );
+    return target?.definition ? getStatValueType(target.definition) : undefined;
+  });
+  if (!type) {
+    throw new BadRequestException(
+      'Invalid stat expression or expression reference outside the story',
+    );
+  }
+  return type;
 }

@@ -518,9 +518,11 @@ describe('StoryEditor interactions', () => {
 
   it('deletes the selected interaction', async () => {
     const user = userEvent.setup();
-    const afterDelete = cloneStory();
-    afterDelete.interactions = [];
-    vi.mocked(api.deleteInteraction).mockResolvedValue(afterDelete);
+    vi.mocked(api.deleteInteraction).mockResolvedValue({
+      interactionId: 'interaction-1',
+      revision: 2,
+      updatedAt: baseStory.updatedAt,
+    });
 
     await renderEditor();
     await user.click(screen.getByTestId('flow-node-interaction-1'));

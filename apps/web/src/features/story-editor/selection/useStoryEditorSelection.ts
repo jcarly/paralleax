@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
-import type { CommentTargetType, Story } from '@paralleax/shared';
+import { getGroupInteractionIds, type CommentTargetType, type Story } from '@paralleax/shared';
 import type { OnSelectionChangeParams } from '@xyflow/react';
 import type { SelectedTrigger, StoryFlowNode } from '../../../storyGraph';
 import {
@@ -11,6 +11,7 @@ import type { StoryContextReference } from '../../../storyNavigation';
 import { findInteraction, findSelectedTrigger } from '../../../storySelection';
 
 export type StoryEditorExclusiveSelection =
+  | { type: 'group'; id: string }
   | { type: 'interaction'; id: string }
   | { type: 'trigger'; trigger: SelectedTrigger }
   | { type: 'graphDecoration'; id: string }
@@ -21,6 +22,7 @@ export type StoryEditorExclusiveSelection =
   | { type: 'statDefinitionCreation' };
 
 export function useStoryEditorSelection(story: Story | undefined) {
+  const [selectedGroupId, setSelectedGroupId] = useState<string>();
   const [selectedId, setSelectedId] = useState<string>();
   const [selectedTrigger, setSelectedTrigger] = useState<SelectedTrigger>();
   const [selectedGraphDecorationId, setSelectedGraphDecorationId] = useState<string>();
@@ -35,6 +37,7 @@ export function useStoryEditorSelection(story: Story | undefined) {
 
   const selectExclusive = useCallback((selection?: StoryEditorExclusiveSelection) => {
     setGraphSelection(undefined);
+    setSelectedGroupId(selection?.type === 'group' ? selection.id : undefined);
     setSelectedId(selection?.type === 'interaction' ? selection.id : undefined);
     setSelectedTrigger(selection?.type === 'trigger' ? selection.trigger : undefined);
     setSelectedGraphDecorationId(selection?.type === 'graphDecoration' ? selection.id : undefined);
@@ -48,6 +51,7 @@ export function useStoryEditorSelection(story: Story | undefined) {
   const focusInteraction = useCallback((interactionId: string) => {
     setGraphSelection(undefined);
     setSelectedTrigger(undefined);
+    setSelectedGroupId(undefined);
     setSelectedId(interactionId);
   }, []);
 
@@ -58,11 +62,29 @@ export function useStoryEditorSelection(story: Story | undefined) {
 
   const clearSelection = useCallback(() => selectExclusive(), [selectExclusive]);
 
-  const handleGraphSelectionStart = useCallback(() => {
-    graphSelectionGesture.current = true;
-    graphSelectionCandidate.current = undefined;
-    selectExclusive();
-  }, [selectExclusive]);
+  const gestureBase = useRef<StoryGraphSelection | undefined>(undefined);
+  const gestureMode = useRef<'replace' | 'add' | 'remove'>('replace');
+  const selectGraphInteractions = useCallback(
+    (interactionIds: string[], triggers: StoryGraphSelection['triggers'] = []) => {
+      selectExclusive();
+      setGraphSelection(
+        interactionIds.length || triggers.length ? { interactionIds, triggers } : undefined,
+      );
+    },
+    [selectExclusive],
+  );
+
+  const handleGraphSelectionStart = useCallback(
+    (event?: { shiftKey: boolean; altKey: boolean }) => {
+      gestureBase.current =
+        graphSelection ?? (selectedId ? { interactionIds: [selectedId], triggers: [] } : undefined);
+      gestureMode.current = event?.altKey ? 'remove' : event?.shiftKey ? 'add' : 'replace';
+      graphSelectionGesture.current = true;
+      graphSelectionCandidate.current = undefined;
+      selectExclusive();
+    },
+    [graphSelection, selectedId, selectExclusive],
+  );
 
   const handleGraphSelectionChange = useCallback(
     ({ nodes }: OnSelectionChangeParams<StoryFlowNode>) => {
@@ -74,7 +96,28 @@ export function useStoryEditorSelection(story: Story | undefined) {
 
   const handleGraphSelectionEnd = useCallback(() => {
     graphSelectionGesture.current = false;
-    setGraphSelection(graphSelectionCandidate.current);
+    const candidate = graphSelectionCandidate.current;
+    const base = gestureBase.current;
+    const mode = gestureMode.current;
+    if (mode === 'replace' || !base) setGraphSelection(mode === 'remove' ? base : candidate);
+    else {
+      const ids = new Set(candidate?.interactionIds ?? []);
+      const triggers = new Set(candidate?.triggers.map(({ nodeId }) => nodeId) ?? []);
+      const next = {
+        interactionIds:
+          mode === 'add'
+            ? [...new Set([...base.interactionIds, ...ids])]
+            : base.interactionIds.filter((id) => !ids.has(id)),
+        triggers:
+          mode === 'add'
+            ? [
+                ...base.triggers.filter(({ nodeId }) => !triggers.has(nodeId)),
+                ...(candidate?.triggers ?? []),
+              ]
+            : base.triggers.filter(({ nodeId }) => !triggers.has(nodeId)),
+      };
+      setGraphSelection(next.interactionIds.length || next.triggers.length ? next : undefined);
+    }
     graphSelectionCandidate.current = undefined;
   }, []);
 
@@ -134,7 +177,23 @@ export function useStoryEditorSelection(story: Story | undefined) {
     selectedItemDefinition,
   );
 
+  const selectedGroup = story?.groups?.find(({ id }) => id === selectedGroupId);
+  const groupInteractionIds = useMemo(
+    () =>
+      selectedGroup && story
+        ? new Set(
+            getGroupInteractionIds(story.groups ?? [], selectedGroup.id).filter((id) =>
+              story.interactions.some((interaction) => interaction.id === id),
+            ),
+          )
+        : undefined,
+    [selectedGroup, story],
+  );
+
   return {
+    selectedGroupId: selectedGroup?.id,
+    groupInteractionIds,
+    selectGraphInteractions,
     selectedId,
     selectedTrigger,
     selectedGraphDecorationId,

@@ -1,0 +1,188 @@
+.rich-text-surface {
+  min-height: 10rem;
+  padding: 0.7rem;
+  overflow-wrap: anywhere;
+  border: 1px solid #cfd5df;
+  border-radius: 0 0 0.5rem 0.5rem;
+  background: white;
+}
+
+.rich-text-surface:focus {
+  border-color: #6d5bd0;
+  outline: 2px solid rgb(109 91 208 / 18%);
+}
+
+.rich-text-surface :is([data-interaction-link-target], [data-stat-value]) {
+  position: relative;
+  display: inline-flex;
+  min-width: 0;
+  max-width: 100%;
+  padding: 0;
+  border: 1px solid var(--color-primary-focus);
+  border-radius: 0.4rem;
+  background: var(--color-primary-soft);
+  color: var(--color-primary-strong);
+  font-size: 0.9em;
+  font-weight: 650;
+  line-height: 1.35;
+  vertical-align: baseline;
+  white-space: normal;
+  cursor: pointer;
+}
+
+.rich-text-token-edit {
+  min-width: 0;
+  max-width: 100%;
+  padding: 0.08rem 0.38rem;
+  overflow: hidden;
+  border: 0;
+  border-radius: inherit;
+  background: transparent;
+  color: inherit;
+  box-shadow: none;
+  font: inherit;
+  line-height: inherit;
+  overflow-wrap: anywhere;
+  text-align: left;
+  white-space: normal;
+  cursor: grab;
+}
+
+.rich-text-token-edit:hover,
+.rich-text-token-edit:focus-visible {
+  background: transparent;
+  box-shadow: none;
+  transform: none;
+}
+
+.rich-text-token-remove,
+.rich-text-condition-remove {
+  position: absolute;
+  z-index: 1;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 2px solid var(--color-surface);
+  border-radius: 999px;
+  background: var(--color-danger);
+  box-shadow: 0 0 0 3px #c53d4f22;
+  font-size: 0.76rem;
+  line-height: 1;
+  opacity: 1;
+  transform: none;
+  pointer-events: all;
+  cursor: pointer;
+  transition: box-shadow 120ms ease;
+}
+
+.rich-text-token-remove {
+  top: -9px;
+  right: -9px;
+}
+
+.rich-text-surface :is([data-interaction-link-target], [data-stat-value]):hover,
+.rich-text-surface :is([data-interaction-link-target], [data-stat-value]):focus,
+.rich-text-surface .rich-text-interaction-link-selected,
+.rich-text-surface .rich-text-variable-selected {
+  border-color: var(--color-primary-strong);
+  outline: 2px solid var(--color-primary-halo-strong);
+}
+
+.rich-text-surface .rich-text-token-dragging {
+  opacity: 0.55;
+}
+
+.rich-text-surface .rich-text-token-dragging,
+.rich-text-surface .rich-text-token-dragging .rich-text-token-edit {
+  cursor: grabbing;
+}
+
+.rich-text-conditional-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: -0.25rem 0 0.75rem;
+}
+
+.rich-text-condition-token {
+  position: relative;
+  display: inline-flex;
+  min-width: 0;
+  max-width: 100%;
+  border: 1px solid var(--color-primary-focus);
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-primary-strong);
+}
+
+.rich-text-condition-token > button:first-child {
+  min-width: 0;
+  max-width: 100%;
+  padding: 0.24rem 0.65rem;
+  overflow: hidden;
+  border: 0;
+  border-radius: inherit;
+  background: transparent;
+  color: inherit;
+  box-shadow: none;
+  font-size: 0.78rem;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+  text-align: left;
+  white-space: normal;
+}
+
+.rich-text-condition-remove {
+  top: -8px;
+  right: -8px;
+}
+
+.rich-text-token-remove:hover,
+.rich-text-token-remove:focus-visible,
+.rich-text-condition-remove:hover,
+.rich-text-condition-remove:focus-visible {
+  background: var(--color-danger);
+  box-shadow: 0 0 0 3px #c53d4f22;
+}
+
+.rich-text-condition-add {
+  width: 1.8rem;
+  min-width: 1.8rem;
+  height: 1.8rem;
+  padding: 0;
+  border-radius: 999px;
+}
+
+.rich-text-limit {
+  margin: 0.35rem 0 0;
+  color: var(--color-text-muted);
+  font-size: 0.78rem;
+  text-align: right;
+}
+
+.rich-text-limit.warning {
+  color: #8a5a00;
+}
+
+.rich-text-limit.error {
+  color: var(--color-error);
+  font-weight: 700;
+}
+
+.rich-text-surface img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 0.75rem auto;
+}
+
+.rich-text-surface video,
+.rich-text-surface iframe {
+  display: block;
+  width: 100%;
+  max-width: 48rem;
+  aspect-ratio: 16 / 9;
+  margin: 0.75rem auto;
+  border: 0;
+}

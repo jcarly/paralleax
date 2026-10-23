@@ -4,7 +4,6 @@ import { Link, Navigate, NavLink, Route, Routes, useLocation, useNavigate } from
 import { api, type AuthUser } from './api';
 import { authenticationPath, safeReturnTo } from './authNavigation';
 import { LanguageSwitcher } from './components/LanguageSwitcher';
-import { FeedbackButton } from './features/feedback/FeedbackButton';
 import type { AccountAction } from './pages/AccountActionPage';
 import { StoryList } from './pages/StoryList';
 import {
@@ -22,6 +21,11 @@ const StoryEditor = lazy(() =>
 );
 const StoryPlayer = lazy(() =>
   loadStoryPlayer().then(({ StoryPlayer }) => ({ default: StoryPlayer })),
+);
+const FeedbackButton = lazy(() =>
+  import('./features/feedback/FeedbackButton').then(({ FeedbackButton }) => ({
+    default: FeedbackButton,
+  })),
 );
 const AuthPage = lazy(() =>
   import('./pages/AuthPage').then(({ AuthPage }) => ({ default: AuthPage })),
@@ -132,7 +136,9 @@ export function App() {
           ) : null}
         </nav>
         <span className="product-app-spacer" />
-        <FeedbackButton />
+        <Suspense fallback={null}>
+          <FeedbackButton />
+        </Suspense>
         <LanguageSwitcher className="language-switcher-header" />
         {user ? (
           <>

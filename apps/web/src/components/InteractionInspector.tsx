@@ -1,5 +1,6 @@
 import {
   getStatValueType,
+  variableReference,
   updateInteractionInStory,
   type Interaction,
   type StatEffect,
@@ -8,15 +9,17 @@ import {
 } from '@paralleax/shared';
 import { useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { getStatTargets, statTargetId, statTargetLabel, type StatTarget } from '../storyStats';
+import { getStatTargets, type StatTarget } from '../storyStats';
 import {
   InspectorCommentField,
   InspectorCommentSlot,
   type InspectorSemanticCommentProps,
   type InspectorTextCommentProps,
 } from '../features/comments/InspectorCommentField';
+import { ExpressionEditor } from './ExpressionEditor';
 import { FieldHelpTooltip } from './FieldHelpTooltip';
 import { RichTextEditor } from './RichTextEditor';
+import { VariablePicker } from './VariablePicker';
 
 function getInitials(name: string) {
   return name
@@ -212,10 +215,6 @@ export function InteractionInspector({
   );
   const statTargets = getStatTargets(story);
   const statEffects = interaction.statEffects ?? [];
-  const statTargetOptions = statTargets.map((target) => ({
-    id: statTargetId(target),
-    label: statTargetLabel(target, t('attributes.owner.story')),
-  }));
   const availableStatTarget = statTargets.find(
     (target) => !statEffects.some((effect) => isSameStatTarget(effect, target)),
   );
@@ -478,13 +477,6 @@ export function InteractionInspector({
                   const valueType = selectedTarget?.definition
                     ? getStatValueType(selectedTarget.definition)
                     : 'number';
-                  const options = statTargetOptions.map((option) => ({
-                    ...option,
-                    disabled: statEffects.some(
-                      (candidate, candidateIndex) =>
-                        candidateIndex !== index && effectTargetId(candidate) === option.id,
-                    ),
-                  }));
                   return (
                     <div
                       className="interaction-effect-card"
@@ -506,28 +498,38 @@ export function InteractionInspector({
                         x
                       </button>
                       <div className="interaction-effect-fields">
-                        <SearchableTargetField
-                          ariaLabel={t('interactionInspector.statEffectTarget')}
-                          onSelect={(targetId) => {
-                            const target = statTargets.find(
-                              (candidate) => statTargetId(candidate) === targetId,
-                            );
-                            if (!target) return;
-                            const nextEffects = [...statEffects];
-                            const nextValueType = target.definition
-                              ? getStatValueType(target.definition)
-                              : 'number';
-                            nextEffects[index] = {
-                              statId: target.assignment.id,
-                              ...(target.itemId ? { itemId: target.itemId } : {}),
-                              operation: nextValueType === 'number' ? effect.operation : 'set',
-                              value: normalizeEffectValue(effect.value, target),
-                            };
-                            saveStatEffects(nextEffects);
-                          }}
-                          options={options}
-                          value={effectTargetId(effect)}
-                        />
+                        <div aria-label={t('interactionInspector.statEffectTarget')}>
+                          <VariablePicker
+                            story={story}
+                            selectedTarget={selectedTarget}
+                            filter={(target) =>
+                              !statEffects.some(
+                                (candidate, candidateIndex) =>
+                                  candidateIndex !== index && isSameStatTarget(candidate, target),
+                              )
+                            }
+                            onSelect={({ target }) => {
+                              const nextEffects = [...statEffects];
+                              const nextValueType = target.definition
+                                ? getStatValueType(target.definition)
+                                : 'number';
+                              nextEffects[index] = {
+                                statId: target.assignment.id,
+                                ...(target.itemId ? { itemId: target.itemId } : {}),
+                                operation: nextValueType === 'number' ? effect.operation : 'set',
+                                value: normalizeEffectValue(
+                                  effect.value ?? target.assignment.initialValue,
+                                  target,
+                                ),
+                              };
+                              if (effect.expression !== undefined && nextValueType === valueType) {
+                                delete nextEffects[index].value;
+                                nextEffects[index].expression = effect.expression;
+                              }
+                              saveStatEffects(nextEffects);
+                            }}
+                          />
+                        </div>
                         <label>
                           {t('interactionInspector.operation')}
                           <select
@@ -549,9 +551,65 @@ export function InteractionInspector({
                             <option value="set">{t('interactionInspector.setOperation')}</option>
                           </select>
                         </label>
-                        <label>
-                          {t('interactionInspector.value')}
-                          {valueType === 'boolean' ? (
+                        <div>
+                          <label>{t('interactionInspector.value')}</label>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const nextEffects = [...statEffects];
+                              if (effect.expression !== undefined) {
+                                const nextEffect = { ...effect };
+                                delete nextEffect.expression;
+                                const fallbackValue = selectedTarget?.assignment.initialValue ?? 0;
+                                nextEffect.value = normalizeEffectValue(
+                                  effect.value ?? fallbackValue,
+                                  selectedTarget ?? statTargets[0],
+                                );
+                                nextEffects[index] = nextEffect;
+                                saveStatEffects(nextEffects);
+                                return;
+                              }
+                              nextEffects[index] = {
+                                ...effect,
+                                expression: selectedTarget
+                                  ? variableReference(
+                                      selectedTarget.assignment.id,
+                                      selectedTarget.itemId,
+                                    )
+                                  : '@{}',
+                                value: undefined,
+                              };
+                              saveStatEffects(nextEffects);
+                            }}
+                          >
+                            {effect.expression !== undefined
+                              ? t('interactionInspector.literalValue')
+                              : t('interactionInspector.expressionValue')}
+                          </button>
+                          {effect.expression !== undefined ? (
+                            <ExpressionEditor
+                              key={`${effect.statId}:${effect.itemId ?? ''}`}
+                              story={story}
+                              value={effect.expression}
+                              expectedType={valueType}
+                              onChange={(expression) => {
+                                const nextEffects = [...statEffects];
+                                const nextEffect = { ...effect };
+                                delete nextEffect.value;
+                                nextEffect.expression = expression;
+                                nextEffects[index] = nextEffect;
+                                saveStatEffects(nextEffects, false);
+                              }}
+                              onBlur={(expression) => {
+                                const nextEffects = [...statEffects];
+                                const nextEffect = { ...effect };
+                                delete nextEffect.value;
+                                nextEffect.expression = expression;
+                                nextEffects[index] = nextEffect;
+                                void onPatch(interaction.id, { statEffects: nextEffects });
+                              }}
+                            />
+                          ) : valueType === 'boolean' ? (
                             <select
                               aria-label={t('interactionInspector.statEffectValue')}
                               value={String(effect.value)}
@@ -572,7 +630,7 @@ export function InteractionInspector({
                             <input
                               aria-label={t('interactionInspector.statEffectValue')}
                               type={valueType === 'number' ? 'number' : 'text'}
-                              value={String(effect.value)}
+                              value={String(effect.value ?? '')}
                               onChange={(event) => {
                                 const nextEffects = [...statEffects];
                                 nextEffects[index] = {
@@ -597,7 +655,7 @@ export function InteractionInspector({
                               }}
                             />
                           )}
-                        </label>
+                        </div>
                       </div>
                     </div>
                   );

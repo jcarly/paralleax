@@ -16,6 +16,7 @@ import { StoryMutationService } from './application/story-mutations';
 import { StoryReaderProgressService } from './application/story-reader-progress';
 import { StoryRuntimeService } from './application/story-runtime';
 import { QspImportWorkerService } from './application/qsp-import-worker.service';
+import { ChoiceScriptImportWorkerService } from './application/choicescript-import-worker.service';
 import { QspImportProgressService } from './application/qsp-import-progress.service';
 
 @Module({
@@ -27,6 +28,7 @@ import { QspImportProgressService } from './application/qsp-import-progress.serv
     StoryEventsService,
     StoryImportService,
     QspImportWorkerService,
+    ChoiceScriptImportWorkerService,
     QspImportProgressService,
     StoryAccessService,
     StoryContextService,

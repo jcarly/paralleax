@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Story } from '@paralleax/shared';
 import { interactionNodeHeight, interactionNodeWidth } from './storyGraph';
-import { computeStoryGraphLayout } from './storyGraphLayout';
+import { computeLegacyStoryGraphLayout } from './storyGraphLayout';
 
 function createLayoutStory(): Story {
   return {
@@ -57,7 +57,7 @@ function createLayoutStory(): Story {
 
 function applyInteractionUpdates(
   story: Story,
-  updates: ReturnType<typeof computeStoryGraphLayout>,
+  updates: ReturnType<typeof computeLegacyStoryGraphLayout>,
 ) {
   const positions = new Map(story.interactions.map(({ id, position }) => [id, position]));
   updates.interactionUpdates.forEach(({ interactionId, position }) =>
@@ -69,7 +69,7 @@ function applyInteractionUpdates(
 describe('story graph automatic layout', () => {
   it('spaces branches, convergence markers, and disconnected components in a vertical hierarchy', () => {
     const story = createLayoutStory();
-    const result = computeStoryGraphLayout(story, { kind: 'all' });
+    const result = computeLegacyStoryGraphLayout(story, { kind: 'all' });
     const positions = applyInteractionUpdates(story, result);
 
     expect(result.triggerUpdates.map(({ triggerIds }) => triggerIds)).toEqual([
@@ -153,7 +153,7 @@ describe('story graph automatic layout', () => {
       ),
     );
 
-    const result = computeStoryGraphLayout(story, { kind: 'all' }, { interactionSizes });
+    const result = computeLegacyStoryGraphLayout(story, { kind: 'all' }, { interactionSizes });
     const positions = applyInteractionUpdates(story, result);
     const rectangles = story.interactions.map(({ id }) => ({
       id,
@@ -260,7 +260,7 @@ describe('story graph automatic layout', () => {
       ],
     };
 
-    const result = computeStoryGraphLayout(story, { kind: 'all' });
+    const result = computeLegacyStoryGraphLayout(story, { kind: 'all' });
     const interactionPositions = applyInteractionUpdates(story, result);
     const triggerPositions = new Map(
       result.triggerUpdates.map(({ triggerIds, position }) => [triggerIds[0], position]),
@@ -334,7 +334,7 @@ describe('story graph automatic layout', () => {
       ],
     };
 
-    const result = computeStoryGraphLayout(story, { kind: 'all' });
+    const result = computeLegacyStoryGraphLayout(story, { kind: 'all' });
     const interactionPositions = applyInteractionUpdates(story, result);
     const interactionCenters = new Map(
       [...interactionPositions].map(([id, position]) => [
@@ -378,8 +378,8 @@ describe('story graph automatic layout', () => {
       },
     ];
 
-    const first = computeStoryGraphLayout(story, { kind: 'all' });
-    const second = computeStoryGraphLayout(story, { kind: 'all' });
+    const first = computeLegacyStoryGraphLayout(story, { kind: 'all' });
+    const second = computeLegacyStoryGraphLayout(story, { kind: 'all' });
     const positions = applyInteractionUpdates(story, first);
 
     expect(first).toEqual(second);
@@ -400,8 +400,8 @@ describe('story graph automatic layout', () => {
           },
         ]),
       );
-      const first = computeStoryGraphLayout(story, { kind: 'all' }, { interactionSizes });
-      const second = computeStoryGraphLayout(story, { kind: 'all' }, { interactionSizes });
+      const first = computeLegacyStoryGraphLayout(story, { kind: 'all' }, { interactionSizes });
+      const second = computeLegacyStoryGraphLayout(story, { kind: 'all' }, { interactionSizes });
       const positions = applyInteractionUpdates(story, first);
       const rectangles = story.interactions.map(({ id }) => ({
         id,
@@ -444,7 +444,7 @@ describe('story graph automatic layout', () => {
     const rootPosition = story.interactions[0].position;
     const rightPosition = story.interactions[2].position;
 
-    const result = computeStoryGraphLayout(story, {
+    const result = computeLegacyStoryGraphLayout(story, {
       kind: 'selection',
       targets: [{ type: 'interaction', interactionId: 'left' }],
     });
@@ -469,7 +469,7 @@ describe('story graph automatic layout', () => {
       conditions: [{ interactionId: 'root', hasBeenVisited: true }],
     });
 
-    const result = computeStoryGraphLayout(story, {
+    const result = computeLegacyStoryGraphLayout(story, {
       kind: 'selection',
       targets: [{ type: 'trigger', interactionId: 'left', triggerId: 'trigger-left-variant' }],
     });
@@ -486,7 +486,7 @@ describe('story graph automatic layout', () => {
 
   it('accepts several interaction and trigger targets for future multi-selection', () => {
     const story = createLayoutStory();
-    const result = computeStoryGraphLayout(story, {
+    const result = computeLegacyStoryGraphLayout(story, {
       kind: 'selection',
       targets: [
         { type: 'interaction', interactionId: 'left' },
@@ -507,7 +507,7 @@ describe('story graph automatic layout', () => {
 
   it('does nothing for an empty future selection', () => {
     expect(
-      computeStoryGraphLayout(createLayoutStory(), { kind: 'selection', targets: [] }),
+      computeLegacyStoryGraphLayout(createLayoutStory(), { kind: 'selection', targets: [] }),
     ).toEqual({ interactionUpdates: [], triggerUpdates: [], affectedNodeIds: [] });
   });
 });

@@ -6,6 +6,7 @@ export interface TriggerNodeData extends Record<string, unknown> {
   triggerId: string;
   triggerIds: string[];
   conditionCount: number;
+  conditionSummary?: string;
   inputCount: number;
   orGroupCount: number;
   selected: boolean;
@@ -51,12 +52,12 @@ export function TriggerNode({ data }: NodeProps) {
         data-interaction-id={d.interactionId}
         data-trigger-id={d.triggerId}
         data-testid={`flow-trigger-${d.interactionId}-${d.triggerId}`}
-        aria-label={t('graph.trigger', {
+        aria-label={`${t('graph.trigger', {
           input: inputLabel,
           condition: conditionLabel,
           variant: orLabel,
-        })}
-        title={`${inputLabel}, ${conditionLabel}, ${orLabel}`}
+        })}${d.conditionSummary ? `, ${d.conditionSummary}` : ''}`}
+        title={`${inputLabel}, ${d.conditionSummary ?? conditionLabel}, ${orLabel}`}
         onClick={(event) => {
           event.preventDefault();
           event.stopPropagation();

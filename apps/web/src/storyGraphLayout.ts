@@ -57,7 +57,7 @@ const verticalGap = 120;
 const componentGap = 260;
 const defaultOrigin = { x: 80, y: 120 };
 
-export function computeStoryGraphLayout(
+export function computeLegacyStoryGraphLayout(
   story: Story,
   scope: StoryGraphLayoutScope,
   options: StoryGraphLayoutOptions = {},

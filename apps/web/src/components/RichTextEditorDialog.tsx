@@ -1,5 +1,6 @@
 import { useId, type ReactNode } from 'react';
 import { handleModalDialogKeyDown } from './modalDialogKeyboard';
+import { ModalPortal } from './ModalPortal';
 
 export function RichTextEditorDialog({
   title,
@@ -20,33 +21,35 @@ export function RichTextEditorDialog({
   const descriptionId = useId();
 
   return (
-    <div className="modal-dialog-backdrop" role="presentation" onMouseDown={onCancel}>
-      <section
-        aria-describedby={descriptionId}
-        aria-labelledby={titleId}
-        aria-modal="true"
-        className={`modal-dialog${className ? ` ${className}` : ''}`}
-        role="dialog"
-        onKeyDown={(event) => handleModalDialogKeyDown(event, onCancel)}
-        onMouseDown={(event) => event.stopPropagation()}
-      >
-        <header className="rich-text-dialog-header">
-          <div>
-            <h2 id={titleId}>{title}</h2>
-            <p id={descriptionId}>{description}</p>
-          </div>
-          <button
-            aria-label={closeLabel}
-            className="ghost rich-text-dialog-close"
-            title={closeLabel}
-            type="button"
-            onClick={onCancel}
-          >
-            ×
-          </button>
-        </header>
-        {children}
-      </section>
-    </div>
+    <ModalPortal>
+      <div className="modal-dialog-backdrop" role="presentation" onMouseDown={onCancel}>
+        <section
+          aria-describedby={descriptionId}
+          aria-labelledby={titleId}
+          aria-modal="true"
+          className={`modal-dialog rich-text-editor-dialog${className ? ` ${className}` : ''}`}
+          role="dialog"
+          onKeyDown={(event) => handleModalDialogKeyDown(event, onCancel)}
+          onMouseDown={(event) => event.stopPropagation()}
+        >
+          <header className="rich-text-dialog-header">
+            <div>
+              <h2 id={titleId}>{title}</h2>
+              <p id={descriptionId}>{description}</p>
+            </div>
+            <button
+              aria-label={closeLabel}
+              className="ghost rich-text-dialog-close"
+              title={closeLabel}
+              type="button"
+              onClick={onCancel}
+            >
+              ×
+            </button>
+          </header>
+          {children}
+        </section>
+      </div>
+    </ModalPortal>
   );
 }

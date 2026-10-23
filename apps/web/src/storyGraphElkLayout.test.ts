@@ -3,6 +3,7 @@ import type { ElkNode } from 'elkjs/lib/elk-api';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { interactionNodeHeight, interactionNodeWidth } from './storyGraph';
 import { computeStoryGraphElkLayout, preloadStoryGraphElk } from './storyGraphElkLayout';
+import { computeLegacyStoryGraphLayout } from './storyGraphLayout';
 
 const { constructElk, layout } = vi.hoisted(() => ({
   constructElk: vi.fn(),
@@ -379,6 +380,18 @@ describe('ELK story graph adapter', () => {
     layout.mockRejectedValue(error);
 
     await expect(computeStoryGraphElkLayout(story)).rejects.toBe(error);
+
+    expect(story).toEqual(original);
+  });
+
+  it('uses the deterministic fallback when ELK exhausts the call stack', async () => {
+    const story = createLayoutStory();
+    const original = structuredClone(story);
+    layout.mockRejectedValue(new RangeError('Maximum call stack size exceeded'));
+
+    await expect(computeStoryGraphElkLayout(story)).resolves.toEqual(
+      computeLegacyStoryGraphLayout(story, { kind: 'all' }),
+    );
 
     expect(story).toEqual(original);
   });

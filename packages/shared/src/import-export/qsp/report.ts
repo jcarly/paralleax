@@ -10,7 +10,7 @@ const FEATURE_SUPPORT: ReadonlyArray<[QspFeatureId, QspFeatureSupport]> = [
   ['navigation', 'partial'],
   ['variables', 'partial'],
   ['conditions', 'partial'],
-  ['subroutines', 'unsupported'],
+  ['subroutines', 'partial'],
   ['local_jumps', 'unsupported'],
   ['loops', 'unsupported'],
   ['dynamic_code', 'unsupported'],

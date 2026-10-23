@@ -34,9 +34,20 @@ When documents disagree, use this precedence:
 7. `docs/architecture.md`.
 8. Roadmap and historical documentation.
 
-If a contradiction remains material, do not silently choose a new product rule. Report it and make the smallest safe change.
+Surface material conflicts under the clarification and product decisions rule
+below before implementing the disputed decision. Source precedence does not remove
+this duty or authorize silently choosing a new product rule.
 
 ## Architectural boundaries
+
+### Concise interface copy
+
+- Keep default interface copy and repeated explanations concise. Prefer a clear,
+  readable label or rule over a persistent explanatory paragraph.
+- Put optional detail in an accessible tooltip or infobulle on hover and keyboard
+  focus. Essential meaning and actions must remain available without hover.
+- Use progressive disclosure for controls: show the readable authored value by
+  default and expose editing controls when the user asks to edit it.
 
 ### `packages/shared`
 
@@ -78,16 +89,92 @@ In particular:
 
 ## Change discipline
 
-Before coding:
+### Start-of-task checklist
 
-1. State the behavior being changed.
-2. Identify affected layer(s): domain, API, web, persistence, documentation.
-3. Identify relevant invariants and regression tests.
-4. If any material implementation question remains, ask the user before coding.
-   This is mandatory when choosing between extending or reusing an existing model
-   and introducing a parallel model, table, API, workflow, or UI concept. Do not
-   infer permission for the parallel design from a general feature request.
-5. Prefer a narrow change over opportunistic refactoring.
+1. Assess model suitability before substantial investigation; report a material
+   mismatch in the opening update (see model recommendation below).
+2. Inspect the working tree and relevant diffs before editing; identify existing
+   work to preserve.
+3. Read the relevant docs and closest implementation, including current scope and
+   relevant roadmap entries; assess alignment, reuse opportunities, and priority.
+4. State a short implementation contract: goal, non-goals, observable behavior,
+   affected layers/files, invariants, acceptance scenarios, and compatibility or
+   migration constraints. Use the template in `docs/ai-workflow.md` as needed.
+5. Resolve open product choices and concrete objections with the user under the
+   rule below; distinguish confirmed requirements from assumptions.
+6. For significant editor interaction changes, validate a concrete user journey or
+   lightweight mockup before building the full implementation.
+
+### Clarification and product decisions
+
+The user wants active questioning and reasoned disagreement about implementation
+and task priority, even for otherwise fully specified requests.
+
+- Ask focused questions about unresolved workflows, domain semantics, UI behavior,
+  edge cases, scope, and acceptance criteria. A general feature request or a
+  plausible interpretation does not settle these choices. For groups, for example,
+  clarify eligible contents, nesting, membership, ordering, moves, and deletion.
+- Challenge concrete concerns such as duplication, complexity, maintenance cost,
+  weak user value, missing prerequisites, or premature scope. Explain tradeoffs and
+  recommend an alternative, including narrowing or deferring work. Identify any
+  documented priority displaced; do not silently reorder tasks or expand scope.
+- For conflicts with the roadmap or documentation, cite the relevant file/section,
+  explain consequences, and ask whether to change direction, adjust, or defer.
+  Respect source precedence and identify stale roadmap entries.
+- Clarification is also mandatory before choosing a parallel model, table, API,
+  workflow, or UI concept over extending an existing one, unless already decided
+  by the user. Explain the semantic or lifecycle distinction (see reuse below).
+- Present concrete options and a recommendation in small, coherent question
+  batches. Wait for answers before implementing unresolved or disputed decisions;
+  read-only investigation and independent settled work may continue. Silence is
+  not agreement. Follow up if a material ambiguity remains.
+- Validate significant editor interactions through a journey or mockup that shows
+  the main action, resulting state, and relevant edge cases. Reuse existing UI
+  patterns and wait for feedback on unresolved interactions before extending the
+  implementation across layers; do not invent a separate prototyping workflow.
+- Incorporate answers and follow the informed decision within authorized scope.
+  Do not invent objections, repeat answered questions, or reopen settled choices
+  without new evidence. Mechanical changes, documented bug fixes, and fully
+  specified tasks need no clarification round when no material choice or conflict
+  remains; this exception does not authorize inventing feature requirements.
+
+### Interface writing and typography
+
+- Keep interface copy concise; put optional precision in tooltips or infobulles.
+- Avoid the em dash (—) in most interface copy. Use `->` for directional or
+  ownership relationships and a simple hyphen for short separators.
+- Use 12 px for compact authoring labels and secondary hints, and 14 px for
+  field values and ordinary compact controls. This is not a global cap: reader
+  prose and prominent headings keep context-appropriate sizes.
+- Keep related condition fields in one consistent vertical layout with uniform
+  gaps; concise condition rules wrap instead of truncating.
+
+### Model recommendation
+
+Prefer the least costly available model and reasoning effort likely to meet the
+quality bar. Consider ambiguity, context size, affected layers, verification, and
+domain/security/migration risks, including the cost of mistakes and rework.
+
+If the current selection is a material mismatch, recommend a specific alternative
+and effort in the opening update with a short reason, whether cheaper or stronger.
+Use current official guidance and known client availability; keep the check
+proportionate. If the active model or effort is unknown, say so and make the
+recommendation conditional. Do not invent access, prices, savings, or fixed rankings.
+
+A recommendation does not switch the conversation's model. Without a supported
+switching control, direct the user to the client model control; do not claim a
+switch, change configuration, or launch another agent/session to simulate one.
+For substantial work with a material mismatch, give the user a chance to choose
+before costly execution. Reassess only when complexity or risk materially changes.
+
+### Preserve existing work
+
+Keep edits, formatting, staging, and commits limited to the task. Preserve unrelated
+local changes, including changes in a file the task also touches. Do not reset,
+overwrite, discard, or stash others' work without explicit authorization. Avoid
+global cleanup or formatting; target touched content. Before staging or committing,
+inspect the diff and select only relevant files or hunks rather than staging the
+whole working tree. Ask if overlapping changes cannot be safely reconciled.
 
 ### Reuse-first principle
 
@@ -110,10 +197,9 @@ service, table, endpoint, model, style, or workflow:
 5. Keep extended code cohesive. If supporting another case would overload an
    existing function or class, separate the common logic from the genuinely
    different logic instead of duplicating the complete implementation.
-6. Create a parallel abstraction only when the semantics, invariants, ownership,
-   or lifecycle are materially different. Record that reason in code documentation,
-   semantic documentation, or an ADR as appropriate, and ask the user first when
-   the distinction was not explicit in the request.
+6. A parallel abstraction requires materially different semantics, invariants,
+   ownership, or lifecycle. Resolve that choice under the clarification rule above
+   and record the reason in the appropriate documentation.
 
 ### Existing libraries and SDKs
 
@@ -130,18 +216,29 @@ the library's normal interface can be used directly. If the project deliberately
 does not use an available library, record the concrete reason in the relevant
 documentation or ADR.
 
-While coding:
+### During implementation
 
+- Prefer a narrow change over opportunistic refactoring.
 - Keep code, tests, UI copy, and technical documentation in English.
 - Do not introduce new domain concepts as incidental implementation details.
 - Avoid adding more responsibilities to known large orchestration files when a focused module is reasonable.
 - Preserve backwards compatibility for persisted stories and reader progress unless the task explicitly includes a migration.
+- If new evidence changes scope, cost, dependencies, or priority materially (for
+  example, a small fix now needs a migration, new abstraction, or refactor), explain
+  the discovery and alternatives promptly. Revisit the contract with the user
+  before pursuing the expanded work; do not silently absorb it into the task.
 
-After coding:
+### Decisions and completion
 
+- Keep agreed behavior and acceptance scenarios in the implementation contract.
+  Record durable decisions where they belong: product/semantic docs for behavior,
+  the roadmap for agreed priority changes, and an ADR for architectural decisions.
+  Include the rationale and relevant consequences; do not leave important decisions
+  only in chat or silently rewrite documentation to justify an implementation.
+  Use existing documents; a new decision log or parallel workflow is unnecessary.
+- Resolve durable architectural decisions in an ADR before implementing them.
 - Add or update tests for every behavior change.
 - Update semantic documentation when behavior changes.
-- Add an ADR when a durable architectural decision changes.
 - Update `CHANGELOG.md` for notable user-visible or architectural changes.
 - Run the narrowest relevant verification, then the broader suite appropriate to the change.
 
@@ -155,11 +252,10 @@ After coding:
 - Cross-layer change: typecheck + affected unit/integration tests + build.
 - Documentation-only change: no full test suite unless semantics changed.
 
-Before merging a substantial feature, prefer:
+Format task-owned content only. Before merging a substantial feature, prefer:
 
 ```bash
 npm run lint
-npm run format
 npm run typecheck
 npm run test
 npm run test:e2e -w @paralleax/web
@@ -217,20 +313,6 @@ apps/web/src/features/story-editor/
 
 Do not perform this reorganization as one massive refactor. Extract incrementally
 when touching a responsibility.
-
-## Agent task contract
-
-Every implementation task should define:
-
-- Goal
-- Non-goals
-- Product behavior
-- Relevant invariants
-- Expected files/layers
-- Acceptance tests
-- Migration/compatibility constraints
-
-If these are absent, infer them from the repository and keep the scope minimal.
 
 ## Imports and external story systems
 

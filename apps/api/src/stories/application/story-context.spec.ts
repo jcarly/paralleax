@@ -96,12 +96,58 @@ describe('StoryContextService', () => {
 
     const deleted = await service.deleteCharacterItem('story-1', 'mira', 'key', 'user-1');
 
-    expect(deleted.characters?.[0].items).toEqual([
+    expect(deleted).toEqual({
+      characterId: 'mira',
+      itemId: 'key',
+      revision: 4,
+      updatedAt: '2026-08-25T16:00:00.000Z',
+    });
+    expect(lastStory.characters?.[0].items).toEqual([
       { id: 'bag', itemDefinitionId: 'bag-definition' },
     ]);
-    expect(deleted.interactions[0].itemEffects).toEqual([]);
-    expect(deleted.interactions[0].statEffects).toEqual([]);
-    expect(getTriggerConditions(deleted.interactions[0].triggers[0])).toEqual([]);
+    expect(lastStory.interactions[0].itemEffects).toEqual([]);
+    expect(lastStory.interactions[0].statEffects).toEqual([]);
+    expect(getTriggerConditions(lastStory.interactions[0].triggers[0])).toEqual([]);
+  });
+
+  it('returns compact metadata after deleting a character stat and cleans its references', async () => {
+    mutations.update.mockImplementationOnce(
+      async (_storyId: string, mutation: (story: Story) => Story) => {
+        const story = storyFixture();
+        story.characters![0].stats = [
+          { id: 'mira-energy', statDefinitionId: 'energy-definition', initialValue: 2 },
+        ];
+        story.interactions[0].statEffects!.push({
+          statId: 'mira-energy',
+          operation: 'add',
+          value: 1,
+        });
+        story.interactions[0].triggers[0].conditions!.push({
+          statId: 'mira-energy',
+          operator: 'gte',
+          value: 1,
+        });
+        lastStory = mutation(story);
+        lastStory.revision = 4;
+        lastStory.updatedAt = '2026-08-25T16:00:00.000Z';
+        return lastStory;
+      },
+    );
+    const deleted = await service.deleteCharacterStat('story-1', 'mira', 'mira-energy', 'user-1');
+
+    expect(deleted).toEqual({
+      characterId: 'mira',
+      statId: 'mira-energy',
+      revision: 4,
+      updatedAt: '2026-08-25T16:00:00.000Z',
+    });
+    expect(lastStory.characters?.[0].stats).toEqual([]);
+    expect(lastStory.interactions[0].statEffects).not.toContainEqual(
+      expect.objectContaining({ statId: 'mira-energy' }),
+    );
+    expect(getTriggerConditions(lastStory.interactions[0].triggers[0])).not.toContainEqual(
+      expect.objectContaining({ statId: 'mira-energy' }),
+    );
   });
 });
 

@@ -338,6 +338,36 @@ not fall back to the first generic free slot. Dragging a connection onto empty
 canvas remains manual: the new interaction keeps the position chosen by the
 pointer instead of being automatically rearranged.
 
+## Organize Interactions with Groups
+
+Select Interactions and press **Ctrl+G** (or **Cmd+G**) to create a Group. Its name
+is immediately editable in the left tree. **Enter** or leaving the name saves;
+**Escape** cancels renaming. The same name-field shortcuts apply to characters,
+locations, variables and item definitions in their existing inspectors.
+
+Each Group uses one compact row with a folder, recursive Interaction count and
+an actions menu. Click the name to highlight its Interactions, including those in
+subgroups, without selecting draggable nodes or opening an inspector. The chevron
+only expands/collapses. Double-click the name or choose **Center on group** to
+adjust the viewport. Search finds Groups even beneath collapsed ancestors.
+
+Drag the name onto a row's center to nest it, or near its upper/lower edge to
+reorder siblings. A folded destination opens after a short hover; the navigation
+panel scrolls near its edges. Drop on **Move to root** to remove parentage. Invalid
+destinations are marked in red. **Escape** cancels dragging before any save.
+
+Use arrow keys to navigate, **Enter** to select, **F2** to rename and **Shift+F10**
+or right-click to open actions. **Ctrl/Cmd+Up/Down** reorders siblings;
+**Ctrl/Cmd+Right** nests under the previous sibling; **Ctrl/Cmd+Left** moves up one
+level. Equivalent actions also appear in the menu. Existing Undo/Redo reverses
+parentage and order together, and both survive reload.
+
+The menu can create an empty subgroup, move selected Interactions into the Group,
+remove selected direct members or select all recursive members. Moving an
+Interaction transfers it from its old Group. Deleting a Group preserves every
+Interaction and promotes its children to the deleted Group's parent. Organization
+never changes graph positions or Simulation behavior.
+
 ## Add Visual Structure to the Graph
 
 Use **Add frame** to place a colored frame around a visual area of the canvas.
