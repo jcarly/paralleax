@@ -13,6 +13,10 @@ function createSdk() {
     track: vi.fn().mockResolvedValue(undefined),
     logout: vi.fn().mockResolvedValue(undefined),
     registerRouteChange: vi.fn().mockResolvedValue(undefined),
+    setEmbeddedData: vi.fn().mockResolvedValue(undefined),
+    clearEmbeddedData: vi.fn().mockResolvedValue(undefined),
+    on: vi.fn(() => () => undefined),
+    off: vi.fn(),
   };
 }
 

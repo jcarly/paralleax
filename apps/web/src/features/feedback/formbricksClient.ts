@@ -1,7 +1,9 @@
-import formbricks from '@formbricks/js';
 import { formbricksFeedbackConfig, type FormbricksFeedbackConfig } from './feedbackConfig';
 
-type FormbricksSdk = typeof formbricks;
+type FormbricksSdk = Pick<
+  typeof import('@formbricks/js').default,
+  'setup' | 'setLanguage' | 'registerRouteChange' | 'track'
+>;
 
 export function createFormbricksFeedbackClient(
   sdk: FormbricksSdk,
@@ -55,7 +57,21 @@ export function createFormbricksFeedbackClient(
   };
 }
 
+let formbricksSdkPromise: Promise<FormbricksSdk> | undefined;
+
+function loadFormbricksSdk(): Promise<FormbricksSdk> {
+  formbricksSdkPromise ??= import('@formbricks/js').then(({ default: sdk }) => sdk);
+  return formbricksSdkPromise;
+}
+
+const lazyFormbricksSdk: FormbricksSdk = {
+  setup: (config) => loadFormbricksSdk().then((sdk) => sdk.setup(config)),
+  setLanguage: (language) => loadFormbricksSdk().then((sdk) => sdk.setLanguage(language)),
+  registerRouteChange: () => loadFormbricksSdk().then((sdk) => sdk.registerRouteChange()),
+  track: (event, properties) => loadFormbricksSdk().then((sdk) => sdk.track(event, properties)),
+};
+
 export const formbricksFeedbackClient = createFormbricksFeedbackClient(
-  formbricks,
+  lazyFormbricksSdk,
   formbricksFeedbackConfig,
 );

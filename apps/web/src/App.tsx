@@ -4,12 +4,8 @@ import { Link, Navigate, NavLink, Route, Routes, useLocation, useNavigate } from
 import { api, type AuthUser } from './api';
 import { authenticationPath, safeReturnTo } from './authNavigation';
 import { LanguageSwitcher } from './components/LanguageSwitcher';
-import { AccountDialog } from './components/AccountDialog';
-import { AuthPage } from './pages/AuthPage';
-import { AccountActionPage, type AccountAction } from './pages/AccountActionPage';
+import type { AccountAction } from './pages/AccountActionPage';
 import { StoryList } from './pages/StoryList';
-import { StoryAccessPage } from './pages/StoryAccessPage';
-import { AdminUsersPage } from './pages/AdminUsersPage';
 import {
   loadParalleaxPrototype,
   loadStoryEditor,
@@ -30,6 +26,23 @@ const FeedbackButton = lazy(() =>
   import('./features/feedback/FeedbackButton').then(({ FeedbackButton }) => ({
     default: FeedbackButton,
   })),
+);
+const AuthPage = lazy(() =>
+  import('./pages/AuthPage').then(({ AuthPage }) => ({ default: AuthPage })),
+);
+const AccountDialog = lazy(() =>
+  import('./components/AccountDialog').then(({ AccountDialog }) => ({ default: AccountDialog })),
+);
+const AccountActionPage = lazy(() =>
+  import('./pages/AccountActionPage').then(({ AccountActionPage }) => ({
+    default: AccountActionPage,
+  })),
+);
+const StoryAccessPage = lazy(() =>
+  import('./pages/StoryAccessPage').then(({ StoryAccessPage }) => ({ default: StoryAccessPage })),
+);
+const AdminUsersPage = lazy(() =>
+  import('./pages/AdminUsersPage').then(({ AdminUsersPage }) => ({ default: AdminUsersPage })),
 );
 
 export function App() {
@@ -75,29 +88,33 @@ export function App() {
 
   if (accountAction)
     return (
-      <AccountActionPage
-        action={accountAction}
-        onBackToSignIn={() => navigate('/login', { replace: true })}
-        onAuthenticated={(authenticatedUser) => {
-          setSessionExpired(false);
-          setUser(authenticatedUser);
-          navigate('/', { replace: true });
-        }}
-      />
+      <Suspense fallback={<main className="page">{t('shell.loadingWorkspace')}</main>}>
+        <AccountActionPage
+          action={accountAction}
+          onBackToSignIn={() => navigate('/login', { replace: true })}
+          onAuthenticated={(authenticatedUser) => {
+            setSessionExpired(false);
+            setUser(authenticatedUser);
+            navigate('/', { replace: true });
+          }}
+        />
+      </Suspense>
     );
 
   if (user === null && isAuthenticationRoute)
     return (
-      <AuthPage
-        initialMode={location.pathname === '/register' ? 'register' : 'login'}
-        notice={sessionExpired ? t('shell.sessionExpired') : ''}
-        onModeChange={(mode) => navigate(authenticationPath(mode, returnTo), { replace: true })}
-        onAuthenticated={(authenticatedUser) => {
-          setSessionExpired(false);
-          setUser(authenticatedUser);
-          navigate(returnTo, { replace: true });
-        }}
-      />
+      <Suspense fallback={<main className="page">{t('shell.loadingWorkspace')}</main>}>
+        <AuthPage
+          initialMode={location.pathname === '/register' ? 'register' : 'login'}
+          notice={sessionExpired ? t('shell.sessionExpired') : ''}
+          onModeChange={(mode) => navigate(authenticationPath(mode, returnTo), { replace: true })}
+          onAuthenticated={(authenticatedUser) => {
+            setSessionExpired(false);
+            setUser(authenticatedUser);
+            navigate(returnTo, { replace: true });
+          }}
+        />
+      </Suspense>
     );
 
   const signInPath = authenticationPath('login', currentDestination);
@@ -192,7 +209,9 @@ export function App() {
         </Routes>
       </Suspense>
       {user && accountOpen ? (
-        <AccountDialog user={user} onClose={() => setAccountOpen(false)} onUpdated={setUser} />
+        <Suspense fallback={null}>
+          <AccountDialog user={user} onClose={() => setAccountOpen(false)} onUpdated={setUser} />
+        </Suspense>
       ) : null}
     </div>
   );
