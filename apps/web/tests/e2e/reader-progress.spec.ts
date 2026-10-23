@@ -88,11 +88,11 @@ test('retries a temporary reader bootstrap failure without reloading the browser
   const failedBootstrapRequests = bootstrapRequests;
   bootstrapUnavailable = false;
   await page.getByRole('button', { name: 'Retry' }).click();
-  await expect(page.getByRole('heading', { name: /Start the story/ })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Start' })).toBeVisible();
   expect(bootstrapRequests).toBeGreaterThan(failedBootstrapRequests);
 });
 
-test('keeps the reader open when navigation is rejected during an unresolved autosave', async ({
+test('automatically enters one available interaction and keeps the reader open during autosave', async ({
   page,
 }) => {
   const story = readerStoryFixture();
@@ -105,6 +105,7 @@ test('keeps the reader open when navigation is rejected during an unresolved aut
   const saveRelease = new Promise<void>((resolve) => {
     releaseSave = resolve;
   });
+  let savedJourneyInteractionIds: string[] = [];
   await mockSignedInReader(page);
   await page.route('**/api/stories/story-1/progress', async (route) => {
     if (route.request().method() === 'GET') {
@@ -117,6 +118,7 @@ test('keeps the reader open when navigation is rejected during an unresolved aut
       randomSeed: string;
       stepStartedAt: string[];
     };
+    savedJourneyInteractionIds = input.journeyInteractionIds;
     markSaveStarted();
     await saveRelease;
     await route.fulfill({
@@ -138,8 +140,9 @@ test('keeps the reader open when navigation is rejected during an unresolved aut
   await mockRuntimeStory(page, story);
 
   await page.goto('/stories/story-1/play');
-  await page.getByRole('button', { name: 'Start', exact: true }).click();
   await saveStarted;
+  expect(savedJourneyInteractionIds).toEqual(['start']);
+  await expect(page.getByRole('heading', { name: 'Start' })).toBeVisible();
 
   await page.getByRole('link', { name: 'Stories', exact: true }).click();
   await expect(page.getByRole('dialog', { name: 'Unsaved changes' })).toBeVisible();

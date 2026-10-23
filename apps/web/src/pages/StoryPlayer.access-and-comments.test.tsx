@@ -48,7 +48,7 @@ describe('StoryPlayer access and comments', () => {
     itemStory.interactions[1].itemEffects = [{ itemId: 'key-1', operation: 'lose' }];
 
     await renderPlayer('/stories/story-1/play', itemStory);
-    await user.click(screen.getByRole('button', { name: 'Start' }));
+    expect(await screen.findByRole('heading', { name: 'Start' })).toBeInTheDocument();
     expect(screen.getByRole('complementary', { name: 'Inventory' })).toHaveTextContent('Key');
     expect(screen.getByRole('complementary', { name: 'Inventory' })).toHaveTextContent('Mira');
     expect(api.saveReaderProgress).toHaveBeenLastCalledWith(
@@ -65,7 +65,7 @@ describe('StoryPlayer access and comments', () => {
       'Durability: 8',
     );
 
-    await user.click(screen.getByRole('button', { name: 'Next' }));
+    await user.click(await screen.findByRole('button', { name: 'Next' }));
     expect(screen.getByRole('complementary', { name: 'Inventory' })).toHaveTextContent('No items.');
     expect(api.saveReaderProgress).toHaveBeenLastCalledWith(
       'story-1',
@@ -83,28 +83,28 @@ describe('StoryPlayer access and comments', () => {
     const user = userEvent.setup();
     await renderPlayer();
 
-    await user.click(screen.getByRole('button', { name: 'Start' }));
-    await user.click(screen.getByRole('button', { name: 'Next' }));
+    expect(await screen.findByRole('heading', { name: 'Start' })).toBeInTheDocument();
+    await user.click(await screen.findByRole('button', { name: 'Next' }));
     await user.click(screen.getByRole('button', { name: 'Secret' }));
 
     expect(screen.getByRole('heading', { name: 'Secret' })).toBeInTheDocument();
     expect(screen.getByText('End of this branch.')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Restart' }));
-    expect(screen.getByRole('heading', { name: /Start the story/ })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Start' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Start' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Next' })).toBeInTheDocument();
   });
 
   it('ignores a direct start interaction outside simulation mode', async () => {
     const user = userEvent.setup();
     await renderPlayer('/stories/story-1/play?startInteractionId=next');
 
-    expect(screen.getByRole('heading', { name: /Start the story/ })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Start' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Start' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Next' })).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Restart' }));
 
-    expect(screen.getByRole('heading', { name: /Start the story/ })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Start' })).toBeInTheDocument();
   });
 
   it('ignores simulation controls and direct starts for non-editors', async () => {
@@ -127,7 +127,7 @@ describe('StoryPlayer access and comments', () => {
     );
 
     expect(screen.getByText('Paralleax Reader')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: /Start the story/ })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Start' })).toBeInTheDocument();
     expect(screen.queryByText('Simulation')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Current interaction title')).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Back to editor' })).not.toBeInTheDocument();
@@ -209,10 +209,10 @@ describe('StoryPlayer access and comments', () => {
     });
 
     await renderPlayer('/stories/story-1/play', readerStory);
-    expect(screen.getByRole('button', { name: 'Comments' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Comments/ })).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Back to editor' })).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Start' }));
+    expect(await screen.findByRole('heading', { name: 'Start' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /^Comments/ }));
     expect(await screen.findByText('Current scene note.')).toBeInTheDocument();
     expect(screen.queryByText('Future scene note.')).not.toBeInTheDocument();

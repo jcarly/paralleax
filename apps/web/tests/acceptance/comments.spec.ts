@@ -64,7 +64,6 @@ test('a reader and an author review an interaction through persisted live commen
     await readerPage.goto(`/stories/${storyId}/play`);
     await expectSuccessful(readerCommentStream);
 
-    await readerPage.getByRole('button', { name: 'Reviewed opening' }).click();
     await expect(readerPage.getByRole('heading', { name: 'Reviewed opening' })).toBeVisible();
     await readerPage.getByRole('button', { name: 'Comment on this scene' }).click();
 

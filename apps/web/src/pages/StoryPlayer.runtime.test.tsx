@@ -34,26 +34,22 @@ describe('StoryPlayer runtime state', () => {
     await renderPlayer();
 
     expect(await screen.findByRole('heading', { name: 'Start' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Next' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Next' })).toBeInTheDocument();
     expect(screen.getByText('Progress saved')).toBeInTheDocument();
   });
 
   it('deletes saved progress when restarting', async () => {
     const user = userEvent.setup();
     await renderPlayer();
-    await user.click(screen.getByRole('button', { name: 'Start' }));
     await user.click(screen.getByRole('button', { name: 'Restart' }));
 
     expect(api.deleteReaderProgress).toHaveBeenCalledWith('story-1', 'reader');
-    expect(screen.getByRole('heading', { name: 'Start the story' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Start' })).toBeInTheDocument();
   });
 
   it('reports a reader progress save failure', async () => {
-    const user = userEvent.setup();
     vi.mocked(api.saveReaderProgress).mockRejectedValueOnce(new Error('offline'));
     await renderPlayer();
-
-    await user.click(screen.getByRole('button', { name: 'Start' }));
 
     expect(await screen.findByText('Progress save failed')).toBeInTheDocument();
   });
@@ -62,6 +58,8 @@ describe('StoryPlayer runtime state', () => {
     const user = userEvent.setup();
     await renderPlayer('/stories/story-1/play?mode=simulation');
 
+    expect(screen.getByRole('heading', { name: /Start the story/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Start' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Start' }));
     await user.click(screen.getByRole('button', { name: 'Restart' }));
 
@@ -133,14 +131,13 @@ describe('StoryPlayer runtime state', () => {
   });
 
   it('shows a draining bar above an available timed option', async () => {
-    const user = userEvent.setup();
     const timedStory = structuredClone(story);
     timedStory.interactions[1].triggers[0].timerSeconds = 10;
 
     await renderPlayer('/stories/story-1/play', timedStory);
-    await user.click(screen.getByRole('button', { name: 'Start' }));
 
-    expect(screen.getByRole('button', { name: 'Next' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Start' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Next' })).toBeInTheDocument();
     const timer = screen.getByRole('progressbar', {
       name: 'Time remaining for this option',
     });
@@ -254,6 +251,59 @@ describe('StoryPlayer runtime state', () => {
     );
   });
 
+  it('starts the unique opening after loading a saved empty reader journey', async () => {
+    const user = userEvent.setup();
+    const updatedAt = '2026-08-27T09:00:00.000Z';
+    vi.mocked(api.listReaderSaves).mockResolvedValueOnce([
+      {
+        id: 'manual-save-before-start',
+        kind: 'manual',
+        name: 'Before starting',
+        currentInteractionId: null,
+        journeyLength: 0,
+        createdAt: updatedAt,
+        updatedAt,
+      },
+    ]);
+    vi.mocked(api.getReaderSave).mockResolvedValueOnce({
+      id: 'manual-save-before-start',
+      kind: 'manual',
+      name: 'Before starting',
+      state: {
+        version: 2,
+        journeyInteractionIds: [],
+        currentInteractionId: null,
+        visitedInteractionIds: [],
+        currentDateTime: '2000-01-03T08:00',
+        currentLocationId: null,
+        statValues: {},
+        ownedItemIds: [],
+        itemStatValues: {},
+      },
+      createdAt: updatedAt,
+      updatedAt,
+    });
+
+    await renderPlayer();
+    expect(await screen.findByRole('heading', { name: 'Start' })).toBeInTheDocument();
+    await waitFor(() => expect(api.saveReaderProgress).toHaveBeenCalledTimes(1));
+    const userSaveControl = screen.getByRole('button', { name: 'Saves' });
+    await user.click(userSaveControl);
+    expect(await screen.findByRole('dialog', { name: 'Manage saves' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Load' }));
+
+    expect(await screen.findByRole('heading', { name: 'Start' })).toBeInTheDocument();
+    await waitFor(() =>
+      expect(api.getReaderSave).toHaveBeenCalledWith('story-1', 'manual-save-before-start'),
+    );
+    await waitFor(() => expect(api.saveReaderProgress).toHaveBeenCalledTimes(3));
+    expect(api.saveReaderProgress).toHaveBeenLastCalledWith(
+      'story-1',
+      expect.objectContaining({ journeyInteractionIds: ['start'] }),
+      'reader',
+    );
+  });
+
   it('creates, overwrites, and deletes a named manual save', async () => {
     const user = userEvent.setup();
     const updatedAt = '2026-08-27T09:00:00.000Z';
@@ -263,9 +313,9 @@ describe('StoryPlayer runtime state', () => {
       name: 'Before the gate',
       state: {
         version: 2 as const,
-        journeyInteractionIds: [],
-        currentInteractionId: null,
-        visitedInteractionIds: [],
+        journeyInteractionIds: ['start'],
+        currentInteractionId: 'start',
+        visitedInteractionIds: ['start'],
         currentDateTime: '2000-01-03T08:00',
         currentLocationId: null,
         statValues: {},
@@ -290,7 +340,7 @@ describe('StoryPlayer runtime state', () => {
 
     expect(api.createReaderSave).toHaveBeenCalledWith(
       'story-1',
-      expect.objectContaining({ name: 'Before the gate', journeyInteractionIds: [] }),
+      expect.objectContaining({ name: 'Before the gate', journeyInteractionIds: ['start'] }),
     );
     expect(await screen.findByText('Before the gate')).toBeInTheDocument();
 
@@ -299,7 +349,7 @@ describe('StoryPlayer runtime state', () => {
       expect(api.updateReaderSave).toHaveBeenCalledWith(
         'story-1',
         'manual-save-1',
-        expect.objectContaining({ name: 'Before the gate', journeyInteractionIds: [] }),
+        expect.objectContaining({ name: 'Before the gate', journeyInteractionIds: ['start'] }),
       ),
     );
     await waitFor(() => expect(screen.getByRole('button', { name: 'Delete' })).toBeEnabled());
@@ -325,7 +375,6 @@ describe('StoryPlayer runtime state', () => {
   });
 
   it('advances the story clock before evaluating temporal choices', async () => {
-    const user = userEvent.setup();
     const timedStory = structuredClone(story);
     timedStory.startDateTime = '2026-07-27T09:00';
     timedStory.interactions[0].durationMinutes = 60;
@@ -339,12 +388,8 @@ describe('StoryPlayer runtime state', () => {
     ];
 
     await renderPlayer('/stories/story-1/play', timedStory);
-    expect(screen.getByText('2026-07-27 09:00')).toBeInTheDocument();
-
-    await user.click(screen.getByRole('button', { name: 'Start' }));
-
-    expect(screen.getByText('2026-07-27 10:00')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Next' })).toBeInTheDocument();
+    expect(await screen.findByText('2026-07-27 10:00')).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Next' })).toBeInTheDocument();
   });
 
   it('updates and preserves current location while evaluating choices', async () => {
@@ -357,15 +402,14 @@ describe('StoryPlayer runtime state', () => {
     ];
 
     await renderPlayer('/stories/story-1/play', locatedStory);
-    await user.click(screen.getByRole('button', { name: 'Start' }));
+    expect(await screen.findByRole('heading', { name: 'Start' })).toBeInTheDocument();
     expect(screen.getByText('Harbor')).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Next' }));
+    await user.click(await screen.findByRole('button', { name: 'Next' }));
 
     expect(screen.getByRole('button', { name: 'Secret' })).toBeInTheDocument();
   });
 
   it('evaluates character conditions from the current interaction cast', async () => {
-    const user = userEvent.setup();
     const characterStory = structuredClone(story);
     characterStory.characters = [{ id: 'mira', name: 'Mira', description: '' }];
     characterStory.interactions[0].characterIds = ['mira'];
@@ -374,9 +418,8 @@ describe('StoryPlayer runtime state', () => {
     ];
 
     await renderPlayer('/stories/story-1/play', characterStory);
-    await user.click(screen.getByRole('button', { name: 'Start' }));
 
-    expect(screen.getByRole('button', { name: 'Next' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Next' })).toBeInTheDocument();
   });
 
   it('selects the playable character and shows player and encounter panels', async () => {
@@ -409,7 +452,7 @@ describe('StoryPlayer runtime state', () => {
     expect(screen.getByRole('complementary', { name: 'Played character' })).toHaveTextContent(
       'Trust: 4',
     );
-    await user.click(screen.getByRole('button', { name: 'Start' }));
+    expect(await screen.findByRole('heading', { name: 'Start' })).toBeInTheDocument();
     expect(screen.getByRole('complementary', { name: 'Encountered characters' })).toHaveTextContent(
       'Mira',
     );
@@ -430,7 +473,6 @@ describe('StoryPlayer runtime state', () => {
   });
 
   it('applies time-based and explicit stat changes before evaluating choices', async () => {
-    const user = userEvent.setup();
     const statStory = structuredClone(story);
     statStory.characters = [
       {
@@ -448,13 +490,11 @@ describe('StoryPlayer runtime state', () => {
     ];
 
     await renderPlayer('/stories/story-1/play', statStory);
-    await user.click(screen.getByRole('button', { name: 'Start' }));
 
-    expect(screen.getByRole('button', { name: 'Next' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Next' })).toBeInTheDocument();
   });
 
   it('replays typed variable effects for conditions and rich-text interpolation', async () => {
-    const user = userEvent.setup();
     const variableStory = structuredClone(story);
     variableStory.statDefinitions = [
       { id: 'score-definition', name: 'Score', valueType: 'number' },
@@ -472,9 +512,8 @@ describe('StoryPlayer runtime state', () => {
     ];
 
     await renderPlayer('/stories/story-1/play', variableStory);
-    await user.click(screen.getByRole('button', { name: 'Start' }));
 
-    expect(screen.getByText('3', { selector: '[data-stat-value]' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Next' })).toBeInTheDocument();
+    expect(await screen.findByText('3', { selector: '[data-stat-value]' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Next' })).toBeInTheDocument();
   });
 });

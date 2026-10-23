@@ -461,6 +461,8 @@ export function StoryPlayer({
   const canUseReaderComments =
     authenticated && !isSimulationMode && story?.capabilities?.canComment === true;
   const comments = useStoryComments(storyId, canUseReaderComments);
+  const cancelCommentDraft = comments.cancelDraft;
+  const selectCommentThread = comments.selectThread;
   const readerCommentThreads = useMemo(
     () =>
       story && current
@@ -769,42 +771,93 @@ export function StoryPlayer({
     editingChoiceInputRef.current?.select();
   }, [editingChoiceId]);
 
-  function choose(interaction: Interaction) {
-    if (!story) return;
-    const now = Date.now();
-    if (!(isSimulationMode && forceUnavailableOptions)) {
-      const startedAt = currentStepStartedAt ? Date.parse(currentStepStartedAt) : now;
-      const stillAvailable = getAvailableInteractions(
-        story,
-        current?.id ?? null,
-        visited,
-        currentLocationId,
-        current?.characterIds ?? [],
-        statValues,
-        currentDateTime,
-        ownedItemDefinitionIds,
-        itemStatValues,
-        {
-          randomSeed,
-          step: journey.length,
-          elapsedTimeMs: Math.max(0, now - (Number.isNaN(startedAt) ? now : startedAt)),
-        },
-      ).some(({ id }) => id === interaction.id);
-      if (!stillAvailable) {
-        setTimerNow(now);
-        return;
+  const choose = useCallback(
+    (interaction: Interaction) => {
+      if (!story) return;
+      const now = Date.now();
+      if (!(isSimulationMode && forceUnavailableOptions)) {
+        const startedAt = currentStepStartedAt ? Date.parse(currentStepStartedAt) : now;
+        const stillAvailable = getAvailableInteractions(
+          story,
+          current?.id ?? null,
+          visited,
+          currentLocationId,
+          current?.characterIds ?? [],
+          statValues,
+          currentDateTime,
+          ownedItemDefinitionIds,
+          itemStatValues,
+          {
+            randomSeed,
+            step: journey.length,
+            elapsedTimeMs: Math.max(0, now - (Number.isNaN(startedAt) ? now : startedAt)),
+          },
+        ).some(({ id }) => id === interaction.id);
+        if (!stillAvailable) {
+          setTimerNow(now);
+          return;
+        }
       }
+      const choiceStepKey = `${story.id}:${journey.length}:${current?.id ?? ''}:${currentStepStartedAt ?? ''}`;
+      if (committedChoiceStep.current === choiceStepKey) return;
+      committedChoiceStep.current = choiceStepKey;
+      readerNavigationVersion.current += 1;
+      cancelCommentDraft();
+      selectCommentThread(undefined);
+      setTimerNow(now);
+      const nextSession = advanceSession(story, interaction);
+      saveProgress(nextSession);
+    },
+    [
+      advanceSession,
+      cancelCommentDraft,
+      selectCommentThread,
+      current,
+      currentDateTime,
+      currentLocationId,
+      currentStepStartedAt,
+      forceUnavailableOptions,
+      isSimulationMode,
+      itemStatValues,
+      journey.length,
+      ownedItemDefinitionIds,
+      randomSeed,
+      saveProgress,
+      statValues,
+      story,
+      visited,
+    ],
+  );
+
+  useEffect(() => {
+    if (
+      isSimulationMode ||
+      loadedKey !== loadKey ||
+      !runtimeSliceReady ||
+      journey.length > 0 ||
+      (playableCharacters.length > 0 && !playedCharacter) ||
+      choices.length !== 1
+    ) {
+      return;
     }
-    const choiceStepKey = `${story.id}:${journey.length}:${current?.id ?? ''}:${currentStepStartedAt ?? ''}`;
-    if (committedChoiceStep.current === choiceStepKey) return;
-    committedChoiceStep.current = choiceStepKey;
-    readerNavigationVersion.current += 1;
-    comments.cancelDraft();
-    comments.selectThread(undefined);
-    setTimerNow(now);
-    const nextSession = advanceSession(story, interaction);
-    saveProgress(nextSession);
-  }
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (!cancelled) choose(choices[0]);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    choices,
+    choose,
+    isSimulationMode,
+    journey.length,
+    loadKey,
+    loadedKey,
+    playableCharacters.length,
+    playedCharacter,
+    runtimeSliceReady,
+  ]);
 
   function restart() {
     comments.cancelDraft();

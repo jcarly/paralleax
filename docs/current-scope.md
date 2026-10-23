@@ -44,6 +44,9 @@ Paralleax currently includes:
   backward replay reproduce the same result while restart creates a new run seed.
   Version 4 progress also preserves wall-clock choice-step starts, so timed options
   continue across reload and Simulation backward navigation.
+- Reader mode starts its single available opening Interaction automatically
+  after any playable-character selection. Multiple opening choices remain
+  selectable, and Simulation Mode keeps explicit start selection.
 - Story-local deterministic calendar time.
 - Locations.
 - Characters.

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Reader mode now opens a unique available starting Interaction directly,
+  after any playable-character selection. Multiple starts remain selectable, and
+  Simulation Mode keeps its explicit start choice.
+
 - Fixed product dialogs appearing below the application header and allowed
   background controls to receive keyboard focus while a dialog was open.
   Dialogs now share a body portal that isolates the background, preserves the

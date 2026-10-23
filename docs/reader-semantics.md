@@ -133,6 +133,21 @@ interaction unless another trigger also makes the same interaction available.
 Contextual inputless triggers are evaluated during reading. They can use visited
 history, the current authored location, and the current interaction's cast.
 
+## Initial Reader Entry
+
+In Reader mode, when the journey is empty, the Reader evaluates available
+inputless Interactions using the normal Trigger rules. If exactly one Interaction
+is available, it starts that Interaction automatically. If several are available,
+the Reader presents them as opening choices; if none are available, it remains at
+the opening screen.
+
+When a playable character must be selected, that selection happens before the
+Reader starts a unique available Interaction. Automatic entry uses the normal
+interaction selection path, so the Interaction becomes the first journey entry
+and its effects and duration apply as usual. Restarting or loading a saved empty
+journey follows the same rule. Simulation Mode keeps its explicit opening choice
+so authors can inspect and add root Interactions before entering one.
+
 ## Current Location
 
 Selecting an interaction with a `locationId` changes the reader's current
