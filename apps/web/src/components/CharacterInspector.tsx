@@ -1,3 +1,4 @@
+import { EntityNameInput } from './EntityNameInput';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type {
@@ -98,11 +99,11 @@ export function CharacterInspector({
       >
         <label>
           {t('inspector.name')}
-          <input
+          <EntityNameInput
             data-comment-field="name"
             value={character.name}
-            onChange={(event) => onChange({ name: event.target.value })}
-            onBlur={(event) => void onPatch(character.id, { name: event.target.value })}
+            onChange={(name) => onChange({ name })}
+            onCommit={(name) => onPatch(character.id, { name })}
           />
         </label>
       </InspectorCommentField>

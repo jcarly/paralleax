@@ -115,6 +115,9 @@ The first vertical slice converts:
   expressions. Earlier branches are negated for every later branch so QSP's
   sequential exclusivity is preserved;
 - static `GOTO` and `GT` destinations to graph reachability;
+- literal `GS` / `GOSUB` calls in location code and extracted action bodies to
+  shared interaction paths, caller-specific string stat effects, and conditional
+  return Triggers (see below);
 - top-level literal `IF $ARGS[0] = 'value'` blocks to separate interactions, and
   the first literal `GOTO`/`GT` argument to the corresponding interaction. An
   empty `ARGS[0]` selector remains on the base location interaction. Repeated
@@ -144,6 +147,61 @@ always marks this semantic difference where it occurs. A QSP location with no
 supported incoming path is retained for graph inspection, exposed as a root
 interaction, and reported as an approximation.
 
+## Static subroutine paths
+
+`GS 'utils'` and `GOSUB 'utils'` reuse the same imported `utils` interactions
+across callers. A dedicated Story string stat, such as `__qsp_return_utils`,
+holds a stable import-local continuation token. Its definition and assignment
+use the existing typed stat model. Generated names avoid source identifiers,
+other generated names, and normalized location-name collisions.
+
+The importer splits location and action code at calls. The segment before the
+call sets that subroutine's return stat using an ordinary `set` effect; only
+that selected path writes it. At a shared normal exit, an ordinary Trigger
+compares the stat with the caller's token and exposes that caller's continuation.
+Selecting the continuation clears the completed return value. Later text and
+effects stay on later segments rather than executing on the initial interaction.
+Action entry conditions stay on the action's call site. Generated continuations
+without a supported incoming return are disabled for normal reading, rather
+than becoming starting choices.
+
+Supported cases include multiple callers, sequential calls, repeated visits,
+calls inside static `ACT` bodies, and nested calls between different acyclic
+subroutines. Statically identified `EXIT` statements end the ordered path;
+later code and later action declarations are not exposed. Returning action
+branches can lead to the same caller continuation. Non-returning `GOTO` branches
+do not receive return links and clear possible pending ancestor returns.
+When many exits and callers would multiply graph links, a shared ordinary
+`utils — Return` interaction collects exits before the conditional return links.
+Small paths return directly.
+
+A single literal string argument can select an existing `ARGS[0]` variant when
+the base has no additional code, description, or actions requiring shared
+argument state. Missing variants never fall back to the base for a call.
+Dynamic targets, calculated or additional arguments, recursive call cycles,
+and calls after an unsupported control-flow boundary receive localized warnings.
+Unresolved calls stop that ordered path. General conditional calls, loops,
+local jumps, dynamic execution, `FUNC`, return values, argument restoration,
+and local-variable scope remain unsupported. Static call-cycle detection is
+conservative, includes action calls, and uses iterative graph analysis rather
+than recursively expanding or copying callees.
+
+This is an interactive traversal approximation, not QSP screen composition.
+QSP calls execute without changing the current location, add description and
+actions to the current interface, and resume immediately. Imported segments
+require reader choices and become journey steps. Callee actions are preserved
+as choices before returning, with an explicit action-lifetime warning; they do
+not remain composed on the caller's screen. Service-like callees may therefore
+appear as selectable steps even when they were not dialogues in QSP. Every
+translated call reports this difference. Unsupported control flow inside a
+callee stops its path with an additional diagnostic rather than guessing a
+return. Other unsupported effects, variables, or UI commands retain their
+existing warnings and are not executed as scripts.
+
+No call stack, special interaction type, automatic navigation, runtime
+expression, or QSP-specific reader state is introduced. This adapter does not
+adopt the unaccepted native [Interaction inclusion proposal](interaction-inclusion-proposal.md).
+
 ## Coverage report
 
 The import response contains source counts, converted/approximated/unsupported
@@ -155,8 +213,8 @@ The matrix reports three states:
 
 - `supported`: locations and entry discovery;
 - `partial`: literal text and assignments, simple action conditions, static
-  actions, and static navigation;
-- `unsupported`: subroutines, local jumps, loops, dynamic code, inventory,
+  actions, static navigation, and static subroutine traversal;
+- `unsupported`: local jumps, loops, dynamic code, inventory,
   media/UI, runtime events, QSP saves/input, and libraries.
 
 Each matrix row includes the number of detected occurrences. Zero does not mean
@@ -168,13 +226,83 @@ The Playwright real-stack acceptance project imports two small repository-owned
 literal `ARGS[0]` destination in the graph, and traverses that path in Simulation
 Mode without mocking a Paralleax endpoint.
 
+## Local large-corpus comparison
+
+The locally available compiled Girl Life 0.9.9.2 corpus was analyzed before and
+after static-call support. No third-party source or assets were added to the
+repository. Counts below inspect the mapped Story before the importer's final
+error gate; both versions reject persistence because of the same existing
+unresolved static `GOTO` target.
+
+| Measurement                             |   Before |    After |
+| --------------------------------------- | -------: | -------: |
+| Source locations                        |    1,397 |    1,397 |
+| Extracted actions                       |   14,643 |   14,643 |
+| Lexically detected `GS` / `GOSUB` sites |   91,625 |   91,625 |
+| Translated static call sites            |        0 |    6,268 |
+| Call sites not translated               |   91,625 |   85,357 |
+| Generated interactions                  |   31,470 |   37,757 |
+| Generated Triggers                      |   31,470 |   37,758 |
+| Warnings                                |  625,807 |  629,734 |
+| Errors                                  |        1 |        1 |
+| Analysis and mapping duration           |  14.95 s |  18.49 s |
+| RSS after mapping                       | 1.00 GiB | 1.07 GiB |
+
+These are single local observations, not performance guarantees or peak-memory
+measurements. They include decoding and retain the decoded inventory alongside
+the importer data; garbage collection affects the memory snapshots. The lexical
+inventory masks strings and comments and includes contexts that the analyzer
+cannot extract. The analyzer's diagnostic occurrence counts therefore do not
+form a disjoint reconciliation of that inventory. Important remaining call
+diagnostics include:
+
+| Diagnostic                                               | After occurrences |
+| -------------------------------------------------------- | ----------------: |
+| Unsupported call context / function-return behavior      |            43,263 |
+| Unsupported argument expressions or additional arguments |            20,765 |
+| Call after an earlier control-flow boundary              |            11,317 |
+| Unsupported base-code / argument scope                   |             5,752 |
+| Missing static callee or argument variant                |             1,414 |
+| Recursive call-cycle target                              |                95 |
+| Dynamic callee                                           |                27 |
+
+Another 3,929 ordered paths stop at unsupported control flow rather than
+inventing a return. Shared subroutines are not copied per caller: growth is
+6,268 continuation interactions plus 19 shared return interactions (about 20%
+over the baseline). The worker execution boundary remains unchanged.
+
+The built API worker also analyzed this corpus with file-backed diagnostics in
+23.66 s. A 20 ms main-thread heartbeat fired 885 times with a maximum observed
+gap of 46 ms, while 4,090 progress events arrived. The worker exited normally;
+the expected blocking source error remains the missing `hookup_morning` target
+from `hookup_after` (compiled location-code line 2,267). This checks worker
+responsiveness and report/progress delivery, not browser or full-game playability.
+
+Representative local reader replay checked the shared `saveposition` path from
+`shortgs · mk1` and `adverts_manager · start`: each exposes its own continuation
+and excludes the other caller's continuation. These are isolated imported path
+segments, not complete game journeys. The synthetic shared reader suite covers
+full supported paths, including action bodies, nesting, repeated visits, and
+navigation away.
+
+To inspect another local compiled corpus after building shared:
+
+```bash
+node scripts/benchmark-qsp-import.mjs path/to/local-game.qsp
+```
+
+The script reuses the parser and mapper, streams diagnostic counts without
+retaining issue details, records graph sizes even for rejected imports, and
+replays representative shared call segments. It never persists the Story.
+
 ## What remains for runtime-equivalent support
 
 Complete QSP compatibility would require several source concepts that do not yet
 have equivalent import behavior:
 
-- ordered imperative execution within locations and actions, including immediate
-  automatic transitions and early `EXIT` behavior;
+- general ordered imperative execution within locations and actions, including
+  immediate automatic transitions; ordered splitting and static `EXIT` handling
+  are currently limited to call-bearing and called paths;
 - assignments or comparisons that read runtime variables, local variables,
   dynamic or last-cell array indices, array-wide lookup/mutation/reordering,
   tuples and multidimensional indices, calculated names, system variables,
@@ -185,8 +313,8 @@ have equivalent import behavior:
   navigation, dynamically declared actions, and branches with side effects.
   Only nested action-only branches with reducible stat expressions are currently
   lowered to Trigger condition groups;
-- `GOSUB`, `GS`, `FUNC`, arguments, local scope, return values, recursion, and
-  call-stack behavior;
+- exact `GOSUB` / `GS` screen composition, `FUNC`, general arguments, local
+  scope, return values, recursion, and call-stack behavior;
 - local labels, `JUMP`, loops, and dynamic code evaluation;
 - mutable action lists (`ACT`, `DELACT`, `CLA`) and actions generated conditionally
   or dynamically;

@@ -1,21 +1,14 @@
 import { defaultStoryAccess } from '../../access-control.js';
-import { MAX_INTERACTION_BODY_LENGTH } from '../../model/interactions.js';
 import type { Interaction } from '../../model/interactions.js';
 import type { Story } from '../../model/stories.js';
 import type { StatEffect, StatValueType } from '../../model/stats.js';
 import { layoutImportedGraph } from '../layout.js';
-import { escapeImportedHtml, truncateImportedText, uniqueImportedValues } from '../source-utils.js';
+import { truncateImportedText, uniqueImportedValues } from '../source-utils.js';
 import { buildImportedTrigger } from '../story-builders.js';
 import { analyzeQspCode } from './analyzer.js';
 import { qspVariableInitialValue, qspVariableKey, qspVariableValueType } from './expressions.js';
-import type {
-  ParsedQspLocation,
-  QspDraftEdge,
-  QspDraftNode,
-  QspSourceCondition,
-  QspVariableEffect,
-} from './models.js';
-import { normalizeQspName } from './parser.js';
+import type { ParsedQspLocation, QspSourceCondition, QspVariableEffect } from './models.js';
+import { buildQspDraftGraph } from './control-flow.js';
 import { addQspSourceIssue } from './report.js';
 import type { QspImportOptions, QspImportReport } from './types.js';
 
@@ -27,7 +20,7 @@ export function mapQspLocationsToStory(
   report: QspImportReport,
   options: QspImportOptions,
 ): Story {
-  const totalMappingWork =
+  let totalMappingWork =
     locations.reduce((total, location) => total + 1 + location.actions.length, 0) * 3;
   let completedMappingWork = 0;
   const reportMappingProgress = (currentFile: string) => {
@@ -47,23 +40,6 @@ export function mapQspLocationsToStory(
   };
 
   options.onProgress?.({ phase: 'mapping', completed: 0, total: totalMappingWork });
-  const nodes: QspDraftNode[] = [];
-  const nodeFiles = new Map<string, string>();
-  const edges: QspDraftEdge[] = [];
-  const edgeKeys = new Set<string>();
-  const addEdge = (from: string, to: string) => {
-    const key = `${from}\u0000${to}`;
-    if (edgeKeys.has(key)) return;
-    edgeKeys.add(key);
-    edges.push({ from, to });
-  };
-  const locationKeys = new Map<string, string>();
-  const pendingTargets: Array<{
-    from: string;
-    targetName: string;
-    argument?: string;
-    source: ParsedQspLocation['source'];
-  }> = [];
   const analyzedLocations = locations.map((location) => {
     const analysis = analyzeQspCode(location.code, location.source, report);
     reportMappingProgress(location.source.fileName);
@@ -77,7 +53,16 @@ export function mapQspLocationsToStory(
       }),
     };
   });
+  const { nodes, edges, nodeFiles, returnVariables } = buildQspDraftGraph(
+    analyzedLocations,
+    report,
+    reportMappingProgress,
+  );
+  totalMappingWork = completedMappingWork + nodes.length;
   const variables = collectQspVariables(analyzedLocations);
+  for (const name of returnVariables) {
+    variables.push({ key: qspVariableKey(name), name, valueType: 'string' });
+  }
   const variableIds = new Map(
     variables.map((variable) => [
       variable.key,
@@ -85,95 +70,8 @@ export function mapQspLocationsToStory(
     ]),
   );
 
-  analyzedLocations.forEach(({ location, analysis: locationAnalysis, actions }, locationIndex) => {
-    const locationKey = `location:${locationIndex}`;
-    locationKeys.set(qspTargetKey(location.name, location.entryArgument), locationKey);
-    nodes.push({
-      key: locationKey,
-      title: truncateImportedText(
-        location.entryArgument === undefined
-          ? location.name
-          : `${location.name} · ${location.entryArgument}`,
-        200,
-      ),
-      body: renderQspBody([...location.description, ...locationAnalysis.text]),
-      effects: locationAnalysis.effects,
-    });
-    nodeFiles.set(locationKey, location.source.fileName);
-    reportMappingProgress(location.source.fileName);
-    for (const target of locationAnalysis.navigationTargets) {
-      pendingTargets.push({
-        from: locationKey,
-        targetName: target.locationName,
-        ...(target.argument !== undefined ? { argument: target.argument } : {}),
-        source: target.source,
-      });
-      reportAutomaticNavigationApproximation(report, target.source);
-    }
-    actions.forEach(({ action, analysis: actionAnalysis }, actionIndex) => {
-      const actionKey = `action:${locationIndex}:${actionIndex}`;
-      nodes.push({
-        key: actionKey,
-        title: truncateImportedText(action.name, 200),
-        body: renderQspBody(actionAnalysis.text),
-        effects: actionAnalysis.effects,
-        ...(action.conditionGroups ? { conditionGroups: action.conditionGroups } : {}),
-      });
-      nodeFiles.set(actionKey, action.source.fileName);
-      reportMappingProgress(action.source.fileName);
-      addEdge(locationKey, actionKey);
-      if (action.image) {
-        addQspSourceIssue(
-          report,
-          action.source,
-          'action_image_ignored',
-          `The image attached to the action "${action.name}" was not imported.`,
-        );
-        report.approximatedStatementCount += 1;
-      }
-      for (const target of actionAnalysis.navigationTargets) {
-        pendingTargets.push({
-          from: actionKey,
-          targetName: target.locationName,
-          ...(target.argument !== undefined ? { argument: target.argument } : {}),
-          source: target.source,
-        });
-        reportAutomaticNavigationApproximation(report, target.source);
-      }
-    });
-  });
-
-  for (const pending of pendingTargets) {
-    const baseTarget = locationKeys.get(qspTargetKey(pending.targetName));
-    if (!baseTarget) {
-      addQspSourceIssue(
-        report,
-        pending.source,
-        'missing_location_target',
-        `The target QSP location "${pending.targetName}" was not found.`,
-        'error',
-      );
-      continue;
-    }
-    const variantTarget =
-      pending.argument === undefined
-        ? undefined
-        : locationKeys.get(qspTargetKey(pending.targetName, pending.argument));
-    const target = variantTarget ?? baseTarget;
-    if (pending.argument !== undefined && !variantTarget) {
-      addQspSourceIssue(
-        report,
-        pending.source,
-        'navigation_argument_variant_not_found',
-        `The location "${pending.targetName}" has no importable ARGS[0] variant for "${pending.argument}"; navigation was connected to its base interaction.`,
-      );
-      report.approximatedStatementCount += 1;
-    }
-    addEdge(pending.from, target);
-  }
-
-  const incoming = new Map(nodes.map(({ key }) => [key, [] as string[]]));
-  for (const edge of edges) incoming.get(edge.to)?.push(edge.from);
+  const incoming = new Map(nodes.map(({ key }) => [key, [] as (typeof edges)[number][]]));
+  for (const edge of edges) incoming.get(edge.to)?.push(edge);
   locations.slice(1).forEach((location, index) => {
     const key = `location:${index + 1}`;
     if ((incoming.get(key) ?? []).length > 0) return;
@@ -189,27 +87,54 @@ export function mapQspLocationsToStory(
   const ids = new Map(nodes.map((node) => [node.key, options.createId()]));
   const positions = layoutImportedGraph(nodes, edges);
   const interactions: Interaction[] = nodes.map((node) => {
-    const triggerId = options.createId();
     const statEffects = mapQspEffects(node.effects, variableIds);
+    const incomingEdges = incoming.get(node.key) ?? [];
+    // Inputs sharing a condition variant remain OR on one Trigger. Returns
+    // with different conditions must remain separate availability variants.
+    const variants = new Map<string, { inputs: string[]; groups: QspSourceCondition[][] }>();
+    for (const edge of incomingEdges) {
+      const groups = edge.conditionGroups ?? [[]];
+      const key = JSON.stringify(
+        groups.map((group) =>
+          group.map((condition) => ({
+            variableName: condition.variableName,
+            operator: condition.operator,
+            value: condition.value,
+          })),
+        ),
+      );
+      const variant = variants.get(key) ?? { inputs: [], groups };
+      variant.inputs.push(edge.from);
+      variants.set(key, variant);
+    }
+    if (!variants.size || (node.key === 'location:0' && returnVariables.size > 0)) {
+      variants.set('root', { inputs: [], groups: [[]] });
+    }
     const interaction = {
       id: ids.get(node.key)!,
       title: node.title,
       body: node.body,
       position: positions.get(node.key)!,
       ...(statEffects.length > 0 ? { statEffects } : {}),
-      triggers: [
-        buildImportedTrigger(
-          triggerId,
-          uniqueImportedValues(incoming.get(node.key) ?? []).map((key) => ids.get(key)!),
-          node.conditionGroups?.map((group) =>
+      triggers: [...variants.values()].map(({ inputs, groups }) => {
+        const combined = groups.flatMap((group) =>
+          (node.conditionGroups ?? [[]]).map((own) => [...group, ...own]),
+        );
+        const trigger = buildImportedTrigger(
+          options.createId(),
+          uniqueImportedValues(inputs).map((key) => ids.get(key)!),
+          combined.map((group) =>
             group.map((condition) => ({
               statId: variableIds.get(qspVariableKey(condition.variableName))!.assignmentId,
               operator: condition.operator,
               value: condition.value,
             })),
-          ) ?? [[]],
-        ),
-      ],
+          ),
+        );
+        // Disconnected generated nodes remain inspectable without becoming roots.
+        if (!inputs.length && !/^location:\d+$/.test(node.key)) trigger.appearanceProbability = 0;
+        return trigger;
+      }),
     };
     reportMappingProgress(nodeFiles.get(node.key) ?? sourceName);
     return interaction;
@@ -224,7 +149,9 @@ export function mapQspLocationsToStory(
     characters: [],
     statDefinitions: variables.map((variable) => ({
       id: variableIds.get(variable.key)!.definitionId,
-      name: displayQspVariableName(variable.name),
+      name: returnVariables.has(variable.name)
+        ? variable.name.slice(1)
+        : displayQspVariableName(variable.name),
       valueType: variable.valueType,
       category: 'QSP',
     })),
@@ -318,38 +245,9 @@ function displayQspVariableName(name: string) {
   return `${baseName} [${displayIndex}]`;
 }
 
-function reportAutomaticNavigationApproximation(
-  report: QspImportReport,
-  source: ParsedQspLocation['source'],
-) {
-  addQspSourceIssue(
-    report,
-    source,
-    'automatic_navigation_requires_choice',
-    'QSP executes GOTO immediately; the imported graph exposes the destination as an additional reader choice.',
-  );
-  report.approximatedStatementCount += 1;
-}
-
-function renderQspBody(parts: readonly string[]) {
-  const body = parts
-    .map((part) => part.trim())
-    .filter(Boolean)
-    .map((part) => `<p>${escapeImportedHtml(part)}</p>`)
-    .join('');
-  if (body.length <= MAX_INTERACTION_BODY_LENGTH) return body;
-  return `<p>${escapeImportedHtml(
-    truncateImportedText(parts.filter(Boolean).join('\n\n'), MAX_INTERACTION_BODY_LENGTH - 20),
-  )}</p>`;
-}
-
 function importedStoryTitle(sourceName: string) {
   const withoutExtension = sourceName
     .replace(/\.(?:qsp|gam|qsps|qsp-txt|txt-qsp|qsrc)$/i, '')
     .trim();
   return truncateImportedText(withoutExtension || 'Imported QSP story', 200);
-}
-
-function qspTargetKey(locationName: string, argument?: string) {
-  return `${normalizeQspName(locationName)}\u0000${argument === undefined ? '' : argument}`;
 }

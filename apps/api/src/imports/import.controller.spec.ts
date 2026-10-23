@@ -39,7 +39,7 @@ describe('ImportController', () => {
   const jobs = {
     get: jest.fn(),
     stream: jest.fn(),
-    setStatus: jest.fn(),
+    cancel: jest.fn(),
   };
   const reportStorage = {
     streamReport: jest.fn(),
@@ -94,13 +94,18 @@ describe('ImportController', () => {
     await expect(controller.getReport(importId, owner)).rejects.toThrow(NotFoundException);
   });
 
-  it('cancels an authorized job and deletes its report asynchronously', () => {
+  it('cancels an authorized job and leaves report cleanup to import orchestration', () => {
     jobs.get.mockReturnValue(job());
+    jobs.cancel.mockReturnValue(true);
 
     expect(controller.cancel(importId, owner)).toEqual({ status: 'cancelled' });
-    expect(jobs.setStatus).toHaveBeenCalledWith(importId, 'cancelled');
-    expect(reportStorage.deleteReport).toHaveBeenCalledWith(importId);
+    expect(jobs.cancel).toHaveBeenCalledWith(importId);
+    expect(reportStorage.deleteReport).not.toHaveBeenCalled();
     expect(() => controller.cancel(importId, otherUser)).toThrow(ForbiddenException);
+
+    jobs.cancel.mockReturnValue(false);
+    expect(controller.cancel(importId, owner)).toEqual({ status: 'running' });
+    expect(reportStorage.deleteReport).not.toHaveBeenCalled();
 
     jobs.get.mockReturnValue(undefined);
     expect(controller.cancel(importId, owner)).toBeUndefined();

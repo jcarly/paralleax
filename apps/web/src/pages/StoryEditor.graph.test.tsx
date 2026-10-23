@@ -315,7 +315,8 @@ describe('StoryEditor graph collaboration and layout', () => {
     expect(
       screen.queryByRole('complementary', { name: 'Comments for the selected element' }),
     ).not.toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Open comments for Title' }));
+    fireEvent.mouseEnter(screen.getByLabelText('Title').closest('.inspector-commentable-field')!);
+    fireEvent.click(screen.getByRole('button', { name: 'Open comments for Title' }));
 
     expect(
       screen.getByRole('complementary', { name: 'Comments for the selected element' }),
@@ -349,7 +350,8 @@ describe('StoryEditor graph collaboration and layout', () => {
 
     await renderEditor(story);
     await user.click(screen.getByTestId('flow-node-interaction-2'));
-    await user.click(screen.getByRole('button', { name: 'Comment on Duration' }));
+    fireEvent.mouseEnter(screen.getByText('Duration').closest('.inspector-commentable-field')!);
+    fireEvent.click(screen.getByRole('button', { name: 'Comment on Duration' }));
 
     expect(
       screen.getByRole('complementary', { name: 'Comments for the selected element' }),
@@ -725,13 +727,21 @@ describe('StoryEditor graph collaboration and layout', () => {
   it('targets linked and root triggers from their contextual actions', async () => {
     const user = userEvent.setup();
     const story = storyWithTwoInteractions();
-    const withoutLinkedTrigger = structuredClone(story);
-    withoutLinkedTrigger.interactions[1].triggers = [];
-    const withoutRootTrigger = structuredClone(story);
-    withoutRootTrigger.interactions[0].triggers = [];
     vi.mocked(api.deleteTrigger)
-      .mockResolvedValueOnce(withoutLinkedTrigger)
-      .mockResolvedValueOnce(withoutRootTrigger);
+      .mockResolvedValueOnce({
+        interactionId: 'interaction-2',
+        triggerId: 'trigger-2',
+        triggerRemoved: false,
+        revision: 2,
+        updatedAt: story.updatedAt,
+      })
+      .mockResolvedValueOnce({
+        interactionId: 'interaction-1',
+        triggerId: 'trigger-1',
+        triggerRemoved: false,
+        revision: 3,
+        updatedAt: story.updatedAt,
+      });
 
     await renderEditor(story);
     fireEvent.contextMenu(screen.getByTestId('flow-node-trigger:interaction-2:trigger-2'), {
@@ -758,9 +768,11 @@ describe('StoryEditor graph collaboration and layout', () => {
   it('deletes the selected graph element with Delete only outside editable fields', async () => {
     const user = userEvent.setup();
     const story = storyWithTwoInteractions();
-    const afterDelete = structuredClone(story);
-    afterDelete.interactions = afterDelete.interactions.filter(({ id }) => id !== 'interaction-1');
-    vi.mocked(api.deleteInteraction).mockResolvedValue(afterDelete);
+    vi.mocked(api.deleteInteraction).mockResolvedValue({
+      interactionId: 'interaction-1',
+      revision: 2,
+      updatedAt: story.updatedAt,
+    });
 
     await renderEditor(story);
     await user.click(screen.getByTestId('flow-node-interaction-1'));
@@ -1251,7 +1263,11 @@ describe('StoryEditor graph collaboration and layout', () => {
     );
     vi.mocked(api.deleteGraphDecoration).mockImplementation(async () => {
       decoratedStory.graphDecorations = [];
-      return structuredClone(decoratedStory);
+      return {
+        decorationId: 'text-1',
+        revision: 4,
+        updatedAt: decoratedStory.updatedAt,
+      };
     });
 
     await renderEditor(decoratedStory);
@@ -1303,9 +1319,11 @@ describe('StoryEditor graph collaboration and layout', () => {
         height: 240,
       },
     ];
-    const afterDelete = structuredClone(story);
-    afterDelete.graphDecorations = [];
-    vi.mocked(api.deleteGraphDecoration).mockResolvedValue(afterDelete);
+    vi.mocked(api.deleteGraphDecoration).mockResolvedValue({
+      decorationId: 'frame-context',
+      revision: 2,
+      updatedAt: story.updatedAt,
+    });
 
     await renderEditor(story);
     fireEvent.contextMenu(screen.getByTestId('flow-node-frame-context'), {

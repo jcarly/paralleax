@@ -25,6 +25,9 @@ Paralleax currently includes:
   and narrative step. A nullable non-negative timer limits how long an otherwise
   eligible Trigger exposes its option; active timers render as draining bars,
   while zero-second timers never appear in normal reading.
+  In the editor, authored condition rules are concise multi-line buttons that
+  open uniform vertically stacked controls on click; Enter or focus leaving a
+  condition closes its editor. AND/OR connectors stay explicit.
 - Persisted visual graph decorations: movable, resizable colored frames and movable
   text with configurable color, size, family, weight, and style. Decorations stay
   behind interactions and trigger markers and have no reader semantics. Frame
@@ -56,6 +59,10 @@ Paralleax currently includes:
   replaceable and movable authoring tokens, with direct inline removal and
   readable paths projected from stable ids so target renames appear immediately;
   exact item instances keep independent values.
+  Effects and Trigger comparisons may use deterministic typed expressions over
+  stable same-Story assignment references, including exact item instances,
+  arithmetic, comparisons, and parentheses. Expression results are replayed in
+  journey order and are not stored as calculated variables.
   A stat assigned to a character is presented as a character characteristic,
   without creating a separate persistence or runtime model.
 - Reusable item definitions.
@@ -140,7 +147,12 @@ Paralleax currently includes:
   cells), action-only `IF` / `ELSEIF` / `ELSE` branches, and static navigation;
   a literal first navigation argument is connected to the matching imported
   `ARGS[0]` variant. It then returns occurrence-aware warnings and a complete
-  feature coverage matrix. Every diagnostic is written in order to an
+  feature coverage matrix. Static acyclic `GS` / `GOSUB` calls reuse shared
+  interaction paths with ordered call-site effects, dedicated string return
+  stats, and conditional continuation Triggers. This is interactive traversal,
+  with explicit screen-composition and action-lifetime approximations; general
+  arguments, local scope, conditional calls, recursion, and `FUNC` remain gaps.
+  Every diagnostic is written in order to an
   owner-protected JSONL report and streamed from `GET /api/imports/:importId/report`;
   API import responses contain counts/statistics rather than the diagnostic list.
   A failed conversion leaves its complete diagnostic report available; a conversion
@@ -152,21 +164,42 @@ Paralleax currently includes:
   use an authenticated binary upload without a Paralleax application-level limit.
   The import dialog reports measurable upload percentage, then live decoding,
   parsing, and mapping counts (with the current source file when available)
-  through a user-private ephemeral stream. Closing the dialog cancels the
-  active analysis worker; warning confirmation repeats that upload and analysis
-  before atomic persistence.
+  through a user-private ephemeral stream. Closing the dialog aborts the client
+  operation and requests cancellation of the active analysis worker; centralized
+  server-side lifecycle arbitration and long-lived metadata cleanup remain open
+  reliability work. Warning confirmation repeats that upload and analysis before
+  atomic persistence.
 - Editor-only React Flow graph authoring. Dropping a connection on an
   interaction's input `+` creates a dedicated Trigger; dropping on a visible
   Trigger marker adds the input to that existing Trigger without a follow-up
   choice dialog.
+- Trigger condition inspectors show concise readable rules by default and open
+  vertically stacked, full-width editing fields on demand. AND/OR connectors
+  remain visible, and the combined rule appears on the graph marker's tooltip.
 - Rectangular graph multi-selection for interactions and linked trigger markers,
   with a transient count inspector, group drag-and-drop, and outside-click clearing.
-- Flat persisted Groups created from selected Interactions. Groups are neutral
-  authoring/navigation metadata with explicit many-to-many membership; they have
-  no reader semantics, nesting, visual projection, or navigation UI yet.
-- Deterministic vertical graph auto-layout for the complete graph, one selected
-  interaction/linked trigger, or a rectangular multi-selection, with grouped
-  trigger-marker placement and fixed bottom-output/top-input interaction routing.
+- Persisted Groups created directly from selected Interactions with Ctrl+G and
+  an immediately selected inline name in a compact searchable left-panel tree.
+  Context menus, mouse/touch dragging and equivalent keyboard commands support
+  renaming, subgroup creation, membership edits, nesting and sibling reordering.
+  Parent and order changes reuse one authored mutation and existing relational
+  sort order, history and collaboration; no migration is needed. Authors can move
+  Groups under one acyclic same-Story parent. Each Interaction has at most one
+  direct Group; creation and membership edits transfer it from its previous Group.
+  A Group can contain both direct Interactions and child Groups. Deletion promotes
+  children without
+  deleting Interactions. Selection highlights recursive members; explicit centering
+  adjusts only the viewport. Group selection never opens a right inspector.
+  Ctrl+click toggles interaction selection, and Shift/Alt rectangles add/remove
+  selection. Groups
+  have no reader semantics or React Flow parent-node structure.
+- Deterministic ELK-backed vertical graph auto-layout for the complete graph, one
+  selected interaction/linked trigger, or a rectangular multi-selection, with
+  grouped trigger-marker placement and fixed bottom-output/top-input interaction
+  routing. Whole-graph organization renders transient ELK routes; reload and
+  manual movement use the documented fallback renderer. Exceptionally large or
+  deep graphs retain deterministic placement through the historic layout before
+  ELK exceeds its synchronous budget or if it exhausts the JavaScript call stack.
 - Durable authored Story change history. Every new content mutation stores a
   reversible field/entity delta with its actor and revision in the same database
   transaction. Authors can undo their latest compatible change with the canvas
@@ -182,13 +215,18 @@ Paralleax currently includes:
   simulation expose saving, saved, and failed states. Safe updates can be retried;
   uncertain creations recover by reloading the canonical Story so a timeout cannot
   duplicate content. Navigation and unload protection includes unresolved authored
-  simulation mutations as well as reader-progress saves.
+  simulation mutations as well as reader-progress saves. Internal links, code
+  navigation, and browser back/forward use data-router blocking with an accessible
+  stay/leave confirmation; browser reload and external departure use `beforeunload`.
 - Live simultaneous editing for clients connected to the same API process. Every
   committed interaction, trigger, position, context entity, item/stat structure,
   and graph-decoration change invalidates open editor and Simulation Mode clients;
   editors reload the authoritative story without a page refresh, while simulations
   deterministically replay their current journey. Active local drafts and drags
-  finish before a remote refresh is applied.
+  finish before a remote refresh is applied. This is the current invalidation-and-
+  reload implementation; collaborative text merging and a durable offline authoring
+  queue are accepted future direction in [ADR-034](decisions/ADR-034-collaborative-offline-authoring.md),
+  not implemented behavior.
 - English, French, and Italian interface localization with browser detection, a persisted
   user preference, and English fallback. Authored story content is never
   translated by the interface layer. Operational API failures are presented
@@ -223,13 +261,16 @@ Paralleax currently includes:
 
 The following remain future or incomplete unless a task explicitly implements them:
 
-- calculated stats/variables, formulas, and dependency graphs;
+- calculated/read-only stats, reactive formulas, and dependency graphs;
 - automatic choices and probabilistic automatic execution;
 - explicit final/completed story semantics;
-- anonymous or offline saves;
+- anonymous or offline reader-progress saves;
+- collaborative text merging and durable offline authoring for an already-open
+  Story, accepted as future direction in [ADR-034](decisions/ADR-034-collaborative-offline-authoring.md);
+- unlisted link visibility, accepted as future direction in
+  [ADR-033](decisions/ADR-033-unlisted-story-visibility.md);
 - managed media upload/storage;
-- presence, remote cursors/selections, conflict-free same-field editing, and
-  horizontally distributed story events;
+- presence, remote cursors/selections, and horizontally distributed story events;
 - suggestion workflow, message editing, mentions, notifications, and horizontally
   distributed comment events;
 - stable public import/export format;
@@ -237,7 +278,7 @@ The following remain future or incomplete unless a task explicitly implements th
 - lossless or runtime-equivalent QSP import, QSP re-export, and incremental re-import;
 - executable/Unity/video exports;
 - AI-driven narrative/runtime behavior.
-- nested Group organization and Group-focused Workbench navigation;
+- combined Group filters and advanced Group-focused Workbench projections;
 - configurable Workbench views for structure, character, location, time, and
   state, including combined filters and Focused / Context / Background treatment;
 - connected-path selection, generic Focus, graph-level dependency navigation,

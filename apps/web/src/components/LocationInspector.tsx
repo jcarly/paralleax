@@ -1,3 +1,4 @@
+import { EntityNameInput } from './EntityNameInput';
 import type {
   ItemDefinition,
   Location,
@@ -64,11 +65,11 @@ export function LocationInspector({
       >
         <label>
           {t('inspector.name')}
-          <input
+          <EntityNameInput
             data-comment-field="name"
             value={location.name}
-            onChange={(event) => onLocalChange({ ...location, name: event.target.value })}
-            onBlur={(event) => void onPatch(location.id, { name: event.target.value })}
+            onChange={(name) => onLocalChange({ ...location, name })}
+            onCommit={(name) => onPatch(location.id, { name })}
           />
         </label>
       </InspectorCommentField>

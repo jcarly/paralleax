@@ -1,23 +1,28 @@
-.inspector label {
+.inspector label,
+.rich-text-editor-dialog label,
+.story-groups-panel label {
   display: block;
   font-size: 0.78rem;
   font-weight: 650;
   margin-bottom: 1rem;
   color: var(--color-muted);
 }
-.inspector fieldset {
+.inspector fieldset,
+.rich-text-editor-dialog fieldset {
   margin: 0 0 1rem;
   border: 1px solid var(--color-border);
   border-radius: 8px;
   padding: 0.75rem;
 }
-.inspector fieldset legend {
+.inspector fieldset legend,
+.rich-text-editor-dialog fieldset legend {
   padding: 0 0.35rem;
   font-size: 0.78rem;
   font-weight: 650;
   color: var(--color-muted);
 }
-.inspector fieldset label {
+.inspector fieldset label,
+.rich-text-editor-dialog fieldset label {
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -27,7 +32,14 @@
 .inspector input[type='number'],
 .inspector input:not([type]),
 .inspector textarea,
-.inspector select {
+.inspector select,
+.rich-text-editor-dialog input[type='text'],
+.rich-text-editor-dialog input[type='number'],
+.rich-text-editor-dialog input:not([type]),
+.rich-text-editor-dialog textarea,
+.rich-text-editor-dialog select,
+.story-groups-panel input,
+.story-groups-panel select {
   width: 100%;
   margin-top: 0.35rem;
   padding: 0.66rem 0.7rem;
@@ -37,7 +49,8 @@
   color: var(--color-text);
   font: inherit;
 }
-.inspector textarea {
+.inspector textarea,
+.rich-text-editor-dialog textarea {
   line-height: 1.55;
   resize: vertical;
 }
@@ -168,161 +181,6 @@
   margin-top: 1rem;
 }
 
-.rich-text-surface {
-  min-height: 10rem;
-  padding: 0.7rem;
-  overflow-wrap: anywhere;
-  border: 1px solid #cfd5df;
-  border-radius: 0 0 0.5rem 0.5rem;
-  background: white;
-}
-
-.rich-text-surface:focus {
-  border-color: #6d5bd0;
-  outline: 2px solid rgb(109 91 208 / 18%);
-}
-
-.rich-text-surface :is([data-interaction-link-target], [data-stat-value]) {
-  position: relative;
-  display: inline-flex;
-  min-width: 0;
-  max-width: 100%;
-  padding: 0;
-  border: 1px solid var(--color-primary-focus);
-  border-radius: 0.4rem;
-  background: var(--color-primary-soft);
-  color: var(--color-primary-strong);
-  font-size: 0.9em;
-  font-weight: 650;
-  line-height: 1.35;
-  vertical-align: baseline;
-  white-space: normal;
-  cursor: pointer;
-}
-
-.rich-text-token-edit {
-  min-width: 0;
-  max-width: 100%;
-  padding: 0.08rem 0.38rem;
-  overflow: hidden;
-  border: 0;
-  border-radius: inherit;
-  background: transparent;
-  color: inherit;
-  box-shadow: none;
-  font: inherit;
-  line-height: inherit;
-  overflow-wrap: anywhere;
-  text-align: left;
-  white-space: normal;
-  cursor: grab;
-}
-
-.rich-text-token-edit:hover,
-.rich-text-token-edit:focus-visible {
-  background: transparent;
-  box-shadow: none;
-  transform: none;
-}
-
-.rich-text-token-remove.trigger-link-delete {
-  z-index: 1;
-  top: -9px;
-  right: -9px;
-  width: 18px;
-  height: 18px;
-  opacity: 1;
-  transform: none;
-}
-
-.rich-text-surface :is([data-interaction-link-target], [data-stat-value]):hover,
-.rich-text-surface :is([data-interaction-link-target], [data-stat-value]):focus,
-.rich-text-surface .rich-text-interaction-link-selected,
-.rich-text-surface .rich-text-variable-selected {
-  border-color: var(--color-primary-strong);
-  outline: 2px solid var(--color-primary-halo-strong);
-}
-
-.rich-text-surface .rich-text-token-dragging {
-  opacity: 0.55;
-}
-
-.rich-text-surface .rich-text-token-dragging,
-.rich-text-surface .rich-text-token-dragging .rich-text-token-edit {
-  cursor: grabbing;
-}
-
-.rich-text-conditional-controls {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-  margin: -0.25rem 0 0.75rem;
-}
-
-.rich-text-condition-token {
-  position: relative;
-  display: inline-flex;
-  min-width: 0;
-  max-width: 100%;
-  border: 1px solid var(--color-primary-focus);
-  border-radius: 999px;
-  background: var(--color-surface);
-  color: var(--color-primary-strong);
-}
-
-.rich-text-condition-token > button:first-child {
-  min-width: 0;
-  max-width: 100%;
-  padding: 0.24rem 0.65rem;
-  overflow: hidden;
-  border: 0;
-  border-radius: inherit;
-  background: transparent;
-  color: inherit;
-  box-shadow: none;
-  font-size: 0.78rem;
-  font-weight: 700;
-  overflow-wrap: anywhere;
-  text-align: left;
-  white-space: normal;
-}
-
-.rich-text-condition-remove.trigger-link-delete {
-  z-index: 1;
-  top: -8px;
-  right: -8px;
-  width: 18px;
-  height: 18px;
-  opacity: 1;
-  transform: none;
-}
-
-.rich-text-condition-add {
-  width: 1.8rem;
-  min-width: 1.8rem;
-  height: 1.8rem;
-  padding: 0;
-  border-radius: 999px;
-}
-
-.rich-text-limit {
-  margin: 0.35rem 0 0;
-  color: var(--color-text-muted);
-  font-size: 0.78rem;
-  text-align: right;
-}
-
-.rich-text-limit.warning {
-  color: #8a5a00;
-}
-
-.rich-text-limit.error {
-  color: var(--color-error);
-  font-weight: 700;
-}
-
-.rich-text-surface img,
 .story-body img {
   display: block;
   max-width: 100%;
@@ -330,8 +188,6 @@
   margin: 0.75rem auto;
 }
 
-.rich-text-surface video,
-.rich-text-surface iframe,
 .story-body video,
 .story-body iframe {
   display: block;
@@ -368,7 +224,7 @@
   display: grid;
   gap: 0.65rem;
   margin-top: 0.8rem;
-  padding: 0.8rem;
+  padding: 0.8rem 1.2rem 0.8rem 0.8rem;
   border: 1px solid var(--color-border);
   border-radius: 10px;
   background: var(--color-surface-secondary);
@@ -396,6 +252,21 @@
   font-size: 1.25rem;
   line-height: 1;
 }
+.trigger-variant-delete {
+  position: absolute;
+  top: -0.55rem;
+  right: -0.55rem;
+  z-index: 2;
+  width: 1.35rem;
+  height: 1.35rem;
+  min-height: 0;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+  font-size: 0.8rem;
+}
 .or-divider {
   position: absolute;
   top: -2rem;
@@ -417,19 +288,110 @@
   background: var(--color-border);
 }
 .condition {
+  position: relative;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr)) 32px;
-  gap: 0.4rem;
-  align-items: center;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.5rem;
+  align-items: start;
+  padding: 0.65rem 1.2rem 0.65rem 0.65rem;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface);
+}
+.condition-fields {
+  display: flex;
+  flex-direction: column;
+  grid-column: 1;
+  gap: 0.5rem;
+  min-width: 0;
+}
+.condition-fields > * {
+  display: block;
+  flex: 0 0 auto;
+  min-width: 0;
+  margin: 0 !important;
+}
+.condition-fields > :is(select, input, textarea) {
+  width: 100%;
+}
+.condition-fields .rich-text-variable-picker {
+  gap: 0.5rem;
+  margin: 0;
+}
+.condition-fields .rich-text-variable-field {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+}
+.condition-row-wrap {
+  min-width: 0;
+}
+.condition-empty {
+  margin: 0.2rem 0;
+  color: var(--color-muted);
+  font-size: 0.8rem;
+}
+.condition > *:not(.ghost) {
+  grid-column: 1;
+  min-width: 0;
+}
+.condition-summary {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  padding: 0.2rem 0.1rem;
+  border: 0;
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+.condition-summary:hover,
+.condition-summary:focus-visible {
+  color: var(--color-primary-strong);
+  text-decoration: underline;
 }
 .condition > .ghost {
-  grid-column: -2;
+  position: absolute;
+  top: -0.5rem;
+  right: -0.5rem;
+  z-index: 2;
+  display: grid;
+  width: 1.25rem;
+  height: 1.25rem;
+  min-height: 0;
+  padding: 0;
+  place-items: center;
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+  font-size: 0.75rem;
+  line-height: 1;
+}
+.condition-connector {
+  width: max-content;
+  margin: 0.1rem auto;
+  padding: 0.12rem 0.55rem;
+  border-radius: 999px;
+  background: var(--color-border);
+  color: var(--color-muted);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
 }
 .condition select {
   margin: 0;
 }
 .condition input {
   margin: 0;
+  min-width: 0;
+}
+.condition [aria-label='Condition variable'] {
+  grid-column: 1;
   min-width: 0;
 }
 .trigger-add-condition {

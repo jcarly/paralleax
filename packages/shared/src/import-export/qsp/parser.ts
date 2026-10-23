@@ -344,6 +344,7 @@ function extractActBlocks(
       const conditional = tryParseConditionalActions(lines, index, source);
       if (conditional) {
         blocks.push(...conditional.blocks);
+        remainingCode.push(...Array<string>(conditional.endIndex - index + 1).fill(''));
         index = conditional.endIndex;
         report.convertedStatementCount +=
           conditional.blocks.length + conditional.controlStatementCount;
@@ -395,6 +396,7 @@ function extractActBlocks(
       break;
     }
     blocks.push(parsed.block);
+    remainingCode.push(...Array<string>(parsed.nextIndex - index + 1).fill(''));
     index = parsed.nextIndex;
     report.convertedStatementCount += 1;
   }
@@ -599,7 +601,8 @@ function readActBlock(
       action: {
         name: header.name,
         ...(header.image ? { image: header.image } : {}),
-        code: lines.slice(startIndex + 1, endIndex),
+        // Keep the header slot so code diagnostics retain their physical line.
+        code: ['', ...lines.slice(startIndex + 1, endIndex)],
       },
       sourceLine: source.line + startIndex,
       endLine: source.line + endIndex,

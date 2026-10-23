@@ -2,7 +2,7 @@
 
 Status: Current
 
-Last reviewed: 2026-09-13
+Last reviewed: 2026-10-17
 
 Implemented: Partial
 
@@ -60,13 +60,14 @@ small test stories. It is not yet ready for an open public production service.
 - Implemented foundation: structured production logs, request identifiers,
   request completion logs, and stable API error envelopes that hide unexpected
   internal details.
-- Add a user display name before exposing multi-user Story, comment, or history
-  surfaces to real participants. Those projections must not use email as a
-  public or collaborative identity; email remains limited to the account owner,
-  administrators, and explicit access-management workflows.
-- Keep repository authorization as the access boundary and add non-disclosing
-  client recovery for inaccessible direct URLs: an unauthorized Story route
-  returns the user to the Story library without rendering private metadata.
+- Implemented foundation: required non-unique display names protect multi-user
+  Story, comment, and history surfaces from exposing email as a public identity.
+  Email remains limited to the account owner, administrators, and explicit
+  access-management workflows.
+- Implemented foundation: repository authorization remains the access boundary,
+  and inaccessible direct Story/editor/player/access URLs return to the library
+  without rendering private metadata. Reader-only editor access redirects to the
+  player.
 - Implemented foundation: interaction bodies are capped at 64,000 characters
   with editor feedback, HTTP request bodies at 128 KiB, and story mutations at
   60 requests per minute. Add aggregate story-size quotas and provider-level
@@ -78,8 +79,8 @@ small test stories. It is not yet ready for an open public production service.
 
 ### P1 — Before an Open Creator Alpha
 
-- Add email verification, password reset, password change, and session
-  revocation.
+- Implemented foundation: verified-email registration, password reset/change,
+  one-use expiring account-action tokens, and session revocation.
 - Implemented foundation: story listing uses a lightweight `StorySummary`
   aggregate query rather than assembling every complete graph. Retain measured
   query-count, payload, and latency budgets before the open creator alpha.
@@ -124,17 +125,25 @@ small test stories. It is not yet ready for an open public production service.
 ### P2 — Before Public Story Reading
 
 - Separate editable drafts from immutable published versions.
-- Add explicit private, unlisted, and public visibility.
+- Implement `unlisted` visibility as link-readable but absent from public
+  discovery, distinct from `public` and `invitation`; see
+  [ADR-033](decisions/ADR-033-unlisted-story-visibility.md).
 - Validate a story before publication and expose stable public reader URLs.
 - Keep author simulation and public reading as separate product surfaces.
 - Add publication metadata, reporting, moderation, and content licensing rules.
 
-### P3 — Before Collaboration
+### P3 — Before Conflict-Safe Collaboration
 
-- Add story members and explicit roles.
-- Add entity-level revisions and optimistic concurrency with `409 Conflict`.
-- Define compare, reload, overwrite, and merge behavior.
-- Add change history, undo/redo, comments, annotations, and review workflows.
+- Implemented foundation: Story reader/editor grants, comment policies,
+  process-local live invalidation, anchored review discussions, and durable
+  authored change history with undo/redo.
+- Implement field-scoped concurrency so unrelated fields can change independently;
+  merge concurrent text edits and explicitly resolve overlapping atomic values.
+- Add durable offline authoring for the already-open Story, with local mutation
+  recovery and reconnect synchronization. Follow
+  [ADR-034](decisions/ADR-034-collaborative-offline-authoring.md); its transport,
+  text protocol, and persistence implementation remain to be selected.
+- Add proposal/approval workflows and any contributor roles they demonstrably require.
 
 ## Architecture Constraints
 
@@ -225,8 +234,8 @@ objectives.
   and import limits.
 - Clean expired sessions with scheduled maintenance rather than a global cleanup
   on every authenticated request.
-- Support account recovery, session revocation, export, and deletion before open
-  registration. Account export/deletion must include reader-progress JSON as
+- Account recovery and session revocation are implemented. Add account export and
+  deletion before open registration; they must include reader-progress JSON as
   personal user data.
 
 ## Accessibility and Device Support
@@ -242,13 +251,11 @@ objectives.
 
 ## Product Reliability
 
-The editor must eventually provide:
-
-- undo/redo;
-- global search and filters;
-- graph validation and a visible problem list;
-- multi-selection for bulk authoring;
-- recovery from slow, failed, and out-of-order saves.
+The editor already provides durable undo/redo, global search/filter navigation,
+rectangular multi-selection, and visible recovery for slow, failed, and
+out-of-order saves. Remaining reliability work includes Story validation with a
+visible problem list, broader bulk-authoring workflows, consistent route-level
+error/loading presentation, and the manual keyboard/focus audit.
 
 Simulation should expose current state, failed conditions, pending effects, and
 author-controlled state overrides. Public readers must not expose these debug or

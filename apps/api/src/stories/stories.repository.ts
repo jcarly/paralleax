@@ -42,6 +42,7 @@ import {
 } from '@paralleax/shared';
 import type { PoolClient } from 'pg';
 import { DatabaseConnection } from '../database/database.connection';
+import { assertStoryWithinQuotas } from './story-quotas';
 import type { Queryable } from './persistence/stories.persistence.types';
 import {
   persistStoryDifference,
@@ -124,6 +125,7 @@ type GraphDecorationRow = {
   sort_order: number;
 };
 type GroupRow = {
+  parent_group_id: string | null;
   id: string;
   story_id: string;
   title: string;
@@ -197,7 +199,8 @@ type StatEffectRow = {
   stat_id: string;
   item_id: string | null;
   operation: 'add' | 'set';
-  value: StatValue;
+  value: StatValue | null;
+  expression: string | null;
   sort_order: number;
 };
 type ItemEffectRow = {
@@ -544,6 +547,7 @@ export class StoriesRepository {
 
   async saveMany(stories: readonly Story[], ownerId: string): Promise<void> {
     await this.transaction(async (client) => {
+      for (const story of stories) assertStoryWithinQuotas(story);
       for (const story of stories) await this.saveWith(client, story, ownerId);
     });
   }
@@ -559,6 +563,7 @@ export class StoriesRepository {
       const current = await this.findWith(client, id, ownerId);
       if (!current) return undefined;
       const updated = await mutation(structuredClone(current));
+      assertStoryWithinQuotas(updated, current);
       const changes = createStoryChangeDelta(current, updated);
       await persistStoryDifference(client, current, updated, changes);
       if (changes && updated.revision !== current.revision && updated.revision !== undefined) {
@@ -607,6 +612,7 @@ export class StoriesRepository {
         updated.id = id;
         updated.updatedAt = new Date().toISOString();
         updated.revision = (current.revision ?? 1) + 1;
+        assertStoryWithinQuotas(updated, current);
         const changes = invertStoryChangeDelta(event.changes);
 
         await persistStoryDifference(client, current, updated, changes);
@@ -877,7 +883,7 @@ export class StoriesRepository {
       [storyIds],
     );
     const groups = await queryable.query<GroupRow>(
-      `SELECT id, story_id, title, sort_order
+      `SELECT id, story_id, title, parent_group_id, sort_order
          FROM story_groups WHERE story_id = ANY($1::text[])
          ORDER BY story_id, sort_order`,
       [storyIds],
@@ -941,7 +947,7 @@ export class StoriesRepository {
       [storyIds],
     );
     const statEffects = await queryable.query<StatEffectRow>(
-      `SELECT story_id, interaction_id, stat_id, item_id, operation, value, sort_order
+      `SELECT story_id, interaction_id, stat_id, item_id, operation, value, expression, sort_order
          FROM interaction_stat_effects WHERE story_id = ANY($1::text[])
          ORDER BY story_id, interaction_id, sort_order`,
       [storyIds],
@@ -1039,6 +1045,7 @@ export class StoriesRepository {
       groups: (groupsByStory.get(row.id) ?? []).map((group): Group => ({
         id: group.id,
         title: group.title,
+        ...(group.parent_group_id ? { parentGroupId: group.parent_group_id } : {}),
         interactionIds: (interactionsByGroup.get(group.id) ?? []).map(
           ({ interaction_id }) => interaction_id,
         ),
@@ -1127,7 +1134,9 @@ export class StoriesRepository {
           statId: effect.stat_id,
           ...(effect.item_id ? { itemId: effect.item_id } : {}),
           operation: effect.operation,
-          value: effect.value,
+          ...(typeof effect.expression === 'string'
+            ? { expression: effect.expression }
+            : { value: effect.value! }),
         })),
         itemEffects: (itemEffectsByInteraction.get(interaction.id) ?? []).map((effect) => ({
           ...(effect.item_id ? { itemId: effect.item_id } : {}),
@@ -1192,6 +1201,7 @@ export class StoriesRepository {
   }
 
   private async saveWith(client: PoolClient, story: Story, ownerId: string): Promise<void> {
+    assertStoryWithinQuotas(story);
     await client.query(
       `INSERT INTO stories
        (id, revision, title, start_date_time, created_at, updated_at, creator_user_id,

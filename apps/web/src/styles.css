@@ -38,6 +38,9 @@
   --color-link-hover: #5f6f82;
   --color-link-soft: #b8b4ad;
 
+  /* Shared overlay layer for dialogs rendered in the document portal. */
+  --z-modal: 50;
+
   /* Elevation tokens */
   --shadow-card: 0 2px 8px #2d2d2d14;
   --shadow-node: 0 2px 8px #2d2d2d18;
@@ -72,6 +75,13 @@ a {
   color: inherit;
 }
 
+/* All modal backdrops share one body-level layer, independent of feature stacking contexts. */
+.modal-portal {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+}
+
 /* Buttons and actions */
 
 button,
@@ -91,13 +101,11 @@ button,
   transition:
     background 150ms ease,
     border-color 150ms ease,
-    box-shadow 150ms ease,
-    transform 150ms ease;
+    box-shadow 150ms ease;
 }
 button:hover,
 .button:hover {
   box-shadow: 0 4px 12px #2d2d2d1c;
-  transform: translateY(-1px);
 }
 button:focus-visible,
 .button:focus-visible,

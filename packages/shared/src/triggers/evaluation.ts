@@ -1,3 +1,4 @@
+import { evaluateExpression } from '../expressions/index.js';
 import type { Interaction } from '../model/interactions.js';
 import type { StatValue } from '../model/stats.js';
 import type { Story } from '../model/stories.js';
@@ -455,15 +456,16 @@ function conditionMatches(
     statValues,
     itemStatValues,
   );
+  const comparisonStatId = 'comparisonStatId' in condition ? condition.comparisonStatId : undefined;
+  const comparisonItemId = 'comparisonItemId' in condition ? condition.comparisonItemId : undefined;
+  const expression = 'expression' in condition ? condition.expression : undefined;
+  const literalValue = 'value' in condition ? condition.value : undefined;
   const comparisonValue =
-    'comparisonStatId' in condition
-      ? getStatConditionValue(
-          condition.comparisonStatId,
-          condition.comparisonItemId,
-          statValues,
-          itemStatValues,
-        )
-      : condition.value;
+    comparisonStatId !== undefined
+      ? getStatConditionValue(comparisonStatId, comparisonItemId, statValues, itemStatValues)
+      : expression !== undefined
+        ? evaluateConditionExpression(expression, statValues, itemStatValues)
+        : literalValue;
   if (
     currentValue === undefined ||
     comparisonValue === undefined ||
@@ -478,6 +480,22 @@ function conditionMatches(
   if (condition.operator === 'lte') return currentValue <= comparisonValue;
   if (condition.operator === 'gt') return currentValue > comparisonValue;
   return currentValue >= comparisonValue;
+}
+
+function evaluateConditionExpression(
+  expression: string,
+  statValues: Readonly<Record<string, StatValue>>,
+  itemStatValues: Readonly<Record<string, Readonly<Record<string, StatValue>>>>,
+): StatValue | undefined {
+  const values: Record<string, StatValue> = { ...statValues };
+  for (const [itemId, itemValues] of Object.entries(itemStatValues)) {
+    for (const [statId, value] of Object.entries(itemValues)) {
+      values[`${statId}|${itemId}`] = value;
+    }
+  }
+  const result = evaluateExpression(expression, values);
+  if (typeof result === 'object' && result && 'ok' in result && !result.ok) return undefined;
+  return result as StatValue;
 }
 
 function getStatConditionValue(

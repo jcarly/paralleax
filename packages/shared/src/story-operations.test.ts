@@ -517,6 +517,26 @@ describe('character stats', () => {
     expect(getJourneyStatValues(story, ['root'])).toEqual({ energy: 8, trust: 3.5 });
     expect(getJourneyStatValues(story, ['root', 'root'])).toEqual({ energy: 6, trust: 5 });
   });
+
+  it('evaluates typed expression effects against the ordered replay state', () => {
+    const story = storyFixture();
+    story.statDefinitions = [{ id: 'number-definition', name: 'Number', valueType: 'number' }];
+    story.stats = [
+      { id: 'score', statDefinitionId: 'number-definition', initialValue: 2 },
+      { id: 'bonus', statDefinitionId: 'number-definition', initialValue: 3 },
+    ];
+    story.interactions[0].statEffects = [
+      { statId: 'score', operation: 'set', expression: '@{score} + @{bonus}' },
+      { statId: 'bonus', operation: 'set', expression: '@{score} * 2' },
+    ];
+
+    expect(getJourneyStatValues(story, ['root'])).toEqual({ score: 5, bonus: 10 });
+    story.interactions[0].statEffects = [
+      { statId: 'score', operation: 'set', expression: '@{bonus} / 0' },
+      { statId: 'bonus', operation: 'set', expression: 'true' },
+    ];
+    expect(getJourneyStatValues(story, ['root'])).toEqual({ score: 2, bonus: 3 });
+  });
 });
 
 describe('story time', () => {
@@ -650,6 +670,7 @@ describe('typed stats', () => {
         stats: [{ id: 'battery-charge', statDefinitionId: 'charge-definition', initialValue: 10 }],
       },
     ];
+    story.stats = [{ id: 'bonus', statDefinitionId: 'charge-definition', initialValue: 2 }];
     story.characters = [
       {
         id: 'mira',
@@ -665,16 +686,33 @@ describe('typed stats', () => {
       {
         statId: 'battery-charge',
         itemId: 'battery-1',
-        operation: 'add',
-        value: -4,
+        operation: 'set',
+        expression: '@{bonus} + @{battery-charge|battery-2}',
       },
     ];
 
     const progress = buildReaderProgressState(story, ['root']);
     expect(progress.itemStatValues).toEqual({
-      'battery-1': { 'battery-charge': 6 },
+      'battery-1': { 'battery-charge': 12 },
       'battery-2': { 'battery-charge': 10 },
     });
+    story.interactions[0].statEffects = [
+      { statId: 'battery-charge', itemId: 'battery-1', operation: 'set', value: 7 },
+      { statId: 'bonus', operation: 'set', expression: '@{battery-charge|battery-1} * 2' },
+      {
+        statId: 'battery-charge',
+        itemId: 'battery-2',
+        operation: 'set',
+        expression: '@{bonus} + @{battery-charge|battery-1}',
+      },
+    ];
+    const ordered = buildReaderProgressState(story, ['root']);
+    expect(ordered.statValues).toEqual({ bonus: 14 });
+    expect(ordered.itemStatValues).toEqual({
+      'battery-1': { 'battery-charge': 7 },
+      'battery-2': { 'battery-charge': 21 },
+    });
+    expect(getJourneyStatValues(story, ['root'])).toEqual(ordered.statValues);
   });
 
   it('evaluates trigger conditions against the targeted item instance value', () => {

@@ -2,6 +2,109 @@
 
 ## Unreleased
 
+- Fixed product dialogs appearing below the application header and allowed
+  background controls to receive keyboard focus while a dialog was open.
+  Dialogs now share a body portal that isolates the background, preserves the
+  selected initial focus target, supports nested dialogs, and restores focus on
+  close.
+
+- Kept root and linked Trigger markers at a stable rotated geometry through
+  hover, keyboard focus, and selection by removing transforms from the shared
+  button hover state. Existing React Flow selection, connection, and drag
+  behavior remains covered by the graph tests.
+
+- Moved rich-text surface and token-control styles into the rich-text editor
+  component stylesheet, so direct Simulation routes keep the same removal
+  control geometry and focus treatment without depending on graph styles.
+  Token removal and authored markup serialization remain unchanged.
+
+- Bound shared eyebrow labels to the root accent token so editor history and
+  reader surfaces keep their intended color outside product-page scopes.
+
+- Improved Trigger condition readability with concise click-to-edit rules,
+  uniform vertical field spacing, Enter/outside-focus collapse, explicit AND/OR
+  connectors, and a combined-rule tooltip on graph markers. Removed redundant
+  condition-group headings and changed compact variable ownership copy to use
+  World/Monde terminology and directional arrows. Added repository guidance for
+  concise copy, punctuation, and compact authoring typography.
+
+- Added deterministic typed expressions to variable effects and Trigger
+  comparisons, with stable Story/exact-item references, arithmetic, comparisons,
+  parentheses, typed API validation, ordered reader replay, PostgreSQL migration
+  `202610210044`, and a shared hierarchical variable picker. Replay preserves
+  interleaved global/item effect order, rejects non-finite results, and cleans
+  expression references when assignments or exact items are removed. Invalid
+  editor expressions remain editable drafts until corrected.
+
+- Reworked Group organization into a compact searchable tree with contextual
+  actions, inline rename, subgroup creation, mouse/touch drag-and-drop and
+  equivalent keyboard moves. Hierarchy and sibling order persist atomically
+  through existing Group history/collaboration, without a schema migration or
+  Group inspector. Fixed descendant-cycle protection for collapsed Groups and
+  shared Enter/blur/Escape name editing across Groups and context entities.
+
+- Added partial static QSP `GS` / `GOSUB` import through shared interaction
+  paths, ordered call-site effects, string return stats, and conditional
+  continuation Triggers. Supports action calls, sequential/repeated calls,
+  acyclic nesting, static exits, and safe literal `ARGS[0]` variants without
+  changing the narrative engine or persistence schema. Reports recursive,
+  dynamic, and unsupported call contexts and the interactive-traversal and
+  action-lifetime approximations. Preserves source lines across action
+  extraction and adjusts import progress for generated segments.
+
+- Changed Interaction Groups to exclusive direct membership. Creating a Group or
+  assigning members now moves Interactions from their previous Groups atomically,
+  including immediate web projection and undo/redo. Groups still support mixed
+  direct Interactions and nested child Groups. Migration `202610190043` keeps
+  the first persisted Group for legacy multiple memberships, irrespective of
+  depth, and enforces uniqueness with a deferred database constraint.
+
+- Completed interaction Groups with visible creation feedback, a left navigation
+  tree, rename/delete and membership controls, recursive highlighting and explicit
+  centering. Added acyclic single-parent nesting with child promotion on deletion,
+  migration `202610190042`, and selection shortcuts without changing narrative
+  or ELK semantics.
+
+- Moved ChoiceScript analysis into a cancellable worker thread, so closing an
+  import no longer blocks the API event loop or allows the cancelled result to
+  be saved.
+
+- Migrated web routing to a React Router data router and protected browser
+  back/forward, links, and code navigation while editor, reader, or Simulation
+  saves are pending or failed. Added an accessible leave confirmation and kept
+  browser unload protection; adjusted the initial bundle budget for the router.
+
+- Enforced configurable per-Story size and entity quotas across authoring,
+  imports, and undo/redo with atomic HTTP 422 responses and localized feedback;
+  existing oversized stories can still reduce their content.
+
+- Re-triaged the active quality backlog and roadmap against the implemented
+  baseline, separated historical feedback from current delivery priorities, and
+  refreshed production-readiness status for account safety, collaboration,
+  accessibility, layout, and reliability work.
+- Recorded the proposed native Interaction-inclusion model and its unresolved
+  ordered-execution, action, argument, safety, persistence, and QSP `GS` / `GOSUB`
+  mapping decisions without presenting it as implemented scope.
+- Extracted rich-text token serialization and temporary editor-DOM cleanup from
+  `RichTextEditor` into a focused tested module while preserving stored markup.
+- Extracted rich-text selection capture, restoration, and inline conditional-frame
+  insertion into a focused tested hook without changing editor behavior.
+
+- Reduced repeated graph-layout projection work by indexing ELK vertices and
+  accumulating routing lanes without repeated array copies, while preserving
+  deterministic positions and edge ordering.
+- Made ELK the explicitly canonical graph-layout strategy, renamed the historic
+  custom implementation as a fallback, and aligned the 2,000-interaction stress
+  benchmark with the production adapter. Exceptionally large or deep graphs now
+  use that deterministic fallback before ELK exceeds its safe synchronous budget,
+  or recover through it if ELK exhausts the JavaScript call stack.
+- Replaced complete-Story responses for Interaction, Trigger, and graph-decoration
+  deletion with compact cleanup results; the editor now applies the existing
+  shared deletion operations and reconciles only mutation metadata.
+- Centralized character-stat and leaf-item cleanup in the shared domain, including
+  authored effect and condition cleanup, and replaced their complete-Story delete
+  responses with compact identifiers and mutation metadata.
+
 - Replaced verbose variable-condition comparison labels with the standard
   `=`, `≠`, `<`, `≤`, `>`, and `≥` symbols across authoring, reader, and Simulation views.
 - Split the English, French, and Italian interface catalogues into consistent

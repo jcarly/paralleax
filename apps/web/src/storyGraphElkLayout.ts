@@ -6,6 +6,7 @@ import {
   interactionNodeWidth,
 } from './storyGraph';
 import {
+  computeLegacyStoryGraphLayout,
   projectStoryGraphLayoutScope,
   type StoryGraphLayoutOptions,
   type StoryGraphLayoutResult,
@@ -14,6 +15,7 @@ import {
 import type { ElkExtendedEdge, ElkNode } from 'elkjs/lib/elk-api';
 
 const triggerNodeSize = 20;
+const maximumSafeElkVertexCount = 3_000;
 
 export interface StoryGraphElkLayoutOptions extends StoryGraphLayoutOptions {
   scope?: StoryGraphLayoutScope;
@@ -135,75 +137,93 @@ export async function computeStoryGraphElkLayout(
     }
   }
 
+  // elkjs' bundled synchronous engine recursively traverses layered graphs. At
+  // this size a simple 2,000-interaction chain can both exceed the editor budget
+  // and overflow Node's call stack, depending on the platform.
+  if (vertices.length > maximumSafeElkVertexCount) {
+    return computeLegacyStoryGraphLayout(story, scope, options);
+  }
+
   const elk = await getElk();
 
-  const result = await elk.layout({
-    id: 'root',
+  let result: ElkNode;
 
-    layoutOptions: {
-      'elk.algorithm': 'layered',
+  try {
+    result = await elk.layout({
+      id: 'root',
 
-      // IMPORTANT : ton interface actuelle est verticale.
-      'elk.direction': 'DOWN',
+      layoutOptions: {
+        'elk.algorithm': 'layered',
 
-      'elk.edgeRouting': 'ORTHOGONAL',
+        // IMPORTANT : ton interface actuelle est verticale.
+        'elk.direction': 'DOWN',
 
-      // Équivalents approximatifs de tes constantes actuelles.
-      'elk.spacing.nodeNode': '140',
-      'elk.layered.spacing.nodeNodeBetweenLayers': '120',
+        'elk.edgeRouting': 'ORTHOGONAL',
 
-      'elk.separateConnectedComponents': 'true',
-      'elk.spacing.componentComponent': '260',
+        // Équivalents approximatifs de tes constantes actuelles.
+        'elk.spacing.nodeNode': '140',
+        'elk.layered.spacing.nodeNodeBetweenLayers': '120',
 
-      'elk.layered.nodePlacement.strategy': 'NETWORK_SIMPLEX',
-      'elk.layered.nodePlacement.favorStraightEdges': 'true',
-    },
+        'elk.separateConnectedComponents': 'true',
+        'elk.spacing.componentComponent': '260',
 
-    children: vertices.map((vertex): ElkNode => {
-      const width = vertex.layoutWidth;
-      const height = vertex.layoutHeight;
+        'elk.layered.nodePlacement.strategy': 'NETWORK_SIMPLEX',
+        'elk.layered.nodePlacement.favorStraightEdges': 'true',
+      },
 
-      const node: ElkNode = {
-        id: vertex.key,
-        width,
-        height,
-      };
+      children: vertices.map((vertex): ElkNode => {
+        const width = vertex.layoutWidth;
+        const height = vertex.layoutHeight;
 
-      if (vertex.kind === 'interaction') {
-        node.layoutOptions = {
-          'elk.portConstraints': 'FIXED_POS',
+        const node: ElkNode = {
+          id: vertex.key,
+          width,
+          height,
         };
 
-        node.ports = [
-          {
-            id: `${vertex.key}:input`,
-            x: width / 2,
-            y: 0,
-            width: 0,
-            height: 0,
-            layoutOptions: {
-              'elk.port.side': 'NORTH',
+        if (vertex.kind === 'interaction') {
+          node.layoutOptions = {
+            'elk.portConstraints': 'FIXED_POS',
+          };
+
+          node.ports = [
+            {
+              id: `${vertex.key}:input`,
+              x: width / 2,
+              y: 0,
+              width: 0,
+              height: 0,
+              layoutOptions: {
+                'elk.port.side': 'NORTH',
+              },
             },
-          },
-          {
-            id: `${vertex.key}:output`,
-            x: width / 2,
-            y: height,
-            width: 0,
-            height: 0,
-            layoutOptions: {
-              'elk.port.side': 'SOUTH',
+            {
+              id: `${vertex.key}:output`,
+              x: width / 2,
+              y: height,
+              width: 0,
+              height: 0,
+              layoutOptions: {
+                'elk.port.side': 'SOUTH',
+              },
             },
-          },
-        ];
-      }
+          ];
+        }
 
-      return node;
-    }),
+        return node;
+      }),
 
-    edges,
-  });
+      edges,
+    });
+  } catch (error) {
+    if (!isElkStackOverflow(error)) {
+      throw error;
+    }
 
+    return computeLegacyStoryGraphLayout(story, scope, options);
+  }
+
+  const verticesByKey = new Map(vertices.map((vertex) => [vertex.key, vertex]));
   const elkPositions = new Map<string, Position>();
 
   for (const child of result.children ?? []) {
@@ -211,7 +231,7 @@ export async function computeStoryGraphElkLayout(
       continue;
     }
 
-    const vertex = vertices.find(({ key }) => key === child.id);
+    const vertex = verticesByKey.get(child.id);
     if (!vertex) continue;
 
     elkPositions.set(vertex.key, {
@@ -288,6 +308,15 @@ export async function computeStoryGraphElkLayout(
     ...projectStoryGraphLayoutScope(story, scope, positions, options),
     ...(scope.kind === 'all' ? { edgeRoutes } : {}),
   };
+}
+
+function isElkStackOverflow(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+
+  return (
+    (error instanceof RangeError || error.name === 'RangeError') &&
+    /maximum call stack size exceeded/i.test(error.message)
+  );
 }
 
 function interactionKey(interactionId: string) {

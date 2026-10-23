@@ -74,6 +74,8 @@ inert and renders as empty text.
   story-owned assignment as a variable without changing canonical semantics.
 - Definitions, assignments, runtime values, and exact item instances remain
   distinct and validate same-story references.
-- Calculated values, formulas, dependency graphs, and cycle handling remain out
-  of scope. A future calculated stat will be read-only and derived from stored
-  assignments rather than persisted as another mutable value.
+- Calculated values, dependency graphs, and cycle handling remain out of scope.
+  ADR-038 later permits deterministic expressions inside effects and conditions;
+  these do not create calculated stats. A future calculated stat will be
+  read-only and derived from stored assignments rather than persisted as another
+  mutable value.

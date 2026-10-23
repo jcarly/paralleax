@@ -8,19 +8,25 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import * as request from 'supertest';
 import type {
   CharacterMutationResult,
+  CharacterItemDeletionResult,
   CharacterItemMutationResult,
+  CharacterStatDeletionResult,
   CharacterStatMutationResult,
   GraphDecorationMutationResult,
+  GraphDecorationDeletionResult,
+  InteractionDeletionResult,
   InteractionMutationResult,
   ItemDefinitionMutationResult,
   LocationMutationResult,
   StatDefinitionMutationResult,
   Story,
   TriggerMutationResult,
+  TriggerDeletionResult,
 } from '@paralleax/shared';
 import {
   getTriggerConditionGroups,
   getTriggerConditions,
+  importChoiceScript,
   importQsp,
   MAX_INTERACTION_BODY_LENGTH,
   serializeQspLocationBundle,
@@ -33,6 +39,7 @@ import { StoriesRepository } from './stories.repository';
 import { STORY_MUTATION_RATE_LIMIT } from './stories.controller';
 import { StoryEventsService } from './story.events';
 import { QspImportWorkerService } from './application/qsp-import-worker.service';
+import { ChoiceScriptImportWorkerService } from './application/choicescript-import-worker.service';
 import { ImportReportWriter } from '../imports/import-report-writer';
 import { LocalImportReportStorage } from '../imports/import-report-storage';
 import { ApiExceptionFilter } from '../operations/api-exception.filter';
@@ -67,6 +74,25 @@ describe('Stories API', () => {
               maxPreviewIssues: 0,
               onIssue: (issue) => writer.writeIssue(issue),
               onProgress: args[1],
+            });
+          } finally {
+            await writer.close();
+          }
+        }),
+      })
+      .overrideProvider(ChoiceScriptImportWorkerService)
+      .useValue({
+        run: jest.fn(async (...args: Parameters<ChoiceScriptImportWorkerService['run']>) => {
+          const [files, options, , reportPath] = args;
+          if (!reportPath) throw new Error('A test ChoiceScript report path is required.');
+          const writer = new ImportReportWriter({ reportPath });
+          await writer.start();
+          try {
+            return importChoiceScript(files, {
+              ...options,
+              createId: randomUUID,
+              maxPreviewIssues: 0,
+              onIssue: (issue) => writer.writeIssue(issue),
             });
           } finally {
             await writer.close();
@@ -146,7 +172,7 @@ describe('Stories API', () => {
     });
   });
 
-  it('creates a flat Group from selected Interactions without changing reader structure', async () => {
+  it('creates a Group and moves selected Interactions from their previous Group without changing reader structure', async () => {
     const created = await createStory('Grouped story');
     const withRoot = await createInteraction(created.id);
     const withChild = await createInteraction(created.id, {
@@ -158,7 +184,7 @@ describe('Stories API', () => {
       .post(`/api/stories/${created.id}/groups`)
       .send({ title: 'Opening', interactionIds: [root.id, child.id] })
       .expect(201);
-    await request(httpServer)
+    const rootOnly = await request(httpServer)
       .post(`/api/stories/${created.id}/groups`)
       .send({ title: 'Root only', interactionIds: [root.id] })
       .expect(201);
@@ -168,15 +194,94 @@ describe('Stories API', () => {
     });
     const reloaded = await request(httpServer).get(`/api/stories/${created.id}`).expect(200);
     expect(reloaded.body.groups).toEqual([
-      expect.objectContaining({ title: 'Opening', interactionIds: [root.id, child.id] }),
+      expect.objectContaining({ title: 'Opening', interactionIds: [child.id] }),
       expect.objectContaining({ title: 'Root only', interactionIds: [root.id] }),
     ]);
     expect(reloaded.body.interactions).toEqual(withChild.interactions);
+    await request(httpServer)
+      .patch(`/api/stories/${created.id}/groups/${rootOnly.body.group.id}`)
+      .send({ parentGroupId: opening.body.group.id })
+      .expect(200);
+    await request(httpServer)
+      .patch(`/api/stories/${created.id}/groups/${opening.body.group.id}`)
+      .send({ interactionIds: [root.id, child.id] })
+      .expect(200);
+    const transferred = await request(httpServer).get(`/api/stories/${created.id}`).expect(200);
+    expect(transferred.body.groups[0].interactionIds).toEqual([root.id, child.id]);
+    expect(transferred.body.groups[1]).toMatchObject({
+      parentGroupId: opening.body.group.id,
+      interactionIds: [],
+    });
+    const undoTransfer = await request(httpServer)
+      .post(`/api/stories/${created.id}/history/undo`)
+      .expect(201);
+    expect(undoTransfer.body.story.groups[0].interactionIds).toEqual([child.id]);
+    expect(undoTransfer.body.story.groups[1]).toMatchObject({
+      parentGroupId: opening.body.group.id,
+      interactionIds: [root.id],
+    });
 
     await request(httpServer)
       .post(`/api/stories/${created.id}/groups`)
       .send({ title: 'Invalid', interactionIds: ['another-story-interaction'] })
       .expect(400);
+  });
+
+  it('manages nested groups with isolation, validation, reload and undo', async () => {
+    const story = await createStory('Groups');
+    const other = await createStory('Other');
+    const withInteraction = await createInteraction(story.id);
+    const id = withInteraction.interactions[0].id;
+    const parent = await request(httpServer)
+      .post(`/api/stories/${story.id}/groups`)
+      .send({ title: 'Parent', interactionIds: [id] })
+      .expect(201);
+    const child = await request(httpServer)
+      .post(`/api/stories/${story.id}/groups`)
+      .send({ title: 'Child', interactionIds: [id] })
+      .expect(201);
+    await request(httpServer)
+      .patch(`/api/stories/${story.id}/groups/${child.body.group.id}`)
+      .send({ title: 'Renamed', parentGroupId: parent.body.group.id, interactionIds: [] })
+      .expect(200);
+    await request(httpServer)
+      .patch(`/api/stories/${story.id}/groups/${parent.body.group.id}`)
+      .send({ parentGroupId: child.body.group.id })
+      .expect(400);
+    await request(httpServer)
+      .patch(`/api/stories/${other.id}/groups/${child.body.group.id}`)
+      .send({ title: 'Foreign' })
+      .expect(404);
+    await request(httpServer)
+      .patch(`/api/stories/${story.id}/groups/${child.body.group.id}`)
+      .send({ title: '  ' })
+      .expect(400);
+    await request(httpServer)
+      .patch(`/api/stories/${story.id}/groups/${child.body.group.id}`)
+      .send({ interactionIds: [id, id] })
+      .expect(400);
+    const loaded = await request(httpServer).get(`/api/stories/${story.id}`).expect(200);
+    expect(loaded.body.groups[1]).toMatchObject({
+      title: 'Renamed',
+      parentGroupId: parent.body.group.id,
+      interactionIds: [],
+    });
+    const deleted = await request(httpServer)
+      .delete(`/api/stories/${story.id}/groups/${parent.body.group.id}`)
+      .expect(200);
+    expect(deleted.body.groupId).toBe(parent.body.group.id);
+    const afterDelete = await request(httpServer).get(`/api/stories/${story.id}`).expect(200);
+    expect(afterDelete.body.groups).toEqual([
+      { id: child.body.group.id, title: 'Renamed', interactionIds: [] },
+    ]);
+    const undone = await request(httpServer)
+      .post(`/api/stories/${story.id}/history/undo`)
+      .expect(201);
+    expect(undone.body.story.groups).toEqual(loaded.body.groups);
+    await request(httpServer).delete(`/api/stories/${story.id}/interactions/${id}`).expect(200);
+    const cleaned = await request(httpServer).get(`/api/stories/${story.id}`).expect(200);
+    expect(cleaned.body.groups[0].interactionIds).toEqual([]);
+    expect(cleaned.body.groups).toHaveLength(2);
   });
 
   it('persists authored Story history and supports undo and redo', async () => {
@@ -1120,9 +1225,15 @@ unknown_command
     expect(loaded.body.graphDecorations).toHaveLength(2);
     expect(loaded.body.interactions).toEqual(interactionGraph.interactions);
 
-    await request(httpServer)
+    const deletion = await request(httpServer)
       .delete(`/api/stories/${story.id}/graph-decorations/${frameResult.decoration.id}`)
       .expect(200);
+    expect(deletion.body as GraphDecorationDeletionResult).toMatchObject({
+      decorationId: frameResult.decoration.id,
+      revision: expect.any(Number),
+      updatedAt: expect.any(String),
+    });
+    expect(deletion.body).not.toHaveProperty('interactions');
     const afterDelete = await request(httpServer).get(`/api/stories/${story.id}`).expect(200);
     expect(afterDelete.body.graphDecorations).toEqual([textResult.decoration]);
   });
@@ -1248,6 +1359,102 @@ unknown_command
       .expect(400);
   });
 
+  it('rejects an over-quota edit atomically with a stable 422 response, while allowing deletion', async () => {
+    const story = await createStory();
+    const first = await createInteraction(story.id);
+    const second = await createInteraction(story.id);
+    const previous = process.env.PARALLEAX_STORY_QUOTA_INTERACTIONS;
+    process.env.PARALLEAX_STORY_QUOTA_INTERACTIONS = '1';
+    try {
+      const rejected = await request(httpServer)
+        .post(`/api/stories/${story.id}/interactions`)
+        .send({})
+        .expect(422);
+      expect(rejected.body).toMatchObject({
+        code: 'STORY_QUOTA_EXCEEDED',
+        details: { resource: 'interactions', limit: 1, current: 2, attempted: 3 },
+      });
+      const unchanged = await request(httpServer).get(`/api/stories/${story.id}`).expect(200);
+      expect(unchanged.body.interactions).toHaveLength(2);
+      expect(unchanged.body.revision).toBe(second.revision);
+
+      await request(httpServer)
+        .delete(`/api/stories/${story.id}/interactions/${first.interactions[0].id}`)
+        .expect(200);
+      const reduced = await request(httpServer).get(`/api/stories/${story.id}`).expect(200);
+      expect(reduced.body.interactions).toHaveLength(1);
+
+      const undo = await request(httpServer)
+        .post(`/api/stories/${story.id}/history/undo`)
+        .expect(422);
+      expect(undo.body).toMatchObject({
+        code: 'STORY_QUOTA_EXCEEDED',
+        details: { resource: 'interactions', limit: 1, current: 1, attempted: 2 },
+      });
+      const afterUndo = await request(httpServer).get(`/api/stories/${story.id}`).expect(200);
+      expect(afterUndo.body).toMatchObject({ revision: reduced.body.revision });
+      expect(afterUndo.body.interactions).toHaveLength(1);
+    } finally {
+      if (previous === undefined) delete process.env.PARALLEAX_STORY_QUOTA_INTERACTIONS;
+      else process.env.PARALLEAX_STORY_QUOTA_INTERACTIONS = previous;
+    }
+  });
+
+  it('rejects an over-quota ChoiceScript import without creating a Story', async () => {
+    const previous = process.env.PARALLEAX_STORY_QUOTA_INTERACTIONS;
+    process.env.PARALLEAX_STORY_QUOTA_INTERACTIONS = '1';
+    try {
+      const rejected = await request(httpServer)
+        .post('/api/stories/imports/choicescript')
+        .send({
+          files: [
+            {
+              name: 'startup.txt',
+              content:
+                '*title Quota import\nOpening.\n*choice\n  #Continue\n    Ending.\n    *ending',
+            },
+          ],
+        })
+        .expect(422);
+      expect(rejected.body).toMatchObject({
+        code: 'STORY_QUOTA_EXCEEDED',
+        details: { resource: 'interactions', limit: 1, current: 0 },
+      });
+      expect(rejected.body.details.attempted).toBeGreaterThan(1);
+      const stories = await request(httpServer).get('/api/stories').expect(200);
+      expect(stories.body.totalCount).toBe(0);
+    } finally {
+      if (previous === undefined) delete process.env.PARALLEAX_STORY_QUOTA_INTERACTIONS;
+      else process.env.PARALLEAX_STORY_QUOTA_INTERACTIONS = previous;
+    }
+  });
+
+  it('rejects redo when it would restore an over-quota entity', async () => {
+    const story = await createStory();
+    await createInteraction(story.id);
+    await createInteraction(story.id);
+    await request(httpServer).post(`/api/stories/${story.id}/history/undo`).expect(201);
+
+    const previous = process.env.PARALLEAX_STORY_QUOTA_INTERACTIONS;
+    process.env.PARALLEAX_STORY_QUOTA_INTERACTIONS = '1';
+    try {
+      const before = await request(httpServer).get(`/api/stories/${story.id}`).expect(200);
+      const rejected = await request(httpServer)
+        .post(`/api/stories/${story.id}/history/redo`)
+        .expect(422);
+      expect(rejected.body).toMatchObject({
+        code: 'STORY_QUOTA_EXCEEDED',
+        details: { resource: 'interactions', limit: 1, current: 1, attempted: 2 },
+      });
+      const after = await request(httpServer).get(`/api/stories/${story.id}`).expect(200);
+      expect(after.body).toMatchObject({ revision: before.body.revision });
+      expect(after.body.interactions).toHaveLength(1);
+    } finally {
+      if (previous === undefined) delete process.env.PARALLEAX_STORY_QUOTA_INTERACTIONS;
+      else process.env.PARALLEAX_STORY_QUOTA_INTERACTIONS = previous;
+    }
+  });
+
   it('rejects raw request bodies above the global HTTP limit', async () => {
     const response = await request(httpServer)
       .post('/api/stories')
@@ -1320,9 +1527,16 @@ unknown_command
       .delete(`/api/stories/${story.id}/interactions/${parent.id}`)
       .expect(200);
 
-    expect(response.body.interactions).toHaveLength(1);
-    expect(response.body.interactions[0].id).toBe(child.id);
-    expect(response.body.interactions[0].triggers[0]).toMatchObject({
+    expect(response.body as InteractionDeletionResult).toMatchObject({
+      interactionId: parent.id,
+      revision: expect.any(Number),
+      updatedAt: expect.any(String),
+    });
+    expect(response.body).not.toHaveProperty('interactions');
+    const afterDelete = await request(httpServer).get(`/api/stories/${story.id}`).expect(200);
+    expect(afterDelete.body.interactions).toHaveLength(1);
+    expect(afterDelete.body.interactions[0].id).toBe(child.id);
+    expect(afterDelete.body.interactions[0].triggers[0]).toMatchObject({
       inputInteractionIds: [],
       conditionGroups: [{ conditions: [] }],
     });
@@ -1352,7 +1566,11 @@ unknown_command
       .delete(`/api/stories/${story.id}/interactions/${firstParent.id}`)
       .expect(200);
 
-    const updatedChild = (response.body as Story).interactions.find(
+    expect(response.body as InteractionDeletionResult).toMatchObject({
+      interactionId: firstParent.id,
+    });
+    const afterDelete = await request(httpServer).get(`/api/stories/${story.id}`).expect(200);
+    const updatedChild = (afterDelete.body as Story).interactions.find(
       (item) => item.id === child.id,
     )!;
     expect(updatedChild.triggers).toHaveLength(1);
@@ -1677,6 +1895,56 @@ unknown_command
     expect((assigned.body as InteractionMutationResult).interaction.characterIds).toEqual([
       character.id,
     ]);
+  });
+
+  it('validates expressions over HTTP and reconstructs their results from the journey', async () => {
+    const story = await createStory();
+    const root = (await createInteraction(story.id)).interactions[0];
+    const definition = await request(httpServer)
+      .post(`/api/stories/${story.id}/stat-definitions`)
+      .send({ name: 'Score', valueType: 'number' })
+      .expect(201);
+    const assigned = await request(httpServer)
+      .post(`/api/stories/${story.id}/stats`)
+      .send({
+        statDefinitionId: definition.body.statDefinition.id,
+        ownerType: 'story',
+        initialValue: 2,
+      })
+      .expect(201);
+    const statId = assigned.body.stats[0].id as string;
+    const effect = { statId, operation: 'set', expression: `(@{${statId}} + 3) * 2` };
+    const interactionUrl = `/api/stories/${story.id}/interactions/${root.id}`;
+    await request(httpServer)
+      .patch(interactionUrl)
+      .send({ statEffects: [effect] })
+      .expect(200);
+    for (const invalid of [
+      { ...effect, expression: true },
+      { ...effect, expression: '@{other-story}' },
+      { ...effect, expression: 'true' },
+      { ...effect, expression: '' },
+      { ...effect, value: 2 },
+    ]) {
+      await request(httpServer)
+        .patch(interactionUrl)
+        .send({ statEffects: [invalid] })
+        .expect(400);
+    }
+    const loaded = await request(httpServer).get(`/api/stories/${story.id}`).expect(200);
+    expect(loaded.body.interactions[0].statEffects).toEqual([effect]);
+    const progress = await request(httpServer)
+      .patch(`/api/stories/${story.id}/progress`)
+      .send({ journeyInteractionIds: [root.id] })
+      .expect(200);
+    expect(progress.body.state.statValues).toEqual({ [statId]: 10 });
+    const condition = { statId, operator: 'gte', expression: `@{${statId}} - 1` };
+    await request(httpServer)
+      .patch(`${interactionUrl}/triggers/${root.triggers[0].id}`)
+      .send({ conditions: [condition] })
+      .expect(200);
+    const reloaded = await request(httpServer).get(`/api/stories/${story.id}`).expect(200);
+    expect(getTriggerConditions(reloaded.body.interactions[0].triggers[0])).toEqual([condition]);
   });
 
   it('creates typed stats, attaches them, and replays effects and conditions', async () => {
@@ -2216,20 +2484,32 @@ unknown_command
         `/api/stories/${story.id}/characters/${character.body.character.id}/stats/${stat.body.stat.id}`,
       )
       .expect(200);
-    expect(withoutStat.body.characters[0].stats).toEqual([]);
-    expect(withoutStat.body.interactions[0].statEffects).toEqual([
+    expect(withoutStat.body as CharacterStatDeletionResult).toMatchObject({
+      characterId: character.body.character.id,
+      statId: stat.body.stat.id,
+    });
+    expect(withoutStat.body).not.toHaveProperty('interactions');
+    const afterStatDelete = await request(httpServer).get(`/api/stories/${story.id}`).expect(200);
+    expect(afterStatDelete.body.characters[0].stats).toEqual([]);
+    expect(afterStatDelete.body.interactions[0].statEffects).toEqual([
       expect.objectContaining({ itemId: item.body.item.id }),
     ]);
-    expect(getTriggerConditions(withoutStat.body.interactions[0].triggers[0])).toEqual([]);
+    expect(getTriggerConditions(afterStatDelete.body.interactions[0].triggers[0])).toEqual([]);
 
     const withoutItem = await request(httpServer)
       .delete(
         `/api/stories/${story.id}/characters/${character.body.character.id}/items/${item.body.item.id}`,
       )
       .expect(200);
-    expect(withoutItem.body.characters[0].items).toEqual([]);
-    expect(withoutItem.body.interactions[0].itemEffects).toEqual([]);
-    expect(withoutItem.body.interactions[0].statEffects).toEqual([]);
+    expect(withoutItem.body as CharacterItemDeletionResult).toMatchObject({
+      characterId: character.body.character.id,
+      itemId: item.body.item.id,
+    });
+    expect(withoutItem.body).not.toHaveProperty('interactions');
+    const afterItemDelete = await request(httpServer).get(`/api/stories/${story.id}`).expect(200);
+    expect(afterItemDelete.body.characters[0].items).toEqual([]);
+    expect(afterItemDelete.body.interactions[0].itemEffects).toEqual([]);
+    expect(afterItemDelete.body.interactions[0].statEffects).toEqual([]);
   });
 
   it('rejects foreign stat references and duplicate effects', async () => {
@@ -2323,8 +2603,15 @@ unknown_command
       .delete(`/api/stories/${story.id}/interactions/${interaction.id}/triggers/${trigger.id}`)
       .expect(200);
 
-    expect(response.body.interactions[0].triggers).toHaveLength(1);
-    expect(response.body.interactions[0].triggers[0].id).toBe(createdTrigger.id);
+    expect(response.body as TriggerDeletionResult).toMatchObject({
+      interactionId: interaction.id,
+      triggerId: trigger.id,
+      triggerRemoved: true,
+    });
+    expect(response.body).not.toHaveProperty('interactions');
+    const afterDelete = await request(httpServer).get(`/api/stories/${story.id}`).expect(200);
+    expect(afterDelete.body.interactions[0].triggers).toHaveLength(1);
+    expect(afterDelete.body.interactions[0].triggers[0].id).toBe(createdTrigger.id);
   });
 
   it('DELETE /api/stories/:storyId/interactions/:interactionId/triggers/:triggerId turns the last trigger into a root trigger', async () => {
@@ -2341,7 +2628,13 @@ unknown_command
       .delete(`/api/stories/${story.id}/interactions/${interaction.id}/triggers/${trigger.id}`)
       .expect(200);
 
-    const updatedInteraction = (response.body as Story).interactions.find(
+    expect(response.body as TriggerDeletionResult).toMatchObject({
+      interactionId: interaction.id,
+      triggerId: trigger.id,
+      triggerRemoved: false,
+    });
+    const afterDelete = await request(httpServer).get(`/api/stories/${story.id}`).expect(200);
+    const updatedInteraction = (afterDelete.body as Story).interactions.find(
       (item) => item.id === interaction.id,
     )!;
     expect(updatedInteraction.triggers).toEqual([{ ...trigger, inputInteractionIds: [] }]);

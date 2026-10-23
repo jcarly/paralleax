@@ -1,7 +1,9 @@
 import { createPortal } from 'react-dom';
-import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import { useContext, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import { ModalPortalContext } from './modalPortalContext';
 
 export function FieldHelpTooltip({ label, help }: { label: string; help: string }) {
+  const modalPortal = useContext(ModalPortalContext);
   const tooltipId = useId();
   const triggerRef = useRef<HTMLButtonElement>(null);
   const tooltipRef = useRef<HTMLSpanElement>(null);
@@ -68,7 +70,7 @@ export function FieldHelpTooltip({ label, help }: { label: string; help: string 
         >
           {help}
         </span>,
-        document.body,
+        modalPortal?.current ?? document.body,
       )}
     </>
   );

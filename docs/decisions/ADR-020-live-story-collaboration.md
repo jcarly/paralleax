@@ -1,8 +1,13 @@
 # ADR-020: Live Story Collaboration by Authorized Invalidation
 
-Status: Accepted
+Status: Accepted; same-field editing direction amended by ADR-034
 
 Date: 2026-08-16
+
+Amendment (2026-10-17): [ADR-034](ADR-034-collaborative-offline-authoring.md)
+supersedes this ADR's same-field last-committed-write behavior as the accepted
+future product direction. The invalidation-and-reload behavior below describes
+the current implementation, not the target for collaborative text editing.
 
 ## Context
 

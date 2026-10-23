@@ -23,7 +23,8 @@ export interface StatEffect {
   statId: string;
   itemId?: string;
   operation: 'add' | 'set';
-  value: StatValue;
+  value?: StatValue;
+  expression?: string;
 }
 
 export function getStatValueType(definition: StatDefinition): StatValueType {

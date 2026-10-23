@@ -51,6 +51,7 @@ export function RichTextInteractionLinkDialog({
           {t('richText.linkText')}
           <input
             autoFocus
+            data-modal-autofocus
             value={text}
             placeholder={t('richText.linkTextPlaceholder')}
             onChange={(event) => setText(event.target.value)}

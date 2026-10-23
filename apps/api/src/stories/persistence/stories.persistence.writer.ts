@@ -101,11 +101,11 @@ async function insertInteractionGraph(client: Queryable, story: Story) {
   await insertJsonRows(
     client,
     `INSERT INTO interaction_stat_effects
-     (story_id, interaction_id, stat_id, item_id, operation, value, sort_order)
-     SELECT story_id, interaction_id, stat_id, item_id, operation, value, sort_order
+     (story_id, interaction_id, stat_id, item_id, operation, value, expression, sort_order)
+     SELECT story_id, interaction_id, stat_id, item_id, operation, value, expression, sort_order
      FROM jsonb_to_recordset($1::jsonb) AS row(
        story_id text, interaction_id text, stat_id text, item_id text, operation text,
-       value jsonb, sort_order integer
+       value jsonb, expression text, sort_order integer
      )`,
     story.interactions.flatMap((interaction) =>
       (interaction.statEffects ?? []).map((effect, sortOrder) => ({
@@ -114,7 +114,8 @@ async function insertInteractionGraph(client: Queryable, story: Story) {
         stat_id: effect.statId,
         item_id: effect.itemId ?? null,
         operation: effect.operation,
-        value: effect.value,
+        value: effect.value ?? null,
+        expression: effect.expression ?? null,
         sort_order: sortOrder,
       })),
     ),
@@ -289,9 +290,9 @@ export async function persistStoryDifference(
 
 async function insertGroup(client: Queryable, storyId: string, group: Group, sortOrder: number) {
   await client.query(
-    `INSERT INTO story_groups (id, story_id, title, sort_order)
-     VALUES ($1, $2, $3, $4)`,
-    [group.id, storyId, group.title, sortOrder],
+    `INSERT INTO story_groups (id, story_id, title, sort_order, parent_group_id)
+     VALUES ($1, $2, $3, $4, $5)`,
+    [group.id, storyId, group.title, sortOrder, group.parentGroupId ?? null],
   );
   await replaceGroupInteractions(client, storyId, group);
 }
@@ -337,10 +338,14 @@ async function persistGroupDifference(client: Queryable, before: Story, after: S
       continue;
     }
 
-    if (previous.title !== group.title || (before.groups ?? []).indexOf(previous) !== sortOrder) {
+    if (
+      previous.title !== group.title ||
+      previous.parentGroupId !== group.parentGroupId ||
+      (before.groups ?? []).indexOf(previous) !== sortOrder
+    ) {
       await client.query(
-        'UPDATE story_groups SET title = $1, sort_order = $2 WHERE id = $3 AND story_id = $4',
-        [group.title, sortOrder, group.id, after.id],
+        'UPDATE story_groups SET title = $1, sort_order = $2, parent_group_id = $5 WHERE id = $3 AND story_id = $4',
+        [group.title, sortOrder, group.id, after.id, group.parentGroupId ?? null],
       );
     }
     if (JSON.stringify(previous.interactionIds) !== JSON.stringify(group.interactionIds)) {
@@ -506,11 +511,11 @@ async function insertInteractionStatEffects(client: Queryable, story: Story) {
   await insertJsonRows(
     client,
     `INSERT INTO interaction_stat_effects
-     (story_id, interaction_id, stat_id, item_id, operation, value, sort_order)
-     SELECT story_id, interaction_id, stat_id, item_id, operation, value, sort_order
+     (story_id, interaction_id, stat_id, item_id, operation, value, expression, sort_order)
+     SELECT story_id, interaction_id, stat_id, item_id, operation, value, expression, sort_order
      FROM jsonb_to_recordset($1::jsonb) AS row(
        story_id text, interaction_id text, stat_id text, item_id text,
-       operation text, value jsonb, sort_order integer
+       operation text, value jsonb, expression text, sort_order integer
      )`,
     story.interactions.flatMap((interaction) =>
       (interaction.statEffects ?? []).map((effect, sortOrder) => ({
@@ -519,7 +524,8 @@ async function insertInteractionStatEffects(client: Queryable, story: Story) {
         stat_id: effect.statId,
         item_id: effect.itemId ?? null,
         operation: effect.operation,
-        value: effect.value,
+        value: effect.value ?? null,
+        expression: effect.expression ?? null,
         sort_order: sortOrder,
       })),
     ),
@@ -679,15 +685,16 @@ async function replaceInteractionStatEffects(
   for (const [index, effect] of (interaction.statEffects ?? []).entries()) {
     await client.query(
       `INSERT INTO interaction_stat_effects
-       (story_id, interaction_id, stat_id, item_id, operation, value, sort_order)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+       (story_id, interaction_id, stat_id, item_id, operation, value, expression, sort_order)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
       [
         storyId,
         interaction.id,
         effect.statId,
         effect.itemId ?? null,
         effect.operation,
-        JSON.stringify(effect.value),
+        effect.value === undefined ? null : JSON.stringify(effect.value),
+        effect.expression ?? null,
         index,
       ],
     );

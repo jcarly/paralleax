@@ -218,4 +218,15 @@ describe('DatabaseMigrator', () => {
     expect(migration?.sql).toMatch(/expires_at > created_at/i);
     expect(migration?.sql).toMatch(/account_action_tokens_expiry_idx/i);
   });
+
+  it('stores exactly one literal or expression source for stat effects', () => {
+    const migration = databaseMigrations.find(
+      ({ id }) => id === '202610210044_stat_effect_expressions',
+    );
+
+    expect(migration?.sql).toMatch(/ALTER COLUMN value DROP NOT NULL/i);
+    expect(migration?.sql).toMatch(/ADD COLUMN expression text/i);
+    expect(migration?.sql).toMatch(/CHECK \(\(value IS NULL\) <> \(expression IS NULL\)\)/i);
+    expect(migration?.sql).toMatch(/char_length\(btrim\(expression\)\) BETWEEN 1 AND 4000/i);
+  });
 });

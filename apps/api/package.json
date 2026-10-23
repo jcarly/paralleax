@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "nest start --watch --builder webpack",
-    "build": "nest build --builder webpack && node ../../scripts/smoke-qsp-worker.mjs",
+    "build": "nest build --builder webpack && node ../../scripts/smoke-qsp-worker.mjs && node ../../scripts/smoke-choicescript-worker.mjs",
     "start": "node dist/main.js",
     "migrate": "nest start --builder webpack -- --migrate",
     "migrate:prod": "node dist/main.js --migrate",

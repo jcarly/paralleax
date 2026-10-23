@@ -74,8 +74,10 @@ For conditions:
   interaction;
 - every `isPresent: false` condition must reference a character absent from the
   current interaction;
-- typed stat conditions compare their current value with a typed literal or a
-  same-Story stat target. Matching values support `=` or `!=`; numeric stats
+- typed stat conditions compare their current value with a typed literal, a
+  same-Story assignment, or a deterministic typed expression. Expressions see
+  the replay state at that journey step and exact-item references resolve only
+  against the identified item instance. Matching values support `=` or `!=`; numeric stats
   additionally support `<`, `<=`, `>`, and `>=`. A missing or mismatched value
   fails the condition;
 - temporal conditions compare the current story-local date, weekday, and time
@@ -412,7 +414,7 @@ creates or overwrites a named save.
 
 The MVP reader does not support:
 
-- calculated stats, formulas, or dependency graphs;
+- calculated/read-only stats, reactive formulas, or dependency graphs;
 - automatic choices;
 - final interactions;
 - weighted or prioritized choices;
