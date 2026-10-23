@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { STORY_LIST_PAGE_SIZE, type Story, type StorySummary } from '@paralleax/shared';
@@ -9,6 +9,12 @@ import { ModalPortal } from '../components/ModalPortal';
 import { StoryImportDialog } from '../features/story-import/StoryImportDialog';
 import { loadStoryEditor, loadStoryPlayer } from './storyRouteLoaders';
 import './ProductPages.css';
+
+const StoryImportDialog = lazy(() =>
+  import('../features/story-import/StoryImportDialog').then(({ StoryImportDialog }) => ({
+    default: StoryImportDialog,
+  })),
+);
 
 type StoryFilter = 'all' | 'editable' | 'commentable' | 'owned';
 type StorySort = 'updated' | 'title';
@@ -446,23 +452,25 @@ export function StoryList({ user }: { user: AuthUser | null }) {
       ) : null}
 
       {importing && isAuthenticated ? (
-        <StoryImportDialog
-          isAdministrator={isAdministrator}
-          onClose={closeImportDialog}
-          onImported={(story) => {
-            setStories((items) => [
-              {
-                ...story,
-                owner:
-                  story.owner ??
-                  (user ? { id: user.id, displayName: user.displayName } : undefined),
-              },
-              ...items,
-            ]);
-            setTotalCount((count) => count + 1);
-            resetLibraryView();
-          }}
-        />
+        <Suspense fallback={null}>
+          <StoryImportDialog
+            isAdministrator={isAdministrator}
+            onClose={closeImportDialog}
+            onImported={(story) => {
+              setStories((items) => [
+                {
+                  ...story,
+                  owner:
+                    story.owner ??
+                    (user ? { id: user.id, displayName: user.displayName } : undefined),
+                },
+                ...items,
+              ]);
+              setTotalCount((count) => count + 1);
+              resetLibraryView();
+            }}
+          />
+        </Suspense>
       ) : null}
     </main>
   );

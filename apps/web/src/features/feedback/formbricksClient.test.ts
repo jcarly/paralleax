@@ -1,5 +1,14 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createFormbricksFeedbackClient } from './formbricksClient';
+
+const lazySdk = vi.hoisted(() => ({
+  setup: vi.fn().mockResolvedValue(undefined),
+  setLanguage: vi.fn().mockResolvedValue(undefined),
+  registerRouteChange: vi.fn().mockResolvedValue(undefined),
+  track: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock('@formbricks/js', () => ({ default: lazySdk }));
 
 function createSdk() {
   return {
@@ -25,6 +34,11 @@ describe('Formbricks feedback client', () => {
     workspaceId: 'workspace-1',
     appUrl: 'https://app.formbricks.com',
   };
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.resetModules();
+  });
 
   it('sets up once and forwards route changes and hidden fields', async () => {
     const sdk = createSdk();
@@ -93,6 +107,37 @@ describe('Formbricks feedback client', () => {
     try {
       const client = createFormbricksFeedbackClient(sdk, config);
       await expect(client.setup()).resolves.toBe(true);
+    } finally {
+      window.formbricks = previousSdk;
+    }
+  });
+
+  it('loads the browser SDK on demand and forwards configured feedback calls', async () => {
+    vi.stubEnv('VITE_FORMBRICKS_WORKSPACE_ID', 'workspace-1');
+    vi.stubEnv('VITE_FORMBRICKS_APP_URL', 'https://app.formbricks.com');
+    vi.resetModules();
+    const previousSdk = window.formbricks;
+    window.formbricks = lazySdk as unknown as typeof window.formbricks;
+
+    try {
+      const { formbricksFeedbackClient } = await import('./formbricksClient');
+
+      expect(formbricksFeedbackClient.isConfigured).toBe(true);
+      await expect(
+        Promise.all([formbricksFeedbackClient.setup(), formbricksFeedbackClient.setup()]),
+      ).resolves.toEqual([true, true]);
+      await expect(formbricksFeedbackClient.registerRouteChange('fr')).resolves.toBe(true);
+      await expect(
+        formbricksFeedbackClient.trackFeedback('fr', { paralleax_surface: 'editor' }),
+      ).resolves.toBe(true);
+
+      expect(lazySdk.setup).toHaveBeenCalledOnce();
+      expect(lazySdk.setup).toHaveBeenCalledWith(config);
+      expect(lazySdk.setLanguage).toHaveBeenCalledWith('fr');
+      expect(lazySdk.registerRouteChange).toHaveBeenCalledOnce();
+      expect(lazySdk.track).toHaveBeenCalledWith('paralleax_feedback_opened', {
+        hiddenFields: { paralleax_surface: 'editor' },
+      });
     } finally {
       window.formbricks = previousSdk;
     }

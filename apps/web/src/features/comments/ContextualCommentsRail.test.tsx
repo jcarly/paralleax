@@ -80,6 +80,37 @@ describe('ContextualCommentsRail', () => {
     expect(onDelete).toHaveBeenCalledWith(thread.id);
   });
 
+  it('keeps the discussion open when resolving while focus is in the reply form', async () => {
+    const user = userEvent.setup();
+    const onStatus = vi.fn().mockResolvedValue({ ...thread, status: 'resolved' });
+
+    function Harness() {
+      const [selectedThreadId, setSelectedThreadId] = useState<string | undefined>(thread.id);
+      return (
+        <ContextualCommentsRail
+          threads={[thread]}
+          selectedThreadId={selectedThreadId}
+          error=""
+          canComment
+          canManageThread={() => true}
+          onSelect={setSelectedThreadId}
+          onCreate={vi.fn()}
+          onCancelDraft={vi.fn()}
+          onReply={vi.fn()}
+          onStatus={onStatus}
+          onClose={vi.fn()}
+        />
+      );
+    }
+
+    render(<Harness />);
+
+    await user.type(screen.getByRole('textbox', { name: 'Reply' }), 'A short reply.');
+    await user.click(screen.getByRole('button', { name: 'Resolve' }));
+
+    expect(onStatus).toHaveBeenCalledWith(thread.id, 'resolved');
+  });
+
   it('shows a new contextual comment composer without opening the global list', async () => {
     const user = userEvent.setup();
     const onCreate = vi.fn().mockResolvedValue(thread);

@@ -26,6 +26,9 @@ test.describe('automated accessibility', () => {
     await mockAuthenticatedLibrary(page);
     await page.goto('/');
     await expect(page.getByRole('heading', { name: 'Stories', exact: true })).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: 'AU Author: Account settings', exact: true }),
+    ).toBeVisible();
 
     await expectNoWcagViolations(page);
 
