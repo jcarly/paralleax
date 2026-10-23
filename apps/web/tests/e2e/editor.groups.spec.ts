@@ -221,6 +221,7 @@ test('creates directly with Ctrl+G, renames inline and uses context menus withou
   await title.fill('Cancelled');
   await title.press('Escape');
   await expect(groups.getByRole('button', { name: 'Renamed 1 interaction' })).toBeVisible();
+  await expect(groups.getByRole('treeitem', { name: /Renamed/ })).toBeFocused();
   await page.keyboard.press('Shift+F10');
   await page.getByRole('menuitem', { name: 'Delete group' }).click();
   await expect(groups.getByRole('button', { name: 'Renamed 1 interaction' })).toHaveCount(0);

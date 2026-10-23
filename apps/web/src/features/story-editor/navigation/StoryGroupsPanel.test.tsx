@@ -149,6 +149,7 @@ describe('Groups navigation', () => {
     await user.type(input, 'Cancelled');
     await user.keyboard('{Escape}');
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+    expect(screen.getByRole('treeitem', { name: /Opening/ })).toHaveFocus();
     expect(onUpdate).not.toHaveBeenCalled();
     await user.keyboard('{F2}');
     input = screen.getByRole('textbox', { name: 'Group title' });

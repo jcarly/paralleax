@@ -1,4 +1,12 @@
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent,
+} from 'react';
 import { createPortal } from 'react-dom';
 import {
   DndContext,
@@ -53,9 +61,15 @@ export function StoryGroupTreePanel(props: StoryGroupsPanelProps) {
   const [activeId, setActiveId] = useState<string>();
   const [target, setTarget] = useState<GroupDropTarget>();
   const panel = useRef<HTMLElement>(null);
+  const restoreFocusGroupId = useRef<string | undefined>(undefined);
   const pointerY = useRef(0);
   const groups = useMemo(() => props.story.groups ?? [], [props.story.groups]);
   const open = collapsedAtCount !== groups.length || Boolean(props.editingGroupId);
+  const focusRow = useCallback((id?: string) => {
+    if (!id) return;
+    const row = document.getElementById(`story-group-${id}`);
+    if (row && panel.current?.contains(row)) row.focus();
+  }, []);
   const tree = useMemo(
     () => projectGroupTree(groups, new Set(props.story.interactions.map(({ id }) => id)), query),
     [groups, props.story.interactions, query],
@@ -113,6 +127,12 @@ export function StoryGroupTreePanel(props: StoryGroupsPanelProps) {
       .find((row) => row.dataset.groupId === props.editingGroupId)
       ?.scrollIntoView?.({ block: 'nearest' });
   }, [props.editingGroupId]);
+  useLayoutEffect(() => {
+    const groupId = restoreFocusGroupId.current;
+    if (!groupId || props.editingGroupId) return;
+    restoreFocusGroupId.current = undefined;
+    focusRow(groupId);
+  }, [focusRow, props.editingGroupId]);
 
   async function mutate(action: () => Promise<unknown>) {
     if (locked.current || props.readOnly) return false;
@@ -143,11 +163,6 @@ export function StoryGroupTreePanel(props: StoryGroupsPanelProps) {
       else next.add(id);
       return next;
     });
-  }
-  function focusRow(id?: string) {
-    if (!id) return;
-    const row = document.getElementById(`story-group-${id}`);
-    if (row && panel.current?.contains(row)) row.focus();
   }
   function move(group: Group, direction: 'up' | 'down' | 'in' | 'out') {
     const siblings = tree.children.get(group.parentGroupId) ?? [];
@@ -359,8 +374,8 @@ export function StoryGroupTreePanel(props: StoryGroupsPanelProps) {
                   onMenu={(position) => setMenu({ groupId: group.id, position })}
                   onRename={(title) => mutate(() => props.onUpdate(group.id, { title }))}
                   onRenameComplete={(restoreFocus) => {
+                    if (restoreFocus) restoreFocusGroupId.current = group.id;
                     props.onEditingChange(undefined);
-                    if (restoreFocus) window.requestAnimationFrame(() => focusRow(group.id));
                   }}
                   onKeyDown={(event) => keyDown(event, group)}
                 />

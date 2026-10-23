@@ -46,7 +46,9 @@ describe('RichTextEditor', () => {
       expect(execCommand).toHaveBeenCalledWith(commandName, false, commandValue);
     }
 
-    await user.click(screen.getByRole('button', { name: 'Add image or GIF' }));
+    const addImageButton = screen.getByRole('button', { name: /Add image or GIF/ });
+    expect(addImageButton).toHaveAccessibleName('Image/GIF: Add image or GIF');
+    await user.click(addImageButton);
     expect(execCommand).toHaveBeenCalledWith(
       'insertImage',
       false,
@@ -289,7 +291,8 @@ describe('RichTextEditor', () => {
       <RichTextEditor value="" onChange={vi.fn()} onBlur={vi.fn()} story={story} />,
     );
 
-    const addVariable = within(container).getByRole('button', { name: 'Add variable' });
+    const addVariable = within(container).getByRole('button', { name: /Add variable/ });
+    expect(addVariable).toHaveAccessibleName('{x}: Add variable');
     await user.click(addVariable);
     expect(screen.getByRole('dialog', { name: 'Add a variable' })).toBeInTheDocument();
     const owner = screen.getByLabelText('Variable owner');

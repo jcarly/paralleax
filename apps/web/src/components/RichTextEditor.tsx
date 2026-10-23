@@ -687,7 +687,7 @@ export function RichTextEditor({
         </button>
         <button
           type="button"
-          aria-label={t('richText.addImage')}
+          aria-label={`${t('richText.image')}: ${t('richText.addImage')}`}
           onMouseDown={(e) => e.preventDefault()}
           onClick={insertImage}
         >
@@ -731,7 +731,7 @@ export function RichTextEditor({
         </button>
         <button
           type="button"
-          aria-label={t('richText.addVariable')}
+          aria-label={`{x}: ${t('richText.addVariable')}`}
           title={t('richText.addVariable')}
           disabled={!hasVariables}
           onMouseDown={(event) => event.preventDefault()}
