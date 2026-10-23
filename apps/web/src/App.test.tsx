@@ -97,7 +97,7 @@ describe('App', () => {
     );
 
     await user.click(await screen.findByRole('button', { name: 'Account settings' }));
-    const input = screen.getByLabelText('Display name');
+    const input = await screen.findByLabelText('Display name');
     await user.clear(input);
     await user.type(input, '  Alice   Cooper  ');
     await user.click(screen.getByRole('button', { name: 'Save' }));
@@ -262,7 +262,9 @@ describe('App', () => {
 
     act(() => window.dispatchEvent(new Event('paralleax:session-expired')));
 
-    expect(screen.getByRole('heading', { name: 'Sign in to Paralleax' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: 'Sign in to Paralleax' }),
+    ).toBeInTheDocument();
     expect(
       screen.getByText('Your session expired. Sign in again to continue.'),
     ).toBeInTheDocument();

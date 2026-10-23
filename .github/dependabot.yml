@@ -2,66 +2,66 @@
 # Security update PRs are not grouped or delayed by these version-update rules.
 version: 2
 updates:
-  - package-ecosystem: "npm"
-    directory: "/"
+  - package-ecosystem: 'npm'
+    directory: '/'
     schedule:
-      interval: "weekly"
-      day: "tuesday"
-      time: "09:00"
-      timezone: "Europe/Paris"
+      interval: 'weekly'
+      day: 'tuesday'
+      time: '09:00'
+      timezone: 'Europe/Paris'
     open-pull-requests-limit: 5
     cooldown:
       default-days: 7
     groups:
       npm-production:
-        applies-to: "version-updates"
-        dependency-type: "production"
+        applies-to: 'version-updates'
+        dependency-type: 'production'
         update-types:
-          - "minor"
-          - "patch"
+          - 'minor'
+          - 'patch'
       npm-development:
-        applies-to: "version-updates"
-        dependency-type: "development"
+        applies-to: 'version-updates'
+        dependency-type: 'development'
         update-types:
-          - "minor"
-          - "patch"
+          - 'minor'
+          - 'patch'
 
-  - package-ecosystem: "github-actions"
-    directory: "/"
+  - package-ecosystem: 'github-actions'
+    directory: '/'
     schedule:
-      interval: "weekly"
-      day: "wednesday"
-      time: "09:00"
-      timezone: "Europe/Paris"
+      interval: 'weekly'
+      day: 'wednesday'
+      time: '09:00'
+      timezone: 'Europe/Paris'
     open-pull-requests-limit: 3
     groups:
       github-actions-minor-patch:
-        applies-to: "version-updates"
+        applies-to: 'version-updates'
         patterns:
-          - "*"
+          - '*'
         update-types:
-          - "minor"
-          - "patch"
+          - 'minor'
+          - 'patch'
 
-  - package-ecosystem: "docker"
-    directory: "/"
+  - package-ecosystem: 'docker'
+    directory: '/'
     schedule:
-      interval: "weekly"
-      day: "thursday"
-      time: "09:00"
-      timezone: "Europe/Paris"
+      interval: 'weekly'
+      day: 'thursday'
+      time: '09:00'
+      timezone: 'Europe/Paris'
     open-pull-requests-limit: 2
 
-  - package-ecosystem: "docker-compose"
-    directory: "/"
+  - package-ecosystem: 'docker-compose'
+    directory: '/'
     schedule:
-      interval: "weekly"
-      day: "thursday"
-      time: "09:30"
-      timezone: "Europe/Paris"
+      interval: 'weekly'
+      day: 'thursday'
+      time: '09:30'
+      timezone: 'Europe/Paris'
     open-pull-requests-limit: 2
     # PostgreSQL major upgrades require an explicit database migration plan.
     ignore:
-      - dependency-name: "postgres"
+      - dependency-name: 'postgres'
         update-types:
-          - "version-update:semver-major"
+          - 'version-update:semver-major'
