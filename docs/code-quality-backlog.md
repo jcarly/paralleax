@@ -385,12 +385,21 @@ unchanged snapshot.
 
 ### P1 — Shared styling and verified behavior
 
-- [ ] **DS-05 — Separate common reader styles from simulation-only styles**
+- [x] **DS-05 — Separate common reader styles from simulation-only styles**
       (D5). Keep the current reader appearance and Simulation behavior while
       removing accidental cascade overrides. Depends on DS-04 token scope.
       Acceptance: normal reader computed card/layout styles match the approved
       baseline; simulation editing, choices, timers and saves are unchanged.
-      Resolution commit: TBD.
+      **Completed 2026-10-24:** page/card and responsive layout overrides in
+      `apps/web/src/features/story-player/storySimulation.css` now require the
+      `.simulation-mode` root, so normal reading uses its `.player-page` and
+      `.player-card` baseline from `storyPlayer.css`. The save-row surface uses
+      the existing root `--color-surface-secondary` token instead of the
+      undefined `--color-surface-muted`. Playwright verifies computed Reader and
+      Simulation layout at desktop and mobile sizes and the save-row surface in
+      both modes; 30 focused StoryPlayer Vitest tests, 3 Playwright regressions,
+      lint, typecheck and the web production build passed. Implementation commit:
+      `9f44a73`.
 - [ ] **DS-06 — Make help tooltips dismissible and usable** (D6, D7). Extend the
       existing `FieldHelpTooltip`; do not add a parallel tooltip system.
       Acceptance: Escape dismisses focused help, hover content remains reachable
