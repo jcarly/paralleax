@@ -459,11 +459,12 @@ those controls. Graph markers remain 18–20px in authored geometry; zoom, spaci
 and target-size exceptions remain open for browser review and are not inferred
 from CSS dimensions alone.
 
-- [ ] **DS-08 — Reconcile typography after product review** (D9). Do not select
-      or bundle a new font as part of mechanical cleanup. Acceptance: UI and
-      reader families, fallbacks, label/value sizing and catalogue examples are
-      agreed and documented; only then align code. Depends on human visual
-      approval. Resolution commit: TBD.
+- [x] **DS-08 — Reconcile typography after product review** (D9). Product review
+      approved the shared Geist/system interface stack, Georgia narrative stack,
+      12px/14px roles, and catalogue samples. No font files were added. Acceptance
+      met: families, fallbacks, label/value sizing and catalogue examples are
+      agreed, documented, and aligned in code. Graph micro-labels remain
+      density-specific. Resolution commit: `3268dda`.
 - [ ] **DS-09 — Synchronize design documentation with accepted implementation**
       (D11). Preserve historical rationale and resolve contradictions against
       domain invariants/accepted ADRs; update docs alongside the relevant code.
