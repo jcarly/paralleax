@@ -195,6 +195,7 @@ button:disabled {
 }
 .field-help-tooltip-content.is-visible {
   opacity: 1;
+  pointer-events: auto;
   transform: translateY(0);
   visibility: visible;
 }

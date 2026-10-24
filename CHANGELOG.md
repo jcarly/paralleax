@@ -37,6 +37,10 @@
 - Bound shared eyebrow labels to the root accent token so editor history and
   reader surfaces keep their intended color outside product-page scopes.
 
+- Made field-help tooltips dismissible with Escape and kept hover content
+  reachable while the pointer moves from its trigger. Closing help preserves
+  focus and allows a subsequent Escape to close a containing dialog.
+
 - Improved Trigger condition readability with concise click-to-edit rules,
   uniform vertical field spacing, Enter/outside-focus collapse, explicit AND/OR
   connectors, and a combined-rule tooltip on graph markers. Removed redundant
