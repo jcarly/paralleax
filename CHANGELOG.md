@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Centralized the interface and narrative font stacks and compact text sizes.
+  Product pages now share the application UI stack, and Reader and Simulation
+  render narrative titles and text with the same serif family. Updated the
+  typography catalogue to match its displayed 12/14, 14/22, 24/30, and 48/52
+  values; graph micro-label sizing and authored decoration typography remain
+  density- and content-specific.
+
 - Improved enabled text contrast for editor counts and status, product
   placeholders, graph location markers, and Simulation help. Added opaque,
   two-color focus indicators to shared rich text and graph controls while

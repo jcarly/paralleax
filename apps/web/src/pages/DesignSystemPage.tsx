@@ -75,11 +75,11 @@ export function DesignSystemPage() {
               <dd>4 px</dd>
             </div>
             <div>
-              <dt>Body type</dt>
-              <dd>System sans</dd>
+              <dt>Interface type</dt>
+              <dd>Geist / system fallback</dd>
             </div>
             <div>
-              <dt>Display type</dt>
+              <dt>Narrative type</dt>
               <dd>Georgia</dd>
             </div>
             <div>
@@ -140,21 +140,23 @@ export function DesignSystemPage() {
             <div className="reference-card type-samples">
               <div className="reference-card-heading">
                 <h3>Typography</h3>
-                <code>1.25 scale</code>
+                <code>Display, heading, body</code>
               </div>
               <div className="display-sample">
                 <span>Display</span>
-                <b>Stories branch. Ideas connect.</b>
+                <b className="display-sample-text">Stories branch. Ideas connect.</b>
                 <small>48 / 52 · Georgia</small>
               </div>
               <div>
                 <span>Heading</span>
-                <b>The Archive Below</b>
+                <b className="heading-sample">The Archive Below</b>
                 <small>24 / 30 · Semibold</small>
               </div>
               <div>
                 <span>Body</span>
-                <p>A calm, readable rhythm keeps dense tools approachable.</p>
+                <p className="body-sample">
+                  A calm, readable rhythm keeps dense tools approachable.
+                </p>
                 <small>14 / 22 · Regular</small>
               </div>
             </div>

@@ -2,7 +2,7 @@
 .rich-text-editor-dialog label,
 .story-groups-panel label {
   display: block;
-  font-size: 0.78rem;
+  font-size: var(--type-size-compact);
   font-weight: 650;
   margin-bottom: 1rem;
   color: var(--color-muted);
@@ -17,7 +17,7 @@
 .inspector fieldset legend,
 .rich-text-editor-dialog fieldset legend {
   padding: 0 0.35rem;
-  font-size: 0.78rem;
+  font-size: var(--type-size-compact);
   font-weight: 650;
   color: var(--color-muted);
 }
@@ -48,6 +48,7 @@
   background: var(--color-surface-secondary);
   color: var(--color-text);
   font: inherit;
+  font-size: var(--type-size-control);
 }
 .inspector textarea,
 .rich-text-editor-dialog textarea {

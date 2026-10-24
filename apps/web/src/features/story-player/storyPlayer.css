@@ -24,7 +24,7 @@
   border-radius: 999px;
   background: var(--color-primary-soft);
   color: var(--color-primary-strong);
-  font-size: 0.74rem;
+  font-size: var(--type-size-compact);
   font-weight: 750;
 }
 .player-card {
@@ -41,7 +41,7 @@
   letter-spacing: 0.08em;
   color: var(--color-accent);
   font-weight: 750;
-  font-size: 0.75rem;
+  font-size: var(--type-size-compact);
 }
 .story-clock {
   display: block;
@@ -50,9 +50,19 @@
   font-variant-numeric: tabular-nums;
 }
 .story-body {
+  font-family: var(--font-narrative);
   font-size: 1.15rem;
   line-height: 1.7;
   white-space: pre-wrap;
+}
+
+.player-story-content > h1 {
+  margin: 0 0 1rem;
+  font-family: var(--font-narrative);
+  font-size: clamp(2rem, 4vw, 3rem);
+  font-weight: 500;
+  letter-spacing: -0.035em;
+  line-height: 1.08;
 }
 
 .story-body .interaction-link {
@@ -107,7 +117,7 @@ span.conditional-text {
   border-radius: 999px;
   background: var(--color-surface);
   color: var(--color-primary-strong);
-  font-size: 0.78rem;
+  font-size: var(--type-size-control);
   font-weight: 700;
 }
 
@@ -125,7 +135,7 @@ span.conditional-text {
   display: block;
   margin-top: 0.65rem;
   color: var(--color-subtle);
-  font-size: 0.76rem;
+  font-size: var(--type-size-compact);
   font-weight: 650;
 }
 

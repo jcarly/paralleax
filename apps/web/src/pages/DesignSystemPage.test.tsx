@@ -18,6 +18,13 @@ describe('DesignSystemPage', () => {
     ).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Color, type, and shape' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Narrative components' })).toBeInTheDocument();
+    expect(screen.getByText('Geist / system fallback')).toBeInTheDocument();
+    expect(screen.getByText('Georgia')).toBeInTheDocument();
+    expect(screen.getByText('Stories branch. Ideas connect.')).toHaveClass('display-sample-text');
+    expect(screen.getByText('The Archive Below')).toHaveClass('heading-sample');
+    expect(screen.getByText('A calm, readable rhythm keeps dense tools approachable.')).toHaveClass(
+      'body-sample',
+    );
     expect(screen.getByLabelText('Empty trigger marker')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Browse stories' })).toHaveAttribute('href', '/');
   });

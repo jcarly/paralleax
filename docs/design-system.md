@@ -65,7 +65,6 @@ Review these areas for consistency and make new decisions only where current
 product surfaces leave a genuine gap:
 
 - color palette;
-- typography;
 - spacing scale;
 - border radius and elevation;
 - icon usage;
@@ -107,11 +106,33 @@ badges and related accents, a place focus can shift the accent to green, and a
 group focus can shift it to violet. The story stays the same, but the author's
 point of view changes.
 
-Typography candidates:
+### Approved typography (2026-10-24)
 
-- Geist as the preferred first candidate;
-- IBM Plex Sans as a readable alternative;
-- Manrope as another strong alternative.
+Use the shared `--font-interface` stack for interface text throughout the app:
+Geist, followed by Geist Sans and platform sans-serif fallbacks. Use
+`--font-narrative` (Georgia, Times New Roman, serif) for story text and
+editorial/display headings. Reader prose, its title, and the editable Simulation
+surface share the narrative family so authors preview the same reading style.
+
+The font stacks reference installed system fonts; the web app does not download
+or bundle font files. The operating system may select a fallback when Geist or
+Georgia is unavailable. Product pages inherit the interface stack rather than
+depending on Inter being installed. The prototype remains a separate reference
+and is outside this decision.
+
+Use the shared type-size tokens for ordinary interface roles:
+
+- compact authoring labels and secondary hints: `--type-size-compact` (12px);
+- ordinary compact controls and field values: `--type-size-control` (14px);
+- catalogue body example: 14/22;
+- catalogue heading example: 24/30;
+- catalogue display example: 48/52.
+
+The graph keeps its current density-specific micro-label sizing and geometry;
+do not apply ordinary form sizing to React Flow markers or authored decoration
+text. Long-form story content and prominent headings keep their contextual
+sizes. The catalogue examples use these tokens and are the reference for their
+displayed values.
 
 Spacing should follow a simple 8-point system:
 

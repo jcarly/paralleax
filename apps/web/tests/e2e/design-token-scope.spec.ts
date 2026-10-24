@@ -37,8 +37,13 @@ test('resolves shared semantic colors in direct Simulation and editor navigation
   await page.goto('/stories/story-1/play?mode=simulation&startInteractionId=interaction-1');
   await expect(page.locator('.simulation-controls .product-eyebrow')).toBeVisible();
   const directColors = await readSimulationColors();
+  const directTypography = await readSimulationTypography(page);
   expect(directColors.badgeBackground).toBe(directColors.expectedBadgeBackground);
   expect(directColors.badgeText).toBe(directColors.expectedBadgeText);
+  expect(directTypography).toEqual({
+    title: 'Georgia, "Times New Roman", serif',
+    body: 'Georgia, "Times New Roman", serif',
+  });
 
   await page.goto('/stories/story-1/edit');
   await expect(page.getByTestId('interaction-node')).toContainText('Original title');
@@ -78,7 +83,22 @@ test('resolves shared semantic colors in direct Simulation and editor navigation
   await page.waitForURL('**/stories/story-1/play?mode=simulation&startInteractionId=interaction-1');
   await expect(page.locator('.simulation-controls .product-eyebrow')).toBeVisible();
   expect(await readSimulationColors()).toEqual(directColors);
+  expect(await readSimulationTypography(page)).toEqual(directTypography);
 });
+
+async function readSimulationTypography(page: import('@playwright/test').Page) {
+  return page.evaluate(() => {
+    const title = document.querySelector('.simulation-title-input');
+    const body = document.querySelector('.rich-text-surface');
+    if (!(title instanceof HTMLElement) || !(body instanceof HTMLElement)) {
+      throw new Error('Simulation title and body must be rendered');
+    }
+    return {
+      title: getComputedStyle(title).fontFamily,
+      body: getComputedStyle(body).fontFamily,
+    };
+  });
+}
 
 async function readColorAgainstToken(locator: Locator, token: string) {
   return locator.evaluate((element, tokenName) => {
