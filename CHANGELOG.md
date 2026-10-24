@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Corrected two shared action variants after visual review: destructive ghost
+  actions now retain danger text on a transparent surface, and secondary actions
+  use the shared neutral border token. Dimensions, hover, and keyboard focus stay
+  unchanged.
+
 - Began the incremental `StoryPlayer` refactor by extracting runtime loading,
   reader navigation, Simulation authoring commands, and realtime refresh
   coordination into focused modules, then moving the scene, choice list, context

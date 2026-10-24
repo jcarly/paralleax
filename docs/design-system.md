@@ -296,6 +296,22 @@ The D8 rendered-state contrast and focus assertions live in
 assessment remains open for browser review; CSS dimensions alone do not establish
 that exception.
 
+### Approved action-state corrections (2026-10-24)
+
+Two demonstrated D14 conflicts were reviewed and approved without a broader
+palette change:
+
+- `.ghost.danger` keeps its transparent surface and uses `--color-danger` for
+  its text, so destructive meaning survives the shared `.ghost` rule.
+- `.secondary` keeps its white surface and primary text and uses
+  `--color-border` for its border instead of a component-specific blue literal.
+- Both variants retain the shared dimensions, hover behavior, and keyboard focus
+  treatment.
+
+Rendered token and keyboard-focus regressions live in
+`apps/web/tests/e2e/design-system-contrast.spec.ts`. Other action and status
+variants remain subject to later, separately reviewed work.
+
 ## Open Decisions
 
 - Choose the primary accent color and semantic colors.

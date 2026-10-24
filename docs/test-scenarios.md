@@ -449,6 +449,9 @@ Component and domain regressions supporting these flows also cover:
 - creation, import, connection, rich-text, and reader-save dialog focus
   containment and Escape dismissal, with restoration to the exact opening
   control when the workflow has one;
+- shared actions: `.ghost.danger` uses the semantic danger text token while
+  remaining transparent, `.secondary` uses the shared border token, and both
+  preserve the keyboard focus ring;
 - Story creation and import remaining visible when Escape is pressed while
   their deliberately non-cancellable request is still pending;
 - a failed initial reader load showing an actionable error and recovering on

@@ -803,12 +803,17 @@ from CSS dimensions alone.
       also composed by `InteractionInspector`. The sample actions are inert; the
       focused test verifies production ownership and that the examples remain
       present after activation. Resolution commit: `fdb3fb5`.
-- [ ] **DS-12 — Align remaining action and status variants** (D14). Follow DS-01
+- [x] **DS-12 — Align remaining action and status variants** (D14). Follow DS-01
       for direct defects, then review only combinations with demonstrated
       conflicts (for example ghost-danger and secondary focus/hover). Acceptance:
       destructive/disabled/selected meaning remains distinguishable and no broad
-      palette redesign is included. Depends on human approval where color changes
-      are involved. Resolution commit: TBD.
+      palette redesign is included. **Completed 2026-10-24 after human approval:**
+      `.ghost.danger` now uses `--color-danger` text while retaining its transparent
+      surface; `.secondary` uses `--color-border` instead of a blue literal.
+      Dimensions, hover, and the shared focus treatment are unchanged. The focused
+      Playwright regression checks semantic token parity, transparency, and keyboard
+      focus. Other action/status variants remain outside this slice. Resolution
+      commit: `0735cf6`.
 - [ ] **DS-13 — Add staged CSS quality rules without noisy global bans** (D16).
       Evaluate Stylelint against Node 24 and current CI, then enable structural
       rules on migrated CSS and expand by explicit file ownership. Acceptance:
