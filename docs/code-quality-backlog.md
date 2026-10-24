@@ -506,7 +506,14 @@ from CSS dimensions alone.
       locations, characters, stats, items and Groups. Updated its local style
       selectors and the existing context test; layout and interactions are
       unchanged. Context and group navigation tests (33), web typecheck, ESLint
-      and Prettier passed. Slice commit: `31bd21b`. Remaining work:
+      and Prettier passed. Slice commit: `31bd21b`.
+      **Additional progress (2026-10-24):** consolidated the identical hover,
+      selected and `:focus-visible` states of root and linked Trigger markers in
+      `storyGraph.css`. Their distinct geometry, rotation, React Flow classes and
+      interactions remain unchanged. Graph, Trigger and connection tests (58),
+      Prettier and the web build passed; configured bundle budgets passed. Vite
+      still reports its existing large-chunk advisory. Slice commit: `f91b376`.
+      Remaining work:
       evaluate other duplicate candidates and CSS ownership boundaries; retain
       graph marker and inspector variants unless their semantics are proven
       identical. Resolution commit: TBD.
