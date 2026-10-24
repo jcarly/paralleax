@@ -20,7 +20,8 @@
     "test:restore": "node scripts/verify-postgres-restore.mjs",
     "test:acceptance": "npm run test:acceptance -w @paralleax/web",
     "smoke:deployment": "node scripts/deployment-smoke.mjs",
-    "lint": "eslint .",
+    "lint": "eslint . && npm run lint:css",
+    "lint:css": "stylelint apps/web/src/components/StoryContextList.css apps/web/src/components/InteractionEffectCard.css apps/web/src/components/richTextEditor.css",
     "format": "prettier . --check",
     "format:write": "prettier . --write",
     "typecheck": "npm run build -w @paralleax/shared && npm run typecheck -w @paralleax/api && npm run typecheck -w @paralleax/web",
@@ -35,6 +36,7 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.7",
     "prettier": "^3.9.10",
+    "stylelint": "^17.16.0",
     "typescript": "5.9.3",
     "typescript-eslint": "^8.72.0"
   },
