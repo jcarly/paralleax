@@ -482,7 +482,19 @@ from CSS dimensions alone.
       only patterns with the same semantics/lifecycle and preserve intentional
       post-it, graph, reader and inspector variants. Acceptance: no cascade-order
       regression; duplicated state logic is removed only where callers share the
-      same behavior. Resolution commit: TBD.
+      same behavior. **Incremental progress (2026-10-24):** moved `.sr-only` to
+      shared `styles.css` because its consumers span product and application
+      surfaces; current `FeedbackButton.css` only hides its label responsively,
+      so that distinct behavior remains local. Consolidated the identical live /
+      reconnecting status-dot rules used by comments, editor and Simulation, and
+      grouped the matching condition/effect picker shells, headers, choice grids,
+      focus rules and tooltips in their existing inspector stylesheet. Added a
+      comment documenting the shared-first CSS import order. Targeted tests
+      (51), typecheck, ESLint, Prettier and the web build passed; bundle budgets
+      remain within limits. The audit snapshot is unchanged. Remaining work:
+      evaluate other duplicate candidates and CSS ownership boundaries; retain
+      graph marker and inspector variants unless their semantics are proven
+      identical. Slice commit: `6b328e8`. Resolution commit: TBD.
 
 ### P2 — Catalogue, automation and remaining state consistency
 
