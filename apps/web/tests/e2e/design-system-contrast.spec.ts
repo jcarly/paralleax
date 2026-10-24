@@ -58,6 +58,44 @@ test('keeps the reviewed text pairs readable on editor, product, and simulation 
   }
 });
 
+test('keeps destructive ghost and secondary actions on their approved semantic tokens', async ({
+  page,
+}) => {
+  await prepareEditorPage(page);
+  await page.goto('/stories/story-1/edit');
+  await page.evaluate(() => {
+    document.body.insertAdjacentHTML(
+      'afterbegin',
+      `<div id="action-variant-fixture">
+        <button id="danger-ghost" class="ghost danger" type="button">Delete</button>
+        <span id="danger-token-probe" style="color:var(--color-danger)"></span>
+        <button id="secondary-action" class="secondary" type="button">Cancel</button>
+        <span id="border-token-probe" style="border-top:1px solid var(--color-border)"></span>
+      </div>`,
+    );
+  });
+
+  const colors = await page.evaluate(() => ({
+    dangerAction: getComputedStyle(document.querySelector('#danger-ghost')!).color,
+    dangerToken: getComputedStyle(document.querySelector('#danger-token-probe')!).color,
+    secondaryBorder: getComputedStyle(document.querySelector('#secondary-action')!).borderTopColor,
+    borderToken: getComputedStyle(document.querySelector('#border-token-probe')!).borderTopColor,
+    dangerBackground: getComputedStyle(document.querySelector('#danger-ghost')!).backgroundColor,
+  }));
+  expect(colors.dangerAction).toBe(colors.dangerToken);
+  expect(colors.secondaryBorder).toBe(colors.borderToken);
+  expect(colors.dangerBackground).toBe('rgba(0, 0, 0, 0)');
+
+  for (const id of ['danger-ghost', 'secondary-action']) {
+    const control = page.locator(`#${id}`);
+    await control.focus();
+    await page.keyboard.press('Shift+Tab');
+    await page.keyboard.press('Tab');
+    await expect(control).toBeFocused();
+    await expectKeyboardFocusRing(control);
+  }
+});
+
 test('applies the focus and help contrast to the rendered Simulation Editor', async ({ page }) => {
   await mockAuthenticatedUser(page, {
     id: 'user-1',

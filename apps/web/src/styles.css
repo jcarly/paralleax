@@ -173,7 +173,7 @@ button:disabled {
   transform: none;
 }
 .secondary {
-  border-color: #c9d9ff;
+  border-color: var(--color-border);
   background: #ffffff;
   color: var(--color-primary-strong);
 }
@@ -184,6 +184,9 @@ button:disabled {
   background: transparent;
   color: var(--color-ghost);
   box-shadow: none;
+}
+.ghost.danger {
+  color: var(--color-danger);
 }
 .error {
   color: var(--color-error);
