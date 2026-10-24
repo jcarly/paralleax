@@ -168,7 +168,6 @@ describe('StoryPlayer loading and presentation', () => {
   });
 
   it('reads publicly without loading or saving authenticated progress', async () => {
-    const user = userEvent.setup();
     const publicStory = structuredClone(story);
     publicStory.access = { visibility: 'public', editPolicy: 'owner', commentPolicy: 'editors' };
     publicStory.capabilities = {
@@ -187,36 +186,37 @@ describe('StoryPlayer loading and presentation', () => {
     );
 
     expect(await screen.findByText('Sign in to save progress')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Start' })).toBeInTheDocument();
     expect(api.getReaderProgress).not.toHaveBeenCalled();
     expect(screen.queryByRole('link', { name: 'Back to editor' })).not.toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Start' }));
     expect(api.saveReaderProgress).not.toHaveBeenCalled();
   });
 
-  it('loads a story and follows available choices', async () => {
+  it('starts its only available opening interaction and follows later choices', async () => {
     const user = userEvent.setup();
     await renderPlayer();
 
-    expect(screen.getByRole('heading', { name: /Start the story/ })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Start' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Next' })).not.toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Start' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /Start the story/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Start' })).not.toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Next' })).toBeInTheDocument();
     expect(
       screen.queryByRole('checkbox', { name: /Force unavailable options/ }),
     ).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Start' }));
-    expect(screen.getByRole('heading', { name: 'Start' })).toBeInTheDocument();
     expect(screen.getByText('You arrive.')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Next' })).toBeInTheDocument();
-    expect(api.saveReaderProgress).toHaveBeenCalledWith(
-      'story-1',
-      {
-        journeyInteractionIds: ['start'],
-        ownedItemIds: [],
-        randomSeed: expect.any(String),
-        stepStartedAt: [expect.any(String), expect.any(String)],
-      },
-      'reader',
+    expect(await screen.findByRole('button', { name: 'Next' })).toBeInTheDocument();
+    await waitFor(() =>
+      expect(api.saveReaderProgress).toHaveBeenCalledWith(
+        'story-1',
+        {
+          journeyInteractionIds: ['start'],
+          ownedItemIds: [],
+          randomSeed: expect.any(String),
+          stepStartedAt: [expect.any(String), expect.any(String)],
+        },
+        'reader',
+      ),
     );
 
     await user.click(screen.getByRole('button', { name: 'Next' }));
@@ -225,9 +225,165 @@ describe('StoryPlayer loading and presentation', () => {
     expect(screen.getByText('Start')).toBeInTheDocument();
   });
 
+  it('automatically passes through a body with no visible content and applies its state changes', async () => {
+    const user = userEvent.setup();
+    const passThroughStory = structuredClone(story);
+    passThroughStory.startDateTime = '2026-07-27T09:00';
+    passThroughStory.locations = [{ id: 'harbor', name: 'Harbor', description: '' }];
+    passThroughStory.statDefinitions = [
+      { id: 'score-definition', name: 'Score', valueType: 'number' },
+    ];
+    passThroughStory.stats = [
+      { id: 'score', statDefinitionId: 'score-definition', initialValue: 0 },
+    ];
+    passThroughStory.interactions[1] = {
+      ...passThroughStory.interactions[1],
+      body: '<div data-conditional-text-block="hidden-only"><p>Hidden text</p></div>',
+      conditionalTextBlocks: [
+        {
+          id: 'hidden-only',
+          conditions: [{ interactionId: 'hidden', hasBeenVisited: true }],
+        },
+      ],
+      durationMinutes: 60,
+      locationId: 'harbor',
+      statEffects: [{ statId: 'score', operation: 'set', value: 3 }],
+    };
+    passThroughStory.interactions[2].triggers[0].conditions = [
+      { statId: 'score', operator: 'gte', value: 3 },
+      { locationId: 'harbor', isCurrentLocation: true },
+    ];
+    passThroughStory.interactions[2].triggers.push({
+      ...passThroughStory.interactions[2].triggers[0],
+      id: 'trigger-hidden-alternative',
+    });
+
+    await renderPlayer('/stories/story-1/play', passThroughStory);
+    expect(await screen.findByRole('heading', { name: 'Start' })).toBeInTheDocument();
+    await user.click(await screen.findByRole('button', { name: 'Next' }));
+
+    expect(await screen.findByRole('heading', { name: 'Secret' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Next' })).not.toBeInTheDocument();
+    expect(screen.getByText('Harbor')).toBeInTheDocument();
+    expect(screen.getByText('2026-07-27 10:00')).toBeInTheDocument();
+    await waitFor(() =>
+      expect(api.saveReaderProgress).toHaveBeenLastCalledWith(
+        'story-1',
+        expect.objectContaining({ journeyInteractionIds: ['start', 'next', 'hidden'] }),
+        'reader',
+      ),
+    );
+  });
+
+  it('keeps an empty interaction visible when its only destination is unavailable', async () => {
+    const user = userEvent.setup();
+    const gatedStory = structuredClone(story);
+    gatedStory.interactions[1].body = '<p><br></p>';
+    gatedStory.interactions[2].triggers[0].conditions = [
+      { interactionId: 'hidden', hasBeenVisited: true },
+    ];
+
+    await renderPlayer('/stories/story-1/play', gatedStory);
+    await user.click(await screen.findByRole('button', { name: 'Next' }));
+
+    expect(await screen.findByRole('heading', { name: 'Next' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Secret' })).not.toBeInTheDocument();
+  });
+
+  it('keeps an empty interaction visible when more than one destination is available', async () => {
+    const user = userEvent.setup();
+    const branchingStory = structuredClone(story);
+    branchingStory.interactions[1].body = '<p><br></p>';
+    branchingStory.interactions.push({
+      id: 'alternative',
+      title: 'Alternative',
+      body: 'Another path.',
+      position: { x: 300, y: 0 },
+      triggers: [{ id: 'trigger-alternative', inputInteractionIds: ['next'], conditions: [] }],
+    });
+
+    await renderPlayer('/stories/story-1/play', branchingStory);
+    await user.click(await screen.findByRole('button', { name: 'Next' }));
+
+    expect(await screen.findByRole('heading', { name: 'Next' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Secret' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Alternative' })).toBeInTheDocument();
+  });
+
+  it('stops automatic pass-through before repeating an interaction in a cycle', async () => {
+    const user = userEvent.setup();
+    const cyclicStory = structuredClone(story);
+    cyclicStory.interactions[1].body = '<p><br></p>';
+    cyclicStory.interactions[2].body = '<p></p>';
+    cyclicStory.interactions[1].triggers[0].inputInteractionIds.push('hidden');
+
+    await renderPlayer('/stories/story-1/play', cyclicStory);
+    await user.click(await screen.findByRole('button', { name: 'Next' }));
+
+    expect(await screen.findByRole('heading', { name: 'Secret' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Next' })).toBeInTheDocument();
+    await waitFor(() =>
+      expect(api.saveReaderProgress).toHaveBeenLastCalledWith(
+        'story-1',
+        expect.objectContaining({ journeyInteractionIds: ['start', 'next', 'hidden'] }),
+        'reader',
+      ),
+    );
+  });
+
+  it('keeps empty interactions selectable in Simulation Mode', async () => {
+    const user = userEvent.setup();
+    const emptyOpening = structuredClone(story);
+    emptyOpening.interactions[0].body = '<p><br></p>';
+
+    await renderPlayer('/stories/story-1/play?mode=simulation', emptyOpening);
+    await user.click(await screen.findByRole('button', { name: 'Start' }));
+
+    expect(await screen.findByDisplayValue('Start')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Next' })).toBeInTheDocument();
+  });
+
+  it('keeps the opening choices when more than one interaction is available', async () => {
+    const multipleOpenings = structuredClone(story);
+    multipleOpenings.interactions.push({
+      id: 'alternative-start',
+      title: 'Alternative start',
+      body: 'Another opening.',
+      position: { x: 300, y: 0 },
+      triggers: [{ id: 'trigger-alternative-start', inputInteractionIds: [], conditions: [] }],
+    });
+
+    await renderPlayer('/stories/story-1/play', multipleOpenings);
+
+    expect(await screen.findByRole('heading', { name: /Start the story/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Start' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Alternative start' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Start' })).not.toBeInTheDocument();
+  });
+
+  it('stays at the opening screen when no interaction is available', async () => {
+    const noAvailableOpening = structuredClone(story);
+    noAvailableOpening.interactions[0].triggers[0].conditions = [
+      { interactionId: 'hidden', hasBeenVisited: true },
+    ];
+
+    await renderPlayer('/stories/story-1/play', noAvailableOpening);
+
+    expect(await screen.findByRole('heading', { name: /Start the story/ })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Start' })).not.toBeInTheDocument();
+  });
+
   it('commits only one transition when an option is activated twice before rerender', async () => {
-    await renderPlayer();
-    const start = screen.getByRole('button', { name: 'Start' });
+    const ambiguousStory = structuredClone(story);
+    ambiguousStory.interactions.push({
+      id: 'alternative-start',
+      title: 'Alternative start',
+      body: 'Another opening.',
+      position: { x: 300, y: 0 },
+      triggers: [{ id: 'trigger-alternative-start', inputInteractionIds: [], conditions: [] }],
+    });
+    await renderPlayer('/stories/story-1/play', ambiguousStory);
+    const start = await screen.findByRole('button', { name: 'Start' });
 
     act(() => {
       start.click();
@@ -250,14 +406,14 @@ describe('StoryPlayer loading and presentation', () => {
       '<p><span data-interaction-link-target="next">Continue in the text</span></p>';
 
     await renderPlayer('/stories/story-1/play', linkedStory);
-    await user.click(screen.getByRole('button', { name: 'Start' }));
-    await user.click(screen.getByRole('button', { name: 'Continue in the text' }));
+    expect(await screen.findByRole('heading', { name: 'Start' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Next' })).toBeInTheDocument();
+    await user.click(await screen.findByRole('button', { name: 'Continue in the text' }));
 
-    expect(screen.getByRole('heading', { name: 'Next' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Next' })).toBeInTheDocument();
   });
 
   it('projects conditional body text from outgoing trigger availability', async () => {
-    const user = userEvent.setup();
     const conditionalStory = structuredClone(story);
     conditionalStory.interactions[0].body =
       '<p>Always shown</p>' +
@@ -265,14 +421,13 @@ describe('StoryPlayer loading and presentation', () => {
       '<div data-conditional-text-target="hidden"><button data-conditional-text-link="hidden">Secret</button><p>Disconnected clue</p></div>';
 
     await renderPlayer('/stories/story-1/play', conditionalStory);
-    await user.click(screen.getByRole('button', { name: 'Start' }));
+    expect(await screen.findByRole('heading', { name: 'Start' })).toBeInTheDocument();
 
-    expect(screen.getByText('Available clue')).toBeInTheDocument();
+    expect(await screen.findByText('Available clue')).toBeInTheDocument();
     expect(screen.queryByText('Disconnected clue')).not.toBeInTheDocument();
   });
 
   it('evaluates structured conditional text with Trigger condition semantics', async () => {
-    const user = userEvent.setup();
     const conditionalStory = structuredClone(story);
     conditionalStory.interactions[0].body =
       '<div data-conditional-text-block="visited-start"><p>Visited clue</p></div>' +
@@ -289,7 +444,7 @@ describe('StoryPlayer loading and presentation', () => {
     ];
 
     await renderPlayer('/stories/story-1/play', conditionalStory);
-    await user.click(screen.getByRole('button', { name: 'Start' }));
+    expect(await screen.findByRole('heading', { name: 'Start' })).toBeInTheDocument();
 
     expect(screen.getByText('Visited clue')).toBeInTheDocument();
     expect(screen.queryByText('Hidden clue')).not.toBeInTheDocument();
@@ -335,13 +490,12 @@ describe('StoryPlayer loading and presentation', () => {
   });
 
   it('renders sanitized rich text and media in the reader', async () => {
-    const user = userEvent.setup();
     const richStory = structuredClone(story);
     richStory.interactions[0].body =
       '<p>A <strong>rich</strong> opening.</p><img src="https://media.example/opening.gif"><script>alert(1)</script>';
     await renderPlayer('/stories/story-1/play', richStory);
 
-    await user.click(screen.getByRole('button', { name: 'Start' }));
+    expect(await screen.findByRole('heading', { name: 'Start' })).toBeInTheDocument();
     expect(screen.getByText('rich').tagName).toBe('STRONG');
     expect(screen.getByRole('img')).toHaveAttribute('src', 'https://media.example/opening.gif');
     expect(document.querySelector('script')).toBeNull();

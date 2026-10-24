@@ -62,6 +62,7 @@ describe('StoryEditor interactions', () => {
     await user.click(screen.getByRole('button', { name: 'Add root' }));
     expect(api.createInteraction).toHaveBeenCalledWith('story-1', { position: rootPosition });
     expect(await screen.findByText('Created root')).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByLabelText('Title')).toHaveValue('Created root'));
 
     await user.click(
       within(screen.getByTestId('flow-node-interaction-1')).getByRole('button', {
@@ -77,6 +78,7 @@ describe('StoryEditor interactions', () => {
         expect.objectContaining({ nodes: [{ id: 'interaction-2' }] }),
       ),
     );
+    expect(screen.getByLabelText('Title')).toHaveValue('Second interaction');
   });
 
   it('links the test action to the selected interaction when one is selected', async () => {
@@ -128,6 +130,7 @@ describe('StoryEditor interactions', () => {
         position: { x: 425, y: 412 },
       });
     });
+    await waitFor(() => expect(screen.getByLabelText('Title')).toHaveValue('Dropped output'));
   });
 
   it('creates a child interaction from the hovered node action', async () => {
@@ -218,6 +221,7 @@ describe('StoryEditor interactions', () => {
       });
       expect(api.updateTrigger).not.toHaveBeenCalled();
     });
+    await waitFor(() => expect(screen.getByLabelText('Title')).toHaveValue('Dropped input'));
   });
 
   it('creates a parent interaction from the hovered node action', async () => {
@@ -262,6 +266,7 @@ describe('StoryEditor interactions', () => {
       });
       expect(api.updateTrigger).not.toHaveBeenCalled();
     });
+    await waitFor(() => expect(screen.getByLabelText('Title')).toHaveValue('Created source'));
   });
 
   it('places a new child interaction below occupied vertical outputs instead of overlapping them', async () => {

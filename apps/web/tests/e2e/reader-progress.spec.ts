@@ -63,6 +63,64 @@ test('resumes and updates authenticated reader progress', async ({ page }) => {
   await expect(page.getByText('Progress saved')).toBeVisible();
 });
 
+test('passes through an empty unique-output Interaction in Reader mode', async ({ page }) => {
+  const story = readerStoryFixture();
+  story.interactions[1].body = '<p><br></p>';
+  story.interactions[1].durationMinutes = 30;
+  story.interactions[1].locationId = 'harbor';
+  story.locations = [{ id: 'harbor', name: 'Harbor', description: '' }];
+  story.interactions.push({
+    id: 'finish',
+    title: 'Finish',
+    body: 'The story is complete.',
+    position: { x: 0, y: 280 },
+    triggers: [{ id: 'trigger-finish', inputInteractionIds: ['next'], conditions: [] }],
+  });
+  const savedInputs: Array<{ journeyInteractionIds: string[] }> = [];
+
+  await mockSignedInReader(page);
+  await page.route('**/api/stories/story-1/progress', async (route) => {
+    if (route.request().method() === 'GET') {
+      await route.fulfill({ json: { progress: null } });
+      return;
+    }
+    const input = route.request().postDataJSON() as {
+      journeyInteractionIds: string[];
+      ownedItemIds: string[];
+      randomSeed: string;
+      stepStartedAt: string[];
+    };
+    savedInputs.push(input);
+    await route.fulfill({
+      json: {
+        state: {
+          ...readerProgressFixture(),
+          version: 4,
+          journeyInteractionIds: input.journeyInteractionIds,
+          currentInteractionId: input.journeyInteractionIds.at(-1) ?? null,
+          visitedInteractionIds: input.journeyInteractionIds,
+          ownedItemIds: input.ownedItemIds,
+          randomSeed: input.randomSeed,
+          stepStartedAt: input.stepStartedAt,
+        },
+        updatedAt: '2026-07-27T09:45:00.000Z',
+      },
+    });
+  });
+  await mockRuntimeStory(page, story);
+
+  await page.goto('/stories/story-1/play');
+  await expect(page.getByRole('heading', { name: 'Start' })).toBeVisible();
+  await page.getByRole('button', { name: 'Continue' }).click();
+
+  await expect(page.getByRole('heading', { name: 'Finish' })).toBeVisible();
+  await expect(page.getByText('Harbor')).toBeVisible();
+  await expect(page.getByText('2026-07-27 09:45')).toBeVisible();
+  await expect
+    .poll(() => savedInputs.at(-1)?.journeyInteractionIds)
+    .toEqual(['start', 'next', 'finish']);
+});
+
 test('retries a temporary reader bootstrap failure without reloading the browser', async ({
   page,
 }) => {
@@ -88,11 +146,11 @@ test('retries a temporary reader bootstrap failure without reloading the browser
   const failedBootstrapRequests = bootstrapRequests;
   bootstrapUnavailable = false;
   await page.getByRole('button', { name: 'Retry' }).click();
-  await expect(page.getByRole('heading', { name: /Start the story/ })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Start' })).toBeVisible();
   expect(bootstrapRequests).toBeGreaterThan(failedBootstrapRequests);
 });
 
-test('keeps the reader open when navigation is rejected during an unresolved autosave', async ({
+test('automatically enters one available interaction and keeps the reader open during autosave', async ({
   page,
 }) => {
   const story = readerStoryFixture();
@@ -105,6 +163,7 @@ test('keeps the reader open when navigation is rejected during an unresolved aut
   const saveRelease = new Promise<void>((resolve) => {
     releaseSave = resolve;
   });
+  let savedJourneyInteractionIds: string[] = [];
   await mockSignedInReader(page);
   await page.route('**/api/stories/story-1/progress', async (route) => {
     if (route.request().method() === 'GET') {
@@ -117,6 +176,7 @@ test('keeps the reader open when navigation is rejected during an unresolved aut
       randomSeed: string;
       stepStartedAt: string[];
     };
+    savedJourneyInteractionIds = input.journeyInteractionIds;
     markSaveStarted();
     await saveRelease;
     await route.fulfill({
@@ -138,8 +198,9 @@ test('keeps the reader open when navigation is rejected during an unresolved aut
   await mockRuntimeStory(page, story);
 
   await page.goto('/stories/story-1/play');
-  await page.getByRole('button', { name: 'Start', exact: true }).click();
   await saveStarted;
+  expect(savedJourneyInteractionIds).toEqual(['start']);
+  await expect(page.getByRole('heading', { name: 'Start' })).toBeVisible();
 
   await page.getByRole('link', { name: 'Stories', exact: true }).click();
   await expect(page.getByRole('dialog', { name: 'Unsaved changes' })).toBeVisible();

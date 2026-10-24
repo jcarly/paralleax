@@ -141,15 +141,12 @@ test('a reader save reconstructs variables, inventory, time, probability, and ti
 
   await page.goto(`/stories/${storyId}/play`);
   await expect(page.getByRole('heading', { name: 'Choose your character' })).toBeVisible();
-  await page.getByRole('button', { name: 'Mira' }).click();
-  await expect(page.getByRole('heading', { name: 'Start the story' })).toBeVisible();
-
   const progressSave = waitForApiResponse(
     page,
     'PATCH',
     new RegExp(`/api/stories/${storyId}/progress$`),
   );
-  await page.getByRole('button', { name: 'Opening' }).click();
+  await page.getByRole('button', { name: 'Mira' }).click();
   const savedResponse = await expectSuccessful(progressSave);
   const saved = (await savedResponse.json()) as ReaderProgress;
 

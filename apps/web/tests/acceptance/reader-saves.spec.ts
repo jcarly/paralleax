@@ -24,15 +24,12 @@ test('reader, simulation, and manual save slots resume independently', async ({ 
   await createdInteraction(childCreation);
   await editInteraction(page, 'New interaction', 'Arrival', 'The journey is complete.');
 
-  await page.goto(`/stories/${storyId}/play`);
-  await expect(page.getByRole('heading', { name: 'Start the story' })).toBeVisible();
-
   let progressSave = waitForApiResponse(
     page,
     'PATCH',
     new RegExp(`/api/stories/${storyId}/progress$`),
   );
-  await page.getByRole('button', { name: 'Opening' }).click();
+  await page.goto(`/stories/${storyId}/play`);
   await expectSuccessful(progressSave);
   await expect(page.getByRole('heading', { name: 'Opening' })).toBeVisible();
 
@@ -64,9 +61,11 @@ test('reader, simulation, and manual save slots resume independently', async ({ 
     'DELETE',
     new RegExp(`/api/stories/${storyId}/progress$`),
   );
+  progressSave = waitForApiResponse(page, 'PATCH', new RegExp(`/api/stories/${storyId}/progress$`));
   await page.getByRole('button', { name: 'Restart' }).click();
   await expectSuccessful(readerRestart);
-  await expect(page.getByRole('heading', { name: 'Start the story' })).toBeVisible();
+  await expectSuccessful(progressSave);
+  await expect(page.getByRole('heading', { name: 'Opening' })).toBeVisible();
 
   await page.goto(`/stories/${storyId}/play?mode=simulation`);
   await expect(page.getByText('Simulation', { exact: true })).toBeVisible();
@@ -107,7 +106,7 @@ test('reader, simulation, and manual save slots resume independently', async ({ 
   await expect(page.getByLabel('Current interaction title')).toHaveValue('Arrival');
 
   await page.goto(`/stories/${storyId}/play`);
-  await expect(page.getByRole('heading', { name: 'Start the story' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Opening' })).toBeVisible();
   await page.getByRole('button', { name: 'Saves' }).click();
   await expect(
     page

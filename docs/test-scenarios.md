@@ -482,8 +482,12 @@ Component and domain regressions supporting these flows also cover:
 - Editor: click a trigger marker, edit its conditions, close the editor, and
   verify that the marker remains attached to the same trigger.
 - Editor: delete an interaction and verify that invalid trigger links are removed from the canvas.
-- Reader: open a story, choose a starting interaction, and verify the following choices.
-- Reader: restart resets history and choices to the initial state.
+- Reader: open a story with one available starting interaction and verify it opens
+  directly; verify multiple available starts remain choices and no available start
+  leaves the opening screen.
+- Reader: restart resets history and automatically opens the unique available start.
+- Reader: choose a playable character before the unique starting interaction opens;
+  Simulation Mode keeps explicit starting choices.
 
 ## Current Priority
 

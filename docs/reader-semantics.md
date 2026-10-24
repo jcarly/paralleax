@@ -133,6 +133,44 @@ interaction unless another trigger also makes the same interaction available.
 Contextual inputless triggers are evaluated during reading. They can use visited
 history, the current authored location, and the current interaction's cast.
 
+## Initial Reader Entry
+
+In Reader mode, when the journey is empty, the Reader evaluates available
+inputless Interactions using the normal Trigger rules. If exactly one Interaction
+is available, it starts that Interaction automatically. If several are available,
+the Reader presents them as opening choices; if none are available, it remains at
+the opening screen.
+
+When a playable character must be selected, that selection happens before the
+Reader starts a unique available Interaction. Automatic entry uses the normal
+interaction selection path, so the Interaction becomes the first journey entry
+and its effects and duration apply as usual. Restarting or loading a saved empty
+journey follows the same rule. Simulation Mode keeps its explicit opening choice
+so authors can inspect and add root Interactions before entering one.
+
+## Empty Interaction Pass-through
+
+After entering an Interaction in Reader mode, the Reader automatically selects
+its only destination when the current body has no visible output and exactly one
+unique Interaction is currently available under the normal Trigger rules.
+Several eligible Triggers to the same destination still count as one available
+Interaction. A structurally connected but unavailable destination is not
+selected.
+
+Visibility uses the same rich-text projection as the Reader: visible text,
+resolved stat values, and embedded media count as content; empty markup, hidden
+conditional frames, and unresolved values that render empty do not. The title is
+not part of this check.
+
+Automatic pass-through uses the normal selection path for every Interaction. It
+applies duration and typed stat and item effects, updates location, appends the
+Interaction to the ordered journey, and saves progress. It continues through
+empty Interactions until the current body has visible output, no destination is
+available, or multiple destinations are available. If the next destination has
+already been traversed during this automatic chain, the Reader stops before
+repeating it and leaves the current Interaction's choices available. Simulation
+Mode never skips these Interactions, so authors can inspect each step.
+
 ## Current Location
 
 Selecting an interaction with a `locationId` changes the reader's current
@@ -367,8 +405,9 @@ to the current web reader history.
 
 If no interaction is available after the current interaction, the branch ends.
 
-The reader does not automatically restart, jump to another root interaction, or
-select an interaction by itself.
+The Reader can pass through empty Interactions as described above, but it does
+not automatically restart, jump to another root Interaction, or choose among
+multiple available Interactions.
 
 This is not a permanent story-completion rule. Later versions should distinguish
 between a branch that currently has no available interaction and an explicit
@@ -415,7 +454,7 @@ creates or overwrites a named save.
 The MVP reader does not support:
 
 - calculated/read-only stats, reactive formulas, or dependency graphs;
-- automatic choices;
+- delayed or probabilistic automatic choices;
 - final interactions;
 - weighted or prioritized choices;
 - anonymous or offline play sessions;

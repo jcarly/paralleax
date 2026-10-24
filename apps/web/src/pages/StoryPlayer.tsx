@@ -25,6 +25,7 @@ import {
 import { api } from '../api';
 import { apiErrorMessage } from '../apiErrorMessages';
 import { RichTextContent } from '../components/RichTextContent';
+import { hasVisibleRichTextContent } from '../components/richTextProjection';
 import { RichTextEditor } from '../components/RichTextEditor';
 import { StoryCommentsPanel } from '../features/comments/StoryCommentsPanel';
 import { useStoryComments } from '../features/comments/useStoryComments';
@@ -144,6 +145,16 @@ export function StoryPlayer({
   const [timerNow, setTimerNow] = useState(() => Date.now());
   const directStartAutosavedKey = useRef('');
   const committedChoiceStep = useRef('');
+  const automaticTransitionPath = useRef<
+    | {
+        storyId: string;
+        journeyLength: number;
+        interactionId: string;
+        interactionIds: Set<string>;
+      }
+    | undefined
+  >(undefined);
+  const blockedAutomaticChoiceStep = useRef('');
   const readerNavigationVersion = useRef(0);
   const realtimeLoadAttempt = useRef(0);
   const simulationEditDepth = useRef(0);
@@ -217,6 +228,8 @@ export function StoryPlayer({
       .then(({ positioned, progress, effectiveStartInteractionId, loadedProgressMode }) => {
         if (cancelled) return;
         committedChoiceStep.current = '';
+        automaticTransitionPath.current = undefined;
+        blockedAutomaticChoiceStep.current = '';
         setTimerNow(Date.now());
         const reconciledProgress = progress
           ? replaySession(
@@ -461,6 +474,8 @@ export function StoryPlayer({
   const canUseReaderComments =
     authenticated && !isSimulationMode && story?.capabilities?.canComment === true;
   const comments = useStoryComments(storyId, canUseReaderComments);
+  const cancelCommentDraft = comments.cancelDraft;
+  const selectCommentThread = comments.selectThread;
   const readerCommentThreads = useMemo(
     () =>
       story && current
@@ -769,48 +784,190 @@ export function StoryPlayer({
     editingChoiceInputRef.current?.select();
   }, [editingChoiceId]);
 
-  function choose(interaction: Interaction) {
-    if (!story) return;
-    const now = Date.now();
-    if (!(isSimulationMode && forceUnavailableOptions)) {
-      const startedAt = currentStepStartedAt ? Date.parse(currentStepStartedAt) : now;
-      const stillAvailable = getAvailableInteractions(
-        story,
-        current?.id ?? null,
-        visited,
-        currentLocationId,
-        current?.characterIds ?? [],
-        statValues,
-        currentDateTime,
-        ownedItemDefinitionIds,
-        itemStatValues,
-        {
-          randomSeed,
-          step: journey.length,
-          elapsedTimeMs: Math.max(0, now - (Number.isNaN(startedAt) ? now : startedAt)),
-        },
-      ).some(({ id }) => id === interaction.id);
-      if (!stillAvailable) {
-        setTimerNow(now);
-        return;
+  const choose = useCallback(
+    (interaction: Interaction, automaticTransition = false) => {
+      if (!story) return;
+      if (!automaticTransition) {
+        automaticTransitionPath.current = undefined;
+        blockedAutomaticChoiceStep.current = '';
       }
+      const now = Date.now();
+      if (!(isSimulationMode && forceUnavailableOptions)) {
+        const startedAt = currentStepStartedAt ? Date.parse(currentStepStartedAt) : now;
+        const stillAvailable = getAvailableInteractions(
+          story,
+          current?.id ?? null,
+          visited,
+          currentLocationId,
+          current?.characterIds ?? [],
+          statValues,
+          currentDateTime,
+          ownedItemDefinitionIds,
+          itemStatValues,
+          {
+            randomSeed,
+            step: journey.length,
+            elapsedTimeMs: Math.max(0, now - (Number.isNaN(startedAt) ? now : startedAt)),
+          },
+        ).some(({ id }) => id === interaction.id);
+        if (!stillAvailable) {
+          setTimerNow(now);
+          return;
+        }
+      }
+      const choiceStepKey = `${story.id}:${journey.length}:${current?.id ?? ''}:${currentStepStartedAt ?? ''}`;
+      if (committedChoiceStep.current === choiceStepKey) return;
+      committedChoiceStep.current = choiceStepKey;
+      readerNavigationVersion.current += 1;
+      cancelCommentDraft();
+      selectCommentThread(undefined);
+      setTimerNow(now);
+      const nextSession = advanceSession(story, interaction);
+      saveProgress(nextSession);
+    },
+    [
+      advanceSession,
+      cancelCommentDraft,
+      selectCommentThread,
+      current,
+      currentDateTime,
+      currentLocationId,
+      currentStepStartedAt,
+      forceUnavailableOptions,
+      isSimulationMode,
+      itemStatValues,
+      journey.length,
+      ownedItemDefinitionIds,
+      randomSeed,
+      saveProgress,
+      statValues,
+      story,
+      visited,
+    ],
+  );
+
+  useEffect(() => {
+    if (
+      isSimulationMode ||
+      loadedKey !== loadKey ||
+      !runtimeSliceReady ||
+      journey.length > 0 ||
+      (playableCharacters.length > 0 && !playedCharacter) ||
+      choices.length !== 1
+    ) {
+      return;
     }
-    const choiceStepKey = `${story.id}:${journey.length}:${current?.id ?? ''}:${currentStepStartedAt ?? ''}`;
-    if (committedChoiceStep.current === choiceStepKey) return;
-    committedChoiceStep.current = choiceStepKey;
-    readerNavigationVersion.current += 1;
-    comments.cancelDraft();
-    comments.selectThread(undefined);
-    setTimerNow(now);
-    const nextSession = advanceSession(story, interaction);
-    saveProgress(nextSession);
-  }
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (!cancelled) choose(choices[0]);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    choices,
+    choose,
+    isSimulationMode,
+    journey.length,
+    loadKey,
+    loadedKey,
+    playableCharacters.length,
+    playedCharacter,
+    runtimeSliceReady,
+  ]);
+
+  useEffect(() => {
+    if (
+      isSimulationMode ||
+      loadedKey !== loadKey ||
+      !runtimeSliceReady ||
+      !current ||
+      journey.length === 0 ||
+      (playableCharacters.length > 0 && !playedCharacter)
+    ) {
+      return;
+    }
+
+    const stepKey = [
+      story?.id ?? '',
+      story?.revision ?? 0,
+      journey.length,
+      current.id,
+      currentStepStartedAt ?? '',
+      choices.map(({ id }) => id).join(','),
+    ].join(':');
+    if (blockedAutomaticChoiceStep.current === stepKey) return;
+
+    if (
+      !story ||
+      hasVisibleRichTextContent(
+        current.body,
+        conditionalTextState,
+        conditionalTextBlockState,
+        statValues,
+        itemStatValues,
+      ) ||
+      choices.length !== 1
+    ) {
+      automaticTransitionPath.current = undefined;
+      return;
+    }
+
+    const previousPath = automaticTransitionPath.current;
+    const interactionIds =
+      previousPath?.storyId === story.id &&
+      previousPath.journeyLength === journey.length &&
+      previousPath.interactionId === current.id
+        ? new Set(previousPath.interactionIds)
+        : new Set([current.id]);
+    const destination = choices[0];
+    if (interactionIds.has(destination.id)) {
+      blockedAutomaticChoiceStep.current = stepKey;
+      automaticTransitionPath.current = undefined;
+      return;
+    }
+
+    interactionIds.add(destination.id);
+    automaticTransitionPath.current = {
+      storyId: story.id,
+      journeyLength: journey.length + 1,
+      interactionId: destination.id,
+      interactionIds,
+    };
+
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (!cancelled) choose(destination, true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    choices,
+    choose,
+    conditionalTextBlockState,
+    conditionalTextState,
+    current,
+    currentStepStartedAt,
+    isSimulationMode,
+    journey.length,
+    loadKey,
+    loadedKey,
+    playableCharacters.length,
+    playedCharacter,
+    runtimeSliceReady,
+    statValues,
+    itemStatValues,
+    story,
+  ]);
 
   function restart() {
     comments.cancelDraft();
     comments.selectThread(undefined);
     directStartAutosavedKey.current = '';
     committedChoiceStep.current = '';
+    automaticTransitionPath.current = undefined;
+    blockedAutomaticChoiceStep.current = '';
     readerNavigationVersion.current += 1;
     setTimerNow(Date.now());
     if (story) {
@@ -855,6 +1012,8 @@ export function StoryPlayer({
   }) {
     if (!story) return;
     committedChoiceStep.current = '';
+    automaticTransitionPath.current = undefined;
+    blockedAutomaticChoiceStep.current = '';
     readerNavigationVersion.current += 1;
     setTimerNow(Date.now());
     const loadedStory = await loadStoryRuntimeSlice(

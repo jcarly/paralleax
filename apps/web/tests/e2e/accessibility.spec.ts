@@ -110,7 +110,7 @@ test.describe('automated accessibility', () => {
     );
     await mockRuntimeStory(page, story);
     await page.goto('/stories/story-1/play');
-    await expect(page.getByRole('heading', { name: 'Start the story' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Original title' })).toBeVisible();
 
     await expectNoWcagViolations(page);
 
