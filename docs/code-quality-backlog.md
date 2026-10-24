@@ -558,6 +558,11 @@ from CSS dimensions alone.
       delete controls. Their sizes, offsets and glyph sizing remain distinct.
       Trigger Inspector and editor condition tests (33) and Prettier passed.
       Slice commit: `5d773c4`.
+      **Additional progress (2026-10-24):** separated the 2rem cancel-picker
+      dimensions from the smaller Trigger group-delete control. Kept their
+      shared icon color and line height, plus each control's existing geometry.
+      Trigger and Interaction Inspector tests (25) and Prettier passed. Slice
+      commit: `0d0cc7b`.
       Remaining work:
       evaluate other duplicate candidates and CSS ownership boundaries; retain
       graph marker and inspector variants unless their semantics are proven
