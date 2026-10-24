@@ -281,7 +281,7 @@ export function StoryGroupTreePanel(props: StoryGroupsPanelProps) {
         if (event.touches[0]) pointerY.current = event.touches[0].clientY;
       }}
     >
-      <div className="location-panel-header editor-heading-row">
+      <div className="editor-context-header editor-heading-row">
         <button
           className="ghost context-heading"
           type="button"

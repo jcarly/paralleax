@@ -363,11 +363,11 @@
   font-size: 0.66rem;
   letter-spacing: 0;
 }
-.location-panel-header > button:last-child:not(.context-heading) {
+.editor-context-header > button:last-child:not(.context-heading) {
   padding: 0.35rem 0.5rem;
   font-size: 0.72rem;
 }
-.location-panel-header.context-section {
+.editor-context-header.context-section {
   margin-top: 1rem;
   border-top: 1px solid var(--color-border);
   padding-top: 0.75rem;

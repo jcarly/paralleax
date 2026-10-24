@@ -594,7 +594,7 @@ describe('StoryEditor story context', () => {
     const variablesToggle = screen.getByRole('button', { name: /Variables/ });
     const addVariable = screen.getByRole('button', { name: 'Add variable' });
     const variablesChevron = variablesToggle.querySelector('.context-heading-label > span');
-    expect(addVariable.closest('.location-panel-header')).toContainElement(variablesToggle);
+    expect(addVariable.closest('.editor-context-header')).toContainElement(variablesToggle);
     expect(variablesChevron).toHaveTextContent('▾');
 
     await user.click(variablesToggle);
