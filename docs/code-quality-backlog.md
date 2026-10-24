@@ -400,12 +400,19 @@ unchanged snapshot.
       both modes; 30 focused StoryPlayer Vitest tests, 3 Playwright regressions,
       lint, typecheck and the web production build passed. Implementation commit:
       `9f44a73`.
-- [ ] **DS-06 — Make help tooltips dismissible and usable** (D6, D7). Extend the
+- [x] **DS-06 — Make help tooltips dismissible and usable** (D6, D7). Extend the
       existing `FieldHelpTooltip`; do not add a parallel tooltip system.
       Acceptance: Escape dismisses focused help, hover content remains reachable
       while the pointer is over it, focus and pointer states are both usable,
-      and essential actions remain available without hover. Resolution commit:
-      TBD.
+      and essential actions remain available without hover. **Completed
+      2026-10-24:** the tooltip now handles Escape only while open, preserving
+      focus and allowing the next Escape to reach and close its containing
+      dialog. A short close delay lets the pointer cross from the trigger onto
+      the tooltip; visible tooltip content accepts pointer events. Playwright
+      covers focused dismissal and essential form controls, pointer travel, and
+      containing dialog dismissal/focus restoration. Three browser tests and 11
+      focused modal keyboard/unit tests passed; repository lint and typecheck
+      and the web production build passed. Implementation commit: `7225199`.
 - [ ] **DS-07 — Evaluate contrast and focus indicators by semantic role** (D8,
       D15). First record component/state pairs and proposed values for human
       review; then implement only approved changes. Acceptance: applicable text
