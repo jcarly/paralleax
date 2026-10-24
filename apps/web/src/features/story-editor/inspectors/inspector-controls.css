@@ -245,7 +245,8 @@
   gap: 0.75rem;
 }
 .trigger-variant-delete,
-.trigger-condition-picker-cancel {
+.trigger-condition-picker-cancel,
+.interaction-effect-picker-cancel {
   width: 2rem;
   height: 2rem;
   padding: 0;
@@ -398,7 +399,8 @@
 .trigger-add-condition {
   justify-self: start;
 }
-.trigger-condition-picker {
+.trigger-condition-picker,
+.interaction-effect-picker {
   display: grid;
   gap: 0.55rem;
   padding: 0.65rem;
@@ -406,7 +408,8 @@
   border-radius: 8px;
   background: var(--color-surface);
 }
-.trigger-condition-picker-header {
+.trigger-condition-picker-header,
+.interaction-effect-picker-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -415,25 +418,30 @@
   font-size: 0.78rem;
   font-weight: 700;
 }
-.trigger-condition-type-options {
+.trigger-condition-type-options,
+.interaction-effect-type-options {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.4rem;
 }
-.trigger-condition-type-option {
+.trigger-condition-type-option,
+.interaction-effect-type-option {
   position: relative;
   min-width: 0;
 }
-.trigger-condition-type-option > button {
+.trigger-condition-type-option > button,
+.interaction-effect-type-option > button {
   width: 100%;
   margin: 0;
 }
-.trigger-condition-type-option:focus-visible {
+.trigger-condition-type-option:focus-visible,
+.interaction-effect-type-option:focus-visible {
   border-radius: 8px;
   outline: 3px solid var(--color-primary-halo-strong);
   outline-offset: 2px;
 }
-.trigger-condition-type-tooltip {
+.trigger-condition-type-tooltip,
+.interaction-effect-type-tooltip {
   position: absolute;
   z-index: 20;
   right: 0;
@@ -457,7 +465,10 @@
 }
 .trigger-condition-type-option:hover .trigger-condition-type-tooltip,
 .trigger-condition-type-option:focus .trigger-condition-type-tooltip,
-.trigger-condition-type-option:focus-within .trigger-condition-type-tooltip {
+.trigger-condition-type-option:focus-within .trigger-condition-type-tooltip,
+.interaction-effect-type-option:hover .interaction-effect-type-tooltip,
+.interaction-effect-type-option:focus .interaction-effect-type-tooltip,
+.interaction-effect-type-option:focus-within .interaction-effect-type-tooltip {
   visibility: visible;
   opacity: 1;
   transform: translateY(0);
@@ -632,78 +643,6 @@
 }
 .interaction-add-effect {
   justify-self: start;
-}
-.interaction-effect-picker {
-  display: grid;
-  gap: 0.55rem;
-  padding: 0.65rem;
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-  background: var(--color-surface);
-}
-.interaction-effect-picker-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  color: var(--color-muted);
-  font-size: 0.78rem;
-  font-weight: 700;
-}
-.interaction-effect-picker-cancel {
-  width: 2rem;
-  height: 2rem;
-  padding: 0;
-  color: var(--color-danger);
-  font-size: 1.25rem;
-  line-height: 1;
-}
-.interaction-effect-type-options {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.4rem;
-}
-.interaction-effect-type-option {
-  position: relative;
-  min-width: 0;
-}
-.interaction-effect-type-option > button {
-  width: 100%;
-  margin: 0;
-}
-.interaction-effect-type-option:focus-visible {
-  border-radius: 8px;
-  outline: 3px solid var(--color-primary-halo-strong);
-  outline-offset: 2px;
-}
-.interaction-effect-type-tooltip {
-  position: absolute;
-  z-index: 20;
-  right: 0;
-  bottom: calc(100% + 0.4rem);
-  left: 0;
-  visibility: hidden;
-  padding: 0.45rem 0.55rem;
-  border-radius: 6px;
-  background: var(--color-text);
-  color: var(--color-surface);
-  box-shadow: var(--shadow-card);
-  font-size: 0.72rem;
-  line-height: 1.35;
-  opacity: 0;
-  pointer-events: none;
-  transform: translateY(0.2rem);
-  transition:
-    opacity 120ms ease,
-    transform 120ms ease,
-    visibility 120ms ease;
-}
-.interaction-effect-type-option:hover .interaction-effect-type-tooltip,
-.interaction-effect-type-option:focus .interaction-effect-type-tooltip,
-.interaction-effect-type-option:focus-within .interaction-effect-type-tooltip {
-  visibility: visible;
-  opacity: 1;
-  transform: translateY(0);
 }
 .interaction-effect-group {
   display: grid;

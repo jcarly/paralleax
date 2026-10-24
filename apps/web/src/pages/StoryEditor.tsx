@@ -1609,7 +1609,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
               role="status"
               aria-live="polite"
             >
-              <span aria-hidden="true" />
+              <span className={`realtime-status-dot ${realtimeStatus}`} aria-hidden="true" />
               {t(`editor.realtime.${realtimeStatus}`)}
             </span>
           ) : null}

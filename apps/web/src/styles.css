@@ -77,6 +77,29 @@ body {
   margin: 0;
   background: var(--color-page);
 }
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+.realtime-status-dot {
+  width: 0.48rem;
+  height: 0.48rem;
+  border-radius: 999px;
+  background: var(--color-subtle);
+}
+.realtime-status-dot.live {
+  background: var(--color-place);
+  box-shadow: 0 0 0 3px #5faf7226;
+}
+.realtime-status-dot.reconnecting {
+  background: var(--color-trigger);
+}
+
 a {
   color: inherit;
 }
