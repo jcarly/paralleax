@@ -1,6 +1,6 @@
-/* Integrated reader and author simulation */
+/* Shared player presentation with Simulation-only page and card layout overrides. */
 
-.player-page {
+.player-page.simulation-mode {
   position: relative;
   display: grid;
   width: 100%;
@@ -217,7 +217,7 @@
   padding: 0.75rem;
   border: 1px solid var(--color-border);
   border-radius: 10px;
-  background: var(--color-surface-muted);
+  background: var(--color-surface-secondary);
 }
 
 .reader-save-list strong,
@@ -435,7 +435,7 @@
   line-height: 1.4;
 }
 
-.player-card {
+.simulation-mode .player-card {
   grid-column: 2;
   grid-row: 2 / 4;
   align-self: stretch;
@@ -928,11 +928,11 @@
 }
 
 @media (max-width: 1080px) {
-  .player-page {
+  .player-page.simulation-mode {
     grid-template-columns: 230px minmax(0, 1fr);
   }
 
-  .encounter-panel {
+  .simulation-mode .encounter-panel {
     position: absolute;
     z-index: 3;
     top: 74px;
@@ -947,7 +947,7 @@
 }
 
 @media (max-width: 760px) {
-  .player-page {
+  .player-page.simulation-mode {
     display: flex;
     height: auto;
     min-height: calc(100vh - 58px);
@@ -978,7 +978,7 @@
     flex: 1;
   }
 
-  .player-card {
+  .simulation-mode .player-card {
     order: 1;
     overflow: visible;
   }

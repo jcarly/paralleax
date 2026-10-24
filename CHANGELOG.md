@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Scoped Simulation Mode page and card layout overrides to the simulation root,
+  restoring the Reader's own card and page layout at desktop and narrow widths.
+  Reader save rows now use the existing shared secondary-surface token.
+
 - Creating an Interaction by clicking a creation action or dropping a
   connection on empty canvas now selects it and opens its inspector.
 
