@@ -268,6 +268,7 @@ The character-stat vertical keeps these regressions covered:
 - Editor: interaction input and output controls also act as graph connection handles.
 - Editor: dropping a source connection on empty canvas creates a linked child interaction at the drop position.
 - Editor: dropping a target connection on empty canvas creates a source interaction linked to the target at the drop position.
+- Editor groups: a mouse move of 4 CSS px does not activate drag, a move to 6 CSS px does, and Escape cancels without saving.
 - Editor/Playwright: a click-created child outside the current viewport is focused
   only after React Flow registers it, then remains immediately visible and editable.
 - Editor: selecting an interaction without a trigger shows a controlled error state instead of a blank page.

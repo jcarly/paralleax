@@ -834,13 +834,22 @@ from CSS dimensions alone.
       unknown property while accepting a custom runtime variable and a differing
       fallback declaration. Extend the target list only as ownership is reviewed.
       Resolution commit: `ad57b65`.
-- [ ] **DS-14 — Complete targeted graph and visual regression coverage** (D15, D16).
-      Extend existing graph geometry/DND/performance and accessibility coverage
-      only for migrated states; retain the existing manual keyboard/focus audit
-      item above as the single cross-dialog checklist. Acceptance: graph hit areas,
-      React Flow projection, drag thresholds, keyboard alternatives, inspector
-      scrolling, reader appearance and bundle budgets remain within baseline.
-      Depends on the relevant component migration. Resolution commit: TBD.
+- [x] **DS-14 — Complete targeted graph and visual regression coverage** (D15, D16).
+      Completed 2026-10-24 after the relevant component migrations. Reused the
+      existing React Flow marker geometry, routing/projection, drag and pan
+      alternatives, inspector scrolling, Reader/Simulation appearance, contrast,
+      and 600-interaction development/production performance coverage. Added an
+      explicit dnd-kit mouse activation regression: movement at 4 CSS px remains
+      below threshold, movement at 6 CSS px activates the drag, and Escape cancels
+      without writes. The two 100-interaction/cycle layout-quality cases still
+      report their existing expected routing failures (15 edge crossings in the
+      tangled graph; 3 edge/node intersections after cycle reload); this slice
+      preserves and records them without changing graph behavior. Validation:
+      36 targeted Playwright tests and both performance projects passed; layout
+      audit cases completed as expected failures; lint, format, typecheck, and
+      production build/bundle budgets passed. The separate manual keyboard/focus
+      checklist and browser zoom/target-size review remain open under D15.
+      Resolution commit: `2cd35b8`.
 
 ## Library Evaluation Candidates — 2026-09-24
 
