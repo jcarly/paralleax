@@ -47,9 +47,7 @@ export function FieldHelpTooltip({ label, help }: { label: string; help: string 
       closeTimerRef.current = undefined;
       const shouldStayOpen =
         !dismissedByEscapeRef.current &&
-        (triggerFocusedRef.current ||
-          triggerHoveredRef.current ||
-          tooltipHoveredRef.current);
+        (triggerFocusedRef.current || triggerHoveredRef.current || tooltipHoveredRef.current);
       setOpen(shouldStayOpen);
     }, 160);
   }

@@ -165,8 +165,9 @@ describe('App', () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByRole('heading', { name: 'A calm interface for complex stories.' }))
-      .toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: 'A calm interface for complex stories.' }),
+    ).toBeInTheDocument();
     expect(document.querySelector('header nav a[href="/design-system"]')).toBeNull();
   });
 
