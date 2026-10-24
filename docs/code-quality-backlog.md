@@ -752,6 +752,14 @@ from CSS dimensions alone.
       shared icon color and line height, plus each control's existing geometry.
       Trigger and Interaction Inspector tests (25) and Prettier passed. Slice
       commit: `0d0cc7b`.
+      **Additional progress (2026-10-24):** moved the context-list category,
+      row, thumbnail, and comment-badge rules from `editor.css` to
+      `components/StoryContextList.css`, beside their shared component. The new
+      sheet loads immediately after the editor sheet; selectors, semantic tokens,
+      geometry, and hover/selected behavior are unchanged. Context tests (22),
+      Playwright contrast tests (2), Prettier and the web build passed. Bundle
+      budgets passed; initial JavaScript is 148.6 KiB / 150.0 KiB. Slice commit:
+      `83c31d3`.
       Remaining work:
       evaluate other duplicate candidates and CSS ownership boundaries; retain
       graph marker and inspector variants unless their semantics are proven
