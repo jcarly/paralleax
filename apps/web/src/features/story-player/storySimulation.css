@@ -253,7 +253,7 @@
   padding: 1.5rem 1.15rem;
   overflow: auto;
   border: 0;
-  border-right: 1px solid #d5d5ce;
+  border-right: 0px solid #d5d5ce;
   border-radius: 0;
   background: #f4f3ed;
 }

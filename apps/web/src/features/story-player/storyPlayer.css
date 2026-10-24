@@ -162,7 +162,7 @@ span.conditional-text {
   align-self: start;
   margin: 0;
   padding: 1rem 1.25rem;
-  border: 1px solid #d9dde7;
+  border: 0px solid #d9dde7;
   border-radius: 0.75rem;
   background: white;
 }

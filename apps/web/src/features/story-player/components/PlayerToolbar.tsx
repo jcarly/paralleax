@@ -60,7 +60,6 @@ export function PlayerToolbar({
           P
         </span>
         <span>
-          <small>{t(isSimulationMode ? 'player.preview' : 'player.reader')}</small>
           <b>{storyTitle}</b>
         </span>
       </div>
