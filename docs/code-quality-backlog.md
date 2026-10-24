@@ -524,6 +524,12 @@ from CSS dimensions alone.
       button in the same focus-visible rule because its keyboard focus ring is
       identical to both Trigger marker rings. Its hover state and geometry stay
       local. Graph tests (32) and Prettier passed. Slice commit: `64f1a43`.
+      **Additional progress (2026-10-24):** moved the `.story-body` image,
+      video and iframe presentation rules from the inspector stylesheet to the
+      Story Player stylesheet, beside the class's rendering owner. Reader and
+      Simulation continue to share the same declarations; selectors and visual
+      behavior are unchanged. Story Player and Simulation tests (29) and
+      Prettier passed. Slice commit: `4e573a1`.
       Remaining work:
       evaluate other duplicate candidates and CSS ownership boundaries; retain
       graph marker and inspector variants unless their semantics are proven
