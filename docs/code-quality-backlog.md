@@ -491,10 +491,19 @@ from CSS dimensions alone.
       focus rules and tooltips in their existing inspector stylesheet. Added a
       comment documenting the shared-first CSS import order. Targeted tests
       (51), typecheck, ESLint, Prettier and the web build passed; bundle budgets
-      remain within limits. The audit snapshot is unchanged. Remaining work:
+      remain within limits. The audit snapshot is unchanged. Slice commit:
+      `6b328e8`.
+      **Additional progress (2026-10-24):** shared the exact flex row layout of
+      context-section and effect-group headings through the editor-owned
+      `.editor-heading-row` utility. Kept their semantic classes and local title
+      styling. The Trigger variant wrapper remains specialized because it only
+      contains an absolutely positioned delete action. Graph marker styles and
+      interactions are unchanged. Targeted inspector/context tests (46), web
+      typecheck, TypeScript lint, Prettier and web build passed; bundle budgets
+      passed. Slice commit: `5579a93`. Remaining work:
       evaluate other duplicate candidates and CSS ownership boundaries; retain
       graph marker and inspector variants unless their semantics are proven
-      identical. Slice commit: `6b328e8`. Resolution commit: TBD.
+      identical. Resolution commit: TBD.
 
 ### P2 — Catalogue, automation and remaining state consistency
 
