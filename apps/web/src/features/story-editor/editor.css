@@ -397,7 +397,8 @@
   font-weight: 600;
   letter-spacing: 0;
 }
-.location-panel ul {
+.location-panel ul,
+.context-entity-list {
   display: grid;
   gap: 0.2rem;
   margin: 0.35rem 0 0;
@@ -410,7 +411,7 @@
   align-items: center;
   gap: 0.2rem;
 }
-.location-panel .context-entity-select {
+.context-entity-select {
   display: grid;
   grid-template-columns: 30px minmax(0, 1fr);
   gap: 0.5rem;
@@ -425,19 +426,19 @@
   text-align: left;
   box-shadow: none;
 }
-.location-panel .context-entity-select.context-entity-select-text {
+.context-entity-select.context-entity-select-text {
   grid-template-columns: minmax(0, 1fr);
 }
-.location-panel .context-entity-select:hover {
+.context-entity-select:hover {
   background: var(--color-surface-secondary);
   box-shadow: none;
   transform: none;
 }
-.location-panel .context-entity-select.selected {
+.context-entity-select.selected {
   background: var(--color-primary-soft);
   color: var(--color-primary-strong);
 }
-.location-panel .context-comment-badge {
+.context-comment-badge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -452,13 +453,13 @@
   box-shadow: none;
   font-size: 0.64rem;
 }
-.location-panel .context-comment-badge:hover {
+.context-comment-badge:hover {
   background: var(--color-trigger-strong);
   color: var(--color-surface);
   box-shadow: none;
   transform: none;
 }
-.location-panel .context-picto {
+.context-entity-select .context-picto {
   display: grid;
   place-items: center;
   width: 30px;

@@ -1695,47 +1695,6 @@
   font-size: 0.72rem;
 }
 
-.context-reference {
-  display: grid;
-  gap: 0.35rem;
-}
-
-.context-reference button {
-  display: grid;
-  grid-template-columns: 34px 1fr auto;
-  gap: 0.7rem;
-  align-items: center;
-  padding: 0.55rem;
-  border: 0;
-  border-radius: 8px;
-  background: transparent;
-  color: var(--product-ink);
-  box-shadow: none;
-  text-align: left;
-}
-
-.context-reference button.selected {
-  background: var(--product-accent-soft);
-}
-
-.context-reference button > span:nth-child(2) {
-  display: grid;
-}
-
-.context-reference b {
-  font-size: 0.72rem;
-}
-
-.context-reference small {
-  color: var(--product-subtle);
-  font-size: 0.6rem;
-}
-
-.context-reference i {
-  color: var(--product-subtle);
-  font-style: normal;
-}
-
 .reference-avatar {
   display: grid;
   width: 34px;
@@ -1782,8 +1741,7 @@
   gap: 1rem;
 }
 
-.design-interaction-card,
-.design-effect-card {
+.design-interaction-card {
   position: relative;
   border: 1px solid #c9cdc6;
   border-radius: 11px;
@@ -1866,54 +1824,6 @@
   flex: 1;
   height: 1px;
   background: #989f98;
-}
-
-.design-effect-card header {
-  display: flex;
-  height: auto;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.75rem 0.85rem;
-  border-bottom: 1px solid var(--product-line);
-  background: #fafaf7;
-  box-shadow: none;
-}
-
-.design-effect-card header b {
-  font-size: 0.72rem;
-}
-
-.design-effect-card header button {
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: var(--product-subtle);
-  box-shadow: none;
-}
-
-.design-effect-card > div {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 0.7rem;
-  padding: 0.85rem;
-}
-
-.design-effect-card label {
-  display: grid;
-  gap: 0.3rem;
-  color: var(--product-muted);
-  font-size: 0.6rem;
-  font-weight: 650;
-}
-
-.design-effect-card input,
-.design-effect-card select {
-  min-width: 0;
-  padding: 0.5rem;
-  border: 1px solid var(--product-line);
-  border-radius: 6px;
-  background: white;
-  font-size: 0.66rem;
 }
 
 .pattern-notes {

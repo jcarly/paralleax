@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, describe, expect, it } from 'vitest';
 import { DesignSystemPage } from './DesignSystemPage';
@@ -65,6 +65,28 @@ describe('DesignSystemPage', () => {
       'trigger-marker',
       'selected',
     );
+
+    const contextRows = document.querySelectorAll('.reference-card .context-entity-row');
+    expect(contextRows).toHaveLength(3);
+    expect(document.querySelector('.context-reference')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Mara Venn' })).toHaveClass(
+      'context-entity-select',
+      'selected',
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Mara Venn' }));
+    expect(screen.getByRole('button', { name: 'Mara Venn' })).toBeInTheDocument();
+
+    const effectCard = document.querySelector('.narrative-reference .interaction-effect-card');
+    expect(effectCard).toBeInTheDocument();
+    expect(effectCard?.querySelector('.interaction-effect-title')).toHaveTextContent(
+      'Stat change 1',
+    );
+    expect(effectCard?.querySelector('.interaction-effect-fields')).toBeInTheDocument();
+    expect(document.querySelector('.design-effect-card')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Remove stat effect' }));
+    expect(
+      document.querySelector('.narrative-reference .interaction-effect-card'),
+    ).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Browse stories' })).toHaveAttribute('href', '/');
   });
 });

@@ -1,5 +1,7 @@
 import { Link } from 'react-router-dom';
 import type { ReactNode } from 'react';
+import { InteractionEffectCard } from '../components/InteractionEffectCard';
+import { ContextEntityRow } from '../components/StoryContextList';
 import './ProductPages.css';
 import '../features/story-editor/graph/storyGraph.css';
 
@@ -306,32 +308,29 @@ export function DesignSystemPage() {
                 <h3>Context rows</h3>
                 <code>Sidebar</code>
               </div>
-              <div className="context-reference">
-                <button className="selected" type="button">
-                  <span className="reference-avatar moss">MV</span>
-                  <span>
-                    <b>Mara Venn</b>
-                    <small>Playable character</small>
-                  </span>
-                  <i>›</i>
-                </button>
-                <button type="button">
-                  <span className="reference-avatar blue">IH</span>
-                  <span>
-                    <b>Ivo Hale</b>
-                    <small>3 interactions</small>
-                  </span>
-                  <i>›</i>
-                </button>
-                <button type="button">
-                  <span className="reference-avatar amber">⌖</span>
-                  <span>
-                    <b>The Glasshouse</b>
-                    <small>Location</small>
-                  </span>
-                  <i>›</i>
-                </button>
-              </div>
+              <ul className="context-entity-list">
+                <ContextEntityRow
+                  name="Mara Venn"
+                  fallback="MV"
+                  selected
+                  metadata="Playable character"
+                  onSelect={() => undefined}
+                />
+                <ContextEntityRow
+                  name="Ivo Hale"
+                  fallback="IH"
+                  selected={false}
+                  metadata="3 interactions"
+                  onSelect={() => undefined}
+                />
+                <ContextEntityRow
+                  name="The Glasshouse"
+                  fallback="⌖"
+                  selected={false}
+                  metadata="Location"
+                  onSelect={() => undefined}
+                />
+              </ul>
             </div>
             <div className="reference-card">
               <div className="reference-card-heading">
@@ -384,36 +383,40 @@ export function DesignSystemPage() {
               />
               <span aria-hidden="true" />
             </div>
-            <article className="design-effect-card">
-              <header>
-                <b>Stat change 1</b>
-                <button type="button" aria-label="Remove stat effect">
-                  ×
+            <InteractionEffectCard
+              title="Stat change 1"
+              removeAction={
+                <button
+                  aria-label="Remove stat effect"
+                  className="ghost danger interaction-effect-remove"
+                  type="button"
+                  onClick={() => undefined}
+                >
+                  x
                 </button>
-              </header>
-              <div>
-                <label>
-                  Target
-                  <input defaultValue="Mara Venn" />
-                </label>
-                <label>
-                  Stat
-                  <select defaultValue="trust">
-                    <option value="trust">Trust</option>
-                  </select>
-                </label>
-                <label>
-                  Operation
-                  <select defaultValue="increase">
-                    <option value="increase">Increase by</option>
-                  </select>
-                </label>
-                <label>
-                  Value
-                  <input type="number" defaultValue="2" />
-                </label>
-              </div>
-            </article>
+              }
+            >
+              <label>
+                Target
+                <input defaultValue="Mara Venn" />
+              </label>
+              <label>
+                Stat
+                <select defaultValue="trust">
+                  <option value="trust">Trust</option>
+                </select>
+              </label>
+              <label>
+                Operation
+                <select defaultValue="increase">
+                  <option value="increase">Increase by</option>
+                </select>
+              </label>
+              <label>
+                Value
+                <input type="number" defaultValue="2" />
+              </label>
+            </InteractionEffectCard>
           </div>
           <div className="pattern-notes">
             <div>
