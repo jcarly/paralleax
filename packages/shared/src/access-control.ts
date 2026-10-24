@@ -2,7 +2,7 @@ import type { UserDisplayIdentity } from './user-identity.js';
 
 export type UserRole = 'user' | 'admin';
 
-export type StoryVisibility = 'private' | 'authenticated' | 'public' | 'invitation';
+export type StoryVisibility = 'private' | 'authenticated' | 'public' | 'unlisted' | 'invitation';
 export type StoryEditPolicy = 'owner' | 'collaborators' | 'authenticated';
 export type StoryCommentPolicy = 'readers' | 'editors';
 export type StoryCollaboratorRole = 'viewer' | 'editor';
@@ -58,6 +58,7 @@ export function resolveStoryAccess(
   const canRead =
     privileged ||
     settings.visibility === 'public' ||
+    settings.visibility === 'unlisted' ||
     (subject.authenticated &&
       (settings.visibility === 'authenticated' ||
         settings.editPolicy === 'authenticated' ||
@@ -69,4 +70,18 @@ export function resolveStoryAccess(
     (settings.commentPolicy === 'readers' || (settings.commentPolicy === 'editors' && canEdit));
 
   return { canRead, canEdit, canManage, canComment };
+}
+
+export function canDiscoverStory(
+  settings: StoryAccessSettings,
+  subject: StoryAccessSubject,
+): boolean {
+  if (settings.visibility === 'unlisted') {
+    return (
+      subject.role === 'admin' ||
+      subject.isOwner === true ||
+      (subject.authenticated && subject.collaboratorRole !== undefined)
+    );
+  }
+  return resolveStoryAccess(settings, subject).canRead;
 }

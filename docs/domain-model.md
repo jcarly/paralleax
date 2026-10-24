@@ -250,11 +250,13 @@ Implemented visibility settings:
 - private: only the creator and administrators can read;
 - authenticated: every signed-in user can read;
 - public: anonymous and authenticated users can read;
+- unlisted: anyone with the Story URL can read without signing in, but the Story
+  is omitted from library discovery except for its owner, administrators, and
+  explicitly granted users;
 - invitation: explicitly granted users can read.
 
-[ADR-033](decisions/ADR-033-unlisted-story-visibility.md) accepts a fifth,
-unlisted policy that is readable by URL but excluded from general library
-discovery. It remains future work and is not part of the implemented policy set.
+See [ADR-033](decisions/ADR-033-unlisted-story-visibility.md) for the unlisted
+visibility contract.
 
 Specific permissions are stored in `story_user_permissions`, with a `userId`, a
 `storyId`, and a `viewer` or `editor` role.

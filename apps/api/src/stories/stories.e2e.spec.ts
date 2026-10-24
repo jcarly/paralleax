@@ -2852,4 +2852,49 @@ unknown_command
       expect.arrayContaining([expect.objectContaining({ id: privateStory.body.id })]),
     );
   });
+
+  it('reads unlisted stories by URL and keeps them out of catalogs without a direct grant', async () => {
+    const created = await request(httpServer)
+      .post('/api/stories')
+      .set('Cookie', 'paralleax_session=user-one')
+      .send({ title: 'Link-only story' })
+      .expect(201);
+    await request(httpServer)
+      .patch(`/api/stories/${created.body.id}/access`)
+      .set('Cookie', 'paralleax_session=user-one')
+      .send({ visibility: 'unlisted', editPolicy: 'authenticated', commentPolicy: 'readers' })
+      .expect(200);
+
+    const anonymousRead = await request(httpServer)
+      .get(`/api/stories/${created.body.id}`)
+      .set('Cookie', 'paralleax_session=anonymous')
+      .expect(200);
+    expect(anonymousRead.body.capabilities).toMatchObject({ canRead: true, canEdit: false });
+
+    const publicCatalog = await request(httpServer).get('/api/stories/public').expect(200);
+    expect(publicCatalog.body.items).not.toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: created.body.id })]),
+    );
+
+    const ungrantedLibrary = await request(httpServer)
+      .get('/api/stories')
+      .set('Cookie', 'paralleax_session=user-two')
+      .expect(200);
+    expect(ungrantedLibrary.body.items).not.toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: created.body.id })]),
+    );
+
+    await request(httpServer)
+      .post(`/api/stories/${created.body.id}/access/collaborators`)
+      .set('Cookie', 'paralleax_session=user-one')
+      .send({ email: 'user-two@paralleax.invalid', role: 'viewer' })
+      .expect(201);
+    const grantedLibrary = await request(httpServer)
+      .get('/api/stories')
+      .set('Cookie', 'paralleax_session=user-two')
+      .expect(200);
+    expect(grantedLibrary.body.items).toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: created.body.id })]),
+    );
+  });
 });

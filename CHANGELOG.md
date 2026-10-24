@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Added unlisted Story visibility: anyone with its player URL can read without
+  signing in, while the Story stays out of public and ungranted account
+  libraries. Owners, administrators, and directly granted accounts retain their
+  library view.
+
 - Centralized the interface and narrative font stacks and compact text sizes.
   Product pages now share the application UI stack, and Reader and Simulation
   render narrative titles and text with the same serif family. Updated the

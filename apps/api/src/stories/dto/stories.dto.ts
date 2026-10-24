@@ -208,7 +208,7 @@ export class UpdateStoryDto {
   startDateTime?: string;
 }
 export class UpdateStoryAccessDto {
-  @IsIn(['private', 'authenticated', 'public', 'invitation'])
+  @IsIn(['private', 'authenticated', 'public', 'unlisted', 'invitation'])
   visibility!: StoryVisibility;
   @IsIn(['owner', 'collaborators', 'authenticated'])
   editPolicy!: StoryEditPolicy;

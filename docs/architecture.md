@@ -265,9 +265,13 @@ queries return metadata and an interaction count without loading interactions,
 Triggers, context entities, or item graphs. Search, access/ownership filters, and
 sorting execute before pagination in PostgreSQL. The authenticated
 `GET /api/stories` projection resolves stories accessible to the requesting
-account; the anonymous `GET /api/stories/public` projection filters to public
-visibility, omits owner account identifiers, and resolves capabilities as a
-signed-out reader. Creation endpoints still return the created complete story;
+account while respecting discovery policy. Unlisted Stories remain absent for
+accounts without ownership, administrator status, or a direct grant, even when
+their edit policy allows all signed-in users. The anonymous
+`GET /api/stories/public` projection filters
+to public visibility, omits owner account identifiers, and resolves capabilities
+as a signed-out reader; unlisted Stories remain readable through their direct
+player URL. Creation endpoints still return the created complete story;
 the web workspace converts that one result to a summary locally. Both story and
 summary projections include resolved capabilities so the interface can hide
 unavailable actions without becoming the security boundary.
@@ -293,7 +297,8 @@ projection. See ADR-027.
 
 The first account becomes the first administrator through a serialized database
 transaction. Administrator role updates use the same lock, and the final
-administrator cannot be demoted. Story access settings live on `stories`; direct
+administrator cannot be demoted. Story access settings live on `stories`;
+unlisted URL reading is resolved separately from library discovery. Direct
 viewer/editor grants live in `story_user_permissions` and target existing local
 accounts. See ADR-017.
 

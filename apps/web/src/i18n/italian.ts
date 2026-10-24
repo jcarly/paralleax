@@ -356,6 +356,7 @@ export const italianTranslation = {
         private: 'Privato',
         authenticated: 'Utenti registrati',
         public: 'Pubblico',
+        unlisted: 'Tramite link',
         invitation: 'Solo su invito',
       },
       continueDescription: 'Continua a dare forma a questa narrativa interattiva.',
@@ -398,6 +399,8 @@ export const italianTranslation = {
       private: 'Solo proprietario',
       authenticated: 'Utenti registrati',
       public: 'Tutti',
+      unlisted: 'Tramite link (non in elenco)',
+      help: 'Chiunque abbia l’URL può leggere la Storia senza accedere. Non apparirà nel catalogo pubblico.',
       invitation: 'Su invito',
     },
     edit: {

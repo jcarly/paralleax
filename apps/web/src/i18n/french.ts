@@ -348,6 +348,7 @@ export const frenchTranslation = {
         private: 'Privée',
         authenticated: 'Utilisateurs connectés',
         public: 'Publique',
+        unlisted: 'Par lien',
         invitation: 'Sur invitation',
       },
       continueDescription: 'Continuez à façonner cette narration interactive.',
@@ -390,6 +391,8 @@ export const frenchTranslation = {
       private: 'Propriétaire uniquement',
       authenticated: 'Utilisateurs connectés',
       public: 'Tout le monde',
+      unlisted: 'Par lien (non répertoriée)',
+      help: 'Toute personne disposant de l’URL peut lire l’histoire sans compte. Elle reste absente du catalogue public.',
       invitation: 'Par invitation',
     },
     edit: {

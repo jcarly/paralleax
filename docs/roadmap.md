@@ -557,7 +557,10 @@ Stories have reliable ownership and revision semantics so multiple people and fu
 - Creator ownership and global user/administrator roles.
 - Story revisions incremented on authored mutations and returned in mutation
   results and live invalidation events.
-- Private, authenticated, invitation, and public Story visibility.
+- Private, authenticated, invitation, public, and unlisted Story visibility.
+  Unlisted Stories are readable by URL without sign-in and excluded from library
+  discovery except for owners, administrators, and explicitly granted users;
+  see [ADR-033](decisions/ADR-033-unlisted-story-visibility.md).
 - Owner, collaborator, authenticated-user, and administrator editing policies.
 - Story-specific viewer/editor grants with effective read/edit/manage/comment
   capabilities.
@@ -600,9 +603,6 @@ Stories have reliable ownership and revision semantics so multiple people and fu
 
 - Finish consolidating repeated SQL/application access expressions behind one
   explicit policy contract without weakening query-level authorization.
-- Implement accepted `unlisted` visibility as a distinct link-readable,
-  non-discoverable policy per
-  [ADR-033](decisions/ADR-033-unlisted-story-visibility.md).
 - Add account export/deletion before open registration. Password change/reset,
   email verification, and session revocation are implemented.
 - Add external identity providers only when operationally required.
@@ -1010,8 +1010,8 @@ A validated Story can become a stable reader-facing publication without exposing
 
 ### Implemented foundation
 
-- Anonymous reading of public Stories and authenticated/invitation/private
-  visibility for other access modes.
+- Anonymous reading of public Stories and unlisted Stories through their player
+  URLs, plus authenticated/invitation/private visibility for other access modes.
 - Stable Story player routes, separate editor-only Simulation Mode, and
   capability-based interface controls.
 - Authenticated reader saves kept separate from authored Story persistence.
@@ -1027,8 +1027,6 @@ versioned publication workflow.
 - Separate mutable drafts from immutable published versions.
 - Validate before publication.
 - Stable public reader URLs.
-- Private, authenticated, invitation, public, and accepted unlisted visibility,
-  with unlisted Stories excluded from general library discovery.
 - Separate author simulation from public reader UX.
 - Reporting and moderation foundations.
 - Ownership and content-licensing rules.
