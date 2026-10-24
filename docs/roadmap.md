@@ -2,7 +2,7 @@
 
 This roadmap describes the progression from the validated narrative core to a public Paralleax platform.
 
-Status reviewed: 2026-10-17.
+Status reviewed: 2026-10-24.
 
 It is organized around **user capabilities** rather than implementation areas. Engineering work supports these milestones but does not define them by itself.
 
@@ -986,9 +986,214 @@ Potential directions include:
 - standalone/web-app exports;
 - managed media pipelines;
 - Unity integration;
-- AI-assisted authoring experiments;
+- provider-neutral API and external-agent integrations, including optional MCP
+  adapters (see [External Agent Integrations](#post-v1-direction-external-agent-integrations));
 - advanced collaboration;
 - advanced economy, equipment, and clothing systems;
 - progressive loading for very large stories when measured usage justifies it.
 
 These are directions for exploration, not commitments to a particular order.
+
+## Post-V1 Direction: External Agent Integrations
+
+External assistants may eventually help authors inspect, test, import, and edit
+Stories through provider-independent interfaces. AI remains optional. MCP is the
+preferred first agent adapter, not the owner of Paralleax business rules and not
+the only supported integration path. This direction does not add AI-generated
+behavior to the reader or narrative engine.
+
+This work stays outside the V1 delivery gates. It should build on the active
+reliability, revision/access, stable exchange-format, validation, and authoring
+work already sequenced above rather than moving those priorities. The stages
+below are a planning order, not a commitment to dates.
+
+### Reusable foundation already in place
+
+- The API already owns persistence, transactions, and Story authorization. Story
+  capability resolution is shared, with repository-level authorization; see
+  [Story access control](decisions/ADR-017-story-access-control.md).
+- The API has focused Story mutation, metadata, access, and history services.
+  Shared operations own deterministic domain changes. Audit these extension
+  points before proposing a service rewrite.
+- Revisioned, paginated read projections provide bounded views of large Stories
+  while preserving one canonical Story; see
+  [paginated Story projections](decisions/ADR-027-paginated-story-read-projections.md).
+- Durable authored-change events already record actor, revision, and reversible
+  field/entity deltas; see
+  [durable Story history](decisions/ADR-023-durable-story-change-history.md).
+- Reader and Simulation Mode use deterministic shared evaluation, including
+  seeded Trigger probability and saved journey state. The
+  [simulation direction](simulation.md) identifies reusable test fixtures and
+  explicit preconditions as open work.
+- ChoiceScript and QSP imports already use source-specific adapters, structured
+  compatibility reports, validation, and a staged mapping pipeline. V0.6 owns
+  the reusable import/export boundary.
+
+These foundations do not yet constitute a stable public automation contract.
+V0.6 still needs a stable Story backup/export representation; reusable complete
+Story validation remains in scope; there is no canonical preview/commit contract
+for multi-entity edits; managed media storage is out of scope; and authored
+content localization has no settled model. Current implementation details are
+described in [Current Scope](current-scope.md).
+
+### Staged scope
+
+#### 1. Provider-neutral authoring API and operation boundary
+
+This is the first structural stage and should remain useful to the editor,
+imports, tests, and future exporters even when no assistant is connected.
+
+- Inventory the operations and entities already supported by the Story API.
+  Reuse the existing authorized services and shared mutations; identify missing
+  capabilities before expanding the interface. Do not expose the complete Story
+  aggregate by default where existing projections can serve the request.
+- Define a reusable validation boundary for complete candidate Stories and
+  operation-level changes, including same-Story references, quotas, and the
+  existing domain invariants.
+- Plan atomic grouped mutations that can be validated without persistence,
+  previewed as a diff, committed against a known Story revision, and rejected
+  cleanly when that revision is stale. A failed batch must not leave partial
+  authored changes.
+- Reuse durable Story history for undo and audit where its semantics fit.
+  Determine how one external operation maps to the existing per-mutation event
+  stream; Story creation/import and whole-Story deletion currently sit outside
+  that history contract.
+- Keep client and assistant integrations on the same authorized application
+  boundary. No adapter may write directly to persistence or implement a second
+  set of narrative rules.
+
+#### 2. Deterministic agent-readable testing
+
+Expose the shared reader and Simulation behavior as bounded, reproducible test
+operations before relying on model judgment to assess a Story.
+
+- Allow a caller to select a start Interaction and explicit initial state,
+  including typed values, simulated time, and random seed where relevant.
+- Explore selected paths or bounded alternatives and return structured
+  diagnostics, coverage limits, and reproducible journeys. Report when budgets
+  stop exploration; do not present partial search as proof that all paths work.
+- Include checks for unavailable Interactions, unreachable content, stuck paths,
+  contradictory conditions, unused state, and repeatable failure scenarios
+  where the deterministic engine can establish the result.
+- Keep subjective narrative or consistency feedback clearly separate from
+  deterministic engine findings. Agents may propose a correction, but testing
+  must not apply one.
+
+#### 3. Read-only MCP integration
+
+Add a thin MCP adapter over the same authorized application operations. Begin
+with tools that inspect and test without changing authored content.
+
+- Search and page through authorized Stories and their entities; inspect
+  structure and relationships without loading unrelated bodies or graph data.
+- Expose validation, deterministic Simulation, and test-report operations with
+  bounded inputs and outputs, filters, and progress for longer work.
+- Support read-only credentials and make the accessible Story set explicit.
+  Returned authored text is untrusted content and must not be treated as tool
+  instructions.
+
+#### 4. Controlled writing tools
+
+Add write capabilities incrementally after the API operation boundary, revision
+conflicts, validation, and history mapping are settled.
+
+- Propose create, update, delete, and connection changes as coherent batches.
+- Return a reviewable diff and validation report before commit. Require an
+  explicit apply step, reject stale previews, enforce Story permissions again
+  at commit, and require deliberate confirmation for destructive operations.
+- Record the acting user or delegated identity and resulting Story revisions in
+  the established audit/history contract. Do not apply model suggestions
+  automatically.
+
+#### 5. Optional agent-assisted extensions
+
+- **Imports:** let an agent help map an unsupported source into the existing
+  source-neutral import pipeline. Keep source parsing and mapping in adapters;
+  validate and preview the mapped Story and report approximations, unsupported
+  features, and lost information. Do not promise faithful conversion for every
+  format.
+- **Narrative authoring:** generate or revise entities and text as reviewable
+  Story batches. Treat coherence checks and graph restructuring as suggestions;
+  preserve stable IDs and validate all canonical mutations.
+- **Media:** let agents submit and associate externally generated assets only
+  after managed upload/storage, format validation, quotas, access control, and
+  asset provenance are designed. Paralleax need not host generation models.
+- **Localization:** define authored locale ownership and fallback behavior
+  separately from interface localization. Preserve entity IDs, dynamic tokens,
+  and expressions; expose missing translations and format/length checks.
+- **Built-in assistant:** consider an in-product conversation UI and BYOK
+  provider selection only after external API/MCP workflows demonstrate value.
+  Do not assume an assistant subscription includes API access or require one
+  provider.
+- Defer multi-agent orchestration until scoped single-agent operations have
+  reliable authorization, recovery, and audit behavior.
+
+### Cross-cutting constraints and risks
+
+- Keep credentials revocable and narrowly scoped by Story and capability. Read
+  and write access must be separable; delegated clients never gain more access
+  than the authorizing user. Confirm the identity, token lifecycle, and scope
+  model before implementation.
+- Recheck authorization, revisions, quotas, and domain validation on every
+  operation. Bound request size, result size, pagination, and exploration work;
+  make long-running imports/tests observable and cancellable under the existing
+  reliability work.
+- Keep authored content and credentials out of operational logs. Preserve
+  operation provenance in the appropriate durable history while avoiding a
+  parallel audit store unless its lifecycle is shown to differ materially.
+- MCP-specific schemas and transport belong in an adapter. Provider SDKs,
+  prompts, and model behavior must not enter `packages/shared` or affect
+  deterministic Reader results.
+- Media rights, retention, and storage cost; large context payloads; prompt
+  injection through Story text; stale previews; destructive calls; and
+  combinatorial test growth all need explicit limits and recovery behavior.
+
+### Decisions required before implementation
+
+- Which existing API operations form a stable external contract, and what
+  compatibility/versioning policy applies to external clients?
+- How are credentials issued, scoped, delegated, expired, and revoked for
+  read-only and read/write use?
+- Does an external batch produce one grouped history event, several existing
+  mutation events, or a distinct operation record? How does undo behave across
+  that unit while respecting the current exclusions for Story creation/import
+  and deletion?
+- What makes a preview current, and how are stale revision, idempotent retry,
+  cancellation, and long-running operation results represented?
+- What authored-locale and managed-media contracts are needed before those
+  optional extensions proceed?
+
+### Indicative dependencies and exit evidence
+
+- Begin only after the active V0.2 reliability gates and the required V0.3
+  revision/conflict and access semantics are complete. Read-only exploration may
+  be piloted earlier only if it does not bypass those gates.
+- Controlled writes require the V0.6 exchange/validation boundary, V0.3 history
+  and conflict behavior, and the batch-operation decisions above. They must not
+  be a prerequisite for V1.0.
+- Import assistance builds on the V0.6 pipeline; Simulation tools build on V0.5
+  deterministic execution and its test/reporting limits; media and localization
+  each require their own model and lifecycle decisions.
+- Evidence should show that an authorized external client can inspect one large
+  Story through bounded reads, reproduce a deterministic test result, preview a
+  valid batch without persistence, reject a stale or unauthorized commit, and
+  audit/undo an accepted authored change without losing unrelated work.
+- The integration remains optional, provider-neutral, and unable to alter
+  Reader semantics or bypass the same validation used by the editor and imports.
+
+### Competitive reference snapshot — 2026-10-24
+
+- **Official integration:** [Arcweave's MCP documentation](https://docs.arcweave.com/integrations/mcp)
+  documents an Arcweave-hosted MCP server alongside scoped workspace API keys
+  with separate read and write permissions. Its [integration overview](https://docs.arcweave.com/integrations/overview)
+  also documents a REST API. This is a product precedent, not a required design
+  for Paralleax.
+- **Community projects:** [twine-play-mcp](https://github.com/adorablelovelymia/twine-play-mcp)
+  exposes tools for playing and testing Twine/interactive-fiction HTML projects;
+  [renpy-mcp](https://github.com/fracturedring/renpy-mcp) is a third-party
+  Ren'Py/MCP project. Neither reference is presented as an official Twine or
+  Ren'Py integration.
+- **Narrative QA reference:** [inkcheck](https://github.com/chaoz23/inkcheck)
+  is an independent Ink testing project documenting CLI and MCP access to
+  bounded, deterministic branch checks and reproducible reports. It is not
+  presented as an official Ink integration or as proof of exhaustive coverage.
