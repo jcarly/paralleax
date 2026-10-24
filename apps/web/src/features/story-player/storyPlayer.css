@@ -56,6 +56,23 @@
   white-space: pre-wrap;
 }
 
+.story-body img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 0.75rem auto;
+}
+
+.story-body video,
+.story-body iframe {
+  display: block;
+  width: 100%;
+  max-width: 48rem;
+  aspect-ratio: 16 / 9;
+  margin: 0.75rem auto;
+  border: 0;
+}
+
 .player-story-content > h1 {
   margin: 0 0 1rem;
   font-family: var(--font-narrative);

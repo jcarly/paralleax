@@ -178,22 +178,6 @@
   margin-top: 1rem;
 }
 
-.story-body img {
-  display: block;
-  max-width: 100%;
-  height: auto;
-  margin: 0.75rem auto;
-}
-
-.story-body video,
-.story-body iframe {
-  display: block;
-  width: 100%;
-  max-width: 48rem;
-  aspect-ratio: 16 / 9;
-  margin: 0.75rem auto;
-  border: 0;
-}
 .inspector hr {
   border: 0;
   border-top: 1px solid var(--color-border);
