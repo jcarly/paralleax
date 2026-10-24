@@ -519,7 +519,12 @@ from CSS dimensions alone.
       `inspector-controls.css`. Dialog markup and behavior are unchanged.
       RichTextEditor and Interaction Inspector tests (30), Prettier and the web
       build passed; configured bundle budgets passed. The Vite large-chunk
-      advisory remains. Slice commit: `341b043`. Remaining work:
+      advisory remains. Slice commit: `341b043`.
+      **Additional progress (2026-10-24):** included the graph's `node-create`
+      button in the same focus-visible rule because its keyboard focus ring is
+      identical to both Trigger marker rings. Its hover state and geometry stay
+      local. Graph tests (32) and Prettier passed. Slice commit: `64f1a43`.
+      Remaining work:
       evaluate other duplicate candidates and CSS ownership boundaries; retain
       graph marker and inspector variants unless their semantics are proven
       identical. Resolution commit: TBD.
