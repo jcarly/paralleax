@@ -13,9 +13,10 @@ during the August 2026 code review and subsequent technical evaluations. Product
 This backlog is intentionally broader than the near-term delivery queue. Use the
 following order when choosing incremental quality work:
 
-1. **Reliability gates:** Story/entity quotas, data-router navigation blocking,
-   cancellable import-job lifecycle, and an explicit optimistic-mutation recovery
-   policy.
+1. **Reliability gates:** durable import-report retention across process
+   restarts and an explicit optimistic-mutation recovery policy. Story/entity
+   quotas, data-router navigation blocking, worker cancellation, server-side
+   lifecycle arbitration, and terminal job metadata cleanup are implemented.
 2. **Measured persistence/performance:** Story-summary budgets, focused repository
    commands, long-journey/item measurements, and retained React Flow latency budgets.
 3. **Author-facing consistency:** shared loading/error/session-expiry presentation,
@@ -261,7 +262,9 @@ rewrite.
 - [ ] Break `RichTextEditor` into focused modules for selection handling,
       token serialization, conditional-content decoration, and editing actions
       before adopting a richer editing engine; keep the existing storage format
-      compatible throughout the refactor.
+      compatible throughout the refactor. This remains prerequisite work for the
+      deferred [Tiptap migration initiative](roadmap.md#deferred-cross-cutting-initiative-rich-text-editor-migration).
+      Do not duplicate this task in that initiative.
   - [x] Extract token-source recovery, temporary editor-control construction, and
         canonical HTML serialization into a focused tested module.
   - [x] Extract selection capture/restoration and inline conditional-frame

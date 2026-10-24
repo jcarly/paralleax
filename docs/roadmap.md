@@ -32,9 +32,10 @@ The private-alpha P0 queue and the first seven P1 verticals are complete. Automa
 layout now uses ELK canonically, with reload/manual-routing quality retained as a
 focused follow-up. The near-term delivery sequence is:
 
-1. close the remaining reliability gates: Story/entity quotas, browser-history
-   navigation blocking through a data router, import cancellation/lifecycle
-   correctness, durable import-report storage, and a recorded provider restore drill;
+1. close the remaining reliability gates: durable import-report storage, an
+   explicit optimistic-mutation recovery policy, and a recorded provider restore
+   drill. Story/entity quotas, data-router navigation blocking, and cancellable
+   import-job lifecycle handling are implemented.
 2. make the Workbench the primary product differentiator: improve selection and
    organization first, then focus, projections, visible logic, dependency
    explanations, and convergence with Simulation Mode as described in
@@ -48,6 +49,113 @@ focused follow-up. The near-term delivery sequence is:
 
 Later milestone foundations may continue to be improved when they support these
 steps, but they must not bypass their production dependencies.
+
+### Deferred Cross-Cutting Initiative: Rich-Text Editor Migration
+
+**Priority:** P2, unscheduled. This structural editor improvement is outside the
+near-term delivery sequence above. The current editor already supports narrative
+tokens and structured conditions, so replacing its editing engine must earn its
+cost through a compatibility prototype before implementation is scheduled.
+
+**Goal:** Evaluate and, if validated, progressively replace the custom WYSIWYG
+editing surface with Tiptap/ProseMirror OSS while retaining Paralleax's narrative
+model and existing story content. Tiptap is a candidate, not an accepted
+architectural decision. Compare Lexical only if the prototype exposes a
+structural limitation in Tiptap.
+
+**Current implementation:**
+
+- `RichTextEditor.tsx` edits a `contentEditable` surface with direct DOM updates,
+  `document.execCommand()`, remembered browser selections, and modal editors for
+  variable, link, and condition tokens. Token serialization and selection handling
+  have focused tested modules; conditional decoration and editing actions remain
+  in the existing code-quality backlog.
+- `Interaction.body` is sanitized HTML. Structured conditional records are stored
+  separately as `conditionalTextBlocks` JSONB with shared `TriggerCondition`
+  values, and a frame update sends both together. The API sanitizer and browser
+  DOMPurify renderer each preserve only their own allowlisted tags and attributes.
+- `RichTextContent.tsx` and `richTextProjection.ts` render reader content and
+  project variable values, available interaction links, and conditional text.
+  Simulation Mode uses the editor surface; its reader output remains a separate
+  rendering path. Existing media includes images, video, and approved embeds.
+- Existing coverage includes editor/token/selection unit tests, API sanitizer
+  tests and endpoint coverage, Simulation Mode tests, and Playwright flows for
+  body saves, modal selection restoration, and conditional-frame updates. The web
+  package currently has no Tiptap, ProseMirror, or Lexical dependency.
+
+**Existing contract and dependencies:**
+
+- Keep `Interaction.body` as sanitized HTML and retain stable stat-assignment,
+  item, interaction, and conditional-frame identifiers.
+- Keep `ConditionalTextBlock` records and their `TriggerCondition` values as the
+  canonical condition model. HTML carries only the frame identifier; the API
+  validates and persists the body and condition records together. Reuse the
+  Trigger condition fields and shared evaluation rules in
+  [ADR-024](decisions/ADR-024-structured-conditional-rich-text.md).
+- Keep the existing variable and interaction-link selectors, condition editor,
+  save path, durable Story history, comments, imports, reader renderer, and
+  Simulation Mode behavior. Reader and Simulation rendering remain separate
+  from the editing engine.
+- Preserve API and browser sanitization, supported image/video/embed content,
+  historical HTML, and imported Stories. The future stable backup/export
+  contract remains governed by V0.6.
+- The unfinished [RichTextEditor extraction](code-quality-backlog.md) remains
+  separate work and is a prerequisite to adopting a new engine. This initiative
+  must not duplicate that extraction or introduce a paid/Cloud dependency.
+- Evaluate compatibility with
+  [ADR-034 collaborative authoring](decisions/ADR-034-collaborative-offline-authoring.md),
+  but do not implement collaboration, select an OT/CRDT protocol, or change the
+  persistence model as part of this migration.
+
+**Phases:**
+
+1. **Audit and prototype.** Map current editor behavior, extensions, sanitizer
+   rules, persistence/history/comments, Simulation Mode, import paths, tests, and
+   bundle boundaries. Build an isolated prototype without changing persisted
+   stories. Test representative sanitized HTML -> Tiptap document -> HTML
+   round-trips, especially inline tokens, legacy target-based conditions,
+   structured inline and multiblock conditions across paragraphs, and media.
+   Measure bundle and editing performance; verify OSS licensing and keyboard,
+   accessibility, and IME behavior. Deliver a compatibility report, prototype,
+   and recommendation documented in a new ADR if the architecture is accepted.
+2. **Editing infrastructure.** If Phase 1 passes review, add a dedicated editor
+   integration with centralized extensions and commands. Replace direct DOM
+   editing and `document.execCommand()` while preserving the inspector contract,
+   selection/focus behavior, copy/paste, editor-local undo/redo, and existing
+   design-system controls.
+3. **Narrative extensions.** Add extensions for dynamic variables, interaction
+   links, conditional text, and existing image/video/embed content. Keep transient
+   edit controls in NodeViews or decorations where appropriate; never serialize
+   them into authored HTML. Reuse existing selectors and condition editors,
+   preserve stable IDs and condition multiplicity, and support insertion,
+   editing, removal, and movement. Leave procedural text, localization variants,
+   and other future narrative formats out of scope.
+4. **Integration and rollout.** Integrate the editor into the Interaction
+   Inspector and Simulation Mode. Preserve the current reader projection and
+   persistence contract unless Phase 1 proves a change is necessary. Verify
+   atomic body/condition saves, Story history versus editor-local undo/redo,
+   text-comment anchors, import/export compatibility, sanitization, and a staged
+   rollout with an exercised rollback path before general availability. Remove
+   the old editor only after the acceptance criteria pass.
+
+**Exit criteria:** Existing Stories survive edit/save/reload without loss of
+content or references; current narrative tokens, inline and multiblock conditions,
+reader behavior, Simulation Mode, imports/exports, comments, history, and saves
+remain correct; temporary controls never enter persisted HTML; keyboard
+selection, shortcuts, copy/paste, drag/drop, undo/redo, accessibility, and IME
+input are reliable; relevant unit, integration, and browser tests pass; and no
+mandatory commercial service is introduced. Any storage-contract or schema
+change requires a separate accepted decision and migration plan.
+
+**Primary risks:** HTML parsing and serialization may normalize legacy markup or
+drop attributes required by stable tokens, imports, or sanitizers. Inline and
+multiblock conditional frames must preserve their IDs and coordinate atomically
+with separate condition records. NodeViews and decorations can interfere with
+selection, copy/paste, comment text offsets, drag/drop, and editor-local undo;
+they must not contaminate durable Story history or saved HTML. Media and embed
+extensions must stay within both sanitizer allowlists. Bundle cost, editing
+performance, keyboard/IME behavior, OSS license, and future compatibility with
+ADR-034's collaborative text contract require evidence before adoption.
 
 ## Historical Private-Alpha Feedback Queue — 2026-09-11
 
