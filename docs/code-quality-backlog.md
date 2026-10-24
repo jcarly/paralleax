@@ -500,7 +500,13 @@ from CSS dimensions alone.
       contains an absolutely positioned delete action. Graph marker styles and
       interactions are unchanged. Targeted inspector/context tests (46), web
       typecheck, TypeScript lint, Prettier and web build passed; bundle budgets
-      passed. Slice commit: `5579a93`. Remaining work:
+      passed. Slice commit: `5579a93`.
+      **Additional progress (2026-10-24):** renamed `.location-panel-header` to
+      `.editor-context-header` because the same editor context header wraps
+      locations, characters, stats, items and Groups. Updated its local style
+      selectors and the existing context test; layout and interactions are
+      unchanged. Context and group navigation tests (33), web typecheck, ESLint
+      and Prettier passed. Slice commit: `31bd21b`. Remaining work:
       evaluate other duplicate candidates and CSS ownership boundaries; retain
       graph marker and inspector variants unless their semantics are proven
       identical. Resolution commit: TBD.
