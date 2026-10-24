@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Added a staged, non-mutating CSS lint check for the explicitly owned reusable
+  component stylesheets. Graph, authored decoration, Prototype and Simulation
+  styles remain outside its initial scope.
+
 - Corrected two shared action variants after visual review: destructive ghost
   actions now retain danger text on a transparent surface, and secondary actions
   use the shared neutral border token. Dimensions, hover, and keyboard focus stay

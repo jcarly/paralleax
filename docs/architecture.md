@@ -1150,7 +1150,8 @@ classes directly.
   with per-workspace thresholds enforced by the coverage commands.
 - Bundle contract: the production web build checks the Vite manifest, dynamic
   route boundaries, and compressed initial/editor/player budgets.
-- Code style: ESLint and Prettier.
+- Code style: ESLint, Stylelint on explicitly listed component CSS files, and
+  Prettier.
 - GitHub Actions: lint, format, typecheck, coverage, build, PostgreSQL 17
   integration and recovery, Playwright, production dependency audit, and
   production image builds on pushes and pull requests.

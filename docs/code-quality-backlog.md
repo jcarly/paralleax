@@ -814,13 +814,26 @@ from CSS dimensions alone.
       Playwright regression checks semantic token parity, transparency, and keyboard
       focus. Other action/status variants remain outside this slice. Resolution
       commit: `0735cf6`.
-- [ ] **DS-13 — Add staged CSS quality rules without noisy global bans** (D16).
+- [x] **DS-13 — Add staged CSS quality rules without noisy global bans** (D16).
       Evaluate Stylelint against Node 24 and current CI, then enable structural
       rules on migrated CSS and expand by explicit file ownership. Acceptance:
       authored decoration colors, runtime CSS properties, graph geometry and
       intentional fallbacks do not create broad false positives; lint runs in CI
-      without auto-fixing source. Depends on DS-10 and token ownership. Resolution
-      commit: TBD.
+      without auto-fixing source. Depends on DS-10 and token ownership.
+      **Initial stage completed 2026-10-24:** added Stylelint 17.16.0 as a
+      development dependency; its MIT license and Node `>=20.19.0` requirement
+      match this repository's Node 24 CI. The normal lint command now invokes
+      Stylelint on the explicitly owned `StoryContextList.css`,
+      `InteractionEffectCard.css`, and `richTextEditor.css` files. Built-in rules
+      detect unknown properties, at-rules and pseudo-classes, empty blocks, and
+      duplicate declarations; consecutive duplicate declarations with different
+      values remain allowed as browser fallbacks. Runtime custom properties pass.
+      No standard preset, color/value naming policy, auto-fix, or whole-tree CSS
+      glob was added. React Flow, authored graph decorations, Prototype and
+      Simulation styles stay outside this initial scope. CLI probes rejected an
+      unknown property while accepting a custom runtime variable and a differing
+      fallback declaration. Extend the target list only as ownership is reviewed.
+      Resolution commit: `ad57b65`.
 - [ ] **DS-14 — Complete targeted graph and visual regression coverage** (D15, D16).
       Extend existing graph geometry/DND/performance and accessibility coverage
       only for migrated states; retain the existing manual keyboard/focus audit
