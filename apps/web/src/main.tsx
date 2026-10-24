@@ -8,6 +8,7 @@ import './components/StoryContextList.css';
 import './features/story-editor/inspectors/inspector-layout.css';
 import './features/comments/comments.css';
 import './features/story-editor/inspectors/inspector-controls.css';
+import './components/InteractionEffectCard.css';
 import './components/richTextEditor.css';
 import './features/story-player/storyPlayer.css';
 import './features/story-player/storySimulation.css';
