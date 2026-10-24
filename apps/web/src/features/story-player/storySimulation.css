@@ -773,6 +773,8 @@
   border-radius: 50%;
   background: #e5ebe6;
   color: #2f6250;
+  text-align: center;
+  line-height: 24px;
 }
 
 .player-story-content .choices .choice.unavailable {
