@@ -10,7 +10,7 @@ export function StoryGroupsPanel(props: StoryGroupsPanelProps) {
   const { t } = useTranslation();
   const fallback = (
     <section className="story-groups-panel" aria-label={t('editor.groups.title')}>
-      <div className="location-panel-header">
+      <div className="location-panel-header editor-heading-row">
         <span className="context-heading">
           <span className="context-heading-label">{t('editor.groups.title')}</span>
           <small>{props.story.groups?.length ?? 0}</small>

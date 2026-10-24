@@ -326,7 +326,7 @@
   font-size: 1.35rem;
   box-shadow: var(--shadow-card);
 }
-.location-panel-header {
+.editor-heading-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
