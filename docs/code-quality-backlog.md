@@ -413,40 +413,51 @@ unchanged snapshot.
       containing dialog dismissal/focus restoration. Three browser tests and 11
       focused modal keyboard/unit tests passed; repository lint and typecheck
       and the web production build passed. Implementation commit: `7225199`.
-- [ ] **DS-07 — Evaluate contrast and focus indicators by semantic role** (D8,
+- [x] **DS-07 — Evaluate contrast and focus indicators by semantic role** (D8,
       D15). First record component/state pairs and proposed values for human
       review; then implement only approved changes. Acceptance: applicable text
       and non-text WCAG criteria pass for enabled states; disabled exceptions and
-      graph zoom/target exceptions are documented rather than guessed. Depends
-      on human approval of colors. Resolution commit: TBD.
+      graph zoom/target exceptions are documented rather than guessed. **Approved
+      and completed 2026-10-24:** the reviewed candidates were approved by the
+      product owner, then applied with existing semantic tokens. Playwright now
+      asserts the listed text ratios, opaque two-color focus rings in light and
+      dark contexts, actual Simulation rich-text focus, and graph marker geometry
+      and focus contrast. The implementation also corrected the target: the
+      rendered Simulation body uses shared `.rich-text-surface`; the named
+      `.simulation-body-input` selector is unused. Axe, 622 web unit tests, lint,
+      typecheck, and the production build passed. Graph zoom/target-size review
+      and the broader D15 keyboard/focus checklist remain in DS-14. Resolution
+      commit: `e15e2ba`.
 
-#### DS-07 review proposal (2026-10-24; pending human approval)
+#### DS-07 review proposal (2026-10-24; approved and implemented)
 
-The audit ratios remain reproducible from the current CSS. These are candidates,
-not accepted palette decisions. For WCAG 2.2 AA, use 4.5:1 for ordinary text and
-3:1 for meaningful non-text component/state indicators against adjacent colors
+The audit ratios record the original baseline. The candidates below were
+reviewed and approved for these component/state pairs; they do not finalize
+palette-wide roles. For WCAG 2.2 AA, use 4.5:1 for ordinary text and 3:1 for
+meaningful non-text component/state indicators against adjacent colors
 (SC 1.4.3 and 1.4.11). SC 2.4.7 requires visible keyboard focus; the separate
 SC 2.4.13 requirement for at least a 2 CSS-pixel perimeter area and a 3:1
 focus-state contrast change is AAA, not an AA requirement.
 
-| Component/state | Current pairing and ratio | Proposed correction for review |
-| --- | --- | --- |
-| Editor comment-count badges (`editor.css`: `.location-panel .context-comment-badge`, `.comments-toolbar-button small`) | White text on `--color-trigger` `#b78335`: 3.33:1 | Keep the amber surface; use existing `--color-text` `#20221f` for the small count text (4.82:1). |
-| Editor save status and graph location marker (`editor.css`: `.save-status.saved`; `graph/storyGraph.css`: `.interaction-node-location > span`) | `--color-place` `#5faf72` on white: 2.67:1 | Use existing `--color-primary` `#2f6250` for the enabled status text and location glyph (7.04:1); retain `--color-place` for fills and dots. The glyph is `aria-hidden` and accompanied by the location name, but the proposal keeps its visual distinction reliable. |
-| Product-page placeholders (`ProductPages.css`: `.product-field input::placeholder`) | `#a6aaa2` on white: 2.36:1 | Use existing `--color-muted` `#666b63` (5.46:1); retain the placeholder role and layout. |
-| Simulation help (`storySimulation.css`: `.simulation-controls small`) | `#8d806a` on `#fffaf0`: 3.72:1 | Use existing `--color-muted` `#666b63` (5.25:1); preserve size and placement. |
-| Shared button/link keyboard focus (`styles.css`: `button:focus-visible`, `.button:focus-visible`, `a:focus-visible`) | `--color-primary-halo-strong` composites to `#d1ddd9` on white: 1.39:1; on the light canvas: 1.38:1 | Review a two-color indicator using existing opaque `--color-primary` and `--color-surface`, so a visible edge remains on both light surfaces and dark Simulation Mode chrome. |
-| Story title and Simulation text-editor focus (`editor.css`: `.story-title-input:focus`; `storyPlayer.css`: Simulation title/body inputs) | `--color-primary-focus` `#87a99b` on white: 2.57:1; the translucent Simulation halo is about 1.14:1 on white | Use an opaque existing primary focus edge on these light editing surfaces, without changing field dimensions. Product-page focus border `#6d9383` on white is already 3.41:1 and should remain unchanged. |
-| Graph node-create and Trigger-marker focus (`graph/storyGraph.css`) | Translucent focus halo is 1.14–1.39:1 on light surfaces; the primary marker border against amber is 2.12:1 | Review the same two-color focus treatment in graph-specific rules. Preserve marker/card dimensions, rotation, React Flow handles, hit areas, selection, `nodrag`/`nopan`, and drag behavior. Do not promote hover or selection-only styling into a keyboard-focus rule. |
+| Component/state                                                                                                                                | Original pairing and ratio                                                                                   | Approved correction                                                                                                                                                                                                                                                     |
+| ---------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Editor comment-count badges (`editor.css`: `.location-panel .context-comment-badge`, `.comments-toolbar-button small`)                         | White text on `--color-trigger` `#b78335`: 3.33:1                                                            | Keep the amber surface; use existing `--color-text` `#20221f` for the small count text (4.82:1).                                                                                                                                                                        |
+| Editor save status and graph location marker (`editor.css`: `.save-status.saved`; `graph/storyGraph.css`: `.interaction-node-location > span`) | `--color-place` `#5faf72` on white: 2.67:1                                                                   | Use existing `--color-primary` `#2f6250` for the enabled status text and location glyph (7.04:1); retain `--color-place` for fills and dots. The glyph is `aria-hidden` and accompanied by the location name, but the proposal keeps its visual distinction reliable.   |
+| Product-page placeholders (`ProductPages.css`: `.product-field input::placeholder`)                                                            | `#a6aaa2` on white: 2.36:1                                                                                   | Use existing `--color-muted` `#666b63` (5.46:1); retain the placeholder role and layout.                                                                                                                                                                                |
+| Simulation help (`storySimulation.css`: `.simulation-controls small`)                                                                          | `#8d806a` on `#fffaf0`: 3.72:1                                                                               | Use existing `--color-muted` `#666b63` (5.25:1); preserve size and placement.                                                                                                                                                                                           |
+| Shared button/link keyboard focus (`styles.css`: `button:focus-visible`, `.button:focus-visible`, `a:focus-visible`)                           | `--color-primary-halo-strong` composites to `#d1ddd9` on white: 1.39:1; on the light canvas: 1.38:1          | Review a two-color indicator using existing opaque `--color-primary` and `--color-surface`, so a visible edge remains on both light surfaces and dark Simulation Mode chrome.                                                                                           |
+| Story title and Simulation text-editor focus (`editor.css`: `.story-title-input:focus`; `storyPlayer.css`: Simulation title/body inputs)       | `--color-primary-focus` `#87a99b` on white: 2.57:1; the translucent Simulation halo is about 1.14:1 on white | Use an opaque existing primary focus edge on these light editing surfaces, without changing field dimensions. Product-page focus border `#6d9383` on white is already 3.41:1 and should remain unchanged.                                                               |
+| Graph node-create and Trigger-marker focus (`graph/storyGraph.css`)                                                                            | Translucent focus halo is 1.14–1.39:1 on light surfaces; the primary marker border against amber is 2.12:1   | Review the same two-color focus treatment in graph-specific rules. Preserve marker/card dimensions, rotation, React Flow handles, hit areas, selection, `nodrag`/`nopan`, and drag behavior. Do not promote hover or selection-only styling into a keyboard-focus rule. |
 
 The current Axe suite passes its four representative routes, but does not assert
-the focused CSS pairings above. After approval, add rendered-state contrast
-assertions for the listed editor, product, Simulation, and graph cases and rerun
-the existing Axe suite. Leave already passing text/focus pairs unchanged. Disabled
-controls remain exempt where WCAG defines them as inactive; keep any exemption
-limited to those controls. Graph markers remain 18–20px in authored geometry;
-zoom, spacing, and target-size exceptions require browser review and must not be
-guessed from CSS dimensions alone.
+the focused CSS pairings above. The approved candidates were implemented in
+`e15e2ba`; rendered-state assertions now cover the listed editor, product,
+Simulation, and graph cases, and the Axe suite was rerun. Already passing
+text/focus pairs and product-input focus were left unchanged. Disabled controls
+remain exempt where WCAG defines them as inactive; the exemption is limited to
+those controls. Graph markers remain 18–20px in authored geometry; zoom, spacing,
+and target-size exceptions remain open for browser review and are not inferred
+from CSS dimensions alone.
 
 - [ ] **DS-08 — Reconcile typography after product review** (D9). Do not select
       or bundle a new font as part of mechanical cleanup. Acceptance: UI and
