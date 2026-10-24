@@ -1,6 +1,6 @@
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useBlocker, type Location } from 'react-router-dom';
+import { useBlocker, type BlockerFunction, type Location } from 'react-router-dom';
 import { RichTextEditorDialog } from '../components/RichTextEditorDialog';
 
 type GuardedSurface = 'editor' | 'player';
@@ -25,9 +25,18 @@ export function leavesPendingSaveSurface(
 export function usePendingSaveGuard(shouldBlock: boolean, surface: GuardedSurface) {
   const { t } = useTranslation();
   const stayButton = useRef<HTMLButtonElement>(null);
+  const shouldBlockRef = useRef(shouldBlock);
+  // Keep React Router's registered callback stable and current before browser input.
+  useLayoutEffect(() => {
+    shouldBlockRef.current = shouldBlock;
+  }, [shouldBlock]);
+
   const blocker = useBlocker(
-    ({ currentLocation, nextLocation }) =>
-      shouldBlock && leavesPendingSaveSurface(currentLocation, nextLocation, surface),
+    useCallback<BlockerFunction>(
+      ({ currentLocation, nextLocation }) =>
+        shouldBlockRef.current && leavesPendingSaveSurface(currentLocation, nextLocation, surface),
+      [surface],
+    ),
   );
 
   useEffect(() => {

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Fixed a timing gap in unsaved-change protection so browser Back and Forward
+  continue to block navigation as soon as an editor or Simulation save becomes
+  pending.
+
 - Added unlisted Story visibility: anyone with its player URL can read without
   signing in, while the Story stays out of public and ungranted account
   libraries. Owners, administrators, and directly granted accounts retain their
