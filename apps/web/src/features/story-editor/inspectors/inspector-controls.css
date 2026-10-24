@@ -183,10 +183,6 @@
   border-top: 1px solid var(--color-border);
   margin: 1.25rem 0;
 }
-.hint {
-  font-size: 0.82rem;
-  color: var(--color-subtle);
-}
 .conditions {
   display: grid;
   gap: 0.5rem;
