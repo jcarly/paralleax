@@ -465,12 +465,18 @@ from CSS dimensions alone.
       met: families, fallbacks, label/value sizing and catalogue examples are
       agreed, documented, and aligned in code. Graph micro-labels remain
       density-specific. Resolution commit: `3268dda`.
-- [ ] **DS-09 — Synchronize design documentation with accepted implementation**
+- [x] **DS-09 — Synchronize design documentation with accepted implementation**
       (D11). Preserve historical rationale and resolve contradictions against
       domain invariants/accepted ADRs; update docs alongside the relevant code.
       Acceptance: graph ownership, trigger OR groups, current entities and
       palette statements are accurate; no unapproved visual decision is recorded
-      as settled. Resolution commit: TBD.
+      as settled. **Completed 2026-10-24:** design-system references now describe
+      current semantic selection/Trigger tokens, mixed spacing units, and the
+      unadopted icon-family proposal without settling future palette choices;
+      UI direction and design principles match canonical Story ownership and
+      current entity scope; Story Canvas and regression scenarios describe OR
+      groups as belonging to one Trigger. The audit snapshot remains unchanged.
+      Resolution commit: `84d5e79`.
 - [ ] **DS-10 — Clarify CSS ownership and consolidate proven duplicates** (D12, D13).
       Continue the existing feature stylesheet split incrementally. Consolidate
       only patterns with the same semantics/lifecycle and preserve intentional
