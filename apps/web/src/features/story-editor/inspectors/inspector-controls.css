@@ -217,12 +217,15 @@
 .trigger-variant-delete,
 .trigger-condition-picker-cancel,
 .interaction-effect-picker-cancel {
+  color: var(--color-danger);
+  line-height: 1;
+}
+.trigger-condition-picker-cancel,
+.interaction-effect-picker-cancel {
   width: 2rem;
   height: 2rem;
   padding: 0;
-  color: var(--color-danger);
   font-size: 1.25rem;
-  line-height: 1;
 }
 .trigger-variant-delete,
 .condition > .ghost {
