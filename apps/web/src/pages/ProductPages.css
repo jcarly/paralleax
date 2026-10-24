@@ -1877,14 +1877,6 @@
   background: #989f98;
 }
 
-.design-connector i {
-  width: 18px;
-  height: 18px;
-  transform: rotate(45deg);
-  border: 2px solid var(--product-trigger);
-  background: transparent;
-}
-
 .design-effect-card header {
   display: flex;
   height: auto;

@@ -1,17 +1,18 @@
 import { Link } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import './ProductPages.css';
+import '../features/story-editor/graph/storyGraph.css';
 
 const swatches = [
-  ['Ink', '#20221f', '--color-text'],
-  ['Moss', '#2f6250', '--color-primary'],
-  ['Moss soft', '#e5ebe6', '--color-primary-soft'],
-  ['Amber', '#b78335', '--color-trigger'],
-  ['Paper', '#ffffff', '--color-surface'],
-  ['Canvas', '#f1f1ed', '--color-canvas'],
-  ['Line', '#dedfd9', '--color-border'],
-  ['Danger', '#a5453f', '--color-danger'],
-];
+  { name: 'Ink', token: '--color-text' },
+  { name: 'Moss', token: '--color-primary' },
+  { name: 'Moss soft', token: '--color-primary-soft' },
+  { name: 'Amber', token: '--color-trigger' },
+  { name: 'Paper', token: '--color-surface' },
+  { name: 'Canvas', token: '--color-canvas' },
+  { name: 'Line', token: '--color-border' },
+  { name: 'Danger', token: '--color-danger' },
+] as const;
 
 function ReferenceSection({
   id,
@@ -126,12 +127,11 @@ export function DesignSystemPage() {
               <code>CSS custom properties</code>
             </div>
             <div className="swatch-grid">
-              {swatches.map(([name, color, token]) => (
+              {swatches.map(({ name, token }) => (
                 <div className="swatch" key={token}>
-                  <span style={{ background: color }} />
+                  <span aria-hidden="true" style={{ background: `var(${token})` }} />
                   <b>{name}</b>
-                  <small>{color}</small>
-                  <code>{token}</code>
+                  <small>{token}</small>
                 </div>
               ))}
             </div>
@@ -145,19 +145,21 @@ export function DesignSystemPage() {
               <div className="display-sample">
                 <span>Display</span>
                 <b className="display-sample-text">Stories branch. Ideas connect.</b>
-                <small>48 / 52 · Georgia</small>
+                <small>
+                  var(--type-size-display) / var(--type-leading-display) · var(--font-narrative)
+                </small>
               </div>
               <div>
                 <span>Heading</span>
                 <b className="heading-sample">The Archive Below</b>
-                <small>24 / 30 · Semibold</small>
+                <small>var(--type-size-heading) / var(--type-leading-heading)</small>
               </div>
               <div>
                 <span>Body</span>
                 <p className="body-sample">
                   A calm, readable rhythm keeps dense tools approachable.
                 </p>
-                <small>14 / 22 · Regular</small>
+                <small>var(--type-size-body) / var(--type-leading-body)</small>
               </div>
             </div>
             <div className="reference-card">
@@ -250,11 +252,16 @@ export function DesignSystemPage() {
                 <option>Lower archive</option>
               </select>
             </label>
-            <label className="product-field error-field">
-              <span>Required field</span>
-              <input placeholder="Add a value" />
-              <small>This field cannot be empty.</small>
-            </label>
+            <div className="product-field error-field">
+              <label htmlFor="design-required-field">Required field</label>
+              <input
+                id="design-required-field"
+                aria-describedby="design-required-field-error"
+                aria-invalid="true"
+                placeholder="Add a value"
+              />
+              <small id="design-required-field-error">This field cannot be empty.</small>
+            </div>
             <label className="product-field">
               <span>Searchable target</span>
               <input list="design-targets" defaultValue="Mara Venn" />
@@ -368,9 +375,14 @@ export function DesignSystemPage() {
               <span className="node-handle bottom" />
             </article>
             <div className="design-connector">
-              <span />
-              <i aria-label="Empty trigger marker" />
-              <span />
+              <span aria-hidden="true" />
+              <button aria-label="Linked Trigger marker" className="trigger-marker" type="button" />
+              <button
+                aria-label="Selected linked Trigger marker"
+                className="trigger-marker selected"
+                type="button"
+              />
+              <span aria-hidden="true" />
             </div>
             <article className="design-effect-card">
               <header>
@@ -412,7 +424,10 @@ export function DesignSystemPage() {
             </div>
             <div>
               <b>Trigger markers</b>
-              <p>Use an empty, selectable diamond. Connecting lines are never selectable.</p>
+              <p>
+                Use an amber diamond; selection and focus add emphasis without changing its
+                geometry.
+              </p>
             </div>
             <div>
               <b>Effect cards</b>

@@ -25,7 +25,46 @@ describe('DesignSystemPage', () => {
     expect(screen.getByText('A calm, readable rhythm keeps dense tools approachable.')).toHaveClass(
       'body-sample',
     );
-    expect(screen.getByLabelText('Empty trigger marker')).toBeInTheDocument();
+    for (const token of [
+      '--color-text',
+      '--color-primary',
+      '--color-primary-soft',
+      '--color-trigger',
+      '--color-surface',
+      '--color-canvas',
+      '--color-border',
+      '--color-danger',
+    ]) {
+      const tokenLabel = screen.getByText(token);
+      expect(tokenLabel.closest('.swatch')?.querySelector('span')).toHaveStyle({
+        background: `var(${token})`,
+      });
+    }
+    expect(document.querySelector('.swatch-grid')?.textContent).not.toMatch(/#[\da-f]{3,8}/i);
+    expect(
+      screen.getByText(/var\(--type-size-display\) \/ var\(--type-leading-display\)/),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/var\(--type-size-heading\) \/ var\(--type-leading-heading\)/),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/var\(--type-size-body\) \/ var\(--type-leading-body\)/),
+    ).toBeInTheDocument();
+
+    const requiredField = screen.getByRole('textbox', { name: /Required field/ });
+    expect(requiredField).toHaveAttribute('aria-invalid', 'true');
+    expect(requiredField).toHaveAttribute('aria-describedby', 'design-required-field-error');
+    expect(document.getElementById('design-required-field-error')).toHaveTextContent(
+      'This field cannot be empty.',
+    );
+
+    expect(screen.getByRole('button', { name: 'Linked Trigger marker' })).toHaveClass(
+      'trigger-marker',
+    );
+    expect(screen.getByRole('button', { name: 'Selected linked Trigger marker' })).toHaveClass(
+      'trigger-marker',
+      'selected',
+    );
     expect(screen.getByRole('link', { name: 'Browse stories' })).toHaveAttribute('href', '/');
   });
 });
