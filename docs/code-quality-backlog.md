@@ -548,6 +548,11 @@ from CSS dimensions alone.
       and reader surfaces. The existing Simulation inventory and interaction
       timing refinements remain local and unchanged. Reader, Simulation and
       inspector tests (45) and Prettier passed. Slice commit: `9c8fe35`.
+      **Additional progress (2026-10-24):** moved `.modal-dialog-backdrop`,
+      `.modal-dialog` and its heading/paragraph rules from `editor.css` to
+      `styles.css` because both Rich Text Editor dialogs and Reader Save dialogs
+      render that shell. Editor action-row layout stays local. Portal, Rich Text
+      and Reader Save tests (46) and Prettier passed. Slice commit: `b630fb6`.
       Remaining work:
       evaluate other duplicate candidates and CSS ownership boundaries; retain
       graph marker and inspector variants unless their semantics are proven
