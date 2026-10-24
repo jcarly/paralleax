@@ -669,7 +669,7 @@ from CSS dimensions alone.
       current entity scope; Story Canvas and regression scenarios describe OR
       groups as belonging to one Trigger. The audit snapshot remains unchanged.
       Resolution commit: `84d5e79`.
-- [ ] **DS-10 — Clarify CSS ownership and consolidate proven duplicates** (D12, D13).
+- [x] **DS-10 — Clarify CSS ownership and consolidate proven duplicates** (D12, D13).
       Continue the existing feature stylesheet split incrementally. Consolidate
       only patterns with the same semantics/lifecycle and preserve intentional
       post-it, graph, reader and inspector variants. Acceptance: no cascade-order
@@ -760,10 +760,23 @@ from CSS dimensions alone.
       Playwright contrast tests (2), Prettier and the web build passed. Bundle
       budgets passed; initial JavaScript is 148.6 KiB / 150.0 KiB. Slice commit:
       `83c31d3`.
-      Remaining work:
-      evaluate other duplicate candidates and CSS ownership boundaries; retain
-      graph marker and inspector variants unless their semantics are proven
-      identical. Resolution commit: TBD.
+      **Additional progress (2026-10-24):** moved the effect-card shell, title,
+      removal action, and field-grid rules from `inspector-controls.css` to
+      `components/InteractionEffectCard.css`, beside the presentation component
+      shared by the inspector and catalogue. Imported the sheet immediately after
+      the inspector controls; declarations and effect behavior are unchanged.
+      Inspector and catalogue tests (12), Prettier and the web build passed.
+      Bundle budgets passed at 148.6 KiB / 150.0 KiB initial JavaScript. Slice
+      commit: `f8ac59d`.
+      **Completed (2026-10-24):** reviewed the remaining audit-listed candidates.
+      Repeated state rules with matching semantics now share declarations; the
+      remaining graph, reader, post-it, Trigger, and inspector geometry/state
+      variants stay local where their lifecycles differ. Shared context-list and
+      effect-card styles now live beside their production components. The
+      main-entry import order remains explicit, and the focused context/inspector
+      tests, contrast Playwright tests, formatting checks, and web build passed.
+      Final ownership slices: `83c31d3`, `f8ac59d`; earlier resolutions are listed
+      above.
 
 ### P2 — Catalogue, automation and remaining state consistency
 
