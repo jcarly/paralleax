@@ -553,6 +553,11 @@ from CSS dimensions alone.
       `styles.css` because both Rich Text Editor dialogs and Reader Save dialogs
       render that shell. Editor action-row layout stays local. Portal, Rich Text
       and Reader Save tests (46) and Prettier passed. Slice commit: `b630fb6`.
+      **Additional progress (2026-10-24):** shared the identical surface,
+      border and positioning declarations for Trigger condition and OR-group
+      delete controls. Their sizes, offsets and glyph sizing remain distinct.
+      Trigger Inspector and editor condition tests (33) and Prettier passed.
+      Slice commit: `5d773c4`.
       Remaining work:
       evaluate other duplicate candidates and CSS ownership boundaries; retain
       graph marker and inspector variants unless their semantics are proven
