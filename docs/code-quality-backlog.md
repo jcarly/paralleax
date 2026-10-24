@@ -483,9 +483,22 @@ from CSS dimensions alone.
 - [ ] **DS-11 — Make the design catalogue a live reference** (D10). After the
       relevant components/tokens migrate, render those real components and states
       instead of copied swatch values and claims. Acceptance: each sample matches
-      its production owner, the route is discoverable, and examples do not mutate
-      stories. Depends on DS-04 and incremental component migration. Resolution
-      commit: TBD.
+      its production owner and examples do not mutate stories. The original
+      route-discoverability acceptance is superseded by the visibility decision
+      below. Depends on DS-04 and incremental component migration.
+      **Visibility decision (2026-10-24):** Keep the production catalogue
+      internal and unmounted from app routes/navigation. The prototype catalogue
+      remains a separate exploratory surface. `apps/web/src/App.test.tsx` keeps
+      covering the absence of `/design-system`.
+      **D10 defect slice completed (2026-10-24):** swatches now read semantic CSS
+      variables, typography labels name the variables used by their rendered
+      examples, the error field exposes `aria-invalid` and an associated
+      description, and Trigger samples reuse the production marker class for
+      resting and selected states. The focused catalogue test verifies these
+      references. Commit: `5cc5f4f`.
+      **Remaining:** migrate the bespoke context/effect examples to their
+      production component owners before marking this catalogue task complete.
+      Resolution commit for remaining work: TBD.
 - [ ] **DS-12 — Align remaining action and status variants** (D14). Follow DS-01
       for direct defects, then review only combinations with demonstrated
       conflicts (for example ghost-danger and secondary focus/hover). Acceptance:
