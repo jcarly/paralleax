@@ -565,9 +565,57 @@ the route component:
   current-option loading. It retains journey interactions, replaces stale option
   candidates per step, and chunks long saved journeys without owning narrative
   evaluation rules.
+- `features/story-player/loadStoryPlayerRuntime.ts`: initial bootstrap,
+  authorized progress lookup, runtime-context loading, and first-slice assembly.
+- `features/story-player/runtime/useStoryPlayerLoading.ts`: initial request
+  cancellation, retry/error state, and the loaded-route key. The route applies the
+  loaded result to its one `Story` projection and replays the reader session.
+- `features/story-player/runtime/useStoryPlayerRuntimeSlice.ts`: current-step
+  option loading, request-key tracking, cancellation, and localized slice-load
+  errors. `StoryPlayer` remains the owner of the mutable `Story` state and passes
+  it to this hook for slice updates. The loader helper and slice hook both reuse
+  `storyRuntimeLoader.ts` rather than duplicating its paging logic.
+- `features/story-player/runtime/loadLatestRuntimeSliceForSession.ts`: repeats
+  the realtime slice request if the reader journey changes while loading, so the
+  caller applies a slice for the latest session.
+- `features/story-player/runtime/useStoryPlayerRealtimeRefresh.ts`: owns refresh
+  generations, latest-session requests, invalidation coalescing, and deferral
+  while a Simulation edit or mutation is active. The route still applies the
+  refreshed projection and handles access recovery.
+- `features/story-player/navigation/useReaderNavigationGuards.ts`: per-step choice
+  commit, stale-navigation version, and automatic-cycle guards. The page keeps
+  transition eligibility, rendering checks, and choice selection.
+- `features/story-player/navigation/restoreReaderSave.ts`: hydrates the saved
+  journey's runtime slice and replays it through the existing session owner. The
+  route applies the resulting Story projection, session, and progress write.
+- `features/story-player/navigation/useAutomaticReaderTransitions.ts`: owns the
+  queued opening choice and empty-body pass-through effects. It reuses the page's
+  choice callback, navigation guards, and browser-side rich-text visibility
+  projection.
+- `features/story-player/navigation/useReaderChoiceNavigation.ts`: revalidates
+  a selected choice at action time, prevents duplicate commits for one step, and
+  advances/persists through the existing session and progress owners.
+- `features/story-player/simulation/useSimulationAuthoringCommands.ts`: owns
+  local interaction patches, current-content and option-title saves, option
+  creation, and canonical reload after uncertain creation. Mutation status and
+  retry behavior remain in `useSimulationMutationPersistence`; the route keeps
+  the single mutable `Story` projection.
 - `features/story-player/ChoiceTimerBar.tsx`: accessible CSS-driven countdown
   projection. The route schedules only expiration and focus synchronization,
   avoiding continuous whole-player rerenders.
+- `features/story-player/components/PlayerChoices.tsx`: renders the already
+  projected Reader and Simulation choices, timer bars, inline title editing,
+  Simulation option creation action, and Reader ending state. Availability,
+  navigation, and authoring mutations remain owned by the route and their
+  existing feature modules.
+- `features/story-player/components/PlayerScene.tsx`: renders the current
+  location, story time, and present-character projection supplied by the route.
+- `features/story-player/components/PlayerContextPanels.tsx`: renders the
+  playable-character profile and stats, inventory, Simulation force-unavailable
+  control, and encountered characters from the current Story and reader state.
+- `features/story-player/components/PlayerToolbar.tsx`: renders mode, realtime,
+  persistence, save, navigation, comment, and editor-exit controls while keeping
+  their route-owned actions and dialog focus ref intact.
 
 The web app may map a story into React Flow nodes and edges, but it must not
 store story semantics as React Flow data. React Flow data is a projection of the

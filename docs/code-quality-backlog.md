@@ -360,6 +360,10 @@ than inherited from the historical audit grouping.
         `StoryRuntimeBootstrap`/slice API contracts and revision checks intact.
         Do not add a second `Story` projection or a second
         `ReaderProgressState` owner. Files: `StoryPlayer.tsx`,
+        `features/story-player/loadStoryPlayerRuntime.ts`,
+        `features/story-player/runtime/useStoryPlayerLoading.ts`,
+        `features/story-player/runtime/useStoryPlayerRuntimeSlice.ts`,
+        `features/story-player/navigation/useReaderNavigationGuards.ts`,
         `features/story-player/storyRuntimeLoader.ts`, and
         `StoryPlayer.loading.test.tsx`. Preserve its recoverable-load-error,
         inaccessible-route, prior-route-response, and latest-simulation-slice
@@ -376,8 +380,11 @@ than inherited from the historical audit grouping.
         navigation boundary. Continue to call `useReaderSessionState` and
         `useReaderProgressPersistence`; they remain the owners of session state
         and save ordering. Keep availability, replay, effects, and date
-        reconstruction in `packages/shared`. Files: `StoryPlayer.tsx`, a focused
-        `features/story-player/navigation/` module if justified, and
+        reconstruction in `packages/shared`. Files include `StoryPlayer.tsx`,
+        `features/story-player/navigation/useReaderNavigationGuards.ts`,
+        `features/story-player/navigation/restoreReaderSave.ts`,
+        `features/story-player/navigation/useAutomaticReaderTransitions.ts`,
+        `features/story-player/navigation/useReaderChoiceNavigation.ts`, and
         `StoryPlayer.loading.test.tsx` / `StoryPlayer.runtime.test.tsx`.
         Preserve existing opening-choice, direct-start, pass-through/cycle,
         duplicate-commit, restart, backward-step, and save-restore cases.
@@ -394,6 +401,7 @@ than inherited from the historical audit grouping.
         `getStoryGraphClickCreationPosition`; keep one owner for the optimistic
         `Story` projection and keep retry policy aligned with mutation safety.
         Files: `StoryPlayer.tsx`, `features/story-player/useSimulationMutationPersistence.ts`,
+        `features/story-player/simulation/useSimulationAuthoringCommands.ts`,
         `features/story/storyMutationResults.ts`, and
         `StoryPlayer.simulation-authoring.test.tsx`.
         Preserve inline-edit, safe-retry, uncertain-create recovery, new-option
@@ -410,7 +418,8 @@ than inherited from the historical audit grouping.
         refresh generations, latest-session slice loading, invalidation
         coalescing, and deferral while a Simulation edit or mutation is active.
         Files: `StoryPlayer.tsx`, `features/realtime/storyRealtime.ts`,
-        `features/story-player/` refresh module if needed, and
+        `features/story-player/runtime/loadLatestRuntimeSliceForSession.ts`, a
+        `features/story-player/runtime/useStoryPlayerRealtimeRefresh.ts`, and
         `StoryPlayer.loading.test.tsx`. Preserve the remote-story-replay and
         latest-slice-after-navigation cases; add the focused-edit deferral case
         from the baseline task. **Depends on:** navigation's current
@@ -433,6 +442,19 @@ than inherited from the historical audit grouping.
         **Acceptance:** `StoryPlayer.tsx` primarily composes the route and
         feature sections, with existing controls, focus, and accessible output
         unchanged.
+    - [x] Extract the Reader and Simulation choice list into
+          `components/PlayerChoices.tsx`. It renders projected options and keeps
+          existing timer, inline-title, add-option, unavailable-choice, and
+          ending presentation. The route and existing action modules continue to
+          own availability, navigation, and authoring mutations.
+    - [x] Extract the location, story time, and present-character visual into
+          `components/PlayerScene.tsx`, receiving the route's existing view data.
+    - [x] Extract the profile, inventory, Simulation control, and encounter
+          panels into `components/PlayerContextPanels.tsx` while keeping the same
+          Story and Reader state owners.
+    - [x] Extract the mode and persistence toolbar into
+          `components/PlayerToolbar.tsx`, retaining route-owned callbacks and the
+          save-dialog trigger ref for focus restoration.
   - [ ] Keep two adjacent backlog items separate from this structural work:
         shared Trigger/interaction evaluation context and incremental journey-date
         recalculation. The former is a prerequisite before consolidating

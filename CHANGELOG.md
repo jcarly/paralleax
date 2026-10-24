@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Began the incremental `StoryPlayer` refactor by extracting runtime loading,
+  reader navigation, Simulation authoring commands, and realtime refresh
+  coordination into focused modules, then moving the scene, choice list, context
+  panels, and toolbar into focused components. The route remains the sole owner
+  of the mutable `Story` projection, and existing session, progress, and mutation
+  persistence owners stay unchanged.
+
 - Fixed a timing gap in unsaved-change protection so browser Back and Forward
   continue to block navigation as soon as an editor or Simulation save becomes
   pending.

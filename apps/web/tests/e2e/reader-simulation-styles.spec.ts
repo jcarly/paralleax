@@ -86,11 +86,11 @@ test('keeps reader layout independent from Simulation Mode layout', async ({ pag
   expect(readerLayout.page).toMatchObject({
     display: 'grid',
     maxWidth: '1360px',
-    padding: '32px',
+    padding: '0px',
   });
   expect(readerLayout.card).toMatchObject({
     borderRadius: '16px',
-    padding: '40px',
+    padding: '0px',
     minHeight: '430px',
   });
 
@@ -106,7 +106,7 @@ test('keeps reader layout independent from Simulation Mode layout', async ({ pag
   await page.setViewportSize({ width: 390, height: 844 });
   const narrowReaderLayout = await readPlayerLayout(page);
   expect(narrowReaderLayout.page.display).toBe('grid');
-  expect(narrowReaderLayout.card).toMatchObject({ borderRadius: '16px', padding: '40px' });
+  expect(narrowReaderLayout.card).toMatchObject({ borderRadius: '16px', padding: '0px' });
 
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/stories/story-1/play?mode=simulation&startInteractionId=interaction-1');

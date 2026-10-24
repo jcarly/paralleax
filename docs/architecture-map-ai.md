@@ -182,9 +182,15 @@ has one clear owner and lifecycle.
 
 Current coupling observed in `StoryPlayer.tsx`:
 
-- Route/mode selection, bootstrap and progress reads, runtime-slice hydration,
-  and load/retry state share one component lifecycle. The paginated data loader
-  itself already lives in `storyRuntimeLoader.ts`.
+- Route/mode selection and replay side effects remain in one component lifecycle.
+  Bootstrap/progress/context assembly lives in `loadStoryPlayerRuntime.ts`;
+  `runtime/useStoryPlayerLoading.ts` owns initial request cancellation,
+  retry/error state, and the loaded-route key. Current-step slice request keys,
+  cancellation, and localized errors live in
+  `runtime/useStoryPlayerRuntimeSlice.ts`. The paginated data loader itself
+  remains in `storyRuntimeLoader.ts`. Save restoration hydrates the saved journey
+  and replays it through `navigation/restoreReaderSave.ts`; the page still applies
+  the restored Story projection and persists the resulting session.
 - The projected `Story` is updated by initial/slice loads, Simulation's local
   edits and mutation responses, and live refreshes. Keep exactly one owner for
   this mutable projection while extracting those paths.
@@ -195,38 +201,47 @@ Current coupling observed in `StoryPlayer.tsx`:
   one generic flag.
 - Availability and condition truth use shared operations. Simulation
   diagnostics and conditional text build several web projections from those
-  results; the click path revalidates availability so a timer that expires after
-  render cannot still be selected. The existing evaluation-context backlog task
-  should assess repeated work before those projections are consolidated.
-- Automatic empty-body pass-through is orchestrated in the page and asks
-  `hasVisibleRichTextContent` in the browser's sanitized DOM projection. Preserve
-  this reader behavior during extraction. The DOM-based visibility helper cannot
-  move into `packages/shared`; a platform-independent narrative rule would need
-  its own contract and tests rather than being inferred during refactoring.
+  results; `useReaderChoiceNavigation.ts` revalidates availability so a timer
+  that expires after render cannot still be selected. The existing
+  evaluation-context backlog task should assess repeated work before those
+  projections are consolidated.
+- `navigation/useAutomaticReaderTransitions.ts` owns queued opening selection
+  and empty-body pass-through. It asks `hasVisibleRichTextContent` in the
+  browser's sanitized DOM projection. Cycle-stop, per-step commit, and stale-
+  navigation refs live in `navigation/useReaderNavigationGuards.ts`. Preserve
+  the reader behavior during further extraction. The DOM-based visibility helper
+  cannot move into `packages/shared`; a platform-independent narrative rule
+  would need its own contract and tests rather than being inferred during
+  refactoring.
 - Rendering already reuses `RichTextContent`, `RichTextEditor`,
   `StoryCommentsPanel`, `ReaderSaveDialog`, and `ChoiceTimerBar`. Extract new
   sections only after action and view-data boundaries are clear.
 
-| Responsibility | Boundary and owner | Reuse and dependency |
-| --- | --- | --- |
-| Route and page composition | `StoryPlayer.tsx` keeps route parameters, effective reader/Simulation mode, access recovery, and final composition. Keep the mutable runtime `Story` projection in one place; if ownership moves to a hook, move it atomically rather than mirroring it. | `useStoryRouteAccessRecovery`, React Router |
-| Runtime loading | A focused loading boundary can own bootstrap/progress request cancellation, request keys, retry/error status, and current-step slice hydration. `storyRuntimeLoader.ts` remains the paginated transport/projection loader and owns no narrative rules. | `api` runtime projections, `storyRuntimeLoader.ts`, `useReaderSessionState`, `useStoryRouteAccessRecovery`; keep revision/request-key checks |
-| Reader navigation | A focused navigation boundary can own selection idempotency, restart/back/load-save actions, opening selection, and automatic empty-body pass-through/cycle guards. | `useReaderSessionState` remains the only `ReaderProgressState` owner; `useReaderProgressPersistence` remains the save queue; shared replay and availability remain authoritative |
-| Simulation authoring | A focused command boundary can own optimistic title/body edits, option creation/rename, and failed-mutation recovery. | `useSimulationMutationPersistence`, `storyMutationResults.ts`, existing graph placement helper; preserve one Story projection owner and safe/unsafe retry policy |
-| Live refresh | A focused player policy can own refresh generations, latest-journey slice loading, invalidation coalescing, and deferral during an active Simulation edit/mutation. | Reuse `useStoryRealtime` and `storyRealtime.ts`; coordinate with the runtime loader and navigation signal |
-| Presentation | Extract only cohesive page sections after action/view-data boundaries settle. | Reuse `ReaderSaveDialog`, `StoryCommentsPanel`, `RichTextContent`, `RichTextEditor`, `ChoiceTimerBar`, current CSS, and existing accessible interaction patterns |
+| Responsibility             | Boundary and owner                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 | Reuse and dependency                                                                                                                                                             |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Route and page composition | `StoryPlayer.tsx` keeps route parameters, effective reader/Simulation mode, access recovery, and final composition. Keep the mutable runtime `Story` projection in one place; if ownership moves to a hook, move it atomically rather than mirroring it.                                                                                                                                                                                                                                                                                                                                                           | `useStoryRouteAccessRecovery`, React Router                                                                                                                                      |
+| Runtime loading            | `loadStoryPlayerRuntime.ts` assembles the initial bootstrap/progress/context/first-slice result. `useStoryPlayerLoading.ts` owns initial request cancellation, retry/error state, and the loaded-route key. `useStoryPlayerRuntimeSlice.ts` owns current-step request keys, cancellation, and slice errors. `StoryPlayer.tsx` still owns session replay and the one mutable `Story` projection.                                                                                                                                                                                                                    | `api` runtime projections, `storyRuntimeLoader.ts`, `useReaderSessionState`, `useStoryRouteAccessRecovery`; keep revision/request-key checks                                     |
+| Reader navigation          | `useReaderNavigationGuards.ts` owns per-step choice commits, stale-navigation versioning, and automatic-cycle guards. `useReaderChoiceNavigation.ts` revalidates choices and advances through existing session/progress callbacks. `restoreReaderSave.ts` hydrates a saved journey slice and replays through the existing session callback. `useAutomaticReaderTransitions.ts` owns queued opening selection and automatic empty-body pass-through. Restart/back side effects remain in `StoryPlayer.tsx`.                                                                                                         | `useReaderSessionState` remains the only `ReaderProgressState` owner; `useReaderProgressPersistence` remains the save queue; shared replay and availability remain authoritative |
+| Simulation authoring       | `simulation/useSimulationAuthoringCommands.ts` owns local interaction patches, current-title/body saves, option creation/title saves, and canonical reload after uncertain mutation failures. `StoryPlayer.tsx` keeps the one mutable Story projection and applies refreshed projections.                                                                                                                                                                                                                                                                                                                          | Reuse `useSimulationMutationPersistence`, `storyMutationResults.ts`, and graph placement helper; preserve the safe update retry and non-retryable create recovery policy         |
+| Live refresh               | `useStoryPlayerRealtimeRefresh.ts` owns refresh generations, latest-session slice loading, invalidation coalescing, and deferral during an active Simulation edit/mutation. `StoryPlayer.tsx` applies the refreshed projection and handles access recovery.                                                                                                                                                                                                                                                                                                                                                        | Reuse `useStoryRealtime`, `storyRealtime.ts`, `loadLatestRuntimeSliceForSession.ts`, the runtime loader, and navigation signal                                                   |
+| Presentation               | `components/PlayerToolbar.tsx` renders route-owned mode, status, save, navigation, comments, and exit actions; `components/PlayerScene.tsx` renders location, story time, and present characters; `components/PlayerChoices.tsx` renders projected choices, timers, inline title editing, the Simulation add-option action, and the Reader ending; `components/PlayerContextPanels.tsx` renders character, inventory, author-control, and encounter panels from the current Story and reader projection. Availability, navigation, and authoring actions remain supplied by the route and existing feature owners. | Reuse `ReaderSaveDialog`, `StoryCommentsPanel`, `RichTextContent`, `RichTextEditor`, `ChoiceTimerBar`, current CSS, and existing accessible interaction patterns                 |
 
-Candidate module layout, subject to review at each implementation slice:
+Incremental module layout, subject to review at each implementation slice:
 
 ```text
 features/story-player/
   runtime/
+    loadLatestRuntimeSliceForSession.ts
+    useStoryPlayerRealtimeRefresh.ts
     useStoryPlayerLoading.ts
-    useStoryPlayerRefresh.ts
+    useStoryPlayerRuntimeSlice.ts
   navigation/
-    useReaderNavigation.ts
+    restoreReaderSave.ts
+    useAutomaticReaderTransitions.ts
+    useReaderChoiceNavigation.ts
+    useReaderNavigationGuards.ts
   simulation/
-    useSimulationAuthoring.ts
+    useSimulationAuthoringCommands.ts
   components/
     PlayerToolbar.tsx
     PlayerScene.tsx
