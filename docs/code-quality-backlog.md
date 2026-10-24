@@ -540,6 +540,11 @@ from CSS dimensions alone.
       the absolutely positioned group-delete control. Removed the duplicated
       row layout. Trigger Inspector tests (14), targeted ESLint and Prettier
       passed. Slice commit: `9209c1c`.
+      **Additional progress (2026-10-24):** moved the shared `.hint` rule from
+      the inspector stylesheet to `styles.css`; the class is used across editor
+      and reader surfaces. The existing Simulation inventory and interaction
+      timing refinements remain local and unchanged. Reader, Simulation and
+      inspector tests (45) and Prettier passed. Slice commit: `9c8fe35`.
       Remaining work:
       evaluate other duplicate candidates and CSS ownership boundaries; retain
       graph marker and inspector variants unless their semantics are proven
