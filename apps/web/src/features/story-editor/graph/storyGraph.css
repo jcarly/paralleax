@@ -222,20 +222,6 @@
   box-shadow: 0 0 0 3px var(--color-trigger-halo);
   transform: rotate(45deg);
 }
-.root-trigger-marker:hover,
-.root-trigger-marker.selected {
-  outline: none;
-  background: var(--color-trigger);
-  border-color: var(--color-primary);
-  box-shadow:
-    0 0 0 4px var(--color-primary-halo),
-    0 3px 10px #2d2d2d22;
-}
-.root-trigger-marker:focus-visible {
-  outline: 2px solid var(--color-surface);
-  outline-offset: 2px;
-  box-shadow: 0 0 0 5px var(--color-primary);
-}
 .react-flow__edge.trigger-edge.selected .react-flow__edge-path {
   stroke: var(--color-trigger-strong);
   stroke-width: 3;
@@ -450,6 +436,8 @@
   border: 0;
   background: transparent;
 }
+.root-trigger-marker:hover,
+.root-trigger-marker.selected,
 .trigger-marker:hover,
 .trigger-marker.selected {
   outline: none;
@@ -459,6 +447,7 @@
     0 0 0 4px var(--color-primary-halo),
     0 3px 10px #2d2d2d22;
 }
+.root-trigger-marker:focus-visible,
 .trigger-marker:focus-visible {
   outline: 2px solid var(--color-surface);
   outline-offset: 2px;
