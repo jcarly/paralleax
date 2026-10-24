@@ -535,6 +535,11 @@ from CSS dimensions alone.
       Stat Definition inspectors. Removed their duplicate flex alignment rules;
       inspector-specific spacing and title styling remain local. Inspector
       tests (6), targeted ESLint and Prettier passed. Slice commit: `c35b3c2`.
+      **Additional progress (2026-10-24):** reused `.editor-heading-row` for
+      Trigger variant headings while retaining `.trigger-variant-header` and
+      the absolutely positioned group-delete control. Removed the duplicated
+      row layout. Trigger Inspector tests (14), targeted ESLint and Prettier
+      passed. Slice commit: `9209c1c`.
       Remaining work:
       evaluate other duplicate candidates and CSS ownership boundaries; retain
       graph marker and inspector variants unless their semantics are proven
