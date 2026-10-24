@@ -530,6 +530,11 @@ from CSS dimensions alone.
       Simulation continue to share the same declarations; selectors and visual
       behavior are unchanged. Story Player and Simulation tests (29) and
       Prettier passed. Slice commit: `4e573a1`.
+      **Additional progress (2026-10-24):** reused `.editor-heading-row` for
+      the four inspector section headers in Character, Item Definition and
+      Stat Definition inspectors. Removed their duplicate flex alignment rules;
+      inspector-specific spacing and title styling remain local. Inspector
+      tests (6), targeted ESLint and Prettier passed. Slice commit: `c35b3c2`.
       Remaining work:
       evaluate other duplicate candidates and CSS ownership boundaries; retain
       graph marker and inspector variants unless their semantics are proven
