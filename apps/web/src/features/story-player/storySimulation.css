@@ -430,7 +430,7 @@
 }
 
 .simulation-controls small {
-  color: #8d806a;
+  color: var(--color-muted);
   font-size: 0.58rem;
   line-height: 1.4;
 }

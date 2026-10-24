@@ -110,8 +110,9 @@ button:hover,
 button:focus-visible,
 .button:focus-visible,
 a:focus-visible {
-  outline: 3px solid var(--color-primary-halo-strong);
+  outline: 2px solid var(--color-surface);
   outline-offset: 2px;
+  box-shadow: 0 0 0 4px var(--color-primary);
 }
 button:disabled {
   opacity: 0.45;

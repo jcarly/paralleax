@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Improved enabled text contrast for editor counts and status, product
+  placeholders, graph location markers, and Simulation help. Added opaque,
+  two-color focus indicators to shared rich text and graph controls while
+  preserving graph geometry.
+
 - Scoped Simulation Mode page and card layout overrides to the simulation root,
   restoring the Reader's own card and page layout at desktop and narrow widths.
   Reader save rows now use the existing shared secondary-surface token.

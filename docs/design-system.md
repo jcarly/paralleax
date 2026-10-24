@@ -260,6 +260,33 @@ Baseline rules:
   relying only on hue;
 - graph controls should remain usable with keyboard navigation where practical.
 
+### Approved contrast and keyboard focus rules (2026-10-24)
+
+The reviewed D8 contrast candidates are approved for enabled controls and status
+text. Ordinary text uses at least 4.5:1 contrast; meaningful non-text controls
+and state indicators use at least 3:1 against an adjacent color. Inactive
+controls are treated under the WCAG inactive-component exception. WCAG requires
+keyboard focus to be visible at AA; the additional 3:1 focus-indicator contrast
+target is a project quality rule, while WCAG 2.4.13 Focus Appearance is AAA.
+
+- Amber comment counts use `--color-text` on `--color-trigger`; their darker
+  hover surface uses `--color-surface` text.
+- Enabled save status text and the graph's location glyph use `--color-primary`.
+  `--color-place` remains available for fills and dots.
+- Product placeholders and Simulation help use `--color-muted`.
+- Buttons, links, and graph controls use a two-color keyboard indicator: an
+  opaque `--color-surface` outline and an opaque `--color-primary` outer ring.
+  Editable Story and Simulation fields, including the shared rich-text surface,
+  use the same opaque primary focus edge on their light surfaces.
+- These adjustments do not alter graph marker dimensions, transforms, React
+  Flow handles, hit areas, selection, or drag behavior.
+
+The D8 rendered-state contrast and focus assertions live in
+`apps/web/tests/e2e/design-system-contrast.spec.ts` and
+`apps/web/tests/e2e/editor.triggers-and-items.spec.ts`. Graph zoom and target-size
+assessment remains open for browser review; CSS dimensions alone do not establish
+that exception.
+
 ## Open Decisions
 
 - Choose the primary accent color and semantic colors.

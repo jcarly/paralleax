@@ -172,7 +172,7 @@
 }
 
 .product-field input::placeholder {
-  color: #a6aaa2;
+  color: var(--color-muted);
 }
 
 .product-field > input:focus,

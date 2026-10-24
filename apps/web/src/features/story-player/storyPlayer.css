@@ -266,13 +266,19 @@ span.conditional-text {
   resize: vertical;
 }
 .simulation-title-input:hover,
-.simulation-title-input:focus,
 .simulation-body-input:hover,
 .simulation-body-input:focus {
   border-color: var(--color-control-border);
   background: var(--color-surface-secondary);
   outline: none;
   box-shadow: 0 0 0 3px var(--color-primary-halo);
+}
+.simulation-title-input:focus {
+  border-color: var(--color-primary);
+  background: var(--color-surface-secondary);
+  outline: 2px solid var(--color-surface);
+  outline-offset: 1px;
+  box-shadow: 0 0 0 4px var(--color-primary);
 }
 .choices {
   display: grid;
