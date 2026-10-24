@@ -487,9 +487,11 @@ from CSS dimensions alone.
       route-discoverability acceptance is superseded by the visibility decision
       below. Depends on DS-04 and incremental component migration.
       **Visibility decision (2026-10-24):** Keep the production catalogue
-      internal and unmounted from app routes/navigation. The prototype catalogue
-      remains a separate exploratory surface. `apps/web/src/App.test.tsx` keeps
-      covering the absence of `/design-system`.
+      internal and directly accessible at `/design-system`, with no link in app
+      navigation or other product surfaces. The prototype catalogue remains a
+      separate exploratory surface. `apps/web/src/App.test.tsx` covers direct
+      route rendering and the absence of an app-navigation link. Implemented in
+      commit `29c6419`.
       **D10 defect slice completed (2026-10-24):** swatches now read semantic CSS
       variables, typography labels name the variables used by their rendered
       examples, the error field exposes `aria-invalid` and an associated
