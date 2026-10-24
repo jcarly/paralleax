@@ -14,7 +14,7 @@ interface StoryAccessSettingsProps {
   onInaccessible?: (error: unknown) => boolean;
 }
 
-const visibilityOptions = ['public', 'authenticated', 'invitation', 'private'] as const;
+const visibilityOptions = ['public', 'unlisted', 'authenticated', 'invitation', 'private'] as const;
 const editOptions = ['authenticated', 'collaborators', 'owner'] as const;
 const commentOptions = ['readers', 'editors'] as const;
 
@@ -138,9 +138,16 @@ export function StoryAccessSettings({ storyId, onInaccessible }: StoryAccessSett
             email: `${access.owner.displayName} · ${access.owner.email}`,
           })}
         </p>
-        <label className="product-field">
-          <span>{t('access.visibility.label')}</span>
+        <div className="product-field">
+          <div className="field-label-with-help">
+            <label htmlFor="story-access-visibility">{t('access.visibility.label')}</label>
+            <FieldHelpTooltip
+              label={t('access.visibility.label')}
+              help={t('access.visibility.help')}
+            />
+          </div>
           <select
+            id="story-access-visibility"
             value={access.visibility}
             disabled={pending}
             onChange={(event) =>
@@ -156,7 +163,7 @@ export function StoryAccessSettings({ storyId, onInaccessible }: StoryAccessSett
               </option>
             ))}
           </select>
-        </label>
+        </div>
         <label className="product-field">
           <span>{t('access.edit.label')}</span>
           <select

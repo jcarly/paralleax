@@ -5,6 +5,7 @@ import {
   READER_AUTOSAVE_ID,
   STORY_LIST_PAGE_SIZE,
   defaultStoryAccess,
+  canDiscoverStory,
   invertStoryChangeDelta,
   readerSaveKind,
   resolveStoryAccess,
@@ -64,6 +65,14 @@ export class InMemoryStoriesRepository {
     options: StoryListOptions = { page: 1, pageSize: STORY_LIST_PAGE_SIZE },
   ): Promise<PaginatedResult<StorySummary>> {
     const summaries = [...this.stories.entries()]
+      .filter(([id, story]) =>
+        canDiscoverStory(story.access ?? defaultStoryAccess, {
+          authenticated: true,
+          role: 'user',
+          isOwner: this.owners.get(id) === ownerId,
+          collaboratorRole: this.permissions.get(id)?.get(ownerId),
+        }),
+      )
       .filter(([id, story]) => this.can(story, id, ownerId).canRead)
       .map(([id, story]) => ({
         id: story.id,

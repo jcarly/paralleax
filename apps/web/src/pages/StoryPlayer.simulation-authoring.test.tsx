@@ -31,6 +31,10 @@ describe('StoryPlayer simulation authoring', () => {
     await renderPlayer('/stories/story-1/play?mode=simulation&startInteractionId=next');
 
     expect(screen.getByText('Simulation')).toBeInTheDocument();
+    expect(document.querySelector('.story-realtime-status .realtime-status-dot')).toHaveAttribute(
+      'aria-hidden',
+      'true',
+    );
     expect(screen.getByLabelText('Current interaction title')).toHaveValue('Next');
     expect(screen.getByRole('button', { name: 'Back' })).toBeDisabled();
     expect(screen.queryByRole('button', { name: 'Start' })).not.toBeInTheDocument();

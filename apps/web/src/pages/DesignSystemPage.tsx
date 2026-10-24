@@ -1,17 +1,20 @@
 import { Link } from 'react-router-dom';
 import type { ReactNode } from 'react';
+import { InteractionEffectCard } from '../components/InteractionEffectCard';
+import { ContextEntityRow } from '../components/StoryContextList';
 import './ProductPages.css';
+import '../features/story-editor/graph/storyGraph.css';
 
 const swatches = [
-  ['Ink', '#20221f', '--color-text'],
-  ['Moss', '#2f6250', '--color-primary'],
-  ['Moss soft', '#e5ebe6', '--color-primary-soft'],
-  ['Amber', '#b78335', '--color-trigger'],
-  ['Paper', '#ffffff', '--color-surface'],
-  ['Canvas', '#f1f1ed', '--color-canvas'],
-  ['Line', '#dedfd9', '--color-border'],
-  ['Danger', '#a5453f', '--color-danger'],
-];
+  { name: 'Ink', token: '--color-text' },
+  { name: 'Moss', token: '--color-primary' },
+  { name: 'Moss soft', token: '--color-primary-soft' },
+  { name: 'Amber', token: '--color-trigger' },
+  { name: 'Paper', token: '--color-surface' },
+  { name: 'Canvas', token: '--color-canvas' },
+  { name: 'Line', token: '--color-border' },
+  { name: 'Danger', token: '--color-danger' },
+] as const;
 
 function ReferenceSection({
   id,
@@ -75,11 +78,11 @@ export function DesignSystemPage() {
               <dd>4 px</dd>
             </div>
             <div>
-              <dt>Body type</dt>
-              <dd>System sans</dd>
+              <dt>Interface type</dt>
+              <dd>Geist / system fallback</dd>
             </div>
             <div>
-              <dt>Display type</dt>
+              <dt>Narrative type</dt>
               <dd>Georgia</dd>
             </div>
             <div>
@@ -126,12 +129,11 @@ export function DesignSystemPage() {
               <code>CSS custom properties</code>
             </div>
             <div className="swatch-grid">
-              {swatches.map(([name, color, token]) => (
+              {swatches.map(({ name, token }) => (
                 <div className="swatch" key={token}>
-                  <span style={{ background: color }} />
+                  <span aria-hidden="true" style={{ background: `var(${token})` }} />
                   <b>{name}</b>
-                  <small>{color}</small>
-                  <code>{token}</code>
+                  <small>{token}</small>
                 </div>
               ))}
             </div>
@@ -140,22 +142,26 @@ export function DesignSystemPage() {
             <div className="reference-card type-samples">
               <div className="reference-card-heading">
                 <h3>Typography</h3>
-                <code>1.25 scale</code>
+                <code>Display, heading, body</code>
               </div>
               <div className="display-sample">
                 <span>Display</span>
-                <b>Stories branch. Ideas connect.</b>
-                <small>48 / 52 · Georgia</small>
+                <b className="display-sample-text">Stories branch. Ideas connect.</b>
+                <small>
+                  var(--type-size-display) / var(--type-leading-display) · var(--font-narrative)
+                </small>
               </div>
               <div>
                 <span>Heading</span>
-                <b>The Archive Below</b>
-                <small>24 / 30 · Semibold</small>
+                <b className="heading-sample">The Archive Below</b>
+                <small>var(--type-size-heading) / var(--type-leading-heading)</small>
               </div>
               <div>
                 <span>Body</span>
-                <p>A calm, readable rhythm keeps dense tools approachable.</p>
-                <small>14 / 22 · Regular</small>
+                <p className="body-sample">
+                  A calm, readable rhythm keeps dense tools approachable.
+                </p>
+                <small>var(--type-size-body) / var(--type-leading-body)</small>
               </div>
             </div>
             <div className="reference-card">
@@ -248,11 +254,16 @@ export function DesignSystemPage() {
                 <option>Lower archive</option>
               </select>
             </label>
-            <label className="product-field error-field">
-              <span>Required field</span>
-              <input placeholder="Add a value" />
-              <small>This field cannot be empty.</small>
-            </label>
+            <div className="product-field error-field">
+              <label htmlFor="design-required-field">Required field</label>
+              <input
+                id="design-required-field"
+                aria-describedby="design-required-field-error"
+                aria-invalid="true"
+                placeholder="Add a value"
+              />
+              <small id="design-required-field-error">This field cannot be empty.</small>
+            </div>
             <label className="product-field">
               <span>Searchable target</span>
               <input list="design-targets" defaultValue="Mara Venn" />
@@ -297,32 +308,29 @@ export function DesignSystemPage() {
                 <h3>Context rows</h3>
                 <code>Sidebar</code>
               </div>
-              <div className="context-reference">
-                <button className="selected" type="button">
-                  <span className="reference-avatar moss">MV</span>
-                  <span>
-                    <b>Mara Venn</b>
-                    <small>Playable character</small>
-                  </span>
-                  <i>›</i>
-                </button>
-                <button type="button">
-                  <span className="reference-avatar blue">IH</span>
-                  <span>
-                    <b>Ivo Hale</b>
-                    <small>3 interactions</small>
-                  </span>
-                  <i>›</i>
-                </button>
-                <button type="button">
-                  <span className="reference-avatar amber">⌖</span>
-                  <span>
-                    <b>The Glasshouse</b>
-                    <small>Location</small>
-                  </span>
-                  <i>›</i>
-                </button>
-              </div>
+              <ul className="context-entity-list">
+                <ContextEntityRow
+                  name="Mara Venn"
+                  fallback="MV"
+                  selected
+                  metadata="Playable character"
+                  onSelect={() => undefined}
+                />
+                <ContextEntityRow
+                  name="Ivo Hale"
+                  fallback="IH"
+                  selected={false}
+                  metadata="3 interactions"
+                  onSelect={() => undefined}
+                />
+                <ContextEntityRow
+                  name="The Glasshouse"
+                  fallback="⌖"
+                  selected={false}
+                  metadata="Location"
+                  onSelect={() => undefined}
+                />
+              </ul>
             </div>
             <div className="reference-card">
               <div className="reference-card-heading">
@@ -366,40 +374,49 @@ export function DesignSystemPage() {
               <span className="node-handle bottom" />
             </article>
             <div className="design-connector">
-              <span />
-              <i aria-label="Empty trigger marker" />
-              <span />
+              <span aria-hidden="true" />
+              <button aria-label="Linked Trigger marker" className="trigger-marker" type="button" />
+              <button
+                aria-label="Selected linked Trigger marker"
+                className="trigger-marker selected"
+                type="button"
+              />
+              <span aria-hidden="true" />
             </div>
-            <article className="design-effect-card">
-              <header>
-                <b>Stat change 1</b>
-                <button type="button" aria-label="Remove stat effect">
-                  ×
+            <InteractionEffectCard
+              title="Stat change 1"
+              removeAction={
+                <button
+                  aria-label="Remove stat effect"
+                  className="ghost danger interaction-effect-remove"
+                  type="button"
+                  onClick={() => undefined}
+                >
+                  x
                 </button>
-              </header>
-              <div>
-                <label>
-                  Target
-                  <input defaultValue="Mara Venn" />
-                </label>
-                <label>
-                  Stat
-                  <select defaultValue="trust">
-                    <option value="trust">Trust</option>
-                  </select>
-                </label>
-                <label>
-                  Operation
-                  <select defaultValue="increase">
-                    <option value="increase">Increase by</option>
-                  </select>
-                </label>
-                <label>
-                  Value
-                  <input type="number" defaultValue="2" />
-                </label>
-              </div>
-            </article>
+              }
+            >
+              <label>
+                Target
+                <input defaultValue="Mara Venn" />
+              </label>
+              <label>
+                Stat
+                <select defaultValue="trust">
+                  <option value="trust">Trust</option>
+                </select>
+              </label>
+              <label>
+                Operation
+                <select defaultValue="increase">
+                  <option value="increase">Increase by</option>
+                </select>
+              </label>
+              <label>
+                Value
+                <input type="number" defaultValue="2" />
+              </label>
+            </InteractionEffectCard>
           </div>
           <div className="pattern-notes">
             <div>
@@ -410,7 +427,10 @@ export function DesignSystemPage() {
             </div>
             <div>
               <b>Trigger markers</b>
-              <p>Use an empty, selectable diamond. Connecting lines are never selectable.</p>
+              <p>
+                Use an amber diamond; selection and focus add emphasis without changing its
+                geometry.
+              </p>
             </div>
             <div>
               <b>Effect cards</b>

@@ -344,6 +344,7 @@ export const englishTranslation = {
         private: 'Private',
         authenticated: 'Signed-in users',
         public: 'Public',
+        unlisted: 'By link',
         invitation: 'Invitation only',
       },
       continueDescription: 'Continue shaping this interactive narrative.',
@@ -385,6 +386,8 @@ export const englishTranslation = {
       private: 'Owner only',
       authenticated: 'Signed-in users',
       public: 'Everyone',
+      unlisted: 'By link (unlisted)',
+      help: "Anyone with the URL can read the Story without signing in. It won't appear in the public catalog.",
       invitation: 'By invitation',
     },
     edit: {

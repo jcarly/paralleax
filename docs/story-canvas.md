@@ -128,13 +128,15 @@ UX rules:
 - connecting to the empty interaction input should create a separate trigger;
 - interactions with several distinct trigger routes should show several trigger
   markers so each route remains editable;
-- several triggers with the same inputs and output should be grouped behind one
-  visual marker, with their alternative condition groups shown as `OR` variants
-  in the inspector.
-- adding an `OR` condition group from the inspector should create another trigger
-  with the same inputs behind the same visual marker.
-- the inspector should let authors delete one OR group at a time, or delete every
-  OR group behind the selected visual marker in one action.
+- each Trigger has its own marker, including when another Trigger has the same
+  inputs and output; separate Triggers remain independent reachability,
+  probability, and timer gates.
+- adding an `OR` condition group in the inspector adds a group to the selected
+  Trigger. Its groups share that Trigger's inputs, probability, and timer; this
+  does not create another Trigger.
+- removing an alternative group changes only the selected Trigger's conditions
+  and respects the invariant that a Trigger owns at least one condition group.
+  Deleting a Trigger remains a separate action.
 
 When the author hovers a trigger marker, local action icons may appear around
 it. These icons can expose trigger actions such as editing conditions, deleting
@@ -161,8 +163,10 @@ remain available but visually quieter than the main author action.
 
 Current direction:
 
-- the primary input action is the blue `+` near the top of the interaction;
-- the primary output action is the blue `+` near the bottom of the interaction;
+- the primary input action is the `+` using the current primary accent near the
+  top of the interaction;
+- the primary output action is the `+` using the current primary accent near the
+  bottom of the interaction;
 - trigger output arrows should point to the primary input action;
 - the empty input handle is a precise drop target for creating a new trigger;
 - the empty input handle should stay hidden until the author is actively

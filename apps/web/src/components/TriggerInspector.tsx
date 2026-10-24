@@ -95,7 +95,7 @@ export function TriggerInspector({
           <div className="trigger-variant" key={group.id}>
             {groupIndex > 0 ? <div className="or-divider">{t('triggerInspector.or')}</div> : null}
             {groups.length > 1 ? (
-              <div className="trigger-variant-header">
+              <div className="trigger-variant-header editor-heading-row">
                 <button
                   aria-label={t('triggerInspector.deleteGroup')}
                   className="ghost danger trigger-variant-delete"

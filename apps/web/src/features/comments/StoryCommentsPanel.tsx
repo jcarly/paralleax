@@ -92,7 +92,7 @@ export function StoryCommentsPanel({
           <span>{t('comments.eyebrow')}</span>
           <h2>{t('comments.title')}</h2>
           <small className={`comments-realtime-status ${realtimeStatus}`} role="status">
-            <span aria-hidden="true" />
+            <span className={`realtime-status-dot ${realtimeStatus}`} aria-hidden="true" />
             {t(`comments.realtime.${realtimeStatus}`)}
           </small>
         </div>

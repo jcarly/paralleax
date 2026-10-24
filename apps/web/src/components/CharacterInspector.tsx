@@ -145,7 +145,7 @@ export function CharacterInspector({
         semanticCommentCounts={semanticCommentCounts}
         onOpenSemanticComments={onOpenSemanticComments}
       >
-        <div className="inspector-section-header">
+        <div className="inspector-section-header editor-heading-row">
           <h3>{t('inspector.stats')}</h3>
         </div>
         {availableDefinitions.length > 0 ? (
@@ -224,7 +224,7 @@ export function CharacterInspector({
         semanticCommentCounts={semanticCommentCounts}
         onOpenSemanticComments={onOpenSemanticComments}
       >
-        <div className="inspector-section-header">
+        <div className="inspector-section-header editor-heading-row">
           <h3>{t('inspector.items')}</h3>
         </div>
         {itemDefinitions.length > 0 ? (

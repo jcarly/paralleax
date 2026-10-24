@@ -46,7 +46,7 @@ describe('StoryAccessSettings', () => {
       within(reading)
         .getAllByRole('option')
         .map((option) => option.textContent),
-    ).toEqual(['Everyone', 'Signed-in users', 'By invitation', 'Owner only']);
+    ).toEqual(['Everyone', 'By link (unlisted)', 'Signed-in users', 'By invitation', 'Owner only']);
     expect(screen.getByLabelText('Editing')).toHaveValue('owner');
     expect(screen.getByLabelText('Comments')).toHaveValue('editors');
   });
@@ -104,14 +104,14 @@ describe('StoryAccessSettings', () => {
     render(<StoryAccessSettings storyId="story-1" />);
     await screen.findByLabelText('Reading');
 
-    await user.selectOptions(screen.getByLabelText('Reading'), 'public');
+    await user.selectOptions(screen.getByLabelText('Reading'), 'unlisted');
     await user.selectOptions(screen.getByLabelText('Editing'), 'collaborators');
     await user.selectOptions(screen.getByLabelText('Comments'), 'readers');
     await waitFor(() =>
       expect(api.updateStoryAccess).toHaveBeenLastCalledWith(
         'story-1',
         expect.objectContaining({
-          visibility: 'public',
+          visibility: 'unlisted',
           editPolicy: 'collaborators',
           commentPolicy: 'readers',
         }),

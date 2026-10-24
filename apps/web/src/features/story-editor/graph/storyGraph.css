@@ -120,7 +120,7 @@
 }
 .interaction-node-location > span {
   flex: none;
-  color: var(--color-place);
+  color: var(--color-primary);
   font-size: 0.8rem;
 }
 .interaction-node-characters {
@@ -200,8 +200,7 @@
   opacity: 0;
   pointer-events: none;
 }
-.node-create:hover,
-.node-create:focus-visible {
+.node-create:hover {
   box-shadow: 0 0 0 5px var(--color-primary-halo-strong);
   outline: none;
 }
@@ -217,16 +216,6 @@
   background: var(--color-trigger);
   box-shadow: 0 0 0 3px var(--color-trigger-halo);
   transform: rotate(45deg);
-}
-.root-trigger-marker:hover,
-.root-trigger-marker:focus-visible,
-.root-trigger-marker.selected {
-  outline: none;
-  background: var(--color-trigger);
-  border-color: var(--color-primary);
-  box-shadow:
-    0 0 0 4px var(--color-primary-halo),
-    0 3px 10px #2d2d2d22;
 }
 .react-flow__edge.trigger-edge.selected .react-flow__edge-path {
   stroke: var(--color-trigger-strong);
@@ -442,8 +431,9 @@
   border: 0;
   background: transparent;
 }
+.root-trigger-marker:hover,
+.root-trigger-marker.selected,
 .trigger-marker:hover,
-.trigger-marker:focus-visible,
 .trigger-marker.selected {
   outline: none;
   background: var(--color-trigger);
@@ -451,6 +441,13 @@
   box-shadow:
     0 0 0 4px var(--color-primary-halo),
     0 3px 10px #2d2d2d22;
+}
+.node-create:focus-visible,
+.root-trigger-marker:focus-visible,
+.trigger-marker:focus-visible {
+  outline: 2px solid var(--color-surface);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 5px var(--color-primary);
 }
 .trigger-link-delete {
   position: absolute;

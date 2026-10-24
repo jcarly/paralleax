@@ -24,7 +24,7 @@
   border-radius: 999px;
   background: var(--color-primary-soft);
   color: var(--color-primary-strong);
-  font-size: 0.74rem;
+  font-size: var(--type-size-compact);
   font-weight: 750;
 }
 .player-card {
@@ -41,7 +41,7 @@
   letter-spacing: 0.08em;
   color: var(--color-accent);
   font-weight: 750;
-  font-size: 0.75rem;
+  font-size: var(--type-size-compact);
 }
 .story-clock {
   display: block;
@@ -50,9 +50,36 @@
   font-variant-numeric: tabular-nums;
 }
 .story-body {
+  font-family: var(--font-narrative);
   font-size: 1.15rem;
   line-height: 1.7;
   white-space: pre-wrap;
+}
+
+.story-body img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 0.75rem auto;
+}
+
+.story-body video,
+.story-body iframe {
+  display: block;
+  width: 100%;
+  max-width: 48rem;
+  aspect-ratio: 16 / 9;
+  margin: 0.75rem auto;
+  border: 0;
+}
+
+.player-story-content > h1 {
+  margin: 0 0 1rem;
+  font-family: var(--font-narrative);
+  font-size: clamp(2rem, 4vw, 3rem);
+  font-weight: 500;
+  letter-spacing: -0.035em;
+  line-height: 1.08;
 }
 
 .story-body .interaction-link {
@@ -107,7 +134,7 @@ span.conditional-text {
   border-radius: 999px;
   background: var(--color-surface);
   color: var(--color-primary-strong);
-  font-size: 0.78rem;
+  font-size: var(--type-size-control);
   font-weight: 700;
 }
 
@@ -125,7 +152,7 @@ span.conditional-text {
   display: block;
   margin-top: 0.65rem;
   color: var(--color-subtle);
-  font-size: 0.76rem;
+  font-size: var(--type-size-compact);
   font-weight: 650;
 }
 
@@ -266,13 +293,19 @@ span.conditional-text {
   resize: vertical;
 }
 .simulation-title-input:hover,
-.simulation-title-input:focus,
 .simulation-body-input:hover,
 .simulation-body-input:focus {
   border-color: var(--color-control-border);
   background: var(--color-surface-secondary);
   outline: none;
   box-shadow: 0 0 0 3px var(--color-primary-halo);
+}
+.simulation-title-input:focus {
+  border-color: var(--color-primary);
+  background: var(--color-surface-secondary);
+  outline: 2px solid var(--color-surface);
+  outline-offset: 1px;
+  box-shadow: 0 0 0 4px var(--color-primary);
 }
 .choices {
   display: grid;

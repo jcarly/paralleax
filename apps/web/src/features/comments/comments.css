@@ -54,19 +54,6 @@
   color: var(--color-muted);
   font-size: 0.67rem;
 }
-.comments-realtime-status > span {
-  width: 0.48rem;
-  height: 0.48rem;
-  border-radius: 999px;
-  background: var(--color-subtle);
-}
-.comments-realtime-status.live > span {
-  background: var(--color-place);
-  box-shadow: 0 0 0 3px #5faf7226;
-}
-.comments-realtime-status.reconnecting > span {
-  background: var(--color-trigger);
-}
 .comments-panel > header button {
   width: 34px;
   height: 34px;

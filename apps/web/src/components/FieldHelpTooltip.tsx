@@ -1,4 +1,5 @@
 import { createPortal } from 'react-dom';
+import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { useContext, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { ModalPortalContext } from './modalPortalContext';
 
@@ -7,6 +8,11 @@ export function FieldHelpTooltip({ label, help }: { label: string; help: string 
   const tooltipId = useId();
   const triggerRef = useRef<HTMLButtonElement>(null);
   const tooltipRef = useRef<HTMLSpanElement>(null);
+  const closeTimerRef = useRef<number | undefined>(undefined);
+  const triggerHoveredRef = useRef(false);
+  const tooltipHoveredRef = useRef(false);
+  const triggerFocusedRef = useRef(false);
+  const dismissedByEscapeRef = useRef(false);
   const [open, setOpen] = useState(false);
   const [position, setPosition] = useState({ left: 0, top: 0 });
 
@@ -26,9 +32,44 @@ export function FieldHelpTooltip({ label, help }: { label: string; help: string 
   }
 
   function showTooltip() {
+    if (closeTimerRef.current !== undefined) {
+      window.clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = undefined;
+    }
+    dismissedByEscapeRef.current = false;
     updatePosition();
     setOpen(true);
   }
+
+  function scheduleTooltipClose() {
+    if (closeTimerRef.current !== undefined) window.clearTimeout(closeTimerRef.current);
+    closeTimerRef.current = window.setTimeout(() => {
+      closeTimerRef.current = undefined;
+      const shouldStayOpen =
+        !dismissedByEscapeRef.current &&
+        (triggerFocusedRef.current || triggerHoveredRef.current || tooltipHoveredRef.current);
+      setOpen(shouldStayOpen);
+    }, 160);
+  }
+
+  function dismissTooltip(event: ReactKeyboardEvent<HTMLButtonElement>) {
+    if (event.key !== 'Escape' || !open) return;
+    event.preventDefault();
+    event.stopPropagation();
+    if (closeTimerRef.current !== undefined) {
+      window.clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = undefined;
+    }
+    dismissedByEscapeRef.current = true;
+    setOpen(false);
+  }
+
+  useEffect(
+    () => () => {
+      if (closeTimerRef.current !== undefined) window.clearTimeout(closeTimerRef.current);
+    },
+    [],
+  );
 
   useEffect(() => {
     if (!open) return;
@@ -53,10 +94,23 @@ export function FieldHelpTooltip({ label, help }: { label: string; help: string 
         className="field-help-tooltip-trigger"
         ref={triggerRef}
         type="button"
-        onBlur={() => setOpen(false)}
-        onFocus={showTooltip}
-        onMouseEnter={showTooltip}
-        onMouseLeave={() => setOpen(false)}
+        onBlur={() => {
+          triggerFocusedRef.current = false;
+          scheduleTooltipClose();
+        }}
+        onFocus={() => {
+          triggerFocusedRef.current = true;
+          showTooltip();
+        }}
+        onKeyDown={dismissTooltip}
+        onPointerEnter={() => {
+          triggerHoveredRef.current = true;
+          showTooltip();
+        }}
+        onPointerLeave={() => {
+          triggerHoveredRef.current = false;
+          scheduleTooltipClose();
+        }}
       >
         ?
       </button>
@@ -67,6 +121,14 @@ export function FieldHelpTooltip({ label, help }: { label: string; help: string 
           role="tooltip"
           ref={tooltipRef}
           style={{ left: position.left, top: position.top }}
+          onPointerEnter={() => {
+            tooltipHoveredRef.current = true;
+            showTooltip();
+          }}
+          onPointerLeave={() => {
+            tooltipHoveredRef.current = false;
+            scheduleTooltipClose();
+          }}
         >
           {help}
         </span>,

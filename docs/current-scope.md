@@ -80,7 +80,8 @@ Paralleax currently includes:
 - Authentication, verified email/password accounts, opaque revocable sessions,
   password recovery/change, self-service revocation of other sessions, creator ownership, required non-unique display names,
   self-service display-name editing, global user/admin roles, per-story
-  visibility, editing, and editor/reader comment policies, reader/editor grants,
+  visibility including unlisted link-readable stories, editing, and editor/reader
+  comment policies, reader/editor grants,
   authenticated anchored review discussions, health/readiness, migrations, and
   production-oriented API error handling. Story-level properties and access use
   one tabbed configuration modal opened from the editor title; Story editors can
@@ -174,10 +175,11 @@ Paralleax currently includes:
   The import dialog reports measurable upload percentage, then live decoding,
   parsing, and mapping counts (with the current source file when available)
   through a user-private ephemeral stream. Closing the dialog aborts the client
-  operation and requests cancellation of the active analysis worker; centralized
-  server-side lifecycle arbitration and long-lived metadata cleanup remain open
-  reliability work. Warning confirmation repeats that upload and analysis before
-  atomic persistence.
+  operation and requests cancellation of the active analysis worker. Server-side
+  lifecycle arbitration prevents cancelled work from persisting or completing as
+  successful, and terminal job metadata is cleaned up automatically. Durable
+  import-report retention across process restarts remains open reliability work.
+  Warning confirmation repeats that upload and analysis before atomic persistence.
 - Editor-only React Flow graph authoring. Dropping a connection on an
   interaction's input `+` creates a dedicated Trigger; dropping on a visible
   Trigger marker adds the input to that existing Trigger without a follow-up
@@ -278,8 +280,6 @@ The following remain future or incomplete unless a task explicitly implements th
 - anonymous or offline reader-progress saves;
 - collaborative text merging and durable offline authoring for an already-open
   Story, accepted as future direction in [ADR-034](decisions/ADR-034-collaborative-offline-authoring.md);
-- unlisted link visibility, accepted as future direction in
-  [ADR-033](decisions/ADR-033-unlisted-story-visibility.md);
 - managed media upload/storage;
 - presence, remote cursors/selections, and horizontally distributed story events;
 - suggestion workflow, message editing, mentions, notifications, and horizontally
