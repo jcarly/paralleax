@@ -2,38 +2,83 @@
 
 Status: Active
 
-Last triaged: 2026-10-22
+Last triaged: 2026-10-24
 
 This page records maintainability, reliability, performance, and test work found
 during the August 2026 code review and subsequent technical evaluations. Production gates remain authoritative in
 [Production readiness](production-readiness.md).
 
+## Priority Definitions
+
+- **P0** blocks an essential author/reader path, threatens data or security, or
+  prevents a scheduled user-validation session.
+- **P1** materially improves the validated product direction or is a concrete
+  prerequisite to the next delivery result.
+- **P2** is useful but can wait without compromising the current product goal.
+- **Deferred / Exploration** needs user evidence, a scope decision, or a
+  feasibility prototype before it can be scheduled.
+
+Priority is impact, not chronology. If a P1 task depends on P2 work, reassess
+whether that dependency is truly required. The [Roadmap](roadmap.md) owns product
+sequence; [Production readiness](production-readiness.md) owns release gates.
+
 ## Active Delivery View
 
-This backlog is intentionally broader than the near-term delivery queue. Use the
+This backlog is intentionally broader than the near-term delivery queue. The
+[Roadmap](roadmap.md) currently leads with guided author validation. Use the
 following order when choosing incremental quality work:
 
-1. **Reliability gates:** durable import-report retention across process
-   restarts and an explicit optimistic-mutation recovery policy. Story/entity
-   quotas, data-router navigation blocking, worker cancellation, server-side
-   lifecycle arbitration, and terminal job metadata cleanup are implemented.
-2. **Measured persistence/performance:** Story-summary budgets, focused repository
-   commands, long-journey/item measurements, and retained React Flow latency budgets.
-3. **Author-facing consistency:** shared loading/error/session-expiry presentation,
-   request-id support details, and the manual keyboard/focus audit.
-4. **Incremental module work:** shared evaluation context, incremental journey time,
-   Rich Text Editor extraction, shared import validation, and smaller editor/player
-   orchestration modules.
-5. **Design-system defects:** address the reproducible P0 layering, graph hover,
-   rich-text CSS ownership and token-scope defects recorded in the
-   [2026-10-22 audit](audits/design-system-2026-10-22.md), then take its P1/P2
-   work in the existing consistency/accessibility order. This does not displace
-   reliability gates or authorize open visual decisions.
+1. **Protect the current alpha journey:** address observed data/security issues or
+   failures that prevent a scheduled author task. Disposable-project sessions do
+   not wait on real-project provider gates; valuable user projects do, per
+   [Production readiness](production-readiness.md).
+2. **Deliver evidence-backed product slices:** use session findings to pick an
+   independently useful authoring fix. `StoryPlayer` incremental extraction stays
+   P1 but begins after author observation unless a slice fixes a concrete blocker,
+   risk, priority feature, or duplicated rule. Do not start a complete rewrite.
+3. **Close the gates for the next release stage:** retain the measured Story-summary
+   and React Flow budgets for the open creator alpha; durable import-report
+   storage and explicit mutation recovery remain P1 when their stated use cases
+   apply.
+4. **Use measurements for performance work:** implement repository/query changes
+   only where profiles show a meaningful cost. General journey optimization and
+   unused cleanup-contract work are P2.
+5. **Finish remaining UX/accessibility and design-system work by impact:** the
+   manual keyboard/focus audit and reproducible defects outrank CSS consolidation
+   or style-only cleanup. DS-01 through DS-04 are resolved; remaining audit work
+   retains its task-level P1/P2 status.
 
 Dependency-watch entries such as the Swagger `js-yaml` override and the
 development-only `glob@10.5.0` warning are removal conditions, not active feature
 work. UX ideas and library candidates remain discovery inputs until a product task
 promotes them.
+
+## Priority Reclassifications
+
+- **`StoryPlayer` extraction: P1 -> P1 (retained).** Keep the detailed,
+  incremental plan and behavior coverage. Start after author observation unless a
+  slice addresses a concrete blocker, feature, risk, or duplication; no complete
+  rewrite before sessions.
+- **`StoryEditor` split: P1 -> P2, conditional.** Split only where an observed
+  workflow, concrete risk, or needed feature benefits; file size alone is not a
+  priority.
+- **`RichTextEditor` extraction: P1 -> P2.** Preserve compatible incremental
+  extraction and tests, but treat it as groundwork for a deferred editor-engine
+  choice, not an alpha prerequisite. Tiptap remains unscheduled.
+- **Shared evaluation context: P1 -> P2.** It is a prerequisite only before
+  consolidating diagnostics; current Reader and Simulation behavior continues.
+- **Incremental journey-date recalculation: P1 -> P2.** Keep full reconstruction
+  for save/replay correctness; optimize only after representative profiles show a
+  material cost.
+- **Repository commands and remaining complete-Story cleanup responses: P1 -> P2.**
+  Extend targeted mutations only for measured costs or a concrete safe client
+  update.
+- **Durable import-report retention: P1 -> P1, conditional gate.** Required before
+  promising reports survive restarts/multiple instances or before production
+  imports; it does not block disposable guided sessions in a test environment.
+- **Optimistic-mutation recovery policy: P1 -> P1, retained.** Clarify recovery by
+  mutation risk and user impact. Promote a specific path to P0 only if evidence
+  shows current behavior can lose saved user work or blocks the alpha journey.
 
 ## Completed In The First Review Batch
 
@@ -68,13 +113,16 @@ promotes them.
 - [x] Upgrade Jest and Vitest, review every dependency install hook, and retain a
       clean full and production npm audit. Keep the classification and evidence
       in [npm warning triage](npm-warning-triage.md).
-- [ ] Remove the targeted Swagger `js-yaml` override once Swagger declares the
-      fixed patch directly, retaining the high-severity CI audit.
-- [ ] Remove the development-only `test-exclude -> glob@10.5.0` deprecation once
-      the Jest/ts-jest coverage chain supports a maintained `glob` release; do
-      not force a transitive major override without an upstream contract.
 - [x] Verify with an automated test that a late response from a previous story
       cannot overwrite the active editor or reader route.
+
+## Dependency Watches
+
+- Remove the targeted Swagger `js-yaml` override once Swagger declares the fixed
+  patch directly, retaining the high-severity CI audit.
+- Remove the development-only `test-exclude -> glob@10.5.0` deprecation once the
+  Jest/ts-jest coverage chain supports a maintained `glob` release; do not force
+  a transitive major override without an upstream contract.
 
 ## P1 — Performance And Persistence
 
@@ -85,20 +133,8 @@ promotes them.
         and latency budgets.
   - [ ] Run the scheduled/manual PostgreSQL stress lane and retain its measured
         baseline before closing this item.
-- [ ] Add direct repository commands for story metadata, interaction text, and
-      node positions so common updates avoid a complete graph read and lock.
 - [x] Group comment messages by thread once when listing discussions instead of
       filtering the complete message result for every thread.
-- [ ] Replace remaining complete-story delete responses with explicit cleanup
-      result contracts where the client can apply them safely.
-  - [x] Return compact cleanup results for Interaction, Trigger, and graph-decoration
-        deletion and apply their shared domain operations locally.
-  - [x] Centralize character-stat and leaf-item cleanup in `packages/shared`, then
-        return compact deletion results and apply the same operations in the editor.
-  - [ ] Review the unused generic stat-definition and stat-assignment deletion
-        endpoints separately before changing their compatibility contracts.
-- [ ] Measure long-journey replay and large item graphs, then add interaction and
-      item lookup maps only where the measurements confirm repeated linear costs.
 - [ ] Retain React Flow projection and interaction-latency budgets after the
       current 2,000-node baseline.
 - [x] Run controlled PostgreSQL stress tests in the weekly/manual CI stress lane
@@ -173,6 +209,23 @@ promotes them.
   - [x] Replace the untyped React Flow component mock with typed node, edge,
         handle, resize, connection, selection, and drag contracts.
 
+## P2 — Conditional Performance And Persistence
+
+These changes follow representative measurements or a concrete client need; they
+are not prerequisites for disposable author sessions.
+
+- [ ] Replace remaining complete-Story delete responses with explicit cleanup
+      result contracts where a client can safely apply them and profiling or
+      concrete usage justifies the contract.
+  - [x] Return compact cleanup results for Interaction, Trigger, and graph-decoration
+        deletion and apply their shared domain operations locally.
+  - [x] Centralize character-stat and leaf-item cleanup in `packages/shared`, then
+        return compact deletion results and apply the same operations in the editor.
+  - [ ] Review the unused generic stat-definition and stat-assignment deletion
+        endpoints separately before changing their compatibility contracts.
+- [ ] Measure long-journey replay and large item graphs, then add interaction and
+      item lookup maps only where measurements confirm repeated linear costs.
+
 ## P2 — Error Handling And User Feedback
 
 - [x] Give Simulation Mode mutations visible saving, failure, and recovery UI.
@@ -222,17 +275,19 @@ promotes them.
 - [x] Review coverage thresholds after module splits and cover hidden branches.
 - [x] Track bundle size so refactors do not pull React Flow into the initial chunk.
 
-## P1 — Additional 2026-10-15 Audit Follow-Ups
+## 2026-10-15 Audit Follow-Ups
 
 These follow-ups came from the October 2026 static audit and should be tracked
 as incremental, behavior-preserving improvements. Keep the existing product
-rules authoritative; treat these as sequencing and measurement work rather than a
-rewrite.
+rules authoritative; current priorities are assigned per item below, rather
+than inherited from the historical audit grouping.
 
-- [ ] Replace the broad scenario mutation flow with focused persistence commands
+- [ ] **P2, measurement-led:** replace the broad scenario mutation flow with
+      focused persistence commands
       such as story metadata, interaction content, and graph-position updates,
       then measure SQL query counts and latency for 100, 600, and 2,000
-      interaction stories before broadening the pattern.
+      interaction stories before broadening the pattern. Do not block alpha
+      sessions unless measurements show a core-task problem.
 - [x] Centralize import job lifecycle management so cancellation is an actual
       stop signal and the API cannot mark a cancelled job as completed after the
       active job keeps running; add concurrency checks before any persistence and
@@ -240,10 +295,12 @@ rewrite.
   - [x] Route QSP job cancellation to the worker abort signal, guard the
         persistence boundary, and expire terminal in-memory metadata.
     - [x] Make ChoiceScript parsing cancellable without blocking the API event loop.
-- [ ] Persist import compatibility reports durably so completed, failed, and
+- [ ] **P1, conditional gate:** persist import compatibility reports durably so completed, failed, and
       cancelled imports retain their diagnostics across process restarts; define
       retention and ownership before exposing the report as a user-facing
-      recovery surface.
+      recovery surface. This applies before promising report retention or running
+      production imports, not before disposable alpha sessions in a test
+      environment.
 - [x] Make ELK the canonical graph-layout strategy while keeping the historic
       custom layout as an explicit fallback or removing it after validation;
       update the large-graph stress benchmark to use the active engine and keep
@@ -251,15 +308,16 @@ rewrite.
 - [x] Reduce repeated graph-layout work by indexing ELK results by node id and
       by avoiding repeated array spreads in lane assignment while preserving
       deterministic ordering for existing graph mutations.
-- [ ] Consolidate trigger and interaction evaluation behind a single shared
+- [ ] **P2, prerequisite only for consolidated diagnostics:** consolidate
+      trigger and interaction evaluation behind a single shared
       evaluation context so the reader, Simulation Mode, and unavailable-reason
-      projections all reuse one deterministic result object instead of repeated
-      bespoke calculations.
-- [ ] Make journey-date recalculation incremental during normal reader
+      projections can reuse one deterministic result object. Do not block current
+      Reader or Simulation behavior on this refactor.
+- [ ] **P2, measurement-led:** make journey-date recalculation incremental during normal reader
       progression, while retaining the full reconstruction path for saves,
       rewinds, and replays; validate the optimization against long loops and
       large journeys.
-- [ ] Break `RichTextEditor` into focused modules for selection handling,
+- [ ] **P2:** continue breaking `RichTextEditor` into focused modules for selection handling,
       token serialization, conditional-content decoration, and editing actions
       before adopting a richer editing engine; keep the existing storage format
       compatible throughout the refactor. This remains prerequisite work for the
@@ -271,15 +329,124 @@ rewrite.
         insertion behind a focused hook.
   - [ ] Extract conditional-content decoration and editing actions without
         changing persisted markup or keyboard behavior.
-- [ ] Share client and server import validation rules for QSP and other import
-      families in `packages/shared` while retaining the server as the final
-      authority for persisted-story acceptance.
-- [ ] Define one explicit optimistic-mutation recovery policy for failed
+- [ ] **P1 when import families expand:** share client and server import
+      validation rules for QSP and other import families in `packages/shared`
+      while retaining the server as the final authority for persisted-story
+      acceptance.
+- [ ] **P1:** define one explicit optimistic-mutation recovery policy for failed
       authoring updates: targeted rollback, preserved draft state, or canonical
       reload according to mutation type and user impact.
 - [ ] Split the remaining orchestration responsibilities in `StoryEditor` and
       `StoryPlayer` into focused feature modules without duplicating narrative
       runtime state or changing the public behavior of the reader engine.
+      **Priority:** targeted `StoryPlayer` slices remain P1; broad `StoryEditor`
+      splitting is conditional P2. Wait for author-session observations before
+      broad structural work; an earlier slice is justified only by a concrete
+      blocker, priority feature, risk, or duplicated rule.
+  - [ ] `StoryPlayer` - establish regression coverage before extracting behavior.
+        Extend the existing `StoryPlayer.loading.test.tsx` and
+        `StoryPlayer.runtime.test.tsx` only for uncovered lifecycle cases:
+        timer expiry after returning from a hidden tab or refocusing the window,
+        and a real-time invalidation received during focused Simulation editing
+        being applied after the edit/mutation settles. Keep the existing route-
+        change, stale-slice, automatic-entry, empty-interaction cycle, replay,
+        save-slot, timer, and mutation-failure coverage as the behavior baseline.
+        **Acceptance:** each new case fails if a stale or deferred update is
+        applied at the wrong time; no reader-semantic expectation changes.
+  - [ ] `StoryPlayer` - extract initial runtime loading and slice lifecycle.
+        Separate bootstrap/context/progress loading, current-step slice
+        hydration, retry/error state, and cancellation from page composition.
+        Reuse `storyRuntimeLoader.ts` and `useStoryRouteAccessRecovery`; keep
+        `StoryRuntimeBootstrap`/slice API contracts and revision checks intact.
+        Do not add a second `Story` projection or a second
+        `ReaderProgressState` owner. Files: `StoryPlayer.tsx`,
+        `features/story-player/storyRuntimeLoader.ts`, and
+        `StoryPlayer.loading.test.tsx`. Preserve its recoverable-load-error,
+        inaccessible-route, prior-route-response, and latest-simulation-slice
+        cases; add only missing cancellation/request-key cases.
+        **Depends on:** the lifecycle baseline above. **Risk:** stale bootstrap,
+        progress, or option-page responses can overwrite a later route or
+        journey. **Acceptance:** retry, inaccessible-route recovery, direct
+        Simulation starts, and latest-step slices remain unchanged; each loaded
+        slice belongs to one Story revision and request key.
+  - [ ] `StoryPlayer` - extract navigation and automatic-transition
+        orchestration. Move choice revalidation/commit guards, restart,
+        Simulation step-back, save restoration, automatic opening selection,
+        empty-body pass-through, and cycle-stop bookkeeping behind a focused
+        navigation boundary. Continue to call `useReaderSessionState` and
+        `useReaderProgressPersistence`; they remain the owners of session state
+        and save ordering. Keep availability, replay, effects, and date
+        reconstruction in `packages/shared`. Files: `StoryPlayer.tsx`, a focused
+        `features/story-player/navigation/` module if justified, and
+        `StoryPlayer.loading.test.tsx` / `StoryPlayer.runtime.test.tsx`.
+        Preserve existing opening-choice, direct-start, pass-through/cycle,
+        duplicate-commit, restart, backward-step, and save-restore cases.
+        **Depends on:** loading lifecycle contract. **Risk:** duplicate choice
+        commits, changed transition timing, probability/timer revalidation, or
+        incorrect save-slot writes. **Acceptance:** repeated visits, seeded
+        probability, timers, focus behavior, starting choices, pass-through,
+        cycle stopping, restart, backward replay, and loaded saves preserve their
+        current results and keyboard behavior.
+  - [ ] `StoryPlayer` - isolate Simulation authoring commands. Extract local
+        interaction patching, current-title/body saves, option creation/title
+        edits, and recovery after uncertain mutations. Reuse
+        `useSimulationMutationPersistence`, `storyMutationResults.ts`, and
+        `getStoryGraphClickCreationPosition`; keep one owner for the optimistic
+        `Story` projection and keep retry policy aligned with mutation safety.
+        Files: `StoryPlayer.tsx`, `features/story-player/useSimulationMutationPersistence.ts`,
+        `features/story/storyMutationResults.ts`, and
+        `StoryPlayer.simulation-authoring.test.tsx`.
+        Preserve inline-edit, safe-retry, uncertain-create recovery, new-option
+        focus, and root/child-option placement cases.
+        **Depends on:** the Story projection update contract from runtime loading.
+        **Risk:** lost typing, duplicate creation after an uncertain response,
+        or a realtime refresh overwriting an active edit. **Acceptance:** inline
+        edits remain responsive, safe updates retain retry behavior, unsafe
+        creation recovers by reload, and save/error/focus states remain
+        accessible.
+  - [ ] `StoryPlayer` - isolate live-refresh coordination. Keep
+        `useStoryRealtime` and `storyRealtime.ts` as the subscription and shared
+        invalidation primitives; extract only the player policy for stale
+        refresh generations, latest-session slice loading, invalidation
+        coalescing, and deferral while a Simulation edit or mutation is active.
+        Files: `StoryPlayer.tsx`, `features/realtime/storyRealtime.ts`,
+        `features/story-player/` refresh module if needed, and
+        `StoryPlayer.loading.test.tsx`. Preserve the remote-story-replay and
+        latest-slice-after-navigation cases; add the focused-edit deferral case
+        from the baseline task. **Depends on:** navigation's current
+        journey signal, Simulation mutation lifecycle, and the loading boundary.
+        **Risk:** losing an invalidation, applying an old revision, or replacing
+        an in-progress draft. **Acceptance:** rapid navigation, overlapping
+        invalidations, edit deferral, mutation failure, story deletion, and route
+        changes never apply a stale Story or discard local input.
+  - [ ] `StoryPlayer` - extract only cohesive presentation sections after the
+        state/action contracts settle. Reuse `ReaderSaveDialog`,
+        `StoryCommentsPanel`, `RichTextContent`, `RichTextEditor`, and
+        `ChoiceTimerBar`; consider focused toolbar/scene, choice-list, and
+        inventory/encounter views, but do not create one component per JSX block
+        or move behavior into a display-only component. Files: `StoryPlayer.tsx`,
+        focused components under `features/story-player/`, existing player CSS,
+        `StoryPlayer.access-and-comments.test.tsx`, the save-dialog focus tests,
+        and the relevant web component/Playwright suites. **Depends on:** stable
+        action and view-data boundaries. **Risk:** focus restoration, keyboard
+        activation, accessible names, and reader/simulation visibility may drift.
+        **Acceptance:** `StoryPlayer.tsx` primarily composes the route and
+        feature sections, with existing controls, focus, and accessible output
+        unchanged.
+  - [ ] Keep two adjacent backlog items separate from this structural work:
+        shared Trigger/interaction evaluation context and incremental journey-date
+        recalculation. The former is a prerequisite before consolidating
+        repeated diagnostics/availability calculations; the latter is an
+        optimization requiring its own measurements. Neither belongs in a
+        behavior-preserving extraction. Do not move narrative rules from
+        `packages/shared` into React or change reader/simulation semantics here.
+  - [ ] For every implementation slice, add or retain the narrow unit/component
+        coverage first, then run the relevant web tests and typecheck; run
+        Playwright for critical reader/simulation focus and navigation flows.
+        No API, persistence schema, reader-progress version, or external
+        dependency change is expected. Keep the refactor under the existing
+        incremental module-work priority; this plan does not reorder the roadmap
+        delivery queue.
 
 ## P2 — UX, Editor Workflow, And Readability Follow-Ups
 

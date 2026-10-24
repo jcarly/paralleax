@@ -2,7 +2,7 @@
 
 Status: Required operator runbook
 
-Last reviewed: 2026-10-12
+Last reviewed: 2026-10-24
 
 ## Scope
 
@@ -11,7 +11,14 @@ open while enabled, but every new account must verify its email address before
 sign-in. This runbook does not authorize public story publication or anonymous
 reading. The deployment remains provider-neutral: a hosting provider, managed
 PostgreSQL service, public domain, and operator contact must be selected before
-registration is enabled for real users.
+production registration is enabled or user projects are retained as valuable
+data.
+
+Guided usability sessions may use explicitly disposable test Stories in a
+controlled non-production environment after the alpha notice and standard
+account, access, and privacy safeguards are ready. Do not use those sessions to
+accept valuable project data. Complete the provider and operator gates below
+before authors rely on the service to retain their projects.
 
 ## Required Topology
 
@@ -32,7 +39,9 @@ on a private network.
 
 ## Provider Gates
 
-Before accepting real user data, record evidence for all of the following:
+Before accepting valuable user-created project data, record evidence for all of
+the following. Test accounts and feedback remain subject to the alpha notice and
+the service's normal security, access, and privacy controls:
 
 - separate staging and production projects;
 - a managed PostgreSQL 17-compatible database with encrypted connections;
@@ -115,7 +124,9 @@ docker compose --env-file .env.production -f compose.production.yaml up --build
 
 The Compose file runs the migration container first, then the API, then the web
 container after API health succeeds. It intentionally does not create a
-PostgreSQL service because real alpha data must use the selected managed service.
+PostgreSQL service. Valuable alpha projects must use the selected managed
+service; disposable session data must stay in the isolated test environment and
+follow its stated reset/retention limit.
 
 ### Railway
 

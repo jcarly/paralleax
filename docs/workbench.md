@@ -105,15 +105,18 @@ view is a primary debugging surface rather than a second variable editor.
 
 ## Selection and Organization
 
-### Planned selection behavior
+### Selection behavior
 
-- Click selects one element.
-- `Ctrl` + click toggles an element in the selection.
-- `Shift` + drag adds the rectangle to the selection.
-- `Alt` + drag removes the rectangle from the selection.
+Implemented baseline: click selects an element, `Ctrl` + click toggles an
+Interaction, `Shift` + drag adds to the selection, `Alt` + drag removes from it,
+and `Ctrl+G` creates a Group from selected Interactions. See
+[Current scope](current-scope.md).
+
+Remaining target behavior:
+
 - `Ctrl+A` selects the currently visible graph projection.
-- `Ctrl+G` creates a Group from the selected Interactions and Groups.
-- A context action can create the same Group.
+- Connected-path selection supports descendants, ancestors, or both directions.
+- A context action can create the same Group as `Ctrl+G`.
 
 Selecting a Group should make its member Interactions and relevant incoming
 Triggers available for emphasis, focus, layout, and later inspection.
@@ -123,7 +126,8 @@ Triggers available for emphasis, focus, layout, and later inspection.
 Implemented baseline: the left navigation now manages persisted, single-parent
 Group trees, explicit Interaction membership, recursive highlighting and explicit
 centering. Ctrl+G opens creation from selected Interactions; moving a Group uses
-its parent picker. Collapse remains transient editor state. See
+its parent picker. Group and panel collapse/expansion are transient editor state;
+search reveals matching Groups beneath collapsed ancestors. See
 [ADR-035](decisions/ADR-035-nested-group-navigation.md). The broader projection
 and combined-selection direction below remains a target.
 
@@ -147,10 +151,12 @@ it from its previous direct Group. Ancestor Groups expose it through navigation
 without storing additional memberships. Groups can mix direct Interactions and
 child Groups. See [ADR-036](decisions/ADR-036-exclusive-group-membership.md).
 
-Collapse, expansion, visibility, colors, nesting cardinality, and persistence of
-per-author view state require a focused implementation contract before coding.
-In particular, collapsing one Group must not destructively hide an Interaction
-that remains relevant through an ancestor Group or through the complete Story view.
+The Group model is an acyclic, single-parent tree with exclusive direct
+Interaction membership, as settled by [ADR-036](decisions/ADR-036-exclusive-group-membership.md).
+Collapsing the navigation tree does not hide graph elements or change membership.
+Canvas visibility filters, Group colors, and persisted per-author view
+preferences remain unimplemented and need a focused contract if user evidence
+supports them.
 
 ### Connected path selection
 
@@ -221,13 +227,13 @@ The exact persisted and web contracts require an ADR before implementation.
 
 ### Phase 1 — Manipulate
 
-- additive and subtractive multi-selection;
-- connected-path selection;
-- explicit Groups with exclusive direct Interaction membership;
-- nested Group navigation;
-- collapse, expand, show, hide, and focus behavior;
-- a Groups section in the left navigation;
-- measured layout improvements for grouped and selected content.
+Implemented baseline: rectangular multi-selection with additive/subtractive
+gestures, a persisted nested Group tree with exclusive direct membership, the
+Groups navigation panel, and transient collapse/expansion. See [Current scope](current-scope.md).
+
+Remaining: connected-path selection, `Ctrl+A` for the visible projection, and
+measured layout improvements for grouped and selected content. Any canvas
+visibility or per-author Group view state should follow observed author needs.
 
 ### Phase 2 — Read
 

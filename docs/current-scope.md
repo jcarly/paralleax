@@ -204,8 +204,10 @@ Paralleax currently includes:
   deleting Interactions. Selection highlights recursive members; explicit centering
   adjusts only the viewport. Group selection never opens a right inspector.
   Ctrl+click toggles interaction selection, and Shift/Alt rectangles add/remove
-  selection. Groups
-  have no reader semantics or React Flow parent-node structure.
+  selection. Tree collapse/expansion and search expansion are transient
+  navigation state; they do not hide graph elements, alter membership, or enter
+  Story history. Groups have no reader semantics or React Flow parent-node
+  structure.
 - Deterministic ELK-backed vertical graph auto-layout for the complete graph, one
   selected interaction/linked trigger, or a rectangular multi-selection, with
   grouped trigger-marker placement and fixed bottom-output/top-input interaction
