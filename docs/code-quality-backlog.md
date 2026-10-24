@@ -513,7 +513,13 @@ from CSS dimensions alone.
       interactions remain unchanged. Graph, Trigger and connection tests (58),
       Prettier and the web build passed; configured bundle budgets passed. Vite
       still reports its existing large-chunk advisory. Slice commit: `f91b376`.
-      Remaining work:
+      **Additional progress (2026-10-24):** grouped the identical stacked form
+      layouts for rich-text interaction links and conditions, and the identical
+      action-row layouts for rich-text and image-URL dialogs, in
+      `inspector-controls.css`. Dialog markup and behavior are unchanged.
+      RichTextEditor and Interaction Inspector tests (30), Prettier and the web
+      build passed; configured bundle budgets passed. The Vite large-chunk
+      advisory remains. Slice commit: `341b043`. Remaining work:
       evaluate other duplicate candidates and CSS ownership boundaries; retain
       graph marker and inspector variants unless their semantics are proven
       identical. Resolution commit: TBD.
