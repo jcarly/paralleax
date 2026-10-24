@@ -13,9 +13,10 @@ during the August 2026 code review and subsequent technical evaluations. Product
 This backlog is intentionally broader than the near-term delivery queue. Use the
 following order when choosing incremental quality work:
 
-1. **Reliability gates:** Story/entity quotas, data-router navigation blocking,
-   cancellable import-job lifecycle, and an explicit optimistic-mutation recovery
-   policy.
+1. **Reliability gates:** durable import-report retention across process
+   restarts and an explicit optimistic-mutation recovery policy. Story/entity
+   quotas, data-router navigation blocking, worker cancellation, server-side
+   lifecycle arbitration, and terminal job metadata cleanup are implemented.
 2. **Measured persistence/performance:** Story-summary budgets, focused repository
    commands, long-journey/item measurements, and retained React Flow latency budgets.
 3. **Author-facing consistency:** shared loading/error/session-expiry presentation,
@@ -261,7 +262,9 @@ rewrite.
 - [ ] Break `RichTextEditor` into focused modules for selection handling,
       token serialization, conditional-content decoration, and editing actions
       before adopting a richer editing engine; keep the existing storage format
-      compatible throughout the refactor.
+      compatible throughout the refactor. This remains prerequisite work for the
+      deferred [Tiptap migration initiative](roadmap.md#deferred-cross-cutting-initiative-rich-text-editor-migration).
+      Do not duplicate this task in that initiative.
   - [x] Extract token-source recovery, temporary editor-control construction, and
         canonical HTML serialization into a focused tested module.
   - [x] Extract selection capture/restoration and inline conditional-frame
@@ -385,50 +388,194 @@ unchanged snapshot.
 
 ### P1 — Shared styling and verified behavior
 
-- [ ] **DS-05 — Separate common reader styles from simulation-only styles**
+- [x] **DS-05 — Separate common reader styles from simulation-only styles**
       (D5). Keep the current reader appearance and Simulation behavior while
       removing accidental cascade overrides. Depends on DS-04 token scope.
       Acceptance: normal reader computed card/layout styles match the approved
       baseline; simulation editing, choices, timers and saves are unchanged.
-      Resolution commit: TBD.
-- [ ] **DS-06 — Make help tooltips dismissible and usable** (D6, D7). Extend the
+      **Completed 2026-10-24:** page/card and responsive layout overrides in
+      `apps/web/src/features/story-player/storySimulation.css` now require the
+      `.simulation-mode` root, so normal reading uses its `.player-page` and
+      `.player-card` baseline from `storyPlayer.css`. The save-row surface uses
+      the existing root `--color-surface-secondary` token instead of the
+      undefined `--color-surface-muted`. Playwright verifies computed Reader and
+      Simulation layout at desktop and mobile sizes and the save-row surface in
+      both modes; 30 focused StoryPlayer Vitest tests, 3 Playwright regressions,
+      lint, typecheck and the web production build passed. Implementation commit:
+      `9f44a73`.
+- [x] **DS-06 — Make help tooltips dismissible and usable** (D6, D7). Extend the
       existing `FieldHelpTooltip`; do not add a parallel tooltip system.
       Acceptance: Escape dismisses focused help, hover content remains reachable
       while the pointer is over it, focus and pointer states are both usable,
-      and essential actions remain available without hover. Resolution commit:
-      TBD.
-- [ ] **DS-07 — Evaluate contrast and focus indicators by semantic role** (D8,
+      and essential actions remain available without hover. **Completed
+      2026-10-24:** the tooltip now handles Escape only while open, preserving
+      focus and allowing the next Escape to reach and close its containing
+      dialog. A short close delay lets the pointer cross from the trigger onto
+      the tooltip; visible tooltip content accepts pointer events. Playwright
+      covers focused dismissal and essential form controls, pointer travel, and
+      containing dialog dismissal/focus restoration. Three browser tests and 11
+      focused modal keyboard/unit tests passed; repository lint and typecheck
+      and the web production build passed. Implementation commit: `7225199`.
+- [x] **DS-07 — Evaluate contrast and focus indicators by semantic role** (D8,
       D15). First record component/state pairs and proposed values for human
       review; then implement only approved changes. Acceptance: applicable text
       and non-text WCAG criteria pass for enabled states; disabled exceptions and
-      graph zoom/target exceptions are documented rather than guessed. Depends
-      on human approval of colors. Resolution commit: TBD.
-- [ ] **DS-08 — Reconcile typography after product review** (D9). Do not select
-      or bundle a new font as part of mechanical cleanup. Acceptance: UI and
-      reader families, fallbacks, label/value sizing and catalogue examples are
-      agreed and documented; only then align code. Depends on human visual
-      approval. Resolution commit: TBD.
-- [ ] **DS-09 — Synchronize design documentation with accepted implementation**
+      graph zoom/target exceptions are documented rather than guessed. **Approved
+      and completed 2026-10-24:** the reviewed candidates were approved by the
+      product owner, then applied with existing semantic tokens. Playwright now
+      asserts the listed text ratios, opaque two-color focus rings in light and
+      dark contexts, actual Simulation rich-text focus, and graph marker geometry
+      and focus contrast. The implementation also corrected the target: the
+      rendered Simulation body uses shared `.rich-text-surface`; the named
+      `.simulation-body-input` selector is unused. Axe, 622 web unit tests, lint,
+      typecheck, and the production build passed. Graph zoom/target-size review
+      and the broader D15 keyboard/focus checklist remain in DS-14. Resolution
+      commit: `e15e2ba`.
+
+#### DS-07 review proposal (2026-10-24; approved and implemented)
+
+The audit ratios record the original baseline. The candidates below were
+reviewed and approved for these component/state pairs; they do not finalize
+palette-wide roles. For WCAG 2.2 AA, use 4.5:1 for ordinary text and 3:1 for
+meaningful non-text component/state indicators against adjacent colors
+(SC 1.4.3 and 1.4.11). SC 2.4.7 requires visible keyboard focus; the separate
+SC 2.4.13 requirement for at least a 2 CSS-pixel perimeter area and a 3:1
+focus-state contrast change is AAA, not an AA requirement.
+
+| Component/state                                                                                                                                | Original pairing and ratio                                                                                   | Approved correction                                                                                                                                                                                                                                                     |
+| ---------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Editor comment-count badges (`editor.css`: `.location-panel .context-comment-badge`, `.comments-toolbar-button small`)                         | White text on `--color-trigger` `#b78335`: 3.33:1                                                            | Keep the amber surface; use existing `--color-text` `#20221f` for the small count text (4.82:1).                                                                                                                                                                        |
+| Editor save status and graph location marker (`editor.css`: `.save-status.saved`; `graph/storyGraph.css`: `.interaction-node-location > span`) | `--color-place` `#5faf72` on white: 2.67:1                                                                   | Use existing `--color-primary` `#2f6250` for the enabled status text and location glyph (7.04:1); retain `--color-place` for fills and dots. The glyph is `aria-hidden` and accompanied by the location name, but the proposal keeps its visual distinction reliable.   |
+| Product-page placeholders (`ProductPages.css`: `.product-field input::placeholder`)                                                            | `#a6aaa2` on white: 2.36:1                                                                                   | Use existing `--color-muted` `#666b63` (5.46:1); retain the placeholder role and layout.                                                                                                                                                                                |
+| Simulation help (`storySimulation.css`: `.simulation-controls small`)                                                                          | `#8d806a` on `#fffaf0`: 3.72:1                                                                               | Use existing `--color-muted` `#666b63` (5.25:1); preserve size and placement.                                                                                                                                                                                           |
+| Shared button/link keyboard focus (`styles.css`: `button:focus-visible`, `.button:focus-visible`, `a:focus-visible`)                           | `--color-primary-halo-strong` composites to `#d1ddd9` on white: 1.39:1; on the light canvas: 1.38:1          | Review a two-color indicator using existing opaque `--color-primary` and `--color-surface`, so a visible edge remains on both light surfaces and dark Simulation Mode chrome.                                                                                           |
+| Story title and Simulation text-editor focus (`editor.css`: `.story-title-input:focus`; `storyPlayer.css`: Simulation title/body inputs)       | `--color-primary-focus` `#87a99b` on white: 2.57:1; the translucent Simulation halo is about 1.14:1 on white | Use an opaque existing primary focus edge on these light editing surfaces, without changing field dimensions. Product-page focus border `#6d9383` on white is already 3.41:1 and should remain unchanged.                                                               |
+| Graph node-create and Trigger-marker focus (`graph/storyGraph.css`)                                                                            | Translucent focus halo is 1.14–1.39:1 on light surfaces; the primary marker border against amber is 2.12:1   | Review the same two-color focus treatment in graph-specific rules. Preserve marker/card dimensions, rotation, React Flow handles, hit areas, selection, `nodrag`/`nopan`, and drag behavior. Do not promote hover or selection-only styling into a keyboard-focus rule. |
+
+The current Axe suite passes its four representative routes, but does not assert
+the focused CSS pairings above. The approved candidates were implemented in
+`e15e2ba`; rendered-state assertions now cover the listed editor, product,
+Simulation, and graph cases, and the Axe suite was rerun. Already passing
+text/focus pairs and product-input focus were left unchanged. Disabled controls
+remain exempt where WCAG defines them as inactive; the exemption is limited to
+those controls. Graph markers remain 18–20px in authored geometry; zoom, spacing,
+and target-size exceptions remain open for browser review and are not inferred
+from CSS dimensions alone.
+
+- [x] **DS-08 — Reconcile typography after product review** (D9). Product review
+      approved the shared Geist/system interface stack, Georgia narrative stack,
+      12px/14px roles, and catalogue samples. No font files were added. Acceptance
+      met: families, fallbacks, label/value sizing and catalogue examples are
+      agreed, documented, and aligned in code. Graph micro-labels remain
+      density-specific. Resolution commit: `3268dda`.
+- [x] **DS-09 — Synchronize design documentation with accepted implementation**
       (D11). Preserve historical rationale and resolve contradictions against
       domain invariants/accepted ADRs; update docs alongside the relevant code.
       Acceptance: graph ownership, trigger OR groups, current entities and
       palette statements are accurate; no unapproved visual decision is recorded
-      as settled. Resolution commit: TBD.
+      as settled. **Completed 2026-10-24:** design-system references now describe
+      current semantic selection/Trigger tokens, mixed spacing units, and the
+      unadopted icon-family proposal without settling future palette choices;
+      UI direction and design principles match canonical Story ownership and
+      current entity scope; Story Canvas and regression scenarios describe OR
+      groups as belonging to one Trigger. The audit snapshot remains unchanged.
+      Resolution commit: `84d5e79`.
 - [ ] **DS-10 — Clarify CSS ownership and consolidate proven duplicates** (D12, D13).
       Continue the existing feature stylesheet split incrementally. Consolidate
       only patterns with the same semantics/lifecycle and preserve intentional
       post-it, graph, reader and inspector variants. Acceptance: no cascade-order
       regression; duplicated state logic is removed only where callers share the
-      same behavior. Resolution commit: TBD.
+      same behavior. **Incremental progress (2026-10-24):** moved `.sr-only` to
+      shared `styles.css` because its consumers span product and application
+      surfaces; current `FeedbackButton.css` only hides its label responsively,
+      so that distinct behavior remains local. Consolidated the identical live /
+      reconnecting status-dot rules used by comments, editor and Simulation, and
+      grouped the matching condition/effect picker shells, headers, choice grids,
+      focus rules and tooltips in their existing inspector stylesheet. Added a
+      comment documenting the shared-first CSS import order. Targeted tests
+      (51), typecheck, ESLint, Prettier and the web build passed; bundle budgets
+      remain within limits. The audit snapshot is unchanged. Slice commit:
+      `6b328e8`.
+      **Additional progress (2026-10-24):** shared the exact flex row layout of
+      context-section and effect-group headings through the editor-owned
+      `.editor-heading-row` utility. Kept their semantic classes and local title
+      styling. The Trigger variant wrapper remains specialized because it only
+      contains an absolutely positioned delete action. Graph marker styles and
+      interactions are unchanged. Targeted inspector/context tests (46), web
+      typecheck, TypeScript lint, Prettier and web build passed; bundle budgets
+      passed. Slice commit: `5579a93`.
+      **Additional progress (2026-10-24):** renamed `.location-panel-header` to
+      `.editor-context-header` because the same editor context header wraps
+      locations, characters, stats, items and Groups. Updated its local style
+      selectors and the existing context test; layout and interactions are
+      unchanged. Context and group navigation tests (33), web typecheck, ESLint
+      and Prettier passed. Slice commit: `31bd21b`.
+      **Additional progress (2026-10-24):** consolidated the identical hover,
+      selected and `:focus-visible` states of root and linked Trigger markers in
+      `storyGraph.css`. Their distinct geometry, rotation, React Flow classes and
+      interactions remain unchanged. Graph, Trigger and connection tests (58),
+      Prettier and the web build passed; configured bundle budgets passed. Vite
+      still reports its existing large-chunk advisory. Slice commit: `f91b376`.
+      **Additional progress (2026-10-24):** grouped the identical stacked form
+      layouts for rich-text interaction links and conditions, and the identical
+      action-row layouts for rich-text and image-URL dialogs, in
+      `inspector-controls.css`. Dialog markup and behavior are unchanged.
+      RichTextEditor and Interaction Inspector tests (30), Prettier and the web
+      build passed; configured bundle budgets passed. The Vite large-chunk
+      advisory remains. Slice commit: `341b043`.
+      **Additional progress (2026-10-24):** included the graph's `node-create`
+      button in the same focus-visible rule because its keyboard focus ring is
+      identical to both Trigger marker rings. Its hover state and geometry stay
+      local. Graph tests (32) and Prettier passed. Slice commit: `64f1a43`.
+      **Additional progress (2026-10-24):** moved the `.story-body` image,
+      video and iframe presentation rules from the inspector stylesheet to the
+      Story Player stylesheet, beside the class's rendering owner. Reader and
+      Simulation continue to share the same declarations; selectors and visual
+      behavior are unchanged. Story Player and Simulation tests (29) and
+      Prettier passed. Slice commit: `4e573a1`.
+      **Additional progress (2026-10-24):** reused `.editor-heading-row` for
+      the four inspector section headers in Character, Item Definition and
+      Stat Definition inspectors. Removed their duplicate flex alignment rules;
+      inspector-specific spacing and title styling remain local. Inspector
+      tests (6), targeted ESLint and Prettier passed. Slice commit: `c35b3c2`.
+      **Additional progress (2026-10-24):** reused `.editor-heading-row` for
+      Trigger variant headings while retaining `.trigger-variant-header` and
+      the absolutely positioned group-delete control. Removed the duplicated
+      row layout. Trigger Inspector tests (14), targeted ESLint and Prettier
+      passed. Slice commit: `9209c1c`.
+      **Additional progress (2026-10-24):** moved the shared `.hint` rule from
+      the inspector stylesheet to `styles.css`; the class is used across editor
+      and reader surfaces. The existing Simulation inventory and interaction
+      timing refinements remain local and unchanged. Reader, Simulation and
+      inspector tests (45) and Prettier passed. Slice commit: `9c8fe35`.
+      Remaining work:
+      evaluate other duplicate candidates and CSS ownership boundaries; retain
+      graph marker and inspector variants unless their semantics are proven
+      identical. Resolution commit: TBD.
 
 ### P2 — Catalogue, automation and remaining state consistency
 
 - [ ] **DS-11 — Make the design catalogue a live reference** (D10). After the
       relevant components/tokens migrate, render those real components and states
       instead of copied swatch values and claims. Acceptance: each sample matches
-      its production owner, the route is discoverable, and examples do not mutate
-      stories. Depends on DS-04 and incremental component migration. Resolution
-      commit: TBD.
+      its production owner and examples do not mutate stories. The original
+      route-discoverability acceptance is superseded by the visibility decision
+      below. Depends on DS-04 and incremental component migration.
+      **Visibility decision (2026-10-24):** Keep the production catalogue
+      internal and directly accessible at `/design-system`, with no link in app
+      navigation or other product surfaces. The prototype catalogue remains a
+      separate exploratory surface. `apps/web/src/App.test.tsx` covers direct
+      route rendering and the absence of an app-navigation link. Implemented in
+      commit `29c6419`.
+      **D10 defect slice completed (2026-10-24):** swatches now read semantic CSS
+      variables, typography labels name the variables used by their rendered
+      examples, the error field exposes `aria-invalid` and an associated
+      description, and Trigger samples reuse the production marker class for
+      resting and selected states. The focused catalogue test verifies these
+      references. Commit: `5cc5f4f`.
+      **Remaining:** migrate the bespoke context/effect examples to their
+      production component owners before marking this catalogue task complete.
+      Resolution commit for remaining work: TBD.
 - [ ] **DS-12 — Align remaining action and status variants** (D14). Follow DS-01
       for direct defects, then review only combinations with demonstrated
       conflicts (for example ghost-danger and secondary focus/hover). Acceptance:

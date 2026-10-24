@@ -1202,7 +1202,7 @@ export function StoryPlayer({
             role="status"
             aria-live="polite"
           >
-            <span aria-hidden="true" />
+            <span className={`realtime-status-dot ${storyRealtimeStatus}`} aria-hidden="true" />
             {t(`player.realtime.${storyRealtimeStatus}`)}
           </span>
         ) : null}

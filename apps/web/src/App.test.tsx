@@ -158,15 +158,17 @@ describe('App', () => {
     expect(screen.queryByRole('link', { name: 'Administration' })).not.toBeInTheDocument();
   });
 
-  it('does not expose the internal design-system route', async () => {
+  it('renders the design-system catalogue by direct route without adding an app navigation link', async () => {
     render(
       <MemoryRouter initialEntries={['/design-system']}>
         <App />
       </MemoryRouter>,
     );
 
-    expect(await screen.findByText('Stories mock for user-1')).toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: 'Design system' })).not.toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: 'A calm interface for complex stories.' }),
+    ).toBeInTheDocument();
+    expect(document.querySelector('header nav a[href="/design-system"]')).toBeNull();
   });
 
   it('routes to editor and player pages', async () => {

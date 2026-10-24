@@ -11,9 +11,10 @@ for each view.
 
 The long-term authoring surface is a Story Canvas.
 
-It keeps the interaction graph as the source of truth, but presents it in a way
-that helps authors think in narrative terms: moments, branches, choices, groups,
-and consequences.
+It presents the canonical Story model through a graph projection, while helping
+authors think in narrative terms: moments, branches, choices, groups, and
+consequences. The graph is not the source of truth; React Flow nodes and edges
+must remain a projection of Story data.
 
 The Graph View is therefore not a separate product direction. It is one technical
 projection of the same Story Canvas, useful for inspecting links, trigger
@@ -46,24 +47,27 @@ opening.
 The panel does not need to be resizable at first. A fixed width keeps the layout
 predictable and avoids making the editor too configurable too early.
 
-In the MVP, it should stay limited to concepts that already exist, such as
-search and interaction-oriented navigation.
+The current left panel combines interaction navigation with the persisted Group
+tree. Other focused navigation or filtering patterns below remain UI directions,
+not prerequisites for the already implemented Character, Location, or Group
+entities.
 
-After the MVP, it may expose tabs for target concepts:
+Future navigation may add focused views or filters for:
 
 - characters;
-- places;
-- search.
+- locations.
 
-These tabs should filter or focus the Story Canvas instead of replacing it with a
-different editor. For example, selecting a character later could dim unrelated
-interactions and reveal the part of the story involving that character.
+These views should filter or focus the Story Canvas instead of replacing it with
+a different editor. For example, selecting a character could dim unrelated
+interactions and reveal the part of the story involving that character. The
+entities themselves already exist; this remains a future navigation pattern.
+Interaction search and the Group tree are already available in the left panel.
 
 ## Groups Instead of Chapters
 
 "Chapter" is too linear as a default concept for Paralleax.
 
-A future grouping concept should be neutral enough to represent:
+A Group is the implemented neutral grouping concept and can represent:
 
 - a quest;
 - a chapter;
@@ -72,11 +76,10 @@ A future grouping concept should be neutral enough to represent:
 - a political intrigue;
 - a companion storyline.
 
-The author-facing label may be configurable later, but the domain concept should
-not force a book-like or RPG-like structure too early.
-
-The first flat Group increment is available from a selected set of Interactions.
-Nested Groups, Group navigation, and Group-focused views remain post-MVP work.
+The Group entity supports nested Groups, interaction membership, navigation, and
+reordering in the current left-panel tree. It has no reader semantics. Further
+Group-focused visualizations remain exploratory; see
+[`docs/current-scope.md`](current-scope.md) for the implemented behavior.
 
 ## Inspector
 
@@ -88,11 +91,11 @@ Depending on the selection, it may edit:
 
 - an interaction;
 - a trigger;
-- a future group;
-- a future character;
-- a future place;
-- a future variable;
-- future media metadata.
+- a character or location;
+- supported stat and item data.
+
+Group membership and hierarchy are managed in the left-panel tree and its
+actions; selecting a Group does not open the right inspector.
 
 The editor should avoid duplicating relationship lists that are already clearer
 on the canvas. For example, trigger inputs and outputs should primarily be read

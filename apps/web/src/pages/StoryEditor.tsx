@@ -1609,7 +1609,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
               role="status"
               aria-live="polite"
             >
-              <span aria-hidden="true" />
+              <span className={`realtime-status-dot ${realtimeStatus}`} aria-hidden="true" />
               {t(`editor.realtime.${realtimeStatus}`)}
             </span>
           ) : null}
@@ -1752,7 +1752,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
                 onUpdate={updateGroup}
                 onDelete={deleteGroup}
               />
-              <div className="location-panel-header">
+              <div className="editor-context-header editor-heading-row">
                 <button
                   className="ghost context-heading"
                   type="button"
@@ -1815,7 +1815,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
                   )}
                 />
               )}
-              <div className="location-panel-header context-section">
+              <div className="editor-context-header editor-heading-row context-section">
                 <button
                   className="ghost context-heading"
                   type="button"
@@ -1882,7 +1882,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
                   )}
                 />
               )}
-              <div className="location-panel-header context-section">
+              <div className="editor-context-header editor-heading-row context-section">
                 <button
                   className="ghost context-heading"
                   type="button"
@@ -1946,7 +1946,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
                   )}
                 />
               )}
-              <div className="location-panel-header context-section">
+              <div className="editor-context-header editor-heading-row context-section">
                 <button
                   className="ghost context-heading"
                   type="button"

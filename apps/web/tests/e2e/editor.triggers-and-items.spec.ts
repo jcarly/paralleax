@@ -45,12 +45,25 @@ test.describe('Story editor triggers and items', () => {
       await expect
         .poll(() => marker.evaluate((element) => element.matches(':focus-visible')))
         .toBe(true);
+      await expectKeyboardFocusRing(marker);
       await expect.poll(geometry).toEqual(atRest);
 
       await marker.click();
       await expect(marker).toHaveClass(/selected/);
       await expect.poll(geometry).toEqual(atRest);
     }
+
+    const createChild = page.locator('.node-create-child');
+    const createChildGeometry = await createChild.boundingBox();
+    await createChild.focus();
+    await page.keyboard.press('Shift+Tab');
+    await page.keyboard.press('Tab');
+    await expect(createChild).toBeFocused();
+    await expect
+      .poll(() => createChild.evaluate((element) => element.matches(':focus-visible')))
+      .toBe(true);
+    await expectKeyboardFocusRing(createChild);
+    expect(await createChild.boundingBox()).toEqual(createChildGeometry);
   });
 
   test('edits root trigger path conditions from the root trigger marker', async ({ page }) => {
@@ -221,3 +234,46 @@ test.describe('Story editor triggers and items', () => {
     await expect(itemRows.last()).toContainText('Archive key');
   });
 });
+
+async function expectKeyboardFocusRing(locator: import('@playwright/test').Locator) {
+  await expect
+    .poll(() => locator.evaluate((element) => getComputedStyle(element).boxShadow))
+    .toContain('rgb(47, 98, 80)');
+  const ring = await locator.evaluate((element) => {
+    const style = getComputedStyle(element);
+    return {
+      outlineColor: style.outlineColor,
+      outlineStyle: style.outlineStyle,
+      backgroundColor: style.backgroundColor,
+      boxShadow: style.boxShadow,
+    };
+  });
+  expect(ring.outlineColor).toBe('rgb(255, 255, 255)');
+  expect(ring.outlineStyle).toBe('solid');
+  expect(ring.boxShadow).toContain('rgb(47, 98, 80)');
+  const background = parseColor(ring.backgroundColor);
+  expect(
+    Math.max(
+      contrastRatio(parseColor(ring.outlineColor), background),
+      contrastRatio([47, 98, 80], background),
+    ),
+  ).toBeGreaterThanOrEqual(3);
+}
+
+function parseColor(value: string): [number, number, number] {
+  const channels = value.match(/[\d.]+/g)?.map(Number);
+  if (!channels || channels.length < 3) throw new Error(`Expected an RGB color, got ${value}`);
+  return [channels[0], channels[1], channels[2]];
+}
+
+function contrastRatio(first: [number, number, number], second: [number, number, number]) {
+  const luminance = (color: [number, number, number]) => {
+    const linear = color.map((channel) => {
+      const normalized = channel / 255;
+      return normalized <= 0.04045 ? normalized / 12.92 : ((normalized + 0.055) / 1.055) ** 2.4;
+    });
+    return linear[0] * 0.2126 + linear[1] * 0.7152 + linear[2] * 0.0722;
+  };
+  const values = [luminance(first), luminance(second)].sort((left, right) => right - left);
+  return (values[0] + 0.05) / (values[1] + 0.05);
+}

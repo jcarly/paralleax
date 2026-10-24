@@ -44,6 +44,11 @@ const StoryAccessPage = lazy(() =>
 const AdminUsersPage = lazy(() =>
   import('./pages/AdminUsersPage').then(({ AdminUsersPage }) => ({ default: AdminUsersPage })),
 );
+const DesignSystemPage = lazy(() =>
+  import('./pages/DesignSystemPage').then(({ DesignSystemPage }) => ({
+    default: DesignSystemPage,
+  })),
+);
 
 export function App() {
   const { t } = useTranslation();
@@ -205,6 +210,7 @@ export function App() {
               element={<Navigate to={user ? '/' : signInPath} replace />}
             />
           )}
+          <Route path="/design-system" element={<DesignSystemPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>

@@ -466,7 +466,7 @@ export function InteractionInspector({
             <AddEffectControl unavailableReasons={effectUnavailableReasons} onAdd={addEffect} />
             {statEffects.length > 0 ? (
               <section className="interaction-effect-group">
-                <div className="interaction-effect-group-header">
+                <div className="interaction-effect-group-header editor-heading-row">
                   <h4>{t('interactionInspector.statEffects')}</h4>
                   <small>{statEffects.length}</small>
                 </div>
@@ -664,7 +664,7 @@ export function InteractionInspector({
             ) : null}
             {(interaction.itemEffects?.length ?? 0) > 0 ? (
               <section className="interaction-effect-group">
-                <div className="interaction-effect-group-header">
+                <div className="interaction-effect-group-header editor-heading-row">
                   <h4>{t('interactionInspector.itemEffects')}</h4>
                   <small>{interaction.itemEffects?.length ?? 0}</small>
                 </div>

@@ -48,7 +48,12 @@ describe('StoryCommentsPanel', () => {
       />,
     );
 
-    expect(screen.getByRole('status')).toHaveTextContent('Live');
+    const realtimeStatus = screen.getByRole('status');
+    expect(realtimeStatus).toHaveTextContent('Live');
+    expect(realtimeStatus.querySelector('.realtime-status-dot.live')).toHaveAttribute(
+      'aria-hidden',
+      'true',
+    );
     await user.type(screen.getByRole('textbox'), 'Move this closer to the opening.');
     await user.click(screen.getByRole('button', { name: 'Send' }));
 

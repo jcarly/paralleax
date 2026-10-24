@@ -174,10 +174,11 @@ Paralleax currently includes:
   The import dialog reports measurable upload percentage, then live decoding,
   parsing, and mapping counts (with the current source file when available)
   through a user-private ephemeral stream. Closing the dialog aborts the client
-  operation and requests cancellation of the active analysis worker; centralized
-  server-side lifecycle arbitration and long-lived metadata cleanup remain open
-  reliability work. Warning confirmation repeats that upload and analysis before
-  atomic persistence.
+  operation and requests cancellation of the active analysis worker. Server-side
+  lifecycle arbitration prevents cancelled work from persisting or completing as
+  successful, and terminal job metadata is cleaned up automatically. Durable
+  import-report retention across process restarts remains open reliability work.
+  Warning confirmation repeats that upload and analysis before atomic persistence.
 - Editor-only React Flow graph authoring. Dropping a connection on an
   interaction's input `+` creates a dedicated Trigger; dropping on a visible
   Trigger marker adds the input to that existing Trigger without a follow-up

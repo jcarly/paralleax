@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+- Centralized the interface and narrative font stacks and compact text sizes.
+  Product pages now share the application UI stack, and Reader and Simulation
+  render narrative titles and text with the same serif family. Updated the
+  typography catalogue to match its displayed 12/14, 14/22, 24/30, and 48/52
+  values; graph micro-label sizing and authored decoration typography remain
+  density- and content-specific.
+
+- Improved enabled text contrast for editor counts and status, product
+  placeholders, graph location markers, and Simulation help. Added opaque,
+  two-color focus indicators to shared rich text and graph controls while
+  preserving graph geometry.
+
+- Scoped Simulation Mode page and card layout overrides to the simulation root,
+  restoring the Reader's own card and page layout at desktop and narrow widths.
+  Reader save rows now use the existing shared secondary-surface token.
+
 - Creating an Interaction by clicking a creation action or dropping a
   connection on empty canvas now selects it and opens its inspector.
 
@@ -32,6 +48,10 @@
 
 - Bound shared eyebrow labels to the root accent token so editor history and
   reader surfaces keep their intended color outside product-page scopes.
+
+- Made field-help tooltips dismissible with Escape and kept hover content
+  reachable while the pointer moves from its trigger. Closing help preserves
+  focus and allows a subsequent Escape to close a containing dialog.
 
 - Improved Trigger condition readability with concise click-to-edit rules,
   uniform vertical field spacing, Enter/outside-focus collapse, explicit AND/OR

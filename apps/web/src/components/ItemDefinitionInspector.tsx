@@ -108,7 +108,7 @@ export function ItemDefinitionInspector({
         semanticCommentCounts={semanticCommentCounts}
         onOpenSemanticComments={onOpenSemanticComments}
       >
-        <div className="inspector-section-header">
+        <div className="inspector-section-header editor-heading-row">
           <h3>{t('inspector.itemStats')}</h3>
           <button
             className="secondary"
