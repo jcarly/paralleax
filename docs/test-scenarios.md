@@ -300,21 +300,20 @@ The character-stat vertical keeps these regressions covered:
 - Editor: dropping a connection on an existing trigger marker adds the source as
   another input of that trigger.
 - Editor: adding a source to an existing trigger keeps the trigger conditions shared by all of its inputs.
-- Editor/Reader: several triggers between the same interactions represent OR
-  condition groups, show as one grouped route in the editor, and expose their
-  OR variants in the trigger inspector.
-- Editor: adding an OR condition group from the trigger inspector creates a new
-  trigger with the same inputs behind the grouped visual route.
-- Editor: the trigger inspector can delete one OR condition group or every OR
-  group behind the selected visual route.
-- Editor: deleting every OR group behind one visual route does not delete
-  triggers that use a different input set for the same output interaction.
-- Editor: root triggers cannot create OR condition groups because they are not
-  linked visual routes.
-- Editor: deleting a grouped visual trigger input link removes that input from
-  every OR trigger variant behind the grouped route.
-- Editor graph mapping: OR trigger variants are grouped only when they share the
-  exact same input set, regardless of input order.
+- Editor/Reader: each Trigger has its own graph marker and independent gates,
+  even when multiple Triggers have the same inputs and output.
+- Editor: adding an OR condition group from the trigger inspector adds a group
+  to that Trigger; it does not create another Trigger or visual marker.
+- Editor: removing an alternative group changes only that Trigger and preserves
+  its required condition-group structure. Trigger deletion remains a separate
+  operation.
+- Editor: root and linked Triggers use the same condition-group semantics; only
+  their input relationships differ.
+- Editor: deleting an input link removes that input from its owning Trigger and
+  leaves other Triggers targeting the same output unchanged.
+- Editor graph mapping: every authored Trigger projects to its own marker;
+  condition groups remain owned by that Trigger rather than being grouped as
+  separate graph variants.
 - Reader engine: an inputless trigger without conditions is available only at
   story start.
 - Reader engine: an inputless trigger with conditions can become available during

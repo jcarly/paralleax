@@ -29,8 +29,12 @@ Instead of building unrelated editors for story, graph, character, place, or
 timeline views, Paralleax should favor one Story Canvas that can be filtered,
 focused, collapsed, or highlighted from different points of view.
 
-Characters, places, variables, media, groups, and timeline concerns remain
-post-MVP concepts.
+The original MVP direction treated characters, places, variables, media, Groups,
+and timeline concerns as future concepts. The implemented scope now includes
+Characters, Locations, typed stats, item definitions and instances, nested
+Groups, direct image URLs, and deterministic story-local calendar behavior.
+Managed media uploads and a dedicated timeline view remain future work. See
+[`docs/current-scope.md`](current-scope.md) for the current baseline.
 
 ## Progressive Complexity
 

@@ -76,35 +76,24 @@ product surfaces leave a genuine gap:
 - reader style;
 - empty, loading, disabled, error, and selected states.
 
-## Visual Direction References
+## Current Palette Reference
 
-The following values are references for the intended direction, not a complete
-or authoritative token specification.
+Production colors are defined by semantic custom properties in
+[`apps/web/src/styles.css`](../apps/web/src/styles.css). The current graph uses
+`--color-primary` for selection and `--color-trigger` for Trigger accents. The
+shared root also defines `--color-place` and `--color-group`; inspect their
+current consumers before assigning them broader roles. The catalogue reads
+shared tokens. This describes the implementation; it does not approve a
+palette-wide redesign or context-dependent tinting. The earlier warm-neutral,
+restrained-surface direction remains moodboard intent, not a source of exact
+production values.
 
-Neutral palette:
-
-- app background: warm paper-like gray, around `#F6F4F1` or `#F5F3EF`;
-- primary surface: `#FFFFFF`;
-- secondary surface: `#FBFAF8`;
-- subtle borders: around `#E5E1DB`;
-- main text: around `#2D2D2D`;
-- secondary text: around `#757575`.
-
-Concept colors should belong to concepts, not generic components:
-
-- interaction: neutral;
-- future character: blue, around `#5C8DF6`;
-- future place: green, around `#5FAF72`;
-- future group: violet, around `#8A6AF0`;
-- trigger: orange, around `#F3A847`;
-- invalid condition: red;
-- valid condition: green.
-
-Interaction cards should remain mostly neutral. A promising direction is to let
-the current context subtly tint the interface: a character focus can influence
-badges and related accents, a place focus can shift the accent to green, and a
-group focus can shift it to violet. The story stays the same, but the author's
-point of view changes.
+Older visual explorations proposed blue character accents, green place accents,
+violet Group accents, and orange Trigger accents. Treat those as historical
+proposals rather than current token values or approved rules. Character-specific
+coloring and context-driven palette changes remain open for product review. The
+role-specific contrast and focus decisions approved for D8 are listed below;
+they do not settle every color use.
 
 ### Approved typography (2026-10-24)
 
@@ -134,15 +123,10 @@ text. Long-form story content and prominent headings keep their contextual
 sizes. The catalogue examples use these tokens and are the reference for their
 displayed values.
 
-Spacing should follow a simple 8-point system:
-
-- `4`;
-- `8`;
-- `16`;
-- `24`;
-- `32`;
-- `48`;
-- `64`.
+The catalogue labels a `4px` base unit, while production styles use a mix of
+pixel and `rem` values. There is no enforced shared spacing-token scale today.
+The earlier 8-point list was an exploratory proposal, not an adopted rule; do
+not use it to justify broad spacing changes.
 
 Border radii should stay restrained:
 
@@ -177,8 +161,9 @@ Interaction cards:
 - cards stay neutral, white, and compact;
 - border radius should stay around `10px`;
 - title and excerpt are the only persistent content on the card;
-- selected cards use the primary blue accent through border and halo, not a
-  filled background.
+- selected cards use the current green `--color-primary` accent through border
+  and halo, not a filled background. This records current styling rather than
+  approving a palette-wide decision.
 
 Automatic placement:
 
@@ -191,11 +176,12 @@ Automatic placement:
 
 Trigger markers:
 
-- linked triggers use a small orange diamond marker around `20px`;
+- linked triggers use a small amber `--color-trigger` diamond marker around
+  `20px`;
 - root triggers use the same visual language so roots are editable as triggers,
   not hidden interaction metadata;
-- selected trigger markers use the same blue selection accent as selected
-  interactions;
+- selected trigger markers use the same `--color-primary` selection accent as
+  selected interactions;
 - trigger markers are the only selectable trigger surface.
 
 Links:
@@ -233,7 +219,9 @@ semantic difference, not an implementation shortcut.
 Large labeled buttons should be rare in the authoring surface. Prefer icons,
 context menus, keyboard shortcuts, and local actions when the command is clear.
 
-Lucide is the preferred icon family.
+Production currently uses inline SVGs and text glyphs; the web app has no Lucide
+dependency. Icon-family adoption remains undecided. Keep current icon behavior
+and semantics intact until that choice is reviewed.
 
 Empty states should be warm and direct. They may use small illustrations, but
 the product should otherwise avoid decorative illustration inside the editor.
