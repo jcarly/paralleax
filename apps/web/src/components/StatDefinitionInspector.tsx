@@ -335,7 +335,7 @@ function StatDefinitionEditor({
         semanticCommentCounts={semanticCommentCounts}
         onOpenSemanticComments={onOpenSemanticComments}
       >
-        <div className="inspector-section-header">
+        <div className="inspector-section-header editor-heading-row">
           <h3>{t('attributes.assignmentsTitle')}</h3>
         </div>
         {assignedOwners.length === 0 ? (
