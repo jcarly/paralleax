@@ -317,6 +317,14 @@ Story. Progress writes reuse the runtime context plus only their requested
 journey interactions, so autosaving does not reconstruct unrelated graph
 branches on the API server.
 
+**Accepted target, not yet implemented (ADR-040):** ordinary save writes and
+loads must preserve and restore the materialized state at the current
+Interaction rather than replaying the complete journey. Reader and Simulation
+share this checkpoint rule. Full journey replay remains an explicit automated
+comparison against a checkpoint and must not replace it. The current API
+replay-on-write/load behavior above is a known gap tracked in the
+[P1 Performance and Persistence backlog](code-quality-backlog.md).
+
 `HealthModule` exposes an unauthenticated process liveness check at
 `GET /api/health` and a readiness check at `GET /api/ready`. Readiness requires
 PostgreSQL connectivity, the migration table, and the latest known migration.
@@ -392,7 +400,12 @@ is active, then applies the authoritative server story. Simulation instead
 rebuilds all runtime values by replaying its current journey against that story
 through shared deterministic operations. This covers interaction and trigger
 content and positions, context entities, items, stats, and graph decorations
-without making React Flow or simulation state canonical. See ADR-020.
+without making React Flow or simulation state canonical. This is the current
+behavior; the accepted target preserves the current runtime checkpoint and uses
+updated authored behavior on later steps in both Reader and Simulation. Simulation
+Back must also cross a restored checkpoint without per-step snapshots, preserving
+stats, inventory, story time, and location while shortening the journey. See
+ADR-020 for live invalidation and ADR-040 for the checkpoint target.
 
 Interaction and trigger create/update routes do not return the complete story.
 They return the saved entity plus the owning story revision and update timestamp.
@@ -565,9 +578,57 @@ the route component:
   current-option loading. It retains journey interactions, replaces stale option
   candidates per step, and chunks long saved journeys without owning narrative
   evaluation rules.
+- `features/story-player/loadStoryPlayerRuntime.ts`: initial bootstrap,
+  authorized progress lookup, runtime-context loading, and first-slice assembly.
+- `features/story-player/runtime/useStoryPlayerLoading.ts`: initial request
+  cancellation, retry/error state, and the loaded-route key. The route applies the
+  loaded result to its one `Story` projection and replays the reader session.
+- `features/story-player/runtime/useStoryPlayerRuntimeSlice.ts`: current-step
+  option loading, request-key tracking, cancellation, and localized slice-load
+  errors. `StoryPlayer` remains the owner of the mutable `Story` state and passes
+  it to this hook for slice updates. The loader helper and slice hook both reuse
+  `storyRuntimeLoader.ts` rather than duplicating its paging logic.
+- `features/story-player/runtime/loadLatestRuntimeSliceForSession.ts`: repeats
+  the realtime slice request if the reader journey changes while loading, so the
+  caller applies a slice for the latest session.
+- `features/story-player/runtime/useStoryPlayerRealtimeRefresh.ts`: owns refresh
+  generations, latest-session requests, invalidation coalescing, and deferral
+  while a Simulation edit or mutation is active. The route still applies the
+  refreshed projection and handles access recovery.
+- `features/story-player/navigation/useReaderNavigationGuards.ts`: per-step choice
+  commit, stale-navigation version, and automatic-cycle guards. The page keeps
+  transition eligibility, rendering checks, and choice selection.
+- `features/story-player/navigation/restoreReaderSave.ts`: hydrates the saved
+  journey's runtime slice and replays it through the existing session owner. The
+  route applies the resulting Story projection, session, and progress write.
+- `features/story-player/navigation/useAutomaticReaderTransitions.ts`: owns the
+  queued opening choice and empty-body pass-through effects. It reuses the page's
+  choice callback, navigation guards, and browser-side rich-text visibility
+  projection.
+- `features/story-player/navigation/useReaderChoiceNavigation.ts`: revalidates
+  a selected choice at action time, prevents duplicate commits for one step, and
+  advances/persists through the existing session and progress owners.
+- `features/story-player/simulation/useSimulationAuthoringCommands.ts`: owns
+  local interaction patches, current-content and option-title saves, option
+  creation, and canonical reload after uncertain creation. Mutation status and
+  retry behavior remain in `useSimulationMutationPersistence`; the route keeps
+  the single mutable `Story` projection.
 - `features/story-player/ChoiceTimerBar.tsx`: accessible CSS-driven countdown
   projection. The route schedules only expiration and focus synchronization,
   avoiding continuous whole-player rerenders.
+- `features/story-player/components/PlayerChoices.tsx`: renders the already
+  projected Reader and Simulation choices, timer bars, inline title editing,
+  Simulation option creation action, and Reader ending state. Availability,
+  navigation, and authoring mutations remain owned by the route and their
+  existing feature modules.
+- `features/story-player/components/PlayerScene.tsx`: renders the current
+  location, story time, and present-character projection supplied by the route.
+- `features/story-player/components/PlayerContextPanels.tsx`: renders the
+  playable-character profile and stats, inventory, Simulation force-unavailable
+  control, and encountered characters from the current Story and reader state.
+- `features/story-player/components/PlayerToolbar.tsx`: renders mode, realtime,
+  persistence, save, navigation, comment, and editor-exit controls while keeping
+  their route-owned actions and dialog focus ref intact.
 
 The web app may map a story into React Flow nodes and edges, but it must not
 store story semantics as React Flow data. React Flow data is a projection of the
@@ -590,6 +651,47 @@ initial JavaScript and stylesheet budgets are 150 KiB and 24 KiB; incremental
 Story Editor and Story Player assets are limited to 145 KiB and 95 KiB. The
 contract also fails if either route stops being a dynamic entry or becomes a
 static dependency of the application entry.
+
+## Automated Architecture Checks
+
+`npm run lint:architecture` analyzes only the three production source roots and
+runs in CI. It rejects web-to-API and API-to-web imports, application imports
+that bypass the `@paralleax/shared` facade, API controllers that import
+repositories or persistence/database modules, and React Flow imports outside
+the configured graph projection and presentation modules. The shared package
+also uses ESLint to reject framework, browser, and HTTP dependencies. These
+rules preserve the workspace ownership described above; they do not ban the
+existing editor/player collaboration with shared web features.
+
+The dependency graph currently contains 557 modules and 2,018 edges. The audit
+found no workspace-boundary violations and no runtime-only cycles. Its only
+existing cycle is mixed: `email.service.ts` imports `test-email-outbox.ts` at
+runtime, while `test-email-outbox.ts` imports `EmailMessage` as a type from the
+service. The committed
+`.dependency-cruiser-known-violations.json` records that exact cycle; new cycles,
+including type-only cycles, fail. Review the baseline when changing either
+module, and use shrink-only baseline updates when a known violation is removed.
+
+ESLint blocks cyclomatic complexity above 20 in production TypeScript. The native
+`eslint-suppressions.json` baseline holds 45 existing findings across 34 files;
+test files and test helpers are excluded. Regenerate or prune it deliberately,
+review the diff, and keep counts moving down. ESLint compares violations by file
+and rule: an increased count fails, while replacing one existing finding with a
+different finding in the same file can keep the count unchanged. Current
+production-source measurements were 86 functions above complexity 15, 2 deeper
+than 4 levels, 27 with more than 5 parameters, 66 longer than 120 lines, and 31
+files longer than 450 lines. These remain review signals rather than additional
+blocking rules.
+
+To shrink baselines, run ESLint with `--prune-suppressions` and
+`--suppressions-location eslint-suppressions.json`; run dependency-cruiser with
+`--baseline --baseline-mode shrink-only`. Review both baseline diffs before
+committing them. Recording a new complexity baseline requires
+`--suppress-rule complexity` and should happen only after reviewing the findings.
+
+The dependency map and the audit exceptions are summarized in
+[`architecture-map-ai.md`](architecture-map-ai.md). The tool and baseline
+decision are recorded in [ADR-039](decisions/ADR-039-automated-architecture-guardrails.md).
 
 ## React Flow Boundary
 
@@ -1102,7 +1204,14 @@ classes directly.
   with per-workspace thresholds enforced by the coverage commands.
 - Bundle contract: the production web build checks the Vite manifest, dynamic
   route boundaries, and compressed initial/editor/player budgets.
-- Code style: ESLint and Prettier.
+- Code style: ESLint with zero-warning enforcement, Stylelint on
+  `apps/web/src/**/*.css`, and Prettier. The Stylelint glob covers all current
+  web source stylesheets, including feature, graph, Simulation, and prototype
+  styles, while excluding dependencies and generated/build output by scope.
+  `styles.css` is the cross-file reference for global CSS tokens; component
+  custom properties remain declared beside their use.
+- Architecture: dependency-cruiser workspace and cycle checks via
+  `npm run lint:architecture`, plus ESLint complexity and shared-layer rules.
 - GitHub Actions: lint, format, typecheck, coverage, build, PostgreSQL 17
   integration and recovery, Playwright, production dependency audit, and
   production image builds on pushes and pull requests.

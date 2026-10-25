@@ -18,11 +18,15 @@ In the current MVP model, a trigger belongs to one output interaction and contai
 
 A trigger can have several input interactions.
 
-Several inputs on the same trigger represent an OR:
+Several inputs on the same trigger are alternative reachability sources:
 
-- if the reader is currently on any one of those input interactions, the trigger input rule matches;
+- if the reader is currently on any one of those input interactions, the
+  trigger input rule matches;
 - the trigger is still available only if one complete condition group matches
   and its appearance roll succeeds.
+
+This input rule is separate from condition groups; it does not combine or add
+conditions.
 
 Example:
 
@@ -32,7 +36,8 @@ A ----\
 B ----/
 ```
 
-Here, interaction `C` can become available after `A` or after `B`, depending on the rest of the trigger conditions.
+Here, interaction `C` can become available after `A` or after `B`, depending on
+the separate condition groups and other Trigger rules.
 
 ## Conditions
 

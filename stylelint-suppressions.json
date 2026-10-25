@@ -1,0 +1,68 @@
+{
+  "apps/web/src/components/formFields.css": {
+    "no-descending-specificity": {
+      "count": 7
+    }
+  },
+  "apps/web/src/pages/ParalleaxPrototype.css": {
+    "declaration-no-important": {
+      "count": 32
+    },
+    "no-descending-specificity": {
+      "count": 66
+    },
+    "no-duplicate-selectors": {
+      "count": 45
+    }
+  },
+  "apps/web/src/pages/ParalleaxPrototypePages.css": {
+    "declaration-no-important": {
+      "count": 1
+    },
+    "no-descending-specificity": {
+      "count": 69
+    }
+  },
+  "apps/web/src/pages/ProductPages.css": {
+    "declaration-no-important": {
+      "count": 12
+    },
+    "no-descending-specificity": {
+      "count": 75
+    },
+    "no-duplicate-selectors": {
+      "count": 1
+    }
+  },
+  "apps/web/src/features/comments/comments.css": {
+    "no-descending-specificity": {
+      "count": 15
+    }
+  },
+  "apps/web/src/features/story-editor/editor.css": {
+    "declaration-no-important": {
+      "count": 1
+    },
+    "no-descending-specificity": {
+      "count": 6
+    }
+  },
+  "apps/web/src/features/story-player/storyPlayer.css": {
+    "no-descending-specificity": {
+      "count": 15
+    }
+  },
+  "apps/web/src/features/story-editor/graph/storyGraph.css": {
+    "declaration-no-important": {
+      "count": 3
+    },
+    "no-descending-specificity": {
+      "count": 5
+    }
+  },
+  "apps/web/src/features/story-editor/inspectors/inspector-controls.css": {
+    "no-descending-specificity": {
+      "count": 6
+    }
+  }
+}

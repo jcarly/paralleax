@@ -43,7 +43,11 @@ Paralleax currently includes:
   Saves preserve the random seed used by Trigger probability, so reload and
   backward replay reproduce the same result while restart creates a new run seed.
   Version 4 progress also preserves wall-clock choice-step starts, so timed options
-  continue across reload and Simulation backward navigation.
+  continue across reload and Simulation backward navigation. Current API writes
+  and loads reconstruct runtime values by replaying the full journey in either
+  mode; restoring the saved checkpoint directly is the accepted target in
+  [ADR-040](decisions/ADR-040-reader-simulation-runtime-checkpoints.md), not yet
+  implemented.
 - Reader mode starts its single available opening Interaction automatically
   after any playable-character selection. Multiple opening choices remain
   selectable, and Simulation Mode keeps explicit start selection.
@@ -204,8 +208,10 @@ Paralleax currently includes:
   deleting Interactions. Selection highlights recursive members; explicit centering
   adjusts only the viewport. Group selection never opens a right inspector.
   Ctrl+click toggles interaction selection, and Shift/Alt rectangles add/remove
-  selection. Groups
-  have no reader semantics or React Flow parent-node structure.
+  selection. Tree collapse/expansion and search expansion are transient
+  navigation state; they do not hide graph elements, alter membership, or enter
+  Story history. Groups have no reader semantics or React Flow parent-node
+  structure.
 - Deterministic ELK-backed vertical graph auto-layout for the complete graph, one
   selected interaction/linked trigger, or a rectangular multi-selection, with
   grouped trigger-marker placement and fixed bottom-output/top-input interaction
@@ -231,11 +237,17 @@ Paralleax currently includes:
   simulation mutations as well as reader-progress saves. Internal links, code
   navigation, and browser back/forward use data-router blocking with an accessible
   stay/leave confirmation; browser reload and external departure use `beforeunload`.
+  Simulation context panels show playable-character stat values and owned items;
+  a unified current-value inspector across Story, Location, and exact item-instance
+  assignments is not implemented.
 - Live simultaneous editing for clients connected to the same API process. Every
   committed interaction, trigger, position, context entity, item/stat structure,
   and graph-decoration change invalidates open editor and Simulation Mode clients;
   editors reload the authoritative story without a page refresh, while simulations
-  deterministically replay their current journey. Active local drafts and drags
+  currently replay their journey after a Story update; preserving the existing
+  checkpoint and applying updated behavior only to later steps is the accepted
+  target in [ADR-040](decisions/ADR-040-reader-simulation-runtime-checkpoints.md).
+  Active local drafts and drags
   finish before a remote refresh is applied. This is the current invalidation-and-
   reload implementation; collaborative text merging and a durable offline authoring
   queue are accepted future direction in [ADR-034](decisions/ADR-034-collaborative-offline-authoring.md),

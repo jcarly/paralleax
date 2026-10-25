@@ -1,0 +1,119 @@
+.context-category-list {
+  display: grid;
+  gap: 0.7rem;
+  margin-top: 0.45rem;
+}
+.context-category-group {
+  min-width: 0;
+}
+.context-category-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0 0.45rem;
+  color: var(--color-muted);
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.context-category-heading small {
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+.context-entity-list {
+  display: grid;
+  gap: 0.2rem;
+  margin: 0.35rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+.context-entity-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.2rem;
+}
+.context-entity-select {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
+  gap: 0.5rem;
+  align-items: center;
+  width: 100%;
+  min-height: 40px;
+  justify-content: flex-start;
+  padding: 0.35rem 0.45rem;
+  border: 0;
+  background: transparent;
+  color: var(--color-ghost);
+  text-align: left;
+  box-shadow: none;
+}
+.context-entity-select.context-entity-select-text {
+  grid-template-columns: minmax(0, 1fr);
+}
+.context-entity-select:hover {
+  background: var(--color-surface-secondary);
+  box-shadow: none;
+  transform: none;
+}
+.context-entity-select.selected {
+  background: var(--color-primary-soft);
+  color: var(--color-primary-strong);
+}
+.context-comment-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.18rem;
+  min-width: 30px;
+  height: 28px;
+  padding: 0 0.35rem;
+  border: 0;
+  border-radius: 999px;
+  background: var(--color-trigger);
+  color: var(--color-text);
+  box-shadow: none;
+  font-size: 0.64rem;
+}
+.context-comment-badge:hover {
+  background: var(--color-trigger-strong);
+  color: var(--color-surface);
+  box-shadow: none;
+  transform: none;
+}
+.context-entity-select .context-picto {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  margin: 0;
+  border-radius: 7px;
+}
+.context-picto-placeholder {
+  background: var(--color-surface-secondary);
+  color: var(--color-subtle);
+  font-size: 0.68rem;
+  font-weight: 750;
+}
+.context-row-copy {
+  display: grid;
+  min-width: 0;
+  gap: 0.08rem;
+}
+.context-row-copy strong,
+.context-row-copy small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.context-row-copy strong {
+  font-size: 0.8rem;
+}
+.context-row-copy small {
+  color: var(--color-muted);
+  font-size: 0.68rem;
+  font-weight: 450;
+}

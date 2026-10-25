@@ -2,6 +2,43 @@
 
 ## Unreleased
 
+- Enabled 12 type-aware ESLint safety rules across all three production
+  workspaces and added native baselines for 120 existing diagnostics. The CSS
+  baseline tracks 359 findings from the cascade, duplicate-selector, and
+  `!important` rules; additional findings fail lint without changing application
+  behavior.
+
+- Added CI checks for workspace boundaries, circular dependencies, shared-layer
+  independence, and graph-only React Flow usage. ESLint now blocks production
+  functions above cyclomatic complexity 20 while a native baseline tracks
+  existing findings; no application behavior changed.
+
+- Clarified Reader and Simulation stylesheet ownership. Common Player presentation
+  now lives in `storyPlayer.css`; authoring, unavailable-choice, diagnostic, and
+  Simulation layout variants are scoped to `.simulation-mode`, including their
+  responsive rules.
+
+- Added shared standard and compact field styles for product forms, settings,
+  inspectors, conditions, and effects. The design catalogue now shows both
+  densities and their control states; persisted stories and editing behavior are
+  unchanged.
+
+- Added a staged, non-mutating CSS lint check for the explicitly owned reusable
+  component stylesheets. Graph, authored decoration, Prototype and Simulation
+  styles remain outside its initial scope.
+
+- Corrected two shared action variants after visual review: destructive ghost
+  actions now retain danger text on a transparent surface, and secondary actions
+  use the shared neutral border token. Dimensions, hover, and keyboard focus stay
+  unchanged.
+
+- Began the incremental `StoryPlayer` refactor by extracting runtime loading,
+  reader navigation, Simulation authoring commands, and realtime refresh
+  coordination into focused modules, then moving the scene, choice list, context
+  panels, and toolbar into focused components. The route remains the sole owner
+  of the mutable `Story` projection, and existing session, progress, and mutation
+  persistence owners stay unchanged.
+
 - Fixed a timing gap in unsaved-change protection so browser Back and Forward
   continue to block navigation as soon as an editor or Simulation save becomes
   pending.

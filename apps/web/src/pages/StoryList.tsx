@@ -417,9 +417,10 @@ export function StoryList({ user }: { user: AuthUser | null }) {
               <h2 id="new-story-title">{t('library.dialog.title')}</h2>
               <p>{t('library.dialog.description')}</p>
               <form onSubmit={(event) => void create(event)}>
-                <label className="product-field">
+                <label className="form-field form-field--standard">
                   <span>{t('library.dialog.storyTitle')}</span>
                   <input
+                    className="form-control form-control--standard"
                     autoFocus
                     data-modal-autofocus
                     placeholder={t('library.dialog.placeholder')}

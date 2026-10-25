@@ -176,7 +176,7 @@ export function AuthPage({
           ) : (
             <form onSubmit={(event) => void submit(event)}>
               {isRegister ? (
-                <div className="product-field">
+                <div className="form-field form-field--standard">
                   <div className="field-label-with-help">
                     <label htmlFor="auth-display-name">{t('auth.displayName')}</label>
                     <FieldHelpTooltip
@@ -185,6 +185,7 @@ export function AuthPage({
                     />
                   </div>
                   <input
+                    className="form-control form-control--standard"
                     id="auth-display-name"
                     aria-label={t('auth.displayName')}
                     autoComplete="nickname"
@@ -197,9 +198,10 @@ export function AuthPage({
                   />
                 </div>
               ) : null}
-              <label className="product-field">
+              <label className="form-field form-field--standard">
                 <span>{t('auth.email')}</span>
                 <input
+                  className="form-control form-control--standard"
                   autoComplete="email"
                   type="email"
                   placeholder={t('auth.emailPlaceholder')}
@@ -208,10 +210,11 @@ export function AuthPage({
                   required
                 />
               </label>
-              <label className="product-field">
+              <label className="form-field form-field--standard">
                 <span>{t('auth.password')}</span>
-                <span className="password-field">
+                <span className="form-control-group password-field">
                   <input
+                    className="form-control form-control--standard"
                     aria-label={t('auth.password')}
                     autoComplete={isRegister ? 'new-password' : 'current-password'}
                     type={showPassword ? 'text' : 'password'}
@@ -229,9 +232,10 @@ export function AuthPage({
                 </span>
               </label>
               {isRegister ? (
-                <label className="product-field">
+                <label className="form-field form-field--standard">
                   <span>{t('auth.confirmPassword')}</span>
                   <input
+                    className="form-control form-control--standard"
                     autoComplete="new-password"
                     type={showPassword ? 'text' : 'password'}
                     placeholder={t('auth.confirmPasswordPlaceholder')}

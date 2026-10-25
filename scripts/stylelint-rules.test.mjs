@@ -1,0 +1,165 @@
+import assert from 'node:assert/strict';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import test from 'node:test';
+import { ESLint } from 'eslint';
+import stylelint from 'stylelint';
+
+const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const stylelintConfigPath = path.join(repositoryRoot, 'stylelint.config.mjs');
+const stylelintFixturePath = path.join(repositoryRoot, 'apps/web/src/__stylelint_fixture__.css');
+
+async function lintCss(code, codeFilename = stylelintFixturePath, options = {}) {
+  const result = await stylelint.lint({
+    code,
+    codeFilename,
+    configFile: stylelintConfigPath,
+    ...options,
+  });
+
+  return {
+    errored: result.errored,
+    rules: result.results.flatMap((entry) => entry.warnings.map(({ rule }) => rule)),
+  };
+}
+
+const invalidCssCases = [
+  {
+    name: 'rejects descending specificity in override order',
+    code: '.scope .button { color: red; }\n.button { color: blue; }',
+    rule: 'no-descending-specificity',
+  },
+  {
+    name: 'rejects duplicate selectors',
+    code: '.button { color: red; }\n.button { color: blue; }',
+    rule: 'no-duplicate-selectors',
+  },
+  {
+    name: 'rejects important declarations',
+    code: '.button { color: red !important; }',
+    rule: 'declaration-no-important',
+  },
+  {
+    name: 'rejects an unknown custom property',
+    code: '.fixture { color: var(--paralleax-undefined-token); }',
+    rule: 'no-unknown-custom-properties',
+  },
+  {
+    name: 'rejects an unknown CSS property',
+    code: '.fixture { colro: red; }',
+    rule: 'property-no-unknown',
+  },
+  {
+    name: 'rejects an invalid property value',
+    code: '.fixture { width: definitely-not-a-length; }',
+    rule: 'declaration-property-value-no-unknown',
+  },
+  {
+    name: 'rejects an invalid media query',
+    code: '@media not(min-width: 300px) { .fixture { display: block; } }',
+    rule: 'media-query-no-invalid',
+  },
+  {
+    name: 'rejects an invalid media-feature value',
+    code: '@media (width: auto) { .fixture { display: block; } }',
+    rule: 'media-feature-name-value-no-unknown',
+  },
+];
+
+for (const { name, code, rule } of invalidCssCases) {
+  test(name, async () => {
+    const result = await lintCss(code);
+
+    assert.equal(result.errored, true);
+    assert.ok(result.rules.includes(rule));
+  });
+}
+
+test('accepts a shared token from styles.css', async () => {
+  const result = await lintCss('.fixture { color: var(--color-primary); }');
+
+  assert.equal(result.errored, false);
+  assert.ok(!result.rules.includes('no-unknown-custom-properties'));
+});
+
+test('does not treat a prototype-only token as a global token', async () => {
+  const result = await lintCss('.fixture { color: var(--muted); }');
+
+  assert.equal(result.errored, true);
+  assert.ok(result.rules.includes('no-unknown-custom-properties'));
+});
+
+test('accepts a declared timer property supplied dynamically by React', async () => {
+  const result = await lintCss(`
+    .fixture {
+      --choice-timer-duration: 0ms;
+      --choice-timer-ratio: 1;
+      animation-duration: var(--choice-timer-duration);
+      transform: scaleX(var(--choice-timer-ratio));
+    }
+  `);
+
+  assert.equal(result.errored, false);
+  assert.ok(!result.rules.includes('no-unknown-custom-properties'));
+});
+
+test('accepts a custom property with a literal fallback', async () => {
+  const result = await lintCss('.fixture { color: var(--optional-token, #123456); }');
+
+  assert.equal(result.errored, false);
+  assert.ok(!result.rules.includes('no-unknown-custom-properties'));
+});
+
+test('native Stylelint suppressions baseline existing diagnostics and expose added ones', async (t) => {
+  const temporaryDirectory = mkdtempSync(path.join(os.tmpdir(), 'paralleax-stylelint-baseline-'));
+  const fixturePath = path.join(repositoryRoot, 'apps/web/src/__stylelint_baseline_fixture__.css');
+  const suppressionsPath = path.join(temporaryDirectory, 'stylelint-suppressions.json');
+  t.after(() => {
+    rmSync(fixturePath, { force: true });
+    rmSync(temporaryDirectory, { recursive: true, force: true });
+  });
+
+  writeFileSync(fixturePath, '.fixture { color: red; }\n.fixture { color: blue; }\n');
+  const initial = await stylelint.lint({
+    files: [fixturePath],
+    configFile: stylelintConfigPath,
+    suppressRule: ['no-duplicate-selectors'],
+    suppressLocation: suppressionsPath,
+  });
+
+  assert.equal(
+    initial.results[0].warnings.filter(({ rule }) => rule === 'no-duplicate-selectors').length,
+    0,
+  );
+
+  writeFileSync(
+    fixturePath,
+    '.fixture { color: red; }\n.fixture { color: blue; }\n.fixture { color: green; }\n',
+  );
+  const updated = await stylelint.lint({
+    files: [fixturePath],
+    configFile: stylelintConfigPath,
+    suppressLocation: suppressionsPath,
+  });
+
+  assert.ok(updated.results[0].warnings.some(({ rule }) => rule === 'no-duplicate-selectors'));
+});
+
+test('prevents shared domain files from importing framework layers', async () => {
+  const eslint = new ESLint({ cwd: repositoryRoot });
+  const [result] = await eslint.lintText(
+    [
+      "import React from 'react';",
+      "import '../../../apps/web/src/App';",
+      "import '@paralleax/api';",
+    ].join('\n'),
+    { filePath: path.join(repositoryRoot, 'packages/shared/src/__eslint_fixture__.test.ts') },
+  );
+
+  assert.equal(
+    result.messages.filter(({ ruleId }) => ruleId === 'no-restricted-imports').length,
+    3,
+  );
+});

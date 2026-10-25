@@ -76,6 +76,16 @@ product surfaces leave a genuine gap:
 - reader style;
 - empty, loading, disabled, error, and selected states.
 
+### Story Player stylesheet ownership
+
+`storyPlayer.css` owns the shared scene, narrative content, choices, contextual
+cards, inventory content, toolbar, save dialog, endings, and Reader layout.
+Reader-specific rules use `.reader-mode` where they overlap shared presentation.
+`storySimulation.css` owns authoring controls, unavailable/forced choice states,
+history and diagnostics, and Simulation layout or responsive variants; rules in
+that file must be scoped to `.simulation-mode`. Keep shared rich-text typography
+in `storyPlayer.css` so Reader and the editable preview remain aligned.
+
 ## Current Palette Reference
 
 Production colors are defined by semantic custom properties in
@@ -122,6 +132,39 @@ do not apply ordinary form sizing to React Flow markers or authored decoration
 text. Long-form story content and prominent headings keep their contextual
 sizes. The catalogue examples use these tokens and are the reference for their
 displayed values.
+
+### Approved field presentation (2026-10-25)
+
+Use the shared field styles in `apps/web/src/components/formFields.css` for
+ordinary inputs, selects, and textareas. Field styles are carried by their own
+classes and do not depend on `.inspector` or `.product-page` ancestors.
+
+- **Standard:** 44px minimum height for one-line controls in product forms,
+  settings, and edit dialogs.
+- **Compact:** 36px minimum height for inspector, condition, effect, and other
+  dense authoring controls.
+- Both densities use `--type-size-compact` (12px) for labels and
+  `--type-size-control` (14px) for values. Keep a consistent 6px label-to-field
+  gap.
+- Use `.form-field.form-field--standard` or `.form-field.form-field--compact`
+  for a labeled field, plus `.form-control.form-control--standard` or
+  `.form-control.form-control--compact` on the control. Use
+  `.form-control--multiline` for textareas; it sets a minimum height and leaves
+  vertical growth available.
+- Borders use `--form-control-border` and `--form-control-radius`; controls use
+  the shared surface and text colors. Hover, keyboard focus, disabled,
+  read-only, and `aria-invalid="true"` states are defined in the same module.
+  Keep labels associated with controls and connect validation messages with
+  `aria-describedby`.
+- Reuse the classes in production examples. Keep field composition in existing
+  components; do not add a React component when classes cover the presentation.
+
+The production catalogue shows standard input/select/textarea states and the
+real compact `InteractionEffectCard` used by the inspector. Keep native
+date/time picker affordances and specialized graph color/geometry controls.
+Library search and toolbar sort controls retain their compact toolbar patterns;
+they are not labeled property fields. Expression controls keep multiline editing
+behavior while using the compact control surface where authored in an inspector.
 
 The catalogue labels a `4px` base unit, while production styles use a mix of
 pixel and `rem` values. There is no enforced shared spacing-token scale today.
@@ -295,6 +338,22 @@ The D8 rendered-state contrast and focus assertions live in
 `apps/web/tests/e2e/editor.triggers-and-items.spec.ts`. Graph zoom and target-size
 assessment remains open for browser review; CSS dimensions alone do not establish
 that exception.
+
+### Approved action-state corrections (2026-10-24)
+
+Two demonstrated D14 conflicts were reviewed and approved without a broader
+palette change:
+
+- `.ghost.danger` keeps its transparent surface and uses `--color-danger` for
+  its text, so destructive meaning survives the shared `.ghost` rule.
+- `.secondary` keeps its white surface and primary text and uses
+  `--color-border` for its border instead of a component-specific blue literal.
+- Both variants retain the shared dimensions, hover behavior, and keyboard focus
+  treatment.
+
+Rendered token and keyboard-focus regressions live in
+`apps/web/tests/e2e/design-system-contrast.spec.ts`. Other action and status
+variants remain subject to later, separately reviewed work.
 
 ## Open Decisions
 

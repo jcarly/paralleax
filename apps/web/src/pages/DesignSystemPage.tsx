@@ -239,24 +239,28 @@ export function DesignSystemPage() {
           id="forms"
           eyebrow="04 · Components"
           title="Forms and selection"
-          description="Labels remain visible. Searchable targets are separate from the property being changed."
+          description="Standard controls are 44 px tall. Labels use 12 px; values use 14 px."
         >
           <div className="reference-card form-reference">
-            <label className="product-field">
+            <label className="form-field form-field--standard">
               <span>Story title</span>
-              <input defaultValue="The Archive Below" />
+              <input
+                className="form-control form-control--standard"
+                defaultValue="The Archive Below"
+              />
               <small>Use a specific, recognizable title.</small>
             </label>
-            <label className="product-field">
+            <label className="form-field form-field--standard">
               <span>Location</span>
-              <select defaultValue="glasshouse">
+              <select className="form-control form-control--standard" defaultValue="glasshouse">
                 <option value="glasshouse">The Glasshouse</option>
                 <option>Lower archive</option>
               </select>
             </label>
-            <div className="product-field error-field">
+            <div className="form-field form-field--standard form-field--error">
               <label htmlFor="design-required-field">Required field</label>
               <input
+                className="form-control form-control--standard"
                 id="design-required-field"
                 aria-describedby="design-required-field-error"
                 aria-invalid="true"
@@ -264,22 +268,50 @@ export function DesignSystemPage() {
               />
               <small id="design-required-field-error">This field cannot be empty.</small>
             </div>
-            <label className="product-field">
+            <label className="form-field form-field--standard">
               <span>Searchable target</span>
-              <input list="design-targets" defaultValue="Mara Venn" />
+              <input
+                className="form-control form-control--standard"
+                list="design-targets"
+                defaultValue="Mara Venn"
+              />
               <datalist id="design-targets">
                 <option value="Mara Venn" />
                 <option value="Ivo Hale" />
               </datalist>
             </label>
-            <label className="product-field">
+            <label className="form-field form-field--standard">
               <span>Category</span>
-              <input list="design-categories" placeholder="Uncategorized" />
+              <input
+                className="form-control form-control--standard"
+                list="design-categories"
+                placeholder="Uncategorized"
+              />
               <datalist id="design-categories">
                 <option value="Allies" />
                 <option value="Antagonists" />
               </datalist>
               <small>Suggest existing same-type categories while allowing a new one.</small>
+            </label>
+            <label className="form-field form-field--standard">
+              <span>Notes</span>
+              <textarea
+                className="form-control form-control--standard form-control--multiline"
+                defaultValue="Standard textareas keep their natural multiline height."
+                rows={3}
+              />
+            </label>
+            <label className="form-field form-field--standard">
+              <span>Read only</span>
+              <input
+                className="form-control form-control--standard"
+                readOnly
+                value="Imported title"
+              />
+            </label>
+            <label className="form-field form-field--standard">
+              <span>Disabled</span>
+              <input className="form-control form-control--standard" disabled value="Unavailable" />
             </label>
             <fieldset>
               <legend>Choice controls</legend>
@@ -383,40 +415,48 @@ export function DesignSystemPage() {
               />
               <span aria-hidden="true" />
             </div>
-            <InteractionEffectCard
-              title="Stat change 1"
-              removeAction={
-                <button
-                  aria-label="Remove stat effect"
-                  className="ghost danger interaction-effect-remove"
-                  type="button"
-                  onClick={() => undefined}
-                >
-                  x
-                </button>
-              }
-            >
-              <label>
-                Target
-                <input defaultValue="Mara Venn" />
-              </label>
-              <label>
-                Stat
-                <select defaultValue="trust">
-                  <option value="trust">Trust</option>
-                </select>
-              </label>
-              <label>
-                Operation
-                <select defaultValue="increase">
-                  <option value="increase">Increase by</option>
-                </select>
-              </label>
-              <label>
-                Value
-                <input type="number" defaultValue="2" />
-              </label>
-            </InteractionEffectCard>
+            <div className="compact-effect-reference">
+              <small className="form-density-caption">Compact fields · 36 px</small>
+              <InteractionEffectCard
+                title="Stat change 1"
+                removeAction={
+                  <button
+                    aria-label="Remove stat effect"
+                    className="ghost danger interaction-effect-remove"
+                    type="button"
+                    onClick={() => undefined}
+                  >
+                    x
+                  </button>
+                }
+              >
+                <label className="form-field form-field--compact">
+                  Target
+                  <input className="form-control form-control--compact" defaultValue="Mara Venn" />
+                </label>
+                <label className="form-field form-field--compact">
+                  Stat
+                  <select className="form-control form-control--compact" defaultValue="trust">
+                    <option value="trust">Trust</option>
+                  </select>
+                </label>
+                <label className="form-field form-field--compact">
+                  Operation
+                  <select className="form-control form-control--compact" defaultValue="increase">
+                    <option value="increase">Increase by</option>
+                  </select>
+                </label>
+                <div className="form-field form-field--compact">
+                  <label htmlFor="design-stat-effect-value">Value</label>
+                  <input
+                    className="form-control form-control--compact"
+                    id="design-stat-effect-value"
+                    type="number"
+                    defaultValue="2"
+                  />
+                </div>
+              </InteractionEffectCard>
+            </div>
           </div>
           <div className="pattern-notes">
             <div>

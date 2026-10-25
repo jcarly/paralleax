@@ -35,6 +35,7 @@ export function TriggerConditionFields({
     return (
       <>
         <select
+          className="form-control form-control--compact"
           aria-label={t('triggerInspector.conditionInteraction')}
           value={condition.interactionId}
           onChange={(event) => onChange({ ...condition, interactionId: event.target.value })}
@@ -48,6 +49,7 @@ export function TriggerConditionFields({
             ))}
         </select>
         <select
+          className="form-control form-control--compact"
           aria-label={t('triggerInspector.interactionOperator')}
           value={condition.hasBeenVisited ? 'visited' : 'not-visited'}
           onChange={(event) =>
@@ -64,6 +66,7 @@ export function TriggerConditionFields({
     return (
       <>
         <select
+          className="form-control form-control--compact"
           aria-label={t('triggerInspector.conditionLocation')}
           value={condition.locationId}
           onChange={(event) => onChange({ ...condition, locationId: event.target.value })}
@@ -75,6 +78,7 @@ export function TriggerConditionFields({
           ))}
         </select>
         <select
+          className="form-control form-control--compact"
           aria-label={t('triggerInspector.locationOperator')}
           value={condition.isCurrentLocation ? 'current' : 'not-current'}
           onChange={(event) =>
@@ -91,6 +95,7 @@ export function TriggerConditionFields({
     return (
       <>
         <select
+          className="form-control form-control--compact"
           aria-label={t('triggerInspector.conditionCharacter')}
           value={condition.characterId}
           onChange={(event) => onChange({ ...condition, characterId: event.target.value })}
@@ -102,6 +107,7 @@ export function TriggerConditionFields({
           ))}
         </select>
         <select
+          className="form-control form-control--compact"
           aria-label={t('triggerInspector.characterOperator')}
           value={condition.isPresent ? 'present' : 'absent'}
           onChange={(event) =>
@@ -129,6 +135,7 @@ export function TriggerConditionFields({
     return (
       <>
         <select
+          className="form-control form-control--compact"
           aria-label={t('triggerInspector.conditionItem')}
           value={condition.itemDefinitionId}
           onChange={(event) => onChange({ ...condition, itemDefinitionId: event.target.value })}
@@ -140,6 +147,7 @@ export function TriggerConditionFields({
           ))}
         </select>
         <select
+          className="form-control form-control--compact"
           aria-label={t('triggerInspector.itemOperator')}
           value={condition.isOwned ? 'owned' : 'not-owned'}
           onChange={(event) => onChange({ ...condition, isOwned: event.target.value === 'owned' })}
@@ -297,6 +305,7 @@ function StatConditionFields({
         />
       </div>
       <select
+        className="form-control form-control--compact"
         aria-label={t('triggerInspector.statOperator')}
         value={condition.operator}
         onChange={(event) =>
@@ -315,6 +324,7 @@ function StatConditionFields({
         ) : null}
       </select>
       <select
+        className="form-control form-control--compact"
         aria-label={t('triggerInspector.statComparisonKind')}
         value={
           'comparisonStatId' in condition
@@ -361,6 +371,7 @@ function StatConditionFields({
       </select>
       {'comparisonStatId' in condition ? (
         <select
+          className="form-control form-control--compact"
           aria-label={t('triggerInspector.comparisonStat')}
           value={comparisonTarget ? statTargetId(comparisonTarget) : ''}
           onChange={(event) => {
@@ -401,6 +412,7 @@ function StatConditionFields({
         />
       ) : valueType === 'boolean' ? (
         <select
+          className="form-control form-control--compact"
           aria-label={t('triggerInspector.statValue')}
           value={String(condition.value)}
           onChange={(event) => onChange({ ...condition, value: event.target.value === 'true' })}
@@ -410,6 +422,7 @@ function StatConditionFields({
         </select>
       ) : (
         <input
+          className="form-control form-control--compact"
           aria-label={t('triggerInspector.statValue')}
           type={valueType === 'number' ? 'number' : 'text'}
           value={String(condition.value)}
@@ -473,6 +486,7 @@ function TemporalConditionFields({
       {(temporal.dates ?? []).map((date, index) => (
         <div className="temporal-row" key={`date-${index}`}>
           <input
+            className="form-control form-control--compact"
             aria-label={t('triggerInspector.allowedDate', { number: index + 1 })}
             type="date"
             value={date}
@@ -495,6 +509,7 @@ function TemporalConditionFields({
       {(temporal.dateRanges ?? []).map((range, index) => (
         <div className="temporal-row" key={`range-${index}`}>
           <input
+            className="form-control form-control--compact"
             aria-label={t('triggerInspector.dateRangeStart', { number: index + 1 })}
             type="date"
             value={range.startDate}
@@ -506,6 +521,7 @@ function TemporalConditionFields({
           />
           <span>{t('triggerInspector.to')}</span>
           <input
+            className="form-control form-control--compact"
             aria-label={t('triggerInspector.dateRangeEnd', { number: index + 1 })}
             type="date"
             value={range.endDate}
@@ -530,6 +546,7 @@ function TemporalConditionFields({
       {(temporal.timeSlots ?? []).map((slot, index) => (
         <div className="temporal-row" key={`slot-${index}`}>
           <input
+            className="form-control form-control--compact"
             aria-label={t('triggerInspector.timeSlotStart', { number: index + 1 })}
             type="time"
             value={slot.startTime}
@@ -541,6 +558,7 @@ function TemporalConditionFields({
           />
           <span>{t('triggerInspector.to')}</span>
           <input
+            className="form-control form-control--compact"
             aria-label={t('triggerInspector.timeSlotEnd', { number: index + 1 })}
             type="time"
             value={slot.endTime}

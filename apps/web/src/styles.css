@@ -52,6 +52,15 @@
   --type-leading-heading: 1.875rem;
   --type-leading-display: 3.25rem;
 
+  /* Shared field presentation */
+  --form-control-height-standard: 44px;
+  --form-control-height-compact: 36px;
+  --form-field-label-gap: 0.375rem;
+  --form-control-padding-inline: 0.75rem;
+  --form-control-radius: 8px;
+  --form-control-border: var(--color-control-border);
+  --form-control-surface: var(--color-surface);
+
   /* Shared overlay layer for dialogs rendered in the document portal. */
   --z-modal: 50;
 
@@ -173,7 +182,7 @@ button:disabled {
   transform: none;
 }
 .secondary {
-  border-color: #c9d9ff;
+  border-color: var(--color-border);
   background: #ffffff;
   color: var(--color-primary-strong);
 }
@@ -184,6 +193,9 @@ button:disabled {
   background: transparent;
   color: var(--color-ghost);
   box-shadow: none;
+}
+.ghost.danger {
+  color: var(--color-danger);
 }
 .error {
   color: var(--color-error);
