@@ -252,17 +252,28 @@ are not prerequisites for disposable author sessions.
 - [ ] Revisit the complexity baseline after guided author sessions. Remove
       entries as affected functions are otherwise changed; do not schedule a
       broad refactor or set a zero-baseline date without evidence.
-- [ ] Pilot type-aware ESLint in one workspace. Start with one bounded
-      production source scope; evaluate `no-floating-promises`,
-      `no-misused-promises`, `no-unnecessary-type-assertion`, and only the
-      `no-unsafe-*` rules that add distinct value. Record diagnostics and lint
-      time before expanding. Do not make all workspaces type-aware until the
-      measured CI cost is acceptable and the baseline is actionable.
-- [ ] Evaluate targeted cascade and design-token checks for stable component
-      styles after responsive override and token ownership are clear. Start
-      from a measured file-specific baseline; preserve authored decoration
-      values and graph geometry, and do not set a specificity cap or ban raw
-      colors/dimensions without an approved token rule.
+- [x] Pilot type-aware ESLint in `packages/shared/src` production files. Enabled
+      `no-floating-promises`, `no-misused-promises`,
+      `no-unnecessary-type-assertion`, and the `no-unsafe-*` rules; tests remain
+      outside the typed scope. The 106-file probe took about 20 seconds and found
+      one existing `no-unsafe-assignment` in the ChoiceScript/QSP converter,
+      now recorded in ESLint's native suppression baseline. Keep web and API out
+      of typed lint until their separate runtime and diagnostic counts are
+      measured; the earlier all-workspace probe exceeded 3.5 minutes. The full
+      root lint now takes about 70–80 seconds, compared with 29.4 seconds before
+      type-aware checks were added.
+- [x] Enable the deferred CSS cascade rules across all 18 source stylesheets:
+      `no-descending-specificity`, `no-duplicate-selectors`, and
+      `declaration-no-important`. The native Stylelint suppression baseline
+      records the existing 264, 46, and 49 diagnostics respectively, across nine
+      stylesheets. New findings beyond the per-file/rule counts fail lint. This
+      file-and-rule count baseline cannot distinguish a new diagnostic from a
+      resolved one if their total stays the same; reduce counts as stylesheets
+      are otherwise changed. Bulk suppressions are experimental in Stylelint
+      17.16.0 and should be re-evaluated when upgrading Stylelint. Preserve
+      authored decoration values and graph geometry; global selector bans,
+      specificity caps, and raw color/dimension restrictions still need stable
+      ownership and approved thresholds.
 
 ## P2 — Testing And Accessibility
 
@@ -906,10 +917,16 @@ from CSS dimensions alone.
       without completing, compared with 29.4 seconds for the prior root lint.
       No broad UI-feature import restriction was added because the `components`
       directory mixes generic controls with domain inspectors that intentionally
-      import `features/comments/InspectorCommentField`. The bounded typed-lint
-      and targeted CSS pilots remain P2 backlog items; global-selector bans,
-      specificity caps, and raw color/dimension restrictions still need stable
-      ownership and approved thresholds.
+      import `features/comments/InspectorCommentField`. At the time, the bounded
+      typed-lint and targeted CSS pilots remained P2 backlog items; global-selector
+      bans, specificity caps, and raw color/dimension restrictions still need
+      stable ownership and approved thresholds.
+      **Deferred-rule pilots completed 2026-10-25:** all three CSS rules are now
+      enabled with Stylelint's native bulk suppression file, containing the
+      audited existing counts. The typed ESLint pilot covers only production
+      files in `packages/shared/src`, with one existing unsafe assignment in its
+      native suppression baseline. The experimental Stylelint suppression
+      feature is version-sensitive; reassess it on Stylelint upgrades.
 - [x] **DS-14 — Complete targeted graph and visual regression coverage** (D15, D16).
       Completed 2026-10-24 after the relevant component migrations. Reused the
       existing React Flow marker geometry, routing/projection, drag and pan

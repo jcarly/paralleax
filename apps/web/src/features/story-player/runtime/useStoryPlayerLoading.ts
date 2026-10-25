@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { TFunction } from 'i18next';
-import type { ReaderAutosaveMode } from '@paralleax/shared';
 import { apiErrorMessage } from '../../../apiErrorMessages';
 import { loadStoryPlayerRuntime } from '../loadStoryPlayerRuntime';
 import type { StoryPlayerRuntimeLoadResult } from '../loadStoryPlayerRuntime';
@@ -9,7 +8,6 @@ export function useStoryPlayerLoading({
   loadKey,
   storyId,
   authenticated,
-  progressMode,
   simulationRequested,
   requestedStartInteractionId,
   onLoaded,
@@ -19,7 +17,6 @@ export function useStoryPlayerLoading({
   loadKey: string;
   storyId: string;
   authenticated: boolean;
-  progressMode: ReaderAutosaveMode;
   simulationRequested: boolean;
   requestedStartInteractionId: string | null;
   onLoaded: (
@@ -41,7 +38,6 @@ export function useStoryPlayerLoading({
     setLoadError(undefined);
   }, []);
 
-  // The loaded story can change the persistence scope from reader to Simulation.
   useEffect(() => {
     let cancelled = false;
     void loadStoryPlayerRuntime({
@@ -69,7 +65,6 @@ export function useStoryPlayerLoading({
     loadAttempt,
     loadKey,
     onLoaded,
-    progressMode,
     recoverFromStoryAccessError,
     requestedStartInteractionId,
     simulationRequested,

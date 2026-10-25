@@ -22,7 +22,7 @@
     "smoke:deployment": "node scripts/deployment-smoke.mjs",
     "lint": "eslint . --max-warnings 0 --suppressions-location eslint-suppressions.json && npm run lint:css",
     "lint:architecture": "depcruise apps/web/src apps/api/src packages/shared/src --config .dependency-cruiser.cjs --ignore-known --output-type err",
-    "lint:css": "stylelint apps/web/src/**/*.css",
+    "lint:css": "stylelint apps/web/src/**/*.css --suppress-location stylelint-suppressions.json",
     "format": "prettier . --check",
     "format:write": "prettier . --write",
     "typecheck": "npm run build -w @paralleax/shared && npm run typecheck -w @paralleax/api && npm run typecheck -w @paralleax/web",

@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Enabled type-aware ESLint safety checks in the shared domain package and added
+  native baselines for its one existing diagnostic and 359 deferred CSS
+  diagnostics. The CSS rules now flag additional cascade, duplicate-selector,
+  and `!important` findings without changing application behavior.
+
 - Added CI checks for workspace boundaries, circular dependencies, shared-layer
   independence, and graph-only React Flow usage. ESLint now blocks production
   functions above cyclomatic complexity 20 while a native baseline tracks

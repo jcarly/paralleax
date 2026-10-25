@@ -159,6 +159,11 @@
       "count": 1
     }
   },
+  "packages/shared/src/import-export/qsp/converter.ts": {
+    "@typescript-eslint/no-unsafe-assignment": {
+      "count": 1
+    }
+  },
   "packages/shared/src/operations/merge.ts": {
     "complexity": {
       "count": 1

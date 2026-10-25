@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
@@ -9,11 +11,12 @@ const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url))
 const stylelintConfigPath = path.join(repositoryRoot, 'stylelint.config.mjs');
 const stylelintFixturePath = path.join(repositoryRoot, 'apps/web/src/__stylelint_fixture__.css');
 
-async function lintCss(code) {
+async function lintCss(code, codeFilename = stylelintFixturePath, options = {}) {
   const result = await stylelint.lint({
     code,
-    codeFilename: stylelintFixturePath,
+    codeFilename,
     configFile: stylelintConfigPath,
+    ...options,
   });
 
   return {
@@ -23,6 +26,21 @@ async function lintCss(code) {
 }
 
 const invalidCssCases = [
+  {
+    name: 'rejects descending specificity in override order',
+    code: '.scope .button { color: red; }\n.button { color: blue; }',
+    rule: 'no-descending-specificity',
+  },
+  {
+    name: 'rejects duplicate selectors',
+    code: '.button { color: red; }\n.button { color: blue; }',
+    rule: 'no-duplicate-selectors',
+  },
+  {
+    name: 'rejects important declarations',
+    code: '.button { color: red !important; }',
+    rule: 'declaration-no-important',
+  },
   {
     name: 'rejects an unknown custom property',
     code: '.fixture { color: var(--paralleax-undefined-token); }',
@@ -94,6 +112,41 @@ test('accepts a custom property with a literal fallback', async () => {
   assert.ok(!result.rules.includes('no-unknown-custom-properties'));
 });
 
+test('native Stylelint suppressions baseline existing diagnostics and expose added ones', async (t) => {
+  const temporaryDirectory = mkdtempSync(path.join(os.tmpdir(), 'paralleax-stylelint-baseline-'));
+  const fixturePath = path.join(repositoryRoot, 'apps/web/src/__stylelint_baseline_fixture__.css');
+  const suppressionsPath = path.join(temporaryDirectory, 'stylelint-suppressions.json');
+  t.after(() => {
+    rmSync(fixturePath, { force: true });
+    rmSync(temporaryDirectory, { recursive: true, force: true });
+  });
+
+  writeFileSync(fixturePath, '.fixture { color: red; }\n.fixture { color: blue; }\n');
+  const initial = await stylelint.lint({
+    files: [fixturePath],
+    configFile: stylelintConfigPath,
+    suppressRule: ['no-duplicate-selectors'],
+    suppressLocation: suppressionsPath,
+  });
+
+  assert.equal(
+    initial.results[0].warnings.filter(({ rule }) => rule === 'no-duplicate-selectors').length,
+    0,
+  );
+
+  writeFileSync(
+    fixturePath,
+    '.fixture { color: red; }\n.fixture { color: blue; }\n.fixture { color: green; }\n',
+  );
+  const updated = await stylelint.lint({
+    files: [fixturePath],
+    configFile: stylelintConfigPath,
+    suppressLocation: suppressionsPath,
+  });
+
+  assert.ok(updated.results[0].warnings.some(({ rule }) => rule === 'no-duplicate-selectors'));
+});
+
 test('prevents shared domain files from importing framework layers', async () => {
   const eslint = new ESLint({ cwd: repositoryRoot });
   const [result] = await eslint.lintText(
@@ -102,7 +155,7 @@ test('prevents shared domain files from importing framework layers', async () =>
       "import '../../../apps/web/src/App';",
       "import '@paralleax/api';",
     ].join('\n'),
-    { filePath: path.join(repositoryRoot, 'packages/shared/src/__eslint_fixture__.ts') },
+    { filePath: path.join(repositoryRoot, 'packages/shared/src/__eslint_fixture__.test.ts') },
   );
 
   assert.equal(

@@ -143,7 +143,10 @@ test('ESLint blocks production complexity above twenty and shared browser global
     { filePath: path.join(repositoryRoot, 'apps/web/src/__architecture_guard_fixture__.ts') },
   );
   const browserGlobal = await eslint.lintText('export const title = window.document.title;', {
-    filePath: path.join(repositoryRoot, 'packages/shared/src/__architecture_guard_fixture__.ts'),
+    filePath: path.join(
+      repositoryRoot,
+      'packages/shared/src/__architecture_guard_fixture__.test.ts',
+    ),
   });
 
   assert.ok(tooComplex[0].messages.some((message) => message.ruleId === 'complexity'));
@@ -195,5 +198,34 @@ test('native complexity suppression baseline is keyed by file and rule count', a
   assert.equal(
     twoViolations[0].messages.filter((message) => message.ruleId === 'complexity').length,
     2,
+  );
+});
+
+test('typed ESLint rules and the suppression baseline cover the shared production pilot', async () => {
+  const eslint = new ESLint({
+    cwd: repositoryRoot,
+    applySuppressions: true,
+    suppressionsLocation: path.join(repositoryRoot, 'eslint-suppressions.json'),
+  });
+  const sourceConfig = await eslint.calculateConfigForFile(
+    path.join(repositoryRoot, 'packages/shared/src/import-export/qsp/converter.ts'),
+  );
+  const ruleIds = [
+    '@typescript-eslint/no-floating-promises',
+    '@typescript-eslint/no-misused-promises',
+    '@typescript-eslint/no-unnecessary-type-assertion',
+    '@typescript-eslint/no-unsafe-assignment',
+  ];
+  const [converterResult] = await eslint.lintFiles([
+    'packages/shared/src/import-export/qsp/converter.ts',
+  ]);
+
+  for (const ruleId of ruleIds) {
+    assert.equal(sourceConfig.rules[ruleId][0], 2, `${ruleId} must be an error`);
+  }
+  assert.ok(
+    converterResult.suppressedMessages.some(
+      ({ ruleId }) => ruleId === '@typescript-eslint/no-unsafe-assignment',
+    ),
   );
 });

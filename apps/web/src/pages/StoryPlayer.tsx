@@ -91,7 +91,6 @@ export function StoryPlayer({
     loadKey,
     storyId,
     authenticated,
-    progressMode,
     simulationRequested,
     requestedStartInteractionId,
     onLoaded: dispatchRuntimeLoadResult,
