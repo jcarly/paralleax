@@ -2,7 +2,7 @@
 
 Status: Active
 
-Last triaged: 2026-10-24
+Last triaged: 2026-10-25
 
 This page records maintainability, reliability, performance, and test work found
 during the August 2026 code review and subsequent technical evaluations. Production gates remain authoritative in
@@ -67,9 +67,10 @@ promotes them.
   choice, not an alpha prerequisite. Tiptap remains unscheduled.
 - **Shared evaluation context: P1 -> P2.** It is a prerequisite only before
   consolidating diagnostics; current Reader and Simulation behavior continues.
-- **Incremental journey-date recalculation: P1 -> P2.** Keep full reconstruction
-  for save/replay correctness; optimize only after representative profiles show a
-  material cost.
+- **Incremental journey-date recalculation: P1 -> P2.** Keep ordinary progress
+  writes and restores on the runtime-checkpoint path in ADR-040; reserve full
+  journey reconstruction for explicit automated validation. Optimize that
+  validation path only if representative profiles show a material cost.
 - **Repository commands and remaining complete-Story cleanup responses: P1 -> P2.**
   Extend targeted mutations only for measured costs or a concrete safe client
   update.
@@ -131,6 +132,27 @@ promotes them.
 
 ## P1 — Performance And Persistence
 
+- [ ] **Restore Reader and Simulation from saved runtime checkpoints.** Persist
+      the materialized state at the current Interaction and restore it directly
+      for autosaves and named saves in both modes. Apply current authored Story
+      behavior only to later steps; do not recalculate prior effects during an
+      ordinary save or load. Retain full journey replay as an explicit automated
+      check that compares replay output with the checkpoint without rewriting it.
+      **Depends on:** an API write/validation contract and a rule for references
+      to changed or deleted authored entities; see
+      [ADR-040](decisions/ADR-040-reader-simulation-runtime-checkpoints.md).
+      **Risk:** trusting or reconciling materialized values incorrectly can lose
+      saved state or accept inconsistent snapshots. **Acceptance:** Reader and
+      Simulation both reopen at the saved Interaction with the saved values;
+      editing an already visited effect leaves checkpoint state intact and the
+      current effect applies on a later visit; ordinary writes and loads do not
+      replay the full prefix; Simulation Back crosses a restored checkpoint
+      without per-step snapshots, shortening the journey while preserving its
+      current debug values; explicit replay compares only a clean journey against
+      its matching Story revision and never changes the save.
+      **Verification:** shared reader tests, API and PostgreSQL
+      save tests, Reader and Simulation Playwright flows, and an explicit replay
+      comparison test.
 - [ ] Record story-summary query count, payload size, and latency with many
       large stories, then retain a regression budget.
   - [x] Add authenticated and public stress measurements for 25 Stories with
@@ -359,10 +381,12 @@ than inherited from the historical audit grouping.
       evaluation context so the reader, Simulation Mode, and unavailable-reason
       projections can reuse one deterministic result object. Do not block current
       Reader or Simulation behavior on this refactor.
-- [ ] **P2, measurement-led:** make journey-date recalculation incremental during normal reader
-      progression, while retaining the full reconstruction path for saves,
-      rewinds, and replays; validate the optimization against long loops and
-      large journeys.
+- [ ] **P2, measurement-led:** make journey-date recalculation incremental during
+      normal reader progression. Ordinary saves and loads use the checkpoint
+      contract in ADR-040; full reconstruction remains available for explicit
+      automated replay validation. Define backward-navigation behavior at the
+      checkpoint boundary before including rewinds in this optimization; validate
+      against long loops and large journeys.
 - [ ] **P2:** continue breaking `RichTextEditor` into focused modules for selection handling,
       token serialization, conditional-content decoration, and editing actions
       before adopting a richer editing engine; keep the existing storage format
@@ -501,12 +525,13 @@ than inherited from the historical audit grouping.
     - [x] Extract the mode and persistence toolbar into
           `components/PlayerToolbar.tsx`, retaining route-owned callbacks and the
           save-dialog trigger ref for focus restoration.
-  - [ ] Keep two adjacent backlog items separate from this structural work:
-        shared Trigger/interaction evaluation context and incremental journey-date
-        recalculation. The former is a prerequisite before consolidating
-        repeated diagnostics/availability calculations; the latter is an
-        optimization requiring its own measurements. Neither belongs in a
-        behavior-preserving extraction. Do not move narrative rules from
+  - [ ] Keep adjacent backlog items separate from this structural work:
+        shared Trigger/interaction evaluation context, incremental journey-date
+        recalculation, and Reader/Simulation runtime checkpoints. The first is a
+        prerequisite before consolidating repeated diagnostics/availability
+        calculations; date recalculation is a measured optimization; checkpoint
+        persistence changes are tracked separately in the P1 persistence task.
+        None belongs in a behavior-preserving extraction. Do not move narrative rules from
         `packages/shared` into React or change reader/simulation semantics here.
   - [ ] For every implementation slice, add or retain the narrow unit/component
         coverage first, then run the relevant web tests and typecheck; run
@@ -516,17 +541,240 @@ than inherited from the historical audit grouping.
         incremental module-work priority; this plan does not reorder the roadmap
         delivery queue.
 
-## P2 — UX, Editor Workflow, And Readability Follow-Ups
+## Consolidated UX Follow-Ups (2026-10-25)
 
-These ideas came from the 2026-10-15 review of the authoring workflow and
-reader/editor usability. They are follow-up items for product polish and
-operational clarity, not a sign that the existing model is incorrect.
+The items below consolidate the 2026-10-15 review and the 36 UX reports audited
+on 2026-10-25. They are candidates for observation-led work, not a new delivery
+sequence. The Roadmap still leads with guided author sessions and its existing
+reliability gates. For this intake, P0 means a reproducible defect that blocks an
+essential author task or a scheduled validation session; operational release
+gates remain in Production readiness. No report was reproduced in a browser
+during this documentation audit, so no new P0 is confirmed. The implementation
+and existing test files were inspected, but tests and browser scenarios were not
+run in this documentation-only pass. Existing coverage references identify
+regression cases in the repository, not tests executed for this audit.
 
-- [ ] Adapt the editor layout to narrow windows by preventing top-bar overflow
-      and keeping side panels from obscuring the graph canvas.
+### P1 — Core authoring and access
+
+- [ ] **Make effect authoring easier to scan.** Show a concise summary for each
+      saved stat or inventory effect and expose the existing fields for editing
+      on demand. Place Add effect after the existing effects. When exactly one
+      effect type is available, create it directly; keep the current disabled
+      explanations when none are available. Reuse InteractionEffectCard,
+      VariablePicker, and ExpressionEditor; keep effect evaluation in
+      packages/shared. **Depends on:** current effect types and shared picker /
+      expression controls. **Risk:** summaries can misstate expression results
+      or diverge from runtime semantics. **Acceptance:** summaries identify the
+      target, operation, and authored value; editing preserves stable targets;
+      the add action follows the list; the single available type opens its
+      existing editor without an extra choice step; no effect type available
+      remains recoverable. **Verification:** component tests for every type and
+      enabled/disabled combination, plus browser coverage for the authoring flow.
+- [ ] **Repair rich-text formatting feedback.** Treat the reported selection,
+      formatting, and active-button problems as a functional editor task, not as
+      part of the Tiptap/ProseMirror migration. The current toolbar calls
+      document.execCommand and does not expose a pressed state; existing unit
+      coverage mocks the command rather than checking browser formatting.
+      **Depends on:** the existing selection hook, token serializer, sanitizer,
+      and rich-text controls. **Risk:** selection restoration, comment anchors,
+      or stable narrative tokens can regress. **Acceptance:** a real selected
+      range receives the requested formatting; caret and selection states are
+      visibly and accessibly reflected by the toolbar; save/reload preserves
+      formatting and tokens. **Verification:** focused component tests and a
+      Playwright selection-formatting regression. Promote to P0 only if a
+      reproduced failure blocks a scheduled author task or loses content.
+- [ ] **Make empty Interaction content actionable.** Replace an always-mounted
+      WYSIWYG editor with a concise Add content action for a truly empty authored
+      body; show an explicit edit action when content is already present and mark
+      empty Interactions on the graph. Reuse RichTextContent and RichTextEditor.
+      **Depends on:** a clear authored-empty versus reader-visible content rule
+      and the existing Reader evaluation. **Risk:** authored-empty content must
+      not be confused with conditional content that is currently invisible to a
+      reader. **Acceptance:**
+      Add content opens and focuses the existing editor; graph status reflects
+      authored content; conditionally hidden or unresolved text remains authored
+      and editable; Reader auto-entry and pass-through rules do not change.
+      **Verification:** component tests for empty, non-empty, and conditional
+      bodies, plus a browser flow and the existing Reader transition regressions.
+- [ ] **Keep essential editor controls reachable at narrow sizes.** Cover
+      left-side graph commands, title,
+      comments, and header actions. **Depends on:** existing editor grid and
+      comment overlay behavior. **Risk:** fixed side-panel widths can compress
+      the graph or hide actions. **Acceptance:** no essential command is clipped,
+      covered, or unreachable at supported viewport widths; inspector and
+      comment overlays preserve graph access, keyboard focus, and scrolling.
+      **Verification:** Playwright at representative narrow, desktop, and short
+      viewports. Promote to P0 only when a command is inaccessible during a
+      scheduled validation task.
+- [ ] **Correct graph cursor affordances.** Reproduce the reported hand cursor
+      during connection dragging and align cursor states with pan, selection,
+      connection, and node movement. **Depends on:** current React Flow gesture
+      projection. **Risk:** cursor rules can make graph actions misleading or
+      interfere with handles. **Acceptance:** each action shows the matching
+      cursor from press through release; connecting remains distinct from panning
+      and rectangular selection. **Verification:** browser regression across
+      connection, pan, selection, and cancel states. This remains a reported
+      issue until that browser check is run.
+
+### P2 — Workflow comprehension and debugging
+
+- [ ] **Simplify variable-owner selection.** VariablePicker is already shared by
+      rich text, expressions, and Trigger conditions. Extend this component and
+      its shared path-label helper so a lone owner does not require a redundant
+      owner choice or display the French Monde / English World level by itself.
+      **Depends on:** the existing same-Story assignment tree. **Risk:** hiding an
+      owner level must not make saved references ambiguous or hide owners when
+      more than one is available. **Acceptance:** one owner is selected without
+      an unnecessary owner step; multiple owners retain clear localized paths;
+      all existing assignment targets remain selectable. **Verification:** picker
+      tests in English, French, and Italian and a browser selection flow. The
+      related request to highlight Interactions that modify a selected variable
+      is already planned as the Workbench State view's reads/writes/dependencies
+      projection in [Workbench](workbench.md#state); keep it within that shared
+      projection instead of adding a parallel filter task.
+- [ ] **Improve graph navigation and information density.** Consolidate graph
+      readability around three proposed zoom levels (structure,
+      essential information, details), explicit effects/condition/chance/delay
+      markers, and loop tracking. Middle-button pan and Space + primary drag are
+      already implemented and have a Playwright test; first improve discovery of
+      Space + drag and only add another gesture if user sessions show a need.
+      **Depends on:** existing graph projection and gesture controller. **Risk:**
+      extra card detail and markers can harm large-graph performance or conflict
+      with selection and connection gestures. **Acceptance:** each zoom level has
+      a defined information set; a user can discover panning without hiding the
+      selection action; markers use authored data and do not change Trigger
+      semantics; large-graph rendering remains within the existing budget.
+      **Verification:** projection/component tests and Playwright at multiple
+      zooms and viewport sizes. Whether zoom levels are worth shipping remains
+      open in Story Canvas UX.
+- [ ] **Create shared parents and children from graph multi-selection.** Reuse
+      the existing selection, Interaction creation, and Trigger mutations. A
+      common parent creates one Interaction and, for each selected output
+      Interaction, one Trigger whose input is the new parent. A common child
+      creates one new output Interaction and one Trigger whose input list
+      contains all selected Interactions. Any one selected Interaction can be
+      the source that makes this Trigger reachable; this is input matching, not
+      condition-group logic. Do not replace existing routes or add conditions.
+      **Depends on:** graph multi-selection and the existing authored creation
+      operations. **Risk:** creation spans multiple writes, so a failed request
+      can leave only part of the new graph. **Acceptance:** each action creates
+      exactly one new Interaction; parent creation adds one correctly owned
+      Trigger to each selected output Interaction; child creation adds one
+      Trigger with every selected Interaction in its input list; existing
+      links and reader semantics remain unchanged; failed or uncertain saves
+      recover through the current mutation/reload behavior without duplicate
+      content.
+      **Verification:** shared operation/component coverage and Playwright for
+      both actions, including save failure and reload recovery.
+- [ ] **Make Simulation read like the Reader by default.** Extend the existing
+      Simulation preview task to render the current interaction through the
+      Reader projection and expose editing on request. Add a diagnostic view for
+      currently available and blocked Interactions, relevant Triggers, reasons,
+      and current typed values. Existing code already shows playable-character
+      stat values and owned items; it does not expose every Story, Location, and
+      exact-item assignment in one state view. Reuse shared reader evaluation and
+      existing editors; do not add a second condition evaluator or a parallel
+      editing model. **Depends on:** the Simulation editing scope and the shared
+      Reader/Simulation checkpoint contract in ADR-040. **Risk:** the current
+      revision reload replays the whole journey, which changes past effects
+      immediately instead of preserving checkpoint state.
+      **Acceptance:** Reader and Simulation remain distinct; current values are
+      labeled by owner; blocked choices remain inspectable; edits use shared
+      operations; both modes preserve state already produced and apply revised
+      effects to later visits. Save, reload, and backward-navigation behavior
+      follows the shared persistence contract. **Verification:** component and
+      StoryPlayer tests, plus Playwright across Reader and Simulation routes.
+      Trigger-condition editing remains a separate scope decision.
+- [ ] **Launch ordinary Reader mode from the editor.** Add a distinct action to
+      open normal /play behavior without the Simulation query, while keeping Test
+      as the authoring simulation action. **Depends on:** existing route access
+      and Reader save-slot behavior. **Risk:** readers and authors could mistake
+      their progress slots or editing capabilities. **Acceptance:** each action
+      opens its documented mode; Reader does not show forced paths or author
+      editing; Simulation keeps its diagnostics and separate autosave. **Verification:**
+      route/component tests and Playwright for mode entry, exit, and save status.
+- [ ] **Reduce Inspector density and retain temporary section choices.** Collapse
+      Context and timing by default,
+      compact secondary controls, and keep open/closed section choices for the
+      current editing session only. Prefer component state; use sessionStorage
+      only if state must survive a same-tab remount. Do not persist preferences
+      to the Story or account. **Depends on:** current native details accordions
+      and Inspector selection lifecycle. **Risk:** restoring state across another
+      selection can reopen irrelevant fields or lose keyboard context.
+      **Acceptance:** the default is concise; authors can reveal fields; state is
+      stable for its defined session and resets at the chosen boundary; comments
+      remain reachable. **Verification:** component tests for selection changes,
+      keyboard access, and session boundaries.
+- [ ] **Resize the Inspector accessibly.** Add a bounded width control after the
+      narrow-layout rules are stable; keep the graph useful at both limits and
+      expose an accessible keyboard-adjustable separator. **Depends on:** the
+      responsive layout task. **Risk:** pointer-only resizing or stale widths can
+      obscure graph actions on small screens. **Acceptance:** pointer and keyboard
+      resizing share documented min/max behavior, width remains transient, and
+      the panel cannot cover essential canvas controls. **Verification:** browser
+      coverage at min/max widths and keyboard-only operation. Full-screen panel
+      modes remain discovery work until resizing is evaluated.
+- [ ] **Lighten Reader presentation without disabling time.** Hide the scene
+      placeholder when no location or other scene context is relevant; show
+      temporal text only when its authored use makes it useful. This is
+      presentation behavior only; every Story
+      currently has a startDateTime and interactions have duration semantics.
+      **Depends on:** an agreed relevance rule for time display. **Risk:** a hidden
+      clock can obscure a meaningful temporal condition or effect. **Acceptance:**
+      empty location presentation is absent; relevant scene context remains; time
+      visibility never changes evaluation, progression, or saved state.
+      **Verification:** Reader component and Playwright cases for timed and
+      untimed-looking Stories. Optional Story-level time remains a separate open
+      domain decision.
+- [ ] **Deliver progressive onboarding through V0.7.** Refine the existing
+      coherent onboarding / first-story flow around short contextual guidance,
+      not a mandatory long tutorial. **Depends on:** guided author-session
+      findings. **Risk:** guidance can distract returning authors or teach a
+      workflow that changes. **Acceptance:** a first-time author can create and
+      test a small branching Story with help available at the point of need; no
+      blocking tutorial is required. **Verification:** observe the flow in the
+      guided sessions and record workarounds or confusion.
+
+### P3 — Finish and polish
+
+- [ ] **Audit directional arrows in localized UI copy.** The intake requests a
+      typographic arrow, while AGENTS.md currently prefers ASCII -> for directional
+      and ownership relationships. Settle the scope and apply one rule across
+      locales before changing labels; preserve code and authored-expression
+      syntax. **Depends on:** the open Interface and presentation question.
+      **Risk:** mixed punctuation can make paths harder to scan or translations
+      inconsistent. **Acceptance:** the agreed rule is used consistently in
+      visible UI, examples, accessibility names, and all supported locales.
+      **Verification:** localization/catalogue tests and a browser visual check.
+- [ ] **Add restrained transition feedback.** Improve panel arrival, Reader
+      transition, and button response only after functional and comprehension
+      issues. Reuse existing CSS transitions; do not add an animation framework.
+      **Depends on:** reviewed user journeys. **Risk:** motion can add latency,
+      distract, or conflict with reduced-motion preferences. **Acceptance:**
+      transitions are brief, do not delay input, respect prefers-reduced-motion,
+      and leave keyboard focus stable. **Verification:** Playwright for state and
+      focus; reduced-motion browser coverage.
+
+### Deferred until product decisions
+
+- [ ] Keep the source/code view as an exploration until open-questions.md decides
+      whether it is read-only diagnostics or a second editable representation.
+      If editable, prototype stable token/condition identity, sanitization, and
+      round-trip compatibility before scheduling implementation. Do not bundle it
+      into the unscheduled Tiptap migration.
+- [ ] Keep automatic entry beyond the single-opening Reader rule unscheduled
+      until the off-path case and narrative intent are defined.
+- [ ] Keep automatic cleanup of comments on deleted entities unscheduled until
+      the entity-history lifecycle is decided. Missing anchor targets are already
+      marked detached and remain available for reattachment; decide whether an
+      entity delete should also hide/soft-delete its threads and how undo/restore
+      reconnects them. Preserve replies and avoid permanent deletion.
+
+### Other 2026-10-15 follow-ups retained
+
 - [x] Make conditions easier to read by avoiding truncated fields, using a
-      vertical rule layout, exposing ET / OU connectors explicitly, and
-      keeping the combined-rule summary available without persistent copy.
+      vertical rule layout, exposing ET / OU connectors explicitly, and keeping
+      the combined-rule summary available without persistent copy.
       **Completed 2026-10-22:** Trigger conditions now show concise readable
       rules by default and reveal vertically stacked controls on demand. The
       editor has uniform field spacing and collapses on Enter or focus leaving
@@ -535,32 +783,21 @@ operational clarity, not a sign that the existing model is incorrect.
       as always matching, preserving their existing semantics.
 - [ ] Distinguish creation from connection by separating "Add interaction" from
       "Link to an existing interaction" and adding destination search.
-- [ ] Improve graph readability with a more suitable working zoom, selection
-      centering, explicit condition / chance / delay markers, and easier loop
-      tracking for large graphs.
-- [ ] Add a reader preview in Simulation Mode with on-demand editing and a
-      condition diagnostic panel showing the result, current value, and reason a
-      block is unavailable.
 - [ ] Uniformize entity creation by naming before creation, using consistent
       user-facing labels in English/French-friendly terminology, and allowing
       variables and items to be created directly from their detail views.
 - [ ] Clarify rule scope by making object ownership explicit and distinguishing
       story-level variables from character-level fields or attributes.
-- [ ] Lighten the inspector by compacting the formatting toolbar, collapsing
-      secondary settings, and reducing the visual dominance of comments.
 - [ ] Improve conditional text editing with easier insertion, spacing,
       keyboard navigation, and visible block-boundary cues.
-- [ ] Lighten the reader by hiding empty panels and reducing generic banners so
-      the text and choices sit closer together.
 - [ ] Streamline the home/creation flow by opening the editor immediately after
       creating a story, compacting cards, and moving demos into an explicit
       Examples section.
 - [ ] Harmonize terminology and translations across the product, including
       story/story, variable/characteristic, graph commands, and technical
       vocabulary.
-- [ ] Validate the following scenarios after the UX fixes: very large graphs,
-      time and delay handling, probability behavior, multiplayer editing,
-      and save integrity after story modifications.
+- [ ] Validate very large graphs, time and delay handling, probability,
+      multiplayer editing, and save integrity after story modifications.
 
 ## Design-System Audit Follow-Ups — 2026-10-22
 

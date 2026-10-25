@@ -102,6 +102,10 @@ the same authored data.
 Search for one stable state target and show what reads it, writes it, or depends
 on it. Examples include a relationship, a character state, or a world flag. This
 view is a primary debugging surface rather than a second variable editor.
+Selecting a variable should also emphasize Interactions whose effects can modify
+that target. Use the same State projection and authored effect data for this
+highlight and for later dependency navigation; do not duplicate effect evaluation
+or add a separate Workbench task for the variable-picker flow.
 
 ## Selection and Organization
 
@@ -117,6 +121,13 @@ Remaining target behavior:
 - `Ctrl+A` selects the currently visible graph projection.
 - Connected-path selection supports descendants, ancestors, or both directions.
 - A context action can create the same Group as `Ctrl+G`.
+- From several selected Interactions, create a common parent by adding one new
+  Interaction and, for each selected output Interaction, one Trigger whose input
+  is the new parent.
+- Create a common child by adding one new output Interaction and one Trigger
+  whose input list contains the selected Interactions. Each selected Interaction
+  is a possible source for reaching that child. This concerns Trigger inputs,
+  not condition groups; preserve existing routes and create no new conditions.
 
 Selecting a Group should make its member Interactions and relevant incoming
 Triggers available for emphasis, focus, layout, and later inspection.

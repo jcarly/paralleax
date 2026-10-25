@@ -2,7 +2,7 @@
 
 This roadmap describes the progression from the validated narrative core to a public Paralleax platform.
 
-Status reviewed: 2026-10-24.
+Status reviewed: 2026-10-25.
 
 It is organized around **user capabilities** rather than implementation areas. Engineering work supports these milestones but does not define them by itself.
 
@@ -47,15 +47,19 @@ numeric success threshold is set.
    success, blockage, workaround, and data/recovery issues without numeric pass
    thresholds.
 2. **Run guided author sessions on disposable projects.** Cover creating and
-   connecting Interactions (including drag and drop), editing conditions, running
-   Simulation, saving, reloading, and recovering from a failed save. **Depends
-   on:** task 1 and the existing invitation/test environment. **Acceptance:**
+   connecting Interactions (including drag and drop), editing rich content,
+   conditions and effects, running Simulation, saving, reloading, and recovering
+   from a failed save. **Depends on:** task 1 and the existing invitation/test
+   environment. **Acceptance:**
    each observed task has a concise outcome and evidence; no valuable user-owned
    project data is introduced.
 3. **Triage observations and close essential blockers.** Separate data/security
    hazards and failures in the core authoring journey from workarounds, isolated
-   preferences, and new feature ideas. **Depends on:** task 2. **Acceptance:**
-   every blocker has an owner and a retest scenario; suggestions do not become
+   preferences, and new feature ideas. Use the consolidated candidate tasks in
+   [Code quality backlog](code-quality-backlog.md#consolidated-ux-follow-ups-2026-10-25),
+   including the 2026-10-25 UX intake, as evidence for sequencing without
+   bypassing this observation step. **Depends on:** task 2. **Acceptance:** every
+   blocker has an owner and a retest scenario; suggestions do not become
    commitments without evidence.
 4. **Complete the valuable-project safety gate.** Close the applicable P0 items
    in [Production readiness](production-readiness.md): add the representative
@@ -65,12 +69,13 @@ numeric success threshold is set.
    **Can run in parallel with:** tasks 1–3. **Acceptance:** evidence is recorded
    for each applicable P0 gate; only then may invited authors rely on Paralleax
    to retain valuable project data.
-5. **Ship the first Workbench improvement selected by observation.** Choose one
-   independently usable improvement to selection, organization, graph
-   readability, or navigation based on task 2 evidence. **Depends on:** task 3.
-   **Acceptance:** the author completes the targeted task with the intended
-   result, the whole-Story model remains available, and the scenario is retested
-   on a representative Story. See [Workbench product direction](workbench.md).
+5. **Ship the first UX improvement selected by observation.** Choose one
+   independently usable improvement on any product surface from the consolidated
+   [Code quality backlog](code-quality-backlog.md#consolidated-ux-follow-ups-2026-10-25),
+   based on task 2 evidence. **Depends on:** task 3. **Acceptance:** the author
+   completes the targeted task with the intended result, the whole-Story model
+   remains available where applicable, and the scenario is retested on a
+   representative Story.
 6. **Define and deliver native Paralleax backup/export and restore/import.**
    Specify the supported authored Story data and validation/diagnostic behavior,
    then verify a saved Story can be restored without loss of supported entities
@@ -495,8 +500,10 @@ An author can safely create, navigate, edit, test, and recover a large story wit
   recovery, and the next successful save. Reader and Simulation autosaves are
   exercised independently across reload and restart, including a named reader
   save loaded into Simulation without modifying its source slot. A richer reader
-  save also verifies replayed variables, runtime inventory and item stats, Story
-  time, seeded probability, and Trigger timers across reload. A two-browser-context
+  save currently verifies replayed variables, runtime inventory and item stats,
+  Story time, seeded probability, and Trigger timers across reload. This is the
+  existing replay-based behavior; ADR-040 adds checkpoint restore and an explicit
+  replay-comparison target. A two-browser-context
   scenario verifies reader/editor grants, the reader-only graph redirect,
   manager-only access controls, collaborator editing, live invalidation, and
   PostgreSQL durability. A transport-reordering scenario delays one real API
@@ -818,8 +825,8 @@ Only implement later stages when concrete story requirements justify them.
 V0.4 is complete when:
 
 - common character/location/stat/item state can be authored without custom code;
-- state changes replay deterministically from a journey;
-- runtime state can be persisted and restored consistently;
+- state changes replay deterministically from a journey, and saved runtime
+  checkpoints restore consistently without replaying the full journey by default;
 - relationships and grouping have explicit documented semantics;
 - the item model supports possession, containers, and a first usable equipment/slot layer;
 - unsupported world-state needs can be identified explicitly rather than hidden in ad-hoc fields.
@@ -843,8 +850,11 @@ Stories can react not only to world state but also to time and controlled automa
 - Interaction durations.
 - Deterministic story-local calendar progression.
 - Date, date-range, weekday, and time-slot availability.
-- Deterministic backward replay and persisted reader/simulation journeys that
-  provide the restoration boundary for future dynamic behavior.
+- Deterministic full-journey replay currently reconstructs saved state and
+  supports Simulation backtracking. Under
+  [ADR-040](decisions/ADR-040-reader-simulation-runtime-checkpoints.md), the
+  target restore boundary is the saved runtime checkpoint; full replay remains
+  an explicit automated validation path.
 - Trigger appearance probability with one deterministic seeded roll per Trigger
   and narrative step, persisted in reader and Simulation saves.
 - Simulation probability diagnostics and forced-path inspection.
@@ -865,7 +875,8 @@ V0.5 is complete when:
 - probabilistic behavior is reproducible for debugging when required;
 - Simulation Mode can explain why and when an automatic choice occurred;
 - automatic execution cannot create uncontrolled loops without explicit protection;
-- reader progress can restore dynamic execution consistently.
+- reader progress can restore dynamic execution from its saved checkpoint, while
+  explicit replay verification remains deterministic.
 
 ### Dependencies
 
@@ -974,7 +985,8 @@ An author who did not build Paralleax can create, test, save, maintain, export, 
 
 ### Scope
 
-- Coherent onboarding and first-story flow.
+- Progressive contextual onboarding and a first-story flow, informed by guided
+  author sessions rather than a mandatory long tutorial.
 - Mature Story Canvas navigation.
 - A Workbench that preserves whole-Story visibility while projecting structure,
   characters, locations, state, time, and dependencies at useful levels of focus.

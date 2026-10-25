@@ -345,12 +345,13 @@ one after every ordered journey entry. Closing, reloading, or backgrounding the
 reader does not pause these timers. Old saves receive current timestamps when
 reconciled and are persisted in version 4 on the next autosave update.
 
-The ordered journey is authoritative for state that can currently be replayed.
-The API derives current interaction, visited ids, story time, location, and stats
-from that journey before writing JSON; clients cannot provide trusted derived
-values. Supplied owned item ids are accepted only when they are authored instances
-from the same Story or deterministic runtime instances produced by replaying that
-journey; the canonical saved inventory is still rebuilt from the journey.
+Current implementation: the API treats the ordered journey as authoritative for
+state that can be replayed. It derives current interaction, visited ids, story
+time, location, and stats from that journey before writing JSON; clients cannot
+provide trusted derived values. Supplied owned item ids are accepted only when
+they are authored instances from the same Story or deterministic runtime
+instances produced by replaying that journey; the canonical saved inventory is
+still rebuilt from the journey.
 Interaction item effects target a reusable item definition. Obtaining creates a
 new instance owned by the effect's target character, so the same definition can
 be obtained several times by one or several characters. Losing removes one
@@ -358,13 +359,24 @@ instance of that definition owned by the target character; losing an absent
 item is a no-op. Legacy exact-instance and unassigned effects remain replayable.
 Deterministic runtime ids preserve both instance and owner across replay,
 backward navigation, and saved progress.
-The same replay reconstructs non-item and exact-item stat values from their
-authored defaults, time-based rates, and explicit interaction effects. Existing
-version 1 snapshots remain readable and are rematerialized as version 2 after a
-subsequent save.
+The same replay currently reconstructs non-item and exact-item stat values from
+their authored defaults, time-based rates, and explicit interaction effects.
+Existing version 1 snapshots remain readable and are rematerialized as version 2
+after a subsequent save.
 
-The reader and Simulation Mode reconcile loaded saves with the authored story
-they fetched:
+**Accepted target (ADR-040; not implemented yet):** the saved runtime snapshot is
+a checkpoint. Reader and Simulation restore the saved current interaction and
+materialized state directly, without replaying the full journey during an ordinary
+save or load. Later interactions apply the current Story rules to that checkpoint;
+editing a previously visited effect does not rewrite state already produced.
+Full replay remains available as an explicit automated validation that compares
+a clean, replayable run against its checkpoint and never overwrites it. A mismatch
+after authored Story changes or intentional Simulation debugging is not by itself
+proof of a corrupt save, so validation must use the authored revision intended
+for comparison and avoid debug-diverged journeys.
+
+Current implementation: the reader and Simulation Mode reconcile loaded saves
+with the authored story they fetched:
 interaction and item ids that no longer exist are removed, and replayable
 derived values are rebuilt without a full-graph browser read. Loading a save
 continues in the current mode and writes subsequent progress to that mode's
@@ -372,7 +384,15 @@ autosave; it does not overwrite the loaded source slot. Restart deletes only the
 current mode's autosave and returns to its configured starting state. Named saves
 remain until explicitly overwritten or deleted. Stepping backward in Simulation
 Mode replays the shortened journey, restores the choice-step timestamp aligned
-with that journey position, and updates only the simulation autosave.
+with that journey position, and updates only the simulation autosave. Checkpoint
+reconciliation for changed or deleted authored entities remains open.
+
+**Accepted Back target (ADR-040; not implemented yet):** after restoring a save,
+Simulation Back can move before the saved Interaction without persisting
+per-step states. It shortens the journey and changes the current Interaction,
+but preserves stats, inventory, story time, and location as the current debug
+state. The next choice continues from those retained values, even when replaying
+the shortened journey would produce a different state.
 
 ## Runtime Read Projection
 

@@ -317,6 +317,14 @@ Story. Progress writes reuse the runtime context plus only their requested
 journey interactions, so autosaving does not reconstruct unrelated graph
 branches on the API server.
 
+**Accepted target, not yet implemented (ADR-040):** ordinary save writes and
+loads must preserve and restore the materialized state at the current
+Interaction rather than replaying the complete journey. Reader and Simulation
+share this checkpoint rule. Full journey replay remains an explicit automated
+comparison against a checkpoint and must not replace it. The current API
+replay-on-write/load behavior above is a known gap tracked in the
+[P1 Performance and Persistence backlog](code-quality-backlog.md).
+
 `HealthModule` exposes an unauthenticated process liveness check at
 `GET /api/health` and a readiness check at `GET /api/ready`. Readiness requires
 PostgreSQL connectivity, the migration table, and the latest known migration.
@@ -392,7 +400,12 @@ is active, then applies the authoritative server story. Simulation instead
 rebuilds all runtime values by replaying its current journey against that story
 through shared deterministic operations. This covers interaction and trigger
 content and positions, context entities, items, stats, and graph decorations
-without making React Flow or simulation state canonical. See ADR-020.
+without making React Flow or simulation state canonical. This is the current
+behavior; the accepted target preserves the current runtime checkpoint and uses
+updated authored behavior on later steps in both Reader and Simulation. Simulation
+Back must also cross a restored checkpoint without per-step snapshots, preserving
+stats, inventory, story time, and location while shortening the journey. See
+ADR-020 for live invalidation and ADR-040 for the checkpoint target.
 
 Interaction and trigger create/update routes do not return the complete story.
 They return the saved entity plus the owning story revision and update timestamp.

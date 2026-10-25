@@ -38,6 +38,11 @@ need an explicit answer before the affected capability is implemented.
   restore the complete discussion. Before adding individual message deletion,
   define its authority, reply handling, retention, live updates, and undo
   behavior; see [Current scope](current-scope.md).
+- Decide how comments anchored to an entity behave when that entity is deleted
+  and later restored through Story history. Missing targets are already marked
+  detached; threads remain available for reattachment. Choose whether entity
+  deletion should also soft-delete or hide its threads, and define how undo,
+  restore, and replies behave. Do not permanently delete the discussion.
 
 ## Story Format and Examples
 
@@ -85,6 +90,11 @@ need an explicit answer before the affected capability is implemented.
 - For future state concepts beyond typed stat assignments and deterministic
   reader replay, define whether values are authored, persisted per play session,
   or derived.
+- Decide whether every Story must retain story-local calendar time or whether a
+  future Story may opt out of temporal state. Keep this domain choice separate
+  from hiding clock and scene presentation when those details are not useful;
+  the current model assigns each Story a start date and time, and Interactions
+  have duration semantics.
 - Define item-definition deletion behavior when authored conditions or existing
   play-session item instances reference it. Authored item effects currently
   cascade with deletion of their exact item instance.
@@ -122,10 +132,19 @@ need an explicit answer before the affected capability is implemented.
   source and target as part of the MVP editor work.
 - Define how the graph visually separates several inputs that feed the same
   trigger before reaching one output interaction.
+- Decide whether a source/code view for variables and conditional text is a
+  read-only diagnostic or an editable representation. If editing is considered,
+  define stable identity for variable references and conditional blocks,
+  sanitization, and lossless round trips before implementation; preserve the
+  current rich-text storage contract and do not bundle this with the deferred
+  Tiptap/ProseMirror evaluation.
 
 ## Story Canvas UX
 
 - Decide whether interaction cards should support several zoom detail levels.
+- After responsive layout and bounded inspector resizing are evaluated, decide
+  whether the inspector also needs a full-screen or reduced-width mode, including
+  how it returns to the graph and retains keyboard focus.
 - Decide whether future filters can be combined and whether they use AND, OR, or
   a user-selected mode.
 - Validate tag-based combined filters as a low-complexity alternative to
@@ -144,6 +163,13 @@ need an explicit answer before the affected capability is implemented.
 - Validate whether a narrative, reading-oriented projection materially improves
   authoring beyond the inspector and Simulation Mode.
 
+## Interface and Presentation
+
+- Resolve the directional-arrow style requested for localized interface paths
+  against the repository instruction to use ASCII `->` for directional and
+  ownership relationships. Decide the scope across visible UI, examples, and
+  accessibility names; keep code and authored-expression syntax unchanged.
+
 ## Hosting and Scale
 
 - Confirm the production frontend/API domain topology before choosing between
@@ -160,15 +186,45 @@ need an explicit answer before the affected capability is implemented.
 - Add Redis, queues, workers, replicas, or multiple API instances only in
   response to observed operational bottlenecks.
 
+## Reader and Simulation Saves
+
+- Checkpoint semantics are settled by
+  [ADR-040](decisions/ADR-040-reader-simulation-runtime-checkpoints.md): loading
+  either mode restores the saved current Interaction and runtime values; current
+  authored behavior applies to later steps; full replay is an explicit automated
+  comparison and does not replace the checkpoint. The current implementation
+  still replays on API save/load and on Simulation Story refresh.
+- Resolved 2026-10-25 in ADR-040: Simulation `Back` works before the saved
+  Interaction without persisting per-step states. It moves the current
+  Interaction and shortens the journey but keeps runtime values such as stats,
+  inventory, story time, and location unchanged. The resulting checkpoint is
+  intentional debug state and can diverge from replaying the shortened journey.
+  Automated replay comparisons must use a clean, unmodified journey and the
+  authored Story revision intended by the test; they must not report intentional
+  debug-state differences as save corruption.
+- Before implementation, define how the API writes and validates checkpoints
+  without replaying the full prefix, and how it handles state references when
+  authored entities are changed or deleted. An explicit replay comparison is
+  only meaningful against the authored Story revision intended by the test.
+
 ## Simulation
 
 - Named manual saves are available in both Reader and Simulation Mode. Decide
   whether reusable simulation test fixtures with explicit preconditions are
   useful in addition to those journey saves.
-- Define whether editing an already-visited interaction's effects changes the
-  displayed simulated state immediately, only on later steps, or after replay.
-- Validate how much inline editing belongs in Simulation Mode before it becomes
-  confusing or duplicates the main inspector.
+- Decide the Simulation editing boundary: use Reader rendering by default with
+  explicit editing on request, then determine whether title/body and option
+  creation remain inline and whether effect or Trigger-condition editing belongs
+  there or should open the shared Story Canvas inspector. Effect edits follow the
+  shared checkpoint contract in ADR-040; Trigger-condition editing remains a
+  separate scope decision.
+- Define which current values the Simulation state view exposes across Story,
+  Character, Location, and exact item-instance assignments. The current context
+  panels show playable-character stat values and owned items, not a unified view
+  of every owner.
+- Decide whether automatic Reader entry should extend beyond the unique opening
+  Interaction to later off-path situations. Preserve explicit Simulation start
+  selection and do not auto-trigger root Interactions without a narrative rule.
 
 ## Devices
 
