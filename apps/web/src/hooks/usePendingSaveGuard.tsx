@@ -43,7 +43,7 @@ export function usePendingSaveGuard(shouldBlock: boolean, surface: GuardedSurfac
     if (blocker.state === 'blocked') stayButton.current?.focus();
   }, [blocker.state]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!shouldBlock) return;
     const preventUnload = (event: BeforeUnloadEvent) => {
       event.preventDefault();
