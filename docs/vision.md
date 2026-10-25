@@ -49,7 +49,12 @@ visual logic markers, and actionable explanations. See
 
 The interaction is the central building block of the system. It represents a narrative moment: a choice, a scene, an action, a dialogue, a video, or a game state.
 
-An interaction becomes available through one or more triggers. In the MVP, a trigger mostly relies on input interactions and "visited / not visited interaction" conditions. Later, it may also take characters, places, time periods, attributes, probabilities, and timing into account.
+An Interaction becomes available through one or more Triggers. A Trigger can use
+alternative input Interactions, AND conditions within OR condition groups,
+location and character context, typed stats and expressions, inventory, a
+story-local calendar, appearance probability, and an optional choice timer.
+Current reader and Trigger rules are described in [Current scope](current-scope.md)
+and [Trigger semantics](triggers.md).
 
 Collaboration is a long-term direction. It should include not only simultaneous
 editing, but also contribution workflows: proposing an interaction, suggesting a

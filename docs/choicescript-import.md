@@ -101,6 +101,10 @@ Interactions on that passage's one unconditional Trigger. This preserves the
 Paralleax rule that one Trigger belongs to exactly one output Interaction and
 that its input Interactions are alternative reachability sources.
 
+If multiple converted options from one source passage reach the same target
+under different supported conditions, the importer combines those alternatives
+as OR condition groups on one Trigger for that source -> target pair.
+
 Initial positions use a deterministic top-to-bottom layered projection. Authors
 can then use the editor's complete or scoped automatic layout.
 

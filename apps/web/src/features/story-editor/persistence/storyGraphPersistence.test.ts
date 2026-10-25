@@ -272,17 +272,20 @@ describe('story graph persistence', () => {
     });
   });
 
-  it('connects new and existing triggers while rejecting invalid connections', async () => {
-    const harness = createHarness();
+  it('rejects repeated connection pairs and still allows reverse routes', async () => {
+    const connectionConflicts: boolean[] = [];
+    const harness = createHarness(async (operation) => operation(), storyFixture(), (conflict) => {
+      connectionConflicts.push(conflict);
+    });
     vi.mocked(api.addTrigger).mockResolvedValue({
-      interactionId: 'child',
-      trigger: { id: 'created-trigger', inputInteractionIds: ['root'], conditions: [] },
+      interactionId: 'root',
+      trigger: { id: 'created-trigger', inputInteractionIds: ['child'], conditions: [] },
       ...metadata(2),
     });
     vi.mocked(api.updateTrigger).mockResolvedValue({
       interactionId: 'child',
       trigger: {
-        id: 'alternative-trigger',
+        id: 'child-trigger',
         inputInteractionIds: ['root', 'third'],
         conditions: [],
       },
@@ -301,14 +304,30 @@ describe('story graph persistence', () => {
       sourceHandle: null,
       targetHandle: 'create-source-input',
     });
-    await harness.actions.connectToExistingTrigger('missing', 'child', 'alternative-trigger');
+    await harness.actions.connectToExistingTrigger('root', 'child', 'alternative-trigger');
+    await harness.actions.connectToExistingTrigger('third', 'child', 'child-trigger');
     await harness.actions.connectToExistingTrigger('third', 'child', 'alternative-trigger');
+    await harness.actions.connectInteractions({
+      source: 'child',
+      target: 'root',
+      sourceHandle: null,
+      targetHandle: 'create-source-input',
+    });
 
     expect(api.addTrigger).toHaveBeenCalledOnce();
-    expect(api.updateTrigger).toHaveBeenCalledOnce();
-    expect(harness.story().interactions[1].triggers.map(({ id }) => id)).toContain(
-      'created-trigger',
-    );
+    expect(api.addTrigger).toHaveBeenCalledWith('story-1', 'root', {
+      inputInteractionIds: ['child'],
+    });
+    expect(api.updateTrigger).toHaveBeenCalledTimes(2);
+    expect(harness.story().interactions[1].triggers[0].inputInteractionIds).toEqual([
+      'root',
+      'third',
+    ]);
+    expect(harness.story().interactions[1].triggers[1].inputInteractionIds).toEqual([
+      'root',
+      'third',
+    ]);
+    expect(connectionConflicts).toContain(true);
   });
 
   it('creates roots, children, parents, and deletes interactions through compact results', async () => {
@@ -444,6 +463,7 @@ describe('story graph persistence', () => {
 function createHarness(
   trackSave: TrackStorySave = async (operation) => operation(),
   initialStory: Story | null = storyFixture(),
+  onConnectionConflict: (conflict: boolean) => void = () => {},
 ) {
   let story: Story | undefined = initialStory ?? undefined;
   const setStory: StoryStateSetter = (next) => {
@@ -466,6 +486,7 @@ function createHarness(
       mergeIncomingStory,
       deletedTriggerIdsRef,
       deletedTriggerInputKeysRef,
+      onConnectionConflict,
     }),
   );
 

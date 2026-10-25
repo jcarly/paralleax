@@ -874,9 +874,10 @@ persistence.
 Interaction bodies are HTML. The API sanitizes them before persistence with a
 strict element, attribute, protocol, and iframe-host allowlist. The web renderer
 sanitizes the stored HTML again before using `dangerouslySetInnerHTML`.
-Conditional blocks persist only a target interaction id in allowed data
-attributes. `StoryPlayer` derives connection, availability, and diagnostics
-from the current story graph instead of persisting duplicate rules.
+Structured conditional blocks persist their own condition groups in allowed
+data attributes. Legacy target-based blocks persist a target interaction id;
+`StoryPlayer` derives their connection availability and diagnostics from the
+current story graph instead of persisting duplicate route rules.
 
 ### Editing Trigger Links
 
@@ -897,8 +898,11 @@ split deliberately:
   trigger, then asks the scoped layout for their creation position. Click-based
   root, child, parent, and Simulation Mode option creation use this projection;
   connection drops keep their explicit pointer-derived position.
-- `storyConnection.ts` decides whether a graph connection can become a trigger
-  input.
+- `storyConnection.ts` validates whether a graph connection can become a
+  Trigger input. Shared validation rejects a directed source -> target pair
+  already owned by another Trigger, and the API repeats the check inside the
+  serialized Story mutation. Historical conflicts remain loadable and removable.
+  This is an application policy, not a database constraint.
 - `storyTriggerInput.ts` decides the local mutation plan for deleting one input
   link.
 - `useStoryEditorPersistence` performs optimistic updates and API writes.

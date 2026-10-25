@@ -80,7 +80,8 @@ In particular:
 - a Trigger has exactly one output Interaction: the Interaction that owns it;
 - one Trigger may have multiple input Interactions;
 - input Interactions on one Trigger are alternative reachability sources;
-- multiple Triggers may target the same Interaction and represent alternative condition variants;
+- during normal creation or editing, a directed source -> target pair may belong to only one Trigger. This is a current application policy, not a database uniqueness constraint; existing duplicate pairs remain loadable and editable so authors can remove them;
+- multiple Triggers may target the same Interaction when their source -> target pairs do not overlap; condition groups on one Trigger remain the OR mechanism for shared routes;
 - authored story state must remain distinct from reader/runtime state;
 - reader results must be deterministic from authored story + ordered journey;
 - graph data is a projection, never the canonical story format;

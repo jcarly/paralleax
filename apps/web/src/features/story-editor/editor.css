@@ -71,6 +71,18 @@
 .save-error button {
   flex: none;
 }
+.graph-connection-alert {
+  position: absolute;
+  top: 0.8rem;
+  left: 50%;
+  z-index: 5;
+  width: max-content;
+  max-width: calc(100% - 5.5rem);
+  transform: translateX(-50%);
+  border: 1px solid #efbbb8;
+  border-radius: 8px;
+  box-shadow: var(--shadow-card);
+}
 .editor-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr);

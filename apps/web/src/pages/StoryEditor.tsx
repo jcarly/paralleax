@@ -169,6 +169,7 @@ function getInitials(name: string) {
 export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
   const { t } = useTranslation();
   const { storyId = '' } = useParams();
+  const [connectionConflict, setConnectionConflict] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
   const {
     story,
@@ -219,7 +220,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
     refreshHistory,
     undo,
     redo,
-  } = useStoryEditorPersistence(storyId);
+  } = useStoryEditorPersistence(storyId, setConnectionConflict);
   const pendingSaveGuard = usePendingSaveGuard(
     Boolean(story) && (saveStatus === 'saving' || saveStatus === 'error'),
     'editor',
@@ -410,6 +411,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
     flowInstanceRef: flowInstance,
     connectInteractions,
     connectToExistingTrigger,
+    onConnectionConflict: setConnectionConflict,
     createChildFromInteraction: createChildAndFocus,
     createParentForInteraction: createParentAndFocus,
   });
@@ -1990,6 +1992,23 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
           ) : null}
         </nav>
         <section className="canvas" ref={canvasRef} aria-busy={isOrganizing}>
+          {connectionConflict ? (
+            <div
+              className="save-error graph-connection-alert"
+              role="alert"
+              data-testid="trigger-connection-conflict"
+            >
+              <span>{t('editor.triggerConnectionExists')}</span>
+              <button
+                className="secondary"
+                type="button"
+                aria-label={t('editor.dismissConnectionConflict')}
+                onClick={() => setConnectionConflict(false)}
+              >
+                ×
+              </button>
+            </div>
+          ) : null}
           <StoryCanvasToolbar
             canEdit={!reviewOnly}
             canComment={story.capabilities?.canComment === true}

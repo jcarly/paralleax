@@ -81,6 +81,11 @@ details. They should stay covered by tests as the editor grows.
 - Input interactions on one Trigger are possible reachability sources: the input
   rule matches when the current Interaction is any one of those inputs. This is
   separate from the Trigger's condition groups.
+- Current authoring policy: normal creation and input edits allow a directed
+  source -> target pair on only one Trigger. This is enforced by shared and API
+  validation, not a PostgreSQL constraint, and is not a permanent storage
+  invariant. Existing duplicate pairs remain readable and editable; unrelated
+  edits and removals remain available.
 - A trigger owns one or more condition groups. Conditions inside a group are AND;
   groups are OR. At least one complete group must match.
 - A trigger owns one appearance probability from 0 through 100, defaulting to 100. Input and condition-group rules are evaluated before one deterministic
@@ -253,11 +258,10 @@ details. They should stay covered by tests as the editor grows.
 - A linked trigger position is optional authoring projection metadata and never
   changes trigger or reader semantics. Missing positions use stable automatic
   placement.
-- Several triggers between the same source and target should be displayed as a
-  grouped edge with several route variants, while remaining distinct triggers in
-  the domain model.
-- Moving a grouped trigger marker saves the same position on every represented
-  trigger variant so deleting one variant does not unexpectedly move the group.
+- Every linked Trigger has its own graph marker and input edges. Historical
+  duplicate source -> target pairs remain separate markers so each Trigger can
+  be inspected or removed independently.
+- Moving a trigger marker changes only that Trigger's saved position.
 - Editing a linked trigger should happen from the graph trigger marker
   representing the relationship.
 - Editing a root trigger should happen from a visible root trigger marker rather
@@ -269,8 +273,9 @@ details. They should stay covered by tests as the editor grows.
   adds the source to that Trigger.
 - Adding an input to an existing trigger preserves one trigger with shared
   conditions across several inputs.
-- Creating a new trigger creates a separate condition group for the same output
-  interaction.
+- Creating a new Trigger creates an independent route only when its source ->
+  target pairs are new. Condition alternatives for an existing route belong in
+  that Trigger's condition groups.
 - Interaction editing should stay focused on interaction content and root trigger
   behavior.
 - Creating or deleting one edge must not silently mutate unrelated trigger inputs.
@@ -341,7 +346,8 @@ details. They should stay covered by tests as the editor grows.
 - Direct edits and pending suggestions should share an event-log foundation.
 - Interface internationalization applies to product UI copy, not user-authored
   story content.
-- Later, contextual inputless triggers may also depend on world state, not only
-  visited / not visited interaction conditions.
+- Contextual inputless Triggers can already depend on visited history, location,
+  character presence, typed stats and expressions, inventory, and story-local
+  time; see [Trigger semantics](triggers.md).
 - Story completion should be explicit, such as through a final interaction or
   play-session completion rule.

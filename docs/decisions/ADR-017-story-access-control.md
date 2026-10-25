@@ -8,7 +8,9 @@ Comment-policy values and defaults are superseded by
 Date: 2026-08-13
 
 Amendment (2026-10-17): [ADR-033](ADR-033-unlisted-story-visibility.md)
-adds `unlisted` as a fifth accepted visibility policy. It is not yet implemented.
+adds `unlisted` as a fifth accepted visibility policy. Implementation completed
+on 2026-10-24; see ADR-033 for its behavior and consequences. This note preserves
+the original amendment date and status history.
 
 ## Context
 

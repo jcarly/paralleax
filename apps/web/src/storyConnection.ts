@@ -1,5 +1,6 @@
 import type { Connection } from '@xyflow/react';
 import type { Interaction, Story } from '@paralleax/shared';
+import { findTriggerConnectionConflict } from '@paralleax/shared';
 
 export interface PendingConnection {
   sourceId: string;
@@ -25,12 +26,28 @@ export function getPendingConnection(
 
   const target = story.interactions.find((item) => item.id === connection.target);
   if (!target) return undefined;
+  if (findTriggerConnectionConflict(story, connection.source, target.id)) return undefined;
 
   return {
     sourceId: connection.source,
     target,
     existingTriggerIds: new Set(target.triggers.map((trigger) => trigger.id)),
   };
+}
+
+export function getPendingConnectionConflict(
+  story: Story | undefined,
+  connection: Connection,
+) {
+  if (!story || !connection.source || !connection.target) return undefined;
+  if (connection.source === connection.target) return undefined;
+  if (connection.targetHandle && connection.targetHandle !== 'create-source-input') {
+    return undefined;
+  }
+  const target = story.interactions.find((item) => item.id === connection.target);
+  return target
+    ? findTriggerConnectionConflict(story, connection.source, target.id)
+    : undefined;
 }
 
 export function getPendingTriggerInputConnection(
@@ -48,6 +65,7 @@ export function getPendingTriggerInputConnection(
 
   const trigger = target.triggers.find((item) => item.id === triggerId);
   if (!trigger || trigger.inputInteractionIds.includes(sourceId)) return undefined;
+  if (findTriggerConnectionConflict(story, sourceId, targetId, triggerId)) return undefined;
 
   return { sourceId, targetId, trigger };
 }

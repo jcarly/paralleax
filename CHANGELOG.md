@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Enforced one Trigger per directed Interaction source -> target pair during
+  normal editor/API route creation and input edits. Existing duplicate routes
+  remain readable and can be edited or removed; the API reports conflicts as
+  `409`, and the editor shows a graph alert. QSP and ChoiceScript imports combine
+  same-pair condition variants into OR groups on one Trigger. Corrected related
+  trigger, conditional-text, QSP subroutine, visibility, and historical MVP
+  documentation.
+
 - Enabled 12 type-aware ESLint safety rules across all three production
   workspaces and added native baselines for 120 existing diagnostics. The CSS
   baseline tracks 359 findings from the cascade, duplicate-selector, and

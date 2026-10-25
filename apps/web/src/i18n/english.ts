@@ -66,6 +66,8 @@ export const englishTranslation = {
     storyImportFailed: 'The source could not be converted into a story.',
     storyRevisionConflict:
       'The story changed elsewhere. Reload it before applying this change again.',
+    triggerConnectionExists:
+      'A trigger already connects these interactions. Select or remove the existing route.',
     storyQuotaExceeded:
       'This story exceeds its size or entity limit. Reduce its content and try again.',
   },
@@ -533,6 +535,9 @@ export const englishTranslation = {
     saving: 'Saving…',
     saved: 'Saved',
     saveFailed: 'Save failed',
+    triggerConnectionExists:
+      'This source already connects to this interaction. Select or remove the existing route.',
+    dismissConnectionConflict: 'Dismiss connection message',
     loadFailed: 'The story could not be loaded.',
     realtime: {
       live: 'Collaborative editing live',

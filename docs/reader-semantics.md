@@ -85,7 +85,10 @@ For conditions:
 - conditions inside one group are evaluated as AND;
 - groups on the same trigger are evaluated as OR.
 
-Inputs on the same trigger are evaluated as OR.
+Trigger inputs are alternative reachability sources: the current Interaction
+matches when it is any one of the Trigger's input interactions. This input rule
+is checked separately from the condition groups; it is not another Boolean
+condition expression.
 
 The appearance probability is an integer from 0 through 100 and defaults to 100.
 The roll is derived from the progress seed, narrative step, and Trigger id. It is
@@ -111,13 +114,12 @@ interaction, but selecting it advances the journey only when that interaction is
 present in the normally evaluated available-choice set. An unavailable,
 disconnected, or missing target is rendered inert and cannot bypass its triggers.
 Conditional text frames remain a separate rich-text projection. A structured
-frame references a condition group owned by the current interaction. Its
-conditions use the exact Trigger condition types and evaluator, are combined as
-AND, and inspect the same visited interactions, current context, typed values,
-inventory, and story-local time. The reader removes a frame when any condition
-fails. Simulation Mode keeps it visible with unavailable styling and a condition
-summary. Legacy target-based frames continue to project normal outgoing choice
-availability.
+frame references a block owned by the current interaction. Its conditions use
+the exact Trigger condition types and evaluator, are combined as AND, and inspect
+the same visited interactions, current context, typed values, inventory, and
+story-local time. The reader removes a frame when any condition fails. Simulation
+Mode keeps it visible with unavailable styling and a condition summary. Legacy
+target-based frames continue to project normal outgoing choice availability.
 
 ## Inputless Triggers
 
@@ -309,9 +311,11 @@ blocked.
 The current web reader stores visited interaction ids in first-visit order and
 does not add duplicates when the same interaction is selected again.
 
-The shared reader converts `visitedIds` to a set for condition checks. MVP
-conditions therefore care only whether an interaction has been visited at least
-once, not how many times it was visited or when it was visited.
+The shared reader converts `visitedIds` to a set for visited-history conditions.
+Those conditions care only whether an interaction has been visited at least once,
+not how many times it was visited or when it was visited. Location, character,
+typed-stat, inventory, and temporal conditions inspect their corresponding
+replayed state; see [Trigger semantics](triggers.md).
 
 ## Persisted Saves
 

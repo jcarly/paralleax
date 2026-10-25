@@ -1,3 +1,4 @@
+import { ConflictException } from '@nestjs/common';
 import type { Story } from '@paralleax/shared';
 import type { StoryMutationService } from './story-mutations';
 import { StoryGraphService } from './story-graph';
@@ -118,9 +119,9 @@ describe('StoryGraphService', () => {
   it('normalizes trigger inputs and temporal condition collections', async () => {
     const result = await service.addTrigger(
       'story-1',
-      'child',
+      'root',
       {
-        inputInteractionIds: ['root', 'root'],
+        inputInteractionIds: ['child', 'child'],
         conditions: [
           {
             temporal: {
@@ -134,9 +135,9 @@ describe('StoryGraphService', () => {
     );
 
     expect(result).toMatchObject({
-      interactionId: 'child',
+      interactionId: 'root',
       trigger: {
-        inputInteractionIds: ['root'],
+        inputInteractionIds: ['child'],
         conditionGroups: [
           {
             conditions: [
@@ -155,6 +156,175 @@ describe('StoryGraphService', () => {
       },
       revision: 4,
     });
+  });
+
+  it('rejects adding a source -> target pair already owned by another Trigger', async () => {
+    let caught: unknown;
+    try {
+      await service.addTrigger(
+        'story-1',
+        'child',
+        { inputInteractionIds: ['root'] },
+        'user-1',
+      );
+    } catch (error) {
+      caught = error;
+    }
+
+    expect(caught).toBeInstanceOf(ConflictException);
+    expect((caught as ConflictException).getStatus()).toBe(409);
+    expect((caught as ConflictException).getResponse()).toMatchObject({
+      code: 'TRIGGER_CONNECTION_EXISTS',
+    });
+  });
+
+  it('allows a reverse route, new sources on a Trigger, and different-source routes', async () => {
+    mutations.update.mockImplementationOnce(
+      async (_storyId: string, mutation: (story: Story) => Story) => {
+        const story = storyFixture();
+        story.interactions.push({
+          id: 'other-source',
+          title: 'Other source',
+          body: '',
+          position: { x: 120, y: 0 },
+          triggers: [{ id: 'other-root', inputInteractionIds: [], conditions: [] }],
+        });
+        return mutation(story);
+      },
+    );
+    const addedInput = await service.updateTrigger(
+      'story-1',
+      'child',
+      'child-trigger',
+      { inputInteractionIds: ['root', 'other-source'] },
+      'user-1',
+    );
+    expect(addedInput.trigger.inputInteractionIds).toEqual(['root', 'other-source']);
+
+    mutations.update.mockImplementationOnce(
+      async (_storyId: string, mutation: (story: Story) => Story) => {
+        const story = storyFixture();
+        story.interactions.push({
+          id: 'other-source',
+          title: 'Other source',
+          body: '',
+          position: { x: 120, y: 0 },
+          triggers: [{ id: 'other-root', inputInteractionIds: [], conditions: [] }],
+        });
+        return mutation(story);
+      },
+    );
+    const separateRoute = await service.addTrigger(
+      'story-1',
+      'child',
+      { inputInteractionIds: ['other-source'] },
+      'user-1',
+    );
+    expect(separateRoute.trigger.inputInteractionIds).toEqual(['other-source']);
+
+    const reverseRoute = await service.addTrigger(
+      'story-1',
+      'root',
+      { inputInteractionIds: ['child'] },
+      'user-1',
+    );
+    expect(reverseRoute.trigger.inputInteractionIds).toEqual(['child']);
+  });
+
+  it('rejects adding a duplicate source through an existing Trigger update', async () => {
+    mutations.update.mockImplementationOnce(
+      async (_storyId: string, mutation: (story: Story) => Story) => {
+        const story = storyFixture();
+        story.interactions.push({
+          id: 'other-source',
+          title: 'Other source',
+          body: '',
+          position: { x: 120, y: 0 },
+          triggers: [{ id: 'other-root', inputInteractionIds: [], conditions: [] }],
+        });
+        story.interactions[1].triggers.push({
+          id: 'other-child-trigger',
+          inputInteractionIds: ['other-source'],
+          conditions: [],
+        });
+        return mutation(story);
+      },
+    );
+
+    await expect(
+      service.updateTrigger(
+        'story-1',
+        'child',
+        'other-child-trigger',
+        { inputInteractionIds: ['root'] },
+        'user-1',
+      ),
+    ).rejects.toMatchObject({
+      status: 409,
+      response: { code: 'TRIGGER_CONNECTION_EXISTS' },
+    });
+  });
+
+  it('allows editing and preserving an existing duplicate in a historical Story', async () => {
+    mutations.update.mockImplementationOnce(
+      async (_storyId: string, mutation: (story: Story) => Story) => {
+        const story = storyFixture();
+        story.interactions[1].triggers.push({
+          id: 'legacy-duplicate',
+          inputInteractionIds: ['root'],
+          conditions: [],
+        });
+        return mutation(story);
+      },
+    );
+    const edited = await service.updateTrigger(
+      'story-1',
+      'child',
+      'child-trigger',
+      { inputInteractionIds: ['root'], appearanceProbability: 70 },
+      'user-1',
+    );
+
+    expect(edited.trigger).toMatchObject({
+      inputInteractionIds: ['root'],
+      appearanceProbability: 70,
+    });
+  });
+
+  it('allows updating conditions and deleting a route on a historical duplicate Story', async () => {
+    mutations.update.mockImplementationOnce(
+      async (_storyId: string, mutation: (story: Story) => Story) => {
+        const story = storyFixture();
+        story.interactions[1].triggers.push({
+          id: 'legacy-duplicate',
+          inputInteractionIds: ['root'],
+          conditions: [],
+        });
+        return mutation(story);
+      },
+    );
+    const edited = await service.updateTrigger(
+      'story-1',
+      'child',
+      'child-trigger',
+      { appearanceProbability: 65 },
+      'user-1',
+    );
+    expect(edited.trigger.appearanceProbability).toBe(65);
+
+    mutations.update.mockImplementationOnce(
+      async (_storyId: string, mutation: (story: Story) => Story) => {
+        const story = storyFixture();
+        story.interactions[1].triggers.push({
+          id: 'legacy-duplicate',
+          inputInteractionIds: ['root'],
+          conditions: [],
+        });
+        return mutation(story);
+      },
+    );
+    const deleted = await service.deleteTrigger('story-1', 'child', 'child-trigger', 'user-1');
+    expect(deleted.triggerRemoved).toBe(true);
   });
 
   it('stores condition groups, probability, and a nullable Trigger timer', async () => {

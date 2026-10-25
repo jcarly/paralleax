@@ -65,9 +65,11 @@ When documents disagree, follow the precedence documented in the repository
 ## Planning Sources
 
 - [Roadmap](roadmap.md) orders user capabilities and durable product milestones.
-- [Interaction inclusion proposal](interaction-inclusion-proposal.md) records the
-  unaccepted native composition direction behind possible QSP `GS` / `GOSUB`
-  support.
+- [Interaction inclusion proposal](interaction-inclusion-proposal.md) records an
+  unaccepted native composition direction. The QSP adapter already maps a
+  limited static, acyclic `GS` / `GOSUB` subset through ordinary interactions;
+  native inclusion would address screen-composition behavior beyond that
+  traversal approximation.
 - [Production readiness](production-readiness.md) owns release and operational gates.
 - [Code quality backlog](code-quality-backlog.md) owns implementation debt,
   measurements, dependency watches, and incremental maintainability work.

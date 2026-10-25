@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { getTriggerConditions } from '../../triggers/index.js';
+import { getTriggerConditionGroups, getTriggerConditions } from '../../triggers/index.js';
+import { createChoiceScriptImportReport } from './report.js';
 import { importChoiceScript } from './importer.js';
+import { mapChoiceScriptGraphToStory } from './mapping.js';
 
 function importFiles(files: Array<{ name: string; content: string }>) {
   let id = 0;
@@ -63,6 +65,78 @@ The hall is dark.
     expect(openDoor.triggers[0].inputInteractionIds).toEqual([opening.id]);
     expect(waitOutside.triggers[0].inputInteractionIds).toEqual([opening.id]);
     expect(inside.triggers[0].inputInteractionIds).toEqual([openDoor.id, waitOutside.id]);
+  });
+
+  it('maps same-source condition variants into condition groups on one Trigger', () => {
+    let id = 0;
+    const source = { fileName: 'startup.txt', number: 1 };
+    const result = mapChoiceScriptGraphToStory(
+      {
+        nodes: [
+          {
+            key: 'source',
+            title: 'Source',
+            body: '',
+            sceneName: 'startup',
+            sourceLine: 1,
+            effects: [],
+          },
+          {
+            key: 'target',
+            title: 'Target',
+            body: '',
+            sceneName: 'startup',
+            sourceLine: 2,
+            effects: [],
+          },
+        ],
+        edges: [
+          {
+            from: 'source',
+            to: 'target',
+            condition: { name: 'score', operator: 'gt', value: 5, source },
+          },
+          {
+            from: 'source',
+            to: 'target',
+            condition: { name: 'score', operator: 'lt', value: 2, source },
+          },
+        ],
+      },
+      [
+        {
+          name: 'startup',
+          fileName: 'startup.txt',
+          title: 'The story',
+          statements: [],
+          sceneList: ['startup'],
+        },
+      ],
+      [
+        {
+          sourceKey: 'global:score',
+          name: 'score',
+          value: 0,
+          valueType: 'number',
+          temporary: false,
+          source,
+        },
+      ],
+      createChoiceScriptImportReport(1),
+      {
+        storyId: 'story-imported',
+        timestamp: '2026-08-22T10:00:00.000Z',
+        createId: () => `generated-${++id}`,
+      },
+    );
+
+    const [sourceInteraction, targetInteraction] = result.interactions;
+    expect(targetInteraction.triggers).toHaveLength(1);
+    expect(targetInteraction.triggers[0].inputInteractionIds).toEqual([sourceInteraction.id]);
+    expect(getTriggerConditionGroups(targetInteraction.triggers[0]).map(({ conditions }) => conditions)).toEqual([
+      [{ statId: result.stats?.[0].id, operator: 'gt', value: 5 }],
+      [{ statId: result.stats?.[0].id, operator: 'lt', value: 2 }],
+    ]);
   });
 
   it('uses scene_list order for finish and converts cross-scene jumps', () => {

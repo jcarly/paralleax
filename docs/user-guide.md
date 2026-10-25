@@ -30,8 +30,9 @@ returns to the sign-in screen with an explanation and restores that page after
 authentication. The former `/stories` workspace address redirects to the library.
 
 New stories are private to the account that creates them. The creator can later
-share them explicitly. The first account created on a new installation is its
-administrator.
+share them explicitly, including by an unlisted player URL that is not shown in
+public library results. Public Stories remain discoverable. The first account
+created on a new installation is its administrator.
 
 To inspect an external story, select `Import a story` beside `New story`, then
 choose its source format. For a small ChoiceScript project, select all of its
@@ -51,14 +52,16 @@ one UTF-8 `.qsps`, `.qsp-txt`, or `.txt-qsp` source, or all `.qsrc` files from a
 administrators have no Paralleax application-level size limit, although the
 deployment infrastructure may enforce one. The importer converts locations,
 literal `ARGS[0]` variants, static actions, literal output and assignments,
-literal-index array cells, action-only `IF` / `ELSEIF` / `ELSE` branches, and
-static `GOTO` paths. A literal first navigation argument connects to its matching
-variant. Numeric and string variables reuse Story stats; `AND` and `OR` become
-Trigger condition groups, with preceding branches negated to preserve QSP
-exclusivity. Its
-report also displays the complete QSP coverage matrix, including unsupported
-calculated state, general conditional execution, subroutines, inventory, dynamic
-code, media, events, saves, input, and libraries. Review the automatic-navigation warning:
+literal-index array cells, action-only `IF` / `ELSEIF` / `ELSE` branches, static
+`GOTO` paths, and a limited acyclic subset of static `GS` / `GOSUB` calls. QSP
+subroutines are represented as ordinary Paralleax interaction paths with typed
+return stats, so this is a traversal approximation rather than QSP screen
+composition. Numeric and string variables reuse Story stats; `AND` and `OR`
+become Trigger condition groups, with preceding branches negated to preserve QSP
+exclusivity. The importer reports unsupported calculated state, general
+conditional execution, recursion, dynamic calls, inventory, dynamic code,
+media, events, saves, input, and libraries. General subroutine arguments, local
+scope, recursion, and `FUNC` are not supported. Review the automatic-navigation warning:
 QSP executes `GOTO` immediately, while the current Paralleax mapping exposes the
 destination as another reader choice. See [`qsp-import.md`](qsp-import.md).
 Large administrator imports show the measured file-upload percentage. At 100%,
@@ -221,9 +224,9 @@ without rewriting the authored link text.
 During reading, the chosen text is displayed as a normal inline link. It can
 navigate only when the target is an available choice under the normal trigger
 rules; unavailable or disconnected targets stay visible but disabled. Existing
-conditional text frames remain supported and keep their previous availability
-projection. The link button no longer creates those frames; their authoring UI is
-reserved for the future conditional-text workflow.
+legacy target-based conditional frames remain supported, and structured frames
+can be authored with their own conditions in the interaction content editor.
+Structured frames do not depend on outgoing Trigger availability.
 
 Use the **Add variable** toolbar button to open the variable dialog. Its first
 selector lists the Story and every character or location that has an available
@@ -387,11 +390,20 @@ authoring aids only and never appear in the reader or affect story rules.
 
 A trigger defines when an interaction becomes available.
 
-- A trigger with no input makes its interaction available at story start.
+- A trigger with no input and no conditions makes its interaction available at
+  story start. A trigger with no input but with conditions is contextual and can
+  become available later in the journey.
 - A linked trigger has one or more input interactions.
-- Several inputs on the same trigger act as alternatives: any input can make the output interaction reachable if conditions match.
+- Several inputs on the same Trigger are alternative reachability sources. The
+  current Interaction is checked against the input list separately from the
+  Trigger's conditions.
 - Condition groups are alternatives (OR), while all conditions inside one group
   must match (AND).
+- The editor and API allow each directed source -> target pair on one Trigger
+  only. Use condition groups for alternative conditions on the same route.
+  Existing Stories with duplicate routes stay readable and can be edited or
+  cleaned up without merging their Triggers. A rejected duplicate connection
+  shows a graph alert.
 - Appearance probability is evaluated once for the Trigger after its inputs and
   one condition group match; it is 100% by default.
 - Availability timer is optional. When configured, it limits the otherwise

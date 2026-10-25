@@ -128,16 +128,16 @@ need an explicit answer before the affected capability is implemented.
   select a maintained text-collaboration protocol/library and define durable
   local queue recovery, atomic-field conflict presentation, and reconnect
   behavior against the existing rich-text tokens and history model.
-- Refine the grouped-edge inspector UX for several triggers that connect the same
-  source and target as part of the MVP editor work.
-- Define how the graph visually separates several inputs that feed the same
-  trigger before reaching one output interaction.
+- Resolved: each Trigger has its own graph marker, and multiple input edges for
+  one Trigger converge on that marker. Historical duplicate source -> target
+  routes remain independently visible and deletable; normal authoring prevents
+  creating new duplicates. See [Domain invariants](domain-invariants.md) and
+  [Trigger semantics](triggers.md).
 - Decide whether a source/code view for variables and conditional text is a
-  read-only diagnostic or an editable representation. If editing is considered,
-  define stable identity for variable references and conditional blocks,
-  sanitization, and lossless round trips before implementation; preserve the
-  current rich-text storage contract and do not bundle this with the deferred
-  Tiptap/ProseMirror evaluation.
+  read-only diagnostic or a second editable representation. The current rich-text
+  editor already supports variable markers and structured conditional frames;
+  any additional source view must define stable identity, sanitization, and
+  lossless round trips while preserving the current storage contract.
 
 ## Story Canvas UX
 
@@ -162,13 +162,6 @@ need an explicit answer before the affected capability is implemented.
   browser and text-input conflict rules.
 - Validate whether a narrative, reading-oriented projection materially improves
   authoring beyond the inspector and Simulation Mode.
-
-## Interface and Presentation
-
-- Resolve the directional-arrow style requested for localized interface paths
-  against the repository instruction to use ASCII `->` for directional and
-  ownership relationships. Decide the scope across visible UI, examples, and
-  accessibility names; keep code and authored-expression syntax unchanged.
 
 ## Hosting and Scale
 

@@ -2,14 +2,13 @@ import { defaultStoryAccess } from '../../access-control.js';
 import type { Interaction } from '../../model/interactions.js';
 import type { Story } from '../../model/stories.js';
 import type { StatValue, StatValueType } from '../../model/stats.js';
-import { buildImportedTrigger } from '../story-builders.js';
+import { buildImportedTrigger, groupImportedTriggerRoutes } from '../story-builders.js';
 import { layoutChoiceScriptGraph } from './graph-builder.js';
 import {
   escapeHtml,
   humanizeIdentifier,
   normalizeIdentifier,
   truncate,
-  unique,
 } from './helpers.js';
 import type {
   DirectEdge,
@@ -41,27 +40,25 @@ export function mapChoiceScriptGraphToStory(
   const positions = layoutChoiceScriptGraph(graph.nodes, graph.edges);
   const interactions: Interaction[] = graph.nodes.map((node) => {
     const incomingEdges = incoming.get(node.key) ?? [];
-    const triggerGroups = new Map<
-      string,
-      { inputKeys: string[]; condition?: ReturnType<typeof mapSourceCondition> }
-    >();
-    for (const edge of incomingEdges) {
-      const condition = edge.condition
-        ? mapSourceCondition(edge.condition, declarations, variableIds, report)
-        : undefined;
-      const signature = JSON.stringify(condition ?? null);
-      const group = triggerGroups.get(signature) ?? { inputKeys: [], condition };
-      group.inputKeys.push(edge.from);
-      triggerGroups.set(signature, group);
-    }
+    const routeGroups = groupImportedTriggerRoutes(
+      incomingEdges.map((edge) => {
+        const condition = edge.condition
+          ? mapSourceCondition(edge.condition, declarations, variableIds, report)
+          : undefined;
+        return {
+          inputInteractionId: edge.from,
+          conditionGroups: [condition ? [condition] : []],
+        };
+      }),
+    );
     const triggers =
       incomingEdges.length === 0
         ? [buildImportedTrigger(options.createId(), [], [[]])]
-        : [...triggerGroups.values()].map((group) =>
+        : routeGroups.map((group) =>
             buildImportedTrigger(
               options.createId(),
-              unique(group.inputKeys).map((key) => interactionIds.get(key)!),
-              group.condition ? [[group.condition]] : [[]],
+              group.inputInteractionIds.map((key) => interactionIds.get(key)!),
+              group.conditionGroups,
             ),
           );
     const statEffects = node.effects.flatMap((effect) => {
