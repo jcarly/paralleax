@@ -746,6 +746,10 @@ span.conditional-text {
 }
 
 .choice-timer-fill {
+  /* ChoiceTimerBar supplies per-choice values through its typed inline style. */
+  --choice-timer-duration: 0ms;
+  --choice-timer-ratio: 1;
+
   display: block;
   width: 100%;
   height: 100%;

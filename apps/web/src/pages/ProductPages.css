@@ -321,7 +321,7 @@
 .auth-recovery-link {
   display: inline-block;
   margin-top: 0.9rem;
-  color: var(--product-forest);
+  color: var(--product-accent);
   font-size: 0.74rem;
 }
 

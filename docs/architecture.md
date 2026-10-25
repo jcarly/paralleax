@@ -1150,8 +1150,12 @@ classes directly.
   with per-workspace thresholds enforced by the coverage commands.
 - Bundle contract: the production web build checks the Vite manifest, dynamic
   route boundaries, and compressed initial/editor/player budgets.
-- Code style: ESLint, Stylelint on explicitly listed component CSS files, and
-  Prettier.
+- Code style: ESLint with zero-warning enforcement, Stylelint on
+  `apps/web/src/**/*.css`, and Prettier. The Stylelint glob covers all current
+  web source stylesheets, including feature, graph, Simulation, and prototype
+  styles, while excluding dependencies and generated/build output by scope.
+  `styles.css` is the cross-file reference for global CSS tokens; component
+  custom properties remain declared beside their use.
 - GitHub Actions: lint, format, typecheck, coverage, build, PostgreSQL 17
   integration and recovery, Playwright, production dependency audit, and
   production image builds on pushes and pull requests.

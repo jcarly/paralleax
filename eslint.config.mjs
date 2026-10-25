@@ -70,8 +70,49 @@ export default tseslint.config(
     },
   },
   {
+    files: ['packages/shared/src/**/*.ts'],
     rules: {
-      '@typescript-eslint/no-explicit-any': 'warn',
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: [
+                '**/apps/api/**',
+                '**/apps/web/**',
+                '@paralleax/api',
+                '@paralleax/api/**',
+                '@paralleax/web',
+                '@paralleax/web/**',
+                'apps/api/**',
+                'apps/web/**',
+                '@nestjs/**',
+                '@xyflow/**',
+                'axios',
+                'http',
+                'https',
+                'node-fetch',
+                'node:http',
+                'node:https',
+                'pg',
+                'react',
+                'react/**',
+                'react-dom',
+                'react-dom/**',
+                'reactflow',
+                'undici',
+              ],
+              message:
+                'packages/shared must remain independent of UI, API, database, and HTTP layers.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
     },
   },

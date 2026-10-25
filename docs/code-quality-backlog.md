@@ -234,6 +234,20 @@ are not prerequisites for disposable author sessions.
       session presentation across frontend routes.
 - [ ] Make API request identifiers available in optional support details.
 
+## P2 — Static Analysis
+
+- [ ] Pilot type-aware ESLint in one workspace. Start with one bounded
+      production source scope; evaluate `no-floating-promises`,
+      `no-misused-promises`, `no-unnecessary-type-assertion`, and only the
+      `no-unsafe-*` rules that add distinct value. Record diagnostics and lint
+      time before expanding. Do not make all workspaces type-aware until the
+      measured CI cost is acceptable and the baseline is actionable.
+- [ ] Evaluate targeted cascade and design-token checks for stable component
+      styles after responsive override and token ownership are clear. Start
+      from a measured file-specific baseline; preserve authored decoration
+      values and graph geometry, and do not set a specificity cap or ban raw
+      colors/dimensions without an approved token rule.
+
 ## P2 — Testing And Accessibility
 
 - [x] Add a separate Playwright real-stack golden path with PostgreSQL and no
@@ -851,6 +865,35 @@ from CSS dimensions alone.
       unknown property while accepting a custom runtime variable and a differing
       fallback declaration. Extend the target list only as ownership is reviewed.
       Resolution commit: `ad57b65`.
+      **Coverage and objective-rule expansion completed 2026-10-25:** the
+      `apps/web/src/**/*.css` glob now checks all 18 source stylesheets, including
+      graph, Simulation, and the lazy prototype routes. Global token references
+      use only `styles.css`; component-local custom properties stay local, so a
+      prototype-only `--muted` token cannot make a missing editor token look
+      valid. Enabled unknown custom-property, invalid property-value, selector,
+      media-feature name/value, media-query, and shorthand-override checks after
+      auditing their current diagnostics. The `referenceFiles` token lookup is
+      covered by an isolated test because Stylelint marks that option
+      experimental. Corrected stale `--color-text-muted`, `--product-forest`,
+      `--border`, `--surface-soft`, and `--muted` references, declared the two
+      timer values that `ChoiceTimerBar.tsx` sets dynamically, and corrected an
+      invalid prototype `font` shorthand. Added isolated Stylelint rule tests.
+      ESLint now errors on explicit `any` and fails CI on any warning; the
+      existing lint had no warnings. A targeted `no-restricted-imports` rule
+      protects the documented framework-independent boundary of
+      `packages/shared`.
+      Globally enabling `no-descending-specificity`, `no-duplicate-selectors`,
+      and `declaration-no-important` was deferred: the audit reported 264, 46,
+      and 49 existing diagnostics respectively, many from responsive/cascade
+      overrides, the prototype, and third-party graph styling. A full
+      type-aware ESLint probe across web, API, and shared exceeded 3.5 minutes
+      without completing, compared with 29.4 seconds for the prior root lint.
+      No broad UI-feature import restriction was added because the `components`
+      directory mixes generic controls with domain inspectors that intentionally
+      import `features/comments/InspectorCommentField`. The bounded typed-lint
+      and targeted CSS pilots remain P2 backlog items; global-selector bans,
+      specificity caps, and raw color/dimension restrictions still need stable
+      ownership and approved thresholds.
 - [x] **DS-14 — Complete targeted graph and visual regression coverage** (D15, D16).
       Completed 2026-10-24 after the relevant component migrations. Reused the
       existing React Flow marker geometry, routing/projection, drag and pan
