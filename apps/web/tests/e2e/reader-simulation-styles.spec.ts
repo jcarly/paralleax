@@ -89,7 +89,11 @@ test('keeps Reader and Simulation styles isolated across direct routes and viewp
   expect(simulationTypography.titleLineHeight).toBe(readerTypography.titleLineHeight);
 
   const simulationLayout = await readPlayerLayout(page);
-  expect(simulationLayout.page).toMatchObject({ display: 'grid', maxWidth: 'none', padding: '0px' });
+  expect(simulationLayout.page).toMatchObject({
+    display: 'grid',
+    maxWidth: 'none',
+    padding: '0px',
+  });
   expect(simulationLayout.header).toMatchObject({
     backgroundColor: 'rgb(31, 48, 41)',
     position: 'static',
