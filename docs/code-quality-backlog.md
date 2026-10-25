@@ -1226,13 +1226,21 @@ tests before replacing code. The current product baseline remains authoritative.
       removal while retaining deliberate placement. React Flow collision examples
       are implementation references to inspect, not an assumed built-in cleanup
       API. Define the permitted displacement and spacing behavior before delivery.
-- [ ] Evaluate **React Hook Form with the existing Zod dependency** where it
-      demonstrably simplifies inspector forms. Preserve current autosave,
-      validation, draft, and optimistic persistence behavior.
-- [ ] Evaluate **Chevrotain** if ChoiceScript or QSP grammar growth justifies
-      replacing parts of the existing parsers. Preserve the staged adapters,
-      source diagnostics, compatibility reports, and canonical mapping; a parser
-      library does not resolve unsupported source runtime semantics.
+- [ ] Evaluate **React Hook Form with the existing Zod dependency** only where
+      it demonstrably simplifies a specific inspector form. The 2026-10-25
+      source scan found no Zod imports in the web application; confirm that
+      finding before considering React Hook Form, and do not add a new form
+      state model without an observed validation or draft problem. Preserve
+      current autosave, validation, draft, and optimistic persistence behavior.
+- [ ] Evaluate **Chevrotain** if a concrete ChoiceScript, QSP, or expression
+      grammar expansion justifies replacing part of an existing parser. Compare
+      one grammar with the current implementation; Peggy may be included only as
+      a parser-generator comparison on that same grammar. Preserve the staged
+      adapters, source locations, cancellation, compatibility reports, and
+      canonical Story mapping; a parser library does not resolve unsupported
+      source runtime semantics. Keep the current parser if the comparison does
+      not reduce custom grammar code without losing diagnostics or adding a
+      costly build/runtime dependency.
 - [ ] Evaluate **Fuse.js** only when approximate, multi-field search becomes a
       concrete requirement beyond the existing filtering and navigation.
 
@@ -1259,8 +1267,78 @@ Primary references checked for the layout and structural-analysis candidates:
   (the example is distributed under the React Flow Pro license)
 - [Graphology standard library](https://graphology.github.io/standard-library/)
 
-The remaining named libraries are retained from the author's note for later
-evaluation; this entry does not verify their versions or select integrations.
+The [2026-10-25 library reuse audit](audits/library-reuse-2026-10-25.md) records
+current implementation evidence, upstream version/license checks, and the
+specific candidates that merit bounded experiments. The entries below remain
+conditional; this list does not approve any dependency.
+
+## Library Reuse Audit Follow-ups: 2026-10-25
+
+These tasks are backlog work only. Guided author validation, data safety, and
+the current roadmap remain ahead of library experiments. Recheck upstream
+versions and runtime requirements when a task is scheduled.
+
+- [ ] **P2 — Pilot Knip across npm workspaces.** Add it only as development
+      tooling and inspect unused files, exports, and dependencies in the root,
+      `apps/web`, `apps/api`, and `packages/shared`. **Depends on:** correct
+      workspace entry points, test/config discovery, and dynamic import
+      registration. **Acceptance:** classify each finding as confirmed or false
+      positive; representative test, worker, Vite, Nest, and script entrypoints
+      are discovered; the configuration needs no broad ignore that hides a
+      workspace; the report adds no duplicate ESLint, Stylelint, or
+      dependency-cruiser rule. If setup noise outweighs unique findings, retain
+      the audit report and do not add the tool to CI. **Verification:** Knip
+      workspace run, current lint/typecheck, and a review of every finding before
+      cleanup.
+- [ ] **P2 — Confirm and remove the unused web Zod dependency.** The source scan
+      found `zod` declared in `apps/web/package.json` but no application or test
+      import. Confirm with Knip or an equivalent complete entrypoint scan before
+      editing the manifest and lockfile. **Acceptance:** no static or dynamic
+      use remains; the direct web dependency and its now-unneeded lockfile
+      entries are removed; the web typecheck, tests, and production bundle still
+      pass. Do not add React Hook Form as a replacement. **Verification:** the
+      targeted dependency scan and web checks.
+- [ ] **P2 — Prototype one Radix Dialog in the existing design system.** Use
+      `StorySettingsDialog` as the prototype, adapting Dialog open/close handling
+      to its current conditional-mount and `onClose` lifecycle while keeping the
+      current styles, labels, fields, and save workflow. Compare it with the shared
+      `ModalPortal` and dialog helpers; do not migrate menus, tooltips, or other
+      dialogs in the same task. **Acceptance:** the prototype preserves Escape,
+      focus entry and restore, Tab wrapping, nested modal isolation, body scroll
+      restore, tooltip access inside the dialog, and keyboard isolation from the
+      graph; CSS appearance remains aligned with the design tokens; no Story
+      access or persistence behavior changes. Record custom code removed, new
+      package/runtime cost, bundle delta, test coverage, and any remaining
+      lifecycle code. If the shared custom modal stays simpler, keep it.
+      **Verification:** focused component tests, accessibility checks, and a
+      browser pass through Story settings on desktop and narrow layouts.
+- [ ] **P2 — Complete an OpenAPI coverage check before generating client types.**
+      `@nestjs/swagger` is already installed, but current API metadata is
+      concentrated in the health controller and most Story DTOs lack schema
+      decorators. Inventory every method used by `apps/web/src/api.ts`, then
+      determine whether its request and response schemas can be represented
+      completely from the Nest contract. If so, prototype
+      `openapi-typescript` on a small authenticated read/write endpoint set;
+      keep `openapi-fetch` out unless it preserves the existing error mapping,
+      session-expiry event, cancellation, and upload-progress transport with
+      less code. **Acceptance:** generated types agree with DTO validation and
+      shared Story types; missing/error responses and cookie auth are explicit;
+      binary upload remains correctly represented; generated types are
+      reproducible without exposing production Swagger routes. No generated
+      client replaces the current request wrapper until a separate comparison
+      proves it removes code. **Verification:** schema coverage report, generated
+      type check, and focused API client contract tests.
+- [ ] **P3 — Compare a parser library only when importer scope grows.** Reuse the
+      existing parser evaluation above when a planned source-format feature or a
+      recurring parser defect gives it a concrete target. Compare Chevrotain,
+      optionally Peggy, and the current implementation on the same grammar and
+      existing supported/invalid inputs. **Acceptance:** source file and line
+      diagnostics, cancellation, compatibility reporting, canonical Story
+      mapping, and current fixtures remain equivalent; record the exact custom
+      grammar code removed, dependencies or generated files added, Node 24/ESM
+      behavior, and shared/web bundle impact. Preserve the handwritten parser
+      when the measured tradeoff is negative. This is not a prerequisite for
+      extending importer support.
 
 ## Delivery Notes
 
