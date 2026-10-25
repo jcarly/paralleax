@@ -889,10 +889,6 @@ export function StoryPlayer({
             <>
               {isSimulationMode ? (
                 <>
-                  <div className="simulation-edit-label">
-                    <span className="product-badge accent">{t('player.liveEditing')}</span>
-                    <small>{t('player.liveEditingHelp')}</small>
-                  </div>
                   <input
                     className="simulation-title-input"
                     aria-label={t('player.currentInteractionTitle')}

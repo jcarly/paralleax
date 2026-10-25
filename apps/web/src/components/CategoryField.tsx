@@ -18,12 +18,13 @@ export function CategoryField({
   const inputId = useId();
 
   return (
-    <div className="field">
+    <div className="form-field form-field--compact">
       <div className="field-label-with-help">
         <label htmlFor={inputId}>{t('inspector.category')}</label>
         <FieldHelpTooltip label={t('inspector.category')} help={t('inspector.categoryHelp')} />
       </div>
       <input
+        className="form-control form-control--compact"
         id={inputId}
         aria-label={t('inspector.category')}
         value={category ?? ''}

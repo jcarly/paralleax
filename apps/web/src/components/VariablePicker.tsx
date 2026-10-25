@@ -42,6 +42,7 @@ export function VariablePicker({
   onSelectionClear,
   autoFocus = false,
   filter,
+  density = 'compact',
 }: {
   story: Story;
   selectedTarget?: StatTarget;
@@ -49,6 +50,7 @@ export function VariablePicker({
   onSelectionClear?: () => void;
   autoFocus?: boolean;
   filter?: (target: StatTarget) => boolean;
+  density?: 'standard' | 'compact';
 }) {
   const { t } = useTranslation();
   const roots = useMemo(
@@ -90,8 +92,12 @@ export function VariablePicker({
           ? t('richText.variableOrItemFor', { name: parent.name })
           : t('richText.variableOwner');
         return (
-          <label className="rich-text-variable-field" key={parent?.id ?? 'owner'}>
+          <label
+            className={`form-field form-field--${density} rich-text-variable-field`}
+            key={parent?.id ?? 'owner'}
+          >
             <select
+              className={`form-control form-control--${density}`}
               aria-label={label}
               autoFocus={autoFocus && depth === 0}
               data-modal-autofocus={autoFocus && depth === 0 ? '' : undefined}

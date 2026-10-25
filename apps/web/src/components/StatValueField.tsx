@@ -16,6 +16,7 @@ export function StatValueField({
   if (valueType === 'boolean') {
     return (
       <select
+        className="form-control form-control--compact"
         aria-label={ariaLabel}
         value={String(value)}
         onChange={(event) => {
@@ -32,6 +33,7 @@ export function StatValueField({
 
   return (
     <input
+      className="form-control form-control--compact"
       aria-label={ariaLabel}
       type={valueType === 'number' ? 'number' : 'text'}
       value={String(value)}

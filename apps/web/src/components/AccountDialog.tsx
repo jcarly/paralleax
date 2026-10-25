@@ -93,7 +93,7 @@ export function AccountDialog({
           <h2 id="account-dialog-title">{t('account.title')}</h2>
           <p>{t('account.description')}</p>
           <form onSubmit={(event) => void submit(event)}>
-            <div className="product-field">
+            <div className="form-field form-field--standard">
               <div className="field-label-with-help">
                 <label htmlFor="account-display-name">{t('account.displayName')}</label>
                 <FieldHelpTooltip
@@ -102,6 +102,7 @@ export function AccountDialog({
                 />
               </div>
               <input
+                className="form-control form-control--standard"
                 id="account-display-name"
                 autoFocus
                 data-modal-autofocus
@@ -141,9 +142,10 @@ export function AccountDialog({
             <h3 id="account-security-title">{t('account.securityTitle')}</h3>
             <p>{t('account.securityDescription')}</p>
             <form onSubmit={(event) => void changePassword(event)}>
-              <label className="product-field">
+              <label className="form-field form-field--standard">
                 <span>{t('account.currentPassword')}</span>
                 <input
+                  className="form-control form-control--standard"
                   autoComplete="current-password"
                   type="password"
                   value={currentPassword}
@@ -151,9 +153,10 @@ export function AccountDialog({
                   required
                 />
               </label>
-              <label className="product-field">
+              <label className="form-field form-field--standard">
                 <span>{t('account.newPassword')}</span>
                 <input
+                  className="form-control form-control--standard"
                   autoComplete="new-password"
                   type="password"
                   value={newPassword}

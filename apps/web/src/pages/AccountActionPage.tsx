@@ -91,9 +91,10 @@ export function AccountActionPage({
           ) : (
             <form onSubmit={(event) => void submit(event)}>
               {action === 'request-password-reset' ? (
-                <label className="product-field">
+                <label className="form-field form-field--standard">
                   <span>{t('auth.email')}</span>
                   <input
+                    className="form-control form-control--standard"
                     autoComplete="email"
                     type="email"
                     value={email}
@@ -105,9 +106,10 @@ export function AccountActionPage({
               ) : null}
               {action === 'reset-password' ? (
                 <>
-                  <label className="product-field">
+                  <label className="form-field form-field--standard">
                     <span>{t('auth.password')}</span>
                     <input
+                      className="form-control form-control--standard"
                       autoComplete="new-password"
                       type="password"
                       value={password}
@@ -117,9 +119,10 @@ export function AccountActionPage({
                       required
                     />
                   </label>
-                  <label className="product-field">
+                  <label className="form-field form-field--standard">
                     <span>{t('auth.confirmPassword')}</span>
                     <input
+                      className="form-control form-control--standard"
                       autoComplete="new-password"
                       type="password"
                       value={confirmation}

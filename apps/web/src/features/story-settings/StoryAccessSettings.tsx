@@ -138,7 +138,7 @@ export function StoryAccessSettings({ storyId, onInaccessible }: StoryAccessSett
             email: `${access.owner.displayName} · ${access.owner.email}`,
           })}
         </p>
-        <div className="product-field">
+        <div className="form-field form-field--standard">
           <div className="field-label-with-help">
             <label htmlFor="story-access-visibility">{t('access.visibility.label')}</label>
             <FieldHelpTooltip
@@ -147,6 +147,7 @@ export function StoryAccessSettings({ storyId, onInaccessible }: StoryAccessSett
             />
           </div>
           <select
+            className="form-control form-control--standard"
             id="story-access-visibility"
             value={access.visibility}
             disabled={pending}
@@ -164,9 +165,10 @@ export function StoryAccessSettings({ storyId, onInaccessible }: StoryAccessSett
             ))}
           </select>
         </div>
-        <label className="product-field">
+        <label className="form-field form-field--standard">
           <span>{t('access.edit.label')}</span>
           <select
+            className="form-control form-control--standard"
             value={access.editPolicy}
             disabled={pending}
             onChange={(event) =>
@@ -183,12 +185,13 @@ export function StoryAccessSettings({ storyId, onInaccessible }: StoryAccessSett
             ))}
           </select>
         </label>
-        <div className="product-field">
+        <div className="form-field form-field--standard">
           <div className="field-label-with-help">
             <label htmlFor="story-access-comments">{t('access.comments.label')}</label>
             <FieldHelpTooltip label={t('access.comments.label')} help={t('access.comments.help')} />
           </div>
           <select
+            className="form-control form-control--standard"
             id="story-access-comments"
             value={access.commentPolicy}
             disabled={pending}
@@ -226,18 +229,20 @@ export function StoryAccessSettings({ storyId, onInaccessible }: StoryAccessSett
           />
         </div>
         <form className="collaborator-form" onSubmit={(event) => void addUser(event)}>
-          <label className="product-field">
+          <label className="form-field form-field--standard">
             <span>{t('access.email')}</span>
             <input
+              className="form-control form-control--standard"
               type="email"
               value={email}
               disabled={pending}
               onChange={(event) => setEmail(event.target.value)}
             />
           </label>
-          <label className="product-field">
+          <label className="form-field form-field--standard">
             <span>{t('access.role.label')}</span>
             <select
+              className="form-control form-control--standard"
               value={role}
               disabled={pending}
               onChange={(event) => setRole(event.target.value as StoryCollaboratorRole)}
@@ -257,9 +262,10 @@ export function StoryAccessSettings({ storyId, onInaccessible }: StoryAccessSett
                 <b>{collaborator.displayName}</b>
                 <span>{collaborator.email}</span>
               </span>
-              <label className="access-collaborator-role">
+              <label className="access-collaborator-role form-field form-field--compact">
                 <span>{t('access.roleFor', { name: collaborator.displayName })}</span>
                 <select
+                  className="form-control form-control--compact"
                   value={collaborator.role}
                   disabled={pending}
                   onChange={(event) =>

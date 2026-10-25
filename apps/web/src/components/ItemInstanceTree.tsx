@@ -59,9 +59,10 @@ export function ItemInstanceTree({
               ))}
             </ul>
           ) : null}
-          <label>
+          <label className="form-field form-field--compact">
             {t('inspector.parent')}
             <select
+              className="form-control form-control--compact"
               aria-label={t('inspector.parentFor', { name: definition?.name ?? item.id })}
               value={item.parentItemId ?? ''}
               onChange={(event) =>
@@ -90,9 +91,10 @@ export function ItemInstanceTree({
           </label>
           {item.parentItemId ? (
             <>
-              <label>
+              <label className="form-field form-field--compact">
                 {t('inspector.relationship')}
                 <select
+                  className="form-control form-control--compact"
                   aria-label={t('inspector.relationshipFor', {
                     name: definition?.name ?? item.id,
                   })}
@@ -112,9 +114,10 @@ export function ItemInstanceTree({
                   ))}
                 </select>
               </label>
-              <label>
+              <label className="form-field form-field--compact">
                 {t('inspector.slot')}
                 <input
+                  className="form-control form-control--compact"
                   aria-label={t('inspector.slotFor', { name: definition?.name ?? item.id })}
                   defaultValue={item.slotKey ?? ''}
                   onBlur={(event) =>

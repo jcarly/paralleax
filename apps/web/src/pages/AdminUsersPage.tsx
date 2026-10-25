@@ -111,9 +111,10 @@ export function AdminUsersPage({ currentUserId }: { currentUserId?: string }) {
                 onChange={(event) => setQuery(event.target.value)}
               />
             </label>
-            <label className="admin-role-filter">
+            <label className="admin-role-filter form-field form-field--standard">
               <span className="sr-only">{t('admin.filterRole')}</span>
               <select
+                className="form-control form-control--standard"
                 aria-label={t('admin.filterRole')}
                 value={roleFilter}
                 onChange={(event) => setRoleFilter(event.target.value as RoleFilter)}
@@ -170,9 +171,10 @@ export function AdminUsersPage({ currentUserId }: { currentUserId?: string }) {
                       <small className="admin-protected-role">{t('admin.lastAdmin')}</small>
                     ) : null}
                   </span>
-                  <label className="admin-role-control">
+                  <label className="admin-role-control form-field form-field--standard">
                     <span>{t('admin.role')}</span>
                     <select
+                      className="form-control form-control--standard"
                       aria-label={t('admin.roleFor', { email: user.email })}
                       value={user.role}
                       disabled={pendingId === user.id}

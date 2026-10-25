@@ -859,6 +859,14 @@ from CSS dimensions alone.
       checklist and browser zoom/target-size review remain open under D15.
       Resolution commit: `2cd35b8`.
 
+- [ ] **DS-15 — Review specialized field exceptions after adoption.** Keep this
+      P2 follow-up behind the manual keyboard/focus audit and guided author
+      validation. After the shared standard/compact styles are used in production,
+      review search and toolbar controls, native date/time fields, expression
+      editors, and graph controls against author feedback at desktop and mobile
+      widths. Record only evidence-backed changes; preserve specialized behavior
+      and do not reopen DS-01 through DS-14.
+
 ## Library Evaluation Candidates — 2026-09-24
 
 These candidates record the author's library-reuse note and the initial layout

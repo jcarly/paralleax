@@ -52,7 +52,22 @@ describe('DesignSystemPage', () => {
     ).toBeInTheDocument();
 
     const requiredField = screen.getByRole('textbox', { name: /Required field/ });
+    expect(screen.getByRole('textbox', { name: /Story title/ })).toHaveClass(
+      'form-control',
+      'form-control--standard',
+    );
+    expect(screen.getByRole('combobox', { name: 'Location' })).toHaveClass(
+      'form-control',
+      'form-control--standard',
+    );
+    expect(screen.getByRole('textbox', { name: 'Notes' })).toHaveClass(
+      'form-control',
+      'form-control--multiline',
+    );
+    expect(screen.getByRole('textbox', { name: 'Read only' })).toHaveAttribute('readonly');
+    expect(screen.getByRole('textbox', { name: 'Disabled' })).toBeDisabled();
     expect(requiredField).toHaveAttribute('aria-invalid', 'true');
+    expect(requiredField).toHaveClass('form-control', 'form-control--standard');
     expect(requiredField).toHaveAttribute('aria-describedby', 'design-required-field-error');
     expect(document.getElementById('design-required-field-error')).toHaveTextContent(
       'This field cannot be empty.',
@@ -82,6 +97,7 @@ describe('DesignSystemPage', () => {
       'Stat change 1',
     );
     expect(effectCard?.querySelector('.interaction-effect-fields')).toBeInTheDocument();
+    expect(effectCard?.querySelector('.form-control--compact')).toBeInTheDocument();
     expect(document.querySelector('.design-effect-card')).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Remove stat effect' }));
     expect(

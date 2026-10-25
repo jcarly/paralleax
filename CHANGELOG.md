@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Added shared standard and compact field styles for product forms, settings,
+  inspectors, conditions, and effects. The design catalogue now shows both
+  densities and their control states; persisted stories and editing behavior are
+  unchanged.
+
 - Added a staged, non-mutating CSS lint check for the explicitly owned reusable
   component stylesheets. Graph, authored decoration, Prototype and Simulation
   styles remain outside its initial scope.

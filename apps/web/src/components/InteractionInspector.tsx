@@ -56,9 +56,10 @@ function SearchableTargetField({
   const selectedLabel = options.find((option) => option.id === value)?.label ?? '';
 
   return (
-    <label>
+    <label className="form-field form-field--compact">
       {t('interactionInspector.target')}
       <input
+        className="form-control form-control--compact"
         aria-label={ariaLabel}
         autoComplete="off"
         defaultValue={selectedLabel}
@@ -294,9 +295,10 @@ export function InteractionInspector({
           textCommentCounts={textCommentCounts}
           onOpenTextComments={onOpenTextComments}
         >
-          <label>
+          <label className="form-field form-field--compact">
             {t('interactionInspector.title')}
             <input
+              className="form-control form-control--compact"
               data-comment-field="title"
               value={interaction.title}
               onChange={(event) => updateLocalInteraction({ title: event.target.value })}
@@ -348,7 +350,7 @@ export function InteractionInspector({
             >
               <div className="interaction-timing-block">
                 <strong>{t('interactionInspector.durationTitle')}</strong>
-                <div className="field">
+                <div className="form-field form-field--compact">
                   <div className="field-label-with-help">
                     <span>{t('interactionInspector.duration')}</span>
                     <FieldHelpTooltip
@@ -356,8 +358,9 @@ export function InteractionInspector({
                       help={t('interactionInspector.durationHelp')}
                     />
                   </div>
-                  <span className="interaction-duration-input">
+                  <span className="interaction-duration-input form-control-group form-control-group--compact">
                     <input
+                      className="form-control form-control--compact"
                       aria-label={t('interactionInspector.durationMinutes')}
                       min="0"
                       step="1"
@@ -378,7 +381,9 @@ export function InteractionInspector({
                         void onPatch(interaction.id, { durationMinutes });
                       }}
                     />
-                    <small>{t('interactionInspector.minutes')}</small>
+                    <small className="form-control-suffix">
+                      {t('interactionInspector.minutes')}
+                    </small>
                   </span>
                 </div>
               </div>
@@ -389,9 +394,10 @@ export function InteractionInspector({
               semanticCommentCounts={semanticCommentCounts}
               onOpenSemanticComments={onOpenSemanticComments}
             >
-              <label>
+              <label className="form-field form-field--compact">
                 {t('interactionInspector.location')}
                 <select
+                  className="form-control form-control--compact"
                   value={interaction.locationId ?? ''}
                   onChange={(event) => {
                     const locationId = event.target.value || null;
@@ -529,9 +535,10 @@ export function InteractionInspector({
                           }}
                         />
                       </div>
-                      <label>
+                      <label className="form-field form-field--compact">
                         {t('interactionInspector.operation')}
                         <select
+                          className="form-control form-control--compact"
                           aria-label={t('interactionInspector.statEffectOperation')}
                           disabled={valueType !== 'number'}
                           value={effect.operation}
@@ -550,7 +557,7 @@ export function InteractionInspector({
                           <option value="set">{t('interactionInspector.setOperation')}</option>
                         </select>
                       </label>
-                      <div>
+                      <div className="form-field form-field--compact">
                         <label>{t('interactionInspector.value')}</label>
                         <button
                           type="button"
@@ -610,6 +617,7 @@ export function InteractionInspector({
                           />
                         ) : valueType === 'boolean' ? (
                           <select
+                            className="form-control form-control--compact"
                             aria-label={t('interactionInspector.statEffectValue')}
                             value={String(effect.value)}
                             onChange={(event) => {
@@ -627,6 +635,7 @@ export function InteractionInspector({
                           </select>
                         ) : (
                           <input
+                            className="form-control form-control--compact"
                             aria-label={t('interactionInspector.statEffectValue')}
                             type={valueType === 'number' ? 'number' : 'text'}
                             value={String(effect.value ?? '')}
@@ -707,9 +716,10 @@ export function InteractionInspector({
                         void onPatch(interaction.id, { itemEffects });
                       }}
                     />
-                    <label>
+                    <label className="form-field form-field--compact">
                       {t('interactionInspector.item')}
                       <select
+                        className="form-control form-control--compact"
                         aria-label={t('interactionInspector.affectedItem')}
                         value={effect.itemDefinitionId ?? ''}
                         onChange={(event) => {
@@ -733,9 +743,10 @@ export function InteractionInspector({
                         ))}
                       </select>
                     </label>
-                    <label>
+                    <label className="form-field form-field--compact">
                       {t('interactionInspector.operation')}
                       <select
+                        className="form-control form-control--compact"
                         aria-label={t('interactionInspector.itemEffectOperation')}
                         value={effect.operation}
                         onChange={(event) => {

@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 // Shared tokens and utilities load first; keep feature stylesheet order stable.
 import './styles.css';
+import './components/formFields.css';
 import './features/story-editor/editor.css';
 import './components/StoryContextList.css';
 import './features/story-editor/inspectors/inspector-layout.css';

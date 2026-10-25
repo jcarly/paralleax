@@ -1,13 +1,3 @@
-.inspector label,
-.interaction-effect-fields label,
-.rich-text-editor-dialog label,
-.story-groups-panel label {
-  display: block;
-  font-size: var(--type-size-compact);
-  font-weight: 650;
-  margin-bottom: 1rem;
-  color: var(--color-muted);
-}
 .inspector fieldset,
 .rich-text-editor-dialog fieldset {
   margin: 0 0 1rem;
@@ -28,35 +18,6 @@
   align-items: center;
   gap: 0.5rem;
   margin: 0.55rem 0;
-}
-.inspector input[type='text'],
-.inspector input[type='number'],
-.inspector input:not([type]),
-.inspector textarea,
-.inspector select,
-.rich-text-editor-dialog input[type='text'],
-.rich-text-editor-dialog input[type='number'],
-.rich-text-editor-dialog input:not([type]),
-.rich-text-editor-dialog textarea,
-.rich-text-editor-dialog select,
-.story-groups-panel input,
-.story-groups-panel select,
-.interaction-effect-fields
-  :is(input[type='text'], input[type='number'], input:not([type]), select) {
-  width: 100%;
-  margin-top: 0.35rem;
-  padding: 0.66rem 0.7rem;
-  border: 1px solid var(--color-control-border);
-  border-radius: 8px;
-  background: var(--color-surface-secondary);
-  color: var(--color-text);
-  font: inherit;
-  font-size: var(--type-size-control);
-}
-.inspector textarea,
-.rich-text-editor-dialog textarea {
-  line-height: 1.55;
-  resize: vertical;
 }
 .graph-decoration-inspector input[type='color'] {
   display: block;
@@ -110,17 +71,8 @@
 }
 
 .rich-text-variable-field {
-  display: grid;
-  gap: 0.35rem;
+  min-width: 0;
   margin: 0;
-  color: var(--color-muted);
-  font-size: 0.78rem;
-  font-weight: 650;
-}
-
-.rich-text-variable-field input,
-.rich-text-variable-field select {
-  width: 100%;
 }
 
 .rich-text-interaction-link-dialog,
@@ -197,7 +149,6 @@
 }
 .trigger-probability-field input {
   width: 6rem;
-  margin: 0;
 }
 .trigger-variant {
   position: relative;
@@ -290,17 +241,9 @@
   display: block;
   flex: 0 0 auto;
   min-width: 0;
-  margin: 0 !important;
-}
-.condition-fields > :is(select, input, textarea) {
-  width: 100%;
-}
-.condition-fields .rich-text-variable-picker {
-  gap: 0.5rem;
   margin: 0;
 }
-.condition-fields .rich-text-variable-field {
-  display: grid;
+.condition-fields .rich-text-variable-picker {
   gap: 0.5rem;
   margin: 0;
 }
@@ -553,31 +496,6 @@
 .interaction-timing-block > .hint {
   margin: 0.25rem 0 0.7rem;
 }
-.interaction-timing-block label {
-  margin-bottom: 0;
-}
-.interaction-duration-input {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  margin-top: 0.35rem;
-  overflow: hidden;
-  border: 1px solid var(--color-control-border);
-  border-radius: 8px;
-  background: var(--color-surface);
-}
-.interaction-duration-input input {
-  margin: 0 !important;
-  border: 0 !important;
-  border-radius: 0 !important;
-  background: transparent !important;
-}
-.interaction-duration-input small {
-  padding: 0 0.7rem;
-  color: var(--color-muted);
-  font-size: 0.72rem;
-  font-weight: 500;
-}
 .character-presence-fieldset {
   display: grid;
   gap: 0.25rem;
@@ -637,9 +555,6 @@
   gap: 0.5rem;
   align-items: center;
   margin: 0.65rem 0 1rem;
-}
-.stat-assignment select {
-  margin: 0;
 }
 .stat-name {
   align-self: center;
@@ -762,6 +677,5 @@
 }
 .stat-effect-row select,
 .stat-effect-row input {
-  margin: 0;
   min-width: 0;
 }

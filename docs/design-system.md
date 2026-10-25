@@ -123,6 +123,39 @@ text. Long-form story content and prominent headings keep their contextual
 sizes. The catalogue examples use these tokens and are the reference for their
 displayed values.
 
+### Approved field presentation (2026-10-25)
+
+Use the shared field styles in `apps/web/src/components/formFields.css` for
+ordinary inputs, selects, and textareas. Field styles are carried by their own
+classes and do not depend on `.inspector` or `.product-page` ancestors.
+
+- **Standard:** 44px minimum height for one-line controls in product forms,
+  settings, and edit dialogs.
+- **Compact:** 36px minimum height for inspector, condition, effect, and other
+  dense authoring controls.
+- Both densities use `--type-size-compact` (12px) for labels and
+  `--type-size-control` (14px) for values. Keep a consistent 6px label-to-field
+  gap.
+- Use `.form-field.form-field--standard` or `.form-field.form-field--compact`
+  for a labeled field, plus `.form-control.form-control--standard` or
+  `.form-control.form-control--compact` on the control. Use
+  `.form-control--multiline` for textareas; it sets a minimum height and leaves
+  vertical growth available.
+- Borders use `--form-control-border` and `--form-control-radius`; controls use
+  the shared surface and text colors. Hover, keyboard focus, disabled,
+  read-only, and `aria-invalid="true"` states are defined in the same module.
+  Keep labels associated with controls and connect validation messages with
+  `aria-describedby`.
+- Reuse the classes in production examples. Keep field composition in existing
+  components; do not add a React component when classes cover the presentation.
+
+The production catalogue shows standard input/select/textarea states and the
+real compact `InteractionEffectCard` used by the inspector. Keep native
+date/time picker affordances and specialized graph color/geometry controls.
+Library search and toolbar sort controls retain their compact toolbar patterns;
+they are not labeled property fields. Expression controls keep multiline editing
+behavior while using the compact control surface where authored in an inspector.
+
 The catalogue labels a `4px` base unit, while production styles use a mix of
 pixel and `rem` values. There is no enforced shared spacing-token scale today.
 The earlier 8-point list was an exploratory proposal, not an adopted rule; do
