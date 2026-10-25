@@ -14,7 +14,7 @@ test('keeps the reviewed text pairs readable on editor, product, and simulation 
   await page.evaluate(() => {
     document.body.insertAdjacentHTML(
       'afterbegin',
-      `<div id="contrast-fixture">
+      `<div id="contrast-fixture" class="simulation-mode">
         <button id="light-focus" type="button" style="background:#ffffff;color:#20221f">Light focus</button>
         <div class="player-top"><button id="dark-focus" type="button" style="background:transparent;color:#ffffff">Dark focus</button></div>
         <div class="location-panel"><button id="context-count" class="context-comment-badge" type="button">3</button></div>
