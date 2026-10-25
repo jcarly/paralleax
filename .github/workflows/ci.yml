@@ -44,6 +44,8 @@ jobs:
         run: npm audit --omit=dev --audit-level=high
 
       - name: Lint
+        env:
+          DEBUG: eslint:cli
         run: npm run lint
 
       - name: Lint architecture
