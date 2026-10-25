@@ -592,6 +592,15 @@ unchanged snapshot.
       both modes; 30 focused StoryPlayer Vitest tests, 3 Playwright regressions,
       lint, typecheck and the web production build passed. Implementation commit:
       `9f44a73`.
+- [x] **DS-05 follow-up — Isolate remaining Reader/Simulation component styles**
+      (D5). DS-05 isolated page and card layout but left shared toolbar, scene,
+      choices, contextual panels, and mobile rules in the later-loaded Simulation
+      stylesheet. Move shared presentation to `storyPlayer.css`; keep authoring,
+      forced/unavailable choices, history, and Simulation layout scoped in
+      `storySimulation.css`. Acceptance covers direct routes, mode navigation,
+      desktop/tablet/mobile computed styles, editing, choice states, ending
+      cards, and panel scrolling. Completed 2026-10-25: 4 targeted Playwright
+      cases, targeted Stylelint, root lint, typecheck, and build passed.
 - [x] **DS-06 — Make help tooltips dismissible and usable** (D6, D7). Extend the
       existing `FieldHelpTooltip`; do not add a parallel tooltip system.
       Acceptance: Escape dismisses focused help, hover content remains reachable

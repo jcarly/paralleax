@@ -76,6 +76,16 @@ product surfaces leave a genuine gap:
 - reader style;
 - empty, loading, disabled, error, and selected states.
 
+### Story Player stylesheet ownership
+
+`storyPlayer.css` owns the shared scene, narrative content, choices, contextual
+cards, inventory content, toolbar, save dialog, endings, and Reader layout.
+Reader-specific rules use `.reader-mode` where they overlap shared presentation.
+`storySimulation.css` owns authoring controls, unavailable/forced choice states,
+history and diagnostics, and Simulation layout or responsive variants; rules in
+that file must be scoped to `.simulation-mode`. Keep shared rich-text typography
+in `storyPlayer.css` so Reader and the editable preview remain aligned.
+
 ## Current Palette Reference
 
 Production colors are defined by semantic custom properties in

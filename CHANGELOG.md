@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Clarified Reader and Simulation stylesheet ownership. Common Player presentation
+  now lives in `storyPlayer.css`; authoring, unavailable-choice, diagnostic, and
+  Simulation layout variants are scoped to `.simulation-mode`, including their
+  responsive rules.
+
 - Added shared standard and compact field styles for product forms, settings,
   inspectors, conditions, and effects. The design catalogue now shows both
   densities and their control states; persisted stories and editing behavior are

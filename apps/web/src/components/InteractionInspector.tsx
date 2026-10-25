@@ -288,7 +288,6 @@ export function InteractionInspector({
   return (
     <div className="interaction-inspector">
       <section className="interaction-inspector-content">
-        <h3>{t('interactionInspector.content')}</h3>
         <InspectorCommentField
           field="title"
           label={t('interactionInspector.title')}
