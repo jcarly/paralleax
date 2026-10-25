@@ -108,6 +108,68 @@ export default tseslint.config(
           ],
         },
       ],
+      'no-restricted-globals': [
+        'error',
+        {
+          globals: [
+            'cancelAnimationFrame',
+            'document',
+            'fetch',
+            'HTMLElement',
+            'IntersectionObserver',
+            'localStorage',
+            'location',
+            'MutationObserver',
+            'navigator',
+            'requestAnimationFrame',
+            'ResizeObserver',
+            'sessionStorage',
+            'window',
+          ].map((name) => ({
+            name,
+            message: 'packages/shared must remain independent of browser and network APIs.',
+          })),
+        },
+      ],
+    },
+  },
+  {
+    files: ['apps/web/src/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['@paralleax/api', '@paralleax/api/**'],
+              message: 'apps/web must consume the API over HTTP.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ['apps/api/src/**/*.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['@paralleax/web', '@paralleax/web/**'],
+              message: 'apps/api must not import frontend implementations.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ['apps/web/src/**/*.{ts,tsx}', 'apps/api/src/**/*.ts', 'packages/shared/src/**/*.ts'],
+    ignores: ['**/*.test.ts', '**/*.test.tsx', '**/*.spec.ts', '**/*.spec.tsx', '**/test/**'],
+    rules: {
+      complexity: ['error', 20],
     },
   },
   {

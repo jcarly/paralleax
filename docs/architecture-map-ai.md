@@ -31,6 +31,41 @@ deterministic rules     reader progress
 The API and web application may orchestrate the model, but neither may become the
 only place where a narrative rule exists.
 
+## Dependency audit snapshot
+
+The 2026-10-25 dependency-cruiser scan covered 557 source modules and 2,018
+dependency edges. It found no workspace-boundary violations and no runtime
+cycles. One mixed cycle remains between `apps/api/src/email/email.service.ts`
+and `apps/api/src/email/test-email-outbox.ts`: the service imports the outbox at
+runtime, and the outbox imports `EmailMessage` as a type. It is the only entry
+in the architecture baseline. The check rejects any additional cycle.
+
+The graph has 34 dynamic-import edges and 447 type-only edges. The shared public
+facade has 212 dependents. High-fan-in modules worth inspecting when their
+responsibility changes include `apps/web/src/api.ts` (45 dependents),
+`packages/shared/src/model/index.ts` (28), `apps/api/src/stories/stories.repository.ts`
+(22), and `apps/web/src/storyGraph.ts` (21). These counts are review context,
+not automatic reasons to split a module.
+
+The production-source ESLint census found 86 functions above complexity 15 and
+45 above 20. At exploratory thresholds, it also found 2 functions deeper than 4
+levels, 27 functions with more than 5 parameters, 66 functions longer than 120
+lines, and 31 files longer than 450 lines. Only complexity above 20 is blocking;
+the other counts do not justify adding more rules before evidence shows value.
+
+The 10 current web feature-to-feature edges connect the editor/player to shared
+story and realtime support. They remain permitted because those modules own
+shared feature behavior. The mixed `apps/web/src/components/` directory also
+contains feature-aware inspectors, so no blanket generic-component-to-feature
+rule is enabled. React Flow imports stay on the explicit graph allowlist in
+`.dependency-cruiser.cjs`.
+
+`@formbricks/js` is declared by the web workspace and resolves from Node, but
+dependency-cruiser reports it as unresolved through its conditional/type-query
+export path. Unresolved imports are not a blocking rule. Semantic duplication
+also remains a review responsibility; dependency rules can protect the shared
+owner, but cannot prove that equivalent business behavior was not reimplemented.
+
 ## Current hotspots
 
 The remaining unusually broad orchestration files are:

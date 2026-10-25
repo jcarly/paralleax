@@ -639,6 +639,47 @@ Story Editor and Story Player assets are limited to 145 KiB and 95 KiB. The
 contract also fails if either route stops being a dynamic entry or becomes a
 static dependency of the application entry.
 
+## Automated Architecture Checks
+
+`npm run lint:architecture` analyzes only the three production source roots and
+runs in CI. It rejects web-to-API and API-to-web imports, application imports
+that bypass the `@paralleax/shared` facade, API controllers that import
+repositories or persistence/database modules, and React Flow imports outside
+the configured graph projection and presentation modules. The shared package
+also uses ESLint to reject framework, browser, and HTTP dependencies. These
+rules preserve the workspace ownership described above; they do not ban the
+existing editor/player collaboration with shared web features.
+
+The dependency graph currently contains 557 modules and 2,018 edges. The audit
+found no workspace-boundary violations and no runtime-only cycles. Its only
+existing cycle is mixed: `email.service.ts` imports `test-email-outbox.ts` at
+runtime, while `test-email-outbox.ts` imports `EmailMessage` as a type from the
+service. The committed
+`.dependency-cruiser-known-violations.json` records that exact cycle; new cycles,
+including type-only cycles, fail. Review the baseline when changing either
+module, and use shrink-only baseline updates when a known violation is removed.
+
+ESLint blocks cyclomatic complexity above 20 in production TypeScript. The native
+`eslint-suppressions.json` baseline holds 45 existing findings across 34 files;
+test files and test helpers are excluded. Regenerate or prune it deliberately,
+review the diff, and keep counts moving down. ESLint compares violations by file
+and rule: an increased count fails, while replacing one existing finding with a
+different finding in the same file can keep the count unchanged. Current
+production-source measurements were 86 functions above complexity 15, 2 deeper
+than 4 levels, 27 with more than 5 parameters, 66 longer than 120 lines, and 31
+files longer than 450 lines. These remain review signals rather than additional
+blocking rules.
+
+To shrink baselines, run ESLint with `--prune-suppressions` and
+`--suppressions-location eslint-suppressions.json`; run dependency-cruiser with
+`--baseline --baseline-mode shrink-only`. Review both baseline diffs before
+committing them. Recording a new complexity baseline requires
+`--suppress-rule complexity` and should happen only after reviewing the findings.
+
+The dependency map and the audit exceptions are summarized in
+[`architecture-map-ai.md`](architecture-map-ai.md). The tool and baseline
+decision are recorded in [ADR-039](decisions/ADR-039-automated-architecture-guardrails.md).
+
 ## React Flow Boundary
 
 React Flow is currently a good fit for the editor because Paralleax needs custom
@@ -1156,6 +1197,8 @@ classes directly.
   styles, while excluding dependencies and generated/build output by scope.
   `styles.css` is the cross-file reference for global CSS tokens; component
   custom properties remain declared beside their use.
+- Architecture: dependency-cruiser workspace and cycle checks via
+  `npm run lint:architecture`, plus ESLint complexity and shared-layer rules.
 - GitHub Actions: lint, format, typecheck, coverage, build, PostgreSQL 17
   integration and recovery, Playwright, production dependency audit, and
   production image builds on pushes and pull requests.

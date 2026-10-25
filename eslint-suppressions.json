@@ -1,0 +1,172 @@
+{
+  "apps/api/src/config/app-config.service.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "apps/api/src/operations/api-exception.filter.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "apps/api/src/stories/application/story-graph.ts": {
+    "complexity": {
+      "count": 2
+    }
+  },
+  "apps/api/src/stories/persistence/stories.persistence.writer.ts": {
+    "complexity": {
+      "count": 3
+    }
+  },
+  "apps/web/src/App.tsx": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "apps/web/src/components/InteractionInspector.tsx": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "apps/web/src/components/ItemInstanceTree.tsx": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "apps/web/src/components/RichTextEditor.tsx": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "apps/web/src/components/StoryCanvasContextMenu.tsx": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "apps/web/src/features/comments/CommentDiscussionCard.tsx": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "apps/web/src/features/comments/StoryCommentsPanel.tsx": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "apps/web/src/features/comments/textAnchors.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "apps/web/src/features/story-editor/navigation/StoryGroupTreePanel.tsx": {
+    "complexity": {
+      "count": 2
+    }
+  },
+  "apps/web/src/features/story-editor/selection/useStoryEditorSelection.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "apps/web/src/features/story-import/StoryImportDialog.tsx": {
+    "complexity": {
+      "count": 2
+    }
+  },
+  "apps/web/src/features/story-player/components/PlayerToolbar.tsx": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "apps/web/src/features/story-player/storyPlayerPresentation.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "apps/web/src/pages/AuthPage.tsx": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "apps/web/src/pages/ParalleaxPrototype.tsx": {
+    "complexity": {
+      "count": 3
+    }
+  },
+  "apps/web/src/pages/StoryEditor.tsx": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "apps/web/src/pages/StoryList.tsx": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "apps/web/src/pages/StoryPlayer.tsx": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "apps/web/src/storyGraphElkLayout.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "apps/web/src/storyNavigation.ts": {
+    "complexity": {
+      "count": 2
+    }
+  },
+  "apps/web/src/triggerConditionPresentation.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "packages/shared/src/comments.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "packages/shared/src/expressions/index.ts": {
+    "complexity": {
+      "count": 3
+    }
+  },
+  "packages/shared/src/history/story-history.ts": {
+    "complexity": {
+      "count": 2
+    }
+  },
+  "packages/shared/src/import-export/choicescript/graph-builder.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "packages/shared/src/import-export/choicescript/parser.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "packages/shared/src/import-export/qsp/analyzer.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "packages/shared/src/import-export/qsp/control-flow.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "packages/shared/src/operations/merge.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "packages/shared/src/triggers/evaluation.ts": {
+    "complexity": {
+      "count": 1
+    }
+  }
+}

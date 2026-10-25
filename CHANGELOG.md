@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Added CI checks for workspace boundaries, circular dependencies, shared-layer
+  independence, and graph-only React Flow usage. ESLint now blocks production
+  functions above cyclomatic complexity 20 while a native baseline tracks
+  existing findings; no application behavior changed.
+
 - Clarified Reader and Simulation stylesheet ownership. Common Player presentation
   now lives in `storyPlayer.css`; authoring, unavailable-choice, diagnostic, and
   Simulation layout variants are scoped to `.simulation-mode`, including their

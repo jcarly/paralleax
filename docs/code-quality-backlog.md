@@ -79,6 +79,11 @@ promotes them.
 - **Optimistic-mutation recovery policy: P1 -> P1, retained.** Clarify recovery by
   mutation risk and user impact. Promote a specific path to P0 only if evidence
   shows current behavior can lose saved user work or blocks the alpha journey.
+- **Scoped architecture guardrails: explicitly commissioned on 2026-10-25.** Add
+  workspace/cycle checks and the calibrated complexity gate as a bounded
+  preventive task. This does not change the Roadmap's next product activity:
+  guided author sessions remain first. The existing-code complexity baseline is
+  a reviewable debt list, not a request for a broad refactor.
 
 ## Completed In The First Review Batch
 
@@ -236,6 +241,17 @@ are not prerequisites for disposable author sessions.
 
 ## P2 — Static Analysis
 
+- [x] Add source-scoped workspace boundary and cycle checks to CI. Keep the one
+      existing mixed API email cycle in the dependency baseline and reject new
+      cycles; protect the shared facade, controller/persistence boundary, and
+      React Flow graph allowlist.
+- [x] Enforce ESLint cyclomatic complexity 20 for production TypeScript with a
+      native suppression baseline: 45 findings across 34 files as of
+      2026-10-25. Reduce this baseline incrementally; do not refactor the large
+      orchestrators solely to clear the metric.
+- [ ] Revisit the complexity baseline after guided author sessions. Remove
+      entries as affected functions are otherwise changed; do not schedule a
+      broad refactor or set a zero-baseline date without evidence.
 - [ ] Pilot type-aware ESLint in one workspace. Start with one bounded
       production source scope; evaluate `no-floating-promises`,
       `no-misused-promises`, `no-unnecessary-type-assertion`, and only the

@@ -20,7 +20,8 @@
     "test:restore": "node scripts/verify-postgres-restore.mjs",
     "test:acceptance": "npm run test:acceptance -w @paralleax/web",
     "smoke:deployment": "node scripts/deployment-smoke.mjs",
-    "lint": "eslint . --max-warnings 0 && npm run lint:css",
+    "lint": "eslint . --max-warnings 0 --suppressions-location eslint-suppressions.json && npm run lint:css",
+    "lint:architecture": "depcruise apps/web/src apps/api/src packages/shared/src --config .dependency-cruiser.cjs --ignore-known --output-type err",
     "lint:css": "stylelint apps/web/src/**/*.css",
     "format": "prettier . --check",
     "format:write": "prettier . --write",
@@ -32,6 +33,7 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "concurrently": "^10.0.6",
+    "dependency-cruiser": "^18.7.0",
     "eslint": "^10.13.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.7",
