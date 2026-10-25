@@ -803,6 +803,14 @@ from CSS dimensions alone.
       also composed by `InteractionInspector`. The sample actions are inert; the
       focused test verifies production ownership and that the examples remain
       present after activation. Resolution commit: `fdb3fb5`.
+      **Follow-up defect found and resolved (2026-10-25):** although the catalogue
+      reused `InteractionEffectCard`, its labels and controls were styled only
+      beneath `.inspector`, so the catalogue showed browser-default fields instead
+      of the inspector's compact 12px labels, 14px values, shared borders, and
+      surfaces. The existing field rules now also target the card's field region,
+      preserving the inspector dimensions and native focus treatment. A focused
+      browser regression compares computed label, input, select, spacing, border,
+      color, and focus styles between the production inspector and catalogue.
 - [x] **DS-12 — Align remaining action and status variants** (D14). Follow DS-01
       for direct defects, then review only combinations with demonstrated
       conflicts (for example ghost-danger and secondary focus/hover). Acceptance:

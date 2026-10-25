@@ -1,4 +1,5 @@
 .inspector label,
+.interaction-effect-fields label,
 .rich-text-editor-dialog label,
 .story-groups-panel label {
   display: block;
@@ -39,7 +40,9 @@
 .rich-text-editor-dialog textarea,
 .rich-text-editor-dialog select,
 .story-groups-panel input,
-.story-groups-panel select {
+.story-groups-panel select,
+.interaction-effect-fields
+  :is(input[type='text'], input[type='number'], input:not([type]), select) {
   width: 100%;
   margin-top: 0.35rem;
   padding: 0.66rem 0.7rem;

@@ -412,10 +412,10 @@ export function DesignSystemPage() {
                   <option value="increase">Increase by</option>
                 </select>
               </label>
-              <label>
-                Value
-                <input type="number" defaultValue="2" />
-              </label>
+              <div>
+                <label htmlFor="design-stat-effect-value">Value</label>
+                <input id="design-stat-effect-value" type="number" defaultValue="2" />
+              </div>
             </InteractionEffectCard>
           </div>
           <div className="pattern-notes">

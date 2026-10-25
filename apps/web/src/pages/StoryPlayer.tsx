@@ -860,7 +860,6 @@ export function StoryPlayer({
           currentDateTime={currentDateTime}
         />
         <div className="player-story-content">
-          <p className="eyebrow">{story.title}</p>
           {playableCharacters.length > 0 && !playedCharacter ? (
             <section className="character-selection" aria-label={t('player.chooseCharacter')}>
               <span className="product-eyebrow">{t('player.beforeStory')}</span>

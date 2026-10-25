@@ -139,6 +139,7 @@
 
 .product-field {
   display: grid;
+  align-content: start;
   gap: 0.38rem;
   color: var(--product-ink);
   font-size: var(--type-size-compact);
