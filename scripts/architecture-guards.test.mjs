@@ -201,27 +201,46 @@ test('native complexity suppression baseline is keyed by file and rule count', a
   );
 });
 
-test('typed ESLint rules and the suppression baseline cover the shared production pilot', async () => {
+test('typed ESLint rules and the suppression baseline cover all production workspaces', async () => {
   const eslint = new ESLint({
     cwd: repositoryRoot,
     applySuppressions: true,
     suppressionsLocation: path.join(repositoryRoot, 'eslint-suppressions.json'),
   });
-  const sourceConfig = await eslint.calculateConfigForFile(
-    path.join(repositoryRoot, 'packages/shared/src/import-export/qsp/converter.ts'),
-  );
   const ruleIds = [
     '@typescript-eslint/no-floating-promises',
     '@typescript-eslint/no-misused-promises',
     '@typescript-eslint/no-unnecessary-type-assertion',
+    '@typescript-eslint/no-unsafe-argument',
     '@typescript-eslint/no-unsafe-assignment',
+    '@typescript-eslint/no-unsafe-call',
+    '@typescript-eslint/no-unsafe-declaration-merging',
+    '@typescript-eslint/no-unsafe-enum-comparison',
+    '@typescript-eslint/no-unsafe-function-type',
+    '@typescript-eslint/no-unsafe-member-access',
+    '@typescript-eslint/no-unsafe-return',
+    '@typescript-eslint/no-unsafe-unary-minus',
   ];
+  const sourceFiles = [
+    'packages/shared/src/import-export/qsp/converter.ts',
+    'apps/api/src/main.ts',
+    'apps/web/src/main.tsx',
+  ];
+  const sourceConfigs = await Promise.all(
+    sourceFiles.map((file) => eslint.calculateConfigForFile(path.join(repositoryRoot, file))),
+  );
   const [converterResult] = await eslint.lintFiles([
     'packages/shared/src/import-export/qsp/converter.ts',
   ]);
 
-  for (const ruleId of ruleIds) {
-    assert.equal(sourceConfig.rules[ruleId][0], 2, `${ruleId} must be an error`);
+  for (const [index, sourceConfig] of sourceConfigs.entries()) {
+    for (const ruleId of ruleIds) {
+      assert.equal(
+        sourceConfig.rules[ruleId][0],
+        2,
+        `${ruleId} must be an error for ${sourceFiles[index]}`,
+      );
+    }
   }
   assert.ok(
     converterResult.suppressedMessages.some(

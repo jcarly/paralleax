@@ -252,16 +252,21 @@ are not prerequisites for disposable author sessions.
 - [ ] Revisit the complexity baseline after guided author sessions. Remove
       entries as affected functions are otherwise changed; do not schedule a
       broad refactor or set a zero-baseline date without evidence.
-- [x] Pilot type-aware ESLint in `packages/shared/src` production files. Enabled
-      `no-floating-promises`, `no-misused-promises`,
-      `no-unnecessary-type-assertion`, and the `no-unsafe-*` rules; tests remain
-      outside the typed scope. The 106-file probe took about 20 seconds and found
-      one existing `no-unsafe-assignment` in the ChoiceScript/QSP converter,
-      now recorded in ESLint's native suppression baseline. Keep web and API out
-      of typed lint until their separate runtime and diagnostic counts are
-      measured; the earlier all-workspace probe exceeded 3.5 minutes. The full
-      root lint now takes about 70–80 seconds, compared with 29.4 seconds before
-      type-aware checks were added.
+- [x] Enable 12 type-aware ESLint safety rules on production TypeScript in all
+      three workspaces: `no-floating-promises`, `no-misused-promises`,
+      `no-unnecessary-type-assertion`, and the `no-unsafe-*` rules. Tests and
+      specs remain outside the typed scope. The original 106-file shared probe
+      took about 20 seconds and found one `no-unsafe-assignment` in the
+      ChoiceScript/QSP converter.
+      **Follow-up measurements (2026-10-25):** API matched 136 TypeScript paths,
+      took 24.7 seconds, and found 100 diagnostics in seven files, all from
+      `no-unsafe-*`. Web matched 247 TypeScript paths, took 67.8 seconds, and
+      found 19 diagnostics in nine files: 11 from the three async/assertion rules
+      and eight from `no-unsafe-*`. Neither probe had parsing errors. The native
+      ESLint suppression baseline now tracks 120 findings across 17 production
+      files (one shared, 100 API, 19 web). The full root lint takes about 130
+      seconds, compared with 29.4 seconds before typed checks. An earlier probe
+      using the full `recommendedTypeChecked` preset exceeded 3.5 minutes.
 - [x] Enable the deferred CSS cascade rules across all 18 source stylesheets:
       `no-descending-specificity`, `no-duplicate-selectors`, and
       `declaration-no-important`. The native Stylelint suppression baseline

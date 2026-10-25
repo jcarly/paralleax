@@ -23,6 +23,45 @@ const nodeGlobals = {
   URL: 'readonly',
 };
 
+const typeAwareIgnores = [
+  '**/*.test.ts',
+  '**/*.test.tsx',
+  '**/*.spec.ts',
+  '**/*.spec.tsx',
+  '**/test/**',
+  '**/__architecture_guard_fixture__.ts',
+  '**/__architecture_baseline_fixture__.ts',
+];
+
+const typeAwareRules = {
+  '@typescript-eslint/no-floating-promises': 'error',
+  '@typescript-eslint/no-misused-promises': 'error',
+  '@typescript-eslint/no-unnecessary-type-assertion': 'error',
+  '@typescript-eslint/no-unsafe-argument': 'error',
+  '@typescript-eslint/no-unsafe-assignment': 'error',
+  '@typescript-eslint/no-unsafe-call': 'error',
+  '@typescript-eslint/no-unsafe-declaration-merging': 'error',
+  '@typescript-eslint/no-unsafe-enum-comparison': 'error',
+  '@typescript-eslint/no-unsafe-function-type': 'error',
+  '@typescript-eslint/no-unsafe-member-access': 'error',
+  '@typescript-eslint/no-unsafe-return': 'error',
+  '@typescript-eslint/no-unsafe-unary-minus': 'error',
+};
+
+function typeAwareWorkspaceConfig(files, project) {
+  return {
+    files,
+    ignores: [...typeAwareIgnores],
+    languageOptions: {
+      parserOptions: {
+        project: [project],
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
+    rules: { ...typeAwareRules },
+  };
+}
+
 export default tseslint.config(
   {
     ignores: [
@@ -172,30 +211,9 @@ export default tseslint.config(
       complexity: ['error', 20],
     },
   },
-  {
-    files: ['packages/shared/src/**/*.ts'],
-    ignores: ['**/*.test.ts', '**/*.test.tsx', '**/*.spec.ts', '**/*.spec.tsx', '**/test/**'],
-    languageOptions: {
-      parserOptions: {
-        project: ['./packages/shared/tsconfig.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-    },
-    rules: {
-      '@typescript-eslint/no-floating-promises': 'error',
-      '@typescript-eslint/no-misused-promises': 'error',
-      '@typescript-eslint/no-unnecessary-type-assertion': 'error',
-      '@typescript-eslint/no-unsafe-argument': 'error',
-      '@typescript-eslint/no-unsafe-assignment': 'error',
-      '@typescript-eslint/no-unsafe-call': 'error',
-      '@typescript-eslint/no-unsafe-declaration-merging': 'error',
-      '@typescript-eslint/no-unsafe-enum-comparison': 'error',
-      '@typescript-eslint/no-unsafe-function-type': 'error',
-      '@typescript-eslint/no-unsafe-member-access': 'error',
-      '@typescript-eslint/no-unsafe-return': 'error',
-      '@typescript-eslint/no-unsafe-unary-minus': 'error',
-    },
-  },
+  typeAwareWorkspaceConfig(['packages/shared/src/**/*.ts'], './packages/shared/tsconfig.json'),
+  typeAwareWorkspaceConfig(['apps/api/src/**/*.ts'], './apps/api/tsconfig.json'),
+  typeAwareWorkspaceConfig(['apps/web/src/**/*.{ts,tsx}'], './apps/web/tsconfig.json'),
   {
     rules: {
       '@typescript-eslint/no-explicit-any': 'error',

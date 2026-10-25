@@ -4,8 +4,40 @@
       "count": 1
     }
   },
+  "apps/api/src/health/health.controller.ts": {
+    "@typescript-eslint/no-unsafe-call": {
+      "count": 6
+    }
+  },
+  "apps/api/src/main.ts": {
+    "@typescript-eslint/no-unsafe-assignment": {
+      "count": 1
+    },
+    "@typescript-eslint/no-unsafe-call": {
+      "count": 8
+    },
+    "@typescript-eslint/no-unsafe-member-access": {
+      "count": 7
+    }
+  },
+  "apps/api/src/observability/sentry.ts": {
+    "@typescript-eslint/no-unsafe-call": {
+      "count": 3
+    },
+    "@typescript-eslint/no-unsafe-member-access": {
+      "count": 1
+    }
+  },
   "apps/api/src/operations/api-exception.filter.ts": {
+    "@typescript-eslint/no-unsafe-enum-comparison": {
+      "count": 1
+    },
     "complexity": {
+      "count": 1
+    }
+  },
+  "apps/api/src/operations/request-body.ts": {
+    "@typescript-eslint/no-unsafe-argument": {
       "count": 1
     }
   },
@@ -14,12 +46,34 @@
       "count": 2
     }
   },
+  "apps/api/src/stories/dto/stories.dto.ts": {
+    "@typescript-eslint/no-unsafe-member-access": {
+      "count": 67
+    },
+    "@typescript-eslint/no-unsafe-return": {
+      "count": 1
+    }
+  },
   "apps/api/src/stories/persistence/stories.persistence.writer.ts": {
     "complexity": {
       "count": 3
     }
   },
+  "apps/api/src/stories/stories.repository.memory.ts": {
+    "@typescript-eslint/no-unsafe-argument": {
+      "count": 2
+    },
+    "@typescript-eslint/no-unsafe-assignment": {
+      "count": 2
+    }
+  },
   "apps/web/src/App.tsx": {
+    "@typescript-eslint/no-floating-promises": {
+      "count": 2
+    },
+    "@typescript-eslint/no-misused-promises": {
+      "count": 2
+    },
     "complexity": {
       "count": 1
     }
@@ -44,8 +98,21 @@
       "count": 1
     }
   },
+  "apps/web/src/components/TriggerInspector.tsx": {
+    "@typescript-eslint/no-unnecessary-type-assertion": {
+      "count": 1
+    }
+  },
   "apps/web/src/features/comments/CommentDiscussionCard.tsx": {
+    "@typescript-eslint/no-unnecessary-type-assertion": {
+      "count": 1
+    },
     "complexity": {
+      "count": 1
+    }
+  },
+  "apps/web/src/features/comments/InspectorCommentField.tsx": {
+    "@typescript-eslint/no-unnecessary-type-assertion": {
       "count": 1
     }
   },
@@ -59,9 +126,19 @@
       "count": 1
     }
   },
+  "apps/web/src/features/feedback/feedbackConfig.ts": {
+    "@typescript-eslint/no-unsafe-argument": {
+      "count": 2
+    }
+  },
   "apps/web/src/features/story-editor/navigation/StoryGroupTreePanel.tsx": {
     "complexity": {
       "count": 2
+    }
+  },
+  "apps/web/src/features/story-editor/persistence/storyEditorLoader.ts": {
+    "@typescript-eslint/no-unsafe-argument": {
+      "count": 1
     }
   },
   "apps/web/src/features/story-editor/selection/useStoryEditorSelection.ts": {
@@ -84,6 +161,19 @@
       "count": 1
     }
   },
+  "apps/web/src/main.tsx": {
+    "@typescript-eslint/no-unsafe-call": {
+      "count": 1
+    },
+    "@typescript-eslint/no-unsafe-member-access": {
+      "count": 1
+    }
+  },
+  "apps/web/src/observability/sentry.ts": {
+    "@typescript-eslint/no-unsafe-argument": {
+      "count": 3
+    }
+  },
   "apps/web/src/pages/AuthPage.tsx": {
     "complexity": {
       "count": 1
@@ -95,6 +185,9 @@
     }
   },
   "apps/web/src/pages/StoryEditor.tsx": {
+    "@typescript-eslint/no-misused-promises": {
+      "count": 4
+    },
     "complexity": {
       "count": 1
     }
