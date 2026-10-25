@@ -4,30 +4,6 @@
       "count": 1
     }
   },
-  "apps/api/src/health/health.controller.ts": {
-    "@typescript-eslint/no-unsafe-call": {
-      "count": 6
-    }
-  },
-  "apps/api/src/main.ts": {
-    "@typescript-eslint/no-unsafe-assignment": {
-      "count": 1
-    },
-    "@typescript-eslint/no-unsafe-call": {
-      "count": 8
-    },
-    "@typescript-eslint/no-unsafe-member-access": {
-      "count": 7
-    }
-  },
-  "apps/api/src/observability/sentry.ts": {
-    "@typescript-eslint/no-unsafe-call": {
-      "count": 3
-    },
-    "@typescript-eslint/no-unsafe-member-access": {
-      "count": 1
-    }
-  },
   "apps/api/src/operations/api-exception.filter.ts": {
     "@typescript-eslint/no-unsafe-enum-comparison": {
       "count": 1
