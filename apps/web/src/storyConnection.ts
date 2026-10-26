@@ -35,19 +35,14 @@ export function getPendingConnection(
   };
 }
 
-export function getPendingConnectionConflict(
-  story: Story | undefined,
-  connection: Connection,
-) {
+export function getPendingConnectionConflict(story: Story | undefined, connection: Connection) {
   if (!story || !connection.source || !connection.target) return undefined;
   if (connection.source === connection.target) return undefined;
   if (connection.targetHandle && connection.targetHandle !== 'create-source-input') {
     return undefined;
   }
   const target = story.interactions.find((item) => item.id === connection.target);
-  return target
-    ? findTriggerConnectionConflict(story, connection.source, target.id)
-    : undefined;
+  return target ? findTriggerConnectionConflict(story, connection.source, target.id) : undefined;
 }
 
 export function getPendingTriggerInputConnection(

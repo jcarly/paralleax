@@ -55,7 +55,9 @@ describe('trigger connection policy', () => {
   it('keeps direction, target, and Trigger ownership distinct', () => {
     expect(findTriggerConnectionConflict(story, 'target', 'source-a')).toBeUndefined();
     expect(findTriggerConnectionConflict(story, 'source-a', 'source-b')).toBeUndefined();
-    expect(findTriggerConnectionConflict(story, 'source-a', 'target', 'trigger-one')).toBeUndefined();
+    expect(
+      findTriggerConnectionConflict(story, 'source-a', 'target', 'trigger-one'),
+    ).toBeUndefined();
   });
 
   it('allows several sources on one Trigger and different sources on Triggers to one target', () => {
@@ -70,11 +72,13 @@ describe('trigger connection policy', () => {
 
   it('checks only newly added pairs when editing a legacy duplicate Trigger', () => {
     const legacyStory = structuredClone(story);
-    legacyStory.interactions.find(({ id }) => id === 'target')!.triggers.push({
-      id: 'legacy-duplicate',
-      inputInteractionIds: ['source-a'],
-      conditions: [],
-    });
+    legacyStory.interactions
+      .find(({ id }) => id === 'target')!
+      .triggers.push({
+        id: 'legacy-duplicate',
+        inputInteractionIds: ['source-a'],
+        conditions: [],
+      });
 
     expect(
       findNewTriggerInputConflict(legacyStory, 'target', ['source-a', 'source-c'], {

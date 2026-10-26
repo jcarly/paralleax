@@ -274,9 +274,13 @@ describe('story graph persistence', () => {
 
   it('rejects repeated connection pairs and still allows reverse routes', async () => {
     const connectionConflicts: boolean[] = [];
-    const harness = createHarness(async (operation) => operation(), storyFixture(), (conflict) => {
-      connectionConflicts.push(conflict);
-    });
+    const harness = createHarness(
+      async (operation) => operation(),
+      storyFixture(),
+      (conflict) => {
+        connectionConflicts.push(conflict);
+      },
+    );
     vi.mocked(api.addTrigger).mockResolvedValue({
       interactionId: 'root',
       trigger: { id: 'created-trigger', inputInteractionIds: ['child'], conditions: [] },

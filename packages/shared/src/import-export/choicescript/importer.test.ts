@@ -133,7 +133,9 @@ The hall is dark.
     const [sourceInteraction, targetInteraction] = result.interactions;
     expect(targetInteraction.triggers).toHaveLength(1);
     expect(targetInteraction.triggers[0].inputInteractionIds).toEqual([sourceInteraction.id]);
-    expect(getTriggerConditionGroups(targetInteraction.triggers[0]).map(({ conditions }) => conditions)).toEqual([
+    expect(
+      getTriggerConditionGroups(targetInteraction.triggers[0]).map(({ conditions }) => conditions),
+    ).toEqual([
       [{ statId: result.stats?.[0].id, operator: 'gt', value: 5 }],
       [{ statId: result.stats?.[0].id, operator: 'lt', value: 2 }],
     ]);

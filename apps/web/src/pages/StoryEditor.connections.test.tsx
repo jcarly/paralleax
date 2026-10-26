@@ -122,9 +122,7 @@ describe('StoryEditor connections', () => {
 
     expect(api.addTrigger).not.toHaveBeenCalled();
     const alert = await screen.findByTestId('trigger-connection-conflict');
-    expect(alert).toHaveTextContent(
-      'This source already connects to this interaction.',
-    );
+    expect(alert).toHaveTextContent('This source already connects to this interaction.');
     expect(alert.closest('.canvas')).not.toBeNull();
     expect(screen.getByTestId('flow-trigger-interaction-3-existing-route')).toBeInTheDocument();
   });

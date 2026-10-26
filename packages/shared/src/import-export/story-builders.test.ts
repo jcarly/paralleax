@@ -22,7 +22,10 @@ describe('groupImportedTriggerRoutes', () => {
         { inputInteractionId: 'source-a', conditionGroups: [[{ check: 'high' }]] },
         { inputInteractionId: 'source-a', conditionGroups: [[{ check: 'low' }]] },
         { inputInteractionId: 'source-b', conditionGroups: [[{ check: 'high' }]] },
-        { inputInteractionId: 'source-c', conditionGroups: [[{ check: 'high' }], [{ check: 'low' }]] },
+        {
+          inputInteractionId: 'source-c',
+          conditionGroups: [[{ check: 'high' }], [{ check: 'low' }]],
+        },
       ]),
     ).toEqual([
       {

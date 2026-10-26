@@ -4,12 +4,7 @@ import type { Story } from '../../model/stories.js';
 import type { StatValue, StatValueType } from '../../model/stats.js';
 import { buildImportedTrigger, groupImportedTriggerRoutes } from '../story-builders.js';
 import { layoutChoiceScriptGraph } from './graph-builder.js';
-import {
-  escapeHtml,
-  humanizeIdentifier,
-  normalizeIdentifier,
-  truncate,
-} from './helpers.js';
+import { escapeHtml, humanizeIdentifier, normalizeIdentifier, truncate } from './helpers.js';
 import type {
   DirectEdge,
   DraftNode,

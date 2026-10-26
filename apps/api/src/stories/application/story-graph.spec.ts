@@ -161,12 +161,7 @@ describe('StoryGraphService', () => {
   it('rejects adding a source -> target pair already owned by another Trigger', async () => {
     let caught: unknown;
     try {
-      await service.addTrigger(
-        'story-1',
-        'child',
-        { inputInteractionIds: ['root'] },
-        'user-1',
-      );
+      await service.addTrigger('story-1', 'child', { inputInteractionIds: ['root'] }, 'user-1');
     } catch (error) {
       caught = error;
     }
