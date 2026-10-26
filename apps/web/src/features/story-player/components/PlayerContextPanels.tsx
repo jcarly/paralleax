@@ -2,6 +2,18 @@ import { useTranslation } from 'react-i18next';
 import type { Character, Interaction, StatValue, Story } from '@paralleax/shared';
 import { getItemDefinitionIdForInstance, getItemOwnerIdForInstance } from '@paralleax/shared';
 
+function shouldShowPlayerContextPanel(
+  playedCharacter: Character | undefined,
+  playableCharacterCount: number,
+  hasItemDefinitions: boolean,
+  isSimulationMode: boolean,
+) {
+  return (
+    Boolean(playedCharacter) ||
+    (playableCharacterCount === 0 && (hasItemDefinitions || isSimulationMode))
+  );
+}
+
 export function PlayerContextPanels({
   story,
   current,
@@ -27,9 +39,12 @@ export function PlayerContextPanels({
 }) {
   const { t } = useTranslation();
   const hasItemDefinitions = (story.itemDefinitions?.length ?? 0) > 0;
-  const showPlayerContextPanel =
-    Boolean(playedCharacter) ||
-    (playableCharacterCount === 0 && (hasItemDefinitions || isSimulationMode));
+  const showPlayerContextPanel = shouldShowPlayerContextPanel(
+    playedCharacter,
+    playableCharacterCount,
+    hasItemDefinitions,
+    isSimulationMode,
+  );
 
   return (
     <>
