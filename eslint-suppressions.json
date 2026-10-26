@@ -2002,39 +2002,6 @@
       "count": 1
     }
   },
-  "apps/web/src/features/story-player/navigation/useAutomaticReaderTransitions.ts": {
-    "complexity": {
-      "count": 1
-    },
-    "curly": {
-      "count": 3
-    },
-    "max-lines-per-function": {
-      "count": 2
-    }
-  },
-  "apps/web/src/features/story-player/navigation/useReaderChoiceNavigation.ts": {
-    "complexity": {
-      "count": 1
-    },
-    "curly": {
-      "count": 2
-    },
-    "max-lines-per-function": {
-      "count": 1
-    },
-    "sonarjs/cognitive-complexity": {
-      "count": 1
-    }
-  },
-  "apps/web/src/features/story-player/navigation/useReaderNavigationGuards.ts": {
-    "curly": {
-      "count": 1
-    },
-    "max-lines-per-function": {
-      "count": 1
-    }
-  },
   "apps/web/src/features/story-player/runtime/loadLatestRuntimeSliceForSession.ts": {
     "curly": {
       "count": 1

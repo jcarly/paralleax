@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Added a brief cross-fade between visible Interactions in Reader and Simulation
+  Mode. Reduced-motion preferences disable it, and Reader pass-through
+  Interactions remain invisible.
+
 - Tightened quality gates to cyclomatic/cognitive complexity 10, nesting 3,
   parameters 4 and function length 50; extended typed safety checks to tests.
   Recorded 4,404 historical ESLint findings, pruned CSS debt to 642 findings and

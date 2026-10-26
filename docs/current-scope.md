@@ -63,6 +63,9 @@ Paralleax currently includes:
   duration, location changes, journey entries, and saves remain consistent.
   The Reader continues through such Interactions until content, a branch, an
   ending, or a repeated destination. Simulation Mode keeps them selectable.
+- Reader and Simulation Mode cross-fade the Player scene and narrative card when
+  the current Interaction changes. Reduced-motion preferences disable the effect;
+  pass-through Interactions are advanced before display.
 - Story-local deterministic calendar time.
 - Locations.
 - Characters.

@@ -453,6 +453,12 @@ Simulation keeps unavailable choices visible for inspection except when their
 matched route fails a location condition; location-blocked choices are hidden to
 avoid presenting impossible movement from the simulated scene.
 
+When the current Interaction changes in Reader or Simulation Mode, the Player
+cross-fades its scene and narrative card. The change is immediate for browsers
+without same-document view transitions and for readers who prefer reduced motion.
+Reader pass-through Interactions are advanced before the browser paints, so they
+do not appear as intermediate screens.
+
 ## Reader Comments and Author Tools
 
 An authenticated reader receives comment controls only when the story's resolved

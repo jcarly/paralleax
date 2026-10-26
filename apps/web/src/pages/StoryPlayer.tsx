@@ -30,6 +30,7 @@ import { useStoryPlayerLoading } from '../features/story-player/runtime/useStory
 import { useStoryPlayerRuntimeSlice } from '../features/story-player/runtime/useStoryPlayerRuntimeSlice';
 import { useStoryPlayerRealtimeRefresh } from '../features/story-player/runtime/useStoryPlayerRealtimeRefresh';
 import { useReaderNavigationGuards } from '../features/story-player/navigation/useReaderNavigationGuards';
+import { transitionPlayerInteraction } from '../features/story-player/navigation/transitionPlayerInteraction';
 import { restoreReaderSave } from '../features/story-player/navigation/restoreReaderSave';
 import { useAutomaticReaderTransitions } from '../features/story-player/navigation/useAutomaticReaderTransitions';
 import { useReaderChoiceNavigation } from '../features/story-player/navigation/useReaderChoiceNavigation';
@@ -169,6 +170,7 @@ export function StoryPlayer({
     resetAutomaticTransitions,
     resetForNewStory,
     clearAutomaticPath,
+    canContinueAutomaticPath,
     isAutomaticStepBlocked,
     continueAutomaticPath,
   } = useReaderNavigationGuards();
@@ -673,11 +675,12 @@ export function StoryPlayer({
     saveProgress,
   });
 
-  useAutomaticReaderTransitions({
+  const isCurrentInteractionPassingThrough = useAutomaticReaderTransitions({
     isSimulationMode,
     loadedKey,
     loadKey,
     runtimeSliceReady,
+    hasRuntimeSliceError: Boolean(runtimeOptionsError),
     journeyLength: journey.length,
     playableCharacterCount: playableCharacters.length,
     playedCharacterId: playedCharacter?.id,
@@ -691,6 +694,7 @@ export function StoryPlayer({
     statValues,
     itemStatValues,
     isAutomaticStepBlocked,
+    canContinueAutomaticPath,
     clearAutomaticPath,
     continueAutomaticPath,
   });
@@ -714,43 +718,47 @@ export function StoryPlayer({
   });
 
   function restart() {
-    comments.cancelDraft();
-    comments.selectThread(undefined);
-    directStartAutosavedKey.current = '';
-    clearChoiceCommit();
-    resetAutomaticTransitions();
-    incrementNavigationVersion();
-    setTimerNow(Date.now());
-    if (story) {
-      replaySession(
-        story,
-        startInteractionId ? [startInteractionId] : [],
-        [],
-        createReaderRandomSeed(),
-      );
-    }
-    setPlayableCharacterId(undefined);
-    setForceUnavailableOptions(false);
-    resetProgress();
+    transitionPlayerInteraction(() => {
+      comments.cancelDraft();
+      comments.selectThread(undefined);
+      directStartAutosavedKey.current = '';
+      clearChoiceCommit();
+      resetAutomaticTransitions();
+      incrementNavigationVersion();
+      setTimerNow(Date.now());
+      if (story) {
+        replaySession(
+          story,
+          startInteractionId ? [startInteractionId] : [],
+          [],
+          createReaderRandomSeed(),
+        );
+      }
+      setPlayableCharacterId(undefined);
+      setForceUnavailableOptions(false);
+      resetProgress();
+    });
   }
 
   function stepBack() {
     if (journey.length <= 1) return;
-    clearChoiceCommit();
-    incrementNavigationVersion();
-    const nextJourney = journey.slice(0, -1);
-    setTimerNow(Date.now());
-    if (story) {
-      saveProgress(
-        replaySession(
-          story,
-          nextJourney,
-          [],
-          randomSeed,
-          stepStartedAt.slice(0, nextJourney.length + 1),
-        ),
-      );
-    }
+    transitionPlayerInteraction(() => {
+      clearChoiceCommit();
+      incrementNavigationVersion();
+      const nextJourney = journey.slice(0, -1);
+      setTimerNow(Date.now());
+      if (story) {
+        saveProgress(
+          replaySession(
+            story,
+            nextJourney,
+            [],
+            randomSeed,
+            stepStartedAt.slice(0, nextJourney.length + 1),
+          ),
+        );
+      }
+    });
   }
 
   async function loadSave(save: ReaderSave) {
@@ -764,19 +772,21 @@ export function StoryPlayer({
       randomSeed: save.state.randomSeed ?? createReaderRandomSeed(),
       replaySession,
     });
-    setStory(loadedStory);
-    markRuntimeSliceLoaded(
-      loadedStory,
-      nextSession.currentInteractionId,
-      nextSession.journeyInteractionIds,
-      { clearFailure: false },
-    );
-    setPlayableCharacterId(
-      nextSession.journeyInteractionIds.length > 0
-        ? loadedStory.characters?.find(({ isPlayable }) => isPlayable)?.id
-        : undefined,
-    );
-    saveProgress(nextSession);
+    transitionPlayerInteraction(() => {
+      setStory(loadedStory);
+      markRuntimeSliceLoaded(
+        loadedStory,
+        nextSession.currentInteractionId,
+        nextSession.journeyInteractionIds,
+        { clearFailure: false },
+      );
+      setPlayableCharacterId(
+        nextSession.journeyInteractionIds.length > 0
+          ? loadedStory.characters?.find(({ isPlayable }) => isPlayable)?.id
+          : undefined,
+      );
+      saveProgress(nextSession);
+    });
   }
 
   function startReaderComment() {
@@ -852,7 +862,11 @@ export function StoryPlayer({
         }
         onToggleComments={() => setCommentsOpen((open) => !open)}
       />
-      <article className="player-card">
+      <article
+        aria-hidden={isCurrentInteractionPassingThrough || undefined}
+        className={`player-card${isCurrentInteractionPassingThrough ? ' player-card-passing' : ''}`}
+        inert={isCurrentInteractionPassingThrough}
+      >
         <PlayerScene
           location={currentLocation}
           characters={presentCharacters}
