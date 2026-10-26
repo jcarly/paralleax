@@ -199,38 +199,88 @@ export function DesignSystemPage() {
           id="actions"
           eyebrow="03 · Components"
           title="Actions"
-          description="Use one clear primary action per surface. Secondary and ghost actions preserve hierarchy."
+          description="Product pages and dense authoring controls keep their own action styles."
         >
-          <div className="reference-card component-row">
-            <div>
-              <button className="product-primary" type="button">
-                Primary action <span>→</span>
-              </button>
-              <code>Primary</code>
+          <div className="reference-card action-family" data-testid="product-action-catalogue">
+            <div className="reference-card-heading">
+              <h3>Product pages</h3>
+              <code>.product-*</code>
             </div>
-            <div>
-              <button className="product-secondary" type="button">
-                Secondary
-              </button>
-              <code>Secondary</code>
+            <div className="component-row">
+              <div>
+                <button
+                  className="product-primary"
+                  data-testid="product-primary-sample"
+                  type="button"
+                >
+                  Primary action <span>→</span>
+                </button>
+                <code>Primary</code>
+              </div>
+              <div>
+                <button
+                  className="product-secondary"
+                  data-testid="product-secondary-sample"
+                  type="button"
+                >
+                  Secondary
+                </button>
+                <code>Secondary</code>
+              </div>
+              <div>
+                <button className="product-ghost" type="button">
+                  Ghost action
+                </button>
+                <code>Ghost</code>
+              </div>
+              <div>
+                <button className="product-danger" type="button">
+                  Delete story
+                </button>
+                <code>Defined, unused by product workflows</code>
+              </div>
+              <div>
+                <button className="product-primary" type="button" disabled>
+                  Unavailable
+                </button>
+                <code>Disabled</code>
+              </div>
             </div>
-            <div>
-              <button className="product-ghost" type="button">
-                Ghost action
-              </button>
-              <code>Ghost</code>
+          </div>
+          <div className="reference-card action-family" data-testid="authoring-action-catalogue">
+            <div className="reference-card-heading">
+              <h3>Authoring</h3>
+              <code>.button / .secondary / .ghost</code>
             </div>
-            <div>
-              <button className="product-danger" type="button">
-                Delete story
-              </button>
-              <code>Danger</code>
-            </div>
-            <div>
-              <button className="product-primary" type="button" disabled>
-                Unavailable
-              </button>
-              <code>Disabled</code>
+            <div className="component-row">
+              <div>
+                <button className="button" type="button">
+                  Primary action
+                </button>
+                <code>Primary</code>
+              </div>
+              <div>
+                <button
+                  className="button secondary"
+                  data-testid="authoring-secondary-sample"
+                  type="button"
+                >
+                  Secondary action
+                </button>
+                <code>Secondary</code>
+              </div>
+              <div>
+                <button className="ghost" type="button">
+                  Ghost action
+                </button>
+                <code>Ghost</code>
+              </div>
+              <div>
+                <button className="ghost danger" type="button">
+                  Delete
+                </button>
+                <code>Destructive ghost</code>
+              </div>
             </div>
           </div>
         </ReferenceSection>

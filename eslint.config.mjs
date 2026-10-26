@@ -2,6 +2,7 @@ import js from '@eslint/js';
 import reactHooks from 'eslint-plugin-react-hooks';
 import reactRefresh from 'eslint-plugin-react-refresh';
 import tseslint from 'typescript-eslint';
+import requireSharedFormControl from './scripts/eslint-rules/require-shared-form-control.mjs';
 
 const browserGlobals = {
   document: 'readonly',
@@ -31,6 +32,7 @@ const typeAwareIgnores = [
   '**/test/**',
   '**/__architecture_guard_fixture__.ts',
   '**/__architecture_baseline_fixture__.ts',
+  '**/__design_system_rule_fixture__.tsx',
 ];
 
 const typeAwareRules = {
@@ -87,6 +89,25 @@ export default tseslint.config(
     rules: {
       ...reactHooks.configs.recommended.rules,
       'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
+    },
+  },
+  {
+    files: ['apps/web/src/**/*.tsx'],
+    ignores: [
+      'apps/web/src/**/*.test.tsx',
+      'apps/web/src/**/*.spec.tsx',
+      'apps/web/src/pages/ParalleaxPrototype.tsx',
+      'apps/web/src/pages/ParalleaxPrototypePages.tsx',
+    ],
+    plugins: {
+      'design-system': {
+        rules: {
+          'require-shared-form-control': requireSharedFormControl,
+        },
+      },
+    },
+    rules: {
+      'design-system/require-shared-form-control': 'error',
     },
   },
   {

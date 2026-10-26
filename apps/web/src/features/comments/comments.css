@@ -208,19 +208,11 @@
   padding: 0.9rem 1rem;
   background: var(--color-surface-secondary);
 }
-.comment-reply-form label,
 .comment-reply-form label > span {
   display: block;
-}
-.comment-reply-form label > span {
-  margin-bottom: 0.35rem;
   color: var(--color-muted);
-  font-size: 0.72rem;
+  font-size: var(--type-size-compact);
   font-weight: 700;
-}
-.comment-reply-form textarea {
-  width: 100%;
-  resize: vertical;
 }
 .comment-reply-form button {
   width: 100%;
@@ -375,20 +367,11 @@
   gap: 0.45rem;
   margin-top: 0.75rem;
 }
-.comment-inline-reply label,
 .comment-inline-reply label > span {
   display: block;
-}
-.comment-inline-reply label > span {
-  margin-bottom: 0.3rem;
   color: var(--color-muted);
-  font-size: 0.65rem;
+  font-size: var(--type-size-compact);
   font-weight: 700;
-}
-.comment-inline-reply textarea {
-  width: 100%;
-  min-height: 68px;
-  resize: vertical;
 }
 .comment-inline-reply > button {
   width: 100%;

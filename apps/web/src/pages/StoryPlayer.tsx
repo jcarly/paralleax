@@ -888,6 +888,7 @@ export function StoryPlayer({
             <>
               {isSimulationMode ? (
                 <>
+                  {/* eslint-disable-next-line design-system/require-shared-form-control -- the Simulation title remains a narrative display editor */}
                   <input
                     className="simulation-title-input"
                     aria-label={t('player.currentInteractionTitle')}

@@ -1554,6 +1554,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
       {pendingSaveGuard}
       <div className="editor-toolbar">
         <div className="story-title-control">
+          {/* eslint-disable-next-line design-system/require-shared-form-control -- the inline Story title uses a display-heading editor */}
           <input
             aria-label={t('editor.storyTitle')}
             className="story-title-input"

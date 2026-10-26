@@ -166,6 +166,38 @@ Library search and toolbar sort controls retain their compact toolbar patterns;
 they are not labeled property fields. Expression controls keep multiline editing
 behavior while using the compact control surface where authored in an inspector.
 
+### Automatic consistency checks (2026-10-26)
+
+ESLint requires ordinary production `input`, `select`, and `textarea` controls to
+use `.form-control` and an explicit standard or compact density. The check reads
+static, conditional, template, and common class-helper expressions, including
+native controls inside reusable components. Search, toggles, color pickers, and
+other specialized control types remain outside the rule. Toolbar controls and
+one-off display editors use documented line-level exceptions. The rule checks
+the control classes; it does not infer whether a field should be standard or
+compact.
+
+Stylelint rejects new named colors, hex colors, and color functions in production
+CSS. Shared `:root` tokens and the page-scoped palette token definitions in
+`ProductPages.css` are explicit token-definition exceptions. Prototype styles
+are excluded. Literal fallback values nested inside `var()` retain the existing
+fallback exception. A one-off CSS exception must use a local Stylelint comment
+with a reason. Authored graph-decoration and narrative colors supplied at
+runtime are outside static CSS lint; the check does not change their stored
+values.
+
+The catalogue keeps authoring actions (`.button`, `.secondary`, and `.ghost`)
+separate from product-page actions (`.product-*`) because they belong to
+different surfaces and density rules. `.product-danger` is defined but currently
+not used by product workflows; the catalogue displays its style only.
+
+The existing color findings use Stylelint's native per-file, per-rule count
+baseline. Counts above that audited baseline fail CI. The baseline is not
+location-specific, so a new finding can be masked if another finding of the same
+rule in that file is removed in the same change. Continue reducing counts as
+styles are otherwise updated; reassess the experimental suppression feature on
+Stylelint upgrades, as recorded under DS-13 and DS-16.
+
 The catalogue labels a `4px` base unit, while production styles use a mix of
 pixel and `rem` values. There is no enforced shared spacing-token scale today.
 The earlier 8-point list was an exploratory proposal, not an adopted rule; do

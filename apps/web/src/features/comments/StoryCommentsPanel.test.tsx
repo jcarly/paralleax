@@ -82,6 +82,11 @@ describe('StoryCommentsPanel', () => {
     );
 
     expect(screen.getByText('Could this be clearer?')).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'Reply' })).toHaveClass(
+      'form-control',
+      'form-control--compact',
+      'form-control--multiline',
+    );
     await user.click(screen.getByRole('button', { name: 'Resolve' }));
     expect(onStatus).toHaveBeenCalledWith('thread-1', 'resolved');
   });

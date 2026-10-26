@@ -57,22 +57,25 @@ export function PlayerChoices({
             />
           ) : null}
           {editingChoiceId === interaction.id ? (
-            <input
-              ref={editingChoiceInputRef}
-              className="choice-title-input"
-              aria-label={t('player.newOptionTitle')}
-              value={interaction.title}
-              onChange={(event) =>
-                onPatchInteraction(interaction.id, { title: event.target.value })
-              }
-              onBlur={(event) => void onSaveChoiceTitle(interaction, event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter') {
-                  event.preventDefault();
-                  event.currentTarget.blur();
+            <>
+              {/* eslint-disable-next-line design-system/require-shared-form-control -- Simulation choice-title editing keeps its narrative control styling */}
+              <input
+                ref={editingChoiceInputRef}
+                className="choice-title-input"
+                aria-label={t('player.newOptionTitle')}
+                value={interaction.title}
+                onChange={(event) =>
+                  onPatchInteraction(interaction.id, { title: event.target.value })
                 }
-              }}
-            />
+                onBlur={(event) => void onSaveChoiceTitle(interaction, event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    event.preventDefault();
+                    event.currentTarget.blur();
+                  }
+                }}
+              />
+            </>
           ) : (
             <button
               className={`choice ${available ? 'available' : 'unavailable'} ${isSimulationMode && !available && forceUnavailableOptions ? 'forced' : ''}`}

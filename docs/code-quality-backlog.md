@@ -1194,6 +1194,31 @@ from CSS dimensions alone.
       widths. Record only evidence-backed changes; preserve specialized behavior
       and do not reopen DS-01 through DS-14.
 
+- [x] **DS-16 — Enforce shared controls and semantic CSS colors.** Keep DS-15
+      open as a separate author-validation task. **Completed 2026-10-26:** an
+      AST-based ESLint rule requires `.form-control` plus standard or compact
+      density on ordinary production native fields, including fields inside
+      reusable components. Specialized search, checkbox, radio, file, color,
+      range, and action inputs remain outside the rule; toolbar and display
+      editors have explained local exceptions. Stylelint now rejects named,
+      hex, and functional literal colors across production stylesheets, while
+      preserving explicit token-definition blocks and excluding the two
+      prototype stylesheets. New findings beyond the audited baseline fail CI.
+      The initial color baseline contains **285 findings across 11 files**:
+      `styles.css` 11, `ProductPages.css` 109, `comments.css` 9, `editor.css` 9,
+      `storyGraph.css` 19, `storyPlayer.css` 77, `storySimulation.css` 36,
+      `richTextEditor.css` 5, `FeedbackButton.css` 5,
+      `inspector-controls.css` 4, and `inspector-layout.css` 1. These are 255
+      hex colors, 29 named colors, and one disallowed color function. The
+      baseline is count-based and can mask an equal-count replacement in the
+      same file/rule; reduce it as affected CSS is otherwise changed and
+      reassess the experimental Stylelint suppression API on upgrades. The
+      catalogue documents separate authoring and product action families and
+      labels `.product-danger` as defined but unused by product workflows. Unit and Playwright checks
+      cover class-expression parsing, baseline growth, catalogue-to-production
+      action styles, and standard/compact fields. No palette migration or
+      narrative runtime change is included.
+
 ## Library Evaluation Candidates — 2026-09-24
 
 These candidates record the author's library-reuse note and the initial layout

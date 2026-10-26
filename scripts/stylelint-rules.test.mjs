@@ -66,6 +66,21 @@ const invalidCssCases = [
     code: '@media (width: auto) { .fixture { display: block; } }',
     rule: 'media-feature-name-value-no-unknown',
   },
+  {
+    name: 'rejects a hex color in a component declaration',
+    code: '.fixture { color: #123456; }',
+    rule: 'color-no-hex',
+  },
+  {
+    name: 'rejects a named color in a component declaration',
+    code: '.fixture { color: white; }',
+    rule: 'color-named',
+  },
+  {
+    name: 'rejects RGB and HSL color functions',
+    code: '.fixture { color: rgb(10 20 30); background: hsl(20 30% 40%); }',
+    rule: 'function-disallowed-list',
+  },
 ];
 
 for (const { name, code, rule } of invalidCssCases) {
@@ -112,6 +127,38 @@ test('accepts a custom property with a literal fallback', async () => {
   assert.ok(!result.rules.includes('no-unknown-custom-properties'));
 });
 
+test('allows an explained one-line color exception', async () => {
+  const result = await lintCss(
+    '/* stylelint-disable-next-line color-no-hex -- external control requires this color */\n.fixture { color: #123456; }',
+  );
+
+  assert.equal(result.errored, false);
+  assert.ok(!result.rules.includes('color-no-hex'));
+});
+
+test('keeps Prototype CSS outside production color-token enforcement', async () => {
+  const prototypePath = path.join(repositoryRoot, 'apps/web/src/pages/ParalleaxPrototype.css');
+  const result = await lintCss('.fixture { color: #123456; }', prototypePath);
+
+  assert.equal(result.errored, false);
+  assert.ok(!result.rules.includes('color-no-hex'));
+});
+
+test('allows color literals in the canonical token block but rejects them in base UI rules', async () => {
+  const tokens = await lintCss(
+    `
+    /* stylelint-disable color-no-hex, color-named, function-disallowed-list -- canonical tokens */
+    :root { --color-example: #123456; }
+    /* stylelint-enable color-no-hex, color-named, function-disallowed-list */
+    .button { color: #123456; }
+  `,
+    path.join(repositoryRoot, 'apps/web/src/styles.css'),
+  );
+
+  assert.equal(tokens.errored, true);
+  assert.ok(tokens.rules.includes('color-no-hex'));
+});
+
 test('native Stylelint suppressions baseline existing diagnostics and expose added ones', async (t) => {
   const temporaryDirectory = mkdtempSync(path.join(os.tmpdir(), 'paralleax-stylelint-baseline-'));
   const fixturePath = path.join(repositoryRoot, 'apps/web/src/__stylelint_baseline_fixture__.css');
@@ -145,6 +192,36 @@ test('native Stylelint suppressions baseline existing diagnostics and expose add
   });
 
   assert.ok(updated.results[0].warnings.some(({ rule }) => rule === 'no-duplicate-selectors'));
+});
+
+test('native color suppression baseline exposes additional literal colors', async (t) => {
+  const temporaryDirectory = mkdtempSync(path.join(os.tmpdir(), 'paralleax-color-baseline-'));
+  const fixturePath = path.join(repositoryRoot, 'apps/web/src/__stylelint_color_fixture__.css');
+  const suppressionsPath = path.join(temporaryDirectory, 'stylelint-suppressions.json');
+  t.after(() => {
+    rmSync(fixturePath, { force: true });
+    rmSync(temporaryDirectory, { recursive: true, force: true });
+  });
+
+  writeFileSync(fixturePath, '.fixture { color: #123456; }\n');
+  const initial = await stylelint.lint({
+    files: [fixturePath],
+    configFile: stylelintConfigPath,
+    suppressRule: ['color-no-hex'],
+    suppressLocation: suppressionsPath,
+  });
+  assert.equal(initial.results[0].warnings.filter(({ rule }) => rule === 'color-no-hex').length, 0);
+
+  writeFileSync(fixturePath, '.fixture { color: #123456; }\n.new-color { color: #654321; }\n');
+  const updated = await stylelint.lint({
+    files: [fixturePath],
+    configFile: stylelintConfigPath,
+    suppressLocation: suppressionsPath,
+  });
+  assert.ok(
+    updated.results[0].warnings.some(({ rule }) => rule === 'color-no-hex'),
+    'a second semantic color must exceed the audited baseline',
+  );
 });
 
 test('prevents shared domain files from importing framework layers', async () => {

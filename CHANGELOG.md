@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Enforced shared density classes on ordinary production fields and enabled
+  semantic color-token lint across production CSS with an audited legacy
+  baseline. Updated the design catalogue to show separate product-page and
+  authoring action families, including the defined but unused product danger
+  action. No narrative runtime behavior changed.
+
 - Enforced one Trigger per directed Interaction source -> target pair during
   normal editor/API route creation and input edits. Existing duplicate routes
   remain readable and can be edited or removed; the API reports conflicts as

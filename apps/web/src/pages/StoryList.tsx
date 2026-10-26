@@ -283,6 +283,7 @@ export function StoryList({ user }: { user: AuthUser | null }) {
         ) : null}
         <label className="library-sort">
           <span>{t('library.sortBy')}</span>
+          {/* eslint-disable-next-line design-system/require-shared-form-control -- sorting is a compact toolbar control, not a property field */}
           <select value={sort} onChange={(event) => setSort(event.target.value as StorySort)}>
             <option value="updated">{t('library.lastEdited')}</option>
             <option value="title">{t('library.sortTitle')}</option>
@@ -498,7 +499,6 @@ function StoryCard({
         <span className="cover-node one" />
         <span className="cover-trigger" />
         <span className="cover-node two" />
-        <small>{String(tone + 1).padStart(2, '0')}</small>
       </div>
       <div className="library-card-body">
         <span className="product-badge neutral">
@@ -510,13 +510,6 @@ function StoryCard({
             {t('library.card.author', { name: story.owner.displayName })}
           </span>
         ) : null}
-        <p>
-          {t(
-            story.interactionCount
-              ? 'library.card.continueDescription'
-              : 'library.card.emptyDescription',
-          )}
-        </p>
         <dl>
           <div>
             <dt>{t('library.card.interactions')}</dt>
