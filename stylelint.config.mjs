@@ -1,5 +1,7 @@
 /** @type {import('stylelint').Config} */
 export default {
+  reportDescriptionlessDisables: true,
+  reportNeedlessDisables: true,
   referenceFiles: ['apps/web/src/styles.css'],
   rules: {
     'at-rule-no-unknown': true,

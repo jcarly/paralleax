@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Tightened quality gates to cyclomatic/cognitive complexity 10, nesting 3,
+  parameters 4 and function length 50; extended typed safety checks to tests.
+  Recorded 4,404 historical ESLint findings, pruned CSS debt to 642 findings and
+  retained one historical dependency cycle. Added a gate for 16 production clone pairs,
+  baseline-growth review records, shrink-only maintenance and regression tests.
+  Native ESLint/Stylelint counts still cannot detect equal-count replacements.
+  Scheduled this tooling prerequisite before guided author sessions (ADR-041).
+
 - Enforced shared density classes on ordinary production fields and enabled
   semantic color-token lint across production CSS with an audited legacy
   baseline. Updated the design catalogue to show separate product-page and

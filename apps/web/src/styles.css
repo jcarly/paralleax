@@ -1,7 +1,7 @@
 /* Design tokens */
 
 :root {
-  /* stylelint-disable color-no-hex, color-named, function-disallowed-list -- canonical semantic color tokens are declared here */
+  /* stylelint-disable color-no-hex -- canonical semantic color tokens are declared here */
   /* Color tokens */
   --color-text: #20221f;
   --color-muted: #666b63;
@@ -38,7 +38,7 @@
   --color-link: #8d918f;
   --color-link-hover: #5f6f82;
   --color-link-soft: #b8b4ad;
-  /* stylelint-enable color-no-hex, color-named, function-disallowed-list */
+  /* stylelint-enable color-no-hex */
 
   /* Typography tokens */
   --font-interface:

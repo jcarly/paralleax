@@ -2,7 +2,7 @@
 
 Status: Active
 
-Last triaged: 2026-10-25
+Last triaged: 2026-10-26
 
 This page records maintainability, reliability, performance, and test work found
 during the August 2026 code review and subsequent technical evaluations. Production gates remain authoritative in
@@ -25,7 +25,9 @@ sequence; [Production readiness](production-readiness.md) owns release gates.
 ## Active Delivery View
 
 This backlog is intentionally broader than the near-term delivery queue. The
-[Roadmap](roadmap.md) currently leads with guided author validation. Use the
+[Roadmap](roadmap.md) now schedules the bounded strict quality-gate initiative
+before guided author validation, by explicit author decision on 2026-10-26.
+After that prerequisite, use the
 following order when choosing incremental quality work:
 
 1. **Protect the current alpha journey:** address observed data/security issues or
@@ -54,6 +56,14 @@ work. UX ideas and library candidates remain discovery inputs until a product ta
 promotes them.
 
 ## Priority Reclassifications
+
+- **Strict quality gates: P2 -> immediate prerequisite (2026-10-26).** Complete
+  the tooling initiative before guided author sessions, as explicitly requested.
+  [ADR-041](decisions/ADR-041-strict-quality-gates-and-native-baselines.md)
+  records native-count limitations, typed-test coverage and the clone gate.
+  [The audit](audits/2026-10-26-quality-gates.md) owns measured debt and the
+  prioritized incremental reductions. This promotion does not authorize broad
+  orchestrator rewrites or a deadline to eliminate all historical findings.
 
 - **`StoryPlayer` extraction: P1 -> P1 (retained).** Keep the detailed,
   incremental plan and behavior coverage. Start after author observation unless a
@@ -262,6 +272,14 @@ are not prerequisites for disposable author sessions.
 - [ ] Make API request identifiers available in optional support details.
 
 ## P2 — Static Analysis
+
+**Current policy (2026-10-26):** the strict quality-gate initiative is promoted
+ahead of sessions; the following completed 2026-10-25 entries are historical
+measurements superseded by ADR-041 and the linked quality audit. Current counts
+are 4,404 ESLint findings, 642 Stylelint findings, one exact dependency cycle
+and 16 production clone pairs. Native-count replacement limits remain explicit.
+Future debt reduction stays incremental; prioritize the shared narrative engine,
+complex shared helpers, central React flows, functional duplication, then styles.
 
 - [x] Add source-scoped workspace boundary and cycle checks to CI. Keep the one
       existing mixed API email cycle in the dependency baseline and reject new

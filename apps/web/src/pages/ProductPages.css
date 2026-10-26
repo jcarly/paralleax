@@ -1,4 +1,4 @@
-/* stylelint-disable color-no-hex, color-named, function-disallowed-list -- page-scoped palette tokens */
+/* stylelint-disable color-no-hex -- page-scoped palette tokens */
 .product-page {
   --product-ink: #20221f;
   --product-muted: #666b63;
@@ -14,7 +14,7 @@
   --product-danger: #a5453f;
   color: var(--product-ink);
 }
-/* stylelint-enable color-no-hex, color-named, function-disallowed-list */
+/* stylelint-enable color-no-hex */
 
 .product-page button {
   font: inherit;

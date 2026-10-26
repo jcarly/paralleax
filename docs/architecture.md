@@ -663,7 +663,7 @@ also uses ESLint to reject framework, browser, and HTTP dependencies. These
 rules preserve the workspace ownership described above; they do not ban the
 existing editor/player collaboration with shared web features.
 
-The dependency graph currently contains 557 modules and 2,018 edges. The audit
+The 2026-10-26 dependency graph contains 560 modules and 2,030 edges. The audit
 found no workspace-boundary violations and no runtime-only cycles. Its only
 existing cycle is mixed: `email.service.ts` imports `test-email-outbox.ts` at
 runtime, while `test-email-outbox.ts` imports `EmailMessage` as a type from the
@@ -672,26 +672,38 @@ service. The committed
 including type-only cycles, fail. Review the baseline when changing either
 module, and use shrink-only baseline updates when a known violation is removed.
 
-ESLint blocks cyclomatic complexity above 20 in production TypeScript. The native
-`eslint-suppressions.json` baseline holds 45 existing findings across 34 files;
-test files and test helpers are excluded. Regenerate or prune it deliberately,
-review the diff, and keep counts moving down. ESLint compares violations by file
-and rule: an increased count fails, while replacing one existing finding with a
-different finding in the same file can keep the count unchanged. Current
-production-source measurements were 86 functions above complexity 15, 2 deeper
-than 4 levels, 27 with more than 5 parameters, 66 longer than 120 lines, and 31
-files longer than 450 lines. These remain review signals rather than additional
-blocking rules.
+ESLint blocks cyclomatic and cognitive complexity above 10, nesting above 3,
+more than 4 parameters, and functions longer than 50 nonblank/noncomment lines.
+Source, tests, scripts and configurations receive these guards. Dedicated
+lint-only TypeScript projects extend selective typed safety rules to tests.
+The initial strict-rule migration records 4,404 historical findings across 387
+tracked files. The 2026-10-25 threshold-20 measurements remain historical in
+ADR-039 and the backlog, rather than describing current configuration.
 
-To shrink baselines, run ESLint with `--prune-suppressions` and
-`--suppressions-location eslint-suppressions.json`; run dependency-cruiser with
-`--baseline --baseline-mode shrink-only`. Review both baseline diffs before
-committing them. Recording a new complexity baseline requires
-`--suppress-rule complexity` and should happen only after reviewing the findings.
+Native ESLint/Stylelint suppressions still count per file and rule by explicit
+author choice. Count increases and new baseline entries fail unless a reviewed
+transition records exact previous/new digests and rationale. Equal-count
+replacements and worsening an existing violation can still pass; changed-code
+review is essential. Dependency Cruiser uses an exact dependency baseline and
+now errors on stale entries. Stylelint checks stale counts across all source CSS.
+
+`npm run lint` includes ESLint, CSS, the production clone gate and baseline-growth
+checks. `npm run lint:baseline:prune` shrinks all baselines without adding new
+violations. Review the diff; no generation runs in CI. Git comparison uses the
+PR base or previous push commit, with `HEAD` as the local default. Run
+`npm run lint:baseline -- <ref>` for an explicit local comparison.
+
+jscpd 4.3 detects production clones of at least 100 tokens and 10 lines. A small
+JSON-report adapter identifies clones by content and file pair, preserving line
+movement and rejecting stale/new entries. Tests remain outside the clone corpus,
+and broad semantic duplication remains a review concern. File limits include
+the large editor/reader orchestrators, with scanned-file coverage checked.
 
 The dependency map and the audit exceptions are summarized in
 [`architecture-map-ai.md`](architecture-map-ai.md). The tool and baseline
-decision are recorded in [ADR-039](decisions/ADR-039-automated-architecture-guardrails.md).
+decisions are recorded in [ADR-039](decisions/ADR-039-automated-architecture-guardrails.md)
+and [ADR-041](decisions/ADR-041-strict-quality-gates-and-native-baselines.md).
+Commands, counts and limitations are in the [quality audit](audits/2026-10-26-quality-gates.md).
 
 ## React Flow Boundary
 

@@ -3,6 +3,10 @@
 **Status:** Accepted  
 **Date:** 2026-10-25
 
+**Partially superseded on 2026-10-26:** [ADR-041](ADR-041-strict-quality-gates-and-native-baselines.md)
+replaces the complexity threshold, typed-test exclusion and deferred size/depth
+guards. The decisions and measurements below are retained as historical context.
+
 ## Context
 
 The repository documents its workspace and React Flow boundaries, but those

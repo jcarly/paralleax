@@ -229,6 +229,27 @@ documentation or ADR.
   the discovery and alternatives promptly. Revisit the contract with the user
   before pursuing the expanded work; do not silently absorb it into the task.
 
+### Quality gates and historical debt
+
+- New implementations must pass the quality gates. A historical violation never
+  authorizes a new one, even when native file/rule counts would conceal it.
+- Never add a suppression without an explicit technical justification. Never
+  disable a rule or increase/regenerate a baseline to make lint or tests pass.
+  An explicitly commissioned initial rule migration is a separate reviewed
+  exception, bound to the previous/new baseline digests and a written rationale
+  in `quality-baseline-transitions.json`.
+- Prefer cohesive refactoring and existing abstractions over lint workarounds.
+  Keep business rules centralized; do not add layers or split functions merely
+  to satisfy a metric. React declarations have no blanket exemption.
+- Remove obsolete suppressions when refactoring. `npm run lint:baseline:prune`
+  only shrinks existing baselines and still rejects new violations. Review its
+  diff. Do not run native suppression-generation flags automatically.
+- Run `npm run lint`, `npm run lint:architecture` and the appropriate tests.
+  CI compares baselines with the pull-request base or previous push commit.
+  Native ESLint/Stylelint counts can hide equal-count replacements and increased
+  severity of an existing diagnostic; review changed code accordingly. See
+  ADR-041 and the quality audit for the exact guarantees and commands.
+
 ### Decisions and completion
 
 - Keep agreed behavior and acceptance scenarios in the implementation contract.

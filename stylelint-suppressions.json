@@ -42,7 +42,7 @@
   },
   "apps/web/src/features/comments/comments.css": {
     "no-descending-specificity": {
-      "count": 15
+      "count": 13
     },
     "color-no-hex": {
       "count": 9
