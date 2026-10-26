@@ -2,6 +2,32 @@
 
 ## Unreleased
 
+- Added a brief cross-fade between visible Interactions in Reader and Simulation
+  Mode. Reduced-motion preferences disable it, and Reader pass-through
+  Interactions remain invisible.
+
+- Tightened quality gates to cyclomatic/cognitive complexity 10, nesting 3,
+  parameters 4 and function length 50; extended typed safety checks to tests.
+  Recorded 4,404 historical ESLint findings, pruned CSS debt to 642 findings and
+  retained one historical dependency cycle. Added a gate for 16 production clone pairs,
+  baseline-growth review records, shrink-only maintenance and regression tests.
+  Native ESLint/Stylelint counts still cannot detect equal-count replacements.
+  Scheduled this tooling prerequisite before guided author sessions (ADR-041).
+
+- Enforced shared density classes on ordinary production fields and enabled
+  semantic color-token lint across production CSS with an audited legacy
+  baseline. Updated the design catalogue to show separate product-page and
+  authoring action families, including the defined but unused product danger
+  action. No narrative runtime behavior changed.
+
+- Enforced one Trigger per directed Interaction source -> target pair during
+  normal editor/API route creation and input edits. Existing duplicate routes
+  remain readable and can be edited or removed; the API reports conflicts as
+  `409`, and the editor shows a graph alert. QSP and ChoiceScript imports combine
+  same-pair condition variants into OR groups on one Trigger. Corrected related
+  trigger, conditional-text, QSP subroutine, visibility, and historical MVP
+  documentation.
+
 - Enabled 12 type-aware ESLint safety rules across all three production
   workspaces and added native baselines for 120 existing diagnostics. The CSS
   baseline tracks 359 findings from the cascade, duplicate-selector, and

@@ -149,10 +149,8 @@
 
 .reader-save-create label,
 .reader-save-list article > div:first-child {
-  display: grid;
   min-width: 0;
   flex: 1;
-  gap: 0.2rem;
 }
 
 .reader-save-create label > span,
@@ -160,11 +158,7 @@
 .reader-save-list small,
 .reader-save-list time {
   color: var(--color-muted);
-  font-size: 0.72rem;
-}
-
-.reader-save-create input {
-  width: 100%;
+  font-size: var(--type-size-compact);
 }
 
 .reader-save-list {
@@ -201,12 +195,49 @@
 
 .player-card {
   grid-column: 2;
+  view-transition-name: story-player-card;
   background: var(--color-surface);
   border: 0px solid var(--color-border);
   border-radius: 16px;
   padding: 0;
   min-height: 430px;
   box-shadow: var(--shadow-player);
+}
+
+.player-card-passing {
+  visibility: hidden;
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+}
+
+::view-transition-old(story-player-card) {
+  animation: player-interaction-fade-out 160ms ease-in both;
+}
+
+::view-transition-new(story-player-card) {
+  animation: player-interaction-fade-in 200ms ease-out both;
+}
+
+@keyframes player-interaction-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes player-interaction-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(story-player-card),
+  ::view-transition-new(story-player-card) {
+    animation: none;
+  }
 }
 
 .eyebrow {

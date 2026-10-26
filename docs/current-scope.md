@@ -25,6 +25,12 @@ Paralleax currently includes:
   and narrative step. A nullable non-negative timer limits how long an otherwise
   eligible Trigger exposes its option; active timers render as draining bars,
   while zero-second timers never appear in normal reading.
+  Normal editor and API creation or input edits allow each directed source ->
+  target pair on only one Trigger. This app-level policy has no database unique
+  constraint. Existing duplicate pairs remain loadable, can be edited without
+  adding another duplicate, and can be removed. QSP and ChoiceScript adapters
+  combine same-pair condition variants into OR groups while preserving
+  source-specific route conditions.
   In the editor, authored condition rules are concise multi-line buttons that
   open uniform vertically stacked controls on click; Enter or focus leaving a
   condition closes its editor. AND/OR connectors stay explicit.
@@ -57,6 +63,9 @@ Paralleax currently includes:
   duration, location changes, journey entries, and saves remain consistent.
   The Reader continues through such Interactions until content, a branch, an
   ending, or a repeated destination. Simulation Mode keeps them selectable.
+- Reader and Simulation Mode cross-fade the Player scene and narrative card when
+  the current Interaction changes. Reduced-motion preferences disable the effect;
+  pass-through Interactions are advanced before display.
 - Story-local deterministic calendar time.
 - Locations.
 - Characters.

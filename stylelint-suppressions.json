@@ -32,11 +32,20 @@
     },
     "no-duplicate-selectors": {
       "count": 1
+    },
+    "color-no-hex": {
+      "count": 97
+    },
+    "color-named": {
+      "count": 12
     }
   },
   "apps/web/src/features/comments/comments.css": {
     "no-descending-specificity": {
-      "count": 15
+      "count": 13
+    },
+    "color-no-hex": {
+      "count": 9
     }
   },
   "apps/web/src/features/story-editor/editor.css": {
@@ -45,11 +54,23 @@
     },
     "no-descending-specificity": {
       "count": 6
+    },
+    "color-no-hex": {
+      "count": 8
+    },
+    "function-disallowed-list": {
+      "count": 1
     }
   },
   "apps/web/src/features/story-player/storyPlayer.css": {
     "no-descending-specificity": {
       "count": 15
+    },
+    "color-no-hex": {
+      "count": 64
+    },
+    "color-named": {
+      "count": 13
     }
   },
   "apps/web/src/features/story-editor/graph/storyGraph.css": {
@@ -58,11 +79,54 @@
     },
     "no-descending-specificity": {
       "count": 5
+    },
+    "color-no-hex": {
+      "count": 18
+    },
+    "color-named": {
+      "count": 1
     }
   },
   "apps/web/src/features/story-editor/inspectors/inspector-controls.css": {
     "no-descending-specificity": {
       "count": 6
+    },
+    "color-no-hex": {
+      "count": 3
+    },
+    "color-named": {
+      "count": 1
+    }
+  },
+  "apps/web/src/styles.css": {
+    "color-no-hex": {
+      "count": 10
+    },
+    "color-named": {
+      "count": 1
+    }
+  },
+  "apps/web/src/components/richTextEditor.css": {
+    "color-no-hex": {
+      "count": 4
+    },
+    "color-named": {
+      "count": 1
+    }
+  },
+  "apps/web/src/features/feedback/FeedbackButton.css": {
+    "color-no-hex": {
+      "count": 5
+    }
+  },
+  "apps/web/src/features/story-player/storySimulation.css": {
+    "color-no-hex": {
+      "count": 36
+    }
+  },
+  "apps/web/src/features/story-editor/inspectors/inspector-layout.css": {
+    "color-no-hex": {
+      "count": 1
     }
   }
 }

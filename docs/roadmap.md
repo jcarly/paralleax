@@ -2,7 +2,7 @@
 
 This roadmap describes the progression from the validated narrative core to a public Paralleax platform.
 
-Status reviewed: 2026-10-25.
+Status reviewed: 2026-10-26.
 
 It is organized around **user capabilities** rather than implementation areas. Engineering work supports these milestones but does not define them by itself.
 
@@ -30,14 +30,23 @@ matter to them. The historical 2026-09-11 private-alpha queue is delivery histor
 not the active queue. The implemented foundations and evidence are listed in
 [Current scope](current-scope.md).
 
-Guided sessions may start now with disposable test projects. Do not use projects
-whose loss would matter until the provider backup and restore drill succeeds and
-the operator has completed the deployment, recovery, communications, and request
+Guided sessions use disposable test projects. Do not use projects whose loss
+would matter until the provider backup and restore drill succeeds and the
+operator has completed the deployment, recovery, communications, and request
 procedures in [Production readiness](production-readiness.md). Sessions record
 task outcomes, difficulties, workarounds, and incidents; no participant quota or
-numeric success threshold is set.
+numeric success threshold is set. The 2026-10-26 priority decision below places
+the quality-gate prerequisite before starting those sessions.
 
 ### Next delivery tasks
+
+**Priority decision, 2026-10-26:** the strict quality-gate and baseline initiative
+in [ADR-041](decisions/ADR-041-strict-quality-gates-and-native-baselines.md) was
+placed before guided author sessions. Its local implementation is complete:
+configured gates, historical-debt inventory, pruning, regression tests and CI
+checks are in place. Remote CI validation awaits the next CI event. This bounded
+prerequisite did not schedule broad code refactoring. Evidence and residual
+limitations are recorded in the [quality audit](audits/2026-10-26-quality-gates.md).
 
 1. **Prepare the alpha session brief.** Reuse the private-alpha runbook to state
    the hypotheses, representative author tasks, project-data boundary, and a
@@ -920,11 +929,13 @@ source inventory
 
 ### Remaining scope
 
-- Decide and, if accepted, implement native ordered Interaction inclusion before
-  mapping QSP `GS` / `GOSUB`. Reuse ordinary Interactions by reference, keep
+- The QSP adapter already maps a limited static, acyclic `GS` / `GOSUB` subset
+  through ordinary Interaction traversal, return stats, and Triggers. Decide
+  whether native ordered Interaction inclusion is still justified for QSP screen
+  composition beyond that approximation. Reuse Interactions by reference, keep
   inclusion dependencies out of the narrative graph, preserve deterministic
-  journey semantics, and retain diagnostics for unrepresentable QSP behavior.
-  The proposal and unresolved model decisions are recorded in
+  journey semantics, and retain diagnostics for unrepresentable behavior. The
+  proposal and unresolved model decisions are recorded in
   [Interaction inclusion](interaction-inclusion-proposal.md).
 - Define a source-neutral retained representation for unsupported source and
   richer expressions; the current draft graph remains ChoiceScript-specific.

@@ -80,7 +80,8 @@ In particular:
 - a Trigger has exactly one output Interaction: the Interaction that owns it;
 - one Trigger may have multiple input Interactions;
 - input Interactions on one Trigger are alternative reachability sources;
-- multiple Triggers may target the same Interaction and represent alternative condition variants;
+- during normal creation or editing, a directed source -> target pair may belong to only one Trigger. This is a current application policy, not a database uniqueness constraint; existing duplicate pairs remain loadable and editable so authors can remove them;
+- multiple Triggers may target the same Interaction when their source -> target pairs do not overlap; condition groups on one Trigger remain the OR mechanism for shared routes;
 - authored story state must remain distinct from reader/runtime state;
 - reader results must be deterministic from authored story + ordered journey;
 - graph data is a projection, never the canonical story format;
@@ -227,6 +228,27 @@ documentation or ADR.
   example, a small fix now needs a migration, new abstraction, or refactor), explain
   the discovery and alternatives promptly. Revisit the contract with the user
   before pursuing the expanded work; do not silently absorb it into the task.
+
+### Quality gates and historical debt
+
+- New implementations must pass the quality gates. A historical violation never
+  authorizes a new one, even when native file/rule counts would conceal it.
+- Never add a suppression without an explicit technical justification. Never
+  disable a rule or increase/regenerate a baseline to make lint or tests pass.
+  An explicitly commissioned initial rule migration is a separate reviewed
+  exception, bound to the previous/new baseline digests and a written rationale
+  in `quality-baseline-transitions.json`.
+- Prefer cohesive refactoring and existing abstractions over lint workarounds.
+  Keep business rules centralized; do not add layers or split functions merely
+  to satisfy a metric. React declarations have no blanket exemption.
+- Remove obsolete suppressions when refactoring. `npm run lint:baseline:prune`
+  only shrinks existing baselines and still rejects new violations. Review its
+  diff. Do not run native suppression-generation flags automatically.
+- Run `npm run lint`, `npm run lint:architecture` and the appropriate tests.
+  CI compares baselines with the pull-request base or previous push commit.
+  Native ESLint/Stylelint counts can hide equal-count replacements and increased
+  severity of an existing diagnostic; review changed code accordingly. See
+  ADR-041 and the quality audit for the exact guarantees and commands.
 
 ### Decisions and completion
 

@@ -1,9 +1,15 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import {
   deleteGraphDecorationFromStory,
   deleteInteractionFromStory,
   deleteTriggerInStory,
+  findNewTriggerInputConflict,
   getTriggerAppearanceProbability,
   getTriggerConditionGroups,
   getTriggerTimerSeconds,
@@ -36,6 +42,7 @@ import type {
   UpdateTriggerDto,
 } from '../dto/stories.dto';
 import { sanitizeRichText } from '../rich-text';
+import { apiErrorResponse } from '../../operations/api-error-response';
 import { buildGraphDecoration } from './graph-decorations';
 import { storyMutationMetadata } from './story-mutation-results';
 import { StoryMutationService } from './story-mutations';
@@ -293,6 +300,12 @@ export class StoryGraphService {
             ? trigger.inputInteractionIds
             : normalizeTriggerInputIds(input.inputInteractionIds);
         this.assertInteractionReferences(story, inputInteractionIds);
+        if (input.inputInteractionIds !== undefined) {
+          this.assertNoTriggerConnectionConflicts(story, interactionId, inputInteractionIds, {
+            triggerId,
+            existingInputInteractionIds: trigger.inputInteractionIds,
+          });
+        }
         return updateTriggerInStory(story, interactionId, triggerId, {
           inputInteractionIds,
           conditionGroups,
@@ -320,10 +333,12 @@ export class StoryGraphService {
       storyId,
       (story) => {
         const conditionGroups = this.triggerConditionGroups(story, input);
-        this.assertInteractionReferences(story, input.inputInteractionIds ?? []);
+        const inputInteractionIds = normalizeTriggerInputIds(input.inputInteractionIds ?? []);
+        this.assertInteractionReferences(story, inputInteractionIds);
+        this.assertNoTriggerConnectionConflicts(story, interactionId, inputInteractionIds);
         this.interaction(story, interactionId).triggers.push({
           id: triggerId,
-          inputInteractionIds: normalizeTriggerInputIds(input.inputInteractionIds ?? []),
+          inputInteractionIds,
           conditionGroups,
           appearanceProbability: input.appearanceProbability ?? 100,
           timerSeconds: input.timerSeconds ?? null,
@@ -376,6 +391,29 @@ export class StoryGraphService {
     const interactionIds = new Set(story.interactions.map(({ id }) => id));
     if (inputInteractionIds.some((id) => !interactionIds.has(id))) {
       throw new BadRequestException('Trigger references must belong to the same story');
+    }
+  }
+
+  private assertNoTriggerConnectionConflicts(
+    story: Story,
+    interactionId: string,
+    inputInteractionIds: string[],
+    options: { triggerId?: string; existingInputInteractionIds?: string[] } = {},
+  ) {
+    const conflict = findNewTriggerInputConflict(
+      story,
+      interactionId,
+      inputInteractionIds,
+      options,
+    );
+    if (conflict) {
+      throw new ConflictException(
+        apiErrorResponse(
+          'TRIGGER_CONNECTION_EXISTS',
+          'Another Trigger already connects these Interactions.',
+          conflict,
+        ),
+      );
     }
   }
 

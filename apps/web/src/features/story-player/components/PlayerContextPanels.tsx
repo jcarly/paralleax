@@ -2,6 +2,18 @@ import { useTranslation } from 'react-i18next';
 import type { Character, Interaction, StatValue, Story } from '@paralleax/shared';
 import { getItemDefinitionIdForInstance, getItemOwnerIdForInstance } from '@paralleax/shared';
 
+function shouldShowPlayerContextPanel(
+  playedCharacter: Character | undefined,
+  playableCharacterCount: number,
+  hasItemDefinitions: boolean,
+  isSimulationMode: boolean,
+) {
+  return (
+    Boolean(playedCharacter) ||
+    (playableCharacterCount === 0 && (hasItemDefinitions || isSimulationMode))
+  );
+}
+
 export function PlayerContextPanels({
   story,
   current,
@@ -26,10 +38,17 @@ export function PlayerContextPanels({
   onForceUnavailableOptionsChange: (checked: boolean) => void;
 }) {
   const { t } = useTranslation();
+  const hasItemDefinitions = (story.itemDefinitions?.length ?? 0) > 0;
+  const showPlayerContextPanel = shouldShowPlayerContextPanel(
+    playedCharacter,
+    playableCharacterCount,
+    hasItemDefinitions,
+    isSimulationMode,
+  );
 
   return (
     <>
-      {playedCharacter || playableCharacterCount === 0 ? (
+      {showPlayerContextPanel ? (
         <aside
           className="player-inventory"
           aria-label={t(playedCharacter ? 'player.playedCharacter' : 'player.inventory')}
@@ -88,7 +107,7 @@ export function PlayerContextPanels({
               </label>
             </section>
           ) : null}
-          {story.itemDefinitions?.length === 0 ? null : (
+          {hasItemDefinitions ? (
             <>
               <h2>{t('player.inventory')}</h2>
               {ownedItemIds.filter(
@@ -139,7 +158,7 @@ export function PlayerContextPanels({
                 </ul>
               )}
             </>
-          )}
+          ) : null}
         </aside>
       ) : null}
       {playedCharacter &&

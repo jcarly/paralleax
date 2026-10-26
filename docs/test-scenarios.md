@@ -294,15 +294,15 @@ The character-stat vertical keeps these regressions covered:
 - Editor: interaction and trigger deletion can be cancelled from their
   confirmation prompt.
 - Editor: creating a new canvas connection creates a dedicated trigger and does not mutate existing linked triggers.
-- Editor: creating a connection or OR variant uses one trigger request rather
-  than a dependent POST followed by PATCH.
+- Editor: creating a route uses one Trigger request, and adding an OR condition
+  group updates the owning Trigger without creating another route.
 - Editor: dropping a connection on an interaction's input `+` creates a separate
   trigger without opening a follow-up choice dialog.
 - Editor: dropping a connection on an existing trigger marker adds the source as
   another input of that trigger.
 - Editor: adding a source to an existing trigger keeps the trigger conditions shared by all of its inputs.
-- Editor/Reader: each Trigger has its own graph marker and independent gates,
-  even when multiple Triggers have the same inputs and output.
+- Editor/Reader: each Trigger has its own graph marker and independent gates;
+  historical duplicate source -> target routes remain separately inspectable.
 - Editor: adding an OR condition group from the trigger inspector adds a group
   to that Trigger; it does not create another Trigger or visual marker.
 - Editor: removing an alternative group changes only that Trigger and preserves
@@ -315,13 +315,22 @@ The character-stat vertical keeps these regressions covered:
 - Editor graph mapping: every authored Trigger projects to its own marker;
   condition groups remain owned by that Trigger rather than being grouped as
   separate graph variants.
+- Shared/API/Editor: reject creation of a second Trigger connection for the same
+  directed source -> target pair, while allowing reverse routes, non-overlapping
+  inputs, and multiple source inputs on one Trigger.
+- Shared/API: editing a historical duplicate without adding a new duplicate is
+  allowed; deleting one duplicate permits a replacement route.
+- QSP/ChoiceScript imports: condition variants for one source -> target pair
+  become OR groups on one Trigger; source pairs with different condition sets
+  remain separate Triggers.
 - Reader engine: an inputless trigger without conditions is available only at
   story start.
 - Reader engine: an inputless trigger with conditions can become available during
   reading.
 - Editor: deleting an interaction removes triggers that output to it.
 - Editor: deleting an interaction removes it from trigger inputs and turns orphaned triggers into root triggers.
-- Reader engine: an interaction without input is available at startup.
+- Reader engine: an interaction with an inputless Trigger without conditions is
+  available at startup; an inputless Trigger with conditions remains contextual.
 - Reader engine: an interaction with input is only available after the source interaction.
 - Reader engine: visited / not visited conditions filter choices correctly.
 - Editor/API: item definitions are created once at story level and can be edited.
@@ -492,7 +501,10 @@ Component and domain regressions supporting these flows also cover:
 - Reader: choose a playable character before the unique starting interaction opens;
   Simulation Mode keeps explicit starting choices.
 
-## Current Priority
+## Historical Implementation Priority
+
+This list records an earlier implementation sequence. It is retained for
+context, not as the current delivery priority; see the [Roadmap](roadmap.md).
 
 1. Title editing stability.
 2. Interaction movement stability.
@@ -500,7 +512,8 @@ Component and domain regressions supporting these flows also cover:
 4. Triggers with several inputs.
 5. Connection UX for choosing existing trigger inputs or new triggers.
 6. Contextual inputless triggers.
-7. OR condition groups through several triggers between the same interactions.
+7. OR condition groups through several Triggers between the same interactions
+   (historical approach, superseded by [ADR-025](decisions/ADR-025-trigger-condition-groups-and-seeded-probability.md)).
 8. Trigger editing from graph markers.
 9. Precise trigger link creation and deletion.
 10. Direct graph creation from connection gestures.

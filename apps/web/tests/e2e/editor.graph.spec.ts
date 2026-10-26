@@ -497,18 +497,25 @@ test.describe('Story editor graph', () => {
     expect(frameLayer).toBeLessThan(interactionLayer);
 
     await expect(page.getByRole('heading', { name: 'Frame' })).toBeVisible();
-    await page.getByLabel('Width').fill('560');
-    await page.getByLabel('Width').blur();
+    const frameWidth = page.getByLabel('Width');
+    await expect(frameWidth).toHaveClass(/\bform-control\b/);
+    await expect(frameWidth).toHaveClass(/\bform-control--compact\b/);
+    await frameWidth.fill('560');
+    await frameWidth.blur();
 
     await page.getByRole('button', { name: 'Add text' }).click();
     const text = page.getByTestId('graph-text-text-1');
     await expect(text).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Text' })).toBeVisible();
-    await page.getByLabel('Content').fill('Opening act');
-    await page.getByLabel('Content').blur();
+    const decorationContent = page.getByLabel('Content');
+    const decorationFont = page.getByLabel('Font');
+    await expect(decorationContent).toHaveClass(/\bform-control--compact\b/);
+    await expect(decorationFont).toHaveClass(/\bform-control--compact\b/);
+    await decorationContent.fill('Opening act');
+    await decorationContent.blur();
     await page.getByLabel('Text size').fill('48');
     await page.getByLabel('Text size').blur();
-    await page.getByLabel('Font').selectOption('serif');
+    await decorationFont.selectOption('serif');
     await page.getByLabel('Bold').check();
     await page.getByLabel('Italic').check();
 

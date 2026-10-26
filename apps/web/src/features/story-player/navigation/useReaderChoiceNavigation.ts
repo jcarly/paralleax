@@ -1,29 +1,9 @@
-import { useCallback } from 'react';
+import { useCallback, useLayoutEffect, useRef } from 'react';
 import type { Interaction, ReaderProgressState, Story } from '@paralleax/shared';
 import { getAvailableInteractions } from '@paralleax/shared';
+import { transitionPlayerInteraction } from './transitionPlayerInteraction';
 
-export function useReaderChoiceNavigation({
-  story,
-  current,
-  visited,
-  currentLocationId,
-  currentDateTime,
-  statValues,
-  ownedItemDefinitionIds,
-  itemStatValues,
-  randomSeed,
-  journeyLength,
-  currentStepStartedAt,
-  isSimulationMode,
-  forceUnavailableOptions,
-  resetAutomaticTransitions,
-  commitChoiceStep,
-  cancelCommentDraft,
-  selectCommentThread,
-  setTimerNow,
-  advanceSession,
-  saveProgress,
-}: {
+interface ReaderChoiceNavigationOptions {
   story: Story | undefined;
   current: Interaction | undefined;
   visited: string[];
@@ -44,66 +24,81 @@ export function useReaderChoiceNavigation({
   setTimerNow: (now: number) => void;
   advanceSession: (story: Story, interaction: Interaction) => ReaderProgressState;
   saveProgress: (session: ReaderProgressState) => void;
-}) {
-  return useCallback(
-    (interaction: Interaction, automaticTransition = false) => {
-      if (!story) return;
-      if (!automaticTransition) {
-        resetAutomaticTransitions();
-      }
-      const now = Date.now();
-      if (!(isSimulationMode && forceUnavailableOptions)) {
-        const startedAt = currentStepStartedAt ? Date.parse(currentStepStartedAt) : now;
-        const stillAvailable = getAvailableInteractions(
-          story,
-          current?.id ?? null,
-          visited,
-          currentLocationId,
-          current?.characterIds ?? [],
-          statValues,
-          currentDateTime,
-          ownedItemDefinitionIds,
-          itemStatValues,
-          {
-            randomSeed,
-            step: journeyLength,
-            elapsedTimeMs: Math.max(0, now - (Number.isNaN(startedAt) ? now : startedAt)),
-          },
-        ).some(({ id }) => id === interaction.id);
-        if (!stillAvailable) {
-          setTimerNow(now);
-          return;
-        }
-      }
-      const choiceStepKey = `${story.id}:${journeyLength}:${current?.id ?? ''}:${currentStepStartedAt ?? ''}`;
-      if (!commitChoiceStep(choiceStepKey)) return;
-      cancelCommentDraft();
-      selectCommentThread(undefined);
-      setTimerNow(now);
-      const nextSession = advanceSession(story, interaction);
-      saveProgress(nextSession);
+}
+
+export function useReaderChoiceNavigation(options: ReaderChoiceNavigationOptions) {
+  const optionsRef = useRef(options);
+  useLayoutEffect(() => {
+    optionsRef.current = options;
+  });
+
+  return useCallback((interaction: Interaction, automaticTransition = false) => {
+    const now = Date.now();
+    const navigate = () =>
+      executeReaderChoiceNavigation(optionsRef.current, interaction, automaticTransition, now);
+    if (automaticTransition) {
+      navigate();
+    } else {
+      transitionPlayerInteraction(navigate);
+    }
+  }, []);
+}
+
+function executeReaderChoiceNavigation(
+  options: ReaderChoiceNavigationOptions,
+  interaction: Interaction,
+  automaticTransition: boolean,
+  now: number,
+): void {
+  const { story, current } = options;
+  if (!story) {
+    return;
+  }
+  if (!automaticTransition) {
+    options.resetAutomaticTransitions();
+  }
+  if (
+    !(options.isSimulationMode && options.forceUnavailableOptions) &&
+    !isChoiceAvailable(options, interaction, now)
+  ) {
+    options.setTimerNow(now);
+    return;
+  }
+
+  const choiceStepKey = `${story.id}:${options.journeyLength}:${current?.id ?? ''}:${options.currentStepStartedAt ?? ''}`;
+  if (!options.commitChoiceStep(choiceStepKey)) {
+    return;
+  }
+  options.cancelCommentDraft();
+  options.selectCommentThread(undefined);
+  options.setTimerNow(now);
+  options.saveProgress(options.advanceSession(story, interaction));
+}
+
+function isChoiceAvailable(
+  options: ReaderChoiceNavigationOptions,
+  interaction: Interaction,
+  now: number,
+): boolean {
+  const { story, current } = options;
+  if (!story) {
+    return false;
+  }
+  const startedAt = options.currentStepStartedAt ? Date.parse(options.currentStepStartedAt) : now;
+  return getAvailableInteractions(
+    story,
+    current?.id ?? null,
+    options.visited,
+    options.currentLocationId,
+    current?.characterIds ?? [],
+    options.statValues,
+    options.currentDateTime,
+    options.ownedItemDefinitionIds,
+    options.itemStatValues,
+    {
+      randomSeed: options.randomSeed,
+      step: options.journeyLength,
+      elapsedTimeMs: Math.max(0, now - (Number.isNaN(startedAt) ? now : startedAt)),
     },
-    [
-      advanceSession,
-      cancelCommentDraft,
-      selectCommentThread,
-      current,
-      currentDateTime,
-      currentLocationId,
-      currentStepStartedAt,
-      resetAutomaticTransitions,
-      commitChoiceStep,
-      forceUnavailableOptions,
-      isSimulationMode,
-      itemStatValues,
-      journeyLength,
-      ownedItemDefinitionIds,
-      randomSeed,
-      saveProgress,
-      setTimerNow,
-      statValues,
-      story,
-      visited,
-    ],
-  );
+  ).some(({ id }) => id === interaction.id);
 }

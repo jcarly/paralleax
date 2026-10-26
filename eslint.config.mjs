@@ -1,7 +1,9 @@
 import js from '@eslint/js';
 import reactHooks from 'eslint-plugin-react-hooks';
 import reactRefresh from 'eslint-plugin-react-refresh';
+import sonarjs from 'eslint-plugin-sonarjs';
 import tseslint from 'typescript-eslint';
+import requireSharedFormControl from './scripts/eslint-rules/require-shared-form-control.mjs';
 
 const browserGlobals = {
   document: 'readonly',
@@ -24,13 +26,11 @@ const nodeGlobals = {
 };
 
 const typeAwareIgnores = [
-  '**/*.test.ts',
-  '**/*.test.tsx',
-  '**/*.spec.ts',
-  '**/*.spec.tsx',
-  '**/test/**',
   '**/__architecture_guard_fixture__.ts',
   '**/__architecture_baseline_fixture__.ts',
+  '**/__design_system_rule_fixture__.tsx',
+  '**/__architecture_guard_fixture__.test.ts',
+  '**/__eslint_fixture__.test.ts',
 ];
 
 const typeAwareRules = {
@@ -46,6 +46,15 @@ const typeAwareRules = {
   '@typescript-eslint/no-unsafe-member-access': 'error',
   '@typescript-eslint/no-unsafe-return': 'error',
   '@typescript-eslint/no-unsafe-unary-minus': 'error',
+  '@typescript-eslint/no-unsafe-type-assertion': 'error',
+  '@typescript-eslint/prefer-promise-reject-errors': 'error',
+  '@typescript-eslint/await-thenable': 'error',
+  '@typescript-eslint/only-throw-error': 'error',
+  '@typescript-eslint/return-await': ['error', 'in-try-catch'],
+  '@typescript-eslint/switch-exhaustiveness-check': [
+    'error',
+    { considerDefaultExhaustiveForUnions: false },
+  ],
 };
 
 function typeAwareWorkspaceConfig(files, project) {
@@ -71,7 +80,12 @@ export default tseslint.config(
       '**/playwright-report/**',
       '**/test-results/**',
       '**/*.tsbuildinfo',
+      'quality-reports/**',
+      'test-data/local/**',
     ],
+  },
+  {
+    linterOptions: { reportUnusedDisableDirectives: 'error', reportUnusedInlineConfigs: 'error' },
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,
@@ -87,6 +101,25 @@ export default tseslint.config(
     rules: {
       ...reactHooks.configs.recommended.rules,
       'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
+    },
+  },
+  {
+    files: ['apps/web/src/**/*.tsx'],
+    ignores: [
+      'apps/web/src/**/*.test.tsx',
+      'apps/web/src/**/*.spec.tsx',
+      'apps/web/src/pages/ParalleaxPrototype.tsx',
+      'apps/web/src/pages/ParalleaxPrototypePages.tsx',
+    ],
+    plugins: {
+      'design-system': {
+        rules: {
+          'require-shared-form-control': requireSharedFormControl,
+        },
+      },
+    },
+    rules: {
+      'design-system/require-shared-form-control': 'error',
     },
   },
   {
@@ -205,25 +238,34 @@ export default tseslint.config(
     },
   },
   {
-    files: ['apps/web/src/**/*.{ts,tsx}', 'apps/api/src/**/*.ts', 'packages/shared/src/**/*.ts'],
-    ignores: ['**/*.test.ts', '**/*.test.tsx', '**/*.spec.ts', '**/*.spec.tsx', '**/test/**'],
+    files: ['**/*.{js,cjs,mjs,ts,tsx}'],
+    plugins: { sonarjs },
     rules: {
-      complexity: ['error', 20],
+      complexity: ['error', 10],
+      'sonarjs/cognitive-complexity': ['error', 10],
+      'sonarjs/no-identical-expressions': 'error',
+      'sonarjs/no-all-duplicated-branches': 'error',
+      'max-depth': ['error', 3],
+      'max-params': ['error', 4],
+      'max-lines-per-function': ['error', { max: 50, skipBlankLines: true, skipComments: true }],
+      eqeqeq: ['error', 'always'],
+      curly: ['error', 'all'],
+      'no-shadow': 'off',
+      '@typescript-eslint/no-shadow': 'error',
+      '@typescript-eslint/consistent-type-imports': 'error',
+      '@typescript-eslint/no-non-null-assertion': 'error',
     },
   },
-  typeAwareWorkspaceConfig(['packages/shared/src/**/*.ts'], './packages/shared/tsconfig.json'),
-  typeAwareWorkspaceConfig(['apps/api/src/**/*.ts'], './apps/api/tsconfig.json'),
-  typeAwareWorkspaceConfig(['apps/web/src/**/*.{ts,tsx}'], './apps/web/tsconfig.json'),
+  typeAwareWorkspaceConfig(
+    ['packages/shared/src/**/*.ts'],
+    './packages/shared/tsconfig.eslint.json',
+  ),
+  typeAwareWorkspaceConfig(['apps/api/src/**/*.ts'], './apps/api/tsconfig.eslint.json'),
+  typeAwareWorkspaceConfig(['apps/web/**/*.{ts,tsx}'], './apps/web/tsconfig.eslint.json'),
   {
     rules: {
       '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
-    },
-  },
-  {
-    files: ['**/*.test.{ts,tsx}', 'apps/web/tests/**/*.ts'],
-    rules: {
-      '@typescript-eslint/no-explicit-any': 'off',
     },
   },
 );

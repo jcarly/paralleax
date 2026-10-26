@@ -22,6 +22,14 @@ function writeFixture(root, relativePath, contents) {
   writeFileSync(destination, contents);
 }
 
+function complexFunction(name) {
+  const branches = Array.from(
+    { length: 21 },
+    (_, index) => `if (value === ${index}) return ${index};`,
+  ).join('\n');
+  return `export function ${name}(value) {\n${branches}\nreturn -1;\n}`;
+}
+
 function dependencyCruiser(root) {
   return spawnSync(
     process.execPath,
@@ -132,10 +140,10 @@ test('architecture dependency rules reject boundary violations and new cycles', 
   }
 });
 
-test('ESLint blocks production complexity above twenty and shared browser globals', async () => {
+test('ESLint blocks production complexity above ten and shared browser globals', async () => {
   const eslint = new ESLint({ cwd: repositoryRoot });
   const branches = Array.from(
-    { length: 21 },
+    { length: 11 },
     (_, index) => `if (value === ${index}) return ${index};`,
   ).join('\n');
   const tooComplex = await eslint.lintText(
@@ -153,6 +161,28 @@ test('ESLint blocks production complexity above twenty and shared browser global
   assert.ok(
     browserGlobal[0].messages.some((message) => message.ruleId === 'no-restricted-globals'),
   );
+});
+
+test('Dependency Cruiser rejects stale native baseline entries', (t) => {
+  const root = createDependencyFixture();
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const result = spawnSync(
+    process.execPath,
+    [
+      dependencyCruiserCli,
+      'apps',
+      'packages',
+      '--config',
+      path.join(repositoryRoot, '.dependency-cruiser.cjs'),
+      '--ignore-known',
+      path.join(repositoryRoot, '.dependency-cruiser-known-violations.json'),
+      '--output-type',
+      'err',
+    ],
+    { cwd: root, encoding: 'utf8' },
+  );
+  assert.notEqual(result.status, 0, result.stdout + result.stderr);
+  assert.match(result.stdout + result.stderr, /stale/i);
 });
 
 test('ESLint blocks direct web-to-API package imports', async () => {
@@ -176,15 +206,16 @@ test('native complexity suppression baseline is keyed by file and rule count', a
     applySuppressions: true,
     suppressionsLocation: suppressionPath,
   });
-  const complexFunction = (name) =>
-    `export function ${name}(value) {\n${Array.from(
-      { length: 21 },
-      (_, index) => `if (value === ${index}) return ${index};`,
-    ).join('\n')}\nreturn -1;\n}`;
   const oneViolation = await eslint.lintText(complexFunction('first'), { filePath });
   const twoViolations = await eslint.lintText(
     `${complexFunction('first')}\n${complexFunction('second')}`,
     { filePath },
+  );
+  const replacement = await eslint.lintText(complexFunction('replacement'), { filePath });
+  assert.equal(
+    replacement[0].messages.filter((message) => message.ruleId === 'complexity').length,
+    0,
+    'native counts cannot distinguish an equal-count replacement; this accepted limitation must stay visible',
   );
 
   assert.equal(
@@ -199,6 +230,23 @@ test('native complexity suppression baseline is keyed by file and rule count', a
     twoViolations[0].messages.filter((message) => message.ruleId === 'complexity').length,
     2,
   );
+});
+
+test('native ESLint baseline never suppresses a new file automatically', async (t) => {
+  const root = mkdtempSync(path.join(os.tmpdir(), 'paralleax-new-file-'));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const suppressions = path.join(root, 'eslint-suppressions.json');
+  writeFileSync(
+    suppressions,
+    JSON.stringify({
+      'apps/web/src/__architecture_baseline_fixture__.ts': { complexity: { count: 1 } },
+    }),
+  );
+  const eslint = new ESLint({ applySuppressions: true, suppressionsLocation: suppressions });
+  const [result] = await eslint.lintText(complexFunction('newFile'), {
+    filePath: path.join(repositoryRoot, 'apps/api/src/__architecture_baseline_fixture__.ts'),
+  });
+  assert.equal(result.messages.filter((message) => message.ruleId === 'complexity').length, 1);
 });
 
 test('typed ESLint rules and the suppression baseline cover all production workspaces', async () => {

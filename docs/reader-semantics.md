@@ -85,7 +85,10 @@ For conditions:
 - conditions inside one group are evaluated as AND;
 - groups on the same trigger are evaluated as OR.
 
-Inputs on the same trigger are evaluated as OR.
+Trigger inputs are alternative reachability sources: the current Interaction
+matches when it is any one of the Trigger's input interactions. This input rule
+is checked separately from the condition groups; it is not another Boolean
+condition expression.
 
 The appearance probability is an integer from 0 through 100 and defaults to 100.
 The roll is derived from the progress seed, narrative step, and Trigger id. It is
@@ -111,13 +114,12 @@ interaction, but selecting it advances the journey only when that interaction is
 present in the normally evaluated available-choice set. An unavailable,
 disconnected, or missing target is rendered inert and cannot bypass its triggers.
 Conditional text frames remain a separate rich-text projection. A structured
-frame references a condition group owned by the current interaction. Its
-conditions use the exact Trigger condition types and evaluator, are combined as
-AND, and inspect the same visited interactions, current context, typed values,
-inventory, and story-local time. The reader removes a frame when any condition
-fails. Simulation Mode keeps it visible with unavailable styling and a condition
-summary. Legacy target-based frames continue to project normal outgoing choice
-availability.
+frame references a block owned by the current interaction. Its conditions use
+the exact Trigger condition types and evaluator, are combined as AND, and inspect
+the same visited interactions, current context, typed values, inventory, and
+story-local time. The reader removes a frame when any condition fails. Simulation
+Mode keeps it visible with unavailable styling and a condition summary. Legacy
+target-based frames continue to project normal outgoing choice availability.
 
 ## Inputless Triggers
 
@@ -309,9 +311,11 @@ blocked.
 The current web reader stores visited interaction ids in first-visit order and
 does not add duplicates when the same interaction is selected again.
 
-The shared reader converts `visitedIds` to a set for condition checks. MVP
-conditions therefore care only whether an interaction has been visited at least
-once, not how many times it was visited or when it was visited.
+The shared reader converts `visitedIds` to a set for visited-history conditions.
+Those conditions care only whether an interaction has been visited at least once,
+not how many times it was visited or when it was visited. Location, character,
+typed-stat, inventory, and temporal conditions inspect their corresponding
+replayed state; see [Trigger semantics](triggers.md).
 
 ## Persisted Saves
 
@@ -438,13 +442,22 @@ completion state.
 
 When a playable character is configured, a new reading session asks the reader
 to select it before showing root interactions. The current vertical allows at
-most one playable character. Its image, current stats, and owned inventory are
-shown in a left panel. Other characters assigned to the current interaction are
-shown as encounter cards in a right panel.
+most one playable character. Its image and current stats are shown in a left
+panel. The inventory section appears only when the Story defines at least one
+item; otherwise the left panel keeps the character profile and stats. When there
+is no character profile, the player omits the context panel if there are no item
+definitions and no Simulation controls to show. Other characters assigned to the
+current interaction are shown as encounter cards in a right panel.
 
 Simulation keeps unavailable choices visible for inspection except when their
 matched route fails a location condition; location-blocked choices are hidden to
 avoid presenting impossible movement from the simulated scene.
+
+When the current Interaction changes in Reader or Simulation Mode, the Player
+cross-fades its scene and narrative card. The change is immediate for browsers
+without same-document view transitions and for readers who prefer reduced motion.
+Reader pass-through Interactions are advanced before the browser paints, so they
+do not appear as intermediate screens.
 
 ## Reader Comments and Author Tools
 

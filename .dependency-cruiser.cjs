@@ -53,6 +53,7 @@ module.exports = {
     },
   ],
   options: {
+    baseline: { mode: 'shrink-only', staleEntriesSeverity: 'error' },
     combinedDependencies: true,
     doNotFollow: { path: 'node_modules' },
     tsConfig: { fileName: 'apps/web/tsconfig.json' },
