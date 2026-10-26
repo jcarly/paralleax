@@ -442,9 +442,12 @@ completion state.
 
 When a playable character is configured, a new reading session asks the reader
 to select it before showing root interactions. The current vertical allows at
-most one playable character. Its image, current stats, and owned inventory are
-shown in a left panel. Other characters assigned to the current interaction are
-shown as encounter cards in a right panel.
+most one playable character. Its image and current stats are shown in a left
+panel. The inventory section appears only when the Story defines at least one
+item; otherwise the left panel keeps the character profile and stats. When there
+is no character profile, the player omits the context panel if there are no item
+definitions and no Simulation controls to show. Other characters assigned to the
+current interaction are shown as encounter cards in a right panel.
 
 Simulation keeps unavailable choices visible for inspection except when their
 matched route fails a location condition; location-blocked choices are hidden to

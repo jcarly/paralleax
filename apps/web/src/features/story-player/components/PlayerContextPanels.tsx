@@ -26,10 +26,14 @@ export function PlayerContextPanels({
   onForceUnavailableOptionsChange: (checked: boolean) => void;
 }) {
   const { t } = useTranslation();
+  const hasItemDefinitions = (story.itemDefinitions?.length ?? 0) > 0;
+  const showPlayerContextPanel =
+    Boolean(playedCharacter) ||
+    (playableCharacterCount === 0 && (hasItemDefinitions || isSimulationMode));
 
   return (
     <>
-      {playedCharacter || playableCharacterCount === 0 ? (
+      {showPlayerContextPanel ? (
         <aside
           className="player-inventory"
           aria-label={t(playedCharacter ? 'player.playedCharacter' : 'player.inventory')}
@@ -88,7 +92,7 @@ export function PlayerContextPanels({
               </label>
             </section>
           ) : null}
-          {story.itemDefinitions?.length === 0 ? null : (
+          {hasItemDefinitions ? (
             <>
               <h2>{t('player.inventory')}</h2>
               {ownedItemIds.filter(
@@ -139,7 +143,7 @@ export function PlayerContextPanels({
                 </ul>
               )}
             </>
-          )}
+          ) : null}
         </aside>
       ) : null}
       {playedCharacter &&
