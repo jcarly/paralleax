@@ -348,17 +348,27 @@ function createDelta(
     return createEntityArrayDelta(before, after);
   }
 
-  if (beforeExists && afterExists && jsonEquals(before as JsonValue, after as JsonValue)) {
+  if (
+    isExistingJsonValue(beforeExists, before) &&
+    isExistingJsonValue(afterExists, after) &&
+    jsonEquals(before, after)
+  ) {
     return undefined;
   }
 
+  const hasBefore = isExistingJsonValue(beforeExists, before);
+  const hasAfter = isExistingJsonValue(afterExists, after);
   return {
     kind: 'value',
     beforeExists,
     afterExists,
-    ...(beforeExists ? { before: cloneJson(before as JsonValue) } : {}),
-    ...(afterExists ? { after: cloneJson(after as JsonValue) } : {}),
+    ...(hasBefore ? { before: cloneJson(before) } : {}),
+    ...(hasAfter ? { after: cloneJson(after) } : {}),
   };
+}
+
+function isExistingJsonValue(exists: boolean, value: JsonValue | undefined): value is JsonValue {
+  return exists && value !== undefined;
 }
 
 function createEntityArrayDelta(
@@ -427,18 +437,13 @@ function applyDelta(
   if (delta.kind === 'value') {
     const expectedExists = direction === 'forward' ? delta.beforeExists : delta.afterExists;
     const expected = direction === 'forward' ? delta.before : delta.after;
-    if (
-      currentExists !== expectedExists ||
-      (expectedExists && !jsonEquals(current as JsonValue, expected as JsonValue))
-    ) {
+    if (currentExists !== expectedExists || (expectedExists && !jsonEquals(current, expected))) {
       conflicts.push({ path });
       return { exists: currentExists, ...(currentExists ? { value: current } : {}) };
     }
     const replacementExists = direction === 'forward' ? delta.afterExists : delta.beforeExists;
     const replacement = direction === 'forward' ? delta.after : delta.before;
-    return replacementExists
-      ? { exists: true, value: cloneJson(replacement as JsonValue) }
-      : { exists: false };
+    return replacementExists ? { exists: true, value: cloneJson(replacement) } : { exists: false };
   }
 
   if (!currentExists) {
@@ -589,7 +594,7 @@ function toJsonValue(value: unknown): JsonValue {
   throw new TypeError('Story history only supports JSON-compatible authored values.');
 }
 
-function jsonEquals(left: JsonValue, right: JsonValue): boolean {
+function jsonEquals(left: JsonValue | undefined, right: JsonValue | undefined): boolean {
   if (left === right) return true;
   if (Array.isArray(left) || Array.isArray(right)) {
     return (
@@ -611,6 +616,6 @@ function jsonEquals(left: JsonValue, right: JsonValue): boolean {
   return false;
 }
 
-function cloneJson<T extends JsonValue>(value: T): T {
+function cloneJson<T extends JsonValue | undefined>(value: T): T {
   return structuredClone(value);
 }
