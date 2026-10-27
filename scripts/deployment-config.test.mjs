@@ -9,7 +9,7 @@ test('the Dockerfile exposes a Railway-selectable runtime while defaulting to we
 
   assert.match(dockerfile, /^ARG RUNTIME_TARGET=web$/m);
   assert.match(dockerfile, /^FROM \$\{RUNTIME_TARGET\} AS runtime$/m);
-  assert.match(dockerfile, /^FROM node:24-alpine AS api$/m);
+  assert.match(dockerfile, /^FROM node:26-alpine AS api$/m);
   assert.match(dockerfile, /^FROM nginx:alpine AS web$/m);
 });
 
