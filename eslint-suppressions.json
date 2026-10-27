@@ -2833,9 +2833,6 @@
     }
   },
   "apps/web/tests/e2e/auth.spec.ts": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 5
-    },
     "max-lines-per-function": {
       "count": 1
     }

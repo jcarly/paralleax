@@ -1,34 +1,8 @@
 import { expect, test } from '@playwright/test';
-import type { Story } from '@paralleax/shared';
-import { cloneStory, paginated, prepareEditorPage } from './editorTestHarness';
+import { paginated, prepareEditorPage, storyWithOpeningPath } from './editorTestHarness';
 
 test('creates a linked opening graph and focuses its root in the editor', async ({ page }) => {
-  const createdStory: Story = {
-    ...cloneStory(),
-    title: 'New story',
-    interactions: [
-      {
-        id: 'interaction-root',
-        title: 'Start',
-        body: '',
-        position: { x: 80, y: 120 },
-        triggers: [{ id: 'trigger-root', inputInteractionIds: [], conditions: [] }],
-      },
-      {
-        id: 'interaction-child',
-        title: 'New interaction',
-        body: '',
-        position: { x: 80, y: 252 },
-        triggers: [
-          {
-            id: 'trigger-child',
-            inputInteractionIds: ['interaction-root'],
-            conditions: [],
-          },
-        ],
-      },
-    ],
-  };
+  const createdStory = storyWithOpeningPath();
 
   await page.route(/\/api\/stories(?:\?.*)?$/, async (route) => {
     if (route.request().method() === 'POST') {

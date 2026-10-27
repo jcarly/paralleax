@@ -101,6 +101,26 @@ describe('StoryEditor interactions', () => {
     expect(screen.getByLabelText('Title')).toHaveValue('Second interaction');
   });
 
+  it('uses measured interaction dimensions when calculating a child position', async () => {
+    const user = userEvent.setup();
+    await renderEditor(storyWithTwoInteractions());
+
+    await user.click(screen.getByTestId('measure-node-interaction-1'));
+    await user.click(
+      within(screen.getByTestId('flow-node-interaction-1')).getByRole('button', {
+        name: 'Create child interaction',
+      }),
+    );
+
+    await waitFor(() => expect(elkLayout.computeStoryGraphElkLayout).toHaveBeenCalled());
+    const calls = vi.mocked(elkLayout.computeStoryGraphElkLayout).mock.calls;
+    const layoutOptions = calls[calls.length - 1]?.[1];
+    expect(layoutOptions?.interactionSizes?.get('interaction-1')).toEqual({
+      width: 500,
+      height: 320,
+    });
+  });
+
   it('links the test action to the selected interaction when one is selected', async () => {
     const user = userEvent.setup();
     await renderEditor(storyWithTwoInteractions());

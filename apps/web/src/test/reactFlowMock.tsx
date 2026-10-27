@@ -89,6 +89,7 @@ function TestReactFlow({
   edges = [],
   nodeTypes = {},
   onInit,
+  onNodesChange,
   onConnect,
   onConnectStart,
   onConnectEnd,
@@ -187,6 +188,19 @@ function TestReactFlow({
                 height={node.measured?.height}
                 sourcePosition={node.sourcePosition}
                 targetPosition={node.targetPosition}
+              />
+              <span
+                data-testid={`measure-node-${node.id}`}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onNodesChange?.([
+                    {
+                      type: 'dimensions',
+                      id: node.id,
+                      dimensions: { width: 500, height: 320 },
+                    },
+                  ]);
+                }}
               />
               <span
                 data-testid={`preview-drag-node-${node.id}`}
