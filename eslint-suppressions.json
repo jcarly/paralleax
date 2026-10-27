@@ -3238,13 +3238,13 @@
   },
   "packages/shared/src/history/story-history.ts": {
     "@typescript-eslint/no-unsafe-type-assertion": {
-      "count": 4
+      "count": 1
     },
     "complexity": {
       "count": 5
     },
     "curly": {
-      "count": 31
+      "count": 29
     },
     "max-lines-per-function": {
       "count": 1

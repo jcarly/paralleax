@@ -5,6 +5,7 @@ import {
   createStoryChangeDelta,
   invertStoryChangeDelta,
   isStoryGraphPositionDelta,
+  type StoryChangeDelta,
 } from './story-history.js';
 
 const story: Story = {
@@ -98,6 +99,40 @@ describe('Story authored change history', () => {
     expect(result).toEqual({
       applied: false,
       conflicts: [{ path: '$.interactions[id="interaction-1"].title' }],
+    });
+  });
+
+  it('rejects a history delta that changes an entity id to a non-string value', () => {
+    const delta = {
+      kind: 'object',
+      fields: {
+        interactions: {
+          kind: 'entities',
+          entries: {
+            'interaction-1': {
+              delta: {
+                kind: 'object',
+                fields: {
+                  id: {
+                    kind: 'value',
+                    beforeExists: true,
+                    afterExists: true,
+                    before: 'interaction-1',
+                    after: 42,
+                  },
+                },
+              },
+              before: { index: 0 },
+              after: { index: 0 },
+            },
+          },
+        },
+      },
+    } satisfies StoryChangeDelta;
+
+    expect(applyStoryChangeDelta(story, delta, 'forward')).toEqual({
+      applied: false,
+      conflicts: [{ path: '$.interactions[id="interaction-1"]' }],
     });
   });
 

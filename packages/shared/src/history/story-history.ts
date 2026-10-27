@@ -421,10 +421,7 @@ function entityPlacements(values: EntityJsonObject[]): Map<string, EntityPlaceme
   );
 }
 
-interface DeltaApplicationValue {
-  exists: boolean;
-  value?: JsonValue;
-}
+type DeltaApplicationValue = { exists: true; value: JsonValue } | { exists: false };
 
 function applyDelta(
   currentExists: boolean,
@@ -439,11 +436,16 @@ function applyDelta(
     const expected = direction === 'forward' ? delta.before : delta.after;
     if (currentExists !== expectedExists || (expectedExists && !jsonEquals(current, expected))) {
       conflicts.push({ path });
-      return { exists: currentExists, ...(currentExists ? { value: current } : {}) };
+      return currentExists && current !== undefined
+        ? { exists: true, value: current }
+        : { exists: false };
     }
     const replacementExists = direction === 'forward' ? delta.afterExists : delta.beforeExists;
     const replacement = direction === 'forward' ? delta.after : delta.before;
-    return replacementExists ? { exists: true, value: cloneJson(replacement) } : { exists: false };
+    if (replacementExists && replacement !== undefined) {
+      return { exists: true, value: cloneJson(replacement) };
+    }
+    return { exists: false };
   }
 
   if (!currentExists) {
@@ -454,7 +456,7 @@ function applyDelta(
   if (delta.kind === 'object') {
     if (!isJsonObject(current)) {
       conflicts.push({ path });
-      return { exists: true, value: current };
+      return current === undefined ? { exists: false } : { exists: true, value: current };
     }
     const value = { ...current };
     for (const [key, fieldDelta] of Object.entries(delta.fields)) {
@@ -466,7 +468,7 @@ function applyDelta(
         `${path}.${key}`,
         conflicts,
       );
-      if (field.exists) value[key] = field.value as JsonValue;
+      if (field.exists) value[key] = field.value;
       else delete value[key];
     }
     return { exists: true, value };
@@ -474,7 +476,7 @@ function applyDelta(
 
   if (!Array.isArray(current) || !isEntityArray(current)) {
     conflicts.push({ path });
-    return { exists: true, value: current };
+    return current === undefined ? { exists: false } : { exists: true, value: current };
   }
   let values: EntityJsonObject[] = [...current];
   const indexesById = new Map(values.map((value, index) => [value.id, index]));
@@ -491,11 +493,20 @@ function applyDelta(
       conflicts,
     );
     if (index >= 0) {
-      if (applied.exists) values[index] = applied.value as EntityJsonObject;
-      else deletedIds.add(id);
+      if (applied.exists && isEntityJsonObject(applied.value)) {
+        values[index] = applied.value;
+      } else if (applied.exists) {
+        conflicts.push({ path: `${path}[id=${JSON.stringify(id)}]` });
+      } else {
+        deletedIds.add(id);
+      }
     } else if (applied.exists) {
-      indexesById.set(id, values.length);
-      values.push(applied.value as EntityJsonObject);
+      if (isEntityJsonObject(applied.value)) {
+        indexesById.set(id, values.length);
+        values.push(applied.value);
+      } else {
+        conflicts.push({ path: `${path}[id=${JSON.stringify(id)}]` });
+      }
     }
   }
   if (deletedIds.size > 0) {
@@ -570,10 +581,14 @@ function applyEntityPlacements(
 function isEntityArray(value: JsonValue[]): value is EntityJsonObject[] {
   const ids = new Set<string>();
   return value.every((item) => {
-    if (!isJsonObject(item) || typeof item.id !== 'string' || ids.has(item.id)) return false;
+    if (!isEntityJsonObject(item) || ids.has(item.id)) return false;
     ids.add(item.id);
     return true;
   });
+}
+
+function isEntityJsonObject(value: JsonValue): value is EntityJsonObject {
+  return isJsonObject(value) && typeof value.id === 'string';
 }
 
 function isJsonObject(value: unknown): value is JsonObject {
