@@ -169,10 +169,7 @@ async function assertSimulationDesktopLayout(
   return simulationLayout;
 }
 
-async function assertSimulationSaveRowColor(
-  page: Page,
-  readerSaveRowColor: string,
-) {
+async function assertSimulationSaveRowColor(page: Page, readerSaveRowColor: string) {
   await page.locator('.player-top .player-toolbar-button').first().click();
   await expect(page.getByRole('dialog')).toBeVisible();
   await expect
@@ -454,11 +451,7 @@ async function readStyle(page: Page, selector: string) {
   });
 }
 
-async function readNarrativeTypography(
-  page: Page,
-  bodySelector: string,
-  titleSelector: string,
-) {
+async function readNarrativeTypography(page: Page, bodySelector: string, titleSelector: string) {
   return page.evaluate(
     ({ bodySelector, titleSelector }) => {
       const body = document.querySelector(bodySelector);
