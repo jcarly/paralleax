@@ -49,6 +49,11 @@ need an explicit answer before the affected capability is implemented.
 - Define a stable `story-format.md` before JSON import/export or external
   integrations depend on the story shape. Relational persistence does not yet
   define an external exchange format.
+- Treat the proposed native Interaction source as an editor projection until an
+  explicit exchange-format decision says otherwise. Ink/Yarn/ChoiceScript/QSP
+  adapters must map only supported concepts into Paralleax canonical content
+  and report gaps; matching surface syntax does not promise runtime or
+  round-trip compatibility.
 - Decide whether documented examples should include simplified JSON, expected
   reader results, and associated regression tests.
 - Consider examples for simple branching, visited-history conditions, shared
@@ -133,11 +138,43 @@ need an explicit answer before the affected capability is implemented.
   routes remain independently visible and deletable; normal authoring prevents
   creating new duplicates. See [Domain invariants](domain-invariants.md) and
   [Trigger semantics](triggers.md).
-- Decide whether a source/code view for variables and conditional text is a
-  read-only diagnostic or a second editable representation. The current rich-text
-  editor already supports variable markers and structured conditional frames;
-  any additional source view must define stable identity, sanitization, and
-  lossless round trips while preserving the current storage contract.
+- **Rich-text source grammar:** The requested direction is a concise native
+  Paralleax content syntax inspired by Ink; the sketch in
+  [ADR-043](decisions/ADR-043-ink-inspired-narrative-source.md) is not a final
+  grammar. Prototype it against current Story data before implementing a
+  CodeMirror mode. Resolve:
+  - Which existing `TriggerCondition` variants and stat-expression forms the
+    first syntax subset represents, and how unsupported existing conditions
+    remain lossless and editable.
+  - How one condition block's stable id is preserved in source, including copy,
+    paste, duplicate ids, missing ids, and deletion. Conditions within a block
+    remain AND; `else` and OR are not represented unless the canonical model
+    changes in a separate accepted decision.
+  - How stable assignment, exact-item, interaction, location, character, item,
+    and temporal references are shown without treating a mutable name as the
+    identity. Define rename, ambiguity, and deleted-reference diagnostics.
+  - Which Markdown-like formatting maps losslessly to the Tiptap schema, and how
+    current media, imported markup, links, and unsupported HTML are represented.
+    An invalid or lossy draft must never replace canonical content.
+  - Whether nested conditional frames are supported and how inline versus
+    multi-paragraph spans round-trip without changing comment anchors.
+  - Which parser approach supports typed diagnostics and CodeMirror highlighting
+    without executing template code. Lezer is a candidate to evaluate after the
+    prototype; it does not itself resolve canonical references or domain rules.
+  - How changing modes, invalid drafts, paste, and concurrent Story revisions
+    interact with the existing atomic body/condition save and change-history path.
+- **Global Story Script:** Keep its grammar and change application out of the
+  Interaction content mode. Before its separate P2 implementation, define how
+  its syntax covers every Trigger shape (including several inputs, condition
+  groups, timers, probability, and inputless Triggers), effects, transitions,
+  and non-text canvas metadata. Specify stable IDs, targeted diffing, duplicate
+  or ambiguous references, preview of additions/changes/deletions, atomic apply,
+  revision conflicts, and history. A failed parse must never partially mutate a
+  Story.
+- **Procedural content:** Before adding variants, decide when and how a choice is
+  selected, whether it is stable during a step, how reload and backward
+  Simulation behave, and what authored/runtime data must be saved. This likely
+  needs a deliberate shared model and engine change, not frontend randomness.
 
 ## Story Canvas UX
 

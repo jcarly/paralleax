@@ -115,7 +115,7 @@ describe('InteractionInspector time', () => {
     });
   });
 
-  it('shows interaction content and organizes context and effects', () => {
+  it('shows an Add content action and organizes context and effects', async () => {
     const interaction: Story['interactions'][number] = {
       id: 'interaction-1',
       title: 'Meet Mira',
@@ -145,7 +145,9 @@ describe('InteractionInspector time', () => {
       />,
     );
 
-    expect(screen.getByRole('textbox', { name: 'Content' })).toBeInTheDocument();
+    expect(screen.queryByRole('textbox', { name: 'Content' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Add content' }));
+    expect(await screen.findByRole('textbox', { name: 'Content' })).toBeInTheDocument();
     expect(screen.getByText('Interaction duration')).toBeInTheDocument();
     expect(screen.getByText('1 present')).toBeInTheDocument();
     expect(screen.getByText('MV')).toBeInTheDocument();

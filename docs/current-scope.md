@@ -19,6 +19,16 @@ Paralleax currently includes:
   selection is wrapped when the frame is created, adding/removing conditions
   preserves its content, and removing the final token unwraps the frame. Legacy
   target-based conditional frames remain readable.
+- Interaction content is edited with Tiptap/ProseMirror. In the Inspector,
+  existing content stays in a compact editable field; focusing it reveals the
+  WYSIWYG toolbar and expanded editor. Empty content shows only **Add content**;
+  leaving an empty draft returns to that action. Simulation keeps its Reader
+  projection interactive at rest; focusing the content field opens Tiptap in
+  place. Empty content shows only **Add content** and returns to it if left
+  empty. The CodeMirror source mode is not available yet. A concise
+  native content syntax inspired by Ink is a proposed direction in
+  [ADR-043](decisions/ADR-043-ink-inspired-narrative-source.md), not an accepted
+  grammar. No source-to-canonical conversion is implemented.
 - Triggers with multiple input interactions, OR condition groups containing AND
   typed conditions, one 0–100 appearance probability, and optional saved positions
   for linked graph markers. Probability uses one deterministic roll per Trigger
@@ -66,6 +76,10 @@ Paralleax currently includes:
 - Reader and Simulation Mode cross-fade the Player scene and narrative card when
   the current Interaction changes. Reduced-motion preferences disable the effect;
   pass-through Interactions are advanced before display.
+- Reader and Simulation share one responsive Player workspace. On desktop and
+  tablet, the narrative card and side panels scroll independently within the
+  viewport. On narrow screens, both use a document-scrolling column with a
+  sticky Player toolbar.
 - Story-local deterministic calendar time.
 - Locations.
 - Characters.
@@ -310,6 +324,14 @@ The following remain future or incomplete unless a task explicitly implements th
 - lossless or runtime-equivalent QSP import, QSP re-export, and incremental re-import;
 - executable/Unity/video exports;
 - AI-driven narrative/runtime behavior.
+- An author-facing content-source mode, an accepted narrative content grammar,
+  and source round-trip conversion. The current Tiptap editor remains the only
+  content authoring mode; the proposed syntax is tracked in
+  [ADR-043](decisions/ADR-043-ink-inspired-narrative-source.md).
+- A global Story Script editor, which is a separate future authoring surface and
+  is not part of the Tiptap migration.
+- Procedural/variant text and its deterministic selection, save, reload, and
+  Simulation semantics.
 - combined Group filters and advanced Group-focused Workbench projections;
 - configurable Workbench views for structure, character, location, time, and
   state, including combined filters and Focused / Context / Background treatment;

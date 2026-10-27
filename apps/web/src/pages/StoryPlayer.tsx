@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type FocusEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Navigate, useParams, useSearchParams } from 'react-router-dom';
 import type { ReaderProgressState, ReaderSave, Story } from '@paralleax/shared';
@@ -8,15 +8,13 @@ import {
   doConditionsMatch,
   ensureStoryInteractionPositions,
   getAvailableInteractions,
-  getInteractionTimerState,
-  getInputReachableInteractions,
   getItemDefinitionIdForInstance,
-  getTriggerConditionFailures,
   getTriggerTimerSeconds,
   isCommentAnchorDetached,
 } from '@paralleax/shared';
 import { RichTextContent } from '../components/RichTextContent';
 import { RichTextEditor } from '../components/RichTextEditor';
+import { hasAuthoredRichTextContent } from '../components/richTextProjection';
 import { StoryCommentsPanel } from '../features/comments/StoryCommentsPanel';
 import { useStoryComments } from '../features/comments/useStoryComments';
 import { ReaderSaveDialog } from '../features/story-player/ReaderSaveDialog';
@@ -40,14 +38,16 @@ import {
   useReaderSessionState,
 } from '../features/story-player/useReaderSessionState';
 import { useSimulationMutationPersistence } from '../features/story-player/useSimulationMutationPersistence';
+import { getVisibleChoices } from '../features/story-player/simulation/getVisibleChoices';
+import {
+  isSimulationAuthoringTarget,
+  shouldKeepSimulationEditingOnBlur,
+} from '../features/story-player/simulation/simulationAuthoringFocus';
 import {
   getConditionSummary,
   getUnavailableReason,
 } from '../features/story-player/storyPlayerPresentation';
-import {
-  isRealtimeEditableTarget,
-  type StoryRealtimeInvalidation,
-} from '../features/realtime/storyRealtime';
+import { type StoryRealtimeInvalidation } from '../features/realtime/storyRealtime';
 import { useStoryRouteAccessRecovery } from '../features/story/useStoryRouteAccessRecovery';
 import { useStoryRealtime } from '../hooks/useStoryRealtime';
 import { usePendingSaveGuard } from '../hooks/usePendingSaveGuard';
@@ -139,6 +139,12 @@ export function StoryPlayer({
   const [savesOpen, setSavesOpen] = useState(false);
   const [forceUnavailableOptions, setForceUnavailableOptions] = useState(false);
   const [editingChoiceId, setEditingChoiceId] = useState<string>();
+  const [bodyEditor, setBodyEditor] = useState<{ interactionId?: string; editing: boolean }>({
+    editing: false,
+  });
+  const bodyDraftRef = useRef<{ interactionId: string; body: string } | undefined>(undefined);
+  const savedBodyRef = useRef<string | undefined>(undefined);
+  const simulationEditActiveRef = useRef(false);
   const [commentsOpen, setCommentsOpen] = useState(false);
   const editingChoiceInputRef = useRef<HTMLInputElement>(null);
   const savesDialogTrigger = useRef<HTMLButtonElement>(null);
@@ -205,7 +211,9 @@ export function StoryPlayer({
       markLoaded: () => void,
       requestKey: string,
     ) => {
-      if (requestKey !== loadKey) return;
+      if (requestKey !== loadKey) {
+        return;
+      }
       resetForNewStory();
       setTimerNow(Date.now());
       const reconciledProgress = progress
@@ -313,7 +321,9 @@ export function StoryPlayer({
         markStoryInaccessible();
         return;
       }
-      if (recoverFromStoryAccessError(caught)) setStory(undefined);
+      if (recoverFromStoryAccessError(caught)) {
+        setStory(undefined);
+      }
     },
     [markStoryInaccessible, recoverFromStoryAccessError],
   );
@@ -339,6 +349,11 @@ export function StoryPlayer({
     () => story?.interactions.find((item) => item.id === currentId),
     [currentId, story],
   );
+  if (bodyEditor.interactionId !== current?.id) {
+    bodyDraftRef.current = undefined;
+    savedBodyRef.current = undefined;
+    setBodyEditor({ interactionId: current?.id, editing: false });
+  }
   const canUseReaderComments =
     authenticated && !isSimulationMode && story?.capabilities?.canComment === true;
   const comments = useStoryComments(storyId, canUseReaderComments);
@@ -440,76 +455,23 @@ export function StoryPlayer({
   const availableChoiceIds = useMemo(() => new Set(choices.map((choice) => choice.id)), [choices]);
   const visibleChoices = useMemo(
     () =>
-      isSimulationMode && story && runtimeSliceReady
-        ? getInputReachableInteractions(story, current?.id ?? null).flatMap((interaction) => {
-            const available = availableChoiceIds.has(interaction.id);
-            const failures = available
-              ? []
-              : getTriggerConditionFailures(
-                  interaction,
-                  current?.id ?? null,
-                  visited,
-                  currentLocationId,
-                  current?.characterIds ?? [],
-                  statValues,
-                  currentDateTime,
-                  ownedItemDefinitionIds,
-                  itemStatValues,
-                );
-            if (failures.some(({ condition }) => 'locationId' in condition)) return [];
-            const timerState = getInteractionTimerState(
-              interaction,
-              current?.id ?? null,
-              visited,
-              triggerEvaluationContext,
-              currentLocationId,
-              current?.characterIds ?? [],
-              statValues,
-              currentDateTime,
-              ownedItemDefinitionIds,
-              itemStatValues,
-            );
-            return [
-              {
-                interaction,
-                available,
-                timerState,
-                unavailableReason: available
-                  ? undefined
-                  : getUnavailableReason(
-                      story,
-                      interaction,
-                      current?.id ?? null,
-                      visited,
-                      currentLocationId,
-                      current?.characterIds ?? [],
-                      statValues,
-                      currentDateTime,
-                      ownedItemDefinitionIds,
-                      itemStatValues,
-                      t,
-                      triggerEvaluationContext,
-                    ),
-              },
-            ];
-          })
-        : choices.map((interaction) => ({
-            interaction,
-            available: true,
-            timerState: getInteractionTimerState(
-              interaction,
-              current?.id ?? null,
-              visited,
-              triggerEvaluationContext,
-              currentLocationId,
-              current?.characterIds ?? [],
-              statValues,
-              currentDateTime,
-              ownedItemDefinitionIds,
-              itemStatValues,
-            ),
-            unavailableReason: undefined,
-          })),
+      getVisibleChoices({
+        story,
+        choices,
+        isSimulationMode,
+        runtimeSliceReady,
+        availableChoiceIds,
+        currentInteraction: current,
+        visited,
+        currentLocationId,
+        currentDateTime,
+        currentCharacterIds: current?.characterIds ?? [],
+        statValues,
+        ownedItemDefinitionIds,
+        itemStatValues,
+        evaluationContext: triggerEvaluationContext,
+        t,
+      }),
     [
       availableChoiceIds,
       choices,
@@ -529,12 +491,16 @@ export function StoryPlayer({
   );
   useEffect(() => {
     const nextExpiration = visibleChoices.reduce<number | undefined>((next, { timerState }) => {
-      if (!timerState || timerState.expired || timerState.remainingTimeMs <= 0) return next;
+      if (!timerState || timerState.expired || timerState.remainingTimeMs <= 0) {
+        return next;
+      }
       return next === undefined
         ? timerState.remainingTimeMs
         : Math.min(next, timerState.remainingTimeMs);
     }, undefined);
-    if (nextExpiration === undefined) return;
+    if (nextExpiration === undefined) {
+      return;
+    }
     const timeout = window.setTimeout(
       () => setTimerNow(Date.now()),
       Math.max(1, Math.ceil(nextExpiration) + 20),
@@ -551,7 +517,9 @@ export function StoryPlayer({
     };
   }, []);
   const conditionalTextState = useMemo(() => {
-    if (!story || !current) return {};
+    if (!story || !current) {
+      return {};
+    }
     return Object.fromEntries(
       story.interactions.map((interaction) => {
         const connected = interaction.triggers.some((trigger) =>
@@ -601,7 +569,9 @@ export function StoryPlayer({
     visited,
   ]);
   const conditionalTextBlockState = useMemo(() => {
-    if (!story || !current) return {};
+    if (!story || !current) {
+      return {};
+    }
     const visitedIds = new Set(visited);
     return Object.fromEntries(
       (current.conditionalTextBlocks ?? []).map((block) => {
@@ -716,6 +686,59 @@ export function StoryPlayer({
     getCurrentSession: getCurrentReaderSession,
     applyReloadedStory: applyReloadedSimulationStory,
   });
+  const commitBodyDraft = useCallback(
+    (interactionId: string) => {
+      const draft = bodyDraftRef.current;
+      if (current?.id !== interactionId || draft?.interactionId !== interactionId) {
+        return;
+      }
+      const currentHasContent = hasAuthoredRichTextContent(current.body);
+      const nextBody = hasAuthoredRichTextContent(draft.body)
+        ? draft.body
+        : currentHasContent
+          ? ''
+          : current.body;
+      bodyDraftRef.current = { interactionId, body: nextBody };
+      if (nextBody === current.body || savedBodyRef.current === nextBody) {
+        savedBodyRef.current = nextBody;
+        return;
+      }
+      savedBodyRef.current = nextBody;
+      patchCurrentInteraction({ body: nextBody });
+      void saveCurrentInteraction({ body: nextBody });
+    },
+    [current, patchCurrentInteraction, saveCurrentInteraction],
+  );
+
+  function startBodyEditing() {
+    if (!current) {
+      return;
+    }
+    bodyDraftRef.current = { interactionId: current.id, body: current.body };
+    savedBodyRef.current = current.body;
+    setBodyEditor({ interactionId: current.id, editing: true });
+  }
+
+  function handleBodyBlur() {
+    commitBodyDraft(current?.id ?? '');
+  }
+
+  function handleBodyRegionBlur(event: FocusEvent<HTMLDivElement>) {
+    const nextElement = event.relatedTarget;
+    if (nextElement instanceof Node && event.currentTarget.contains(nextElement)) {
+      return;
+    }
+    window.setTimeout(() => {
+      const activeElement = document.activeElement;
+      if (
+        activeElement instanceof HTMLElement &&
+        (activeElement.closest('.rich-text-editor') || activeElement.closest('[role="dialog"]'))
+      ) {
+        return;
+      }
+      setBodyEditor({ interactionId: current?.id, editing: false });
+    }, 0);
+  }
 
   function restart() {
     transitionPlayerInteraction(() => {
@@ -741,7 +764,9 @@ export function StoryPlayer({
   }
 
   function stepBack() {
-    if (journey.length <= 1) return;
+    if (journey.length <= 1) {
+      return;
+    }
     transitionPlayerInteraction(() => {
       clearChoiceCommit();
       incrementNavigationVersion();
@@ -762,7 +787,9 @@ export function StoryPlayer({
   }
 
   async function loadSave(save: ReaderSave) {
-    if (!story) return;
+    if (!story) {
+      return;
+    }
     resetForNewStory();
     incrementNavigationVersion();
     setTimerNow(Date.now());
@@ -790,18 +817,24 @@ export function StoryPlayer({
   }
 
   function startReaderComment() {
-    if (!canUseReaderComments || !current) return;
+    if (!canUseReaderComments || !current) {
+      return;
+    }
     comments.selectThread(undefined);
     comments.startThread({ kind: 'entity', targetType: 'interaction', targetId: current.id });
     setCommentsOpen(true);
   }
 
   async function deleteReaderComment(threadId: string) {
-    if (!window.confirm(t('comments.confirmDelete'))) return;
+    if (!window.confirm(t('comments.confirmDelete'))) {
+      return;
+    }
     return comments.deleteThread(threadId);
   }
 
-  if (storyRouteInaccessible) return <Navigate to="/" replace />;
+  if (storyRouteInaccessible) {
+    return <Navigate to="/" replace />;
+  }
 
   if (!story || loadedKey !== loadKey) {
     const activeLoadError = loadError?.key === loadKey ? loadError.message : '';
@@ -832,10 +865,28 @@ export function StoryPlayer({
     <main
       className={`player-page ${isSimulationMode ? 'simulation-mode' : 'reader-mode'}`}
       onFocusCapture={(event) => {
-        if (isSimulationMode && isRealtimeEditableTarget(event.target)) beginSimulationEdit();
+        if (
+          isSimulationMode &&
+          isSimulationAuthoringTarget(event.target) &&
+          !simulationEditActiveRef.current
+        ) {
+          simulationEditActiveRef.current = true;
+          beginSimulationEdit();
+        }
       }}
       onBlurCapture={(event) => {
-        if (isSimulationMode && isRealtimeEditableTarget(event.target)) endSimulationEdit();
+        if (!isSimulationMode || !isSimulationAuthoringTarget(event.target)) {
+          return;
+        }
+        if (
+          shouldKeepSimulationEditingOnBlur(event.target, event.relatedTarget, bodyEditor.editing)
+        ) {
+          return;
+        }
+        if (simulationEditActiveRef.current) {
+          simulationEditActiveRef.current = false;
+          endSimulationEdit();
+        }
       }}
     >
       {pendingSaveGuard}
@@ -910,31 +961,85 @@ export function StoryPlayer({
                     onChange={(event) => patchCurrentInteraction({ title: event.target.value })}
                     onBlur={(event) => void saveCurrentInteraction({ title: event.target.value })}
                   />
-                  <RichTextEditor
-                    ariaLabel={t('player.currentInteractionContent')}
-                    interactionId={current.id}
-                    story={story}
-                    value={current.body}
-                    onChange={(body) => patchCurrentInteraction({ body })}
-                    onBlur={(body) => void saveCurrentInteraction({ body })}
-                    interactionLinkTargets={interactionLinkTargets}
-                    conditionalTextBlocks={current.conditionalTextBlocks}
-                    onConditionalTextChange={(body, conditionalTextBlocks) => {
-                      patchCurrentInteraction({ body, conditionalTextBlocks });
-                      void saveCurrentInteraction({ body, conditionalTextBlocks });
-                    }}
-                    conditionalTextState={conditionalTextState}
-                    conditionalTextBlockState={conditionalTextBlockState}
-                    onConditionalTargetClick={(interactionId) => {
-                      const target = story.interactions.find(({ id }) => id === interactionId);
-                      if (
-                        target &&
-                        (availableChoiceIds.has(interactionId) || forceUnavailableOptions)
-                      ) {
-                        choose(target);
-                      }
-                    }}
-                  />
+                  {bodyEditor.editing ? (
+                    <div className="simulation-body-editor" onBlurCapture={handleBodyRegionBlur}>
+                      <RichTextEditor
+                        ariaLabel={t('player.currentInteractionContent')}
+                        interactionId={current.id}
+                        story={story}
+                        value={current.body}
+                        autoFocus
+                        revealToolbarOnFocus
+                        onChange={(body) => {
+                          bodyDraftRef.current = { interactionId: current.id, body };
+                        }}
+                        onBlur={handleBodyBlur}
+                        interactionLinkTargets={interactionLinkTargets}
+                        conditionalTextBlocks={current.conditionalTextBlocks}
+                        onConditionalTextChange={(body, conditionalTextBlocks) => {
+                          bodyDraftRef.current = { interactionId: current.id, body };
+                          savedBodyRef.current = body;
+                          patchCurrentInteraction({ body, conditionalTextBlocks });
+                          void saveCurrentInteraction({ body, conditionalTextBlocks });
+                        }}
+                        onConditionalTargetClick={(interactionId) => {
+                          const target = story.interactions.find(({ id }) => id === interactionId);
+                          if (
+                            target &&
+                            (availableChoiceIds.has(interactionId) || forceUnavailableOptions)
+                          ) {
+                            choose(target);
+                          }
+                        }}
+                      />
+                    </div>
+                  ) : hasAuthoredRichTextContent(current.body) ? (
+                    <div
+                      aria-label={t('player.currentInteractionContent')}
+                      className="simulation-body-preview"
+                      onFocus={startBodyEditing}
+                      onClick={(event) => {
+                        if (
+                          event.target instanceof Element &&
+                          event.target.closest(
+                            'button[data-interaction-link-target], button[data-conditional-text-link]',
+                          )
+                        ) {
+                          return;
+                        }
+                        startBodyEditing();
+                      }}
+                      role="group"
+                      tabIndex={0}
+                    >
+                      <RichTextContent
+                        className="story-body"
+                        html={current.body}
+                        conditionalTextState={conditionalTextState}
+                        conditionalTextBlockState={conditionalTextBlockState}
+                        statValues={statValues}
+                        itemStatValues={itemStatValues}
+                        onInteractionLinkClick={(interactionId) => {
+                          const target = story.interactions.find(({ id }) => id === interactionId);
+                          if (
+                            target &&
+                            (availableChoiceIds.has(interactionId) || forceUnavailableOptions)
+                          ) {
+                            choose(target);
+                          }
+                        }}
+                      />
+                    </div>
+                  ) : null}
+                  {!bodyEditor.editing && !hasAuthoredRichTextContent(current.body) ? (
+                    <button
+                      className="secondary simulation-content-edit-toggle simulation-content-add"
+                      type="button"
+                      onClick={startBodyEditing}
+                    >
+                      {t('richText.addContent')}
+                    </button>
+                  ) : null}
                 </>
               ) : (
                 <>
@@ -948,7 +1053,9 @@ export function StoryPlayer({
                     itemStatValues={itemStatValues}
                     onInteractionLinkClick={(interactionId) => {
                       const target = story.interactions.find(({ id }) => id === interactionId);
-                      if (target && availableChoiceIds.has(interactionId)) choose(target);
+                      if (target && availableChoiceIds.has(interactionId)) {
+                        choose(target);
+                      }
                     }}
                   />
                   {canUseReaderComments ? (

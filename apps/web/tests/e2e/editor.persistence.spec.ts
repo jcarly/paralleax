@@ -120,28 +120,53 @@ test.describe('Story editor persistence', () => {
   });
 
   test('edits and saves rich interaction content', async ({ page }) => {
-    const richBody =
-      '<p>A <strong>rich</strong> scene.</p><img src="https://media.example/scene.gif">';
-    const updated = cloneStory();
-    updated.interactions[0].body = richBody;
-
+    let current = cloneStory();
+    const bodyPatches: string[] = [];
     await page.route('**/api/stories/story-1/interactions/interaction-1', async (route) => {
-      expect(route.request().method()).toBe('PATCH');
-      expect(route.request().postDataJSON()).toEqual({ body: richBody });
-      await route.fulfill({ json: updated });
+      if (route.request().method() !== 'PATCH') {
+        return route.fallback();
+      }
+      const patch = readJsonObject(route.request().postDataJSON());
+      if (typeof patch.body === 'string') {
+        bodyPatches.push(patch.body);
+      }
+      current = {
+        ...current,
+        interactions: current.interactions.map((interaction) =>
+          interaction.id === 'interaction-1' ? { ...interaction, ...patch } : interaction,
+        ),
+      };
+      await route.fulfill({ json: current });
     });
 
     await page.goto('/stories/story-1/edit');
     await page.getByTestId('interaction-node').filter({ hasText: 'Original title' }).click();
     const content = page.getByRole('textbox', { name: 'Content' });
-    await content.evaluate((element, html) => {
-      element.innerHTML = html;
-      element.dispatchEvent(new InputEvent('input', { bubbles: true }));
-    }, richBody);
-    await content.blur();
+    await content.click();
+    await page.keyboard.press('Control+a');
+    await page.keyboard.type('A rich scene.');
+    await page.keyboard.press('Control+a');
+    await page.keyboard.press('Control+b');
+    await expect(page.getByRole('button', { name: 'Bold' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    await page.keyboard.press('ArrowRight');
+    page.on('dialog', (dialog) => dialog.accept('https://media.example/scene.gif'));
+    await page.getByRole('button', { name: 'Add image or GIF' }).click();
 
-    await expect(content.locator('strong')).toHaveText('rich');
-    await expect(content.locator('img')).toHaveAttribute('src', 'https://media.example/scene.gif');
+    await expect(content.locator('strong')).toHaveText('A rich scene.');
+    await expect(content.locator('img[src]')).toHaveAttribute(
+      'src',
+      'https://media.example/scene.gif',
+    );
+    await page.getByLabel('Title', { exact: true }).click();
+    await expect.poll(() => bodyPatches.at(-1)).toContain('<strong>A rich scene.</strong>');
+    expect(bodyPatches.at(-1)).toContain('src="https://media.example/scene.gif"');
+    await expect(content.locator('strong')).toHaveText('A rich scene.');
+    await expect(page.getByRole('button', { name: 'Edit content' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Done' })).toHaveCount(0);
+    await expect(page.getByRole('toolbar', { name: 'Content formatting' })).toBeHidden();
   });
 
   test('restores rich-text selection before insertion after an isolated dialog closes', async ({
@@ -151,7 +176,7 @@ test.describe('Story editor persistence', () => {
     await mockStory(page, current);
     const patches: Array<Record<string, unknown>> = [];
     await page.route('**/api/stories/story-1/interactions/interaction-1', async (route) => {
-      const patch = route.request().postDataJSON() as Record<string, unknown>;
+      const patch = readJsonObject(route.request().postDataJSON());
       patches.push(patch);
       await route.fulfill({
         json: {
@@ -191,7 +216,7 @@ test.describe('Story editor persistence', () => {
       .getByRole('dialog', { name: 'Edit interaction link' })
       .getByRole('button', { name: 'Cancel', exact: true })
       .click();
-    await expect(token).toBeFocused();
+    await expect(content).toBeFocused();
     await page.getByTestId('interaction-node').filter({ hasText: 'Original title' }).click();
     await expect
       .poll(() => patches.filter((patch) => typeof patch.body === 'string').at(-1)?.body)
@@ -205,7 +230,7 @@ test.describe('Story editor persistence', () => {
     const patches: Array<Record<string, unknown>> = [];
     await mockStory(page, current);
     await page.route('**/api/stories/story-1/interactions/interaction-1', async (route) => {
-      const patch = route.request().postDataJSON() as Record<string, unknown>;
+      const patch = readJsonObject(route.request().postDataJSON());
       patches.push(patch);
       const interaction = { ...current.interactions[0], ...patch };
       await route.fulfill({
@@ -222,8 +247,10 @@ test.describe('Story editor persistence', () => {
     const content = page.getByRole('textbox', { name: 'Content' });
     await content.evaluate((element) => {
       element.focus();
-      const text = element.firstChild;
-      if (!text) throw new Error('Expected interaction body text');
+      const text = element.querySelector('p')?.firstChild;
+      if (!text) {
+        throw new Error('Expected interaction body text');
+      }
       const range = document.createRange();
       range.setStart(text, 9);
       range.setEnd(text, 16);
@@ -242,7 +269,7 @@ test.describe('Story editor persistence', () => {
       .poll(() => patches.find((patch) => 'conditionalTextBlocks' in patch))
       .toMatchObject({
         body: expect.stringMatching(
-          /^Original <span data-conditional-text-block="[^"]+">content<\/span>$/,
+          /^<p>Original <span data-conditional-text-block="[^"]+">content<\/span><\/p>$/,
         ),
         conditionalTextBlocks: [
           {
@@ -257,7 +284,7 @@ test.describe('Story editor persistence', () => {
     await expect
       .poll(() => patches.at(-1))
       .toMatchObject({
-        body: 'Original content',
+        body: '<p>Original content</p>',
         conditionalTextBlocks: [],
       });
     await expect(content).toHaveText('Original content');
@@ -388,3 +415,14 @@ test.describe('Story editor persistence', () => {
     await expect(page.getByLabel('Story save status')).toHaveText('Saved');
   });
 });
+
+function readJsonObject(value: unknown): Record<string, unknown> {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    throw new Error('Expected the request body to be a JSON object.');
+  }
+  const result: Record<string, unknown> = {};
+  for (const key of Object.keys(value)) {
+    result[key] = Reflect.get(value, key);
+  }
+  return result;
+}

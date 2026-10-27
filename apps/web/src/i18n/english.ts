@@ -724,6 +724,7 @@ export const englishTranslation = {
     width: 'Width',
     height: 'Height',
     content: 'Content',
+    loading: 'Loading editor…',
     fontSize: 'Text size',
     fontFamily: 'Font',
     font: {
@@ -1124,6 +1125,11 @@ export const englishTranslation = {
   },
   richText: {
     content: 'Content',
+    editContent: 'Edit content',
+    addContent: 'Add content',
+    doneEditing: 'Done',
+    emptyContent: 'No content yet.',
+    incompatibleContent: 'This content cannot be edited without losing supported markup.',
     characters_one: '{{count}} character',
     characters_other: '{{count}} characters',
     overLimit: '{{characters}} over limit. This content cannot be saved.',
@@ -1138,6 +1144,8 @@ export const englishTranslation = {
     underline: 'Underline',
     heading: 'Heading',
     bulletedList: 'Bulleted list',
+    numberedList: 'Numbered list',
+    blockquote: 'Block quote',
     list: 'List',
     addImage: 'Add image or GIF',
     image: 'Image/GIF',

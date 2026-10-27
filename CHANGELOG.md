@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+- Reader and Simulation now share the same responsive Player workspace, including
+  viewport-contained scrolling on desktop and tablet and a sticky toolbar in the
+  narrow-screen page-scrolling layout. Simulation authoring controls and
+  diagnostics remain mode-specific.
+
+- Replaced the custom rich-text editing surface with Tiptap/ProseMirror. The
+  Inspector keeps existing content in a compact editable field and reveals the
+  WYSIWYG toolbar on focus; empty content shows only **Add content**. Simulation
+  keeps its interactive Reader projection at rest and opens Tiptap in place when
+  the content field receives focus. Tiptap loads on demand. An Ink-inspired
+  native content syntax is proposed for a future CodeMirror mode; its grammar
+  and lossless mapping are not accepted or implemented, so source editing is
+  not exposed yet.
+
 - Added a brief cross-fade between visible Interactions in Reader and Simulation
   Mode. Reduced-motion preferences disable it, and Reader pass-through
   Interactions remain invisible.

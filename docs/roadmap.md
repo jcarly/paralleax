@@ -112,115 +112,124 @@ finishing the remaining V0.3 conflict-safe collaboration work is not a prerequis
 for guided single-author validation or native backup/export. Existing access and
 revision foundations remain in use; collaboration features that allow concurrent
 editing still depend on V0.3. Advanced collaboration, complex offline authoring,
-AI integrations, Tiptap migration, and public-scale publishing remain deferred
-until user evidence and their own readiness gates justify them.
+AI integrations, and public-scale publishing remain deferred until user evidence
+and their own readiness gates justify them.
 
-### Deferred Cross-Cutting Initiative: Rich-Text Editor Migration
+### P1: Tiptap and Ink-Inspired Narrative Content Editing
 
-**Priority:** P2, unscheduled. This structural editor improvement is outside the
-near-term delivery sequence above. The current editor already supports narrative
-tokens and structured conditions, so replacing its editing engine must earn its
-cost through a compatibility prototype before implementation is scheduled.
+**Priority:** P1, promoted from the unscheduled roadmap by the explicit migration
+request dated 2026-10-26. The task includes the visual editor and a future editable
+content-source mode, integrated into the Inspector and Simulation. The user later
+specified that the author-facing syntax should be native to Paralleax and inspired
+by Ink; its exact grammar remains a proposal, not an accepted language decision.
 
-**Goal:** Evaluate and, if validated, progressively replace the custom WYSIWYG
-editing surface with Tiptap/ProseMirror OSS while retaining Paralleax's narrative
-model and existing story content. Tiptap is a candidate, not an accepted
-architectural decision. Compare Lexical only if the prototype exposes a
-structural limitation in Tiptap.
+**Goal:** Replace the custom WYSIWYG editing surface with Tiptap/ProseMirror OSS
+and provide an author-readable CodeMirror representation of the same Interaction
+content. Preserve the Paralleax model, existing Stories, and the current Reader
+projection. Ink is a design inspiration, not a runtime or compatibility target.
 
 **Current implementation:**
 
-- `RichTextEditor.tsx` edits a `contentEditable` surface with direct DOM updates,
-  `document.execCommand()`, remembered browser selections, and modal editors for
-  variable, link, and condition tokens. Token serialization and selection handling
-  have focused tested modules; conditional decoration and editing actions remain
-  in the existing code-quality backlog.
-- `Interaction.body` is sanitized HTML. Structured conditional records are stored
-  separately as `conditionalTextBlocks` JSONB with shared `TriggerCondition`
-  values, and a frame update sends both together. The API sanitizer and browser
-  DOMPurify renderer each preserve only their own allowlisted tags and attributes.
-- `RichTextContent.tsx` and `richTextProjection.ts` render reader content and
-  project variable values, available interaction links, and conditional text.
-  Simulation Mode uses the editor surface; its reader output remains a separate
-  rendering path. Existing media includes images, video, and approved embeds.
-- Existing coverage includes editor/token/selection unit tests, API sanitizer
-  tests and endpoint coverage, Simulation Mode tests, and Playwright flows for
-  body saves, modal selection restoration, and conditional-frame updates. The web
-  package currently has no Tiptap, ProseMirror, or Lexical dependency.
+- `RichTextEditor.tsx` re-exports the Tiptap editor in
+  `features/rich-text/`. The editor uses ProseMirror transactions, native local
+  history, and focused extensions for narrative references and condition frames.
+- `Interaction.body` remains sanitized HTML. `conditionalTextBlocks` remains the
+  canonical condition store, and body plus condition records use the existing
+  atomic Interaction update path.
+- The Inspector keeps existing content in a compact editable field and reveals
+  the WYSIWYG toolbar on focus. An empty body shows **Add content** and returns
+  to that action if left empty. Simulation keeps its interactive Reader
+  projection at rest and opens the editor in place when the content field is
+  focused; an empty body shows only **Add content**. Tiptap is loaded on demand.
+  Reader projections, condition evaluation, and media sanitization remain in
+  their existing layers.
+- The CodeMirror source mode is not yet available. The native content syntax,
+  typed condition mapping, and lossless representation rules are proposed in
+  [ADR-043](decisions/ADR-043-ink-inspired-narrative-source.md) and require a
+  prototype before implementation. HTML may remain a technical diagnostic view,
+  but it is not the planned author-facing Code experience.
 
 **Existing contract and dependencies:**
 
 - Keep `Interaction.body` as sanitized HTML and retain stable stat-assignment,
   item, interaction, and conditional-frame identifiers.
-- Keep `ConditionalTextBlock` records and their `TriggerCondition` values as the
-  canonical condition model. HTML carries only the frame identifier; the API
-  validates and persists the body and condition records together. Reuse the
-  Trigger condition fields and shared evaluation rules in
+- Keep `ConditionalTextBlock` records and `TriggerCondition` values canonical.
+  The code representation must preserve the block id and map condition changes
+  to those records; source markup alone cannot invent conditions. Reuse the
+  shared condition fields and evaluation rules in
   [ADR-024](decisions/ADR-024-structured-conditional-rich-text.md).
-- Keep the existing variable and interaction-link selectors, condition editor,
-  save path, durable Story history, comments, imports, reader renderer, and
-  Simulation Mode behavior. Reader and Simulation rendering remain separate
-  from the editing engine.
+- Preserve the variable and interaction-link selectors, condition editor, save
+  path, durable Story history, comment anchors, imports, Reader renderer, and
+  Simulation behavior.
 - Preserve API and browser sanitization, supported image/video/embed content,
-  historical HTML, and imported Stories. The future stable backup/export
-  contract remains governed by V0.6.
-- The unfinished [RichTextEditor extraction](code-quality-backlog.md) remains
-  separate work and is a prerequisite to adopting a new engine. This initiative
-  must not duplicate that extraction or introduce a paid/Cloud dependency.
-- Evaluate compatibility with
-  [ADR-034 collaborative authoring](decisions/ADR-034-collaborative-offline-authoring.md),
-  but do not implement collaboration, select an OT/CRDT protocol, or change the
-  persistence model as part of this migration.
+  historical HTML, and imported Stories. No database migration or second
+  persisted content representation is included.
+- Continue focused extraction as part of the migration; a complete extraction of
+  the former editor is not a general prerequisite. Do not introduce a paid/Cloud
+  dependency or collaboration/CRDT layer.
+- Keep the existing collaborative-authoring boundary in
+  [ADR-034](decisions/ADR-034-collaborative-offline-authoring.md); do not change
+  the persistence model as part of this migration.
+
+**Content language direction:** The author requests a concise, native Paralleax
+content syntax inspired by Ink rather than embedding an existing template engine.
+The syntax must serialize to the existing sanitized `Interaction.body` and
+canonical `conditionalTextBlocks`; it cannot define execution, effects, choices,
+Triggers, or a new variable/condition system. The proposed direction and open
+choices are in ADR-043 and [Editor Technology](open-questions.md#editor-technology).
+Do not treat the sketch as a finalized grammar or promise lossless conversion
+before the prototype validates it.
 
 **Phases:**
 
-1. **Audit and prototype.** Map current editor behavior, extensions, sanitizer
-   rules, persistence/history/comments, Simulation Mode, import paths, tests, and
-   bundle boundaries. Build an isolated prototype without changing persisted
-   stories. Test representative sanitized HTML -> Tiptap document -> HTML
-   round-trips, especially inline tokens, legacy target-based conditions,
-   structured inline and multiblock conditions across paragraphs, and media.
-   Measure bundle and editing performance; verify OSS licensing and keyboard,
-   accessibility, and IME behavior. Deliver a compatibility report, prototype,
-   and recommendation documented in a new ADR if the architecture is accepted.
-2. **Editing infrastructure.** If Phase 1 passes review, add a dedicated editor
-   integration with centralized extensions and commands. Replace direct DOM
-   editing and `document.execCommand()` while preserving the inspector contract,
-   selection/focus behavior, copy/paste, editor-local undo/redo, and existing
-   design-system controls.
-3. **Narrative extensions.** Add extensions for dynamic variables, interaction
-   links, conditional text, and existing image/video/embed content. Keep transient
-   edit controls in NodeViews or decorations where appropriate; never serialize
-   them into authored HTML. Reuse existing selectors and condition editors,
-   preserve stable IDs and condition multiplicity, and support insertion,
-   editing, removal, and movement. Leave procedural text, localization variants,
-   and other future narrative formats out of scope.
-4. **Integration and rollout.** Integrate the editor into the Interaction
-   Inspector and Simulation Mode. Preserve the current reader projection and
-   persistence contract unless Phase 1 proves a change is necessary. Verify
-   atomic body/condition saves, Story history versus editor-local undo/redo,
-   text-comment anchors, import/export compatibility, sanitization, and a staged
-   rollout with an exercised rollback path before general availability. Remove
-   the old editor only after the acceptance criteria pass.
+1. **Visual editor.** Complete the Tiptap migration, narrative extensions,
+   sanitizer and historical-content round trips, selection, clipboard, editor
+   undo/redo, and atomic condition saves. Keep invalid or incompatible content
+   recoverable; never save degraded output.
+2. **Content-source prototype.** Prototype a small Ink-inspired syntax against
+   real examples from current Stories, including references, supported rich
+   formatting, inline and multi-paragraph conditions, media, diagnostics, and
+   stable ids. Compare parsing options and verify canonical data equality in both
+   directions before selecting a grammar or broadening the supported subset.
+3. **CodeMirror content mode.** After the prototype and grammar decision, load
+   CodeMirror lazily with syntax highlighting, line numbers, indentation, search,
+   localized diagnostics, and design-system styling. Keep invalid source as a
+   recoverable local draft; apply valid edits through the same Tiptap projection
+   and existing atomic persistence path.
+4. **Integration and cleanup.** Verify Inspector and Simulation journeys,
+   comments, remote updates, history, mobile layout, keyboard/focus, and browser
+   behavior. Remove unused DOM-selection/token helpers only after their callers
+   and tests have migrated.
+
+The future **Story Script** is a separate P2 product surface, not an extension of
+Interaction content mode. Its scope would include structured Interaction and
+Trigger definitions, effects, transitions, and graph-independent Story metadata;
+it must preserve the complete canonical model through a previewed, targeted
+change set. Do not implement it in this migration. Procedural text is also a
+separate future model/engine decision because deterministic selection and save,
+reload, and Simulation behavior are not currently defined.
 
 **Exit criteria:** Existing Stories survive edit/save/reload without loss of
-content or references; current narrative tokens, inline and multiblock conditions,
-reader behavior, Simulation Mode, imports/exports, comments, history, and saves
-remain correct; temporary controls never enter persisted HTML; keyboard
-selection, shortcuts, copy/paste, drag/drop, undo/redo, accessibility, and IME
-input are reliable; relevant unit, integration, and browser tests pass; and no
-mandatory commercial service is introduced. Any storage-contract or schema
-change requires a separate accepted decision and migration plan.
+content or references; narrative tokens, inline and multiblock conditions,
+Reader behavior, Simulation, imports/exports, comments, history, and saves remain
+correct; both representations stay synchronized without saving on a mode switch;
+invalid source cannot replace canonical content; temporary controls never enter
+saved HTML; source round trips preserve ids and all supported rich content; the
+accepted grammar's unit, integration, and browser tests pass; and no mandatory
+commercial service is introduced. Any storage-contract or schema change needs a
+separate accepted decision and migration plan.
 
-**Primary risks:** HTML parsing and serialization may normalize legacy markup or
-drop attributes required by stable tokens, imports, or sanitizers. Inline and
-multiblock conditional frames must preserve their IDs and coordinate atomically
-with separate condition records. NodeViews and decorations can interfere with
-selection, copy/paste, comment text offsets, drag/drop, and editor-local undo;
-they must not contaminate durable Story history or saved HTML. Media and embed
-extensions must stay within both sanitizer allowlists. Bundle cost, editing
-performance, keyboard/IME behavior, OSS license, and future compatibility with
-ADR-034's collaborative text contract require evidence before adoption.
+**Primary risks:** Tiptap parsing and serialization may normalize legacy markup
+or drop stable references. Source conditions must preserve stable block ids and
+map to existing `TriggerCondition` values without adding a runtime evaluator.
+Ink-like syntax could accidentally imply unsupported branching, `else`, OR,
+procedural selection, or executable logic; strict parsing and explicit diagnostics
+must reject unsupported forms without changing canonical content.
+NodeViews can interfere with selection, copy/paste, comment offsets, drag/drop,
+and local undo; temporary controls must stay out of durable HTML and Story
+history. Media must remain within both sanitizer allowlists. Bundle cost,
+editing performance, keyboard/IME behavior, OSS licensing, and compatibility with
+ADR-034's collaborative text contract remain verification gates.
 
 ## Historical Private-Alpha Feedback Queue — 2026-09-11
 

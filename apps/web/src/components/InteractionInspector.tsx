@@ -7,7 +7,7 @@ import {
   type StatValue,
   type Story,
 } from '@paralleax/shared';
-import { useId, useState } from 'react';
+import { useId, useRef, useState, type FocusEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { getStatTargets, type StatTarget } from '../storyStats';
 import { InteractionEffectCard } from './InteractionEffectCard';
@@ -20,6 +20,7 @@ import {
 import { ExpressionEditor } from './ExpressionEditor';
 import { FieldHelpTooltip } from './FieldHelpTooltip';
 import { RichTextEditor } from './RichTextEditor';
+import { hasAuthoredRichTextContent } from './richTextProjection';
 import { VariablePicker } from './VariablePicker';
 
 function getInitials(name: string) {
@@ -69,7 +70,9 @@ function SearchableTargetField({
           const option = options.find(
             (candidate) => candidate.label === event.target.value && !candidate.disabled,
           );
-          if (option) onSelect(option.id);
+          if (option) {
+            onSelect(option.id);
+          }
         }}
         onBlur={(event) => {
           if (
@@ -186,7 +189,9 @@ function initialEffectValue(target: StatTarget): StatValue {
 
 function normalizeEffectValue(value: StatValue, target: StatTarget): StatValue {
   const valueType = target.definition ? getStatValueType(target.definition) : 'number';
-  if (typeof value === valueType) return value;
+  if (typeof value === valueType) {
+    return value;
+  }
   return target.assignment.initialValue;
 }
 
@@ -211,6 +216,11 @@ export function InteractionInspector({
 } & InspectorTextCommentProps &
   InspectorSemanticCommentProps) {
   const { t } = useTranslation();
+  const [bodyEditor, setBodyEditor] = useState({ interactionId: interaction.id, editing: false });
+  const bodyDraftRef = useRef<{ interactionId: string; body: string } | undefined>(undefined);
+  if (bodyEditor.interactionId !== interaction.id) {
+    setBodyEditor({ interactionId: interaction.id, editing: false });
+  }
   const characters = story.characters ?? [];
   const interactionLinkTargets = story.interactions.filter(
     (candidate) => candidate.id !== interaction.id,
@@ -250,9 +260,50 @@ export function InteractionInspector({
     onChange(updateInteractionInStory(story, interaction.id, patch));
   }
 
+  function commitBodyDraft(body: string) {
+    const draft = bodyDraftRef.current;
+    const candidateBody = draft?.interactionId === interaction.id ? draft.body : body;
+    const candidateHasContent = hasAuthoredRichTextContent(candidateBody);
+    const currentHasContent = hasAuthoredRichTextContent(interaction.body);
+    const nextBody = candidateHasContent
+      ? candidateBody
+      : currentHasContent
+        ? ''
+        : interaction.body;
+    bodyDraftRef.current = undefined;
+    if (nextBody === interaction.body) {
+      return;
+    }
+    updateLocalInteraction({ body: nextBody });
+    void onPatch(interaction.id, { body: nextBody });
+  }
+
+  function handleBodyBlur(body: string) {
+    commitBodyDraft(body);
+  }
+
+  function handleBodyRegionBlur(event: FocusEvent<HTMLDivElement>) {
+    const nextElement = event.relatedTarget;
+    if (nextElement instanceof Node && event.currentTarget.contains(nextElement)) {
+      return;
+    }
+    window.setTimeout(() => {
+      const activeElement = document.activeElement;
+      if (
+        activeElement instanceof HTMLElement &&
+        (activeElement.closest('.rich-text-editor') || activeElement.closest('[role="dialog"]'))
+      ) {
+        return;
+      }
+      setBodyEditor({ interactionId: interaction.id, editing: false });
+    }, 0);
+  }
+
   function saveStatEffects(nextEffects: StatEffect[], persist = true) {
     updateLocalInteraction({ statEffects: nextEffects });
-    if (persist) void onPatch(interaction.id, { statEffects: nextEffects });
+    if (persist) {
+      void onPatch(interaction.id, { statEffects: nextEffects });
+    }
   }
 
   function addEffect(type: EffectType) {
@@ -311,20 +362,38 @@ export function InteractionInspector({
           textCommentCounts={textCommentCounts}
           onOpenTextComments={onOpenTextComments}
         >
-          <RichTextEditor
-            interactionId={interaction.id}
-            story={story}
-            value={interaction.body}
-            onChange={(body) => updateLocalInteraction({ body })}
-            onBlur={(body) => void onPatch(interaction.id, { body })}
-            interactionLinkTargets={interactionLinkTargets}
-            conditionalTextBlocks={interaction.conditionalTextBlocks}
-            onConditionalTextChange={(body, conditionalTextBlocks) => {
-              updateLocalInteraction({ body, conditionalTextBlocks });
-              void onPatch(interaction.id, { body, conditionalTextBlocks });
-            }}
-            onConditionalTargetClick={onSelectInteraction}
-          />
+          {hasAuthoredRichTextContent(interaction.body) || bodyEditor.editing ? (
+            <div onBlurCapture={handleBodyRegionBlur}>
+              <RichTextEditor
+                autoFocus={bodyEditor.editing}
+                interactionId={interaction.id}
+                story={story}
+                value={interaction.body}
+                onChange={(body) => {
+                  bodyDraftRef.current = { interactionId: interaction.id, body };
+                }}
+                onBlur={handleBodyBlur}
+                revealToolbarOnFocus
+                interactionLinkTargets={interactionLinkTargets}
+                conditionalTextBlocks={interaction.conditionalTextBlocks}
+                onConditionalTextChange={(body, conditionalTextBlocks) => {
+                  bodyDraftRef.current = undefined;
+                  updateLocalInteraction({ body, conditionalTextBlocks });
+                  void onPatch(interaction.id, { body, conditionalTextBlocks });
+                }}
+                onConditionalTargetClick={onSelectInteraction}
+              />
+            </div>
+          ) : (
+            <button
+              className="secondary interaction-content-edit-toggle"
+              data-comment-exclude="true"
+              type="button"
+              onClick={() => setBodyEditor({ interactionId: interaction.id, editing: true })}
+            >
+              {t('richText.addContent')}
+            </button>
+          )}
         </InspectorCommentField>
       </section>
       <InspectorCommentSlot

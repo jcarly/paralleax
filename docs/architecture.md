@@ -101,6 +101,16 @@ reuses the shared Trigger condition union, API validation, editor fields, and
 deterministic AND evaluator. Legacy target-based frames retain their availability
 projection. Links do not reuse either frame format as canonical markup.
 
+The proposed author-facing Code view is a source projection of this same content,
+not a second persistence or execution format. Its parser/serializer must map to
+sanitized `Interaction.body` and canonical conditional records through the
+existing Interaction update path. CodeMirror and Tiptap adapters belong in
+`apps/web`; a framework-independent parser could move to `packages/shared` only
+if API validation, import/export, or another non-web consumer needs the exact
+same conversion. No source document is persisted, and no database migration is
+part of the current proposal. The grammar and its supported rich-content subset
+remain open in [ADR-043](decisions/ADR-043-ink-inspired-narrative-source.md).
+
 Default interaction placement lives in `packages/shared/src/graph/`, while the
 deterministic sample story lives in `packages/shared/src/demo/`. The public
 `index.ts` facade re-exports both modules and owns no implementation for either

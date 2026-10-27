@@ -205,10 +205,18 @@ nothing is selected.
 
 ## Edit Interaction Content
 
-The interaction **Content** field is a WYSIWYG editor. Its toolbar formats text,
-headings, and lists, and inserts images or animated GIFs by URL. **Video**
-accepts direct video URLs plus YouTube and Vimeo links. Media is referenced
-externally; Paralleax does not upload or host the file yet.
+The interaction **Content** field stays editable in the inspector. Existing
+content appears in a compact field; focus it to reveal the WYSIWYG toolbar and
+expanded editor. Changes save when focus leaves the field. An empty body shows
+only **Add content**; if you leave the editor empty, that action returns.
+In Simulation, the Reader projection stays visible and its content field opens
+the editor on focus; Reader links remain available while the projection is
+shown. Empty content shows only **Add content**, which opens the editor and
+returns when left empty. The toolbar formats text, headings, and lists, and
+inserts images or animated GIFs by URL. **Video** accepts direct video URLs plus
+YouTube and Vimeo links. Media is referenced externally; Paralleax does not
+upload or host the file yet. A native narrative source syntax is being explored,
+but no Code view is available yet.
 
 The character indicator below the editor measures the stored HTML. It warns in
 the final 10% of the 64,000-character allowance and reports when content is over

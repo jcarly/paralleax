@@ -734,6 +734,7 @@ export const frenchTranslation = {
     width: 'Largeur',
     height: 'Hauteur',
     content: 'Contenu',
+    loading: 'Chargement de l’éditeur…',
     fontSize: 'Taille du texte',
     fontFamily: 'Police',
     font: {
@@ -1139,6 +1140,12 @@ export const frenchTranslation = {
   },
   richText: {
     content: 'Contenu',
+    editContent: 'Modifier le contenu',
+    addContent: 'Ajouter du contenu',
+    doneEditing: 'Terminer',
+    emptyContent: 'Aucun contenu pour le moment.',
+    incompatibleContent:
+      'Ce contenu ne peut pas être modifié sans perte de balisage pris en charge.',
     characters_one: '{{count}} caractère',
     characters_other: '{{count}} caractères',
     overLimit: '{{characters}} au-delà de la limite. Ce contenu ne peut pas être enregistré.',
@@ -1153,6 +1160,8 @@ export const frenchTranslation = {
     underline: 'Souligné',
     heading: 'Titre',
     bulletedList: 'Liste à puces',
+    numberedList: 'Liste numérotée',
+    blockquote: 'Citation',
     list: 'Liste',
     addImage: 'Ajouter une image ou un GIF',
     image: 'Image/GIF',

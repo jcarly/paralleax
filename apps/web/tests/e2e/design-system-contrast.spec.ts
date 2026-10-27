@@ -123,12 +123,15 @@ test('applies the focus and help contrast to the rendered Simulation Editor', as
   await mockRuntimeStory(page, story);
   await page.goto('/stories/story-1/play?mode=simulation&startInteractionId=interaction-1');
 
+  await expect(page.locator('.simulation-body-preview .story-body')).toBeVisible();
+  await page.locator('.simulation-body-preview').focus();
   await expect(page.getByRole('textbox', { name: 'Current interaction content' })).toBeVisible();
   await expectTextContrast(page.locator('.simulation-controls small'), 4.5);
   const richTextSurface = page.getByRole('textbox', { name: 'Current interaction content' });
+  const editorSurface = page.locator('.simulation-body-editor .rich-text-surface');
   await richTextSurface.focus();
   await expect(richTextSurface).toBeFocused();
-  await expectKeyboardFocusRing(richTextSurface);
+  await expectKeyboardFocusRing(editorSurface);
 });
 
 async function expectTextContrast(locator: Locator, minimum: number) {
@@ -204,7 +207,9 @@ async function expectKeyboardFocusRing(locator: Locator) {
 
 function parseColor(value: string): [number, number, number] {
   const channels = value.match(/[\d.]+/g)?.map(Number);
-  if (!channels || channels.length < 3) throw new Error(`Expected an RGB color, got ${value}`);
+  if (!channels || channels.length < 3) {
+    throw new Error(`Expected an RGB color, got ${value}`);
+  }
   return [channels[0], channels[1], channels[2]];
 }
 

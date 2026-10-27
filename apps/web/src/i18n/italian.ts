@@ -1162,6 +1162,13 @@ export const italianTranslation = {
   },
   richText: {
     content: 'Contenuto',
+    loading: 'Caricamento editor…',
+    editContent: 'Modifica contenuto',
+    addContent: 'Aggiungi contenuto',
+    doneEditing: 'Fine',
+    emptyContent: 'Nessun contenuto.',
+    incompatibleContent:
+      'Questo contenuto non può essere modificato senza perdere elementi supportati.',
     characters_one: 'carattere {{count}}',
     characters_other: '{{count}} caratteri',
     overLimit: '{{characters}} oltre il limite. Questo contenuto non può essere salvato.',
@@ -1176,6 +1183,8 @@ export const italianTranslation = {
     underline: 'Sottolineare',
     heading: 'Intestazione',
     bulletedList: 'Elenco puntato',
+    numberedList: 'Elenco numerato',
+    blockquote: 'Citazione',
     list: 'Elenco',
     addImage: 'Aggiungi immagine o GIF',
     image: 'Immagine/GIF',

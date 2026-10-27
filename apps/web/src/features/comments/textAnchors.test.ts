@@ -41,17 +41,44 @@ describe('comment text anchors', () => {
     surface.dataset.commentField = 'body';
     surface.textContent = 'The old harbor is quiet.';
     document.body.append(surface);
-    const text = surface.firstChild!;
+    const text = requiredNode(surface.firstChild, 'Expected input text');
     const range = document.createRange();
     range.setStart(text, 8);
     range.setEnd(text, 14);
-    const selection = window.getSelection()!;
+    const selection = requiredSelection();
     selection.removeAllRanges();
     selection.addRange(range);
 
     expect(captureActiveTextSelection()).toMatchObject({
       field: 'body',
       selector: { exact: 'harbor', start: 8, end: 14 },
+    });
+  });
+
+  it('anchors rich text without counting temporary controls or token labels', () => {
+    const surface = document.createElement('div');
+    surface.dataset.commentField = 'body';
+    surface.innerHTML =
+      '<p>The <span data-comment-value="{{story.Score}}"><button>Story -> Score</button></span>' +
+      '<span data-comment-exclude="true">Edit condition</span> harbor</p>';
+    document.body.append(surface);
+    const paragraph = requiredNode(surface.querySelector('p'), 'Expected comment paragraph');
+    const firstText = requiredNode(paragraph.firstChild, 'Expected leading text');
+    const lastText = requiredNode(paragraph.lastChild, 'Expected trailing text');
+    const range = document.createRange();
+    range.setStart(firstText, 0);
+    range.setEnd(lastText, lastText.textContent?.length ?? 0);
+    const selection = requiredSelection();
+    selection.removeAllRanges();
+    selection.addRange(range);
+
+    expect(captureActiveTextSelection()).toMatchObject({
+      field: 'body',
+      selector: {
+        exact: 'The {{story.Score}} harbor',
+        start: 0,
+        end: 'The {{story.Score}} harbor'.length,
+      },
     });
   });
 
@@ -63,11 +90,11 @@ describe('comment text anchors', () => {
     Object.defineProperty(surface, 'isContentEditable', { value: true });
     document.body.append(surface);
     surface.focus();
-    const text = surface.firstChild!;
+    const text = requiredNode(surface.firstChild, 'Expected editable text');
     const range = document.createRange();
     range.setStart(text, 4);
     range.setEnd(text, 10);
-    const selection = window.getSelection()!;
+    const selection = requiredSelection();
     selection.removeAllRanges();
     selection.addRange(range);
 
@@ -98,3 +125,18 @@ describe('comment text anchors', () => {
     expect(makeSelection(longValue, 'body', 0, longValue.length)).toBeUndefined();
   });
 });
+
+function requiredNode<T extends Node>(node: T | null, message: string): T {
+  if (!node) {
+    throw new Error(message);
+  }
+  return node;
+}
+
+function requiredSelection(): Selection {
+  const selection = window.getSelection();
+  if (!selection) {
+    throw new Error('Expected a browser selection');
+  }
+  return selection;
+}

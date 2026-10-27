@@ -72,9 +72,10 @@ promotes them.
 - **`StoryEditor` split: P1 -> P2, conditional.** Split only where an observed
   workflow, concrete risk, or needed feature benefits; file size alone is not a
   priority.
-- **`RichTextEditor` extraction: P1 -> P2.** Preserve compatible incremental
-  extraction and tests, but treat it as groundwork for a deferred editor-engine
-  choice, not an alpha prerequisite. Tiptap remains unscheduled.
+- **`RichTextEditor` extraction: absorbed by the P1 editor migration.** The
+  former custom editor is now a compatibility re-export of the focused Tiptap
+  implementation. Do not keep a separate extraction prerequisite or duplicate
+  the active [migration](roadmap.md#p1-tiptap-and-ink-inspired-narrative-content-editing).
 - **Shared evaluation context: P1 -> P2.** It is a prerequisite only before
   consolidating diagnostics; current Reader and Simulation behavior continues.
 - **Incremental journey-date recalculation: P1 -> P2.** Keep ordinary progress
@@ -405,18 +406,10 @@ than inherited from the historical audit grouping.
       automated replay validation. Define backward-navigation behavior at the
       checkpoint boundary before including rewinds in this optimization; validate
       against long loops and large journeys.
-- [ ] **P2:** continue breaking `RichTextEditor` into focused modules for selection handling,
-      token serialization, conditional-content decoration, and editing actions
-      before adopting a richer editing engine; keep the existing storage format
-      compatible throughout the refactor. This remains prerequisite work for the
-      deferred [Tiptap migration initiative](roadmap.md#deferred-cross-cutting-initiative-rich-text-editor-migration).
-      Do not duplicate this task in that initiative.
-  - [x] Extract token-source recovery, temporary editor-control construction, and
-        canonical HTML serialization into a focused tested module.
-  - [x] Extract selection capture/restoration and inline conditional-frame
-        insertion behind a focused hook.
-  - [ ] Extract conditional-content decoration and editing actions without
-        changing persisted markup or keyboard behavior.
+- [x] **Replace the legacy rich-text editor with Tiptap/ProseMirror.** Narrative
+      tokens and conditional frames now use focused extensions, while the
+      compatibility component re-exports the new editor. The P1 migration
+      roadmap owns remaining round-trip, browser, and source-mode work.
 - [ ] **P1 when import families expand:** share client and server import
       validation rules for QSP and other import families in `packages/shared`
       while retaining the server as the final authority for persisted-story
@@ -588,32 +581,12 @@ regression cases in the repository, not tests executed for this audit.
       existing editor without an extra choice step; no effect type available
       remains recoverable. **Verification:** component tests for every type and
       enabled/disabled combination, plus browser coverage for the authoring flow.
-- [ ] **Repair rich-text formatting feedback.** Treat the reported selection,
-      formatting, and active-button problems as a functional editor task, not as
-      part of the Tiptap/ProseMirror migration. The current toolbar calls
-      document.execCommand and does not expose a pressed state; existing unit
-      coverage mocks the command rather than checking browser formatting.
-      **Depends on:** the existing selection hook, token serializer, sanitizer,
-      and rich-text controls. **Risk:** selection restoration, comment anchors,
-      or stable narrative tokens can regress. **Acceptance:** a real selected
-      range receives the requested formatting; caret and selection states are
-      visibly and accessibly reflected by the toolbar; save/reload preserves
-      formatting and tokens. **Verification:** focused component tests and a
-      Playwright selection-formatting regression. Promote to P0 only if a
-      reproduced failure blocks a scheduled author task or loses content.
-- [ ] **Make empty Interaction content actionable.** Replace an always-mounted
-      WYSIWYG editor with a concise Add content action for a truly empty authored
-      body; show an explicit edit action when content is already present and mark
-      empty Interactions on the graph. Reuse RichTextContent and RichTextEditor.
-      **Depends on:** a clear authored-empty versus reader-visible content rule
-      and the existing Reader evaluation. **Risk:** authored-empty content must
-      not be confused with conditional content that is currently invisible to a
-      reader. **Acceptance:**
-      Add content opens and focuses the existing editor; graph status reflects
-      authored content; conditionally hidden or unresolved text remains authored
-      and editable; Reader auto-entry and pass-through rules do not change.
-      **Verification:** component tests for empty, non-empty, and conditional
-      bodies, plus a browser flow and the existing Reader transition regressions.
+- [ ] **Show authored-empty Interaction status on the graph.** Inspector and
+      Simulation now use Reader-first content with in-place Add/Edit actions as
+      part of the P1 editor migration. This remaining graph affordance should
+      distinguish a truly empty authored body from content that is currently
+      hidden by conditions. **Acceptance:** graph status reflects authored
+      content without changing Reader auto-entry or pass-through behavior.
 - [ ] **Keep essential editor controls reachable at narrow sizes.** Cover
       left-side graph commands, title,
       comments, and header actions. **Depends on:** existing editor grid and
@@ -775,11 +748,14 @@ regression cases in the repository, not tests executed for this audit.
 
 ### Deferred until product decisions
 
-- [ ] Keep the source/code view as an exploration until open-questions.md decides
-      whether it is read-only diagnostics or a second editable representation.
-      If editable, prototype stable token/condition identity, sanitization, and
-      round-trip compatibility before scheduling implementation. Do not bundle it
-      into the unscheduled Tiptap migration.
+- [ ] **Prototype the Ink-inspired content grammar and stable-reference mapping**
+      before exposing a CodeMirror mode. Keep the prototype bound to the existing
+      sanitized HTML body, `conditionalTextBlocks`, stable references, and typed
+      `TriggerCondition` rules. Blocks remain AND-only, without `else` or OR.
+      Check conversion with representative existing content, unsupported rich
+      nodes, comments, copy/paste, and invalid drafts. This remains part of the
+      P1 migration, not a separate backlog project; see
+      [ADR-043](decisions/ADR-043-ink-inspired-narrative-source.md).
 - [ ] Keep automatic entry beyond the single-opening Reader rule unscheduled
       until the off-path case and narrative intent are defined.
 - [ ] Keep automatic cleanup of comments on deleted entities unscheduled until
@@ -902,6 +878,10 @@ unchanged snapshot.
       desktop/tablet/mobile computed styles, editing, choice states, ending
       cards, and panel scrolling. Completed 2026-10-25: 4 targeted Playwright
       cases, targeted Stylelint, root lint, typecheck, and build passed.
+- **Updated 2026-10-27:** Reader now uses the shared viewport-contained Player
+  workspace and responsive layout previously scoped to Simulation. This
+  supersedes the earlier acceptance to preserve a separate Reader layout;
+  authoring controls and diagnostics remain Simulation-specific.
 - [x] **DS-06 — Make help tooltips dismissible and usable** (D6, D7). Extend the
       existing `FieldHelpTooltip`; do not add a parallel tooltip system.
       Acceptance: Escape dismisses focused help, hover content remains reachable
