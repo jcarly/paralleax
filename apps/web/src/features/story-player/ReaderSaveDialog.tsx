@@ -147,9 +147,10 @@ export function ReaderSaveDialog({
           </div>
 
           <form className="reader-save-create" onSubmit={(event) => void create(event)}>
-            <label>
-              <span>{t('player.saves.name')}</span>
+            <label className="form-field form-field--standard">
+              <span className="form-field-label">{t('player.saves.name')}</span>
               <input
+                className="form-control form-control--standard"
                 autoFocus
                 data-modal-autofocus
                 value={name}

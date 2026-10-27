@@ -1,0 +1,164 @@
+.form-field {
+  display: grid;
+  align-content: start;
+  gap: var(--form-field-label-gap);
+  min-width: 0;
+  color: var(--color-text);
+  font-size: var(--type-size-compact);
+  font-weight: 650;
+}
+
+.form-field--standard {
+  --form-field-control-height: var(--form-control-height-standard);
+}
+
+.form-field--compact {
+  --form-field-control-height: var(--form-control-height-compact);
+}
+
+.form-field > :is(label, .form-field-label) {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: var(--type-size-compact);
+  font-weight: 650;
+  line-height: 1.3;
+}
+
+.form-field > .field-label-with-help {
+  min-width: 0;
+}
+
+.form-density-caption {
+  color: var(--color-muted);
+  font-size: var(--type-size-compact);
+  font-weight: 600;
+}
+
+.form-field > small,
+.form-field-error {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: var(--type-size-compact);
+  font-weight: 450;
+  line-height: 1.4;
+}
+
+.form-field--error > small,
+.form-field-error,
+.field-error {
+  color: var(--color-error);
+}
+
+.form-control {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  min-height: var(--form-field-control-height, var(--form-control-height-standard));
+  padding: 0.45rem var(--form-control-padding-inline);
+  border: 1px solid var(--form-control-border);
+  border-radius: var(--form-control-radius);
+  background: var(--form-control-surface);
+  color: var(--color-text);
+  font-family: var(--font-interface);
+  font-size: var(--type-size-control);
+  font-weight: 400;
+  line-height: 1.25;
+}
+
+.form-control--standard {
+  --form-field-control-height: var(--form-control-height-standard);
+}
+
+.form-control--compact {
+  --form-field-control-height: var(--form-control-height-compact);
+  padding-block: 0.35rem;
+}
+
+.form-control:is(input, select, textarea):hover:not(:disabled):not([readonly]):not(
+    [aria-invalid='true']
+  ) {
+  border-color: var(--color-muted);
+}
+
+.form-control::placeholder {
+  color: var(--color-muted);
+  opacity: 1;
+}
+
+.form-control:is(input, select, textarea):focus {
+  border-color: var(--color-primary);
+  outline: 0;
+}
+
+.form-control:is(input, select, textarea):focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+
+.form-control:is(input, select, textarea):disabled {
+  background: var(--color-surface-secondary);
+  color: var(--color-muted);
+  cursor: not-allowed;
+}
+
+.form-control:is(input, textarea)[readonly] {
+  background: var(--color-surface-secondary);
+}
+
+.form-control:is(input, select, textarea)[aria-invalid='true'],
+.form-field--error .form-control {
+  border-color: var(--color-error);
+}
+
+.form-control:is(input, select, textarea)[aria-invalid='true']:focus-visible,
+.form-field--error .form-control:focus-visible {
+  outline-color: var(--color-error);
+}
+
+.form-control--multiline {
+  min-height: 7rem;
+  padding-block: 0.65rem;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.form-control-group {
+  display: grid;
+  width: 100%;
+  min-width: 0;
+  min-height: var(--form-field-control-height, var(--form-control-height-standard));
+  grid-template-columns: minmax(0, 1fr) auto;
+  overflow: hidden;
+  border: 1px solid var(--form-control-border);
+  border-radius: var(--form-control-radius);
+  background: var(--form-control-surface);
+}
+
+.form-control-group--compact {
+  --form-field-control-height: var(--form-control-height-compact);
+}
+
+.form-control-group:focus-within {
+  border-color: var(--color-primary);
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+
+.form-control-group > .form-control {
+  min-height: inherit;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.form-control-group > .form-control:focus-visible {
+  outline: 0;
+}
+
+.form-control-suffix {
+  align-self: center;
+  padding: 0 var(--form-control-padding-inline);
+  color: var(--color-muted);
+  font-size: var(--type-size-compact);
+  font-weight: 450;
+}

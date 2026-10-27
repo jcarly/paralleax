@@ -2,7 +2,7 @@
 
 Status: Required production runbook
 
-Last reviewed: 2026-07-26
+Last reviewed: 2026-10-24
 
 ## Scope
 
@@ -11,9 +11,14 @@ commands that keep database credentials out of process arguments, validate an
 archive before accepting it, and require an explicit target confirmation before
 restoration.
 
-These commands are a recovery foundation, not a hosted backup service. Before
-real user data is accepted, the chosen PostgreSQL provider must schedule and
-monitor backups in a separate failure domain.
+These commands are a recovery foundation, not a hosted backup service. Guided
+usability sessions may use explicitly disposable test Stories in a controlled
+test environment after the alpha notice and normal account, access, and privacy
+safeguards are ready. Before authors rely on Paralleax to retain valuable user
+projects, the chosen PostgreSQL provider must schedule and monitor backups in a
+separate failure domain and the operator must complete a recorded restore drill.
+Tell testers the intended lifetime of disposable project data; never describe it
+as recoverable before those gates pass.
 
 ## Backup
 

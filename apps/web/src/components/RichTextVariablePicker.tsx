@@ -23,6 +23,7 @@ export function RichTextVariablePicker({
       story={story}
       selectedTarget={selectedTarget}
       autoFocus={autoFocus}
+      density="standard"
       filter={filter}
       onSelect={onSelect}
       onSelectionClear={onSelectionClear}

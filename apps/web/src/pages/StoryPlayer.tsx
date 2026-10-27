@@ -1,13 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom';
-import type {
-  Interaction,
-  InteractionMutationResult,
-  ReaderAutosaveMode,
-  ReaderProgressState,
-  Story,
-} from '@paralleax/shared';
+import { Navigate, useParams, useSearchParams } from 'react-router-dom';
+import type { ReaderProgressState, ReaderSave, Story } from '@paralleax/shared';
 import {
   canDeleteCommentThread,
   canManageCommentThread,
@@ -17,47 +11,46 @@ import {
   getInteractionTimerState,
   getInputReachableInteractions,
   getItemDefinitionIdForInstance,
-  getItemOwnerIdForInstance,
   getTriggerConditionFailures,
   getTriggerTimerSeconds,
   isCommentAnchorDetached,
 } from '@paralleax/shared';
-import { api } from '../api';
-import { apiErrorMessage } from '../apiErrorMessages';
 import { RichTextContent } from '../components/RichTextContent';
-import { hasVisibleRichTextContent } from '../components/richTextProjection';
 import { RichTextEditor } from '../components/RichTextEditor';
 import { StoryCommentsPanel } from '../features/comments/StoryCommentsPanel';
 import { useStoryComments } from '../features/comments/useStoryComments';
 import { ReaderSaveDialog } from '../features/story-player/ReaderSaveDialog';
-import { ChoiceTimerBar } from '../features/story-player/ChoiceTimerBar';
+import { PlayerChoices } from '../features/story-player/components/PlayerChoices';
+import { PlayerContextPanels } from '../features/story-player/components/PlayerContextPanels';
+import { PlayerScene } from '../features/story-player/components/PlayerScene';
+import { PlayerToolbar } from '../features/story-player/components/PlayerToolbar';
 import { useReaderProgressPersistence } from '../features/story-player/useReaderProgressPersistence';
+import type { StoryPlayerRuntimeLoadResult } from '../features/story-player/loadStoryPlayerRuntime';
+import { useStoryPlayerLoading } from '../features/story-player/runtime/useStoryPlayerLoading';
+import { useStoryPlayerRuntimeSlice } from '../features/story-player/runtime/useStoryPlayerRuntimeSlice';
+import { useStoryPlayerRealtimeRefresh } from '../features/story-player/runtime/useStoryPlayerRealtimeRefresh';
+import { useReaderNavigationGuards } from '../features/story-player/navigation/useReaderNavigationGuards';
+import { transitionPlayerInteraction } from '../features/story-player/navigation/transitionPlayerInteraction';
+import { restoreReaderSave } from '../features/story-player/navigation/restoreReaderSave';
+import { useAutomaticReaderTransitions } from '../features/story-player/navigation/useAutomaticReaderTransitions';
+import { useReaderChoiceNavigation } from '../features/story-player/navigation/useReaderChoiceNavigation';
+import { useSimulationAuthoringCommands } from '../features/story-player/simulation/useSimulationAuthoringCommands';
 import {
   createReaderRandomSeed,
   useReaderSessionState,
 } from '../features/story-player/useReaderSessionState';
 import { useSimulationMutationPersistence } from '../features/story-player/useSimulationMutationPersistence';
 import {
-  loadStoryRuntimeContext,
-  loadStoryRuntimeSlice,
-} from '../features/story-player/storyRuntimeLoader';
-import {
   getConditionSummary,
   getUnavailableReason,
 } from '../features/story-player/storyPlayerPresentation';
 import {
   isRealtimeEditableTarget,
-  prioritizeStoryRealtimeInvalidation,
   type StoryRealtimeInvalidation,
 } from '../features/realtime/storyRealtime';
 import { useStoryRouteAccessRecovery } from '../features/story/useStoryRouteAccessRecovery';
-import {
-  applyInteractionMutationResult,
-  findSavedInteraction,
-} from '../features/story/storyMutationResults';
 import { useStoryRealtime } from '../hooks/useStoryRealtime';
 import { usePendingSaveGuard } from '../hooks/usePendingSaveGuard';
-import { getStoryGraphClickCreationPosition } from '../storyGraphCreationLayout';
 import { describeTriggerCondition } from '../triggerConditionPresentation';
 
 export function StoryPlayer({
@@ -78,16 +71,33 @@ export function StoryPlayer({
     : null;
   const [story, setStory] = useState<Story>();
   const isSimulationMode = simulationRequested && story?.capabilities?.canEdit === true;
+  const progressMode = isSimulationMode ? 'simulation' : 'reader';
   const startInteractionId = isSimulationMode ? requestedStartInteractionId : null;
   const loadKey = `${storyId}:${simulationRequested ? 'simulation-request' : 'reader'}:${requestedStartInteractionId ?? ''}`;
-  const [loadedKey, setLoadedKey] = useState('');
-  const [loadError, setLoadError] = useState<{ key: string; message: string }>();
-  const [runtimeOptionsFailure, setRuntimeOptionsFailure] = useState<{
-    key: string;
-    message: string;
-  }>();
-  const [runtimeSliceKey, setRuntimeSliceKey] = useState('');
-  const [loadAttempt, setLoadAttempt] = useState(0);
+  const runtimeLoadResultHandler = useRef<
+    (result: StoryPlayerRuntimeLoadResult, markLoaded: () => void, requestKey: string) => void
+  >(() => {});
+  const dispatchRuntimeLoadResult = useCallback(
+    (result: StoryPlayerRuntimeLoadResult, markLoaded: () => void, requestKey: string) => {
+      runtimeLoadResultHandler.current(result, markLoaded, requestKey);
+    },
+    [],
+  );
+  const {
+    loadedKey,
+    loadError,
+    retry: retryStoryLoad,
+    clearError: clearStoryLoadError,
+  } = useStoryPlayerLoading({
+    loadKey,
+    storyId,
+    authenticated,
+    simulationRequested,
+    requestedStartInteractionId,
+    onLoaded: dispatchRuntimeLoadResult,
+    recoverFromStoryAccessError,
+    t,
+  });
   const {
     session,
     replay: replayReaderSession,
@@ -105,14 +115,21 @@ export function StoryPlayer({
     randomSeed = '',
     stepStartedAt = [],
   } = session;
-  const requestedRuntimeSliceKey = story ? runtimeStateKey(story, currentId, journey) : '';
-  const runtimeOptionsError =
-    runtimeOptionsFailure?.key === requestedRuntimeSliceKey ? runtimeOptionsFailure.message : '';
-  const runtimeSliceReady = Boolean(
-    story && runtimeSliceKey === requestedRuntimeSliceKey && !runtimeOptionsError,
-  );
+  const {
+    markRuntimeSliceLoaded,
+    runtimeOptionsError,
+    runtimeSliceMatchesRequest,
+    runtimeSliceReady,
+  } = useStoryPlayerRuntimeSlice({
+    story,
+    currentInteractionId: currentId,
+    journeyInteractionIds: journey,
+    routeLoaded: loadedKey === loadKey,
+    setStory,
+    recoverFromStoryAccessError,
+    t,
+  });
   const [playableCharacterId, setPlayableCharacterId] = useState<string>();
-  const progressMode = isSimulationMode ? 'simulation' : 'reader';
   const {
     status: progressStatus,
     markLoaded: markProgressLoaded,
@@ -126,6 +143,7 @@ export function StoryPlayer({
   const editingChoiceInputRef = useRef<HTMLInputElement>(null);
   const savesDialogTrigger = useRef<HTMLButtonElement>(null);
   const sessionRef = useRef<ReaderProgressState>(session);
+  const getCurrentReaderSession = useCallback(() => sessionRef.current, []);
   const replaySession = useCallback(
     (...args: Parameters<typeof replayReaderSession>) => {
       const nextSession = replayReaderSession(...args);
@@ -144,22 +162,18 @@ export function StoryPlayer({
   );
   const [timerNow, setTimerNow] = useState(() => Date.now());
   const directStartAutosavedKey = useRef('');
-  const committedChoiceStep = useRef('');
-  const automaticTransitionPath = useRef<
-    | {
-        storyId: string;
-        journeyLength: number;
-        interactionId: string;
-        interactionIds: Set<string>;
-      }
-    | undefined
-  >(undefined);
-  const blockedAutomaticChoiceStep = useRef('');
-  const readerNavigationVersion = useRef(0);
-  const realtimeLoadAttempt = useRef(0);
-  const simulationEditDepth = useRef(0);
-  const pendingRealtimeInvalidation = useRef<StoryRealtimeInvalidation | undefined>(undefined);
-  const realtimeRefresh = useRef<(invalidation: StoryRealtimeInvalidation) => void>(() => {});
+  const {
+    clearChoiceCommit,
+    commitChoiceStep,
+    getNavigationVersion,
+    incrementNavigationVersion,
+    resetAutomaticTransitions,
+    resetForNewStory,
+    clearAutomaticPath,
+    canContinueAutomaticPath,
+    isAutomaticStepBlocked,
+    continueAutomaticPath,
+  } = useReaderNavigationGuards();
   const simulationMutations = useSimulationMutationPersistence({
     storyId,
     fallbackError: t('player.storyChangesSaveFailed'),
@@ -180,6 +194,67 @@ export function StoryPlayer({
     'player',
   );
 
+  const handleRuntimeLoaded = useCallback(
+    (
+      {
+        positioned,
+        progress,
+        effectiveStartInteractionId,
+        loadedProgressMode,
+      }: StoryPlayerRuntimeLoadResult,
+      markLoaded: () => void,
+      requestKey: string,
+    ) => {
+      if (requestKey !== loadKey) return;
+      resetForNewStory();
+      setTimerNow(Date.now());
+      const reconciledProgress = progress
+        ? replaySession(
+            positioned,
+            progress.state.journeyInteractionIds,
+            progress.state.ownedItemIds,
+            progress.state.randomSeed ?? createReaderRandomSeed(),
+            progress.state.stepStartedAt,
+          )
+        : undefined;
+      const nextJourney =
+        reconciledProgress?.journeyInteractionIds ??
+        (effectiveStartInteractionId ? [effectiveStartInteractionId] : []);
+      setStory(positioned);
+      markRuntimeSliceLoaded(positioned, nextJourney.at(-1) ?? null, nextJourney);
+      markLoaded();
+      if (!reconciledProgress) {
+        const createdSession = replaySession(positioned, nextJourney, [], createReaderRandomSeed());
+        if (
+          !effectiveStartInteractionId &&
+          positioned.interactions.some((interaction) =>
+            interaction.triggers.some((trigger) => getTriggerTimerSeconds(trigger) !== null),
+          )
+        ) {
+          saveProgress(createdSession, loadedProgressMode);
+        }
+      } else if (
+        !progress?.state.stepStartedAt ||
+        progress.state.stepStartedAt.length !== progress.state.journeyInteractionIds.length + 1
+      ) {
+        saveProgress(reconciledProgress, loadedProgressMode);
+      }
+      if (nextJourney.length > 0) {
+        setPlayableCharacterId(positioned.characters?.find(({ isPlayable }) => isPlayable)?.id);
+      }
+      markProgressLoaded(Boolean(progress));
+    },
+    [
+      markProgressLoaded,
+      markRuntimeSliceLoaded,
+      resetForNewStory,
+      loadKey,
+      replaySession,
+      saveProgress,
+    ],
+  );
+  runtimeLoadResultHandler.current = handleRuntimeLoaded;
+
   useEffect(() => {
     if (
       !isSimulationMode ||
@@ -194,125 +269,13 @@ export function StoryPlayer({
     saveProgress(session);
   }, [isSimulationMode, loadKey, loadedKey, saveProgress, session, startInteractionId]);
 
-  useEffect(() => {
-    let cancelled = false;
-    void api
-      .getStoryRuntimeBootstrap(storyId)
-      .then(async (bootstrap) => {
-        const authorizedSimulation =
-          simulationRequested && bootstrap.capabilities?.canEdit === true;
-        const loadedProgressMode: ReaderAutosaveMode = authorizedSimulation
-          ? 'simulation'
-          : 'reader';
-        const effectiveStartInteractionId = authorizedSimulation
-          ? requestedStartInteractionId
-          : null;
-        const [runtimeStory, progress] = await Promise.all([
-          loadStoryRuntimeContext(storyId, bootstrap),
-          !authenticated || (authorizedSimulation && effectiveStartInteractionId)
-            ? Promise.resolve(null)
-            : api.getReaderProgress(storyId, authorizedSimulation ? 'simulation' : 'reader'),
-        ]);
-        const journeyInteractionIds =
-          progress?.state.journeyInteractionIds ??
-          (effectiveStartInteractionId ? [effectiveStartInteractionId] : []);
-        const positioned = ensureStoryInteractionPositions(
-          await loadStoryRuntimeSlice(
-            runtimeStory,
-            journeyInteractionIds.at(-1) ?? null,
-            journeyInteractionIds,
-          ),
-        );
-        return { positioned, progress, effectiveStartInteractionId, loadedProgressMode };
-      })
-      .then(({ positioned, progress, effectiveStartInteractionId, loadedProgressMode }) => {
-        if (cancelled) return;
-        committedChoiceStep.current = '';
-        automaticTransitionPath.current = undefined;
-        blockedAutomaticChoiceStep.current = '';
-        setTimerNow(Date.now());
-        const reconciledProgress = progress
-          ? replaySession(
-              positioned,
-              progress.state.journeyInteractionIds,
-              progress.state.ownedItemIds,
-              progress.state.randomSeed ?? createReaderRandomSeed(),
-              progress.state.stepStartedAt,
-            )
-          : undefined;
-        const nextJourney =
-          reconciledProgress?.journeyInteractionIds ??
-          (effectiveStartInteractionId ? [effectiveStartInteractionId] : []);
-        setStory(positioned);
-        setRuntimeSliceKey(runtimeStateKey(positioned, nextJourney.at(-1) ?? null, nextJourney));
-        setRuntimeOptionsFailure(undefined);
-        setLoadedKey(loadKey);
-        if (!reconciledProgress) {
-          const createdSession = replaySession(
-            positioned,
-            nextJourney,
-            [],
-            createReaderRandomSeed(),
-          );
-          if (
-            !effectiveStartInteractionId &&
-            positioned.interactions.some((interaction) =>
-              interaction.triggers.some((trigger) => getTriggerTimerSeconds(trigger) !== null),
-            )
-          ) {
-            saveProgress(createdSession, loadedProgressMode);
-          }
-        } else if (
-          !progress?.state.stepStartedAt ||
-          progress.state.stepStartedAt.length !== progress.state.journeyInteractionIds.length + 1
-        ) {
-          saveProgress(reconciledProgress, loadedProgressMode);
-        }
-        if (nextJourney.length > 0) {
-          setPlayableCharacterId(positioned.characters?.find(({ isPlayable }) => isPlayable)?.id);
-        }
-        markProgressLoaded(Boolean(progress));
-      })
-      .catch((caught: unknown) => {
-        if (cancelled) return;
-        if (recoverFromStoryAccessError(caught)) return;
-        setLoadError({
-          key: loadKey,
-          message: apiErrorMessage(caught, t, t('player.loadFailed')),
-        });
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    authenticated,
-    loadAttempt,
-    loadKey,
-    markProgressLoaded,
-    requestedStartInteractionId,
-    replaySession,
-    recoverFromStoryAccessError,
-    saveProgress,
-    simulationRequested,
-    storyId,
-    t,
-  ]);
-
-  const flushPendingRealtimeRefresh = useCallback(() => {
-    if (hasActiveSimulationMutations() || simulationEditDepth.current > 0) return;
-    const pending = pendingRealtimeInvalidation.current;
-    if (!pending) return;
-    pendingRealtimeInvalidation.current = undefined;
-    realtimeRefresh.current(pending);
-  }, [hasActiveSimulationMutations]);
-
   const applyReloadedSimulationStory = useCallback(
     (nextStory: Story) => {
       const positioned = ensureStoryInteractionPositions(nextStory);
       setTimerNow(Date.now());
       if (positioned.capabilities?.canEdit !== true) {
         setStory(undefined);
-        setLoadAttempt((currentAttempt) => currentAttempt + 1);
+        retryStoryLoad();
         return;
       }
       const currentSession = sessionRef.current;
@@ -324,14 +287,11 @@ export function StoryPlayer({
         currentSession.stepStartedAt,
       );
       setStory(positioned);
-      setRuntimeSliceKey(
-        runtimeStateKey(
-          positioned,
-          currentSession.currentInteractionId,
-          currentSession.journeyInteractionIds,
-        ),
+      markRuntimeSliceLoaded(
+        positioned,
+        currentSession.currentInteractionId,
+        currentSession.journeyInteractionIds,
       );
-      setRuntimeOptionsFailure(undefined);
       setEditingChoiceId((choiceId) =>
         choiceId && positioned.interactions.some(({ id }) => id === choiceId)
           ? choiceId
@@ -343,77 +303,30 @@ export function StoryPlayer({
           : undefined,
       );
     },
-    [replaySession],
+    [markRuntimeSliceLoaded, replaySession, retryStoryLoad],
   );
 
-  const refreshFromRealtime = useCallback(
-    (invalidation: StoryRealtimeInvalidation) => {
-      if (hasActiveSimulationMutations() || simulationEditDepth.current > 0) {
-        pendingRealtimeInvalidation.current = prioritizeStoryRealtimeInvalidation(
-          pendingRealtimeInvalidation.current,
-          invalidation,
-        );
+  const handleRealtimeRefreshFailure = useCallback(
+    (caught: unknown, invalidation: StoryRealtimeInvalidation) => {
+      if (invalidation === 'deleted') {
+        setStory(undefined);
+        markStoryInaccessible();
         return;
       }
-
-      const attempt = ++realtimeLoadAttempt.current;
-      const navigationVersion = readerNavigationVersion.current;
-      void api
-        .getStoryRuntimeBootstrap(storyId)
-        .then((bootstrap) => loadStoryRuntimeContext(storyId, bootstrap))
-        .then(async (runtimeStory) => {
-          let requestedSession = sessionRef.current;
-          while (true) {
-            const nextStory = await loadStoryRuntimeSlice(
-              runtimeStory,
-              requestedSession.currentInteractionId,
-              requestedSession.journeyInteractionIds,
-            );
-            const latestSession = sessionRef.current;
-            if (hasSameRuntimeSliceRequest(requestedSession, latestSession)) return nextStory;
-            requestedSession = latestSession;
-          }
-        })
-        .then((nextStory) => {
-          if (attempt !== realtimeLoadAttempt.current) return;
-          if (navigationVersion !== readerNavigationVersion.current) {
-            realtimeRefresh.current(invalidation);
-            return;
-          }
-          if (hasActiveSimulationMutations() || simulationEditDepth.current > 0) {
-            pendingRealtimeInvalidation.current = prioritizeStoryRealtimeInvalidation(
-              pendingRealtimeInvalidation.current,
-              invalidation,
-            );
-            return;
-          }
-
-          applyReloadedSimulationStory(nextStory);
-        })
-        .catch((caught: unknown) => {
-          if (attempt !== realtimeLoadAttempt.current) return;
-          if (invalidation === 'deleted') {
-            setStory(undefined);
-            markStoryInaccessible();
-            return;
-          }
-          if (recoverFromStoryAccessError(caught)) {
-            setStory(undefined);
-          }
-        });
+      if (recoverFromStoryAccessError(caught)) setStory(undefined);
     },
-    [
-      applyReloadedSimulationStory,
-      hasActiveSimulationMutations,
-      markStoryInaccessible,
-      recoverFromStoryAccessError,
-      storyId,
-    ],
+    [markStoryInaccessible, recoverFromStoryAccessError],
   );
-
-  useEffect(() => {
-    realtimeRefresh.current = refreshFromRealtime;
-  }, [refreshFromRealtime]);
+  const { refreshFromRealtime, beginSimulationEdit, endSimulationEdit } =
+    useStoryPlayerRealtimeRefresh({
+      storyId,
+      getCurrentSession: getCurrentReaderSession,
+      getNavigationVersion,
+      hasActiveMutations: hasActiveSimulationMutations,
+      mutationStatus: simulationMutations.status,
+      applyReloadedStory: applyReloadedSimulationStory,
+      onRefreshFailure: handleRealtimeRefreshFailure,
+    });
 
   const storyRealtimeStatus = useStoryRealtime(
     storyId,
@@ -421,51 +334,6 @@ export function StoryPlayer({
     refreshFromRealtime,
     story?.revision,
   );
-
-  const beginSimulationEdit = useCallback(() => {
-    simulationEditDepth.current += 1;
-  }, []);
-
-  const endSimulationEdit = useCallback(() => {
-    simulationEditDepth.current = Math.max(0, simulationEditDepth.current - 1);
-    setTimeout(flushPendingRealtimeRefresh, 0);
-  }, [flushPendingRealtimeRefresh]);
-
-  useEffect(() => {
-    if (simulationMutations.status !== 'saving') flushPendingRealtimeRefresh();
-  }, [flushPendingRealtimeRefresh, simulationMutations.status]);
-
-  useEffect(() => {
-    if (!story || loadedKey !== loadKey || runtimeSliceKey === requestedRuntimeSliceKey) return;
-    let cancelled = false;
-    void loadStoryRuntimeSlice(story, currentId, journey)
-      .then((nextStory) => {
-        if (cancelled) return;
-        setStory(nextStory);
-        setRuntimeSliceKey(runtimeStateKey(nextStory, currentId, journey));
-        setRuntimeOptionsFailure(undefined);
-      })
-      .catch((caught: unknown) => {
-        if (cancelled || recoverFromStoryAccessError(caught)) return;
-        setRuntimeOptionsFailure({
-          key: requestedRuntimeSliceKey,
-          message: apiErrorMessage(caught, t, t('player.loadFailed')),
-        });
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    currentId,
-    journey,
-    loadKey,
-    loadedKey,
-    recoverFromStoryAccessError,
-    requestedRuntimeSliceKey,
-    runtimeSliceKey,
-    story,
-    t,
-  ]);
 
   const current = useMemo(
     () => story?.interactions.find((item) => item.id === currentId),
@@ -506,13 +374,13 @@ export function StoryPlayer({
   );
   const ownedItemDefinitionIds = useMemo(
     () =>
-      story && runtimeSliceKey === requestedRuntimeSliceKey
+      story && runtimeSliceMatchesRequest
         ? ownedItemIds.flatMap((itemId) => {
             const definitionId = getItemDefinitionIdForInstance(story, itemId);
             return definitionId ? [definitionId] : [];
           })
         : [],
-    [ownedItemIds, requestedRuntimeSliceKey, runtimeSliceKey, story],
+    [ownedItemIds, runtimeSliceMatchesRequest, story],
   );
   const playableCharacters = useMemo(
     () => (story?.characters ?? []).filter(({ isPlayable }) => isPlayable),
@@ -784,327 +652,141 @@ export function StoryPlayer({
     editingChoiceInputRef.current?.select();
   }, [editingChoiceId]);
 
-  const choose = useCallback(
-    (interaction: Interaction, automaticTransition = false) => {
-      if (!story) return;
-      if (!automaticTransition) {
-        automaticTransitionPath.current = undefined;
-        blockedAutomaticChoiceStep.current = '';
-      }
-      const now = Date.now();
-      if (!(isSimulationMode && forceUnavailableOptions)) {
-        const startedAt = currentStepStartedAt ? Date.parse(currentStepStartedAt) : now;
-        const stillAvailable = getAvailableInteractions(
-          story,
-          current?.id ?? null,
-          visited,
-          currentLocationId,
-          current?.characterIds ?? [],
-          statValues,
-          currentDateTime,
-          ownedItemDefinitionIds,
-          itemStatValues,
-          {
-            randomSeed,
-            step: journey.length,
-            elapsedTimeMs: Math.max(0, now - (Number.isNaN(startedAt) ? now : startedAt)),
-          },
-        ).some(({ id }) => id === interaction.id);
-        if (!stillAvailable) {
-          setTimerNow(now);
-          return;
-        }
-      }
-      const choiceStepKey = `${story.id}:${journey.length}:${current?.id ?? ''}:${currentStepStartedAt ?? ''}`;
-      if (committedChoiceStep.current === choiceStepKey) return;
-      committedChoiceStep.current = choiceStepKey;
-      readerNavigationVersion.current += 1;
-      cancelCommentDraft();
-      selectCommentThread(undefined);
-      setTimerNow(now);
-      const nextSession = advanceSession(story, interaction);
-      saveProgress(nextSession);
-    },
-    [
-      advanceSession,
-      cancelCommentDraft,
-      selectCommentThread,
-      current,
-      currentDateTime,
-      currentLocationId,
-      currentStepStartedAt,
-      forceUnavailableOptions,
-      isSimulationMode,
-      itemStatValues,
-      journey.length,
-      ownedItemDefinitionIds,
-      randomSeed,
-      saveProgress,
-      statValues,
-      story,
-      visited,
-    ],
-  );
-
-  useEffect(() => {
-    if (
-      isSimulationMode ||
-      loadedKey !== loadKey ||
-      !runtimeSliceReady ||
-      journey.length > 0 ||
-      (playableCharacters.length > 0 && !playedCharacter) ||
-      choices.length !== 1
-    ) {
-      return;
-    }
-    let cancelled = false;
-    queueMicrotask(() => {
-      if (!cancelled) choose(choices[0]);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    choices,
-    choose,
-    isSimulationMode,
-    journey.length,
-    loadKey,
-    loadedKey,
-    playableCharacters.length,
-    playedCharacter,
-    runtimeSliceReady,
-  ]);
-
-  useEffect(() => {
-    if (
-      isSimulationMode ||
-      loadedKey !== loadKey ||
-      !runtimeSliceReady ||
-      !current ||
-      journey.length === 0 ||
-      (playableCharacters.length > 0 && !playedCharacter)
-    ) {
-      return;
-    }
-
-    const stepKey = [
-      story?.id ?? '',
-      story?.revision ?? 0,
-      journey.length,
-      current.id,
-      currentStepStartedAt ?? '',
-      choices.map(({ id }) => id).join(','),
-    ].join(':');
-    if (blockedAutomaticChoiceStep.current === stepKey) return;
-
-    if (
-      !story ||
-      hasVisibleRichTextContent(
-        current.body,
-        conditionalTextState,
-        conditionalTextBlockState,
-        statValues,
-        itemStatValues,
-      ) ||
-      choices.length !== 1
-    ) {
-      automaticTransitionPath.current = undefined;
-      return;
-    }
-
-    const previousPath = automaticTransitionPath.current;
-    const interactionIds =
-      previousPath?.storyId === story.id &&
-      previousPath.journeyLength === journey.length &&
-      previousPath.interactionId === current.id
-        ? new Set(previousPath.interactionIds)
-        : new Set([current.id]);
-    const destination = choices[0];
-    if (interactionIds.has(destination.id)) {
-      blockedAutomaticChoiceStep.current = stepKey;
-      automaticTransitionPath.current = undefined;
-      return;
-    }
-
-    interactionIds.add(destination.id);
-    automaticTransitionPath.current = {
-      storyId: story.id,
-      journeyLength: journey.length + 1,
-      interactionId: destination.id,
-      interactionIds,
-    };
-
-    let cancelled = false;
-    queueMicrotask(() => {
-      if (!cancelled) choose(destination, true);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    choices,
-    choose,
-    conditionalTextBlockState,
-    conditionalTextState,
+  const choose = useReaderChoiceNavigation({
+    story,
     current,
+    visited,
+    currentLocationId,
+    currentDateTime,
+    statValues,
+    ownedItemDefinitionIds,
+    itemStatValues,
+    randomSeed,
+    journeyLength: journey.length,
     currentStepStartedAt,
     isSimulationMode,
-    journey.length,
-    loadKey,
+    forceUnavailableOptions,
+    resetAutomaticTransitions,
+    commitChoiceStep,
+    cancelCommentDraft,
+    selectCommentThread,
+    setTimerNow,
+    advanceSession,
+    saveProgress,
+  });
+
+  const isCurrentInteractionPassingThrough = useAutomaticReaderTransitions({
+    isSimulationMode,
     loadedKey,
-    playableCharacters.length,
-    playedCharacter,
+    loadKey,
     runtimeSliceReady,
+    hasRuntimeSliceError: Boolean(runtimeOptionsError),
+    journeyLength: journey.length,
+    playableCharacterCount: playableCharacters.length,
+    playedCharacterId: playedCharacter?.id,
+    choices,
+    choose,
+    current,
+    currentStepStartedAt,
+    story,
+    conditionalTextState,
+    conditionalTextBlockState,
     statValues,
     itemStatValues,
+    isAutomaticStepBlocked,
+    canContinueAutomaticPath,
+    clearAutomaticPath,
+    continueAutomaticPath,
+  });
+
+  const {
+    saveCurrentInteraction,
+    patchInteraction,
+    patchCurrentInteraction,
+    addOption,
+    saveChoiceTitle,
+    reloadAfterSimulationMutationFailure,
+  } = useSimulationAuthoringCommands({
+    storyId,
     story,
-  ]);
+    current,
+    setStory,
+    setEditingChoiceId,
+    runMutation: simulationMutations.run,
+    getCurrentSession: getCurrentReaderSession,
+    applyReloadedStory: applyReloadedSimulationStory,
+  });
 
   function restart() {
-    comments.cancelDraft();
-    comments.selectThread(undefined);
-    directStartAutosavedKey.current = '';
-    committedChoiceStep.current = '';
-    automaticTransitionPath.current = undefined;
-    blockedAutomaticChoiceStep.current = '';
-    readerNavigationVersion.current += 1;
-    setTimerNow(Date.now());
-    if (story) {
-      replaySession(
-        story,
-        startInteractionId ? [startInteractionId] : [],
-        [],
-        createReaderRandomSeed(),
-      );
-    }
-    setPlayableCharacterId(undefined);
-    setForceUnavailableOptions(false);
-    resetProgress();
+    transitionPlayerInteraction(() => {
+      comments.cancelDraft();
+      comments.selectThread(undefined);
+      directStartAutosavedKey.current = '';
+      clearChoiceCommit();
+      resetAutomaticTransitions();
+      incrementNavigationVersion();
+      setTimerNow(Date.now());
+      if (story) {
+        replaySession(
+          story,
+          startInteractionId ? [startInteractionId] : [],
+          [],
+          createReaderRandomSeed(),
+        );
+      }
+      setPlayableCharacterId(undefined);
+      setForceUnavailableOptions(false);
+      resetProgress();
+    });
   }
 
   function stepBack() {
     if (journey.length <= 1) return;
-    committedChoiceStep.current = '';
-    readerNavigationVersion.current += 1;
-    const nextJourney = journey.slice(0, -1);
-    setTimerNow(Date.now());
-    if (story) {
-      saveProgress(
-        replaySession(
-          story,
-          nextJourney,
-          [],
-          randomSeed,
-          stepStartedAt.slice(0, nextJourney.length + 1),
-        ),
-      );
-    }
-  }
-
-  async function loadSave(save: {
-    state: {
-      journeyInteractionIds: string[];
-      ownedItemIds: string[];
-      randomSeed?: string;
-      stepStartedAt?: string[];
-    };
-  }) {
-    if (!story) return;
-    committedChoiceStep.current = '';
-    automaticTransitionPath.current = undefined;
-    blockedAutomaticChoiceStep.current = '';
-    readerNavigationVersion.current += 1;
-    setTimerNow(Date.now());
-    const loadedStory = await loadStoryRuntimeSlice(
-      story,
-      save.state.journeyInteractionIds.at(-1) ?? null,
-      save.state.journeyInteractionIds,
-    );
-    setStory(loadedStory);
-    const nextSession = replaySession(
-      loadedStory,
-      save.state.journeyInteractionIds,
-      save.state.ownedItemIds,
-      save.state.randomSeed ?? createReaderRandomSeed(),
-      save.state.stepStartedAt,
-    );
-    setPlayableCharacterId(
-      nextSession.journeyInteractionIds.length > 0
-        ? loadedStory.characters?.find(({ isPlayable }) => isPlayable)?.id
-        : undefined,
-    );
-    setRuntimeSliceKey(
-      runtimeStateKey(
-        loadedStory,
-        nextSession.currentInteractionId,
-        nextSession.journeyInteractionIds,
-      ),
-    );
-    saveProgress(nextSession);
-  }
-
-  async function saveCurrentInteraction(
-    patch: Partial<Pick<Interaction, 'title' | 'body' | 'conditionalTextBlocks'>>,
-  ) {
-    if (!current) return;
-    await simulationMutations.run(
-      () => api.updateInteraction(storyId, current.id, patch),
-      (result) =>
-        setStory((currentStory) =>
-          currentStory ? applyInteractionResponse(currentStory, result) : currentStory,
-        ),
-    );
-  }
-
-  function patchInteraction(
-    interactionId: string,
-    patch: Partial<Pick<Interaction, 'title' | 'body' | 'conditionalTextBlocks'>>,
-  ) {
-    if (!story) return;
-    setStory({
-      ...story,
-      interactions: story.interactions.map((interaction) =>
-        interaction.id === interactionId ? { ...interaction, ...patch } : interaction,
-      ),
+    transitionPlayerInteraction(() => {
+      clearChoiceCommit();
+      incrementNavigationVersion();
+      const nextJourney = journey.slice(0, -1);
+      setTimerNow(Date.now());
+      if (story) {
+        saveProgress(
+          replaySession(
+            story,
+            nextJourney,
+            [],
+            randomSeed,
+            stepStartedAt.slice(0, nextJourney.length + 1),
+          ),
+        );
+      }
     });
   }
 
-  function patchCurrentInteraction(
-    patch: Partial<Pick<Interaction, 'title' | 'body' | 'conditionalTextBlocks'>>,
-  ) {
-    if (!current) return;
-    patchInteraction(current.id, patch);
-  }
-
-  async function addOption() {
+  async function loadSave(save: ReaderSave) {
     if (!story) return;
-    const creation = current
-      ? ({ kind: 'child', sourceId: current.id } as const)
-      : ({ kind: 'root' } as const);
-    const position = await getStoryGraphClickCreationPosition(story, creation);
-    await simulationMutations.run(
-      () =>
-        api.createInteraction(
-          storyId,
-          current
-            ? {
-                parentId: current.id,
-                position,
-              }
-            : {
-                position,
-              },
-        ),
-      (result) => {
-        const created = findSavedInteraction(result, story);
-        setStory((currentStory) =>
-          currentStory ? applyInteractionResponse(currentStory, result) : currentStory,
-        );
-        setEditingChoiceId(created?.id);
-      },
-      { retryable: false },
-    );
+    resetForNewStory();
+    incrementNavigationVersion();
+    setTimerNow(Date.now());
+    const { story: loadedStory, session: nextSession } = await restoreReaderSave({
+      story,
+      save,
+      randomSeed: save.state.randomSeed ?? createReaderRandomSeed(),
+      replaySession,
+    });
+    transitionPlayerInteraction(() => {
+      setStory(loadedStory);
+      markRuntimeSliceLoaded(
+        loadedStory,
+        nextSession.currentInteractionId,
+        nextSession.journeyInteractionIds,
+        { clearFailure: false },
+      );
+      setPlayableCharacterId(
+        nextSession.journeyInteractionIds.length > 0
+          ? loadedStory.characters?.find(({ isPlayable }) => isPlayable)?.id
+          : undefined,
+      );
+      saveProgress(nextSession);
+    });
   }
 
   function startReaderComment() {
@@ -1117,34 +799,6 @@ export function StoryPlayer({
   async function deleteReaderComment(threadId: string) {
     if (!window.confirm(t('comments.confirmDelete'))) return;
     return comments.deleteThread(threadId);
-  }
-
-  async function saveChoiceTitle(interaction: Interaction, title: string) {
-    setEditingChoiceId(undefined);
-    await simulationMutations.run(
-      () => api.updateInteraction(storyId, interaction.id, { title }),
-      (result) =>
-        setStory((currentStory) =>
-          currentStory ? applyInteractionResponse(currentStory, result) : currentStory,
-        ),
-    );
-  }
-
-  async function reloadAfterSimulationMutationFailure() {
-    const currentSession = sessionRef.current;
-    await simulationMutations.run(
-      async () => {
-        const bootstrap = await api.getStoryRuntimeBootstrap(storyId);
-        const runtimeStory = await loadStoryRuntimeContext(storyId, bootstrap);
-        return loadStoryRuntimeSlice(
-          runtimeStory,
-          currentSession.currentInteractionId,
-          currentSession.journeyInteractionIds,
-        );
-      },
-      applyReloadedSimulationStory,
-      { retryable: false },
-    );
   }
 
   if (storyRouteInaccessible) return <Navigate to="/" replace />;
@@ -1160,8 +814,8 @@ export function StoryPlayer({
             </p>
             <button
               onClick={() => {
-                setLoadError(undefined);
-                setLoadAttempt((attempt) => attempt + 1);
+                clearStoryLoadError();
+                retryStoryLoad();
               }}
             >
               {t('player.retry')}
@@ -1185,149 +839,40 @@ export function StoryPlayer({
       }}
     >
       {pendingSaveGuard}
-      <div className="player-top">
-        <div className="player-context">
-          <span className="player-mark" aria-hidden="true">
-            P
-          </span>
-          <span>
-            <small>{t(isSimulationMode ? 'player.preview' : 'player.reader')}</small>
-            <b>{story.title}</b>
-          </span>
-        </div>
-        {isSimulationMode ? <span className="mode-pill">{t('player.simulation')}</span> : null}
-        {isSimulationMode ? (
-          <span
-            className={`story-realtime-status ${storyRealtimeStatus}`}
-            role="status"
-            aria-live="polite"
-          >
-            <span className={`realtime-status-dot ${storyRealtimeStatus}`} aria-hidden="true" />
-            {t(`player.realtime.${storyRealtimeStatus}`)}
-          </span>
-        ) : null}
-        {isSimulationMode && simulationMutations.status !== 'idle' ? (
-          <div
-            className={`simulation-save-feedback ${simulationMutations.status}`}
-            role={simulationMutations.status === 'error' ? 'alert' : 'status'}
-            aria-live="polite"
-          >
-            <span>
-              {simulationMutations.status === 'saving'
-                ? t('player.savingStoryChanges')
-                : simulationMutations.status === 'saved'
-                  ? t('player.storyChangesSaved')
-                  : t('player.storyChangesSaveFailed')}
-            </span>
-            {simulationMutations.status === 'error' ? (
-              <>
-                <small>{simulationMutations.error}</small>
-                {simulationMutations.canRetry ? (
-                  <button type="button" onClick={simulationMutations.retry}>
-                    {t('player.retryStoryChanges')}
-                  </button>
-                ) : null}
-                <button type="button" onClick={() => void reloadAfterSimulationMutationFailure()}>
-                  {t('player.reloadStoryAfterSaveFailure')}
-                </button>
-              </>
-            ) : null}
-          </div>
-        ) : null}
-        {authenticated ? (
-          <span className={`save-status ${progressStatus}`} role="status" aria-live="polite">
-            {progressStatus === 'saving'
-              ? t('player.savingProgress')
-              : progressStatus === 'saved'
-                ? t('player.progressSaved')
-                : progressStatus === 'error'
-                  ? t('player.progressSaveFailed')
-                  : ''}
-          </span>
-        ) : !isSimulationMode ? (
-          <span className="save-status">{t('player.signInToSave')}</span>
-        ) : null}
-        {authenticated ? (
-          <button
-            ref={savesDialogTrigger}
-            className="player-toolbar-button"
-            type="button"
-            onClick={() => setSavesOpen(true)}
-          >
-            {t('player.saves.open')}
-          </button>
-        ) : null}
-        {isSimulationMode ? (
-          <button
-            className="player-toolbar-button"
-            disabled={journey.length <= 1}
-            onClick={stepBack}
-          >
-            <span aria-hidden="true">←</span> {t('player.back')}
-          </button>
-        ) : null}
-        <button className="player-toolbar-button" onClick={restart}>
-          <span aria-hidden="true">↻</span> {t('player.restart')}
-        </button>
-        {canUseReaderComments ? (
-          <button
-            className={`player-toolbar-button comments-toolbar-button ${commentsOpen ? 'active' : ''}`}
-            type="button"
-            onClick={() => setCommentsOpen((open) => !open)}
-          >
-            {t('comments.title')}
-            {readerCommentThreads.filter(({ status, deletedAt }) => status === 'open' && !deletedAt)
-              .length ? (
-              <small>
-                {
-                  readerCommentThreads.filter(
-                    ({ status, deletedAt }) => status === 'open' && !deletedAt,
-                  ).length
-                }
-              </small>
-            ) : null}
-          </button>
-        ) : null}
-        {story.capabilities?.canEdit ? (
-          <Link className="player-exit" to={`/stories/${story.id}/edit`}>
-            {t(isSimulationMode ? 'player.exitSimulation' : 'player.backToEditor')}
-          </Link>
-        ) : null}
-      </div>
-      <article className="player-card">
-        <div className={`player-scene-visual ${currentLocation?.imageUrl ? 'with-image' : ''}`}>
-          {currentLocation?.imageUrl ? (
-            <img src={currentLocation.imageUrl} alt={currentLocation.name} />
-          ) : (
-            <div className="player-scene-placeholder" aria-hidden="true">
-              <span />
-              <span />
-              <i />
-            </div>
-          )}
-          <div className="player-scene-meta">
-            <span>
-              <small>{t('player.location')}</small>
-              <b>{currentLocation?.name ?? t('player.unknownLocation')}</b>
-            </span>
-            <time dateTime={currentDateTime}>{currentDateTime.replace('T', ' ')}</time>
-            {presentCharacters.length > 0 ? (
-              <span className="scene-character-list" aria-label={t('player.charactersPresent')}>
-                {presentCharacters.map((character) =>
-                  character.imageUrl ? (
-                    <img key={character.id} src={character.imageUrl} alt={character.name} />
-                  ) : (
-                    <i key={character.id} title={character.name}>
-                      {character.name.slice(0, 2).toUpperCase()}
-                    </i>
-                  ),
-                )}
-              </span>
-            ) : null}
-          </div>
-        </div>
+      <PlayerToolbar
+        storyId={story.id}
+        storyTitle={story.title}
+        canEditStory={story.capabilities?.canEdit === true}
+        isSimulationMode={isSimulationMode}
+        storyRealtimeStatus={storyRealtimeStatus}
+        simulationMutations={simulationMutations}
+        onReloadAfterSimulationFailure={reloadAfterSimulationMutationFailure}
+        authenticated={authenticated}
+        progressStatus={progressStatus}
+        savesDialogTrigger={savesDialogTrigger}
+        onOpenSaves={() => setSavesOpen(true)}
+        canStepBack={journey.length > 1}
+        onStepBack={stepBack}
+        onRestart={restart}
+        canUseReaderComments={canUseReaderComments}
+        commentsOpen={commentsOpen}
+        openCommentCount={
+          readerCommentThreads.filter(({ status, deletedAt }) => status === 'open' && !deletedAt)
+            .length
+        }
+        onToggleComments={() => setCommentsOpen((open) => !open)}
+      />
+      <article
+        aria-hidden={isCurrentInteractionPassingThrough || undefined}
+        className={`player-card${isCurrentInteractionPassingThrough ? ' player-card-passing' : ''}`}
+        inert={isCurrentInteractionPassingThrough}
+      >
+        <PlayerScene
+          location={currentLocation}
+          characters={presentCharacters}
+          currentDateTime={currentDateTime}
+        />
         <div className="player-story-content">
-          <p className="eyebrow">{story.title}</p>
           {playableCharacters.length > 0 && !playedCharacter ? (
             <section className="character-selection" aria-label={t('player.chooseCharacter')}>
               <span className="product-eyebrow">{t('player.beforeStory')}</span>
@@ -1357,10 +902,7 @@ export function StoryPlayer({
             <>
               {isSimulationMode ? (
                 <>
-                  <div className="simulation-edit-label">
-                    <span className="product-badge accent">{t('player.liveEditing')}</span>
-                    <small>{t('player.liveEditingHelp')}</small>
-                  </div>
+                  {/* eslint-disable-next-line design-system/require-shared-form-control -- the Simulation title remains a narrative display editor */}
                   <input
                     className="simulation-title-input"
                     aria-label={t('player.currentInteractionTitle')}
@@ -1437,230 +979,53 @@ export function StoryPlayer({
             </p>
           ) : null}
           {playableCharacters.length === 0 || playedCharacter ? (
-            <div className="choices">
-              {visibleChoices.map(({ interaction, available, timerState, unavailableReason }) => (
-                <div className="choice-row" key={interaction.id}>
-                  {timerState ? (
-                    <ChoiceTimerBar
-                      key={`${journey.length}:${interaction.id}:${timerState.triggerId}:${currentStepStartedAt ?? ''}`}
-                      timer={timerState}
-                    />
-                  ) : null}
-                  {editingChoiceId === interaction.id ? (
-                    <input
-                      ref={editingChoiceInputRef}
-                      className="choice-title-input"
-                      aria-label={t('player.newOptionTitle')}
-                      value={interaction.title}
-                      onChange={(event) =>
-                        patchInteraction(interaction.id, { title: event.target.value })
-                      }
-                      onBlur={(event) => void saveChoiceTitle(interaction, event.target.value)}
-                      onKeyDown={(event) => {
-                        if (event.key === 'Enter') {
-                          event.preventDefault();
-                          event.currentTarget.blur();
-                        }
-                      }}
-                    />
-                  ) : (
-                    <button
-                      className={`choice ${available ? 'available' : 'unavailable'} ${isSimulationMode && !available && forceUnavailableOptions ? 'forced' : ''}`}
-                      disabled={isSimulationMode && !available && !forceUnavailableOptions}
-                      onClick={() => choose(interaction)}
-                      title={
-                        available
-                          ? getConditionSummary(story, interaction, current?.id ?? null, t)
-                          : (unavailableReason ?? t('player.unavailable'))
-                      }
-                    >
-                      <span className="choice-copy">
-                        <strong>{interaction.title}</strong>
-                        {isSimulationMode && !available ? (
-                          <small>
-                            {unavailableReason ?? t('player.unavailable')}
-                            {forceUnavailableOptions ? t('player.forced') : ''}
-                          </small>
-                        ) : null}
-                      </span>
-                      <span className="choice-arrow" aria-hidden="true">
-                        →
-                      </span>
-                    </button>
-                  )}
-                </div>
-              ))}
-              {isSimulationMode ? (
-                <button
-                  className="choice add-option"
-                  aria-label={t('player.addOption')}
-                  onClick={() => void addOption()}
-                >
-                  <span className="choice-copy">
-                    <strong>{t('player.addOption')}</strong>
-                    <small>{t('player.addOptionHelp')}</small>
-                  </span>
-                  <span className="choice-arrow" aria-hidden="true">
-                    ＋
-                  </span>
-                </button>
-              ) : null}
-              {runtimeSliceReady && choices.length === 0 && current && !isSimulationMode ? (
-                <div className="ending">
-                  <span aria-hidden="true">◇</span>
-                  <div>
-                    <b>{t('player.branchEnd')}</b>
-                    <p>{t('player.branchEndHelp')}</p>
-                  </div>
-                </div>
-              ) : null}
-            </div>
+            <PlayerChoices
+              choices={visibleChoices}
+              editingChoiceId={editingChoiceId}
+              editingChoiceInputRef={editingChoiceInputRef}
+              isSimulationMode={isSimulationMode}
+              forceUnavailableOptions={forceUnavailableOptions}
+              journeyLength={journey.length}
+              currentStepStartedAt={currentStepStartedAt}
+              story={story}
+              currentInteractionId={current?.id}
+              showEnding={
+                runtimeSliceReady && choices.length === 0 && Boolean(current) && !isSimulationMode
+              }
+              onChoose={choose}
+              onPatchInteraction={patchInteraction}
+              onSaveChoiceTitle={saveChoiceTitle}
+              onAddOption={addOption}
+            />
           ) : null}
         </div>
       </article>
-      {playedCharacter || playableCharacters.length === 0 ? (
-        <aside
-          className="player-inventory"
-          aria-label={t(playedCharacter ? 'player.playedCharacter' : 'player.inventory')}
-        >
-          {playedCharacter ? (
-            <>
-              <div className="player-character-profile">
-                {playedCharacter.imageUrl ? (
-                  <img
-                    className="player-character-image"
-                    src={playedCharacter.imageUrl}
-                    alt={playedCharacter.name}
-                  />
-                ) : (
-                  <span className="player-character-placeholder" aria-hidden="true">
-                    {playedCharacter.name.slice(0, 2).toUpperCase()}
-                  </span>
-                )}
-                <h2>{playedCharacter.name}</h2>
-                {playedCharacter.description ? <p>{playedCharacter.description}</p> : null}
-              </div>
-              <h3>{t('player.stats')}</h3>
-              {(playedCharacter.stats ?? []).length === 0 ? (
-                <p className="hint">{t('player.noStats')}</p>
-              ) : (
-                <ul className="player-stat-list">
-                  {(playedCharacter.stats ?? []).map((stat) => (
-                    <li key={stat.id}>
-                      <span className="player-stat-icon" aria-hidden="true">
-                        ◇
-                      </span>
-                      <span>
-                        {story.statDefinitions?.find(({ id }) => id === stat.statDefinitionId)
-                          ?.name ?? t('player.unknownStat')}
-                      </span>
-                      <strong>: {statValues[stat.id] ?? stat.initialValue}</strong>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </>
-          ) : null}
-          {isSimulationMode ? (
-            <section className="simulation-controls">
-              <span className="product-eyebrow">{t('player.authorTools')}</span>
-              <label>
-                <input
-                  type="checkbox"
-                  checked={forceUnavailableOptions}
-                  onChange={(event) => setForceUnavailableOptions(event.target.checked)}
-                />
-                <span>
-                  <b>{t('player.forceUnavailable')}</b>
-                  <small>{t('player.forceUnavailableHelp')}</small>
-                </span>
-              </label>
-            </section>
-          ) : null}
-          <h2>{t('player.inventory')}</h2>
-          {ownedItemIds.filter(
-            (itemId) =>
-              !playedCharacter || getItemOwnerIdForInstance(story, itemId) === playedCharacter.id,
-          ).length === 0 ? (
-            <p className="hint">{t('player.noItems')}</p>
-          ) : (
-            <ul className="player-item-list">
-              {ownedItemIds
-                .filter(
-                  (itemId) =>
-                    !playedCharacter ||
-                    getItemOwnerIdForInstance(story, itemId) === playedCharacter.id,
-                )
-                .map((itemId) => {
-                  const ownerId = getItemOwnerIdForInstance(story, itemId);
-                  const owner = (story.characters ?? []).find(
-                    (character) => character.id === ownerId,
-                  );
-                  const itemDefinitionId = getItemDefinitionIdForInstance(story, itemId);
-                  const definition = story.itemDefinitions?.find(
-                    ({ id }) => id === itemDefinitionId,
-                  );
-                  return (
-                    <li key={itemId}>
-                      {definition?.imageUrl ? (
-                        <img className="context-picto" src={definition.imageUrl} alt="" />
-                      ) : null}
-                      {definition?.name ?? t('player.unknownItem')}
-                      {(definition?.stats ?? []).length > 0 ? (
-                        <ul className="item-stat-list">
-                          {(definition?.stats ?? []).map((stat) => (
-                            <li key={stat.statDefinitionId}>
-                              {story.statDefinitions?.find(({ id }) => id === stat.statDefinitionId)
-                                ?.name ?? t('player.unknownStat')}
-                              : {itemStatValues[itemId]?.[stat.id] ?? stat.initialValue}
-                            </li>
-                          ))}
-                        </ul>
-                      ) : null}
-                      {owner ? <small> — {owner.name}</small> : null}
-                    </li>
-                  );
-                })}
-            </ul>
-          )}
-        </aside>
+      <PlayerContextPanels
+        story={story}
+        current={current}
+        playedCharacter={playedCharacter}
+        playableCharacterCount={playableCharacters.length}
+        statValues={statValues}
+        ownedItemIds={ownedItemIds}
+        itemStatValues={itemStatValues}
+        isSimulationMode={isSimulationMode}
+        forceUnavailableOptions={forceUnavailableOptions}
+        onForceUnavailableOptionsChange={setForceUnavailableOptions}
+      />
+      {isSimulationMode ? (
+        <>
+          <details className="debug player-history">
+            <summary>
+              {t(isSimulationMode ? 'player.simulationHistory' : 'player.readingHistory')}
+            </summary>
+            <ol>
+              {visited.map((id) => (
+                <li key={id}>{story.interactions.find((item) => item.id === id)?.title ?? id}</li>
+              ))}
+            </ol>
+          </details>
+        </>
       ) : null}
-      {playedCharacter &&
-      current &&
-      (current.characterIds ?? []).some((id) => id !== playedCharacter.id) ? (
-        <aside className="encounter-panel" aria-label={t('player.encounteredCharacters')}>
-          <span className="product-eyebrow">{t('player.currentScene')}</span>
-          <h2>{t('player.encounter')}</h2>
-          {(current.characterIds ?? [])
-            .filter((id) => id !== playedCharacter?.id)
-            .map((characterId) => {
-              const character = story.characters?.find(({ id }) => id === characterId);
-              return character ? (
-                <section className="encounter-card" key={character.id}>
-                  {character.imageUrl ? (
-                    <img src={character.imageUrl} alt={character.name} />
-                  ) : (
-                    <span className="encounter-placeholder" aria-hidden="true">
-                      {character.name.slice(0, 2).toUpperCase()}
-                    </span>
-                  )}
-                  <h3>{character.name}</h3>
-                  {character.description ? <p>{character.description}</p> : null}
-                </section>
-              ) : null;
-            })}
-        </aside>
-      ) : null}
-      <details className="debug player-history">
-        <summary>
-          {t(isSimulationMode ? 'player.simulationHistory' : 'player.readingHistory')}
-        </summary>
-        <ol>
-          {visited.map((id) => (
-            <li key={id}>{story.interactions.find((item) => item.id === id)?.title ?? id}</li>
-          ))}
-        </ol>
-      </details>
       <StoryCommentsPanel
         open={commentsOpen && canUseReaderComments}
         loading={comments.loading}
@@ -1692,29 +1057,5 @@ export function StoryPlayer({
         />
       ) : null}
     </main>
-  );
-}
-
-function applyInteractionResponse(story: Story, result: InteractionMutationResult | Story) {
-  if ('interactions' in result) return ensureStoryInteractionPositions(result);
-  return ensureStoryInteractionPositions(applyInteractionMutationResult(story, result));
-}
-
-function runtimeStateKey(
-  story: Pick<Story, 'revision'>,
-  currentInteractionId: string | null,
-  journeyInteractionIds: readonly string[],
-) {
-  return `${story.revision ?? 1}:${currentInteractionId ?? 'start'}:${journeyInteractionIds.join(',')}`;
-}
-
-function hasSameRuntimeSliceRequest(
-  first: ReaderProgressState,
-  second: ReaderProgressState,
-): boolean {
-  return (
-    first.currentInteractionId === second.currentInteractionId &&
-    first.journeyInteractionIds.length === second.journeyInteractionIds.length &&
-    first.journeyInteractionIds.every((id, index) => id === second.journeyInteractionIds[index])
   );
 }

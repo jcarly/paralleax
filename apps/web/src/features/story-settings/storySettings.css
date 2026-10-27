@@ -131,15 +131,14 @@
   margin-top: 1.25rem;
 }
 
-.story-settings-properties .product-field,
-.story-settings-properties input {
+.story-settings-properties .form-field {
   min-width: 0;
 }
 
 .story-settings-properties-fields > small {
   margin-top: -0.75rem;
   color: var(--color-muted);
-  font-size: 0.72rem;
+  font-size: var(--type-size-compact);
 }
 
 .story-access-settings {
@@ -172,14 +171,13 @@
 
 .access-collaborator-role {
   display: grid;
-  gap: 0.25rem;
+  gap: var(--form-field-label-gap);
   color: var(--color-muted);
-  font-size: 0.68rem;
+  font-size: var(--type-size-compact);
 }
 
-.access-collaborator-role select {
-  min-height: 34px;
-  padding: 0.35rem 1.7rem 0.35rem 0.55rem;
+.access-collaborator-role select.form-control--compact {
+  padding-right: 1.7rem;
 }
 
 .story-title-control {

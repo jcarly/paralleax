@@ -62,7 +62,7 @@ export function ItemDefinitionInspector({
         textCommentCounts={textCommentCounts}
         onOpenTextComments={onOpenTextComments}
       >
-        <label>
+        <label className="form-field form-field--compact">
           {t('inspector.name')}
           <EntityNameInput
             data-comment-field="name"
@@ -91,9 +91,10 @@ export function ItemDefinitionInspector({
         textCommentCounts={textCommentCounts}
         onOpenTextComments={onOpenTextComments}
       >
-        <label>
+        <label className="form-field form-field--compact">
           {t('inspector.description')}
           <textarea
+            className="form-control form-control--compact form-control--multiline"
             data-comment-field="description"
             rows={7}
             value={itemDefinition.description}
@@ -137,6 +138,7 @@ export function ItemDefinitionInspector({
         {itemStats.map((stat, index) => (
           <div className="stat-effect-row" key={stat.statDefinitionId}>
             <select
+              className="form-control form-control--compact"
               aria-label={t('inspector.itemStat')}
               value={stat.statDefinitionId}
               onChange={(event) => {

@@ -13,6 +13,7 @@ export function LanguageSwitcher({ className = '' }: { className?: string }) {
   return (
     <label className={`language-switcher ${className}`.trim()}>
       <span className="sr-only">{t('language.label')}</span>
+      {/* eslint-disable-next-line design-system/require-shared-form-control -- the header language selector keeps its compact toolbar treatment */}
       <select
         aria-label={t('language.label')}
         value={language}

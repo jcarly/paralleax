@@ -18,11 +18,15 @@ In the current MVP model, a trigger belongs to one output interaction and contai
 
 A trigger can have several input interactions.
 
-Several inputs on the same trigger represent an OR:
+Several inputs on the same trigger are alternative reachability sources:
 
-- if the reader is currently on any one of those input interactions, the trigger input rule matches;
+- if the reader is currently on any one of those input interactions, the
+  trigger input rule matches;
 - the trigger is still available only if one complete condition group matches
   and its appearance roll succeeds.
+
+This input rule is separate from condition groups; it does not combine or add
+conditions.
 
 Example:
 
@@ -32,7 +36,27 @@ A ----\
 B ----/
 ```
 
-Here, interaction `C` can become available after `A` or after `B`, depending on the rest of the trigger conditions.
+Here, interaction `C` can become available after `A` or after `B`, depending on
+the separate condition groups and other Trigger rules.
+
+The input list is not a condition group. It identifies possible previous
+Interactions; the reader matches the current Interaction against that list
+separately from the Trigger's conditions.
+
+## Connection Uniqueness
+
+Current editor and API policy allows each directed source -> target pair on only
+one Trigger. A Trigger may still have several inputs, and several Triggers may
+target one output when their input pairs do not overlap. Inputless Triggers have
+no source pair and may remain separate condition or probability gates.
+
+Condition differences do not allow two Triggers to own the same source -> target
+pair. Add an OR condition group to the existing Trigger instead. The policy is
+checked when a route is added or an input list is edited; it adds no database
+constraint. Existing Stories with duplicate pairs remain readable. Editing their
+conditions, changing unrelated properties, or deleting a route remains allowed.
+The graph keeps every such historical Trigger on its own marker so an author can
+inspect and remove redundant routes.
 
 ## Conditions
 
@@ -137,11 +161,14 @@ If the deleted interaction appears in trigger conditions:
 
 ## Editing UX
 
-Conditional text embedded in an interaction body references an interaction
-reachable through an outgoing trigger. It reuses that trigger's complete input
-and condition semantics; the body block never owns another condition set. If all
-outgoing trigger connections to the referenced target are removed, the stored
-block remains editable but is no longer rendered to readers.
+Interaction bodies support two conditional frame forms:
+
+- A structured frame has its own condition set, stored on the owning interaction.
+  It reuses Trigger condition types and validation, with conditions combined as
+  AND. It does not depend on an outgoing route.
+- A legacy target-based frame references an output interaction. Its visibility
+  follows that target's outgoing Trigger availability. If the target route is
+  removed, the stored frame remains editable but is not shown to readers.
 
 Triggers should be edited from their visible graph marker, not primarily from the
 interaction inspector.
@@ -244,7 +271,8 @@ New interactions created by dropping a connection on empty canvas should be plac
 
 An interaction can have several triggers.
 
-This allows several alternative condition sets for the same output interaction.
+Several Triggers may expose the same output through different source routes or
+independent inputless rules.
 
 Example:
 
@@ -261,22 +289,24 @@ A ----\
 B ----/
 ```
 
-Use a single trigger with several inputs when the same conditions apply to every input.
+Use one Trigger with several inputs when the same conditions, probability, and
+timer apply to every source.
 
-Use several triggers when each route to the same output needs different conditions.
+Use several Triggers when different source routes need independent condition,
+probability, timer, comment, or lifecycle rules, while keeping every directed
+source -> target pair on one Trigger only.
 
-Several triggers may also connect the same input interaction to the same output
-interaction, but they remain separate reachability and probability gates.
+Different condition variants for one source -> target pair belong in the same
+Trigger's OR condition groups. Different pairs remain independent Triggers.
 
-Example:
+For example, this is not a route that authors can create now:
 
 ```text
 A --> Trigger 1 (30%) --> C
 A --> Trigger 2 (80%) --> C
 ```
 
-Use condition groups inside one Trigger when inputs, probability, and timer are shared
-and only the alternative conditions differ. The inspector adds and removes those
-groups directly on the Trigger. Use several Triggers only when the route requires
-independent inputs, probability gates, comments, or lifecycle. Even with identical
-inputs, each Trigger keeps its own graph marker.
+Use condition groups inside one Trigger when only the alternative conditions
+differ. For existing Stories that already contain the duplicated routes, each
+Trigger keeps its own graph marker and can be deleted independently. The editor
+does not merge their conditions, probability, timer, comments, or identity.

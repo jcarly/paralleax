@@ -68,8 +68,14 @@ describe('ContextualCommentsRail', () => {
       screen.getByRole('complementary', { name: 'Comments for the selected element' }),
     ).toBeInTheDocument();
     expect(screen.getByText('Could this be clearer?')).toBeInTheDocument();
+    const replyField = screen.getByRole('textbox', { name: 'Reply' });
+    expect(replyField).toHaveClass(
+      'form-control',
+      'form-control--compact',
+      'form-control--multiline',
+    );
 
-    await user.type(screen.getByRole('textbox', { name: 'Reply' }), 'Yes, let us shorten it.');
+    await user.type(replyField, 'Yes, let us shorten it.');
     await user.click(screen.getByRole('button', { name: 'Send' }));
     expect(onReply).toHaveBeenCalledWith(thread.id, 'Yes, let us shorten it.');
 

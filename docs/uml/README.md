@@ -80,7 +80,11 @@ classDiagram
   PlaySession ..> Trigger : evaluates
 ```
 
-### Trigger Eligibility Rule
+### Trigger Eligibility Rule (Historical UML)
+
+This conceptual diagram predates the current Trigger and condition-group model;
+use [Domain invariants](../domain-invariants.md) and [Trigger semantics](../triggers.md)
+for current behavior.
 
 A trigger is offered by the reader when:
 
@@ -88,7 +92,10 @@ A trigger is offered by the reader when:
 2. all `COMPLETED` requirements are present in the reading history;
 3. none of its `NOT_COMPLETED` requirements are present in that history.
 
-Several input interactions on the same trigger represent an **OR**: each can lead to the same output interaction. Trigger conditions represent an **AND**: all of them must be verified.
+Trigger inputs are alternative reachability sources, checked separately from
+conditions. Conditions inside one group are AND, while groups on the same Trigger
+are OR. Current authoring permits each directed source -> target pair on one
+Trigger; condition variants for that pair belong in its condition groups.
 
 ## 2. Vision Class Diagram
 
@@ -190,7 +197,8 @@ classDiagram
 
 - `Interaction` remains independent from `Trigger`, as in the prototype.
 - A trigger has exactly one output interaction.
-- An interaction can have several triggers: this allows several alternative condition sets.
+- Several Triggers may target one Interaction when their directed input pairs do
+  not overlap; alternative condition sets for one route belong to one Trigger.
 - Inputs and conditions are shown as separate conceptual associations. Inputs map
   to `trigger_inputs`; ordered conditions are stored as JSONB on `triggers`.
 - The reader does not persist play sessions yet.

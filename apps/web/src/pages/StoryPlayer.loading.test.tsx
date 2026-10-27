@@ -109,7 +109,7 @@ describe('StoryPlayer loading and presentation', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('API unavailable');
     await user.click(screen.getByRole('button', { name: 'Retry' }));
-    expect(await screen.findByText('Paralleax Reader')).toBeInTheDocument();
+    expect(await screen.findByText(story.title, { exact: true })).toBeInTheDocument();
     expect(api.getStory).toHaveBeenCalledTimes(2);
   });
 
@@ -221,8 +221,10 @@ describe('StoryPlayer loading and presentation', () => {
 
     await user.click(screen.getByRole('button', { name: 'Next' }));
     expect(screen.getByRole('heading', { name: 'Next' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Secret' })).toBeInTheDocument();
-    expect(screen.getByText('Start')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Secret' })).toHaveAttribute(
+      'title',
+      '"Start" has been visited',
+    );
   });
 
   it('automatically passes through a body with no visible content and applies its state changes', async () => {

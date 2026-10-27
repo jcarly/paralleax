@@ -110,13 +110,19 @@ function CreateDefinitionForm({
         );
       }}
     >
-      <label>
+      <label className="form-field form-field--compact">
         {t('attributes.name')}
-        <input required value={name} onChange={(event) => setName(event.target.value)} />
+        <input
+          className="form-control form-control--compact"
+          required
+          value={name}
+          onChange={(event) => setName(event.target.value)}
+        />
       </label>
-      <label>
+      <label className="form-field form-field--compact">
         {t('attributes.valueType')}
         <select
+          className="form-control form-control--compact"
           value={valueType}
           onChange={(event) => setValueType(event.target.value as typeof valueType)}
         >
@@ -271,7 +277,7 @@ function StatDefinitionEditor({
         textCommentCounts={textCommentCounts}
         onOpenTextComments={onOpenTextComments}
       >
-        <label>
+        <label className="form-field form-field--compact">
           {t('attributes.definitionName')}
           <EntityNameInput
             data-comment-field="name"
@@ -300,9 +306,13 @@ function StatDefinitionEditor({
         semanticCommentCounts={semanticCommentCounts}
         onOpenSemanticComments={onOpenSemanticComments}
       >
-        <label>
+        <label className="form-field form-field--compact">
           {t('attributes.valueType')}
-          <input readOnly value={t(`attributes.type.${valueType}`)} />
+          <input
+            className="form-control form-control--compact"
+            readOnly
+            value={t(`attributes.type.${valueType}`)}
+          />
         </label>
       </InspectorCommentSlot>
       {valueType === 'number' ? (
@@ -312,9 +322,10 @@ function StatDefinitionEditor({
           semanticCommentCounts={semanticCommentCounts}
           onOpenSemanticComments={onOpenSemanticComments}
         >
-          <label>
+          <label className="form-field form-field--compact">
             {t('attributes.changePerHour')}
             <input
+              className="form-control form-control--compact"
               step="any"
               type="number"
               value={definition.changePerHour ?? 0}
@@ -357,9 +368,13 @@ function StatDefinitionEditor({
         )}
         {selectedOwner ? (
           <div className="attribute-assignment-create">
-            <label>
+            <label className="form-field form-field--compact">
               {t('attributes.ownerLabel')}
-              <select value={ownerKey} onChange={(event) => setOwnerKey(event.target.value)}>
+              <select
+                className="form-control form-control--compact"
+                value={ownerKey}
+                onChange={(event) => setOwnerKey(event.target.value)}
+              >
                 {availableOwners.map((owner) => {
                   const key = `${owner.ownerType}:${owner.ownerId ?? ''}`;
                   return (
@@ -370,7 +385,7 @@ function StatDefinitionEditor({
                 })}
               </select>
             </label>
-            <label>
+            <label className="form-field form-field--compact">
               {t('attributes.initialValue')}
               <StatValueField
                 ariaLabel={t('attributes.initialValue')}
