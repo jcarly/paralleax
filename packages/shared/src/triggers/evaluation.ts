@@ -242,8 +242,13 @@ export function getInteractionTimerState(
     ownedItemDefinitionIds,
     itemStatValues,
   );
-  if (candidates.some((candidate) => candidate === null)) return null;
-  return (candidates as TriggerTimerResult[]).reduce<TriggerTimerResult | null>(
+  const timedCandidates = candidates.filter(
+    (candidate): candidate is TriggerTimerResult => candidate !== null,
+  );
+  if (timedCandidates.length !== candidates.length) {
+    return null;
+  }
+  return timedCandidates.reduce<TriggerTimerResult | null>(
     (longest, candidate) =>
       !longest || candidate.remainingTimeMs > longest.remainingTimeMs ? candidate : longest,
     null,
@@ -380,8 +385,13 @@ export function getTriggerTimerFailures(
     ownedItemDefinitionIds,
     itemStatValues,
   );
-  if (candidates.some((candidate) => candidate === null || !candidate.expired)) return [];
-  return (candidates as TriggerTimerResult[]).map(({ triggerId, timerSeconds, elapsedTimeMs }) => ({
+  const expiredCandidates = candidates.filter(
+    (candidate): candidate is TriggerTimerResult => candidate !== null && candidate.expired,
+  );
+  if (expiredCandidates.length !== candidates.length) {
+    return [];
+  }
+  return expiredCandidates.map(({ triggerId, timerSeconds, elapsedTimeMs }) => ({
     triggerId,
     timerSeconds,
     elapsedTimeMs,
