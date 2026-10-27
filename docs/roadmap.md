@@ -2,7 +2,7 @@
 
 This roadmap describes the progression from the validated narrative core to a public Paralleax platform.
 
-Status reviewed: 2026-10-24.
+Status reviewed: 2026-10-26.
 
 It is organized around **user capabilities** rather than implementation areas. Engineering work supports these milestones but does not define them by itself.
 
@@ -22,33 +22,98 @@ Version numbers express product progression, not a requirement to finish every p
 
 ## Current Position and Delivery Order
 
-Paralleax is suitable for demonstrations, private-alpha use, and small or
-moderately complex test stories. The implemented product already contains
-substantial V0.3, V0.4, V0.6, V0.8, and V0.9 foundations, but that does not make
-the later milestones complete: public delivery is still gated by the unfinished
-reliability, conflict, exchange-format, accessibility, and publication work.
+Paralleax already has a functional narrative engine, graph editor, Simulation
+Mode, save/recovery flows, partial import/export, comments, and Groups. The next
+product objective is to validate the essential authoring journey with external
+authors, observe where it fails or slows them down, and improve the parts that
+matter to them. The historical 2026-09-11 private-alpha queue is delivery history,
+not the active queue. The implemented foundations and evidence are listed in
+[Current scope](current-scope.md).
 
-The private-alpha P0 queue and the first seven P1 verticals are complete. Automatic
-layout now uses ELK canonically, with reload/manual-routing quality retained as a
-focused follow-up. The near-term delivery sequence is:
+Guided sessions use disposable test projects. Do not use projects whose loss
+would matter until the provider backup and restore drill succeeds and the
+operator has completed the deployment, recovery, communications, and request
+procedures in [Production readiness](production-readiness.md). Sessions record
+task outcomes, difficulties, workarounds, and incidents; no participant quota or
+numeric success threshold is set. The 2026-10-26 priority decision below places
+the quality-gate prerequisite before starting those sessions.
 
-1. close the remaining reliability gates: durable import-report storage, an
-   explicit optimistic-mutation recovery policy, and a recorded provider restore
-   drill. Story/entity quotas, data-router navigation blocking, and cancellable
-   import-job lifecycle handling are implemented.
-2. make the Workbench the primary product differentiator: improve selection and
-   organization first, then focus, projections, visible logic, dependency
-   explanations, and convergence with Simulation Mode as described in
-   [Workbench product direction](workbench.md);
-3. complete V0.3 optimistic concurrency, conflict recovery, history retention,
-   and optional gesture grouping;
-4. establish the stable Paralleax backup/import-export contract required by V0.6;
-5. add Story validation, onboarding, and accessibility evidence to reach V0.7;
-6. then deepen world state, dynamic execution, collaboration, and publishing
-   according to validated user needs.
+### Next delivery tasks
 
-Later milestone foundations may continue to be improved when they support these
-steps, but they must not bypass their production dependencies.
+**Priority decision, 2026-10-26:** the strict quality-gate and baseline initiative
+in [ADR-041](decisions/ADR-041-strict-quality-gates-and-native-baselines.md) was
+placed before guided author sessions. Its local implementation is complete:
+configured gates, historical-debt inventory, pruning, regression tests and CI
+checks are in place. Remote CI validation awaits the next CI event. This bounded
+prerequisite did not schedule broad code refactoring. Evidence and residual
+limitations are recorded in the [quality audit](audits/2026-10-26-quality-gates.md).
+
+1. **Prepare the alpha session brief.** Reuse the private-alpha runbook to state
+   the hypotheses, representative author tasks, project-data boundary, and a
+   lightweight observation record for first-time, narrative-tool-experienced,
+   and professional authors. **Depends on:** none. **Acceptance:** each task has
+   a defined starting state and observable outcome, and the record captures
+   success, blockage, workaround, and data/recovery issues without numeric pass
+   thresholds.
+2. **Run guided author sessions on disposable projects.** Cover creating and
+   connecting Interactions (including drag and drop), editing rich content,
+   conditions and effects, running Simulation, saving, reloading, and recovering
+   from a failed save. **Depends on:** task 1 and the existing invitation/test
+   environment. **Acceptance:**
+   each observed task has a concise outcome and evidence; no valuable user-owned
+   project data is introduced.
+3. **Triage observations and close essential blockers.** Separate data/security
+   hazards and failures in the core authoring journey from workarounds, isolated
+   preferences, and new feature ideas. Use the consolidated candidate tasks in
+   [Code quality backlog](code-quality-backlog.md#consolidated-ux-follow-ups-2026-10-25),
+   including the 2026-10-25 UX intake, as evidence for sequencing without
+   bypassing this observation step. **Depends on:** task 2. **Acceptance:** every
+   blocker has an owner and a retest scenario; suggestions do not become
+   commitments without evidence.
+4. **Complete the valuable-project safety gate.** Close the applicable P0 items
+   in [Production readiness](production-readiness.md): add the representative
+   migration regression, configure monitored encrypted off-site backups, record
+   a provider restore drill, verify the HTTPS/secrets/staging path, complete the
+   operator notice/recovery/request procedures, and test application rollback.
+   **Can run in parallel with:** tasks 1–3. **Acceptance:** evidence is recorded
+   for each applicable P0 gate; only then may invited authors rely on Paralleax
+   to retain valuable project data.
+5. **Ship the first UX improvement selected by observation.** Choose one
+   independently usable improvement on any product surface from the consolidated
+   [Code quality backlog](code-quality-backlog.md#consolidated-ux-follow-ups-2026-10-25),
+   based on task 2 evidence. **Depends on:** task 3. **Acceptance:** the author
+   completes the targeted task with the intended result, the whole-Story model
+   remains available where applicable, and the scenario is retested on a
+   representative Story.
+6. **Define and deliver native Paralleax backup/export and restore/import.**
+   Specify the supported authored Story data and validation/diagnostic behavior,
+   then verify a saved Story can be restored without loss of supported entities
+   or links. **Can run in parallel with:** task 5 after the supported model
+   boundary is agreed. **Acceptance:** round-trip evidence covers representative
+   Stories and invalid input is rejected before persistence. This task does not
+   depend on advanced collaboration, offline authoring, or text-merge support.
+7. **Make import reports durable before promising retained reports or production
+   imports.** Keep report retention and job metadata separate from the
+   already implemented cancellation lifecycle. **Depends on:** the import
+   workflow's retention promise and storage choice. **Acceptance:** completed,
+   failed, and cancelled diagnostics survive the supported restart/instance
+   boundary, with documented ownership and retention.
+8. **Prepare any open creator alpha from observed evidence.** Close the applicable
+   provider abuse, secret/container scanning, manual keyboard/focus, and measured
+   performance gates in [Production readiness](production-readiness.md), then
+   repeat the essential author tasks. **Depends on:** tasks 3–6, task 7 when
+   production imports are included, and every gate marked for open creator alpha.
+   **Acceptance:** remaining limitations and
+   operating procedures are documented; essential tasks have observable outcomes
+   and no unresolved data/security blocker.
+
+V0.x numbers remain capability targets, not a rigid sequence. In particular,
+finishing the remaining V0.3 conflict-safe collaboration work is not a prerequisite
+for guided single-author validation or native backup/export. Existing access and
+revision foundations remain in use; collaboration features that allow concurrent
+editing still depend on V0.3. Advanced collaboration, complex offline authoring,
+AI integrations, Tiptap migration, and public-scale publishing remain deferred
+until user evidence and their own readiness gates justify them.
 
 ### Deferred Cross-Cutting Initiative: Rich-Text Editor Migration
 
@@ -444,8 +509,10 @@ An author can safely create, navigate, edit, test, and recover a large story wit
   recovery, and the next successful save. Reader and Simulation autosaves are
   exercised independently across reload and restart, including a named reader
   save loaded into Simulation without modifying its source slot. A richer reader
-  save also verifies replayed variables, runtime inventory and item stats, Story
-  time, seeded probability, and Trigger timers across reload. A two-browser-context
+  save currently verifies replayed variables, runtime inventory and item stats,
+  Story time, seeded probability, and Trigger timers across reload. This is the
+  existing replay-based behavior; ADR-040 adds checkpoint restore and an explicit
+  replay-comparison target. A two-browser-context
   scenario verifies reader/editor grants, the reader-only graph redirect,
   manager-only access controls, collaborator editing, live invalidation, and
   PostgreSQL durability. A transport-reordering scenario delays one real API
@@ -489,10 +556,11 @@ An author can safely create, navigate, edit, test, and recover a large story wit
 
 #### Authoring UX
 
-- Deliver the Workbench phases incrementally: improved additive/subtractive
-  selection and connected paths; neutral Groups with multiple Interaction
-  membership; focus and projection controls; visible logic markers; dependency
-  navigation; and actionable availability explanations.
+- Build on implemented additive/subtractive selection and the nested Group tree
+  with exclusive direct Interaction membership; see [Current scope](current-scope.md)
+  and [Workbench product direction](workbench.md). Remaining Workbench work is
+  connected-path selection, focus and projection controls, visible logic
+  markers, dependency navigation, and actionable availability explanations.
 - Preserve whole-Story orientation through Focused / Context / Background
   treatment before offering an explicit `Hide unrelated` mode.
 - Add Structure, Character, and Location projections before the more specialized
@@ -513,13 +581,13 @@ An author can safely create, navigate, edit, test, and recover a large story wit
 - Define representative story-size and creator-account performance budgets.
 - Profile before changing graph projection or React Flow synchronization.
 - Continue replacing unnecessary full-graph persistence with targeted mutations.
-- Add story-level size/entity quotas and provider-level abuse limits.
+- Add provider-level abuse limits; story/entity quotas are implemented and
+  enforced on authoring and import operations.
 - Complete a recorded backup restoration drill in the selected deployment
   environment; keep the existing CI restore verification green.
 - Maintain reproducible stress-test fixtures and recorded baselines.
-- Retain the existing real-browser coverage for late route responses and
-  unresolved-save navigation guards while migrating browser-history blocking to
-  a data router.
+- Retain real-browser coverage for late route responses and unresolved-save
+  navigation guards; browser-history blocking already uses the data router.
 
 ### Exit criteria
 
@@ -557,7 +625,10 @@ Stories have reliable ownership and revision semantics so multiple people and fu
 - Creator ownership and global user/administrator roles.
 - Story revisions incremented on authored mutations and returned in mutation
   results and live invalidation events.
-- Private, authenticated, invitation, and public Story visibility.
+- Private, authenticated, invitation, public, and unlisted Story visibility.
+  Unlisted Stories are readable by URL without sign-in and excluded from library
+  discovery except for owners, administrators, and explicitly granted users;
+  see [ADR-033](decisions/ADR-033-unlisted-story-visibility.md).
 - Owner, collaborator, authenticated-user, and administrator editing policies.
 - Story-specific viewer/editor grants with effective read/edit/manage/comment
   capabilities.
@@ -600,9 +671,6 @@ Stories have reliable ownership and revision semantics so multiple people and fu
 
 - Finish consolidating repeated SQL/application access expressions behind one
   explicit policy contract without weakening query-level authorization.
-- Implement accepted `unlisted` visibility as a distinct link-readable,
-  non-discoverable policy per
-  [ADR-033](decisions/ADR-033-unlisted-story-visibility.md).
 - Add account export/deletion before open registration. Password change/reset,
   email verification, and session revocation are implemented.
 - Add external identity providers only when operationally required.
@@ -733,12 +801,14 @@ work packages, or any author-defined organization. Groups are authoring and
 navigation metadata only; they do not own conditions, effects, completion state,
 journal behavior, or other runtime semantics.
 
-One Interaction may belong to several Groups. The initial Group implementation
-is flat and is created from selected Interactions; Groups can become empty when
-members are deleted. Removing a Group preserves all Interactions. Visual overlap
-with a Graph Decoration never creates membership. Nested Groups, collapse,
-visibility, and per-author view state require a follow-up ADR. See
-[Workbench product direction](workbench.md).
+Implemented baseline: Groups form an acyclic, single-parent tree, and each
+Interaction has at most one direct Group membership; moving it transfers that
+membership. Group deletion preserves Interactions and promotes child Groups.
+Navigation-tree collapse and search expansion are transient and do not hide graph
+elements or change membership. Visual overlap with a Graph Decoration never
+creates membership. Canvas visibility filters and persisted per-author view state
+remain future options requiring evidence and a focused contract. See
+[Current scope](current-scope.md) and [Workbench product direction](workbench.md).
 
 #### Items — staged progression
 
@@ -764,8 +834,8 @@ Only implement later stages when concrete story requirements justify them.
 V0.4 is complete when:
 
 - common character/location/stat/item state can be authored without custom code;
-- state changes replay deterministically from a journey;
-- runtime state can be persisted and restored consistently;
+- state changes replay deterministically from a journey, and saved runtime
+  checkpoints restore consistently without replaying the full journey by default;
 - relationships and grouping have explicit documented semantics;
 - the item model supports possession, containers, and a first usable equipment/slot layer;
 - unsupported world-state needs can be identified explicitly rather than hidden in ad-hoc fields.
@@ -789,8 +859,11 @@ Stories can react not only to world state but also to time and controlled automa
 - Interaction durations.
 - Deterministic story-local calendar progression.
 - Date, date-range, weekday, and time-slot availability.
-- Deterministic backward replay and persisted reader/simulation journeys that
-  provide the restoration boundary for future dynamic behavior.
+- Deterministic full-journey replay currently reconstructs saved state and
+  supports Simulation backtracking. Under
+  [ADR-040](decisions/ADR-040-reader-simulation-runtime-checkpoints.md), the
+  target restore boundary is the saved runtime checkpoint; full replay remains
+  an explicit automated validation path.
 - Trigger appearance probability with one deterministic seeded roll per Trigger
   and narrative step, persisted in reader and Simulation saves.
 - Simulation probability diagnostics and forced-path inspection.
@@ -811,7 +884,8 @@ V0.5 is complete when:
 - probabilistic behavior is reproducible for debugging when required;
 - Simulation Mode can explain why and when an automatic choice occurred;
 - automatic execution cannot create uncontrolled loops without explicit protection;
-- reader progress can restore dynamic execution consistently.
+- reader progress can restore dynamic execution from its saved checkpoint, while
+  explicit replay verification remains deterministic.
 
 ### Dependencies
 
@@ -855,11 +929,13 @@ source inventory
 
 ### Remaining scope
 
-- Decide and, if accepted, implement native ordered Interaction inclusion before
-  mapping QSP `GS` / `GOSUB`. Reuse ordinary Interactions by reference, keep
+- The QSP adapter already maps a limited static, acyclic `GS` / `GOSUB` subset
+  through ordinary Interaction traversal, return stats, and Triggers. Decide
+  whether native ordered Interaction inclusion is still justified for QSP screen
+  composition beyond that approximation. Reuse Interactions by reference, keep
   inclusion dependencies out of the narrative graph, preserve deterministic
-  journey semantics, and retain diagnostics for unrepresentable QSP behavior.
-  The proposal and unresolved model decisions are recorded in
+  journey semantics, and retain diagnostics for unrepresentable behavior. The
+  proposal and unresolved model decisions are recorded in
   [Interaction inclusion](interaction-inclusion-proposal.md).
 - Define a source-neutral retained representation for unsupported source and
   richer expressions; the current draft graph remains ChoiceScript-specific.
@@ -891,7 +967,10 @@ V0.6 is complete when:
 
 ### Dependencies
 
-- Complex imports depend on sufficiently stable domain semantics.
+- Native Story backup/export and restore/import depend on a stable authored Story
+  contract and validation; they do not require field-scoped concurrent editing,
+  offline authoring, text merge, or completion of V0.3 collaboration work.
+- Complex foreign imports depend on sufficiently stable domain semantics.
 - External projects are compatibility fixtures, not specifications for Paralleax.
 
 ---
@@ -917,7 +996,8 @@ An author who did not build Paralleax can create, test, save, maintain, export, 
 
 ### Scope
 
-- Coherent onboarding and first-story flow.
+- Progressive contextual onboarding and a first-story flow, informed by guided
+  author sessions rather than a mandatory long tutorial.
 - Mature Story Canvas navigation.
 - A Workbench that preserves whole-Story visibility while projecting structure,
   characters, locations, state, time, and dependencies at useful levels of focus.
@@ -945,13 +1025,21 @@ V0.7 is complete when:
 - common mistakes produce understandable validation/errors;
 - the author can back up and restore their work;
 - the core workflow passes a documented accessibility review;
-- usability testing identifies no blocker requiring knowledge of Paralleax internals.
+- guided sessions cover the representative author profiles and tasks; findings,
+  workarounds, and unresolved blockers are documented and prioritized. No fixed
+  participant count or task pass-rate is required to make the next product
+  decision.
 
 ### Dependencies
 
-- Builds on V0.2 authoring reliability.
-- Requires enough of V0.4 to create useful stories.
-- Requires V0.6 backup/import-export foundations.
+- Builds on V0.2 core authoring reliability and enough of V0.4 to create useful
+  stories.
+- Requires the native backup/restore capability from V0.6 before promising
+  portable project protection; it does not require every foreign-engine importer
+  to be complete.
+- Single-author creation, testing, and backup do not require completion of V0.3
+  conflict-safe collaboration. Any feature that permits concurrent editing still
+  depends on V0.3 revision/conflict semantics.
 - Does not require real-time collaboration or public publishing.
 
 ---
@@ -1010,8 +1098,8 @@ A validated Story can become a stable reader-facing publication without exposing
 
 ### Implemented foundation
 
-- Anonymous reading of public Stories and authenticated/invitation/private
-  visibility for other access modes.
+- Anonymous reading of public Stories and unlisted Stories through their player
+  URLs, plus authenticated/invitation/private visibility for other access modes.
 - Stable Story player routes, separate editor-only Simulation Mode, and
   capability-based interface controls.
 - Authenticated reader saves kept separate from authored Story persistence.
@@ -1027,8 +1115,6 @@ versioned publication workflow.
 - Separate mutable drafts from immutable published versions.
 - Validate before publication.
 - Stable public reader URLs.
-- Private, authenticated, invitation, public, and accepted unlisted visibility,
-  with unlisted Stories excluded from general library discovery.
 - Separate author simulation from public reader UX.
 - Reporting and moderation foundations.
 - Ownership and content-licensing rules.

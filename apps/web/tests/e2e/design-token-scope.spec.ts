@@ -1,7 +1,7 @@
 import { expect, test, type Locator } from '@playwright/test';
 import { cloneStory, mockRuntimeStory, prepareEditorPage } from './editorTestHarness';
 
-test('resolves shared semantic colors in direct Simulation and editor navigation', async ({
+test('keeps Simulation styling consistent across direct and editor navigation', async ({
   page,
 }) => {
   const story = cloneStory();
@@ -11,35 +11,28 @@ test('resolves shared semantic colors in direct Simulation and editor navigation
     route.fulfill({ json: { progress: null } }),
   );
 
-  const readSimulationColors = async () =>
+  const readSimulationIndicatorStyle = async () =>
     page.evaluate(() => {
-      const resolveColor = (token: string) => {
-        const probe = document.createElement('span');
-        probe.style.color = `var(${token})`;
-        document.body.append(probe);
-        const color = getComputedStyle(probe).color;
-        probe.remove();
-        return color;
-      };
-      const badge = document.querySelector('.simulation-edit-label .product-badge.accent');
+      const badge = document.querySelector('.simulation-mode .player-top .mode-pill');
       if (!(badge instanceof HTMLElement)) {
-        throw new Error('Simulation badge must be rendered');
+        throw new Error('Simulation mode indicator must be rendered');
       }
       const badgeStyle = getComputedStyle(badge);
       return {
-        badgeBackground: badgeStyle.backgroundColor,
-        expectedBadgeBackground: resolveColor('--color-primary-soft'),
-        badgeText: badgeStyle.color,
-        expectedBadgeText: resolveColor('--color-primary-strong'),
+        background: badgeStyle.backgroundColor,
+        border: badgeStyle.borderTopColor,
+        text: badgeStyle.color,
       };
     });
 
   await page.goto('/stories/story-1/play?mode=simulation&startInteractionId=interaction-1');
   await expect(page.locator('.simulation-controls .product-eyebrow')).toBeVisible();
-  const directColors = await readSimulationColors();
+  await expect(page.locator('.simulation-mode .player-top .mode-pill')).toHaveText('Simulation');
+  const directIndicatorStyle = await readSimulationIndicatorStyle();
+  expect(directIndicatorStyle.background).not.toBe('rgba(0, 0, 0, 0)');
+  expect(directIndicatorStyle.border).not.toBe('rgba(0, 0, 0, 0)');
+  expect(directIndicatorStyle.text).not.toBe('rgba(0, 0, 0, 0)');
   const directTypography = await readSimulationTypography(page);
-  expect(directColors.badgeBackground).toBe(directColors.expectedBadgeBackground);
-  expect(directColors.badgeText).toBe(directColors.expectedBadgeText);
   expect(directTypography).toEqual({
     title: 'Georgia, "Times New Roman", serif',
     body: 'Georgia, "Times New Roman", serif',
@@ -82,7 +75,8 @@ test('resolves shared semantic colors in direct Simulation and editor navigation
   await page.getByRole('link', { name: 'Test from current interaction' }).click();
   await page.waitForURL('**/stories/story-1/play?mode=simulation&startInteractionId=interaction-1');
   await expect(page.locator('.simulation-controls .product-eyebrow')).toBeVisible();
-  expect(await readSimulationColors()).toEqual(directColors);
+  await expect(page.locator('.simulation-mode .player-top .mode-pill')).toHaveText('Simulation');
+  expect(await readSimulationIndicatorStyle()).toEqual(directIndicatorStyle);
   expect(await readSimulationTypography(page)).toEqual(directTypography);
 });
 

@@ -2,6 +2,7 @@ import { AxeBuilder } from '@axe-core/playwright';
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import {
   mockAuthenticatedUser,
+  mockAuthenticatedLibrary,
   mockRuntimeStory,
   paginated,
   prepareEditorPage,
@@ -155,26 +156,6 @@ async function expectBackgroundIsolated(page: Page, dialog: Locator) {
     );
   });
   expect(covered).toBe(true);
-}
-
-async function mockAuthenticatedLibrary(page: Page) {
-  await mockAuthenticatedUser(page);
-  await page.route(/\/api\/stories(?:\?.*)?$/, (route) =>
-    route.fulfill({
-      json: paginated([
-        {
-          id: story.id,
-          title: story.title,
-          interactionCount: story.interactions.length,
-          access: story.access,
-          capabilities: story.capabilities,
-          owner: { id: 'user-1', displayName: 'Author' },
-          createdAt: story.createdAt,
-          updatedAt: story.updatedAt,
-        },
-      ]),
-    }),
-  );
 }
 
 async function expectNoWcagViolations(page: Page) {

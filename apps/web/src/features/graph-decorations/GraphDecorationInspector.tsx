@@ -28,8 +28,8 @@ export function GraphDecorationInspector({
       </label>
       {decoration.kind === 'frame' ? (
         <div className="graph-decoration-size-fields">
-          <label>
-            {t('decoration.width')}
+          <label className="form-field form-field--compact">
+            <span className="form-field-label">{t('decoration.width')}</span>
             <DecorationNumberInput
               label={t('decoration.width')}
               value={Math.round(decoration.width)}
@@ -37,8 +37,8 @@ export function GraphDecorationInspector({
               onCommit={(width) => onPatch({ width })}
             />
           </label>
-          <label>
-            {t('decoration.height')}
+          <label className="form-field form-field--compact">
+            <span className="form-field-label">{t('decoration.height')}</span>
             <DecorationNumberInput
               label={t('decoration.height')}
               value={Math.round(decoration.height)}
@@ -49,9 +49,10 @@ export function GraphDecorationInspector({
         </div>
       ) : (
         <>
-          <label>
-            {t('decoration.content')}
+          <label className="form-field form-field--compact">
+            <span className="form-field-label">{t('decoration.content')}</span>
             <textarea
+              className="form-control form-control--compact form-control--multiline"
               aria-label={t('decoration.content')}
               key={`${decoration.id}:${decoration.text}`}
               maxLength={2000}
@@ -62,8 +63,8 @@ export function GraphDecorationInspector({
               }}
             />
           </label>
-          <label>
-            {t('decoration.fontSize')}
+          <label className="form-field form-field--compact">
+            <span className="form-field-label">{t('decoration.fontSize')}</span>
             <DecorationNumberInput
               label={t('decoration.fontSize')}
               value={decoration.fontSize}
@@ -72,9 +73,10 @@ export function GraphDecorationInspector({
               onCommit={(fontSize) => onPatch({ fontSize })}
             />
           </label>
-          <label>
-            {t('decoration.fontFamily')}
+          <label className="form-field form-field--compact">
+            <span className="form-field-label">{t('decoration.fontFamily')}</span>
             <select
+              className="form-control form-control--compact"
               value={decoration.fontFamily}
               onChange={(event) =>
                 onPatch({
@@ -141,6 +143,7 @@ function DecorationNumberInput({
 
   return (
     <input
+      className="form-control form-control--compact"
       aria-label={label}
       key={`${label}:${value}`}
       type="number"

@@ -78,8 +78,14 @@ details. They should stay covered by tests as the editor grows.
 - An inputless trigger without conditions is a starting trigger.
 - An inputless trigger with conditions is a contextual trigger evaluated during
   reading.
-- Inputs on the same trigger are OR conditions: any one input can make the output
-  interaction reachable if the trigger conditions also match.
+- Input interactions on one Trigger are possible reachability sources: the input
+  rule matches when the current Interaction is any one of those inputs. This is
+  separate from the Trigger's condition groups.
+- Current authoring policy: normal creation and input edits allow a directed
+  source -> target pair on only one Trigger. This is enforced by shared and API
+  validation, not a PostgreSQL constraint, and is not a permanent storage
+  invariant. Existing duplicate pairs remain readable and editable; unrelated
+  edits and removals remain available.
 - A trigger owns one or more condition groups. Conditions inside a group are AND;
   groups are OR. At least one complete group must match.
 - A trigger owns one appearance probability from 0 through 100, defaulting to 100. Input and condition-group rules are evaluated before one deterministic
@@ -140,8 +146,9 @@ details. They should stay covered by tests as the editor grows.
   item assignments. They evaluate in authored order across global and item
   targets after hourly changes. Invalid, missing, ill-typed, or non-finite
   results do not mutate a target and cannot satisfy a condition.
-- Reader and Simulation progress preserve the probability seed. Reloading or
-  stepping backward replays the same rolls; starting a new run creates a new seed.
+- Reader and Simulation progress preserve the probability seed. Restoring or
+  revisiting a step uses the same deterministic Trigger rolls; starting a new run
+  creates a new seed.
 - Version 4 Reader and Simulation progress preserve one wall-clock start for the
   choice step before the journey and one after every selected interaction.
   Reloading does not pause timers; Simulation backward navigation restores the
@@ -192,29 +199,44 @@ details. They should stay covered by tests as the editor grows.
   replaces the value with one of the definition's declared type.
 - Selecting an interaction first applies time-based stat changes for its
   duration, then its explicit stat effects, before the next choices are
-  evaluated. Replaying the journey reconstructs the same stat state.
+  evaluated. A new run is deterministic from its initial state and ordered
+  journey; a resumed run continues from its saved runtime checkpoint and applies
+  current authored rules to later steps.
 - If no interaction is available in the reader, the current branch stops.
 - A reader save belongs to exactly one authenticated user, one story, and one
   slot. The two reserved slot ids represent the reader and Simulation Mode
   autosaves; every other slot is a named manual save.
 - Each user/story pair has at most one autosave per mode and at most 20 manual
   saves. Manual saves are readable and writable from either authorized mode.
-- Its JSON state is versioned and keeps the ordered journey, including repeated
-  visits, plus a materialized runtime snapshot.
-- Current interaction, unique visits, story time, location, and typed stats are
-  reconstructed from the ordered journey before persistence.
+- Its versioned JSON state keeps the ordered journey, including repeated visits,
+  and the materialized runtime checkpoint at the current interaction.
+- Loading a save in Reader or Simulation restores its current interaction and
+  runtime checkpoint directly. Normal save writes and loads do not replay the
+  full journey from its beginning.
+- Later interactions apply the current authored rules to the restored checkpoint;
+  edits to already visited effects do not recalculate state already represented
+  by that checkpoint.
+- Simulation Back may move before the saved Interaction and shortens the
+  journey without changing stats, inventory, story time, or location. It does not
+  persist per-step snapshots; later choices continue from the retained debug
+  state. Current Interaction and journey-derived metadata follow the shortened
+  path.
+- Full replay from the beginning remains an explicit validation operation for
+  automated tests. On a clean, replayable run, it compares replayed state with
+  the checkpoint and never replaces or repairs the saved checkpoint. Intentional
+  Simulation debug changes may make the shortened journey diverge from its state.
 - Saved owned item ids reference distinct authored or deterministic runtime item
-  instances and are reconstructed by replaying interaction item effects.
-- Saved item stat values are reconstructed from definition defaults, elapsed
-  story time, and ordered interaction effects rather than trusted from clients.
+  instances in the checkpoint. Saved item stat values, typed stats, story time,
+  location, and visit state are restored from that checkpoint rather than
+  reconstructed from the full journey on ordinary load.
 - An interaction has at most one inventory effect per item definition. Every
   obtain creates another instance; losing an absent definition is a no-op.
 - An item trigger condition references one same-story item definition and tests
   whether at least one instance is currently owned.
 - Normal reader navigation writes only the reader autosave. Normal Simulation
   Mode navigation writes only the simulation autosave and requires effective
-  edit permission. Loading another slot copies its replayed state into the
-  current mode's autosave without mutating the source slot.
+  edit permission. Loading another slot copies its checkpoint into the current
+  mode's autosave without mutating the source slot.
 
 ## Editor Projection Invariants
 
@@ -236,11 +258,10 @@ details. They should stay covered by tests as the editor grows.
 - A linked trigger position is optional authoring projection metadata and never
   changes trigger or reader semantics. Missing positions use stable automatic
   placement.
-- Several triggers between the same source and target should be displayed as a
-  grouped edge with several route variants, while remaining distinct triggers in
-  the domain model.
-- Moving a grouped trigger marker saves the same position on every represented
-  trigger variant so deleting one variant does not unexpectedly move the group.
+- Every linked Trigger has its own graph marker and input edges. Historical
+  duplicate source -> target pairs remain separate markers so each Trigger can
+  be inspected or removed independently.
+- Moving a trigger marker changes only that Trigger's saved position.
 - Editing a linked trigger should happen from the graph trigger marker
   representing the relationship.
 - Editing a root trigger should happen from a visible root trigger marker rather
@@ -252,8 +273,9 @@ details. They should stay covered by tests as the editor grows.
   adds the source to that Trigger.
 - Adding an input to an existing trigger preserves one trigger with shared
   conditions across several inputs.
-- Creating a new trigger creates a separate condition group for the same output
-  interaction.
+- Creating a new Trigger creates an independent route only when its source ->
+  target pairs are new. Condition alternatives for an existing route belong in
+  that Trigger's condition groups.
 - Interaction editing should stay focused on interaction content and root trigger
   behavior.
 - Creating or deleting one edge must not silently mutate unrelated trigger inputs.
@@ -324,7 +346,8 @@ details. They should stay covered by tests as the editor grows.
 - Direct edits and pending suggestions should share an event-log foundation.
 - Interface internationalization applies to product UI copy, not user-authored
   story content.
-- Later, contextual inputless triggers may also depend on world state, not only
-  visited / not visited interaction conditions.
+- Contextual inputless Triggers can already depend on visited history, location,
+  character presence, typed stats and expressions, inventory, and story-local
+  time; see [Trigger semantics](triggers.md).
 - Story completion should be explicit, such as through a final interaction or
   play-session completion rule.

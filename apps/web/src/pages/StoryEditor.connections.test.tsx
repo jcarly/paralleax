@@ -106,6 +106,27 @@ describe('StoryEditor connections', () => {
     expect(await screen.findByTestId('flow-edge-interaction-2-interaction-3')).toBeInTheDocument();
   });
 
+  it('blocks a repeated source -> target pair and explains why', async () => {
+    const user = userEvent.setup();
+    const story = storyWithThreeInteractions();
+    story.interactions[2].triggers = [
+      {
+        id: 'existing-route',
+        inputInteractionIds: ['interaction-1'],
+        conditions: [],
+      },
+    ];
+
+    await renderEditor(story);
+    await user.click(screen.getByTestId('connect-interaction-1-interaction-3'));
+
+    expect(api.addTrigger).not.toHaveBeenCalled();
+    const alert = await screen.findByTestId('trigger-connection-conflict');
+    expect(alert).toHaveTextContent('This source already connects to this interaction.');
+    expect(alert.closest('.canvas')).not.toBeNull();
+    expect(screen.getByTestId('flow-trigger-interaction-3-existing-route')).toBeInTheDocument();
+  });
+
   it('does not open a connection-choice dialog when the input plus has eligible triggers', async () => {
     const user = userEvent.setup();
     const story = storyWithThreeInteractions();

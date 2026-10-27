@@ -1,0 +1,14 @@
+[
+  {
+    "file": "eslint-suppressions.json",
+    "before": "bf455e8d413041fa92358b8cae10914524ae38ea7c55a5eef79cf457e2d0e802",
+    "after": "778aef82a78a1cdcd90944d090ca216f08f24a84ef63ce534db65ff0cb6f1032",
+    "reason": "Initial strict quality-gate migration explicitly requested by the author on 2026-10-26. Registers only historical tracked-code findings and 16 measured production clone pairs. New task tooling receives no suppressions. See ADR-041 and the quality audit."
+  },
+  {
+    "file": ".duplication-baseline.json",
+    "before": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+    "after": "7df2c1831a542080e619e9bb6bffc0b11e682247e92b6537f94093fa1f019f33",
+    "reason": "Initial strict quality-gate migration explicitly requested by the author on 2026-10-26. Registers only historical tracked-code findings and 16 measured production clone pairs. New task tooling receives no suppressions. See ADR-041 and the quality audit."
+  }
+]

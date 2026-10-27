@@ -53,7 +53,7 @@ import { StoryCanvasToolbar } from '../components/StoryCanvasToolbar';
 import {
   CategorizedContextList,
   ContextCommentButton,
-  ContextThumbnail,
+  ContextEntityRow,
 } from '../components/StoryContextList';
 import { StoryGroupsPanel } from '../features/story-editor/navigation/StoryGroupsPanel';
 import { StoryGraphSelectionInspector } from '../components/StoryGraphSelectionInspector';
@@ -169,6 +169,7 @@ function getInitials(name: string) {
 export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
   const { t } = useTranslation();
   const { storyId = '' } = useParams();
+  const [connectionConflict, setConnectionConflict] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
   const {
     story,
@@ -219,7 +220,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
     refreshHistory,
     undo,
     redo,
-  } = useStoryEditorPersistence(storyId);
+  } = useStoryEditorPersistence(storyId, setConnectionConflict);
   const pendingSaveGuard = usePendingSaveGuard(
     Boolean(story) && (saveStatus === 'saving' || saveStatus === 'error'),
     'editor',
@@ -410,6 +411,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
     flowInstanceRef: flowInstance,
     connectInteractions,
     connectToExistingTrigger,
+    onConnectionConflict: setConnectionConflict,
     createChildFromInteraction: createChildAndFocus,
     createParentForInteraction: createParentAndFocus,
   });
@@ -1552,6 +1554,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
       {pendingSaveGuard}
       <div className="editor-toolbar">
         <div className="story-title-control">
+          {/* eslint-disable-next-line design-system/require-shared-form-control -- the inline Story title uses a display-heading editor */}
           <input
             aria-label={t('editor.storyTitle')}
             className="story-title-input"
@@ -1783,35 +1786,28 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
                 <CategorizedContextList
                   items={filteredLocations}
                   renderItem={(location) => (
-                    <li className="context-entity-row" key={location.id}>
-                      <button
-                        type="button"
-                        aria-label={location.name}
-                        className={`context-entity-select ${
-                          location.id === selectedLocationId ? 'selected' : 'ghost'
-                        }`}
-                        onClick={() => {
-                          clearSearch();
-                          selectExclusive({ type: 'location', id: location.id });
-                        }}
-                      >
-                        <ContextThumbnail imageUrl={location.imageUrl} fallback="⌖" />
-                        <span className="context-row-copy">
-                          <strong>{location.name}</strong>
-                          <small>
-                            {formatCount(
-                              contextReferenceCounts.locations.get(location.id) ?? 0,
-                              'interaction',
-                            )}
-                          </small>
-                        </span>
-                      </button>
-                      <ContextCommentButton
-                        count={commentCountsByTarget.get(`location:${location.id}`) ?? 0}
-                        entityName={location.name}
-                        onClick={() => openCommentsForTarget('location', location.id)}
-                      />
-                    </li>
+                    <ContextEntityRow
+                      key={location.id}
+                      name={location.name}
+                      imageUrl={location.imageUrl}
+                      fallback="⌖"
+                      selected={location.id === selectedLocationId}
+                      metadata={formatCount(
+                        contextReferenceCounts.locations.get(location.id) ?? 0,
+                        'interaction',
+                      )}
+                      onSelect={() => {
+                        clearSearch();
+                        selectExclusive({ type: 'location', id: location.id });
+                      }}
+                      action={
+                        <ContextCommentButton
+                          count={commentCountsByTarget.get(`location:${location.id}`) ?? 0}
+                          entityName={location.name}
+                          onClick={() => openCommentsForTarget('location', location.id)}
+                        />
+                      }
+                    />
                   )}
                 />
               )}
@@ -1846,39 +1842,33 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
                 <CategorizedContextList
                   items={filteredCharacters}
                   renderItem={(character) => (
-                    <li className="context-entity-row" key={character.id}>
-                      <button
-                        type="button"
-                        aria-label={character.name}
-                        className={`context-entity-select ${
-                          character.id === selectedCharacterId ? 'selected' : 'ghost'
-                        }`}
-                        onClick={() => {
-                          clearSearch();
-                          selectExclusive({ type: 'character', id: character.id });
-                        }}
-                      >
-                        <ContextThumbnail
-                          imageUrl={character.imageUrl}
-                          fallback={getInitials(character.name)}
+                    <ContextEntityRow
+                      key={character.id}
+                      name={character.name}
+                      imageUrl={character.imageUrl}
+                      fallback={getInitials(character.name)}
+                      selected={character.id === selectedCharacterId}
+                      metadata={
+                        <>
+                          {character.isPlayable ? `${t('editor.playable')} · ` : ''}
+                          {formatCount(
+                            contextReferenceCounts.characters.get(character.id) ?? 0,
+                            'interaction',
+                          )}
+                        </>
+                      }
+                      onSelect={() => {
+                        clearSearch();
+                        selectExclusive({ type: 'character', id: character.id });
+                      }}
+                      action={
+                        <ContextCommentButton
+                          count={commentCountsByTarget.get(`character:${character.id}`) ?? 0}
+                          entityName={character.name}
+                          onClick={() => openCommentsForTarget('character', character.id)}
                         />
-                        <span className="context-row-copy">
-                          <strong>{character.name}</strong>
-                          <small>
-                            {character.isPlayable ? `${t('editor.playable')} · ` : ''}
-                            {formatCount(
-                              contextReferenceCounts.characters.get(character.id) ?? 0,
-                              'interaction',
-                            )}
-                          </small>
-                        </span>
-                      </button>
-                      <ContextCommentButton
-                        count={commentCountsByTarget.get(`character:${character.id}`) ?? 0}
-                        entityName={character.name}
-                        onClick={() => openCommentsForTarget('character', character.id)}
-                      />
-                    </li>
+                      }
+                    />
                   )}
                 />
               )}
@@ -1913,36 +1903,33 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
                 <CategorizedContextList
                   items={filteredStatDefinitions}
                   renderItem={(definition) => (
-                    <li className="context-entity-row" key={definition.id}>
-                      <button
-                        type="button"
-                        aria-label={definition.name}
-                        className={`context-entity-select ${
-                          definition.id === selectedStatDefinitionId ? 'selected' : 'ghost'
-                        }`}
-                        onClick={() => {
-                          clearSearch();
-                          selectExclusive({ type: 'statDefinition', id: definition.id });
-                        }}
-                      >
-                        <ContextThumbnail imageUrl={definition.imageUrl} fallback="↗" />
-                        <span className="context-row-copy">
-                          <strong>{definition.name}</strong>
-                          <small>
-                            {t(`attributes.type.${definition.valueType ?? 'number'}`)} ·{' '}
-                            {formatCount(
-                              contextReferenceCounts.stats.get(definition.id) ?? 0,
-                              'assignment',
-                            )}
-                          </small>
-                        </span>
-                      </button>
-                      <ContextCommentButton
-                        count={commentCountsByTarget.get(`statDefinition:${definition.id}`) ?? 0}
-                        entityName={definition.name}
-                        onClick={() => openCommentsForTarget('statDefinition', definition.id)}
-                      />
-                    </li>
+                    <ContextEntityRow
+                      key={definition.id}
+                      name={definition.name}
+                      imageUrl={definition.imageUrl}
+                      fallback="↗"
+                      selected={definition.id === selectedStatDefinitionId}
+                      metadata={
+                        <>
+                          {t(`attributes.type.${definition.valueType ?? 'number'}`)} ·{' '}
+                          {formatCount(
+                            contextReferenceCounts.stats.get(definition.id) ?? 0,
+                            'assignment',
+                          )}
+                        </>
+                      }
+                      onSelect={() => {
+                        clearSearch();
+                        selectExclusive({ type: 'statDefinition', id: definition.id });
+                      }}
+                      action={
+                        <ContextCommentButton
+                          count={commentCountsByTarget.get(`statDefinition:${definition.id}`) ?? 0}
+                          entityName={definition.name}
+                          onClick={() => openCommentsForTarget('statDefinition', definition.id)}
+                        />
+                      }
+                    />
                   )}
                 />
               )}
@@ -1977,35 +1964,28 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
                 <CategorizedContextList
                   items={filteredItemDefinitions}
                   renderItem={(definition) => (
-                    <li className="context-entity-row" key={definition.id}>
-                      <button
-                        type="button"
-                        aria-label={definition.name}
-                        className={`context-entity-select ${
-                          definition.id === selectedItemDefinitionId ? 'selected' : 'ghost'
-                        }`}
-                        onClick={() => {
-                          clearSearch();
-                          selectExclusive({ type: 'itemDefinition', id: definition.id });
-                        }}
-                      >
-                        <ContextThumbnail imageUrl={definition.imageUrl} fallback="▣" />
-                        <span className="context-row-copy">
-                          <strong>{definition.name}</strong>
-                          <small>
-                            {formatCount(
-                              contextReferenceCounts.items.get(definition.id) ?? 0,
-                              'instance',
-                            )}
-                          </small>
-                        </span>
-                      </button>
-                      <ContextCommentButton
-                        count={commentCountsByTarget.get(`itemDefinition:${definition.id}`) ?? 0}
-                        entityName={definition.name}
-                        onClick={() => openCommentsForTarget('itemDefinition', definition.id)}
-                      />
-                    </li>
+                    <ContextEntityRow
+                      key={definition.id}
+                      name={definition.name}
+                      imageUrl={definition.imageUrl}
+                      fallback="▣"
+                      selected={definition.id === selectedItemDefinitionId}
+                      metadata={formatCount(
+                        contextReferenceCounts.items.get(definition.id) ?? 0,
+                        'instance',
+                      )}
+                      onSelect={() => {
+                        clearSearch();
+                        selectExclusive({ type: 'itemDefinition', id: definition.id });
+                      }}
+                      action={
+                        <ContextCommentButton
+                          count={commentCountsByTarget.get(`itemDefinition:${definition.id}`) ?? 0}
+                          entityName={definition.name}
+                          onClick={() => openCommentsForTarget('itemDefinition', definition.id)}
+                        />
+                      }
+                    />
                   )}
                 />
               )}
@@ -2013,6 +1993,23 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
           ) : null}
         </nav>
         <section className="canvas" ref={canvasRef} aria-busy={isOrganizing}>
+          {connectionConflict ? (
+            <div
+              className="save-error graph-connection-alert"
+              role="alert"
+              data-testid="trigger-connection-conflict"
+            >
+              <span>{t('editor.triggerConnectionExists')}</span>
+              <button
+                className="secondary"
+                type="button"
+                aria-label={t('editor.dismissConnectionConflict')}
+                onClick={() => setConnectionConflict(false)}
+              >
+                ×
+              </button>
+            </div>
+          ) : null}
           <StoryCanvasToolbar
             canEdit={!reviewOnly}
             canComment={story.capabilities?.canComment === true}

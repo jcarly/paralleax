@@ -128,6 +128,11 @@ The first vertical slice converts:
 - the source filename to the Story title;
 - deterministic initial graph positions through the shared import layout helper.
 
+When multiple converted branches connect the same source Interaction to the
+same target, their distinct condition variants become OR groups on one Trigger.
+Different source -> target pairs can remain on separate Triggers, including
+when their condition groups differ.
+
 All imported rich text is escaped. Static targets are matched case-insensitively,
 as QSP location names are. Targets containing QSP runtime interpolation such as
 `'room_<<$state>>'` cannot be resolved statically, so no speculative graph edge

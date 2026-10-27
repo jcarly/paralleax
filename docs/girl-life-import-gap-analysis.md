@@ -1,5 +1,11 @@
 # Girl Life Import Gap Analysis
 
+Implementation status note (2026-10-25): this comparison is a dated analysis,
+not a current feature inventory. The QSP adapter now supports a limited static,
+acyclic `GS` / `GOSUB` traversal approximation with generated return stats and
+diagnostics; general arguments, local scope, recursive or dynamic calls, and
+QSP screen composition remain gaps. See [QSP Import](qsp-import.md#static-subroutine-paths).
+
 ## Scope and Source
 
 This analysis compares Paralleax with the Girl Life source repository at

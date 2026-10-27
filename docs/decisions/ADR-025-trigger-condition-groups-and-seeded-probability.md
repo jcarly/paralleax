@@ -4,6 +4,13 @@ Status: Accepted
 
 Date: 2026-08-31
 
+Current authoring policy (2026-10-25): the editor and API allow each directed
+source -> target pair on one Trigger. Multiple condition variants for that pair
+use the Trigger's OR condition groups. This application policy does not add a
+database uniqueness constraint; historical duplicate pairs remain inspectable
+and editable so authors can remove them. The decision below records the original
+condition-group migration and reader semantics.
+
 ## Context
 
 Alternative condition routes were represented as several Triggers with identical

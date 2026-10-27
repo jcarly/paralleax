@@ -4,6 +4,11 @@ Status: Accepted; direct membership revised by [ADR-036](ADR-036-exclusive-group
 
 Date: 2026-10-19
 
+Historical note: the many-to-many membership text below records the rule accepted
+with this decision and is retained as history. ADR-036 supersedes direct
+membership cardinality; Groups remain a same-Story, single-parent tree, and the
+other navigation and deletion decisions below remain in force.
+
 ## Context
 
 The requested completion of interaction Groups requires a navigable tree and

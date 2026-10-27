@@ -164,9 +164,10 @@ export function StoryImportDialog({
             />
           ) : (
             <>
-              <label className="product-field">
+              <label className="form-field form-field--standard">
                 <span>{t('library.import.formatLabel')}</span>
                 <select
+                  className="form-control form-control--standard"
                   value={format}
                   onChange={(event) => {
                     setFormat(event.currentTarget.value as StoryImportFormat);
@@ -186,7 +187,7 @@ export function StoryImportDialog({
                 )}
               </p>
               <form onSubmit={(event) => void runImport(event)}>
-                <label className="product-field choicescript-file-field">
+                <label className="form-field form-field--standard choicescript-file-field">
                   <span>
                     {t(
                       format === 'qsp'

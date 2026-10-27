@@ -25,6 +25,12 @@ Paralleax currently includes:
   and narrative step. A nullable non-negative timer limits how long an otherwise
   eligible Trigger exposes its option; active timers render as draining bars,
   while zero-second timers never appear in normal reading.
+  Normal editor and API creation or input edits allow each directed source ->
+  target pair on only one Trigger. This app-level policy has no database unique
+  constraint. Existing duplicate pairs remain loadable, can be edited without
+  adding another duplicate, and can be removed. QSP and ChoiceScript adapters
+  combine same-pair condition variants into OR groups while preserving
+  source-specific route conditions.
   In the editor, authored condition rules are concise multi-line buttons that
   open uniform vertically stacked controls on click; Enter or focus leaving a
   condition closes its editor. AND/OR connectors stay explicit.
@@ -43,7 +49,11 @@ Paralleax currently includes:
   Saves preserve the random seed used by Trigger probability, so reload and
   backward replay reproduce the same result while restart creates a new run seed.
   Version 4 progress also preserves wall-clock choice-step starts, so timed options
-  continue across reload and Simulation backward navigation.
+  continue across reload and Simulation backward navigation. Current API writes
+  and loads reconstruct runtime values by replaying the full journey in either
+  mode; restoring the saved checkpoint directly is the accepted target in
+  [ADR-040](decisions/ADR-040-reader-simulation-runtime-checkpoints.md), not yet
+  implemented.
 - Reader mode starts its single available opening Interaction automatically
   after any playable-character selection. Multiple opening choices remain
   selectable, and Simulation Mode keeps explicit start selection.
@@ -53,6 +63,9 @@ Paralleax currently includes:
   duration, location changes, journey entries, and saves remain consistent.
   The Reader continues through such Interactions until content, a branch, an
   ending, or a repeated destination. Simulation Mode keeps them selectable.
+- Reader and Simulation Mode cross-fade the Player scene and narrative card when
+  the current Interaction changes. Reduced-motion preferences disable the effect;
+  pass-through Interactions are advanced before display.
 - Story-local deterministic calendar time.
 - Locations.
 - Characters.
@@ -80,7 +93,8 @@ Paralleax currently includes:
 - Authentication, verified email/password accounts, opaque revocable sessions,
   password recovery/change, self-service revocation of other sessions, creator ownership, required non-unique display names,
   self-service display-name editing, global user/admin roles, per-story
-  visibility, editing, and editor/reader comment policies, reader/editor grants,
+  visibility including unlisted link-readable stories, editing, and editor/reader
+  comment policies, reader/editor grants,
   authenticated anchored review discussions, health/readiness, migrations, and
   production-oriented API error handling. Story-level properties and access use
   one tabbed configuration modal opened from the editor title; Story editors can
@@ -203,8 +217,10 @@ Paralleax currently includes:
   deleting Interactions. Selection highlights recursive members; explicit centering
   adjusts only the viewport. Group selection never opens a right inspector.
   Ctrl+click toggles interaction selection, and Shift/Alt rectangles add/remove
-  selection. Groups
-  have no reader semantics or React Flow parent-node structure.
+  selection. Tree collapse/expansion and search expansion are transient
+  navigation state; they do not hide graph elements, alter membership, or enter
+  Story history. Groups have no reader semantics or React Flow parent-node
+  structure.
 - Deterministic ELK-backed vertical graph auto-layout for the complete graph, one
   selected interaction/linked trigger, or a rectangular multi-selection, with
   grouped trigger-marker placement and fixed bottom-output/top-input interaction
@@ -230,11 +246,17 @@ Paralleax currently includes:
   simulation mutations as well as reader-progress saves. Internal links, code
   navigation, and browser back/forward use data-router blocking with an accessible
   stay/leave confirmation; browser reload and external departure use `beforeunload`.
+  Simulation context panels show playable-character stat values and owned items;
+  a unified current-value inspector across Story, Location, and exact item-instance
+  assignments is not implemented.
 - Live simultaneous editing for clients connected to the same API process. Every
   committed interaction, trigger, position, context entity, item/stat structure,
   and graph-decoration change invalidates open editor and Simulation Mode clients;
   editors reload the authoritative story without a page refresh, while simulations
-  deterministically replay their current journey. Active local drafts and drags
+  currently replay their journey after a Story update; preserving the existing
+  checkpoint and applying updated behavior only to later steps is the accepted
+  target in [ADR-040](decisions/ADR-040-reader-simulation-runtime-checkpoints.md).
+  Active local drafts and drags
   finish before a remote refresh is applied. This is the current invalidation-and-
   reload implementation; collaborative text merging and a durable offline authoring
   queue are accepted future direction in [ADR-034](decisions/ADR-034-collaborative-offline-authoring.md),
@@ -279,8 +301,6 @@ The following remain future or incomplete unless a task explicitly implements th
 - anonymous or offline reader-progress saves;
 - collaborative text merging and durable offline authoring for an already-open
   Story, accepted as future direction in [ADR-034](decisions/ADR-034-collaborative-offline-authoring.md);
-- unlisted link visibility, accepted as future direction in
-  [ADR-033](decisions/ADR-033-unlisted-story-visibility.md);
 - managed media upload/storage;
 - presence, remote cursors/selections, and horizontally distributed story events;
 - suggestion workflow, message editing, mentions, notifications, and horizontally

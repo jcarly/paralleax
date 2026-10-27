@@ -68,6 +68,8 @@ export const italianTranslation = {
     storyImportFailed: 'Impossibile convertire la fonte in una storia.',
     storyRevisionConflict:
       'La storia è cambiata altrove. Ricaricarlo prima di applicare nuovamente questa modifica.',
+    triggerConnectionExists:
+      'Un trigger collega già queste interazioni. Seleziona o rimuovi il collegamento esistente.',
     storyQuotaExceeded:
       'Questa storia supera il limite di dimensione o di entità. Riduci il contenuto e riprova.',
   },
@@ -356,6 +358,7 @@ export const italianTranslation = {
         private: 'Privato',
         authenticated: 'Utenti registrati',
         public: 'Pubblico',
+        unlisted: 'Tramite link',
         invitation: 'Solo su invito',
       },
       continueDescription: 'Continua a dare forma a questa narrativa interattiva.',
@@ -398,6 +401,8 @@ export const italianTranslation = {
       private: 'Solo proprietario',
       authenticated: 'Utenti registrati',
       public: 'Tutti',
+      unlisted: 'Tramite link (non in elenco)',
+      help: 'Chiunque abbia l’URL può leggere la Storia senza accedere. Non apparirà nel catalogo pubblico.',
       invitation: 'Su invito',
     },
     edit: {
@@ -560,6 +565,9 @@ export const italianTranslation = {
     saving: 'Salvataggio…',
     saved: 'Salvato',
     saveFailed: 'Salvataggio non riuscito',
+    triggerConnectionExists:
+      'Questa origine è già collegata a questa interazione. Seleziona o rimuovi il collegamento esistente.',
+    dismissConnectionConflict: 'Nascondi il messaggio di connessione',
     loadFailed: 'Impossibile caricare la storia.',
     realtime: {
       live: 'Editing collaborativo dal vivo',

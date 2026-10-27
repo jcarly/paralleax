@@ -28,6 +28,26 @@ export async function mockAuthenticatedUser(page: Page, user: AuthUser = testAut
   await page.route('**/api/auth/me', (route) => route.fulfill({ json: user }));
 }
 
+export async function mockAuthenticatedLibrary(page: Page) {
+  await mockAuthenticatedUser(page);
+  await page.route(/\/api\/stories(?:\?.*)?$/, (route) =>
+    route.fulfill({
+      json: paginated([
+        {
+          id: story.id,
+          title: story.title,
+          interactionCount: story.interactions.length,
+          access: story.access,
+          capabilities: story.capabilities,
+          owner: { id: 'user-1', displayName: 'Author' },
+          createdAt: story.createdAt,
+          updatedAt: story.updatedAt,
+        },
+      ]),
+    }),
+  );
+}
+
 export const story: Story = {
   id: 'story-1',
   title: 'Test story',

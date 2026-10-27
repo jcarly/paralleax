@@ -40,18 +40,18 @@ The current implementation now includes:
 These capabilities must not be treated as out of scope merely because they were
 not part of the original MVP.
 
-## Still Outside the Stable Product Contract
+## Work That Remained at the Original MVP Snapshot
 
-Unless explicitly introduced and validated, the following remain future or incomplete:
+At the time of the original MVP snapshot, the following remained future or
+incomplete:
 
 - generic story variables/attributes beyond the current typed stat model;
-- probabilities and probabilistic automatic choices;
-- real-time choice countdowns and delayed automatic choices;
+- automatic choice execution after a probability roll and delayed automatic choices;
 - explicit final interactions and completed-story semantics;
-- multiple player save slots and anonymous saves;
+- anonymous saves (manual saves were added later);
 - managed media upload/storage;
 - real-time collaboration;
-- public story sharing, delegated permissions, and suggestion/review workflows;
+- delegated permission workflows and suggestion/review workflows;
 - stable public import/export formats;
 - executable, Unity, or video exports;
 - AI-driven narrative or runtime behavior.
@@ -62,7 +62,10 @@ Unless explicitly introduced and validated, the following remain future or incom
 - A Trigger may have several input Interactions; they are alternative reachability sources.
 - An inputless Trigger without conditions can expose a starting Interaction.
 - An inputless Trigger with conditions is contextual and evaluated against reader state.
-- Multiple Triggers may target the same Interaction to represent alternative condition variants.
+- At that time, separate Triggers represented alternative condition variants.
+  [ADR-025](decisions/ADR-025-trigger-condition-groups-and-seeded-probability.md)
+  moved those variants into OR condition groups on one Trigger. Current
+  authoring also prevents duplicate directed source -> target pairs.
 - Authored story state and reader/runtime state remain separate.
 - React Flow graph data is a projection of story state, never the canonical story format.
 

@@ -97,7 +97,7 @@ export function StorySettingsDialog({
                 <h3>{t('storySettings.properties')}</h3>
                 <p>{t('storySettings.propertiesDescription')}</p>
                 <div className="story-settings-properties-fields">
-                  <div className="product-field">
+                  <div className="form-field form-field--standard">
                     <div className="field-label-with-help">
                       <label htmlFor="story-settings-start-date-time">
                         {t('editor.storyStartDateTime')}
@@ -108,6 +108,7 @@ export function StorySettingsDialog({
                       />
                     </div>
                     <input
+                      className="form-control form-control--standard"
                       id="story-settings-start-date-time"
                       autoFocus
                       data-modal-autofocus

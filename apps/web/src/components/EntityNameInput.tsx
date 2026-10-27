@@ -60,6 +60,7 @@ export function EntityNameInput({
     <>
       <input
         {...inputProps}
+        className={`form-control form-control--compact ${inputProps.className ?? ''}`.trim()}
         value={value}
         readOnly={pending || inputProps.readOnly}
         aria-busy={pending || undefined}
@@ -100,7 +101,7 @@ export function EntityNameInput({
         }}
       />
       {error ? (
-        <span id={errorId} role="alert" className="error">
+        <span id={errorId} role="alert" className="form-field-error">
           {error}
         </span>
       ) : null}

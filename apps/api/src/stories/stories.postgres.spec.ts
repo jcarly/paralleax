@@ -773,6 +773,35 @@ describePostgres('StoriesRepository PostgreSQL integration', () => {
     });
   });
 
+  it('allows unlisted URL reads without adding ungranted stories to libraries', async () => {
+    const story = persistedStory();
+    await repository.save(story, ownerId);
+    await repository.updateAccess(story.id, ownerId, {
+      visibility: 'unlisted',
+      editPolicy: 'authenticated',
+      commentPolicy: 'readers',
+    });
+
+    await expect(repository.find(story.id)).resolves.toMatchObject({
+      access: { visibility: 'unlisted' },
+      capabilities: { canRead: true, canEdit: false, canManage: false },
+    });
+    await expect(repository.find(story.id, collaboratorId)).resolves.toMatchObject({
+      capabilities: { canRead: true, canEdit: true, canManage: false },
+    });
+    await expect(repository.list(collaboratorId)).resolves.toMatchObject({
+      items: [],
+      totalCount: 0,
+    });
+    await expect(repository.listPublic()).resolves.toMatchObject({ items: [], totalCount: 0 });
+
+    await repository.setCollaborator(story.id, ownerId, `${collaboratorId}@example.test`, 'viewer');
+    await expect(repository.list(collaboratorId)).resolves.toMatchObject({
+      items: [expect.objectContaining({ id: story.id })],
+      totalCount: 1,
+    });
+  });
+
   it('stores the story graph in relational tables', async () => {
     const story = persistedStory();
     await repository.save(story, ownerId);

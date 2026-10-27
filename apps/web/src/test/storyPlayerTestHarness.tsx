@@ -80,7 +80,7 @@ export async function renderPlayer(initialEntry = '/stories/story-1/play', story
     />,
   );
 
-  await screen.findByText(/Paralleax (Reader|Preview)/);
+  await screen.findByText(storyFixture.title, { exact: true });
 }
 
 export function setupStoryPlayerTestSuite() {

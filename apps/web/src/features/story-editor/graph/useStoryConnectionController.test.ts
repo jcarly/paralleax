@@ -105,6 +105,7 @@ function renderController() {
     connectInteractions: vi.fn<(connection: Connection) => void>(),
     connectToExistingTrigger:
       vi.fn<(sourceId: string, targetId: string, triggerId: string) => void>(),
+    onConnectionConflict: vi.fn<(conflict: boolean) => void>(),
     createChildFromInteraction: vi.fn(),
     createParentForInteraction: vi.fn(),
   };

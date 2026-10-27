@@ -85,7 +85,10 @@ For conditions:
 - conditions inside one group are evaluated as AND;
 - groups on the same trigger are evaluated as OR.
 
-Inputs on the same trigger are evaluated as OR.
+Trigger inputs are alternative reachability sources: the current Interaction
+matches when it is any one of the Trigger's input interactions. This input rule
+is checked separately from the condition groups; it is not another Boolean
+condition expression.
 
 The appearance probability is an integer from 0 through 100 and defaults to 100.
 The roll is derived from the progress seed, narrative step, and Trigger id. It is
@@ -111,13 +114,12 @@ interaction, but selecting it advances the journey only when that interaction is
 present in the normally evaluated available-choice set. An unavailable,
 disconnected, or missing target is rendered inert and cannot bypass its triggers.
 Conditional text frames remain a separate rich-text projection. A structured
-frame references a condition group owned by the current interaction. Its
-conditions use the exact Trigger condition types and evaluator, are combined as
-AND, and inspect the same visited interactions, current context, typed values,
-inventory, and story-local time. The reader removes a frame when any condition
-fails. Simulation Mode keeps it visible with unavailable styling and a condition
-summary. Legacy target-based frames continue to project normal outgoing choice
-availability.
+frame references a block owned by the current interaction. Its conditions use
+the exact Trigger condition types and evaluator, are combined as AND, and inspect
+the same visited interactions, current context, typed values, inventory, and
+story-local time. The reader removes a frame when any condition fails. Simulation
+Mode keeps it visible with unavailable styling and a condition summary. Legacy
+target-based frames continue to project normal outgoing choice availability.
 
 ## Inputless Triggers
 
@@ -309,9 +311,11 @@ blocked.
 The current web reader stores visited interaction ids in first-visit order and
 does not add duplicates when the same interaction is selected again.
 
-The shared reader converts `visitedIds` to a set for condition checks. MVP
-conditions therefore care only whether an interaction has been visited at least
-once, not how many times it was visited or when it was visited.
+The shared reader converts `visitedIds` to a set for visited-history conditions.
+Those conditions care only whether an interaction has been visited at least once,
+not how many times it was visited or when it was visited. Location, character,
+typed-stat, inventory, and temporal conditions inspect their corresponding
+replayed state; see [Trigger semantics](triggers.md).
 
 ## Persisted Saves
 
@@ -345,12 +349,13 @@ one after every ordered journey entry. Closing, reloading, or backgrounding the
 reader does not pause these timers. Old saves receive current timestamps when
 reconciled and are persisted in version 4 on the next autosave update.
 
-The ordered journey is authoritative for state that can currently be replayed.
-The API derives current interaction, visited ids, story time, location, and stats
-from that journey before writing JSON; clients cannot provide trusted derived
-values. Supplied owned item ids are accepted only when they are authored instances
-from the same Story or deterministic runtime instances produced by replaying that
-journey; the canonical saved inventory is still rebuilt from the journey.
+Current implementation: the API treats the ordered journey as authoritative for
+state that can be replayed. It derives current interaction, visited ids, story
+time, location, and stats from that journey before writing JSON; clients cannot
+provide trusted derived values. Supplied owned item ids are accepted only when
+they are authored instances from the same Story or deterministic runtime
+instances produced by replaying that journey; the canonical saved inventory is
+still rebuilt from the journey.
 Interaction item effects target a reusable item definition. Obtaining creates a
 new instance owned by the effect's target character, so the same definition can
 be obtained several times by one or several characters. Losing removes one
@@ -358,13 +363,24 @@ instance of that definition owned by the target character; losing an absent
 item is a no-op. Legacy exact-instance and unassigned effects remain replayable.
 Deterministic runtime ids preserve both instance and owner across replay,
 backward navigation, and saved progress.
-The same replay reconstructs non-item and exact-item stat values from their
-authored defaults, time-based rates, and explicit interaction effects. Existing
-version 1 snapshots remain readable and are rematerialized as version 2 after a
-subsequent save.
+The same replay currently reconstructs non-item and exact-item stat values from
+their authored defaults, time-based rates, and explicit interaction effects.
+Existing version 1 snapshots remain readable and are rematerialized as version 2
+after a subsequent save.
 
-The reader and Simulation Mode reconcile loaded saves with the authored story
-they fetched:
+**Accepted target (ADR-040; not implemented yet):** the saved runtime snapshot is
+a checkpoint. Reader and Simulation restore the saved current interaction and
+materialized state directly, without replaying the full journey during an ordinary
+save or load. Later interactions apply the current Story rules to that checkpoint;
+editing a previously visited effect does not rewrite state already produced.
+Full replay remains available as an explicit automated validation that compares
+a clean, replayable run against its checkpoint and never overwrites it. A mismatch
+after authored Story changes or intentional Simulation debugging is not by itself
+proof of a corrupt save, so validation must use the authored revision intended
+for comparison and avoid debug-diverged journeys.
+
+Current implementation: the reader and Simulation Mode reconcile loaded saves
+with the authored story they fetched:
 interaction and item ids that no longer exist are removed, and replayable
 derived values are rebuilt without a full-graph browser read. Loading a save
 continues in the current mode and writes subsequent progress to that mode's
@@ -372,7 +388,15 @@ autosave; it does not overwrite the loaded source slot. Restart deletes only the
 current mode's autosave and returns to its configured starting state. Named saves
 remain until explicitly overwritten or deleted. Stepping backward in Simulation
 Mode replays the shortened journey, restores the choice-step timestamp aligned
-with that journey position, and updates only the simulation autosave.
+with that journey position, and updates only the simulation autosave. Checkpoint
+reconciliation for changed or deleted authored entities remains open.
+
+**Accepted Back target (ADR-040; not implemented yet):** after restoring a save,
+Simulation Back can move before the saved Interaction without persisting
+per-step states. It shortens the journey and changes the current Interaction,
+but preserves stats, inventory, story time, and location as the current debug
+state. The next choice continues from those retained values, even when replaying
+the shortened journey would produce a different state.
 
 ## Runtime Read Projection
 
@@ -418,13 +442,22 @@ completion state.
 
 When a playable character is configured, a new reading session asks the reader
 to select it before showing root interactions. The current vertical allows at
-most one playable character. Its image, current stats, and owned inventory are
-shown in a left panel. Other characters assigned to the current interaction are
-shown as encounter cards in a right panel.
+most one playable character. Its image and current stats are shown in a left
+panel. The inventory section appears only when the Story defines at least one
+item; otherwise the left panel keeps the character profile and stats. When there
+is no character profile, the player omits the context panel if there are no item
+definitions and no Simulation controls to show. Other characters assigned to the
+current interaction are shown as encounter cards in a right panel.
 
 Simulation keeps unavailable choices visible for inspection except when their
 matched route fails a location condition; location-blocked choices are hidden to
 avoid presenting impossible movement from the simulated scene.
+
+When the current Interaction changes in Reader or Simulation Mode, the Player
+cross-fades its scene and narrative card. The change is immediate for browsers
+without same-document view transitions and for readers who prefer reduced motion.
+Reader pass-through Interactions are advanced before the browser paints, so they
+do not appear as intermediate screens.
 
 ## Reader Comments and Author Tools
 

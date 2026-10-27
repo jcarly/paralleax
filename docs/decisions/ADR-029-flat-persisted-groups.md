@@ -5,6 +5,11 @@ direct membership revised by [ADR-036](ADR-036-exclusive-group-membership.md)
 
 Date: 2026-10-06
 
+Historical note: the many-to-many membership text below records the original
+decision and is retained as history. ADR-036 supersedes that rule: an Interaction
+has zero or one direct Group. The remaining flat-Group decisions stand except
+where later ADRs extend them.
+
 ## Context
 
 Authors need a first durable way to organize selected Interactions, while the

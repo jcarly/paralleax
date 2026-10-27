@@ -2,7 +2,12 @@
 
 ## Status
 
-Accepted
+Accepted; checkpoint restoration and replay behavior amended by
+[ADR-040](ADR-040-reader-simulation-runtime-checkpoints.md).
+
+ADR-040 supersedes this ADR's replay-on-load and replay-before-write rules.
+Slot cardinality, permissions, mode-specific autosaves, and source-slot
+preservation remain in force.
 
 ## Context
 

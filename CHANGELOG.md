@@ -2,6 +2,78 @@
 
 ## Unreleased
 
+- Added a brief cross-fade between visible Interactions in Reader and Simulation
+  Mode. Reduced-motion preferences disable it, and Reader pass-through
+  Interactions remain invisible.
+
+- Tightened quality gates to cyclomatic/cognitive complexity 10, nesting 3,
+  parameters 4 and function length 50; extended typed safety checks to tests.
+  Recorded 4,404 historical ESLint findings, pruned CSS debt to 642 findings and
+  retained one historical dependency cycle. Added a gate for 16 production clone pairs,
+  baseline-growth review records, shrink-only maintenance and regression tests.
+  Native ESLint/Stylelint counts still cannot detect equal-count replacements.
+  Scheduled this tooling prerequisite before guided author sessions (ADR-041).
+
+- Enforced shared density classes on ordinary production fields and enabled
+  semantic color-token lint across production CSS with an audited legacy
+  baseline. Updated the design catalogue to show separate product-page and
+  authoring action families, including the defined but unused product danger
+  action. No narrative runtime behavior changed.
+
+- Enforced one Trigger per directed Interaction source -> target pair during
+  normal editor/API route creation and input edits. Existing duplicate routes
+  remain readable and can be edited or removed; the API reports conflicts as
+  `409`, and the editor shows a graph alert. QSP and ChoiceScript imports combine
+  same-pair condition variants into OR groups on one Trigger. Corrected related
+  trigger, conditional-text, QSP subroutine, visibility, and historical MVP
+  documentation.
+
+- Enabled 12 type-aware ESLint safety rules across all three production
+  workspaces and added native baselines for 120 existing diagnostics. The CSS
+  baseline tracks 359 findings from the cascade, duplicate-selector, and
+  `!important` rules; additional findings fail lint without changing application
+  behavior.
+
+- Added CI checks for workspace boundaries, circular dependencies, shared-layer
+  independence, and graph-only React Flow usage. ESLint now blocks production
+  functions above cyclomatic complexity 20 while a native baseline tracks
+  existing findings; no application behavior changed.
+
+- Clarified Reader and Simulation stylesheet ownership. Common Player presentation
+  now lives in `storyPlayer.css`; authoring, unavailable-choice, diagnostic, and
+  Simulation layout variants are scoped to `.simulation-mode`, including their
+  responsive rules.
+
+- Added shared standard and compact field styles for product forms, settings,
+  inspectors, conditions, and effects. The design catalogue now shows both
+  densities and their control states; persisted stories and editing behavior are
+  unchanged.
+
+- Added a staged, non-mutating CSS lint check for the explicitly owned reusable
+  component stylesheets. Graph, authored decoration, Prototype and Simulation
+  styles remain outside its initial scope.
+
+- Corrected two shared action variants after visual review: destructive ghost
+  actions now retain danger text on a transparent surface, and secondary actions
+  use the shared neutral border token. Dimensions, hover, and keyboard focus stay
+  unchanged.
+
+- Began the incremental `StoryPlayer` refactor by extracting runtime loading,
+  reader navigation, Simulation authoring commands, and realtime refresh
+  coordination into focused modules, then moving the scene, choice list, context
+  panels, and toolbar into focused components. The route remains the sole owner
+  of the mutable `Story` projection, and existing session, progress, and mutation
+  persistence owners stay unchanged.
+
+- Fixed a timing gap in unsaved-change protection so browser Back and Forward
+  continue to block navigation as soon as an editor or Simulation save becomes
+  pending.
+
+- Added unlisted Story visibility: anyone with its player URL can read without
+  signing in, while the Story stays out of public and ungranted account
+  libraries. Owners, administrators, and directly granted accounts retain their
+  library view.
+
 - Centralized the interface and narrative font stacks and compact text sizes.
   Product pages now share the application UI stack, and Reader and Simulation
   render narrative titles and text with the same serif family. Updated the

@@ -2,11 +2,13 @@
 
 ## Status
 
-Accepted; amended by [ADR-022](ADR-022-reader-and-simulation-save-slots.md)
+Accepted; amended by [ADR-022](ADR-022-reader-and-simulation-save-slots.md) and
+[ADR-040](ADR-040-reader-simulation-runtime-checkpoints.md).
 
-ADR-022 preserves the versioned JSON state and deterministic reconstruction from
-this decision, but replaces its one-row cardinality and simulation exclusion
-with explicit save slots. The original decision below remains as history.
+ADR-022 replaces the one-row cardinality and Simulation exclusion with explicit
+save slots. ADR-040 replaces deterministic reconstruction as the default save
+and restore mechanism with runtime checkpoints. The original decision below
+remains as history.
 
 ## Context
 
