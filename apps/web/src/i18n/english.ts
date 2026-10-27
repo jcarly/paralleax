@@ -724,7 +724,6 @@ export const englishTranslation = {
     width: 'Width',
     height: 'Height',
     content: 'Content',
-    loading: 'Loading editor…',
     fontSize: 'Text size',
     fontFamily: 'Font',
     font: {
@@ -1125,6 +1124,7 @@ export const englishTranslation = {
   },
   richText: {
     content: 'Content',
+    loading: 'Loading editor…',
     editContent: 'Edit content',
     addContent: 'Add content',
     doneEditing: 'Done',

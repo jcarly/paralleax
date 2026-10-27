@@ -734,7 +734,6 @@ export const frenchTranslation = {
     width: 'Largeur',
     height: 'Hauteur',
     content: 'Contenu',
-    loading: 'Chargement de l’éditeur…',
     fontSize: 'Taille du texte',
     fontFamily: 'Police',
     font: {
@@ -1140,6 +1139,7 @@ export const frenchTranslation = {
   },
   richText: {
     content: 'Contenu',
+    loading: 'Chargement de l’éditeur…',
     editContent: 'Modifier le contenu',
     addContent: 'Ajouter du contenu',
     doneEditing: 'Terminer',

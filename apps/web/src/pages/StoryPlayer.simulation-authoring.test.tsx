@@ -44,6 +44,14 @@ describe('StoryPlayer simulation authoring', () => {
       configurable: true,
       value: () => new DOMRect(0, 0, 0, 0),
     });
+    Object.defineProperty(HTMLElement.prototype, 'getClientRects', {
+      configurable: true,
+      value: () => [],
+    });
+    Object.defineProperty(HTMLElement.prototype, 'getBoundingClientRect', {
+      configurable: true,
+      value: () => new DOMRect(0, 0, 0, 0),
+    });
     Object.defineProperty(document, 'elementFromPoint', {
       configurable: true,
       value: () => document.body,
@@ -112,7 +120,7 @@ describe('StoryPlayer simulation authoring', () => {
     });
     expect(await screen.findByDisplayValue('Renamed step')).toBeInTheDocument();
 
-    expect(screen.getByText('You continue.')).toBeInTheDocument();
+    expect(await screen.findByText('You continue.')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Edit content' })).not.toBeInTheDocument();
 
     const bodyInput = await screen.findByRole('textbox', { name: 'Current interaction content' });
