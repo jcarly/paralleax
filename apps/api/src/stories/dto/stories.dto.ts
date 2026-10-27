@@ -403,10 +403,12 @@ export class StatEffectDto {
   @IsNotEmpty()
   itemId?: string;
   @IsIn(['add', 'set']) operation!: 'add' | 'set';
-  @ValidateIf((effect) => effect.expression === undefined)
+  @ValidateIf((effect: StatEffectDto) => effect.expression === undefined)
   @IsDefined()
   value?: unknown;
-  @ValidateIf((effect, value) => effect.value === undefined && value !== undefined)
+  @ValidateIf(
+    (effect: StatEffectDto, value: unknown) => effect.value === undefined && value !== undefined,
+  )
   @IsString()
   @IsNotEmpty()
   @MaxLength(4000)
@@ -462,7 +464,7 @@ export class TemporalSpecDto {
 }
 export class TriggerConditionDto {
   @ValidateIf(
-    (condition) =>
+    (condition: TriggerConditionDto) =>
       condition.locationId === undefined &&
       condition.characterId === undefined &&
       condition.statId === undefined &&
@@ -472,7 +474,7 @@ export class TriggerConditionDto {
   @IsString()
   interactionId?: string;
   @ValidateIf(
-    (condition) =>
+    (condition: TriggerConditionDto) =>
       condition.locationId === undefined &&
       condition.characterId === undefined &&
       condition.statId === undefined &&
@@ -482,7 +484,7 @@ export class TriggerConditionDto {
   @IsBoolean()
   hasBeenVisited?: boolean;
   @ValidateIf(
-    (condition) =>
+    (condition: TriggerConditionDto) =>
       condition.interactionId === undefined &&
       condition.characterId === undefined &&
       condition.statId === undefined &&
@@ -492,7 +494,7 @@ export class TriggerConditionDto {
   @IsString()
   locationId?: string;
   @ValidateIf(
-    (condition) =>
+    (condition: TriggerConditionDto) =>
       condition.interactionId === undefined &&
       condition.characterId === undefined &&
       condition.statId === undefined &&
@@ -502,7 +504,7 @@ export class TriggerConditionDto {
   @IsBoolean()
   isCurrentLocation?: boolean;
   @ValidateIf(
-    (condition) =>
+    (condition: TriggerConditionDto) =>
       condition.interactionId === undefined &&
       condition.locationId === undefined &&
       condition.statId === undefined &&
@@ -512,7 +514,7 @@ export class TriggerConditionDto {
   @IsString()
   characterId?: string;
   @ValidateIf(
-    (condition) =>
+    (condition: TriggerConditionDto) =>
       condition.interactionId === undefined &&
       condition.locationId === undefined &&
       condition.statId === undefined &&
@@ -522,7 +524,7 @@ export class TriggerConditionDto {
   @IsBoolean()
   isPresent?: boolean;
   @ValidateIf(
-    (condition) =>
+    (condition: TriggerConditionDto) =>
       condition.interactionId === undefined &&
       condition.locationId === undefined &&
       condition.characterId === undefined &&
@@ -531,17 +533,26 @@ export class TriggerConditionDto {
   )
   @IsString()
   statId?: string;
-  @ValidateIf((condition, value) => condition.statId !== undefined && value !== undefined)
+  @ValidateIf(
+    (condition: TriggerConditionDto, value: unknown) =>
+      condition.statId !== undefined && value !== undefined,
+  )
   @IsString()
   itemId?: string;
-  @ValidateIf((condition, value) => condition.statId !== undefined && value !== undefined)
+  @ValidateIf(
+    (condition: TriggerConditionDto, value: unknown) =>
+      condition.statId !== undefined && value !== undefined,
+  )
   @IsString()
   comparisonStatId?: string;
-  @ValidateIf((condition, value) => condition.comparisonStatId !== undefined && value !== undefined)
+  @ValidateIf(
+    (condition: TriggerConditionDto, value: unknown) =>
+      condition.comparisonStatId !== undefined && value !== undefined,
+  )
   @IsString()
   comparisonItemId?: string;
   @ValidateIf(
-    (condition, value) =>
+    (condition: TriggerConditionDto, value: unknown) =>
       condition.statId !== undefined &&
       condition.value === undefined &&
       condition.comparisonStatId === undefined &&
@@ -552,7 +563,7 @@ export class TriggerConditionDto {
   @MaxLength(4000)
   expression?: string;
   @ValidateIf(
-    (condition) =>
+    (condition: TriggerConditionDto) =>
       condition.interactionId === undefined &&
       condition.locationId === undefined &&
       condition.characterId === undefined &&
@@ -562,7 +573,7 @@ export class TriggerConditionDto {
   @IsIn(['eq', 'neq', 'lt', 'lte', 'gt', 'gte'])
   operator?: 'eq' | 'neq' | 'lt' | 'lte' | 'gt' | 'gte';
   @ValidateIf(
-    (condition) =>
+    (condition: TriggerConditionDto) =>
       condition.statId !== undefined &&
       condition.comparisonStatId === undefined &&
       condition.expression === undefined,
@@ -570,7 +581,7 @@ export class TriggerConditionDto {
   @IsDefined()
   value?: unknown;
   @ValidateIf(
-    (condition) =>
+    (condition: TriggerConditionDto) =>
       condition.interactionId === undefined &&
       condition.locationId === undefined &&
       condition.characterId === undefined &&
@@ -580,7 +591,7 @@ export class TriggerConditionDto {
   @IsString()
   itemDefinitionId?: string;
   @ValidateIf(
-    (condition) =>
+    (condition: TriggerConditionDto) =>
       condition.interactionId === undefined &&
       condition.locationId === undefined &&
       condition.characterId === undefined &&
@@ -590,7 +601,7 @@ export class TriggerConditionDto {
   @IsBoolean()
   isOwned?: boolean;
   @ValidateIf(
-    (condition) =>
+    (condition: TriggerConditionDto) =>
       condition.interactionId === undefined &&
       condition.locationId === undefined &&
       condition.characterId === undefined &&
@@ -718,7 +729,7 @@ export class CreateStatAssignmentDto {
   @IsString() @IsNotEmpty() statDefinitionId!: string;
   @IsIn(['story', 'character', 'location', 'itemDefinition'])
   ownerType!: 'story' | 'character' | 'location' | 'itemDefinition';
-  @ValidateIf((input) => input.ownerType !== 'story')
+  @ValidateIf((input: CreateStatAssignmentDto) => input.ownerType !== 'story')
   @IsString()
   @IsNotEmpty()
   ownerId?: string;
