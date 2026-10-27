@@ -1144,12 +1144,6 @@
     }
   },
   "apps/web/src/components/ItemInstanceTree.tsx": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 3
-    },
-    "@typescript-eslint/no-unsafe-type-assertion": {
-      "count": 2
-    },
     "complexity": {
       "count": 1
     },
