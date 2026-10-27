@@ -3122,9 +3122,6 @@
     }
   },
   "packages/shared/src/comments.ts": {
-    "@typescript-eslint/no-unsafe-type-assertion": {
-      "count": 1
-    },
     "complexity": {
       "count": 2
     },
