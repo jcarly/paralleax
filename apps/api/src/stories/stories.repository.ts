@@ -280,9 +280,15 @@ export class StoriesRepository {
        WHERE (
          actor.role = 'admin'
          OR stories.creator_user_id = $1
-         OR stories.visibility IN ('public', 'authenticated')
-         OR stories.edit_policy = 'authenticated'
-         OR (stories.visibility = 'invitation' AND permission.user_id IS NOT NULL)
+         OR (stories.visibility = 'unlisted' AND permission.user_id IS NOT NULL)
+         OR (
+           stories.visibility <> 'unlisted'
+           AND (
+             stories.visibility IN ('public', 'authenticated')
+             OR stories.edit_policy = 'authenticated'
+             OR (stories.visibility = 'invitation' AND permission.user_id IS NOT NULL)
+           )
+         )
        )
        AND ($2 = '' OR stories.title ILIKE '%' || $2 || '%')
        AND (${filter})
@@ -353,7 +359,7 @@ export class StoriesRepository {
          WHERE stories.id = $1
            AND (
              actor.role = 'admin' OR stories.creator_user_id = $2
-             OR stories.visibility = 'public'
+             OR stories.visibility IN ('public', 'unlisted')
              OR (
                actor.id IS NOT NULL AND (
                  stories.visibility = 'authenticated'
@@ -670,7 +676,7 @@ export class StoriesRepository {
          AND progress.slot_id = $3
          AND (
            actor.role = 'admin' OR stories.creator_user_id = $2
-           OR stories.visibility IN ('public', 'authenticated')
+           OR stories.visibility IN ('public', 'authenticated', 'unlisted')
            OR stories.edit_policy = 'authenticated'
            OR (stories.visibility = 'invitation' AND permission.user_id IS NOT NULL)
          )`,
@@ -700,7 +706,7 @@ export class StoriesRepository {
          AND progress.user_id = $2
          AND (
            actor.role = 'admin' OR stories.creator_user_id = $2
-           OR stories.visibility IN ('public', 'authenticated')
+           OR stories.visibility IN ('public', 'authenticated', 'unlisted')
            OR stories.edit_policy = 'authenticated'
            OR (stories.visibility = 'invitation' AND permission.user_id IS NOT NULL)
          )
@@ -730,7 +736,7 @@ export class StoriesRepository {
        WHERE stories.id = $1
          AND (
            actor.role = 'admin' OR stories.creator_user_id = $2
-           OR stories.visibility IN ('public', 'authenticated')
+           OR stories.visibility IN ('public', 'authenticated', 'unlisted')
            OR stories.edit_policy = 'authenticated'
            OR (stories.visibility = 'invitation' AND permission.user_id IS NOT NULL)
          )
@@ -846,7 +852,7 @@ export class StoriesRepository {
        WHERE stories.id = $1
          AND (
            actor.role = 'admin' OR stories.creator_user_id = $2
-           OR stories.visibility = 'public'
+           OR stories.visibility IN ('public', 'unlisted')
            OR (
              actor.id IS NOT NULL AND (
                stories.visibility = 'authenticated'

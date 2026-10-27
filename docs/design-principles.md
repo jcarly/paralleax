@@ -38,7 +38,10 @@ Managed media uploads and a dedicated timeline view remain future work. See
 
 ## Progressive Complexity
 
-The tool should let users start with a simple graph, then progressively add conditions, multiple inputs, timing, probabilities, characters, or places.
+The tool should let users start with a simple graph, then progressively expose
+conditions, multiple inputs, timers, probabilities, characters, or places as a
+story needs them. These capabilities already exist; progressive disclosure is
+an interface principle, not a statement that they are future model work.
 
 A simple story should not force the user to understand every dimension of the target model.
 

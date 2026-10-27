@@ -66,6 +66,8 @@ export const englishTranslation = {
     storyImportFailed: 'The source could not be converted into a story.',
     storyRevisionConflict:
       'The story changed elsewhere. Reload it before applying this change again.',
+    triggerConnectionExists:
+      'A trigger already connects these interactions. Select or remove the existing route.',
     storyQuotaExceeded:
       'This story exceeds its size or entity limit. Reduce its content and try again.',
   },
@@ -344,6 +346,7 @@ export const englishTranslation = {
         private: 'Private',
         authenticated: 'Signed-in users',
         public: 'Public',
+        unlisted: 'By link',
         invitation: 'Invitation only',
       },
       continueDescription: 'Continue shaping this interactive narrative.',
@@ -385,6 +388,8 @@ export const englishTranslation = {
       private: 'Owner only',
       authenticated: 'Signed-in users',
       public: 'Everyone',
+      unlisted: 'By link (unlisted)',
+      help: "Anyone with the URL can read the Story without signing in. It won't appear in the public catalog.",
       invitation: 'By invitation',
     },
     edit: {
@@ -530,6 +535,9 @@ export const englishTranslation = {
     saving: 'Saving…',
     saved: 'Saved',
     saveFailed: 'Save failed',
+    triggerConnectionExists:
+      'This source already connects to this interaction. Select or remove the existing route.',
+    dismissConnectionConflict: 'Dismiss connection message',
     loadFailed: 'The story could not be loaded.',
     realtime: {
       live: 'Collaborative editing live',

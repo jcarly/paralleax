@@ -97,7 +97,7 @@ export function CharacterInspector({
         textCommentCounts={textCommentCounts}
         onOpenTextComments={onOpenTextComments}
       >
-        <label>
+        <label className="form-field form-field--compact">
           {t('inspector.name')}
           <EntityNameInput
             data-comment-field="name"
@@ -151,6 +151,7 @@ export function CharacterInspector({
         {availableDefinitions.length > 0 ? (
           <div className="stat-assignment">
             <select
+              className="form-control form-control--compact"
               aria-label={t('inspector.statToAdd')}
               value={definitionId}
               onChange={(event) => setSelectedDefinitionId(event.target.value)}
@@ -190,7 +191,7 @@ export function CharacterInspector({
               {statDefinitions.find(({ id }) => id === stat.statDefinitionId)?.name ??
                 t('inspector.unknownStat')}
             </span>
-            <label>
+            <label className="form-field form-field--compact">
               {t('inspector.initialValue')}
               <StatValueField
                 ariaLabel={t('inspector.initialValue')}
@@ -230,6 +231,7 @@ export function CharacterInspector({
         {itemDefinitions.length > 0 ? (
           <div className="stat-assignment">
             <select
+              className="form-control form-control--compact"
               aria-label={t('inspector.itemToAdd')}
               value={itemDefinitionId}
               onChange={(event) => setSelectedItemDefinitionId(event.target.value)}
@@ -271,9 +273,10 @@ export function CharacterInspector({
         textCommentCounts={textCommentCounts}
         onOpenTextComments={onOpenTextComments}
       >
-        <label>
+        <label className="form-field form-field--compact">
           {t('inspector.description')}
           <textarea
+            className="form-control form-control--compact form-control--multiline"
             data-comment-field="description"
             rows={7}
             value={character.description}

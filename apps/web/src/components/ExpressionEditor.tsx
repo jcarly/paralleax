@@ -43,6 +43,7 @@ export function ExpressionEditor({
   return (
     <div className="expression-editor-field">
       <textarea
+        className="form-control form-control--compact form-control--multiline"
         aria-label={t('interactionInspector.variableEffectExpression')}
         aria-invalid={!isValid}
         maxLength={4000}

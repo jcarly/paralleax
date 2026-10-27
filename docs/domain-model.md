@@ -63,10 +63,15 @@ Main MVP fields:
 `inputInteractionIds` can contain several interactions. An interaction is therefore not limited to a single input.
 
 A trigger has exactly one output interaction: the interaction that owns the trigger.
-Its inputs are alternative sources. Several input interactions on the same trigger
-represent an OR. Conditions inside one group are AND, while the groups owned by
-the trigger are OR. Once an input and one complete group match, one deterministic
+Its inputs are alternative reachability sources, checked separately from its
+conditions. Conditions inside one group are AND, while the groups owned by the
+trigger are OR. Once an input and one complete group match, one deterministic
 appearance roll is made for the trigger.
+
+The current editor/API policy assigns each directed source -> target pair to one
+Trigger. Different condition variants for that pair use the Trigger's condition
+groups. This policy has no database uniqueness constraint, and existing duplicate
+pairs remain available for inspection, editing, and removal.
 
 After those gates succeed, a non-null timer limits availability to the configured
 number of wall-clock seconds in the current choice step. Zero expires immediately.
@@ -86,7 +91,7 @@ reading.
 
 ### Condition
 
-A condition checks the reader path or current location.
+A condition checks replayed path or world state.
 
 Examples:
 
@@ -97,6 +102,7 @@ Examples:
 - character present;
 - character absent.
 - typed stat equality/inequality and numeric comparison.
+- item ownership and deterministic typed expressions;
 - story-local exact dates, inclusive date ranges, weekdays, and time slots.
 
 The story clock is a deterministic floating calendar rather than the reader's
@@ -250,11 +256,13 @@ Implemented visibility settings:
 - private: only the creator and administrators can read;
 - authenticated: every signed-in user can read;
 - public: anonymous and authenticated users can read;
+- unlisted: anyone with the Story URL can read without signing in, but the Story
+  is omitted from library discovery except for its owner, administrators, and
+  explicitly granted users;
 - invitation: explicitly granted users can read.
 
-[ADR-033](decisions/ADR-033-unlisted-story-visibility.md) accepts a fifth,
-unlisted policy that is readable by URL but excluded from general library
-discovery. It remains future work and is not part of the implemented policy set.
+See [ADR-033](decisions/ADR-033-unlisted-story-visibility.md) for the unlisted
+visibility contract.
 
 Specific permissions are stored in `story_user_permissions`, with a `userId`, a
 `storyId`, and a `viewer` or `editor` role.
@@ -655,29 +663,23 @@ obtain/lose effects, and item-ownership trigger conditions. Durability, multiple
 containers, procedural properties, layered clothing, shops, and economy remain
 later increments.
 
-### Target Interaction
+### Future Interaction Extensions
 
 Later, an interaction may additionally contain:
 
-- involved characters;
 - visual attitude or posture;
 - speaking indicator;
-- media;
 - final interaction flag;
-- conditional content or display pseudo-code.
 
-### Target Trigger
+### Future Trigger Extensions
 
 Later, a trigger may additionally take into account:
 
 - equipment tags and relationships;
-- availability timing.
 
-An inputless trigger in the target model does not necessarily mean "available
-only at story start." The MVP already uses the same base distinction: inputless
-triggers without conditions are starting triggers, while inputless triggers with
-conditions can be evaluated during reading. Later conditions may include context,
-such as being in a place or meeting a character.
+Inputless Triggers without conditions are starting rules. Inputless Triggers with
+conditions are contextual and can already check location, character presence,
+stats, inventory, or story-local time during reading.
 
 ### Play Session
 
@@ -692,13 +694,14 @@ Player saves are separate from story authoring persistence. Story persistence
 stores the authored scenario; play-session persistence stores a reader's progress
 through that scenario.
 
-## Target Narrative Rules
+## Narrative Rules and Remaining Work
 
 - If several interactions are available after an interaction, the reader offers a choice.
-- A choice may become automatic if a trigger probability is defined.
-- Timing may make an option unavailable after expiration.
-- An inputless trigger may start a story or become available later through world
-  context, such as a place, time period, or character.
+- Trigger probability can make an option unavailable; automatic choice execution
+  after a roll remains future work.
+- A configured wall-clock timer can make an otherwise eligible option expire.
+- An inputless Trigger may start a story or become available later through its
+  current conditions, including world context.
 - If no interaction is available, the current branch may pause or stop, but the
   whole story is not necessarily complete.
 - A story is explicitly complete when the reader reaches a final interaction or a

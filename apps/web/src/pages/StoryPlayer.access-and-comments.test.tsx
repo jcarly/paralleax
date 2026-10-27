@@ -126,7 +126,6 @@ describe('StoryPlayer access and comments', () => {
       readerStory,
     );
 
-    expect(screen.getByText('Paralleax Reader')).toBeInTheDocument();
     expect(await screen.findByRole('heading', { name: 'Start' })).toBeInTheDocument();
     expect(screen.queryByText('Simulation')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Current interaction title')).not.toBeInTheDocument();

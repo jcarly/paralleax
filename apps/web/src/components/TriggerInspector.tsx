@@ -221,7 +221,7 @@ export function TriggerInspector({
         semanticCommentCounts={semanticCommentCounts}
         onOpenSemanticComments={onOpenSemanticComments}
       >
-        <div className="field">
+        <div className="form-field form-field--compact">
           <div className="field-label-with-help">
             <span>{t('triggerInspector.appearanceProbability')}</span>
             <FieldHelpTooltip
@@ -231,6 +231,7 @@ export function TriggerInspector({
           </div>
           <div className="trigger-probability-field">
             <input
+              className="form-control form-control--compact"
               aria-label={t('triggerInspector.appearanceProbability')}
               defaultValue={getTriggerAppearanceProbability(trigger)}
               key={`${trigger.id}:${getTriggerAppearanceProbability(trigger)}`}
@@ -258,7 +259,7 @@ export function TriggerInspector({
         semanticCommentCounts={semanticCommentCounts}
         onOpenSemanticComments={onOpenSemanticComments}
       >
-        <div className="field">
+        <div className="form-field form-field--compact">
           <div className="field-label-with-help">
             <span>{t('triggerInspector.timer')}</span>
             <FieldHelpTooltip
@@ -268,6 +269,7 @@ export function TriggerInspector({
           </div>
           <div className="trigger-probability-field">
             <input
+              className="form-control form-control--compact"
               aria-label={t('triggerInspector.timer')}
               defaultValue={getTriggerTimerSeconds(trigger) ?? ''}
               key={`${trigger.id}:timer:${getTriggerTimerSeconds(trigger) ?? 'none'}`}

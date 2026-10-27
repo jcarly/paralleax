@@ -11,6 +11,42 @@ export function ContextThumbnail({ imageUrl, fallback }: { imageUrl?: string; fa
   );
 }
 
+export function ContextEntityRow({
+  name,
+  metadata,
+  imageUrl,
+  fallback,
+  selected,
+  onSelect,
+  action,
+}: {
+  name: string;
+  metadata: ReactNode;
+  imageUrl?: string;
+  fallback: string;
+  selected: boolean;
+  onSelect: () => void;
+  action?: ReactNode;
+}) {
+  return (
+    <li className="context-entity-row">
+      <button
+        type="button"
+        aria-label={name}
+        className={`context-entity-select ${selected ? 'selected' : 'ghost'}`}
+        onClick={onSelect}
+      >
+        <ContextThumbnail imageUrl={imageUrl} fallback={fallback} />
+        <span className="context-row-copy">
+          <strong>{name}</strong>
+          <small>{metadata}</small>
+        </span>
+      </button>
+      {action}
+    </li>
+  );
+}
+
 export function ContextCommentButton({
   count,
   entityName,
@@ -70,7 +106,7 @@ export function CategorizedContextList<T extends { id: string; category?: string
               <span>{category}</span>
               <small>{groupedItems.length}</small>
             </div>
-            <ul>{groupedItems.map(renderItem)}</ul>
+            <ul className="context-entity-list">{groupedItems.map(renderItem)}</ul>
           </section>
         ),
       )}

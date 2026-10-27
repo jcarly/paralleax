@@ -115,7 +115,7 @@ describe('InteractionInspector time', () => {
     });
   });
 
-  it('organizes real interaction fields into content, context, and effect sections', () => {
+  it('shows interaction content and organizes context and effects', () => {
     const interaction: Story['interactions'][number] = {
       id: 'interaction-1',
       title: 'Meet Mira',
@@ -145,7 +145,7 @@ describe('InteractionInspector time', () => {
       />,
     );
 
-    expect(screen.getByRole('heading', { name: 'Content' })).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'Content' })).toBeInTheDocument();
     expect(screen.getByText('Interaction duration')).toBeInTheDocument();
     expect(screen.getByText('1 present')).toBeInTheDocument();
     expect(screen.getByText('MV')).toBeInTheDocument();

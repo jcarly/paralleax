@@ -20,7 +20,10 @@ import {
   getStoryMutationRevision,
 } from '../features/story/storyMutationResults';
 
-export function useStoryEditorPersistence(storyId: string) {
+export function useStoryEditorPersistence(
+  storyId: string,
+  onConnectionConflict: (conflict: boolean) => void = () => {},
+) {
   const [story, setStory] = useState<Story>();
   const persistence = useStoryPersistenceLifecycle({ storyId, story, setStory });
   const trackPersistenceSave = persistence.trackSave;
@@ -62,6 +65,7 @@ export function useStoryEditorPersistence(storyId: string) {
     mergeIncomingStory: persistence.mergeIncomingStory,
     deletedTriggerIdsRef: persistence.deletedTriggerIdsRef,
     deletedTriggerInputKeysRef: persistence.deletedTriggerInputKeysRef,
+    onConnectionConflict,
   });
 
   const contextPersistence = useStoryContextPersistence({

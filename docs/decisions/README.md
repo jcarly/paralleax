@@ -43,6 +43,9 @@ This folder records accepted architecture and product-shaping decisions.
 - [ADR-036 - Exclusive Direct Group Membership](ADR-036-exclusive-group-membership.md)
 - [ADR-037 - Group Tree Authoring](ADR-037-group-tree-authoring.md)
 - [ADR-038 - Deterministic Typed Stat Expressions](ADR-038-typed-stat-expressions.md)
+- [ADR-039 - Automated Architecture Guardrails](ADR-039-automated-architecture-guardrails.md)
+- [ADR-040 - Reader and Simulation Runtime Checkpoints](ADR-040-reader-simulation-runtime-checkpoints.md)
+- [ADR-041 - Strict Quality Gates and Native Baselines](ADR-041-strict-quality-gates-and-native-baselines.md)
 
 ## Maintenance
 

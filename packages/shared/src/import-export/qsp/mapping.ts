@@ -3,8 +3,8 @@ import type { Interaction } from '../../model/interactions.js';
 import type { Story } from '../../model/stories.js';
 import type { StatEffect, StatValueType } from '../../model/stats.js';
 import { layoutImportedGraph } from '../layout.js';
-import { truncateImportedText, uniqueImportedValues } from '../source-utils.js';
-import { buildImportedTrigger } from '../story-builders.js';
+import { truncateImportedText } from '../source-utils.js';
+import { buildImportedTrigger, groupImportedTriggerRoutes } from '../story-builders.js';
 import { analyzeQspCode } from './analyzer.js';
 import { qspVariableInitialValue, qspVariableKey, qspVariableValueType } from './expressions.js';
 import type { ParsedQspLocation, QspSourceCondition, QspVariableEffect } from './models.js';
@@ -89,26 +89,26 @@ export function mapQspLocationsToStory(
   const interactions: Interaction[] = nodes.map((node) => {
     const statEffects = mapQspEffects(node.effects, variableIds);
     const incomingEdges = incoming.get(node.key) ?? [];
-    // Inputs sharing a condition variant remain OR on one Trigger. Returns
-    // with different conditions must remain separate availability variants.
-    const variants = new Map<string, { inputs: string[]; groups: QspSourceCondition[][] }>();
-    for (const edge of incomingEdges) {
-      const groups = edge.conditionGroups ?? [[]];
-      const key = JSON.stringify(
-        groups.map((group) =>
-          group.map((condition) => ({
-            variableName: condition.variableName,
-            operator: condition.operator,
-            value: condition.value,
-          })),
-        ),
-      );
-      const variant = variants.get(key) ?? { inputs: [], groups };
-      variant.inputs.push(edge.from);
-      variants.set(key, variant);
-    }
-    if (!variants.size || (node.key === 'location:0' && returnVariables.size > 0)) {
-      variants.set('root', { inputs: [], groups: [[]] });
+    const routeGroups = groupImportedTriggerRoutes(
+      incomingEdges.map((edge) => {
+        const groups = edge.conditionGroups ?? [[]];
+        const ownGroups = node.conditionGroups ?? [[]];
+        return {
+          inputInteractionId: edge.from,
+          conditionGroups: groups.flatMap((group) =>
+            ownGroups.map((own) =>
+              [...group, ...own].map(({ variableName, operator, value }) => ({
+                variableName,
+                operator,
+                value,
+              })),
+            ),
+          ),
+        };
+      }),
+    );
+    if (!routeGroups.length || (node.key === 'location:0' && returnVariables.size > 0)) {
+      routeGroups.push({ inputInteractionIds: [], conditionGroups: [[]] });
     }
     const interaction = {
       id: ids.get(node.key)!,
@@ -116,14 +116,11 @@ export function mapQspLocationsToStory(
       body: node.body,
       position: positions.get(node.key)!,
       ...(statEffects.length > 0 ? { statEffects } : {}),
-      triggers: [...variants.values()].map(({ inputs, groups }) => {
-        const combined = groups.flatMap((group) =>
-          (node.conditionGroups ?? [[]]).map((own) => [...group, ...own]),
-        );
+      triggers: routeGroups.map(({ inputInteractionIds, conditionGroups }) => {
         const trigger = buildImportedTrigger(
           options.createId(),
-          uniqueImportedValues(inputs).map((key) => ids.get(key)!),
-          combined.map((group) =>
+          inputInteractionIds.map((key) => ids.get(key)!),
+          conditionGroups.map((group) =>
             group.map((condition) => ({
               statId: variableIds.get(qspVariableKey(condition.variableName))!.assignmentId,
               operator: condition.operator,
@@ -132,7 +129,9 @@ export function mapQspLocationsToStory(
           ),
         );
         // Disconnected generated nodes remain inspectable without becoming roots.
-        if (!inputs.length && !/^location:\d+$/.test(node.key)) trigger.appearanceProbability = 0;
+        if (!inputInteractionIds.length && !/^location:\d+$/.test(node.key)) {
+          trigger.appearanceProbability = 0;
+        }
         return trigger;
       }),
     };

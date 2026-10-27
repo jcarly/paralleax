@@ -30,8 +30,10 @@ identity boundary, expensive computation, or frequently rerendered subtree.
   requires the first result.
 - When a common editor action requires several dependent HTTP calls, prefer one
   atomic API command over client-side orchestration. Trigger creation already
-  accepts initial inputs and conditions, so graph connections and OR variants
-  must not follow it with a redundant PATCH.
+  accepts initial inputs and conditions, so creating a route does not need a
+  dependent PATCH. Alternative condition groups update that same Trigger; a
+  duplicate directed source -> target route is rejected by shared validation and
+  the API.
 - Preserve optimistic updates and stale-response protection when consolidating
   commands.
 - Apply interaction and trigger mutation responses directly to their owning

@@ -110,17 +110,28 @@ Simulation Mode should also support direct lightweight edits:
 - add root or output options directly from the simulation;
 - open the inspector for available options when trigger details need inspection.
 
+For the next authoring iteration, prefer Reader rendering of the current content
+by default and reveal the existing editor on request. Keep editing on the same
+shared authoring operations. Direct Trigger-condition editing remains an open
+scope decision. The accepted save-checkpoint rule applies equally to Reader and
+Simulation: state already produced remains intact, while current authored effects
+apply to later steps. Full journey replay is reserved for explicit automated
+validation; there is no separate Simulation-only effect revision rule. This is
+not yet implemented: current save/load and Story-refresh paths replay the journey.
+See [ADR-040](decisions/ADR-040-reader-simulation-runtime-checkpoints.md) and
+[Open questions](open-questions.md#reader-and-simulation-saves). This future
+direction does not describe the current always-available inline editing surface
+below. After restore, Simulation `Back` can cross the checkpoint without storing
+per-step states; it shortens the journey and moves the current Interaction while
+keeping stats, inventory, story time, and location unchanged. Later steps use
+that retained debug state.
+
 Inline editing is an important product direction. The author should be able to
 write in the context of play: click the current title or body, edit it, confirm,
 and continue the test. Adding a new option from the simulated reader should
 create the underlying interaction and trigger without making the author leave
 the writing flow. At the beginning of the simulation, before any current
 interaction is selected, the same action creates a root interaction.
-
-The behavior of already-replayed effects after editing an interaction remains to
-be defined. In particular, decide whether the displayed state changes
-immediately, on later steps, or only after replay; see
-[Open questions](open-questions.md#simulation).
 
 The simulation journey should support simple backtracking, such as a back arrow
 above the reader area, so authors can try another branch without restarting the
@@ -165,7 +176,8 @@ Current behavior:
 - a simulation `Back` action returns to the previous step of the current
   journey;
 - the current interaction title and content can be edited inline in Simulation
-  Mode and are saved to the story;
+  Mode and are saved to the story; the current surface keeps the WYSIWYG editor
+  available rather than requiring an explicit edit action;
 - `Add option` is displayed below the existing options in Simulation Mode;
 - at the beginning of a simulation, `Add option` creates a new root interaction
   and focuses the new option title directly in the choice list;

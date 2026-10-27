@@ -1668,4 +1668,12 @@ export const databaseMigrations: DatabaseMigration[] = [
           CHECK (expression IS NULL OR char_length(btrim(expression)) BETWEEN 1 AND 4000);
     `,
   },
+  {
+    id: '202610240045_unlisted_story_visibility',
+    sql: `
+      ALTER TABLE stories DROP CONSTRAINT stories_visibility_allowed;
+      ALTER TABLE stories ADD CONSTRAINT stories_visibility_allowed
+        CHECK (visibility IN ('private', 'authenticated', 'public', 'unlisted', 'invitation'));
+    `,
+  },
 ];

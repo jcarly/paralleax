@@ -2,7 +2,8 @@
 
 ## Status
 
-Accepted.
+Accepted; default save restoration is amended by
+[ADR-040](ADR-040-reader-simulation-runtime-checkpoints.md).
 
 ## Context
 
@@ -43,9 +44,10 @@ assignments; existing item-stat assignments and effects are migrated into that
 same relational model. No parallel `attribute_*` tables or runtime path are
 introduced.
 
-Reader progress version 2 stores typed stat values while the ordered journey
-remains authoritative. Version 1 numeric snapshots remain readable and are
-reconstructed from the journey.
+At this decision's implementation, Reader progress version 2 stores typed stat
+values while the ordered journey remains authoritative; version 1 numeric
+snapshots are reconstructed from the journey. ADR-040 supersedes full journey
+reconstruction as the default save/restore mechanism.
 
 Imported ChoiceScript variables map to story-owned stat assignments. `*temp` variables
 use namespaced definitions and explicit `set` effects on scene-entry

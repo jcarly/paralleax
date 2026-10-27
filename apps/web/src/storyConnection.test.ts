@@ -3,6 +3,7 @@ import type { Story } from '@paralleax/shared';
 import {
   findCreatedTrigger,
   getPendingConnection,
+  getPendingConnectionConflict,
   getPendingTriggerInputConnection,
 } from './storyConnection';
 
@@ -56,15 +57,39 @@ describe('story connection helpers', () => {
     expect(pending?.existingTriggerIds.has('trigger-existing')).toBe(true);
   });
 
-  it('prepares a new trigger connection even when another trigger already links the same interactions', () => {
-    const pending = getPendingConnection(story, {
+  it('rejects a new trigger connection when another trigger already links the same interactions', () => {
+    const connection = {
       source: 'interaction-3',
+      target: 'interaction-2',
+      sourceHandle: null,
+      targetHandle: 'create-source-input',
+    };
+
+    expect(getPendingConnection(story, connection)).toBeUndefined();
+    expect(getPendingConnectionConflict(story, connection)).toMatchObject({
+      sourceInteractionId: 'interaction-3',
+      targetInteractionId: 'interaction-2',
+      existingTriggerId: 'trigger-existing',
+    });
+  });
+
+  it('allows a reverse-direction connection and a different source to the same target', () => {
+    expect(
+      getPendingConnection(story, {
+        source: 'interaction-2',
+        target: 'interaction-3',
+        sourceHandle: null,
+        targetHandle: 'create-source-input',
+      }),
+    ).toBeDefined();
+    const pending = getPendingConnection(story, {
+      source: 'interaction-1',
       target: 'interaction-2',
       sourceHandle: null,
       targetHandle: 'create-source-input',
     });
 
-    expect(pending?.sourceId).toBe('interaction-3');
+    expect(pending?.sourceId).toBe('interaction-1');
     expect(pending?.target.id).toBe('interaction-2');
   });
 
