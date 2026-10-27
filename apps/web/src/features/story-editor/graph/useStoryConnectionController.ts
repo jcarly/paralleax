@@ -7,13 +7,14 @@ import {
   type StoryFlowNode,
   type TriggerFlowEdge,
 } from '../../../storyGraph';
-import { getPendingConnection } from '../../../storyConnection';
+import { getPendingConnection, getPendingConnectionConflict } from '../../../storyConnection';
 
 interface StoryConnectionControllerDependencies {
   story: Story | undefined;
   flowInstanceRef: RefObject<ReactFlowInstance<StoryFlowNode, TriggerFlowEdge> | null>;
   connectInteractions: (connection: Connection) => void;
   connectToExistingTrigger: (sourceId: string, targetId: string, triggerId: string) => void;
+  onConnectionConflict: (conflict: boolean) => void;
   createChildFromInteraction: (sourceId: string, position?: Position) => void;
   createParentForInteraction: (targetId: string, position?: Position) => void;
 }
@@ -23,6 +24,7 @@ export function useStoryConnectionController({
   flowInstanceRef,
   connectInteractions,
   connectToExistingTrigger,
+  onConnectionConflict,
   createChildFromInteraction,
   createParentForInteraction,
 }: StoryConnectionControllerDependencies) {
@@ -33,10 +35,16 @@ export function useStoryConnectionController({
 
   const requestConnection = useCallback(
     (connection: Connection) => {
+      const conflict = getPendingConnectionConflict(story, connection);
+      if (conflict) {
+        onConnectionConflict(true);
+        return;
+      }
+      onConnectionConflict(false);
       if (!getPendingConnection(story, connection)) return;
       void connectInteractions(connection);
     },
-    [connectInteractions, story],
+    [connectInteractions, onConnectionConflict, story],
   );
 
   const startCanvasConnection = useCallback<OnConnectStart>((_, params) => {
@@ -60,6 +68,7 @@ export function useStoryConnectionController({
         triggerDropTarget?.interactionId &&
         triggerDropTarget.triggerId
       ) {
+        onConnectionConflict(false);
         void connectToExistingTrigger(
           start.nodeId,
           triggerDropTarget.interactionId,
@@ -83,6 +92,7 @@ export function useStoryConnectionController({
       createChildFromInteraction,
       createParentForInteraction,
       flowInstanceRef,
+      onConnectionConflict,
     ],
   );
 

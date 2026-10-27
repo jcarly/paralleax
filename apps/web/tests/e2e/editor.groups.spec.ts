@@ -154,6 +154,27 @@ test('rejects descendant cycles and cancels valid drags without saving', async (
   await expect(page.locator('.story-group-root-drop')).toHaveCount(0);
 });
 
+test('requires the configured mouse movement before activating a group drag', async ({ page }) => {
+  const state = await installGroups(page);
+  const source = page.getByRole('button', { name: 'Other 0 interactions' });
+  const bounds = await source.boundingBox();
+  expect(bounds).not.toBeNull();
+  const start = { x: bounds!.x + bounds!.width / 2, y: bounds!.y + bounds!.height / 2 };
+
+  await page.mouse.move(start.x, start.y);
+  await page.mouse.down();
+  await page.mouse.move(start.x + 4, start.y);
+  await expect(page.locator('.story-group-drag-preview')).toHaveCount(0);
+
+  await page.mouse.move(start.x + 6, start.y);
+  await expect(page.locator('.story-group-drag-preview')).toHaveText('Other');
+  await page.keyboard.press('Escape');
+  await page.mouse.up();
+
+  expect(state.writes()).toBe(0);
+  await expect(page.locator('.story-group-root-drop')).toHaveCount(0);
+});
+
 test('creates the first group from selection and loads its inline name without an inspector', async ({
   page,
 }) => {

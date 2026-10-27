@@ -3,7 +3,7 @@
 This glossary keeps project vocabulary stable across product notes, code, tests,
 and UI copy.
 
-## MVP Terms
+## Current Terms
 
 ### Story
 
@@ -16,14 +16,14 @@ choice, action, dialogue, video moment, or game state.
 
 ### Trigger
 
-The rule that makes one output interaction available. In the MVP, a trigger
-belongs to exactly one output interaction and can have several input
-interactions.
+The rule that makes one output Interaction available. A Trigger belongs to
+exactly one output Interaction and may have several input Interactions.
 
 ### Input Interaction
 
-An interaction that can lead to a trigger's output interaction. Several inputs on
-the same trigger are alternatives: any one of them can satisfy the input rule.
+An Interaction that can lead to a Trigger's output Interaction. Several inputs on
+one Trigger are alternative reachability sources; this input rule is separate
+from conditions.
 
 ### Starting Trigger
 
@@ -37,14 +37,15 @@ it can become available during reading when its conditions match.
 
 ### Condition
 
-An additional rule checked by a trigger. MVP conditions only check whether an
-interaction has been visited or not.
+An additional rule checked by a Trigger. Current condition types cover visited
+history, location, character presence, typed stats and deterministic expressions,
+item ownership, and story-local date/time. See [Trigger semantics](triggers.md)
+for the supported fields and comparison rules.
 
-### OR Condition Group
+### Condition Group
 
-A route variant represented by a distinct trigger. Conditions inside one trigger
-are AND, while several triggers for the same route represent OR between condition
-groups.
+A set of conditions owned by one Trigger. Conditions inside a group are AND;
+multiple groups on that Trigger are OR.
 
 ### Reader
 
@@ -59,8 +60,9 @@ reader.
 
 ### Graph Edge
 
-The editor representation of one trigger input. A trigger with several inputs is
-shown as several edges that share the same trigger id.
+The editor representation of one Trigger input. A Trigger with several inputs is
+shown as several edges that share its marker and Trigger id. Each Trigger has its
+own marker, including when a historical Story contains duplicate connections.
 
 ## Post-MVP Terms
 

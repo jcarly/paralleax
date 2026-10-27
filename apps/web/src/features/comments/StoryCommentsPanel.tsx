@@ -240,9 +240,12 @@ export function StoryCommentsPanel({
       )}
       {(draftAnchor || (selectedThread && !selectedThread.deletedAt)) && canComment ? (
         <form className="comment-reply-form" onSubmit={(event) => void submit(event)}>
-          <label>
-            <span>{t(draftAnchor ? 'comments.comment' : 'comments.reply')}</span>
+          <label className="form-field form-field--compact">
+            <span className="form-field-label">
+              {t(draftAnchor ? 'comments.comment' : 'comments.reply')}
+            </span>
             <textarea
+              className="form-control form-control--compact form-control--multiline"
               value={body}
               maxLength={4000}
               rows={4}

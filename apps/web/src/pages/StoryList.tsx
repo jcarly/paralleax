@@ -283,6 +283,7 @@ export function StoryList({ user }: { user: AuthUser | null }) {
         ) : null}
         <label className="library-sort">
           <span>{t('library.sortBy')}</span>
+          {/* eslint-disable-next-line design-system/require-shared-form-control -- sorting is a compact toolbar control, not a property field */}
           <select value={sort} onChange={(event) => setSort(event.target.value as StorySort)}>
             <option value="updated">{t('library.lastEdited')}</option>
             <option value="title">{t('library.sortTitle')}</option>
@@ -417,9 +418,10 @@ export function StoryList({ user }: { user: AuthUser | null }) {
               <h2 id="new-story-title">{t('library.dialog.title')}</h2>
               <p>{t('library.dialog.description')}</p>
               <form onSubmit={(event) => void create(event)}>
-                <label className="product-field">
+                <label className="form-field form-field--standard">
                   <span>{t('library.dialog.storyTitle')}</span>
                   <input
+                    className="form-control form-control--standard"
                     autoFocus
                     data-modal-autofocus
                     placeholder={t('library.dialog.placeholder')}
@@ -497,7 +499,6 @@ function StoryCard({
         <span className="cover-node one" />
         <span className="cover-trigger" />
         <span className="cover-node two" />
-        <small>{String(tone + 1).padStart(2, '0')}</small>
       </div>
       <div className="library-card-body">
         <span className="product-badge neutral">
@@ -509,13 +510,6 @@ function StoryCard({
             {t('library.card.author', { name: story.owner.displayName })}
           </span>
         ) : null}
-        <p>
-          {t(
-            story.interactionCount
-              ? 'library.card.continueDescription'
-              : 'library.card.emptyDescription',
-          )}
-        </p>
         <dl>
           <div>
             <dt>{t('library.card.interactions')}</dt>

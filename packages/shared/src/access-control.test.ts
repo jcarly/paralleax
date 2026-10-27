@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { defaultStoryAccess, resolveStoryAccess, type StoryAccessSettings } from './index.js';
+import {
+  canDiscoverStory,
+  defaultStoryAccess,
+  resolveStoryAccess,
+  type StoryAccessSettings,
+} from './index.js';
 
 const invitation: StoryAccessSettings = {
   visibility: 'invitation',
@@ -33,6 +38,28 @@ describe('story access control', () => {
         { authenticated: false },
       ),
     ).toMatchObject({ canRead: true, canComment: false });
+  });
+
+  it('allows unlisted URL reading without granting library discovery', () => {
+    const settings: StoryAccessSettings = {
+      visibility: 'unlisted',
+      editPolicy: 'authenticated',
+      commentPolicy: 'readers',
+    };
+
+    expect(resolveStoryAccess(settings, { authenticated: false })).toMatchObject({
+      canRead: true,
+      canEdit: false,
+      canComment: false,
+    });
+    expect(canDiscoverStory(settings, { authenticated: true, role: 'user' })).toBe(false);
+    expect(
+      canDiscoverStory(settings, { authenticated: true, role: 'user', collaboratorRole: 'viewer' }),
+    ).toBe(true);
+    expect(canDiscoverStory(settings, { authenticated: true, role: 'user', isOwner: true })).toBe(
+      true,
+    );
+    expect(canDiscoverStory(settings, { authenticated: true, role: 'admin' })).toBe(true);
   });
 
   it('distinguishes invited viewers and editors', () => {

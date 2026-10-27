@@ -63,7 +63,7 @@ export function LocationInspector({
         textCommentCounts={textCommentCounts}
         onOpenTextComments={onOpenTextComments}
       >
-        <label>
+        <label className="form-field form-field--compact">
           {t('inspector.name')}
           <EntityNameInput
             data-comment-field="name"
@@ -111,9 +111,10 @@ export function LocationInspector({
         textCommentCounts={textCommentCounts}
         onOpenTextComments={onOpenTextComments}
       >
-        <label>
+        <label className="form-field form-field--compact">
           {t('inspector.description')}
           <textarea
+            className="form-control form-control--compact form-control--multiline"
             data-comment-field="description"
             rows={7}
             value={location.description}

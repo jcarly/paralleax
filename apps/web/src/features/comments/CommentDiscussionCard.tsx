@@ -118,9 +118,10 @@ export function CommentDiscussionCard({
               onBlur={collapseReplyOnBlur}
               onSubmit={(event) => void submit(event)}
             >
-              <label>
-                <span>{t('comments.reply')}</span>
+              <label className="form-field form-field--compact">
+                <span className="form-field-label">{t('comments.reply')}</span>
                 <textarea
+                  className="form-control form-control--compact form-control--multiline"
                   aria-label={t('comments.reply')}
                   autoFocus
                   value={body}
@@ -189,9 +190,10 @@ export function CommentDraftCard({
         <small>{description}</small>
       </header>
       <form className="comment-inline-reply" onSubmit={(event) => void submit(event)}>
-        <label>
-          <span>{t('comments.comment')}</span>
+        <label className="form-field form-field--compact">
+          <span className="form-field-label">{t('comments.comment')}</span>
           <textarea
+            className="form-control form-control--compact form-control--multiline"
             aria-label={t('comments.comment')}
             autoFocus
             value={body}

@@ -1,0 +1,23 @@
+[
+  {
+    "type": "cycle",
+    "from": "apps/api/src/email/email.service.ts",
+    "to": "apps/api/src/email/test-email-outbox.ts",
+    "unresolvedTo": "./test-email-outbox",
+    "dependencyTypes": ["local", "import"],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "apps/api/src/email/test-email-outbox.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "apps/api/src/email/email.service.ts",
+        "dependencyTypes": ["local", "type-only", "import"]
+      }
+    ]
+  }
+]

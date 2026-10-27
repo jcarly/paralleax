@@ -38,6 +38,23 @@ describe('QSP importer', () => {
     expect(captured).toEqual([{ code: 'unsupported_statement', severity: 'warning' }]);
   });
 
+  it('keeps repeated source-to-target navigation on one Trigger', () => {
+    const result = importSource({
+      name: 'repeated-route.qsps',
+      format: 'text',
+      content: `# Start
+gt 'End'
+gt 'End'
+--- Start ---
+# End
+--- End ---`,
+    });
+
+    const [start, end] = result.story!.interactions;
+    expect(end.triggers).toHaveLength(1);
+    expect(end.triggers[0].inputInteractionIds).toEqual([start.id]);
+  });
+
   it('combines qsrc location files and connects literal ARGS[0] variants', () => {
     const result = importSource({
       name: 'Girl Life.qsrc',

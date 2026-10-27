@@ -208,7 +208,7 @@ test.describe('Constrained overlays and editor panels', () => {
       .getByRole('button', { name: 'Story settings' })
       .evaluate((button: HTMLButtonElement) => button.click());
     await page.getByRole('tab', { name: 'Access' }).click();
-    await expect(page.getByLabel('Reading')).toBeVisible();
+    await expect(page.getByLabel('Reading', { exact: true })).toBeVisible();
 
     const layout = await page.locator('.story-access-settings').evaluate((element) => {
       const cards = Array.from(element.querySelectorAll<HTMLElement>('.settings-card'));

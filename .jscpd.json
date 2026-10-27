@@ -1,0 +1,13 @@
+{
+  "path": ["apps/api/src", "apps/web/src", "packages/shared/src"],
+  "minTokens": 100,
+  "minLines": 10,
+  "maxLines": 1000000,
+  "maxSize": "20mb",
+  "mode": "mild",
+  "format": ["typescript", "tsx", "javascript", "jsx"],
+  "ignore": ["**/*.test.*", "**/*.spec.*", "**/test/**"],
+  "reporters": ["json"],
+  "gitignore": true,
+  "silent": true
+}

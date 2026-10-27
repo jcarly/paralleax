@@ -28,9 +28,10 @@ export function ImageUrlDialog({
           onSave(nextImageUrl.trim());
         }}
       >
-        <label>
+        <label className="form-field form-field--standard">
           {t('inspector.imageUrl')}
           <input
+            className="form-control form-control--standard"
             autoFocus
             data-modal-autofocus
             placeholder="https://example.com/image.png"

@@ -40,6 +40,8 @@ export const frenchTranslation = {
     qspSourceInvalidUtf8: 'La source texte QSP n’est pas encodée correctement en UTF-8.',
     storyImportFailed: 'La source n’a pas pu être convertie en histoire.',
     storyRevisionConflict: 'L’histoire a été modifiée ailleurs. Rechargez-la avant de réessayer.',
+    triggerConnectionExists:
+      'Un déclencheur relie déjà ces interactions. Sélectionnez ou supprimez la connexion existante.',
     storyQuotaExceeded:
       'Cette histoire dépasse sa limite de taille ou d’entités. Réduisez son contenu et réessayez.',
   },
@@ -348,6 +350,7 @@ export const frenchTranslation = {
         private: 'Privée',
         authenticated: 'Utilisateurs connectés',
         public: 'Publique',
+        unlisted: 'Par lien',
         invitation: 'Sur invitation',
       },
       continueDescription: 'Continuez à façonner cette narration interactive.',
@@ -390,6 +393,8 @@ export const frenchTranslation = {
       private: 'Propriétaire uniquement',
       authenticated: 'Utilisateurs connectés',
       public: 'Tout le monde',
+      unlisted: 'Par lien (non répertoriée)',
+      help: 'Toute personne disposant de l’URL peut lire l’histoire sans compte. Elle reste absente du catalogue public.',
       invitation: 'Par invitation',
     },
     edit: {
@@ -540,6 +545,9 @@ export const frenchTranslation = {
     saving: 'Enregistrement…',
     saved: 'Enregistrée',
     saveFailed: 'Échec de l’enregistrement',
+    triggerConnectionExists:
+      'Cette source est déjà reliée à cette interaction. Sélectionnez ou supprimez la connexion existante.',
+    dismissConnectionConflict: 'Masquer le message de connexion',
     realtime: {
       live: 'Édition collaborative en direct',
       reconnecting: 'Reconnexion de la collaboration…',

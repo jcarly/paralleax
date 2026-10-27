@@ -2,7 +2,7 @@
 
 Status: Current
 
-Last reviewed: 2026-10-17
+Last reviewed: 2026-10-24
 
 Implemented: Partial
 
@@ -13,12 +13,34 @@ Feature work must not silently move Paralleax toward public production while
 leaving data recovery, security, observability, scalability, accessibility, or
 publication semantics undefined.
 
-The current application is suitable for demonstrations, a closed alpha, and
-small test stories. It is not yet ready for an open public production service.
+The current application supports demonstrations and guided, invited alpha
+sessions on disposable test projects. Do not ask authors to rely on Paralleax for
+valuable project data until the provider restore drill and operator prerequisites
+below are complete. The open creator alpha and public reading have additional
+gates.
+
+Implemented baseline: unlisted URL visibility, aggregate Story size/entity
+quotas, data-router navigation blocking for pending saves, and cancellable
+import-job lifecycle handling. See [Current scope](current-scope.md) for product
+behavior and its current verification evidence.
 
 ## Non-Negotiable Priorities
 
-### P0 — Before Real User Data
+### Release-stage boundaries
+
+- **Demo/development:** use synthetic or disposable projects.
+- **Guided private alpha:** invited external authors may test disposable projects
+  now in a controlled test environment, after the alpha notice and normal
+  account, access, and privacy safeguards are ready; state data lifetime and
+  recovery limits.
+- **Valuable user projects:** require every applicable P0 gate below, including a
+  successful provider restoration drill and completed operator procedures.
+- **Open creator alpha:** additionally close the P1 provider, abuse, performance,
+  and manual accessibility gates below.
+- **Public story reading:** close the publication, moderation, and licensing
+  requirements in P2. Conflict-safe collaboration remains a separate P3 scope.
+
+### P0 — Before Valuable User Projects
 
 - Implemented foundation: historical JSON stories, graph relationships,
   conditions, and ownership are converted instead of deleted; unit tests forbid
@@ -70,12 +92,14 @@ small test stories. It is not yet ready for an open public production service.
   player.
 - Implemented foundation: interaction bodies are capped at 64,000 characters
   with editor feedback, HTTP request bodies at 128 KiB, and story mutations at
-  60 requests per minute. Add aggregate story-size quotas and provider-level
-  abuse controls.
+  60 requests per minute; aggregate Story size and entity-count quotas also
+  apply. Add provider-level abuse controls.
 - Implemented foundation: the private-alpha runbook documents monitoring,
   rollback, recovery, and operator evidence, and a privacy-notice template lists
   export/deletion requirements. Complete the operator identity, provider facts,
-  communication channels, and actual request procedure before inviting users.
+  communication channels, and actual request procedure before inviting authors
+  to rely on Paralleax for valuable project data. Disposable guided sessions may
+  proceed under the limits stated above.
 
 ### P1 — Before an Open Creator Alpha
 
@@ -102,8 +126,9 @@ small test stories. It is not yet ready for an open public production service.
   targeted contracts. Continue removing remaining complete-story reads or
   responses only where those profiles show a meaningful cost.
 - Implemented foundation: pending or failed editor saves protect browser
-  closing/reloading and internal link navigation. Add data-router blocking for
-  browser back/forward navigation and retain real-browser coverage.
+  closing/reloading, internal links, and browser back/forward navigation through
+  the data router. Retain real-browser coverage for late responses and blocked
+  navigation.
 - Implemented foundation: critical library, editor, reader, and modal routes run
   automated WCAG A/AA checks. Complete the manual keyboard/focus audit.
 - Implemented foundation: CI runs a high-severity production dependency audit;
@@ -116,7 +141,8 @@ small test stories. It is not yet ready for an open public production service.
 - Implemented foundation: separate production API/web images, a migration-first
   Compose shape, smoke checks, and CI image builds are available. Connect them to
   the selected provider and complete a recorded rollback drill.
-- Add quotas and scheduled expired-session cleanup.
+- Add scheduled expired-session cleanup; Story size/entity quotas are already
+  implemented.
 - Before production imports, replace the API container's ephemeral report
   directory with durable storage configured through `PARALLEAX_IMPORT_REPORT_DIR`
   or an `ImportReportStorage` object-store adapter. Persist import-job metadata
@@ -125,9 +151,6 @@ small test stories. It is not yet ready for an open public production service.
 ### P2 — Before Public Story Reading
 
 - Separate editable drafts from immutable published versions.
-- Implement `unlisted` visibility as link-readable but absent from public
-  discovery, distinct from `public` and `invitation`; see
-  [ADR-033](decisions/ADR-033-unlisted-story-visibility.md).
 - Validate a story before publication and expose stable public reader URLs.
 - Keep author simulation and public reading as separate product surfaces.
 - Add publication metadata, reporting, moderation, and content licensing rules.
@@ -229,8 +252,8 @@ objectives.
   require an exact `Origin` match. Reassess CSRF tokens if the final topology
   separates the frontend and API origins.
 - Keep exact credentialed CORS origins and secure production cookies.
-- Implemented foundation: enforce DTO input lengths and application-level story
-  mutation throttling. Add aggregate story quotas, provider-level rate controls,
+- Implemented foundation: enforce DTO input lengths, aggregate Story quotas, and
+  application-level story mutation throttling. Add provider-level rate controls
   and import limits.
 - Clean expired sessions with scheduled maintenance rather than a global cleanup
   on every authenticated request.
