@@ -2629,9 +2629,6 @@
     }
   },
   "apps/web/src/storyNavigation.ts": {
-    "@typescript-eslint/no-unsafe-type-assertion": {
-      "count": 1
-    },
     "complexity": {
       "count": 2
     },
