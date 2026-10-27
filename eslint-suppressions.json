@@ -666,11 +666,6 @@
       "count": 4
     }
   },
-  "apps/api/src/stories/dto/stories.dto.ts": {
-    "@typescript-eslint/no-unsafe-return": {
-      "count": 1
-    }
-  },
   "apps/api/src/stories/persistence/stories.persistence.writer.spec.ts": {
     "@typescript-eslint/no-non-null-assertion": {
       "count": 1

@@ -166,7 +166,9 @@ export class QspSourceMetadataDto {
 
 export class QspImportQueryDto extends QspSourceMetadataDto {
   @IsOptional()
-  @Transform(({ value }) => (value === 'true' ? true : value === 'false' ? false : value))
+  @Transform(({ value }: { value: unknown }) =>
+    value === 'true' ? true : value === 'false' ? false : value,
+  )
   @IsBoolean()
   confirmWarnings = false;
 
