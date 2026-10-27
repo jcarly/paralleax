@@ -78,7 +78,7 @@ export function parseQspAssignment(
     effect: {
       variableName: name,
       operation,
-      value: sourceOperation === '-=' ? -(value as number) : value,
+      value: sourceOperation === '-=' && typeof value === 'number' ? -value : value,
       source,
     },
   };

@@ -3402,9 +3402,6 @@
     }
   },
   "packages/shared/src/import-export/qsp/expressions.ts": {
-    "@typescript-eslint/no-unsafe-type-assertion": {
-      "count": 1
-    },
     "complexity": {
       "count": 6
     },
