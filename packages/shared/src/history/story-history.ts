@@ -270,8 +270,8 @@ export function applyStoryChangeDelta(
     };
   }
 
-  const story = structuredClone(current) as Story & Record<string, unknown>;
-  for (const key of authoredStoryKeys) delete story[key];
+  const story = structuredClone(current);
+  for (const key of authoredStoryKeys) Reflect.deleteProperty(story, key);
   Object.assign(story, result.value);
   if (validateStoryGroups(story)) return { applied: false, conflicts: [{ path: '$.groups' }] };
   return { applied: true, story };

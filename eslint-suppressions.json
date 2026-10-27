@@ -3237,9 +3237,6 @@
     }
   },
   "packages/shared/src/history/story-history.ts": {
-    "@typescript-eslint/no-unsafe-type-assertion": {
-      "count": 1
-    },
     "complexity": {
       "count": 5
     },

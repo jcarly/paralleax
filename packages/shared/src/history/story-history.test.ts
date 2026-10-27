@@ -136,6 +136,28 @@ describe('Story authored change history', () => {
     });
   });
 
+  it('removes an authored optional field while preserving story metadata', () => {
+    const before = { ...structuredClone(story), startDateTime: '2026-08-28T08:00:00.000Z' };
+    const after = { ...before };
+    delete after.startDateTime;
+    const delta = createStoryChangeDelta(before, after);
+    expect(delta).toBeDefined();
+    if (!delta) {
+      return;
+    }
+
+    const result = applyStoryChangeDelta(before, delta, 'forward');
+
+    expect(result.applied).toBe(true);
+    if (!result.applied) {
+      return;
+    }
+    expect(Object.hasOwn(result.story, 'startDateTime')).toBe(false);
+    expect(result.story.revision).toBe(before.revision);
+    expect(result.story.createdAt).toBe(before.createdAt);
+    expect(result.story.updatedAt).toBe(before.updatedAt);
+  });
+
   it('preserves an unrelated later entity while reversing an authored reorder', () => {
     const before = storyWithInteractions('interaction-1', 'interaction-2', 'interaction-3');
     const reordered = storyWithInteractions('interaction-2', 'interaction-1', 'interaction-3');
