@@ -129,9 +129,6 @@
     }
   },
   "apps/api/src/config/app-config.service.ts": {
-    "@typescript-eslint/no-unsafe-type-assertion": {
-      "count": 2
-    },
     "complexity": {
       "count": 2
     },
