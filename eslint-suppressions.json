@@ -3743,14 +3743,11 @@
     }
   },
   "packages/shared/src/triggers/evaluation.ts": {
-    "@typescript-eslint/no-unsafe-type-assertion": {
-      "count": 1
-    },
     "complexity": {
       "count": 2
     },
     "curly": {
-      "count": 10
+      "count": 9
     },
     "max-lines-per-function": {
       "count": 2

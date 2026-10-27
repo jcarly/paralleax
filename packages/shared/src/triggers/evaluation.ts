@@ -504,8 +504,10 @@ function evaluateConditionExpression(
     }
   }
   const result = evaluateExpression(expression, values);
-  if (typeof result === 'object' && result && 'ok' in result && !result.ok) return undefined;
-  return result as StatValue;
+  if (typeof result === 'number' || typeof result === 'boolean' || typeof result === 'string') {
+    return result;
+  }
+  return undefined;
 }
 
 function getStatConditionValue(
