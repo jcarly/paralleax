@@ -62,8 +62,8 @@ function resolveEffectValue(
 ): StatValue | undefined {
   if (effect.expression !== undefined) {
     const result = evaluateExpression(effect.expression, values);
-    if (typeof result === 'object' && result && 'ok' in result && !result.ok) return undefined;
-    return result as StatValue;
+    if (typeof result === 'object' && result !== null) return undefined;
+    return result;
   }
   return effect.value;
 }
