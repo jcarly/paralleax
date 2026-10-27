@@ -1092,9 +1092,6 @@
     }
   },
   "apps/web/src/components/InteractionInspector.tsx": {
-    "@typescript-eslint/no-unsafe-type-assertion": {
-      "count": 2
-    },
     "complexity": {
       "count": 1
     },
