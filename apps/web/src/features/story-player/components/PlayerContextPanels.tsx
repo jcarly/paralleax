@@ -22,6 +22,7 @@ export function PlayerContextPanels({
   statValues,
   ownedItemIds,
   itemStatValues,
+  visitedIds,
   isSimulationMode,
   forceUnavailableOptions,
   onForceUnavailableOptionsChange,
@@ -33,6 +34,7 @@ export function PlayerContextPanels({
   statValues: Record<string, StatValue>;
   ownedItemIds: string[];
   itemStatValues: Record<string, Record<string, StatValue>>;
+  visitedIds: string[];
   isSimulationMode: boolean;
   forceUnavailableOptions: boolean;
   onForceUnavailableOptionsChange: (checked: boolean) => void;
@@ -158,6 +160,16 @@ export function PlayerContextPanels({
                 </ul>
               )}
             </>
+          ) : null}
+          {isSimulationMode ? (
+            <details className="debug player-history">
+              <summary>{t('player.simulationHistory')}</summary>
+              <ol>
+                {visitedIds.map((id) => (
+                  <li key={id}>{story.interactions.find((item) => item.id === id)?.title ?? id}</li>
+                ))}
+              </ol>
+            </details>
           ) : null}
         </aside>
       ) : null}

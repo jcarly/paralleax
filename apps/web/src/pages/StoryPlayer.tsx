@@ -1115,24 +1115,11 @@ export function StoryPlayer({
         statValues={statValues}
         ownedItemIds={ownedItemIds}
         itemStatValues={itemStatValues}
+        visitedIds={visited}
         isSimulationMode={isSimulationMode}
         forceUnavailableOptions={forceUnavailableOptions}
         onForceUnavailableOptionsChange={setForceUnavailableOptions}
       />
-      {isSimulationMode ? (
-        <>
-          <details className="debug player-history">
-            <summary>
-              {t(isSimulationMode ? 'player.simulationHistory' : 'player.readingHistory')}
-            </summary>
-            <ol>
-              {visited.map((id) => (
-                <li key={id}>{story.interactions.find((item) => item.id === id)?.title ?? id}</li>
-              ))}
-            </ol>
-          </details>
-        </>
-      ) : null}
       <StoryCommentsPanel
         open={commentsOpen && canUseReaderComments}
         loading={comments.loading}

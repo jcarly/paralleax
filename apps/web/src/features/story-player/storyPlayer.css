@@ -393,6 +393,11 @@ span.conditional-text {
   background: var(--color-canvas);
 }
 
+.simulation-mode .player-inventory {
+  display: flex;
+  flex-direction: column;
+}
+
 .player-inventory > h2,
 .player-inventory > h3 {
   margin: 1.4rem 0 0.6rem;

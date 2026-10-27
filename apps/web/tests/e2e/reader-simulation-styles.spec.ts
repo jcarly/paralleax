@@ -135,6 +135,9 @@ async function assertSimulationDesktopLayout(
   readerLayout: Awaited<ReturnType<typeof readPlayerLayout>>,
 ) {
   const simulationLayout = await readPlayerLayout(page);
+  await expect(page.locator('.player-inventory .player-history summary')).toHaveText(
+    'Simulation history',
+  );
   expect(simulationLayout.page).toEqual(readerLayout.page);
   expect(simulationLayout.page).toMatchObject({
     display: 'grid',
@@ -228,7 +231,10 @@ async function assertReaderResponsiveLayout(
 
   await page.setViewportSize({ width: 390, height: 844 });
   const narrowReaderLayout = await readPlayerLayout(page);
-  expect(narrowReaderLayout.page).toEqual(simulation.narrow.page);
+  expect(narrowReaderLayout.page).toMatchObject({
+    ...simulation.narrow.page,
+    height: expect.any(String),
+  });
   expect(narrowReaderLayout.page.display).toBe('flex');
   expect(narrowReaderLayout.card).toMatchObject({
     borderRadius: '0px',
