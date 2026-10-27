@@ -276,7 +276,7 @@ function variableLabel(
   if (target) {
     return statTargetPathLabel(target, context.t('attributes.owner.story'));
   }
-  const source = sourceText.replace(/^\{\{|\}\}$/g, '').replaceAll('.', ' -> ');
+  const source = sourceText.replace(/^\{\{|\}\}$/g, '').replaceAll('.', ' → ');
   return source || assignmentId;
 }
 

@@ -806,13 +806,13 @@
       "count": 3
     },
     "@typescript-eslint/no-unsafe-member-access": {
-      "count": 278
+      "count": 277
     },
     "@typescript-eslint/no-unsafe-return": {
       "count": 1
     },
     "@typescript-eslint/no-unsafe-type-assertion": {
-      "count": 67
+      "count": 66
     },
     "complexity": {
       "count": 1

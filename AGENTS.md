@@ -80,8 +80,8 @@ In particular:
 - a Trigger has exactly one output Interaction: the Interaction that owns it;
 - one Trigger may have multiple input Interactions;
 - input Interactions on one Trigger are alternative reachability sources;
-- during normal creation or editing, a directed source -> target pair may belong to only one Trigger. This is a current application policy, not a database uniqueness constraint; existing duplicate pairs remain loadable and editable so authors can remove them;
-- multiple Triggers may target the same Interaction when their source -> target pairs do not overlap; condition groups on one Trigger remain the OR mechanism for shared routes;
+- during normal creation or editing, a directed source → target pair may belong to only one Trigger. This is a current application policy, not a database uniqueness constraint; existing duplicate pairs remain loadable and editable so authors can remove them;
+- multiple Triggers may target the same Interaction when their source → target pairs do not overlap; condition groups on one Trigger remain the OR mechanism for shared routes;
 - authored story state must remain distinct from reader/runtime state;
 - reader results must be deterministic from authored story + ordered journey;
 - graph data is a projection, never the canonical story format;
@@ -142,8 +142,9 @@ and task priority, even for otherwise fully specified requests.
 ### Interface writing and typography
 
 - Keep interface copy concise; put optional precision in tooltips or infobulles.
-- Avoid the em dash (—) in most interface copy. Use `->` for directional or
-  ownership relationships and a simple hyphen for short separators.
+- Avoid the em dash (—) in most interface copy. Use `→` for directional and
+  ownership relationships, including variable ownership and nested item paths
+  shown in the interface. Use a simple hyphen for short separators.
 - Use 12 px for compact authoring labels and secondary hints, and 14 px for
   field values and ordinary compact controls. This is not a global cap: reader
   prose and prominent headings keep context-appropriate sizes.
@@ -348,11 +349,11 @@ Prefer a staged pipeline:
 
 ```text
 source parser
-  -> source-neutral intermediate representation
-  -> compatibility/gap report
-  -> Paralleax mapping
-  -> validation
-  -> import
+  → source-neutral intermediate representation
+  → compatibility/gap report
+  → Paralleax mapping
+  → validation
+  → import
 ```
 
 Keep source-specific code outside the narrative engine.

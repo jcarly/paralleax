@@ -268,6 +268,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
   );
   const flowInstance = useRef<ReactFlowInstance<StoryFlowNode, TriggerFlowEdge> | null>(null);
   const pendingFocusInteractionIdRef = useRef<string | undefined>(undefined);
+  const appliedInitialFocusInteractionIdRef = useRef<string | undefined>(undefined);
   const storySettingsTriggerRef = useRef<HTMLButtonElement | null>(null);
   const canvasRef = useRef<HTMLElement | null>(null);
   useTwoFingerCanvasPan(canvasRef, story?.id);
@@ -385,6 +386,30 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
     },
     [selectInteraction],
   );
+  const initialFocusInteractionId = searchParams.get('focusInteractionId');
+  useEffect(() => {
+    if (
+      !initialFocusInteractionId ||
+      appliedInitialFocusInteractionIdRef.current === initialFocusInteractionId ||
+      loadPhase !== 'ready' ||
+      !story?.interactions.some(({ id }) => id === initialFocusInteractionId)
+    ) {
+      return;
+    }
+
+    appliedInitialFocusInteractionIdRef.current = initialFocusInteractionId;
+    focusInteractionNode(initialFocusInteractionId);
+    const nextSearchParams = new URLSearchParams(searchParams);
+    nextSearchParams.delete('focusInteractionId');
+    setSearchParams(nextSearchParams, { replace: true });
+  }, [
+    focusInteractionNode,
+    initialFocusInteractionId,
+    loadPhase,
+    searchParams,
+    setSearchParams,
+    story?.interactions,
+  ]);
   const createChildAndFocus = useCallback(
     async (sourceId: string, position?: Position) => {
       const interactionId = await createChildFromInteraction(

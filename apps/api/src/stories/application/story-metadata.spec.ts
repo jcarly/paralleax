@@ -82,6 +82,24 @@ describe('StoryMetadataService', () => {
       createdAt: '2026-08-25T16:30:00.000Z',
       updatedAt: '2026-08-25T16:30:00.000Z',
     });
+    expect(story.interactions).toHaveLength(2);
+    expect(story.interactions).toMatchObject([
+      {
+        title: 'Start',
+        body: '',
+        position: { x: 80, y: 120 },
+        triggers: [{ inputInteractionIds: [], conditionGroups: [{ conditions: [] }] }],
+      },
+      {
+        title: 'New interaction',
+        body: '',
+        position: { x: 80, y: 252 },
+        triggers: [{ conditionGroups: [{ conditions: [] }] }],
+      },
+    ]);
+    expect(story.interactions[1].triggers[0].inputInteractionIds).toEqual([
+      story.interactions[0].id,
+    ]);
     expect(repository.save).toHaveBeenCalledWith(story, 'user-1');
   });
 

@@ -9,6 +9,8 @@ import {
   createDemoStories,
   defaultStoryAccess,
   ensureStoryInteractionPositions,
+  getNextChildPosition,
+  getNextRootPosition,
   isStoryDateTime,
   STORY_LIST_PAGE_SIZE,
   storyHistoryOperations,
@@ -19,6 +21,7 @@ import {
 import type { CreateStoryDto, UpdateStoryDto } from '../dto/stories.dto';
 import { StoriesRepository } from '../stories.repository';
 import { StoryEventsService } from '../story.events';
+import { buildInteractionWithDefaultTrigger } from './interaction-factory';
 import { StoryMutationService } from './story-mutations';
 
 @Injectable()
@@ -99,6 +102,21 @@ export class StoryMetadataService {
       createdAt: now,
       updatedAt: now,
     };
+    const root = buildInteractionWithDefaultTrigger({
+      id: randomUUID(),
+      title: 'Start',
+      body: '',
+      position: getNextRootPosition(story),
+    });
+    story.interactions.push(root);
+    story.interactions.push(
+      buildInteractionWithDefaultTrigger({
+        id: randomUUID(),
+        body: '',
+        position: getNextChildPosition(story, root),
+        inputInteractionIds: [root.id],
+      }),
+    );
     await this.repository.save(story, userId);
     return structuredClone(story);
   }

@@ -65,7 +65,7 @@ incomplete:
 - At that time, separate Triggers represented alternative condition variants.
   [ADR-025](decisions/ADR-025-trigger-condition-groups-and-seeded-probability.md)
   moved those variants into OR condition groups on one Trigger. Current
-  authoring also prevents duplicate directed source -> target pairs.
+  authoring also prevents duplicate directed source → target pairs.
 - Authored story state and reader/runtime state remain separate.
 - React Flow graph data is a projection of story state, never the canonical story format.
 

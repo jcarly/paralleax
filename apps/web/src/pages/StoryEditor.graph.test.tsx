@@ -16,6 +16,7 @@ import {
   storyWithThreeInteractions,
   storyWithTwoInteractions,
 } from '../test/storyEditorTestHarness';
+import { reactFlowFitViewMock } from '../test/reactFlowMock';
 
 vi.mock('../api', async () => {
   const { createStoryApiMock } = await import('../test/mockStoryApi');
@@ -53,6 +54,22 @@ describe('StoryEditor graph collaboration and layout', () => {
     runIdleWork?.();
 
     await waitFor(() => expect(preloadStoryGraphElk).toHaveBeenCalledOnce());
+  });
+
+  it('selects, inspects, and centers the interaction requested by the creation route', async () => {
+    const story = storyWithTwoInteractions();
+
+    await renderEditor(story, '/stories/story-1/edit?focusInteractionId=interaction-1');
+
+    expect(await screen.findByDisplayValue('Original title')).toBeInTheDocument();
+    expect(
+      screen.getByTestId('flow-node-interaction-1').querySelector('.interaction-node'),
+    ).toHaveClass('selected');
+    await waitFor(() =>
+      expect(reactFlowFitViewMock).toHaveBeenCalledWith(
+        expect.objectContaining({ nodes: [{ id: 'interaction-1' }] }),
+      ),
+    );
   });
 
   it('opens the global comment list in the inspector and navigates to a contextual thread', async () => {

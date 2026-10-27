@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- New Stories now start with a linked root and child Interaction; the editor
+  opens with the root selected and centered.
+
 - Reader and Simulation now share the same responsive Player workspace, including
   viewport-contained scrolling on desktop and tablet and a sticky toolbar in the
   narrow-screen page-scrolling layout. Simulation authoring controls and
@@ -34,7 +37,7 @@
   authoring action families, including the defined but unused product danger
   action. No narrative runtime behavior changed.
 
-- Enforced one Trigger per directed Interaction source -> target pair during
+- Enforced one Trigger per directed Interaction source → target pair during
   normal editor/API route creation and input edits. Existing duplicate routes
   remain readable and can be edited or removed; the API reports conflicts as
   `409`, and the editor shows a graph alert. QSP and ChoiceScript imports combine

@@ -57,7 +57,7 @@ promotes them.
 
 ## Priority Reclassifications
 
-- **Strict quality gates: P2 -> immediate prerequisite (2026-10-26).** Complete
+- **Strict quality gates: P2 → immediate prerequisite (2026-10-26).** Complete
   the tooling initiative before guided author sessions, as explicitly requested.
   [ADR-041](decisions/ADR-041-strict-quality-gates-and-native-baselines.md)
   records native-count limitations, typed-test coverage and the clone gate.
@@ -65,30 +65,30 @@ promotes them.
   prioritized incremental reductions. This promotion does not authorize broad
   orchestrator rewrites or a deadline to eliminate all historical findings.
 
-- **`StoryPlayer` extraction: P1 -> P1 (retained).** Keep the detailed,
+- **`StoryPlayer` extraction: P1 → P1 (retained).** Keep the detailed,
   incremental plan and behavior coverage. Start after author observation unless a
   slice addresses a concrete blocker, feature, risk, or duplication; no complete
   rewrite before sessions.
-- **`StoryEditor` split: P1 -> P2, conditional.** Split only where an observed
+- **`StoryEditor` split: P1 → P2, conditional.** Split only where an observed
   workflow, concrete risk, or needed feature benefits; file size alone is not a
   priority.
 - **`RichTextEditor` extraction: absorbed by the P1 editor migration.** The
   former custom editor is now a compatibility re-export of the focused Tiptap
   implementation. Do not keep a separate extraction prerequisite or duplicate
   the active [migration](roadmap.md#p1-tiptap-and-ink-inspired-narrative-content-editing).
-- **Shared evaluation context: P1 -> P2.** It is a prerequisite only before
+- **Shared evaluation context: P1 → P2.** It is a prerequisite only before
   consolidating diagnostics; current Reader and Simulation behavior continues.
-- **Incremental journey-date recalculation: P1 -> P2.** Keep ordinary progress
+- **Incremental journey-date recalculation: P1 → P2.** Keep ordinary progress
   writes and restores on the runtime-checkpoint path in ADR-040; reserve full
   journey reconstruction for explicit automated validation. Optimize that
   validation path only if representative profiles show a material cost.
-- **Repository commands and remaining complete-Story cleanup responses: P1 -> P2.**
+- **Repository commands and remaining complete-Story cleanup responses: P1 → P2.**
   Extend targeted mutations only for measured costs or a concrete safe client
   update.
-- **Durable import-report retention: P1 -> P1, conditional gate.** Required before
+- **Durable import-report retention: P1 → P1, conditional gate.** Required before
   promising reports survive restarts/multiple instances or before production
   imports; it does not block disposable guided sessions in a test environment.
-- **Optimistic-mutation recovery policy: P1 -> P1, retained.** Clarify recovery by
+- **Optimistic-mutation recovery policy: P1 → P1, retained.** Clarify recovery by
   mutation risk and user impact. Promote a specific path to P0 only if evidence
   shows current behavior can lose saved user work or blocks the alpha journey.
 - **Scoped architecture guardrails: explicitly commissioned on 2026-10-25.** Add
@@ -137,7 +137,7 @@ promotes them.
 
 - Remove the targeted Swagger `js-yaml` override once Swagger declares the fixed
   patch directly, retaining the high-severity CI audit.
-- Remove the development-only `test-exclude -> glob@10.5.0` deprecation once the
+- Remove the development-only `test-exclude → glob@10.5.0` deprecation once the
   Jest/ts-jest coverage chain supports a maintained `glob` release; do not force
   a transitive major override without an upstream contract.
 
@@ -728,15 +728,12 @@ regression cases in the repository, not tests executed for this audit.
 
 ### P3 — Finish and polish
 
-- [ ] **Audit directional arrows in localized UI copy.** The intake requests a
-      typographic arrow, while AGENTS.md currently prefers ASCII -> for directional
-      and ownership relationships. Settle the scope and apply one rule across
-      locales before changing labels; preserve code and authored-expression
-      syntax. **Depends on:** the open Interface and presentation question.
-      **Risk:** mixed punctuation can make paths harder to scan or translations
-      inconsistent. **Acceptance:** the agreed rule is used consistently in
-      visible UI, examples, accessibility names, and all supported locales.
-      **Verification:** localization/catalogue tests and a browser visual check.
+- [x] **Standardize directional arrows in text.** Use the typographic arrow for
+      directional relationships across interface prose, documentation, test
+      descriptions, and quality diagnostics. Keep PostgreSQL JSON operators and
+      Mermaid/PlantUML syntax plus stable clone-baseline keys unchanged.
+      **Completed:** 2026-10-27. **Verification:** repository search confirms
+      remaining ASCII arrows are required syntax or identifiers.
 - [ ] **Add restrained transition feedback.** Improve panel arrival, Reader
       transition, and button response only after functional and comprehension
       issues. Reuse existing CSS transitions; do not add an animation framework.

@@ -407,7 +407,7 @@ A trigger defines when an interaction becomes available.
   Trigger's conditions.
 - Condition groups are alternatives (OR), while all conditions inside one group
   must match (AND).
-- The editor and API allow each directed source -> target pair on one Trigger
+- The editor and API allow each directed source → target pair on one Trigger
   only. Use condition groups for alternative conditions on the same route.
   Existing Stories with duplicate routes stay readable and can be edited or
   cleaned up without merging their Triggers. A rejected duplicate connection

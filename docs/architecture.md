@@ -921,7 +921,7 @@ split deliberately:
   root, child, parent, and Simulation Mode option creation use this projection;
   connection drops keep their explicit pointer-derived position.
 - `storyConnection.ts` validates whether a graph connection can become a
-  Trigger input. Shared validation rejects a directed source -> target pair
+  Trigger input. Shared validation rejects a directed source → target pair
   already owned by another Trigger, and the API repeats the check inside the
   serialized Story mutation. Historical conflicts remain loadable and removable.
   This is an application policy, not a database constraint.

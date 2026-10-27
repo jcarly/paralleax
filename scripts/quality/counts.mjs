@@ -55,12 +55,12 @@ export function compareCounts(actual, accepted) {
   const stale = [];
   for (const [key, count] of actual) {
     if (count > (accepted.get(key) ?? 0)) {
-      growth.push(`${key}: ${accepted.get(key) ?? 0} -> ${count}`);
+      growth.push(`${key}: ${accepted.get(key) ?? 0} → ${count}`);
     }
   }
   for (const [key, count] of accepted) {
     if (count > (actual.get(key) ?? 0)) {
-      stale.push(`${key}: ${count} -> ${actual.get(key) ?? 0}`);
+      stale.push(`${key}: ${count} → ${actual.get(key) ?? 0}`);
     }
   }
   return { growth, stale };

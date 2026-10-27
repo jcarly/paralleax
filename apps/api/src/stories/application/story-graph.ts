@@ -44,6 +44,7 @@ import type {
 import { sanitizeRichText } from '../rich-text';
 import { apiErrorResponse } from '../../operations/api-error-response';
 import { buildGraphDecoration } from './graph-decorations';
+import { buildInteractionWithDefaultTrigger } from './interaction-factory';
 import { storyMutationMetadata } from './story-mutation-results';
 import { StoryMutationService } from './story-mutations';
 import { buildStatCondition, validateStatEffects } from './story-stats';
@@ -58,32 +59,22 @@ export class StoryGraphService {
     userId: string,
   ): Promise<InteractionMutationResult> {
     const interactionId = randomUUID();
-    const triggerId = randomUUID();
     const story = await this.mutations.update(
       storyId,
       (story) => {
         if (input.parentId && !story.interactions.some((item) => item.id === input.parentId)) {
           throw new NotFoundException('Parent interaction not found');
         }
-        story.interactions.push({
-          id: interactionId,
-          title: 'New interaction',
-          body: 'Describe what happens here.',
-          position: input.position ?? {
-            x: 80 + story.interactions.length * 40,
-            y: 100 + story.interactions.length * 30,
-          },
-          durationMinutes: 0,
-          triggers: [
-            {
-              id: triggerId,
-              inputInteractionIds: input.parentId ? [input.parentId] : [],
-              conditionGroups: [{ id: randomUUID(), conditions: [] }],
-              appearanceProbability: 100,
-              timerSeconds: null,
+        story.interactions.push(
+          buildInteractionWithDefaultTrigger({
+            id: interactionId,
+            inputInteractionIds: input.parentId ? [input.parentId] : [],
+            position: input.position ?? {
+              x: 80 + story.interactions.length * 40,
+              y: 100 + story.interactions.length * 30,
             },
-          ],
-        });
+          }),
+        );
         return story;
       },
       userId,

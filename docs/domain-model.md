@@ -68,7 +68,7 @@ conditions. Conditions inside one group are AND, while the groups owned by the
 trigger are OR. Once an input and one complete group match, one deterministic
 appearance roll is made for the trigger.
 
-The current editor/API policy assigns each directed source -> target pair to one
+The current editor/API policy assigns each directed source → target pair to one
 Trigger. Different condition variants for that pair use the Trigger's condition
 groups. This policy has no database uniqueness constraint, and existing duplicate
 pairs remain available for inspection, editing, and removal.
@@ -327,9 +327,9 @@ example, several guards) is explicitly later work.
 
 #### Incarnation
 
-`incarnate Player -> Character` is a planned explicit runtime effect. It is
+`incarnate Player → Character` is a planned explicit runtime effect. It is
 different from setting a character property: `set Character.name` changes a
-character, whereas `incarnate Player -> Character` changes who controls it.
+character, whereas `incarnate Player → Character` changes who controls it.
 
 Initially, a PlayerInstance controls at most one CharacterInstance and a
 CharacterInstance is controlled by at most one PlayerInstance. Switching a

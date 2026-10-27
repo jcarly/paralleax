@@ -134,7 +134,7 @@ need an explicit answer before the affected capability is implemented.
   local queue recovery, atomic-field conflict presentation, and reconnect
   behavior against the existing rich-text tokens and history model.
 - Resolved: each Trigger has its own graph marker, and multiple input edges for
-  one Trigger converge on that marker. Historical duplicate source -> target
+  one Trigger converge on that marker. Historical duplicate source → target
   routes remain independently visible and deletable; normal authoring prevents
   creating new duplicates. See [Domain invariants](domain-invariants.md) and
   [Trigger semantics](triggers.md).

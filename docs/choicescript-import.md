@@ -27,10 +27,10 @@ The adapter follows the repository import boundary:
 
 ```text
 ChoiceScript source files
-  -> parsed scenes and statements
-  -> compatibility issues
-  -> Paralleax interactions, triggers, and typed stats
-  -> API validation and atomic persistence
+  → parsed scenes and statements
+  → compatibility issues
+  → Paralleax interactions, triggers, and typed stats
+  → API validation and atomic persistence
 ```
 
 Parsing, deterministic mapping, and reporting live in
@@ -103,7 +103,7 @@ that its input Interactions are alternative reachability sources.
 
 If multiple converted options from one source passage reach the same target
 under different supported conditions, the importer combines those alternatives
-as OR condition groups on one Trigger for that source -> target pair.
+as OR condition groups on one Trigger for that source → target pair.
 
 Initial positions use a deterministic top-to-bottom layered projection. Authors
 can then use the editor's complete or scoped automatic layout.

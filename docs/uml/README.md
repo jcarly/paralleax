@@ -94,7 +94,7 @@ A trigger is offered by the reader when:
 
 Trigger inputs are alternative reachability sources, checked separately from
 conditions. Conditions inside one group are AND, while groups on the same Trigger
-are OR. Current authoring permits each directed source -> target pair on one
+are OR. Current authoring permits each directed source → target pair on one
 Trigger; condition variants for that pair belong in its condition groups.
 
 ## 2. Vision Class Diagram

@@ -35,7 +35,7 @@ Paralleax currently includes:
   and narrative step. A nullable non-negative timer limits how long an otherwise
   eligible Trigger exposes its option; active timers render as draining bars,
   while zero-second timers never appear in normal reading.
-  Normal editor and API creation or input edits allow each directed source ->
+  Normal editor and API creation or input edits allow each directed source →
   target pair on only one Trigger. This app-level policy has no database unique
   constraint. Existing duplicate pairs remain loadable, can be edited without
   adding another duplicate, and can be removed. QSP and ChoiceScript adapters
@@ -160,8 +160,10 @@ Paralleax currently includes:
 - A unified story library: anonymous visitors see public stories, while signed-in
   users see every story they can read with capability and ownership filters.
   Search, filtering, sorting, and incremental pagination use lightweight server
-  summaries and do not load Story graphs. Local return-to-page navigation is
-  preserved through sign-in and registration.
+  summaries and do not load Story graphs. Creating a new Story from the library
+  atomically seeds a `Start → New interaction` chain with empty bodies, then
+  opens its editor with the root selected, centered, and shown in the Inspector.
+  Local return-to-page navigation is preserved through sign-in and registration.
 - Paginated, revision-consistent Story read projections. The editor displays
   context lists first, then interaction and Trigger structure, then bodies,
   effects, and conditions before enabling mutations. Reader and Simulation Mode

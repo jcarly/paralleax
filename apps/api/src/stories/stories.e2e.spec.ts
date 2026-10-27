@@ -24,6 +24,7 @@ import type {
   TriggerDeletionResult,
 } from '@paralleax/shared';
 import {
+  defaultStoryAccess,
   getTriggerConditionGroups,
   getTriggerConditions,
   importChoiceScript,
@@ -145,9 +146,22 @@ describe('Stories API', () => {
   });
 
   async function createStory(title = 'Test story'): Promise<Story> {
-    const response = await request(httpServer).post('/api/stories').send({ title }).expect(201);
-
-    return response.body as Story;
+    const now = new Date().toISOString();
+    const story: Story = {
+      id: randomUUID(),
+      revision: 1,
+      title,
+      startDateTime: now.slice(0, 16),
+      locations: [],
+      characters: [],
+      interactions: [],
+      access: { ...defaultStoryAccess },
+      createdAt: now,
+      updatedAt: now,
+    };
+    // Most endpoint tests need an empty graph fixture; the POST contract is tested separately.
+    await app.get(StoriesRepository).save(story, 'test-user');
+    return story;
   }
 
   async function createInteraction(
@@ -436,10 +450,22 @@ describe('Stories API', () => {
 
     expect(response.body).toMatchObject({
       title: 'New API story',
-      interactions: [],
       access: { visibility: 'private', editPolicy: 'owner', commentPolicy: 'editors' },
+      interactions: [
+        {
+          title: 'Start',
+          body: '',
+          position: { x: 80, y: 120 },
+          triggers: [{ inputInteractionIds: [], conditionGroups: [{ conditions: [] }] }],
+        },
+        {
+          title: 'New interaction',
+          body: '',
+          position: { x: 80, y: 252 },
+          triggers: [{ conditionGroups: [{ conditions: [] }] }],
+        },
+      ],
     });
-    expect(response.body.id).toEqual(expect.any(String));
   });
 
   it('POST /api/stories requires a non-null title', async () => {

@@ -273,7 +273,9 @@ test('allows in-place Simulation narrative editing', async ({ page }) => {
   await page.locator('.simulation-body-preview').focus();
   const body = page.getByRole('textbox', { name: 'Current interaction content' });
   await expect(body).toHaveText('A brass door waits at the end of the hall.');
-  await body.fill('Edited narrative content');
+  await body.focus();
+  await page.keyboard.press('Control+a');
+  await page.keyboard.type('Edited narrative content');
   await expect(body).toHaveText('Edited narrative content');
 });
 

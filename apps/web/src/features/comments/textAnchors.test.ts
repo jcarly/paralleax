@@ -59,7 +59,7 @@ describe('comment text anchors', () => {
     const surface = document.createElement('div');
     surface.dataset.commentField = 'body';
     surface.innerHTML =
-      '<p>The <span data-comment-value="{{story.Score}}"><button>Story -> Score</button></span>' +
+      '<p>The <span data-comment-value="{{story.Score}}"><button>Story → Score</button></span>' +
       '<span data-comment-exclude="true">Edit condition</span> harbor</p>';
     document.body.append(surface);
     const paragraph = requiredNode(surface.querySelector('p'), 'Expected comment paragraph');

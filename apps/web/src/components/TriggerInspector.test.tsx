@@ -208,7 +208,7 @@ describe('TriggerInspector temporal conditions', () => {
     openConditionEditor();
 
     expect(screen.getByLabelText('Variable owner')).toBeInTheDocument();
-    expect(screen.getByRole('option', { name: 'World -> Timed story' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'World → Timed story' })).toBeInTheDocument();
   });
 
   it('compares a variable condition with another compatible variable', () => {
@@ -435,7 +435,7 @@ describe('TriggerInspector temporal conditions', () => {
     fireEvent.change(screen.getByLabelText('Item condition operator'), {
       target: { value: 'not-owned' },
     });
-    openConditionEditor('Story -> Score');
+    openConditionEditor('Story → Score');
     fireEvent.change(
       within(screen.getByLabelText('Condition variable')).getAllByRole('combobox')[1],
       { target: { value: 'variable:story:mood' } },

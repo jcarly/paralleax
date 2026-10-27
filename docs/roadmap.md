@@ -48,6 +48,11 @@ checks are in place. Remote CI validation awaits the next CI event. This bounded
 prerequisite did not schedule broad code refactoring. Evidence and residual
 limitations are recorded in the [quality audit](audits/2026-10-26-quality-gates.md).
 
+**Priority decision, 2026-10-27:** direct creator feedback promoted one bounded
+first-Story authoring improvement ahead of guided sessions: Story creation now
+starts with a linked root and child Interaction and opens the editor focused on
+the root. The broader UX selection remains tied to session observations.
+
 1. **Prepare the alpha session brief.** Reuse the private-alpha runbook to state
    the hypotheses, representative author tasks, project-data boundary, and a
    lightweight observation record for first-time, narrative-tool-experienced,
@@ -78,7 +83,7 @@ limitations are recorded in the [quality audit](audits/2026-10-26-quality-gates.
    **Can run in parallel with:** tasks 1–3. **Acceptance:** evidence is recorded
    for each applicable P0 gate; only then may invited authors rely on Paralleax
    to retain valuable project data.
-5. **Ship the first UX improvement selected by observation.** Choose one
+5. **Ship the next UX improvement selected by observation.** Choose one
    independently usable improvement on any product surface from the consolidated
    [Code quality backlog](code-quality-backlog.md#consolidated-ux-follow-ups-2026-10-25),
    based on task 2 evidence. **Depends on:** task 3. **Acceptance:** the author
@@ -308,7 +313,7 @@ and operational gates in [Production readiness](production-readiness.md).
    Vitest 5 remove the obsolete test dependency chains while retaining all
    coverage thresholds. Both npm audits report zero findings and every install
    hook is explicitly allowed or denied. The sole remaining deprecation is the
-   development-only `test-exclude -> glob@10.5.0` path, with its upstream removal
+   development-only `test-exclude → glob@10.5.0` path, with its upstream removal
    condition documented rather than hidden by an unsafe major override.
 
 ### P1 — Next Product Verticals
@@ -760,7 +765,7 @@ Model relationships as general directional state between entities rather than ha
 Example conceptual shape:
 
 ```text
-Alice -> Bob
+Alice → Bob
   trust: 30
   affection: 15
   fear: 0
@@ -779,7 +784,7 @@ Character evolves as the character-definition role, with one lazily created and
 reused CharacterInstance per definition and play session in the first
 increment.
 
-The increment should add an explicit `incarnate Player -> Character` effect and
+The increment should add an explicit `incarnate Player → Character` effect and
 interaction participant roles for actors and spectators. A Player participant
 keeps its role across character changes, while a Character participant is
 controlled by whoever currently incarnates that character. Spectators receive a
@@ -823,12 +828,12 @@ remain future options requiring evidence and a focused contract. See
 
 ```text
 recursive item graph
-  -> character possession and nested item containers
-  -> equipment and slots
-  -> quantities and consumables
-  -> modifiers and durability
-  -> economy and shops
-  -> advanced clothing/layer semantics
+  → character possession and nested item containers
+  → equipment and slots
+  → quantities and consumables
+  → modifiers and durability
+  → economy and shops
+  → advanced clothing/layer semantics
 ```
 
 Only implement later stages when concrete story requirements justify them.
@@ -928,12 +933,12 @@ Paralleax can ingest and emit non-trivial story data through explicit, validated
 
 ```text
 source inventory
-  -> source parser
-  -> source-neutral intermediate representation
-  -> compatibility / unsupported-feature report
-  -> Paralleax mapping
-  -> validation
-  -> import
+  → source parser
+  → source-neutral intermediate representation
+  → compatibility / unsupported-feature report
+  → Paralleax mapping
+  → validation
+  → import
 ```
 
 ### Remaining scope

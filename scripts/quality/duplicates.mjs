@@ -87,7 +87,7 @@ export function checkDuplicates(prune = false) {
   if (comparison.growth.length) {
     for (const clone of report.duplicates) {
       console.error(
-        `Clone: ${clone.firstFile.name}:${clone.firstFile.start} -> ${clone.secondFile.name}:${clone.secondFile.start} (${clone.tokens} tokens)`,
+        `Clone: ${clone.firstFile.name}:${clone.firstFile.start} → ${clone.secondFile.name}:${clone.secondFile.start} (${clone.tokens} tokens)`,
       );
     }
   }
