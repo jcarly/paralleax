@@ -252,25 +252,36 @@ test('creates directly with Ctrl+G, renames inline and uses context menus withou
   await page.screenshot({ path: testInfo.outputPath('groups-tree.png') });
 });
 
-test('searches many groups and auto-scrolls the navigation panel during a drag', async ({
-  page,
-}) => {
+function storyWithGroups(count: number): Story {
   const story = storyWithConditionCandidate();
-  story.groups = Array.from({ length: 1000 }, (_, index) => ({
+  story.groups = Array.from({ length: count }, (_, index) => ({
     id: 'g' + index,
     title: 'Group ' + index,
     interactionIds: [],
   }));
-  const state = await installGroups(page, story);
+  return story;
+}
+
+test('searches a thousand groups', async ({ page }) => {
+  await installGroups(page, storyWithGroups(1000));
   await page.getByRole('searchbox', { name: 'Find a group' }).fill('Group 999');
   await expect(page.getByRole('treeitem')).toHaveCount(1);
-  await page.getByRole('searchbox', { name: 'Find a group' }).fill('');
+});
+
+test('auto-scrolls the navigation panel during a group drag', async ({ page }) => {
+  const state = await installGroups(page, storyWithGroups(100));
   const scroller = page.locator('.location-panel-content');
+  await expect
+    .poll(() => scroller.evaluate((element) => element.scrollHeight > element.clientHeight))
+    .toBe(true);
   await scroller.evaluate((element) => {
     element.scrollTop = 0;
   });
-  await startDrag(page, page.getByRole('button', { name: 'Group 0 0 interactions', exact: true }));
+  const group = page.getByRole('button', { name: 'Group 0 0 interactions', exact: true });
+  await startDrag(page, group);
+  await expect(page.locator('#story-group-g0')).toHaveClass(/dragging/);
   const bounds = await scroller.boundingBox();
+  expect(bounds).not.toBeNull();
   await page.mouse.move(bounds!.x + bounds!.width / 2, bounds!.y + bounds!.height - 3, {
     steps: 10,
   });

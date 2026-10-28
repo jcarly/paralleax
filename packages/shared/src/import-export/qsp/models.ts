@@ -60,12 +60,19 @@ export interface QspNavigationTarget {
   source: QspSourcePosition;
 }
 
-export interface QspVariableEffect {
-  variableName: string;
-  operation: 'add' | 'set';
-  value: number | string;
-  source: QspSourcePosition;
-}
+export type QspVariableEffect =
+  | {
+      variableName: string;
+      operation: 'add';
+      value: number;
+      source: QspSourcePosition;
+    }
+  | {
+      variableName: string;
+      operation: 'set';
+      value: number | string;
+      source: QspSourcePosition;
+    };
 
 export interface QspSourceCondition {
   variableName: string;
