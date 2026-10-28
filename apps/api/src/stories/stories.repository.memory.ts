@@ -492,21 +492,12 @@ export class InMemoryStoriesRepository {
           paths: reverted.conflicts.map(({ path }) => path),
         };
       }
-      const updated = reverted.story;
-      updated.updatedAt = new Date().toISOString();
-      updated.revision = (current.revision ?? 1) + 1;
-      assertStoryWithinQuotas(updated, current);
-      const changes = invertStoryChangeDelta(candidate.changes);
-      this.stories.set(id, structuredClone(updated));
-      this.appendHistory(id, {
-        actorUserId: userId,
-        revision: updated.revision,
-        kind: action,
-        operation: candidate.operation,
-        changes,
-        createdAt: updated.updatedAt,
-        revertsEventId: candidate.id,
-      });
+      const changes = this.commitHistoryRevert(
+        { id, userId, action },
+        current,
+        candidate,
+        reverted.story,
+      );
       const story = await this.find(id, userId);
       if (!story) {
         return undefined;
@@ -684,6 +675,30 @@ export class InMemoryStoriesRepository {
   private ownerSummary(id: string) {
     const ownerId = this.ownerIdForStory(id);
     return { id: ownerId, displayName: displayNameForUser(ownerId) };
+  }
+
+  private commitHistoryRevert(
+    context: { id: string; userId: string; action: 'undo' | 'redo' },
+    current: Story,
+    candidate: MemoryStoryHistoryEvent,
+    updated: Story,
+  ): StoryChangeDelta {
+    const { id, userId, action } = context;
+    updated.updatedAt = new Date().toISOString();
+    updated.revision = (current.revision ?? 1) + 1;
+    assertStoryWithinQuotas(updated, current);
+    const changes = invertStoryChangeDelta(candidate.changes);
+    this.stories.set(id, structuredClone(updated));
+    this.appendHistory(id, {
+      actorUserId: userId,
+      revision: updated.revision,
+      kind: action,
+      operation: candidate.operation,
+      changes,
+      createdAt: updated.updatedAt,
+      revertsEventId: candidate.id,
+    });
+    return changes;
   }
 
   private appendHistory(
