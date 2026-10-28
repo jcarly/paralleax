@@ -831,20 +831,8 @@
     }
   },
   "apps/api/src/stories/stories.repository.memory.ts": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 9
-    },
-    "@typescript-eslint/no-unsafe-argument": {
-      "count": 2
-    },
-    "@typescript-eslint/no-unsafe-assignment": {
-      "count": 2
-    },
     "complexity": {
       "count": 3
-    },
-    "curly": {
-      "count": 34
     },
     "max-lines-per-function": {
       "count": 3

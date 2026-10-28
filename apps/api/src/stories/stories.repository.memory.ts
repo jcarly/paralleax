@@ -82,7 +82,7 @@ export class InMemoryStoriesRepository {
         startDateTime: story.startDateTime,
         access: story.access ?? defaultStoryAccess,
         capabilities: this.can(story, id, ownerId),
-        owner: { id: this.owners.get(id)!, displayName: displayNameForUser(this.owners.get(id)!) },
+        owner: this.ownerSummary(id),
         createdAt: story.createdAt,
         updatedAt: story.updatedAt,
       }))
@@ -106,7 +106,7 @@ export class InMemoryStoriesRepository {
         capabilities: resolveStoryAccess(story.access ?? defaultStoryAccess, {
           authenticated: false,
         }),
-        owner: { id: this.owners.get(id)!, displayName: displayNameForUser(this.owners.get(id)!) },
+        owner: this.ownerSummary(id),
         createdAt: story.createdAt,
         updatedAt: story.updatedAt,
       }))
@@ -130,7 +130,9 @@ export class InMemoryStoriesRepository {
     pageSize: number,
   ): Promise<StoryEditorContextPage | undefined> {
     const story = await this.find(id, ownerId);
-    if (!story) return undefined;
+    if (!story) {
+      return undefined;
+    }
     const statAssignments: StoryEditorStatAssignment[] = [
       ...(story.stats ?? []).map((stat) => ({ ...stat, ownerType: 'story' as const })),
       ...(story.characters ?? []).flatMap((character) =>
@@ -204,7 +206,9 @@ export class InMemoryStoriesRepository {
     pageSize: number,
   ): Promise<StoryEditorInteractionPage | undefined> {
     const story = await this.find(id, ownerId);
-    if (!story) return undefined;
+    if (!story) {
+      return undefined;
+    }
     return {
       revision: story.revision ?? 1,
       page,
@@ -226,7 +230,9 @@ export class InMemoryStoriesRepository {
     pageSize: number,
   ): Promise<StoryEditorTriggerPage | undefined> {
     const story = await this.find(id, ownerId);
-    if (!story) return undefined;
+    if (!story) {
+      return undefined;
+    }
     const triggers = story.interactions.flatMap((interaction) =>
       interaction.triggers.map((trigger) => ({
         id: trigger.id,
@@ -251,7 +257,9 @@ export class InMemoryStoriesRepository {
     pageSize: number,
   ): Promise<StoryEditorInteractionContentPage | undefined> {
     const story = await this.find(id, ownerId);
-    if (!story) return undefined;
+    if (!story) {
+      return undefined;
+    }
     return {
       revision: story.revision ?? 1,
       page,
@@ -276,7 +284,9 @@ export class InMemoryStoriesRepository {
     pageSize: number,
   ): Promise<StoryEditorTriggerContentPage | undefined> {
     const story = await this.find(id, ownerId);
-    if (!story) return undefined;
+    if (!story) {
+      return undefined;
+    }
     const triggers = story.interactions.flatMap((interaction) => interaction.triggers);
     return {
       revision: story.revision ?? 1,
@@ -329,7 +339,9 @@ export class InMemoryStoriesRepository {
     request: StoryRuntimeSliceRequest,
   ): Promise<StoryRuntimeSlice | undefined> {
     const story = await this.find(id, ownerId);
-    if (!story) return undefined;
+    if (!story) {
+      return undefined;
+    }
     const candidates =
       request.includeOptions === false
         ? []
@@ -379,12 +391,14 @@ export class InMemoryStoriesRepository {
 
   async find(id: string, ownerId?: string): Promise<Story | undefined> {
     const story = this.stories.get(id);
-    if (!story || !this.can(story, id, ownerId).canRead) return undefined;
+    if (!story || !this.can(story, id, ownerId).canRead) {
+      return undefined;
+    }
     return structuredClone({
       ...story,
       access: story.access ?? defaultStoryAccess,
       capabilities: this.can(story, id, ownerId),
-      owner: { id: this.owners.get(id)!, displayName: displayNameForUser(this.owners.get(id)!) },
+      owner: this.ownerSummary(id),
     });
   }
 
@@ -395,8 +409,12 @@ export class InMemoryStoriesRepository {
   }
 
   async saveMany(stories: readonly Story[], ownerId: string): Promise<void> {
-    for (const story of stories) assertStoryWithinQuotas(story);
-    for (const story of stories) await this.save(story, ownerId);
+    for (const story of stories) {
+      assertStoryWithinQuotas(story);
+    }
+    for (const story of stories) {
+      await this.save(story, ownerId);
+    }
   }
 
   async mutate(
@@ -408,7 +426,9 @@ export class InMemoryStoriesRepository {
     return this.serializeMutation(id, async () => {
       const candidate = this.stories.get(id);
       const story = candidate && this.can(candidate, id, ownerId).canEdit ? candidate : undefined;
-      if (!story) return undefined;
+      if (!story) {
+        return undefined;
+      }
       const updated = await mutation(structuredClone(story));
       assertStoryWithinQuotas(updated, story);
       const changes = createStoryChangeDelta(story, updated);
@@ -429,7 +449,9 @@ export class InMemoryStoriesRepository {
 
   async getHistory(id: string, userId: string, limit = 50): Promise<StoryHistory | undefined> {
     const story = this.stories.get(id);
-    if (!story || !this.can(story, id, userId).canEdit) return undefined;
+    if (!story || !this.can(story, id, userId).canEdit) {
+      return undefined;
+    }
     return this.historyFor(id, userId, limit);
   }
 
@@ -445,7 +467,9 @@ export class InMemoryStoriesRepository {
   > {
     return this.serializeMutation(id, async () => {
       const current = this.stories.get(id);
-      if (!current || !this.can(current, id, userId).canEdit) return undefined;
+      if (!current || !this.can(current, id, userId).canEdit) {
+        return undefined;
+      }
       const events = this.history.get(id) ?? [];
       const reversedEventIds = new Set(
         events.flatMap(({ revertsEventId }) => (revertsEventId ? [revertsEventId] : [])),
@@ -458,7 +482,9 @@ export class InMemoryStoriesRepository {
             !reversedEventIds.has(event.id) &&
             (action === 'undo' ? event.kind !== 'undo' : event.kind === 'undo'),
         );
-      if (!candidate) return { kind: 'unavailable' as const };
+      if (!candidate) {
+        return { kind: 'unavailable' as const };
+      }
       const reverted = applyStoryChangeDelta(current, candidate.changes, 'backward');
       if (!reverted.applied) {
         return {
@@ -482,7 +508,9 @@ export class InMemoryStoriesRepository {
         revertsEventId: candidate.id,
       });
       const story = await this.find(id, userId);
-      if (!story) return undefined;
+      if (!story) {
+        return undefined;
+      }
       return {
         kind: 'applied' as const,
         result: createStoryHistoryMutationResult(
@@ -497,11 +525,15 @@ export class InMemoryStoriesRepository {
 
   async delete(id: string, ownerId: string): Promise<boolean> {
     const story = this.stories.get(id);
-    if (!story || !this.can(story, id, ownerId).canManage) return false;
+    if (!story || !this.can(story, id, ownerId).canManage) {
+      return false;
+    }
     this.owners.delete(id);
     this.history.delete(id);
     for (const key of this.progress.keys()) {
-      if (key.includes(`:${id}:`)) this.progress.delete(key);
+      if (key.includes(`:${id}:`)) {
+        this.progress.delete(key);
+      }
     }
     return this.stories.delete(id);
   }
@@ -512,7 +544,9 @@ export class InMemoryStoriesRepository {
     slotId = READER_AUTOSAVE_ID,
   ): Promise<ReaderSave | undefined> {
     const story = this.stories.get(storyId);
-    if (!story || !this.can(story, storyId, userId).canRead) return undefined;
+    if (!story || !this.can(story, storyId, userId).canRead) {
+      return undefined;
+    }
     const progress = this.progress.get(progressKey(userId, storyId, slotId));
     return progress ? structuredClone(progress) : undefined;
   }
@@ -522,7 +556,9 @@ export class InMemoryStoriesRepository {
     userId: string,
   ): Promise<Array<ReaderSave & { currentInteractionTitle?: string }>> {
     const story = this.stories.get(storyId);
-    if (!story || !this.can(story, storyId, userId).canRead) return [];
+    if (!story || !this.can(story, storyId, userId).canRead) {
+      return [];
+    }
     const prefix = `${userId}:${storyId}:`;
     return [...this.progress.entries()]
       .filter(([key]) => key.startsWith(prefix))
@@ -549,7 +585,9 @@ export class InMemoryStoriesRepository {
     createdAt = updatedAt,
   ): Promise<boolean> {
     const story = this.stories.get(storyId);
-    if (!story || !this.can(story, storyId, userId).canRead) return false;
+    if (!story || !this.can(story, storyId, userId).canRead) {
+      return false;
+    }
     const key = progressKey(userId, storyId, slotId);
     this.progress.set(key, {
       id: slotId,
@@ -572,37 +610,46 @@ export class InMemoryStoriesRepository {
 
   async getAccess(id: string, userId: string): Promise<StoryAccessConfiguration | undefined> {
     const story = this.stories.get(id);
-    if (!story || !this.can(story, id, userId).canManage) return undefined;
+    if (!story || !this.can(story, id, userId).canManage) {
+      return undefined;
+    }
+    const ownerId = this.ownerIdForStory(id);
     return {
       ...(story.access ?? defaultStoryAccess),
       owner: {
-        id: this.owners.get(id)!,
-        email: emailForUser(this.owners.get(id)!),
-        displayName: displayNameForUser(this.owners.get(id)!),
+        id: ownerId,
+        email: emailForUser(ownerId),
+        displayName: displayNameForUser(ownerId),
       },
-      collaborators: [...(this.permissions.get(id) ?? new Map()).entries()].map(
-        ([collaboratorId, role]) => ({
-          userId: collaboratorId,
-          email: emailForUser(collaboratorId),
-          displayName: displayNameForUser(collaboratorId),
-          role,
-        }),
-      ),
+      collaborators: [
+        ...(this.permissions.get(id) ?? new Map<string, StoryCollaboratorRole>()).entries(),
+      ].map(([collaboratorId, role]) => ({
+        userId: collaboratorId,
+        email: emailForUser(collaboratorId),
+        displayName: displayNameForUser(collaboratorId),
+        role,
+      })),
     };
   }
 
   async updateAccess(id: string, userId: string, settings: StoryAccessSettings) {
     const story = this.stories.get(id);
-    if (!story || !this.can(story, id, userId).canManage) return false;
+    if (!story || !this.can(story, id, userId).canManage) {
+      return false;
+    }
     story.access = structuredClone(settings);
     return true;
   }
 
   async setCollaborator(id: string, userId: string, email: string, role: StoryCollaboratorRole) {
     const story = this.stories.get(id);
-    if (!story || !this.can(story, id, userId).canManage) return false;
+    if (!story || !this.can(story, id, userId).canManage) {
+      return false;
+    }
     const collaboratorId = userForEmail(email);
-    if (!collaboratorId || collaboratorId === this.owners.get(id)) return false;
+    if (!collaboratorId || collaboratorId === this.owners.get(id)) {
+      return false;
+    }
     const permissions = this.permissions.get(id) ?? new Map<string, StoryCollaboratorRole>();
     permissions.set(collaboratorId, role);
     this.permissions.set(id, permissions);
@@ -611,7 +658,9 @@ export class InMemoryStoriesRepository {
 
   async removeCollaborator(id: string, userId: string, collaboratorId: string) {
     const story = this.stories.get(id);
-    if (!story || !this.can(story, id, userId).canManage) return false;
+    if (!story || !this.can(story, id, userId).canManage) {
+      return false;
+    }
     return this.permissions.get(id)?.delete(collaboratorId) ?? false;
   }
 
@@ -622,6 +671,19 @@ export class InMemoryStoriesRepository {
       isOwner: this.owners.get(id) === userId,
       collaboratorRole: userId ? this.permissions.get(id)?.get(userId) : undefined,
     });
+  }
+
+  private ownerIdForStory(id: string): string {
+    const ownerId = this.owners.get(id);
+    if (ownerId === undefined) {
+      throw new Error(`Story ${id} has no owner.`);
+    }
+    return ownerId;
+  }
+
+  private ownerSummary(id: string) {
+    const ownerId = this.ownerIdForStory(id);
+    return { id: ownerId, displayName: displayNameForUser(ownerId) };
   }
 
   private appendHistory(
@@ -663,7 +725,7 @@ export class InMemoryStoriesRepository {
 
   private async serializeMutation<T>(id: string, work: () => Promise<T>): Promise<T> {
     const previous = this.mutationQueues.get(id) ?? Promise.resolve();
-    let release!: () => void;
+    let release: (() => void) | undefined;
     const gate = new Promise<void>((resolve) => (release = resolve));
     const current = previous.then(() => gate);
     this.mutationQueues.set(id, current);
@@ -671,8 +733,10 @@ export class InMemoryStoriesRepository {
     try {
       return await work();
     } finally {
-      release();
-      if (this.mutationQueues.get(id) === current) this.mutationQueues.delete(id);
+      release?.();
+      if (this.mutationQueues.get(id) === current) {
+        this.mutationQueues.delete(id);
+      }
     }
   }
 }
@@ -703,9 +767,15 @@ function matchesStoryList(
   ) {
     return false;
   }
-  if (options.filter === 'editable' && !story.capabilities?.canEdit) return false;
-  if (options.filter === 'commentable' && !story.capabilities?.canComment) return false;
-  if (options.filter === 'owned' && story.owner?.id !== ownerId) return false;
+  if (options.filter === 'editable' && !story.capabilities?.canEdit) {
+    return false;
+  }
+  if (options.filter === 'commentable' && !story.capabilities?.canComment) {
+    return false;
+  }
+  if (options.filter === 'owned' && story.owner?.id !== ownerId) {
+    return false;
+  }
   return true;
 }
 
@@ -765,19 +835,31 @@ function progressKey(userId: string, storyId: string, slotId: string): string {
 }
 
 function emailForUser(userId: string) {
-  if (userId === 'user-1') return 'user-one@paralleax.invalid';
-  if (userId === 'user-2') return 'user-two@paralleax.invalid';
+  if (userId === 'user-1') {
+    return 'user-one@paralleax.invalid';
+  }
+  if (userId === 'user-2') {
+    return 'user-two@paralleax.invalid';
+  }
   return `${userId}@paralleax.invalid`;
 }
 
 function displayNameForUser(userId: string) {
-  if (userId === 'user-1') return 'User One';
-  if (userId === 'user-2') return 'User Two';
+  if (userId === 'user-1') {
+    return 'User One';
+  }
+  if (userId === 'user-2') {
+    return 'User Two';
+  }
   return `User ${userId.slice(0, 8)}`;
 }
 
 function userForEmail(email: string) {
-  if (email === 'user-one@paralleax.invalid') return 'user-1';
-  if (email === 'user-two@paralleax.invalid') return 'user-2';
+  if (email === 'user-one@paralleax.invalid') {
+    return 'user-1';
+  }
+  if (email === 'user-two@paralleax.invalid') {
+    return 'user-2';
+  }
   return email.endsWith('@paralleax.invalid') ? email.slice(0, -'@paralleax.invalid'.length) : '';
 }
