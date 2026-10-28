@@ -2568,9 +2568,6 @@
     }
   },
   "apps/web/src/storyGraphLayout.ts": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 43
-    },
     "complexity": {
       "count": 2
     },

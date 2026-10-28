@@ -223,8 +223,12 @@ function addEdge(
 
 function layoutProjection(projection: Projection): Map<string, Position> {
   const components = getWeakComponents(projection).sort((left, right) => {
-    const leftX = Math.min(...left.map((key) => projection.byKey.get(key)!.currentPosition.x));
-    const rightX = Math.min(...right.map((key) => projection.byKey.get(key)!.currentPosition.x));
+    const leftX = Math.min(
+      ...left.map((key) => requireDefined(projection.byKey.get(key)).currentPosition.x),
+    );
+    const rightX = Math.min(
+      ...right.map((key) => requireDefined(projection.byKey.get(key)).currentPosition.x),
+    );
     return leftX - rightX || getMinimumOrder(left, projection) - getMinimumOrder(right, projection);
   });
   const interactionVertices = projection.vertices.filter(({ kind }) => kind === 'interaction');
@@ -265,14 +269,17 @@ function getWeakComponents(projection: Projection): string[][] {
     const pending = [vertex.key];
     visited.add(vertex.key);
     while (pending.length > 0) {
-      const key = pending.shift()!;
+      const key = requireDefined(pending.shift());
       component.push(key);
       const neighbors = new Set([
         ...(projection.incoming.get(key) ?? []),
         ...(projection.outgoing.get(key) ?? []),
       ]);
       for (const neighbor of [...neighbors].sort((left, right) =>
-        compareVertexOrder(projection.byKey.get(left)!, projection.byKey.get(right)!),
+        compareVertexOrder(
+          requireDefined(projection.byKey.get(left)),
+          requireDefined(projection.byKey.get(right)),
+        ),
       )) {
         if (visited.has(neighbor)) continue;
         visited.add(neighbor);
@@ -297,8 +304,8 @@ function layoutComponent(
   }
   for (const layer of layers.values()) {
     layer.sort((left, right) => {
-      const leftVertex = projection.byKey.get(left)!;
-      const rightVertex = projection.byKey.get(right)!;
+      const leftVertex = requireDefined(projection.byKey.get(left));
+      const rightVertex = requireDefined(projection.byKey.get(right));
       return (
         leftVertex.currentPosition.x - rightVertex.currentPosition.x ||
         compareVertexOrder(leftVertex, rightVertex)
@@ -312,10 +319,16 @@ function layoutComponent(
   for (const [rank, layer] of layers) {
     layerWidths.set(
       rank,
-      layer.reduce((total, key) => total + projection.byKey.get(key)!.layoutWidth, 0) +
+      layer.reduce(
+        (total, key) => total + requireDefined(projection.byKey.get(key)).layoutWidth,
+        0,
+      ) +
         Math.max(0, layer.length - 1) * horizontalGap,
     );
-    layerHeights.set(rank, Math.max(...layer.map((key) => projection.byKey.get(key)!.height)));
+    layerHeights.set(
+      rank,
+      Math.max(...layer.map((key) => requireDefined(projection.byKey.get(key)).height)),
+    );
   }
 
   const width = Math.max(...layerWidths.values(), interactionNodeWidth);
@@ -328,11 +341,11 @@ function layoutComponent(
       y += triggerNodeSize + verticalGap;
       continue;
     }
-    const layerWidth = layerWidths.get(rank)!;
-    const layerHeight = layerHeights.get(rank)!;
+    const layerWidth = requireDefined(layerWidths.get(rank));
+    const layerHeight = requireDefined(layerHeights.get(rank));
     let x = (width - layerWidth) / 2;
     for (const key of layer) {
-      const vertex = projection.byKey.get(key)!;
+      const vertex = requireDefined(projection.byKey.get(key));
       positions.set(key, {
         x: x + (vertex.layoutWidth - vertex.width) / 2,
         y: y + (layerHeight - vertex.height) / 2,
@@ -370,9 +383,9 @@ function alignLayerToSuccessors(
   positions: Map<string, Position>,
   width: number,
 ) {
-  const vertices = layer.map((key) => projection.byKey.get(key)!);
+  const vertices = layer.map((key) => requireDefined(projection.byKey.get(key)));
   const centers = vertices.map((vertex) => {
-    const currentCenter = getVertexCenter(vertex, positions.get(vertex.key)!);
+    const currentCenter = getVertexCenter(vertex, requireDefined(positions.get(vertex.key)));
     const successorCenters = [...(projection.outgoing.get(vertex.key) ?? [])]
       .flatMap((key) => {
         const successor = projection.byKey.get(key);
@@ -390,8 +403,8 @@ function alignLayerToSuccessors(
     );
   }
 
-  const rightLimit = width - vertices.at(-1)!.layoutWidth / 2;
-  const overflow = centers.at(-1)! - rightLimit;
+  const rightLimit = width - requireDefined(vertices.at(-1)).layoutWidth / 2;
+  const overflow = requireDefined(centers.at(-1)) - rightLimit;
   if (overflow > 0) centers.forEach((center, index) => (centers[index] = center - overflow));
 
   for (let index = centers.length - 2; index >= 0; index -= 1) {
@@ -406,7 +419,7 @@ function alignLayerToSuccessors(
   if (underflow > 0) centers.forEach((center, index) => (centers[index] = center + underflow));
 
   vertices.forEach((vertex, index) => {
-    const position = positions.get(vertex.key)!;
+    const position = requireDefined(positions.get(vertex.key));
     positions.set(vertex.key, { ...position, x: centers[index] - vertex.width / 2 });
   });
 }
@@ -434,8 +447,8 @@ function getRanks(component: string[], projection: Projection): Map<string, numb
   const successors = strongComponents.map(() => new Set<number>());
   for (const source of component) {
     for (const target of projection.outgoing.get(source) ?? []) {
-      const sourceComponent = componentByVertex.get(source)!;
-      const targetComponent = componentByVertex.get(target)!;
+      const sourceComponent = requireDefined(componentByVertex.get(source));
+      const targetComponent = requireDefined(componentByVertex.get(target));
       if (sourceComponent === targetComponent) continue;
       successors[sourceComponent].add(targetComponent);
       predecessors[targetComponent].add(sourceComponent);
@@ -452,7 +465,7 @@ function getRanks(component: string[], projection: Projection): Map<string, numb
   const bases = strongComponents.map(() => 0);
   const orderedComponents: number[] = [];
   while (pending.length > 0) {
-    const componentIndex = pending.shift()!;
+    const componentIndex = requireDefined(pending.shift());
     orderedComponents.push(componentIndex);
     for (const successor of successors[componentIndex]) {
       bases[successor] = Math.max(
@@ -470,8 +483,8 @@ function getRanks(component: string[], projection: Projection): Map<string, numb
   const ranks = new Map<string, number>();
   for (const componentIndex of orderedComponents) {
     const members = [...strongComponents[componentIndex]].sort((left, right) => {
-      const leftVertex = projection.byKey.get(left)!;
-      const rightVertex = projection.byKey.get(right)!;
+      const leftVertex = requireDefined(projection.byKey.get(left));
+      const rightVertex = requireDefined(projection.byKey.get(right));
       return (
         leftVertex.currentPosition.y - rightVertex.currentPosition.y ||
         leftVertex.currentPosition.x - rightVertex.currentPosition.x ||
@@ -503,11 +516,17 @@ function getStrongComponents(component: string[], projection: Projection): strin
     [...(projection.outgoing.get(key) ?? [])]
       .filter((target) => allowed.has(target))
       .sort((left, right) =>
-        compareVertexOrder(projection.byKey.get(left)!, projection.byKey.get(right)!),
+        compareVertexOrder(
+          requireDefined(projection.byKey.get(left)),
+          requireDefined(projection.byKey.get(right)),
+        ),
       );
 
   for (const key of [...component].sort((left, right) =>
-    compareVertexOrder(projection.byKey.get(left)!, projection.byKey.get(right)!),
+    compareVertexOrder(
+      requireDefined(projection.byKey.get(left)),
+      requireDefined(projection.byKey.get(right)),
+    ),
   )) {
     if (indices.has(key)) continue;
     openVertex(key);
@@ -519,7 +538,7 @@ function getStrongComponents(component: string[], projection: Projection): strin
     }> = [{ key, targets: getTargets(key), nextTargetIndex: 0 }];
 
     while (traversalStack.length > 0) {
-      const frame = traversalStack.at(-1)!;
+      const frame = requireDefined(traversalStack.at(-1));
       const target = frame.targets[frame.nextTargetIndex];
       if (target !== undefined) {
         frame.nextTargetIndex += 1;
@@ -532,20 +551,29 @@ function getStrongComponents(component: string[], projection: Projection): strin
             nextTargetIndex: 0,
           });
         } else if (onStack.has(target)) {
-          lowLinks.set(frame.key, Math.min(lowLinks.get(frame.key)!, indices.get(target)!));
+          lowLinks.set(
+            frame.key,
+            Math.min(requireDefined(lowLinks.get(frame.key)), requireDefined(indices.get(target))),
+          );
         }
         continue;
       }
 
       traversalStack.pop();
       if (frame.parent !== undefined) {
-        lowLinks.set(frame.parent, Math.min(lowLinks.get(frame.parent)!, lowLinks.get(frame.key)!));
+        lowLinks.set(
+          frame.parent,
+          Math.min(
+            requireDefined(lowLinks.get(frame.parent)),
+            requireDefined(lowLinks.get(frame.key)),
+          ),
+        );
       }
       if (lowLinks.get(frame.key) !== indices.get(frame.key)) continue;
       const members: string[] = [];
       let member: string;
       do {
-        member = componentStack.pop()!;
+        member = requireDefined(componentStack.pop());
         onStack.delete(member);
         members.push(member);
       } while (member !== frame.key);
@@ -741,7 +769,7 @@ function sortLayer(
     }
     if (leftScore !== undefined && rightScore === undefined) return -1;
     if (leftScore === undefined && rightScore !== undefined) return 1;
-    return previousOrder.get(left)! - previousOrder.get(right)!;
+    return requireDefined(previousOrder.get(left)) - requireDefined(previousOrder.get(right));
   });
 }
 
@@ -794,20 +822,26 @@ function alignSelectionToFixedGraph(
     translation = {
       x: median(
         [...boundaryKeys].map(
-          (key) => projection.byKey.get(key)!.currentPosition.x - canonical.get(key)!.x,
+          (key) =>
+            requireDefined(projection.byKey.get(key)).currentPosition.x -
+            requireDefined(canonical.get(key)).x,
         ),
       ),
       y: median(
         [...boundaryKeys].map(
-          (key) => projection.byKey.get(key)!.currentPosition.y - canonical.get(key)!.y,
+          (key) =>
+            requireDefined(projection.byKey.get(key)).currentPosition.y -
+            requireDefined(canonical.get(key)).y,
         ),
       ),
     };
   } else {
     const currentCenter = getPositionCenter(
-      [...selected].map((key) => projection.byKey.get(key)!.currentPosition),
+      [...selected].map((key) => requireDefined(projection.byKey.get(key)).currentPosition),
     );
-    const canonicalCenter = getPositionCenter([...selected].map((key) => canonical.get(key)!));
+    const canonicalCenter = getPositionCenter(
+      [...selected].map((key) => requireDefined(canonical.get(key))),
+    );
     translation = {
       x: currentCenter.x - canonicalCenter.x,
       y: currentCenter.y - canonicalCenter.y,
@@ -816,7 +850,7 @@ function alignSelectionToFixedGraph(
 
   const desired = new Map(
     [...selected].map((key) => {
-      const position = canonical.get(key)!;
+      const position = requireDefined(canonical.get(key));
       return [
         key,
         { x: Math.round(position.x + translation.x), y: Math.round(position.y + translation.y) },
@@ -860,7 +894,7 @@ function findCollisionFreeOffset(
   return (
     candidates.find((offset) =>
       [...desired].every(([key, position]) => {
-        const selectedVertex = projection.byKey.get(key)!;
+        const selectedVertex = requireDefined(projection.byKey.get(key));
         const moved = { x: position.x + offset.x, y: position.y + offset.y };
         return fixed.every(
           (fixedVertex) =>
@@ -900,7 +934,7 @@ function median(values: number[]) {
 }
 
 function getMinimumOrder(keys: string[], projection: Projection) {
-  return Math.min(...keys.map((key) => projection.byKey.get(key)!.order));
+  return Math.min(...keys.map((key) => requireDefined(projection.byKey.get(key)).order));
 }
 
 function compareVertexOrder(left: LayoutVertex, right: LayoutVertex) {
@@ -938,4 +972,11 @@ function getInteractionKey(interactionId: string) {
 
 function getTriggerKey(interactionId: string, triggerId: string) {
   return `trigger:${interactionId}:${triggerId}`;
+}
+
+function requireDefined<T>(value: T | undefined): T {
+  if (value === undefined) {
+    throw new Error('Expected a story graph layout value to exist.');
+  }
+  return value;
 }
