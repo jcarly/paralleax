@@ -2552,23 +2552,6 @@
       "count": 5
     }
   },
-  "apps/web/src/storyGraphLayout.ts": {
-    "complexity": {
-      "count": 2
-    },
-    "curly": {
-      "count": 29
-    },
-    "max-depth": {
-      "count": 3
-    },
-    "max-lines-per-function": {
-      "count": 6
-    },
-    "sonarjs/cognitive-complexity": {
-      "count": 6
-    }
-  },
   "apps/web/src/storyGraphSelection.ts": {
     "@typescript-eslint/no-unsafe-type-assertion": {
       "count": 1
