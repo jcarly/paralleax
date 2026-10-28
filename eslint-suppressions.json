@@ -3125,17 +3125,6 @@
       "count": 1
     }
   },
-  "packages/shared/src/expressions/index.ts": {
-    "complexity": {
-      "count": 4
-    },
-    "curly": {
-      "count": 32
-    },
-    "sonarjs/cognitive-complexity": {
-      "count": 4
-    }
-  },
   "packages/shared/src/graph/placement.ts": {
     "curly": {
       "count": 4
