@@ -1194,14 +1194,8 @@
     }
   },
   "apps/web/src/components/RichTextEditor.tsx": {
-    "@typescript-eslint/no-unsafe-type-assertion": {
-      "count": 4
-    },
     "complexity": {
       "count": 4
-    },
-    "curly": {
-      "count": 39
     },
     "max-lines-per-function": {
       "count": 4
