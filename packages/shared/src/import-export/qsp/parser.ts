@@ -594,12 +594,8 @@ function readActionOnlyBranch(
     }
     const conditional = tryParseConditionalActions(lines, index, source, endIndex);
     if (conditional) {
-      for (const block of conditional.blocks) {
-        const conditionGroups = andQspConditionGroups(parentGroups, block.conditionGroups ?? [[]]);
-        if (!conditionGroups) {
-          return undefined;
-        }
-        blocks.push({ ...block, conditionGroups });
+      if (!appendConditionalBlocks(blocks, conditional.blocks, parentGroups)) {
+        return undefined;
       }
       conditionCount += conditional.conditionCount;
       controlStatementCount += conditional.controlStatementCount;
@@ -618,6 +614,21 @@ function readActionOnlyBranch(
     index = parsed.nextIndex;
   }
   return { blocks, conditionCount, controlStatementCount };
+}
+
+function appendConditionalBlocks(
+  blocks: ParsedActBlock[],
+  conditionalBlocks: ParsedActBlock[],
+  parentGroups: NonNullable<ParsedActBlock['conditionGroups']>,
+): boolean {
+  for (const block of conditionalBlocks) {
+    const conditionGroups = andQspConditionGroups(parentGroups, block.conditionGroups ?? [[]]);
+    if (!conditionGroups) {
+      return false;
+    }
+    blocks.push({ ...block, conditionGroups });
+  }
+  return true;
 }
 
 function readActBlock(
