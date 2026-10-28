@@ -441,23 +441,8 @@
     }
   },
   "apps/api/src/stories/application/story-context.ts": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 1
-    },
-    "@typescript-eslint/no-shadow": {
-      "count": 13
-    },
-    "complexity": {
-      "count": 2
-    },
-    "curly": {
-      "count": 24
-    },
     "max-params": {
       "count": 1
-    },
-    "sonarjs/cognitive-complexity": {
-      "count": 2
     }
   },
   "apps/api/src/stories/application/story-graph.spec.ts": {
