@@ -1,5 +1,5 @@
 import type { StatComparisonOperator } from '../../triggers/conditions.js';
-import type { StatEffect, StatValueType } from '../../model/stats.js';
+import type { StatValueType } from '../../model/stats.js';
 import type { QspSourceCondition, QspSourcePosition, QspVariableEffect } from './models.js';
 
 type Token =
@@ -72,13 +72,24 @@ export function parseQspAssignment(
       message: 'Relative string assignments are not yet imported.',
     };
   }
-  const operation: StatEffect['operation'] = sourceOperation === '=' ? 'set' : 'add';
+  if (sourceOperation === '=') {
+    return {
+      kind: 'parsed',
+      effect: { variableName: name, operation: 'set', value, source },
+    };
+  }
+  if (typeof value !== 'number') {
+    return {
+      kind: 'unsupported',
+      message: 'Relative string assignments are not yet imported.',
+    };
+  }
   return {
     kind: 'parsed',
     effect: {
       variableName: name,
-      operation,
-      value: sourceOperation === '-=' ? -(value as number) : value,
+      operation: 'add',
+      value: sourceOperation === '-=' ? -value : value,
       source,
     },
   };

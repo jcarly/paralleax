@@ -550,10 +550,14 @@ export function InteractionInspector({
                           disabled={valueType !== 'number'}
                           value={effect.operation}
                           onChange={(event) => {
+                            const operation = event.target.value;
+                            if (operation !== 'add' && operation !== 'set') {
+                              return;
+                            }
                             const nextEffects = [...statEffects];
                             nextEffects[index] = {
                               ...effect,
-                              operation: event.target.value as 'add' | 'set',
+                              operation,
                             };
                             saveStatEffects(nextEffects);
                           }}
@@ -757,10 +761,14 @@ export function InteractionInspector({
                         aria-label={t('interactionInspector.itemEffectOperation')}
                         value={effect.operation}
                         onChange={(event) => {
+                          const operation = event.target.value;
+                          if (operation !== 'obtain' && operation !== 'lose') {
+                            return;
+                          }
                           const itemEffects = [...(interaction.itemEffects ?? [])];
                           itemEffects[index] = {
                             ...effect,
-                            operation: event.target.value as 'obtain' | 'lose',
+                            operation,
                           };
                           updateLocalInteraction({ itemEffects });
                           void onPatch(interaction.id, { itemEffects });

@@ -61,7 +61,10 @@ export function parseExpression(expression: string): ExpressionNode | undefined 
   if (!node || !parser.isAtEnd()) return undefined;
   const pending = [{ node, depth: 0 }];
   while (pending.length) {
-    const entry = pending.pop()!;
+    const entry = pending.pop();
+    if (!entry) {
+      continue;
+    }
     if (entry.depth > 64) return undefined;
     const children =
       entry.node.kind === 'binary'
@@ -164,25 +167,26 @@ function evaluateNode(
     }
     case 'unary': {
       const operand = evaluateNode(node.operand, values);
-      if (typeof operand === 'object' && operand && 'ok' in operand && !operand.ok) return operand;
-      const value = operand as ExpressionLiteral;
-      if (typeof value !== 'number') {
+      if (isExpressionFailure(operand)) {
+        return operand;
+      }
+      if (typeof operand !== 'number') {
         return { ok: false, error: `Unary ${node.operator} requires a numeric operand` };
       }
-      return node.operator === '-' ? -value : value;
+      return node.operator === '-' ? -operand : operand;
     }
     case 'group':
       return evaluateNode(node.expression, values);
     case 'binary': {
       const left = evaluateNode(node.left, values);
-      if (typeof left === 'object' && left && 'ok' in left && !left.ok) return left;
+      if (isExpressionFailure(left)) {
+        return left;
+      }
       const right = evaluateNode(node.right, values);
-      if (typeof right === 'object' && right && 'ok' in right && !right.ok) return right;
-      const result = applyBinaryOperator(
-        node.operator,
-        left as ExpressionLiteral,
-        right as ExpressionLiteral,
-      );
+      if (isExpressionFailure(right)) {
+        return right;
+      }
+      const result = applyBinaryOperator(node.operator, left, right);
       return typeof result === 'number' && !Number.isFinite(result)
         ? { ok: false, error: 'Expression result must be finite' }
         : result;
@@ -190,6 +194,12 @@ function evaluateNode(
     default:
       return { ok: false, error: 'Invalid expression node' };
   }
+}
+
+function isExpressionFailure(
+  value: ExpressionEvaluationResult,
+): value is { ok: false; error: string } {
+  return typeof value === 'object' && value !== null && 'ok' in value && !value.ok;
 }
 
 function visitExpression(node: ExpressionNode, visitor: (node: ExpressionNode) => void): void {
@@ -232,57 +242,41 @@ function applyBinaryOperator(
   left: ExpressionLiteral,
   right: ExpressionLiteral,
 ): ExpressionEvaluationResult {
-  const leftIsNumber = typeof left === 'number';
-  const rightIsNumber = typeof right === 'number';
-
-  if (
-    operator === '+' ||
-    operator === '-' ||
-    operator === '*' ||
-    operator === '/' ||
-    operator === '<' ||
-    operator === '<=' ||
-    operator === '>' ||
-    operator === '>='
-  ) {
-    if (!leftIsNumber || !rightIsNumber) {
-      if (operator === '+' && typeof left === 'string' && typeof right === 'string') {
-        return `${left}${right}`;
-      }
-      return { ok: false, error: `Operator ${operator} requires numeric operands` };
+  if (operator === '+') {
+    if (typeof left === 'string' && typeof right === 'string') {
+      return `${left}${right}`;
     }
+    if (typeof left === 'number' && typeof right === 'number') {
+      return left + right;
+    }
+    return { ok: false, error: 'Operator + requires numeric operands' };
   }
-
-  const leftNumber = left as number;
-  const rightNumber = right as number;
-  if ((operator === '==' || operator === '!=') && typeof left !== typeof right) {
-    return { ok: false, error: 'Equality requires matching operand types' };
+  if (operator === '==' || operator === '!=') {
+    if (typeof left !== typeof right) {
+      return { ok: false, error: 'Equality requires matching operand types' };
+    }
+    return operator === '==' ? left === right : left !== right;
+  }
+  if (typeof left !== 'number' || typeof right !== 'number') {
+    return { ok: false, error: `Operator ${operator} requires numeric operands` };
   }
 
   switch (operator) {
-    case '+':
-      return leftNumber + rightNumber;
     case '-':
-      return leftNumber - rightNumber;
+      return left - right;
     case '*':
-      return leftNumber * rightNumber;
+      return left * right;
     case '/':
-      if (rightNumber === 0) return { ok: false, error: 'Division by zero' };
-      return leftNumber / rightNumber;
-    case '==':
-      return left === right;
-    case '!=':
-      return left !== right;
+      if (right === 0) return { ok: false, error: 'Division by zero' };
+      return left / right;
     case '<':
-      return leftNumber < rightNumber;
+      return left < right;
     case '<=':
-      return leftNumber <= rightNumber;
+      return left <= right;
     case '>':
-      return leftNumber > rightNumber;
+      return left > right;
     case '>=':
-      return leftNumber >= rightNumber;
-    default:
-      return { ok: false, error: 'Unsupported operator' };
+      return left >= right;
   }
 }
 
@@ -399,85 +393,119 @@ class ExpressionParser {
 
   private parsePrimary(): ExpressionNode | undefined {
     this.skipWhitespace();
-    if (this.isAtEnd()) return undefined;
-
     const current = this.peek();
-    if (current === '(') {
-      this.index += 1;
-      const expression = this.parseComparison();
-      this.skipWhitespace();
-      if (!expression || this.peek() !== ')') return undefined;
-      this.index += 1;
-      return { kind: 'group', expression };
-    }
-    if (current === '@') {
-      this.index += 1;
-      const maybeBrace = this.peek();
-      if (maybeBrace !== '{') return undefined;
-      this.index += 1;
-      const rawReference = this.readUntil('}');
-      if (!rawReference) return undefined;
-      const parts = rawReference.split('|');
-      const [id, itemId] = parts;
-      if (parts.length > 2 || !id || (parts.length === 2 && !itemId)) return undefined;
-      if (parts.some((part) => /[\s{}]/.test(part))) return undefined;
-      const node: VariableReferenceNode = { kind: 'variable', id, ...(itemId ? { itemId } : {}) };
-      this.index += 1;
-      return node;
-    }
-
-    if (current === '"' || current === "'") {
-      const quote = current;
-      this.index += 1;
-      let value = '';
-      while (!this.isAtEnd()) {
-        const char = this.source[this.index];
-        if (char === quote) {
-          this.index += 1;
-          return { kind: 'literal', value };
-        }
-        this.index += 1;
-        if (char === '\\') {
-          const next = this.peek();
-          if (next === undefined) return undefined;
-          value += next;
-          this.index += 1;
-          continue;
-        }
-        value += char;
-      }
+    if (current === undefined) {
       return undefined;
     }
-
+    if (current === '(') {
+      return this.parseGroupedExpression();
+    }
+    if (current === '@') {
+      return this.parseVariableReference();
+    }
+    if (current === '"' || current === "'") {
+      return this.parseStringLiteral(current);
+    }
     if (this.matchesKeyword('true')) {
       return { kind: 'literal', value: true };
     }
     if (this.matchesKeyword('false')) {
       return { kind: 'literal', value: false };
     }
-
     if (this.isDigit() || current === '.') {
-      const start = this.index;
-      if (current === '.') {
-        this.index += 1;
-      }
-      while (this.isDigit()) this.index += 1;
-      if (this.peek() === '.') {
-        this.index += 1;
-        while (this.isDigit()) this.index += 1;
-      }
-      const raw = this.source.slice(start, this.index);
-      if (!NUMBER_PATTERN.test(raw) || !Number.isFinite(Number(raw))) return undefined;
-      return { kind: 'literal', value: Number(raw) };
+      return this.parseNumberLiteral();
     }
+    return this.parseIdentifier();
+  }
 
-    const identStart = this.index;
+  private parseGroupedExpression(): ExpressionNode | undefined {
+    this.index += 1;
+    const expression = this.parseComparison();
+    this.skipWhitespace();
+    if (!expression || this.peek() !== ')') {
+      return undefined;
+    }
+    this.index += 1;
+    return { kind: 'group', expression };
+  }
+
+  private parseVariableReference(): ExpressionNode | undefined {
+    this.index += 1;
+    if (this.peek() !== '{') {
+      return undefined;
+    }
+    this.index += 1;
+    const rawReference = this.readUntil('}');
+    if (!rawReference) {
+      return undefined;
+    }
+    const parts = rawReference.split('|');
+    const [id, itemId] = parts;
+    if (parts.length > 2 || !id || (parts.length === 2 && !itemId)) {
+      return undefined;
+    }
+    if (parts.some((part) => /[\s{}]/.test(part))) {
+      return undefined;
+    }
+    this.index += 1;
+    return { kind: 'variable', id, ...(itemId ? { itemId } : {}) };
+  }
+
+  private parseStringLiteral(quote: string): ExpressionNode | undefined {
+    this.index += 1;
+    let value = '';
+    while (!this.isAtEnd()) {
+      const char = this.source[this.index];
+      if (char === quote) {
+        this.index += 1;
+        return { kind: 'literal', value };
+      }
+      this.index += 1;
+      if (char === '\\') {
+        const next = this.peek();
+        if (next === undefined) {
+          return undefined;
+        }
+        value += next;
+        this.index += 1;
+        continue;
+      }
+      value += char;
+    }
+    return undefined;
+  }
+
+  private parseNumberLiteral(): ExpressionNode | undefined {
+    const start = this.index;
+    if (this.peek() === '.') {
+      this.index += 1;
+    }
+    while (this.isDigit()) {
+      this.index += 1;
+    }
+    if (this.peek() === '.') {
+      this.index += 1;
+      while (this.isDigit()) {
+        this.index += 1;
+      }
+    }
+    const raw = this.source.slice(start, this.index);
+    if (!NUMBER_PATTERN.test(raw) || !Number.isFinite(Number(raw))) {
+      return undefined;
+    }
+    return { kind: 'literal', value: Number(raw) };
+  }
+
+  private parseIdentifier(): ExpressionNode | undefined {
+    const start = this.index;
     while (!this.isAtEnd() && /[A-Za-z0-9_-]/.test(this.source[this.index])) {
       this.index += 1;
     }
-    const ident = this.source.slice(identStart, this.index);
-    if (!ident) return undefined;
-    return { kind: 'variable', id: ident };
+    const id = this.source.slice(start, this.index);
+    if (id) {
+      return { kind: 'variable', id };
+    }
+    return undefined;
   }
 
   private skipWhitespace(): void {

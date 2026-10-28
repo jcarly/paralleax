@@ -286,7 +286,7 @@ function commentTextValue(target: object, targetType: CommentTargetType, field: 
   ) {
     return undefined;
   }
-  const value = (target as Record<string, unknown>)[field];
+  const value: unknown = Reflect.get(target, field);
   if (typeof value !== 'string') return undefined;
   return field === 'body' ? richTextToPlainText(value) : value;
 }
