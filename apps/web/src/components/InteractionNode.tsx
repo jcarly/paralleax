@@ -1,5 +1,5 @@
 import type { KeyboardEvent, MouseEvent } from 'react';
-import { Handle, Position, type NodeProps } from '@xyflow/react';
+import { Handle, Position, type Node, type NodeProps } from '@xyflow/react';
 import { useTranslation } from 'react-i18next';
 export interface InteractionNodeData extends Record<string, unknown> {
   title: string;
@@ -20,6 +20,7 @@ export interface InteractionNodeData extends Record<string, unknown> {
 }
 
 const routingHandles = [Position.Top, Position.Right, Position.Bottom, Position.Left];
+type NodeActionEvent = Pick<MouseEvent<HTMLDivElement>, 'preventDefault' | 'stopPropagation'>;
 
 function getInitials(name: string) {
   return name
@@ -31,32 +32,32 @@ function getInitials(name: string) {
     .toLocaleUpperCase();
 }
 
-export function InteractionNode({ id, data }: NodeProps) {
+export function InteractionNode({ id, data }: NodeProps<Node<InteractionNodeData>>) {
   const { t } = useTranslation();
-  const d = data as InteractionNodeData;
+  const d = data;
+  const rootTriggerId = d.rootTriggerId;
   const characters = d.characters ?? [];
   const visibleCharacters = characters.slice(0, 3);
-  const createParent = (event: MouseEvent<HTMLDivElement>) => {
+  const createParent = (event: NodeActionEvent) => {
     event.preventDefault();
     event.stopPropagation();
     d.onCreateParent?.(id);
   };
-  const createChild = (event: MouseEvent<HTMLDivElement>) => {
+  const createChild = (event: NodeActionEvent) => {
     event.preventDefault();
     event.stopPropagation();
     d.onCreateChild?.(id);
   };
   const selectRootTrigger = (event: MouseEvent<HTMLButtonElement>) => {
-    if (!d.rootTriggerId) return;
+    if (!rootTriggerId) return;
     event.preventDefault();
     event.stopPropagation();
-    d.onSelectRootTrigger?.(id, d.rootTriggerId);
+    d.onSelectRootTrigger?.(id, rootTriggerId);
   };
   const triggerKeyboardAction =
-    (callback: (event: MouseEvent<HTMLDivElement>) => void) =>
-    (event: KeyboardEvent<HTMLDivElement>) => {
+    (callback: (event: NodeActionEvent) => void) => (event: KeyboardEvent<HTMLDivElement>) => {
       if (event.key !== 'Enter' && event.key !== ' ') return;
-      callback(event as unknown as MouseEvent<HTMLDivElement>);
+      callback(event);
     };
 
   return (
@@ -64,19 +65,19 @@ export function InteractionNode({ id, data }: NodeProps) {
       className={`interaction-node ${d.selected ? 'selected' : ''} ${d.dimmed ? 'dimmed' : ''}`}
       data-testid="interaction-node"
     >
-      {d.rootTriggerId ? (
+      {rootTriggerId ? (
         <button
           className={`root-trigger-marker nodrag nopan ${d.rootTriggerSelected ? 'selected' : ''}`}
           type="button"
           data-trigger-drop-target="true"
           data-interaction-id={id}
-          data-trigger-id={d.rootTriggerId}
+          data-trigger-id={rootTriggerId}
           aria-label={t('graph.selectRootTrigger')}
           title={t('graph.rootTrigger')}
           onClick={selectRootTrigger}
         />
       ) : null}
-      {d.rootTriggerId && d.rootTriggerCommentCount ? (
+      {rootTriggerId && d.rootTriggerCommentCount ? (
         <button
           className="root-trigger-comment-badge nodrag nopan"
           type="button"
@@ -84,7 +85,7 @@ export function InteractionNode({ id, data }: NodeProps) {
           onClick={(event) => {
             event.preventDefault();
             event.stopPropagation();
-            d.onOpenComments?.('trigger', d.rootTriggerId!);
+            d.onOpenComments?.('trigger', rootTriggerId);
           }}
         >
           <span aria-hidden="true">◆</span>
