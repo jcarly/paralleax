@@ -67,6 +67,8 @@ test('an author creates, persists, resumes, and simulates a conditional story', 
   const middle = await createdInteraction(middleCreation);
   await editInteraction(page, 'New interaction', 'Gain courage', 'Alice chooses to continue.');
 
+  await page.getByRole('button', { name: 'Fit View' }).click();
+  await expect(openingNode).toBeVisible();
   const alternativeCreation = waitForApiResponse(
     page,
     'POST',
