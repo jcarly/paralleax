@@ -1,5 +1,17 @@
 import type { Story } from '@paralleax/shared';
 
+const defaultScenePrompt = 'Describe what happens here.';
+
+export function storyHasAuthoredScene(story: Story): boolean {
+  return story.interactions.some(({ body }) => {
+    const text = body
+      .replace(/<[^>]*>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    return text.length > 0 && text !== defaultScenePrompt;
+  });
+}
+
 function* connectedDestinations(story: Story): Iterable<{ sourceId: string; targetId: string }> {
   for (const target of story.interactions) {
     for (const trigger of target.triggers) {

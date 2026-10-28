@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import type { Story } from '@paralleax/shared';
-import { storyHasBranchingChoice } from './branchingChoice';
+import { storyHasAuthoredScene, storyHasBranchingChoice } from './branchingChoice';
 
-function makeStory(inputByTarget: Record<string, string[]>): Story {
+function makeStory(
+  inputByTarget: Record<string, string[]>,
+  bodyByTarget: Record<string, string> = {},
+): Story {
   return {
     id: 'story',
     title: 'Story',
@@ -11,7 +14,7 @@ function makeStory(inputByTarget: Record<string, string[]>): Story {
     interactions: Object.entries(inputByTarget).map(([targetId, inputInteractionIds]) => ({
       id: targetId,
       title: targetId,
-      body: '',
+      body: bodyByTarget[targetId] ?? '',
       position: { x: 0, y: 0 },
       triggers: [{ id: `trigger-${targetId}`, inputInteractionIds }],
     })),
@@ -29,5 +32,19 @@ describe('storyHasBranchingChoice', () => {
     const story = makeStory({ root: [], child: ['root'] });
 
     expect(storyHasBranchingChoice(story)).toBe(false);
+  });
+});
+
+describe('storyHasAuthoredScene', () => {
+  it('ignores the default interaction prompt', () => {
+    const story = makeStory({ root: [] }, { root: '<p>Describe what happens here.</p>' });
+
+    expect(storyHasAuthoredScene(story)).toBe(false);
+  });
+
+  it('recognizes authored scene content', () => {
+    const story = makeStory({ root: [] }, { root: '<p>Alice enters the atrium.</p>' });
+
+    expect(storyHasAuthoredScene(story)).toBe(true);
   });
 });

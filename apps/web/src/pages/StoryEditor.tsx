@@ -74,7 +74,10 @@ import { useStoryComments } from '../features/comments/useStoryComments';
 import { GraphDecorationInspector } from '../features/graph-decorations/GraphDecorationInspector';
 import { GraphDecorationNode } from '../features/graph-decorations/GraphDecorationNode';
 import { buildGraphDecorationNodes } from '../features/graph-decorations/graphDecorationNodes';
-import { storyHasBranchingChoice } from '../features/onboarding/branchingChoice';
+import {
+  storyHasAuthoredScene,
+  storyHasBranchingChoice,
+} from '../features/onboarding/branchingChoice';
 import { useOnboarding } from '../features/onboarding/onboardingContext';
 import { isRealtimeEditableTarget } from '../features/realtime/storyRealtime';
 import { useStoryConnectionController } from '../features/story-editor/graph/useStoryConnectionController';
@@ -321,10 +324,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
       return;
     }
     lastOnboardingSnapshot.current = snapshot;
-    const hasAuthoredScene = story.interactions.some(
-      ({ body }) => body.replace(/<[^>]*>/g, ' ').trim().length > 0,
-    );
-    reportStoryState(storyId, hasAuthoredScene, storyHasBranchingChoice(story));
+    reportStoryState(storyId, storyHasAuthoredScene(story), storyHasBranchingChoice(story));
   }, [loadPhase, reportStoryState, story, storyId]);
   useEffect(() => {
     if (loadPhase !== 'ready' || !story || story.id !== storyId || !selectedId) {
