@@ -1,5 +1,7 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import type { ReactNode } from 'react';
+import { useEffect, useMemo, useReducer } from 'react';
+import type { Dispatch, ReactNode } from 'react';
+import { OnboardingContext } from './onboardingContext';
+import type { OnboardingContextValue } from './onboardingContext';
 import {
   completeOnboardingStep,
   currentOnboardingStep,
@@ -12,31 +14,138 @@ import {
   type OnboardingStepId,
 } from './onboardingProgress';
 
-interface OnboardingContextValue {
-  progress: OnboardingProgress;
-  beginForStory: (storyId: string) => void;
-  openHelp: (storyId?: string) => void;
-  pause: () => void;
-  restart: (storyId?: string) => void;
-  skipCurrentStep: () => void;
-  reportStepComplete: (storyId: string, step: OnboardingStepId) => void;
-  reportStoryState: (storyId: string, hasScene: boolean, hasBranch: boolean) => void;
-  reportStoryDeleted: (storyId: string) => void;
+type OnboardingAction =
+  | { type: 'begin'; storyId: string }
+  | { type: 'open-help'; storyId?: string }
+  | { type: 'pause' }
+  | { type: 'restart'; storyId?: string }
+  | { type: 'skip' }
+  | { type: 'complete'; storyId: string; step: OnboardingStepId }
+  | { type: 'story-state'; storyId: string; hasScene: boolean; hasBranch: boolean }
+  | { type: 'story-deleted'; storyId: string };
+
+type LifecycleAction = Extract<
+  OnboardingAction,
+  { type: 'begin' | 'open-help' | 'pause' | 'restart' }
+>;
+type StepAction = Extract<OnboardingAction, { type: 'skip' | 'complete' }>;
+type StoryAction = Extract<OnboardingAction, { type: 'story-state' | 'story-deleted' }>;
+
+function openGuide(progress: OnboardingProgress, storyId?: string): OnboardingProgress {
+  if (!storyId || storyId === progress.storyId) {
+    if (progress.status === 'active') {
+      return progress;
+    }
+    if (progress.status === 'paused') {
+      return { ...progress, status: 'active' };
+    }
+  }
+  return { ...initialOnboardingProgress, status: 'active', storyId: storyId ?? progress.storyId };
 }
 
-const defaultValue: OnboardingContextValue = {
-  progress: initialOnboardingProgress,
-  beginForStory: () => undefined,
-  openHelp: () => undefined,
-  pause: () => undefined,
-  restart: () => undefined,
-  skipCurrentStep: () => undefined,
-  reportStepComplete: () => undefined,
-  reportStoryState: () => undefined,
-  reportStoryDeleted: () => undefined,
-};
+function applyStoryState(
+  progress: OnboardingProgress,
+  storyId: string,
+  hasScene: boolean,
+  hasBranch: boolean,
+): OnboardingProgress {
+  if (progress.storyId !== storyId || progress.status === 'idle') {
+    return progress;
+  }
+  let next = progress;
+  if (hasScene) {
+    next = completeOnboardingStep(next, 'write-scene');
+  }
+  if (hasBranch) {
+    next = completeOnboardingStep(next, 'create-branch');
+  }
+  return next;
+}
 
-const OnboardingContext = createContext(defaultValue);
+function reduceLifecycleAction(
+  progress: OnboardingProgress,
+  action: LifecycleAction,
+): OnboardingProgress {
+  switch (action.type) {
+    case 'begin':
+      return { ...initialOnboardingProgress, status: 'active', storyId: action.storyId };
+    case 'open-help':
+      return openGuide(progress, action.storyId);
+    case 'pause':
+      return progress.status === 'active' ? { ...progress, status: 'paused' } : progress;
+    case 'restart':
+      return {
+        ...initialOnboardingProgress,
+        status: 'active',
+        storyId: action.storyId ?? progress.storyId,
+      };
+  }
+}
+
+function reduceStepAction(
+  progress: OnboardingProgress,
+  action: StepAction,
+): OnboardingProgress {
+  switch (action.type) {
+    case 'skip': {
+      const step = currentOnboardingStep(progress);
+      return progress.status === 'active' && step ? skipOnboardingStep(progress, step) : progress;
+    }
+    case 'complete':
+      return progress.storyId === action.storyId && progress.status !== 'idle'
+        ? completeOnboardingStep(progress, action.step)
+        : progress;
+  }
+}
+
+function reduceStoryAction(
+  progress: OnboardingProgress,
+  action: StoryAction,
+): OnboardingProgress {
+  switch (action.type) {
+    case 'story-state':
+      return applyStoryState(progress, action.storyId, action.hasScene, action.hasBranch);
+    case 'story-deleted':
+      return progress.storyId === action.storyId
+        ? { ...progress, status: 'paused', storyId: null }
+        : progress;
+  }
+}
+
+function onboardingReducer(
+  progress: OnboardingProgress,
+  action: OnboardingAction,
+): OnboardingProgress {
+  switch (action.type) {
+    case 'begin':
+    case 'open-help':
+    case 'pause':
+    case 'restart':
+      return reduceLifecycleAction(progress, action);
+    case 'skip':
+    case 'complete':
+      return reduceStepAction(progress, action);
+    case 'story-state':
+    case 'story-deleted':
+      return reduceStoryAction(progress, action);
+  }
+}
+
+function createActions(
+  dispatch: Dispatch<OnboardingAction>,
+): Omit<OnboardingContextValue, 'progress'> {
+  return {
+    beginForStory: (storyId) => dispatch({ type: 'begin', storyId }),
+    openHelp: (storyId) => dispatch({ type: 'open-help', storyId }),
+    pause: () => dispatch({ type: 'pause' }),
+    restart: (storyId) => dispatch({ type: 'restart', storyId }),
+    skipCurrentStep: () => dispatch({ type: 'skip' }),
+    reportStepComplete: (storyId, step) => dispatch({ type: 'complete', storyId, step }),
+    reportStoryState: (storyId, hasScene, hasBranch) =>
+      dispatch({ type: 'story-state', storyId, hasScene, hasBranch }),
+    reportStoryDeleted: (storyId) => dispatch({ type: 'story-deleted', storyId }),
+  };
+}
 
 export function OnboardingProvider({
   children,
@@ -46,130 +155,18 @@ export function OnboardingProvider({
   userId: string | null | undefined;
 }) {
   const storageKey = onboardingStorageKey(userId ?? null);
-  const [progress, setProgress] = useState(() =>
-    readOnboardingProgress(window.localStorage, storageKey),
+  const [progress, dispatch] = useReducer(
+    onboardingReducer,
+    storageKey,
+    (key) => readOnboardingProgress(window.localStorage, key),
   );
+  const actions = useMemo(() => createActions(dispatch), [dispatch]);
+  const value = useMemo(() => ({ ...actions, progress }), [actions, progress]);
 
   useEffect(
     () => writeOnboardingProgress(window.localStorage, storageKey, progress),
     [progress, storageKey],
   );
 
-  const update = useCallback((transform: (current: OnboardingProgress) => OnboardingProgress) => {
-    setProgress((current) => transform(current));
-  }, []);
-
-  const beginForStory = useCallback(
-    (storyId: string) => {
-      update(() => ({ ...initialOnboardingProgress, status: 'active', storyId }));
-    },
-    [update],
-  );
-
-  const restart = useCallback(
-    (storyId?: string) => {
-      update((current) => ({
-        ...initialOnboardingProgress,
-        status: 'active',
-        storyId: storyId ?? current.storyId,
-      }));
-    },
-    [update],
-  );
-
-  const openHelp = useCallback(
-    (storyId?: string) => {
-      update((current) => {
-        if (!storyId || storyId === current.storyId) {
-          if (current.status === 'active') return current;
-          if (current.status === 'paused') return { ...current, status: 'active' };
-        }
-        return {
-          ...initialOnboardingProgress,
-          status: 'active',
-          storyId: storyId ?? current.storyId,
-        };
-      });
-    },
-    [update],
-  );
-
-  const pause = useCallback(() => {
-    update((current) =>
-      current.status === 'active' ? { ...current, status: 'paused' } : current,
-    );
-  }, [update]);
-
-  const skipCurrentStep = useCallback(() => {
-    update((current) => {
-      const step = currentOnboardingStep(current);
-      return current.status === 'active' && step ? skipOnboardingStep(current, step) : current;
-    });
-  }, [update]);
-
-  const reportStepComplete = useCallback(
-    (storyId: string, step: OnboardingStepId) => {
-      update((current) =>
-        current.storyId === storyId && current.status !== 'idle'
-          ? completeOnboardingStep(current, step)
-          : current,
-      );
-    },
-    [update],
-  );
-
-  const reportStoryState = useCallback(
-    (storyId: string, hasScene: boolean, hasBranch: boolean) => {
-      update((current) => {
-        if (current.storyId !== storyId || current.status === 'idle') return current;
-        let next = current;
-        if (hasScene) next = completeOnboardingStep(next, 'write-scene');
-        if (hasBranch) next = completeOnboardingStep(next, 'create-branch');
-        return next;
-      });
-    },
-    [update],
-  );
-
-  const reportStoryDeleted = useCallback(
-    (storyId: string) => {
-      update((current) =>
-        current.storyId === storyId
-          ? { ...current, status: 'paused', storyId: null }
-          : current,
-      );
-    },
-    [update],
-  );
-
-  const value = useMemo(
-    () => ({
-      progress,
-      beginForStory,
-      openHelp,
-      pause,
-      restart,
-      skipCurrentStep,
-      reportStepComplete,
-      reportStoryState,
-      reportStoryDeleted,
-    }),
-    [
-      beginForStory,
-      openHelp,
-      pause,
-      progress,
-      reportStepComplete,
-      reportStoryDeleted,
-      reportStoryState,
-      restart,
-      skipCurrentStep,
-    ],
-  );
-
   return <OnboardingContext.Provider value={value}>{children}</OnboardingContext.Provider>;
-}
-
-export function useOnboarding(): OnboardingContextValue {
-  return useContext(OnboardingContext);
 }

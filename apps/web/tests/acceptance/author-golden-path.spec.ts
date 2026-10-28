@@ -47,6 +47,7 @@ test('an author creates, persists, resumes, and simulates a conditional story', 
   const rootCreation = waitForApiResponse(page, 'POST', /\/api\/stories\/[^/]+\/interactions$/);
   await page.getByRole('button', { name: 'Add root' }).click();
   const root = await createdInteraction(rootCreation);
+  await interactionNode(page, 'New interaction').click();
   await expect(page.getByRole('heading', { name: 'Write a scene' })).toBeVisible();
   await editInteraction(page, 'New interaction', 'Opening', 'Alice enters the atrium.');
   await expect(page.getByRole('heading', { name: 'Create a choice' })).toBeVisible();

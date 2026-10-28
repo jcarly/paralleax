@@ -25,12 +25,13 @@ export const initialOnboardingProgress: OnboardingProgress = {
 export function readOnboardingProgress(storage: Storage, key: string): OnboardingProgress {
   try {
     const value: unknown = JSON.parse(storage.getItem(key) ?? 'null');
-    if (!value || typeof value !== 'object') return initialOnboardingProgress;
-    const candidate = value as Partial<OnboardingProgress>;
-    const completedSteps = validStepIds(candidate.completedSteps);
-    const skippedSteps = validStepIds(candidate.skippedSteps);
-    const status = validStatus(candidate.status);
-    const storyId = typeof candidate.storyId === 'string' ? candidate.storyId : null;
+    if (!isRecord(value)) {
+      return initialOnboardingProgress;
+    }
+    const completedSteps = validStepIds(value.completedSteps);
+    const skippedSteps = validStepIds(value.skippedSteps);
+    const status = validStatus(value.status);
+    const storyId = typeof value.storyId === 'string' ? value.storyId : null;
     return normalizeProgress({ status, storyId, completedSteps, skippedSteps });
   } catch {
     return initialOnboardingProgress;
@@ -88,8 +89,14 @@ export function onboardingStorageKey(userId: string | null): string {
 }
 
 function validStepIds(value: unknown): OnboardingStepId[] {
-  if (!Array.isArray(value)) return [];
+  if (!Array.isArray(value)) {
+    return [];
+  }
   return [...new Set(value.filter(isOnboardingStepId))];
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function isOnboardingStepId(value: unknown): value is OnboardingStepId {

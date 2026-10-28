@@ -4,11 +4,18 @@ import { storyHasBranchingChoice } from './branchingChoice';
 
 function makeStory(inputByTarget: Record<string, string[]>): Story {
   return {
+    id: 'story',
+    title: 'Story',
+    createdAt: '2026-10-28T00:00:00Z',
+    updatedAt: '2026-10-28T00:00:00Z',
     interactions: Object.entries(inputByTarget).map(([targetId, inputInteractionIds]) => ({
       id: targetId,
+      title: targetId,
+      body: '',
+      position: { x: 0, y: 0 },
       triggers: [{ id: `trigger-${targetId}`, inputInteractionIds }],
     })),
-  } as Story;
+  };
 }
 
 describe('storyHasBranchingChoice', () => {

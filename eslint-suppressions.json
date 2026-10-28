@@ -960,9 +960,6 @@
     "@typescript-eslint/no-misused-promises": {
       "count": 2
     },
-    "@typescript-eslint/no-shadow": {
-      "count": 10
-    },
     "complexity": {
       "count": 1
     },
@@ -1094,9 +1091,6 @@
   "apps/web/src/components/InteractionInspector.tsx": {
     "complexity": {
       "count": 1
-    },
-    "curly": {
-      "count": 3
     },
     "max-lines-per-function": {
       "count": 4
@@ -1565,7 +1559,7 @@
   },
   "apps/web/src/features/feedback/FeedbackButton.tsx": {
     "curly": {
-      "count": 4
+      "count": 1
     }
   },
   "apps/web/src/features/feedback/feedbackConfig.ts": {

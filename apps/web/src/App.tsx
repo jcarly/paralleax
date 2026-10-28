@@ -4,8 +4,9 @@ import { Link, Navigate, NavLink, Route, Routes, useLocation, useNavigate } from
 import { api, type AuthUser } from './api';
 import { authenticationPath, safeReturnTo } from './authNavigation';
 import { LanguageSwitcher } from './components/LanguageSwitcher';
-import { OnboardingGuide, OnboardingHelpButton } from './features/onboarding/OnboardingGuide';
-import { OnboardingProvider, useOnboarding } from './features/onboarding/OnboardingProvider';
+import { OnboardingHelpButton } from './features/onboarding/OnboardingHelpButton';
+import { OnboardingProvider } from './features/onboarding/OnboardingProvider';
+import { useOnboarding } from './features/onboarding/onboardingContext';
 import type { AccountAction } from './pages/AccountActionPage';
 import { StoryList } from './pages/StoryList';
 import {
@@ -15,40 +16,41 @@ import {
 } from './pages/storyRouteLoaders';
 
 const ParalleaxPrototype = lazy(() =>
-  loadParalleaxPrototype().then(({ ParalleaxPrototype }) => ({ default: ParalleaxPrototype })),
+  loadParalleaxPrototype().then(({ ParalleaxPrototype: component }) => ({ default: component })),
 );
 
 const StoryEditor = lazy(() =>
-  loadStoryEditor().then(({ StoryEditor }) => ({ default: StoryEditor })),
+  loadStoryEditor().then(({ StoryEditor: component }) => ({ default: component })),
 );
 const StoryPlayer = lazy(() =>
-  loadStoryPlayer().then(({ StoryPlayer }) => ({ default: StoryPlayer })),
+  loadStoryPlayer().then(({ StoryPlayer: component }) => ({ default: component })),
 );
 const FeedbackButton = lazy(() =>
-  import('./features/feedback/FeedbackButton').then(({ FeedbackButton }) => ({
-    default: FeedbackButton,
+  import('./features/feedback/FeedbackButton').then(({ FeedbackButton: component }) => ({
+    default: component,
   })),
 );
+const OnboardingGuide = lazy(() => import('./features/onboarding/OnboardingGuide'));
 const AuthPage = lazy(() =>
-  import('./pages/AuthPage').then(({ AuthPage }) => ({ default: AuthPage })),
+  import('./pages/AuthPage').then(({ AuthPage: component }) => ({ default: component })),
 );
 const AccountDialog = lazy(() =>
-  import('./components/AccountDialog').then(({ AccountDialog }) => ({ default: AccountDialog })),
+  import('./components/AccountDialog').then(({ AccountDialog: component }) => ({ default: component })),
 );
 const AccountActionPage = lazy(() =>
-  import('./pages/AccountActionPage').then(({ AccountActionPage }) => ({
-    default: AccountActionPage,
+  import('./pages/AccountActionPage').then(({ AccountActionPage: component }) => ({
+    default: component,
   })),
 );
 const StoryAccessPage = lazy(() =>
-  import('./pages/StoryAccessPage').then(({ StoryAccessPage }) => ({ default: StoryAccessPage })),
+  import('./pages/StoryAccessPage').then(({ StoryAccessPage: component }) => ({ default: component })),
 );
 const AdminUsersPage = lazy(() =>
-  import('./pages/AdminUsersPage').then(({ AdminUsersPage }) => ({ default: AdminUsersPage })),
+  import('./pages/AdminUsersPage').then(({ AdminUsersPage: component }) => ({ default: component })),
 );
 const DesignSystemPage = lazy(() =>
-  import('./pages/DesignSystemPage').then(({ DesignSystemPage }) => ({
-    default: DesignSystemPage,
+  import('./pages/DesignSystemPage').then(({ DesignSystemPage: component }) => ({
+    default: component,
   })),
 );
 
@@ -179,7 +181,7 @@ export function App() {
           </div>
         )}
       </header>
-      <OnboardingGuide />
+      <Suspense fallback={null}>{user ? <OnboardingGuide /> : null}</Suspense>
       <Suspense fallback={<main className="page">{t('shell.loadingWorkspace')}</main>}>
         <Routes>
           <Route

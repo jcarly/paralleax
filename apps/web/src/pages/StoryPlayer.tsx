@@ -24,7 +24,7 @@ import { PlayerChoices } from '../features/story-player/components/PlayerChoices
 import { PlayerContextPanels } from '../features/story-player/components/PlayerContextPanels';
 import { PlayerScene } from '../features/story-player/components/PlayerScene';
 import { PlayerToolbar } from '../features/story-player/components/PlayerToolbar';
-import { useOnboarding } from '../features/onboarding/OnboardingProvider';
+import { useOnboarding } from '../features/onboarding/onboardingContext';
 import { useReaderProgressPersistence } from '../features/story-player/useReaderProgressPersistence';
 import type { StoryPlayerRuntimeLoadResult } from '../features/story-player/loadStoryPlayerRuntime';
 import { useStoryPlayerLoading } from '../features/story-player/runtime/useStoryPlayerLoading';
@@ -116,15 +116,17 @@ export function StoryPlayer({
     randomSeed = '',
     stepStartedAt = [],
   } = session;
-  const onboarding = useOnboarding();
+  const { reportStoryDeleted, reportStepComplete } = useOnboarding();
   useEffect(() => {
-    if (storyRouteInaccessible) onboarding.reportStoryDeleted(storyId);
-  }, [onboarding.reportStoryDeleted, storyId, storyRouteInaccessible]);
+    if (storyRouteInaccessible) {
+      reportStoryDeleted(storyId);
+    }
+  }, [reportStoryDeleted, storyId, storyRouteInaccessible]);
   useEffect(() => {
     if (isSimulationMode && story && journey.length > 1) {
-      onboarding.reportStepComplete(storyId, 'test-story');
+      reportStepComplete(storyId, 'test-story');
     }
-  }, [isSimulationMode, journey.length, onboarding.reportStepComplete, story, storyId]);
+  }, [isSimulationMode, journey.length, reportStepComplete, story, storyId]);
   const {
     markRuntimeSliceLoaded,
     runtimeOptionsError,

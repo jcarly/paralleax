@@ -69,7 +69,9 @@ function SearchableTargetField({
           const option = options.find(
             (candidate) => candidate.label === event.target.value && !candidate.disabled,
           );
-          if (option) onSelect(option.id);
+          if (option) {
+            onSelect(option.id);
+          }
         }}
         onBlur={(event) => {
           if (
@@ -186,7 +188,9 @@ function initialEffectValue(target: StatTarget): StatValue {
 
 function normalizeEffectValue(value: StatValue, target: StatTarget): StatValue {
   const valueType = target.definition ? getStatValueType(target.definition) : 'number';
-  if (typeof value === valueType) return value;
+  if (typeof value === valueType) {
+    return value;
+  }
   return target.assignment.initialValue;
 }
 
@@ -254,7 +258,9 @@ export function InteractionInspector({
 
   function saveStatEffects(nextEffects: StatEffect[], persist = true) {
     updateLocalInteraction({ statEffects: nextEffects });
-    if (persist) void onPatch(interaction.id, { statEffects: nextEffects });
+    if (persist) {
+      void onPatch(interaction.id, { statEffects: nextEffects });
+    }
   }
 
   function addEffect(type: EffectType) {
@@ -320,7 +326,9 @@ export function InteractionInspector({
             onChange={(body) => updateLocalInteraction({ body })}
             onBlur={(body) => {
               void onPatch(interaction.id, { body }).then((saved) => {
-                if (saved !== false) onContentSaved?.(body);
+                if (saved !== false) {
+                  onContentSaved?.(body);
+                }
               });
             }}
             interactionLinkTargets={interactionLinkTargets}
@@ -328,7 +336,9 @@ export function InteractionInspector({
             onConditionalTextChange={(body, conditionalTextBlocks) => {
               updateLocalInteraction({ body, conditionalTextBlocks });
               void onPatch(interaction.id, { body, conditionalTextBlocks }).then((saved) => {
-                if (saved !== false) onContentSaved?.(body);
+                if (saved !== false) {
+                  onContentSaved?.(body);
+                }
               });
             }}
             onConditionalTargetClick={onSelectInteraction}

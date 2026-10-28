@@ -22,7 +22,9 @@ describe('InteractionInspector time', () => {
       createdAt: '2026-10-21T08:00:00Z',
       updatedAt: '2026-10-21T08:00:00Z',
     };
-    const onPatch = vi.fn().mockResolvedValue(true);
+    const onPatch = vi.fn(
+      async (_id: string, _patch: Partial<Story['interactions'][number]>) => true,
+    );
     const onContentSaved = vi.fn();
 
     render(
@@ -41,9 +43,8 @@ describe('InteractionInspector time', () => {
     fireEvent.blur(editor);
 
     await waitFor(() => expect(onContentSaved).toHaveBeenCalledOnce());
-    expect(onPatch).toHaveBeenCalledWith('interaction-1', {
-      body: expect.stringContaining('A scene'),
-    });
+    const savedPatch = onPatch.mock.calls[0]?.[1];
+    expect(savedPatch?.body).toContain('A scene');
   });
 
   it('does not report scene content when its save fails', async () => {

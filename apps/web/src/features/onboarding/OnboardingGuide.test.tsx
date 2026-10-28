@@ -2,8 +2,10 @@ import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
-import { OnboardingGuide, OnboardingHelpButton } from './OnboardingGuide';
-import { OnboardingProvider, useOnboarding } from './OnboardingProvider';
+import { OnboardingGuide } from './OnboardingGuide';
+import { OnboardingHelpButton } from './OnboardingHelpButton';
+import { OnboardingProvider } from './OnboardingProvider';
+import { useOnboarding } from './onboardingContext';
 
 afterEach(cleanup);
 

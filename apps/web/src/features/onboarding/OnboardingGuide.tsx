@@ -1,160 +1,157 @@
 import { useTranslation } from 'react-i18next';
 import { Link, useLocation } from 'react-router-dom';
-import { currentOnboardingStep, onboardingStepIds } from './onboardingProgress';
-import { useOnboarding } from './OnboardingProvider';
+import { useOnboarding } from './onboardingContext';
+import {
+  currentOnboardingStep,
+  onboardingStepIds,
+  type OnboardingStatus,
+  type OnboardingStepId,
+} from './onboardingProgress';
 import './OnboardingGuide.css';
+
+interface GuideRoute {
+  storyId: string | null;
+  isLibrary: boolean;
+  isEditor: boolean;
+  isSimulation: boolean;
+}
 
 const storyRoutePattern = /^\/stories\/([^/]+)\/(edit|play)\/?$/;
 
-export function OnboardingHelpButton({ storyId }: { storyId?: string }) {
-  const { t } = useTranslation();
-  const { openHelp } = useOnboarding();
+function readGuideRoute(pathname: string, search: string): GuideRoute {
+  const match = pathname.match(storyRoutePattern);
+  return {
+    storyId: match?.[1] ?? null,
+    isLibrary: pathname === '/' || pathname === '/stories',
+    isEditor: match?.[2] === 'edit',
+    isSimulation:
+      match?.[2] === 'play' && new URLSearchParams(search).get('mode') === 'simulation',
+  };
+}
 
+function isGuideVisible(
+  status: OnboardingStatus,
+  storyId: string | null,
+  route: GuideRoute,
+): boolean {
   return (
-    <button className="product-help-button" type="button" onClick={() => openHelp(storyId)}>
-      {t('shell.help')}
+    status === 'active' &&
+    (route.isLibrary || route.storyId === storyId || (!storyId && route.storyId === null))
+  );
+}
+
+function canShowStep(step: OnboardingStepId, route: GuideRoute): boolean {
+  return step === 'test-story'
+    ? route.isEditor || route.isSimulation
+    : route.isEditor;
+}
+
+function GuideCloseButton({ label, onPause }: { label: string; onPause: () => void }) {
+  return (
+    <button
+      aria-label={label}
+      className="onboarding-close"
+      type="button"
+      onClick={onPause}
+    >
+      ×
     </button>
   );
 }
 
-export function OnboardingGuide() {
+function GuidePromptCard({
+  message,
+  storyId,
+  showStoryLink = false,
+  onPause,
+}: {
+  message: 'createStoryPrompt' | 'openStoryPrompt' | 'returnToEditorPrompt';
+  storyId?: string;
+  showStoryLink?: boolean;
+  onPause: () => void;
+}) {
   const { t } = useTranslation();
-  const location = useLocation();
-  const { progress, pause, restart, skipCurrentStep } = useOnboarding();
-  const currentStep = currentOnboardingStep(progress);
-  const routeMatch = location.pathname.match(storyRoutePattern);
-  const currentRouteStoryId = routeMatch?.[1];
-  const onLibrary = location.pathname === '/' || location.pathname === '/stories';
-  const onActiveStory = currentRouteStoryId === progress.storyId;
-  const isEditorRoute = routeMatch?.[2] === 'edit';
-  const isSimulationRoute =
-    routeMatch?.[2] === 'play' &&
-    new URLSearchParams(location.search).get('mode') === 'simulation';
-  const stepCanRunHere =
-    currentStep === 'test-story'
-      ? isEditorRoute || isSimulationRoute
-      : isEditorRoute;
-  const visible =
-    progress.status === 'active' &&
-    (onLibrary || onActiveStory || (!progress.storyId && routeMatch === null));
+  const linkStoryId = storyId ?? '';
 
-  if (!visible) return null;
-
-  if (!progress.storyId) {
-    return (
-      <aside className="onboarding-card" role="region" aria-labelledby="onboarding-title" aria-live="polite">
-        <div className="onboarding-card-heading">
-          <h2 id="onboarding-title">{t('onboarding.startTitle')}</h2>
-          <button
-            aria-label={t('onboarding.close')}
-            className="onboarding-close"
-            type="button"
-            onClick={pause}
-          >
-            ×
-          </button>
-        </div>
-        <p>{t('onboarding.createStoryPrompt')}</p>
-      </aside>
-    );
-  }
-
-  if (!onActiveStory) {
-    return (
-      <aside className="onboarding-card" role="region" aria-labelledby="onboarding-title" aria-live="polite">
-        <div className="onboarding-card-heading">
-          <h2 id="onboarding-title">{t('onboarding.startTitle')}</h2>
-          <button
-            aria-label={t('onboarding.close')}
-            className="onboarding-close"
-            type="button"
-            onClick={pause}
-          >
-            ×
-          </button>
-        </div>
-        <p>{t('onboarding.openStoryPrompt')}</p>
-        <Link className="onboarding-primary" to={`/stories/${progress.storyId}/edit`}>
+  return (
+    <aside className="onboarding-card" role="region" aria-labelledby="onboarding-title" aria-live="polite">
+      <div className="onboarding-card-heading">
+        <h2 id="onboarding-title">{t('onboarding.startTitle')}</h2>
+        <GuideCloseButton label={t('onboarding.close')} onPause={onPause} />
+      </div>
+      <p>{t(`onboarding.${message}`)}</p>
+      {showStoryLink ? (
+        <Link className="onboarding-primary" to={`/stories/${linkStoryId}/edit`}>
           {t('onboarding.openStory')}
         </Link>
-      </aside>
-    );
-  }
+      ) : null}
+    </aside>
+  );
+}
 
-  if (!stepCanRunHere && currentStep) {
-    return (
-      <aside className="onboarding-card" role="region" aria-labelledby="onboarding-title" aria-live="polite">
-        <div className="onboarding-card-heading">
-          <h2 id="onboarding-title">{t('onboarding.startTitle')}</h2>
-          <button
-            aria-label={t('onboarding.close')}
-            className="onboarding-close"
-            type="button"
-            onClick={pause}
-          >
-            ×
-          </button>
-        </div>
-        <p>{t('onboarding.returnToEditorPrompt')}</p>
-        <Link className="onboarding-primary" to={`/stories/${progress.storyId}/edit`}>
-          {t('onboarding.openStory')}
-        </Link>
-      </aside>
-    );
-  }
+function GuideCompleteCard({
+  storyId,
+  onPause,
+  onRestart,
+}: {
+  storyId: string;
+  onPause: () => void;
+  onRestart: (storyId?: string) => void;
+}) {
+  const { t } = useTranslation();
 
-  if (!currentStep) {
-    return (
-      <aside className="onboarding-card" aria-labelledby="onboarding-title" aria-live="polite">
-        <div className="onboarding-card-heading">
-          <h2 id="onboarding-title">{t('onboarding.completeTitle')}</h2>
-          <button
-            aria-label={t('onboarding.close')}
-            className="onboarding-close"
-            type="button"
-            onClick={pause}
-          >
-            ×
-          </button>
-        </div>
-        <p>{t('onboarding.completeDescription')}</p>
-        <button
-          className="onboarding-secondary"
-          type="button"
-          onClick={() => restart(progress.storyId ?? undefined)}
-        >
-          {t('onboarding.restart')}
-        </button>
-      </aside>
-    );
-  }
+  return (
+    <aside className="onboarding-card" aria-labelledby="onboarding-title" aria-live="polite">
+      <div className="onboarding-card-heading">
+        <h2 id="onboarding-title">{t('onboarding.completeTitle')}</h2>
+        <GuideCloseButton label={t('onboarding.close')} onPause={onPause} />
+      </div>
+      <p>{t('onboarding.completeDescription')}</p>
+      <button
+        className="onboarding-secondary"
+        type="button"
+        onClick={() => onRestart(storyId)}
+      >
+        {t('onboarding.restart')}
+      </button>
+    </aside>
+  );
+}
 
-  const stepNumber = onboardingStepIds.indexOf(currentStep) + 1;
+function GuideStepCard({
+  step,
+  storyId,
+  onPause,
+  onRestart,
+  onSkip,
+}: {
+  step: OnboardingStepId;
+  storyId: string;
+  onPause: () => void;
+  onRestart: (storyId?: string) => void;
+  onSkip: () => void;
+}) {
+  const { t } = useTranslation();
+  const stepNumber = onboardingStepIds.indexOf(step) + 1;
+
   return (
     <aside className="onboarding-card" role="region" aria-labelledby="onboarding-title" aria-live="polite">
       <div className="onboarding-card-heading">
         <span className="onboarding-step-count">
           {t('onboarding.stepCount', { current: stepNumber, total: onboardingStepIds.length })}
         </span>
-        <button
-          aria-label={t('onboarding.close')}
-          className="onboarding-close"
-          type="button"
-          onClick={pause}
-        >
-          ×
-        </button>
+        <GuideCloseButton label={t('onboarding.close')} onPause={onPause} />
       </div>
-      <h2 id="onboarding-title">{t(`onboarding.steps.${currentStep}.title`)}</h2>
-      <p>{t(`onboarding.steps.${currentStep}.description`)}</p>
+      <h2 id="onboarding-title">{t(`onboarding.steps.${step}.title`)}</h2>
+      <p>{t(`onboarding.steps.${step}.description`)}</p>
       <div className="onboarding-card-actions">
-        <button className="onboarding-secondary" type="button" onClick={skipCurrentStep}>
+        <button className="onboarding-secondary" type="button" onClick={onSkip}>
           {t('onboarding.skipStep')}
         </button>
         <button
           className="onboarding-secondary"
           type="button"
-          onClick={() => restart(progress.storyId ?? undefined)}
+          onClick={() => onRestart(storyId)}
         >
           {t('onboarding.restart')}
         </button>
@@ -162,3 +159,51 @@ export function OnboardingGuide() {
     </aside>
   );
 }
+
+export function OnboardingGuide() {
+  const location = useLocation();
+  const { progress, pause, restart, skipCurrentStep } = useOnboarding();
+  const step = currentOnboardingStep(progress);
+  const route = readGuideRoute(location.pathname, location.search);
+
+  if (!isGuideVisible(progress.status, progress.storyId, route)) {
+    return null;
+  }
+  if (!progress.storyId) {
+    return <GuidePromptCard message="createStoryPrompt" onPause={pause} />;
+  }
+  if (!route.isLibrary && route.storyId !== progress.storyId) {
+    return (
+      <GuidePromptCard
+        message="openStoryPrompt"
+        storyId={progress.storyId}
+        showStoryLink
+        onPause={pause}
+      />
+    );
+  }
+  if (step && !canShowStep(step, route)) {
+    return (
+      <GuidePromptCard
+        message="returnToEditorPrompt"
+        storyId={progress.storyId}
+        showStoryLink
+        onPause={pause}
+      />
+    );
+  }
+  if (!step) {
+    return <GuideCompleteCard storyId={progress.storyId} onPause={pause} onRestart={restart} />;
+  }
+  return (
+    <GuideStepCard
+      step={step}
+      storyId={progress.storyId}
+      onPause={pause}
+      onRestart={restart}
+      onSkip={skipCurrentStep}
+    />
+  );
+}
+
+export default OnboardingGuide;

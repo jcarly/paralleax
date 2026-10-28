@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   completeOnboardingStep,
   currentOnboardingStep,
@@ -12,6 +12,7 @@ import {
 
 describe('onboarding progress', () => {
   beforeEach(() => window.localStorage.clear());
+  afterEach(() => vi.restoreAllMocks());
 
   it('starts with the first action and advances only when that step is completed or skipped', () => {
     expect(currentOnboardingStep(initialOnboardingProgress)).toBe('discover-interactions');
@@ -39,16 +40,16 @@ describe('onboarding progress', () => {
     window.localStorage.setItem(key, '{broken');
     expect(readOnboardingProgress(window.localStorage, key)).toEqual(initialOnboardingProgress);
 
-    const unavailableStorage = {
-      getItem: () => {
-        throw new Error('blocked');
-      },
-      setItem: () => {
-        throw new Error('blocked');
-      },
-    } as unknown as Storage;
-    expect(readOnboardingProgress(unavailableStorage, key)).toEqual(initialOnboardingProgress);
-    expect(() => writeOnboardingProgress(unavailableStorage, key, initialOnboardingProgress)).not.toThrow();
+    vi.spyOn(window.localStorage, 'getItem').mockImplementation(() => {
+      throw new Error('blocked');
+    });
+    vi.spyOn(window.localStorage, 'setItem').mockImplementation(() => {
+      throw new Error('blocked');
+    });
+    expect(readOnboardingProgress(window.localStorage, key)).toEqual(initialOnboardingProgress);
+    expect(() =>
+      writeOnboardingProgress(window.localStorage, key, initialOnboardingProgress),
+    ).not.toThrow();
   });
 
   it('does not show the guide again after all steps are completed or passed', () => {

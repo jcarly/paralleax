@@ -75,7 +75,7 @@ import { GraphDecorationInspector } from '../features/graph-decorations/GraphDec
 import { GraphDecorationNode } from '../features/graph-decorations/GraphDecorationNode';
 import { buildGraphDecorationNodes } from '../features/graph-decorations/graphDecorationNodes';
 import { storyHasBranchingChoice } from '../features/onboarding/branchingChoice';
-import { useOnboarding } from '../features/onboarding/OnboardingProvider';
+import { useOnboarding } from '../features/onboarding/onboardingContext';
 import { isRealtimeEditableTarget } from '../features/realtime/storyRealtime';
 import { useStoryConnectionController } from '../features/story-editor/graph/useStoryConnectionController';
 import { useTwoFingerCanvasPan } from '../features/story-editor/graph/useTwoFingerCanvasPan';
@@ -305,28 +305,36 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
     handleGraphSelectionChange,
     handleGraphSelectionEnd,
   } = useStoryEditorSelection(story);
-  const onboarding = useOnboarding();
+  const { reportStoryDeleted, reportStoryState, reportStepComplete } = useOnboarding();
   const lastOnboardingSnapshot = useRef<string | null>(null);
   useEffect(() => {
-    if (storyRouteInaccessible) onboarding.reportStoryDeleted(storyId);
-  }, [onboarding.reportStoryDeleted, storyId, storyRouteInaccessible]);
+    if (storyRouteInaccessible) {
+      reportStoryDeleted(storyId);
+    }
+  }, [reportStoryDeleted, storyId, storyRouteInaccessible]);
   useEffect(() => {
-    if (loadPhase !== 'ready' || !story || story.id !== storyId) return;
+    if (loadPhase !== 'ready' || !story || story.id !== storyId) {
+      return;
+    }
     const snapshot = `${storyId}:${story.revision ?? 'loaded'}`;
-    if (lastOnboardingSnapshot.current === snapshot) return;
+    if (lastOnboardingSnapshot.current === snapshot) {
+      return;
+    }
     lastOnboardingSnapshot.current = snapshot;
     const hasAuthoredScene = story.interactions.some(
       ({ body }) => body.replace(/<[^>]*>/g, ' ').trim().length > 0,
     );
-    onboarding.reportStoryState(storyId, hasAuthoredScene, storyHasBranchingChoice(story));
-  }, [onboarding.reportStoryState, loadPhase, story, storyId]);
+    reportStoryState(storyId, hasAuthoredScene, storyHasBranchingChoice(story));
+  }, [loadPhase, reportStoryState, story, storyId]);
   useEffect(() => {
-    if (loadPhase !== 'ready' || !story || story.id !== storyId || !selectedId) return;
-    if (selectedId && story.interactions.some(({ id }) => id === selectedId)) {
-      onboarding.reportStepComplete(storyId, 'discover-interactions');
+    if (loadPhase !== 'ready' || !story || story.id !== storyId || !selectedId) {
+      return;
+    }
+    if (story.interactions.some(({ id }) => id === selectedId)) {
+      reportStepComplete(storyId, 'discover-interactions');
     }
   }, [
-    onboarding.reportStepComplete,
+    reportStepComplete,
     loadPhase,
     selectedId,
     story,
@@ -2338,7 +2346,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
                   onPatch={patchInteraction}
                   onContentSaved={(body) => {
                     if (body.replace(/<[^>]*>/g, ' ').trim()) {
-                      onboarding.reportStepComplete(storyId, 'write-scene');
+                      reportStepComplete(storyId, 'write-scene');
                     }
                   }}
                   onDelete={remove}
