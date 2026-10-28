@@ -22,10 +22,7 @@ function OnboardingProbe() {
       >
         Select interaction
       </button>
-      <button
-        type="button"
-        onClick={() => onboarding.reportStoryState('story-1', true, true)}
-      >
+      <button type="button" onClick={() => onboarding.reportStoryState('story-1', true, true)}>
         Report existing content
       </button>
       <button type="button" onClick={onboarding.pause}>

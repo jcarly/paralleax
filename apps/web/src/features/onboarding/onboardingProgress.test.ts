@@ -10,6 +10,15 @@ import {
   type OnboardingProgress,
 } from './onboardingProgress';
 
+function blockStorageAccess() {
+  vi.spyOn(window.localStorage, 'getItem').mockImplementation(() => {
+    throw new Error('blocked');
+  });
+  vi.spyOn(window.localStorage, 'setItem').mockImplementation(() => {
+    throw new Error('blocked');
+  });
+}
+
 describe('onboarding progress', () => {
   beforeEach(() => window.localStorage.clear());
   afterEach(() => vi.restoreAllMocks());
@@ -18,7 +27,9 @@ describe('onboarding progress', () => {
     expect(currentOnboardingStep(initialOnboardingProgress)).toBe('discover-interactions');
     const completed = completeOnboardingStep(initialOnboardingProgress, 'discover-interactions');
     expect(currentOnboardingStep(completed)).toBe('write-scene');
-    expect(currentOnboardingStep(skipOnboardingStep(completed, 'write-scene'))).toBe('create-branch');
+    expect(currentOnboardingStep(skipOnboardingStep(completed, 'write-scene'))).toBe(
+      'create-branch',
+    );
   });
 
   it('persists progress and resumes at the first unfinished action', () => {
@@ -40,12 +51,7 @@ describe('onboarding progress', () => {
     window.localStorage.setItem(key, '{broken');
     expect(readOnboardingProgress(window.localStorage, key)).toEqual(initialOnboardingProgress);
 
-    vi.spyOn(window.localStorage, 'getItem').mockImplementation(() => {
-      throw new Error('blocked');
-    });
-    vi.spyOn(window.localStorage, 'setItem').mockImplementation(() => {
-      throw new Error('blocked');
-    });
+    blockStorageAccess();
     expect(readOnboardingProgress(window.localStorage, key)).toEqual(initialOnboardingProgress);
     expect(() =>
       writeOnboardingProgress(window.localStorage, key, initialOnboardingProgress),
@@ -54,7 +60,12 @@ describe('onboarding progress', () => {
 
   it('does not show the guide again after all steps are completed or passed', () => {
     let progress: OnboardingProgress = { ...initialOnboardingProgress, status: 'active' };
-    for (const step of ['discover-interactions', 'write-scene', 'create-branch', 'test-story'] as const) {
+    for (const step of [
+      'discover-interactions',
+      'write-scene',
+      'create-branch',
+      'test-story',
+    ] as const) {
       progress = completeOnboardingStep(progress, step);
     }
     expect(progress.status).toBe('complete');

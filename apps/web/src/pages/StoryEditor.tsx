@@ -333,13 +333,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
     if (story.interactions.some(({ id }) => id === selectedId)) {
       reportStepComplete(storyId, 'discover-interactions');
     }
-  }, [
-    reportStepComplete,
-    loadPhase,
-    selectedId,
-    story,
-    storyId,
-  ]);
+  }, [reportStepComplete, loadPhase, selectedId, story, storyId]);
   const selectExclusive = useCallback(
     (selection?: StoryEditorExclusiveSelection) => {
       if (selection) setCommentsOpen(false);

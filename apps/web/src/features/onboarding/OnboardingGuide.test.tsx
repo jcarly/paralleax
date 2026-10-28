@@ -16,10 +16,7 @@ function BeginGuide() {
       <button type="button" onClick={() => beginForStory('story-1')}>
         Start guide
       </button>
-      <button
-        type="button"
-        onClick={() => reportStepComplete('story-1', 'discover-interactions')}
-      >
+      <button type="button" onClick={() => reportStepComplete('story-1', 'discover-interactions')}>
         Mark first step
       </button>
     </>

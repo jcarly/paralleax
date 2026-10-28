@@ -82,10 +82,7 @@ function reduceLifecycleAction(
   }
 }
 
-function reduceStepAction(
-  progress: OnboardingProgress,
-  action: StepAction,
-): OnboardingProgress {
+function reduceStepAction(progress: OnboardingProgress, action: StepAction): OnboardingProgress {
   switch (action.type) {
     case 'skip': {
       const step = currentOnboardingStep(progress);
@@ -98,10 +95,7 @@ function reduceStepAction(
   }
 }
 
-function reduceStoryAction(
-  progress: OnboardingProgress,
-  action: StoryAction,
-): OnboardingProgress {
+function reduceStoryAction(progress: OnboardingProgress, action: StoryAction): OnboardingProgress {
   switch (action.type) {
     case 'story-state':
       return applyStoryState(progress, action.storyId, action.hasScene, action.hasBranch);
@@ -155,10 +149,8 @@ export function OnboardingProvider({
   userId: string | null | undefined;
 }) {
   const storageKey = onboardingStorageKey(userId ?? null);
-  const [progress, dispatch] = useReducer(
-    onboardingReducer,
-    storageKey,
-    (key) => readOnboardingProgress(window.localStorage, key),
+  const [progress, dispatch] = useReducer(onboardingReducer, storageKey, (key) =>
+    readOnboardingProgress(window.localStorage, key),
   );
   const actions = useMemo(() => createActions(dispatch), [dispatch]);
   const value = useMemo(() => ({ ...actions, progress }), [actions, progress]);

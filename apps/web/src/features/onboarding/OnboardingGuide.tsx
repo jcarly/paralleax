@@ -24,8 +24,7 @@ function readGuideRoute(pathname: string, search: string): GuideRoute {
     storyId: match?.[1] ?? null,
     isLibrary: pathname === '/' || pathname === '/stories',
     isEditor: match?.[2] === 'edit',
-    isSimulation:
-      match?.[2] === 'play' && new URLSearchParams(search).get('mode') === 'simulation',
+    isSimulation: match?.[2] === 'play' && new URLSearchParams(search).get('mode') === 'simulation',
   };
 }
 
@@ -41,19 +40,12 @@ function isGuideVisible(
 }
 
 function canShowStep(step: OnboardingStepId, route: GuideRoute): boolean {
-  return step === 'test-story'
-    ? route.isEditor || route.isSimulation
-    : route.isEditor;
+  return step === 'test-story' ? route.isEditor || route.isSimulation : route.isEditor;
 }
 
 function GuideCloseButton({ label, onPause }: { label: string; onPause: () => void }) {
   return (
-    <button
-      aria-label={label}
-      className="onboarding-close"
-      type="button"
-      onClick={onPause}
-    >
+    <button aria-label={label} className="onboarding-close" type="button" onClick={onPause}>
       ×
     </button>
   );
@@ -74,7 +66,12 @@ function GuidePromptCard({
   const linkStoryId = storyId ?? '';
 
   return (
-    <aside className="onboarding-card" role="region" aria-labelledby="onboarding-title" aria-live="polite">
+    <aside
+      className="onboarding-card"
+      role="region"
+      aria-labelledby="onboarding-title"
+      aria-live="polite"
+    >
       <div className="onboarding-card-heading">
         <h2 id="onboarding-title">{t('onboarding.startTitle')}</h2>
         <GuideCloseButton label={t('onboarding.close')} onPause={onPause} />
@@ -107,11 +104,7 @@ function GuideCompleteCard({
         <GuideCloseButton label={t('onboarding.close')} onPause={onPause} />
       </div>
       <p>{t('onboarding.completeDescription')}</p>
-      <button
-        className="onboarding-secondary"
-        type="button"
-        onClick={() => onRestart(storyId)}
-      >
+      <button className="onboarding-secondary" type="button" onClick={() => onRestart(storyId)}>
         {t('onboarding.restart')}
       </button>
     </aside>
@@ -135,7 +128,12 @@ function GuideStepCard({
   const stepNumber = onboardingStepIds.indexOf(step) + 1;
 
   return (
-    <aside className="onboarding-card" role="region" aria-labelledby="onboarding-title" aria-live="polite">
+    <aside
+      className="onboarding-card"
+      role="region"
+      aria-labelledby="onboarding-title"
+      aria-live="polite"
+    >
       <div className="onboarding-card-heading">
         <span className="onboarding-step-count">
           {t('onboarding.stepCount', { current: stepNumber, total: onboardingStepIds.length })}
@@ -148,11 +146,7 @@ function GuideStepCard({
         <button className="onboarding-secondary" type="button" onClick={onSkip}>
           {t('onboarding.skipStep')}
         </button>
-        <button
-          className="onboarding-secondary"
-          type="button"
-          onClick={() => onRestart(storyId)}
-        >
+        <button className="onboarding-secondary" type="button" onClick={() => onRestart(storyId)}>
           {t('onboarding.restart')}
         </button>
       </div>

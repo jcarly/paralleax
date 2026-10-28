@@ -34,7 +34,8 @@ export const italianTranslation = {
     steps: {
       'discover-interactions': {
         title: 'Esplora il grafo',
-        description: 'Seleziona un’interazione. I collegamenti mostrano come si susseguono le scene.',
+        description:
+          'Seleziona un’interazione. I collegamenti mostrano come si susseguono le scene.',
       },
       'write-scene': {
         title: 'Scrivi una scena',

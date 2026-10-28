@@ -80,11 +80,13 @@ export const frenchTranslation = {
     steps: {
       'discover-interactions': {
         title: 'Découvrir le graphe',
-        description: 'Sélectionnez une interaction. Les connexions montrent comment les scènes se suivent.',
+        description:
+          'Sélectionnez une interaction. Les connexions montrent comment les scènes se suivent.',
       },
       'write-scene': {
         title: 'Écrire une scène',
-        description: 'Modifiez le contenu d’une interaction, puis quittez le champ pour l’enregistrer.',
+        description:
+          'Modifiez le contenu d’une interaction, puis quittez le champ pour l’enregistrer.',
       },
       'create-branch': {
         title: 'Créer un choix',

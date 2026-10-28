@@ -34,7 +34,8 @@ export const englishTranslation = {
     steps: {
       'discover-interactions': {
         title: 'Explore the graph',
-        description: 'Select an interaction. Connections show how story moments lead to each other.',
+        description:
+          'Select an interaction. Connections show how story moments lead to each other.',
       },
       'write-scene': {
         title: 'Write a scene',

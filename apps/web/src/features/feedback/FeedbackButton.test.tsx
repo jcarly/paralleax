@@ -81,6 +81,8 @@ describe('FeedbackButton', () => {
     );
     const button = await screen.findByRole('button', { name: 'Give feedback' });
     await userEvent.setup().click(button);
-    expect(await screen.findByText('The feedback form is unavailable. Try again later.')).toBeInTheDocument();
+    expect(
+      await screen.findByText('The feedback form is unavailable. Try again later.'),
+    ).toBeInTheDocument();
   });
 });

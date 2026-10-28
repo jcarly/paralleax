@@ -1,8 +1,6 @@
 import type { Story } from '@paralleax/shared';
 
-function* connectedDestinations(
-  story: Story,
-): Iterable<{ sourceId: string; targetId: string }> {
+function* connectedDestinations(story: Story): Iterable<{ sourceId: string; targetId: string }> {
   for (const target of story.interactions) {
     for (const trigger of target.triggers) {
       for (const sourceId of trigger.inputInteractionIds) {
