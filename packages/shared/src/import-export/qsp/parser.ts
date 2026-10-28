@@ -26,7 +26,9 @@ export function parseQspSource(
   onProgress?: QspImportOptions['onProgress'],
 ): ParsedQspLocation[] {
   const decodedFiles = decodeQspFiles(source, report, onProgress);
-  if (decodedFiles.length === 0) return [];
+  if (decodedFiles.length === 0) {
+    return [];
+  }
 
   const decodedLocations = decodedFiles.flatMap((file) =>
     file.locations.map((location, locationIndex) => ({
@@ -191,10 +193,14 @@ function decodeQspFiles(
   }
   try {
     if (source.format === 'binary') {
-      if (!(source.content instanceof ArrayBuffer)) throw new Error('Expected binary content.');
+      if (!(source.content instanceof ArrayBuffer)) {
+        throw new Error('Expected binary content.');
+      }
       return [{ name: source.name, locations: readQsp(source.content), codeLines: [] }];
     }
-    if (typeof source.content !== 'string') throw new Error('Expected UTF-8 text content.');
+    if (typeof source.content !== 'string') {
+      throw new Error('Expected UTF-8 text content.');
+    }
     return decodeTextQspFile(source.name, source.content, report);
   } catch (caught) {
     addQspImportIssue(report, {
@@ -241,7 +247,9 @@ function decodeTextQspFile(
 
 function putLikelyEntryFirst<T extends { location: QspSourceLocation }>(locations: T[]) {
   const index = locations.findIndex(({ location }) => normalizeQspName(location.name) === 'start');
-  if (index <= 0) return locations;
+  if (index <= 0) {
+    return locations;
+  }
   return [locations[index], ...locations.slice(0, index), ...locations.slice(index + 1)];
 }
 
@@ -275,27 +283,37 @@ function extractLocationArgumentVariants(
       continue;
     }
     if (outerBlockDepth > 0) {
-      if (/^(?:act|if|loop)\b.*:\s*$/i.test(trimmed)) outerBlockDepth += 1;
+      if (/^(?:act|if|loop)\b.*:\s*$/i.test(trimmed)) {
+        outerBlockDepth += 1;
+      }
       continue;
     }
     const opening = /^if\b\s*(.+):\s*$/i.exec(trimmed);
     const argument = opening ? parseLocationArgumentSelector(opening[1]) : undefined;
     if (argument === undefined) {
-      if (/^(?:act|if|loop)\b.*:\s*$/i.test(trimmed)) outerBlockDepth += 1;
+      if (/^(?:act|if|loop)\b.*:\s*$/i.test(trimmed)) {
+        outerBlockDepth += 1;
+      }
       continue;
     }
     const endIndex = findMultilineBlockEnd(lines, index, lines.length);
-    if (endIndex === undefined) continue;
+    if (endIndex === undefined) {
+      continue;
+    }
     baseCode[index] = '';
     baseCode[endIndex] = '';
     if (argument) {
-      for (let removed = index + 1; removed < endIndex; removed += 1) baseCode[removed] = '';
+      for (let removed = index + 1; removed < endIndex; removed += 1) {
+        baseCode[removed] = '';
+      }
       const code = lines.slice(index + 1, endIndex);
       const sourceLine = source.line + index + 1;
       const existing = variantsByArgument.get(argument);
       if (existing) {
         const gap = sourceLine - existing.source.line - existing.code.length;
-        if (gap > 0) existing.code.push(...Array<string>(gap).fill(''));
+        if (gap > 0) {
+          existing.code.push(...Array<string>(gap).fill(''));
+        }
         existing.code.push(...code);
       } else {
         const variant = {
@@ -316,7 +334,9 @@ function extractLocationArgumentVariants(
 
 function parseLocationArgumentSelector(expression: string): string | undefined {
   const selector = /^\s*\$args\s*\[\s*0\s*\]\s*=\s*/i.exec(expression);
-  if (!selector) return undefined;
+  if (!selector) {
+    return undefined;
+  }
   const literalExpression = expression.slice(selector[0].length).trim();
   const value = parseQspStringLiteral(literalExpression);
   return value !== undefined &&
@@ -358,7 +378,9 @@ function extractActBlocks(
       continue;
     }
     if (outerBlockDepth > 0) {
-      if (/^(?:act|if|loop)\b.*:\s*$/i.test(trimmed)) outerBlockDepth += 1;
+      if (/^(?:act|if|loop)\b.*:\s*$/i.test(trimmed)) {
+        outerBlockDepth += 1;
+      }
       remainingCode.push(lines[index]);
       continue;
     }
@@ -422,11 +444,17 @@ function tryParseConditionalActions(
     }
   | undefined {
   const opening = /^\s*if\b\s*(.+):\s*$/i.exec(lines[startIndex]);
-  if (!opening) return undefined;
+  if (!opening) {
+    return undefined;
+  }
   const endIndex = findMultilineBlockEnd(lines, startIndex, limit);
-  if (endIndex === undefined) return undefined;
+  if (endIndex === undefined) {
+    return undefined;
+  }
   const branches = parseConditionalBranches(lines, startIndex, endIndex, source, opening[1]);
-  if (!branches) return undefined;
+  if (!branches) {
+    return undefined;
+  }
   const blocks: ParsedActBlock[] = [];
   let excludedGroups: NonNullable<ParsedActBlock['conditionGroups']> = [[]];
   let conditionCount = 0;
@@ -437,10 +465,14 @@ function tryParseConditionalActions(
       conditionCount += branch.conditionGroups.reduce((total, group) => total + group.length, 0);
       const combined = andQspConditionGroups(excludedGroups, branch.conditionGroups);
       const negated = negateQspConditionGroups(branch.conditionGroups);
-      if (!combined || !negated) return undefined;
+      if (!combined || !negated) {
+        return undefined;
+      }
       effectiveGroups = combined;
       const nextExcluded = andQspConditionGroups(excludedGroups, negated);
-      if (!nextExcluded) return undefined;
+      if (!nextExcluded) {
+        return undefined;
+      }
       excludedGroups = nextExcluded;
     }
     const branchResult = readActionOnlyBranch(
@@ -450,12 +482,16 @@ function tryParseConditionalActions(
       source,
       effectiveGroups,
     );
-    if (!branchResult) return undefined;
+    if (!branchResult) {
+      return undefined;
+    }
     blocks.push(...branchResult.blocks);
     conditionCount += branchResult.conditionCount;
     controlStatementCount += branchResult.controlStatementCount;
   }
-  if (blocks.length === 0) return undefined;
+  if (blocks.length === 0) {
+    return undefined;
+  }
   return {
     blocks,
     endIndex,
@@ -480,7 +516,9 @@ function parseConditionalBranches(
     ...source,
     line: source.line + startIndex,
   });
-  if (!openingGroups) return undefined;
+  if (!openingGroups) {
+    return undefined;
+  }
   const branches: Array<{
     startIndex: number;
     endIndex: number;
@@ -497,25 +535,33 @@ function parseConditionalBranches(
     if (depth === 1) {
       const elseif = /^\s*(?:elseif|else\s+if)\b\s*(.+):\s*$/i.exec(lines[index]);
       if (elseif) {
-        if (hasElse) return undefined;
+        if (hasElse) {
+          return undefined;
+        }
         const conditionGroups = parseQspConditionExpression(elseif[1], {
           ...source,
           line: source.line + index,
         });
-        if (!conditionGroups) return undefined;
+        if (!conditionGroups) {
+          return undefined;
+        }
         branches.at(-1)!.endIndex = index;
         branches.push({ startIndex: index + 1, endIndex, conditionGroups });
         continue;
       }
       if (/^\s*else\s*:?\s*$/i.test(lines[index])) {
-        if (hasElse) return undefined;
+        if (hasElse) {
+          return undefined;
+        }
         hasElse = true;
         branches.at(-1)!.endIndex = index;
         branches.push({ startIndex: index + 1, endIndex });
         continue;
       }
     }
-    if (/^(?:act|if|loop)\b.*:\s*$/i.test(trimmed)) depth += 1;
+    if (/^(?:act|if|loop)\b.*:\s*$/i.test(trimmed)) {
+      depth += 1;
+    }
   }
   return branches;
 }
@@ -543,12 +589,16 @@ function readActionOnlyBranch(
   let controlStatementCount = 0;
   for (let index = startIndex; index < endIndex; index += 1) {
     const trimmed = lines[index].trim();
-    if (!trimmed || trimmed.startsWith('!')) continue;
+    if (!trimmed || trimmed.startsWith('!')) {
+      continue;
+    }
     const conditional = tryParseConditionalActions(lines, index, source, endIndex);
     if (conditional) {
       for (const block of conditional.blocks) {
         const conditionGroups = andQspConditionGroups(parentGroups, block.conditionGroups ?? [[]]);
-        if (!conditionGroups) return undefined;
+        if (!conditionGroups) {
+          return undefined;
+        }
         blocks.push({ ...block, conditionGroups });
       }
       conditionCount += conditional.conditionCount;
@@ -557,9 +607,13 @@ function readActionOnlyBranch(
       continue;
     }
     const header = parseActHeader(lines[index]);
-    if (!header?.name) return undefined;
+    if (!header?.name) {
+      return undefined;
+    }
     const parsed = readActBlock(lines, index, endIndex, source, header);
-    if (!parsed) return undefined;
+    if (!parsed) {
+      return undefined;
+    }
     blocks.push({ ...parsed.block, conditionGroups: parentGroups });
     index = parsed.nextIndex;
   }
@@ -578,7 +632,9 @@ function readActBlock(
   },
   header: { name?: string; image?: string; inlineCode?: string },
 ): { block: ParsedActBlock; nextIndex: number } | undefined {
-  if (!header.name) return undefined;
+  if (!header.name) {
+    return undefined;
+  }
   if (header.inlineCode) {
     const line = source.line + startIndex;
     return {
@@ -595,7 +651,9 @@ function readActBlock(
     };
   }
   const endIndex = findMultilineBlockEnd(lines, startIndex, limit);
-  if (endIndex === undefined) return undefined;
+  if (endIndex === undefined) {
+    return undefined;
+  }
   return {
     block: {
       action: {
@@ -617,10 +675,14 @@ function findMultilineBlockEnd(lines: string[], startIndex: number, limit: numbe
     const trimmed = lines[index].trim();
     if (/^end\b/i.test(trimmed)) {
       depth -= 1;
-      if (depth === 0) return index;
+      if (depth === 0) {
+        return index;
+      }
       continue;
     }
-    if (/^(?:act|if|loop)\b.*:\s*$/i.test(trimmed)) depth += 1;
+    if (/^(?:act|if|loop)\b.*:\s*$/i.test(trimmed)) {
+      depth += 1;
+    }
   }
   return undefined;
 }
@@ -629,13 +691,19 @@ function parseActHeader(
   line: string,
 ): { name?: string; image?: string; inlineCode?: string } | null {
   const match = /^\s*act\b\s*(.*)$/i.exec(line);
-  if (!match) return null;
+  if (!match) {
+    return null;
+  }
   const colon = findOutsideQuotes(match[1], ':');
-  if (colon < 0) return {};
+  if (colon < 0) {
+    return {};
+  }
   const argumentsText = match[1].slice(0, colon).trim();
   const inlineCode = match[1].slice(colon + 1).trim();
   const name = parseQspStringLiteral(argumentsText);
-  if (!name) return {};
+  if (!name) {
+    return {};
+  }
   const afterName = argumentsText.slice(consumedLiteralLength(argumentsText)).trim();
   const image = afterName.startsWith(',')
     ? parseQspStringLiteral(afterName.slice(1).trim())
@@ -652,7 +720,9 @@ function deduplicateActions(actions: ParsedQspAction[]) {
       action.code,
       action.conditionGroups ?? [],
     ]);
-    if (seen.has(signature)) return false;
+    if (seen.has(signature)) {
+      return false;
+    }
     seen.add(signature);
     return true;
   });
@@ -660,7 +730,9 @@ function deduplicateActions(actions: ParsedQspAction[]) {
 
 export function parseQspStringLiteral(value: string): string | undefined {
   const quote = value[0];
-  if (quote !== "'" && quote !== '"') return undefined;
+  if (quote !== "'" && quote !== '"') {
+    return undefined;
+  }
   let result = '';
   for (let index = 1; index < value.length; index += 1) {
     if (value[index] !== quote) {
@@ -679,9 +751,13 @@ export function parseQspStringLiteral(value: string): string | undefined {
 
 export function consumedLiteralLength(value: string): number {
   const quote = value[0];
-  if (quote !== "'" && quote !== '"') return 0;
+  if (quote !== "'" && quote !== '"') {
+    return 0;
+  }
   for (let index = 1; index < value.length; index += 1) {
-    if (value[index] !== quote) continue;
+    if (value[index] !== quote) {
+      continue;
+    }
     if (value[index + 1] === quote) {
       index += 1;
       continue;
@@ -698,15 +774,23 @@ export function findOutsideQuotes(value: string, delimiter: string): number {
     const character = value[index];
     if (quote) {
       if (character === quote) {
-        if (value[index + 1] === quote) index += 1;
-        else quote = '';
+        if (value[index + 1] === quote) {
+          index += 1;
+        } else {
+          quote = '';
+        }
       }
       continue;
     }
-    if (character === "'" || character === '"') quote = character;
-    else if (character === '{') braces += 1;
-    else if (character === '}') braces = Math.max(0, braces - 1);
-    else if (character === delimiter && braces === 0) return index;
+    if (character === "'" || character === '"') {
+      quote = character;
+    } else if (character === '{') {
+      braces += 1;
+    } else if (character === '}') {
+      braces = Math.max(0, braces - 1);
+    } else if (character === delimiter && braces === 0) {
+      return index;
+    }
   }
   return -1;
 }

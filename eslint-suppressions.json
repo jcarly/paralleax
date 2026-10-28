@@ -3457,9 +3457,6 @@
     "complexity": {
       "count": 7
     },
-    "curly": {
-      "count": 44
-    },
     "max-depth": {
       "count": 6
     },
