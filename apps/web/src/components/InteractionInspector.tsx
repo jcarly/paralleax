@@ -195,6 +195,7 @@ export function InteractionInspector({
   interaction,
   onChange,
   onPatch,
+  onContentSaved,
   onDelete,
   onSelectInteraction,
   textCommentCounts,
@@ -205,7 +206,8 @@ export function InteractionInspector({
   story: Story;
   interaction: Interaction;
   onChange: (story: Story) => void;
-  onPatch: (id: string, patch: Partial<Interaction>) => Promise<void>;
+  onPatch: (id: string, patch: Partial<Interaction>) => Promise<boolean | void>;
+  onContentSaved?: (body: string) => void;
   onDelete: () => Promise<void>;
   onSelectInteraction?: (interactionId: string) => void;
 } & InspectorTextCommentProps &
@@ -316,12 +318,18 @@ export function InteractionInspector({
             story={story}
             value={interaction.body}
             onChange={(body) => updateLocalInteraction({ body })}
-            onBlur={(body) => void onPatch(interaction.id, { body })}
+            onBlur={(body) => {
+              void onPatch(interaction.id, { body }).then((saved) => {
+                if (saved !== false) onContentSaved?.(body);
+              });
+            }}
             interactionLinkTargets={interactionLinkTargets}
             conditionalTextBlocks={interaction.conditionalTextBlocks}
             onConditionalTextChange={(body, conditionalTextBlocks) => {
               updateLocalInteraction({ body, conditionalTextBlocks });
-              void onPatch(interaction.id, { body, conditionalTextBlocks });
+              void onPatch(interaction.id, { body, conditionalTextBlocks }).then((saved) => {
+                if (saved !== false) onContentSaved?.(body);
+              });
             }}
             onConditionalTargetClick={onSelectInteraction}
           />

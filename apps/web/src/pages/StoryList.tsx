@@ -19,7 +19,15 @@ type StoryFilter = 'all' | 'editable' | 'commentable' | 'owned';
 type StorySort = 'updated' | 'title';
 type StoryView = 'grid' | 'list';
 
-export function StoryList({ user }: { user: AuthUser | null }) {
+export function StoryList({
+  user,
+  onStoryCreated,
+  onStoryDeleted,
+}: {
+  user: AuthUser | null;
+  onStoryCreated?: (storyId: string) => void;
+  onStoryDeleted?: (storyId: string) => void;
+}) {
   const { t } = useTranslation();
   const isAuthenticated = user !== null;
   const isAdministrator = user?.role === 'admin';
@@ -129,6 +137,7 @@ export function StoryList({ user }: { user: AuthUser | null }) {
       setError('');
       setPending('story');
       const story = await api.createStory(title);
+      onStoryCreated?.(story.id);
       setStories((items) => [summarizeStory(story, user ?? undefined), ...items]);
       setTotalCount((count) => count + 1);
       setNewTitle('');
@@ -164,6 +173,7 @@ export function StoryList({ user }: { user: AuthUser | null }) {
     try {
       setError('');
       await api.deleteStory(id);
+      onStoryDeleted?.(id);
       setStories((items) => items.filter((item) => item.id !== id));
       setTotalCount((count) => Math.max(0, count - 1));
       setRefreshVersion((version) => version + 1);

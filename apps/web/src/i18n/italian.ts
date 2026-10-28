@@ -13,9 +13,42 @@ export const italianTranslation = {
     signOut: 'Esci',
     account: "Impostazioni dell'account",
     feedback: 'Dai un feedback',
+    feedbackUnavailable: 'Il modulo di feedback non è disponibile. Riprova più tardi.',
+    help: 'Guida',
     loading: 'Caricamento…',
     loadingWorkspace: "Caricamento dell'area di lavoro…",
     sessionExpired: 'La tua sessione è scaduta. Accedi nuovamente per continuare.',
+  },
+  onboarding: {
+    startTitle: 'Crea e prova una storia',
+    createStoryPrompt: 'Crea una storia per iniziare la guida.',
+    openStoryPrompt: 'La tua nuova storia è pronta. Aprila per continuare.',
+    returnToEditorPrompt: "Torna all'editor per continuare la guida.",
+    openStory: 'Apri la storia',
+    completeTitle: 'La storia è pronta da esplorare',
+    completeDescription: 'Continua a esplorare o riavvia la guida quando vuoi.',
+    stepCount: 'Passaggio {{current}} di {{total}}',
+    skipStep: 'Salta il passaggio',
+    close: 'Chiudi la guida',
+    restart: 'Riavvia la guida',
+    steps: {
+      'discover-interactions': {
+        title: 'Esplora il grafo',
+        description: 'Seleziona un’interazione. I collegamenti mostrano come si susseguono le scene.',
+      },
+      'write-scene': {
+        title: 'Scrivi una scena',
+        description: 'Modifica il contenuto di un’interazione, poi esci dal campo per salvarlo.',
+      },
+      'create-branch': {
+        title: 'Crea una scelta',
+        description: 'Aggiungi un’altra interazione e collegala alla stessa origine.',
+      },
+      'test-story': {
+        title: 'Prova la storia',
+        description: 'Apri Prova nell’editor, poi scegli un percorso in modalità simulazione.',
+      },
+    },
   },
   pendingSave: {
     title: 'Modifiche non salvate',

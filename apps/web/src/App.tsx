@@ -4,6 +4,8 @@ import { Link, Navigate, NavLink, Route, Routes, useLocation, useNavigate } from
 import { api, type AuthUser } from './api';
 import { authenticationPath, safeReturnTo } from './authNavigation';
 import { LanguageSwitcher } from './components/LanguageSwitcher';
+import { OnboardingGuide, OnboardingHelpButton } from './features/onboarding/OnboardingGuide';
+import { OnboardingProvider, useOnboarding } from './features/onboarding/OnboardingProvider';
 import type { AccountAction } from './pages/AccountActionPage';
 import { StoryList } from './pages/StoryList';
 import {
@@ -124,9 +126,11 @@ export function App() {
 
   const signInPath = authenticationPath('login', currentDestination);
   const registerPath = authenticationPath('register', currentDestination);
+  const currentStoryId = location.pathname.match(/^\/stories\/([^/]+)\/(edit|play)\/?$/)?.[1];
 
   return (
-    <div className="app">
+    <OnboardingProvider key={user?.id ?? 'anonymous'} userId={user?.id ?? null}>
+      <div className="app">
       <header className="product-app-header">
         <Link to="/" className="product-app-brand">
           <span aria-hidden="true">P</span>
@@ -144,6 +148,7 @@ export function App() {
         <Suspense fallback={null}>
           <FeedbackButton />
         </Suspense>
+        {user ? <OnboardingHelpButton storyId={currentStoryId} /> : null}
         <LanguageSwitcher className="language-switcher-header" />
         {user ? (
           <>
@@ -174,12 +179,16 @@ export function App() {
           </div>
         )}
       </header>
+      <OnboardingGuide />
       <Suspense fallback={<main className="page">{t('shell.loadingWorkspace')}</main>}>
         <Routes>
           <Route
             path="/"
             element={
-              <StoryList key={user ? `${user.id}:${user.displayName}` : 'anonymous'} user={user} />
+              <OnboardingStoryList
+                key={user ? `${user.id}:${user.displayName}` : 'anonymous'}
+                user={user}
+              />
             }
           />
           <Route path="/login" element={<Navigate to={returnTo} replace />} />
@@ -219,7 +228,19 @@ export function App() {
           <AccountDialog user={user} onClose={() => setAccountOpen(false)} onUpdated={setUser} />
         </Suspense>
       ) : null}
-    </div>
+      </div>
+    </OnboardingProvider>
+  );
+}
+
+function OnboardingStoryList({ user }: { user: AuthUser | null }) {
+  const onboarding = useOnboarding();
+  return (
+    <StoryList
+      user={user}
+      onStoryCreated={onboarding.beginForStory}
+      onStoryDeleted={onboarding.reportStoryDeleted}
+    />
   );
 }
 

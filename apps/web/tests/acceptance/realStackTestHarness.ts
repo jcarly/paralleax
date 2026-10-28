@@ -91,9 +91,11 @@ export async function createStory(page: Page, prefix: string) {
 
   const storyCard = page.locator('.library-card').filter({ hasText: storyTitle });
   await expect(storyCard).toBeVisible();
-  await storyCard.getByRole('link', { name: 'Edit' }).click();
+  await expect(page.getByRole('region', { name: 'Create and test a story' })).toBeVisible();
+  await page.getByRole('link', { name: 'Open story' }).click();
   await expect(page.locator('.story-title-input')).toHaveValue(storyTitle);
   await expect(page.getByRole('button', { name: 'Add root' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Explore the graph' })).toBeVisible();
 
   return { storyId: story.id, storyTitle };
 }

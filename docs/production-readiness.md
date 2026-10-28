@@ -2,7 +2,7 @@
 
 Status: Current
 
-Last reviewed: 2026-10-24
+Last reviewed: 2026-10-28
 
 Implemented: Partial
 
@@ -23,6 +23,13 @@ Implemented baseline: unlisted URL visibility, aggregate Story size/entity
 quotas, data-router navigation blocking for pending saves, and cancellable
 import-job lifecycle handling. See [Current scope](current-scope.md) for product
 behavior and its current verification evidence.
+
+The optional authoring guide keeps its progress in browser storage and does not
+send activity to an analytics service. Automatic Formbricks journey milestones
+and post-Simulation surveys remain disabled until an explicit consent flow and
+the alpha privacy notice cover that collection. The separate feedback button is
+user-initiated and Formbricks may record the full current URL; disclose and
+review that metadata before collecting tester responses.
 
 ## Non-Negotiable Priorities
 

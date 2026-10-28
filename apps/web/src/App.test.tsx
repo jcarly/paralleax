@@ -44,6 +44,7 @@ describe('App', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    window.localStorage.clear();
     const user = {
       id: 'user-1',
       email: 'author@example.com',
@@ -77,6 +78,7 @@ describe('App', () => {
 
     expect(await screen.findByRole('link', { name: 'Paralleax' })).toHaveAttribute('href', '/');
     expect(screen.getByRole('link', { name: 'Stories' })).toHaveAttribute('href', '/');
+    expect(screen.getByRole('button', { name: 'Guide' })).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Design system' })).not.toBeInTheDocument();
     expect(screen.getByText('Stories mock for user-1')).toBeInTheDocument();
   });

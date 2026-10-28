@@ -74,6 +74,8 @@ import { useStoryComments } from '../features/comments/useStoryComments';
 import { GraphDecorationInspector } from '../features/graph-decorations/GraphDecorationInspector';
 import { GraphDecorationNode } from '../features/graph-decorations/GraphDecorationNode';
 import { buildGraphDecorationNodes } from '../features/graph-decorations/graphDecorationNodes';
+import { storyHasBranchingChoice } from '../features/onboarding/branchingChoice';
+import { useOnboarding } from '../features/onboarding/OnboardingProvider';
 import { isRealtimeEditableTarget } from '../features/realtime/storyRealtime';
 import { useStoryConnectionController } from '../features/story-editor/graph/useStoryConnectionController';
 import { useTwoFingerCanvasPan } from '../features/story-editor/graph/useTwoFingerCanvasPan';
@@ -303,6 +305,33 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
     handleGraphSelectionChange,
     handleGraphSelectionEnd,
   } = useStoryEditorSelection(story);
+  const onboarding = useOnboarding();
+  const lastOnboardingSnapshot = useRef<string | null>(null);
+  useEffect(() => {
+    if (storyRouteInaccessible) onboarding.reportStoryDeleted(storyId);
+  }, [onboarding.reportStoryDeleted, storyId, storyRouteInaccessible]);
+  useEffect(() => {
+    if (loadPhase !== 'ready' || !story || story.id !== storyId) return;
+    const snapshot = `${storyId}:${story.revision ?? 'loaded'}`;
+    if (lastOnboardingSnapshot.current === snapshot) return;
+    lastOnboardingSnapshot.current = snapshot;
+    const hasAuthoredScene = story.interactions.some(
+      ({ body }) => body.replace(/<[^>]*>/g, ' ').trim().length > 0,
+    );
+    onboarding.reportStoryState(storyId, hasAuthoredScene, storyHasBranchingChoice(story));
+  }, [onboarding.reportStoryState, loadPhase, story, storyId]);
+  useEffect(() => {
+    if (loadPhase !== 'ready' || !story || story.id !== storyId || !selectedId) return;
+    if (selectedId && story.interactions.some(({ id }) => id === selectedId)) {
+      onboarding.reportStepComplete(storyId, 'discover-interactions');
+    }
+  }, [
+    onboarding.reportStepComplete,
+    loadPhase,
+    selectedId,
+    story,
+    storyId,
+  ]);
   const selectExclusive = useCallback(
     (selection?: StoryEditorExclusiveSelection) => {
       if (selection) setCommentsOpen(false);
@@ -2307,6 +2336,11 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
                   interaction={selected}
                   onChange={(next) => setStory(next)}
                   onPatch={patchInteraction}
+                  onContentSaved={(body) => {
+                    if (body.replace(/<[^>]*>/g, ' ').trim()) {
+                      onboarding.reportStepComplete(storyId, 'write-scene');
+                    }
+                  }}
                   onDelete={remove}
                   onSelectInteraction={(interactionId) =>
                     selectExclusive({ type: 'interaction', id: interactionId })

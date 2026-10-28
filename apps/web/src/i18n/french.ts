@@ -59,9 +59,42 @@ export const frenchTranslation = {
     signOut: 'Se déconnecter',
     account: 'Paramètres du compte',
     feedback: 'Donner un retour',
+    feedbackUnavailable: 'Le formulaire de retour est indisponible. Réessayez plus tard.',
+    help: 'Guide',
     loading: 'Chargement…',
     loadingWorkspace: 'Chargement de l’espace de travail…',
     sessionExpired: 'Votre session a expiré. Reconnectez-vous pour continuer.',
+  },
+  onboarding: {
+    startTitle: 'Créer et tester une histoire',
+    createStoryPrompt: 'Créez une histoire pour commencer le guide.',
+    openStoryPrompt: 'Votre nouvelle histoire est prête. Ouvrez-la pour continuer.',
+    returnToEditorPrompt: 'Retournez dans l’éditeur pour continuer le guide.',
+    openStory: 'Ouvrir l’histoire',
+    completeTitle: 'Votre histoire est prête à explorer',
+    completeDescription: 'Continuez à explorer ou relancez le guide quand vous le souhaitez.',
+    stepCount: 'Étape {{current}} sur {{total}}',
+    skipStep: 'Passer l’étape',
+    close: 'Fermer le guide',
+    restart: 'Relancer le guide',
+    steps: {
+      'discover-interactions': {
+        title: 'Découvrir le graphe',
+        description: 'Sélectionnez une interaction. Les connexions montrent comment les scènes se suivent.',
+      },
+      'write-scene': {
+        title: 'Écrire une scène',
+        description: 'Modifiez le contenu d’une interaction, puis quittez le champ pour l’enregistrer.',
+      },
+      'create-branch': {
+        title: 'Créer un choix',
+        description: 'Ajoutez une interaction et reliez-la à la même source.',
+      },
+      'test-story': {
+        title: 'Tester votre histoire',
+        description: 'Ouvrez Tester dans l’éditeur, puis choisissez un chemin en simulation.',
+      },
+    },
   },
   pendingSave: {
     title: 'Modifications non enregistrées',

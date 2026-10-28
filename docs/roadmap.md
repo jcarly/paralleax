@@ -2,7 +2,7 @@
 
 This roadmap describes the progression from the validated narrative core to a public Paralleax platform.
 
-Status reviewed: 2026-10-26.
+Status reviewed: 2026-10-28.
 
 It is organized around **user capabilities** rather than implementation areas. Engineering work supports these milestones but does not define them by itself.
 
@@ -47,6 +47,15 @@ configured gates, historical-debt inventory, pruning, regression tests and CI
 checks are in place. Remote CI validation awaits the next CI event. This bounded
 prerequisite did not schedule broad code refactoring. Evidence and residual
 limitations are recorded in the [quality audit](audits/2026-10-26-quality-gates.md).
+
+**Priority decision, 2026-10-28:** deliver a small, optional authoring guide and
+user-initiated feedback path before the guided sessions so first-time authors
+can get help without a moderator explaining every editor surface. The four-step
+guide and lazy, click-only Formbricks entrypoint are implemented. Guide progress
+stays in browser storage. Automatic behavioral milestones and a post-Simulation
+survey remain deferred until explicit consent and the privacy notice cover that
+collection. This slice supports guided sessions; it does not replace disposable
+project safeguards or the provider and operator readiness gates.
 
 1. **Prepare the alpha session brief.** Reuse the private-alpha runbook to state
    the hypotheses, representative author tasks, project-data boundary, and a

@@ -47,7 +47,9 @@ test('an author creates, persists, resumes, and simulates a conditional story', 
   const rootCreation = waitForApiResponse(page, 'POST', /\/api\/stories\/[^/]+\/interactions$/);
   await page.getByRole('button', { name: 'Add root' }).click();
   const root = await createdInteraction(rootCreation);
+  await expect(page.getByRole('heading', { name: 'Write a scene' })).toBeVisible();
   await editInteraction(page, 'New interaction', 'Opening', 'Alice enters the atrium.');
+  await expect(page.getByRole('heading', { name: 'Create a choice' })).toBeVisible();
 
   let openingNode = interactionNode(page, 'Opening');
   await openingNode.click();
@@ -63,6 +65,16 @@ test('an author creates, persists, resumes, and simulates a conditional story', 
   await openingNode.getByRole('button', { name: 'Create child interaction' }).click();
   const middle = await createdInteraction(middleCreation);
   await editInteraction(page, 'New interaction', 'Gain courage', 'Alice chooses to continue.');
+
+  const alternativeCreation = waitForApiResponse(
+    page,
+    'POST',
+    /\/api\/stories\/[^/]+\/interactions$/,
+  );
+  await openingNode.getByRole('button', { name: 'Create child interaction' }).click();
+  const alternative = await createdInteraction(alternativeCreation);
+  await editInteraction(page, 'New interaction', 'Leave the atrium', 'Alice takes another path.');
+  await expect(page.getByRole('heading', { name: 'Test your story' })).toBeVisible();
 
   const effectCreation = waitForInteractionPatch(page);
   await inspector.getByRole('button', { name: 'Add effect' }).click();
@@ -151,9 +163,11 @@ test('an author creates, persists, resumes, and simulates a conditional story', 
   await expect(page.getByLabel('Current interaction title')).toHaveValue('Opening');
   await page.getByRole('button', { name: 'Gain courage' }).click();
   await expect(page.getByLabel('Current interaction title')).toHaveValue('Gain courage');
+  await expect(page.locator('.onboarding-card')).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Resolve' })).toBeEnabled();
   await page.getByRole('button', { name: 'Resolve' }).click();
   await expect(page.getByLabel('Current interaction title')).toHaveValue('Resolve');
 
   expect(root.id).not.toBe(middle.id);
+  expect(alternative.id).not.toBe(middle.id);
 });

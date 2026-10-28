@@ -222,10 +222,11 @@ describe('StoryList', () => {
       .mockResolvedValueOnce(storyPage([]));
     vi.mocked(api.createStory).mockResolvedValue(createdStory);
     vi.mocked(api.deleteStory).mockResolvedValue(undefined);
+    const onStoryCreated = vi.fn();
 
     render(
       <MemoryRouter>
-        <StoryList user={standardUser} />
+        <StoryList user={standardUser} onStoryCreated={onStoryCreated} />
       </MemoryRouter>,
     );
     await screen.findByRole('heading', { name: 'First story' });
@@ -235,6 +236,7 @@ describe('StoryList', () => {
     await user.click(screen.getByRole('button', { name: 'Create story' }));
     expect(await screen.findByRole('heading', { name: 'New story' })).toBeInTheDocument();
     expect(api.createStory).toHaveBeenCalledWith('New story');
+    expect(onStoryCreated).toHaveBeenCalledWith('story-3');
 
     const firstCard = screen.getByRole('heading', { name: 'First story' }).closest('article')!;
     await user.click(within(firstCard).getByRole('button', { name: 'Delete' }));

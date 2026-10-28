@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Added an optional four-step, non-modal first-story guide with resumable local
+  progress and save-aware completion. Formbricks now initializes only after a
+  user opens feedback; automatic journey milestones and post-Simulation surveys
+  remain disabled pending explicit consent and notice coverage.
+
 - Added a brief cross-fade between visible Interactions in Reader and Simulation
   Mode. Reduced-motion preferences disable it, and Reader pass-through
   Interactions remain invisible.

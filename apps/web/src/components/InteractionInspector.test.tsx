@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { useState } from 'react';
 import type { Story } from '@paralleax/shared';
@@ -7,6 +7,82 @@ import { InteractionInspector } from './InteractionInspector';
 afterEach(cleanup);
 
 describe('InteractionInspector time', () => {
+  it('reports authored scene content after the save succeeds', async () => {
+    const interaction: Story['interactions'][number] = {
+      id: 'interaction-1',
+      title: 'Start',
+      body: '',
+      position: { x: 0, y: 0 },
+      triggers: [],
+    };
+    const story: Story = {
+      id: 'story-1',
+      title: 'Story',
+      interactions: [interaction],
+      createdAt: '2026-10-21T08:00:00Z',
+      updatedAt: '2026-10-21T08:00:00Z',
+    };
+    const onPatch = vi.fn().mockResolvedValue(true);
+    const onContentSaved = vi.fn();
+
+    render(
+      <InteractionInspector
+        story={story}
+        interaction={interaction}
+        onChange={vi.fn()}
+        onPatch={onPatch}
+        onContentSaved={onContentSaved}
+        onDelete={vi.fn()}
+      />,
+    );
+
+    const editor = screen.getByRole('textbox', { name: 'Content' });
+    editor.innerHTML = '<p>A scene</p>';
+    fireEvent.blur(editor);
+
+    await waitFor(() => expect(onContentSaved).toHaveBeenCalledOnce());
+    expect(onPatch).toHaveBeenCalledWith('interaction-1', {
+      body: expect.stringContaining('A scene'),
+    });
+  });
+
+  it('does not report scene content when its save fails', async () => {
+    const interaction: Story['interactions'][number] = {
+      id: 'interaction-1',
+      title: 'Start',
+      body: '',
+      position: { x: 0, y: 0 },
+      triggers: [],
+    };
+    const story: Story = {
+      id: 'story-1',
+      title: 'Story',
+      interactions: [interaction],
+      createdAt: '2026-10-21T08:00:00Z',
+      updatedAt: '2026-10-21T08:00:00Z',
+    };
+    const onPatch = vi.fn().mockResolvedValue(false);
+    const onContentSaved = vi.fn();
+
+    render(
+      <InteractionInspector
+        story={story}
+        interaction={interaction}
+        onChange={vi.fn()}
+        onPatch={onPatch}
+        onContentSaved={onContentSaved}
+        onDelete={vi.fn()}
+      />,
+    );
+
+    const editor = screen.getByRole('textbox', { name: 'Content' });
+    editor.innerHTML = '<p>A scene</p>';
+    fireEvent.blur(editor);
+
+    await waitFor(() => expect(onPatch).toHaveBeenCalled());
+    expect(onContentSaved).not.toHaveBeenCalled();
+  });
+
   it.each(['number', 'boolean', 'string'] as const)(
     'switches a %s effect between a literal and an expression',
     (valueType) => {

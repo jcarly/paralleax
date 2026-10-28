@@ -34,6 +34,9 @@ The service stores:
 - authored stories, characters, locations, stats, items, images referenced by
   URL, and graph structure;
 - reader progress and simulation-related authored changes;
+- the optional authoring guide's current Story and step progress in this browser's
+  local storage; guide activity is not sent to Paralleax servers or an analytics
+  provider;
 - operational request identifiers, timestamps, status codes, and error details
   that exclude request bodies, passwords, cookies, and session tokens.
 
@@ -67,8 +70,18 @@ incident materially affects their data, subject to applicable law.
 
 ## Feedback
 
-Testers may send product feedback through `[feedback channel]`. State whether
-feedback may be quoted, attributed, or used anonymously: `[terms]`.
+Testers may choose to open the Formbricks feedback form by selecting its button.
+When opened, Paralleax sends the normalized route, product surface, web version,
+viewport size, and interface language. Formbricks may also record the full URL,
+browser, operating system, device, and country; the full URL can contain a Story
+id. State the Formbricks workspace/operator, hosting region, response access,
+retention, and deletion procedure: `[details]`. State whether feedback may be
+quoted, attributed, or used anonymously: `[terms]`.
+
+Automatic journey milestones and a survey opened after Simulation are disabled.
+If behavioral events are later introduced, describe their purpose and exact data
+here and obtain explicit consent before enabling collection: `[consent and event
+details]`.
 
 ## Acknowledgement
 

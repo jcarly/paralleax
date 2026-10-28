@@ -13,9 +13,42 @@ export const englishTranslation = {
     signOut: 'Sign out',
     account: 'Account settings',
     feedback: 'Give feedback',
+    feedbackUnavailable: 'The feedback form is unavailable. Try again later.',
+    help: 'Guide',
     loading: 'Loading…',
     loadingWorkspace: 'Loading workspace…',
     sessionExpired: 'Your session expired. Sign in again to continue.',
+  },
+  onboarding: {
+    startTitle: 'Create and test a story',
+    createStoryPrompt: 'Create a story to start the guide.',
+    openStoryPrompt: 'Your new story is ready. Open it to continue.',
+    returnToEditorPrompt: 'Return to the editor to continue the guide.',
+    openStory: 'Open story',
+    completeTitle: 'Story ready to explore',
+    completeDescription: 'Keep exploring your story or restart the guide at any time.',
+    stepCount: 'Step {{current}} of {{total}}',
+    skipStep: 'Skip step',
+    close: 'Close guide',
+    restart: 'Restart guide',
+    steps: {
+      'discover-interactions': {
+        title: 'Explore the graph',
+        description: 'Select an interaction. Connections show how story moments lead to each other.',
+      },
+      'write-scene': {
+        title: 'Write a scene',
+        description: 'Edit an interaction’s content, then leave the field to save it.',
+      },
+      'create-branch': {
+        title: 'Create a choice',
+        description: 'Add another interaction and connect it to the same source.',
+      },
+      'test-story': {
+        title: 'Test your story',
+        description: 'Open Test in the editor, then choose a path in Simulation Mode.',
+      },
+    },
   },
   pendingSave: {
     title: 'Unsaved changes',

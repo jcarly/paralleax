@@ -746,12 +746,14 @@ regression cases in the repository, not tests executed for this audit.
       domain decision.
 - [ ] **Deliver progressive onboarding through V0.7.** Refine the existing
       coherent onboarding / first-story flow around short contextual guidance,
-      not a mandatory long tutorial. **Depends on:** guided author-session
-      findings. **Risk:** guidance can distract returning authors or teach a
-      workflow that changes. **Acceptance:** a first-time author can create and
-      test a small branching Story with help available at the point of need; no
-      blocking tutorial is required. **Verification:** observe the flow in the
-      guided sessions and record workarounds or confusion.
+      not a mandatory long tutorial. **Initial alpha slice implemented
+      2026-10-28:** an optional four-step, non-modal guide with local progress,
+      pause/skip/restart controls, and save-aware completion. **Remaining:**
+      observe the flow in guided author sessions and refine it from recorded
+      workarounds or confusion. **Risk:** guidance can distract returning
+      authors or teach a workflow that changes. **Acceptance:** a first-time
+      author can create and test a small branching Story with help available at
+      the point of need; no blocking tutorial is required.
 
 ### P3 — Finish and polish
 

@@ -8,6 +8,18 @@ no longer matches the current repository.
 
 Paralleax currently includes:
 
+- An optional first-Story authoring guide: a non-modal four-step card for graph
+  exploration, scene writing, branching, and Simulation. New Stories start the
+  guide; authors can pause, skip, restart, or reopen it. Progress is saved only
+  in browser storage scoped by the signed-in account, and completion follows
+  loaded or successfully saved state. Guide activity is not sent to an analytics
+  service. See [Authoring guide architecture](onboarding.md).
+- An optional Formbricks feedback button in the product header when configured.
+  The SDK and feedback context load only after a user clicks it. Formbricks'
+  standard response metadata can still include the full URL and Story id; see the
+  [feedback runbook](operations/formbricks-feedback.md). Automatic journey
+  milestones and post-Simulation surveys are not enabled pending explicit
+  consent and privacy-notice coverage.
 - Story authoring and PostgreSQL persistence.
 - Interactions with rich content, graph positions, location context, character cast,
   typed stat effects, item effects, and duration. Rich content supports editable,
@@ -266,9 +278,17 @@ Paralleax currently includes:
   translated by the interface layer. Operational API failures are presented
   through localized stable error codes across authentication, access, imports,
   authoring persistence, comments, administration, reader loading, and saves.
-- Optional Formbricks-powered contextual feedback from the application header,
-  with localized controls and non-content route, surface, version, viewport, and
-  language context. The integration stays disabled when it is not configured.
+- An optional four-step authoring guide for exploring the graph, writing a scene,
+  creating a branch, and testing the Story. It starts after a new Story is
+  created, can be restarted from the authenticated header, saves progress in
+  account-scoped browser storage, and advances from observed editor/Simulation
+  actions. It can be skipped or closed and does not change the Story model.
+- Optional Formbricks feedback from the application header, with localized
+  controls and non-content route, surface, version, viewport, and language
+  context. The SDK now loads only after a tester clicks the button. It remains
+  disabled when not configured. Formbricks' standard full-URL metadata can still
+  contain a Story id after that user-initiated action; automatic journey events
+  and the post-Simulation survey remain disabled until explicit consent exists.
 - Unit, integration, PostgreSQL, component, fast mocked Playwright UI testing,
   and a real-stack Playwright alpha-acceptance path covering registration,
   authoring, reload, reconnection, persistence, Simulation Mode, durable content
