@@ -2636,26 +2636,6 @@
       "count": 2
     }
   },
-  "apps/web/src/test/layoutGeometry.ts": {
-    "complexity": {
-      "count": 4
-    },
-    "curly": {
-      "count": 21
-    },
-    "max-depth": {
-      "count": 9
-    },
-    "max-lines-per-function": {
-      "count": 1
-    },
-    "max-params": {
-      "count": 2
-    },
-    "sonarjs/cognitive-complexity": {
-      "count": 4
-    }
-  },
   "apps/web/src/test/mockStoryApi.ts": {
     "@typescript-eslint/consistent-type-imports": {
       "count": 1
