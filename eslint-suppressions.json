@@ -3157,23 +3157,6 @@
       "count": 1
     }
   },
-  "packages/shared/src/history/story-history.ts": {
-    "complexity": {
-      "count": 5
-    },
-    "curly": {
-      "count": 29
-    },
-    "max-lines-per-function": {
-      "count": 1
-    },
-    "max-params": {
-      "count": 2
-    },
-    "sonarjs/cognitive-complexity": {
-      "count": 6
-    }
-  },
   "packages/shared/src/import-export/choicescript/graph-builder.ts": {
     "complexity": {
       "count": 1
