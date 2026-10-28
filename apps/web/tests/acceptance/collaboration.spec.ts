@@ -1,7 +1,6 @@
 import { expect, test } from '@playwright/test';
 import {
   changeStoryCollaboratorRole,
-  createdInteraction,
   configureStoryAccess,
   expectSuccessful,
   interactionNode,
@@ -10,7 +9,6 @@ import {
   openStoryAccess,
   registerAndCreateStory,
   registerUser,
-  waitForApiResponse,
   waitForInteractionPatch,
 } from './realStackTestHarness';
 
@@ -22,14 +20,6 @@ test('an owner grants reader then editor access and receives the collaborator ed
     ownerPage,
     'Collaboration acceptance',
   );
-
-  const rootCreation = waitForApiResponse(
-    ownerPage,
-    'POST',
-    /\/api\/stories\/[^/]+\/interactions$/,
-  );
-  await ownerPage.getByRole('button', { name: 'Add root' }).click();
-  await createdInteraction(rootCreation);
 
   await interactionNode(ownerPage, 'New interaction').click();
   const ownerInspector = ownerPage.getByRole('complementary', { name: 'Inspector' });

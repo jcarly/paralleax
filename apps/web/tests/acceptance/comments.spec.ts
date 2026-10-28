@@ -1,7 +1,6 @@
 import { expect, test } from '@playwright/test';
 import {
   configureStoryAccess,
-  createdInteraction,
   expectSuccessful,
   interactionNode,
   interactionTitleField,
@@ -18,14 +17,6 @@ test('a reader and an author review an interaction through persisted live commen
   page: ownerPage,
 }, testInfo) => {
   const { storyId, storyTitle } = await registerAndCreateStory(ownerPage, 'Review acceptance');
-
-  const rootCreation = waitForApiResponse(
-    ownerPage,
-    'POST',
-    /\/api\/stories\/[^/]+\/interactions$/,
-  );
-  await ownerPage.getByRole('button', { name: 'Add root' }).click();
-  await createdInteraction(rootCreation);
 
   await interactionNode(ownerPage, 'New interaction').click();
   const ownerInspector = ownerPage.getByRole('complementary', { name: 'Inspector' });

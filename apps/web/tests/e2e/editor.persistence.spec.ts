@@ -41,6 +41,8 @@ test.describe('Story editor persistence', () => {
     });
 
     await expect(page.getByTestId('interaction-node')).toContainText('Changed by another editor');
+    const locations = page.getByRole('navigation', { name: 'Story context' });
+    await locations.getByRole('button', { name: /Locations/ }).click();
     await expect(page.getByText('Remote location')).toBeVisible();
     await expect(page).toHaveURL('/stories/story-1/edit');
   });
@@ -344,6 +346,10 @@ test.describe('Story editor persistence', () => {
     await mockStory(page, locatedStory);
 
     await page.goto('/stories/story-1/edit');
+    await page
+      .getByRole('navigation', { name: 'Story context' })
+      .getByRole('button', { name: /Locations/ })
+      .click();
     await page.getByRole('button', { name: 'Harbor', exact: true }).click();
 
     const inspector = page.getByRole('complementary', { name: 'Inspector' });

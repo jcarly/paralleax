@@ -519,7 +519,7 @@
       "count": 1
     },
     "curly": {
-      "count": 6
+      "count": 5
     }
   },
   "apps/api/src/stories/application/story-history.ts": {
@@ -2877,7 +2877,7 @@
       "count": 9
     },
     "curly": {
-      "count": 5
+      "count": 3
     },
     "max-lines-per-function": {
       "count": 2

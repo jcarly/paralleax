@@ -80,8 +80,14 @@ async function installGroups(page: Page, input?: Story) {
     });
   });
   await page.goto('/stories/story-1/edit');
-  if (current.groups.length) await expect(page.getByRole('tree')).toBeVisible();
-  else await expect(page.getByRole('region', { name: 'Groups', exact: true })).toBeVisible();
+  const groups = page.getByRole('region', { name: 'Groups', exact: true });
+  await expect(groups).toBeVisible();
+  if (current.groups.length) {
+    const toggle = groups.getByRole('button', { name: /Groups/ });
+    await toggle.click();
+    await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    await expect(groups.getByRole('tree', { name: 'Groups' })).toBeVisible();
+  }
   return { story: () => current, writes: () => writes };
 }
 async function startDrag(page: Page, source: Locator) {
@@ -134,6 +140,8 @@ test('drags into collapsed groups, returns to root, reorders, undoes and reloads
     .poll(() => state.story().groups!.map(({ id }) => id))
     .toEqual(['other', 'parent', 'child']);
   await page.reload();
+  const groups = page.getByRole('region', { name: 'Groups', exact: true });
+  await groups.getByRole('button', { name: /Groups/ }).click();
   await expect(page.getByRole('treeitem').first()).toHaveAttribute('data-group-id', 'other');
   expect(state.story().interactions.map(({ position }) => position)).toEqual(positions);
 });
@@ -264,7 +272,10 @@ function storyWithGroups(count: number): Story {
 
 test('searches a thousand groups', async ({ page }) => {
   await installGroups(page, storyWithGroups(1000));
-  await page.getByRole('searchbox', { name: 'Find a group' }).fill('Group 999');
+  await page
+    .getByRole('navigation', { name: 'Story context' })
+    .getByRole('searchbox', { name: 'Search story context and interactions' })
+    .fill('Group 999');
   await expect(page.getByRole('treeitem')).toHaveCount(1);
 });
 

@@ -71,18 +71,19 @@ test('a reader save reconstructs variables, inventory, time, probability, and ti
   const durability = itemDefinition.stats?.[0];
   expect(durability).toBeDefined();
 
-  const { interaction: opening } = await requestApiJson<InteractionMutationResult>(
-    page,
-    'POST',
-    `/api/stories/${storyId}/interactions`,
-    {},
+  const initialStory = await requestApiJson<Story>(page, 'GET', `/api/stories/${storyId}`);
+  const opening = initialStory.interactions.find(({ triggers }) =>
+    triggers.some(({ inputInteractionIds }) => inputInteractionIds.length === 0),
   );
-  const { interaction: timedPath } = await requestApiJson<InteractionMutationResult>(
-    page,
-    'POST',
-    `/api/stories/${storyId}/interactions`,
-    { parentId: opening.id },
+  if (!opening) {
+    throw new Error('The new Story is missing its opening Interaction');
+  }
+  const timedPath = initialStory.interactions.find(({ triggers }) =>
+    triggers.some(({ inputInteractionIds }) => inputInteractionIds.includes(opening.id)),
   );
+  if (!timedPath) {
+    throw new Error('The new Story is missing its seeded child Interaction');
+  }
   const { interaction: randomPath } = await requestApiJson<InteractionMutationResult>(
     page,
     'POST',
