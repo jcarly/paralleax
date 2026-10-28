@@ -29,9 +29,14 @@ import {
 import { ContextMenu, ContextMenuAction } from '../../../components/ContextMenu';
 import { getGroupDropInput, projectGroupTree, type GroupDropTarget } from './groupTree';
 import { GroupDropZone, StoryGroupRow } from './StoryGroupRow';
+import { StoryContextSectionHeader } from './StoryContextSectionHeader';
 
 export interface StoryGroupsPanelProps {
   story: Story;
+  searchQuery: string;
+  open: boolean;
+  onToggle: () => void;
+  onAdd: () => void;
   selectedGroupId?: string;
   editingGroupId?: string;
   selectionIds: string[];
@@ -51,9 +56,7 @@ export interface StoryGroupsPanelProps {
 
 export function StoryGroupTreePanel(props: StoryGroupsPanelProps) {
   const { t } = useTranslation();
-  const [collapsedAtCount, setCollapsedAtCount] = useState<number>();
   const [expandedIds, setExpandedIds] = useState<ReadonlySet<string>>(() => new Set());
-  const [query, setQuery] = useState('');
   const [busy, setBusy] = useState(false);
   const locked = useRef(false);
   const [message, setMessage] = useState('');
@@ -64,15 +67,20 @@ export function StoryGroupTreePanel(props: StoryGroupsPanelProps) {
   const restoreFocusGroupId = useRef<string | undefined>(undefined);
   const pointerY = useRef(0);
   const groups = useMemo(() => props.story.groups ?? [], [props.story.groups]);
-  const open = collapsedAtCount !== groups.length || Boolean(props.editingGroupId);
+  const open = props.open || Boolean(props.editingGroupId);
   const focusRow = useCallback((id?: string) => {
     if (!id) return;
     const row = document.getElementById(`story-group-${id}`);
     if (row && panel.current?.contains(row)) row.focus();
   }, []);
   const tree = useMemo(
-    () => projectGroupTree(groups, new Set(props.story.interactions.map(({ id }) => id)), query),
-    [groups, props.story.interactions, query],
+    () =>
+      projectGroupTree(
+        groups,
+        new Set(props.story.interactions.map(({ id }) => id)),
+        props.searchQuery,
+      ),
+    [groups, props.story.interactions, props.searchQuery],
   );
   const forcedOpen = new Set<string>();
   let ancestor = tree.byId.get(props.editingGroupId ?? '');
@@ -281,32 +289,25 @@ export function StoryGroupTreePanel(props: StoryGroupsPanelProps) {
         if (event.touches[0]) pointerY.current = event.touches[0].clientY;
       }}
     >
-      <div className="editor-context-header editor-heading-row">
-        <button
-          className="ghost context-heading"
-          type="button"
-          aria-expanded={open}
-          onClick={() => setCollapsedAtCount(open ? groups.length : undefined)}
-        >
-          <span className="context-heading-label">
-            <span aria-hidden="true">{open ? '▾' : '▸'}</span>
-            {t('editor.groups.title')}
-          </span>
-          <small>{groups.length}</small>
-        </button>
-      </div>
+      <StoryContextSectionHeader
+        title={t('editor.groups.title')}
+        count={groups.length}
+        countLabel={t('editor.groups.count', { count: groups.length })}
+        expanded={open}
+        onToggle={props.onToggle}
+        toggleDisabled={Boolean(props.editingGroupId)}
+        add={
+          !props.readOnly
+            ? {
+                accessibleName: t('editor.groups.add'),
+                onClick: props.onAdd,
+                disabled: Boolean(props.editingGroupId),
+              }
+            : undefined
+        }
+      />
       {open ? (
         <>
-          {groups.length > 0 ? (
-            <input
-              type="search"
-              className="story-group-search"
-              aria-label={t('editor.groups.search')}
-              placeholder={t('editor.groups.search')}
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-            />
-          ) : null}
           <DndContext
             sensors={sensors}
             collisionDetection={pointerWithin}

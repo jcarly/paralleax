@@ -327,6 +327,8 @@ details. They should stay covered by tests as the editor grows.
 
 - A Group is authoring and navigation metadata only. Membership never changes
   Trigger evaluation, reader output, progress replay, or Simulation state.
+- A Group may have no direct Interactions, including at the root. Groups remain
+  organizational metadata and do not require member Interactions to be valid.
 - One Interaction may belong directly to zero or one Group. Assigning it to a
   Group removes its previous direct membership atomically. Group membership is
   explicit and is never inferred from Graph Decoration overlap or canvas position.

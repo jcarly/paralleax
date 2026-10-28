@@ -476,11 +476,11 @@ Possible elements:
 - title;
 - explicit Interaction membership;
 
-A root Group is created from one or more selected Interactions; an empty subgroup
-can also be created directly beneath an existing Group. A Group may have one
-optional `parentGroupId` referencing a Group in the same Story. This forms an
-acyclic organizational tree. Existing flat Groups remain roots. Collapse state
-is transient editor state, separate from authored metadata.
+A root Group may be empty or created from one or more selected Interactions; an
+empty subgroup can also be created directly beneath an existing Group. A Group
+may have one optional `parentGroupId` referencing a Group in the same Story. This
+forms an acyclic organizational tree. Existing flat Groups remain roots. Collapse
+state is transient editor state, separate from authored metadata.
 
 An Interaction has at most one direct Group. Assigning selected Interactions to
 a new or existing Group transfers them from their previous direct Groups in one

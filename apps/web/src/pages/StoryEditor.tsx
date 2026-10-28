@@ -50,12 +50,13 @@ import { LocationInspector } from '../components/LocationInspector';
 import { StatDefinitionInspector } from '../components/StatDefinitionInspector';
 import { StoryCanvasContextMenu } from '../components/StoryCanvasContextMenu';
 import { StoryCanvasToolbar } from '../components/StoryCanvasToolbar';
-import {
-  CategorizedContextList,
-  ContextCommentButton,
-  ContextEntityRow,
-} from '../components/StoryContextList';
 import { StoryGroupsPanel } from '../features/story-editor/navigation/StoryGroupsPanel';
+import {
+  CharacterContextSection,
+  ItemDefinitionContextSection,
+  LocationContextSection,
+  StatDefinitionContextSection,
+} from '../features/story-editor/navigation/StoryContextEntitySections';
 import { StoryGraphSelectionInspector } from '../components/StoryGraphSelectionInspector';
 import { TriggerEdge } from '../components/TriggerEdge';
 import { TriggerInspector } from '../components/TriggerInspector';
@@ -156,16 +157,6 @@ function scheduleIdleWork(callback: () => void) {
   return () => window.clearTimeout(handle);
 }
 
-function getInitials(name: string) {
-  return name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0])
-    .join('')
-    .toLocaleUpperCase();
-}
-
 export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
   const { t } = useTranslation();
   const { storyId = '' } = useParams();
@@ -224,14 +215,6 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
   const pendingSaveGuard = usePendingSaveGuard(
     Boolean(story) && (saveStatus === 'saving' || saveStatus === 'error'),
     'editor',
-  );
-  const formatCount = useCallback(
-    (
-      count: number,
-      entity:
-        'location' | 'character' | 'stat' | 'item' | 'interaction' | 'assignment' | 'instance',
-    ) => t(`editor.count.${entity}`, { count }),
-    [t],
   );
   const [editingGroupId, setEditingGroupId] = useState<string>();
   const creatingGroup = useRef(false);
@@ -1073,6 +1056,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
         if (id) {
           clearSearch();
           openContextPanel();
+          openContextSection('groups');
           setCommentsOpen(false);
           selectExclusive({ type: 'group', id });
           setEditingGroupId(id);
@@ -1082,7 +1066,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
         creatingGroup.current = false;
       }
     },
-    [createGroup, clearSearch, openContextPanel, selectExclusive],
+    [createGroup, clearSearch, openContextPanel, openContextSection, selectExclusive],
   );
 
   useEffect(() => {
@@ -1421,6 +1405,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
     if (!locationId) return;
     selectExclusive({ type: 'location', id: locationId });
     openContextPanel();
+    openContextSection('locations');
   }
 
   function updateLocalLocation(nextLocation: NonNullable<typeof selectedLocation>) {
@@ -1438,6 +1423,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
     if (!characterId) return;
     selectExclusive({ type: 'character', id: characterId });
     openContextPanel();
+    openContextSection('characters');
   }
 
   function addStatDefinition() {
@@ -1754,9 +1740,73 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
                     : `${currentNavigationIndex + 1} / ${navigationInteractionIds.length}`}
                 </span>
               </div>
+              <StatDefinitionContextSection
+                items={filteredStatDefinitions}
+                count={story.statDefinitions?.length ?? 0}
+                open={openContextSections.stats}
+                selectedId={selectedStatDefinitionId}
+                referenceCounts={contextReferenceCounts.stats}
+                commentCounts={commentCountsByTarget}
+                onToggle={() => toggleContextSection('stats')}
+                onAdd={!reviewOnly ? addStatDefinition : undefined}
+                onSelect={(id) => {
+                  clearSearch();
+                  selectExclusive({ type: 'statDefinition', id });
+                }}
+                onOpenComments={(id) => openCommentsForTarget('statDefinition', id)}
+              />
+              <ItemDefinitionContextSection
+                items={filteredItemDefinitions}
+                count={story.itemDefinitions?.length ?? 0}
+                open={openContextSections.items}
+                selectedId={selectedItemDefinitionId}
+                referenceCounts={contextReferenceCounts.items}
+                commentCounts={commentCountsByTarget}
+                onToggle={() => toggleContextSection('items')}
+                onAdd={!reviewOnly ? () => void addItemDefinition() : undefined}
+                onSelect={(id) => {
+                  clearSearch();
+                  selectExclusive({ type: 'itemDefinition', id });
+                }}
+                onOpenComments={(id) => openCommentsForTarget('itemDefinition', id)}
+              />
+              <CharacterContextSection
+                items={filteredCharacters}
+                count={story.characters?.length ?? 0}
+                open={openContextSections.characters}
+                selectedId={selectedCharacterId}
+                referenceCounts={contextReferenceCounts.characters}
+                commentCounts={commentCountsByTarget}
+                onToggle={() => toggleContextSection('characters')}
+                onAdd={!reviewOnly ? () => void addCharacter() : undefined}
+                onSelect={(id) => {
+                  clearSearch();
+                  selectExclusive({ type: 'character', id });
+                }}
+                onOpenComments={(id) => openCommentsForTarget('character', id)}
+              />
+              <LocationContextSection
+                items={filteredLocations}
+                count={story.locations?.length ?? 0}
+                open={openContextSections.locations}
+                selectedId={selectedLocationId}
+                referenceCounts={contextReferenceCounts.locations}
+                commentCounts={commentCountsByTarget}
+                onToggle={() => toggleContextSection('locations')}
+                onAdd={!reviewOnly ? () => void addLocation() : undefined}
+                onSelect={(id) => {
+                  clearSearch();
+                  selectExclusive({ type: 'location', id });
+                }}
+                onOpenComments={(id) => openCommentsForTarget('location', id)}
+              />
               <StoryGroupsPanel
                 key={story.id}
                 story={story}
+                searchQuery={searchQuery}
+                open={openContextSections.groups}
+                onToggle={() => toggleContextSection('groups')}
+                onAdd={() => void createEditorGroup(t('editor.groups.newGroup'), [])}
                 selectedGroupId={selectedGroupId}
                 editingGroupId={editingGroupId}
                 onEditingChange={setEditingGroupId}
@@ -1780,240 +1830,6 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
                 onUpdate={updateGroup}
                 onDelete={deleteGroup}
               />
-              <div className="editor-context-header editor-heading-row">
-                <button
-                  className="ghost context-heading"
-                  type="button"
-                  aria-expanded={openContextSections.locations}
-                  onClick={() => toggleContextSection('locations')}
-                >
-                  <span className="context-heading-label">
-                    <span aria-hidden="true">{openContextSections.locations ? '▾' : '▸'}</span>
-                    {t('editor.locations')}
-                  </span>
-                  <small aria-label={formatCount(story.locations?.length ?? 0, 'location')}>
-                    {story.locations?.length ?? 0}
-                  </small>
-                </button>
-                {!reviewOnly ? (
-                  <button
-                    aria-label={t('editor.addLocation')}
-                    type="button"
-                    onClick={() => void addLocation()}
-                  >
-                    {t('editor.add')}
-                  </button>
-                ) : null}
-              </div>
-              {!openContextSections.locations ? null : (story.locations?.length ?? 0) === 0 ? (
-                <p className="hint">{t('editor.noLocations')}</p>
-              ) : (
-                <CategorizedContextList
-                  items={filteredLocations}
-                  renderItem={(location) => (
-                    <ContextEntityRow
-                      key={location.id}
-                      name={location.name}
-                      imageUrl={location.imageUrl}
-                      fallback="⌖"
-                      selected={location.id === selectedLocationId}
-                      metadata={formatCount(
-                        contextReferenceCounts.locations.get(location.id) ?? 0,
-                        'interaction',
-                      )}
-                      onSelect={() => {
-                        clearSearch();
-                        selectExclusive({ type: 'location', id: location.id });
-                      }}
-                      action={
-                        <ContextCommentButton
-                          count={commentCountsByTarget.get(`location:${location.id}`) ?? 0}
-                          entityName={location.name}
-                          onClick={() => openCommentsForTarget('location', location.id)}
-                        />
-                      }
-                    />
-                  )}
-                />
-              )}
-              <div className="editor-context-header editor-heading-row context-section">
-                <button
-                  className="ghost context-heading"
-                  type="button"
-                  aria-expanded={openContextSections.characters}
-                  onClick={() => toggleContextSection('characters')}
-                >
-                  <span className="context-heading-label">
-                    <span aria-hidden="true">{openContextSections.characters ? '▾' : '▸'}</span>
-                    {t('editor.characters')}
-                  </span>
-                  <small aria-label={formatCount(story.characters?.length ?? 0, 'character')}>
-                    {story.characters?.length ?? 0}
-                  </small>
-                </button>
-                {!reviewOnly ? (
-                  <button
-                    aria-label={t('editor.addCharacter')}
-                    type="button"
-                    onClick={() => void addCharacter()}
-                  >
-                    {t('editor.add')}
-                  </button>
-                ) : null}
-              </div>
-              {!openContextSections.characters ? null : (story.characters?.length ?? 0) === 0 ? (
-                <p className="hint">{t('editor.noCharacters')}</p>
-              ) : (
-                <CategorizedContextList
-                  items={filteredCharacters}
-                  renderItem={(character) => (
-                    <ContextEntityRow
-                      key={character.id}
-                      name={character.name}
-                      imageUrl={character.imageUrl}
-                      fallback={getInitials(character.name)}
-                      selected={character.id === selectedCharacterId}
-                      metadata={
-                        <>
-                          {character.isPlayable ? `${t('editor.playable')} · ` : ''}
-                          {formatCount(
-                            contextReferenceCounts.characters.get(character.id) ?? 0,
-                            'interaction',
-                          )}
-                        </>
-                      }
-                      onSelect={() => {
-                        clearSearch();
-                        selectExclusive({ type: 'character', id: character.id });
-                      }}
-                      action={
-                        <ContextCommentButton
-                          count={commentCountsByTarget.get(`character:${character.id}`) ?? 0}
-                          entityName={character.name}
-                          onClick={() => openCommentsForTarget('character', character.id)}
-                        />
-                      }
-                    />
-                  )}
-                />
-              )}
-              <div className="editor-context-header editor-heading-row context-section">
-                <button
-                  className="ghost context-heading"
-                  type="button"
-                  aria-expanded={openContextSections.stats}
-                  onClick={() => toggleContextSection('stats')}
-                >
-                  <span className="context-heading-label">
-                    <span aria-hidden="true">{openContextSections.stats ? '▾' : '▸'}</span>
-                    {t('attributes.title')}
-                  </span>
-                  <small aria-label={formatCount(story.statDefinitions?.length ?? 0, 'stat')}>
-                    {story.statDefinitions?.length ?? 0}
-                  </small>
-                </button>
-                {!reviewOnly ? (
-                  <button
-                    aria-label={t('editor.addStatDefinition')}
-                    type="button"
-                    onClick={addStatDefinition}
-                  >
-                    {t('editor.add')}
-                  </button>
-                ) : null}
-              </div>
-              {!openContextSections.stats ? null : (story.statDefinitions?.length ?? 0) === 0 ? (
-                <p className="hint">{t('editor.noStats')}</p>
-              ) : (
-                <CategorizedContextList
-                  items={filteredStatDefinitions}
-                  renderItem={(definition) => (
-                    <ContextEntityRow
-                      key={definition.id}
-                      name={definition.name}
-                      imageUrl={definition.imageUrl}
-                      fallback="↗"
-                      selected={definition.id === selectedStatDefinitionId}
-                      metadata={
-                        <>
-                          {t(`attributes.type.${definition.valueType ?? 'number'}`)} ·{' '}
-                          {formatCount(
-                            contextReferenceCounts.stats.get(definition.id) ?? 0,
-                            'assignment',
-                          )}
-                        </>
-                      }
-                      onSelect={() => {
-                        clearSearch();
-                        selectExclusive({ type: 'statDefinition', id: definition.id });
-                      }}
-                      action={
-                        <ContextCommentButton
-                          count={commentCountsByTarget.get(`statDefinition:${definition.id}`) ?? 0}
-                          entityName={definition.name}
-                          onClick={() => openCommentsForTarget('statDefinition', definition.id)}
-                        />
-                      }
-                    />
-                  )}
-                />
-              )}
-              <div className="editor-context-header editor-heading-row context-section">
-                <button
-                  className="ghost context-heading"
-                  type="button"
-                  aria-expanded={openContextSections.items}
-                  onClick={() => toggleContextSection('items')}
-                >
-                  <span className="context-heading-label">
-                    <span aria-hidden="true">{openContextSections.items ? '▾' : '▸'}</span>
-                    {t('editor.items')}
-                  </span>
-                  <small aria-label={formatCount(story.itemDefinitions?.length ?? 0, 'item')}>
-                    {story.itemDefinitions?.length ?? 0}
-                  </small>
-                </button>
-                {!reviewOnly ? (
-                  <button
-                    aria-label={t('editor.addItemDefinition')}
-                    type="button"
-                    onClick={() => void addItemDefinition()}
-                  >
-                    {t('editor.add')}
-                  </button>
-                ) : null}
-              </div>
-              {!openContextSections.items ? null : (story.itemDefinitions?.length ?? 0) === 0 ? (
-                <p className="hint">{t('editor.noItems')}</p>
-              ) : (
-                <CategorizedContextList
-                  items={filteredItemDefinitions}
-                  renderItem={(definition) => (
-                    <ContextEntityRow
-                      key={definition.id}
-                      name={definition.name}
-                      imageUrl={definition.imageUrl}
-                      fallback="▣"
-                      selected={definition.id === selectedItemDefinitionId}
-                      metadata={formatCount(
-                        contextReferenceCounts.items.get(definition.id) ?? 0,
-                        'instance',
-                      )}
-                      onSelect={() => {
-                        clearSearch();
-                        selectExclusive({ type: 'itemDefinition', id: definition.id });
-                      }}
-                      action={
-                        <ContextCommentButton
-                          count={commentCountsByTarget.get(`itemDefinition:${definition.id}`) ?? 0}
-                          entityName={definition.name}
-                          onClick={() => openCommentsForTarget('itemDefinition', definition.id)}
-                        />
-                      }
-                    />
-                  )}
-                />
-              )}
             </div>
           ) : null}
         </nav>

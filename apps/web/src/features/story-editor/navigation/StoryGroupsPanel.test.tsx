@@ -25,8 +25,10 @@ const story: Story = {
     { id: 'other', title: 'Other', interactionIds: [] },
   ],
 };
-function setup(input = story, readOnly = false) {
+function setup(input = story, readOnly = false, searchQuery = '') {
   const callbacks = {
+    onToggle: vi.fn(),
+    onAdd: vi.fn(),
     onSelect: vi.fn(),
     onFocus: vi.fn(),
     onSelectInteractions: vi.fn(),
@@ -43,6 +45,8 @@ function setup(input = story, readOnly = false) {
     return (
       <StoryGroupsPanel
         story={current}
+        searchQuery={searchQuery}
+        open
         selectedGroupId={selected}
         editingGroupId={editing}
         onEditingChange={setEditing}
@@ -200,23 +204,25 @@ describe('Groups navigation', () => {
     await user.keyboard('{Home}{Enter}{ArrowDown}{Enter}');
     expect(onSelect).toHaveBeenLastCalledWith('child');
   });
-  it('finds groups under collapsed ancestors and handles a large tree compactly', async () => {
-    const { user } = setup({
-      ...story,
-      groups: [
-        ...story.groups!,
-        ...Array.from({ length: 997 }, (_, index) => ({
-          id: 'g' + index,
-          title: 'Group ' + index,
-          interactionIds: [],
-        })),
-      ],
-    });
-    expect(screen.getAllByRole('treeitem')).toHaveLength(999);
-    await user.type(screen.getByRole('searchbox'), 'Child');
+  it('finds groups under collapsed ancestors from the shared query', () => {
+    setup(
+      {
+        ...story,
+        groups: [
+          ...story.groups!,
+          ...Array.from({ length: 997 }, (_, index) => ({
+            id: 'g' + index,
+            title: 'Group ' + index,
+            interactionIds: [],
+          })),
+        ],
+      },
+      false,
+      'Child',
+    );
     expect(screen.getAllByRole('treeitem')).toHaveLength(2);
     expect(screen.getByText('Child')).toBeVisible();
-    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+    expect(screen.queryByRole('searchbox')).not.toBeInTheDocument();
   });
   it('hides mutations for readers and displays save failures without discarding the tree', async () => {
     const { user } = setup(story, true);
@@ -226,6 +232,6 @@ describe('Groups navigation', () => {
   });
   it('shows the legacy empty state', () => {
     setup({ ...story, groups: undefined });
-    expect(screen.getByText('Select interactions on the graph to create a group.')).toBeVisible();
+    expect(screen.getByText('No groups yet.')).toBeVisible();
   });
 });

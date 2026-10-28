@@ -197,6 +197,10 @@ describe('StoryEditor story context', () => {
 
     await renderEditor();
     await user.click(screen.getByRole('button', { name: 'Add location' }));
+    expect(screen.getByRole('button', { name: /Locations/ })).toHaveAttribute(
+      'aria-expanded',
+      'true',
+    );
 
     const inspector = screen.getByRole('complementary', { name: 'Inspector' });
     expect(within(inspector).getByRole('heading', { name: 'Items' })).toBeInTheDocument();
@@ -251,6 +255,7 @@ describe('StoryEditor story context', () => {
     vi.mocked(api.listCommentThreads).mockResolvedValue([thread]);
 
     await renderEditor(story);
+    await user.click(screen.getByRole('button', { name: /Locations/ }));
     await user.click(
       await screen.findByRole('button', { name: 'Open comments for this element: Harbor' }),
     );
@@ -313,6 +318,10 @@ describe('StoryEditor story context', () => {
 
     await renderEditor();
     await user.click(screen.getByRole('button', { name: 'Add character' }));
+    expect(screen.getByRole('button', { name: /Characters/ })).toHaveAttribute(
+      'aria-expanded',
+      'true',
+    );
     const inspector = screen.getByRole('complementary', { name: 'Inspector' });
     const name = within(inspector).getByLabelText('Name');
     await user.clear(name);
@@ -529,6 +538,7 @@ describe('StoryEditor story context', () => {
 
     await renderEditor();
     await user.click(screen.getByRole('button', { name: 'Add item definition' }));
+    expect(screen.getByRole('button', { name: /Items/ })).toHaveAttribute('aria-expanded', 'true');
     const itemName = screen.getByLabelText('Name');
     await user.clear(itemName);
     await user.type(itemName, 'Archive key');
@@ -570,21 +580,93 @@ describe('StoryEditor story context', () => {
     ).toHaveLength(2);
   }, 30_000);
 
-  it('collapses each story context section and the whole navigation', async () => {
+  it('starts each story context section collapsed and toggles the whole navigation', async () => {
     const user = userEvent.setup();
     await renderEditor();
 
-    for (const section of ['Locations', 'Characters', 'Variables', 'Items']) {
+    for (const section of ['Groups', 'Locations', 'Characters', 'Variables', 'Items']) {
       const toggle = screen.getByRole('button', { name: new RegExp(section) });
+      expect(toggle).toHaveAttribute('aria-expanded', 'false');
+      await user.click(toggle);
       expect(toggle).toHaveAttribute('aria-expanded', 'true');
       await user.click(toggle);
       expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    }
+    for (const section of ['Groups', 'Locations']) {
+      expect(
+        screen.getByRole('button', { name: new RegExp(section) }).closest('.editor-context-header'),
+      ).toHaveClass('context-section');
     }
 
     await user.click(screen.getByRole('button', { name: 'Collapse story context' }));
     expect(screen.getByRole('button', { name: 'Expand story context' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Expand story context' }));
     expect(screen.getByRole('button', { name: 'Collapse story context' })).toBeInTheDocument();
+  });
+
+  it('starts an existing Group tree collapsed', async () => {
+    const user = userEvent.setup();
+    const story = cloneStory();
+    story.groups = [{ id: 'group-1', title: 'Opening', interactionIds: [] }];
+
+    await renderEditor(story);
+    const groupsToggle = await screen.findByRole('button', { name: /Groups/ });
+    expect(groupsToggle).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('treeitem', { name: /Opening/ })).not.toBeInTheDocument();
+
+    await user.click(groupsToggle);
+    expect(await screen.findByRole('treeitem', { name: /Opening/ })).toBeVisible();
+    await user.click(screen.getByRole('button', { name: /Groups/ }));
+    expect(screen.queryByRole('treeitem', { name: /Opening/ })).not.toBeInTheDocument();
+  });
+
+  it('filters Groups with the shared story context search', async () => {
+    const user = userEvent.setup();
+    const story = cloneStory();
+    story.groups = [
+      { id: 'harbor-group', title: 'Harbor notes', interactionIds: [] },
+      { id: 'other-group', title: 'Other notes', interactionIds: [] },
+    ];
+
+    await renderEditor(story);
+    const context = screen.getByRole('navigation', { name: 'Story context' });
+    await user.click(within(context).getByRole('button', { name: /Groups/ }));
+    const search = within(context).getByRole('searchbox', {
+      name: 'Search story context and interactions',
+    });
+    await user.type(search, 'Harbor');
+
+    expect(await screen.findByRole('treeitem', { name: /Harbor notes/ })).toBeVisible();
+    expect(screen.queryByRole('treeitem', { name: /Other notes/ })).not.toBeInTheDocument();
+  });
+
+  it('creates and opens an empty root group from the Groups header', async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.createGroup).mockResolvedValue({
+      revision: 2,
+      updatedAt: baseStory.updatedAt,
+      group: { id: 'group-1', title: 'New group', interactionIds: [] },
+    });
+
+    await renderEditor();
+    const groupsToggle = screen.getByRole('button', { name: /Groups/ });
+    expect(groupsToggle).toHaveAttribute('aria-expanded', 'false');
+
+    await user.click(screen.getByRole('button', { name: 'Add group' }));
+
+    await waitFor(() =>
+      expect(api.createGroup).toHaveBeenCalledWith('story-1', {
+        title: 'New group',
+        interactionIds: [],
+      }),
+    );
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /Groups/ })).toHaveAttribute(
+        'aria-expanded',
+        'true',
+      ),
+    );
+    expect(await screen.findByRole('textbox', { name: 'Group title' })).toHaveValue('New group');
   });
 
   it('opens the variable creator from the same context header pattern as other entities', async () => {
@@ -595,9 +677,6 @@ describe('StoryEditor story context', () => {
     const addVariable = screen.getByRole('button', { name: 'Add variable' });
     const variablesChevron = variablesToggle.querySelector('.context-heading-label > span');
     expect(addVariable.closest('.editor-context-header')).toContainElement(variablesToggle);
-    expect(variablesChevron).toHaveTextContent('▾');
-
-    await user.click(variablesToggle);
     expect(variablesToggle).toHaveAttribute('aria-expanded', 'false');
     expect(variablesChevron).toHaveTextContent('▸');
     await user.click(addVariable);
@@ -617,6 +696,7 @@ describe('StoryEditor story context', () => {
     const story = cloneStory();
     story.statDefinitions = [{ id: 'attribute-definition-1', name: 'Energy', valueType: 'number' }];
     await renderEditor(story);
+    await user.click(screen.getByRole('button', { name: /Variables/ }));
 
     const variableRow = screen.getByRole('button', { name: 'Energy' });
     await user.click(variableRow);
@@ -651,6 +731,7 @@ describe('StoryEditor story context', () => {
   });
 
   it('summarizes real story references in compact context entity rows', async () => {
+    const user = userEvent.setup();
     const story = cloneStory();
     story.locations = [
       {
@@ -681,8 +762,11 @@ describe('StoryEditor story context', () => {
     story.interactions[0].characterIds = ['mira'];
 
     await renderEditor(story);
-
     const context = screen.getByRole('navigation', { name: 'Story context' });
+    for (const section of ['Locations', 'Characters', 'Variables', 'Items']) {
+      await user.click(within(context).getByRole('button', { name: new RegExp(section) }));
+    }
+
     for (const category of ['Coast', 'Allies', 'Relationships', 'Quest items', 'Uncategorized']) {
       expect(within(context).getByText(category)).toBeInTheDocument();
     }
@@ -723,6 +807,9 @@ describe('StoryEditor story context', () => {
     ];
 
     await renderEditor(story);
+    const context = screen.getByRole('navigation', { name: 'Story context' });
+    await user.click(within(context).getByRole('button', { name: /Locations/ }));
+    await user.click(within(context).getByRole('button', { name: /Characters/ }));
     expect(screen.getByTestId('react-flow')).toHaveAttribute('data-min-zoom', '0.05');
 
     const search = screen.getByRole('searchbox', {
@@ -757,6 +844,7 @@ describe('StoryEditor story context', () => {
     story.interactions[0].locationId = 'harbor';
 
     await renderEditor(story);
+    await user.click(screen.getByRole('button', { name: /Locations/ }));
     await user.click(screen.getByRole('button', { name: 'Harbor' }));
 
     expect(

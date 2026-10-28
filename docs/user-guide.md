@@ -351,7 +351,9 @@ pointer instead of being automatically rearranged.
 
 ## Organize Interactions with Groups
 
-Select Interactions and press **Ctrl+G** (or **Cmd+G**) to create a Group. Its name
+The left context sections start collapsed and reopen when an entity is created
+in them. Use **Add** in Groups to create an empty root Group. Select Interactions
+and press **Ctrl+G** (or **Cmd+G**) to create a Group with those members. Its name
 is immediately editable in the left tree. **Enter** or leaving the name saves;
 **Escape** cancels renaming. The same name-field shortcuts apply to characters,
 locations, variables and item definitions in their existing inspectors.
@@ -360,7 +362,8 @@ Each Group uses one compact row with a folder, recursive Interaction count and
 an actions menu. Click the name to highlight its Interactions, including those in
 subgroups, without selecting draggable nodes or opening an inspector. The chevron
 only expands/collapses. Double-click the name or choose **Center on group** to
-adjust the viewport. Search finds Groups even beneath collapsed ancestors.
+adjust the viewport. The shared sidebar search filters Group names and reveals
+matches beneath collapsed ancestors.
 
 Drag the name onto a row's center to nest it, or near its upper/lower edge to
 reorder siblings. A folded destination opens after a short hover; the navigation

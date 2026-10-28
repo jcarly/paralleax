@@ -220,8 +220,9 @@ Paralleax currently includes:
   remain visible, and the combined rule appears on the graph marker's tooltip.
 - Rectangular graph multi-selection for interactions and linked trigger markers,
   with a transient count inspector, group drag-and-drop, and outside-click clearing.
-- Persisted Groups created directly from selected Interactions with Ctrl+G and
-  an immediately selected inline name in a compact searchable left-panel tree.
+- Persisted Groups created from selected Interactions with Ctrl+G or as an empty
+  root from the Groups section's **Add** action, with an immediately selected
+  inline name in a compact searchable left-panel tree.
   Context menus, mouse/touch dragging and equivalent keyboard commands support
   renaming, subgroup creation, membership edits, nesting and sibling reordering.
   Parent and order changes reuse one authored mutation and existing relational
@@ -232,6 +233,8 @@ Paralleax currently includes:
   children without
   deleting Interactions. Selection highlights recursive members; explicit centering
   adjusts only the viewport. Group selection never opens a right inspector.
+  The Groups, Locations, Characters, Variables and Items sections start collapsed
+  and reopen after an entity is created in that section.
   Ctrl+click toggles interaction selection, and Shift/Alt rectangles add/remove
   selection. Tree collapse/expansion and search expansion are transient
   navigation state; they do not hide graph elements, alter membership, or enter

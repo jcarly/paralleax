@@ -44,6 +44,10 @@ function setup() {
   render(
     <StoryGroupTreePanel
       story={story}
+      searchQuery=""
+      open
+      onToggle={vi.fn()}
+      onAdd={vi.fn()}
       selectionIds={[]}
       readOnly={false}
       onSelect={onSelect}

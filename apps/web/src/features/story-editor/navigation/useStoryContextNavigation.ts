@@ -11,7 +11,7 @@ import {
   type StoryContextReference,
 } from '../../../storyNavigation';
 
-export type StoryContextSection = 'locations' | 'characters' | 'stats' | 'items';
+export type StoryContextSection = 'groups' | 'locations' | 'characters' | 'stats' | 'items';
 
 interface StoryContextNavigationDependencies {
   story: Story | undefined;
@@ -37,10 +37,11 @@ export function useStoryContextNavigation({
   const [openContextSections, setOpenContextSections] = useState<
     Record<StoryContextSection, boolean>
   >({
-    locations: true,
-    characters: true,
-    stats: true,
-    items: true,
+    groups: false,
+    locations: false,
+    characters: false,
+    stats: false,
+    items: false,
   });
 
   useEffect(() => {
