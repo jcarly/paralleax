@@ -77,8 +77,11 @@ test('an author creates, persists, resumes, and simulates a conditional story', 
   await openingNode.getByRole('button', { name: 'Create child interaction' }).click();
   const alternative = await createdInteraction(alternativeCreation);
   await editInteraction(page, 'New interaction', 'Leave the atrium', 'Alice takes another path.');
+  await page.getByRole('button', { name: 'Fit View' }).click();
   await expect(page.getByRole('heading', { name: 'Test your story' })).toBeVisible();
 
+  await page.getByRole('button', { name: 'Collapse story context' }).click();
+  await interactionNode(page, 'Gain courage').click();
   const effectCreation = waitForInteractionPatch(page);
   await inspector.getByRole('button', { name: 'Add effect' }).click();
   await inspector
@@ -95,7 +98,6 @@ test('an author creates, persists, resumes, and simulates a conditional story', 
   await expect(inspector.getByLabel('Variable effect value')).toHaveValue('1');
   await expect(page.getByLabel('Story save status')).toHaveText('Saved');
 
-  await interactionNode(page, 'Gain courage').click();
   const finalCreation = waitForApiResponse(page, 'POST', /\/api\/stories\/[^/]+\/interactions$/);
   await interactionNode(page, 'Gain courage')
     .getByRole('button', { name: 'Create child interaction' })
@@ -124,9 +126,12 @@ test('an author creates, persists, resumes, and simulates a conditional story', 
   await expect(interactionNode(page, 'Opening')).toBeVisible();
   await expect(interactionNode(page, 'Gain courage')).toBeVisible();
   await expect(interactionNode(page, 'Resolve')).toBeVisible();
+  await page.getByRole('button', { name: 'Expand story context' }).click();
   await expect(page.getByRole('button', { name: 'Atrium', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Alice', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Courage', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Collapse story context' }).click();
+  await page.getByRole('button', { name: 'Fit View' }).click();
   await interactionNode(page, 'Opening').click();
   await expect(inspector.getByRole('textbox', { name: 'Content' })).toHaveText(
     'Alice enters the atrium.',
@@ -158,6 +163,7 @@ test('an author creates, persists, resumes, and simulates a conditional story', 
   await expect(storyCard).toBeVisible();
   await storyCard.getByRole('link', { name: 'Edit' }).click();
   await expect(page.locator('.story-title-input')).toHaveValue(storyTitle);
+  await page.getByRole('button', { name: 'Fit View' }).click();
   openingNode = interactionNode(page, 'Opening');
   await openingNode.click();
   await page.getByRole('link', { name: 'Test from current interaction' }).click();
