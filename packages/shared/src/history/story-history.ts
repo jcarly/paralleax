@@ -197,21 +197,31 @@ export function invertStoryChangeDelta(delta: StoryChangeDelta): StoryChangeDelt
 
 /** Identifies a delta that changes only existing interaction or Trigger positions. */
 export function isStoryGraphPositionDelta(delta: StoryChangeDelta): boolean {
-  if (delta.kind !== 'object' || Object.keys(delta.fields).length !== 1) return false;
+  if (delta.kind !== 'object' || Object.keys(delta.fields).length !== 1) {
+    return false;
+  }
   const interactions = delta.fields.interactions;
-  if (!interactions || interactions.kind !== 'entities') return false;
+  if (!interactions || interactions.kind !== 'entities') {
+    return false;
+  }
   const entries = Object.values(interactions.entries);
   return entries.length > 0 && entries.every(isInteractionGraphPositionEntry);
 }
 
 function isInteractionGraphPositionEntry(entry: EntityDeltaEntry): boolean {
-  if (entry.move || !entry.delta || entry.delta.kind !== 'object') return false;
+  if (entry.move || !entry.delta || entry.delta.kind !== 'object') {
+    return false;
+  }
   const fields = Object.entries(entry.delta.fields);
   return (
     fields.length > 0 &&
     fields.every(([key, delta]) => {
-      if (key === 'position') return isPositionDelta(delta);
-      if (key !== 'triggers' || delta.kind !== 'entities') return false;
+      if (key === 'position') {
+        return isPositionDelta(delta);
+      }
+      if (key !== 'triggers' || delta.kind !== 'entities') {
+        return false;
+      }
       const triggerEntries = Object.values(delta.entries);
       return triggerEntries.length > 0 && triggerEntries.every(isTriggerGraphPositionEntry);
     })
@@ -219,7 +229,9 @@ function isInteractionGraphPositionEntry(entry: EntityDeltaEntry): boolean {
 }
 
 function isTriggerGraphPositionEntry(entry: EntityDeltaEntry): boolean {
-  if (entry.move || !entry.delta || entry.delta.kind !== 'object') return false;
+  if (entry.move || !entry.delta || entry.delta.kind !== 'object') {
+    return false;
+  }
   const fields = Object.entries(entry.delta.fields);
   return fields.length === 1 && fields[0][0] === 'position' && isPositionDelta(fields[0][1]);
 }
@@ -231,7 +243,9 @@ function isPositionDelta(delta: StoryChangeDelta): boolean {
       (!delta.afterExists || isPositionValue(delta.after))
     );
   }
-  if (delta.kind !== 'object') return false;
+  if (delta.kind !== 'object') {
+    return false;
+  }
   const fields = Object.entries(delta.fields);
   return (
     fields.length > 0 &&
@@ -255,14 +269,11 @@ export function applyStoryChangeDelta(
   direction: 'forward' | 'backward',
 ): StoryChangeApplication {
   const conflicts: StoryChangeConflict[] = [];
-  const result = applyDelta(
-    true,
-    authoredStoryProjection(current),
-    delta,
+  const result = applyDelta(true, authoredStoryProjection(current), delta, {
     direction,
-    '$',
+    path: '$',
     conflicts,
-  );
+  });
   if (conflicts.length > 0 || !result.exists || !isJsonObject(result.value)) {
     return {
       applied: false,
@@ -271,9 +282,13 @@ export function applyStoryChangeDelta(
   }
 
   const story = structuredClone(current);
-  for (const key of authoredStoryKeys) Reflect.deleteProperty(story, key);
+  for (const key of authoredStoryKeys) {
+    Reflect.deleteProperty(story, key);
+  }
   Object.assign(story, result.value);
-  if (validateStoryGroups(story)) return { applied: false, conflicts: [{ path: '$.groups' }] };
+  if (validateStoryGroups(story)) {
+    return { applied: false, conflicts: [{ path: '$.groups' }] };
+  }
   return { applied: true, story };
 }
 
@@ -320,42 +335,90 @@ function createDelta(
   afterExists: boolean,
   after: JsonValue | undefined,
 ): StoryChangeDelta | undefined {
-  if (!beforeExists && !afterExists) return undefined;
+  if (!beforeExists && !afterExists) {
+    return undefined;
+  }
+  const objects = getObjectChange(beforeExists, before, afterExists, after);
+  if (objects) {
+    return createObjectDelta(...objects);
+  }
+  const entityArrays = getNonemptyEntityArrayChange(beforeExists, before, afterExists, after);
+  if (entityArrays) {
+    return createEntityArrayDelta(...entityArrays);
+  }
+  if (isSameExistingValue(beforeExists, before, afterExists, after)) {
+    return undefined;
+  }
+  return createValueDelta(beforeExists, before, afterExists, after);
+}
 
-  if (beforeExists && afterExists && isJsonObject(before) && isJsonObject(after)) {
-    const fields: Record<string, StoryChangeDelta> = {};
-    for (const key of new Set([...Object.keys(before), ...Object.keys(after)])) {
-      const fieldDelta = createDelta(
-        Object.hasOwn(before, key),
-        before[key],
-        Object.hasOwn(after, key),
-        after[key],
-      );
-      if (fieldDelta) fields[key] = fieldDelta;
+function getObjectChange(
+  beforeExists: boolean,
+  before: JsonValue | undefined,
+  afterExists: boolean,
+  after: JsonValue | undefined,
+): [JsonObject, JsonObject] | undefined {
+  if (!beforeExists || !afterExists || !isJsonObject(before) || !isJsonObject(after)) {
+    return undefined;
+  }
+  return [before, after];
+}
+
+function createObjectDelta(before: JsonObject, after: JsonObject): StoryChangeDelta | undefined {
+  const fields: Record<string, StoryChangeDelta> = {};
+  for (const key of new Set([...Object.keys(before), ...Object.keys(after)])) {
+    const fieldDelta = createDelta(
+      Object.hasOwn(before, key),
+      before[key],
+      Object.hasOwn(after, key),
+      after[key],
+    );
+    if (fieldDelta) {
+      fields[key] = fieldDelta;
     }
-    return Object.keys(fields).length > 0 ? { kind: 'object', fields } : undefined;
   }
+  return Object.keys(fields).length > 0 ? { kind: 'object', fields } : undefined;
+}
 
+function getNonemptyEntityArrayChange(
+  beforeExists: boolean,
+  before: JsonValue | undefined,
+  afterExists: boolean,
+  after: JsonValue | undefined,
+): [EntityJsonObject[], EntityJsonObject[]] | undefined {
   if (
-    beforeExists &&
-    afterExists &&
-    Array.isArray(before) &&
-    Array.isArray(after) &&
-    isEntityArray(before) &&
-    isEntityArray(after) &&
-    before.length + after.length > 0
-  ) {
-    return createEntityArrayDelta(before, after);
-  }
-
-  if (
-    isExistingJsonValue(beforeExists, before) &&
-    isExistingJsonValue(afterExists, after) &&
-    jsonEquals(before, after)
+    !beforeExists ||
+    !afterExists ||
+    !Array.isArray(before) ||
+    !Array.isArray(after) ||
+    !isEntityArray(before) ||
+    !isEntityArray(after) ||
+    before.length + after.length === 0
   ) {
     return undefined;
   }
+  return [before, after];
+}
 
+function isSameExistingValue(
+  beforeExists: boolean,
+  before: JsonValue | undefined,
+  afterExists: boolean,
+  after: JsonValue | undefined,
+): boolean {
+  return (
+    isExistingJsonValue(beforeExists, before) &&
+    isExistingJsonValue(afterExists, after) &&
+    jsonEquals(before, after)
+  );
+}
+
+function createValueDelta(
+  beforeExists: boolean,
+  before: JsonValue | undefined,
+  afterExists: boolean,
+  after: JsonValue | undefined,
+): ValueDelta {
   const hasBefore = isExistingJsonValue(beforeExists, before);
   const hasAfter = isExistingJsonValue(afterExists, after);
   return {
@@ -377,35 +440,61 @@ function createEntityArrayDelta(
 ): EntityArrayDelta | undefined {
   const beforeById = new Map(before.map((value) => [value.id, value]));
   const afterById = new Map(after.map((value) => [value.id, value]));
+  const movedIds = getMovedEntityIds(before, after, beforeById, afterById);
+  const beforePlacements = entityPlacements(before);
+  const afterPlacements = entityPlacements(after);
+  const context = { beforeById, afterById, movedIds, beforePlacements, afterPlacements };
+  const entries: Record<string, EntityDeltaEntry> = {};
+  for (const id of new Set([...beforeById.keys(), ...afterById.keys()])) {
+    const entry = createEntityDeltaEntry(id, context);
+    if (entry) {
+      entries[id] = entry;
+    }
+  }
+  return Object.keys(entries).length > 0 ? { kind: 'entities', entries } : undefined;
+}
+
+function getMovedEntityIds(
+  before: EntityJsonObject[],
+  after: EntityJsonObject[],
+  beforeById: Map<string, EntityJsonObject>,
+  afterById: Map<string, EntityJsonObject>,
+): Set<string> {
   const commonIds = new Set([...beforeById.keys()].filter((id) => afterById.has(id)));
   const beforeCommon = before.map(({ id }) => id).filter((id) => commonIds.has(id));
   const afterCommon = after.map(({ id }) => id).filter((id) => commonIds.has(id));
-  const movedIds = new Set<string>();
-  if (!jsonEquals(beforeCommon, afterCommon)) {
-    const beforeIndexes = new Map(beforeCommon.map((id, index) => [id, index]));
-    const afterIndexes = new Map(afterCommon.map((id, index) => [id, index]));
-    for (const id of commonIds) {
-      if (beforeIndexes.get(id) !== afterIndexes.get(id)) movedIds.add(id);
-    }
+  if (jsonEquals(beforeCommon, afterCommon)) {
+    return new Set();
   }
 
-  const beforePlacements = entityPlacements(before);
-  const afterPlacements = entityPlacements(after);
-  const entries: Record<string, EntityDeltaEntry> = {};
-  for (const id of new Set([...beforeById.keys(), ...afterById.keys()])) {
-    const previous = beforeById.get(id);
-    const next = afterById.get(id);
-    const delta = createDelta(previous !== undefined, previous, next !== undefined, next);
-    const move = previous === undefined || next === undefined || movedIds.has(id);
-    if (!delta && !move) continue;
-    entries[id] = {
-      ...(delta ? { delta } : {}),
-      ...(move ? { move: true } : {}),
-      before: beforePlacements.get(id) ?? { index: -1 },
-      after: afterPlacements.get(id) ?? { index: -1 },
-    };
+  const beforeIndexes = new Map(beforeCommon.map((id, index) => [id, index]));
+  const afterIndexes = new Map(afterCommon.map((id, index) => [id, index]));
+  return new Set([...commonIds].filter((id) => beforeIndexes.get(id) !== afterIndexes.get(id)));
+}
+
+function createEntityDeltaEntry(
+  id: string,
+  context: {
+    beforeById: Map<string, EntityJsonObject>;
+    afterById: Map<string, EntityJsonObject>;
+    movedIds: Set<string>;
+    beforePlacements: Map<string, EntityPlacement>;
+    afterPlacements: Map<string, EntityPlacement>;
+  },
+): EntityDeltaEntry | undefined {
+  const previous = context.beforeById.get(id);
+  const next = context.afterById.get(id);
+  const delta = createDelta(previous !== undefined, previous, next !== undefined, next);
+  const move = previous === undefined || next === undefined || context.movedIds.has(id);
+  if (!delta && !move) {
+    return undefined;
   }
-  return Object.keys(entries).length > 0 ? { kind: 'entities', entries } : undefined;
+  return {
+    ...(delta ? { delta } : {}),
+    ...(move ? { move: true } : {}),
+    before: context.beforePlacements.get(id) ?? { index: -1 },
+    after: context.afterPlacements.get(id) ?? { index: -1 },
+  };
 }
 
 function entityPlacements(values: EntityJsonObject[]): Map<string, EntityPlacement> {
@@ -423,165 +512,317 @@ function entityPlacements(values: EntityJsonObject[]): Map<string, EntityPlaceme
 
 type DeltaApplicationValue = { exists: true; value: JsonValue } | { exists: false };
 
+interface DeltaApplicationContext {
+  direction: 'forward' | 'backward';
+  path: string;
+  conflicts: StoryChangeConflict[];
+}
+
+interface EntityDeltaApplicationContext extends DeltaApplicationContext {
+  entityId: string;
+}
+
+interface EntityDeltaApplicationState {
+  values: EntityJsonObject[];
+  indexesById: Map<string, number>;
+  deletedIds: Set<string>;
+}
+
 function applyDelta(
   currentExists: boolean,
   current: JsonValue | undefined,
   delta: StoryChangeDelta,
-  direction: 'forward' | 'backward',
-  path: string,
-  conflicts: StoryChangeConflict[],
+  context: DeltaApplicationContext,
 ): DeltaApplicationValue {
   if (delta.kind === 'value') {
-    const expectedExists = direction === 'forward' ? delta.beforeExists : delta.afterExists;
-    const expected = direction === 'forward' ? delta.before : delta.after;
-    if (currentExists !== expectedExists || (expectedExists && !jsonEquals(current, expected))) {
-      conflicts.push({ path });
-      return currentExists && current !== undefined
-        ? { exists: true, value: current }
-        : { exists: false };
-    }
-    const replacementExists = direction === 'forward' ? delta.afterExists : delta.beforeExists;
-    const replacement = direction === 'forward' ? delta.after : delta.before;
-    if (replacementExists && replacement !== undefined) {
-      return { exists: true, value: cloneJson(replacement) };
-    }
-    return { exists: false };
+    return applyValueDelta(currentExists, current, delta, context);
   }
-
   if (!currentExists) {
-    conflicts.push({ path });
+    context.conflicts.push({ path: context.path });
     return { exists: false };
   }
-
   if (delta.kind === 'object') {
-    if (!isJsonObject(current)) {
-      conflicts.push({ path });
-      return current === undefined ? { exists: false } : { exists: true, value: current };
-    }
-    const value = { ...current };
-    for (const [key, fieldDelta] of Object.entries(delta.fields)) {
-      const field = applyDelta(
-        Object.hasOwn(value, key),
-        value[key],
-        fieldDelta,
-        direction,
-        `${path}.${key}`,
-        conflicts,
-      );
-      if (field.exists) value[key] = field.value;
-      else delete value[key];
-    }
-    return { exists: true, value };
+    return applyObjectDelta(current, delta, context);
   }
+  return applyEntityArrayDelta(current, delta, context);
+}
 
-  if (!Array.isArray(current) || !isEntityArray(current)) {
-    conflicts.push({ path });
+function applyValueDelta(
+  currentExists: boolean,
+  current: JsonValue | undefined,
+  delta: ValueDelta,
+  context: DeltaApplicationContext,
+): DeltaApplicationValue {
+  if (!matchesExpectedValue(currentExists, current, delta, context.direction)) {
+    context.conflicts.push({ path: context.path });
+    return currentExists && current !== undefined
+      ? { exists: true, value: current }
+      : { exists: false };
+  }
+  const replacementExists =
+    context.direction === 'forward' ? delta.afterExists : delta.beforeExists;
+  const replacement = context.direction === 'forward' ? delta.after : delta.before;
+  if (replacementExists && replacement !== undefined) {
+    return { exists: true, value: cloneJson(replacement) };
+  }
+  return { exists: false };
+}
+
+function matchesExpectedValue(
+  currentExists: boolean,
+  current: JsonValue | undefined,
+  delta: ValueDelta,
+  direction: 'forward' | 'backward',
+): boolean {
+  const expectedExists = direction === 'forward' ? delta.beforeExists : delta.afterExists;
+  const expected = direction === 'forward' ? delta.before : delta.after;
+  return currentExists === expectedExists && (!expectedExists || jsonEquals(current, expected));
+}
+
+function applyObjectDelta(
+  current: JsonValue | undefined,
+  delta: ObjectDelta,
+  context: DeltaApplicationContext,
+): DeltaApplicationValue {
+  if (!isJsonObject(current)) {
+    context.conflicts.push({ path: context.path });
     return current === undefined ? { exists: false } : { exists: true, value: current };
   }
-  let values: EntityJsonObject[] = [...current];
-  const indexesById = new Map(values.map((value, index) => [value.id, index]));
-  const deletedIds = new Set<string>();
-  for (const [id, entry] of Object.entries(delta.entries)) {
-    if (!entry.delta) continue;
-    const index = indexesById.get(id) ?? -1;
-    const applied = applyDelta(
-      index >= 0,
-      index >= 0 ? values[index] : undefined,
-      entry.delta,
-      direction,
-      `${path}[id=${JSON.stringify(id)}]`,
-      conflicts,
-    );
-    if (index >= 0) {
-      if (applied.exists && isEntityJsonObject(applied.value)) {
-        values[index] = applied.value;
-      } else if (applied.exists) {
-        conflicts.push({ path: `${path}[id=${JSON.stringify(id)}]` });
-      } else {
-        deletedIds.add(id);
-      }
-    } else if (applied.exists) {
-      if (isEntityJsonObject(applied.value)) {
-        indexesById.set(id, values.length);
-        values.push(applied.value);
-      } else {
-        conflicts.push({ path: `${path}[id=${JSON.stringify(id)}]` });
-      }
+  const value = { ...current };
+  for (const [key, fieldDelta] of Object.entries(delta.fields)) {
+    const field = applyDelta(Object.hasOwn(value, key), value[key], fieldDelta, {
+      ...context,
+      path: `${context.path}.${key}`,
+    });
+    if (field.exists) {
+      value[key] = field.value;
+    } else {
+      delete value[key];
     }
   }
-  if (deletedIds.size > 0) {
-    values = values.filter((value) => !deletedIds.has(value.id));
-  }
+  return { exists: true, value };
+}
 
-  if (conflicts.length === 0) {
-    validateEntityPlacements(values, delta, direction, path, conflicts);
+function applyEntityArrayDelta(
+  current: JsonValue | undefined,
+  delta: EntityArrayDelta,
+  context: DeltaApplicationContext,
+): DeltaApplicationValue {
+  if (!Array.isArray(current) || !isEntityArray(current)) {
+    context.conflicts.push({ path: context.path });
+    return current === undefined ? { exists: false } : { exists: true, value: current };
   }
-  if (conflicts.length === 0) applyEntityPlacements(values, delta, direction);
-  return { exists: true, value: values };
+  const state: EntityDeltaApplicationState = {
+    values: [...current],
+    indexesById: new Map(current.map((value, index) => [value.id, index])),
+    deletedIds: new Set(),
+  };
+  applyEntityEntries(delta, context, state);
+  if (state.deletedIds.size > 0) {
+    state.values = state.values.filter((value) => !state.deletedIds.has(value.id));
+  }
+  if (context.conflicts.length === 0) {
+    validateEntityPlacements(state.values, delta, context);
+  }
+  if (context.conflicts.length === 0) {
+    applyEntityPlacements(state.values, delta, context.direction);
+  }
+  return { exists: true, value: state.values };
+}
+
+function applyEntityEntries(
+  delta: EntityArrayDelta,
+  context: DeltaApplicationContext,
+  state: EntityDeltaApplicationState,
+): void {
+  for (const [id, entry] of Object.entries(delta.entries)) {
+    if (entry.delta) {
+      applyEntityEntry(id, entry, context, state);
+    }
+  }
+}
+
+function applyEntityEntry(
+  id: string,
+  entry: EntityDeltaEntry,
+  context: DeltaApplicationContext,
+  state: EntityDeltaApplicationState,
+): void {
+  if (!entry.delta) {
+    return;
+  }
+  const index = state.indexesById.get(id) ?? -1;
+  const entityPath = `${context.path}[id=${JSON.stringify(id)}]`;
+  const entityContext = { ...context, entityId: id, path: entityPath };
+  const applied = applyDelta(
+    index >= 0,
+    index >= 0 ? state.values[index] : undefined,
+    entry.delta,
+    entityContext,
+  );
+  if (index >= 0) {
+    applyExistingEntity(index, applied, entityContext, state);
+    return;
+  }
+  appendCreatedEntity(applied, entityContext, state);
+}
+
+function applyExistingEntity(
+  index: number,
+  applied: DeltaApplicationValue,
+  context: EntityDeltaApplicationContext,
+  state: EntityDeltaApplicationState,
+): void {
+  if (applied.exists && isEntityJsonObject(applied.value)) {
+    state.values[index] = applied.value;
+  } else if (applied.exists) {
+    context.conflicts.push({ path: context.path });
+  } else {
+    state.deletedIds.add(context.entityId);
+  }
+}
+
+function appendCreatedEntity(
+  applied: DeltaApplicationValue,
+  context: EntityDeltaApplicationContext,
+  state: EntityDeltaApplicationState,
+): void {
+  if (!applied.exists) {
+    return;
+  }
+  if (isEntityJsonObject(applied.value)) {
+    const index = state.values.length;
+    state.indexesById.set(context.entityId, index);
+    state.values.push(applied.value);
+  } else {
+    context.conflicts.push({ path: context.path });
+  }
 }
 
 function validateEntityPlacements(
   values: EntityJsonObject[],
   delta: EntityArrayDelta,
-  direction: 'forward' | 'backward',
-  path: string,
-  conflicts: StoryChangeConflict[],
-) {
+  context: DeltaApplicationContext,
+): void {
   const indexesById = new Map(values.map((value, index) => [value.id, index]));
   for (const [id, entry] of Object.entries(delta.entries)) {
-    if (!entry.move) continue;
-    const expected = direction === 'forward' ? entry.before : entry.after;
-    const replacement = direction === 'forward' ? entry.after : entry.before;
-    if (expected.index < 0 || replacement.index < 0) continue;
-    const index = indexesById.get(id) ?? -1;
-    if (index < 0) continue;
-    const previousIndex = expected.previousId ? (indexesById.get(expected.previousId) ?? -1) : -1;
-    const nextIndex = expected.nextId ? (indexesById.get(expected.nextId) ?? -1) : -1;
-    if ((previousIndex >= 0 && previousIndex > index) || (nextIndex >= 0 && nextIndex < index)) {
-      conflicts.push({ path: `${path}[id=${JSON.stringify(id)}]` });
+    if (hasEntityPlacementConflict(id, entry, indexesById, context.direction)) {
+      context.conflicts.push({ path: `${context.path}[id=${JSON.stringify(id)}]` });
     }
   }
+}
+
+function hasEntityPlacementConflict(
+  id: string,
+  entry: EntityDeltaEntry,
+  indexesById: Map<string, number>,
+  direction: 'forward' | 'backward',
+): boolean {
+  if (!entry.move) {
+    return false;
+  }
+  const expected = direction === 'forward' ? entry.before : entry.after;
+  const replacement = direction === 'forward' ? entry.after : entry.before;
+  if (expected.index < 0 || replacement.index < 0) {
+    return false;
+  }
+  const index = indexesById.get(id) ?? -1;
+  if (index < 0) {
+    return false;
+  }
+  const previousIndex = getNeighborIndex(expected.previousId, indexesById);
+  const nextIndex = getNeighborIndex(expected.nextId, indexesById);
+  return hasNeighborOrderConflict(previousIndex, index, nextIndex);
+}
+
+function hasNeighborOrderConflict(
+  previousIndex: number,
+  index: number,
+  nextIndex: number,
+): boolean {
+  return (previousIndex >= 0 && previousIndex > index) || (nextIndex >= 0 && nextIndex < index);
+}
+
+function getNeighborIndex(id: string | undefined, indexesById: Map<string, number>): number {
+  return id ? (indexesById.get(id) ?? -1) : -1;
 }
 
 function applyEntityPlacements(
   values: EntityJsonObject[],
   delta: EntityArrayDelta,
   direction: 'forward' | 'backward',
-) {
-  const placements = Object.entries(delta.entries)
+): void {
+  const placements = getEntityPlacementsToApply(values, delta, direction);
+  const moving = removeMovedEntities(values, placements);
+  insertMovedEntities(values, placements, moving);
+}
+
+function getEntityPlacementsToApply(
+  values: EntityJsonObject[],
+  delta: EntityArrayDelta,
+  direction: 'forward' | 'backward',
+): Array<{ id: string; placement: EntityPlacement }> {
+  return Object.entries(delta.entries)
     .filter(([, entry]) => entry.move)
     .map(([id, entry]) => ({ id, placement: direction === 'forward' ? entry.after : entry.before }))
     .filter(({ id, placement }) => placement.index >= 0 && values.some((value) => value.id === id))
     .sort((left, right) => left.placement.index - right.placement.index);
+}
 
+function removeMovedEntities(
+  values: EntityJsonObject[],
+  placements: Array<{ id: string; placement: EntityPlacement }>,
+): Map<string, EntityJsonObject> {
   const moving = new Map<string, EntityJsonObject>();
   for (const { id } of placements) {
     const index = values.findIndex((value) => value.id === id);
-    if (index >= 0) moving.set(id, values.splice(index, 1)[0]);
+    if (index >= 0) {
+      moving.set(id, values.splice(index, 1)[0]);
+    }
   }
+  return moving;
+}
+
+function insertMovedEntities(
+  values: EntityJsonObject[],
+  placements: Array<{ id: string; placement: EntityPlacement }>,
+  moving: Map<string, EntityJsonObject>,
+): void {
   for (const { id, placement } of placements) {
     const value = moving.get(id);
-    if (!value) continue;
-    const previousIndex = placement.previousId
-      ? values.findIndex((candidate) => candidate.id === placement.previousId)
-      : -1;
-    const nextIndex = placement.nextId
-      ? values.findIndex((candidate) => candidate.id === placement.nextId)
-      : -1;
-    const index =
-      previousIndex >= 0
-        ? previousIndex + 1
-        : nextIndex >= 0
-          ? nextIndex
-          : Math.min(placement.index, values.length);
+    if (!value) {
+      continue;
+    }
+    const index = resolveEntityPlacementIndex(values, placement);
     values.splice(index, 0, value);
   }
+}
+
+function resolveEntityPlacementIndex(
+  values: EntityJsonObject[],
+  placement: EntityPlacement,
+): number {
+  const previousIndex = placement.previousId
+    ? values.findIndex((candidate) => candidate.id === placement.previousId)
+    : -1;
+  if (previousIndex >= 0) {
+    return previousIndex + 1;
+  }
+  const nextIndex = placement.nextId
+    ? values.findIndex((candidate) => candidate.id === placement.nextId)
+    : -1;
+  if (nextIndex >= 0) {
+    return nextIndex;
+  }
+  return Math.min(placement.index, values.length);
 }
 
 function isEntityArray(value: JsonValue[]): value is EntityJsonObject[] {
   const ids = new Set<string>();
   return value.every((item) => {
-    if (!isEntityJsonObject(item) || ids.has(item.id)) return false;
+    if (!isEntityJsonObject(item) || ids.has(item.id)) {
+      return false;
+    }
     ids.add(item.id);
     return true;
   });
@@ -596,39 +837,63 @@ function isJsonObject(value: unknown): value is JsonObject {
 }
 
 function toJsonValue(value: unknown): JsonValue {
-  if (value === null || typeof value === 'string' || typeof value === 'boolean') return value;
-  if (typeof value === 'number') return Number.isFinite(value) ? value : null;
-  if (Array.isArray(value)) return value.map(toJsonValue);
+  if (value === null || typeof value === 'string' || typeof value === 'boolean') {
+    return value;
+  }
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : null;
+  }
+  if (Array.isArray(value)) {
+    return value.map(toJsonValue);
+  }
   if (typeof value === 'object') {
-    const result: Record<string, JsonValue> = {};
-    for (const [key, entry] of Object.entries(value)) {
-      if (entry !== undefined) result[key] = toJsonValue(entry);
-    }
-    return result;
+    return toJsonObject(value);
   }
   throw new TypeError('Story history only supports JSON-compatible authored values.');
 }
 
+function toJsonObject(value: object): JsonObject {
+  const result: JsonObject = {};
+  for (const [key, entry] of Object.entries(value)) {
+    if (entry !== undefined) {
+      result[key] = toJsonValue(entry);
+    }
+  }
+  return result;
+}
+
 function jsonEquals(left: JsonValue | undefined, right: JsonValue | undefined): boolean {
-  if (left === right) return true;
+  if (left === right) {
+    return true;
+  }
   if (Array.isArray(left) || Array.isArray(right)) {
-    return (
-      Array.isArray(left) &&
-      Array.isArray(right) &&
-      left.length === right.length &&
-      left.every((value, index) => jsonEquals(value, right[index]))
-    );
+    return jsonArraysEqual(left, right);
   }
   if (isJsonObject(left) || isJsonObject(right)) {
-    if (!isJsonObject(left) || !isJsonObject(right)) return false;
-    const leftKeys = Object.keys(left);
-    const rightKeys = Object.keys(right);
-    return (
-      leftKeys.length === rightKeys.length &&
-      leftKeys.every((key) => Object.hasOwn(right, key) && jsonEquals(left[key], right[key]))
-    );
+    return jsonObjectsEqual(left, right);
   }
   return false;
+}
+
+function jsonArraysEqual(left: JsonValue | undefined, right: JsonValue | undefined): boolean {
+  return (
+    Array.isArray(left) &&
+    Array.isArray(right) &&
+    left.length === right.length &&
+    left.every((value, index) => jsonEquals(value, right[index]))
+  );
+}
+
+function jsonObjectsEqual(left: JsonValue | undefined, right: JsonValue | undefined): boolean {
+  if (!isJsonObject(left) || !isJsonObject(right)) {
+    return false;
+  }
+  const leftKeys = Object.keys(left);
+  const rightKeys = Object.keys(right);
+  return (
+    leftKeys.length === rightKeys.length &&
+    leftKeys.every((key) => Object.hasOwn(right, key) && jsonEquals(left[key], right[key]))
+  );
 }
 
 function cloneJson<T extends JsonValue | undefined>(value: T): T {
