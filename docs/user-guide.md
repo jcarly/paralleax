@@ -217,10 +217,18 @@ nothing is selected.
 
 ## Edit Interaction Content
 
-The interaction **Content** field is a WYSIWYG editor. Its toolbar formats text,
-headings, and lists, and inserts images or animated GIFs by URL. **Video**
-accepts direct video URLs plus YouTube and Vimeo links. Media is referenced
-externally; Paralleax does not upload or host the file yet.
+The interaction **Content** field stays editable in the inspector. Existing
+content appears in a compact field; focus it to reveal the WYSIWYG toolbar and
+expanded editor. Changes save when focus leaves the field. An empty body shows
+only **Add content**; if you leave the editor empty, that action returns.
+In Simulation, the Reader projection stays visible and its content field opens
+the editor on focus; Reader links remain available while the projection is
+shown. Empty content shows only **Add content**, which opens the editor and
+returns when left empty. The toolbar formats text, headings, and lists, and
+inserts images or animated GIFs by URL. **Video** accepts direct video URLs plus
+YouTube and Vimeo links. Media is referenced externally; Paralleax does not
+upload or host the file yet. A native narrative source syntax is being explored,
+but no Code view is available yet.
 
 The character indicator below the editor measures the stored HTML. It warns in
 the final 10% of the 64,000-character allowance and reports when content is over
@@ -355,7 +363,9 @@ pointer instead of being automatically rearranged.
 
 ## Organize Interactions with Groups
 
-Select Interactions and press **Ctrl+G** (or **Cmd+G**) to create a Group. Its name
+The left context sections start collapsed and reopen when an entity is created
+in them. Use **Add** in Groups to create an empty root Group. Select Interactions
+and press **Ctrl+G** (or **Cmd+G**) to create a Group with those members. Its name
 is immediately editable in the left tree. **Enter** or leaving the name saves;
 **Escape** cancels renaming. The same name-field shortcuts apply to characters,
 locations, variables and item definitions in their existing inspectors.
@@ -364,7 +374,8 @@ Each Group uses one compact row with a folder, recursive Interaction count and
 an actions menu. Click the name to highlight its Interactions, including those in
 subgroups, without selecting draggable nodes or opening an inspector. The chevron
 only expands/collapses. Double-click the name or choose **Center on group** to
-adjust the viewport. Search finds Groups even beneath collapsed ancestors.
+adjust the viewport. The shared sidebar search filters Group names and reveals
+matches beneath collapsed ancestors.
 
 Drag the name onto a row's center to nest it, or near its upper/lower edge to
 reorder siblings. A folded destination opens after a short hover; the navigation
@@ -411,7 +422,7 @@ A trigger defines when an interaction becomes available.
   Trigger's conditions.
 - Condition groups are alternatives (OR), while all conditions inside one group
   must match (AND).
-- The editor and API allow each directed source -> target pair on one Trigger
+- The editor and API allow each directed source → target pair on one Trigger
   only. Use condition groups for alternative conditions on the same route.
   Existing Stories with duplicate routes stay readable and can be edited or
   cleaned up without merging their Triggers. A rejected duplicate connection

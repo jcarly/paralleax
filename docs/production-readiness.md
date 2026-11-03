@@ -161,6 +161,13 @@ review that metadata before collecting tester responses.
 - Validate a story before publication and expose stable public reader URLs.
 - Keep author simulation and public reading as separate product surfaces.
 - Add publication metadata, reporting, moderation, and content licensing rules.
+- Before enabling author-facing reader analytics, complete the privacy and
+  operating controls in [Roadmap V0.9](roadmap.md#reader-journey-analytics-p1-before-wider-public-reading):
+  participant notice and legal-basis review (including any cookie or local
+  storage consent), explicit per-Story/publication purpose, access control,
+  abuse limits, small-cohort suppression, retention and purge, and the handling
+  of participant requests. Do not presume a pseudonymous session id is
+  anonymous or consent-exempt.
 
 ### P3 — Before Conflict-Safe Collaboration
 

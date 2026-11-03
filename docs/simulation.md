@@ -96,7 +96,7 @@ semantics or story data.
 Simulation Mode should support:
 
 ```text
-Test -> notice -> edit -> retest
+Test → notice → edit → retest
 ```
 
 Each listed interaction should eventually expose an action to open it in the

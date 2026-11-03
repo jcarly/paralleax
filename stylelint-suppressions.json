@@ -67,10 +67,10 @@
       "count": 15
     },
     "color-no-hex": {
-      "count": 64
+      "count": 63
     },
     "color-named": {
-      "count": 13
+      "count": 12
     }
   },
   "apps/web/src/features/story-editor/graph/storyGraph.css": {
@@ -121,7 +121,7 @@
   },
   "apps/web/src/features/story-player/storySimulation.css": {
     "color-no-hex": {
-      "count": 36
+      "count": 26
     }
   },
   "apps/web/src/features/story-editor/inspectors/inspector-layout.css": {

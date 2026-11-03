@@ -128,7 +128,13 @@ test('an author creates, persists, resumes, and simulates a conditional story', 
   await expect(interactionNode(page, 'Opening')).toBeVisible();
   await expect(interactionNode(page, 'Gain courage')).toBeVisible();
   await expect(interactionNode(page, 'Resolve')).toBeVisible();
-  await page.getByRole('button', { name: 'Expand story context' }).click();
+  const storyContext = page.getByRole('navigation', { name: 'Story context' });
+  for (const section of ['Locations', 'Characters', 'Variables']) {
+    const toggle = storyContext.getByRole('button', { name: new RegExp(section) });
+    if ((await toggle.getAttribute('aria-expanded')) === 'false') {
+      await toggle.click();
+    }
+  }
   await expect(page.getByRole('button', { name: 'Atrium', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Alice', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Courage', exact: true })).toBeVisible();

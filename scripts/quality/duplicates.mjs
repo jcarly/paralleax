@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -37,6 +37,7 @@ function assertCoverage(report, config) {
     .split('\n')
     .filter(
       (file) =>
+        existsSync(file) &&
         /\.(ts|tsx|js|jsx)$/.test(file) &&
         readFileSync(file, 'utf8').split('\n').length >= config.minLines &&
         !(config.ignore ?? []).some((pattern) => path.matchesGlob(file, pattern)),
@@ -86,7 +87,7 @@ export function checkDuplicates(prune = false) {
   if (comparison.growth.length) {
     for (const clone of report.duplicates) {
       console.error(
-        `Clone: ${clone.firstFile.name}:${clone.firstFile.start} -> ${clone.secondFile.name}:${clone.secondFile.start} (${clone.tokens} tokens)`,
+        `Clone: ${clone.firstFile.name}:${clone.firstFile.start} → ${clone.secondFile.name}:${clone.secondFile.start} (${clone.tokens} tokens)`,
       );
     }
   }

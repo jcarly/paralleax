@@ -89,10 +89,7 @@ export async function createStory(page: Page, prefix: string) {
   const response = await expectSuccessful(storyCreation);
   const story = (await response.json()) as { id: string };
 
-  const storyCard = page.locator('.library-card').filter({ hasText: storyTitle });
-  await expect(storyCard).toBeVisible();
-  await expect(page.getByRole('region', { name: 'Create and test a story' })).toBeVisible();
-  await page.getByRole('link', { name: 'Open story' }).click();
+  await expect(page).toHaveURL(new RegExp(`/stories/${story.id}/edit`));
   await expect(page.locator('.story-title-input')).toHaveValue(storyTitle);
   await expect(page.getByRole('button', { name: 'Add root' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Explore the graph' })).toBeVisible();
@@ -196,18 +193,28 @@ export async function editInteraction(
   title: string,
   body: string,
 ) {
-  await interactionNode(page, currentTitle).last().click();
   const inspector = page.getByRole('complementary', { name: 'Inspector' });
   const titleField = interactionTitleField(inspector);
   await expect(titleField).toBeVisible();
+  if ((await titleField.inputValue()) !== currentTitle) {
+    await interactionNode(page, currentTitle).last().click();
+    await expect(titleField).toHaveValue(currentTitle);
+  }
   const titleUpdate = waitForInteractionPatch(page);
   await titleField.fill(title);
   await titleField.blur();
   await expectSuccessful(titleUpdate);
 
+  const contentField = inspector.getByRole('textbox', { name: 'Content' });
+  if (!(await contentField.count())) {
+    const addContent = inspector.getByRole('button', { name: 'Add content', exact: true });
+    await expect(addContent).toBeVisible();
+    await addContent.click();
+  }
+  await expect(contentField).toBeVisible();
   const bodyUpdate = waitForInteractionPatch(page);
-  await inspector.getByRole('textbox', { name: 'Content' }).fill(body);
-  await inspector.getByRole('textbox', { name: 'Content' }).blur();
+  await contentField.fill(body);
+  await contentField.blur();
   await expectSuccessful(bodyUpdate);
 }
 

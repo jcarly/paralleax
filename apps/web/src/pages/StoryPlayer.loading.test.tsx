@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Link, Route, Routes } from 'react-router-dom';
 import { TestDataRouter } from '../test/TestDataRouter';
@@ -467,7 +467,11 @@ describe('StoryPlayer loading and presentation', () => {
     expect(screen.getByText('Unavailable clue').closest('.conditional-text')).toHaveClass(
       'conditional-text-unavailable',
     );
-    expect(screen.getByText(/Requires "Secret" to be visited/)).toBeInTheDocument();
+    expect(
+      within(screen.getByRole('group', { name: 'Current interaction content' })).getByText(
+        /Requires "Secret" to be visited/,
+      ),
+    ).toBeInTheDocument();
     const unavailableOption = screen.getByRole('button', {
       name: /^NextRequires "Secret" to be visited\./,
     });

@@ -121,7 +121,7 @@ test('audits real routes after organizing a tangled 100-interaction story', asyn
         .map(({ id }) => id);
       expect(
         edgeIds,
-        `${first} <-> ${second}: both Trigger input/output routes are present`,
+        `${first} ↔ ${second}: both Trigger input/output routes are present`,
       ).toHaveLength(4);
       return {
         interactionIds,
@@ -178,7 +178,7 @@ test('audits real routes after organizing a tangled 100-interaction story', asyn
   for (const cycle of twoInteractionCycles) {
     expect(
       cycle.edgeNodeIntersections,
-      `Cycle ${cycle.interactionIds.join(' <-> ')} must not cross either interaction`,
+      `Cycle ${cycle.interactionIds.join(' ↔ ')} must not cross either interaction`,
     ).toEqual([]);
   }
 

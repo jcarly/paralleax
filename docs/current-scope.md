@@ -33,13 +33,23 @@ Paralleax currently includes:
   selection is wrapped when the frame is created, adding/removing conditions
   preserves its content, and removing the final token unwraps the frame. Legacy
   target-based conditional frames remain readable.
+- Interaction content is edited with Tiptap/ProseMirror. In the Inspector,
+  existing content stays in a compact editable field; focusing it reveals the
+  WYSIWYG toolbar and expanded editor. Empty content shows only **Add content**;
+  leaving an empty draft returns to that action. Simulation keeps its Reader
+  projection interactive at rest; focusing the content field opens Tiptap in
+  place. Empty content shows only **Add content** and returns to it if left
+  empty. The CodeMirror source mode is not available yet. A concise
+  native content syntax inspired by Ink is a proposed direction in
+  [ADR-043](decisions/ADR-043-ink-inspired-narrative-source.md), not an accepted
+  grammar. No source-to-canonical conversion is implemented.
 - Triggers with multiple input interactions, OR condition groups containing AND
   typed conditions, one 0–100 appearance probability, and optional saved positions
   for linked graph markers. Probability uses one deterministic roll per Trigger
   and narrative step. A nullable non-negative timer limits how long an otherwise
   eligible Trigger exposes its option; active timers render as draining bars,
   while zero-second timers never appear in normal reading.
-  Normal editor and API creation or input edits allow each directed source ->
+  Normal editor and API creation or input edits allow each directed source →
   target pair on only one Trigger. This app-level policy has no database unique
   constraint. Existing duplicate pairs remain loadable, can be edited without
   adding another duplicate, and can be removed. QSP and ChoiceScript adapters
@@ -80,6 +90,10 @@ Paralleax currently includes:
 - Reader and Simulation Mode cross-fade the Player scene and narrative card when
   the current Interaction changes. Reduced-motion preferences disable the effect;
   pass-through Interactions are advanced before display.
+- Reader and Simulation share one responsive Player workspace. On desktop and
+  tablet, the narrative card and side panels scroll independently within the
+  viewport. On narrow screens, both use a document-scrolling column with a
+  sticky Player toolbar.
 - Story-local deterministic calendar time.
 - Locations.
 - Characters.
@@ -160,8 +174,10 @@ Paralleax currently includes:
 - A unified story library: anonymous visitors see public stories, while signed-in
   users see every story they can read with capability and ownership filters.
   Search, filtering, sorting, and incremental pagination use lightweight server
-  summaries and do not load Story graphs. Local return-to-page navigation is
-  preserved through sign-in and registration.
+  summaries and do not load Story graphs. Creating a new Story from the library
+  atomically seeds a `Start → New interaction` chain with empty bodies, then
+  opens its editor with the root selected, centered, and shown in the Inspector.
+  Local return-to-page navigation is preserved through sign-in and registration.
 - Paginated, revision-consistent Story read projections. The editor displays
   context lists first, then interaction and Trigger structure, then bodies,
   effects, and conditions before enabling mutations. Reader and Simulation Mode
@@ -218,8 +234,9 @@ Paralleax currently includes:
   remain visible, and the combined rule appears on the graph marker's tooltip.
 - Rectangular graph multi-selection for interactions and linked trigger markers,
   with a transient count inspector, group drag-and-drop, and outside-click clearing.
-- Persisted Groups created directly from selected Interactions with Ctrl+G and
-  an immediately selected inline name in a compact searchable left-panel tree.
+- Persisted Groups created from selected Interactions with Ctrl+G or as an empty
+  root from the Groups section's **Add** action, with an immediately selected
+  inline name in a compact searchable left-panel tree.
   Context menus, mouse/touch dragging and equivalent keyboard commands support
   renaming, subgroup creation, membership edits, nesting and sibling reordering.
   Parent and order changes reuse one authored mutation and existing relational
@@ -230,6 +247,20 @@ Paralleax currently includes:
   children without
   deleting Interactions. Selection highlights recursive members; explicit centering
   adjusts only the viewport. Group selection never opens a right inspector.
+  The Groups section also explores grouped and ungrouped Interactions. Expanded
+  Groups show child Groups first, then their direct Interactions in saved order.
+  The shared search matches Interaction titles and content, present characters,
+  locations, effect targets, incoming Trigger sources, and Trigger conditions.
+  Group-title matches stay collapsed; member matches expand the path and show
+  only matching Interactions. Context-list selections do not yet filter this
+  explorer.
+  The browser-side search completed query, result navigation, and selection in
+  1.85 seconds on one local development run with the existing 600-Interaction
+  performance fixture, below its 5-second selection budget. This single run does
+  not cover production or larger Stories; reconsider a hosted search service if
+  supported Story sizes exceed that budget.
+  The Groups, Locations, Characters, Variables and Items sections start collapsed
+  and reopen after an entity is created in that section.
   Ctrl+click toggles interaction selection, and Shift/Alt rectangles add/remove
   selection. Tree collapse/expansion and search expansion are transient
   navigation state; they do not hide graph elements, alter membership, or enter
@@ -321,6 +352,11 @@ The following remain future or incomplete unless a task explicitly implements th
 - delayed or probabilistic automatic choices;
 - explicit final/completed story semantics;
 - anonymous or offline reader-progress saves;
+- reader-journey event collection, author-facing aggregate analytics, CSV
+  reporting, and graph overlays; existing authenticated Reader/Simulation saves
+  and in-memory anonymous journeys are not analytics;
+- reader-facing progress steps configured by authors; any future progress
+  indicator is separate from analytics and must not assume graph length;
 - collaborative text merging and durable offline authoring for an already-open
   Story, accepted as future direction in [ADR-034](decisions/ADR-034-collaborative-offline-authoring.md);
 - managed media upload/storage;
@@ -332,7 +368,17 @@ The following remain future or incomplete unless a task explicitly implements th
 - lossless or runtime-equivalent QSP import, QSP re-export, and incremental re-import;
 - executable/Unity/video exports;
 - AI-driven narrative/runtime behavior.
-- combined Group filters and advanced Group-focused Workbench projections;
+- An author-facing content-source mode, an accepted narrative content grammar,
+  and source round-trip conversion. The current Tiptap editor remains the only
+  content authoring mode; the proposed syntax is tracked in
+  [ADR-043](decisions/ADR-043-ink-inspired-narrative-source.md).
+- A global Story Script editor, which is a separate future authoring surface and
+  is not part of the Tiptap migration.
+- Procedural/variant text and its deterministic selection, save, reload, and
+  Simulation semantics.
+- combined Group filters, advanced Group-focused Workbench projections, and
+  filtering the Interaction explorer from selected characters, locations,
+  variables, or items in the other context lists;
 - configurable Workbench views for structure, character, location, time, and
   state, including combined filters and Focused / Context / Background treatment;
 - connected-path selection, generic Focus, graph-level dependency navigation,

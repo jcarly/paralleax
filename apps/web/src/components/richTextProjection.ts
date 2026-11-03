@@ -66,6 +66,16 @@ export function renderReaderRichText(
       });
   }
   template.content
+    .querySelectorAll<HTMLButtonElement>('button[data-conditional-text-link]')
+    .forEach((link) => {
+      const targetId = link.dataset.conditionalTextLink ?? '';
+      const state = conditionalTextState?.[targetId];
+      if (conditionalTextState && !state?.available) {
+        link.disabled = true;
+        link.title = state?.reason ?? unavailableMessage;
+      }
+    });
+  template.content
     .querySelectorAll<HTMLElement>('[data-interaction-link-target]')
     .forEach((marker) => {
       const targetId = marker.dataset.interactionLinkTarget ?? '';
@@ -94,9 +104,13 @@ export function renderReaderRichText(
 function removeUnresolvedStatReferences(content: DocumentFragment) {
   const walker = document.createTreeWalker(content, NodeFilter.SHOW_TEXT);
   const textNodes: Text[] = [];
-  while (walker.nextNode()) textNodes.push(walker.currentNode as Text);
+  while (walker.nextNode()) {
+    textNodes.push(walker.currentNode as Text);
+  }
   textNodes.forEach((node) => {
-    if (node.parentElement?.closest('[data-stat-value]')) return;
+    if (node.parentElement?.closest('[data-stat-value]')) {
+      return;
+    }
     node.data = node.data.replace(/\{\{[^{}]*\}\}/g, '');
   });
 }
@@ -118,8 +132,23 @@ export function hasVisibleRichTextContent(
   );
   const template = document.createElement('template');
   template.innerHTML = rendered;
-  if ((template.content.textContent ?? '').replace(/[\s\u200B\uFEFF]/gu, '')) return true;
+  if ((template.content.textContent ?? '').replace(/[\s\u200B\uFEFF]/gu, '')) {
+    return true;
+  }
   return Boolean(
     template.content.querySelector('img, video, audio, iframe, hr, canvas, svg, object, embed'),
+  );
+}
+
+export function hasAuthoredRichTextContent(html: string): boolean {
+  const template = document.createElement('template');
+  template.innerHTML = sanitizeRichTextForDisplay(html);
+  if ((template.content.textContent ?? '').replace(/[\s\u200B\uFEFF]/gu, '')) {
+    return true;
+  }
+  return Boolean(
+    template.content.querySelector(
+      'img, video, audio, iframe, hr, canvas, svg, object, embed, [data-stat-value], [data-interaction-link-target], [data-conditional-text-block], [data-conditional-text-target], [data-conditional-text-link]',
+    ),
   );
 }

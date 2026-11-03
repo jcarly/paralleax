@@ -1,6 +1,11 @@
 import { expect, test, type Page } from '@playwright/test';
 import type { Story } from '@paralleax/shared';
-import { paginated } from './editorTestHarness';
+import {
+  mockEditorBackgroundRequests,
+  mockStory,
+  paginated,
+  storyWithOpeningPath,
+} from './editorTestHarness';
 
 test('registers, verifies email, creates a story, signs out, and signs back in', async ({
   page,
@@ -48,13 +53,7 @@ test('registers, verifies email, creates a story, signs out, and signs back in',
       return;
     }
     if (route.request().method() === 'POST') {
-      const story: Story = {
-        id: 'story-1',
-        title: 'New story',
-        interactions: [],
-        createdAt: '2026-07-18T00:00:00.000Z',
-        updatedAt: '2026-07-18T00:00:00.000Z',
-      };
+      const story: Story = storyWithOpeningPath();
       stories.push(story);
       await route.fulfill({ status: 201, json: story });
       return;
@@ -71,6 +70,14 @@ test('registers, verifies email, creates a story, signs out, and signs back in',
       ),
     });
   });
+  await mockStory(page, () => {
+    const createdStory = stories[0];
+    if (!createdStory) {
+      throw new Error('The editor requested the Story before creation completed.');
+    }
+    return createdStory;
+  });
+  await mockEditorBackgroundRequests(page);
 
   await page.goto('/');
   const signIn = page.getByRole('link', { name: 'Sign in' });
@@ -117,8 +124,11 @@ test('registers, verifies email, creates a story, signs out, and signs back in',
   await page.getByRole('button', { name: 'New story' }).click();
   await page.getByLabel('Story title').fill('New story');
   await page.getByRole('button', { name: 'Create story' }).click();
-  await expect(page.getByRole('heading', { name: 'New story', exact: true })).toBeVisible();
+  await expect(page).toHaveURL(/\/stories\/story-1\/edit$/);
+  await expect(page.getByRole('textbox', { name: 'Story title' })).toHaveValue('New story');
 
+  await page.goto('/');
+  await expect(page.getByRole('heading', { name: 'New story', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Sign out' }).click();
   await page.getByRole('link', { name: 'Sign in' }).click();
   await expect(page.getByRole('heading', { name: 'Sign in to Paralleax' })).toBeVisible();
@@ -138,8 +148,9 @@ async function expectAccountActionsToFit(page: Page, signInName: string, createN
     responsiveSignIn.boundingBox(),
     responsiveCreateAccount.boundingBox(),
   ]);
-  expect(signInBox).not.toBeNull();
-  expect(createAccountBox).not.toBeNull();
-  expect(signInBox!.x + signInBox!.width).toBeLessThanOrEqual(createAccountBox!.x);
-  expect(createAccountBox!.x + createAccountBox!.width).toBeLessThanOrEqual(360);
+  if (!signInBox || !createAccountBox) {
+    throw new Error('Expected both account actions to have bounding boxes.');
+  }
+  expect(signInBox.x + signInBox.width).toBeLessThanOrEqual(createAccountBox.x);
+  expect(createAccountBox.x + createAccountBox.width).toBeLessThanOrEqual(360);
 }

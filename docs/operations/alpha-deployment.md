@@ -34,7 +34,7 @@ and reflect that metadata in the tester notice before collecting responses.
 Use one public HTTPS origin for the browser and API:
 
 ```text
-browser -> TLS edge -> Paralleax web container -> /api proxy -> API container -> managed PostgreSQL
+browser → TLS edge → Paralleax web container → /api proxy → API container → managed PostgreSQL
 ```
 
 The web container serves the Vite build, applies browser security headers, and

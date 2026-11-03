@@ -270,7 +270,7 @@ The seven reference edge/node intersections come from four output edges:
 | `trigger:interaction-64:trigger-64-output`           | `interaction-63`                                                       |
 | `trigger:interaction-80:trigger-return-87-80-output` | `interaction-83`                                                       |
 
-Cycle breaking may make an ordinary link such as 47 -> 48 run backwards in the
+Cycle breaking may make an ordinary link such as 47 → 48 run backwards in the
 drawing; the problematic routes are not limited to authored return links.
 `getSmoothStepPath` routes between two endpoints and does not receive the other
 node rectangles. Increasing spacing cannot make that route obstacle-aware.

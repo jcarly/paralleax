@@ -504,7 +504,7 @@
       "count": 1
     },
     "curly": {
-      "count": 6
+      "count": 5
     }
   },
   "apps/api/src/stories/application/story-history.ts": {
@@ -780,13 +780,13 @@
       "count": 3
     },
     "@typescript-eslint/no-unsafe-member-access": {
-      "count": 278
+      "count": 277
     },
     "@typescript-eslint/no-unsafe-return": {
       "count": 1
     },
     "@typescript-eslint/no-unsafe-type-assertion": {
-      "count": 67
+      "count": 66
     },
     "complexity": {
       "count": 1
@@ -1144,30 +1144,16 @@
   "apps/web/src/components/RichTextContent.tsx": {
     "@typescript-eslint/no-unsafe-type-assertion": {
       "count": 1
-    },
-    "curly": {
-      "count": 1
     }
   },
   "apps/web/src/components/RichTextEditor.test.tsx": {
     "@typescript-eslint/no-non-null-assertion": {
-      "count": 14
+      "count": 4
     },
     "@typescript-eslint/no-unsafe-assignment": {
       "count": 2
     },
     "max-lines-per-function": {
-      "count": 3
-    }
-  },
-  "apps/web/src/components/RichTextEditor.tsx": {
-    "complexity": {
-      "count": 4
-    },
-    "max-lines-per-function": {
-      "count": 4
-    },
-    "sonarjs/cognitive-complexity": {
       "count": 2
     }
   },
@@ -1359,42 +1345,15 @@
       "count": 5
     }
   },
-  "apps/web/src/components/richTextEditorTokens.ts": {
-    "@typescript-eslint/no-unsafe-type-assertion": {
-      "count": 1
-    },
-    "curly": {
-      "count": 2
-    }
-  },
   "apps/web/src/components/richTextProjection.ts": {
     "@typescript-eslint/no-unsafe-type-assertion": {
       "count": 1
-    },
-    "curly": {
-      "count": 3
     },
     "max-lines-per-function": {
       "count": 1
     },
     "max-params": {
       "count": 2
-    }
-  },
-  "apps/web/src/components/useRichTextEditorSelection.test.tsx": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 6
-    },
-    "max-lines-per-function": {
-      "count": 1
-    }
-  },
-  "apps/web/src/components/useRichTextEditorSelection.ts": {
-    "curly": {
-      "count": 5
-    },
-    "max-lines-per-function": {
-      "count": 1
     }
   },
   "apps/web/src/features/comments/CommentDiscussionCard.tsx": {
@@ -1479,9 +1438,6 @@
     }
   },
   "apps/web/src/features/comments/textAnchors.test.ts": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 4
-    },
     "@typescript-eslint/no-unsafe-assignment": {
       "count": 1
     },
@@ -1490,14 +1446,8 @@
     }
   },
   "apps/web/src/features/comments/textAnchors.ts": {
-    "@typescript-eslint/no-unsafe-type-assertion": {
-      "count": 3
-    },
     "complexity": {
       "count": 1
-    },
-    "curly": {
-      "count": 4
     },
     "sonarjs/cognitive-complexity": {
       "count": 1
@@ -1677,26 +1627,6 @@
       "count": 1
     }
   },
-  "apps/web/src/features/story-editor/navigation/StoryGroupTreePanel.tsx": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 2
-    },
-    "@typescript-eslint/no-unsafe-type-assertion": {
-      "count": 3
-    },
-    "complexity": {
-      "count": 3
-    },
-    "curly": {
-      "count": 22
-    },
-    "max-lines-per-function": {
-      "count": 2
-    },
-    "sonarjs/cognitive-complexity": {
-      "count": 2
-    }
-  },
   "apps/web/src/features/story-editor/navigation/StoryGroupsPanel.test.tsx": {
     "@typescript-eslint/no-non-null-assertion": {
       "count": 3
@@ -1715,16 +1645,6 @@
     },
     "max-lines-per-function": {
       "count": 3
-    }
-  },
-  "apps/web/src/features/story-editor/navigation/groupTree.test.ts": {
-    "curly": {
-      "count": 1
-    }
-  },
-  "apps/web/src/features/story-editor/navigation/groupTree.ts": {
-    "curly": {
-      "count": 5
     }
   },
   "apps/web/src/features/story-editor/navigation/useStoryContextNavigation.test.ts": {
@@ -2411,7 +2331,7 @@
       "count": 3
     },
     "@typescript-eslint/no-unsafe-assignment": {
-      "count": 4
+      "count": 3
     },
     "max-lines-per-function": {
       "count": 1
@@ -2419,13 +2339,10 @@
   },
   "apps/web/src/pages/StoryPlayer.tsx": {
     "complexity": {
-      "count": 3
-    },
-    "curly": {
-      "count": 15
+      "count": 2
     },
     "max-lines-per-function": {
-      "count": 3
+      "count": 2
     },
     "sonarjs/cognitive-complexity": {
       "count": 1
@@ -2767,9 +2684,6 @@
     }
   },
   "apps/web/tests/e2e/auth.spec.ts": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 5
-    },
     "max-lines-per-function": {
       "count": 1
     }
@@ -2783,9 +2697,6 @@
     },
     "@typescript-eslint/no-unsafe-type-assertion": {
       "count": 2
-    },
-    "curly": {
-      "count": 1
     }
   },
   "apps/web/tests/e2e/design-system-effect-fields.spec.ts": {
@@ -2833,9 +2744,6 @@
     "@typescript-eslint/no-non-null-assertion": {
       "count": 46
     },
-    "@typescript-eslint/no-shadow": {
-      "count": 3
-    },
     "@typescript-eslint/no-unsafe-argument": {
       "count": 6
     },
@@ -2846,10 +2754,7 @@
       "count": 9
     },
     "curly": {
-      "count": 5
-    },
-    "max-lines-per-function": {
-      "count": 2
+      "count": 1
     }
   },
   "apps/web/tests/e2e/editor.layout-quality.spec.ts": {
@@ -2875,12 +2780,6 @@
   "apps/web/tests/e2e/editor.persistence.spec.ts": {
     "@typescript-eslint/no-non-null-assertion": {
       "count": 8
-    },
-    "@typescript-eslint/no-unsafe-type-assertion": {
-      "count": 2
-    },
-    "curly": {
-      "count": 1
     },
     "max-lines-per-function": {
       "count": 3
@@ -2942,20 +2841,11 @@
     }
   },
   "apps/web/tests/e2e/reader-simulation-styles.spec.ts": {
-    "@typescript-eslint/consistent-type-imports": {
-      "count": 4
-    },
     "@typescript-eslint/no-shadow": {
       "count": 2
     },
     "@typescript-eslint/no-unsafe-assignment": {
       "count": 2
-    },
-    "curly": {
-      "count": 1
-    },
-    "max-lines-per-function": {
-      "count": 1
     }
   },
   "apps/web/tests/e2e/rich-text-controls.spec.ts": {

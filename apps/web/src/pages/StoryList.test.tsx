@@ -1,7 +1,7 @@
 import React from 'react';
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Story, StorySummary } from '@paralleax/shared';
 import { StoryList } from './StoryList';
@@ -42,6 +42,12 @@ const administrator: AuthUser = {
   email: 'admin@example.com',
   role: 'admin',
 };
+
+function StoryEditorRouteProbe() {
+  const location = useLocation();
+  const destination = `${location.pathname}${location.search}`;
+  return <h1>Story editor {destination}</h1>;
+}
 
 class FakeEventSource {
   static readonly instances: FakeEventSource[] = [];
@@ -110,6 +116,37 @@ function importedStorySummary(story: Story): StorySummary {
     capabilities: { canRead: true, canEdit: true, canManage: true, canComment: true },
     createdAt: story.createdAt,
     updatedAt: story.updatedAt,
+  };
+}
+
+function storyWithOpeningPath(): Story {
+  return {
+    id: 'story-3',
+    title: 'New story',
+    createdAt: '2026-07-14T08:00:00.000Z',
+    updatedAt: '2026-07-14T08:00:00.000Z',
+    interactions: [
+      {
+        id: 'story-3-root',
+        title: 'Start',
+        body: '',
+        position: { x: 80, y: 120 },
+        triggers: [{ id: 'story-3-root-trigger', inputInteractionIds: [], conditions: [] }],
+      },
+      {
+        id: 'story-3-child',
+        title: 'New interaction',
+        body: '',
+        position: { x: 80, y: 252 },
+        triggers: [
+          {
+            id: 'story-3-child-trigger',
+            inputInteractionIds: ['story-3-root'],
+            conditions: [],
+          },
+        ],
+      },
+    ],
   };
 }
 
@@ -208,25 +245,21 @@ describe('StoryList', () => {
     expect(screen.queryByRole('button', { name: 'Generate demos' })).not.toBeInTheDocument();
   });
 
-  it('creates and deletes a story from the list', async () => {
+  it('opens a newly created story in the editor', async () => {
     const user = userEvent.setup();
-    const createdStory: Story = {
-      id: 'story-3',
-      title: 'New story',
-      createdAt: '2026-07-14T08:00:00.000Z',
-      updatedAt: '2026-07-14T08:00:00.000Z',
-      interactions: [],
-    };
-    vi.mocked(api.listStories)
-      .mockResolvedValueOnce(storyPage([structuredClone(stories[0])]))
-      .mockResolvedValueOnce(storyPage([]));
-    vi.mocked(api.createStory).mockResolvedValue(createdStory);
-    vi.mocked(api.deleteStory).mockResolvedValue(undefined);
+    vi.mocked(api.listStories).mockResolvedValue(storyPage([structuredClone(stories[0])]));
+    vi.mocked(api.createStory).mockResolvedValue(storyWithOpeningPath());
     const onStoryCreated = vi.fn();
 
     render(
       <MemoryRouter>
-        <StoryList user={standardUser} onStoryCreated={onStoryCreated} />
+        <Routes>
+          <Route
+            path="/"
+            element={<StoryList user={standardUser} onStoryCreated={onStoryCreated} />}
+          />
+          <Route path="/stories/story-3/edit" element={<StoryEditorRouteProbe />} />
+        </Routes>
       </MemoryRouter>,
     );
     await screen.findByRole('heading', { name: 'First story' });
@@ -234,9 +267,28 @@ describe('StoryList', () => {
     await user.click(screen.getByRole('button', { name: 'New story' }));
     await user.type(screen.getByLabelText('Story title'), 'New story');
     await user.click(screen.getByRole('button', { name: 'Create story' }));
-    expect(await screen.findByRole('heading', { name: 'New story' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', {
+        name: 'Story editor /stories/story-3/edit?focusInteractionId=story-3-root',
+      }),
+    ).toBeInTheDocument();
     expect(api.createStory).toHaveBeenCalledWith('New story');
     expect(onStoryCreated).toHaveBeenCalledWith('story-3');
+  });
+
+  it('deletes a story from the list', async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.listStories)
+      .mockResolvedValueOnce(storyPage([structuredClone(stories[0])]))
+      .mockResolvedValueOnce(storyPage([]));
+    vi.mocked(api.deleteStory).mockResolvedValue(undefined);
+
+    render(
+      <MemoryRouter>
+        <StoryList user={standardUser} />
+      </MemoryRouter>,
+    );
+    await screen.findByRole('heading', { name: 'First story' });
 
     const firstCard = screen.getByRole('heading', { name: 'First story' }).closest('article')!;
     await user.click(within(firstCard).getByRole('button', { name: 'Delete' }));
@@ -885,7 +937,10 @@ describe('StoryList', () => {
 
     render(
       <MemoryRouter>
-        <StoryList user={standardUser} />
+        <Routes>
+          <Route path="/" element={<StoryList user={standardUser} />} />
+          <Route path="/stories/story-created-once/edit" element={<h1>Story editor</h1>} />
+        </Routes>
       </MemoryRouter>,
     );
     await screen.findByRole('heading', { name: 'No stories found' });
@@ -910,7 +965,7 @@ describe('StoryList', () => {
         interactions: [],
       }),
     );
-    expect(await screen.findByRole('heading', { name: 'Only once' })).toBeVisible();
+    expect(await screen.findByRole('heading', { name: 'Story editor' })).toBeVisible();
   });
 
   it('closes the creation dialog with Escape and restores its opening control', async () => {
@@ -1002,7 +1057,10 @@ describe('StoryList', () => {
 
     render(
       <MemoryRouter>
-        <StoryList user={standardUser} />
+        <Routes>
+          <Route path="/" element={<StoryList user={standardUser} />} />
+          <Route path="/stories/story-recovered/edit" element={<h1>Story editor</h1>} />
+        </Routes>
       </MemoryRouter>,
     );
     await screen.findByRole('heading', { name: 'No stories found' });
@@ -1016,7 +1074,7 @@ describe('StoryList', () => {
 
     await user.click(screen.getByRole('button', { name: 'Create story' }));
 
-    expect(await screen.findByRole('heading', { name: 'Recovered story' })).toBeVisible();
+    expect(await screen.findByRole('heading', { name: 'Story editor' })).toBeVisible();
     expect(api.createStory).toHaveBeenCalledTimes(2);
   });
 

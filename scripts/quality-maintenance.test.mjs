@@ -117,6 +117,34 @@ test('real clone gate tolerates line moves but rejects a third copy and edited c
   assert.equal(readFileSync(baseline, 'utf8'), before);
 });
 
+test('clone gate ignores tracked files deleted from the current worktree', (t) => {
+  const root = project(t);
+  writeJson(path.join(root, '.jscpd.json'), {
+    path: ['apps/api/src'],
+    minTokens: 40,
+    minLines: 5,
+    format: ['typescript'],
+    reporters: ['json'],
+    silent: true,
+  });
+  const source = `export function sample(input: number) {\nlet total = input;\n${Array.from(
+    { length: 12 },
+    (_, index) => `total += input * ${index};`,
+  ).join('\n')}\nreturn total;\n}\n`;
+  write(root, 'apps/api/src/a.ts', source);
+  write(root, 'apps/api/src/b.ts', source);
+  execFileSync('git', ['init', '--quiet'], { cwd: root });
+  execFileSync('git', ['add', 'apps/api/src'], { cwd: root });
+  writeJson(path.join(root, '.duplication-baseline.json'), scanIn(root));
+
+  rmSync(path.join(root, 'apps/api/src/a.ts'));
+  assert.equal(run(root, 'duplicates', ['--prune']).status, 0);
+  assert.deepEqual(
+    JSON.parse(readFileSync(path.join(root, '.duplication-baseline.json'), 'utf8')),
+    {},
+  );
+});
+
 function policyProject(t) {
   const root = project(t);
   const previous = { 'file.ts': { complexity: { count: 1 } } };
