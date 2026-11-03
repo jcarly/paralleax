@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Full Story reads now use one read-only repeatable-read snapshot, and malformed
+  persisted graph decorations fail explicitly during projection.
+
 - Left sidebar lists now share section headers and separators, including between
   Groups and Locations. Sections start collapsed and open after entity creation;
   root Groups can be created empty. The Groups section explores grouped and

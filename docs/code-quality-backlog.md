@@ -177,6 +177,12 @@ promotes them.
       current 2,000-node baseline.
 - [x] Run controlled PostgreSQL stress tests in the weekly/manual CI stress lane
       and retain their structured measurements in job logs.
+- [x] Assemble full Story reads from a consistent PostgreSQL snapshot. The
+      repository now runs its multi-query projection in a read-only repeatable-
+      read transaction. Validate nullable graph-decoration columns at the read
+      boundary and remove 12 related non-null assertions. Shared effect and
+      trigger projections also remove the duplicate between full Story reads and
+      runtime slices. See the [2026-11-03 persistence follow-up](audits/2026-11-03-story-persistence.md).
 
 ## P1 — Module Boundaries
 
@@ -274,13 +280,13 @@ are not prerequisites for disposable author sessions.
 
 ## P2 — Static Analysis
 
-**Current policy (2026-11-03):** the strict quality-gate initiative remains the
-completed prerequisite ahead of sessions; the following completed 2026-10-25
-entries are historical measurements superseded by ADR-041 and the linked quality
-audit. The audit measured 4,404 ESLint findings on 2026-10-26. The current
-`origin/main` baseline had 4,391; this focused follow-up pruned it to 4,374 ESLint
-findings, with 642 Stylelint findings, one exact dependency cycle, and 16
-production clone pairs. Native-count replacement limits remain explicit.
+**Current policy (2026-11-03):** the strict quality-gate initiative is promoted
+ahead of sessions; the following completed 2026-10-25 entries are historical
+measurements superseded by ADR-041 and the linked quality audit. The 2026-10-26
+audit recorded 4,404 ESLint findings, 642 Stylelint findings, one exact
+dependency cycle and 16 production clone pairs. Dated follow-up audits record
+later branch-specific measurements. Native-count replacement limits remain
+explicit.
 Future debt reduction stays incremental; prioritize the shared narrative engine,
 complex shared helpers, central React flows, functional duplication, then styles.
 
