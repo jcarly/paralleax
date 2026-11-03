@@ -26,10 +26,11 @@ compact response optionally includes `groupOrder`, so the web projection receive
 the server's committed order without creating a second store. An older response
 cannot replace order from a newer authoritative Story revision.
 
-Root creation still requires selected Interactions. The existing creation action
-also accepts an optional same-Story parent and an empty selection for creating an
-empty subgroup directly in the tree. Existing Groups and API callers stay valid;
-no migration is required.
+The Groups section exposes an **Add** action that creates an empty root Group.
+Ctrl+G continues to create a root Group from selected Interactions. The existing
+creation operation also accepts an optional same-Story parent and an empty
+selection for creating an empty subgroup directly in the tree. Existing Groups
+and API callers stay valid; no migration is required.
 
 The editor uses `@dnd-kit/core` for mouse/touch sensors, collision measurement,
 drag cancellation, drag overlays and ancestor auto-scrolling. Its MIT-licensed,

@@ -75,6 +75,35 @@ export function cloneStory() {
   return structuredClone(story);
 }
 
+export function storyWithOpeningPath(): Story {
+  return {
+    ...cloneStory(),
+    title: 'New story',
+    interactions: [
+      {
+        id: 'interaction-root',
+        title: 'Start',
+        body: '',
+        position: { x: 80, y: 120 },
+        triggers: [{ id: 'trigger-root', inputInteractionIds: [], conditions: [] }],
+      },
+      {
+        id: 'interaction-child',
+        title: 'New interaction',
+        body: '',
+        position: { x: 80, y: 252 },
+        triggers: [
+          {
+            id: 'trigger-child',
+            inputInteractionIds: ['interaction-root'],
+            conditions: [],
+          },
+        ],
+      },
+    ],
+  };
+}
+
 export function storyWithConditionCandidate(): Story {
   const next = cloneStory();
   next.interactions.push({
@@ -215,7 +244,7 @@ export async function mockGraphPositionUpdates(
   });
 }
 
-async function mockEditorBackgroundRequests(page: Page) {
+export async function mockEditorBackgroundRequests(page: Page) {
   await page.addInitScript(() => {
     class TestEventSource {
       readonly listeners = new Map<string, Array<() => void>>();
