@@ -15,6 +15,9 @@ test.describe('Story editor graph', () => {
   });
 
   test('keeps the guide outside layout and follows the current editor target', async ({ page }) => {
+    const storyWithoutScene = structuredClone(story);
+    storyWithoutScene.interactions[0].body = '';
+    await mockStory(page, storyWithoutScene);
     await page.addInitScript(() => {
       window.localStorage.setItem(
         'paralleax-onboarding:v1:user-1',
