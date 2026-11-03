@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -66,5 +66,108 @@ describe('AccountActionPage', () => {
     expect(
       screen.getByText(/If an eligible account exists for this email address/),
     ).toBeInTheDocument();
+  });
+});
+
+describe('AccountActionPage authenticated transition errors', () => {
+  beforeEach(() => vi.resetAllMocks());
+  afterEach(() => cleanup());
+
+  it('shows an error when the authenticated transition fails', async () => {
+    const user = userEvent.setup();
+    const token = 'v'.repeat(43);
+    vi.mocked(api.verifyEmail).mockResolvedValue({
+      id: 'user-1',
+      email: 'author@example.com',
+      displayName: 'Author',
+      role: 'user',
+      createdAt: '2026-01-01T00:00:00.000Z',
+      emailVerifiedAt: '2026-01-01T00:00:00.000Z',
+    });
+    const onAuthenticated = vi.fn().mockRejectedValue(new Error('Navigation failed'));
+    render(
+      <MemoryRouter initialEntries={[`/verify-email?token=${token}`]}>
+        <AccountActionPage
+          action="verify-email"
+          onAuthenticated={onAuthenticated}
+          onBackToSignIn={vi.fn()}
+        />
+      </MemoryRouter>,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Verify and sign in' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Navigation failed');
+  });
+});
+
+describe('AccountActionPage sign-in navigation errors', () => {
+  beforeEach(() => vi.resetAllMocks());
+  afterEach(() => cleanup());
+
+  it('shows an error when returning to sign in fails', async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.requestPasswordReset).mockResolvedValue(undefined);
+    const onBackToSignIn = vi.fn().mockRejectedValue(new Error('Navigation failed'));
+    render(
+      <MemoryRouter>
+        <AccountActionPage
+          action="request-password-reset"
+          onAuthenticated={vi.fn()}
+          onBackToSignIn={onBackToSignIn}
+        />
+      </MemoryRouter>,
+    );
+
+    await user.type(screen.getByLabelText('Email address'), 'author@example.com');
+    await user.click(screen.getByRole('button', { name: 'Send reset instructions' }));
+    await user.click(screen.getByRole('button', { name: 'Back to sign in' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Navigation failed');
+  });
+});
+
+describe('AccountActionPage pending transitions', () => {
+  beforeEach(() => vi.resetAllMocks());
+  afterEach(() => cleanup());
+
+  it('keeps verification pending until its parent transition finishes', async () => {
+    const user = userEvent.setup();
+    const token = 'v'.repeat(43);
+    let resolveTransition: (() => void) | undefined;
+    const transition = new Promise<void>((resolve) => {
+      resolveTransition = resolve;
+    });
+    vi.mocked(api.verifyEmail).mockResolvedValue({
+      id: 'user-1',
+      email: 'author@example.com',
+      displayName: 'Author',
+      role: 'user',
+      createdAt: '2026-01-01T00:00:00.000Z',
+      emailVerifiedAt: '2026-01-01T00:00:00.000Z',
+    });
+    const onAuthenticated = vi.fn(() => transition);
+    render(
+      <MemoryRouter initialEntries={[`/verify-email?token=${token}`]}>
+        <AccountActionPage
+          action="verify-email"
+          onAuthenticated={onAuthenticated}
+          onBackToSignIn={vi.fn()}
+        />
+      </MemoryRouter>,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Verify and sign in' }));
+    await waitFor(() => expect(onAuthenticated).toHaveBeenCalledOnce());
+
+    const submit = screen.getByRole('button', { name: 'Please wait…' });
+    expect(submit).toBeDisabled();
+    await user.click(submit);
+    expect(api.verifyEmail).toHaveBeenCalledOnce();
+
+    resolveTransition?.();
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Verify and sign in' })).toBeEnabled(),
+    );
   });
 });

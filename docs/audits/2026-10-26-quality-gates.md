@@ -346,3 +346,45 @@ findings remain enabled and are exercised by configuration fixtures.
 | `apps/api/src/stories/dto/stories.dto.ts:866`            | `apps/api/src/stories/dto/stories.dto.ts:831`                       |    35 |    365 |
 | `apps/api/src/stories/stories.repository.ts:1139`        | `apps/api/src/stories/persistence/story-runtime.persistence.ts:282` |    28 |    435 |
 | `apps/api/src/observability/sentry.ts:63`                | `apps/web/src/observability/sentry.ts:106`                          |    23 |    240 |
+
+## Focused asynchronous follow-up — 2026-11-03
+
+The `origin/main` baseline started this slice with 4,391 suppressed ESLint
+findings. A raw, unsuppressed probe of the web files with
+`@typescript-eslint/no-floating-promises` or
+`@typescript-eslint/no-misused-promises` found 13 diagnostics across six files:
+six floating promises and seven promise-returning callbacks passed to void
+contracts.
+
+- `App.tsx` had two of each rule where authentication callbacks returned Router
+  navigation promises. `AuthPage` and `AccountActionPage` now accept and await
+  asynchronous callbacks, report rejected transitions in their existing error
+  area, and complete pending-state updates before invoking the parent callback.
+- `StoryEditor.tsx` passed four asynchronous graph-persistence callbacks to a
+  controller that declared synchronous methods. The controller now reflects the
+  Promise contract and forwards unexpected rejections to the existing save error
+  feedback. Expected API failures continue to be handled by the persistence
+  lifecycle.
+- The remaining five diagnostics were in test callbacks: unawaited React
+  `act()` calls and a navigation click handler. The tests now await state flushes
+  and keep the navigation explicitly fire-and-forget at its event boundary.
+
+The unsuppressed async probe now reports zero findings. The native ESLint
+baseline shrank from 4,391 to 4,374 total findings: the 13 async entries plus
+four stale `curly` entries in the touched controller. No rule, threshold, or
+suppression policy changed. The focused web verification passed all nine
+selected suites (66 tests) using one worker, including the added
+rejection and double-submit cases; the web typecheck passed. One default parallel
+run timed out while the existing `App.test.tsx` waited for the lazy AccountDialog;
+the App suite then passed alone, and all selected suites passed together with one
+worker. Prettier and `git diff --check` passed. The architecture check passed
+with the one documented email cycle.
+
+The full `npm run lint:baseline:prune` reached its duplication step but could not
+spawn the nested Node process in this execution environment (`EPERM`). The
+jscpd CLI ran directly with the same config and input paths: it scanned all 289
+eligible files, found the expected 16 clones, and comparison against the
+duplication baseline reported no growth or stale entries. The dependency baseline
+remained at its one known cycle. This does not reorder the remaining independent
+work: persistence SQL, shared narrative logic, graph/editor follow-ups, then
+secondary debt remain separate slices in the existing backlog.

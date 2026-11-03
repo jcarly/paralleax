@@ -12,11 +12,16 @@ import { getPendingConnection, getPendingConnectionConflict } from '../../../sto
 interface StoryConnectionControllerDependencies {
   story: Story | undefined;
   flowInstanceRef: RefObject<ReactFlowInstance<StoryFlowNode, TriggerFlowEdge> | null>;
-  connectInteractions: (connection: Connection) => void;
-  connectToExistingTrigger: (sourceId: string, targetId: string, triggerId: string) => void;
+  connectInteractions: (connection: Connection) => Promise<void>;
+  connectToExistingTrigger: (
+    sourceId: string,
+    targetId: string,
+    triggerId: string,
+  ) => Promise<void>;
   onConnectionConflict: (conflict: boolean) => void;
-  createChildFromInteraction: (sourceId: string, position?: Position) => void;
-  createParentForInteraction: (targetId: string, position?: Position) => void;
+  onUnexpectedError: (error: unknown) => void;
+  createChildFromInteraction: (sourceId: string, position?: Position) => Promise<void>;
+  createParentForInteraction: (targetId: string, position?: Position) => Promise<void>;
 }
 
 export function useStoryConnectionController({
@@ -25,6 +30,7 @@ export function useStoryConnectionController({
   connectInteractions,
   connectToExistingTrigger,
   onConnectionConflict,
+  onUnexpectedError,
   createChildFromInteraction,
   createParentForInteraction,
 }: StoryConnectionControllerDependencies) {
@@ -41,10 +47,12 @@ export function useStoryConnectionController({
         return;
       }
       onConnectionConflict(false);
-      if (!getPendingConnection(story, connection)) return;
-      void connectInteractions(connection);
+      if (!getPendingConnection(story, connection)) {
+        return;
+      }
+      runConnectionAction(() => connectInteractions(connection), onUnexpectedError);
     },
-    [connectInteractions, onConnectionConflict, story],
+    [connectInteractions, onConnectionConflict, onUnexpectedError, story],
   );
 
   const startCanvasConnection = useCallback<OnConnectStart>((_, params) => {
@@ -62,30 +70,38 @@ export function useStoryConnectionController({
     (event, connectionState) => {
       const start = pendingConnectionStart.current;
       pendingConnectionStart.current = null;
-      const triggerDropTarget = getTriggerDropTarget(event);
-      if (
-        start?.handleType === 'source' &&
-        triggerDropTarget?.interactionId &&
-        triggerDropTarget.triggerId
-      ) {
+      const existingTriggerConnection = getExistingTriggerConnection(start, event);
+      if (existingTriggerConnection) {
         onConnectionConflict(false);
-        void connectToExistingTrigger(
-          start.nodeId,
-          triggerDropTarget.interactionId,
-          triggerDropTarget.triggerId,
+        runConnectionAction(
+          () =>
+            connectToExistingTrigger(
+              existingTriggerConnection.sourceId,
+              existingTriggerConnection.targetId,
+              existingTriggerConnection.triggerId,
+            ),
+          onUnexpectedError,
         );
         return;
       }
 
-      if (!start || connectionState.isValid === true || connectionState.toNode) return;
+      if (!start || connectionState.isValid === true || connectionState.toNode) {
+        return;
+      }
       if (start.handleType === 'source') {
         const position = getDroppedInteractionPosition(event, flowInstanceRef.current, 'child');
-        void createChildFromInteraction(start.nodeId, position);
+        runConnectionAction(
+          () => createChildFromInteraction(start.nodeId, position),
+          onUnexpectedError,
+        );
         return;
       }
 
       const position = getDroppedInteractionPosition(event, flowInstanceRef.current, 'parent');
-      void createParentForInteraction(start.nodeId, position);
+      runConnectionAction(
+        () => createParentForInteraction(start.nodeId, position),
+        onUnexpectedError,
+      );
     },
     [
       connectToExistingTrigger,
@@ -93,6 +109,7 @@ export function useStoryConnectionController({
       createParentForInteraction,
       flowInstanceRef,
       onConnectionConflict,
+      onUnexpectedError,
     ],
   );
 
@@ -103,13 +120,40 @@ export function useStoryConnectionController({
   };
 }
 
+function runConnectionAction(
+  action: () => Promise<void>,
+  onUnexpectedError: (error: unknown) => void,
+) {
+  void action().catch(onUnexpectedError);
+}
+
 function getTriggerDropTarget(event: MouseEvent | TouchEvent) {
   const target = event.target instanceof Element ? event.target : null;
   const marker = target?.closest<HTMLElement>('[data-trigger-drop-target="true"]');
-  if (!marker) return undefined;
+  if (!marker) {
+    return undefined;
+  }
   return {
     interactionId: marker.dataset.interactionId,
     triggerId: marker.dataset.triggerId,
+  };
+}
+
+function getExistingTriggerConnection(
+  start: { nodeId: string; handleType: 'source' | 'target' } | null,
+  event: MouseEvent | TouchEvent,
+) {
+  if (start?.handleType !== 'source') {
+    return undefined;
+  }
+  const target = getTriggerDropTarget(event);
+  if (!target?.interactionId || !target.triggerId) {
+    return undefined;
+  }
+  return {
+    sourceId: start.nodeId,
+    targetId: target.interactionId,
+    triggerId: target.triggerId,
   };
 }
 
@@ -118,7 +162,9 @@ function getDroppedInteractionPosition(
   flow: ReactFlowInstance<StoryFlowNode, TriggerFlowEdge> | null,
   placement: 'child' | 'parent',
 ): Position | undefined {
-  if (!flow) return undefined;
+  if (!flow) {
+    return undefined;
+  }
 
   const pointer = 'changedTouches' in event ? event.changedTouches[0] : event;
   const drop = flow.screenToFlowPosition({
