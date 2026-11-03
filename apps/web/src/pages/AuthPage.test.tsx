@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { api } from '../api';
@@ -31,6 +31,25 @@ describe('AuthPage', () => {
 
     expect(api.login).toHaveBeenCalledWith('author@example.com', 'correct horse battery staple');
     expect(onAuthenticated).toHaveBeenCalledWith(authenticated);
+  });
+
+  it('shows an error when the authenticated transition fails', async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.login).mockResolvedValue({
+      id: 'user-1',
+      email: 'author@example.com',
+      displayName: 'Author',
+      role: 'user',
+      createdAt: '2026-01-01T00:00:00.000Z',
+    });
+    const onAuthenticated = vi.fn().mockRejectedValue(new Error('Navigation failed'));
+    render(<AuthPage onAuthenticated={onAuthenticated} />);
+
+    await user.type(screen.getByLabelText('Email address'), 'author@example.com');
+    await user.type(screen.getByLabelText('Password'), 'correct horse battery staple');
+    await user.click(screen.getByRole('button', { name: 'Sign in' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Navigation failed');
   });
 
   it('switches to account creation', async () => {
@@ -81,5 +100,50 @@ describe('AuthPage', () => {
   it('shows a session notice', () => {
     render(<AuthPage notice="Your session expired." onAuthenticated={vi.fn()} />);
     expect(screen.getByText('Your session expired.')).toBeInTheDocument();
+  });
+});
+
+describe('AuthPage navigation callback errors', () => {
+  afterEach(() => cleanup());
+  beforeEach(() => vi.resetAllMocks());
+
+  it('shows an error when switching authentication modes fails', async () => {
+    const user = userEvent.setup();
+    const onModeChange = vi.fn().mockRejectedValue(new Error('Mode change failed'));
+    render(<AuthPage onAuthenticated={vi.fn()} onModeChange={onModeChange} />);
+
+    await user.click(screen.getByRole('button', { name: 'Create an account' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Mode change failed');
+  });
+
+  it('keeps sign-in pending until its parent transition finishes', async () => {
+    const user = userEvent.setup();
+    let resolveTransition: (() => void) | undefined;
+    const transition = new Promise<void>((resolve) => {
+      resolveTransition = resolve;
+    });
+    vi.mocked(api.login).mockResolvedValue({
+      id: 'user-1',
+      email: 'author@example.com',
+      displayName: 'Author',
+      role: 'user',
+      createdAt: '2026-01-01T00:00:00.000Z',
+    });
+    const onAuthenticated = vi.fn(() => transition);
+    render(<AuthPage onAuthenticated={onAuthenticated} />);
+
+    await user.type(screen.getByLabelText('Email address'), 'author@example.com');
+    await user.type(screen.getByLabelText('Password'), 'correct horse battery staple');
+    await user.click(screen.getByRole('button', { name: 'Sign in' }));
+    await waitFor(() => expect(onAuthenticated).toHaveBeenCalledOnce());
+
+    const submit = screen.getByRole('button', { name: 'Please wait…' });
+    expect(submit).toBeDisabled();
+    await user.click(submit);
+    expect(api.login).toHaveBeenCalledOnce();
+
+    resolveTransition?.();
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Sign in' })).toBeEnabled());
   });
 });

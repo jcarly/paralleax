@@ -2,7 +2,7 @@
 
 Status: Active
 
-Last triaged: 2026-10-26
+Last triaged: 2026-11-03
 
 This page records maintainability, reliability, performance, and test work found
 during the August 2026 code review and subsequent technical evaluations. Production gates remain authoritative in
@@ -274,11 +274,13 @@ are not prerequisites for disposable author sessions.
 
 ## P2 — Static Analysis
 
-**Current policy (2026-10-26):** the strict quality-gate initiative is promoted
-ahead of sessions; the following completed 2026-10-25 entries are historical
-measurements superseded by ADR-041 and the linked quality audit. Current counts
-are 4,404 ESLint findings, 642 Stylelint findings, one exact dependency cycle
-and 16 production clone pairs. Native-count replacement limits remain explicit.
+**Current policy (2026-11-03):** the strict quality-gate initiative remains the
+completed prerequisite ahead of sessions; the following completed 2026-10-25
+entries are historical measurements superseded by ADR-041 and the linked quality
+audit. The audit measured 4,404 ESLint findings on 2026-10-26. The current
+`origin/main` baseline had 4,391; this focused follow-up pruned it to 4,374 ESLint
+findings, with 642 Stylelint findings, one exact dependency cycle, and 16
+production clone pairs. Native-count replacement limits remain explicit.
 Future debt reduction stays incremental; prioritize the shared narrative engine,
 complex shared helpers, central React flows, functional duplication, then styles.
 
@@ -308,6 +310,18 @@ complex shared helpers, central React flows, functional duplication, then styles
       files (one shared, 100 API, 19 web). The full root lint takes about 130
       seconds, compared with 29.4 seconds before typed checks. An earlier probe
       using the full `recommendedTypeChecked` preset exceeded 3.5 minutes.
+- [x] **P1-A async handling follow-up (2026-11-03):** the baseline on
+      `origin/main` contained 13 web diagnostics: six
+      `no-floating-promises` and seven `no-misused-promises`, across six files.
+      All 13 were fixed and pruned. Authentication pages now await parent
+      navigation callbacks and show rejected transitions; graph persistence
+      callbacks use their actual Promise contract and unexpected rejections feed
+      the editor's existing save error status. Expected API save failures remain
+      handled by the persistence lifecycle. Regression tests now await React
+      `act()` and cover callback rejection. Four stale `curly` entries in the
+      touched graph controller were also removed. This closes Lot A without
+      changing the existing priority for the separate persistence, shared-engine,
+      graph/editor, and secondary-debt work.
 - [x] Enable the deferred CSS cascade rules across all 18 source stylesheets:
       `no-descending-specificity`, `no-duplicate-selectors`, and
       `declaration-no-important`. The native Stylelint suppression baseline

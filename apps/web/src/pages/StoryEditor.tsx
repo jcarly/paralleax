@@ -169,6 +169,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
     error,
     loadPhase,
     saveStatus,
+    reportSaveError,
     realtimeStatus,
     beginLocalEdit,
     endLocalEdit,
@@ -421,6 +422,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
     connectInteractions,
     connectToExistingTrigger,
     onConnectionConflict: setConnectionConflict,
+    onUnexpectedError: reportSaveError,
     createChildFromInteraction: createChildAndFocus,
     createParentForInteraction: createParentAndFocus,
   });

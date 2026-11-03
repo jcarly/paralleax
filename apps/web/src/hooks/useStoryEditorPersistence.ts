@@ -112,6 +112,7 @@ export function useStoryEditorPersistence(
     error: persistence.error,
     loadPhase: persistence.loadPhase,
     saveStatus: persistence.saveStatus,
+    reportSaveError: persistence.reportSaveError,
     realtimeStatus: persistence.realtimeStatus,
     beginLocalEdit: persistence.beginLocalEdit,
     endLocalEdit: persistence.endLocalEdit,

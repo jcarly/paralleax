@@ -1,4 +1,4 @@
-import { act, renderHook } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import type { Connection, OnConnectEnd, ReactFlowInstance } from '@xyflow/react';
 import { describe, expect, it, vi } from 'vitest';
 import type { Story } from '@paralleax/shared';
@@ -14,6 +14,16 @@ describe('story connection controller', () => {
 
     expect(actions.connectInteractions).toHaveBeenCalledWith(connection);
     expect(actions.connectToExistingTrigger).not.toHaveBeenCalled();
+  });
+
+  it('reports unexpected async connection failures to the editor', async () => {
+    const { actions, result } = renderController();
+    const error = new Error('Unexpected graph mutation failure');
+    actions.connectInteractions.mockRejectedValue(error);
+
+    act(() => result.current.requestConnection(connect('source', 'target')));
+
+    await waitFor(() => expect(actions.onUnexpectedError).toHaveBeenCalledWith(error));
   });
 
   it('ignores a connection that does not target the input plus handle', () => {
@@ -102,12 +112,18 @@ describe('story connection controller', () => {
 
 function renderController() {
   const actions = {
-    connectInteractions: vi.fn<(connection: Connection) => void>(),
-    connectToExistingTrigger:
-      vi.fn<(sourceId: string, targetId: string, triggerId: string) => void>(),
+    connectInteractions: vi.fn<(connection: Connection) => Promise<void>>().mockResolvedValue(),
+    connectToExistingTrigger: vi
+      .fn<(sourceId: string, targetId: string, triggerId: string) => Promise<void>>()
+      .mockResolvedValue(),
     onConnectionConflict: vi.fn<(conflict: boolean) => void>(),
-    createChildFromInteraction: vi.fn(),
-    createParentForInteraction: vi.fn(),
+    onUnexpectedError: vi.fn<(error: unknown) => void>(),
+    createChildFromInteraction: vi
+      .fn<(sourceId: string, position?: { x: number; y: number }) => Promise<void>>()
+      .mockResolvedValue(),
+    createParentForInteraction: vi
+      .fn<(targetId: string, position?: { x: number; y: number }) => Promise<void>>()
+      .mockResolvedValue(),
   };
   const flowInstanceRef = {
     current: {
