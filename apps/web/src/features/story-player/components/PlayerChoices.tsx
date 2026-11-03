@@ -47,7 +47,10 @@ export function PlayerChoices({
   const { t } = useTranslation();
 
   return (
-    <div className="choices">
+    <div
+      className="choices"
+      data-onboarding-target={isSimulationMode ? 'simulation-choices' : undefined}
+    >
       {choices.map(({ interaction, available, timerState, unavailableReason }) => (
         <div className="choice-row" key={interaction.id}>
           {timerState ? (

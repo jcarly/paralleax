@@ -256,6 +256,7 @@ export function StoryList({
             </button>
             <button
               className="product-primary"
+              data-onboarding-target="story-create"
               type="button"
               onClick={(event) => openCreationDialog(event.currentTarget)}
             >

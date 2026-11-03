@@ -8,10 +8,12 @@ no longer matches the current repository.
 
 Paralleax currently includes:
 
-- An optional first-Story authoring guide: a non-modal four-step card for graph
-  exploration, scene writing, branching, and Simulation. New Stories start the
-  guide; authors can pause, skip, restart, or reopen it. Progress is saved only
-  in browser storage scoped by the signed-in account, and completion follows
+- An optional first-Story authoring guide: a non-modal floating four-step card
+  for graph exploration, scene writing, branching, and Simulation. It does not
+  change page layout and outlines the new-Story action or the current editor or
+  Simulation target while leaving other controls interactive. New Stories start
+  the guide; authors can pause, skip, restart, or reopen it. Progress is saved
+  only in browser storage scoped by the signed-in account, and completion follows
   loaded or successfully saved state. Guide activity is not sent to an analytics
   service. See [Authoring guide architecture](onboarding.md).
 - An optional Formbricks feedback button in the product header when configured.

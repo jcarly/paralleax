@@ -1665,6 +1665,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
           ) : null}
           <Link
             className="button secondary"
+            data-onboarding-target={reviewOnly ? undefined : 'simulation-launch'}
             to={reviewOnly ? `/stories/${storyId}/play` : simulationPath}
           >
             {t(
@@ -2023,7 +2024,12 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
             </div>
           ) : null}
         </nav>
-        <section className="canvas" ref={canvasRef} aria-busy={isOrganizing}>
+        <section
+          className="canvas"
+          data-onboarding-target="graph"
+          ref={canvasRef}
+          aria-busy={isOrganizing}
+        >
           {connectionConflict ? (
             <div
               className="save-error graph-connection-alert"
@@ -2218,7 +2224,11 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
             />
           </div>
         ) : hasInspectorSelection ? (
-          <aside className="inspector" aria-label={t('editor.inspector')}>
+          <aside
+            className="inspector"
+            data-onboarding-target={selected && !reviewOnly ? 'scene-inspector' : undefined}
+            aria-label={t('editor.inspector')}
+          >
             <div className="inspector-header">
               {selectedCommentTarget && story.capabilities?.canComment ? (
                 <div className="inspector-comment-actions">

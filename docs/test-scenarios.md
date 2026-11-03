@@ -489,6 +489,10 @@ Component and domain regressions supporting these flows also cover:
 - Editor: create one reusable item definition and give a character two separate
   owned instances of it.
 - Editor: create a root interaction and verify that it appears on the canvas.
+- Editor guide: the floating card leaves the editor layout in place, outlines the
+  new-Story action, interaction, inspector, branch control, and Simulation target
+  in sequence, and keeps controls outside the card usable; on narrow screens the
+  card docks at the bottom.
 - Editor: create a child interaction from the selected interaction, then verify the trigger input link and absence of overlap with other outputs.
 - Editor: configure several inputs on the same trigger and verify that graph links share the trigger marker.
 - Editor: click a trigger marker, edit its conditions, close the editor, and

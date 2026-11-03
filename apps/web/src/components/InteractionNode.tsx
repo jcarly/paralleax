@@ -63,6 +63,7 @@ export function InteractionNode({ id, data }: NodeProps<Node<InteractionNodeData
   return (
     <div
       className={`interaction-node ${d.selected ? 'selected' : ''} ${d.dimmed ? 'dimmed' : ''}`}
+      data-onboarding-target="interaction"
       data-testid="interaction-node"
     >
       {rootTriggerId ? (
@@ -200,6 +201,7 @@ export function InteractionNode({ id, data }: NodeProps<Node<InteractionNodeData
           id="interaction-output"
           position={Position.Bottom}
           className="node-create node-create-child nodrag nopan"
+          data-onboarding-target={d.selected ? 'branch-add' : undefined}
           role="button"
           tabIndex={0}
           aria-label={t('graph.createChild')}

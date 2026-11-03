@@ -1,13 +1,42 @@
+.onboarding-guide-layer {
+  position: fixed;
+  z-index: 40;
+  pointer-events: none;
+  inset: 0;
+}
+
+.onboarding-guide-positioner {
+  position: fixed;
+  width: min(22rem, calc(100vw - 2rem));
+  max-height: calc(100dvh - 5.625rem);
+  overflow-y: auto;
+  pointer-events: auto;
+}
+
 .onboarding-card {
   position: relative;
-  z-index: 1;
-  width: min(22rem, calc(100vw - 2rem));
-  margin: 0.75rem 1rem 0.25rem auto;
+  width: 100%;
+  margin: 0;
   padding: 1rem;
   border: 1px solid var(--color-border);
   border-radius: 10px;
   background: var(--color-surface);
   box-shadow: var(--shadow-card);
+}
+
+.onboarding-target-highlight {
+  outline: 3px solid var(--color-primary-focus);
+  outline-offset: 4px;
+  box-shadow: 0 0 0 6px var(--color-primary-halo-strong);
+}
+
+.canvas.onboarding-target-highlight {
+  outline-offset: -5px;
+}
+
+.node-create-child.onboarding-target-highlight {
+  outline-offset: 3px;
+  box-shadow: 0 0 0 6px var(--color-primary-halo-strong);
 }
 
 .onboarding-card-heading {
@@ -93,9 +122,9 @@
 }
 
 @media (max-width: 620px) {
-  .onboarding-card {
-    width: calc(100% - 1.5rem);
-    margin: 0.75rem auto 0.25rem;
+  .onboarding-guide-positioner {
+    width: calc(100vw - 2rem);
+    max-height: 45dvh;
   }
 }
 

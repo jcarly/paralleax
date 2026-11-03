@@ -6,12 +6,22 @@ Last reviewed: 2026-10-28
 
 ## User behavior
 
-The optional first-story guide is a non-modal card shown beneath the application
-header. It starts when a new Story is successfully created, follows that Story
-between the library, editor, and Simulation, and does not cover graph controls or
-change narrative data. Authors can pause it, skip the current step, restart it,
-or reopen it from the authenticated `Guide` control. Completing the flow does
-not prevent later use of the editor.
+The optional first-story guide is a non-modal card layered over the interface;
+it never changes page layout. On wide screens, it moves beside its current
+target. On narrow screens, it docks to the bottom. The current target receives
+a clear outline, while the rest of the interface stays visible and interactive.
+The guide starts when a new Story is successfully created, follows that Story
+between the library, editor, and Simulation, and does not change narrative data.
+Authors can pause it, skip the current step, restart it, or reopen it from the
+authenticated `Guide` control. Completing the flow does not prevent later use of
+the editor.
+
+In the editor, the guide highlights an Interaction to explore, the scene
+inspector, the selected Interaction's child `+` control, and the Simulation
+entry point. When opened from the library without an active Story, it highlights
+the new-Story action. In Simulation, it highlights the available choices. If a
+specific target is not present, the guide falls back to a broader editor target
+when available; the card remains usable even when no highlight is available.
 
 The guide has four outcome-based steps:
 
@@ -33,9 +43,12 @@ the guide remains usable for the current session.
   completion/skip behavior.
 - `OnboardingProvider.tsx` owns the guide lifecycle and storage. Story creation
   starts it; successful deletion of its Story clears the active Story pointer.
-- `OnboardingGuide.tsx` renders the non-modal card and help control, localizes
+- `OnboardingGuide.tsx` renders the non-modal guide and help control, localizes
   step copy, and keeps the guide available on the library/editor/Simulation
   routes for the active Story.
+- `OnboardingGuideOverlay.tsx` keeps the card outside page layout, tracks the
+  current target, and leaves other controls interactive. `guidePlacement.ts`
+  places the card beside targets or at the mobile bottom edge.
 - `branchingChoice.ts` detects a branch by finding distinct destinations linked
   from the same source Interaction.
 - `StoryEditor.tsx` recognizes loaded/saved Story state and successful scene

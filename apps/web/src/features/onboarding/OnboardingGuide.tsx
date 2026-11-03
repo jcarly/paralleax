@@ -1,6 +1,8 @@
 import { useTranslation } from 'react-i18next';
 import { Link, useLocation } from 'react-router-dom';
 import { useOnboarding } from './onboardingContext';
+import { OnboardingGuideOverlay } from './OnboardingGuideOverlay';
+import type { OnboardingGuideFocus } from './OnboardingGuideOverlay';
 import {
   currentOnboardingStep,
   onboardingStepIds,
@@ -41,6 +43,59 @@ function isGuideVisible(
 
 function canShowStep(step: OnboardingStepId, route: GuideRoute): boolean {
   return step === 'test-story' ? route.isEditor || route.isSimulation : route.isEditor;
+}
+
+type GuideView =
+  | { kind: 'hidden' }
+  | {
+      kind: 'prompt';
+      focus: OnboardingGuideFocus;
+      message: 'createStoryPrompt' | 'openStoryPrompt' | 'returnToEditorPrompt';
+      storyId?: string;
+      showStoryLink?: boolean;
+    }
+  | { kind: 'complete'; storyId: string }
+  | { kind: 'step'; focus: OnboardingGuideFocus; storyId: string; step: OnboardingStepId };
+
+function resolveGuideView(
+  progress: ReturnType<typeof useOnboarding>['progress'],
+  step: OnboardingStepId | null,
+  route: GuideRoute,
+): GuideView {
+  if (!isGuideVisible(progress.status, progress.storyId, route)) {
+    return { kind: 'hidden' };
+  }
+  if (!progress.storyId) {
+    return { kind: 'prompt', focus: 'create-story', message: 'createStoryPrompt' };
+  }
+  if (!route.isLibrary && route.storyId !== progress.storyId) {
+    return {
+      kind: 'prompt',
+      focus: null,
+      message: 'openStoryPrompt',
+      storyId: progress.storyId,
+      showStoryLink: true,
+    };
+  }
+  if (step && !canShowStep(step, route)) {
+    return {
+      kind: 'prompt',
+      focus: null,
+      message: 'returnToEditorPrompt',
+      storyId: progress.storyId,
+      showStoryLink: true,
+    };
+  }
+  if (!step) {
+    return { kind: 'complete', storyId: progress.storyId };
+  }
+  const focus: OnboardingGuideFocus =
+    step === 'test-story'
+      ? route.isSimulation
+        ? 'test-story-simulation'
+        : 'test-story-editor'
+      : step;
+  return { kind: 'step', focus, storyId: progress.storyId, step };
 }
 
 function GuideCloseButton({ label, onPause }: { label: string; onPause: () => void }) {
@@ -159,44 +214,39 @@ export function OnboardingGuide() {
   const { progress, pause, restart, skipCurrentStep } = useOnboarding();
   const step = currentOnboardingStep(progress);
   const route = readGuideRoute(location.pathname, location.search);
-
-  if (!isGuideVisible(progress.status, progress.storyId, route)) {
+  const view = resolveGuideView(progress, step, route);
+  if (view.kind === 'hidden') {
     return null;
   }
-  if (!progress.storyId) {
-    return <GuidePromptCard message="createStoryPrompt" onPause={pause} />;
-  }
-  if (!route.isLibrary && route.storyId !== progress.storyId) {
+  if (view.kind === 'prompt') {
     return (
-      <GuidePromptCard
-        message="openStoryPrompt"
-        storyId={progress.storyId}
-        showStoryLink
-        onPause={pause}
-      />
+      <OnboardingGuideOverlay focus={view.focus}>
+        <GuidePromptCard
+          message={view.message}
+          storyId={view.storyId}
+          showStoryLink={view.showStoryLink}
+          onPause={pause}
+        />
+      </OnboardingGuideOverlay>
     );
   }
-  if (step && !canShowStep(step, route)) {
+  if (view.kind === 'complete') {
     return (
-      <GuidePromptCard
-        message="returnToEditorPrompt"
-        storyId={progress.storyId}
-        showStoryLink
-        onPause={pause}
-      />
+      <OnboardingGuideOverlay focus={null}>
+        <GuideCompleteCard storyId={view.storyId} onPause={pause} onRestart={restart} />
+      </OnboardingGuideOverlay>
     );
-  }
-  if (!step) {
-    return <GuideCompleteCard storyId={progress.storyId} onPause={pause} onRestart={restart} />;
   }
   return (
-    <GuideStepCard
-      step={step}
-      storyId={progress.storyId}
-      onPause={pause}
-      onRestart={restart}
-      onSkip={skipCurrentStep}
-    />
+    <OnboardingGuideOverlay focus={view.focus}>
+      <GuideStepCard
+        step={view.step}
+        storyId={view.storyId}
+        onPause={pause}
+        onRestart={restart}
+        onSkip={skipCurrentStep}
+      />
+    </OnboardingGuideOverlay>
   );
 }
 
