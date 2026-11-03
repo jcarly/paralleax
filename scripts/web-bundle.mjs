@@ -1,12 +1,14 @@
 import assert from 'node:assert/strict';
 
 export const WEB_BUNDLE_ROUTE_SOURCES = Object.freeze({
+  library: 'src/pages/StoryList.tsx',
   editor: 'src/pages/StoryEditor.tsx',
   player: 'src/pages/StoryPlayer.tsx',
 });
 
 export const WEB_BUNDLE_BUDGETS = Object.freeze({
   initialJavaScriptBytes: 150 * 1024,
+  libraryIncrementalBytes: 45 * 1024,
   initialStylesheetBytes: 24 * 1024,
   editorIncrementalBytes: 145 * 1024,
   playerIncrementalBytes: 95 * 1024,
@@ -33,13 +35,20 @@ export function collectStaticBundleAssets(manifest, entryKey) {
 
 export function analyzeWebBundle(manifest, compressedAssetBytes) {
   const entryKey = findChunkKey(manifest, (chunk) => chunk.isEntry === true, 'application entry');
+  const libraryKey = findSourceChunkKey(manifest, WEB_BUNDLE_ROUTE_SOURCES.library);
   const editorKey = findSourceChunkKey(manifest, WEB_BUNDLE_ROUTE_SOURCES.editor);
   const playerKey = findSourceChunkKey(manifest, WEB_BUNDLE_ROUTE_SOURCES.player);
   const entry = manifest[entryKey];
   const initial = collectStaticBundleAssets(manifest, entryKey);
+  const library = collectStaticBundleAssets(manifest, libraryKey);
   const editor = collectStaticBundleAssets(manifest, editorKey);
   const player = collectStaticBundleAssets(manifest, playerKey);
 
+  assert.equal(
+    manifest[libraryKey].isDynamicEntry,
+    true,
+    'Story Library must remain a dynamic entry.',
+  );
   assert.equal(
     manifest[editorKey].isDynamicEntry,
     true,
@@ -51,12 +60,20 @@ export function analyzeWebBundle(manifest, compressedAssetBytes) {
     'Story Player must remain a dynamic entry.',
   );
   assert.ok(
+    entry.dynamicImports?.includes(libraryKey),
+    'The application entry must dynamically import Story Library.',
+  );
+  assert.ok(
     entry.dynamicImports?.includes(editorKey),
     'The application entry must dynamically import Story Editor.',
   );
   assert.ok(
     entry.dynamicImports?.includes(playerKey),
     'The application entry must dynamically import Story Player.',
+  );
+  assert.ok(
+    !initial.chunkKeys.has(libraryKey),
+    'Story Library was pulled into the initial chunk graph.',
   );
   assert.ok(
     !initial.chunkKeys.has(editorKey),
@@ -67,6 +84,7 @@ export function analyzeWebBundle(manifest, compressedAssetBytes) {
     'Story Player was pulled into the initial chunk graph.',
   );
 
+  const libraryIncrementalAssets = difference(library.assets, initial.assets);
   const editorIncrementalAssets = difference(editor.assets, initial.assets);
   const playerIncrementalAssets = difference(player.assets, initial.assets);
 
@@ -77,10 +95,12 @@ export function analyzeWebBundle(manifest, compressedAssetBytes) {
     initialStylesheetBytes: sumCompressedBytes(initial.assets, compressedAssetBytes, (asset) =>
       asset.endsWith('.css'),
     ),
+    libraryIncrementalBytes: sumCompressedBytes(libraryIncrementalAssets, compressedAssetBytes),
     editorIncrementalBytes: sumCompressedBytes(editorIncrementalAssets, compressedAssetBytes),
     playerIncrementalBytes: sumCompressedBytes(playerIncrementalAssets, compressedAssetBytes),
     assets: {
       initial: [...initial.assets].sort(),
+      libraryIncremental: [...libraryIncrementalAssets].sort(),
       editorIncremental: [...editorIncrementalAssets].sort(),
       playerIncremental: [...playerIncrementalAssets].sort(),
     },
@@ -105,6 +125,7 @@ export function formatWebBundleReport(metrics, budgets = WEB_BUNDLE_BUDGETS) {
   return [
     ['Initial JavaScript', 'initialJavaScriptBytes'],
     ['Initial stylesheets', 'initialStylesheetBytes'],
+    ['Story Library incremental assets', 'libraryIncrementalBytes'],
     ['Story Editor incremental assets', 'editorIncrementalBytes'],
     ['Story Player incremental assets', 'playerIncrementalBytes'],
   ]

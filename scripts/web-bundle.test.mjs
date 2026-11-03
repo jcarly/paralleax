@@ -12,11 +12,21 @@ const manifest = {
     file: 'assets/main.js',
     isEntry: true,
     imports: ['_shared.js'],
-    dynamicImports: ['src/pages/StoryEditor.tsx', 'src/pages/StoryPlayer.tsx'],
+    dynamicImports: [
+      'src/pages/StoryList.tsx',
+      'src/pages/StoryEditor.tsx',
+      'src/pages/StoryPlayer.tsx',
+    ],
     css: ['assets/main.css'],
   },
   '_shared.js': {
     file: 'assets/shared.js',
+  },
+  'src/pages/StoryList.tsx': {
+    file: 'assets/story-list.js',
+    src: 'src/pages/StoryList.tsx',
+    isDynamicEntry: true,
+    imports: ['index.html'],
   },
   'src/pages/StoryEditor.tsx': {
     file: 'assets/editor.js',
@@ -41,6 +51,7 @@ const compressedAssetBytes = {
   'assets/main.js': 60,
   'assets/main.css': 10,
   'assets/shared.js': 20,
+  'assets/story-list.js': 35,
   'assets/editor.js': 30,
   'assets/editor.css': 5,
   'assets/editor-vendor.js': 15,
@@ -72,10 +83,12 @@ test('measures only route assets not already loaded by the application entry', (
   assert.deepEqual(metrics, {
     initialJavaScriptBytes: 80,
     initialStylesheetBytes: 10,
+    libraryIncrementalBytes: 35,
     editorIncrementalBytes: 50,
     playerIncrementalBytes: 25,
     assets: {
       initial: ['assets/main.css', 'assets/main.js', 'assets/shared.js'],
+      libraryIncremental: ['assets/story-list.js'],
       editorIncremental: ['assets/editor-vendor.js', 'assets/editor.css', 'assets/editor.js'],
       playerIncremental: ['assets/player.js'],
     },
@@ -84,6 +97,7 @@ test('measures only route assets not already loaded by the application entry', (
     assertWebBundleBudgets(metrics, {
       initialJavaScriptBytes: 80,
       initialStylesheetBytes: 10,
+      libraryIncrementalBytes: 35,
       editorIncrementalBytes: 50,
       playerIncrementalBytes: 25,
     }),
@@ -91,6 +105,13 @@ test('measures only route assets not already loaded by the application entry', (
 });
 
 test('rejects eager routes, missing chunks, and exceeded budgets with explicit errors', () => {
+  const eagerLibraryManifest = structuredClone(manifest);
+  eagerLibraryManifest['index.html'].imports.push('src/pages/StoryList.tsx');
+  assert.throws(
+    () => analyzeWebBundle(eagerLibraryManifest, compressedAssetBytes),
+    /Story Library was pulled into the initial chunk graph/,
+  );
+
   const eagerManifest = structuredClone(manifest);
   eagerManifest['index.html'].imports.push('src/pages/StoryEditor.tsx');
   assert.throws(
@@ -111,11 +132,13 @@ test('rejects eager routes, missing chunks, and exceeded budgets with explicit e
       assertWebBundleBudgets(metrics, {
         initialJavaScriptBytes: 79,
         initialStylesheetBytes: 10,
+        libraryIncrementalBytes: 35,
         editorIncrementalBytes: 50,
         playerIncrementalBytes: 25,
       }),
     /InitialJavaScriptBytes is 0.1 KiB, above its 0.1 KiB budget/i,
   );
+  assert.match(formatWebBundleReport(metrics), /Story Library incremental assets: 0.0 KiB/);
   assert.match(formatWebBundleReport(metrics), /Story Editor incremental assets: 0.0 KiB/);
 });
 
@@ -126,7 +149,7 @@ test('measures a named dynamic route when Rollup omits its source facade', () =>
   route.name = 'StoryEditor';
   generated['_StoryEditor-hash.js'] = route;
   delete generated['src/pages/StoryEditor.tsx'];
-  generated['index.html'].dynamicImports[0] = '_StoryEditor-hash.js';
+  generated['index.html'].dynamicImports[1] = '_StoryEditor-hash.js';
   assert.deepEqual(
     analyzeWebBundle(generated, compressedAssetBytes),
     analyzeWebBundle(manifest, compressedAssetBytes),
