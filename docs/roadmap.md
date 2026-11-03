@@ -2,7 +2,7 @@
 
 This roadmap describes the progression from the validated narrative core to a public Paralleax platform.
 
-Status reviewed: 2026-10-26.
+Status reviewed: 2026-10-28.
 
 It is organized around **user capabilities** rather than implementation areas. Engineering work supports these milestones but does not define them by itself.
 
@@ -29,6 +29,13 @@ authors, observe where it fails or slows them down, and improve the parts that
 matter to them. The historical 2026-09-11 private-alpha queue is delivery history,
 not the active queue. The implemented foundations and evidence are listed in
 [Current scope](current-scope.md).
+
+Reader-journey analytics is a separate publication capability, not a substitute
+for observing authors. Keep it out of the immediate guided-author queue and do
+not make it a prerequisite for disposable guided tests or the open creator
+alpha. Treat a small opt-in analytics slice as P1 within V0.9, before wider
+public Story reading. Its results must bind to immutable published versions;
+mutable Story revisions are not publication identities.
 
 Guided sessions use disposable test projects. Do not use projects whose loss
 would matter until the provider backup and restore drill succeeds and the
@@ -1027,6 +1034,12 @@ An author who did not build Paralleax can create, test, save, maintain, export, 
 - User-facing documentation.
 - Accessibility pass on critical authoring workflows.
 - Representative usability testing with external authors.
+- Capture the request for a reader-facing progress indicator separately from
+  analytics. After guided sessions, assess an optional author-defined stage or
+  step indicator for questionnaires and learning paths. Do not infer a percentage
+  from graph length or require progress percentages for exploratory stories.
+  This is independent of analytics and neither feature is a prerequisite for the
+  other.
 - Cohesive loading, empty, failure, recovery, and confirmation patterns across
   the complete authoring workflow.
 
@@ -1133,6 +1146,146 @@ versioned publication workflow.
 - Reporting and moderation foundations.
 - Ownership and content-licensing rules.
 - Production staging, metrics, error reporting, backup, restore, and rollback gates.
+- Version-scoped reader-journey analytics with per-publication opt-in, as
+  detailed below.
+
+#### Reader-journey analytics (P1 before wider public reading)
+
+**Purpose and position:** The first externally shared questionnaire received
+positive feedback on traversal and ease of use, and surfaced the missing ability
+for authors to understand readers' actual paths. Help authors understand how
+external readers traverse published Stories, including public readers without
+accounts. This is a P1 for expanding public reading, but it does not displace
+current guided author sessions or block the open creator alpha. It belongs in
+V0.9 because trustworthy results need the immutable publication identity
+established by this milestone. Do not create a new version or analytics
+subsystem.
+
+**Existing foundations and boundaries:**
+
+- The Reader already has an ordered journey that can contain repeated
+  Interaction ids, a separate unique-visited list, deterministic choice
+  evaluation, and one transition path for explicit and automatic navigation.
+  Instrument the existing navigation and session-state boundaries so cycles
+  remain countable; do not add another narrative evaluator. Count total visits
+  separately from distinct Interactions. Preserve ordered per-session events
+  during the retention window so observed paths can be derived; expose only
+  aggregate route/transition patterns, never individual reader timelines.
+- Reader saves are per authenticated user and Story. Simulation Mode has a
+  separate author-only autosave and can mutate the draft. These are runtime and
+  debugging features, not reader analytics; never mix Simulation events or
+  authenticated save journeys into public-reader totals by default.
+- Current public and unlisted Story routes can be read anonymously, but they
+  serve mutable authored content. The current `revision` changes on edits and
+  is not an immutable publication id. Bind every analytics session to the
+  immutable published version introduced in V0.9.
+- Authored Story history records edits, process-local Story events invalidate
+  open clients, structured logs support operations, and optional Formbricks
+  feedback gathers product feedback. None of these is a durable reader event
+  store or an author-facing path analysis surface.
+
+**Increment 1 — minimal collection and essential statistics:**
+
+- Collection is explicitly configurable per Story and its purpose is disclosed
+  to participants. Snapshot the effective setting and purpose with the
+  publication version. Do not enable collection implicitly because a Story is
+  public or unlisted.
+- Use a random, short-lived first-party session id for anonymous journeys and a
+  stable event id for retry deduplication. Use a random per-run id for signed-in
+  readers too; never derive it from or link it to an account id, and never reuse
+  reader-save journeys as analytics. Preserve the id across a page refresh
+  within the chosen session boundary. Treat the id and ordered path as
+  potentially personal or pseudonymous data until the privacy review establishes
+  the applicable status. Do not fingerprint readers or persist account ids, IP
+  addresses, user-agent/referrer details, answer text, or sensitive Story
+  variable values in analytics events.
+- Start a session when its opening Interaction is actually entered, after any
+  required playable-character selection. Record every Interaction entry,
+  including repeat visits through cycles; record an explicit reader choice with
+  its source and destination. Automatic pass-throughs are visits, not reader
+  choices. A completion event is valid only when an explicit Story ending or
+  completion rule exists. A branch with no available choice is not, by itself,
+  a completed Story.
+- Send events asynchronously through a small first-party API path and reuse the
+  existing PostgreSQL deployment. Keep ordered raw events separate from
+  rebuildable aggregates; bound request and per-Story volumes, validate Story,
+  publication, Interaction references, event order, and selected routes against
+  the immutable graph and shared Reader rules where the supplied journey allows
+  it; rate-limit abuse and make retries idempotent. Treat remaining client-
+  reported journey data as open to some manipulation and set bounded metric
+  expectations. Collection errors, slow responses, and browser closure must
+  never block or roll back Reader navigation. Do not treat unload or visibility
+  events as a reliable completion signal.
+- Retain raw ordered events only for a defined, limited period; define whether
+  and how derived aggregates are retained longer, and purge both under the
+  approved policy. Authors see aggregates, not individual reader timelines.
+  Suppress detailed results for small cohorts. The first CSV export contains
+  only the authorized, privacy-filtered aggregate data.
+- The initial author view reports starts, explicit completions and completion
+  rate only for Stories with an explicit completion rule, total and distinct
+  Interaction visits, most visited Interactions, selected-branch frequencies,
+  and probable drop-off points. Show unfinished sessions as in progress or
+  inactive according to a defined inactivity window; never label an
+  interruption or inactivity as definitive abandonment. Include median
+  duration only when validated timing data is available; otherwise omit it.
+
+**Increment 2 — graph analysis:** After the essential report has been used and
+reviewed, optionally project aggregate Interaction and connection frequencies,
+rarely or never visited eligible branches, probable drop-off areas, and ending
+frequencies on the existing graph. Keep this view optional and reuse the graph
+as the analysis surface; do not add a parallel editor or change authoring
+projection behavior.
+
+**Dependencies and decisions before implementation:**
+
+- Requires V0.3 Story access rules and V0.9 immutable published versions. Public
+  reading may continue without analytics enabled.
+- The targeted `StoryPlayer` navigation extraction in the
+  [code-quality backlog](code-quality-backlog.md#p1-module-boundaries) is related
+  implementation context, not a prerequisite for the product decision. Reuse
+  its existing focused navigation/session boundaries if implementation needs
+  them; do not wait for or start a broad Player rewrite solely for analytics.
+- Explicit ending/completion semantics are not implemented today. Define how an
+  author marks a final Interaction or completion rule before exposing completion
+  rates; until then, show that metric as unavailable.
+- Resolve the legal basis and participant notice, whether consent is required
+  for the chosen session identifier/storage, per-Story versus per-publication
+  override and default state for the Story-level setting and purpose, session
+  continuity across refreshes/tabs, the inactivity window, raw and aggregate
+  retention, minimum cohort size, export detail, and the handling of data
+  requests for anonymous sessions. Do not assume that pseudonymous ids are
+  anonymous or that consent is exempt.
+- Define an abuse budget and event-validation boundary that fits the current
+  API and PostgreSQL architecture. Do not introduce a third-party event bus or
+  external analytics dependency without separate evidence and review.
+
+**Acceptance criteria:**
+
+1. An anonymous reader completes a questionnaire with an explicit ending; one
+   session start and one completion are reflected in the published-version
+   aggregates.
+2. Readers choosing different branches increment the correct source-to-target
+   choice counts for that published version.
+3. A Story with cycles records every repeated visit and transition without
+   assuming a fixed journey length; unique Interaction reach remains a separate
+   measure.
+4. Reloading, closing a tab, or becoming inactive does not mark a session
+   complete. The report distinguishes completed, recent/in-progress, and
+   inactive/probable drop-off sessions using the approved inactivity window.
+5. Publishing an edited Story creates a separate analytics identity; results
+   from earlier immutable versions remain unchanged and are not combined with
+   the new publication.
+6. Retried or duplicated event submissions with the same event id affect the
+   aggregates once.
+7. A reader or other user without the analytics permission cannot query or
+   export a Story's analytics, even if they can read that Story. The API checks
+   the applicable owner/editor capability.
+8. Retention and purge jobs remove raw events and aggregates according to the
+   approved policy, with verifiable evidence and no data left past its limit.
+9. A collection outage or slow endpoint does not interrupt navigation, choice
+   selection, or Reader state updates.
+10. CSV export contains only the permitted aggregates, respects small-cohort
+    suppression, and remains subject to the same authorization as the report.
 
 ### Exit criteria
 
@@ -1143,6 +1296,8 @@ V0.9 is complete when:
 - public reader access obeys visibility rules;
 - rollback and restoration procedures are verified;
 - moderation/reporting responsibilities are documented and minimally operational;
+- the P1 reader analytics increment is version-scoped, permission-protected,
+  privacy-reviewed, purgeable, and non-blocking before wider public reading;
 - production observability can identify critical failures.
 
 ### Dependencies

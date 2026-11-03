@@ -93,68 +93,139 @@ function projectStoryGraphLayoutScopeFromProjection(
   canonicalPositions: ReadonlyMap<string, Position>,
 ): StoryGraphLayoutResult {
   if (projection.vertices.length === 0) {
-    return { interactionUpdates: [], triggerUpdates: [], affectedNodeIds: [] };
+    return emptyLayoutResult();
   }
-
   const selectedKeys = getSelectedKeys(projection, scope);
-  if (selectedKeys.size === 0) {
-    return { interactionUpdates: [], triggerUpdates: [], affectedNodeIds: [] };
-  }
-
   if (
+    selectedKeys.size === 0 ||
+    hasMissingCanonicalPosition(projection, scope, canonicalPositions)
+  ) {
+    return emptyLayoutResult();
+  }
+  const positions = getScopedLayoutPositions(projection, scope, canonicalPositions, selectedKeys);
+  const interactionUpdates = getInteractionPositionUpdates(projection, positions, selectedKeys);
+  return {
+    interactionUpdates,
+    triggerUpdates: getTriggerPositionUpdates({
+      story,
+      projection,
+      scope,
+      positions,
+      selectedKeys,
+      interactionUpdates,
+    }),
+    affectedNodeIds: getAffectedNodeIds(projection, selectedKeys),
+  };
+}
+
+function emptyLayoutResult(): StoryGraphLayoutResult {
+  return { interactionUpdates: [], triggerUpdates: [], affectedNodeIds: [] };
+}
+
+function hasMissingCanonicalPosition(
+  projection: Projection,
+  scope: StoryGraphLayoutScope,
+  canonicalPositions: ReadonlyMap<string, Position>,
+): boolean {
+  return (
     scope.kind === 'selection' &&
     projection.vertices.some((vertex) => !canonicalPositions.has(vertex.key))
-  ) {
-    return { interactionUpdates: [], triggerUpdates: [], affectedNodeIds: [] };
-  }
+  );
+}
 
-  const positions =
-    scope.kind === 'all'
-      ? canonicalPositions
-      : alignSelectionToFixedGraph(projection, canonicalPositions, selectedKeys);
-  const interactionUpdates = projection.vertices.flatMap((vertex) => {
-    if (vertex.kind !== 'interaction' || !selectedKeys.has(vertex.key)) return [];
+function getScopedLayoutPositions(
+  projection: Projection,
+  scope: StoryGraphLayoutScope,
+  canonicalPositions: ReadonlyMap<string, Position>,
+  selectedKeys: Set<string>,
+): ReadonlyMap<string, Position> {
+  return scope.kind === 'all'
+    ? canonicalPositions
+    : alignSelectionToFixedGraph(projection, canonicalPositions, selectedKeys);
+}
+
+function getInteractionPositionUpdates(
+  projection: Projection,
+  positions: ReadonlyMap<string, Position>,
+  selectedKeys: Set<string>,
+): InteractionPositionUpdate[] {
+  return projection.vertices.flatMap((vertex) => {
+    if (vertex.kind !== 'interaction' || !selectedKeys.has(vertex.key)) {
+      return [];
+    }
     const position = positions.get(vertex.key);
-    if (!position || positionsEqual(position, vertex.currentPosition)) return [];
+    if (!position || positionsEqual(position, vertex.currentPosition)) {
+      return [];
+    }
     return [{ interactionId: vertex.interactionId, position }];
   });
+}
 
+function getTriggerPositionUpdates(input: {
+  story: Story;
+  projection: Projection;
+  scope: StoryGraphLayoutScope;
+  positions: ReadonlyMap<string, Position>;
+  selectedKeys: Set<string>;
+  interactionUpdates: InteractionPositionUpdate[];
+}): TriggerPositionUpdate[] {
+  const updatesByGroup = new Map<string, TriggerPositionUpdate>();
   const interactionOverrides = new Map(
-    interactionUpdates.map(({ interactionId, position }) => [interactionId, position]),
+    input.interactionUpdates.map(({ interactionId, position }) => [interactionId, position]),
   );
-  const triggerUpdatesByGroup = new Map<string, TriggerPositionUpdate>();
-
-  if (scope.kind === 'selection') {
-    for (const update of getInteractionMovesTriggerPositionUpdates(story, interactionOverrides)) {
-      triggerUpdatesByGroup.set(getTriggerUpdateKey(update), update);
+  if (input.scope.kind === 'selection') {
+    for (const update of getInteractionMovesTriggerPositionUpdates(
+      input.story,
+      interactionOverrides,
+    )) {
+      updatesByGroup.set(getTriggerUpdateKey(update), update);
     }
   }
-
-  for (const vertex of projection.vertices) {
-    if (vertex.kind !== 'trigger' || !selectedKeys.has(vertex.key) || !vertex.triggerIds) continue;
-    const position = positions.get(vertex.key);
-    if (!position) continue;
-    const owner = story.interactions.find(({ id }) => id === vertex.interactionId);
-    const shouldUpdate = vertex.triggerIds.some((triggerId) => {
-      const saved = owner?.triggers.find(({ id }) => id === triggerId)?.position;
-      return !saved || !positionsEqual(saved, position);
-    });
-    if (!shouldUpdate) continue;
+  for (const vertex of input.projection.vertices) {
+    if (!isSelectedTriggerVertex(vertex, input.selectedKeys)) {
+      continue;
+    }
+    const position = input.positions.get(vertex.key);
+    if (!position || !shouldUpdateTriggerPosition(input.story, vertex, position)) {
+      continue;
+    }
     const update = {
       interactionId: vertex.interactionId,
       triggerIds: vertex.triggerIds,
       position,
     };
-    triggerUpdatesByGroup.set(getTriggerUpdateKey(update), update);
+    updatesByGroup.set(getTriggerUpdateKey(update), update);
   }
+  return [...updatesByGroup.values()];
+}
 
-  return {
-    interactionUpdates,
-    triggerUpdates: [...triggerUpdatesByGroup.values()],
-    affectedNodeIds: projection.vertices
-      .filter((vertex) => selectedKeys.has(vertex.key))
-      .map((vertex) => vertex.nodeId),
-  };
+function isSelectedTriggerVertex(
+  vertex: LayoutVertex,
+  selectedKeys: Set<string>,
+): vertex is LayoutVertex & { kind: 'trigger'; triggerIds: string[] } {
+  return (
+    vertex.kind === 'trigger' && selectedKeys.has(vertex.key) && vertex.triggerIds !== undefined
+  );
+}
+
+function shouldUpdateTriggerPosition(
+  story: Story,
+  vertex: LayoutVertex & { kind: 'trigger'; triggerIds: string[] },
+  position: Position,
+): boolean {
+  const owner = story.interactions.find(({ id }) => id === vertex.interactionId);
+  return (
+    vertex.triggerIds.some((triggerId) => {
+      const saved = owner?.triggers.find(({ id }) => id === triggerId)?.position;
+      return !saved || !positionsEqual(saved, position);
+    }) ?? false
+  );
+}
+
+function getAffectedNodeIds(projection: Projection, selectedKeys: Set<string>): string[] {
+  return projection.vertices
+    .filter((vertex) => selectedKeys.has(vertex.key))
+    .map((vertex) => vertex.nodeId);
 }
 
 function buildProjection(story: Story, options: StoryGraphLayoutOptions): Projection {
@@ -175,7 +246,26 @@ function buildProjection(story: Story, options: StoryGraphLayoutOptions): Projec
   const knownInteractionIds = new Set(story.interactions.map(({ id }) => id));
   const incoming = new Map(vertices.map(({ key }) => [key, new Set<string>()]));
   const outgoing = new Map(vertices.map(({ key }) => [key, new Set<string>()]));
+  addTriggerVertices(story, knownInteractionIds, { vertices, incoming, outgoing });
+  return {
+    vertices,
+    byKey: new Map(vertices.map((vertex) => [vertex.key, vertex])),
+    incoming,
+    outgoing,
+  };
+}
 
+interface ProjectionBuilderState {
+  vertices: LayoutVertex[];
+  incoming: Map<string, Set<string>>;
+  outgoing: Map<string, Set<string>>;
+}
+
+function addTriggerVertices(
+  story: Story,
+  knownInteractionIds: Set<string>,
+  state: ProjectionBuilderState,
+): void {
   story.interactions.forEach((target, targetIndex) => {
     getLinkedTriggerGroups(target).forEach((group, groupIndex) => {
       const key = getTriggerKey(target.id, group.primaryTrigger.id);
@@ -191,24 +281,19 @@ function buildProjection(story: Story, options: StoryGraphLayoutOptions): Projec
         interactionId: target.id,
         triggerIds: group.triggers.map(({ id }) => id),
       };
-      vertices.push(triggerVertex);
-      incoming.set(key, new Set());
-      outgoing.set(key, new Set());
+      state.vertices.push(triggerVertex);
+      state.incoming.set(key, new Set());
+      state.outgoing.set(key, new Set());
 
       for (const inputId of group.inputInteractionIds) {
-        if (!knownInteractionIds.has(inputId)) continue;
-        addEdge(getInteractionKey(inputId), key, incoming, outgoing);
+        if (!knownInteractionIds.has(inputId)) {
+          continue;
+        }
+        addEdge(getInteractionKey(inputId), key, state.incoming, state.outgoing);
       }
-      addEdge(key, getInteractionKey(target.id), incoming, outgoing);
+      addEdge(key, getInteractionKey(target.id), state.incoming, state.outgoing);
     });
   });
-
-  return {
-    vertices,
-    byKey: new Map(vertices.map((vertex) => [vertex.key, vertex])),
-    incoming,
-    outgoing,
-  };
 }
 
 function addEdge(
@@ -223,8 +308,12 @@ function addEdge(
 
 function layoutProjection(projection: Projection): Map<string, Position> {
   const components = getWeakComponents(projection).sort((left, right) => {
-    const leftX = Math.min(...left.map((key) => projection.byKey.get(key)!.currentPosition.x));
-    const rightX = Math.min(...right.map((key) => projection.byKey.get(key)!.currentPosition.x));
+    const leftX = Math.min(
+      ...left.map((key) => requireDefined(projection.byKey.get(key)).currentPosition.x),
+    );
+    const rightX = Math.min(
+      ...right.map((key) => requireDefined(projection.byKey.get(key)).currentPosition.x),
+    );
     return leftX - rightX || getMinimumOrder(left, projection) - getMinimumOrder(right, projection);
   });
   const interactionVertices = projection.vertices.filter(({ kind }) => kind === 'interaction');
@@ -258,31 +347,48 @@ function layoutProjection(projection: Projection): Map<string, Position> {
 function getWeakComponents(projection: Projection): string[][] {
   const visited = new Set<string>();
   const components: string[][] = [];
-
   for (const vertex of [...projection.vertices].sort(compareVertexOrder)) {
-    if (visited.has(vertex.key)) continue;
-    const component: string[] = [];
-    const pending = [vertex.key];
-    visited.add(vertex.key);
-    while (pending.length > 0) {
-      const key = pending.shift()!;
-      component.push(key);
-      const neighbors = new Set([
-        ...(projection.incoming.get(key) ?? []),
-        ...(projection.outgoing.get(key) ?? []),
-      ]);
-      for (const neighbor of [...neighbors].sort((left, right) =>
-        compareVertexOrder(projection.byKey.get(left)!, projection.byKey.get(right)!),
-      )) {
-        if (visited.has(neighbor)) continue;
-        visited.add(neighbor);
-        pending.push(neighbor);
-      }
+    if (visited.has(vertex.key)) {
+      continue;
     }
-    components.push(component);
+    components.push(getWeakComponent(vertex.key, projection, visited));
   }
-
   return components;
+}
+
+function getWeakComponent(start: string, projection: Projection, visited: Set<string>): string[] {
+  const component: string[] = [];
+  const pending = [start];
+  visited.add(start);
+  while (pending.length > 0) {
+    const key = requireDefined(pending.shift());
+    component.push(key);
+    addUnvisitedNeighbors(getOrderedNeighbors(key, projection), pending, visited);
+  }
+  return component;
+}
+
+function getOrderedNeighbors(key: string, projection: Projection): string[] {
+  const neighbors = new Set([
+    ...(projection.incoming.get(key) ?? []),
+    ...(projection.outgoing.get(key) ?? []),
+  ]);
+  return [...neighbors].sort((left, right) =>
+    compareVertexOrder(
+      requireDefined(projection.byKey.get(left)),
+      requireDefined(projection.byKey.get(right)),
+    ),
+  );
+}
+
+function addUnvisitedNeighbors(neighbors: string[], pending: string[], visited: Set<string>): void {
+  for (const neighbor of neighbors) {
+    if (visited.has(neighbor)) {
+      continue;
+    }
+    visited.add(neighbor);
+    pending.push(neighbor);
+  }
 }
 
 function layoutComponent(
@@ -290,61 +396,110 @@ function layoutComponent(
   projection: Projection,
 ): { positions: Map<string, Position>; width: number } {
   const ranks = getRanks(component, projection);
+  const layers = createLayers(component, ranks);
+  sortLayersByCurrentPosition(layers, projection);
+  reduceCrossings(layers, projection);
+  const measures = measureLayoutLayers(layers, projection);
+  const positions = placeLayoutLayers(layers, projection, measures);
+  alignLayersToSuccessors(layers, projection, positions, measures.width);
+  return { positions, width: measures.width };
+}
+
+interface LayoutLayerMeasures {
+  widths: Map<number, number>;
+  heights: Map<number, number>;
+  width: number;
+  maximumRank: number;
+}
+
+function createLayers(component: string[], ranks: Map<string, number>): Map<number, string[]> {
   const layers = new Map<number, string[]>();
   for (const key of component) {
     const rank = ranks.get(key) ?? 0;
     layers.set(rank, [...(layers.get(rank) ?? []), key]);
   }
+  return layers;
+}
+
+function sortLayersByCurrentPosition(layers: Map<number, string[]>, projection: Projection): void {
   for (const layer of layers.values()) {
     layer.sort((left, right) => {
-      const leftVertex = projection.byKey.get(left)!;
-      const rightVertex = projection.byKey.get(right)!;
+      const leftVertex = requireDefined(projection.byKey.get(left));
+      const rightVertex = requireDefined(projection.byKey.get(right));
       return (
         leftVertex.currentPosition.x - rightVertex.currentPosition.x ||
         compareVertexOrder(leftVertex, rightVertex)
       );
     });
   }
+}
 
-  reduceCrossings(layers, projection);
-  const layerWidths = new Map<number, number>();
-  const layerHeights = new Map<number, number>();
+function measureLayoutLayers(
+  layers: Map<number, string[]>,
+  projection: Projection,
+): LayoutLayerMeasures {
+  const widths = new Map<number, number>();
+  const heights = new Map<number, number>();
   for (const [rank, layer] of layers) {
-    layerWidths.set(
+    widths.set(
       rank,
-      layer.reduce((total, key) => total + projection.byKey.get(key)!.layoutWidth, 0) +
+      layer.reduce(
+        (total, key) => total + requireDefined(projection.byKey.get(key)).layoutWidth,
+        0,
+      ) +
         Math.max(0, layer.length - 1) * horizontalGap,
     );
-    layerHeights.set(rank, Math.max(...layer.map((key) => projection.byKey.get(key)!.height)));
+    heights.set(
+      rank,
+      Math.max(...layer.map((key) => requireDefined(projection.byKey.get(key)).height)),
+    );
   }
+  return {
+    widths,
+    heights,
+    width: Math.max(...widths.values(), interactionNodeWidth),
+    maximumRank: Math.max(...layers.keys()),
+  };
+}
 
-  const width = Math.max(...layerWidths.values(), interactionNodeWidth);
+function placeLayoutLayers(
+  layers: Map<number, string[]>,
+  projection: Projection,
+  measures: LayoutLayerMeasures,
+): Map<string, Position> {
   const positions = new Map<string, Position>();
-  const maximumRank = Math.max(...layers.keys());
   let y = 0;
-  for (let rank = 0; rank <= maximumRank; rank += 1) {
+  for (let rank = 0; rank <= measures.maximumRank; rank += 1) {
     const layer = layers.get(rank);
     if (!layer) {
       y += triggerNodeSize + verticalGap;
       continue;
     }
-    const layerWidth = layerWidths.get(rank)!;
-    const layerHeight = layerHeights.get(rank)!;
-    let x = (width - layerWidth) / 2;
-    for (const key of layer) {
-      const vertex = projection.byKey.get(key)!;
-      positions.set(key, {
-        x: x + (vertex.layoutWidth - vertex.width) / 2,
-        y: y + (layerHeight - vertex.height) / 2,
-      });
-      x += vertex.layoutWidth + horizontalGap;
-    }
-    y += layerHeight + verticalGap;
+    y = placeLayoutLayer({ layer, rank, projection, positions, measures, y });
   }
+  return positions;
+}
 
-  alignLayersToSuccessors(layers, projection, positions, width);
-
-  return { positions, width };
+function placeLayoutLayer(input: {
+  layer: string[];
+  rank: number;
+  projection: Projection;
+  positions: Map<string, Position>;
+  measures: LayoutLayerMeasures;
+  y: number;
+}): number {
+  const layerWidth = requireDefined(input.measures.widths.get(input.rank));
+  const layerHeight = requireDefined(input.measures.heights.get(input.rank));
+  let x = (input.measures.width - layerWidth) / 2;
+  for (const key of input.layer) {
+    const vertex = requireDefined(input.projection.byKey.get(key));
+    input.positions.set(key, {
+      x: x + (vertex.layoutWidth - vertex.width) / 2,
+      y: input.y + (layerHeight - vertex.height) / 2,
+    });
+    x += vertex.layoutWidth + horizontalGap;
+  }
+  return input.y + layerHeight + verticalGap;
 }
 
 function alignLayersToSuccessors(
@@ -358,7 +513,9 @@ function alignLayersToSuccessors(
   for (let pass = 0; pass < 4; pass += 1) {
     for (const rank of ranks) {
       const layer = layers.get(rank);
-      if (!layer || layer.length === 0) continue;
+      if (!layer || layer.length === 0) {
+        continue;
+      }
       alignLayerToSuccessors(layer, projection, positions, width);
     }
   }
@@ -370,29 +527,44 @@ function alignLayerToSuccessors(
   positions: Map<string, Position>,
   width: number,
 ) {
-  const vertices = layer.map((key) => projection.byKey.get(key)!);
-  const centers = vertices.map((vertex) => {
-    const currentCenter = getVertexCenter(vertex, positions.get(vertex.key)!);
-    const successorCenters = [...(projection.outgoing.get(vertex.key) ?? [])]
-      .flatMap((key) => {
-        const successor = projection.byKey.get(key);
-        const position = positions.get(key);
-        return successor && position ? [getVertexCenter(successor, position)] : [];
-      })
-      .sort((left, right) => left - right);
-    return successorCenters.length > 0 ? getMedian(successorCenters) : currentCenter;
-  });
+  const vertices = layer.map((key) => requireDefined(projection.byKey.get(key)));
+  const centers = vertices.map((vertex) => getSuccessorTargetCenter(vertex, projection, positions));
+  enforceMinimumCenterGaps(centers, vertices);
+  fitCentersToLayerWidth(centers, vertices, width);
+  applyLayerCenters(vertices, centers, positions);
+}
 
+function getSuccessorTargetCenter(
+  vertex: LayoutVertex,
+  projection: Projection,
+  positions: Map<string, Position>,
+): number {
+  const currentCenter = getVertexCenter(vertex, requireDefined(positions.get(vertex.key)));
+  const successorCenters = [...(projection.outgoing.get(vertex.key) ?? [])]
+    .flatMap((key) => {
+      const successor = projection.byKey.get(key);
+      const position = positions.get(key);
+      return successor && position ? [getVertexCenter(successor, position)] : [];
+    })
+    .sort((left, right) => left - right);
+  return successorCenters.length > 0 ? getMedian(successorCenters) : currentCenter;
+}
+
+function enforceMinimumCenterGaps(centers: number[], vertices: LayoutVertex[]): void {
   for (let index = 1; index < centers.length; index += 1) {
     centers[index] = Math.max(
       centers[index],
       centers[index - 1] + getMinimumCenterGap(vertices[index - 1], vertices[index]),
     );
   }
+}
 
-  const rightLimit = width - vertices.at(-1)!.layoutWidth / 2;
-  const overflow = centers.at(-1)! - rightLimit;
-  if (overflow > 0) centers.forEach((center, index) => (centers[index] = center - overflow));
+function fitCentersToLayerWidth(centers: number[], vertices: LayoutVertex[], width: number): void {
+  const rightLimit = width - requireDefined(vertices.at(-1)).layoutWidth / 2;
+  const overflow = requireDefined(centers.at(-1)) - rightLimit;
+  if (overflow > 0) {
+    shiftCenters(centers, -overflow);
+  }
 
   for (let index = centers.length - 2; index >= 0; index -= 1) {
     centers[index] = Math.min(
@@ -403,10 +575,24 @@ function alignLayerToSuccessors(
 
   const leftLimit = vertices[0].layoutWidth / 2;
   const underflow = leftLimit - centers[0];
-  if (underflow > 0) centers.forEach((center, index) => (centers[index] = center + underflow));
+  if (underflow > 0) {
+    shiftCenters(centers, underflow);
+  }
+}
 
+function shiftCenters(centers: number[], offset: number): void {
+  centers.forEach((center, index) => {
+    centers[index] = center + offset;
+  });
+}
+
+function applyLayerCenters(
+  vertices: LayoutVertex[],
+  centers: number[],
+  positions: Map<string, Position>,
+): void {
   vertices.forEach((vertex, index) => {
-    const position = positions.get(vertex.key)!;
+    const position = requireDefined(positions.get(vertex.key));
     positions.set(vertex.key, { ...position, x: centers[index] - vertex.width / 2 });
   });
 }
@@ -426,133 +612,285 @@ function getMedian(values: number[]) {
 
 function getRanks(component: string[], projection: Projection): Map<string, number> {
   const strongComponents = getStrongComponents(component, projection);
+  const componentByVertex = getComponentMembership(strongComponents);
+  const graph = buildCondensedComponentGraph(
+    component,
+    projection,
+    componentByVertex,
+    strongComponents.length,
+  );
+  const order = orderCondensedComponents(strongComponents, graph, projection);
+  return assignComponentRanks(strongComponents, order, projection);
+}
+
+interface CondensedComponentGraph {
+  predecessors: Set<number>[];
+  successors: Set<number>[];
+}
+
+interface CondensedComponentOrder {
+  indices: number[];
+  bases: number[];
+}
+
+function getComponentMembership(strongComponents: string[][]): Map<string, number> {
   const componentByVertex = new Map<string, number>();
   strongComponents.forEach((members, index) => {
     members.forEach((key) => componentByVertex.set(key, index));
   });
-  const predecessors = strongComponents.map(() => new Set<number>());
-  const successors = strongComponents.map(() => new Set<number>());
+  return componentByVertex;
+}
+
+function buildCondensedComponentGraph(
+  component: string[],
+  projection: Projection,
+  componentByVertex: Map<string, number>,
+  componentCount: number,
+): CondensedComponentGraph {
+  const predecessors = Array.from({ length: componentCount }, () => new Set<number>());
+  const successors = Array.from({ length: componentCount }, () => new Set<number>());
   for (const source of component) {
     for (const target of projection.outgoing.get(source) ?? []) {
-      const sourceComponent = componentByVertex.get(source)!;
-      const targetComponent = componentByVertex.get(target)!;
-      if (sourceComponent === targetComponent) continue;
+      const sourceComponent = requireDefined(componentByVertex.get(source));
+      const targetComponent = requireDefined(componentByVertex.get(target));
+      if (sourceComponent === targetComponent) {
+        continue;
+      }
       successors[sourceComponent].add(targetComponent);
       predecessors[targetComponent].add(sourceComponent);
     }
   }
+  return { predecessors, successors };
+}
 
+function orderCondensedComponents(
+  strongComponents: string[][],
+  graph: CondensedComponentGraph,
+  projection: Projection,
+): CondensedComponentOrder {
   const componentOrder = strongComponents.map((members) => getMinimumOrder(members, projection));
-  const indegrees = predecessors.map((items) => items.size);
+  const indegrees = graph.predecessors.map((items) => items.size);
   const pending = indegrees
     .map((indegree, index) => ({ indegree, index }))
     .filter(({ indegree }) => indegree === 0)
     .map(({ index }) => index)
     .sort((left, right) => componentOrder[left] - componentOrder[right]);
   const bases = strongComponents.map(() => 0);
-  const orderedComponents: number[] = [];
+  const indices: number[] = [];
   while (pending.length > 0) {
-    const componentIndex = pending.shift()!;
-    orderedComponents.push(componentIndex);
-    for (const successor of successors[componentIndex]) {
-      bases[successor] = Math.max(
-        bases[successor],
-        bases[componentIndex] + strongComponents[componentIndex].length,
-      );
+    const componentIndex = requireDefined(pending.shift());
+    indices.push(componentIndex);
+    for (const successor of graph.successors[componentIndex]) {
+      updateComponentBase(successor, componentIndex, bases, strongComponents);
       indegrees[successor] -= 1;
       if (indegrees[successor] === 0) {
-        pending.push(successor);
-        pending.sort((left, right) => componentOrder[left] - componentOrder[right]);
+        insertComponentInOrder(pending, successor, componentOrder);
       }
     }
   }
+  return { indices, bases };
+}
 
+function updateComponentBase(
+  successor: number,
+  source: number,
+  bases: number[],
+  strongComponents: string[][],
+): void {
+  bases[successor] = Math.max(bases[successor], bases[source] + strongComponents[source].length);
+}
+
+function insertComponentInOrder(pending: number[], componentIndex: number, order: number[]): void {
+  pending.push(componentIndex);
+  pending.sort((left, right) => order[left] - order[right]);
+}
+
+function assignComponentRanks(
+  strongComponents: string[][],
+  order: CondensedComponentOrder,
+  projection: Projection,
+): Map<string, number> {
   const ranks = new Map<string, number>();
-  for (const componentIndex of orderedComponents) {
+  for (const componentIndex of order.indices) {
     const members = [...strongComponents[componentIndex]].sort((left, right) => {
-      const leftVertex = projection.byKey.get(left)!;
-      const rightVertex = projection.byKey.get(right)!;
+      const leftVertex = requireDefined(projection.byKey.get(left));
+      const rightVertex = requireDefined(projection.byKey.get(right));
       return (
         leftVertex.currentPosition.y - rightVertex.currentPosition.y ||
         leftVertex.currentPosition.x - rightVertex.currentPosition.x ||
         compareVertexOrder(leftVertex, rightVertex)
       );
     });
-    members.forEach((key, memberIndex) => ranks.set(key, bases[componentIndex] + memberIndex));
+    members.forEach((key, memberIndex) =>
+      ranks.set(key, order.bases[componentIndex] + memberIndex),
+    );
   }
   return ranks;
 }
 
+interface StrongComponentFrame {
+  key: string;
+  parent?: string;
+  targets: string[];
+  nextTargetIndex: number;
+}
+
+interface StrongComponentSearchState {
+  projection: Projection;
+  allowed: Set<string>;
+  indices: Map<string, number>;
+  lowLinks: Map<string, number>;
+  componentStack: string[];
+  onStack: Set<string>;
+  traversalStack: StrongComponentFrame[];
+  result: string[][];
+  nextIndex: number;
+}
+
 function getStrongComponents(component: string[], projection: Projection): string[][] {
-  const allowed = new Set(component);
-  const indices = new Map<string, number>();
-  const lowLinks = new Map<string, number>();
-  const componentStack: string[] = [];
-  const onStack = new Set<string>();
-  const result: string[][] = [];
-  let nextIndex = 0;
-
-  const openVertex = (key: string) => {
-    indices.set(key, nextIndex);
-    lowLinks.set(key, nextIndex);
-    nextIndex += 1;
-    componentStack.push(key);
-    onStack.add(key);
-  };
-  const getTargets = (key: string) =>
-    [...(projection.outgoing.get(key) ?? [])]
-      .filter((target) => allowed.has(target))
-      .sort((left, right) =>
-        compareVertexOrder(projection.byKey.get(left)!, projection.byKey.get(right)!),
-      );
-
-  for (const key of [...component].sort((left, right) =>
-    compareVertexOrder(projection.byKey.get(left)!, projection.byKey.get(right)!),
-  )) {
-    if (indices.has(key)) continue;
-    openVertex(key);
-    const traversalStack: Array<{
-      key: string;
-      parent?: string;
-      targets: string[];
-      nextTargetIndex: number;
-    }> = [{ key, targets: getTargets(key), nextTargetIndex: 0 }];
-
-    while (traversalStack.length > 0) {
-      const frame = traversalStack.at(-1)!;
-      const target = frame.targets[frame.nextTargetIndex];
-      if (target !== undefined) {
-        frame.nextTargetIndex += 1;
-        if (!indices.has(target)) {
-          openVertex(target);
-          traversalStack.push({
-            key: target,
-            parent: frame.key,
-            targets: getTargets(target),
-            nextTargetIndex: 0,
-          });
-        } else if (onStack.has(target)) {
-          lowLinks.set(frame.key, Math.min(lowLinks.get(frame.key)!, indices.get(target)!));
-        }
-        continue;
-      }
-
-      traversalStack.pop();
-      if (frame.parent !== undefined) {
-        lowLinks.set(frame.parent, Math.min(lowLinks.get(frame.parent)!, lowLinks.get(frame.key)!));
-      }
-      if (lowLinks.get(frame.key) !== indices.get(frame.key)) continue;
-      const members: string[] = [];
-      let member: string;
-      do {
-        member = componentStack.pop()!;
-        onStack.delete(member);
-        members.push(member);
-      } while (member !== frame.key);
-      result.push(members);
+  const state = createStrongComponentSearchState(component, projection);
+  for (const key of getOrderedComponentKeys(component, projection)) {
+    if (!state.indices.has(key)) {
+      visitStrongComponentRoot(key, state);
     }
   }
-  return result;
+  return state.result;
+}
+
+function createStrongComponentSearchState(
+  component: string[],
+  projection: Projection,
+): StrongComponentSearchState {
+  return {
+    projection,
+    allowed: new Set(component),
+    indices: new Map(),
+    lowLinks: new Map(),
+    componentStack: [],
+    onStack: new Set(),
+    traversalStack: [],
+    result: [],
+    nextIndex: 0,
+  };
+}
+
+function getOrderedComponentKeys(component: string[], projection: Projection): string[] {
+  return [...component].sort((left, right) =>
+    compareVertexOrder(
+      requireDefined(projection.byKey.get(left)),
+      requireDefined(projection.byKey.get(right)),
+    ),
+  );
+}
+
+function visitStrongComponentRoot(key: string, state: StrongComponentSearchState): void {
+  openStrongComponentVertex(key, state);
+  state.traversalStack.push(createStrongComponentFrame(key, state));
+  while (state.traversalStack.length > 0) {
+    advanceStrongComponentTraversal(state);
+  }
+}
+
+function openStrongComponentVertex(key: string, state: StrongComponentSearchState): void {
+  state.indices.set(key, state.nextIndex);
+  state.lowLinks.set(key, state.nextIndex);
+  state.nextIndex += 1;
+  state.componentStack.push(key);
+  state.onStack.add(key);
+}
+
+function createStrongComponentFrame(
+  key: string,
+  state: StrongComponentSearchState,
+): StrongComponentFrame {
+  return { key, targets: getStrongComponentTargets(key, state), nextTargetIndex: 0 };
+}
+
+function getStrongComponentTargets(key: string, state: StrongComponentSearchState): string[] {
+  return [...(state.projection.outgoing.get(key) ?? [])]
+    .filter((target) => state.allowed.has(target))
+    .sort((left, right) =>
+      compareVertexOrder(
+        requireDefined(state.projection.byKey.get(left)),
+        requireDefined(state.projection.byKey.get(right)),
+      ),
+    );
+}
+
+function advanceStrongComponentTraversal(state: StrongComponentSearchState): void {
+  const frame = requireDefined(state.traversalStack.at(-1));
+  const target = frame.targets[frame.nextTargetIndex];
+  if (target !== undefined) {
+    visitStrongComponentTarget(frame, target, state);
+    return;
+  }
+  finishStrongComponentFrame(frame, state);
+}
+
+function visitStrongComponentTarget(
+  frame: StrongComponentFrame,
+  target: string,
+  state: StrongComponentSearchState,
+): void {
+  frame.nextTargetIndex += 1;
+  if (!state.indices.has(target)) {
+    openStrongComponentVertex(target, state);
+    state.traversalStack.push({
+      ...createStrongComponentFrame(target, state),
+      parent: frame.key,
+    });
+    return;
+  }
+  if (state.onStack.has(target)) {
+    updateLowLinkFromIndex(frame.key, target, state);
+  }
+}
+
+function finishStrongComponentFrame(
+  frame: StrongComponentFrame,
+  state: StrongComponentSearchState,
+): void {
+  state.traversalStack.pop();
+  if (frame.parent !== undefined) {
+    updateLowLinkFromChild(frame.parent, frame.key, state);
+  }
+  if (state.lowLinks.get(frame.key) !== state.indices.get(frame.key)) {
+    return;
+  }
+  state.result.push(collectStrongComponent(frame.key, state));
+}
+
+function updateLowLinkFromIndex(
+  source: string,
+  target: string,
+  state: StrongComponentSearchState,
+): void {
+  state.lowLinks.set(
+    source,
+    Math.min(requireDefined(state.lowLinks.get(source)), requireDefined(state.indices.get(target))),
+  );
+}
+
+function updateLowLinkFromChild(
+  source: string,
+  child: string,
+  state: StrongComponentSearchState,
+): void {
+  state.lowLinks.set(
+    source,
+    Math.min(requireDefined(state.lowLinks.get(source)), requireDefined(state.lowLinks.get(child))),
+  );
+}
+
+function collectStrongComponent(root: string, state: StrongComponentSearchState): string[] {
+  const members: string[] = [];
+  let member: string;
+  do {
+    member = requireDefined(state.componentStack.pop());
+    state.onStack.delete(member);
+    members.push(member);
+  } while (member !== root);
+  return members;
 }
 
 function reduceCrossings(layers: Map<number, string[]>, projection: Projection) {
@@ -574,9 +912,13 @@ function reduceCrossings(layers: Map<number, string[]>, projection: Projection) 
     bestLayers = copyLayerOrder(layers);
   };
   for (let pass = 0; pass < 4; pass += 1) {
-    for (const rank of ranks) sortLayer(layers, rank, projection.incoming);
+    for (const rank of ranks) {
+      sortLayer(layers, rank, projection.incoming);
+    }
     keepBestOrder();
-    for (const rank of [...ranks].reverse()) sortLayer(layers, rank, projection.outgoing);
+    for (const rank of [...ranks].reverse()) {
+      sortLayer(layers, rank, projection.outgoing);
+    }
     keepBestOrder();
   }
   for (const [rank, layer] of bestLayers) {
@@ -586,33 +928,68 @@ function reduceCrossings(layers: Map<number, string[]>, projection: Projection) 
 }
 
 function optimizeAdjacentLayerSwaps(layers: Map<number, string[]>, projection: Projection) {
-  let crossingCount = countLayerCrossings(layers, projection);
-  let edgeSpan = getLayerEdgeSpan(layers, projection);
+  const state: LayerSwapState = {
+    layers,
+    projection,
+    crossingCount: countLayerCrossings(layers, projection),
+    edgeSpan: getLayerEdgeSpan(layers, projection),
+    improved: false,
+  };
   const ranks = [...layers.keys()].sort((left, right) => left - right);
-
   for (let pass = 0; pass < 4; pass += 1) {
-    let improved = false;
+    state.improved = false;
     for (const rank of ranks) {
       const layer = layers.get(rank);
-      if (!layer || layer.length < 2) continue;
-      for (let index = 0; index < layer.length - 1; index += 1) {
-        [layer[index], layer[index + 1]] = [layer[index + 1], layer[index]];
-        const candidateCrossingCount = countLayerCrossings(layers, projection);
-        const candidateEdgeSpan = getLayerEdgeSpan(layers, projection);
-        const isBetter =
-          candidateCrossingCount < crossingCount ||
-          (candidateCrossingCount === crossingCount && candidateEdgeSpan < edgeSpan);
-        if (isBetter) {
-          crossingCount = candidateCrossingCount;
-          edgeSpan = candidateEdgeSpan;
-          improved = true;
-        } else {
-          [layer[index], layer[index + 1]] = [layer[index + 1], layer[index]];
-        }
+      if (layer && layer.length >= 2) {
+        optimizeLayerSwaps(layer, state);
       }
     }
-    if (!improved) return;
+    if (!state.improved) {
+      return;
+    }
   }
+}
+
+interface LayerSwapState {
+  layers: Map<number, string[]>;
+  projection: Projection;
+  crossingCount: number;
+  edgeSpan: number;
+  improved: boolean;
+}
+
+function optimizeLayerSwaps(layer: string[], state: LayerSwapState): void {
+  for (let index = 0; index < layer.length - 1; index += 1) {
+    considerAdjacentLayerSwap(layer, index, state);
+  }
+}
+
+function considerAdjacentLayerSwap(layer: string[], index: number, state: LayerSwapState): void {
+  swapAdjacentKeys(layer, index);
+  const candidateCrossingCount = countLayerCrossings(state.layers, state.projection);
+  const candidateEdgeSpan = getLayerEdgeSpan(state.layers, state.projection);
+  if (isBetterLayerOrder(candidateCrossingCount, candidateEdgeSpan, state)) {
+    state.crossingCount = candidateCrossingCount;
+    state.edgeSpan = candidateEdgeSpan;
+    state.improved = true;
+    return;
+  }
+  swapAdjacentKeys(layer, index);
+}
+
+function swapAdjacentKeys(layer: string[], index: number): void {
+  [layer[index], layer[index + 1]] = [layer[index + 1], layer[index]];
+}
+
+function isBetterLayerOrder(
+  crossingCount: number,
+  edgeSpan: number,
+  state: LayerSwapState,
+): boolean {
+  return (
+    crossingCount < state.crossingCount ||
+    (crossingCount === state.crossingCount && edgeSpan < state.edgeSpan)
+  );
 }
 
 function copyLayerOrder(layers: Map<number, string[]>) {
@@ -627,16 +1004,46 @@ function getLayerEdgeSpan(layers: Map<number, string[]>, projection: Projection)
   let span = 0;
   for (const [source, targets] of projection.outgoing) {
     const sourceOrder = normalizedOrder.get(source);
-    if (sourceOrder === undefined) continue;
+    if (sourceOrder === undefined) {
+      continue;
+    }
     for (const target of targets) {
       const targetOrder = normalizedOrder.get(target);
-      if (targetOrder !== undefined) span += Math.abs(sourceOrder - targetOrder);
+      if (targetOrder !== undefined) {
+        span += Math.abs(sourceOrder - targetOrder);
+      }
     }
   }
   return span;
 }
 
 function countLayerCrossings(layers: Map<number, string[]>, projection: Projection) {
+  const orderIndexes = getLayerOrderIndexes(layers);
+  const edgeGroups = groupCrossingEdges(projection, orderIndexes);
+  return [...edgeGroups.values()].reduce(
+    (crossings, edges) => crossings + countEdgeGroupCrossings(edges),
+    0,
+  );
+}
+
+interface LayerOrderIndexes {
+  rankByKey: Map<string, number>;
+  orderByKey: Map<string, number>;
+}
+
+interface CrossingEdge {
+  left: number;
+  right: number;
+}
+
+interface EdgeCrossingState {
+  edges: CrossingEdge[];
+  counts: FenwickTree;
+  inserted: number;
+  crossings: number;
+}
+
+function getLayerOrderIndexes(layers: Map<number, string[]>): LayerOrderIndexes {
   const rankByKey = new Map<string, number>();
   const orderByKey = new Map<string, number>();
   for (const [rank, layer] of layers) {
@@ -645,58 +1052,95 @@ function countLayerCrossings(layers: Map<number, string[]>, projection: Projecti
       orderByKey.set(key, index);
     });
   }
+  return { rankByKey, orderByKey };
+}
 
-  const edgeGroups = new Map<string, Array<{ left: number; right: number }>>();
+function groupCrossingEdges(
+  projection: Projection,
+  orderIndexes: LayerOrderIndexes,
+): Map<string, CrossingEdge[]> {
+  const edgeGroups = new Map<string, CrossingEdge[]>();
   for (const [source, targets] of projection.outgoing) {
     for (const target of targets) {
-      const sourceRank = rankByKey.get(source);
-      const targetRank = rankByKey.get(target);
-      const sourceOrder = orderByKey.get(source);
-      const targetOrder = orderByKey.get(target);
-      if (
-        sourceRank === undefined ||
-        targetRank === undefined ||
-        sourceOrder === undefined ||
-        targetOrder === undefined ||
-        sourceRank === targetRank
-      ) {
+      const group = getCrossingEdgeGroup(source, target, orderIndexes);
+      if (!group) {
         continue;
       }
-      const ascending = sourceRank < targetRank;
-      const firstRank = ascending ? sourceRank : targetRank;
-      const secondRank = ascending ? targetRank : sourceRank;
-      const edge = ascending
-        ? { left: sourceOrder, right: targetOrder }
-        : { left: targetOrder, right: sourceOrder };
-      const groupKey = `${firstRank}:${secondRank}`;
+      const { groupKey, edge } = group;
       edgeGroups.set(groupKey, [...(edgeGroups.get(groupKey) ?? []), edge]);
     }
   }
+  return edgeGroups;
+}
 
-  let crossings = 0;
-  for (const edges of edgeGroups.values()) {
-    if (edges.length < 2) continue;
-    edges.sort((left, right) => left.left - right.left || left.right - right.right);
-    const maximumRight = Math.max(...edges.map(({ right }) => right));
-    const counts = new FenwickTree(maximumRight + 1);
-    let inserted = 0;
-    let index = 0;
-    while (index < edges.length) {
-      let groupEnd = index + 1;
-      while (groupEnd < edges.length && edges[groupEnd].left === edges[index].left) {
-        groupEnd += 1;
-      }
-      for (let edgeIndex = index; edgeIndex < groupEnd; edgeIndex += 1) {
-        crossings += inserted - counts.getPrefixCount(edges[edgeIndex].right);
-      }
-      for (let edgeIndex = index; edgeIndex < groupEnd; edgeIndex += 1) {
-        counts.add(edges[edgeIndex].right);
-        inserted += 1;
-      }
-      index = groupEnd;
-    }
+function getCrossingEdgeGroup(
+  source: string,
+  target: string,
+  orderIndexes: LayerOrderIndexes,
+): { groupKey: string; edge: CrossingEdge } | undefined {
+  const sourceRank = orderIndexes.rankByKey.get(source);
+  const targetRank = orderIndexes.rankByKey.get(target);
+  const sourceOrder = orderIndexes.orderByKey.get(source);
+  const targetOrder = orderIndexes.orderByKey.get(target);
+  if (
+    sourceRank === undefined ||
+    targetRank === undefined ||
+    sourceOrder === undefined ||
+    targetOrder === undefined ||
+    sourceRank === targetRank
+  ) {
+    return undefined;
   }
-  return crossings;
+  const ascending = sourceRank < targetRank;
+  return {
+    groupKey: ascending ? `${sourceRank}:${targetRank}` : `${targetRank}:${sourceRank}`,
+    edge: ascending
+      ? { left: sourceOrder, right: targetOrder }
+      : { left: targetOrder, right: sourceOrder },
+  };
+}
+
+function countEdgeGroupCrossings(edges: CrossingEdge[]): number {
+  if (edges.length < 2) {
+    return 0;
+  }
+  edges.sort((left, right) => left.left - right.left || left.right - right.right);
+  const maximumRight = Math.max(...edges.map(({ right }) => right));
+  const state: EdgeCrossingState = {
+    edges,
+    counts: new FenwickTree(maximumRight + 1),
+    inserted: 0,
+    crossings: 0,
+  };
+  let index = 0;
+  while (index < edges.length) {
+    const groupEnd = getSameLeftOrderEnd(edges, index);
+    countCrossingsBeforeGroup(state, index, groupEnd);
+    insertEdgeGroup(state, index, groupEnd);
+    index = groupEnd;
+  }
+  return state.crossings;
+}
+
+function getSameLeftOrderEnd(edges: CrossingEdge[], start: number): number {
+  let end = start + 1;
+  while (end < edges.length && edges[end].left === edges[start].left) {
+    end += 1;
+  }
+  return end;
+}
+
+function countCrossingsBeforeGroup(state: EdgeCrossingState, start: number, end: number): void {
+  for (let index = start; index < end; index += 1) {
+    state.crossings += state.inserted - state.counts.getPrefixCount(state.edges[index].right);
+  }
+}
+
+function insertEdgeGroup(state: EdgeCrossingState, start: number, end: number): void {
+  for (let index = start; index < end; index += 1) {
+    state.counts.add(state.edges[index].right);
+    state.inserted += 1;
+  }
 }
 
 class FenwickTree {
@@ -727,7 +1171,9 @@ function sortLayer(
   neighbors: Map<string, Set<string>>,
 ) {
   const layer = layers.get(rank);
-  if (!layer || layer.length < 2) return;
+  if (!layer || layer.length < 2) {
+    return;
+  }
   const order = new Map<string, number>();
   for (const current of layers.values()) {
     current.forEach((key, index) => order.set(key, index));
@@ -739,9 +1185,13 @@ function sortLayer(
     if (leftScore !== undefined && rightScore !== undefined && leftScore !== rightScore) {
       return leftScore - rightScore;
     }
-    if (leftScore !== undefined && rightScore === undefined) return -1;
-    if (leftScore === undefined && rightScore !== undefined) return 1;
-    return previousOrder.get(left)! - previousOrder.get(right)!;
+    if (leftScore !== undefined && rightScore === undefined) {
+      return -1;
+    }
+    if (leftScore === undefined && rightScore !== undefined) {
+      return 1;
+    }
+    return requireDefined(previousOrder.get(left)) - requireDefined(previousOrder.get(right));
   });
 }
 
@@ -750,17 +1200,23 @@ function getBarycenter(neighbors: Set<string> | undefined, order: Map<string, nu
     const value = order.get(key);
     return value === undefined ? [] : [value];
   });
-  if (positions.length === 0) return undefined;
+  if (positions.length === 0) {
+    return undefined;
+  }
   return positions.reduce((total, value) => total + value, 0) / positions.length;
 }
 
 function getSelectedKeys(projection: Projection, scope: StoryGraphLayoutScope): Set<string> {
-  if (scope.kind === 'all') return new Set(projection.vertices.map(({ key }) => key));
+  if (scope.kind === 'all') {
+    return new Set(projection.vertices.map(({ key }) => key));
+  }
   const selected = new Set<string>();
   for (const target of scope.targets) {
     if (target.type === 'interaction') {
       const key = getInteractionKey(target.interactionId);
-      if (projection.byKey.has(key)) selected.add(key);
+      if (projection.byKey.has(key)) {
+        selected.add(key);
+      }
       continue;
     }
     const vertex = projection.vertices.find(
@@ -769,7 +1225,9 @@ function getSelectedKeys(projection: Projection, scope: StoryGraphLayoutScope): 
         candidate.interactionId === target.interactionId &&
         candidate.triggerIds?.includes(target.triggerId),
     );
-    if (vertex) selected.add(vertex.key);
+    if (vertex) {
+      selected.add(vertex.key);
+    }
   }
   return selected;
 }
@@ -779,55 +1237,103 @@ function alignSelectionToFixedGraph(
   canonical: ReadonlyMap<string, Position>,
   selected: Set<string>,
 ): Map<string, Position> {
+  const boundaryKeys = getSelectionBoundaryKeys(projection, selected);
+  const translation = getSelectionTranslation(projection, canonical, selected, boundaryKeys);
+  const desired = getDesiredSelectionPositions(canonical, selected, translation);
+  const collisionOffset = findCollisionFreeOffset(projection, desired, selected);
+  return applyPositionOffset(desired, collisionOffset);
+}
+
+function getSelectionBoundaryKeys(projection: Projection, selected: Set<string>): Set<string> {
   const boundaryKeys = new Set<string>();
   for (const key of selected) {
     for (const neighbor of [
       ...(projection.incoming.get(key) ?? []),
       ...(projection.outgoing.get(key) ?? []),
     ]) {
-      if (!selected.has(neighbor)) boundaryKeys.add(neighbor);
+      if (!selected.has(neighbor)) {
+        boundaryKeys.add(neighbor);
+      }
     }
   }
+  return boundaryKeys;
+}
 
-  let translation: Position;
-  if (boundaryKeys.size > 0) {
-    translation = {
-      x: median(
-        [...boundaryKeys].map(
-          (key) => projection.byKey.get(key)!.currentPosition.x - canonical.get(key)!.x,
-        ),
-      ),
-      y: median(
-        [...boundaryKeys].map(
-          (key) => projection.byKey.get(key)!.currentPosition.y - canonical.get(key)!.y,
-        ),
-      ),
-    };
-  } else {
-    const currentCenter = getPositionCenter(
-      [...selected].map((key) => projection.byKey.get(key)!.currentPosition),
-    );
-    const canonicalCenter = getPositionCenter([...selected].map((key) => canonical.get(key)!));
-    translation = {
-      x: currentCenter.x - canonicalCenter.x,
-      y: currentCenter.y - canonicalCenter.y,
-    };
-  }
+function getSelectionTranslation(
+  projection: Projection,
+  canonical: ReadonlyMap<string, Position>,
+  selected: Set<string>,
+  boundaryKeys: Set<string>,
+): Position {
+  return boundaryKeys.size > 0
+    ? getBoundaryTranslation(projection, canonical, boundaryKeys)
+    : getCenterTranslation(projection, canonical, selected);
+}
 
-  const desired = new Map(
+function getBoundaryTranslation(
+  projection: Projection,
+  canonical: ReadonlyMap<string, Position>,
+  boundaryKeys: Set<string>,
+): Position {
+  return {
+    x: median(
+      [...boundaryKeys].map(
+        (key) =>
+          requireDefined(projection.byKey.get(key)).currentPosition.x -
+          requireDefined(canonical.get(key)).x,
+      ),
+    ),
+    y: median(
+      [...boundaryKeys].map(
+        (key) =>
+          requireDefined(projection.byKey.get(key)).currentPosition.y -
+          requireDefined(canonical.get(key)).y,
+      ),
+    ),
+  };
+}
+
+function getCenterTranslation(
+  projection: Projection,
+  canonical: ReadonlyMap<string, Position>,
+  selected: Set<string>,
+): Position {
+  const currentCenter = getPositionCenter(
+    [...selected].map((key) => requireDefined(projection.byKey.get(key)).currentPosition),
+  );
+  const canonicalCenter = getPositionCenter(
+    [...selected].map((key) => requireDefined(canonical.get(key))),
+  );
+  return {
+    x: currentCenter.x - canonicalCenter.x,
+    y: currentCenter.y - canonicalCenter.y,
+  };
+}
+
+function getDesiredSelectionPositions(
+  canonical: ReadonlyMap<string, Position>,
+  selected: Set<string>,
+  translation: Position,
+): Map<string, Position> {
+  return new Map(
     [...selected].map((key) => {
-      const position = canonical.get(key)!;
+      const position = requireDefined(canonical.get(key));
       return [
         key,
         { x: Math.round(position.x + translation.x), y: Math.round(position.y + translation.y) },
       ];
     }),
   );
-  const collisionOffset = findCollisionFreeOffset(projection, desired, selected);
+}
+
+function applyPositionOffset(
+  desired: Map<string, Position>,
+  offset: Position,
+): Map<string, Position> {
   return new Map(
     [...desired].map(([key, position]) => [
       key,
-      { x: position.x + collisionOffset.x, y: position.y + collisionOffset.y },
+      { x: position.x + offset.x, y: position.y + offset.y },
     ]),
   );
 }
@@ -860,7 +1366,7 @@ function findCollisionFreeOffset(
   return (
     candidates.find((offset) =>
       [...desired].every(([key, position]) => {
-        const selectedVertex = projection.byKey.get(key)!;
+        const selectedVertex = requireDefined(projection.byKey.get(key));
         const moved = { x: position.x + offset.x, y: position.y + offset.y };
         return fixed.every(
           (fixedVertex) =>
@@ -900,7 +1406,7 @@ function median(values: number[]) {
 }
 
 function getMinimumOrder(keys: string[], projection: Projection) {
-  return Math.min(...keys.map((key) => projection.byKey.get(key)!.order));
+  return Math.min(...keys.map((key) => requireDefined(projection.byKey.get(key)).order));
 }
 
 function compareVertexOrder(left: LayoutVertex, right: LayoutVertex) {
@@ -938,4 +1444,11 @@ function getInteractionKey(interactionId: string) {
 
 function getTriggerKey(interactionId: string, triggerId: string) {
   return `trigger:${interactionId}:${triggerId}`;
+}
+
+function requireDefined<T>(value: T | undefined): T {
+  if (value === undefined) {
+    throw new Error('Expected a story graph layout value to exist.');
+  }
+  return value;
 }

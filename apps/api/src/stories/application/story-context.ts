@@ -56,7 +56,7 @@ export class StoryContextService {
     userId: string,
   ): Promise<LocationMutationResult> {
     const locationId = randomUUID();
-    const story = await this.mutations.update(
+    const updatedStory = await this.mutations.update(
       storyId,
       (story) => {
         (story.locations ??= []).push({
@@ -71,7 +71,7 @@ export class StoryContextService {
       userId,
       storyHistoryOperations.locationCreated,
     );
-    return this.locationResult(story, locationId);
+    return this.locationResult(updatedStory, locationId);
   }
 
   async updateLocation(
@@ -80,24 +80,33 @@ export class StoryContextService {
     input: UpdateLocationDto,
     userId: string,
   ): Promise<LocationMutationResult> {
-    const story = await this.mutations.update(
+    const updatedStory = await this.mutations.update(
       storyId,
       (story) => {
         const location = this.location(story, locationId);
-        if (input.name !== undefined) location.name = input.name.trim();
-        if (input.description !== undefined) location.description = input.description;
+        if (input.name !== undefined) {
+          location.name = input.name.trim();
+        }
+        if (input.description !== undefined) {
+          location.description = input.description;
+        }
         if (input.category !== undefined) {
           const category = input.category.trim();
-          if (category) location.category = category;
-          else delete location.category;
+          if (category) {
+            location.category = category;
+          } else {
+            delete location.category;
+          }
         }
-        if (input.imageUrl !== undefined) location.imageUrl = input.imageUrl.trim();
+        if (input.imageUrl !== undefined) {
+          location.imageUrl = input.imageUrl.trim();
+        }
         return story;
       },
       userId,
       storyHistoryOperations.locationUpdated,
     );
-    return this.locationResult(story, locationId);
+    return this.locationResult(updatedStory, locationId);
   }
 
   async createCharacter(
@@ -106,11 +115,11 @@ export class StoryContextService {
     userId: string,
   ): Promise<CharacterMutationResult> {
     const characterId = randomUUID();
-    const story = await this.mutations.update(
+    const updatedStory = await this.mutations.update(
       storyId,
       (story) => {
         if (input.isPlayable) {
-          for (const character of story.characters ?? []) character.isPlayable = false;
+          this.clearPlayableCharacters(story);
         }
         (story.characters ??= []).push({
           id: characterId,
@@ -126,7 +135,7 @@ export class StoryContextService {
       userId,
       storyHistoryOperations.characterCreated,
     );
-    return this.characterResult(story, characterId);
+    return this.characterResult(updatedStory, characterId);
   }
 
   async updateCharacter(
@@ -135,21 +144,14 @@ export class StoryContextService {
     input: UpdateCharacterDto,
     userId: string,
   ): Promise<CharacterMutationResult> {
-    const story = await this.mutations.update(
+    const updatedStory = await this.mutations.update(
       storyId,
       (story) => {
         const character = this.character(story, characterId);
-        if (input.name !== undefined) character.name = input.name.trim();
-        if (input.description !== undefined) character.description = input.description;
-        if (input.category !== undefined) {
-          const category = input.category.trim();
-          if (category) character.category = category;
-          else delete character.category;
-        }
-        if (input.imageUrl !== undefined) character.imageUrl = input.imageUrl.trim();
+        this.updateCharacterFields(character, input);
         if (input.isPlayable !== undefined) {
           if (input.isPlayable) {
-            for (const candidate of story.characters ?? []) candidate.isPlayable = false;
+            this.clearPlayableCharacters(story);
           }
           character.isPlayable = input.isPlayable;
         }
@@ -158,7 +160,7 @@ export class StoryContextService {
       userId,
       storyHistoryOperations.characterUpdated,
     );
-    return this.characterResult(story, characterId);
+    return this.characterResult(updatedStory, characterId);
   }
 
   async createStatDefinition(
@@ -167,7 +169,7 @@ export class StoryContextService {
     userId: string,
   ): Promise<StatDefinitionMutationResult> {
     const statDefinitionId = randomUUID();
-    const story = await this.mutations.update(
+    const updatedStory = await this.mutations.update(
       storyId,
       (story) => {
         createStatDefinition(story, statDefinitionId, {
@@ -179,7 +181,7 @@ export class StoryContextService {
       userId,
       storyHistoryOperations.statDefinitionCreated,
     );
-    return this.statDefinitionResult(story, statDefinitionId);
+    return this.statDefinitionResult(updatedStory, statDefinitionId);
   }
 
   async updateStatDefinition(
@@ -188,7 +190,7 @@ export class StoryContextService {
     input: UpdateStatDefinitionDto,
     userId: string,
   ): Promise<StatDefinitionMutationResult> {
-    const story = await this.mutations.update(
+    const updatedStory = await this.mutations.update(
       storyId,
       (story) => {
         updateStatDefinition(story, statDefinitionId, input);
@@ -197,7 +199,7 @@ export class StoryContextService {
       userId,
       storyHistoryOperations.statDefinitionUpdated,
     );
-    return this.statDefinitionResult(story, statDefinitionId);
+    return this.statDefinitionResult(updatedStory, statDefinitionId);
   }
 
   async deleteStatDefinition(
@@ -268,7 +270,7 @@ export class StoryContextService {
     userId: string,
   ): Promise<ItemDefinitionMutationResult> {
     const itemDefinitionId = randomUUID();
-    const story = await this.mutations.update(
+    const updatedStory = await this.mutations.update(
       storyId,
       (story) => {
         (story.itemDefinitions ??= []).push({
@@ -284,7 +286,7 @@ export class StoryContextService {
       userId,
       storyHistoryOperations.itemDefinitionCreated,
     );
-    return this.itemDefinitionResult(story, itemDefinitionId);
+    return this.itemDefinitionResult(updatedStory, itemDefinitionId);
   }
 
   async updateItemDefinition(
@@ -293,32 +295,20 @@ export class StoryContextService {
     input: UpdateItemDefinitionDto,
     userId: string,
   ): Promise<ItemDefinitionMutationResult> {
-    const story = await this.mutations.update(
+    const updatedStory = await this.mutations.update(
       storyId,
       (story) => {
         const definition = this.itemDefinition(story, itemDefinitionId);
-        if (input.name !== undefined) definition.name = input.name.trim();
-        if (input.description !== undefined) definition.description = input.description;
-        if (input.category !== undefined) {
-          const category = input.category.trim();
-          if (category) definition.category = category;
-          else delete definition.category;
-        }
-        if (input.imageUrl !== undefined) definition.imageUrl = input.imageUrl.trim();
+        this.updateItemDefinitionFields(definition, input);
         if (input.stats !== undefined) {
-          const nextStats = this.itemDefinitionStats(story, input.stats, definition.stats ?? []);
-          const nextIds = new Set(nextStats.map(({ id }) => id));
-          for (const current of definition.stats ?? []) {
-            if (!nextIds.has(current.id)) deleteStatAssignment(story, current.id);
-          }
-          definition.stats = nextStats;
+          this.updateItemDefinitionStats(story, definition, input.stats);
         }
         return story;
       },
       userId,
       storyHistoryOperations.itemDefinitionUpdated,
     );
-    return this.itemDefinitionResult(story, itemDefinitionId);
+    return this.itemDefinitionResult(updatedStory, itemDefinitionId);
   }
 
   async createCharacterStat(
@@ -328,7 +318,7 @@ export class StoryContextService {
     userId: string,
   ): Promise<CharacterStatMutationResult> {
     const statId = randomUUID();
-    const story = await this.mutations.update(
+    const updatedStory = await this.mutations.update(
       storyId,
       (story) => {
         createStatAssignment(story, statId, {
@@ -341,7 +331,7 @@ export class StoryContextService {
       userId,
       storyHistoryOperations.statAssignmentCreated,
     );
-    return this.statResult(story, characterId, statId);
+    return this.statResult(updatedStory, characterId, statId);
   }
 
   async updateCharacterStat(
@@ -351,7 +341,7 @@ export class StoryContextService {
     input: UpdateCharacterStatDto,
     userId: string,
   ): Promise<CharacterStatMutationResult> {
-    const story = await this.mutations.update(
+    const updatedStory = await this.mutations.update(
       storyId,
       (story) => {
         const stat = this.stat(story, characterId, statId);
@@ -361,7 +351,7 @@ export class StoryContextService {
       userId,
       storyHistoryOperations.statAssignmentUpdated,
     );
-    return this.statResult(story, characterId, statId);
+    return this.statResult(updatedStory, characterId, statId);
   }
 
   async deleteCharacterStat(
@@ -370,7 +360,7 @@ export class StoryContextService {
     statId: string,
     userId: string,
   ): Promise<CharacterStatDeletionResult> {
-    const story = await this.mutations.update(
+    const updatedStory = await this.mutations.update(
       storyId,
       (story) => {
         this.stat(story, characterId, statId);
@@ -379,7 +369,7 @@ export class StoryContextService {
       userId,
       storyHistoryOperations.statAssignmentDeleted,
     );
-    return { ...storyMutationMetadata(story), characterId, statId };
+    return { ...storyMutationMetadata(updatedStory), characterId, statId };
   }
 
   async createCharacterItem(
@@ -389,7 +379,7 @@ export class StoryContextService {
     userId: string,
   ): Promise<CharacterItemMutationResult> {
     const itemId = randomUUID();
-    const story = await this.mutations.update(
+    const updatedStory = await this.mutations.update(
       storyId,
       (story) => {
         const character = this.character(story, characterId);
@@ -403,7 +393,7 @@ export class StoryContextService {
       userId,
       storyHistoryOperations.itemInstanceCreated,
     );
-    return this.itemResult(story, characterId, itemId);
+    return this.itemResult(updatedStory, characterId, itemId);
   }
 
   async moveItemInstance(
@@ -426,7 +416,7 @@ export class StoryContextService {
     itemId: string,
     userId: string,
   ): Promise<CharacterItemDeletionResult> {
-    const story = await this.mutations.update(
+    const updatedStory = await this.mutations.update(
       storyId,
       (story) => {
         this.character(story, characterId);
@@ -446,43 +436,122 @@ export class StoryContextService {
       userId,
       storyHistoryOperations.itemInstanceDeleted,
     );
-    return { ...storyMutationMetadata(story), characterId, itemId };
+    return { ...storyMutationMetadata(updatedStory), characterId, itemId };
   }
 
   private location(story: Story, id: string) {
     const location = (story.locations ?? []).find((item) => item.id === id);
-    if (!location) throw new NotFoundException('Location not found');
+    if (!location) {
+      throw new NotFoundException('Location not found');
+    }
     return location;
   }
 
   private character(story: Story, id: string) {
     const character = (story.characters ?? []).find((item) => item.id === id);
-    if (!character) throw new NotFoundException('Character not found');
+    if (!character) {
+      throw new NotFoundException('Character not found');
+    }
     return character;
   }
 
   private stat(story: Story, characterId: string, statId: string) {
     const stat = this.character(story, characterId).stats?.find(({ id }) => id === statId);
-    if (!stat) throw new NotFoundException('Character stat not found');
+    if (!stat) {
+      throw new NotFoundException('Character stat not found');
+    }
     return stat;
   }
 
   private statDefinition(story: Story, id: string) {
     const definition = (story.statDefinitions ?? []).find((item) => item.id === id);
-    if (!definition) throw new NotFoundException('Stat definition not found');
+    if (!definition) {
+      throw new NotFoundException('Stat definition not found');
+    }
     return definition;
   }
 
   private itemDefinition(story: Story, id: string) {
     const definition = (story.itemDefinitions ?? []).find((item) => item.id === id);
-    if (!definition) throw new NotFoundException('Item definition not found');
+    if (!definition) {
+      throw new NotFoundException('Item definition not found');
+    }
     return definition;
   }
 
   private item(story: Story, characterId: string, itemId: string) {
     const item = this.character(story, characterId).items?.find(({ id }) => id === itemId);
-    if (!item) throw new NotFoundException('Character item not found');
+    if (!item) {
+      throw new NotFoundException('Character item not found');
+    }
     return item;
+  }
+
+  private clearPlayableCharacters(story: Story): void {
+    for (const character of story.characters ?? []) {
+      character.isPlayable = false;
+    }
+  }
+
+  private updateCharacterFields(
+    character: NonNullable<Story['characters']>[number],
+    input: UpdateCharacterDto,
+  ): void {
+    if (input.name !== undefined) {
+      character.name = input.name.trim();
+    }
+    if (input.description !== undefined) {
+      character.description = input.description;
+    }
+    if (input.category !== undefined) {
+      const category = input.category.trim();
+      if (category) {
+        character.category = category;
+      } else {
+        delete character.category;
+      }
+    }
+    if (input.imageUrl !== undefined) {
+      character.imageUrl = input.imageUrl.trim();
+    }
+  }
+
+  private updateItemDefinitionFields(
+    definition: NonNullable<Story['itemDefinitions']>[number],
+    input: UpdateItemDefinitionDto,
+  ): void {
+    if (input.name !== undefined) {
+      definition.name = input.name.trim();
+    }
+    if (input.description !== undefined) {
+      definition.description = input.description;
+    }
+    if (input.category !== undefined) {
+      const category = input.category.trim();
+      if (category) {
+        definition.category = category;
+      } else {
+        delete definition.category;
+      }
+    }
+    if (input.imageUrl !== undefined) {
+      definition.imageUrl = input.imageUrl.trim();
+    }
+  }
+
+  private updateItemDefinitionStats(
+    story: Story,
+    definition: NonNullable<Story['itemDefinitions']>[number],
+    stats: NonNullable<UpdateItemDefinitionDto['stats']>,
+  ): void {
+    const nextStats = this.itemDefinitionStats(story, stats, definition.stats ?? []);
+    const nextIds = new Set(nextStats.map(({ id }) => id));
+    for (const current of definition.stats ?? []) {
+      if (!nextIds.has(current.id)) {
+        deleteStatAssignment(story, current.id);
+      }
+    }
+    definition.stats = nextStats;
   }
 
   private itemDefinitionStats(
@@ -500,7 +569,7 @@ export class StoryContextService {
       throw new BadRequestException('An item definition can only assign a stat once');
     }
     return stats.map((stat) => {
-      const definition = definitions.get(stat.statDefinitionId)!;
+      const definition = requireStatDefinition(definitions, stat.statDefinitionId);
       const existingAssignment = existing.find(
         ({ statDefinitionId }) => statDefinitionId === stat.statDefinitionId,
       );
@@ -577,4 +646,15 @@ export class StoryContextService {
       ...storyMutationMetadata(story),
     };
   }
+}
+
+function requireStatDefinition(
+  definitions: ReadonlyMap<string, NonNullable<Story['statDefinitions']>[number]>,
+  statDefinitionId: string,
+) {
+  const definition = definitions.get(statDefinitionId);
+  if (definition === undefined) {
+    throw new BadRequestException('Item stats must belong to the same story');
+  }
+  return definition;
 }

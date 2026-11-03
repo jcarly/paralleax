@@ -441,23 +441,8 @@
     }
   },
   "apps/api/src/stories/application/story-context.ts": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 1
-    },
-    "@typescript-eslint/no-shadow": {
-      "count": 13
-    },
-    "complexity": {
-      "count": 2
-    },
-    "curly": {
-      "count": 24
-    },
     "max-params": {
       "count": 1
-    },
-    "sonarjs/cognitive-complexity": {
-      "count": 2
     }
   },
   "apps/api/src/stories/application/story-graph.spec.ts": {
@@ -831,20 +816,8 @@
     }
   },
   "apps/api/src/stories/stories.repository.memory.ts": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 9
-    },
-    "@typescript-eslint/no-unsafe-argument": {
-      "count": 2
-    },
-    "@typescript-eslint/no-unsafe-assignment": {
-      "count": 2
-    },
     "complexity": {
       "count": 3
-    },
-    "curly": {
-      "count": 34
     },
     "max-lines-per-function": {
       "count": 3
@@ -2493,26 +2466,6 @@
       "count": 5
     }
   },
-  "apps/web/src/storyGraphLayout.ts": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 43
-    },
-    "complexity": {
-      "count": 2
-    },
-    "curly": {
-      "count": 29
-    },
-    "max-depth": {
-      "count": 3
-    },
-    "max-lines-per-function": {
-      "count": 6
-    },
-    "sonarjs/cognitive-complexity": {
-      "count": 6
-    }
-  },
   "apps/web/src/storyGraphSelection.ts": {
     "@typescript-eslint/no-unsafe-type-assertion": {
       "count": 1
@@ -2550,26 +2503,6 @@
       "count": 1
     }
   },
-  "apps/web/src/test/complexLayoutStoryFixture.test.ts": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 25
-    },
-    "@typescript-eslint/no-unnecessary-type-assertion": {
-      "count": 11
-    },
-    "curly": {
-      "count": 4
-    },
-    "max-depth": {
-      "count": 2
-    },
-    "max-lines-per-function": {
-      "count": 1
-    },
-    "sonarjs/cognitive-complexity": {
-      "count": 1
-    }
-  },
   "apps/web/src/test/complexLayoutStoryFixture.ts": {
     "@typescript-eslint/no-non-null-assertion": {
       "count": 6
@@ -2595,26 +2528,6 @@
     },
     "max-lines-per-function": {
       "count": 2
-    }
-  },
-  "apps/web/src/test/layoutGeometry.ts": {
-    "complexity": {
-      "count": 4
-    },
-    "curly": {
-      "count": 21
-    },
-    "max-depth": {
-      "count": 9
-    },
-    "max-lines-per-function": {
-      "count": 1
-    },
-    "max-params": {
-      "count": 2
-    },
-    "sonarjs/cognitive-complexity": {
-      "count": 4
     }
   },
   "apps/web/src/test/mockStoryApi.ts": {
@@ -3042,17 +2955,6 @@
       "count": 1
     }
   },
-  "packages/shared/src/expressions/index.ts": {
-    "complexity": {
-      "count": 4
-    },
-    "curly": {
-      "count": 32
-    },
-    "sonarjs/cognitive-complexity": {
-      "count": 4
-    }
-  },
   "packages/shared/src/graph/placement.ts": {
     "curly": {
       "count": 4
@@ -3083,23 +2985,6 @@
     },
     "max-lines-per-function": {
       "count": 1
-    }
-  },
-  "packages/shared/src/history/story-history.ts": {
-    "complexity": {
-      "count": 5
-    },
-    "curly": {
-      "count": 29
-    },
-    "max-lines-per-function": {
-      "count": 1
-    },
-    "max-params": {
-      "count": 2
-    },
-    "sonarjs/cognitive-complexity": {
-      "count": 6
     }
   },
   "packages/shared/src/import-export/choicescript/graph-builder.ts": {
@@ -3336,13 +3221,10 @@
       "count": 2
     },
     "complexity": {
-      "count": 7
-    },
-    "curly": {
-      "count": 44
+      "count": 6
     },
     "max-depth": {
-      "count": 6
+      "count": 5
     },
     "max-lines-per-function": {
       "count": 7

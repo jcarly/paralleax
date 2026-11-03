@@ -330,6 +330,11 @@ The following remain future or incomplete unless a task explicitly implements th
 - delayed or probabilistic automatic choices;
 - explicit final/completed story semantics;
 - anonymous or offline reader-progress saves;
+- reader-journey event collection, author-facing aggregate analytics, CSV
+  reporting, and graph overlays; existing authenticated Reader/Simulation saves
+  and in-memory anonymous journeys are not analytics;
+- reader-facing progress steps configured by authors; any future progress
+  indicator is separate from analytics and must not assume graph length;
 - collaborative text merging and durable offline authoring for an already-open
   Story, accepted as future direction in [ADR-034](decisions/ADR-034-collaborative-offline-authoring.md);
 - managed media upload/storage;
