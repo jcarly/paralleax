@@ -4,10 +4,10 @@ import { Link, Navigate, NavLink, Route, Routes, useLocation, useNavigate } from
 import { api, type AuthUser } from './api';
 import { authenticationPath, safeReturnTo } from './authNavigation';
 import { LanguageSwitcher } from './components/LanguageSwitcher';
-import { OnboardingHelpButton } from './features/onboarding/OnboardingHelpButton';
 import { OnboardingProvider } from './features/onboarding/OnboardingProvider';
 import { useOnboarding } from './features/onboarding/onboardingContext';
 import type { AccountAction } from './pages/AccountActionPage';
+import { StoryList } from './pages/StoryList';
 import {
   loadParalleaxPrototype,
   loadStoryEditor,
@@ -16,10 +16,6 @@ import {
 
 const ParalleaxPrototype = lazy(() =>
   loadParalleaxPrototype().then(({ ParalleaxPrototype: component }) => ({ default: component })),
-);
-
-const StoryList = lazy(() =>
-  import('./pages/StoryList').then(({ StoryList: component }) => ({ default: component })),
 );
 
 const StoryEditor = lazy(() =>
@@ -32,6 +28,11 @@ const FeedbackButton = lazy(() =>
   import('./features/feedback/FeedbackButton').then(({ FeedbackButton: component }) => ({
     default: component,
   })),
+);
+const OnboardingHelpButton = lazy(() =>
+  import('./features/onboarding/OnboardingHelpButton').then(
+    ({ OnboardingHelpButton: component }) => ({ default: component }),
+  ),
 );
 const OnboardingGuide = lazy(() => import('./features/onboarding/OnboardingGuide'));
 const AuthPage = lazy(() =>
@@ -159,7 +160,11 @@ export function App() {
           <Suspense fallback={null}>
             <FeedbackButton />
           </Suspense>
-          {user ? <OnboardingHelpButton storyId={currentStoryId} /> : null}
+          {user ? (
+            <Suspense fallback={null}>
+              <OnboardingHelpButton storyId={currentStoryId} />
+            </Suspense>
+          ) : null}
           <LanguageSwitcher className="language-switcher-header" />
           {user ? (
             <>
