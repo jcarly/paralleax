@@ -39,7 +39,7 @@ describe('InteractionInspector time', () => {
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'Add content' }));
-    const editor = screen.getByRole('textbox', { name: 'Content' });
+    const editor = await screen.findByRole('textbox', { name: 'Content' });
     editor.innerHTML = '<p>A scene</p>';
     fireEvent.blur(editor);
 
@@ -78,7 +78,7 @@ describe('InteractionInspector time', () => {
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'Add content' }));
-    const editor = screen.getByRole('textbox', { name: 'Content' });
+    const editor = await screen.findByRole('textbox', { name: 'Content' });
     editor.innerHTML = '<p>A scene</p>';
     fireEvent.blur(editor);
 
