@@ -7,7 +7,7 @@ import { LanguageSwitcher } from './components/LanguageSwitcher';
 import { OnboardingProvider } from './features/onboarding/OnboardingProvider';
 import { useOnboarding } from './features/onboarding/onboardingContext';
 import type { AccountAction } from './pages/AccountActionPage';
-import { StoryList } from './pages/StoryList';
+import './pages/ProductPages.css';
 import {
   loadParalleaxPrototype,
   loadStoryEditor,
@@ -16,6 +16,10 @@ import {
 
 const ParalleaxPrototype = lazy(() =>
   loadParalleaxPrototype().then(({ ParalleaxPrototype: component }) => ({ default: component })),
+);
+
+const StoryList = lazy(() =>
+  import('./pages/StoryList').then(({ StoryList: component }) => ({ default: component })),
 );
 
 const StoryEditor = lazy(() =>
