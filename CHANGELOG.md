@@ -4,7 +4,10 @@
 
 - Left sidebar lists now share section headers and separators, including between
   Groups and Locations. Sections start collapsed and open after entity creation;
-  root Groups can be created empty. The shared sidebar search also filters Groups.
+  root Groups can be created empty. The Groups section explores grouped and
+  ungrouped Interactions, and the shared search matches interaction text, context,
+  effects and incoming Trigger sources and conditions. Group-title results stay
+  collapsed; matching members expand their path.
 
 - New Stories now start with a linked root and child Interaction; the editor
   opens with the root selected and centered.

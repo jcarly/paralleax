@@ -10,6 +10,7 @@ import { StoryContextSectionHeader } from './StoryContextSectionHeader';
 interface EntitySectionProps<T extends { id: string; category?: string }> {
   items: T[];
   count: number;
+  searchQuery: string;
   open: boolean;
   selectedId?: string;
   referenceCounts: ReadonlyMap<string, number>;
@@ -26,6 +27,15 @@ function countLabel(
   entity: 'location' | 'character' | 'stat' | 'item' | 'interaction' | 'assignment' | 'instance',
 ) {
   return t(`editor.count.${entity}`, { count });
+}
+
+function emptyLabel(
+  t: ReturnType<typeof useTranslation>['t'],
+  searchQuery: string,
+  emptyMessageKey:
+    'editor.noLocations' | 'editor.noCharacters' | 'editor.noStats' | 'editor.noItems',
+) {
+  return t(searchQuery.trim() ? 'editor.noSearchResults' : emptyMessageKey);
 }
 
 function getInitials(name: string) {
@@ -56,7 +66,7 @@ export function LocationContextSection(props: EntitySectionProps<Location>) {
         }
       />
       {!props.open ? null : props.items.length === 0 ? (
-        <p className="hint">{t('editor.noLocations')}</p>
+        <p className="hint">{emptyLabel(t, props.searchQuery, 'editor.noLocations')}</p>
       ) : (
         <CategorizedContextList
           items={props.items}
@@ -102,7 +112,7 @@ export function CharacterContextSection(props: EntitySectionProps<Character>) {
         }
       />
       {!props.open ? null : props.items.length === 0 ? (
-        <p className="hint">{t('editor.noCharacters')}</p>
+        <p className="hint">{emptyLabel(t, props.searchQuery, 'editor.noCharacters')}</p>
       ) : (
         <CategorizedContextList
           items={props.items}
@@ -153,7 +163,7 @@ export function StatDefinitionContextSection(props: EntitySectionProps<StatDefin
         }
       />
       {!props.open ? null : props.items.length === 0 ? (
-        <p className="hint">{t('editor.noStats')}</p>
+        <p className="hint">{emptyLabel(t, props.searchQuery, 'editor.noStats')}</p>
       ) : (
         <CategorizedContextList
           items={props.items}
@@ -204,7 +214,7 @@ export function ItemDefinitionContextSection(props: EntitySectionProps<ItemDefin
         }
       />
       {!props.open ? null : props.items.length === 0 ? (
-        <p className="hint">{t('editor.noItems')}</p>
+        <p className="hint">{emptyLabel(t, props.searchQuery, 'editor.noItems')}</p>
       ) : (
         <CategorizedContextList
           items={props.items}

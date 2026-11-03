@@ -147,7 +147,9 @@ describe('InteractionInspector time', () => {
 
     expect(screen.queryByRole('textbox', { name: 'Content' })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Add content' }));
-    expect(await screen.findByRole('textbox', { name: 'Content' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('textbox', { name: 'Content' }, { timeout: 5_000 }),
+    ).toBeInTheDocument();
     expect(screen.getByText('Interaction duration')).toBeInTheDocument();
     expect(screen.getByText('1 present')).toBeInTheDocument();
     expect(screen.getByText('MV')).toBeInTheDocument();

@@ -233,6 +233,18 @@ Paralleax currently includes:
   children without
   deleting Interactions. Selection highlights recursive members; explicit centering
   adjusts only the viewport. Group selection never opens a right inspector.
+  The Groups section also explores grouped and ungrouped Interactions. Expanded
+  Groups show child Groups first, then their direct Interactions in saved order.
+  The shared search matches Interaction titles and content, present characters,
+  locations, effect targets, incoming Trigger sources, and Trigger conditions.
+  Group-title matches stay collapsed; member matches expand the path and show
+  only matching Interactions. Context-list selections do not yet filter this
+  explorer.
+  The browser-side search completed query, result navigation, and selection in
+  1.85 seconds on one local development run with the existing 600-Interaction
+  performance fixture, below its 5-second selection budget. This single run does
+  not cover production or larger Stories; reconsider a hosted search service if
+  supported Story sizes exceed that budget.
   The Groups, Locations, Characters, Variables and Items sections start collapsed
   and reopen after an entity is created in that section.
   Ctrl+click toggles interaction selection, and Shift/Alt rectangles add/remove
@@ -337,7 +349,9 @@ The following remain future or incomplete unless a task explicitly implements th
   is not part of the Tiptap migration.
 - Procedural/variant text and its deterministic selection, save, reload, and
   Simulation semantics.
-- combined Group filters and advanced Group-focused Workbench projections;
+- combined Group filters, advanced Group-focused Workbench projections, and
+  filtering the Interaction explorer from selected characters, locations,
+  variables, or items in the other context lists;
 - configurable Workbench views for structure, character, location, time, and
   state, including combined filters and Focused / Context / Background treatment;
 - connected-path selection, generic Focus, graph-level dependency navigation,

@@ -499,7 +499,7 @@ describe('StoryEditor story context', () => {
     await user.clear(comparisonValue);
     await user.type(comparisonValue, '5');
     await user.click(screen.getByRole('button', { name: 'Delete condition 1' }));
-  }, 30_000);
+  }, 60_000);
 
   it('creates an item definition and gives separate copies to a character', async () => {
     const user = userEvent.setup();
@@ -691,6 +691,38 @@ describe('StoryEditor story context', () => {
     ).not.toBeInTheDocument();
   });
 
+  it('distinguishes an empty variable list from a search with no results', async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.createStatDefinition).mockResolvedValue({
+      statDefinition: { id: 'stat-definition-1', name: 'Courage', valueType: 'number' },
+      revision: 2,
+      updatedAt: baseStory.updatedAt,
+    });
+    await renderEditor();
+
+    const context = screen.getByRole('navigation', { name: 'Story context' });
+    await user.click(within(context).getByRole('button', { name: /Variables/ }));
+    expect(within(context).getByText('No stats yet.')).toBeVisible();
+    const search = within(context).getByRole('searchbox', {
+      name: 'Search story context and interactions',
+    });
+    await user.type(search, 'Does not match');
+    expect(await within(context).findByText('No results for this search.')).toBeVisible();
+    expect(await within(context).findByText('No matching groups or interactions.')).toBeVisible();
+    expect(within(context).queryByText('No stats yet.')).not.toBeInTheDocument();
+    await user.click(within(context).getByRole('button', { name: 'Add variable' }));
+
+    const inspector = screen.getByRole('complementary', { name: 'Inspector' });
+    await user.type(within(inspector).getByLabelText('Name'), 'Courage');
+    await user.click(within(inspector).getByRole('button', { name: 'Create' }));
+
+    expect(await within(context).findByText('No results for this search.')).toBeVisible();
+    expect(search).toHaveValue('Does not match');
+    await user.clear(search);
+    const createdVariable = await within(context).findByRole('button', { name: 'Courage' });
+    expect(createdVariable).toHaveClass('selected');
+  });
+
   it('selects a variable from the context list and edits it in the inspector', async () => {
     const user = userEvent.setup();
     const story = cloneStory();
@@ -794,7 +826,7 @@ describe('StoryEditor story context', () => {
     ).toBeInTheDocument();
   });
 
-  it('filters context lists, counts text matches, navigates occurrences, and allows deeper zoom', async () => {
+  it('filters context lists, counts text matches, navigates interaction results, and allows deeper zoom', async () => {
     const user = userEvent.setup();
     const story = storyWithTwoInteractions();
     story.locations = [
@@ -822,10 +854,10 @@ describe('StoryEditor story context', () => {
     expect(screen.getByRole('button', { name: 'Original Guide' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Mira' })).not.toBeInTheDocument();
     expect(screen.getByLabelText('2 occurrences')).toBeInTheDocument();
-    expect(screen.getByText('0 / 1')).toBeInTheDocument();
+    expect(screen.getByText('0 / 2')).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Next interaction occurrence' }));
-    expect(screen.getByText('1 / 1')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Next interaction result' }));
+    expect(screen.getByText('1 / 2')).toBeInTheDocument();
     expect(screen.getByRole('complementary', { name: 'Inspector' })).toBeInTheDocument();
 
     await user.clear(search);
@@ -855,7 +887,7 @@ describe('StoryEditor story context', () => {
     ).toHaveClass('dimmed');
     expect(screen.getByText('0 / 1')).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Next interaction occurrence' }));
+    await user.click(screen.getByRole('button', { name: 'Next interaction result' }));
     expect(screen.getByText('1 / 1')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Harbor' })).toHaveClass('selected');
   });

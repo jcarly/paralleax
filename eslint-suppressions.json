@@ -1657,26 +1657,6 @@
       "count": 1
     }
   },
-  "apps/web/src/features/story-editor/navigation/StoryGroupTreePanel.tsx": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 2
-    },
-    "@typescript-eslint/no-unsafe-type-assertion": {
-      "count": 3
-    },
-    "complexity": {
-      "count": 3
-    },
-    "curly": {
-      "count": 22
-    },
-    "max-lines-per-function": {
-      "count": 2
-    },
-    "sonarjs/cognitive-complexity": {
-      "count": 2
-    }
-  },
   "apps/web/src/features/story-editor/navigation/StoryGroupsPanel.test.tsx": {
     "@typescript-eslint/no-non-null-assertion": {
       "count": 3
@@ -1695,16 +1675,6 @@
     },
     "max-lines-per-function": {
       "count": 3
-    }
-  },
-  "apps/web/src/features/story-editor/navigation/groupTree.test.ts": {
-    "curly": {
-      "count": 1
-    }
-  },
-  "apps/web/src/features/story-editor/navigation/groupTree.ts": {
-    "curly": {
-      "count": 5
     }
   },
   "apps/web/src/features/story-editor/navigation/useStoryContextNavigation.test.ts": {
@@ -2864,9 +2834,6 @@
     "@typescript-eslint/no-non-null-assertion": {
       "count": 46
     },
-    "@typescript-eslint/no-shadow": {
-      "count": 3
-    },
     "@typescript-eslint/no-unsafe-argument": {
       "count": 6
     },
@@ -2877,10 +2844,7 @@
       "count": 9
     },
     "curly": {
-      "count": 3
-    },
-    "max-lines-per-function": {
-      "count": 2
+      "count": 1
     }
   },
   "apps/web/tests/e2e/editor.layout-quality.spec.ts": {

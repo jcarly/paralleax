@@ -334,6 +334,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
     toggleContextSection,
     openContextSection,
     occurrenceCounts,
+    matchingInteractionIds,
     navigationInteractionIds,
     currentNavigationIndex,
     emphasizedInteractionIds: contextEmphasizedInteractionIds,
@@ -1717,8 +1718,8 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
                 <button
                   className="ghost"
                   type="button"
-                  aria-label={t('editor.previousOccurrence')}
-                  title={t('editor.previousOccurrence')}
+                  aria-label={t('editor.previousResult')}
+                  title={t('editor.previousResult')}
                   disabled={navigationInteractionIds.length === 0}
                   onClick={() => navigateInteractions(-1)}
                 >
@@ -1727,8 +1728,8 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
                 <button
                   className="ghost"
                   type="button"
-                  aria-label={t('editor.nextOccurrence')}
-                  title={t('editor.nextOccurrence')}
+                  aria-label={t('editor.nextResult')}
+                  title={t('editor.nextResult')}
                   disabled={navigationInteractionIds.length === 0}
                   onClick={() => navigateInteractions(1)}
                 >
@@ -1742,6 +1743,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
               </div>
               <StatDefinitionContextSection
                 items={filteredStatDefinitions}
+                searchQuery={searchQuery}
                 count={story.statDefinitions?.length ?? 0}
                 open={openContextSections.stats}
                 selectedId={selectedStatDefinitionId}
@@ -1757,6 +1759,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
               />
               <ItemDefinitionContextSection
                 items={filteredItemDefinitions}
+                searchQuery={searchQuery}
                 count={story.itemDefinitions?.length ?? 0}
                 open={openContextSections.items}
                 selectedId={selectedItemDefinitionId}
@@ -1772,6 +1775,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
               />
               <CharacterContextSection
                 items={filteredCharacters}
+                searchQuery={searchQuery}
                 count={story.characters?.length ?? 0}
                 open={openContextSections.characters}
                 selectedId={selectedCharacterId}
@@ -1787,6 +1791,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
               />
               <LocationContextSection
                 items={filteredLocations}
+                searchQuery={searchQuery}
                 count={story.locations?.length ?? 0}
                 open={openContextSections.locations}
                 selectedId={selectedLocationId}
@@ -1804,10 +1809,12 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
                 key={story.id}
                 story={story}
                 searchQuery={searchQuery}
+                matchingInteractionIds={matchingInteractionIds}
                 open={openContextSections.groups}
                 onToggle={() => toggleContextSection('groups')}
                 onAdd={() => void createEditorGroup(t('editor.groups.newGroup'), [])}
                 selectedGroupId={selectedGroupId}
+                selectedInteractionId={selectedId}
                 editingGroupId={editingGroupId}
                 onEditingChange={setEditingGroupId}
                 onCreate={createEditorGroup}
@@ -1819,6 +1826,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
                   setCommentsOpen(false);
                   selectExclusive({ type: 'group', id });
                 }}
+                onSelectInteraction={selectInteraction}
                 onFocus={(ids) => {
                   void flowInstance.current?.fitView({
                     nodes: ids.map((id) => ({ id })),

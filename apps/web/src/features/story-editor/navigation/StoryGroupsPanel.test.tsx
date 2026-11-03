@@ -9,7 +9,9 @@ import {
   type Story,
   type UpdateGroupInput,
 } from '@paralleax/shared';
-import { StoryGroupTreePanel as StoryGroupsPanel } from './StoryGroupTreePanel';
+import { StoryGroupsPanel as StoryGroupsPanelWithoutTree } from './StoryGroupsPanel';
+import { StoryGroupTreePanel } from './StoryGroupTreePanel';
+import type { StoryGroupsPanelProps } from './storyGroupTypes';
 
 const story: Story = {
   createdAt: '2026-10-21T08:00:00.000Z',
@@ -25,11 +27,17 @@ const story: Story = {
     { id: 'other', title: 'Other', interactionIds: [] },
   ],
 };
-function setup(input = story, readOnly = false, searchQuery = '') {
+function setup(
+  input = story,
+  readOnly = false,
+  searchQuery = '',
+  matchingInteractionIds: string[] = [],
+) {
   const callbacks = {
     onToggle: vi.fn(),
     onAdd: vi.fn(),
     onSelect: vi.fn(),
+    onSelectInteraction: vi.fn(),
     onFocus: vi.fn(),
     onSelectInteractions: vi.fn(),
     onUpdate: vi
@@ -43,11 +51,13 @@ function setup(input = story, readOnly = false, searchQuery = '') {
     const [selected, setSelected] = useState<string>();
     const [editing, setEditing] = useState<string>();
     return (
-      <StoryGroupsPanel
+      <StoryGroupTreePanel
         story={current}
         searchQuery={searchQuery}
+        matchingInteractionIds={matchingInteractionIds}
         open
         selectedGroupId={selected}
+        selectedInteractionId={undefined}
         editingGroupId={editing}
         onEditingChange={setEditing}
         selectionIds={['one']}
@@ -57,6 +67,7 @@ function setup(input = story, readOnly = false, searchQuery = '') {
           callbacks.onSelect(id);
           setSelected(id);
         }}
+        onSelectInteraction={callbacks.onSelectInteraction}
         onUpdate={async (id, patch) => {
           if (!(await callbacks.onUpdate(id, patch))) return false;
           setStory((old) => {
@@ -97,6 +108,29 @@ function setup(input = story, readOnly = false, searchQuery = '') {
   render(<Harness />);
   return { ...callbacks, user: userEvent.setup() };
 }
+
+function renderGroupsWithoutTree(searchQuery: string) {
+  const props: StoryGroupsPanelProps = {
+    story: { ...story, groups: undefined },
+    searchQuery,
+    matchingInteractionIds: [],
+    open: true,
+    onToggle: vi.fn(),
+    onAdd: vi.fn(),
+    selectionIds: [],
+    readOnly: false,
+    onSelect: vi.fn(),
+    onSelectInteraction: vi.fn(),
+    onFocus: vi.fn(),
+    onSelectInteractions: vi.fn(),
+    onEditingChange: vi.fn(),
+    onCreate: async () => false,
+    onUpdate: async () => true,
+    onDelete: async () => true,
+  };
+  render(<StoryGroupsPanelWithoutTree {...props} />);
+}
+
 async function menu(user: ReturnType<typeof userEvent.setup>, title = 'Opening') {
   await user.click(screen.getByRole('button', { name: 'Actions for ' + title }));
   return screen.getByRole('menu');
@@ -112,9 +146,26 @@ describe('Groups navigation', () => {
     await user.click(screen.getByRole('button', { name: 'Expand or collapse Opening' }));
     expect(screen.getByRole('button', { name: 'Child 1 interaction' })).toBeVisible();
     expect(onSelect).toHaveBeenCalledTimes(1);
-    expect(screen.queryByRole('button', { name: 'Opening scene' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Expand or collapse Child' }));
+    const interaction = screen.getByRole('treeitem', { name: 'Opening scene' });
+    expect(interaction).toBeVisible();
     await user.dblClick(screen.getByRole('button', { name: 'Opening 1 interaction' }));
     expect(onFocus).toHaveBeenCalledWith(['one']);
+  });
+
+  it('returns from an Interaction to its Group and opens the Group menu from the keyboard', async () => {
+    const { user } = setup();
+    await user.click(screen.getByRole('button', { name: 'Expand or collapse Opening' }));
+    await user.click(screen.getByRole('button', { name: 'Expand or collapse Child' }));
+
+    const interaction = screen.getByRole('treeitem', { name: 'Opening scene' });
+    interaction.focus();
+    await user.keyboard('{ArrowLeft}');
+    const child = screen.getByRole('treeitem', { name: /Child/ });
+    expect(child).toHaveFocus();
+
+    await user.keyboard('{Shift>}{F10}{/Shift}');
+    expect(screen.getByRole('menuitem', { name: 'Rename group' })).toBeVisible();
   });
   it('uses action menus to add members, select recursive members, create children and delete without losing interactions', async () => {
     const { user, onUpdate, onSelectInteractions, onCreate, onDelete } = setup();
@@ -224,14 +275,70 @@ describe('Groups navigation', () => {
     expect(screen.getByText('Child')).toBeVisible();
     expect(screen.queryByRole('searchbox')).not.toBeInTheDocument();
   });
-  it('hides mutations for readers and displays save failures without discarding the tree', async () => {
+  it('collapses search-forced groups and displays only the matching interactions', async () => {
+    const input: Story = {
+      ...story,
+      interactions: [
+        ...story.interactions,
+        {
+          id: 'other-scene',
+          title: 'Another scene',
+          body: '',
+          triggers: [],
+          position: { x: 0, y: 100 },
+        },
+      ],
+      groups: [
+        { id: 'parent', title: 'Opening', interactionIds: [] },
+        {
+          id: 'child',
+          title: 'Child',
+          interactionIds: ['one', 'other-scene'],
+          parentGroupId: 'parent',
+        },
+      ],
+    };
+    const { user } = setup(input, false, 'Mira', ['one']);
+    expect(screen.getByRole('button', { name: 'Expand or collapse Opening' })).toHaveAttribute(
+      'aria-expanded',
+      'true',
+    );
+    expect(screen.getByRole('button', { name: 'Expand or collapse Child' })).toHaveAttribute(
+      'aria-expanded',
+      'true',
+    );
+    expect(screen.getByRole('treeitem', { name: 'Opening scene' })).toBeVisible();
+    expect(screen.queryByRole('treeitem', { name: 'Another scene' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Expand or collapse Child' }));
+    expect(screen.queryByRole('treeitem', { name: 'Opening scene' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Expand or collapse Child' }));
+    expect(screen.getByRole('treeitem', { name: 'Opening scene' })).toBeVisible();
+  });
+  it('shows searchable ungrouped interactions when a Story has no groups', async () => {
+    const input: Story = { ...story, groups: undefined };
+    const { onSelectInteraction, user } = setup(input, false, 'Mira', ['one']);
+    expect(screen.getByRole('region', { name: 'Ungrouped interactions' })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Opening scene' })).toBeVisible();
+    await user.click(screen.getByRole('button', { name: 'Opening scene' }));
+    expect(onSelectInteraction).toHaveBeenCalledWith('one');
+  });
+  it('hides mutations for readers and ignores the rename shortcut', async () => {
     const { user } = setup(story, true);
     await menu(user);
     expect(screen.queryByRole('menuitem', { name: 'Rename group' })).not.toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: 'Center on group' })).toBeVisible();
+    await user.keyboard('{Escape}');
+    screen.getByRole('treeitem', { name: /Opening/ }).focus();
+    await user.keyboard('{F2}');
+    expect(screen.queryByRole('textbox', { name: 'Group title' })).not.toBeInTheDocument();
   });
-  it('shows the legacy empty state', () => {
-    setup({ ...story, groups: undefined });
+  it('shows the empty state when the group list has no entities', () => {
+    renderGroupsWithoutTree('');
     expect(screen.getByText('No groups yet.')).toBeVisible();
+  });
+  it('shows distinct no-match wording when a search has no group results', () => {
+    renderGroupsWithoutTree('missing');
+    expect(screen.getByText('No matching groups or interactions.')).toBeVisible();
+    expect(screen.queryByText('No groups yet.')).not.toBeInTheDocument();
   });
 });

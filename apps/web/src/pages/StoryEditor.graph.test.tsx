@@ -397,6 +397,7 @@ describe('StoryEditor graph collaboration and layout', () => {
   it('applies remote story content, positions, context, and decorations without reloading', async () => {
     vi.stubGlobal('EventSource', FakeEventSource);
     await renderEditor();
+    fireEvent.click(screen.getByRole('button', { name: /Locations/ }));
 
     const remote = cloneStory();
     remote.revision = 2;
@@ -440,6 +441,7 @@ describe('StoryEditor graph collaboration and layout', () => {
   it('keeps an active local draft until it is saved before applying a remote refresh', async () => {
     vi.stubGlobal('EventSource', FakeEventSource);
     await renderEditor();
+    fireEvent.click(screen.getByRole('button', { name: /Locations/ }));
 
     const combined = cloneStory();
     combined.revision = 3;
