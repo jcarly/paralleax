@@ -28,7 +28,7 @@ function GuardFixture({
         {location.search}
       </p>
       <Link to="/other">Leave by link</Link>
-      <button onClick={() => navigate('/other')}>Leave by code</button>
+      <button onClick={() => void navigate('/other')}>Leave by code</button>
     </>
   );
 }

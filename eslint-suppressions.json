@@ -919,19 +919,13 @@
     }
   },
   "apps/web/src/App.test.tsx": {
-    "@typescript-eslint/no-floating-promises": {
-      "count": 1
-    },
     "max-lines-per-function": {
       "count": 1
     }
   },
   "apps/web/src/App.tsx": {
-    "@typescript-eslint/no-floating-promises": {
-      "count": 2
-    },
-    "@typescript-eslint/no-misused-promises": {
-      "count": 2
+    "@typescript-eslint/no-shadow": {
+      "count": 10
     },
     "complexity": {
       "count": 1
@@ -1557,9 +1551,6 @@
     }
   },
   "apps/web/src/features/story-editor/graph/useStoryConnectionController.ts": {
-    "curly": {
-      "count": 4
-    },
     "max-lines-per-function": {
       "count": 1
     }
@@ -1958,9 +1949,6 @@
     }
   },
   "apps/web/src/features/story-player/useReaderSessionState.test.ts": {
-    "@typescript-eslint/no-floating-promises": {
-      "count": 2
-    },
     "@typescript-eslint/no-non-null-assertion": {
       "count": 1
     }
@@ -2027,9 +2015,6 @@
     }
   },
   "apps/web/src/hooks/usePendingSaveGuard.test.tsx": {
-    "@typescript-eslint/no-misused-promises": {
-      "count": 1
-    },
     "max-lines-per-function": {
       "count": 1
     }
@@ -2044,11 +2029,6 @@
       "count": 2
     },
     "max-lines-per-function": {
-      "count": 1
-    }
-  },
-  "apps/web/src/hooks/useStoryRealtime.test.tsx": {
-    "@typescript-eslint/no-floating-promises": {
       "count": 1
     }
   },
@@ -2242,9 +2222,6 @@
   "apps/web/src/pages/StoryEditor.tsx": {
     "@typescript-eslint/consistent-type-imports": {
       "count": 1
-    },
-    "@typescript-eslint/no-misused-promises": {
-      "count": 4
     },
     "@typescript-eslint/no-non-null-assertion": {
       "count": 3

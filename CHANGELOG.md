@@ -34,6 +34,12 @@
   and lossless mapping are not accepted or implemented, so source editing is
   not exposed yet.
 
+- Awaited authentication navigation callbacks and surfaced rejected transitions.
+  Story editor graph actions now route unexpected asynchronous failures through
+  the existing save error feedback. Removed all 13 asynchronous lint baseline
+  findings and four stale brace findings; no quality rule or suppression policy
+  changed.
+
 - Added a brief cross-fade between visible Interactions in Reader and Simulation
   Mode. Reduced-motion preferences disable it, and Reader pass-through
   Interactions remain invisible.

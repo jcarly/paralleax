@@ -82,6 +82,19 @@ describe('story persistence lifecycle', () => {
     expect(result.current).toMatchObject({ error: 'Save rejected', saveStatus: 'error' });
   });
 
+  it('reports unexpected editor operation failures through save feedback', async () => {
+    vi.mocked(api.getStory).mockResolvedValue(storyFixture());
+    const { result } = renderLifecycle();
+    await waitFor(() => expect(result.current.story).toBeDefined());
+
+    act(() => result.current.reportSaveError(new Error('Unexpected graph failure')));
+
+    expect(result.current).toMatchObject({
+      error: 'Unexpected graph failure',
+      saveStatus: 'error',
+    });
+  });
+
   it('keeps a concurrent save batch pending until every response completes', async () => {
     vi.mocked(api.getStory).mockResolvedValue(storyFixture());
     const { result } = renderLifecycle();
