@@ -7,7 +7,6 @@ import { api, type AuthUser } from '../api';
 import { handleModalDialogKeyDown } from '../components/modalDialogKeyboard';
 import { ModalPortal } from '../components/ModalPortal';
 import { loadStoryEditor, loadStoryPlayer } from './storyRouteLoaders';
-import './ProductPages.css';
 
 const StoryImportDialog = lazy(() =>
   import('../features/story-import/StoryImportDialog').then(({ StoryImportDialog }) => ({
