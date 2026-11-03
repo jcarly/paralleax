@@ -71,8 +71,8 @@
     "source-map-js": "1.2.2"
   },
   "dependencies": {
-    "@sentry/nestjs": "^11.8.0",
-    "@sentry/profiling-node": "^11.8.0",
+    "@sentry/nestjs": "^11.9.0",
+    "@sentry/profiling-node": "^11.9.0",
     "class-validator": "^0.15.1",
     "elkjs": "^0.12.0"
   }
