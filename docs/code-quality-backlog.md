@@ -344,6 +344,11 @@ complex shared helpers, central React flows, functional duplication, then styles
       values after each effect, and leaves the input unchanged. A focused test
       covers those ordering guarantees. See
       [the reader replay audit](audits/2026-11-04-reader-replay.md).
+- [x] **P1-C3 group validation (2026-11-04):** separate group membership and
+      hierarchy checks from `validateStoryGroups`, preserving the first-error
+      order used by authoring and history replay. Remove three non-null
+      assertions from group traversal and deletion. The shared baseline shrank
+      by 11 findings; see [the group validation audit](audits/2026-11-04-group-validation.md).
 - [x] **P1-D StoryEditor guard follow-up (2026-11-04):** remove three
       `no-non-null-assertion` suppressions from `StoryEditor.tsx`. Trigger
       summaries now handle an absent Story explicitly, and local stat/item

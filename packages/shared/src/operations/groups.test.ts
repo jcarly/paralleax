@@ -134,6 +134,22 @@ describe('authored groups', () => {
     expect(validateStoryGroups(story)).toContain('same Story');
   });
 
+  it('preserves group validation error order', () => {
+    const story = fixture();
+    const [root, child] = story.groups ?? [];
+    if (!root || !child) {
+      throw new Error('Fixture groups are missing');
+    }
+    root.parentGroupId = child.id;
+    root.interactionIds.push('missing');
+    expect(validateStoryGroups(story)).toBe('Group members must belong to the same Story');
+
+    root.interactionIds = ['one'];
+    root.parentGroupId = 'foreign';
+    child.title = '';
+    expect(validateStoryGroups(story)).toBe('Group parent must belong to the same Story');
+  });
+
   it('rejects an undo that would create a cycle after another author moves a group', () => {
     const before = fixture();
     const after = structuredClone(before);

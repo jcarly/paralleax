@@ -12,7 +12,10 @@ export function getGroupDescendantIds(groups: readonly Group[], groupId: string)
   const result = new Set<string>();
   const pending = [groupId];
   while (pending.length) {
-    const id = pending.pop()!;
+    const id = pending.pop();
+    if (id === undefined) {
+      continue;
+    }
     if (result.has(id)) continue;
     result.add(id);
     pending.push(...(children.get(id) ?? []));
@@ -57,26 +60,57 @@ export function validateStoryGroups(story: Story): string | undefined {
   const interactions = new Set(story.interactions.map(({ id }) => id));
   const assignedInteractions = new Set<string>();
   for (const group of groups) {
-    if (!group.title.trim() || group.title.length > 200)
-      return 'Group title must contain 1 to 200 characters';
-    if (new Set(group.interactionIds).size !== group.interactionIds.length)
-      return 'Group Interaction members must be unique';
-    if (group.interactionIds.some((id) => !interactions.has(id)))
-      return 'Group members must belong to the same Story';
-    for (const id of group.interactionIds) {
-      if (assignedInteractions.has(id))
-        return 'An Interaction may belong directly to only one Group';
-      assignedInteractions.add(id);
+    const membershipError = validateGroupMemberships(group, interactions, assignedInteractions);
+    if (membershipError) {
+      return membershipError;
     }
-    const ancestors = new Set([group.id]);
-    let parentId = group.parentGroupId;
-    while (parentId !== undefined) {
-      if (ancestors.has(parentId)) return 'Group hierarchy must not contain cycles';
-      const parent = byId.get(parentId);
-      if (!parent) return 'Group parent must belong to the same Story';
-      ancestors.add(parentId);
-      parentId = parent.parentGroupId;
+    const hierarchyError = validateGroupHierarchy(group, byId);
+    if (hierarchyError) {
+      return hierarchyError;
     }
+  }
+  return undefined;
+}
+
+function validateGroupMemberships(
+  group: Group,
+  interactions: ReadonlySet<string>,
+  assignedInteractions: Set<string>,
+): string | undefined {
+  if (!group.title.trim() || group.title.length > 200) {
+    return 'Group title must contain 1 to 200 characters';
+  }
+  if (new Set(group.interactionIds).size !== group.interactionIds.length) {
+    return 'Group Interaction members must be unique';
+  }
+  if (group.interactionIds.some((id) => !interactions.has(id))) {
+    return 'Group members must belong to the same Story';
+  }
+  for (const id of group.interactionIds) {
+    if (assignedInteractions.has(id)) {
+      return 'An Interaction may belong directly to only one Group';
+    }
+    assignedInteractions.add(id);
+  }
+  return undefined;
+}
+
+function validateGroupHierarchy(
+  group: Group,
+  groupsById: ReadonlyMap<string, Group>,
+): string | undefined {
+  const ancestors = new Set([group.id]);
+  let parentId = group.parentGroupId;
+  while (parentId !== undefined) {
+    if (ancestors.has(parentId)) {
+      return 'Group hierarchy must not contain cycles';
+    }
+    const parent = groupsById.get(parentId);
+    if (!parent) {
+      return 'Group parent must belong to the same Story';
+    }
+    ancestors.add(parentId);
+    parentId = parent.parentGroupId;
   }
   return undefined;
 }
@@ -103,12 +137,13 @@ export function setStoryGroupInteractions(
 
 /** Removing a container promotes its children to its parent, preserving all members. */
 export function removeStoryGroup(story: Story, groupId: string): Story {
-  const removed = story.groups?.find(({ id }) => id === groupId);
+  const groups = story.groups ?? [];
+  const removed = groups.find(({ id }) => id === groupId);
   if (!removed) return story;
   return {
     ...story,
-    groups: story
-      .groups!.filter(({ id }) => id !== groupId)
+    groups: groups
+      .filter(({ id }) => id !== groupId)
       .map((group) => {
         if (group.parentGroupId !== groupId) return group;
         const promoted = { ...group };
@@ -134,7 +169,10 @@ export function getGroupInteractionIds(groups: readonly Group[], groupId: string
   const visited = new Set<string>();
   const interactions = new Set<string>();
   while (pending.length) {
-    const id = pending.pop()!;
+    const id = pending.pop();
+    if (id === undefined) {
+      continue;
+    }
     if (visited.has(id)) continue;
     visited.add(id);
     byId.get(id)?.interactionIds.forEach((member) => interactions.add(member));

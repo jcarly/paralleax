@@ -3299,17 +3299,14 @@
     }
   },
   "packages/shared/src/operations/groups.ts": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 3
-    },
     "complexity": {
-      "count": 2
+      "count": 1
     },
     "curly": {
-      "count": 20
+      "count": 14
     },
     "sonarjs/cognitive-complexity": {
-      "count": 2
+      "count": 1
     }
   },
   "packages/shared/src/operations/merge.ts": {
