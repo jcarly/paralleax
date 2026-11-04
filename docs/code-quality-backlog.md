@@ -2,7 +2,7 @@
 
 Status: Active
 
-Last triaged: 2026-11-03
+Last triaged: 2026-11-04
 
 This page records maintainability, reliability, performance, and test work found
 during the August 2026 code review and subsequent technical evaluations. Production gates remain authoritative in
@@ -328,6 +328,15 @@ complex shared helpers, central React flows, functional duplication, then styles
       touched graph controller were also removed. This closes Lot A without
       changing the existing priority for the separate persistence, shared-engine,
       graph/editor, and secondary-debt work.
+- [x] **P1-C1 shared Trigger condition evaluation (2026-11-04):** the internal
+      `conditionMatches` dispatcher combined six condition families in one
+      26-complexity, 27-cognitive-complexity function with eight parameters.
+      It now evaluates a typed condition context and delegates stat comparison
+      resolution and operators to focused helpers. Public evaluator signatures,
+      deterministic Trigger behavior, and AND/OR semantics are unchanged. The
+      shared ESLint baseline shrank by 12 findings; see the
+      [2026-11-04 shared-engine audit](audits/2026-11-04-shared-engine.md).
+      Higher-risk Reader item-stat replay complexity remains a separate slice.
 - [x] Enable the deferred CSS cascade rules across all 18 source stylesheets:
       `no-descending-specificity`, `no-duplicate-selectors`, and
       `declaration-no-important`. The native Stylelint suppression baseline

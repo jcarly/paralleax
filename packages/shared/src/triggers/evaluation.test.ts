@@ -64,6 +64,23 @@ describe('condition group evaluation', () => {
   });
 });
 
+describe('stat comparison operators', () => {
+  it.each([
+    { operator: 'eq', current: 5, comparison: 5, matches: true },
+    { operator: 'neq', current: 6, comparison: 5, matches: true },
+    { operator: 'lt', current: 4, comparison: 5, matches: true },
+    { operator: 'lte', current: 5, comparison: 5, matches: true },
+    { operator: 'gt', current: 6, comparison: 5, matches: true },
+    { operator: 'gte', current: 5, comparison: 5, matches: true },
+  ] as const)(
+    'preserves the $operator comparison',
+    ({ operator, current, comparison, matches }) => {
+      const condition = { statId: 'score', operator, value: comparison };
+      expect(doConditionsMatch([condition], new Set(), null, [], { score: current })).toBe(matches);
+    },
+  );
+});
+
 describe('Trigger groups and probability', () => {
   it('matches OR groups whose conditions are individually AND groups', () => {
     const story = probabilityStory({

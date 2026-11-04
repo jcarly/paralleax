@@ -3431,19 +3431,13 @@
   },
   "packages/shared/src/triggers/evaluation.ts": {
     "complexity": {
-      "count": 2
+      "count": 1
     },
     "curly": {
-      "count": 9
-    },
-    "max-lines-per-function": {
       "count": 2
     },
     "max-params": {
-      "count": 10
-    },
-    "sonarjs/cognitive-complexity": {
-      "count": 1
+      "count": 9
     }
   },
   "scripts/benchmark-qsp-import.mjs": {
