@@ -14,7 +14,7 @@ import './components/richTextEditor.css';
 import './features/story-player/storyPlayer.css';
 import './features/story-player/storySimulation.css';
 import './responsive.css';
-import './i18n';
+import { i18nReady } from './i18n';
 import { App } from './App';
 
 const router = createBrowserRouter([{ path: '*', element: <App /> }]);
@@ -25,8 +25,10 @@ if (import.meta.env.VITE_SENTRY_DSN?.trim()) {
     .catch(() => undefined);
 }
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
-    <RouterProvider router={router} />
-  </React.StrictMode>,
-);
+void i18nReady.then(() => {
+  ReactDOM.createRoot(document.getElementById('root')!).render(
+    <React.StrictMode>
+      <RouterProvider router={router} />
+    </React.StrictMode>,
+  );
+});
