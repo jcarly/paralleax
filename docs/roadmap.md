@@ -37,6 +37,18 @@ alpha. Treat a small opt-in analytics slice as P1 within V0.9, before wider
 public Story reading. Its results must bind to immutable published versions;
 mutable Story revisions are not publication identities.
 
+**Opt-in project updates / tester invitations (P2, issue #26).** Before broad
+community promotion, add a discreet, consent-based subscription on the public
+site (updates and invitations to tests as separate opt-ins). Reuse the existing
+Brevo account's dedicated subscription infrastructure where suitable; keep
+Formbricks for in-product feedback. Do not infer consent from account creation,
+prior interviews, or email correspondence, and do not import contacts. Provide
+double opt-in, unsubscribe/preference controls, FR/EN copy, and privacy notices.
+The first lightweight signup may be promoted to people already contacted via
+individual optional invitations once its URL is live. This must **not** block
+disposable guided author tests or be confused with author feedback collection.
+See [issue #26](https://github.com/jcarly/paralleax/issues/26).
+
 Guided sessions use disposable test projects. Do not use projects whose loss
 would matter until the provider backup and restore drill succeeds and the
 operator has completed the deployment, recovery, communications, and request
