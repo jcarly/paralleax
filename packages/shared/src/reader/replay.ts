@@ -264,6 +264,63 @@ export function getInitialItemStatValues(story: Story): Record<string, Record<st
   );
 }
 
+function ensureItemStatValues(
+  story: Story,
+  definitions: ReadonlyMap<string, StatDefinition>,
+  values: Record<string, Record<string, StatValue>>,
+  itemId: string,
+): void {
+  values[itemId] ??= initialValuesForAssignments(
+    definitions,
+    getItemStatAssignments(story, itemId),
+  );
+}
+
+function advanceItemStatValuesForDuration(
+  story: Story,
+  definitions: ReadonlyMap<string, StatDefinition>,
+  values: Record<string, Record<string, StatValue>>,
+  durationMinutes: number,
+): void {
+  for (const [itemId, itemValues] of Object.entries(values)) {
+    for (const assignment of getItemStatAssignments(story, itemId)) {
+      advanceItemStatAssignment(definitions, itemValues, assignment, durationMinutes);
+    }
+  }
+}
+
+function advanceItemStatAssignment(
+  definitions: ReadonlyMap<string, StatDefinition>,
+  itemValues: Record<string, StatValue>,
+  assignment: StatAssignment,
+  durationMinutes: number,
+): void {
+  const definition = definitions.get(assignment.statDefinitionId);
+  const currentValue = itemValues[assignment.id];
+  if (
+    !definition ||
+    getStatValueType(definition) !== 'number' ||
+    typeof currentValue !== 'number' ||
+    !definition.changePerHour
+  ) {
+    return;
+  }
+  itemValues[assignment.id] = currentValue + (definition.changePerHour * durationMinutes) / 60;
+}
+
+function itemStatExpressionContext(
+  statValues: Readonly<Record<string, StatValue | undefined>>,
+  itemStatValues: Readonly<Record<string, Readonly<Record<string, StatValue>>>>,
+): Record<string, StatValue | undefined> {
+  const context: Record<string, StatValue | undefined> = { ...statValues };
+  for (const [itemId, itemValues] of Object.entries(itemStatValues)) {
+    for (const [statId, value] of Object.entries(itemValues)) {
+      context[`${statId}|${itemId}`] = value;
+    }
+  }
+  return context;
+}
+
 export function applyInteractionItemStatChanges(
   story: Story,
   values: Readonly<Record<string, Readonly<Record<string, StatValue>>>>,
@@ -275,42 +332,19 @@ export function applyInteractionItemStatChanges(
   const definitions = getStatDefinitions(story);
 
   for (const itemId of ownedItemIds) {
-    next[itemId] ??= initialValuesForAssignments(
-      definitions,
-      getItemStatAssignments(story, itemId),
-    );
+    ensureItemStatValues(story, definitions, next, itemId);
   }
 
   if (interaction.durationMinutes) {
-    for (const [itemId, itemValues] of Object.entries(next)) {
-      for (const assignment of getItemStatAssignments(story, itemId)) {
-        const definition = definitions.get(assignment.statDefinitionId);
-        const currentValue = itemValues[assignment.id];
-        if (
-          definition &&
-          getStatValueType(definition) === 'number' &&
-          typeof currentValue === 'number' &&
-          definition.changePerHour
-        ) {
-          itemValues[assignment.id] =
-            currentValue + (definition.changePerHour * interaction.durationMinutes) / 60;
-        }
-      }
-    }
+    advanceItemStatValuesForDuration(story, definitions, next, interaction.durationMinutes);
   }
 
   for (const effect of interaction.statEffects ?? []) {
-    if (!effect.itemId) continue;
-    next[effect.itemId] ??= initialValuesForAssignments(
-      definitions,
-      getItemStatAssignments(story, effect.itemId),
-    );
-    const expressionContext = { ...statValues };
-    for (const [itemId, itemValues] of Object.entries(next)) {
-      for (const [statId, value] of Object.entries(itemValues)) {
-        expressionContext[`${statId}|${itemId}`] = value;
-      }
+    if (!effect.itemId) {
+      continue;
     }
+    ensureItemStatValues(story, definitions, next, effect.itemId);
+    const expressionContext = itemStatExpressionContext(statValues, next);
     const resolvedValue = resolveEffectValue(effect, expressionContext);
     const changed = applyEffect(
       next[effect.itemId][effect.statId],

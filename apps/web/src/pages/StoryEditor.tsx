@@ -805,18 +805,22 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
       buildTriggerNodes(story, selectedTrigger, {
         onSelectTrigger: (interactionId, triggerId) =>
           selectExclusive({ type: 'trigger', trigger: { interactionId, triggerId } }),
-        conditionSummary: (triggers) =>
-          triggers
+        conditionSummary: (triggers) => {
+          if (!story) {
+            return '';
+          }
+          return triggers
             .flatMap((trigger) =>
               getTriggerConditionGroups(trigger).map(({ conditions }) =>
                 conditions.length === 0
                   ? t('triggerInspector.noConditions')
                   : conditions
-                      .map((condition) => describeTriggerCondition(story!, condition, t))
+                      .map((condition) => describeTriggerCondition(story, condition, t))
                       .join(` ${t('triggerInspector.and')} `),
               ),
             )
-            .join(` ${t('triggerInspector.or')} `),
+            .join(` ${t('triggerInspector.or')} `);
+        },
         commentCounts: graphCommentCounts,
         onOpenComments: openCommentsForTarget,
       }),
@@ -1484,9 +1488,12 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
   }
 
   function updateLocalStatDefinition(nextDefinition: NonNullable<typeof selectedStatDefinition>) {
+    if (!story) {
+      return;
+    }
     setStory({
-      ...story!,
-      statDefinitions: (story?.statDefinitions ?? []).map((definition) =>
+      ...story,
+      statDefinitions: (story.statDefinitions ?? []).map((definition) =>
         definition.id === nextDefinition.id ? nextDefinition : definition,
       ),
     });
@@ -1501,9 +1508,12 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
   }
 
   function updateLocalItemDefinition(nextDefinition: NonNullable<typeof selectedItemDefinition>) {
+    if (!story) {
+      return;
+    }
     setStory({
-      ...story!,
-      itemDefinitions: (story?.itemDefinitions ?? []).map((definition) =>
+      ...story,
+      itemDefinitions: (story.itemDefinitions ?? []).map((definition) =>
         definition.id === nextDefinition.id ? nextDefinition : definition,
       ),
     });

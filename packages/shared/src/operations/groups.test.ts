@@ -60,6 +60,7 @@ describe('authored groups', () => {
     expect(() => moveStoryGroup(story, 'root', 'leaf', null)).toThrow('cycles');
     expect(() => moveStoryGroup(story, 'root', 'root', null)).toThrow('cycles');
     expect(() => moveStoryGroup(story, 'leaf', 'foreign', null)).toThrow('same Story');
+    expect(() => moveStoryGroup(story, 'leaf', 'foreign', 'missing')).toThrow('same Story');
     expect(() => moveStoryGroup(story, 'leaf', null, 'child')).toThrow('sibling');
     expect(() => moveStoryGroup(story, 'leaf', null, 'foreign')).toThrow('sibling');
     expect(() => moveStoryGroup(story, 'missing', null, null)).toThrow('not found');
@@ -132,6 +133,22 @@ describe('authored groups', () => {
     delete story.groups![0].parentGroupId;
     story.groups![0].interactionIds.push('missing');
     expect(validateStoryGroups(story)).toContain('same Story');
+  });
+
+  it('preserves group validation error order', () => {
+    const story = fixture();
+    const [root, child] = story.groups ?? [];
+    if (!root || !child) {
+      throw new Error('Fixture groups are missing');
+    }
+    root.parentGroupId = child.id;
+    root.interactionIds.push('missing');
+    expect(validateStoryGroups(story)).toBe('Group members must belong to the same Story');
+
+    root.interactionIds = ['one'];
+    root.parentGroupId = 'foreign';
+    child.title = '';
+    expect(validateStoryGroups(story)).toBe('Group parent must belong to the same Story');
   });
 
   it('rejects an undo that would create a cycle after another author moves a group', () => {
