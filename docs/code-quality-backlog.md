@@ -344,6 +344,11 @@ complex shared helpers, central React flows, functional duplication, then styles
       values after each effect, and leaves the input unchanged. A focused test
       covers those ordering guarantees. See
       [the reader replay audit](audits/2026-11-04-reader-replay.md).
+- [x] **P1-D StoryEditor guard follow-up (2026-11-04):** remove three
+      `no-non-null-assertion` suppressions from `StoryEditor.tsx`. Trigger
+      summaries now handle an absent Story explicitly, and local stat/item
+      definition updates follow the existing location-update guard. See
+      [the graph/editor audit](audits/2026-11-04-graph-editor.md).
 - [x] Enable the deferred CSS cascade rules across all 18 source stylesheets:
       `no-descending-specificity`, `no-duplicate-selectors`, and
       `declaration-no-important`. The native Stylelint suppression baseline
