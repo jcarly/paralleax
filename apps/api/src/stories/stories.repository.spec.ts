@@ -514,7 +514,7 @@ describe('StoriesRepository', () => {
 
   it('finds and assembles a story by id', async () => {
     const saved = graphStory();
-    relationalRead(mockQuery, saved);
+    relationalRead(mockClientQuery, saved);
 
     await expect(repository().find(saved.id, ownerId)).resolves.toEqual({
       ...saved,
@@ -534,10 +534,75 @@ describe('StoriesRepository', () => {
         triggers: interaction.triggers.map(toCanonicalTrigger),
       })),
     });
-    expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining('WHERE stories.id = $1'), [
+    expect(mockClientQuery).toHaveBeenCalledWith(expect.stringContaining('WHERE stories.id = $1'), [
       saved.id,
       ownerId,
     ]);
+    expect(mockClientQuery).toHaveBeenNthCalledWith(1, 'BEGIN');
+    expect(mockClientQuery).toHaveBeenNthCalledWith(
+      2,
+      'SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY',
+    );
+    expect(mockClientQuery).toHaveBeenLastCalledWith('COMMIT');
+    expect(mockQuery).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    {
+      kind: 'frame',
+      width: null,
+      height: 240,
+      text_content: null,
+      font_size: null,
+      font_family: null,
+      font_weight: null,
+      font_style: null,
+      expectedError: 'Invalid persisted frame decoration: dimensions are missing',
+    },
+    {
+      kind: 'text',
+      width: null,
+      height: null,
+      text_content: 'Act one',
+      font_size: null,
+      font_family: 'sans',
+      font_weight: 'bold',
+      font_style: 'italic',
+      expectedError: 'Invalid persisted text decoration: content or style is missing',
+    },
+  ])('rejects persisted $kind decorations with missing required fields', async (decoration) => {
+    const saved = graphStory();
+    mockClientQuery.mockImplementation((sql: string) => {
+      if (sql.includes('FROM stories')) {
+        return Promise.resolve({ rows: [storyRow(saved)], rowCount: 1 });
+      }
+      if (sql.includes('FROM graph_decorations')) {
+        return Promise.resolve({
+          rows: [
+            {
+              id: `${decoration.kind}-1`,
+              story_id: saved.id,
+              kind: decoration.kind,
+              position_x: 5,
+              position_y: 15,
+              width: decoration.width,
+              height: decoration.height,
+              text_content: decoration.text_content,
+              color: '#273043',
+              font_size: decoration.font_size,
+              font_family: decoration.font_family,
+              font_weight: decoration.font_weight,
+              font_style: decoration.font_style,
+              sort_order: 0,
+            },
+          ],
+        });
+      }
+      return Promise.resolve({ rows: [] });
+    });
+
+    await expect(repository().find(saved.id, ownerId)).rejects.toThrow(decoration.expectedError);
+    expect(mockClientQuery).toHaveBeenLastCalledWith('ROLLBACK');
   });
 
   it('assembles typed stat definitions, owner assignments, and interaction effects', async () => {
@@ -588,7 +653,7 @@ describe('StoriesRepository', () => {
         value: -1,
       },
     ];
-    relationalRead(mockQuery, saved);
+    relationalRead(mockClientQuery, saved);
 
     const loaded = await repository().find(saved.id, ownerId);
 

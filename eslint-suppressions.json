@@ -732,9 +732,6 @@
     }
   },
   "apps/api/src/stories/persistence/story-runtime.persistence.ts": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 1
-    },
     "curly": {
       "count": 1
     },
@@ -853,9 +850,6 @@
     }
   },
   "apps/api/src/stories/stories.repository.ts": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 11
-    },
     "curly": {
       "count": 25
     },
