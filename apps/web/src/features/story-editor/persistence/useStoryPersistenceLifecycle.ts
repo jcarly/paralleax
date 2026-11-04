@@ -110,6 +110,15 @@ export function useStoryPersistenceLifecycle({
     realtimeRefreshRef.current(pending);
   }, []);
 
+  const reportSaveError = useCallback(
+    (caught: unknown) => {
+      const message = apiErrorMessage(caught, i18n.t, i18n.t('editor.saveFailed'));
+      saveBatchErrorRef.current = message;
+      updateFeedback({ error: message, saveStatus: 'error' });
+    },
+    [updateFeedback],
+  );
+
   const trackSave: TrackStorySave = useCallback(
     async <T>(operation: () => Promise<T>): Promise<T | undefined> => {
       const lifecycleVersion = lifecycleVersionRef.current;
@@ -125,9 +134,7 @@ export function useStoryPersistenceLifecycle({
         return lifecycleVersion === lifecycleVersionRef.current ? result : undefined;
       } catch (caught) {
         if (lifecycleVersion !== lifecycleVersionRef.current) return undefined;
-        const message = apiErrorMessage(caught, i18n.t, i18n.t('editor.saveFailed'));
-        saveBatchErrorRef.current = message;
-        updateFeedback({ error: message, saveStatus: 'error' });
+        reportSaveError(caught);
         return undefined;
       } finally {
         if (lifecycleVersion === lifecycleVersionRef.current) {
@@ -141,7 +148,7 @@ export function useStoryPersistenceLifecycle({
         }
       }
     },
-    [flushPendingRealtimeRefresh, updateFeedback],
+    [flushPendingRealtimeRefresh, reportSaveError, updateFeedback],
   );
 
   const mergeIncomingStory: MergeIncomingStory = useCallback(
@@ -271,6 +278,7 @@ export function useStoryPersistenceLifecycle({
     beginLocalEdit,
     endLocalEdit,
     retry,
+    reportSaveError,
     trackSave,
     mergeIncomingStory,
     replaceStory,

@@ -380,7 +380,9 @@ describe('App', () => {
     );
     expect(await screen.findByText('Editeur mock')).toBeInTheDocument();
 
-    act(() => window.dispatchEvent(new Event('paralleax:session-expired')));
+    await act(async () => {
+      window.dispatchEvent(new Event('paralleax:session-expired'));
+    });
 
     expect(
       await screen.findByRole('heading', { name: 'Sign in to Paralleax' }),

@@ -56,10 +56,10 @@ export function AuthPage({
   initialMode = 'login',
   onModeChange,
 }: {
-  onAuthenticated: (user: AuthUser) => void;
+  onAuthenticated: (user: AuthUser) => void | Promise<void>;
   notice?: string;
   initialMode?: AuthMode;
-  onModeChange?: (mode: AuthMode) => void;
+  onModeChange?: (mode: AuthMode) => void | Promise<void>;
 }) {
   const { t } = useTranslation();
   const [localMode, setLocalMode] = useState<AuthMode>(initialMode);
@@ -92,7 +92,7 @@ export function AuthPage({
         const result = await api.register(email, password, normalizedDisplayName);
         setVerificationEmail(result.email);
       } else {
-        onAuthenticated(await api.login(email, password));
+        await onAuthenticated(await api.login(email, password));
       }
     } catch (caught) {
       setError(apiErrorMessage(caught, t, t('auth.failed')));
@@ -101,13 +101,17 @@ export function AuthPage({
     }
   }
 
-  function switchMode() {
+  async function switchMode() {
     const nextMode = isRegister ? 'login' : 'register';
     if (!onModeChange) setLocalMode(nextMode);
     setConfirmation('');
     setError('');
     setVerificationEmail('');
-    onModeChange?.(nextMode);
+    try {
+      await onModeChange?.(nextMode);
+    } catch (caught) {
+      setError(apiErrorMessage(caught, t, t('auth.failed')));
+    }
   }
 
   return (
@@ -169,7 +173,7 @@ export function AuthPage({
               >
                 {pending ? t('auth.pending') : t('auth.verification.resend')}
               </button>
-              <button className="product-secondary" type="button" onClick={switchMode}>
+              <button className="product-secondary" type="button" onClick={() => void switchMode()}>
                 {t('auth.verification.backToSignIn')}
               </button>
             </div>
@@ -268,7 +272,7 @@ export function AuthPage({
           ) : null}
           <div className="auth-switch">
             <span>{t(isRegister ? 'auth.register.switchPrompt' : 'auth.login.switchPrompt')}</span>
-            <button type="button" onClick={switchMode}>
+            <button type="button" onClick={() => void switchMode()}>
               {t(isRegister ? 'auth.register.switchAction' : 'auth.login.switchAction')}
             </button>
           </div>

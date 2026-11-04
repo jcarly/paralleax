@@ -2,7 +2,7 @@
 
 Status: Active
 
-Last triaged: 2026-10-26
+Last triaged: 2026-11-04
 
 This page records maintainability, reliability, performance, and test work found
 during the August 2026 code review and subsequent technical evaluations. Production gates remain authoritative in
@@ -177,6 +177,12 @@ promotes them.
       current 2,000-node baseline.
 - [x] Run controlled PostgreSQL stress tests in the weekly/manual CI stress lane
       and retain their structured measurements in job logs.
+- [x] Assemble full Story reads from a consistent PostgreSQL snapshot. The
+      repository now runs its multi-query projection in a read-only repeatable-
+      read transaction. Validate nullable graph-decoration columns at the read
+      boundary and remove 12 related non-null assertions. Shared effect and
+      trigger projections also remove the duplicate between full Story reads and
+      runtime slices. See the [2026-11-03 persistence follow-up](audits/2026-11-03-story-persistence.md).
 
 ## P1 — Module Boundaries
 
@@ -274,11 +280,13 @@ are not prerequisites for disposable author sessions.
 
 ## P2 — Static Analysis
 
-**Current policy (2026-10-26):** the strict quality-gate initiative is promoted
+**Current policy (2026-11-03):** the strict quality-gate initiative is promoted
 ahead of sessions; the following completed 2026-10-25 entries are historical
-measurements superseded by ADR-041 and the linked quality audit. Current counts
-are 4,404 ESLint findings, 642 Stylelint findings, one exact dependency cycle
-and 16 production clone pairs. Native-count replacement limits remain explicit.
+measurements superseded by ADR-041 and the linked quality audit. The 2026-10-26
+audit recorded 4,404 ESLint findings, 642 Stylelint findings, one exact
+dependency cycle and 16 production clone pairs. Dated follow-up audits record
+later branch-specific measurements. Native-count replacement limits remain
+explicit.
 Future debt reduction stays incremental; prioritize the shared narrative engine,
 complex shared helpers, central React flows, functional duplication, then styles.
 
@@ -308,6 +316,44 @@ complex shared helpers, central React flows, functional duplication, then styles
       files (one shared, 100 API, 19 web). The full root lint takes about 130
       seconds, compared with 29.4 seconds before typed checks. An earlier probe
       using the full `recommendedTypeChecked` preset exceeded 3.5 minutes.
+- [x] **P1-A async handling follow-up (2026-11-03):** the baseline on
+      `origin/main` contained 13 web diagnostics: six
+      `no-floating-promises` and seven `no-misused-promises`, across six files.
+      All 13 were fixed and pruned. Authentication pages now await parent
+      navigation callbacks and show rejected transitions; graph persistence
+      callbacks use their actual Promise contract and unexpected rejections feed
+      the editor's existing save error status. Expected API save failures remain
+      handled by the persistence lifecycle. Regression tests now await React
+      `act()` and cover callback rejection. Four stale `curly` entries in the
+      touched graph controller were also removed. This closes Lot A without
+      changing the existing priority for the separate persistence, shared-engine,
+      graph/editor, and secondary-debt work.
+- [x] **P1-C1 shared Trigger condition evaluation (2026-11-04):** the internal
+      `conditionMatches` dispatcher combined six condition families in one
+      26-complexity, 27-cognitive-complexity function with eight parameters.
+      It now evaluates a typed condition context and delegates stat comparison
+      resolution and operators to focused helpers. Public evaluator signatures,
+      deterministic Trigger behavior, and AND/OR semantics are unchanged. The
+      shared ESLint baseline shrank by 12 findings; see the
+      [2026-11-04 shared-engine audit](audits/2026-11-04-shared-engine.md).
+      The Reader item-stat replay follow-up is recorded separately below.
+- [x] **Shared item-stat replay slice (2026-11-04):** split initialization,
+      duration advancement, and expression-context construction out of
+      `applyInteractionItemStatChanges`. Replay still advances owned item stats
+      before effects, applies effects in authored order, refreshes expression
+      values after each effect, and leaves the input unchanged. A focused test
+      covers those ordering guarantees. See
+      [the reader replay audit](audits/2026-11-04-reader-replay.md).
+- [x] **P1-C3 group operations (2026-11-04):** separate membership and hierarchy
+      checks from `validateStoryGroups`, then split parent and sibling checks
+      from `moveStoryGroup`, preserving error order and canonical list order.
+      Remove three non-null assertions from traversal and deletion. The shared
+      baseline shrank by 16 findings; see [the group operations audit](audits/2026-11-04-group-validation.md).
+- [x] **P1-D StoryEditor guard follow-up (2026-11-04):** remove three
+      `no-non-null-assertion` suppressions from `StoryEditor.tsx`. Trigger
+      summaries now handle an absent Story explicitly, and local stat/item
+      definition updates follow the existing location-update guard. See
+      [the graph/editor audit](audits/2026-11-04-graph-editor.md).
 - [x] Enable the deferred CSS cascade rules across all 18 source stylesheets:
       `no-descending-specificity`, `no-duplicate-selectors`, and
       `declaration-no-important`. The native Stylelint suppression baseline
@@ -320,6 +366,12 @@ complex shared helpers, central React flows, functional duplication, then styles
       authored decoration values and graph geometry; global selector bans,
       specificity caps, and raw color/dimension restrictions still need stable
       ownership and approved thresholds.
+- [x] **P2-E QSP analyzer cleanup (2026-11-04):** add explicit braces to the 21
+      auto-fixable `curly` findings in `packages/shared/src/import-export/qsp/analyzer.ts`.
+      The change is syntax-only; QSP importer tests confirm existing parsing and
+      compatibility behavior. Higher-complexity parser and control-flow work
+      remains tied to specific source cases. See
+      [the secondary-debt audit](audits/2026-11-04-secondary-debt.md).
 
 ## P2 — Testing And Accessibility
 

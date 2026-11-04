@@ -14,8 +14,8 @@ export function AccountActionPage({
   onBackToSignIn,
 }: {
   action: AccountAction;
-  onAuthenticated: (user: AuthUser) => void;
-  onBackToSignIn: () => void;
+  onAuthenticated: (user: AuthUser) => void | Promise<void>;
+  onBackToSignIn: () => void | Promise<void>;
 }) {
   const { t } = useTranslation();
   const [searchParams] = useSearchParams();
@@ -35,6 +35,14 @@ export function AccountActionPage({
         ? token.length >= 32 && password.length >= 8 && passwordsMatch
         : token.length >= 32);
 
+  async function backToSignIn() {
+    try {
+      await onBackToSignIn();
+    } catch (caught) {
+      setError(apiErrorMessage(caught, t, t('auth.failed')));
+    }
+  }
+
   async function submit(event: FormEvent) {
     event.preventDefault();
     if (!canSubmit) return;
@@ -42,11 +50,11 @@ export function AccountActionPage({
       setPending(true);
       setError('');
       if (action === 'verify-email') {
-        onAuthenticated(await api.verifyEmail(token));
+        await onAuthenticated(await api.verifyEmail(token));
         return;
       }
       if (action === 'reset-password') {
-        onAuthenticated(await api.resetPassword(token, password));
+        await onAuthenticated(await api.resetPassword(token, password));
         return;
       }
       await api.requestPasswordReset(email);
@@ -84,8 +92,17 @@ export function AccountActionPage({
               ? t('auth.action.requestReset.complete')
               : t(`auth.action.${key}.description`)}
           </p>
+          {error ? (
+            <p className="form-error" role="alert">
+              {error}
+            </p>
+          ) : null}
           {complete ? (
-            <button className="product-primary auth-submit" type="button" onClick={onBackToSignIn}>
+            <button
+              className="product-primary auth-submit"
+              type="button"
+              onClick={() => void backToSignIn()}
+            >
               {t('auth.action.backToSignIn')}
             </button>
           ) : (
@@ -136,16 +153,15 @@ export function AccountActionPage({
                   </label>
                 </>
               ) : null}
-              {error ? (
-                <p className="form-error" role="alert">
-                  {error}
-                </p>
-              ) : null}
               <div className="auth-verification-actions">
                 <button className="product-primary auth-submit" type="submit" disabled={!canSubmit}>
                   {pending ? t('auth.pending') : t(`auth.action.${key}.submit`)}
                 </button>
-                <button className="product-secondary" type="button" onClick={onBackToSignIn}>
+                <button
+                  className="product-secondary"
+                  type="button"
+                  onClick={() => void backToSignIn()}
+                >
                   {t('auth.action.backToSignIn')}
                 </button>
               </div>

@@ -732,9 +732,6 @@
     }
   },
   "apps/api/src/stories/persistence/story-runtime.persistence.ts": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 1
-    },
     "curly": {
       "count": 1
     },
@@ -853,9 +850,6 @@
     }
   },
   "apps/api/src/stories/stories.repository.ts": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 11
-    },
     "curly": {
       "count": 25
     },
@@ -919,20 +913,11 @@
     }
   },
   "apps/web/src/App.test.tsx": {
-    "@typescript-eslint/no-floating-promises": {
-      "count": 1
-    },
     "max-lines-per-function": {
       "count": 1
     }
   },
   "apps/web/src/App.tsx": {
-    "@typescript-eslint/no-floating-promises": {
-      "count": 2
-    },
-    "@typescript-eslint/no-misused-promises": {
-      "count": 2
-    },
     "@typescript-eslint/no-shadow": {
       "count": 10
     },
@@ -1560,9 +1545,6 @@
     }
   },
   "apps/web/src/features/story-editor/graph/useStoryConnectionController.ts": {
-    "curly": {
-      "count": 4
-    },
     "max-lines-per-function": {
       "count": 1
     }
@@ -1961,9 +1943,6 @@
     }
   },
   "apps/web/src/features/story-player/useReaderSessionState.test.ts": {
-    "@typescript-eslint/no-floating-promises": {
-      "count": 2
-    },
     "@typescript-eslint/no-non-null-assertion": {
       "count": 1
     }
@@ -2030,9 +2009,6 @@
     }
   },
   "apps/web/src/hooks/usePendingSaveGuard.test.tsx": {
-    "@typescript-eslint/no-misused-promises": {
-      "count": 1
-    },
     "max-lines-per-function": {
       "count": 1
     }
@@ -2047,11 +2023,6 @@
       "count": 2
     },
     "max-lines-per-function": {
-      "count": 1
-    }
-  },
-  "apps/web/src/hooks/useStoryRealtime.test.tsx": {
-    "@typescript-eslint/no-floating-promises": {
       "count": 1
     }
   },
@@ -2245,12 +2216,6 @@
   "apps/web/src/pages/StoryEditor.tsx": {
     "@typescript-eslint/consistent-type-imports": {
       "count": 1
-    },
-    "@typescript-eslint/no-misused-promises": {
-      "count": 4
-    },
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 3
     },
     "@typescript-eslint/no-shadow": {
       "count": 2
@@ -3088,9 +3053,6 @@
     "complexity": {
       "count": 2
     },
-    "curly": {
-      "count": 21
-    },
     "max-depth": {
       "count": 5
     },
@@ -3337,17 +3299,8 @@
     }
   },
   "packages/shared/src/operations/groups.ts": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 3
-    },
-    "complexity": {
-      "count": 2
-    },
     "curly": {
-      "count": 20
-    },
-    "sonarjs/cognitive-complexity": {
-      "count": 2
+      "count": 11
     }
   },
   "packages/shared/src/operations/merge.ts": {
@@ -3371,22 +3324,19 @@
   },
   "packages/shared/src/reader/replay.ts": {
     "complexity": {
-      "count": 4
+      "count": 3
     },
     "curly": {
-      "count": 21
+      "count": 20
     },
     "max-depth": {
-      "count": 2
-    },
-    "max-lines-per-function": {
       "count": 1
     },
     "max-params": {
       "count": 3
     },
     "sonarjs/cognitive-complexity": {
-      "count": 3
+      "count": 2
     }
   },
   "packages/shared/src/stats/references.ts": {
@@ -3463,19 +3413,13 @@
   },
   "packages/shared/src/triggers/evaluation.ts": {
     "complexity": {
-      "count": 2
+      "count": 1
     },
     "curly": {
-      "count": 9
-    },
-    "max-lines-per-function": {
       "count": 2
     },
     "max-params": {
-      "count": 10
-    },
-    "sonarjs/cognitive-complexity": {
-      "count": 1
+      "count": 9
     }
   },
   "scripts/benchmark-qsp-import.mjs": {

@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Full Story reads now use one read-only repeatable-read snapshot, and malformed
+  persisted graph decorations fail explicitly during projection.
+
 - Left sidebar lists now share section headers and separators, including between
   Groups and Locations. Sections start collapsed and open after entity creation;
   root Groups can be created empty. The Groups section explores grouped and
@@ -25,6 +28,12 @@
   native content syntax is proposed for a future CodeMirror mode; its grammar
   and lossless mapping are not accepted or implemented, so source editing is
   not exposed yet.
+
+- Awaited authentication navigation callbacks and surfaced rejected transitions.
+  Story editor graph actions now route unexpected asynchronous failures through
+  the existing save error feedback. Removed all 13 asynchronous lint baseline
+  findings and four stale brace findings; no quality rule or suppression policy
+  changed.
 
 - Added a brief cross-fade between visible Interactions in Reader and Simulation
   Mode. Reduced-motion preferences disable it, and Reader pass-through
