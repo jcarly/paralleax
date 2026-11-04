@@ -580,11 +580,6 @@
       "count": 2
     }
   },
-  "apps/api/src/stories/application/story-mutations.ts": {
-    "curly": {
-      "count": 1
-    }
-  },
   "apps/api/src/stories/application/story-reader-progress.spec.ts": {
     "@typescript-eslint/no-unsafe-assignment": {
       "count": 1
@@ -777,13 +772,13 @@
       "count": 3
     },
     "@typescript-eslint/no-unsafe-member-access": {
-      "count": 277
+      "count": 276
     },
     "@typescript-eslint/no-unsafe-return": {
       "count": 1
     },
     "@typescript-eslint/no-unsafe-type-assertion": {
-      "count": 66
+      "count": 65
     },
     "complexity": {
       "count": 1
@@ -1967,10 +1962,10 @@
   },
   "apps/web/src/features/story-settings/StoryAccessSettings.tsx": {
     "@typescript-eslint/no-unsafe-type-assertion": {
-      "count": 5
+      "count": 4
     },
     "curly": {
-      "count": 9
+      "count": 7
     },
     "max-lines-per-function": {
       "count": 1
@@ -2211,9 +2206,6 @@
     "@typescript-eslint/consistent-type-imports": {
       "count": 1
     },
-    "@typescript-eslint/no-shadow": {
-      "count": 2
-    },
     "@typescript-eslint/no-unsafe-type-assertion": {
       "count": 1
     },
@@ -2221,7 +2213,7 @@
       "count": 9
     },
     "curly": {
-      "count": 75
+      "count": 74
     },
     "max-lines-per-function": {
       "count": 5
