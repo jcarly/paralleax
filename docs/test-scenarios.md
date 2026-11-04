@@ -302,7 +302,7 @@ The character-stat vertical keeps these regressions covered:
   another input of that trigger.
 - Editor: adding a source to an existing trigger keeps the trigger conditions shared by all of its inputs.
 - Editor/Reader: each Trigger has its own graph marker and independent gates;
-  historical duplicate source -> target routes remain separately inspectable.
+  historical duplicate source → target routes remain separately inspectable.
 - Editor: adding an OR condition group from the trigger inspector adds a group
   to that Trigger; it does not create another Trigger or visual marker.
 - Editor: removing an alternative group changes only that Trigger and preserves
@@ -316,11 +316,11 @@ The character-stat vertical keeps these regressions covered:
   condition groups remain owned by that Trigger rather than being grouped as
   separate graph variants.
 - Shared/API/Editor: reject creation of a second Trigger connection for the same
-  directed source -> target pair, while allowing reverse routes, non-overlapping
+  directed source → target pair, while allowing reverse routes, non-overlapping
   inputs, and multiple source inputs on one Trigger.
 - Shared/API: editing a historical duplicate without adding a new duplicate is
   allowed; deleting one duplicate permits a replacement route.
-- QSP/ChoiceScript imports: condition variants for one source -> target pair
+- QSP/ChoiceScript imports: condition variants for one source → target pair
   become OR groups on one Trigger; source pairs with different condition sets
   remain separate Triggers.
 - Reader engine: an inputless trigger without conditions is available only at

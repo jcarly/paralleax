@@ -23,8 +23,6 @@ export class StoryGroupService {
     input: CreateGroupDto,
     userId: string,
   ): Promise<GroupMutationResult> {
-    if (input.interactionIds.length === 0 && !input.parentGroupId)
-      throw new BadRequestException('Select at least one Interaction to create a root Group');
     const groupId = randomUUID();
     const title = input.title.trim();
 

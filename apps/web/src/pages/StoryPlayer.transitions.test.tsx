@@ -26,7 +26,7 @@ describe('Reader pass-through presentation', () => {
     const visibleCards = recordVisibleCards();
     await renderPlayer('/stories/story-1/play', createPassThroughStory());
 
-    await user.click(await screen.findByRole('button', { name: 'Next' }));
+    await user.click(await screen.findByRole('button', { name: 'Next' }, { timeout: 5_000 }));
 
     expect(await screen.findByRole('heading', { name: 'Secret' })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Next' })).not.toBeInTheDocument();

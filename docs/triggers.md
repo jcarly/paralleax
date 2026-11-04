@@ -32,7 +32,7 @@ Example:
 
 ```text
 A ----\
-      Trigger T ----> C
+      Trigger T ───→ C
 B ----/
 ```
 
@@ -45,12 +45,12 @@ separately from the Trigger's conditions.
 
 ## Connection Uniqueness
 
-Current editor and API policy allows each directed source -> target pair on only
+Current editor and API policy allows each directed source → target pair on only
 one Trigger. A Trigger may still have several inputs, and several Triggers may
 target one output when their input pairs do not overlap. Inputless Triggers have
 no source pair and may remain separate condition or probability gates.
 
-Condition differences do not allow two Triggers to own the same source -> target
+Condition differences do not allow two Triggers to own the same source → target
 pair. Add an OR condition group to the existing Trigger instead. The policy is
 checked when a route is added or an input list is edited; it adds no database
 constraint. Existing Stories with duplicate pairs remain readable. Editing their
@@ -277,15 +277,15 @@ independent inputless rules.
 Example:
 
 ```text
-A --> Trigger 1 --> C
-B --> Trigger 2 --> C
+A → Trigger 1 → C
+B → Trigger 2 → C
 ```
 
 This is different from a single trigger with several inputs:
 
 ```text
 A ----\
-      Trigger 1 --> C
+      Trigger 1 → C
 B ----/
 ```
 
@@ -294,16 +294,16 @@ timer apply to every source.
 
 Use several Triggers when different source routes need independent condition,
 probability, timer, comment, or lifecycle rules, while keeping every directed
-source -> target pair on one Trigger only.
+source → target pair on one Trigger only.
 
-Different condition variants for one source -> target pair belong in the same
+Different condition variants for one source → target pair belong in the same
 Trigger's OR condition groups. Different pairs remain independent Triggers.
 
 For example, this is not a route that authors can create now:
 
 ```text
-A --> Trigger 1 (30%) --> C
-A --> Trigger 2 (80%) --> C
+A → Trigger 1 (30%) → C
+A → Trigger 2 (80%) → C
 ```
 
 Use condition groups inside one Trigger when only the alternative conditions

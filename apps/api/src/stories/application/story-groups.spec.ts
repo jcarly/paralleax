@@ -133,7 +133,7 @@ describe('StoryGroupService', () => {
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 
-  it('creates an empty subgroup through the existing Group mutation and rejects empty roots', async () => {
+  it('creates empty root Groups and subgroups through the existing Group mutation', async () => {
     const current = storyFixture();
     current.groups = [{ id: 'parent', title: 'Parent', interactionIds: [] }];
     mutations.update.mockImplementation(async (_id: string, mutation: (story: Story) => Story) =>
@@ -149,9 +149,12 @@ describe('StoryGroupService', () => {
       interactionIds: [],
       parentGroupId: 'parent',
     });
-    await expect(
-      service.create('story-1', { title: 'Empty', interactionIds: [] }, 'user-1'),
-    ).rejects.toThrow('at least one');
+    const emptyRoot = await service.create(
+      'story-1',
+      { title: 'Empty', interactionIds: [] },
+      'user-1',
+    );
+    expect(emptyRoot.group).toMatchObject({ title: 'Empty', interactionIds: [] });
     await expect(
       service.create(
         'story-1',

@@ -6,7 +6,7 @@ export interface TriggerConnectionConflict {
   existingTriggerId: string;
 }
 
-/** Finds another Trigger that already owns the directed source -> target connection. */
+/** Finds another Trigger that already owns the directed source → target connection. */
 export function findTriggerConnectionConflict(
   story: Pick<Story, 'interactions'>,
   sourceInteractionId: string,

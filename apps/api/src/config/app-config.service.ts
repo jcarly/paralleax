@@ -173,7 +173,11 @@ function optionalEmailAddress(name: string, value: string | undefined): EmailAdd
   return { email, ...(displayName ? { name: displayName } : {}) };
 }
 
+function isAllowedValue<T extends string>(value: string, allowed: readonly T[]): value is T {
+  return allowed.some((candidate) => candidate === value);
+}
+
 function enumValue<T extends string>(name: string, value: string, allowed: readonly T[]): T {
-  if (allowed.includes(value as T)) return value as T;
+  if (isAllowedValue(value, allowed)) return value;
   throw new Error(`${name} must be one of: ${allowed.join(', ')}`);
 }

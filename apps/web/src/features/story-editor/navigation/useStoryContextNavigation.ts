@@ -10,8 +10,9 @@ import {
   matchesStoryContextSearch,
   type StoryContextReference,
 } from '../../../storyNavigation';
+import { createInteractionSearchIndex, searchInteractionIds } from './interactionSearch';
 
-export type StoryContextSection = 'locations' | 'characters' | 'stats' | 'items';
+export type StoryContextSection = 'groups' | 'locations' | 'characters' | 'stats' | 'items';
 
 interface StoryContextNavigationDependencies {
   story: Story | undefined;
@@ -32,15 +33,16 @@ export function useStoryContextNavigation({
   selectInteraction,
   focusInteraction,
 }: StoryContextNavigationDependencies) {
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQueryState] = useState('');
   const [isContextPanelOpen, setIsContextPanelOpen] = useState(getInitialContextPanelOpen);
   const [openContextSections, setOpenContextSections] = useState<
     Record<StoryContextSection, boolean>
   >({
-    locations: true,
-    characters: true,
-    stats: true,
-    items: true,
+    groups: false,
+    locations: false,
+    characters: false,
+    stats: false,
+    items: false,
   });
 
   useEffect(() => {
@@ -64,20 +66,33 @@ export function useStoryContextNavigation({
       sections[section] ? sections : { ...sections, [section]: true },
     );
   }, []);
-  const clearSearch = useCallback(() => setSearchQuery(''), []);
+  const setSearchQuery = useCallback((query: string) => {
+    setSearchQueryState(query);
+    if (query.trim()) {
+      setOpenContextSections((sections) =>
+        sections.groups ? sections : { ...sections, groups: true },
+      );
+    }
+  }, []);
+  const clearSearch = useCallback(() => setSearchQuery(''), [setSearchQuery]);
 
   const normalizedSearchQuery = searchQuery.trim().toLocaleLowerCase();
   const occurrenceCounts = useMemo(
     () => getInteractionTextOccurrenceCounts(story, searchQuery),
     [searchQuery, story],
   );
+  const interactionSearchIndex = useMemo(() => createInteractionSearchIndex(story), [story]);
+  const matchingInteractionIds = useMemo(
+    () => searchInteractionIds(interactionSearchIndex, searchQuery),
+    [interactionSearchIndex, searchQuery],
+  );
   const referencedInteractionIds = useMemo(
     () => getReferencedInteractionIds(story, selectedContextReference),
     [selectedContextReference, story],
   );
   const navigationInteractionIds = useMemo(
-    () => (normalizedSearchQuery ? [...occurrenceCounts.keys()] : referencedInteractionIds),
-    [normalizedSearchQuery, occurrenceCounts, referencedInteractionIds],
+    () => (normalizedSearchQuery ? matchingInteractionIds : referencedInteractionIds),
+    [normalizedSearchQuery, matchingInteractionIds, referencedInteractionIds],
   );
   const currentNavigationIndex = selectedId ? navigationInteractionIds.indexOf(selectedId) : -1;
   const emphasizedInteractionIds = useMemo(
@@ -177,6 +192,7 @@ export function useStoryContextNavigation({
     toggleContextSection,
     openContextSection,
     occurrenceCounts,
+    matchingInteractionIds,
     referencedInteractionIds,
     navigationInteractionIds,
     currentNavigationIndex,

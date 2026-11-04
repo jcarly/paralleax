@@ -169,13 +169,13 @@ test('slow reordered saves preserve graph creation, movement, and deletion acros
   const child = await createdInteraction(childCreation);
   const childTriggerId = child.triggers[0]?.id;
   expect(childTriggerId).toBeTruthy();
-  await expect(interactionNode(page, 'New interaction')).toBeVisible();
+  await expect(interactionNode(page, 'New interaction').last()).toBeVisible();
   await expect(page.getByLabel('Story save status')).toContainText('Saving');
 
   releaseSlowResponse();
   await expectSuccessful(slowSave);
   await expect(page.getByLabel('Story save status')).toHaveText('Saved');
-  await expect(interactionNode(page, 'New interaction')).toBeVisible();
+  await expect(interactionNode(page, 'New interaction').last()).toBeVisible();
   await editInteraction(page, 'New interaction', 'Movable child', 'Created during the slow save.');
   await page.getByRole('button', { name: 'Close inspector' }).click();
 
@@ -233,6 +233,14 @@ test('a response lost after creation commit recovers canonically without duplica
   page,
 }) => {
   const { storyId } = await registerAndCreateStory(page, 'Uncertain committed creation');
+  await interactionNode(page, 'New interaction').click();
+  const existingTitle = interactionTitleField(
+    page.getByRole('complementary', { name: 'Inspector' }),
+  );
+  const rename = waitForInteractionPatch(page);
+  await existingTitle.fill('Existing interaction');
+  await existingTitle.blur();
+  await expectSuccessful(rename);
   const creationPath = new RegExp(`/api/stories/${storyId}/interactions$`);
   let intercepted = false;
   let markCommitted = () => {};

@@ -44,9 +44,16 @@ function setup() {
   render(
     <StoryGroupTreePanel
       story={story}
+      searchQuery=""
+      matchingInteractionIds={[]}
+      open
+      onToggle={vi.fn()}
+      onAdd={vi.fn()}
       selectionIds={[]}
       readOnly={false}
+      selectedInteractionId={undefined}
       onSelect={onSelect}
+      onSelectInteraction={vi.fn()}
       onFocus={onFocus}
       onSelectInteractions={vi.fn()}
       onEditingChange={vi.fn()}
@@ -117,7 +124,7 @@ describe('Group tree gestures', () => {
     act(() => captured.props?.onDragStart?.({ active: { id: 'child' } } as never));
     expect(document.querySelector('.story-group-root-drop')).toBeInTheDocument();
     act(() => captured.props?.onDragCancel?.({} as never));
-    expect(document.querySelector('.story-group-root-drop')).not.toBeInTheDocument();
+    expect(document.querySelector('.story-group-root-drop')).toHaveAttribute('aria-hidden', 'true');
     const outside = { active: { id: 'child' }, over: null } as unknown as DragEndEvent;
     await act(async () => captured.props?.onDragEnd?.(outside));
     await act(async () => captured.props?.onDragEnd?.(drag('child')));
@@ -128,6 +135,26 @@ describe('Group tree gestures', () => {
     expect(announcements?.onDragOver?.({ over: { id: 'other' } } as never)).toBeTruthy();
     expect(announcements?.onDragEnd?.({} as never)).toBeTruthy();
     expect(announcements?.onDragCancel?.({} as never)).toBeTruthy();
+  });
+
+  it('recovers the last hovered group when the drag end has no collision target', async () => {
+    const { onUpdate } = setup();
+    const panel = screen.getByRole('region', { name: 'Groups' });
+    const other = screen.getByRole('treeitem', { name: /Other/ });
+    vi.spyOn(other, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 100, 100));
+    const end = drag('other');
+    end.over = null;
+
+    act(() => {
+      captured.props?.onDragOver?.(drag('other'));
+      fireEvent.pointerMove(panel, { clientX: 50, clientY: 50 });
+    });
+    await act(async () => captured.props?.onDragEnd?.(end));
+
+    expect(onUpdate).toHaveBeenLastCalledWith('child', {
+      parentGroupId: 'other',
+      beforeGroupId: null,
+    });
   });
 
   it('navigates visible rows, expands children and selects with the keyboard', async () => {

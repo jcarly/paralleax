@@ -2,7 +2,7 @@
 
 Status: Active
 
-Last triaged: 2026-10-26
+Last triaged: 2026-11-03
 
 This page records maintainability, reliability, performance, and test work found
 during the August 2026 code review and subsequent technical evaluations. Production gates remain authoritative in
@@ -57,7 +57,7 @@ promotes them.
 
 ## Priority Reclassifications
 
-- **Strict quality gates: P2 -> immediate prerequisite (2026-10-26).** Complete
+- **Strict quality gates: P2 → immediate prerequisite (2026-10-26).** Complete
   the tooling initiative before guided author sessions, as explicitly requested.
   [ADR-041](decisions/ADR-041-strict-quality-gates-and-native-baselines.md)
   records native-count limitations, typed-test coverage and the clone gate.
@@ -65,29 +65,30 @@ promotes them.
   prioritized incremental reductions. This promotion does not authorize broad
   orchestrator rewrites or a deadline to eliminate all historical findings.
 
-- **`StoryPlayer` extraction: P1 -> P1 (retained).** Keep the detailed,
+- **`StoryPlayer` extraction: P1 → P1 (retained).** Keep the detailed,
   incremental plan and behavior coverage. Start after author observation unless a
   slice addresses a concrete blocker, feature, risk, or duplication; no complete
   rewrite before sessions.
-- **`StoryEditor` split: P1 -> P2, conditional.** Split only where an observed
+- **`StoryEditor` split: P1 → P2, conditional.** Split only where an observed
   workflow, concrete risk, or needed feature benefits; file size alone is not a
   priority.
-- **`RichTextEditor` extraction: P1 -> P2.** Preserve compatible incremental
-  extraction and tests, but treat it as groundwork for a deferred editor-engine
-  choice, not an alpha prerequisite. Tiptap remains unscheduled.
-- **Shared evaluation context: P1 -> P2.** It is a prerequisite only before
+- **`RichTextEditor` extraction: absorbed by the P1 editor migration.** The
+  former custom editor is now a compatibility re-export of the focused Tiptap
+  implementation. Do not keep a separate extraction prerequisite or duplicate
+  the active [migration](roadmap.md#p1-tiptap-and-ink-inspired-narrative-content-editing).
+- **Shared evaluation context: P1 → P2.** It is a prerequisite only before
   consolidating diagnostics; current Reader and Simulation behavior continues.
-- **Incremental journey-date recalculation: P1 -> P2.** Keep ordinary progress
+- **Incremental journey-date recalculation: P1 → P2.** Keep ordinary progress
   writes and restores on the runtime-checkpoint path in ADR-040; reserve full
   journey reconstruction for explicit automated validation. Optimize that
   validation path only if representative profiles show a material cost.
-- **Repository commands and remaining complete-Story cleanup responses: P1 -> P2.**
+- **Repository commands and remaining complete-Story cleanup responses: P1 → P2.**
   Extend targeted mutations only for measured costs or a concrete safe client
   update.
-- **Durable import-report retention: P1 -> P1, conditional gate.** Required before
+- **Durable import-report retention: P1 → P1, conditional gate.** Required before
   promising reports survive restarts/multiple instances or before production
   imports; it does not block disposable guided sessions in a test environment.
-- **Optimistic-mutation recovery policy: P1 -> P1, retained.** Clarify recovery by
+- **Optimistic-mutation recovery policy: P1 → P1, retained.** Clarify recovery by
   mutation risk and user impact. Promote a specific path to P0 only if evidence
   shows current behavior can lose saved user work or blocks the alpha journey.
 - **Scoped architecture guardrails: explicitly commissioned on 2026-10-25.** Add
@@ -136,7 +137,7 @@ promotes them.
 
 - Remove the targeted Swagger `js-yaml` override once Swagger declares the fixed
   patch directly, retaining the high-severity CI audit.
-- Remove the development-only `test-exclude -> glob@10.5.0` deprecation once the
+- Remove the development-only `test-exclude → glob@10.5.0` deprecation once the
   Jest/ts-jest coverage chain supports a maintained `glob` release; do not force
   a transitive major override without an upstream contract.
 
@@ -176,6 +177,12 @@ promotes them.
       current 2,000-node baseline.
 - [x] Run controlled PostgreSQL stress tests in the weekly/manual CI stress lane
       and retain their structured measurements in job logs.
+- [x] Assemble full Story reads from a consistent PostgreSQL snapshot. The
+      repository now runs its multi-query projection in a read-only repeatable-
+      read transaction. Validate nullable graph-decoration columns at the read
+      boundary and remove 12 related non-null assertions. Shared effect and
+      trigger projections also remove the duplicate between full Story reads and
+      runtime slices. See the [2026-11-03 persistence follow-up](audits/2026-11-03-story-persistence.md).
 
 ## P1 — Module Boundaries
 
@@ -273,11 +280,13 @@ are not prerequisites for disposable author sessions.
 
 ## P2 — Static Analysis
 
-**Current policy (2026-10-26):** the strict quality-gate initiative is promoted
+**Current policy (2026-11-03):** the strict quality-gate initiative is promoted
 ahead of sessions; the following completed 2026-10-25 entries are historical
-measurements superseded by ADR-041 and the linked quality audit. Current counts
-are 4,404 ESLint findings, 642 Stylelint findings, one exact dependency cycle
-and 16 production clone pairs. Native-count replacement limits remain explicit.
+measurements superseded by ADR-041 and the linked quality audit. The 2026-10-26
+audit recorded 4,404 ESLint findings, 642 Stylelint findings, one exact
+dependency cycle and 16 production clone pairs. Dated follow-up audits record
+later branch-specific measurements. Native-count replacement limits remain
+explicit.
 Future debt reduction stays incremental; prioritize the shared narrative engine,
 complex shared helpers, central React flows, functional duplication, then styles.
 
@@ -307,6 +316,18 @@ complex shared helpers, central React flows, functional duplication, then styles
       files (one shared, 100 API, 19 web). The full root lint takes about 130
       seconds, compared with 29.4 seconds before typed checks. An earlier probe
       using the full `recommendedTypeChecked` preset exceeded 3.5 minutes.
+- [x] **P1-A async handling follow-up (2026-11-03):** the baseline on
+      `origin/main` contained 13 web diagnostics: six
+      `no-floating-promises` and seven `no-misused-promises`, across six files.
+      All 13 were fixed and pruned. Authentication pages now await parent
+      navigation callbacks and show rejected transitions; graph persistence
+      callbacks use their actual Promise contract and unexpected rejections feed
+      the editor's existing save error status. Expected API save failures remain
+      handled by the persistence lifecycle. Regression tests now await React
+      `act()` and cover callback rejection. Four stale `curly` entries in the
+      touched graph controller were also removed. This closes Lot A without
+      changing the existing priority for the separate persistence, shared-engine,
+      graph/editor, and secondary-debt work.
 - [x] Enable the deferred CSS cascade rules across all 18 source stylesheets:
       `no-descending-specificity`, `no-duplicate-selectors`, and
       `declaration-no-important`. The native Stylelint suppression baseline
@@ -405,18 +426,10 @@ than inherited from the historical audit grouping.
       automated replay validation. Define backward-navigation behavior at the
       checkpoint boundary before including rewinds in this optimization; validate
       against long loops and large journeys.
-- [ ] **P2:** continue breaking `RichTextEditor` into focused modules for selection handling,
-      token serialization, conditional-content decoration, and editing actions
-      before adopting a richer editing engine; keep the existing storage format
-      compatible throughout the refactor. This remains prerequisite work for the
-      deferred [Tiptap migration initiative](roadmap.md#deferred-cross-cutting-initiative-rich-text-editor-migration).
-      Do not duplicate this task in that initiative.
-  - [x] Extract token-source recovery, temporary editor-control construction, and
-        canonical HTML serialization into a focused tested module.
-  - [x] Extract selection capture/restoration and inline conditional-frame
-        insertion behind a focused hook.
-  - [ ] Extract conditional-content decoration and editing actions without
-        changing persisted markup or keyboard behavior.
+- [x] **Replace the legacy rich-text editor with Tiptap/ProseMirror.** Narrative
+      tokens and conditional frames now use focused extensions, while the
+      compatibility component re-exports the new editor. The P1 migration
+      roadmap owns remaining round-trip, browser, and source-mode work.
 - [ ] **P1 when import families expand:** share client and server import
       validation rules for QSP and other import families in `packages/shared`
       while retaining the server as the final authority for persisted-story
@@ -588,32 +601,12 @@ regression cases in the repository, not tests executed for this audit.
       existing editor without an extra choice step; no effect type available
       remains recoverable. **Verification:** component tests for every type and
       enabled/disabled combination, plus browser coverage for the authoring flow.
-- [ ] **Repair rich-text formatting feedback.** Treat the reported selection,
-      formatting, and active-button problems as a functional editor task, not as
-      part of the Tiptap/ProseMirror migration. The current toolbar calls
-      document.execCommand and does not expose a pressed state; existing unit
-      coverage mocks the command rather than checking browser formatting.
-      **Depends on:** the existing selection hook, token serializer, sanitizer,
-      and rich-text controls. **Risk:** selection restoration, comment anchors,
-      or stable narrative tokens can regress. **Acceptance:** a real selected
-      range receives the requested formatting; caret and selection states are
-      visibly and accessibly reflected by the toolbar; save/reload preserves
-      formatting and tokens. **Verification:** focused component tests and a
-      Playwright selection-formatting regression. Promote to P0 only if a
-      reproduced failure blocks a scheduled author task or loses content.
-- [ ] **Make empty Interaction content actionable.** Replace an always-mounted
-      WYSIWYG editor with a concise Add content action for a truly empty authored
-      body; show an explicit edit action when content is already present and mark
-      empty Interactions on the graph. Reuse RichTextContent and RichTextEditor.
-      **Depends on:** a clear authored-empty versus reader-visible content rule
-      and the existing Reader evaluation. **Risk:** authored-empty content must
-      not be confused with conditional content that is currently invisible to a
-      reader. **Acceptance:**
-      Add content opens and focuses the existing editor; graph status reflects
-      authored content; conditionally hidden or unresolved text remains authored
-      and editable; Reader auto-entry and pass-through rules do not change.
-      **Verification:** component tests for empty, non-empty, and conditional
-      bodies, plus a browser flow and the existing Reader transition regressions.
+- [ ] **Show authored-empty Interaction status on the graph.** Inspector and
+      Simulation now use Reader-first content with in-place Add/Edit actions as
+      part of the P1 editor migration. This remaining graph affordance should
+      distinguish a truly empty authored body from content that is currently
+      hidden by conditions. **Acceptance:** graph status reflects authored
+      content without changing Reader auto-entry or pass-through behavior.
 - [ ] **Keep essential editor controls reachable at narrow sizes.** Cover
       left-side graph commands, title,
       comments, and header actions. **Depends on:** existing editor grid and
@@ -755,15 +748,12 @@ regression cases in the repository, not tests executed for this audit.
 
 ### P3 — Finish and polish
 
-- [ ] **Audit directional arrows in localized UI copy.** The intake requests a
-      typographic arrow, while AGENTS.md currently prefers ASCII -> for directional
-      and ownership relationships. Settle the scope and apply one rule across
-      locales before changing labels; preserve code and authored-expression
-      syntax. **Depends on:** the open Interface and presentation question.
-      **Risk:** mixed punctuation can make paths harder to scan or translations
-      inconsistent. **Acceptance:** the agreed rule is used consistently in
-      visible UI, examples, accessibility names, and all supported locales.
-      **Verification:** localization/catalogue tests and a browser visual check.
+- [x] **Standardize directional arrows in text.** Use the typographic arrow for
+      directional relationships across interface prose, documentation, test
+      descriptions, and quality diagnostics. Keep PostgreSQL JSON operators and
+      Mermaid/PlantUML syntax plus stable clone-baseline keys unchanged.
+      **Completed:** 2026-10-27. **Verification:** repository search confirms
+      remaining ASCII arrows are required syntax or identifiers.
 - [ ] **Add restrained transition feedback.** Improve panel arrival, Reader
       transition, and button response only after functional and comprehension
       issues. Reuse existing CSS transitions; do not add an animation framework.
@@ -775,11 +765,14 @@ regression cases in the repository, not tests executed for this audit.
 
 ### Deferred until product decisions
 
-- [ ] Keep the source/code view as an exploration until open-questions.md decides
-      whether it is read-only diagnostics or a second editable representation.
-      If editable, prototype stable token/condition identity, sanitization, and
-      round-trip compatibility before scheduling implementation. Do not bundle it
-      into the unscheduled Tiptap migration.
+- [ ] **Prototype the Ink-inspired content grammar and stable-reference mapping**
+      before exposing a CodeMirror mode. Keep the prototype bound to the existing
+      sanitized HTML body, `conditionalTextBlocks`, stable references, and typed
+      `TriggerCondition` rules. Blocks remain AND-only, without `else` or OR.
+      Check conversion with representative existing content, unsupported rich
+      nodes, comments, copy/paste, and invalid drafts. This remains part of the
+      P1 migration, not a separate backlog project; see
+      [ADR-043](decisions/ADR-043-ink-inspired-narrative-source.md).
 - [ ] Keep automatic entry beyond the single-opening Reader rule unscheduled
       until the off-path case and narrative intent are defined.
 - [ ] Keep automatic cleanup of comments on deleted entities unscheduled until
@@ -902,6 +895,10 @@ unchanged snapshot.
       desktop/tablet/mobile computed styles, editing, choice states, ending
       cards, and panel scrolling. Completed 2026-10-25: 4 targeted Playwright
       cases, targeted Stylelint, root lint, typecheck, and build passed.
+- **Updated 2026-10-27:** Reader now uses the shared viewport-contained Player
+  workspace and responsive layout previously scoped to Simulation. This
+  supersedes the earlier acceptance to preserve a separate Reader layout;
+  authoring controls and diagnostics remain Simulation-specific.
 - [x] **DS-06 — Make help tooltips dismissible and usable** (D6, D7). Extend the
       existing `FieldHelpTooltip`; do not add a parallel tooltip system.
       Acceptance: Escape dismisses focused help, hover content remains reachable

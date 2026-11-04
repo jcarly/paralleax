@@ -67,7 +67,7 @@ test('opens, navigates, edits, reloads, and simulates a realistically sized Stor
   });
   const selectionStartedAt = performance.now();
   await storySearch.fill(finalTitle);
-  await page.getByRole('button', { name: 'Next interaction occurrence' }).click();
+  await page.getByRole('button', { name: 'Next interaction result' }).click();
 
   const inspector = page.getByRole('complementary', { name: 'Inspector' });
   const titleField = interactionTitleField(inspector);
@@ -127,7 +127,7 @@ test('opens, navigates, edits, reloads, and simulates a realistically sized Stor
   await page
     .getByRole('searchbox', { name: 'Search story context and interactions' })
     .fill(persistedTitle);
-  await page.getByRole('button', { name: 'Next interaction occurrence' }).click();
+  await page.getByRole('button', { name: 'Next interaction result' }).click();
   await expect(
     interactionTitleField(page.getByRole('complementary', { name: 'Inspector' })),
   ).toHaveValue(persistedTitle);
@@ -135,7 +135,7 @@ test('opens, navigates, edits, reloads, and simulates a realistically sized Stor
   await page
     .getByRole('searchbox', { name: 'Search story context and interactions' })
     .fill('Location 0');
-  await page.getByRole('button', { name: 'Next interaction occurrence' }).click();
+  await page.getByRole('button', { name: 'Next interaction result' }).click();
   await expect(
     interactionTitleField(page.getByRole('complementary', { name: 'Inspector' })),
   ).toHaveValue('Location 0');

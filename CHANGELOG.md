@@ -2,6 +2,39 @@
 
 ## Unreleased
 
+- Full Story reads now use one read-only repeatable-read snapshot, and malformed
+  persisted graph decorations fail explicitly during projection.
+
+- Left sidebar lists now share section headers and separators, including between
+  Groups and Locations. Sections start collapsed and open after entity creation;
+  root Groups can be created empty. The Groups section explores grouped and
+  ungrouped Interactions, and the shared search matches interaction text, context,
+  effects and incoming Trigger sources and conditions. Group-title results stay
+  collapsed; matching members expand their path.
+
+- New Stories now start with a linked root and child Interaction; the editor
+  opens with the root selected and centered.
+
+- Reader and Simulation now share the same responsive Player workspace, including
+  viewport-contained scrolling on desktop and tablet and a sticky toolbar in the
+  narrow-screen page-scrolling layout. Simulation authoring controls and
+  diagnostics remain mode-specific.
+
+- Replaced the custom rich-text editing surface with Tiptap/ProseMirror. The
+  Inspector keeps existing content in a compact editable field and reveals the
+  WYSIWYG toolbar on focus; empty content shows only **Add content**. Simulation
+  keeps its interactive Reader projection at rest and opens Tiptap in place when
+  the content field receives focus. Tiptap loads on demand. An Ink-inspired
+  native content syntax is proposed for a future CodeMirror mode; its grammar
+  and lossless mapping are not accepted or implemented, so source editing is
+  not exposed yet.
+
+- Awaited authentication navigation callbacks and surfaced rejected transitions.
+  Story editor graph actions now route unexpected asynchronous failures through
+  the existing save error feedback. Removed all 13 asynchronous lint baseline
+  findings and four stale brace findings; no quality rule or suppression policy
+  changed.
+
 - Added a brief cross-fade between visible Interactions in Reader and Simulation
   Mode. Reduced-motion preferences disable it, and Reader pass-through
   Interactions remain invisible.
@@ -20,7 +53,7 @@
   authoring action families, including the defined but unused product danger
   action. No narrative runtime behavior changed.
 
-- Enforced one Trigger per directed Interaction source -> target pair during
+- Enforced one Trigger per directed Interaction source → target pair during
   normal editor/API route creation and input edits. Existing duplicate routes
   remain readable and can be edited or removed; the API reports conflicts as
   `409`, and the editor shows a graph alert. QSP and ChoiceScript imports combine

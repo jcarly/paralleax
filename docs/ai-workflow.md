@@ -135,7 +135,7 @@ Poor parallel split:
 For a cross-layer feature, serial execution is often safer:
 
 ```text
-domain contract -> API/persistence -> web -> E2E review
+domain contract → API/persistence → web → E2E review
 ```
 
 ## Import workflow

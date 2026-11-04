@@ -44,7 +44,7 @@ const story: Story = {
 };
 
 describe('trigger connection policy', () => {
-  it('detects a repeated directed source -> target pair across Triggers', () => {
+  it('detects a repeated directed source → target pair across Triggers', () => {
     expect(findTriggerConnectionConflict(story, 'source-a', 'target')).toEqual({
       sourceInteractionId: 'source-a',
       targetInteractionId: 'target',

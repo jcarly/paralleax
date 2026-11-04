@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useRef, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { STORY_LIST_PAGE_SIZE, type Story, type StorySummary } from '@paralleax/shared';
 import { api, type AuthUser } from '../api';
 import { apiErrorMessage } from '../apiErrorMessages';
@@ -21,6 +21,7 @@ type StoryView = 'grid' | 'list';
 
 export function StoryList({ user }: { user: AuthUser | null }) {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const isAuthenticated = user !== null;
   const isAdministrator = user?.role === 'admin';
   const [stories, setStories] = useState<StorySummary[]>([]);
@@ -129,11 +130,16 @@ export function StoryList({ user }: { user: AuthUser | null }) {
       setError('');
       setPending('story');
       const story = await api.createStory(title);
-      setStories((items) => [summarizeStory(story, user ?? undefined), ...items]);
-      setTotalCount((count) => count + 1);
       setNewTitle('');
       closeCreationDialog();
-      resetLibraryView();
+      const openingInteraction =
+        story.interactions.find(({ triggers }) =>
+          triggers.some(({ inputInteractionIds }) => inputInteractionIds.length === 0),
+        ) ?? story.interactions[0];
+      const focusQuery = openingInteraction
+        ? `?focusInteractionId=${encodeURIComponent(openingInteraction.id)}`
+        : '';
+      void navigate(`/stories/${story.id}/edit${focusQuery}`);
     } catch (caught) {
       setError(apiErrorMessage(caught, t, t('library.createFailed')));
     } finally {
@@ -404,19 +410,13 @@ export function StoryList({ user }: { user: AuthUser | null }) {
               className="new-story-dialog"
               role="dialog"
               aria-modal="true"
-              aria-labelledby="new-story-title"
+              aria-label={t('library.dialog.title')}
               onKeyDown={(event) =>
                 handleModalDialogKeyDown(event, () => {
                   if (pending !== 'story') closeCreationDialog();
                 })
               }
             >
-              <div className="dialog-icon" aria-hidden="true">
-                ◇
-              </div>
-              <span className="product-eyebrow">{t('library.dialog.eyebrow')}</span>
-              <h2 id="new-story-title">{t('library.dialog.title')}</h2>
-              <p>{t('library.dialog.description')}</p>
               <form onSubmit={(event) => void create(event)}>
                 <label className="form-field form-field--standard">
                   <span>{t('library.dialog.storyTitle')}</span>

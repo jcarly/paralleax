@@ -1,10 +1,14 @@
-import type {
-  ConditionalTextBlock,
-  StatValue,
-  StoryRuntimeSlice,
-  TriggerConditionGroup,
-} from '@paralleax/shared';
+import type { ConditionalTextBlock, StoryRuntimeSlice } from '@paralleax/shared';
 import type { Queryable } from './stories.persistence.types';
+import {
+  projectItemEffects,
+  projectStatEffects,
+  projectTriggers,
+  type PersistedItemEffectRow,
+  type PersistedStatEffectRow,
+  type PersistedTriggerInputRow,
+  type PersistedTriggerRow,
+} from './story-projections';
 
 interface RuntimeSliceOptions {
   storyId: string;
@@ -34,45 +38,9 @@ type RuntimeInteractionRow = {
   sort_order: number;
 };
 
-type RuntimeTriggerRow = {
-  id: string;
-  output_interaction_id: string;
-  position_x: number | null;
-  position_y: number | null;
-  condition_groups: TriggerConditionGroup[];
-  appearance_probability: number;
-  timer_seconds: number | null;
-  sort_order: number;
-};
-
-type RuntimeTriggerInputRow = {
-  trigger_id: string;
-  input_interaction_id: string;
-  sort_order: number;
-};
-
 type RuntimeInteractionCharacterRow = {
   interaction_id: string;
   character_id: string;
-  sort_order: number;
-};
-
-type RuntimeStatEffectRow = {
-  interaction_id: string;
-  stat_id: string;
-  item_id: string | null;
-  operation: 'add' | 'set';
-  value: StatValue | null;
-  expression: string | null;
-  sort_order: number;
-};
-
-type RuntimeItemEffectRow = {
-  interaction_id: string;
-  item_id: string | null;
-  item_definition_id: string | null;
-  character_id: string | null;
-  operation: 'obtain' | 'lose';
   sort_order: number;
 };
 
@@ -145,7 +113,7 @@ export async function readStoryRuntimeSlice(
 
   const triggers =
     optionInteractionIds.length > 0
-      ? await queryable.query<RuntimeTriggerRow>(
+      ? await queryable.query<PersistedTriggerRow>(
           `SELECT triggers.id, triggers.output_interaction_id, triggers.position_x,
                   triggers.position_y, triggers.condition_groups,
                   triggers.appearance_probability, triggers.timer_seconds, triggers.sort_order
@@ -181,7 +149,7 @@ export async function readStoryRuntimeSlice(
              ORDER BY triggers.output_interaction_id, triggers.sort_order, triggers.id`,
           [optionInteractionIds, currentInteractionId],
         )
-      : { rows: [] as RuntimeTriggerRow[] };
+      : { rows: [] as PersistedTriggerRow[] };
   const triggerIds = triggers.rows.map(({ id }) => id);
   const [interactions, triggerInputs, characters, statEffects, itemEffects] = await Promise.all([
     queryable.query<RuntimeInteractionRow>(
@@ -193,7 +161,7 @@ export async function readStoryRuntimeSlice(
       [options.storyId, selectedInteractionIds],
     ),
     triggerIds.length > 0
-      ? queryable.query<RuntimeTriggerInputRow>(
+      ? queryable.query<PersistedTriggerInputRow>(
           `SELECT trigger_inputs.trigger_id, trigger_inputs.input_interaction_id,
                     trigger_inputs.sort_order
                FROM trigger_inputs
@@ -201,7 +169,7 @@ export async function readStoryRuntimeSlice(
                ORDER BY trigger_inputs.trigger_id, trigger_inputs.sort_order`,
           [triggerIds],
         )
-      : Promise.resolve({ rows: [] as RuntimeTriggerInputRow[] }),
+      : Promise.resolve({ rows: [] as PersistedTriggerInputRow[] }),
     queryable.query<RuntimeInteractionCharacterRow>(
       `SELECT interaction_id, character_id, sort_order
            FROM interaction_characters
@@ -209,14 +177,14 @@ export async function readStoryRuntimeSlice(
            ORDER BY interaction_id, sort_order`,
       [options.storyId, selectedInteractionIds],
     ),
-    queryable.query<RuntimeStatEffectRow>(
+    queryable.query<PersistedStatEffectRow>(
       `SELECT interaction_id, stat_id, item_id, operation, value, expression, sort_order
            FROM interaction_stat_effects
            WHERE story_id = $1 AND interaction_id = ANY($2::text[])
            ORDER BY interaction_id, sort_order`,
       [options.storyId, selectedInteractionIds],
     ),
-    queryable.query<RuntimeItemEffectRow>(
+    queryable.query<PersistedItemEffectRow>(
       `SELECT interaction_id, item_id, item_definition_id, character_id, operation, sort_order
            FROM interaction_item_effects
            WHERE story_id = $1 AND interaction_id = ANY($2::text[])
@@ -279,32 +247,9 @@ export async function readStoryRuntimeSlice(
       characterIds: (charactersByInteraction.get(interaction.id) ?? []).map(
         ({ character_id }) => character_id,
       ),
-      statEffects: (statEffectsByInteraction.get(interaction.id) ?? []).map((effect) => ({
-        statId: effect.stat_id,
-        ...(effect.item_id ? { itemId: effect.item_id } : {}),
-        operation: effect.operation,
-        ...(typeof effect.expression === 'string'
-          ? { expression: effect.expression }
-          : { value: effect.value! }),
-      })),
-      itemEffects: (itemEffectsByInteraction.get(interaction.id) ?? []).map((effect) => ({
-        ...(effect.item_id ? { itemId: effect.item_id } : {}),
-        ...(effect.item_definition_id ? { itemDefinitionId: effect.item_definition_id } : {}),
-        ...(effect.character_id ? { characterId: effect.character_id } : {}),
-        operation: effect.operation,
-      })),
-      triggers: (triggersByInteraction.get(interaction.id) ?? []).map((trigger) => ({
-        id: trigger.id,
-        inputInteractionIds: (inputsByTrigger.get(trigger.id) ?? []).map(
-          ({ input_interaction_id }) => input_interaction_id,
-        ),
-        conditionGroups: trigger.condition_groups,
-        appearanceProbability: trigger.appearance_probability,
-        timerSeconds: trigger.timer_seconds,
-        ...(typeof trigger.position_x === 'number' && typeof trigger.position_y === 'number'
-          ? { position: { x: trigger.position_x, y: trigger.position_y } }
-          : {}),
-      })),
+      statEffects: projectStatEffects(statEffectsByInteraction.get(interaction.id) ?? []),
+      itemEffects: projectItemEffects(itemEffectsByInteraction.get(interaction.id) ?? []),
+      triggers: projectTriggers(triggersByInteraction.get(interaction.id) ?? [], inputsByTrigger),
     })),
   };
 }

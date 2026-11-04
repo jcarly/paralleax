@@ -1,5 +1,5 @@
 .rich-text-surface {
-  min-height: 10rem;
+  min-height: 180px;
   padding: 0.7rem;
   overflow-wrap: anywhere;
   border: 1px solid #cfd5df;
@@ -7,7 +7,7 @@
   background: white;
 }
 
-.rich-text-surface:focus {
+.rich-text-surface:focus-within {
   border-color: var(--color-primary);
   outline: 2px solid var(--color-surface);
   outline-offset: 1px;
@@ -187,4 +187,21 @@
   aspect-ratio: 16 / 9;
   margin: 0.75rem auto;
   border: 0;
+}
+
+.rich-text-editor--focus-revealed:not(:focus-within) .rich-text-toolbar,
+.rich-text-editor--focus-revealed:not(:focus-within) .rich-text-limit,
+.rich-text-editor--focus-revealed:not(:focus-within)
+  :is(.rich-text-token-remove, .rich-text-condition-remove, .rich-text-condition-add) {
+  display: none;
+}
+
+.rich-text-editor--focus-revealed:not(:focus-within) .rich-text-surface {
+  min-height: 2.75rem;
+  padding: 0.55rem 0.7rem;
+  border-radius: 0.5rem;
+}
+
+.rich-text-editor--focus-revealed:focus-within .rich-text-surface {
+  min-height: 180px;
 }

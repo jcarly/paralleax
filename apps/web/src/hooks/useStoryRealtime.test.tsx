@@ -44,17 +44,8 @@ function Fixture({
 }
 
 describe('useStoryRealtime', () => {
-  beforeEach(() => {
-    vi.useFakeTimers();
-    FakeEventSource.instances = [];
-    vi.stubGlobal('EventSource', FakeEventSource);
-  });
-
-  afterEach(() => {
-    cleanup();
-    vi.unstubAllGlobals();
-    vi.useRealTimers();
-  });
+  beforeEach(setupRealtimeTest);
+  afterEach(cleanupRealtimeTest);
 
   it('connects to the story stream and coalesces change invalidations', () => {
     const onInvalidate = vi.fn();
@@ -79,12 +70,12 @@ describe('useStoryRealtime', () => {
     expect(onInvalidate).toHaveBeenLastCalledWith('deleted');
   });
 
-  it('ignores initial readiness and changes already represented by the local revision', () => {
+  it('ignores initial readiness and changes already represented by the local revision', async () => {
     const onInvalidate = vi.fn();
     const { rerender } = render(<Fixture onInvalidate={onInvalidate} revision={1} />);
     const source = FakeEventSource.instances[0];
 
-    act(() => {
+    await act(async () => {
       source.emit('ready');
       vi.advanceTimersByTime(75);
     });
@@ -92,10 +83,12 @@ describe('useStoryRealtime', () => {
 
     act(() => source.emit('story-changed', { revision: 2 }));
     rerender(<Fixture onInvalidate={onInvalidate} revision={2} />);
-    act(() => vi.advanceTimersByTime(75));
+    await act(async () => {
+      vi.advanceTimersByTime(75);
+    });
     expect(onInvalidate).not.toHaveBeenCalled();
 
-    act(() => {
+    await act(async () => {
       source.emit('story-changed', { revision: 3 });
       vi.advanceTimersByTime(75);
     });
@@ -103,3 +96,15 @@ describe('useStoryRealtime', () => {
     expect(onInvalidate).toHaveBeenCalledWith('changed');
   });
 });
+
+function setupRealtimeTest() {
+  vi.useFakeTimers();
+  FakeEventSource.instances = [];
+  vi.stubGlobal('EventSource', FakeEventSource);
+}
+
+function cleanupRealtimeTest() {
+  cleanup();
+  vi.unstubAllGlobals();
+  vi.useRealTimers();
+}

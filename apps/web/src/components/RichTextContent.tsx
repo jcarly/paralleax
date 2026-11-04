@@ -38,10 +38,14 @@ export function RichTextContent({
       }}
       onClick={(event) => {
         const link = (event.target as HTMLElement).closest<HTMLButtonElement>(
-          'button[data-interaction-link-target]',
+          'button[data-interaction-link-target], button[data-conditional-text-link]',
         );
-        if (!link || link.disabled) return;
-        onInteractionLinkClick?.(link.dataset.interactionLinkTarget ?? '');
+        if (!link || link.disabled) {
+          return;
+        }
+        onInteractionLinkClick?.(
+          link.dataset.interactionLinkTarget ?? link.dataset.conditionalTextLink ?? '',
+        );
       }}
     />
   );

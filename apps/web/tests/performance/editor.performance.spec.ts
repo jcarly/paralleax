@@ -76,7 +76,7 @@ test('measures large-Story editor loading and common interactions', async ({ pag
   await page
     .getByRole('searchbox', { name: 'Search story context and interactions' })
     .fill(selectedTitle);
-  await page.getByRole('button', { name: 'Next interaction occurrence' }).click();
+  await page.getByRole('button', { name: 'Next interaction result' }).click();
   const inspector = page.getByRole('complementary', { name: 'Inspector' });
   await expect(inspector.getByLabel('Title')).toHaveValue(selectedTitle);
   const selectionReactAfter = await waitForReactCommitQuiescence(page);

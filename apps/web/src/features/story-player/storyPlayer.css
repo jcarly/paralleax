@@ -1,17 +1,24 @@
-/* Shared Reader and Simulation presentation with Reader as the layout baseline. */
+/* Shared Reader and Simulation player workspace. */
 
 .player-page {
+  position: relative;
   display: grid;
-  grid-template-columns: minmax(220px, 280px) minmax(0, 760px) minmax(220px, 280px);
+  width: 100%;
+  max-width: none;
+  height: calc(100vh - 58px);
+  min-height: 600px;
+  grid-template-columns: 260px minmax(0, 1fr) 250px;
+  grid-template-rows: 58px minmax(0, 1fr) auto;
   gap: 0;
-  max-width: 1360px;
-  margin: 0 auto;
+  margin: 0;
   padding: 0;
-  background: var(--color-page);
+  overflow: hidden;
+  background: var(--color-canvas);
 }
 
 .player-top {
   grid-column: 1 / -1;
+  grid-row: 1;
   display: flex;
   min-width: 0;
   align-items: center;
@@ -195,12 +202,17 @@
 
 .player-card {
   grid-column: 2;
-  view-transition-name: story-player-card;
-  background: var(--color-surface);
-  border: 0px solid var(--color-border);
-  border-radius: 16px;
+  grid-row: 2 / 4;
+  align-self: stretch;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
   padding: 0;
-  min-height: 430px;
+  overflow: auto;
+  view-transition-name: story-player-card;
+  border: 0;
+  border-radius: 0;
+  background: var(--color-surface-secondary);
   box-shadow: var(--shadow-player);
 }
 
@@ -372,12 +384,18 @@ span.conditional-text {
 .player-inventory {
   grid-column: 1;
   grid-row: 2;
-  align-self: start;
+  align-self: stretch;
   margin: 0;
-  padding: 1rem 1.25rem;
-  border: 0px solid #d9dde7;
-  border-radius: 0.75rem;
-  background: white;
+  padding: 1.5rem 1.15rem;
+  overflow: auto;
+  border: 0;
+  border-radius: 0;
+  background: var(--color-canvas);
+}
+
+.simulation-mode .player-inventory {
+  display: flex;
+  flex-direction: column;
 }
 
 .player-inventory > h2,
@@ -895,9 +913,15 @@ span.conditional-text {
 .encounter-panel {
   grid-column: 3;
   grid-row: 2;
-  align-self: start;
+  align-self: stretch;
   display: grid;
-  gap: 0.75rem;
+  align-content: start;
+  gap: 0.7rem;
+  margin: 0;
+  padding: 1.4rem 1rem;
+  overflow: auto;
+  border-left: 1px solid var(--color-border);
+  background: var(--color-canvas);
 }
 
 .encounter-panel > h2 {
@@ -944,34 +968,79 @@ span.conditional-text {
   color: var(--color-empty);
 }
 
-@media (max-width: 980px) {
-  .player-page.reader-mode {
-    grid-template-columns: 1fr;
+@media (max-width: 1080px) {
+  .player-page {
+    grid-template-columns: 230px minmax(0, 1fr);
   }
 
-  .reader-mode .player-top,
-  .reader-mode .player-card,
-  .reader-mode .player-inventory,
-  .reader-mode .encounter-panel,
-  .reader-mode .debug {
-    grid-column: 1;
-    grid-row: auto;
-  }
-
-  .reader-mode .player-inventory {
-    order: 1;
-  }
-
-  .reader-mode .player-card {
-    order: 2;
-  }
-
-  .reader-mode .encounter-panel {
-    order: 3;
+  .encounter-panel {
+    position: absolute;
+    z-index: 3;
+    top: 74px;
+    right: 1rem;
+    width: 210px;
+    height: auto;
+    max-height: calc(100% - 90px);
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    box-shadow: var(--shadow-player);
   }
 }
 
 @media (max-width: 760px) {
+  .player-page {
+    display: flex;
+    height: auto;
+    min-height: calc(100vh - 58px);
+    flex-direction: column;
+    overflow: visible;
+  }
+
+  .player-top {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    min-height: 58px;
+    flex-wrap: wrap;
+    padding: 0.65rem;
+  }
+
+  .player-context {
+    width: calc(100% - 95px);
+  }
+
+  .player-top .mode-pill,
+  .player-top .save-status {
+    margin-left: auto;
+  }
+
+  .player-toolbar-button,
+  .player-exit {
+    flex: 1;
+  }
+
+  .player-card {
+    order: 1;
+    overflow: visible;
+  }
+
+  .player-inventory {
+    order: 2;
+    overflow: visible;
+    border-top: 1px solid var(--color-border);
+    border-right: 0;
+  }
+
+  .encounter-panel {
+    position: static;
+    order: 3;
+    width: auto;
+    max-height: none;
+    border-width: 1px 0 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
   .player-scene-visual {
     height: 190px;
   }

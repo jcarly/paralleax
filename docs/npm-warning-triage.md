@@ -75,12 +75,12 @@ reports 20 moderate findings, all in the development-only Jest coverage chain:
 
 ```text
 ts-jest@29.4.15
-  -> @jest/transform@30.5.2
-  -> babel-plugin-istanbul@8.0.2
-  -> @istanbuljs/load-nyc-config@1.1.0
-  -> js-yaml@3.15.2
-  -> argparse@1.0.10
-  -> sprintf-js@1.0.3
+  → @jest/transform@30.5.2
+  → babel-plugin-istanbul@8.0.2
+  → @istanbuljs/load-nyc-config@1.1.0
+  → js-yaml@3.15.2
+  → argparse@1.0.10
+  → sprintf-js@1.0.3
 ```
 
 `npm audit fix` applied the compatible `babel-plugin-istanbul` update, but the
@@ -117,10 +117,10 @@ One deprecated package remains in the development-only test toolchain:
 
 ```text
 ts-jest@29.4.15
-  -> @jest/transform@30.5.2
-  -> babel-plugin-istanbul@8.0.2
-  -> test-exclude@7.0.2
-  -> glob@10.5.0
+  → @jest/transform@30.5.2
+  → babel-plugin-istanbul@8.0.2
+  → test-exclude@7.0.2
+  → glob@10.5.0
 ```
 
 `glob@10.5.0` is marked unsupported by its maintainer. It is not shipped in a

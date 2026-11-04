@@ -61,8 +61,9 @@ their controls on demand. Put optional precision in a tooltip or infobulle that
 works on hover and keyboard focus; never make essential meaning or actions
 available only through hover.
 
-Avoid the em dash in most interface copy. Use `->` for directional or ownership
-relationships and a simple hyphen for short separators. In compact authoring
+Avoid the em dash in most interface copy. Use `→` for directional and ownership
+relationships, including variable ownership and nested item paths shown in the
+interface. Use a simple hyphen for short separators. In compact authoring
 controls, use 12 px for labels and secondary hints and 14 px for field values;
 reader prose and prominent headings retain sizes suited to their context.
 
