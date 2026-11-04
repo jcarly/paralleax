@@ -3053,9 +3053,6 @@
     "complexity": {
       "count": 2
     },
-    "curly": {
-      "count": 21
-    },
     "max-depth": {
       "count": 5
     },
