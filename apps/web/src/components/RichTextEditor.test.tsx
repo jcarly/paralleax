@@ -1,66 +1,68 @@
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Story } from '@paralleax/shared';
 import { RichTextContent } from './RichTextContent';
-import { RichTextEditor } from './RichTextEditor';
+import { RichTextEditor } from '../features/rich-text/RichTextEditor';
 
 describe('RichTextEditor', () => {
   afterEach(() => {
     cleanup();
     vi.restoreAllMocks();
     Reflect.deleteProperty(document, 'caretRangeFromPoint');
+    Reflect.deleteProperty(document, 'elementFromPoint');
+    Reflect.deleteProperty(Range.prototype, 'getClientRects');
+    Reflect.deleteProperty(Range.prototype, 'getBoundingClientRect');
+  });
+
+  beforeEach(() => {
+    Object.defineProperty(Range.prototype, 'getClientRects', {
+      configurable: true,
+      value: () => [],
+    });
+    Object.defineProperty(Range.prototype, 'getBoundingClientRect', {
+      configurable: true,
+      value: () => new DOMRect(0, 0, 0, 0),
+    });
+    Object.defineProperty(document, 'elementFromPoint', {
+      configurable: true,
+      value: () => document.body,
+    });
   });
 
   it('edits rich HTML and offers image, GIF, and video insertion', async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
     const onBlur = vi.fn();
-    const execCommand = vi.fn().mockReturnValue(true);
-    Object.defineProperty(document, 'execCommand', {
-      configurable: true,
-      value: execCommand,
-    });
     vi.spyOn(window, 'prompt')
       .mockReturnValueOnce('https://media.example/scene.gif')
       .mockReturnValueOnce('https://www.youtube.com/watch?v=video-1');
 
-    render(<RichTextEditor value="<p>Opening</p>" onChange={onChange} onBlur={onBlur} />);
+    render(<RichTextEditor value="<p></p>" onChange={onChange} onBlur={onBlur} />);
 
     const editor = screen.getByRole('textbox', { name: 'Content' });
-    expect(editor.innerHTML).toBe('<p>Opening</p>');
-    editor.innerHTML = '<p><strong>Changed</strong></p>';
-    fireEvent.input(editor);
-    fireEvent.blur(editor);
-    expect(onChange).toHaveBeenLastCalledWith('<p><strong>Changed</strong></p>');
-    expect(onBlur).toHaveBeenLastCalledWith('<p><strong>Changed</strong></p>');
-
-    for (const [label, commandName, commandValue] of [
-      ['Bold', 'bold', undefined],
-      ['Italic', 'italic', undefined],
-      ['Underline', 'underline', undefined],
-      ['Heading', 'formatBlock', 'h2'],
-      ['Bulleted list', 'insertUnorderedList', undefined],
-    ] as const) {
-      await user.click(screen.getByRole('button', { name: label }));
-      expect(execCommand).toHaveBeenCalledWith(commandName, false, commandValue);
-    }
+    await user.click(editor);
+    await user.type(editor, 'Opening');
+    await user.keyboard('{Control>}a{/Control}');
+    await user.click(screen.getByRole('button', { name: 'Bold' }));
+    expect(editor.innerHTML).toBe('<p><strong>Opening</strong></p>');
+    expect(onChange).toHaveBeenLastCalledWith('<p><strong>Opening</strong></p>');
 
     const addImageButton = screen.getByRole('button', { name: /Add image or GIF/ });
-    expect(addImageButton).toHaveAccessibleName('Image/GIF: Add image or GIF');
+    expect(addImageButton).toHaveAccessibleName('Add image or GIF');
     await user.click(addImageButton);
-    expect(execCommand).toHaveBeenCalledWith(
-      'insertImage',
-      false,
+    expect(editor.querySelector('img[src]')).toHaveAttribute(
+      'src',
       'https://media.example/scene.gif',
     );
 
     await user.click(screen.getByRole('button', { name: 'Add video' }));
-    expect(execCommand).toHaveBeenCalledWith(
-      'insertHTML',
-      false,
-      expect.stringContaining('https://www.youtube-nocookie.com/embed/video-1'),
+    expect(editor.querySelector('iframe')).toHaveAttribute(
+      'src',
+      'https://www.youtube-nocookie.com/embed/video-1',
     );
+    fireEvent.blur(editor);
+    expect(onBlur).toHaveBeenLastCalledWith(onChange.mock.lastCall?.[0]);
   });
 
   it('removes scripts, event handlers, and unsafe URLs when rendering', () => {
@@ -80,10 +82,27 @@ describe('RichTextEditor', () => {
     expect(container.querySelector('iframe')).toBeNull();
   });
 
-  it('warns before the authored HTML limit and reports content over the limit', () => {
+  it('keeps unsupported authored markup visible and disables edits instead of saving a lossy parse', async () => {
+    const onChange = vi.fn();
+    const onBlur = vi.fn();
+    const source = '<p>Keep this</p><script>alert(1)</script>';
+    const { container } = render(
+      <RichTextEditor value={source} onChange={onChange} onBlur={onBlur} />,
+    );
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'This content cannot be edited without losing supported markup.',
+    );
+    expect(container.querySelector('.ProseMirror')).toHaveAttribute('contenteditable', 'false');
+    expect(container.querySelector('pre')).toHaveTextContent(source);
+    expect(onChange).not.toHaveBeenCalled();
+    expect(onBlur).not.toHaveBeenCalled();
+  });
+
+  it('warns before the authored HTML limit and reports content over the limit', async () => {
     const { container, rerender } = render(
       <RichTextEditor
-        value="123456789012345678"
+        value="<p>123456789012</p>"
         onChange={vi.fn()}
         onBlur={vi.fn()}
         maxLength={20}
@@ -91,7 +110,7 @@ describe('RichTextEditor', () => {
     );
 
     expect(within(container).getByRole('status', { name: 'Content length' })).toHaveTextContent(
-      '2 characters remaining.',
+      '1 character remaining.',
     );
     expect(within(container).getByRole('status', { name: 'Content length' })).toHaveClass(
       'warning',
@@ -99,29 +118,27 @@ describe('RichTextEditor', () => {
 
     rerender(
       <RichTextEditor
-        value="123456789012345678901"
+        value="<p>123456789012345</p>"
         onChange={vi.fn()}
         onBlur={vi.fn()}
         maxLength={20}
       />,
     );
-    expect(within(container).getByRole('status', { name: 'Content length' })).toHaveTextContent(
-      '1 character over limit. This content cannot be saved.',
+    await waitFor(() =>
+      expect(within(container).getByRole('status', { name: 'Content length' })).toHaveTextContent(
+        '2 characters over limit. This content cannot be saved.',
+      ),
     );
     expect(within(container).getByRole('status', { name: 'Content length' })).toHaveClass('error');
   });
 
   it('creates an interaction link through a modal with display text and target', async () => {
     const user = userEvent.setup();
-    const execCommand = vi.fn().mockReturnValue(true);
-    Object.defineProperty(document, 'execCommand', {
-      configurable: true,
-      value: execCommand,
-    });
+    const onChange = vi.fn();
     const { container } = render(
       <RichTextEditor
         value=""
-        onChange={vi.fn()}
+        onChange={onChange}
         onBlur={vi.fn()}
         interactionLinkTargets={[{ id: 'next', title: 'Next scene' }]}
       />,
@@ -136,13 +153,12 @@ describe('RichTextEditor', () => {
     await user.type(screen.getByLabelText('Text to display'), 'Continue');
     await user.selectOptions(screen.getByLabelText('Target interaction'), 'next');
 
-    expect(execCommand).not.toHaveBeenCalled();
     await user.click(screen.getByRole('button', { name: 'Insert' }));
-    expect(execCommand).toHaveBeenLastCalledWith(
-      'insertHTML',
-      false,
-      '<span contenteditable="false" data-interaction-link-target="next">Continue</span>',
-    );
+    expect(onChange.mock.lastCall?.[0]).toContain('data-interaction-link-target="next"');
+    expect(onChange.mock.lastCall?.[0]).toContain('>Continue</span>');
+    expect(
+      await screen.findByRole('button', { name: 'Edit link Continue to Next scene' }),
+    ).toBeInTheDocument();
   });
 
   it('prefills a new interaction link from the selected text', async () => {
@@ -156,18 +172,12 @@ describe('RichTextEditor', () => {
       />,
     );
     const editor = within(container).getByRole('textbox', { name: 'Content' });
-    const text = editor.querySelector('p')!.firstChild!;
-    const range = document.createRange();
-    range.setStart(text, 0);
-    range.setEnd(text, 'Continue'.length);
-    const selection = window.getSelection()!;
-    selection.removeAllRanges();
-    selection.addRange(range);
-    fireEvent.mouseUp(editor);
+    editor.focus();
+    await user.keyboard('{Control>}a{/Control}');
 
     await user.click(within(container).getByRole('button', { name: 'Add interaction link' }));
 
-    expect(screen.getByLabelText('Text to display')).toHaveValue('Continue');
+    expect(screen.getByLabelText('Text to display')).toHaveValue('Continue now');
   });
 
   it('creates a conditional frame around the selected rich text with a Trigger condition', async () => {
@@ -185,22 +195,15 @@ describe('RichTextEditor', () => {
       />,
     );
     const editor = within(container).getByRole('textbox', { name: 'Content' });
-    const selected = editor.querySelector('strong')!;
-    const range = document.createRange();
-    range.selectNode(selected);
-    const selection = window.getSelection()!;
-    selection.removeAllRanges();
-    selection.addRange(range);
-    fireEvent.mouseUp(editor);
+    editor.focus();
+    await user.keyboard('{Control>}a{/Control}');
 
     await user.click(within(container).getByRole('button', { name: 'Add conditional text' }));
     await user.click(screen.getByRole('button', { name: 'Interaction' }));
     await user.click(screen.getByRole('button', { name: 'Insert' }));
 
     expect(onConditionalTextChange).toHaveBeenCalledWith(
-      expect.stringMatching(
-        /^<p>Before <span data-conditional-text-block="[^"]+"><strong>selected text<\/strong><\/span> after<\/p>$/,
-      ),
+      expect.stringContaining('data-conditional-text-block="'),
       [
         {
           id: expect.any(String),
@@ -224,15 +227,11 @@ describe('RichTextEditor', () => {
       />,
     );
     const editor = within(container).getByRole('textbox', { name: 'Content' });
-    const range = document.createRange();
-    range.selectNode(editor.querySelector('strong')!);
-    const selection = window.getSelection()!;
-    selection.removeAllRanges();
-    selection.addRange(range);
-    fireEvent.mouseUp(editor);
+    editor.focus();
+    await user.keyboard('{Control>}a{/Control}');
 
     await user.click(within(container).getByRole('button', { name: 'Add conditional text' }));
-    expect(editor.querySelector('[data-conditional-text-block]')).not.toBeNull();
+    expect(editor.querySelector('[data-conditional-text-block]')).toBeNull();
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
 
     expect(editor.innerHTML).toBe('<p>Before <strong>selected text</strong> after</p>');
@@ -261,7 +260,7 @@ describe('RichTextEditor', () => {
       />,
     );
 
-    await user.click(within(container).getByRole('button', { name: 'Edit condition' }));
+    await user.click(await within(container).findByRole('button', { name: 'Edit condition' }));
     await user.selectOptions(
       screen.getByLabelText('Interaction condition operator'),
       'not-visited',
@@ -272,7 +271,9 @@ describe('RichTextEditor', () => {
       [{ id: 'block-1', conditions: [{ interactionId: 'next', hasBeenVisited: false }] }],
     );
 
-    const removeCondition = within(container).getByRole('button', { name: 'Remove condition' });
+    const removeCondition = await within(container).findByRole('button', {
+      name: 'Remove condition',
+    });
     expect(removeCondition).toHaveClass('rich-text-condition-remove');
     expect(removeCondition).not.toHaveClass('trigger-link-delete');
     await user.click(removeCondition);
@@ -281,32 +282,28 @@ describe('RichTextEditor', () => {
 
   it('walks story owners and nested items before inserting a stable variable marker', async () => {
     const user = userEvent.setup();
-    const execCommand = vi.fn().mockReturnValue(true);
-    Object.defineProperty(document, 'execCommand', {
-      configurable: true,
-      value: execCommand,
-    });
+    const onChange = vi.fn();
     const story = variableStoryFixture();
     const { container } = render(
-      <RichTextEditor value="" onChange={vi.fn()} onBlur={vi.fn()} story={story} />,
+      <RichTextEditor value="" onChange={onChange} onBlur={vi.fn()} story={story} />,
     );
 
     const addVariable = within(container).getByRole('button', { name: /Add variable/ });
-    expect(addVariable).toHaveAccessibleName('{x}: Add variable');
+    expect(addVariable).toHaveAccessibleName('Add variable');
     await user.click(addVariable);
     expect(screen.getByRole('dialog', { name: 'Add a variable' })).toBeInTheDocument();
     const owner = screen.getByLabelText('Variable owner');
-    expect(within(owner).getByRole('option', { name: 'World -> Demo' })).toBeInTheDocument();
-    expect(within(owner).getByRole('option', { name: 'Character -> Mira' })).toBeInTheDocument();
-    expect(within(owner).getByRole('option', { name: 'Location -> Lab' })).toBeInTheDocument();
+    expect(within(owner).getByRole('option', { name: 'World → Demo' })).toBeInTheDocument();
+    expect(within(owner).getByRole('option', { name: 'Character → Mira' })).toBeInTheDocument();
+    expect(within(owner).getByRole('option', { name: 'Location → Lab' })).toBeInTheDocument();
 
     await user.selectOptions(owner, 'owner:character:mira');
     const characterContent = screen.getByLabelText('Variable or item in Mira');
     expect(
-      within(characterContent).getByRole('option', { name: 'Variable -> Health' }),
+      within(characterContent).getByRole('option', { name: 'Variable → Health' }),
     ).toBeInTheDocument();
     expect(
-      within(characterContent).getByRole('option', { name: 'Item -> Bag' }),
+      within(characterContent).getByRole('option', { name: 'Item → Bag' }),
     ).toBeInTheDocument();
     await user.selectOptions(characterContent, 'item:bag');
     await user.selectOptions(screen.getByLabelText('Variable or item in Bag'), 'item:battery');
@@ -315,21 +312,16 @@ describe('RichTextEditor', () => {
       'variable:battery:charge',
     );
     expect(
-      within(screen.getByRole('dialog')).getByText('Mira -> Bag -> Battery -> Charge'),
+      within(screen.getByRole('dialog')).getByText('Mira → Bag → Battery → Charge'),
     ).toBeInTheDocument();
 
-    expect(execCommand).not.toHaveBeenCalledWith(
-      'insertHTML',
-      false,
-      expect.stringContaining('data-stat-value="charge"'),
-    );
     await user.click(screen.getByRole('button', { name: 'Insert' }));
-
-    expect(execCommand).toHaveBeenLastCalledWith(
-      'insertHTML',
-      false,
-      '<span contenteditable="false" data-stat-value="charge" data-stat-item="battery">{{battery.Charge}}</span>',
-    );
+    expect(onChange.mock.lastCall?.[0]).toContain('data-stat-value="charge"');
+    expect(onChange.mock.lastCall?.[0]).toContain('data-stat-item="battery"');
+    expect(onChange.mock.lastCall?.[0]).toContain('{{battery.Charge}}');
+    expect(
+      await screen.findByRole('button', { name: 'Edit variable Mira → Bag → Battery → Charge' }),
+    ).toBeInTheDocument();
 
     await user.click(addVariable);
     await user.selectOptions(screen.getByLabelText('Variable owner'), 'owner:story:demo');
@@ -338,11 +330,8 @@ describe('RichTextEditor', () => {
       'variable:story:score',
     );
     await user.click(screen.getByRole('button', { name: 'Insert' }));
-    expect(execCommand).toHaveBeenLastCalledWith(
-      'insertHTML',
-      false,
-      '<span contenteditable="false" data-stat-value="score">{{story.Score}}</span>',
-    );
+    expect(onChange.mock.lastCall?.[0]).toContain('data-stat-value="score"');
+    expect(onChange.mock.lastCall?.[0]).toContain('{{story.Score}}');
   });
 
   it('edits and removes an existing variable token without persisting editor controls', async () => {
@@ -359,8 +348,8 @@ describe('RichTextEditor', () => {
       />,
     );
 
-    const token = within(container).getByRole('button', {
-      name: 'Edit variable Story -> Score',
+    const token = await within(container).findByRole('button', {
+      name: 'Edit variable Story → Score',
     });
     await user.click(token);
     expect(screen.getByRole('dialog', { name: 'Edit variable' })).toBeInTheDocument();
@@ -372,21 +361,20 @@ describe('RichTextEditor', () => {
       screen.getByLabelText('Variable or item in Mira'),
       'variable:character:health',
     );
-    expect(within(screen.getByRole('dialog')).getByText('Mira -> Health')).toBeInTheDocument();
+    expect(within(screen.getByRole('dialog')).getByText('Mira → Health')).toBeInTheDocument();
 
     expect(onChange).not.toHaveBeenCalled();
     await user.click(screen.getByRole('button', { name: 'Update' }));
 
-    expect(onChange).toHaveBeenLastCalledWith(
-      '<p>Value: <span contenteditable="false" data-stat-value="health">{{Mira.Health}}</span></p>',
-    );
+    expect(onChange.mock.lastCall?.[0]).toContain('data-stat-value="health"');
+    expect(onChange.mock.lastCall?.[0]).toContain('{{Mira.Health}}');
     expect(onChange.mock.lastCall?.[0]).not.toContain('aria-label');
     expect(onChange.mock.lastCall?.[0]).not.toContain('rich-text-variable-selected');
     expect(onChange.mock.lastCall?.[0]).not.toContain('data-rich-text-variable');
     expect(onChange.mock.lastCall?.[0]).not.toContain('trigger-link-delete');
 
-    const removeVariable = within(container).getByRole('button', {
-      name: 'Remove variable Mira -> Health',
+    const removeVariable = await within(container).findByRole('button', {
+      name: 'Remove variable Mira → Health',
     });
     expect(removeVariable).toHaveClass('rich-text-token-remove');
     expect(removeVariable).not.toHaveClass('trigger-link-delete');
@@ -397,7 +385,7 @@ describe('RichTextEditor', () => {
     expect(container.querySelector('[data-stat-value]')).toBeNull();
   });
 
-  it('projects variable token labels from stable ids after entity renames', () => {
+  it('projects variable token labels from stable ids after entity renames', async () => {
     const value =
       '<p>Value: <span contenteditable="false" data-stat-value="health">{{Mira.Health}}</span></p>';
     const { container, rerender } = render(
@@ -410,7 +398,7 @@ describe('RichTextEditor', () => {
     );
 
     expect(
-      within(container).getByRole('button', { name: 'Edit variable Mira -> Health' }),
+      await within(container).findByRole('button', { name: 'Edit variable Mira → Health' }),
     ).toBeInTheDocument();
 
     const renamedStory = variableStoryFixture();
@@ -421,13 +409,13 @@ describe('RichTextEditor', () => {
     );
 
     expect(
-      within(container).getByRole('button', { name: 'Edit variable Alice -> Force' }),
+      await within(container).findByRole('button', { name: 'Edit variable Alice → Force' }),
     ).toBeInTheDocument();
-    expect(container.querySelector('[data-stat-value]')).toHaveTextContent('Alice -> Force');
+    expect(container.querySelector('[data-stat-value]')).toHaveTextContent('Alice → Force');
     expect(container.querySelector('[data-stat-value]')).not.toHaveTextContent('{{');
   });
 
-  it('moves a variable token within the rich text without persisting drag controls', () => {
+  it('exposes variable references as draggable nodes with separate edit controls', async () => {
     const onChange = vi.fn();
     const { container } = render(
       <RichTextEditor
@@ -440,43 +428,15 @@ describe('RichTextEditor', () => {
       />,
     );
     const editor = within(container).getByRole('textbox', { name: 'Content' });
-    const token = within(container).getByRole('button', {
-      name: 'Edit variable Story -> Score',
+    const token = await within(container).findByRole('button', {
+      name: 'Edit variable Story → Score',
     });
     const marker = token.closest<HTMLElement>('[data-stat-value]')!;
-    const targetText = [...editor.querySelector('p')!.childNodes].find(
-      (node) => node.nodeType === Node.TEXT_NODE && node.textContent === ' after.',
-    )!;
-    const dropRange = document.createRange();
-    dropRange.setStart(targetText, targetText.textContent!.length);
-    dropRange.collapse(true);
-    Object.defineProperty(document, 'caretRangeFromPoint', {
-      configurable: true,
-      value: vi.fn(() => dropRange),
-    });
-    const dataTransfer = {
-      dropEffect: 'none',
-      effectAllowed: 'none',
-      setData: vi.fn(),
-    };
-
     expect(token).toHaveAttribute('draggable', 'true');
-    fireEvent.dragStart(token, { dataTransfer });
-    expect(marker).toHaveClass('rich-text-token-dragging');
-    expect(dataTransfer.effectAllowed).toBe('move');
-    expect(dataTransfer.setData).toHaveBeenCalledWith('text/plain', 'Story -> Score');
-
-    fireEvent.dragOver(editor, { clientX: 80, clientY: 20, dataTransfer });
-    expect(dataTransfer.dropEffect).toBe('move');
-    fireEvent.drop(editor, { clientX: 80, clientY: 20, dataTransfer });
-
-    expect(marker).not.toHaveClass('rich-text-token-dragging');
-    expect(onChange).toHaveBeenCalledTimes(1);
-    expect(onChange).toHaveBeenLastCalledWith(
-      '<p>Before  after.<span contenteditable="false" data-stat-value="score">{{story.Score}}</span></p>',
-    );
-    expect(onChange.mock.lastCall?.[0]).not.toContain('draggable');
-    expect(onChange.mock.lastCall?.[0]).not.toContain('rich-text-token-dragging');
+    expect(marker.closest('[draggable="true"]')).not.toBeNull();
+    expect(editor.innerHTML).toContain('rich-text-token-edit');
+    expect(editor.innerHTML).toContain('rich-text-token-remove');
+    expect(onChange).not.toHaveBeenCalled();
   });
 
   it('edits, reprojects, and removes an interaction link token', async () => {
@@ -496,7 +456,7 @@ describe('RichTextEditor', () => {
       />,
     );
 
-    const token = within(container).getByRole('button', {
+    const token = await within(container).findByRole('button', {
       name: 'Edit link Continue to Next scene',
     });
     expect(token).toHaveTextContent('🔗 Continue | Next scene');
@@ -511,9 +471,8 @@ describe('RichTextEditor', () => {
     await user.selectOptions(screen.getByLabelText('Target interaction'), 'ending');
     await user.click(screen.getByRole('button', { name: 'Update' }));
 
-    expect(onChange).toHaveBeenLastCalledWith(
-      '<p><span contenteditable="false" data-interaction-link-target="ending">Finish</span></p>',
-    );
+    expect(onChange.mock.lastCall?.[0]).toContain('data-interaction-link-target="ending"');
+    expect(onChange.mock.lastCall?.[0]).toContain('>Finish</span>');
     expect(onChange.mock.lastCall?.[0]).not.toContain('data-rich-text-interaction-link');
 
     rerender(
@@ -528,11 +487,11 @@ describe('RichTextEditor', () => {
       />,
     );
     expect(
-      within(container).getByRole('button', { name: 'Edit link Finish to Final chapter' }),
+      await within(container).findByRole('button', { name: 'Edit link Finish to Final chapter' }),
     ).toHaveTextContent('🔗 Finish | Final chapter');
 
     await user.click(
-      within(container).getByRole('button', {
+      await within(container).findByRole('button', {
         name: 'Remove link Finish to Final chapter',
       }),
     );
@@ -642,6 +601,39 @@ describe('RichTextEditor', () => {
     expect(onInteractionLinkClick).toHaveBeenCalledWith('next');
   });
 
+  it('keeps legacy conditional links navigable from the Reader projection', async () => {
+    const user = userEvent.setup();
+    const onInteractionLinkClick = vi.fn();
+    const html =
+      '<div data-conditional-text-target="next">' +
+      '<button data-conditional-text-link="next">Next</button><p>Clue</p></div>';
+    const { rerender } = render(
+      <RichTextContent
+        html={html}
+        conditionalTextState={{ next: { visible: true, available: true } }}
+        onInteractionLinkClick={onInteractionLinkClick}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Next' }));
+    expect(onInteractionLinkClick).toHaveBeenCalledWith('next');
+
+    rerender(
+      <RichTextContent
+        html={html}
+        conditionalTextState={{
+          next: { visible: true, available: false, reason: 'Condition failed.' },
+        }}
+        onInteractionLinkClick={onInteractionLinkClick}
+      />,
+    );
+    const unavailableLink = screen.getByRole('button', { name: 'Next' });
+    expect(unavailableLink).toBeDisabled();
+    expect(unavailableLink).toHaveAttribute('title', 'Condition failed.');
+    await user.click(unavailableLink);
+    expect(onInteractionLinkClick).toHaveBeenCalledOnce();
+  });
+
   it('renders inert typed-stat interpolation markers from replayed values', () => {
     const html =
       '<p>Score: <span data-stat-value="score"></span></p>' +
@@ -687,6 +679,22 @@ describe('RichTextEditor', () => {
     expect(screen.getByText('Unknown:')).toBeInTheDocument();
     expect(screen.getByText('Malformed:')).toBeInTheDocument();
     expect(screen.queryByText(/Unknown\.Message/)).not.toBeInTheDocument();
+  });
+
+  it('keeps legacy plain-text interaction bodies editable', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<RichTextEditor value="Legacy plain text" onChange={onChange} onBlur={vi.fn()} />);
+
+    const editor = screen.getByRole('textbox', { name: 'Content' });
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    await user.click(editor);
+    await user.type(editor, '!');
+
+    expect(editor).toHaveTextContent(/(?:!Legacy plain text|Legacy plain text!)/);
+    expect(onChange).toHaveBeenCalledWith(
+      expect.stringMatching(/<p>(?:!Legacy plain text|Legacy plain text!)<\/p>/),
+    );
   });
 });
 

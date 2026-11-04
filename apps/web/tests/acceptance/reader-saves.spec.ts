@@ -1,9 +1,7 @@
 import { expect, test } from '@playwright/test';
 import {
-  createdInteraction,
   editInteraction,
   expectSuccessful,
-  interactionNode,
   registerAndCreateStory,
   waitForApiResponse,
 } from './realStackTestHarness';
@@ -12,16 +10,7 @@ test('reader, simulation, and manual save slots resume independently', async ({ 
   test.setTimeout(420_000);
   const { storyId } = await registerAndCreateStory(page, 'Save slots');
 
-  const rootCreation = waitForApiResponse(page, 'POST', /\/api\/stories\/[^/]+\/interactions$/);
-  await page.getByRole('button', { name: 'Add root' }).click();
-  await createdInteraction(rootCreation);
-  await editInteraction(page, 'New interaction', 'Opening', 'The journey starts.');
-
-  const childCreation = waitForApiResponse(page, 'POST', /\/api\/stories\/[^/]+\/interactions$/);
-  await interactionNode(page, 'Opening')
-    .getByRole('button', { name: 'Create child interaction' })
-    .click();
-  await createdInteraction(childCreation);
+  await editInteraction(page, 'Start', 'Opening', 'The journey starts.');
   await editInteraction(page, 'New interaction', 'Arrival', 'The journey is complete.');
 
   let progressSave = waitForApiResponse(

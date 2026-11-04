@@ -82,7 +82,7 @@ details. They should stay covered by tests as the editor grows.
   rule matches when the current Interaction is any one of those inputs. This is
   separate from the Trigger's condition groups.
 - Current authoring policy: normal creation and input edits allow a directed
-  source -> target pair on only one Trigger. This is enforced by shared and API
+  source → target pair on only one Trigger. This is enforced by shared and API
   validation, not a PostgreSQL constraint, and is not a permanent storage
   invariant. Existing duplicate pairs remain readable and editable; unrelated
   edits and removals remain available.
@@ -259,7 +259,7 @@ details. They should stay covered by tests as the editor grows.
   changes trigger or reader semantics. Missing positions use stable automatic
   placement.
 - Every linked Trigger has its own graph marker and input edges. Historical
-  duplicate source -> target pairs remain separate markers so each Trigger can
+  duplicate source → target pairs remain separate markers so each Trigger can
   be inspected or removed independently.
 - Moving a trigger marker changes only that Trigger's saved position.
 - Editing a linked trigger should happen from the graph trigger marker
@@ -273,7 +273,7 @@ details. They should stay covered by tests as the editor grows.
   adds the source to that Trigger.
 - Adding an input to an existing trigger preserves one trigger with shared
   conditions across several inputs.
-- Creating a new Trigger creates an independent route only when its source ->
+- Creating a new Trigger creates an independent route only when its source →
   target pairs are new. Condition alternatives for an existing route belong in
   that Trigger's condition groups.
 - Interaction editing should stay focused on interaction content and root trigger
@@ -327,6 +327,8 @@ details. They should stay covered by tests as the editor grows.
 
 - A Group is authoring and navigation metadata only. Membership never changes
   Trigger evaluation, reader output, progress replay, or Simulation state.
+- A Group may have no direct Interactions, including at the root. Groups remain
+  organizational metadata and do not require member Interactions to be valid.
 - One Interaction may belong directly to zero or one Group. Assigning it to a
   Group removes its previous direct membership atomically. Group membership is
   explicit and is never inferred from Graph Decoration overlap or canvas position.

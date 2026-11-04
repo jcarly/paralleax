@@ -25,7 +25,7 @@ before authors rely on the service to retain their projects.
 Use one public HTTPS origin for the browser and API:
 
 ```text
-browser -> TLS edge -> Paralleax web container -> /api proxy -> API container -> managed PostgreSQL
+browser → TLS edge → Paralleax web container → /api proxy → API container → managed PostgreSQL
 ```
 
 The web container serves the Vite build, applies browser security headers, and
@@ -102,9 +102,12 @@ docker build --target api --tag registry.example/paralleax-api:<commit> .
 docker build --target web --tag registry.example/paralleax-web:<commit> .
 ```
 
-Use immutable commit or digest references. GitHub Actions builds both targets on
-every push and pull request. A provider deployment should pull those exact
-images instead of rebuilding an unreviewed working tree.
+Use immutable commit or digest references. GitHub Actions builds both targets
+when Docker, production Compose, deployment, or dependency-manifest files change,
+and in the weekly/manual exhaustive lane. Application pull requests still run
+the affected workspace build and tests. CI validates images locally but does
+not publish them; a provider deployment should use reviewed image digests rather
+than rebuilding an unreviewed working tree.
 
 Run the API image once as a migration job before replacing application traffic:
 

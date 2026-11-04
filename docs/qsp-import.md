@@ -64,14 +64,14 @@ it can produce source locations and compatibility issues before canonical mappin
 
 ```text
 QSP game file or .qsrc location collection
-  -> API request validation and source decoding
-  -> QSP worker thread: official format decoding per game/source file
-  -> QSP worker thread: locations, static actions, and statement analysis
-  -> compatibility issues and coverage matrix
-  -> Paralleax interactions and triggers
-  -> worker result returned to the API
-  -> author confirmation when warnings exist
-  -> API-owned atomic persistence
+  → API request validation and source decoding
+  → QSP worker thread: official format decoding per game/source file
+  → QSP worker thread: locations, static actions, and statement analysis
+  → compatibility issues and coverage matrix
+  → Paralleax interactions and triggers
+  → worker result returned to the API
+  → author confirmation when warnings exist
+  → API-owned atomic persistence
 ```
 
 The deterministic adapter lives in `packages/shared/src/import-export/qsp/`.
@@ -130,7 +130,7 @@ The first vertical slice converts:
 
 When multiple converted branches connect the same source Interaction to the
 same target, their distinct condition variants become OR groups on one Trigger.
-Different source -> target pairs can remain on separate Triggers, including
+Different source → target pairs can remain on separate Triggers, including
 when their condition groups differ.
 
 All imported rich text is escaped. Static targets are matched case-insensitively,

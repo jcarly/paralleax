@@ -26,6 +26,9 @@ test('keeps rich-text removal controls styled without graph CSS in Simulation an
   );
 
   await page.goto('/stories/story-1/play?mode=simulation&startInteractionId=interaction-1');
+  await expect(page.locator('.simulation-body-preview .story-body')).toContainText('Continue');
+  await expect(page.locator('.simulation-body-preview .story-body')).toContainText('Secret clue');
+  await page.locator('.simulation-body-preview').focus();
   const simulationContent = page.getByRole('textbox', { name: 'Current interaction content' });
   await expect(simulationContent).toContainText('Continue');
   await expect(simulationContent).toContainText('Secret clue');
@@ -65,6 +68,7 @@ test('keeps rich-text removal controls styled without graph CSS in Simulation an
   await page.goto('/stories/story-1/edit');
   await page.getByTestId('interaction-node').filter({ hasText: 'Original title' }).click();
   const editorContent = page.getByRole('textbox', { name: 'Content' });
+  await editorContent.focus();
   const editorLinkRemove = editorContent.locator('.rich-text-token-remove');
   const editorConditionRemove = editorContent.locator('.rich-text-condition-remove');
   await expect(editorLinkRemove).toHaveCount(1);
@@ -74,6 +78,42 @@ test('keeps rich-text removal controls styled without graph CSS in Simulation an
   expect(await captureRemovalStates(page, editorConditionRemove)).toEqual(
     simulationConditionStates,
   );
+});
+
+test('shows a distinct active state for formatting toolbar buttons', async ({ page }) => {
+  const story = storyWithConditionCandidate();
+  story.interactions[0].body = '<p>Text to format</p>';
+
+  await prepareEditorPage(page, story);
+  await page.goto('/stories/story-1/edit');
+  await page.getByTestId('interaction-node').filter({ hasText: 'Original title' }).click();
+
+  const content = page.getByRole('textbox', { name: 'Content' });
+  await content.evaluate((element) => {
+    const text = element.querySelector('p')?.firstChild;
+    if (!text) {
+      throw new Error('Expected interaction body text');
+    }
+    const range = document.createRange();
+    range.selectNodeContents(text);
+    const selection = window.getSelection();
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+    element.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+  });
+
+  const bold = page.getByRole('button', { name: 'Bold' });
+  const inactiveBackground = await bold.evaluate(
+    (element) => getComputedStyle(element).backgroundColor,
+  );
+  await bold.click();
+  await expect(bold).toHaveAttribute('aria-pressed', 'true');
+  const activeBackground = await bold.evaluate(
+    (element) => getComputedStyle(element).backgroundColor,
+  );
+
+  expect(activeBackground).not.toBe(inactiveBackground);
+  await expect(content.locator('strong')).toHaveText('Text to format');
 });
 
 async function captureRemovalStates(page: Page, button: Locator) {

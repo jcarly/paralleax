@@ -28,6 +28,10 @@ test('keeps Simulation styling consistent across direct and editor navigation', 
   await page.goto('/stories/story-1/play?mode=simulation&startInteractionId=interaction-1');
   await expect(page.locator('.simulation-controls .product-eyebrow')).toBeVisible();
   await expect(page.locator('.simulation-mode .player-top .mode-pill')).toHaveText('Simulation');
+  await expect(page.getByRole('textbox', { name: 'Current interaction title' })).toHaveValue(
+    'Original title',
+  );
+  await expect(page.locator('.simulation-body-preview .story-body')).toBeVisible();
   const directIndicatorStyle = await readSimulationIndicatorStyle();
   expect(directIndicatorStyle.background).not.toBe('rgba(0, 0, 0, 0)');
   expect(directIndicatorStyle.border).not.toBe('rgba(0, 0, 0, 0)');
@@ -76,6 +80,10 @@ test('keeps Simulation styling consistent across direct and editor navigation', 
   await page.waitForURL('**/stories/story-1/play?mode=simulation&startInteractionId=interaction-1');
   await expect(page.locator('.simulation-controls .product-eyebrow')).toBeVisible();
   await expect(page.locator('.simulation-mode .player-top .mode-pill')).toHaveText('Simulation');
+  await expect(page.getByRole('textbox', { name: 'Current interaction title' })).toHaveValue(
+    'Original title',
+  );
+  await expect(page.locator('.simulation-body-preview .story-body')).toBeVisible();
   expect(await readSimulationIndicatorStyle()).toEqual(directIndicatorStyle);
   expect(await readSimulationTypography(page)).toEqual(directTypography);
 });
@@ -83,7 +91,7 @@ test('keeps Simulation styling consistent across direct and editor navigation', 
 async function readSimulationTypography(page: import('@playwright/test').Page) {
   return page.evaluate(() => {
     const title = document.querySelector('.simulation-title-input');
-    const body = document.querySelector('.rich-text-surface');
+    const body = document.querySelector('.simulation-body-preview .story-body');
     if (!(title instanceof HTMLElement) || !(body instanceof HTMLElement)) {
       throw new Error('Simulation title and body must be rendered');
     }

@@ -32,7 +32,7 @@ identity boundary, expensive computation, or frequently rerendered subtree.
   atomic API command over client-side orchestration. Trigger creation already
   accepts initial inputs and conditions, so creating a route does not need a
   dependent PATCH. Alternative condition groups update that same Trigger; a
-  duplicate directed source -> target route is rejected by shared validation and
+  duplicate directed source → target route is rejected by shared validation and
   the API.
 - Preserve optimistic updates and stale-response protection when consolidating
   commands.
@@ -65,7 +65,7 @@ identity boundary, expensive computation, or frequently rerendered subtree.
 
 The editor currently projects a domain `Story` into React Flow nodes and edges.
 Because React Flow also owns transient drag state, changes to the
-`story -> projected nodes -> React Flow nodes` synchronization require a focused
+`story → projected nodes → React Flow nodes` synchronization require a focused
 design and regression tests. Do not remove or duplicate that boundary as a
 generic rerender optimization.
 

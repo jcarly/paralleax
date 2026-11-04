@@ -96,11 +96,13 @@ export function App() {
       <Suspense fallback={<main className="page">{t('shell.loadingWorkspace')}</main>}>
         <AccountActionPage
           action={accountAction}
-          onBackToSignIn={() => navigate('/login', { replace: true })}
-          onAuthenticated={(authenticatedUser) => {
+          onBackToSignIn={async () => {
+            await navigate('/login', { replace: true });
+          }}
+          onAuthenticated={async (authenticatedUser) => {
             setSessionExpired(false);
             setUser(authenticatedUser);
-            navigate('/', { replace: true });
+            await navigate('/', { replace: true });
           }}
         />
       </Suspense>
@@ -112,11 +114,13 @@ export function App() {
         <AuthPage
           initialMode={location.pathname === '/register' ? 'register' : 'login'}
           notice={sessionExpired ? t('shell.sessionExpired') : ''}
-          onModeChange={(mode) => navigate(authenticationPath(mode, returnTo), { replace: true })}
-          onAuthenticated={(authenticatedUser) => {
+          onModeChange={async (mode) => {
+            await navigate(authenticationPath(mode, returnTo), { replace: true });
+          }}
+          onAuthenticated={async (authenticatedUser) => {
             setSessionExpired(false);
             setUser(authenticatedUser);
-            navigate(returnTo, { replace: true });
+            await navigate(returnTo, { replace: true });
           }}
         />
       </Suspense>

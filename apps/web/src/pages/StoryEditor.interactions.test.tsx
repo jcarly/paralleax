@@ -29,6 +29,26 @@ describe('StoryEditor interactions', () => {
   setupStoryEditorTestSuite();
 
   beforeEach(() => {
+    Object.defineProperty(Range.prototype, 'getClientRects', {
+      configurable: true,
+      value: () => [],
+    });
+    Object.defineProperty(Range.prototype, 'getBoundingClientRect', {
+      configurable: true,
+      value: () => new DOMRect(0, 0, 0, 0),
+    });
+    Object.defineProperty(HTMLElement.prototype, 'getClientRects', {
+      configurable: true,
+      value: () => [],
+    });
+    Object.defineProperty(HTMLElement.prototype, 'getBoundingClientRect', {
+      configurable: true,
+      value: () => new DOMRect(0, 0, 0, 0),
+    });
+    Object.defineProperty(document, 'elementFromPoint', {
+      configurable: true,
+      value: () => document.body,
+    });
     vi.spyOn(elkLayout, 'computeStoryGraphElkLayout').mockResolvedValue({
       interactionUpdates: [],
       triggerUpdates: [],
@@ -79,6 +99,26 @@ describe('StoryEditor interactions', () => {
       ),
     );
     expect(screen.getByLabelText('Title')).toHaveValue('Second interaction');
+  });
+
+  it('uses measured interaction dimensions when calculating a child position', async () => {
+    const user = userEvent.setup();
+    await renderEditor(storyWithTwoInteractions());
+
+    await user.click(screen.getByTestId('measure-node-interaction-1'));
+    await user.click(
+      within(screen.getByTestId('flow-node-interaction-1')).getByRole('button', {
+        name: 'Create child interaction',
+      }),
+    );
+
+    await waitFor(() => expect(elkLayout.computeStoryGraphElkLayout).toHaveBeenCalled());
+    const calls = vi.mocked(elkLayout.computeStoryGraphElkLayout).mock.calls;
+    const layoutOptions = calls[calls.length - 1]?.[1];
+    expect(layoutOptions?.interactionSizes?.get('interaction-1')).toEqual({
+      width: 500,
+      height: 320,
+    });
   });
 
   it('links the test action to the selected interaction when one is selected', async () => {
@@ -333,13 +373,13 @@ describe('StoryEditor interactions', () => {
     await renderEditor();
     await user.click(screen.getByTestId('flow-node-interaction-1'));
 
-    const bodyInput = screen.getByLabelText('Content');
+    const bodyInput = await screen.findByRole('textbox', { name: 'Content' });
     await user.clear(bodyInput);
     await user.type(bodyInput, 'Long new content');
     await user.tab();
 
     expect(api.updateInteraction).toHaveBeenCalledWith('story-1', 'interaction-1', {
-      body: 'Long new content',
+      body: '<p>Long new content</p>',
     });
     await waitFor(() =>
       expect(screen.getByLabelText('Content')).toHaveTextContent('Long new content'),
@@ -347,6 +387,7 @@ describe('StoryEditor interactions', () => {
   });
 
   it('serializes title and body saves so reopening keeps both edits', async () => {
+    const user = userEvent.setup();
     let resolveTitleSave!: (story: Story) => void;
     let resolveBodySave!: (story: Story) => void;
     vi.mocked(api.updateInteraction)
@@ -356,12 +397,14 @@ describe('StoryEditor interactions', () => {
     await renderEditor();
     fireEvent.click(screen.getByTestId('flow-node-interaction-1'));
 
-    fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'Saved title' } });
-    fireEvent.blur(screen.getByLabelText('Title'));
-    const content = screen.getByLabelText('Content');
-    content.innerHTML = 'Saved content';
-    fireEvent.input(content);
-    fireEvent.blur(content);
+    const titleInput = screen.getByLabelText('Title');
+    await user.clear(titleInput);
+    await user.type(titleInput, 'Saved title');
+    await user.tab();
+    const content = await screen.findByRole('textbox', { name: 'Content' });
+    await user.clear(content);
+    await user.type(content, 'Saved content');
+    await user.tab();
 
     await waitFor(() => expect(api.updateInteraction).toHaveBeenCalledTimes(1));
     expect(screen.getByRole('status', { name: 'Story save status' })).toHaveTextContent('Saving…');
@@ -375,12 +418,12 @@ describe('StoryEditor interactions', () => {
 
     await waitFor(() => expect(api.updateInteraction).toHaveBeenCalledTimes(2));
     expect(api.updateInteraction).toHaveBeenNthCalledWith(2, 'story-1', 'interaction-1', {
-      body: 'Saved content',
+      body: '<p>Saved content</p>',
     });
 
     const fullySavedStory = cloneStory();
     fullySavedStory.interactions[0].title = 'Saved title';
-    fullySavedStory.interactions[0].body = 'Saved content';
+    fullySavedStory.interactions[0].body = '<p>Saved content</p>';
     await act(async () => resolveBodySave(fullySavedStory));
 
     expect(await screen.findByDisplayValue('Saved title')).toBeInTheDocument();

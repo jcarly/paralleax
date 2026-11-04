@@ -170,9 +170,10 @@ export function getReferencedInteractionIds(
 }
 
 export function getStoryContextCategorySuggestions(items: Array<{ category?: string }>) {
-  return [
-    ...new Set(items.map(({ category }) => category?.trim()).filter(Boolean) as string[]),
-  ].sort((left, right) => left.localeCompare(right));
+  const categories = items
+    .map(({ category }) => category?.trim())
+    .filter((category): category is string => category !== undefined && category !== '');
+  return [...new Set(categories)].sort((left, right) => left.localeCompare(right));
 }
 
 export function matchesStoryContextSearch(

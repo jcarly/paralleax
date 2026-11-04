@@ -12,6 +12,12 @@ import type { CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { RemoveRowButton } from './RemoveRowButton';
 
+type ItemDepthStyle = CSSProperties & { '--item-depth': number };
+
+function isItemRelationshipType(value: string): value is ItemRelationshipType {
+  return ITEM_RELATIONSHIP_TYPES.some((relationshipType) => relationshipType === value);
+}
+
 export function ItemInstanceTree({
   items,
   itemDefinitions,
@@ -34,10 +40,13 @@ export function ItemInstanceTree({
 
   const renderItem = (item: ItemInstance, depth: number, ancestors: ReadonlySet<string>) => {
     const definition = itemDefinitions.find(({ id }) => id === item.itemDefinitionId);
+    const definitionStats = definition?.stats ?? [];
     const nextAncestors = new Set([...ancestors, item.id]);
     const descendants = getItemDescendantIds(items, item.id);
+    const childItems = childrenByParent.get(item.id) ?? [];
+    const itemDepthStyle: ItemDepthStyle = { '--item-depth': depth };
     return (
-      <li key={item.id} style={{ '--item-depth': depth } as CSSProperties}>
+      <li key={item.id} style={itemDepthStyle}>
         <div className="item-tree-card">
           <div className="item-tree-title">
             {definition?.imageUrl ? (
@@ -48,9 +57,9 @@ export function ItemInstanceTree({
               <small>{t(`inspector.relationshipType.${item.relationshipType}`)}</small>
             ) : null}
           </div>
-          {(definition?.stats ?? []).length > 0 ? (
+          {definitionStats.length > 0 ? (
             <ul className="item-stat-list">
-              {definition!.stats!.map((stat) => (
+              {definitionStats.map((stat) => (
                 <li key={stat.statDefinitionId}>
                   {statDefinitions?.find(({ id }) => id === stat.statDefinitionId)?.name ??
                     t('inspector.unknownStat')}
@@ -99,13 +108,17 @@ export function ItemInstanceTree({
                     name: definition?.name ?? item.id,
                   })}
                   value={item.relationshipType ?? 'contained'}
-                  onChange={(event) =>
+                  onChange={(event) => {
+                    const relationshipType = event.target.value;
+                    if (!isItemRelationshipType(relationshipType)) {
+                      return;
+                    }
                     void onMove(item.id, {
                       parentItemId: item.parentItemId,
-                      relationshipType: event.target.value as ItemRelationshipType,
+                      relationshipType,
                       ...(item.slotKey ? { slotKey: item.slotKey } : {}),
-                    })
-                  }
+                    });
+                  }}
                 >
                   {ITEM_RELATIONSHIP_TYPES.map((type) => (
                     <option key={type} value={type}>
@@ -138,10 +151,9 @@ export function ItemInstanceTree({
             />
           ) : null}
         </div>
-        {depth < 12 && (childrenByParent.get(item.id)?.length ?? 0) > 0 ? (
+        {depth < 12 && childItems.length > 0 ? (
           <ul>
-            {childrenByParent
-              .get(item.id)!
+            {childItems
               .filter(({ id }) => !nextAncestors.has(id))
               .map((child) => renderItem(child, depth + 1, nextAncestors))}
           </ul>

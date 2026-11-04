@@ -39,6 +39,18 @@ describe('story context navigation', () => {
     expect(harness.result.current.searchQuery).toBe('');
   });
 
+  it('navigates interactions found through incoming Trigger conditions', () => {
+    const harness = renderNavigation();
+    act(() => harness.result.current.setSearchQuery('Mira'));
+
+    expect(harness.result.current.matchingInteractionIds).toEqual(['target']);
+    expect(harness.result.current.navigationInteractionIds).toEqual(['target']);
+    expect(harness.result.current.occurrenceCounts).toEqual(new Map());
+
+    act(() => harness.result.current.navigateInteractions(1));
+    expect(harness.selectInteraction).toHaveBeenCalledWith('target');
+  });
+
   it('keeps context selected while navigating its referenced interactions', () => {
     const harness = renderNavigation({
       selectedId: 'source',
@@ -73,6 +85,8 @@ describe('story context navigation', () => {
     expect(harness.result.current.isContextPanelOpen).toBe(true);
     expect(window.localStorage.getItem('paralleax-story-context-panel')).toBe('open');
 
+    act(() => harness.result.current.openContextSection('stats'));
+    expect(harness.result.current.openContextSections.stats).toBe(true);
     act(() => harness.result.current.toggleContextSection('stats'));
     expect(harness.result.current.openContextSections.stats).toBe(false);
     act(() => harness.result.current.openContextSection('stats'));
@@ -150,6 +164,7 @@ function storyFixture(): Story {
         stats: [{ id: 'character-stat', statDefinitionId: 'stat-1', initialValue: false }],
         items: [{ id: 'character-key', itemDefinitionId: 'item-1' }],
       },
+      { id: 'mira', name: 'Mira', description: '', category: 'Crew' },
     ],
     statDefinitions: [{ id: 'stat-1', name: 'Alarm', valueType: 'boolean', category: 'Ship' }],
     stats: [{ id: 'story-stat', statDefinitionId: 'stat-1', initialValue: false }],
@@ -179,7 +194,13 @@ function storyFixture(): Story {
         locationId: 'location-1',
         characterIds: ['character-1'],
         position: { x: 0, y: 200 },
-        triggers: [{ id: 'target-trigger', inputInteractionIds: ['source'], conditions: [] }],
+        triggers: [
+          {
+            id: 'target-trigger',
+            inputInteractionIds: ['source'],
+            conditions: [{ characterId: 'mira', isPresent: true }],
+          },
+        ],
       },
     ],
   };

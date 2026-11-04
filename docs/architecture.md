@@ -101,6 +101,16 @@ reuses the shared Trigger condition union, API validation, editor fields, and
 deterministic AND evaluator. Legacy target-based frames retain their availability
 projection. Links do not reuse either frame format as canonical markup.
 
+The proposed author-facing Code view is a source projection of this same content,
+not a second persistence or execution format. Its parser/serializer must map to
+sanitized `Interaction.body` and canonical conditional records through the
+existing Interaction update path. CodeMirror and Tiptap adapters belong in
+`apps/web`; a framework-independent parser could move to `packages/shared` only
+if API validation, import/export, or another non-web consumer needs the exact
+same conversion. No source document is persisted, and no database migration is
+part of the current proposal. The grammar and its supported rich-content subset
+remain open in [ADR-043](decisions/ADR-043-ink-inspired-narrative-source.md).
+
 Default interaction placement lives in `packages/shared/src/graph/`, while the
 deterministic sample story lives in `packages/shared/src/demo/`. The public
 `index.ts` facade re-exports both modules and owns no implementation for either
@@ -911,7 +921,7 @@ split deliberately:
   root, child, parent, and Simulation Mode option creation use this projection;
   connection drops keep their explicit pointer-derived position.
 - `storyConnection.ts` validates whether a graph connection can become a
-  Trigger input. Shared validation rejects a directed source -> target pair
+  Trigger input. Shared validation rejects a directed source → target pair
   already owned by another Trigger, and the API repeats the check inside the
   serialized Story mutation. Historical conflicts remain loadable and removable.
   This is an application policy, not a database constraint.
@@ -1228,9 +1238,74 @@ classes directly.
   custom properties remain declared beside their use.
 - Architecture: dependency-cruiser workspace and cycle checks via
   `npm run lint:architecture`, plus ESLint complexity and shared-layer rules.
-- GitHub Actions: lint, format, typecheck, coverage, build, PostgreSQL 17
-  integration and recovery, Playwright, production dependency audit, and
-  production image builds on pushes and pull requests.
+- GitHub Actions: lint, formatting, affected-workspace builds and coverage,
+  PostgreSQL 17 integration, Playwright, production dependency audit, and
+  production image validation through the event and change policy below.
+
+### GitHub Actions validation policy
+
+`CI` runs for pull requests targeting `dev` or `main` and for pushes to those
+branches. Feature-branch pushes do not start a second workflow beside the pull
+request run. The workflow does not use top-level path filters, so the stable
+`Quality` check remains present for documentation-only and workflow-only pull
+requests. An event-specific concurrency group cancels stale runs for the same
+pull request or branch without letting a scheduled run cancel a branch push.
+
+| Previous behavior                                                                 | Current behavior                                                                                                                                                                           |
+| --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Every push on every branch and every pull request ran the full five-job workflow. | Pull requests to `dev`/`main` run once per update; branch pushes are limited to `dev`/`main`.                                                                                              |
+| Every run collected coverage and built both production images.                    | Code changes build `shared` plus the affected workspace(s) and collect their coverage. Production images build for Docker, production Compose, deployment, or dependency-manifest changes. |
+| PostgreSQL integration and backup restoration ran for unrelated changes.          | API/shared/dependency changes run PostgreSQL integration and migration tests. Backup restoration runs for its scripts and in the exhaustive lane.                                          |
+| E2E, real-stack acceptance, and stress checks ran together on each event.         | Web/shared/dependency changes run browser E2E. Real-stack acceptance runs after relevant pushes to `dev`/`main`; full acceptance, stress, and performance checks remain weekly and manual. |
+| Production dependency audit ran on each workflow run.                             | The production audit runs when dependency manifests change and in the exhaustive lane.                                                                                                     |
+
+The `Quality` job always checks formatting. Application or tooling changes also
+run the strict lint and architecture gates; tooling changes run the
+operational-script tests. Workflow changes run `actionlint`. Application changes
+use targeted workspace `build` commands as TypeScript and production-build
+checks instead of running `typecheck` and `build` separately. Coverage thresholds remain
+enforced for `shared` and each affected application workspace; dependency
+changes and the weekly/manual lane cover all workspaces. The PostgreSQL
+integration job includes migration tests; the separate backup-restore check
+does not run for every API source change. `setup-node` retains the npm package
+cache, although each isolated job still runs `npm ci`. Browser setup is shared by
+E2E and acceptance in a run. Their installs took 24 sec and 31 sec in the
+measured run, so Playwright's browser cache is not persisted; its storage and
+maintenance do not justify that short saving.
+
+The weekly schedule runs Monday at 04:00 UTC. Manual dispatch runs the same
+exhaustive lane: all workspace coverage and builds, PostgreSQL integration and
+stress, backup restoration, E2E and performance samples, real-stack acceptance
+including the large-Story case, production dependency audit, and both production
+image builds. The two Docker targets reuse their common local BuildKit layers;
+no remote Docker cache is maintained.
+
+#### Measured baseline and expected change
+
+The latest successful main-branch run inspected (2026-10-28, run 328) took
+7 min 14 sec elapsed. Its five job durations summed to about 20 min 37 sec:
+Quality 7 min 10 sec, production images 4 min 55 sec, PostgreSQL 1 min 14 sec,
+E2E 3 min 29 sec, and acceptance 3 min 49 sec. The Actions timing endpoint did
+not provide usable billable totals, so these are job elapsed times, not a claim
+about rounded invoice minutes.
+
+The expected range for an ordinary single-workspace PR is 6–9 cumulative job
+minutes; a change spanning both applications and shared code can exceed that
+range. This is an estimate based on the measured baseline and selective jobs,
+not a measured post-change result. Several comparable runs are needed to confirm
+the target or the monthly savings. The principal expected savings are removing
+feature-branch push duplicates and skipping unrelated Docker, database, browser,
+and acceptance jobs.
+
+One scheduled run on 2026-11-02 had 12 acceptance tests pass and the large-Story
+case fail twice because the expected QSP compatibility dialog was absent. The
+failure remains visible in the weekly/manual lane with traces and screenshots;
+one observation is not enough to classify it as intermittent or to change its
+retry policy.
+
+At this audit, GitHub reports `main` as unprotected with no required status
+checks. `Quality` is kept stable for a future required check, but GitHub branch
+protection must be enabled separately before merge blocking can be relied on.
 
 ## Verification Commands
 

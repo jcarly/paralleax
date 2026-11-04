@@ -1,13 +1,26 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import type { Story } from '@paralleax/shared';
 import { mockAuthenticatedUser, mockRuntimeStory, cloneStory } from './editorTestHarness';
 
-test('keeps Reader and Simulation styles isolated across direct routes and viewport sizes', async ({
+test('shares Reader and Simulation player layout while keeping mode-specific controls', async ({
   page,
 }) => {
   await preparePlayer(page);
   await page.setViewportSize({ width: 1440, height: 900 });
+  const reader = await assertReaderDesktopPresentation(page);
+  const readerSaveRowColor = await assertReaderSaveRowColor(page);
+  await assertSimulationDesktopPresentation(page, reader, readerSaveRowColor);
+  const simulationResponsive = await assertSimulationResponsiveLayout(page);
+  await assertReaderResponsiveLayout(page, simulationResponsive);
+});
 
+async function assertReaderDesktopPresentation(page: Page) {
+  const typography = await assertReaderDesktopTypography(page);
+  const layout = await assertReaderDesktopLayout(page);
+  return { layout, typography };
+}
+
+async function assertReaderDesktopTypography(page: Page) {
   await page.goto('/stories/story-1/play');
   await expect(page.locator('.character-choice-card')).toBeVisible();
   const characterChoice = await readStyle(page, '.character-choice-card');
@@ -27,10 +40,14 @@ test('keeps Reader and Simulation styles isolated across direct routes and viewp
     titleFontSize: '48px',
   });
 
+  return readerTypography;
+}
+
+async function assertReaderDesktopLayout(page: Page) {
   const readerLayout = await readPlayerLayout(page);
   expect(readerLayout.page).toMatchObject({
     display: 'grid',
-    maxWidth: '1360px',
+    maxWidth: 'none',
     padding: '0px',
   });
   expect(readerLayout.header).toMatchObject({
@@ -38,9 +55,10 @@ test('keeps Reader and Simulation styles isolated across direct routes and viewp
     position: 'static',
   });
   expect(readerLayout.card).toMatchObject({
-    borderRadius: '16px',
+    borderRadius: '0px',
     padding: '0px',
-    minHeight: '430px',
+    minHeight: '0px',
+    overflow: 'auto',
   });
   expect(Number.parseFloat(readerLayout.scene.height)).toBeGreaterThan(190);
   expect(Number.parseFloat(readerLayout.content.width)).toBeLessThanOrEqual(780);
@@ -49,17 +67,23 @@ test('keeps Reader and Simulation styles isolated across direct routes and viewp
     backgroundColor: 'rgb(255, 255, 255)',
   });
   expect(readerLayout.inventory).toMatchObject({
-    alignSelf: 'start',
-    borderRadius: '12px',
-    backgroundColor: 'rgb(255, 255, 255)',
-    width: '280px',
+    alignSelf: 'stretch',
+    borderRadius: '0px',
+    backgroundColor: 'rgb(241, 241, 237)',
+    width: '260px',
+    overflow: 'auto',
   });
   expect(readerLayout.encounter).toMatchObject({
     position: 'static',
-    alignSelf: 'start',
-    width: '280px',
+    alignSelf: 'stretch',
+    width: '250px',
+    overflow: 'auto',
   });
 
+  return readerLayout;
+}
+
+async function assertReaderSaveRowColor(page: Page) {
   await page.locator('.player-top .player-toolbar-button').first().click();
   await expect(page.getByRole('dialog')).toBeVisible();
   const readerSaveRowColor = await page
@@ -68,7 +92,24 @@ test('keeps Reader and Simulation styles isolated across direct routes and viewp
   expect(readerSaveRowColor).toBe('rgb(251, 251, 248)');
   await page.keyboard.press('Escape');
   await expect(page.getByRole('dialog')).toHaveCount(0);
+  return readerSaveRowColor;
+}
 
+async function assertSimulationDesktopPresentation(
+  page: Page,
+  reader: Awaited<ReturnType<typeof assertReaderDesktopPresentation>>,
+  readerSaveRowColor: string,
+) {
+  await assertSimulationDesktopTypography(page, reader.typography);
+  const simulationLayout = await assertSimulationDesktopLayout(page, reader.layout);
+  await assertSimulationSaveRowColor(page, readerSaveRowColor);
+  return simulationLayout;
+}
+
+async function assertSimulationDesktopTypography(
+  page: Page,
+  readerTypography: Awaited<ReturnType<typeof readNarrativeTypography>>,
+) {
   await page.goto('/stories/story-1/play?mode=simulation&startInteractionId=interaction-1');
   await expect(page.getByRole('textbox', { name: 'Current interaction title' })).toHaveValue(
     'Original title',
@@ -78,7 +119,7 @@ test('keeps Reader and Simulation styles isolated across direct routes and viewp
 
   const simulationTypography = await readNarrativeTypography(
     page,
-    '.rich-text-surface',
+    '.simulation-body-preview .story-body',
     '.simulation-title-input',
   );
   expect(simulationTypography.bodyFontFamily).toBe(readerTypography.bodyFontFamily);
@@ -87,8 +128,17 @@ test('keeps Reader and Simulation styles isolated across direct routes and viewp
   expect(simulationTypography.titleFontSize).toBe(readerTypography.titleFontSize);
   expect(simulationTypography.bodyLineHeight).toBe(readerTypography.bodyLineHeight);
   expect(simulationTypography.titleLineHeight).toBe(readerTypography.titleLineHeight);
+}
 
+async function assertSimulationDesktopLayout(
+  page: Page,
+  readerLayout: Awaited<ReturnType<typeof readPlayerLayout>>,
+) {
   const simulationLayout = await readPlayerLayout(page);
+  await expect(page.locator('.player-inventory .player-history summary')).toHaveText(
+    'Simulation history',
+  );
+  expect(simulationLayout.page).toEqual(readerLayout.page);
   expect(simulationLayout.page).toMatchObject({
     display: 'grid',
     maxWidth: 'none',
@@ -106,7 +156,7 @@ test('keeps Reader and Simulation styles isolated across direct routes and viewp
   expect(simulationLayout.inventory).toMatchObject({
     alignSelf: 'stretch',
     borderRadius: '0px',
-    backgroundColor: 'rgb(244, 243, 237)',
+    backgroundColor: 'rgb(241, 241, 237)',
     width: '260px',
     overflow: 'auto',
   });
@@ -119,7 +169,10 @@ test('keeps Reader and Simulation styles isolated across direct routes and viewp
   await expect(page.getByRole('button', { name: /Continue/ })).toBeVisible();
   const unavailableChoice = page.getByRole('button', { name: /Unavailable option/ });
   await expect(unavailableChoice).toBeDisabled();
+  return simulationLayout;
+}
 
+async function assertSimulationSaveRowColor(page: Page, readerSaveRowColor: string) {
   await page.locator('.player-top .player-toolbar-button').first().click();
   await expect(page.getByRole('dialog')).toBeVisible();
   await expect
@@ -131,7 +184,9 @@ test('keeps Reader and Simulation styles isolated across direct routes and viewp
     .toBe(readerSaveRowColor);
   await page.keyboard.press('Escape');
   await expect(page.getByRole('dialog')).toHaveCount(0);
+}
 
+async function assertSimulationResponsiveLayout(page: Page) {
   await page.setViewportSize({ width: 900, height: 768 });
   const tabletSimulationLayout = await readPlayerLayout(page);
   expect(tabletSimulationLayout.page.display).toBe('grid');
@@ -154,27 +209,43 @@ test('keeps Reader and Simulation styles isolated across direct routes and viewp
   expect(narrowSimulationLayout.inventory.overflow).toBe('visible');
   expect(narrowSimulationLayout.encounter.order).toBe('3');
   expect(narrowSimulationLayout.overflowX).toBeLessThanOrEqual(390);
+  return { narrow: narrowSimulationLayout, tablet: tabletSimulationLayout };
+}
 
+async function assertReaderResponsiveLayout(
+  page: Page,
+  simulation: Awaited<ReturnType<typeof assertSimulationResponsiveLayout>>,
+) {
   await page.goto('/stories/story-1/play');
   await page.setViewportSize({ width: 900, height: 768 });
   await page.locator('.character-choice-card').click();
   await expect(page.getByRole('heading', { name: 'Original title' })).toBeVisible();
   const tabletReaderLayout = await readPlayerLayout(page);
+  expect(tabletReaderLayout.page).toEqual(simulation.tablet.page);
   expect(tabletReaderLayout.page.display).toBe('grid');
-  expect(tabletReaderLayout.encounter.position).toBe('static');
-  expect(tabletReaderLayout.inventory.y).toBeLessThan(tabletReaderLayout.card.y);
-  expect(tabletReaderLayout.encounter.y).toBeGreaterThan(tabletReaderLayout.card.y);
+  expect(tabletReaderLayout.encounter).toMatchObject({
+    position: 'absolute',
+    width: '210px',
+  });
   expect(tabletReaderLayout.overflowX).toBeLessThanOrEqual(900);
 
   await page.setViewportSize({ width: 390, height: 844 });
   const narrowReaderLayout = await readPlayerLayout(page);
-  expect(narrowReaderLayout.page.display).toBe('grid');
-  expect(narrowReaderLayout.card).toMatchObject({ borderRadius: '16px', padding: '0px' });
-  expect(narrowReaderLayout.header.position).toBe('static');
+  expect(narrowReaderLayout.page).toMatchObject({
+    ...simulation.narrow.page,
+    height: expect.any(String),
+  });
+  expect(narrowReaderLayout.page.display).toBe('flex');
+  expect(narrowReaderLayout.card).toMatchObject({
+    borderRadius: '0px',
+    padding: '0px',
+    overflow: 'visible',
+  });
+  expect(narrowReaderLayout.header.position).toBe('sticky');
+  expect(narrowReaderLayout.inventory).toMatchObject({ order: '2', overflow: 'visible' });
+  expect(narrowReaderLayout.encounter).toMatchObject({ order: '3', position: 'static' });
   expect(narrowReaderLayout.overflowX).toBeLessThanOrEqual(390);
-  expect(narrowReaderLayout.inventory.y).toBeLessThan(narrowReaderLayout.card.y);
-  expect(narrowReaderLayout.encounter.y).toBeGreaterThan(narrowReaderLayout.card.y);
-});
+}
 
 test('allows in-place Simulation title editing', async ({ page }) => {
   await preparePlayer(page);
@@ -196,9 +267,15 @@ test('allows in-place Simulation narrative editing', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/stories/story-1/play?mode=simulation&startInteractionId=interaction-1');
   await expect(page.locator('.simulation-controls')).toBeVisible();
+  await expect(page.locator('.simulation-body-preview .story-body')).toHaveText(
+    'A brass door waits at the end of the hall.',
+  );
+  await page.locator('.simulation-body-preview').focus();
   const body = page.getByRole('textbox', { name: 'Current interaction content' });
   await expect(body).toHaveText('A brass door waits at the end of the hall.');
-  await body.fill('Edited narrative content');
+  await body.focus();
+  await page.keyboard.press('Control+a');
+  await page.keyboard.type('Edited narrative content');
   await expect(body).toHaveText('Edited narrative content');
 });
 
@@ -236,7 +313,7 @@ test('shows forced unavailable choices in Simulation and preserves Reader ending
   await expect(page.locator('.simulation-title-input')).toHaveCount(0);
 });
 
-async function preparePlayer(page: import('@playwright/test').Page) {
+async function preparePlayer(page: Page) {
   await mockAuthenticatedUser(page);
   const currentStory = createStyleStory();
   await mockRuntimeStory(page, () => currentStory);
@@ -313,39 +390,41 @@ function createStyleStory(): Story {
   return story;
 }
 
-async function readPlayerLayout(page: import('@playwright/test').Page) {
+async function readPlayerLayout(page: Page) {
   return page.locator('.player-page').evaluate((element) => {
     const style = (selector: string) => {
       const target = element.querySelector<HTMLElement>(selector);
-      if (!target) return null;
+      if (!target) {
+        return null;
+      }
       const computed = getComputedStyle(target);
-      const bounds = target.getBoundingClientRect();
       return {
         display: computed.display,
         position: computed.position,
         order: computed.order,
         width: computed.width,
         height: computed.height,
-        x: bounds.x,
-        y: bounds.y,
         minHeight: computed.minHeight,
-        maxWidth: computed.maxWidth,
         padding: computed.padding,
         borderRadius: computed.borderRadius,
         backgroundColor: computed.backgroundColor,
         alignSelf: computed.alignSelf,
         overflow: computed.overflow,
-        minWidth: computed.minWidth,
       };
     };
     const root = getComputedStyle(element);
-    const pageBounds = element.getBoundingClientRect();
     return {
       page: {
         display: root.display,
+        height: root.height,
+        minHeight: root.minHeight,
         maxWidth: root.maxWidth,
         padding: root.padding,
+        position: root.position,
+        width: root.width,
         gridTemplateColumns: root.gridTemplateColumns,
+        gridTemplateRows: root.gridTemplateRows,
+        overflow: root.overflow,
       },
       header: style('.player-top'),
       card: style('.player-card'),
@@ -357,12 +436,11 @@ async function readPlayerLayout(page: import('@playwright/test').Page) {
       encounter: style('.encounter-panel'),
       ending: style('.ending'),
       overflowX: document.documentElement.scrollWidth,
-      cardY: pageBounds.y + (element.querySelector('.player-card')?.getBoundingClientRect().y ?? 0),
     };
   });
 }
 
-async function readStyle(page: import('@playwright/test').Page, selector: string) {
+async function readStyle(page: Page, selector: string) {
   return page.locator(selector).evaluate((element) => {
     const style = getComputedStyle(element);
     return {
@@ -381,11 +459,7 @@ async function readStyle(page: import('@playwright/test').Page, selector: string
   });
 }
 
-async function readNarrativeTypography(
-  page: import('@playwright/test').Page,
-  bodySelector: string,
-  titleSelector: string,
-) {
+async function readNarrativeTypography(page: Page, bodySelector: string, titleSelector: string) {
   return page.evaluate(
     ({ bodySelector, titleSelector }) => {
       const body = document.querySelector(bodySelector);

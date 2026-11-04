@@ -106,7 +106,7 @@ describe('StoryEditor connections', () => {
     expect(await screen.findByTestId('flow-edge-interaction-2-interaction-3')).toBeInTheDocument();
   });
 
-  it('blocks a repeated source -> target pair and explains why', async () => {
+  it('blocks a repeated source → target pair and explains why', async () => {
     const user = userEvent.setup();
     const story = storyWithThreeInteractions();
     story.interactions[2].triggers = [

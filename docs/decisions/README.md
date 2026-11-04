@@ -46,6 +46,11 @@ This folder records accepted architecture and product-shaping decisions.
 - [ADR-039 - Automated Architecture Guardrails](ADR-039-automated-architecture-guardrails.md)
 - [ADR-040 - Reader and Simulation Runtime Checkpoints](ADR-040-reader-simulation-runtime-checkpoints.md)
 - [ADR-041 - Strict Quality Gates and Native Baselines](ADR-041-strict-quality-gates-and-native-baselines.md)
+- [ADR-042 - Tiptap and CodeMirror for Rich Text Authoring](ADR-042-tiptap-and-codemirror-rich-text-authoring.md)
+
+## Proposals
+
+- [ADR-043 - Ink-Inspired Narrative Content Source](ADR-043-ink-inspired-narrative-source.md) (Proposed)
 
 ## Maintenance
 

@@ -38,7 +38,6 @@ import {
   type StoryRuntimeSliceRequest,
   type StatValue,
   type StatValueType,
-  type TriggerConditionGroup,
 } from '@paralleax/shared';
 import type { PoolClient } from 'pg';
 import { DatabaseConnection } from '../database/database.connection';
@@ -53,6 +52,15 @@ import {
   insertStoryHistoryEvent,
   readStoryHistory,
 } from './persistence/story-history.persistence';
+import {
+  projectItemEffects,
+  projectStatEffects,
+  projectTriggers,
+  type PersistedItemEffectRow,
+  type PersistedStatEffectRow,
+  type PersistedTriggerInputRow,
+  type PersistedTriggerRow,
+} from './persistence/story-projections';
 import {
   readStoryEditorContextPage,
   readStoryEditorInteractionContentPage,
@@ -111,7 +119,6 @@ type InteractionRow = {
 type GraphDecorationRow = {
   id: string;
   story_id: string;
-  kind: GraphDecoration['kind'];
   position_x: number;
   position_y: number;
   width: number | null;
@@ -123,7 +130,7 @@ type GraphDecorationRow = {
   font_weight: 'normal' | 'bold' | null;
   font_style: 'normal' | 'italic' | null;
   sort_order: number;
-};
+} & ({ kind: 'frame' } | { kind: 'text' });
 type GroupRow = {
   parent_group_id: string | null;
   id: string;
@@ -191,42 +198,6 @@ type ItemRelationshipRow = {
   child_item_id: string;
   relationship_type: ItemRelationshipType;
   slot_key: string | null;
-  sort_order: number;
-};
-type StatEffectRow = {
-  story_id: string;
-  interaction_id: string;
-  stat_id: string;
-  item_id: string | null;
-  operation: 'add' | 'set';
-  value: StatValue | null;
-  expression: string | null;
-  sort_order: number;
-};
-type ItemEffectRow = {
-  story_id: string;
-  interaction_id: string;
-  item_id: string | null;
-  item_definition_id: string | null;
-  character_id: string | null;
-  operation: 'obtain' | 'lose';
-  sort_order: number;
-};
-type TriggerRow = {
-  id: string;
-  story_id: string;
-  output_interaction_id: string;
-  position_x: number | null;
-  position_y: number | null;
-  sort_order: number;
-  condition_groups: TriggerConditionGroup[];
-  appearance_probability: number;
-  timer_seconds: number | null;
-};
-type TriggerInputRow = {
-  story_id: string;
-  trigger_id: string;
-  input_interaction_id: string;
   sort_order: number;
 };
 type ReaderProgressRow = {
@@ -542,7 +513,10 @@ export class StoriesRepository {
   }
 
   async find(id: string, userId?: string): Promise<Story | undefined> {
-    return this.findWith(this.database.pool, id, userId);
+    return this.transaction(async (client) => {
+      await client.query('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY');
+      return this.findWith(client, id, userId);
+    });
   }
 
   async save(story: Story, ownerId: string): Promise<void> {
@@ -952,20 +926,20 @@ export class StoriesRepository {
          ORDER BY story_id, parent_item_id, sort_order`,
       [storyIds],
     );
-    const statEffects = await queryable.query<StatEffectRow>(
+    const statEffects = await queryable.query<PersistedStatEffectRow>(
       `SELECT story_id, interaction_id, stat_id, item_id, operation, value, expression, sort_order
          FROM interaction_stat_effects WHERE story_id = ANY($1::text[])
          ORDER BY story_id, interaction_id, sort_order`,
       [storyIds],
     );
-    const itemEffects = await queryable.query<ItemEffectRow>(
+    const itemEffects = await queryable.query<PersistedItemEffectRow>(
       `SELECT story_id, interaction_id, item_id, item_definition_id, character_id,
               operation, sort_order
          FROM interaction_item_effects WHERE story_id = ANY($1::text[])
          ORDER BY story_id, interaction_id, sort_order`,
       [storyIds],
     );
-    const triggers = await queryable.query<TriggerRow>(
+    const triggers = await queryable.query<PersistedTriggerRow>(
       `SELECT triggers.id, interactions.story_id, triggers.output_interaction_id,
                 triggers.position_x, triggers.position_y, triggers.sort_order,
                 triggers.condition_groups, triggers.appearance_probability,
@@ -976,7 +950,7 @@ export class StoriesRepository {
          ORDER BY interactions.story_id, triggers.output_interaction_id, triggers.sort_order`,
       [storyIds],
     );
-    const inputs = await queryable.query<TriggerInputRow>(
+    const inputs = await queryable.query<PersistedTriggerInputRow>(
       `SELECT output.story_id, trigger_inputs.trigger_id,
                 trigger_inputs.input_interaction_id, trigger_inputs.sort_order
          FROM trigger_inputs
@@ -1035,135 +1009,97 @@ export class StoriesRepository {
       ({ interaction_id }) => interaction_id,
     );
 
-    return storyRows.map((row) => ({
-      id: row.id,
-      revision: row.revision,
-      title: row.title,
-      access: accessSettings(row),
-      capabilities: capabilities(row),
-      owner: { id: row.creator_user_id, displayName: row.owner_display_name },
-      startDateTime: row.start_date_time,
-      createdAt: iso(row.created_at),
-      updatedAt: iso(row.updated_at),
-      ...(storyStats.get(row.id)?.length
-        ? { stats: storyStats.get(row.id)!.map(projectStatAssignment) }
-        : {}),
-      groups: (groupsByStory.get(row.id) ?? []).map((group): Group => ({
-        id: group.id,
-        title: group.title,
-        ...(group.parent_group_id ? { parentGroupId: group.parent_group_id } : {}),
-        interactionIds: (interactionsByGroup.get(group.id) ?? []).map(
-          ({ interaction_id }) => interaction_id,
-        ),
-      })),
-      graphDecorations: (graphDecorationsByStory.get(row.id) ?? []).map((decoration) =>
-        decoration.kind === 'frame'
-          ? {
-              id: decoration.id,
-              kind: 'frame',
-              position: { x: decoration.position_x, y: decoration.position_y },
-              color: decoration.color,
-              width: decoration.width!,
-              height: decoration.height!,
-            }
-          : {
-              id: decoration.id,
-              kind: 'text',
-              position: { x: decoration.position_x, y: decoration.position_y },
-              color: decoration.color,
-              text: decoration.text_content!,
-              fontSize: decoration.font_size!,
-              fontFamily: decoration.font_family!,
-              fontWeight: decoration.font_weight!,
-              fontStyle: decoration.font_style!,
-            },
-      ),
-      locations: (locationsByStory.get(row.id) ?? []).map((location) => ({
-        id: location.id,
-        name: location.name,
-        description: location.description,
-        ...(location.category ? { category: location.category } : {}),
-        ...(location.image_url ? { imageUrl: location.image_url } : {}),
-        ...(statsByLocation.get(location.id)?.length
-          ? {
-              stats: statsByLocation.get(location.id)!.map(projectStatAssignment),
-            }
-          : {}),
-        ...(itemsByLocation.get(location.id)?.length
-          ? {
-              items: itemsByLocation
-                .get(location.id)!
-                .map((item) => projectItemInstance(item, relationshipByChild)),
-            }
-          : {}),
-      })),
-      characters: (charactersByStory.get(row.id) ?? []).map((character) => ({
-        id: character.id,
-        name: character.name,
-        description: character.description,
-        ...(character.category ? { category: character.category } : {}),
-        ...(character.image_url ? { imageUrl: character.image_url } : {}),
-        ...(character.is_playable ? { isPlayable: true } : {}),
-        stats: (statsByCharacter.get(character.id) ?? []).map(projectStatAssignment),
-        items: (itemsByCharacter.get(character.id) ?? []).map((item) =>
-          projectItemInstance(item, relationshipByChild),
-        ),
-      })),
-      statDefinitions: (statDefinitionsByStory.get(row.id) ?? []).map((definition) => ({
-        id: definition.id,
-        name: definition.name,
-        valueType: definition.value_type,
-        ...(definition.category ? { category: definition.category } : {}),
-        ...(definition.image_url ? { imageUrl: definition.image_url } : {}),
-        ...(definition.change_per_hour ? { changePerHour: definition.change_per_hour } : {}),
-      })),
-      itemDefinitions: (itemDefinitionsByStory.get(row.id) ?? []).map((definition) => ({
-        id: definition.id,
-        name: definition.name,
-        description: definition.description,
-        ...(definition.category ? { category: definition.category } : {}),
-        ...(definition.image_url ? { imageUrl: definition.image_url } : {}),
-        stats: (statsByItemDefinition.get(definition.id) ?? []).map(projectStatAssignment),
-      })),
-      interactions: (interactionsByStory.get(row.id) ?? []).map((interaction) => ({
-        id: interaction.id,
-        title: interaction.title,
-        body: interaction.body,
-        position: { x: interaction.position_x, y: interaction.position_y },
-        locationId: interaction.location_id,
-        durationMinutes: interaction.duration_minutes,
-        conditionalTextBlocks: interaction.conditional_text_blocks,
-        characterIds: (charactersByInteraction.get(interaction.id) ?? []).map(
-          ({ character_id }) => character_id,
-        ),
-        statEffects: (effectsByInteraction.get(interaction.id) ?? []).map((effect) => ({
-          statId: effect.stat_id,
-          ...(effect.item_id ? { itemId: effect.item_id } : {}),
-          operation: effect.operation,
-          ...(typeof effect.expression === 'string'
-            ? { expression: effect.expression }
-            : { value: effect.value! }),
-        })),
-        itemEffects: (itemEffectsByInteraction.get(interaction.id) ?? []).map((effect) => ({
-          ...(effect.item_id ? { itemId: effect.item_id } : {}),
-          ...(effect.item_definition_id ? { itemDefinitionId: effect.item_definition_id } : {}),
-          ...(effect.character_id ? { characterId: effect.character_id } : {}),
-          operation: effect.operation,
-        })),
-        triggers: (triggersByInteraction.get(interaction.id) ?? []).map((trigger) => ({
-          id: trigger.id,
-          inputInteractionIds: (inputsByTrigger.get(trigger.id) ?? []).map(
-            ({ input_interaction_id }) => input_interaction_id,
+    return storyRows.map((row) => {
+      const storyAssignments = storyStats.get(row.id);
+      return {
+        id: row.id,
+        revision: row.revision,
+        title: row.title,
+        access: accessSettings(row),
+        capabilities: capabilities(row),
+        owner: { id: row.creator_user_id, displayName: row.owner_display_name },
+        startDateTime: row.start_date_time,
+        createdAt: iso(row.created_at),
+        updatedAt: iso(row.updated_at),
+        ...(storyAssignments?.length ? { stats: storyAssignments.map(projectStatAssignment) } : {}),
+        groups: (groupsByStory.get(row.id) ?? []).map((group): Group => ({
+          id: group.id,
+          title: group.title,
+          ...(group.parent_group_id ? { parentGroupId: group.parent_group_id } : {}),
+          interactionIds: (interactionsByGroup.get(group.id) ?? []).map(
+            ({ interaction_id }) => interaction_id,
           ),
-          conditionGroups: trigger.condition_groups,
-          appearanceProbability: trigger.appearance_probability,
-          timerSeconds: trigger.timer_seconds,
-          ...(typeof trigger.position_x === 'number' && typeof trigger.position_y === 'number'
-            ? { position: { x: trigger.position_x, y: trigger.position_y } }
-            : {}),
         })),
-      })),
-    }));
+        graphDecorations: (graphDecorationsByStory.get(row.id) ?? []).map(
+          projectGraphDecorationRow,
+        ),
+        locations: (locationsByStory.get(row.id) ?? []).map((location) => {
+          const locationStats = statsByLocation.get(location.id);
+          const locationItems = itemsByLocation.get(location.id);
+          return {
+            id: location.id,
+            name: location.name,
+            description: location.description,
+            ...(location.category ? { category: location.category } : {}),
+            ...(location.image_url ? { imageUrl: location.image_url } : {}),
+            ...(locationStats?.length ? { stats: locationStats.map(projectStatAssignment) } : {}),
+            ...(locationItems?.length
+              ? {
+                  items: locationItems.map((item) =>
+                    projectItemInstance(item, relationshipByChild),
+                  ),
+                }
+              : {}),
+          };
+        }),
+        characters: (charactersByStory.get(row.id) ?? []).map((character) => ({
+          id: character.id,
+          name: character.name,
+          description: character.description,
+          ...(character.category ? { category: character.category } : {}),
+          ...(character.image_url ? { imageUrl: character.image_url } : {}),
+          ...(character.is_playable ? { isPlayable: true } : {}),
+          stats: (statsByCharacter.get(character.id) ?? []).map(projectStatAssignment),
+          items: (itemsByCharacter.get(character.id) ?? []).map((item) =>
+            projectItemInstance(item, relationshipByChild),
+          ),
+        })),
+        statDefinitions: (statDefinitionsByStory.get(row.id) ?? []).map((definition) => ({
+          id: definition.id,
+          name: definition.name,
+          valueType: definition.value_type,
+          ...(definition.category ? { category: definition.category } : {}),
+          ...(definition.image_url ? { imageUrl: definition.image_url } : {}),
+          ...(definition.change_per_hour ? { changePerHour: definition.change_per_hour } : {}),
+        })),
+        itemDefinitions: (itemDefinitionsByStory.get(row.id) ?? []).map((definition) => ({
+          id: definition.id,
+          name: definition.name,
+          description: definition.description,
+          ...(definition.category ? { category: definition.category } : {}),
+          ...(definition.image_url ? { imageUrl: definition.image_url } : {}),
+          stats: (statsByItemDefinition.get(definition.id) ?? []).map(projectStatAssignment),
+        })),
+        interactions: (interactionsByStory.get(row.id) ?? []).map((interaction) => ({
+          id: interaction.id,
+          title: interaction.title,
+          body: interaction.body,
+          position: { x: interaction.position_x, y: interaction.position_y },
+          locationId: interaction.location_id,
+          durationMinutes: interaction.duration_minutes,
+          conditionalTextBlocks: interaction.conditional_text_blocks,
+          characterIds: (charactersByInteraction.get(interaction.id) ?? []).map(
+            ({ character_id }) => character_id,
+          ),
+          statEffects: projectStatEffects(effectsByInteraction.get(interaction.id) ?? []),
+          itemEffects: projectItemEffects(itemEffectsByInteraction.get(interaction.id) ?? []),
+          triggers: projectTriggers(
+            triggersByInteraction.get(interaction.id) ?? [],
+            inputsByTrigger,
+          ),
+        })),
+      };
+    });
   }
 
   private async transaction<T>(work: (client: PoolClient) => Promise<T>): Promise<T> {
@@ -1236,6 +1172,44 @@ export class StoriesRepository {
     );
     await replaceStoryGraph(client, story);
   }
+}
+
+function projectGraphDecorationRow(decoration: GraphDecorationRow): GraphDecoration {
+  const position = { x: decoration.position_x, y: decoration.position_y };
+  if (decoration.kind === 'frame') {
+    if (typeof decoration.width !== 'number' || typeof decoration.height !== 'number') {
+      throw new Error('Invalid persisted frame decoration: dimensions are missing');
+    }
+    return {
+      id: decoration.id,
+      kind: 'frame',
+      position,
+      color: decoration.color,
+      width: decoration.width,
+      height: decoration.height,
+    };
+  }
+
+  if (
+    typeof decoration.text_content !== 'string' ||
+    typeof decoration.font_size !== 'number' ||
+    typeof decoration.font_family !== 'string' ||
+    typeof decoration.font_weight !== 'string' ||
+    typeof decoration.font_style !== 'string'
+  ) {
+    throw new Error('Invalid persisted text decoration: content or style is missing');
+  }
+  return {
+    id: decoration.id,
+    kind: 'text',
+    position,
+    color: decoration.color,
+    text: decoration.text_content,
+    fontSize: decoration.font_size,
+    fontFamily: decoration.font_family,
+    fontWeight: decoration.font_weight,
+    fontStyle: decoration.font_style,
+  };
 }
 
 function groupBy<T>(items: T[], key: (item: T) => string) {

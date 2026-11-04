@@ -15,10 +15,47 @@ vi.mock('../api', async () => {
   return { api: createStoryApiMock() };
 });
 
+async function verifyEmptySimulationBodyEntry(user: ReturnType<typeof userEvent.setup>) {
+  expect(screen.queryByText('No content yet.')).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole('textbox', { name: 'Current interaction content' }),
+  ).not.toBeInTheDocument();
+  const addContent = screen.getByRole('button', { name: 'Add content' });
+  await user.click(addContent);
+  expect(
+    await screen.findByRole('textbox', { name: 'Current interaction content' }),
+  ).toBeInTheDocument();
+  await user.click(screen.getByLabelText('Current interaction title'));
+  await waitFor(() =>
+    expect(screen.getByRole('button', { name: 'Add content' })).toBeInTheDocument(),
+  );
+  expect(document.querySelector('.simulation-body-editor')).toBeNull();
+}
+
 describe('StoryPlayer simulation authoring', () => {
   setupStoryPlayerTestSuite();
 
   beforeEach(() => {
+    Object.defineProperty(Range.prototype, 'getClientRects', {
+      configurable: true,
+      value: () => [],
+    });
+    Object.defineProperty(Range.prototype, 'getBoundingClientRect', {
+      configurable: true,
+      value: () => new DOMRect(0, 0, 0, 0),
+    });
+    Object.defineProperty(HTMLElement.prototype, 'getClientRects', {
+      configurable: true,
+      value: () => [],
+    });
+    Object.defineProperty(HTMLElement.prototype, 'getBoundingClientRect', {
+      configurable: true,
+      value: () => new DOMRect(0, 0, 0, 0),
+    });
+    Object.defineProperty(document, 'elementFromPoint', {
+      configurable: true,
+      value: () => document.body,
+    });
     vi.spyOn(elkLayout, 'computeStoryGraphElkLayout').mockResolvedValue({
       interactionUpdates: [],
       triggerUpdates: [],
@@ -60,7 +97,7 @@ describe('StoryPlayer simulation authoring', () => {
     expect(screen.getByText(/Requires "Start" to be visited/)).toBeInTheDocument();
   });
 
-  it('edits the current title and content inline in simulation mode', async () => {
+  it('keeps the Reader body in an editable field and opens the editor on focus', async () => {
     const user = userEvent.setup();
     const renamed = structuredClone(story);
     renamed.interactions[1].title = 'Renamed step';
@@ -71,28 +108,33 @@ describe('StoryPlayer simulation authoring', () => {
       .mockResolvedValueOnce(rewritten);
 
     await renderPlayer('/stories/story-1/play?mode=simulation&startInteractionId=next');
+    expect(screen.getByRole('group', { name: 'Current interaction content' })).toBeInTheDocument();
 
     const titleInput = screen.getByLabelText('Current interaction title');
     await user.clear(titleInput);
     await user.type(titleInput, 'Renamed step');
-    await user.tab();
+    await user.click(screen.getByText('You continue.'));
 
     expect(api.updateInteraction).toHaveBeenCalledWith('story-1', 'next', {
       title: 'Renamed step',
     });
     expect(await screen.findByDisplayValue('Renamed step')).toBeInTheDocument();
 
-    const bodyInput = screen.getByLabelText('Current interaction content');
+    expect(await screen.findByText('You continue.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Edit content' })).not.toBeInTheDocument();
+
+    const bodyInput = await screen.findByRole('textbox', { name: 'Current interaction content' });
     await user.clear(bodyInput);
     await user.type(bodyInput, 'Rewritten content.');
     await user.tab();
 
-    expect(api.updateInteraction).toHaveBeenCalledWith('story-1', 'next', {
-      body: 'Rewritten content.',
-    });
-    expect(screen.getByLabelText('Current interaction content')).toHaveTextContent(
-      'Rewritten content.',
+    await waitFor(() =>
+      expect(api.updateInteraction).toHaveBeenCalledWith('story-1', 'next', {
+        body: '<p>Rewritten content.</p>',
+      }),
     );
+    expect(screen.getByText('Rewritten content.')).toBeInTheDocument();
+    expect(document.querySelector('.simulation-body-editor .rich-text-editor')).toBeNull();
   });
 
   it('shows a failed simulation mutation and retries the same safe update', async () => {
@@ -142,7 +184,6 @@ describe('StoryPlayer simulation authoring', () => {
     const conditionalStory = structuredClone(story);
     conditionalStory.interactions[0].body =
       '<div data-conditional-text-target="next"><button type="button" contenteditable="false" aria-label="Open target interaction: Next" data-conditional-text-link="next">Next</button><p>Source-only clue</p></div>';
-    vi.mocked(api.updateInteraction).mockResolvedValue(conditionalStory);
 
     await renderPlayer(
       '/stories/story-1/play?mode=simulation&startInteractionId=start',
@@ -152,19 +193,11 @@ describe('StoryPlayer simulation authoring', () => {
     const link = await screen.findByRole('button', {
       name: 'Open target interaction: Next',
     });
-    const sourceEditor = screen.getByLabelText('Current interaction content');
-    sourceEditor.focus();
     fireEvent.click(link);
 
     expect(await screen.findByDisplayValue('Next')).toBeInTheDocument();
-    const targetEditor = screen.getByLabelText('Current interaction content');
-    expect(targetEditor).toHaveTextContent('You continue.');
-    expect(targetEditor).not.toHaveTextContent('Source-only clue');
-    await waitFor(() =>
-      expect(api.updateInteraction).toHaveBeenCalledWith('story-1', 'start', {
-        body: expect.stringContaining('Source-only clue'),
-      }),
-    );
+    expect(screen.getByText('You continue.')).toBeInTheDocument();
+    expect(screen.queryByText('Source-only clue')).not.toBeInTheDocument();
     expect(api.updateInteraction).not.toHaveBeenCalledWith('story-1', 'next', {
       body: expect.stringContaining('Source-only clue'),
     });
@@ -211,7 +244,7 @@ describe('StoryPlayer simulation authoring', () => {
     await user.click(screen.getByRole('button', { name: 'Ask the guard' }));
 
     expect(screen.getByLabelText('Current interaction title')).toHaveValue('Ask the guard');
-    expect(screen.getByLabelText('Current interaction content')).toBeEmptyDOMElement();
+    await verifyEmptySimulationBodyEntry(user);
   });
 
   it('adds an option from a newly created option without a stored position', async () => {

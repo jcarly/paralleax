@@ -214,7 +214,7 @@ function mapQspEffects(
     const currentValue = typeof current?.value === 'number' ? current.value : 0;
     collapsed.set(key, {
       operation: current?.operation === 'set' ? 'set' : 'add',
-      value: currentValue + (effect.value as number),
+      value: currentValue + effect.value,
     });
   }
   return [...collapsed].map(([key, effect]) => ({

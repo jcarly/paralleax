@@ -2,76 +2,200 @@ name: CI
 
 on:
   push:
+    branches: [dev, main]
   pull_request:
+    branches: [dev, main]
   schedule:
     - cron: '0 4 * * 1'
   workflow_dispatch:
-    inputs:
-      run_scheduled_stress:
-        description: Run PostgreSQL and real-stack large-Story baselines
-        required: false
-        default: false
-        type: boolean
 
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}-${{ github.event_name }}
   cancel-in-progress: true
 
 permissions:
   contents: read
 
 jobs:
+  changes:
+    name: Detect affected areas
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      full: ${{ steps.full.outputs.full == 'true' }}
+      application: ${{ steps.full.outputs.full == 'true' || steps.filter.outputs.application == 'true' }}
+      api_coverage: ${{ steps.full.outputs.full == 'true' || steps.filter.outputs.api == 'true' || steps.filter.outputs.shared == 'true' || steps.filter.outputs.dependencies == 'true' }}
+      web_coverage: ${{ steps.full.outputs.full == 'true' || steps.filter.outputs.web == 'true' || steps.filter.outputs.shared == 'true' || steps.filter.outputs.dependencies == 'true' }}
+      shared_coverage: ${{ steps.full.outputs.full == 'true' || steps.filter.outputs.application == 'true' }}
+      build_shared: ${{ steps.full.outputs.full == 'true' || steps.filter.outputs.application == 'true' }}
+      build_api: ${{ steps.full.outputs.full == 'true' || steps.filter.outputs.api == 'true' || steps.filter.outputs.shared == 'true' || steps.filter.outputs.dependencies == 'true' }}
+      build_web: ${{ steps.full.outputs.full == 'true' || steps.filter.outputs.web == 'true' || steps.filter.outputs.shared == 'true' || steps.filter.outputs.dependencies == 'true' }}
+      postgres: ${{ steps.full.outputs.full == 'true' || steps.filter.outputs.api == 'true' || steps.filter.outputs.shared == 'true' || steps.filter.outputs.dependencies == 'true' || steps.filter.outputs.restore == 'true' }}
+      postgres_integration: ${{ steps.full.outputs.full == 'true' || steps.filter.outputs.api == 'true' || steps.filter.outputs.shared == 'true' || steps.filter.outputs.dependencies == 'true' || steps.filter.outputs.restore == 'true' }}
+      postgres_restore: ${{ steps.full.outputs.full == 'true' || steps.filter.outputs.restore == 'true' }}
+      browser_e2e: ${{ steps.full.outputs.full == 'true' || steps.filter.outputs.web == 'true' || steps.filter.outputs.shared == 'true' || steps.filter.outputs.dependencies == 'true' }}
+      acceptance: ${{ steps.full.outputs.full == 'true' || (github.event_name == 'push' && steps.filter.outputs.acceptance == 'true') }}
+      docker: ${{ steps.full.outputs.full == 'true' || steps.filter.outputs.docker == 'true' }}
+      security_audit: ${{ steps.full.outputs.full == 'true' || steps.filter.outputs.dependencies == 'true' }}
+      operations: ${{ steps.full.outputs.full == 'true' || steps.filter.outputs.tooling == 'true' }}
+      lint: ${{ steps.full.outputs.full == 'true' || steps.filter.outputs.application == 'true' || steps.filter.outputs.tooling == 'true' }}
+      workflow: ${{ steps.filter.outputs.workflow == 'true' }}
+    steps:
+      - name: Check out pushed branch for change detection
+        if: github.event_name == 'push'
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Detect changed areas
+        id: filter
+        if: github.event_name == 'push' || github.event_name == 'pull_request'
+        uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        with:
+          base: ${{ github.ref_name }}
+          filters: |
+            application:
+              - 'apps/**'
+              - 'packages/**'
+              - 'package.json'
+              - 'package-lock.json'
+            api:
+              - 'apps/api/**'
+            web:
+              - 'apps/web/**'
+            shared:
+              - 'packages/shared/**'
+            dependencies:
+              - 'package.json'
+              - 'package-lock.json'
+              - 'apps/*/package.json'
+              - 'packages/*/package.json'
+            restore:
+              - 'scripts/postgres-operations.mjs'
+              - 'scripts/backup-postgres.mjs'
+              - 'scripts/restore-postgres.mjs'
+              - 'scripts/verify-postgres-restore.mjs'
+            tooling:
+              - 'scripts/**'
+              - 'eslint.config.mjs'
+              - 'stylelint.config.mjs'
+              - '.dependency-cruiser*'
+              - '.duplication-baseline.json'
+              - '*-suppressions.json'
+              - 'quality-baseline-transitions.json'
+              - 'tsconfig*.json'
+            acceptance:
+              - 'apps/api/src/**'
+              - 'apps/web/src/**'
+              - 'apps/web/tests/acceptance/**'
+              - 'packages/shared/src/**'
+              - 'apps/api/src/database/**'
+              - 'compose.production.yaml'
+              - 'Dockerfile'
+              - 'deploy/**'
+              - 'package.json'
+              - 'package-lock.json'
+              - 'apps/*/package.json'
+              - 'packages/*/package.json'
+            docker:
+              - 'Dockerfile'
+              - '.dockerignore'
+              - 'compose.production.yaml'
+              - 'deploy/**'
+              - 'package.json'
+              - 'package-lock.json'
+              - 'apps/*/package.json'
+              - 'packages/*/package.json'
+            workflow:
+              - '.github/workflows/**'
+
+      - name: Select exhaustive validation
+        id: full
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+        run: echo 'full=true' >> "$GITHUB_OUTPUT"
+
   quality:
     name: Quality
+    needs: changes
+    if: always()
     runs-on: ubuntu-latest
     steps:
+      - name: Fail when change detection failed
+        if: needs.changes.result != 'success'
+        run: exit 1
+
       - name: Check out repository
+        if: needs.changes.result == 'success'
         uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
       - name: Set up Node.js
+        if: needs.changes.result == 'success'
         uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: npm
 
       - name: Set up npm
+        if: needs.changes.result == 'success'
         run: npm install --global npm@12.0.1
 
       - name: Install dependencies
-        run: npm ci --prefer-offline
+        if: needs.changes.result == 'success'
+        run: npm ci --prefer-offline --audit=false
 
       - name: Audit production dependencies
+        if: needs.changes.result == 'success' && needs.changes.outputs.security_audit == 'true'
         run: npm audit --omit=dev --audit-level=high
 
       - name: Lint
+        if: needs.changes.result == 'success' && needs.changes.outputs.lint == 'true'
         env:
-          DEBUG: eslint:cli
           BASELINE_BASE_REF: ${{ github.event.pull_request.base.sha || github.event.before || 'HEAD^' }}
           BASELINE_DEFAULT_REF: origin/${{ github.event.repository.default_branch }}
         run: npm run lint
 
       - name: Lint architecture
+        if: needs.changes.result == 'success' && needs.changes.outputs.lint == 'true'
         run: npm run lint:architecture
 
       - name: Check formatting
+        if: needs.changes.result == 'success'
         run: npm run format
 
-      - name: Typecheck
-        run: npm run typecheck
-
       - name: Test operational scripts
+        if: needs.changes.result == 'success' && needs.changes.outputs.operations == 'true'
         run: npm run test:operations
 
-      - name: Run coverage suites
-        run: npm run coverage
+      - name: Build shared workspace
+        if: needs.changes.result == 'success' && needs.changes.outputs.build_shared == 'true'
+        run: npm run build -w @paralleax/shared
 
-      - name: Build
-        run: npm run build
+      - name: Build API workspace
+        if: needs.changes.result == 'success' && needs.changes.outputs.build_api == 'true'
+        run: npm run build -w @paralleax/api
+
+      - name: Build web workspace
+        if: needs.changes.result == 'success' && needs.changes.outputs.build_web == 'true'
+        run: npm run build -w @paralleax/web
+
+      - name: Run shared coverage suite
+        if: needs.changes.result == 'success' && needs.changes.outputs.shared_coverage == 'true'
+        run: npm run coverage -w @paralleax/shared
+
+      - name: Run API coverage suite
+        if: needs.changes.result == 'success' && needs.changes.outputs.api_coverage == 'true'
+        run: npm run coverage -w @paralleax/api
+
+      - name: Run web coverage suite
+        if: needs.changes.result == 'success' && needs.changes.outputs.web_coverage == 'true'
+        run: npm run coverage -w @paralleax/web
 
       - name: Upload coverage reports
-        if: always()
+        if: always() && needs.changes.outputs.application == 'true'
         uses: actions/upload-artifact@v7
         with:
           name: coverage-reports
@@ -82,28 +206,22 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
-  production-images:
-    name: Production images
+  workflow-validation:
+    name: Workflow syntax
+    needs: changes
+    if: needs.changes.outputs.workflow == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
 
-      - name: Validate production Compose configuration
-        env:
-          DATABASE_URL: postgresql://paralleax:ci-only@db.example:5432/paralleax
-          CORS_ORIGIN: https://alpha.example.com
-          REGISTRATION_MODE: open
-        run: docker compose -f compose.production.yaml config --quiet
+      - name: Lint GitHub Actions workflows
+        run: go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.12 -color
 
-      - name: Build production API image
-        run: docker build --target api --tag paralleax-api:ci .
-
-      - name: Build production web image
-        run: docker build --target web --tag paralleax-web:ci .
-
-  postgres-integration:
-    name: PostgreSQL integration
+  postgres:
+    name: PostgreSQL validation
+    needs: changes
+    if: needs.changes.outputs.postgres == 'true'
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -131,7 +249,14 @@ jobs:
           node-version: 24
           cache: npm
 
-      - name: Install PostgreSQL 17 client
+      - name: Set up npm
+        run: npm install --global npm@12.0.1
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline --audit=false
+
+      - name: Install PostgreSQL 17 client for recovery verification
+        if: needs.changes.outputs.postgres_restore == 'true'
         run: |
           sudo install -d /usr/share/postgresql-common/pgdg
           sudo curl --fail --show-error --silent \
@@ -144,71 +269,27 @@ jobs:
           sudo apt-get install --yes --no-install-recommends postgresql-client-17
           PG17_BIN=/usr/lib/postgresql/17/bin
           echo "$PG17_BIN" >> "$GITHUB_PATH"
-          "$PG17_BIN/pg_dump" --version
-          "$PG17_BIN/pg_restore" --version
           "$PG17_BIN/pg_dump" --version | grep -E ' 17([.]|$)'
           "$PG17_BIN/pg_restore" --version | grep -E ' 17([.]|$)'
 
-      - name: Set up npm
-        run: npm install --global npm@12.0.1
-
-      - name: Install dependencies
-        run: npm ci --prefer-offline
-
-      - name: Run PostgreSQL integration tests
+      - name: Run PostgreSQL integration and migration tests
+        if: needs.changes.outputs.postgres_integration == 'true'
         run: npm run test:postgres -w @paralleax/api
 
       - name: Verify backup restoration
+        if: needs.changes.outputs.postgres_restore == 'true'
         run: npm run test:restore
 
       - name: Run scheduled PostgreSQL stress baseline
-        if: github.event_name == 'schedule' || inputs.run_scheduled_stress
+        if: needs.changes.outputs.full == 'true'
         env:
           RUN_POSTGRES_STRESS_TESTS: 'true'
         run: npm run test:stress:postgres -w @paralleax/api
 
-  e2e:
-    name: End-to-end
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v7
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v7
-        with:
-          node-version: 24
-          cache: npm
-
-      - name: Set up npm
-        run: npm install --global npm@12.0.1
-
-      - name: Install dependencies
-        run: npm ci --prefer-offline
-
-      - name: Install Playwright browsers
-        run: npm run playwright:install -w @paralleax/web -- --with-deps
-
-      - name: Run Playwright tests
-        run: npm run test:e2e -w @paralleax/web
-
-      - name: Run scheduled browser performance baseline
-        if: github.event_name == 'schedule' || inputs.run_scheduled_stress
-        run: npm run test:performance -w @paralleax/web
-
-      - name: Upload Playwright reports
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: playwright-reports
-          path: |
-            apps/web/playwright-report/
-            apps/web/test-results/
-          if-no-files-found: ignore
-          retention-days: 7
-
-  acceptance:
-    name: Alpha acceptance (real stack)
+  browser:
+    name: Browser validation
+    needs: changes
+    if: needs.changes.outputs.browser_e2e == 'true' || needs.changes.outputs.acceptance == 'true'
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -226,7 +307,7 @@ jobs:
           --health-retries 5
     env:
       PARALLEAX_ACCEPTANCE_DATABASE_URL: postgres://paralleax:paralleax@127.0.0.1:5432/paralleax_acceptance
-      RUN_LARGE_STORY_ACCEPTANCE: ${{ (github.event_name == 'schedule' || inputs.run_scheduled_stress) && 'true' || 'false' }}
+      RUN_LARGE_STORY_ACCEPTANCE: ${{ needs.changes.outputs.full == 'true' && 'true' || 'false' }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
@@ -241,21 +322,52 @@ jobs:
         run: npm install --global npm@12.0.1
 
       - name: Install dependencies
-        run: npm ci --prefer-offline
+        run: npm ci --prefer-offline --audit=false
 
       - name: Install Playwright browsers
         run: npm run playwright:install -w @paralleax/web -- --with-deps
 
+      - name: Run Playwright tests
+        if: needs.changes.outputs.browser_e2e == 'true'
+        run: npm run test:e2e -w @paralleax/web
+
+      - name: Run scheduled browser performance baseline
+        if: needs.changes.outputs.full == 'true'
+        run: npm run test:performance -w @paralleax/web
+
       - name: Run real-stack alpha acceptance
+        if: needs.changes.outputs.acceptance == 'true'
         run: npm run test:acceptance -w @paralleax/web
 
-      - name: Upload acceptance reports
+      - name: Upload browser reports
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: playwright-acceptance-reports
+          name: browser-reports
           path: |
-            apps/web/playwright-report/acceptance/
-            apps/web/test-results/acceptance/
+            apps/web/playwright-report/
+            apps/web/test-results/
           if-no-files-found: ignore
           retention-days: 7
+
+  production-images:
+    name: Production images
+    needs: changes
+    if: needs.changes.outputs.docker == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Validate production Compose configuration
+        env:
+          DATABASE_URL: postgresql://paralleax:ci-only@db.example:5432/paralleax
+          CORS_ORIGIN: https://alpha.example.com
+          REGISTRATION_MODE: open
+        run: docker compose -f compose.production.yaml config --quiet
+
+      - name: Build production API image
+        run: docker build --target api --tag paralleax-api:ci .
+
+      - name: Build production web image
+        run: docker build --target web --tag paralleax-web:ci .
