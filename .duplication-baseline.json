@@ -51,11 +51,6 @@
       "count": 1
     }
   },
-  "apps/api/src/stories/persistence/story-runtime.persistence.ts -> apps/api/src/stories/stories.repository.ts": {
-    "8333dd07f6f31ee753e2ed95303cd28bb82ffe21e4e4d3f016e5b5d25b54e0ed": {
-      "count": 1
-    }
-  },
   "apps/api/src/observability/sentry.ts -> apps/web/src/observability/sentry.ts": {
     "bbe7d2c23502a52fdb8dd0fb67197d36256b29c863fdb9cab333abca8d81555f": {
       "count": 1

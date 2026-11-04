@@ -349,7 +349,7 @@ findings remain enabled and are exercised by configuration fixtures.
 
 ## Focused asynchronous follow-up — 2026-11-03
 
-The `origin/main` baseline started this slice with 4,391 suppressed ESLint
+The `origin/main` baseline started this slice with 3,678 suppressed ESLint
 findings. A raw, unsuppressed probe of the web files with
 `@typescript-eslint/no-floating-promises` or
 `@typescript-eslint/no-misused-promises` found 13 diagnostics across six files:
@@ -370,7 +370,7 @@ contracts.
   and keep the navigation explicitly fire-and-forget at its event boundary.
 
 The unsuppressed async probe now reports zero findings. The native ESLint
-baseline shrank from 4,391 to 4,374 total findings: the 13 async entries plus
+baseline shrank from 3,678 to 3,661 total findings: the 13 async entries plus
 four stale `curly` entries in the touched controller. No rule, threshold, or
 suppression policy changed. The focused web verification passed all nine
 selected suites (66 tests) using one worker, including the added
