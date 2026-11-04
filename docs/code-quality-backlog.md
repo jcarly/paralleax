@@ -356,6 +356,12 @@ complex shared helpers, central React flows, functional duplication, then styles
       authored decoration values and graph geometry; global selector bans,
       specificity caps, and raw color/dimension restrictions still need stable
       ownership and approved thresholds.
+- [x] **P2-E QSP analyzer cleanup (2026-11-04):** add explicit braces to the 21
+      auto-fixable `curly` findings in `packages/shared/src/import-export/qsp/analyzer.ts`.
+      The change is syntax-only; QSP importer tests confirm existing parsing and
+      compatibility behavior. Higher-complexity parser and control-flow work
+      remains tied to specific source cases. See
+      [the secondary-debt audit](audits/2026-11-04-secondary-debt.md).
 
 ## P2 — Testing And Accessibility
 
