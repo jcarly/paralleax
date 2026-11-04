@@ -6,6 +6,7 @@ import type { Trigger } from '../model/triggers.js';
 import { DEFAULT_STORY_DATE_TIME } from '../time/calendar.js';
 import { temporalConditionMatches } from '../time/conditions.js';
 import type {
+  StatCondition,
   TriggerCondition,
   TriggerConditionFailure,
   TriggerProbabilityFailure,
@@ -17,6 +18,16 @@ import {
   getTriggerConditions,
   getTriggerTimerSeconds,
 } from './model.js';
+
+interface ConditionEvaluationContext {
+  visited: ReadonlySet<string>;
+  currentLocationId: string | null;
+  currentCharacterIds: readonly string[];
+  statValues: Readonly<Record<string, StatValue>>;
+  currentDateTime: string;
+  ownedItemDefinitionIds: readonly string[];
+  itemStatValues: Readonly<Record<string, Readonly<Record<string, StatValue>>>>;
+}
 
 export interface TriggerProbabilityContext {
   randomSeed: string;
@@ -87,18 +98,15 @@ export function doTriggerConditionGroupsMatch(
   ownedItemDefinitionIds: readonly string[] = [],
   itemStatValues: Readonly<Record<string, Readonly<Record<string, StatValue>>>> = {},
 ): boolean {
-  return getTriggerConditionGroups(trigger).some(({ conditions }) =>
-    doConditionsMatch(
-      conditions,
-      visited,
-      currentLocationId,
-      currentCharacterIds,
-      statValues,
-      currentDateTime,
-      ownedItemDefinitionIds,
-      itemStatValues,
-    ),
-  );
+  return conditionGroupsMatch(trigger, {
+    visited,
+    currentLocationId,
+    currentCharacterIds,
+    statValues,
+    currentDateTime,
+    ownedItemDefinitionIds,
+    itemStatValues,
+  });
 }
 
 export function getTriggerProbabilityResult(
@@ -159,18 +167,15 @@ export function doConditionsMatch(
   ownedItemDefinitionIds: readonly string[] = [],
   itemStatValues: Readonly<Record<string, Readonly<Record<string, StatValue>>>> = {},
 ): boolean {
-  return conditions.every((condition) =>
-    conditionMatches(
-      condition,
-      visited,
-      currentLocationId,
-      currentCharacterIds,
-      statValues,
-      currentDateTime,
-      ownedItemDefinitionIds,
-      itemStatValues,
-    ),
-  );
+  return conditionsMatch(conditions, {
+    visited,
+    currentLocationId,
+    currentCharacterIds,
+    statValues,
+    currentDateTime,
+    ownedItemDefinitionIds,
+    itemStatValues,
+  });
 }
 
 export function doesTriggerInputMatch(
@@ -276,43 +281,27 @@ export function getTriggerConditionFailures(
   itemStatValues: Readonly<Record<string, Readonly<Record<string, StatValue>>>> = {},
 ): TriggerConditionFailure[] {
   const visited = new Set(visitedIds);
+  const context: ConditionEvaluationContext = {
+    visited,
+    currentLocationId,
+    currentCharacterIds,
+    statValues,
+    currentDateTime,
+    ownedItemDefinitionIds,
+    itemStatValues,
+  };
   const inputMatchingTriggers = interaction.triggers.filter((trigger) =>
     doesTriggerInputMatch(trigger, currentInteractionId),
   );
 
-  if (
-    inputMatchingTriggers.some((trigger) =>
-      doTriggerConditionGroupsMatch(
-        trigger,
-        visited,
-        currentLocationId,
-        currentCharacterIds,
-        statValues,
-        currentDateTime,
-        ownedItemDefinitionIds,
-        itemStatValues,
-      ),
-    )
-  ) {
+  if (inputMatchingTriggers.some((trigger) => conditionGroupsMatch(trigger, context))) {
     return [];
   }
 
   return inputMatchingTriggers.flatMap((trigger) =>
     getTriggerConditionGroups(trigger).flatMap((group) =>
       group.conditions
-        .filter(
-          (condition) =>
-            !conditionMatches(
-              condition,
-              visited,
-              currentLocationId,
-              currentCharacterIds,
-              statValues,
-              currentDateTime,
-              ownedItemDefinitionIds,
-              itemStatValues,
-            ),
-        )
+        .filter((condition) => !conditionMatches(condition, context))
         .map((condition) => ({
           triggerId: trigger.id,
           conditionGroupId: group.id,
@@ -432,50 +421,57 @@ function getTimerCandidates(
   });
 }
 
+function conditionGroupsMatch(trigger: Trigger, context: ConditionEvaluationContext): boolean {
+  return getTriggerConditionGroups(trigger).some(({ conditions }) =>
+    conditionsMatch(conditions, context),
+  );
+}
+
+function conditionsMatch(
+  conditions: readonly TriggerCondition[],
+  context: ConditionEvaluationContext,
+): boolean {
+  return conditions.every((condition) => conditionMatches(condition, context));
+}
+
 function conditionMatches(
   condition: TriggerCondition,
-  visited: ReadonlySet<string>,
-  currentLocationId: string | null,
-  currentCharacterIds: readonly string[],
-  statValues: Readonly<Record<string, StatValue>>,
-  currentDateTime: string,
-  ownedItemDefinitionIds: readonly string[],
-  itemStatValues: Readonly<Record<string, Readonly<Record<string, StatValue>>>>,
-) {
+  context: ConditionEvaluationContext,
+): boolean {
   if ('interactionId' in condition) {
-    return condition.hasBeenVisited
-      ? visited.has(condition.interactionId)
-      : !visited.has(condition.interactionId);
+    const hasBeenVisited = context.visited.has(condition.interactionId);
+    return condition.hasBeenVisited === hasBeenVisited;
   }
   if ('locationId' in condition) {
-    const matches = currentLocationId === condition.locationId;
-    return condition.isCurrentLocation ? matches : !matches;
+    const matches = context.currentLocationId === condition.locationId;
+    return condition.isCurrentLocation === matches;
   }
   if ('characterId' in condition) {
-    const isPresent = currentCharacterIds.includes(condition.characterId);
-    return condition.isPresent ? isPresent : !isPresent;
+    const isPresent = context.currentCharacterIds.includes(condition.characterId);
+    return condition.isPresent === isPresent;
   }
   if ('itemDefinitionId' in condition) {
-    const isOwned = ownedItemDefinitionIds.includes(condition.itemDefinitionId);
-    return condition.isOwned ? isOwned : !isOwned;
+    const isOwned = context.ownedItemDefinitionIds.includes(condition.itemDefinitionId);
+    return condition.isOwned === isOwned;
   }
-  if ('temporal' in condition) return temporalConditionMatches(condition, currentDateTime);
+  if ('temporal' in condition) {
+    return temporalConditionMatches(condition, context.currentDateTime);
+  }
+
+  return statConditionMatches(condition, context);
+}
+
+function statConditionMatches(
+  condition: StatCondition,
+  context: ConditionEvaluationContext,
+): boolean {
   const currentValue = getStatConditionValue(
     condition.statId,
     condition.itemId,
-    statValues,
-    itemStatValues,
+    context.statValues,
+    context.itemStatValues,
   );
-  const comparisonStatId = 'comparisonStatId' in condition ? condition.comparisonStatId : undefined;
-  const comparisonItemId = 'comparisonItemId' in condition ? condition.comparisonItemId : undefined;
-  const expression = 'expression' in condition ? condition.expression : undefined;
-  const literalValue = 'value' in condition ? condition.value : undefined;
-  const comparisonValue =
-    comparisonStatId !== undefined
-      ? getStatConditionValue(comparisonStatId, comparisonItemId, statValues, itemStatValues)
-      : expression !== undefined
-        ? evaluateConditionExpression(expression, statValues, itemStatValues)
-        : literalValue;
+  const comparisonValue = getStatComparisonValue(condition, context);
   if (
     currentValue === undefined ||
     comparisonValue === undefined ||
@@ -483,13 +479,57 @@ function conditionMatches(
   ) {
     return false;
   }
-  if (condition.operator === 'eq') return currentValue === comparisonValue;
-  if (condition.operator === 'neq') return currentValue !== comparisonValue;
-  if (typeof currentValue !== 'number' || typeof comparisonValue !== 'number') return false;
-  if (condition.operator === 'lt') return currentValue < comparisonValue;
-  if (condition.operator === 'lte') return currentValue <= comparisonValue;
-  if (condition.operator === 'gt') return currentValue > comparisonValue;
-  return currentValue >= comparisonValue;
+  return compareStatValues(condition.operator, currentValue, comparisonValue);
+}
+
+function getStatComparisonValue(
+  condition: StatCondition,
+  context: ConditionEvaluationContext,
+): StatValue | undefined {
+  if ('comparisonStatId' in condition && condition.comparisonStatId !== undefined) {
+    return getStatConditionValue(
+      condition.comparisonStatId,
+      condition.comparisonItemId,
+      context.statValues,
+      context.itemStatValues,
+    );
+  }
+  if ('expression' in condition && condition.expression !== undefined) {
+    return evaluateConditionExpression(
+      condition.expression,
+      context.statValues,
+      context.itemStatValues,
+    );
+  }
+  return 'value' in condition ? condition.value : undefined;
+}
+
+function compareStatValues(
+  operator: StatCondition['operator'],
+  left: StatValue,
+  right: StatValue,
+): boolean {
+  if (operator === 'eq') {
+    return left === right;
+  }
+  if (operator === 'neq') {
+    return left !== right;
+  }
+  if (typeof left !== 'number' || typeof right !== 'number') {
+    return false;
+  }
+  switch (operator) {
+    case 'lt':
+      return left < right;
+    case 'lte':
+      return left <= right;
+    case 'gt':
+      return left > right;
+    case 'gte':
+      return left >= right;
+    default:
+      return false;
+  }
 }
 
 function evaluateConditionExpression(

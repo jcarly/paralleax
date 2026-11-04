@@ -2217,9 +2217,6 @@
     "@typescript-eslint/consistent-type-imports": {
       "count": 1
     },
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 3
-    },
     "@typescript-eslint/no-shadow": {
       "count": 2
     },
@@ -3056,9 +3053,6 @@
     "complexity": {
       "count": 2
     },
-    "curly": {
-      "count": 21
-    },
     "max-depth": {
       "count": 5
     },
@@ -3305,17 +3299,8 @@
     }
   },
   "packages/shared/src/operations/groups.ts": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 3
-    },
-    "complexity": {
-      "count": 2
-    },
     "curly": {
-      "count": 20
-    },
-    "sonarjs/cognitive-complexity": {
-      "count": 2
+      "count": 11
     }
   },
   "packages/shared/src/operations/merge.ts": {
@@ -3339,22 +3324,19 @@
   },
   "packages/shared/src/reader/replay.ts": {
     "complexity": {
-      "count": 4
+      "count": 3
     },
     "curly": {
-      "count": 21
+      "count": 20
     },
     "max-depth": {
-      "count": 2
-    },
-    "max-lines-per-function": {
       "count": 1
     },
     "max-params": {
       "count": 3
     },
     "sonarjs/cognitive-complexity": {
-      "count": 3
+      "count": 2
     }
   },
   "packages/shared/src/stats/references.ts": {
@@ -3431,19 +3413,13 @@
   },
   "packages/shared/src/triggers/evaluation.ts": {
     "complexity": {
-      "count": 2
+      "count": 1
     },
     "curly": {
-      "count": 9
-    },
-    "max-lines-per-function": {
       "count": 2
     },
     "max-params": {
-      "count": 10
-    },
-    "sonarjs/cognitive-complexity": {
-      "count": 1
+      "count": 9
     }
   },
   "scripts/benchmark-qsp-import.mjs": {

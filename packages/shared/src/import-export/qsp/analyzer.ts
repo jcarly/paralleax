@@ -24,7 +24,9 @@ export function analyzeQspCode(
         unsupportedBlockDepth -= 1;
         continue;
       }
-      if (/^(?:act|if|loop)\b.*:\s*$/i.test(trimmedLine)) unsupportedBlockDepth += 1;
+      if (/^(?:act|if|loop)\b.*:\s*$/i.test(trimmedLine)) {
+        unsupportedBlockDepth += 1;
+      }
       const category = classifyUnsupportedCommand(trimmedLine);
       unsupported(
         report,
@@ -52,7 +54,9 @@ export function analyzeQspCode(
       : splitQspCommands(lines[lineIndex]);
     for (const command of commands) {
       const trimmed = command.trim();
-      if (!trimmed || trimmed.startsWith('!')) continue;
+      if (!trimmed || trimmed.startsWith('!')) {
+        continue;
+      }
       const assignment = parseQspAssignment(trimmed, sourceAtLine);
       if (assignment.kind === 'parsed') {
         analysis.effects.push(assignment.effect);
@@ -177,7 +181,9 @@ export function analyzeQspCode(
         analysis.statements.push({ kind: 'exit', source: sourceAtLine });
         continue;
       }
-      if (/^end\b/i.test(trimmed)) continue;
+      if (/^end\b/i.test(trimmed)) {
+        continue;
+      }
       if (/^(?:if|elseif|else|loop|jump|dynamic|func|return)\b|^:/i.test(trimmed)) {
         analysis.statements.push({ kind: 'barrier', source: sourceAtLine });
       }
@@ -213,11 +219,17 @@ export function analyzeQspCode(
 }
 
 function parseNavigationArgument(remainder: string): { argument?: string; ignored: boolean } {
-  if (!remainder) return { ignored: false };
-  if (!remainder.startsWith(',')) return { ignored: true };
+  if (!remainder) {
+    return { ignored: false };
+  }
+  if (!remainder.startsWith(',')) {
+    return { ignored: true };
+  }
   const expression = remainder.slice(1).trim();
   const argument = parseQspStringLiteral(expression);
-  if (argument === undefined || containsQspInterpolation(expression)) return { ignored: true };
+  if (argument === undefined || containsQspInterpolation(expression)) {
+    return { ignored: true };
+  }
   return {
     argument,
     ignored: Boolean(expression.slice(consumedLiteralLength(expression)).trim()),
@@ -238,9 +250,13 @@ export function splitQspCommands(line: string): string[] {
   let remaining = line;
   while (remaining) {
     const delimiter = findOutsideQuotes(remaining, '&');
-    if (delimiter < 0) break;
+    if (delimiter < 0) {
+      break;
+    }
     const next = remaining.slice(delimiter + 1);
-    if (assignment.test(remaining) && !/^\s*(?:gs|gosub|gt|goto|exit)\b/i.test(next)) break;
+    if (assignment.test(remaining) && !/^\s*(?:gs|gosub|gt|goto|exit)\b/i.test(next)) {
+      break;
+    }
     commands.push(remaining.slice(0, delimiter));
     remaining = remaining.slice(delimiter + 1);
   }
@@ -265,91 +281,104 @@ function classifyUnsupportedCommand(command: string): {
   code: string;
   message: string;
 } {
-  if (/^(?:if|elseif|else)\b/i.test(command))
+  if (/^(?:if|elseif|else)\b/i.test(command)) {
     return {
       feature: 'conditions',
       code: 'unsupported_condition',
       message: 'This QSP conditional cannot be reduced to supported Trigger condition groups.',
     };
-  if (/^(?:gosub|gs|func|return)\b/i.test(command))
+  }
+  if (/^(?:gosub|gs|func|return)\b/i.test(command)) {
     return {
       feature: 'subroutines',
       code: 'unsupported_subroutine',
       message:
         'This QSP call context, function return value, or call-stack behavior is unsupported.',
     };
-  if (/^(?:jump)\b|^:/i.test(command))
+  }
+  if (/^(?:jump)\b|^:/i.test(command)) {
     return {
       feature: 'local_jumps',
       code: 'unsupported_local_jump',
       message: 'QSP local labels and JUMP control flow are not yet imported.',
     };
-  if (/^(?:loop)\b/i.test(command))
+  }
+  if (/^(?:loop)\b/i.test(command)) {
     return {
       feature: 'loops',
       code: 'unsupported_loop',
       message: 'QSP loops are not executed during import.',
     };
-  if (/^(?:dynamic)\b/i.test(command))
+  }
+  if (/^(?:dynamic)\b/i.test(command)) {
     return {
       feature: 'dynamic_code',
       code: 'unsupported_dynamic_code',
       message: 'Dynamically evaluated QSP code cannot be statically imported.',
     };
-  if (/^(?:addobj|delobj|killobj|unselect)\b/i.test(command))
+  }
+  if (/^(?:addobj|delobj|killobj|unselect)\b/i.test(command)) {
     return {
       feature: 'inventory',
       code: 'unsupported_inventory_or_action_state',
       message:
         'QSP inventory and mutable action state are not yet mapped to Paralleax items or triggers.',
     };
-  if (/^(?:delact|cla)\b/i.test(command))
+  }
+  if (/^(?:delact|cla)\b/i.test(command)) {
     return {
       feature: 'actions',
       code: 'unsupported_mutable_action_state',
       message: 'QSP action removal and clearing are not yet mapped to Trigger availability.',
     };
-  if (/^(?:settimer)\b/i.test(command))
+  }
+  if (/^(?:settimer)\b/i.test(command)) {
     return {
       feature: 'runtime_events',
       code: 'unsupported_runtime_timer',
       message: 'The QSP runtime timer and counter event are not yet imported.',
     };
-  if (/^(?:play|close|view|msg|menu|showacts|showinput|showobjs|showstat|wait)\b/i.test(command))
+  }
+  if (/^(?:play|close|view|msg|menu|showacts|showinput|showobjs|showstat|wait)\b/i.test(command)) {
     return {
       feature: 'media_and_ui',
       code: 'unsupported_media_or_ui',
       message: 'QSP media, menus, windows, and UI commands are not yet imported.',
     };
-  if (/^(?:savegame|opengame|input|user_text)\b/i.test(command))
+  }
+  if (/^(?:savegame|opengame|input|user_text)\b/i.test(command)) {
     return {
       feature: 'saves_and_input',
       code: 'unsupported_save_or_input',
       message: 'QSP save, load, and interactive input semantics are not yet imported.',
     };
-  if (/^(?:inclib|freelib)\b/i.test(command))
+  }
+  if (/^(?:inclib|freelib)\b/i.test(command)) {
     return {
       feature: 'libraries',
       code: 'unsupported_library',
       message: 'QSP libraries are not resolved by the single-game-file importer.',
     };
-  if (/^(?:act)\b/i.test(command))
+  }
+  if (/^(?:act)\b/i.test(command)) {
     return {
       feature: 'actions',
       code: 'unsupported_dynamic_action',
       message: 'This QSP action declaration could not be reduced to a static option.',
     };
+  }
   if (
     /^(?:set\b|let\b|local\b|killvar\b|[a-z_$%][a-z0-9_$%]*(?:\[[^\]]+\])?\s*(?:=|\+=|-=|\*=|\/=))/i.test(
       command,
     )
-  )
+  ) {
     return {
       feature: 'variables',
       code: 'unsupported_variable_statement',
       message:
         'Only scalar or literal-index array assignments with literal values are currently mapped to typed Story stats.',
     };
+  }
   return {
     feature: 'dynamic_code',
     code: 'unsupported_statement',
