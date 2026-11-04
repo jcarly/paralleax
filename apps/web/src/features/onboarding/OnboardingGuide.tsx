@@ -36,7 +36,7 @@ function isGuideVisible(
   route: GuideRoute,
 ): boolean {
   return (
-    status === 'active' &&
+    (status === 'active' || status === 'complete') &&
     (route.isLibrary || route.storyId === storyId || (!storyId && route.storyId === null))
   );
 }
@@ -54,7 +54,7 @@ type GuideView =
       storyId?: string;
       showStoryLink?: boolean;
     }
-  | { kind: 'complete'; storyId: string }
+  | { kind: 'complete'; storyId: string; didTest: boolean }
   | { kind: 'step'; focus: OnboardingGuideFocus; storyId: string; step: OnboardingStepId };
 
 function resolveGuideView(
@@ -87,7 +87,11 @@ function resolveGuideView(
     };
   }
   if (!step) {
-    return { kind: 'complete', storyId: progress.storyId };
+    return {
+      kind: 'complete',
+      storyId: progress.storyId,
+      didTest: progress.completedSteps.includes('test-story'),
+    };
   }
   const focus: OnboardingGuideFocus =
     step === 'test-story'
@@ -143,25 +147,49 @@ function GuidePromptCard({
 
 function GuideCompleteCard({
   storyId,
+  didTest,
   onPause,
   onRestart,
 }: {
   storyId: string;
+  didTest: boolean;
   onPause: () => void;
   onRestart: (storyId?: string) => void;
 }) {
   const { t } = useTranslation();
 
   return (
-    <aside className="onboarding-card" aria-labelledby="onboarding-title" aria-live="polite">
+    <aside
+      className="onboarding-card"
+      role="region"
+      aria-labelledby="onboarding-title"
+      aria-live="polite"
+    >
       <div className="onboarding-card-heading">
         <h2 id="onboarding-title">{t('onboarding.completeTitle')}</h2>
         <GuideCloseButton label={t('onboarding.close')} onPause={onPause} />
       </div>
-      <p>{t('onboarding.completeDescription')}</p>
-      <button className="onboarding-secondary" type="button" onClick={() => onRestart(storyId)}>
-        {t('onboarding.restart')}
-      </button>
+      <p>
+        {t(didTest ? 'onboarding.completeDescription' : 'onboarding.completeSkippedDescription')}
+      </p>
+      {didTest ? <p>{t('onboarding.completeAccessDescription')}</p> : null}
+      <div className="onboarding-card-actions">
+        <Link className="onboarding-primary" to={`/stories/${storyId}/edit`} onClick={onPause}>
+          {t('onboarding.continueCreating')}
+        </Link>
+        {didTest ? (
+          <Link
+            className="onboarding-primary"
+            to={`/stories/${storyId}/edit?settings=access`}
+            onClick={onPause}
+          >
+            {t('onboarding.shareForTesting')}
+          </Link>
+        ) : null}
+        <button className="onboarding-secondary" type="button" onClick={() => onRestart(storyId)}>
+          {t('onboarding.restart')}
+        </button>
+      </div>
     </aside>
   );
 }
@@ -233,7 +261,12 @@ export function OnboardingGuide() {
   if (view.kind === 'complete') {
     return (
       <OnboardingGuideOverlay focus={null}>
-        <GuideCompleteCard storyId={view.storyId} onPause={pause} onRestart={restart} />
+        <GuideCompleteCard
+          storyId={view.storyId}
+          didTest={view.didTest}
+          onPause={pause}
+          onRestart={restart}
+        />
       </OnboardingGuideOverlay>
     );
   }

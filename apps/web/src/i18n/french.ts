@@ -65,6 +65,13 @@ export const frenchTranslation = {
     loadingWorkspace: 'Chargement de l’espace de travail…',
     sessionExpired: 'Votre session a expiré. Reconnectez-vous pour continuer.',
   },
+  storyUnavailable: {
+    title: 'Histoire indisponible',
+    description: 'Cette histoire est indisponible ou votre compte n’y a plus accès.',
+    accessTitle: 'Paramètres d’accès indisponibles',
+    accessDescription: 'Votre compte ne peut pas gérer les paramètres d’accès de cette histoire.',
+    backToStory: 'Retour à l’histoire',
+  },
   onboarding: {
     startTitle: 'Créer et tester une histoire',
     createStoryPrompt: 'Créez une histoire pour commencer le guide.',
@@ -72,7 +79,12 @@ export const frenchTranslation = {
     returnToEditorPrompt: 'Retournez dans l’éditeur pour continuer le guide.',
     openStory: 'Ouvrir l’histoire',
     completeTitle: 'Votre histoire est prête à explorer',
-    completeDescription: 'Continuez à explorer ou relancez le guide quand vous le souhaitez.',
+    completeDescription: 'Vous avez créé et testé un premier parcours.',
+    completeSkippedDescription: 'Continuez à créer ou relancez le guide quand vous le souhaitez.',
+    completeAccessDescription:
+      'Choisissez qui peut lire, commenter ou modifier. L’histoire reste privée tant que vous ne changez pas ses paramètres d’accès.',
+    continueCreating: 'Continuer la création',
+    shareForTesting: 'Partager pour faire tester',
     stepCount: 'Étape {{current}} sur {{total}}',
     skipStep: 'Passer l’étape',
     close: 'Fermer le guide',
@@ -86,15 +98,17 @@ export const frenchTranslation = {
       'write-scene': {
         title: 'Écrire une scène',
         description:
-          'Modifiez le contenu d’une interaction, puis quittez le champ pour l’enregistrer.',
+          'L’interaction sélectionnée apparaît dans l’inspecteur. Ajoutez sa scène, puis quittez le champ pour l’enregistrer.',
       },
       'create-branch': {
         title: 'Créer un choix',
-        description: 'Ajoutez une interaction et reliez-la à la même source.',
+        description:
+          'Créez un deuxième choix depuis l’interaction de départ avec son bouton +. Les deux chemins doivent être enregistrés.',
       },
       'test-story': {
         title: 'Tester votre histoire',
-        description: 'Ouvrez Tester dans l’éditeur, puis choisissez un chemin en simulation.',
+        description:
+          'Dans l’éditeur, choisissez Tester depuis le début, puis suivez un parcours en simulation.',
       },
     },
   },
@@ -448,9 +462,12 @@ export const frenchTranslation = {
     collaboratorsHelp:
       'Ajoutez un compte Paralleax existant avec un droit de lecture ou de modification.',
     email: 'E-mail de l’utilisateur',
+    emailInvalid: 'Saisissez une adresse e-mail valide.',
+    userAlreadyAdded: 'Cet utilisateur a déjà accès à l’histoire. Modifiez son rôle ci-dessous.',
     role: { label: 'Accès', viewer: 'Lecteur', editor: 'Éditeur' },
     roleFor: 'Accès de {{name}}',
     add: 'Ajouter l’utilisateur',
+    adding: 'Ajout…',
     remove: 'Retirer',
     saving: 'Enregistrement…',
     saved: 'Droits enregistrés.',
@@ -594,6 +611,7 @@ export const frenchTranslation = {
     openReader: 'Ouvrir le lecteur',
     addChild: 'Ajouter un enfant',
     testFromCurrent: 'Tester depuis l’interaction actuelle',
+    testFromStart: 'Tester depuis le début',
     test: 'Tester',
     reloadStory: 'Recharger l’histoire',
     context: 'Contexte de l’histoire',
@@ -1026,6 +1044,9 @@ export const frenchTranslation = {
     target: 'Cible',
     content: 'Contenu',
     title: 'Titre',
+    startTitlePlaceholder: 'Départ',
+    newTitlePlaceholder: 'Nouvelle interaction',
+    bodyPlaceholder: 'Décrivez ce qui se passe ici.',
     contextAndTiming: 'Contexte et temporalité',
     present: '{{count}} présent(s)',
     durationTitle: 'Durée de l’interaction',

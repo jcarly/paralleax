@@ -1,4 +1,6 @@
 import type { Interaction } from '@paralleax/shared';
+import { useTranslation } from 'react-i18next';
+import { interactionTitleForDisplay } from '../../story/interactionTitlePresentation';
 
 export function StoryInteractionRow({
   interaction,
@@ -15,6 +17,8 @@ export function StoryInteractionRow({
   onKeyDown?: (event: React.KeyboardEvent<HTMLButtonElement>) => void;
   onSelect: () => void;
 }) {
+  const { t } = useTranslation();
+  const title = interactionTitleForDisplay(interaction, t);
   return (
     <button
       type="button"
@@ -26,14 +30,14 @@ export function StoryInteractionRow({
       id={inTree ? `story-interaction-${interaction.id}` : undefined}
       className={`ghost story-interaction-row ${selected ? 'selected' : ''}`}
       style={{ paddingLeft: `${depth * 16 + 6}px` }}
-      title={interaction.title}
+      title={title}
       onKeyDown={onKeyDown}
       onClick={onSelect}
     >
       <span className="story-interaction-mark" aria-hidden="true">
         ◦
       </span>
-      <span className="story-interaction-title">{interaction.title}</span>
+      <span className="story-interaction-title">{title}</span>
     </button>
   );
 }

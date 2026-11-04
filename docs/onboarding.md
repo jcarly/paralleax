@@ -2,7 +2,7 @@
 
 Status: Implemented alpha slice
 
-Last reviewed: 2026-10-28
+Last reviewed: 2026-11-04
 
 ## User behavior
 
@@ -17,18 +17,33 @@ authenticated `Guide` control. Completing the flow does not prevent later use of
 the editor.
 
 In the editor, the guide highlights an Interaction to explore, the scene
-inspector, the selected Interaction's child `+` control, and the Simulation
+inspector, the starting Interaction's child `+` control, and the Simulation
 entry point. When opened from the library without an active Story, it highlights
-the new-Story action. In Simulation, it highlights the available choices. If a
-specific target is not present, the guide falls back to a broader editor target
-when available; the card remains usable even when no highlight is available.
+the new-Story action. In Simulation, it highlights the available choices. If the
+mobile dock would cover the target, the card moves to the top edge. If a specific
+target is not present, the guide falls back to a broader editor target when
+available; the card remains usable even when no highlight is available.
 
 The guide has four outcome-based steps:
 
-1. Explore the graph by selecting an Interaction.
+1. Explore the graph by selecting an Interaction. An existing selection also
+   completes this step after a guide restart.
 2. Write a scene and wait for its save to succeed.
 3. Create a choice with more than one distinct destination from a source.
 4. Run Simulation and make a choice that advances the journey.
+
+Testing from the editor starts at the beginning of the Story. A separate
+`Test from current interaction` action appears when the selected Interaction is
+not the starting one. After a tested path, the completion card links back to the
+editor and to its existing Access settings tab. The access link only opens those
+settings; it does not change sharing policy or send invitations.
+
+New Interaction titles and bodies are stored empty. Localized placeholders show
+`Start` or `New interaction` in English, `Départ` or `Nouvelle interaction` in
+French, and `Inizio` or `Nuova interazione` in Italian. Empty scene bodies show
+`Describe what happens here.`, `Décrivez ce qui se passe ici.`, or
+`Descrivi cosa succede qui.` in the corresponding language. Existing authored
+titles and bodies are not translated or rewritten.
 
 Each step is completed by an observable action, not by a telemetry event. Steps
 can also be skipped, and progress is stored in browser `localStorage` under a

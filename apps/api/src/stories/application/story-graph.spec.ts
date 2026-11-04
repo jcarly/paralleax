@@ -30,7 +30,7 @@ describe('StoryGraphService', () => {
       revision: 4,
       updatedAt: '2026-08-25T16:00:00.000Z',
       interaction: {
-        title: 'New interaction',
+        title: '',
         position: { x: 320, y: 480 },
         triggers: [
           {

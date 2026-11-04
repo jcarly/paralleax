@@ -79,6 +79,15 @@ describe('story graph mapping', () => {
     ]);
   });
 
+  it('targets the starting interaction for the guide branch step', () => {
+    const nodes = buildInteractionNodes(story, 'interaction-2', undefined, {
+      onboardingBranchSourceId: 'interaction-1',
+    });
+
+    expect(nodes[0].data.onboardingBranchAdd).toBe(true);
+    expect(nodes[1].data.onboardingBranchAdd).toBeUndefined();
+  });
+
   it('projects the real location and ordered cast onto interaction cards', () => {
     const contextualStory = structuredClone(story);
     contextualStory.locations = [{ id: 'archive', name: 'Lower archive', description: '' }];

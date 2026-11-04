@@ -2,7 +2,7 @@
 
 This roadmap describes the progression from the validated narrative core to a public Paralleax platform.
 
-Status reviewed: 2026-10-28.
+Status reviewed: 2026-11-04.
 
 It is organized around **user capabilities** rather than implementation areas. Engineering work supports these milestones but does not define them by itself.
 
@@ -68,6 +68,13 @@ stays in browser storage. Automatic behavioral milestones and a post-Simulation
 survey remain deferred until explicit consent and the privacy notice cover that
 collection. This slice supports guided sessions; it does not replace disposable
 project safeguards or the provider and operator readiness gates.
+
+**Priority decision, 2026-11-04:** the pre-beta stabilization brief promotes a
+bounded first-story UX and access-control pass ahead of guided author sessions.
+It covers localized empty defaults, the first authoring and Simulation journey,
+ordinary-user API permission checks, collaborator validation, and inaccessible
+Story feedback. This does not close the open creator alpha operational gates or
+the separate public-reading publication, moderation, and licensing scope.
 
 1. **Prepare the alpha session brief.** Reuse the private-alpha runbook to state
    the hypotheses, representative author tasks, project-data boundary, and a
@@ -339,10 +346,11 @@ and operational gates in [Production readiness](production-readiness.md).
    as the separate P2 decision below. **Completed 2026-09-30:** Nodemailer SMTP
    delivery initially sent purpose-specific verification and recovery messages.
    **Updated 2026-10-08:** the transport now uses the Brevo HTTPS API so restricted
-   hosting plans do not require outbound SMTP access. New
-   registrations cannot sign in before verification; verification and reset
-   tokens are random, hashed at rest, scoped, expiry-bound, and atomic one-use
-   actions. Password reset/change revokes existing sessions, the account dialog
+   hosting plans do not require outbound SMTP access. Production and test
+   registrations cannot sign in before verification; local development defaults
+   to a development-only verification bypass. Verification and reset tokens are
+   random, hashed at rest, scoped, expiry-bound, and atomic one-use actions.
+   Password reset/change revokes existing sessions, the account dialog
    can revoke other sessions, unknown reset addresses receive a neutral response,
    and the forward migration preserves access for pre-existing accounts.
 2. **Story configuration and access.** Put configuration behind a gear beside

@@ -22,6 +22,7 @@ import { FieldHelpTooltip } from './FieldHelpTooltip';
 import { RichTextEditor } from './RichTextEditor';
 import { hasAuthoredRichTextContent } from './richTextProjection';
 import { VariablePicker } from './VariablePicker';
+import { interactionTitlePlaceholder } from '../features/story/interactionTitlePresentation';
 
 function getInitials(name: string) {
   return name
@@ -356,6 +357,7 @@ export function InteractionInspector({
             <input
               className="form-control form-control--compact"
               data-comment-field="title"
+              placeholder={interactionTitlePlaceholder(interaction, t)}
               value={interaction.title}
               onChange={(event) => updateLocalInteraction({ title: event.target.value })}
               onBlur={(event) => void onPatch(interaction.id, { title: event.target.value })}
@@ -395,14 +397,19 @@ export function InteractionInspector({
               />
             </div>
           ) : (
-            <button
-              className="secondary interaction-content-edit-toggle"
-              data-comment-exclude="true"
-              type="button"
-              onClick={() => setBodyEditor({ interactionId: interaction.id, editing: true })}
-            >
-              {t('richText.addContent')}
-            </button>
+            <div className="interaction-content-empty">
+              <p className="interaction-content-empty-prompt">
+                {t('interactionInspector.bodyPlaceholder')}
+              </p>
+              <button
+                className="secondary interaction-content-edit-toggle"
+                data-comment-exclude="true"
+                type="button"
+                onClick={() => setBodyEditor({ interactionId: interaction.id, editing: true })}
+              >
+                {t('richText.addContent')}
+              </button>
+            </div>
           )}
         </InspectorCommentField>
       </section>

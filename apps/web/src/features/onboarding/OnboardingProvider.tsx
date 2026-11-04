@@ -72,7 +72,9 @@ function reduceLifecycleAction(
     case 'open-help':
       return openGuide(progress, action.storyId);
     case 'pause':
-      return progress.status === 'active' ? { ...progress, status: 'paused' } : progress;
+      return progress.status === 'active' || progress.status === 'complete'
+        ? { ...progress, status: 'paused' }
+        : progress;
     case 'restart':
       return {
         ...initialOnboardingProgress,

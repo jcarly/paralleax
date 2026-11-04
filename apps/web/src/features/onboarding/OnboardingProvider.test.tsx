@@ -25,6 +25,9 @@ function OnboardingProbe() {
       <button type="button" onClick={() => onboarding.reportStoryState('story-1', true, true)}>
         Report existing content
       </button>
+      <button type="button" onClick={() => onboarding.reportStepComplete('story-1', 'test-story')}>
+        Complete test
+      </button>
       <button type="button" onClick={onboarding.pause}>
         Close
       </button>
@@ -85,5 +88,21 @@ describe('OnboardingProvider', () => {
     await user.click(screen.getByRole('button', { name: 'Delete story' }));
 
     expect(screen.getByRole('status')).toHaveTextContent('paused:discover-interactions');
+  });
+
+  it('pauses a completed guide and resumes at its completion screen', async () => {
+    const user = userEvent.setup();
+    renderOnboarding();
+
+    await user.click(screen.getByRole('button', { name: 'Begin' }));
+    await user.click(screen.getByRole('button', { name: 'Select interaction' }));
+    await user.click(screen.getByRole('button', { name: 'Report existing content' }));
+    await user.click(screen.getByRole('button', { name: 'Complete test' }));
+    expect(screen.getByRole('status')).toHaveTextContent('complete:done');
+
+    await user.click(screen.getByRole('button', { name: 'Close' }));
+    expect(screen.getByRole('status')).toHaveTextContent('paused:done');
+    await user.click(screen.getByRole('button', { name: 'Help' }));
+    expect(screen.getByRole('status')).toHaveTextContent('active:done');
   });
 });

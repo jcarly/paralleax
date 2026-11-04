@@ -19,6 +19,14 @@ export const italianTranslation = {
     loadingWorkspace: "Caricamento dell'area di lavoro…",
     sessionExpired: 'La tua sessione è scaduta. Accedi nuovamente per continuare.',
   },
+  storyUnavailable: {
+    title: 'Storia non disponibile',
+    description: 'Questa storia non è disponibile o il tuo account non può più accedervi.',
+    accessTitle: 'Impostazioni di accesso non disponibili',
+    accessDescription:
+      'Il tuo account non può gestire le impostazioni di accesso di questa storia.',
+    backToStory: 'Torna alla storia',
+  },
   onboarding: {
     startTitle: 'Crea e prova una storia',
     createStoryPrompt: 'Crea una storia per iniziare la guida.',
@@ -26,7 +34,12 @@ export const italianTranslation = {
     returnToEditorPrompt: "Torna all'editor per continuare la guida.",
     openStory: 'Apri la storia',
     completeTitle: 'La storia è pronta da esplorare',
-    completeDescription: 'Continua a esplorare o riavvia la guida quando vuoi.',
+    completeDescription: 'Hai creato e provato il tuo primo percorso.',
+    completeSkippedDescription: 'Continua a creare o riavvia la guida quando vuoi.',
+    completeAccessDescription:
+      'Scegli chi può leggere, commentare o modificare. La storia resta privata finché non cambi le impostazioni di accesso.',
+    continueCreating: 'Continua a creare',
+    shareForTesting: 'Condividi per i test',
     stepCount: 'Passaggio {{current}} di {{total}}',
     skipStep: 'Salta il passaggio',
     close: 'Chiudi la guida',
@@ -39,15 +52,18 @@ export const italianTranslation = {
       },
       'write-scene': {
         title: 'Scrivi una scena',
-        description: 'Modifica il contenuto di un’interazione, poi esci dal campo per salvarlo.',
+        description:
+          'L’interazione selezionata appare nell’ispettore. Aggiungi la scena, poi esci dal campo per salvarla.',
       },
       'create-branch': {
         title: 'Crea una scelta',
-        description: 'Aggiungi un’altra interazione e collegala alla stessa origine.',
+        description:
+          'Crea una seconda scelta dall’interazione iniziale con il pulsante +. Entrambi i percorsi devono essere salvati.',
       },
       'test-story': {
         title: 'Prova la storia',
-        description: 'Apri Prova nell’editor, poi scegli un percorso in modalità simulazione.',
+        description:
+          'Nell’editor scegli Prova dall’inizio, poi segui un percorso in modalità simulazione.',
       },
     },
   },
@@ -454,6 +470,8 @@ export const italianTranslation = {
     collaborators: 'Utenti',
     collaboratorsHelp: 'Aggiungi un account Paralleax esistente con accesso in lettura o modifica.',
     email: "E-mail dell'utente",
+    emailInvalid: 'Inserisci un indirizzo e-mail valido.',
+    userAlreadyAdded: 'Questo utente ha già accesso. Modifica il ruolo qui sotto.',
     role: {
       label: 'Accesso',
       viewer: 'Lettore',
@@ -461,6 +479,7 @@ export const italianTranslation = {
     },
     roleFor: 'Accesso per {{name}}',
     add: 'Aggiungi utente',
+    adding: 'Aggiunta…',
     remove: 'Rimuovi',
     saving: 'Salvataggio...',
     saved: 'Accesso salvato.',
@@ -613,6 +632,7 @@ export const italianTranslation = {
     openReader: 'Lettore aperto',
     addChild: 'Aggiungi bambino',
     testFromCurrent: "Test dall'interazione corrente",
+    testFromStart: "Test dall'inizio",
     test: 'Prova',
     reloadStory: 'Ricarica la storia',
     context: 'Contesto della storia',
@@ -1049,6 +1069,9 @@ export const italianTranslation = {
     target: 'Obiettivo',
     content: 'Contenuto',
     title: 'Titolo',
+    startTitlePlaceholder: 'Inizio',
+    newTitlePlaceholder: 'Nuova interazione',
+    bodyPlaceholder: 'Descrivi cosa succede qui.',
     contextAndTiming: 'Contesto e tempistica',
     present: '{{count}} presente',
     durationTitle: "Durata dell'interazione",

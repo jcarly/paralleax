@@ -22,7 +22,7 @@ describe('AuthService', () => {
     findUserById: jest.fn((id: string) =>
       Promise.resolve([...users.values()].find((user) => user.id === id)),
     ),
-    createUser: jest.fn((user: Omit<AuthUser, 'role' | 'emailVerifiedAt'>) => {
+    createUser: jest.fn((user: Omit<AuthUser, 'role'>) => {
       if (users.has(user.email)) return Promise.resolve(undefined);
       const created: AuthUser = { ...user, role: users.size === 0 ? 'admin' : 'user' };
       users.set(created.email, created);
@@ -127,7 +127,10 @@ describe('AuthService', () => {
       });
     }),
   };
-  const config = { corsOrigin: 'https://app.example.com' } as AppConfigService;
+  const config = {
+    corsOrigin: 'https://app.example.com',
+    devSkipEmailVerification: false,
+  } as AppConfigService;
 
   beforeEach(() => {
     users.clear();
@@ -135,6 +138,7 @@ describe('AuthService', () => {
     actionTokens.clear();
     jest.clearAllMocks();
     Object.assign(email, { isConfigured: true });
+    Object.assign(config, { devSkipEmailVerification: false });
   });
 
   it('requires verification before creating a session for a new registration', async () => {
@@ -165,6 +169,30 @@ describe('AuthService', () => {
       email: 'author@example.com',
     });
     await expect(auth.verifyEmail(verificationToken)).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('creates an immediately usable account without email delivery in local development', async () => {
+    Object.assign(config, { devSkipEmailVerification: true });
+    Object.assign(email, { isConfigured: false });
+    const auth = service();
+
+    const result = await auth.register(
+      'Author@Example.com',
+      'correct horse battery staple',
+      'Alice Author',
+    );
+
+    expect(result).toMatchObject({ verificationRequired: false });
+    if (result.verificationRequired) {
+      throw new Error('Expected a local session');
+    }
+    expect(result.user.email).toBe('author@example.com');
+    expect(typeof result.user.emailVerifiedAt).toBe('string');
+    expect(result).not.toHaveProperty('user.passwordHash');
+    expect(email.send).not.toHaveBeenCalled();
+    const sessionUser = await auth.userForToken(result.token);
+    expect(sessionUser?.email).toBe('author@example.com');
+    expect(typeof sessionUser?.emailVerifiedAt).toBe('string');
   });
 
   it('does not disclose whether an email can receive a password reset', async () => {
@@ -272,7 +300,8 @@ describe('AuthService', () => {
       'correct horse battery staple',
       'Member',
     );
-    const memberUser = users.get(member.email)!;
+    const memberEmail = member.verificationRequired ? member.email : member.user.email;
+    const memberUser = users.get(memberEmail)!;
     await expect(auth.listUsers('user')).rejects.toBeInstanceOf(ForbiddenException);
     await expect(auth.updateUserRole('admin', memberUser.id, 'admin')).resolves.toMatchObject({
       id: memberUser.id,

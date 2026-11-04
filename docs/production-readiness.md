@@ -2,7 +2,7 @@
 
 Status: Current
 
-Last reviewed: 2026-10-28
+Last reviewed: 2026-11-04
 
 Implemented: Partial
 
@@ -18,6 +18,12 @@ sessions on disposable test projects. Do not ask authors to rely on Paralleax fo
 valuable project data until the provider restore drill and operator prerequisites
 below are complete. The open creator alpha and public reading have additional
 gates.
+
+The November 2026 first-story and access-control stabilization improves the
+authoring journey and permission feedback. It does not establish release
+readiness: the open creator alpha still requires its P1 provider, abuse,
+performance, and manual accessibility gates; public reading still requires its
+P2 publication, moderation, and licensing gates.
 
 Implemented baseline: unlisted URL visibility, aggregate Story size/entity
 quotas, data-router navigation blocking for pending saves, and cancellable

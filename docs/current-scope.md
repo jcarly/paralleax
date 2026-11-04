@@ -118,8 +118,10 @@ Paralleax currently includes:
 - Reusable item definitions.
 - Exact authored item instances, including nested item relationships.
 - Character- or location-rooted item placement and nested item relationships.
-- Authentication, verified email/password accounts, opaque revocable sessions,
-  password recovery/change, self-service revocation of other sessions, creator ownership, required non-unique display names,
+- Authentication, including verified email/password accounts and opaque
+  revocable sessions (verification is skipped by default in local development),
+  password recovery/change, self-service session revocation, creator ownership,
+  required non-unique display names,
   self-service display-name editing, global user/admin roles, per-story
   visibility including unlisted link-readable stories, editing, and editor/reader
   comment policies, reader/editor grants,
@@ -131,17 +133,21 @@ Paralleax currently includes:
   the access tab directly. Story cards, comments, and change
   history project current display names by user id without exposing account
   emails; self-service, administration, and explicit access management retain
-  email where needed. An inaccessible or missing direct Story editor, player, or
-  access URL returns to the Story library without rendering the API detail;
-  readable accounts that merely lack edit permission still move from the editor
-  URL to the player.
+  email where needed. An inaccessible or missing direct Story editor or player
+  shows a generic localized explanation with library and sign-in navigation,
+  without rendering Story details; direct Access URLs explain when the account
+  cannot manage sharing and offer a return to the Story. Accounts that can read
+  a Story but cannot edit or manage it receive `403`; hidden or missing Stories
+  remain `404`, and protected writes without a session remain `401`.
 - Transactional-email delivery through the Brevo HTTPS API for account
   verification and recovery. The API uses the official Brevo Node.js SDK with a
   configured sender, disables automatic delivery retries, accepts no partial
   configuration, and keeps recipients, message content, credentials, and raw
   provider responses out of application logs. New registrations require a
-  verified email before a session is created. Account-action tokens are
-  purpose-bound, stored only as hashes, expire, and are consumed once; password
+  verified email before a session is created except in local development, where
+  the development-only bypass marks the account verified and signs it in.
+  Account-action tokens remain purpose-bound, stored only as hashes, expiring,
+  and single-use; password
   resets and changes revoke prior
   sessions. Accounts predating this feature migrate as verified to avoid lockout.
 - Story review post-its on the graph, interactions, triggers, characters, locations,
@@ -175,8 +181,11 @@ Paralleax currently includes:
   users see every story they can read with capability and ownership filters.
   Search, filtering, sorting, and incremental pagination use lightweight server
   summaries and do not load Story graphs. Creating a new Story from the library
-  atomically seeds a `Start → New interaction` chain with empty bodies, then
-  opens its editor with the root selected, centered, and shown in the Inspector.
+  atomically seeds a root and child Interaction with empty titles and bodies.
+  English, French, and Italian placeholders identify the starting Interaction,
+  new Interactions, and empty scene bodies without writing translated copy into
+  authored Story data.
+  The editor opens with the root selected, centered, and shown in the Inspector.
   Local return-to-page navigation is preserved through sign-in and registration.
 - Paginated, revision-consistent Story read projections. The editor displays
   context lists first, then interaction and Trigger structure, then bodies,

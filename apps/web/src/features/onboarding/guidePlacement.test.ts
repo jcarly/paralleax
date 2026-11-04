@@ -24,6 +24,15 @@ describe('getGuideCardPosition', () => {
     ).toEqual({ left: 16, bottom: 16, placement: 'mobile-bottom' });
   });
 
+  it('moves the card above a target it would cover on a narrow screen', () => {
+    expect(
+      getGuideCardPosition({ width: 300, height: 160 }, rect(100, 710, 100, 50), {
+        width: 390,
+        height: 844,
+      }),
+    ).toEqual({ left: 16, top: 74, placement: 'mobile-top' });
+  });
+
   it('uses a quiet viewport corner when there is no highlighted target', () => {
     expect(
       getGuideCardPosition({ width: 320, height: 160 }, undefined, {

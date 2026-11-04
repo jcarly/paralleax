@@ -174,13 +174,18 @@ test('an author creates, persists, resumes, and simulates a conditional story', 
   await page.getByRole('button', { name: 'Fit View' }).click();
   openingNode = interactionNode(page, 'Opening');
   await openingNode.click();
-  await page.getByRole('link', { name: 'Test from current interaction' }).click();
+  await page.getByRole('link', { name: 'Test from start' }).click();
 
   await expect(page.getByText('Simulation', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Opening' }).click();
   await expect(page.getByLabel('Current interaction title')).toHaveValue('Opening');
   await page.getByRole('button', { name: 'Gain courage' }).click();
   await expect(page.getByLabel('Current interaction title')).toHaveValue('Gain courage');
-  await expect(page.locator('.onboarding-card')).toHaveCount(0);
+  await expect(page.getByRole('region', { name: 'Story ready to explore' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Share for testing' })).toHaveAttribute(
+    'href',
+    /settings=access/,
+  );
   await expect(page.getByRole('button', { name: 'Resolve' })).toBeEnabled();
   await page.getByRole('button', { name: 'Resolve' }).click();
   await expect(page.getByLabel('Current interaction title')).toHaveValue('Resolve');

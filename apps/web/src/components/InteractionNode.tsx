@@ -10,6 +10,7 @@ export interface InteractionNodeData extends Record<string, unknown> {
   location?: { id: string; name: string };
   characters?: Array<{ id: string; name: string; imageUrl?: string }>;
   rootTriggerId?: string;
+  onboardingBranchAdd?: boolean;
   rootTriggerSelected?: boolean;
   rootTriggerCommentCount?: number;
   onCreateChild?: (interactionId: string) => void;
@@ -36,6 +37,13 @@ export function InteractionNode({ id, data }: NodeProps<Node<InteractionNodeData
   const { t } = useTranslation();
   const d = data;
   const rootTriggerId = d.rootTriggerId;
+  const title = d.title.trim()
+    ? d.title
+    : t(
+        rootTriggerId
+          ? 'interactionInspector.startTitlePlaceholder'
+          : 'interactionInspector.newTitlePlaceholder',
+      );
   const characters = d.characters ?? [];
   const visibleCharacters = characters.slice(0, 3);
   const createParent = (event: NodeActionEvent) => {
@@ -97,7 +105,7 @@ export function InteractionNode({ id, data }: NodeProps<Node<InteractionNodeData
         <button
           className="node-comment-badge nodrag nopan"
           type="button"
-          aria-label={t('comments.openForEntity', { count: d.commentCount, entity: d.title })}
+          aria-label={t('comments.openForEntity', { count: d.commentCount, entity: title })}
           onClick={(event) => {
             event.preventDefault();
             event.stopPropagation();
@@ -135,7 +143,7 @@ export function InteractionNode({ id, data }: NodeProps<Node<InteractionNodeData
         />
       ))}
       <strong>
-        {d.title}
+        {title}
         {d.occurrenceCount ? (
           <span
             className="interaction-occurrence-count"
@@ -201,7 +209,7 @@ export function InteractionNode({ id, data }: NodeProps<Node<InteractionNodeData
           id="interaction-output"
           position={Position.Bottom}
           className="node-create node-create-child nodrag nopan"
-          data-onboarding-target={d.selected ? 'branch-add' : undefined}
+          data-onboarding-target={d.onboardingBranchAdd ? 'branch-add' : undefined}
           role="button"
           tabIndex={0}
           aria-label={t('graph.createChild')}

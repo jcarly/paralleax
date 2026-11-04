@@ -2108,9 +2108,6 @@
     "complexity": {
       "count": 1
     },
-    "curly": {
-      "count": 2
-    },
     "max-lines-per-function": {
       "count": 1
     },

@@ -10,7 +10,7 @@ import { useOnboarding } from './onboardingContext';
 afterEach(cleanup);
 
 function BeginGuide() {
-  const { beginForStory, openHelp, reportStepComplete } = useOnboarding();
+  const { beginForStory, openHelp, progress, reportStepComplete } = useOnboarding();
   return (
     <>
       <button type="button" onClick={() => openHelp()}>
@@ -28,6 +28,10 @@ function BeginGuide() {
       <button type="button" onClick={() => reportStepComplete('story-1', 'create-branch')}>
         Mark branch created
       </button>
+      <button type="button" onClick={() => reportStepComplete('story-1', 'test-story')}>
+        Mark test complete
+      </button>
+      <output data-testid="guide-status">{progress.status}</output>
       <Link to="/stories/story-1/play?mode=simulation">Go to Simulation</Link>
     </>
   );
@@ -142,4 +146,25 @@ it('can restart the guide from the help control', async () => {
   await user.click(screen.getByRole('button', { name: 'Restart guide' }));
 
   expect(screen.getByRole('heading', { name: 'Explore the graph' })).toBeInTheDocument();
+});
+
+it('shows completion actions after testing and pauses when opening access settings', async () => {
+  const user = userEvent.setup();
+  renderGuide('/stories/story-1/edit');
+  await user.click(screen.getByRole('button', { name: 'Start guide' }));
+  await user.click(screen.getByRole('button', { name: 'Mark first step' }));
+  await user.click(screen.getByRole('button', { name: 'Mark scene saved' }));
+  await user.click(screen.getByRole('button', { name: 'Mark branch created' }));
+  await user.click(screen.getByRole('link', { name: 'Go to Simulation' }));
+  await user.click(screen.getByRole('button', { name: 'Mark test complete' }));
+
+  expect(screen.getByRole('region', { name: 'Story ready to explore' })).toBeInTheDocument();
+  const continueLink = screen.getByRole('link', { name: 'Continue creating' });
+  const shareLink = screen.getByRole('link', { name: 'Share for testing' });
+  expect(continueLink).toHaveAttribute('href', '/stories/story-1/edit');
+  expect(shareLink).toHaveAttribute('href', '/stories/story-1/edit?settings=access');
+
+  await user.click(shareLink);
+  expect(screen.getByTestId('guide-status')).toHaveTextContent('paused');
+  expect(screen.queryByRole('region', { name: 'Story ready to explore' })).not.toBeInTheDocument();
 });

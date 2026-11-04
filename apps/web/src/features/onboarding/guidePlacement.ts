@@ -16,7 +16,7 @@ export interface GuideCardPosition {
   left: number;
   top?: number;
   bottom?: number;
-  placement: 'top' | 'right' | 'bottom' | 'left' | 'corner' | 'mobile-bottom';
+  placement: 'top' | 'right' | 'bottom' | 'left' | 'corner' | 'mobile-bottom' | 'mobile-top';
 }
 
 interface PositionCandidate extends GuideCardPosition {
@@ -159,6 +159,33 @@ function getCornerPosition(
     : { left: edgeGap, top: safeTop, placement: 'corner' };
 }
 
+function getMobileGuideCardPosition(
+  card: Pick<GuideRect, 'width' | 'height'>,
+  target: GuideRect | undefined,
+  viewport: GuideViewport,
+  cardHeight: number,
+): GuideCardPosition {
+  const bottomPosition = { left: edgeGap, bottom: edgeGap, placement: 'mobile-bottom' as const };
+  if (!target) {
+    return bottomPosition;
+  }
+
+  const bottomOverlap = scoreCorner(
+    { left: edgeGap, top: viewport.height - cardHeight - edgeGap },
+    card,
+    target,
+  );
+  if (bottomOverlap.overlapArea === 0) {
+    return bottomPosition;
+  }
+
+  const topPosition = { left: edgeGap, top: safeTop };
+  const topOverlap = scoreCorner(topPosition, card, target);
+  return topOverlap.overlapArea < bottomOverlap.overlapArea
+    ? { ...topPosition, placement: 'mobile-top' }
+    : bottomPosition;
+}
+
 export function getGuideCardPosition(
   card: Pick<GuideRect, 'width' | 'height'>,
   target: GuideRect | undefined,
@@ -170,7 +197,7 @@ export function getGuideCardPosition(
   );
   const cardHeight = card.height || 190;
   if (viewport.width <= 620) {
-    return { left: edgeGap, bottom: edgeGap, placement: 'mobile-bottom' };
+    return getMobileGuideCardPosition(card, target, viewport, cardHeight);
   }
   if (!target) {
     return {

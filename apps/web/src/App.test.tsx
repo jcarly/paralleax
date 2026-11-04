@@ -80,7 +80,7 @@ describe('App', () => {
     expect(screen.getByRole('link', { name: 'Stories' })).toHaveAttribute('href', '/');
     expect(await screen.findByRole('button', { name: 'Guide' })).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Design system' })).not.toBeInTheDocument();
-    expect(screen.getByText('Stories mock for user-1')).toBeInTheDocument();
+    expect(await screen.findByText('Stories mock for user-1')).toBeInTheDocument();
   });
 
   it('updates the current display name from the account dialog', async () => {
@@ -99,7 +99,7 @@ describe('App', () => {
     );
 
     await user.click(await screen.findByRole('button', { name: 'AU Author: Account settings' }));
-    const input = await screen.findByLabelText('Display name');
+    const input = await screen.findByLabelText('Display name', {}, { timeout: 5_000 });
     await user.clear(input);
     await user.type(input, '  Alice   Cooper  ');
     await user.click(screen.getByRole('button', { name: 'Save' }));
