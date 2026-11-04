@@ -60,6 +60,7 @@ describe('authored groups', () => {
     expect(() => moveStoryGroup(story, 'root', 'leaf', null)).toThrow('cycles');
     expect(() => moveStoryGroup(story, 'root', 'root', null)).toThrow('cycles');
     expect(() => moveStoryGroup(story, 'leaf', 'foreign', null)).toThrow('same Story');
+    expect(() => moveStoryGroup(story, 'leaf', 'foreign', 'missing')).toThrow('same Story');
     expect(() => moveStoryGroup(story, 'leaf', null, 'child')).toThrow('sibling');
     expect(() => moveStoryGroup(story, 'leaf', null, 'foreign')).toThrow('sibling');
     expect(() => moveStoryGroup(story, 'missing', null, null)).toThrow('not found');

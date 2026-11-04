@@ -3299,14 +3299,8 @@
     }
   },
   "packages/shared/src/operations/groups.ts": {
-    "complexity": {
-      "count": 1
-    },
     "curly": {
-      "count": 14
-    },
-    "sonarjs/cognitive-complexity": {
-      "count": 1
+      "count": 11
     }
   },
   "packages/shared/src/operations/merge.ts": {

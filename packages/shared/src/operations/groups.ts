@@ -33,23 +33,46 @@ export function moveStoryGroup(
   const groups = story.groups ?? [];
   const group = groups.find(({ id }) => id === groupId);
   if (!group) throw new Error('Group not found');
-  if (parentGroupId !== null) {
-    if (!groups.some(({ id }) => id === parentGroupId))
-      throw new Error('Group parent must belong to the same Story');
-    if (getGroupDescendantIds(groups, groupId).has(parentGroupId))
-      throw new Error('Group hierarchy must not contain cycles');
-  }
+  validateGroupMoveParent(groups, groupId, parentGroupId);
   const remaining = groups.filter(({ id }) => id !== groupId);
-  const sibling =
-    beforeGroupId === null ? undefined : remaining.find(({ id }) => id === beforeGroupId);
-  if (beforeGroupId !== null && (!sibling || (sibling.parentGroupId ?? null) !== parentGroupId))
-    throw new Error('Group destination must be a sibling in the same Story');
+  const sibling = findGroupMoveSibling(remaining, parentGroupId, beforeGroupId);
   const moved = { ...group };
   delete moved.parentGroupId;
   if (parentGroupId !== null) moved.parentGroupId = parentGroupId;
   const index = sibling ? remaining.indexOf(sibling) : remaining.length;
   remaining.splice(index, 0, moved);
   return { ...story, groups: remaining };
+}
+
+function validateGroupMoveParent(
+  groups: readonly Group[],
+  groupId: string,
+  parentGroupId: string | null,
+): void {
+  if (parentGroupId === null) {
+    return;
+  }
+  if (!groups.some(({ id }) => id === parentGroupId)) {
+    throw new Error('Group parent must belong to the same Story');
+  }
+  if (getGroupDescendantIds(groups, groupId).has(parentGroupId)) {
+    throw new Error('Group hierarchy must not contain cycles');
+  }
+}
+
+function findGroupMoveSibling(
+  groups: readonly Group[],
+  parentGroupId: string | null,
+  beforeGroupId: string | null,
+): Group | undefined {
+  if (beforeGroupId === null) {
+    return undefined;
+  }
+  const sibling = groups.find(({ id }) => id === beforeGroupId);
+  if (!sibling || (sibling.parentGroupId ?? null) !== parentGroupId) {
+    throw new Error('Group destination must be a sibling in the same Story');
+  }
+  return sibling;
 }
 
 /** Validate canonical organization, including after history replay. */
