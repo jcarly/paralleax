@@ -918,9 +918,6 @@
     }
   },
   "apps/web/src/App.tsx": {
-    "@typescript-eslint/no-shadow": {
-      "count": 10
-    },
     "complexity": {
       "count": 1
     },
