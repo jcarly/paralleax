@@ -3299,17 +3299,8 @@
     }
   },
   "packages/shared/src/operations/groups.ts": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 3
-    },
-    "complexity": {
-      "count": 2
-    },
     "curly": {
-      "count": 20
-    },
-    "sonarjs/cognitive-complexity": {
-      "count": 2
+      "count": 11
     }
   },
   "packages/shared/src/operations/merge.ts": {
