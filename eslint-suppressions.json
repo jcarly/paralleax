@@ -3339,22 +3339,19 @@
   },
   "packages/shared/src/reader/replay.ts": {
     "complexity": {
-      "count": 4
+      "count": 3
     },
     "curly": {
-      "count": 21
+      "count": 20
     },
     "max-depth": {
-      "count": 2
-    },
-    "max-lines-per-function": {
       "count": 1
     },
     "max-params": {
       "count": 3
     },
     "sonarjs/cognitive-complexity": {
-      "count": 3
+      "count": 2
     }
   },
   "packages/shared/src/stats/references.ts": {

@@ -336,7 +336,14 @@ complex shared helpers, central React flows, functional duplication, then styles
       deterministic Trigger behavior, and AND/OR semantics are unchanged. The
       shared ESLint baseline shrank by 12 findings; see the
       [2026-11-04 shared-engine audit](audits/2026-11-04-shared-engine.md).
-      Higher-risk Reader item-stat replay complexity remains a separate slice.
+      The Reader item-stat replay follow-up is recorded separately below.
+- [x] **Shared item-stat replay slice (2026-11-04):** split initialization,
+      duration advancement, and expression-context construction out of
+      `applyInteractionItemStatChanges`. Replay still advances owned item stats
+      before effects, applies effects in authored order, refreshes expression
+      values after each effect, and leaves the input unchanged. A focused test
+      covers those ordering guarantees. See
+      [the reader replay audit](audits/2026-11-04-reader-replay.md).
 - [x] Enable the deferred CSS cascade rules across all 18 source stylesheets:
       `no-descending-specificity`, `no-duplicate-selectors`, and
       `declaration-no-important`. The native Stylelint suppression baseline
