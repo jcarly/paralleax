@@ -41,7 +41,7 @@ describe('LanguageSwitcher', () => {
     expectLanguageEndonyms();
     await user.selectOptions(screen.getByRole('combobox', { name: 'Language' }), 'fr');
 
-    expect(screen.getByText('Histoires')).toBeInTheDocument();
+    expect(await screen.findByText('Histoires')).toBeInTheDocument();
     expect(screen.getByRole('combobox', { name: 'Langue' })).toHaveValue('fr');
     expectLanguageEndonyms();
     expect(window.localStorage.getItem(languageStorageKey)).toBe('fr');

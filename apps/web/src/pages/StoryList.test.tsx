@@ -7,7 +7,7 @@ import type { Story, StorySummary } from '@paralleax/shared';
 import { StoryList } from './StoryList';
 import { api, type AuthUser, type QspImportResponse } from '../api';
 import { loadStoryEditor, loadStoryPlayer } from './storyRouteLoaders';
-import { i18n } from '../i18n';
+import { changeInterfaceLanguage } from '../i18n';
 
 vi.mock('../api', () => ({
   api: {
@@ -1162,7 +1162,7 @@ describe('StoryList', () => {
   });
 
   it('translates product copy without changing authored story titles', async () => {
-    await i18n.changeLanguage('fr');
+    await changeInterfaceLanguage('fr');
     vi.mocked(api.listStories).mockResolvedValue(storyPage([structuredClone(stories[0])]));
 
     render(
