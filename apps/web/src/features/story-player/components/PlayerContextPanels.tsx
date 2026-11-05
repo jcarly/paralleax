@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import type { Character, Interaction, StatValue, Story } from '@paralleax/shared';
 import { getItemDefinitionIdForInstance, getItemOwnerIdForInstance } from '@paralleax/shared';
+import { interactionTitleForDisplay } from '../../story/interactionTitlePresentation';
 
 function shouldShowPlayerContextPanel(
   playedCharacter: Character | undefined,
@@ -166,7 +167,12 @@ export function PlayerContextPanels({
               <summary>{t('player.simulationHistory')}</summary>
               <ol>
                 {visitedIds.map((id) => (
-                  <li key={id}>{story.interactions.find((item) => item.id === id)?.title ?? id}</li>
+                  <li key={id}>
+                    {(() => {
+                      const interaction = story.interactions.find((item) => item.id === id);
+                      return interaction ? interactionTitleForDisplay(interaction, t) : id;
+                    })()}
+                  </li>
                 ))}
               </ol>
             </details>

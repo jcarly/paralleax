@@ -2,6 +2,25 @@
 
 ## Unreleased
 
+- Local development registrations now skip email verification by default and
+  sign in immediately. `DEV_SKIP_EMAIL_VERIFICATION=false` restores the normal
+  email flow; the bypass cannot be enabled in test or production.
+
+- Added an optional four-step, non-modal first-story guide with resumable local
+  progress and save-aware completion. Its card now floats without shifting the
+  page, adapts around the current target, docks at the bottom on mobile, and
+  outlines relevant editor and Simulation controls. Formbricks still initializes
+  only after a user opens feedback; automatic journey milestones and
+  post-Simulation surveys remain disabled pending explicit consent and notice
+  coverage.
+
+- Stabilized first-story onboarding with localized placeholders for empty
+  Interaction titles and scene bodies, a direct branch target, distinct Simulation starts, and
+  completion links to the editor and Access settings. Inaccessible Story routes
+  now explain recovery without revealing Story details. Reader-only writes
+  return `403` while hidden Stories remain `404`; collaborator email validation
+  rejects malformed and duplicate entries.
+
 - Full Story reads now use one read-only repeatable-read snapshot, and malformed
   persisted graph decorations fail explicitly during projection.
 

@@ -1,4 +1,9 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import type { StoryAccessSettings } from '@paralleax/shared';
 import type { SetStoryCollaboratorDto, UpdateStoryAccessDto } from '../dto/stories.dto';
 import { StoriesRepository } from '../stories.repository';
@@ -15,12 +20,16 @@ export class StoryAccessService {
   async get(storyId: string, userId: string) {
     const access = await this.repository.getAccess(storyId, userId);
     if (!access) {
+      if (await this.repository.find(storyId, userId)) {
+        throw new ForbiddenException('Story access management required');
+      }
       throw new NotFoundException(apiErrorResponse('STORY_NOT_FOUND', 'Story not found'));
     }
     return access;
   }
 
   async update(storyId: string, input: UpdateStoryAccessDto, userId: string) {
+    await this.get(storyId, userId);
     const settings: StoryAccessSettings = {
       visibility: input.visibility,
       editPolicy: input.editPolicy,

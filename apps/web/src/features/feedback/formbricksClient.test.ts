@@ -4,7 +4,6 @@ import { createFormbricksFeedbackClient } from './formbricksClient';
 const lazySdk = vi.hoisted(() => ({
   setup: vi.fn().mockResolvedValue(undefined),
   setLanguage: vi.fn().mockResolvedValue(undefined),
-  registerRouteChange: vi.fn().mockResolvedValue(undefined),
   track: vi.fn().mockResolvedValue(undefined),
 }));
 
@@ -45,13 +44,11 @@ describe('Formbricks feedback client', () => {
     const client = createFormbricksFeedbackClient(sdk, config, () => true);
 
     await expect(Promise.all([client.setup(), client.setup()])).resolves.toEqual([true, true]);
-    await expect(client.registerRouteChange('fr')).resolves.toBe(true);
     await expect(client.trackFeedback('fr', { paralleax_surface: 'editor' })).resolves.toBe(true);
 
     expect(sdk.setup).toHaveBeenCalledOnce();
     expect(sdk.setup).toHaveBeenCalledWith(config);
     expect(sdk.setLanguage).toHaveBeenCalledWith('fr');
-    expect(sdk.registerRouteChange).toHaveBeenCalledOnce();
     expect(sdk.track).toHaveBeenCalledWith('paralleax_feedback_opened', {
       hiddenFields: { paralleax_surface: 'editor' },
     });
@@ -73,7 +70,6 @@ describe('Formbricks feedback client', () => {
     failingSdk.setup.mockRejectedValue(new Error('offline'));
     const failingClient = createFormbricksFeedbackClient(failingSdk, config, () => true);
     await expect(failingClient.setup()).resolves.toBe(false);
-    await expect(failingClient.registerRouteChange('en')).resolves.toBe(false);
     await expect(failingClient.trackFeedback('en', {})).resolves.toBe(false);
 
     const disabledSdk = createSdk();
@@ -83,13 +79,11 @@ describe('Formbricks feedback client', () => {
     expect(disabledSdk.setup).not.toHaveBeenCalled();
   });
 
-  it('reports route and tracking call failures without rejecting', async () => {
+  it('reports tracking failures without rejecting', async () => {
     const sdk = createSdk();
-    sdk.registerRouteChange.mockRejectedValue(new Error('route failed'));
     sdk.track.mockRejectedValue(new Error('track failed'));
     const client = createFormbricksFeedbackClient(sdk, config, () => true);
 
-    await expect(client.registerRouteChange('en')).resolves.toBe(false);
     await expect(client.trackFeedback('en', {})).resolves.toBe(false);
   });
 
@@ -126,7 +120,6 @@ describe('Formbricks feedback client', () => {
       await expect(
         Promise.all([formbricksFeedbackClient.setup(), formbricksFeedbackClient.setup()]),
       ).resolves.toEqual([true, true]);
-      await expect(formbricksFeedbackClient.registerRouteChange('fr')).resolves.toBe(true);
       await expect(
         formbricksFeedbackClient.trackFeedback('fr', { paralleax_surface: 'editor' }),
       ).resolves.toBe(true);
@@ -134,7 +127,6 @@ describe('Formbricks feedback client', () => {
       expect(lazySdk.setup).toHaveBeenCalledOnce();
       expect(lazySdk.setup).toHaveBeenCalledWith(config);
       expect(lazySdk.setLanguage).toHaveBeenCalledWith('fr');
-      expect(lazySdk.registerRouteChange).toHaveBeenCalledOnce();
       expect(lazySdk.track).toHaveBeenCalledWith('paralleax_feedback_opened', {
         hiddenFields: { paralleax_surface: 'editor' },
       });

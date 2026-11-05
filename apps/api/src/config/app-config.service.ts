@@ -18,6 +18,7 @@ export class AppConfigService {
   readonly registrationMode!: RegistrationMode;
   readonly authRegistrationRateLimit!: number;
   readonly testEmailOutbox!: boolean;
+  readonly devSkipEmailVerification!: boolean;
   readonly brevoApiKey?: string;
   readonly emailFrom?: EmailAddress;
   readonly emailReplyTo?: EmailAddress;
@@ -71,6 +72,14 @@ export function loadAppConfig(environment: NodeJS.ProcessEnv) {
   if (testEmailOutbox && nodeEnvironment !== 'test') {
     throw new Error('TEST_EMAIL_OUTBOX is only available in the test environment');
   }
+  const devSkipEmailVerification = booleanValue(
+    'DEV_SKIP_EMAIL_VERIFICATION',
+    environment.DEV_SKIP_EMAIL_VERIFICATION ??
+      (nodeEnvironment === 'development' ? 'true' : 'false'),
+  );
+  if (devSkipEmailVerification && nodeEnvironment !== 'development') {
+    throw new Error('DEV_SKIP_EMAIL_VERIFICATION is only available in the development environment');
+  }
   if (environment.EMAIL_SMTP_URL?.trim()) {
     throw new Error('EMAIL_SMTP_URL is no longer supported; configure BREVO_API_KEY instead');
   }
@@ -97,6 +106,7 @@ export function loadAppConfig(environment: NodeJS.ProcessEnv) {
     registrationMode,
     authRegistrationRateLimit,
     testEmailOutbox,
+    devSkipEmailVerification,
     brevoApiKey,
     emailFrom,
     emailReplyTo,

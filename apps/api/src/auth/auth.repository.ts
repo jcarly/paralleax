@@ -57,24 +57,29 @@ export class AuthRepository {
     return result.rows[0] ? mapUser(result.rows[0]) : undefined;
   }
 
-  async createUser(
-    user: Omit<AuthUser, 'role' | 'emailVerifiedAt'>,
-  ): Promise<AuthUser | undefined> {
+  async createUser(user: Omit<AuthUser, 'role'>): Promise<AuthUser | undefined> {
     const client = await this.database.pool.connect();
     try {
       await client.query('BEGIN');
       await client.query("SELECT pg_advisory_xact_lock(hashtext('paralleax-admin-roles'))");
       const result = await client.query<AuthUserRow>(
-        `INSERT INTO users (id, email, display_name, password_hash, role, created_at)
+        `INSERT INTO users (id, email, display_name, password_hash, role, created_at, email_verified_at)
          VALUES (
            $1, $2, $3, $4,
            CASE WHEN EXISTS (SELECT 1 FROM users WHERE role = 'admin')
              THEN 'user' ELSE 'admin' END,
-           $5
+           $5, $6
          )
          ON CONFLICT (email) DO NOTHING
          RETURNING id, email, display_name, password_hash, role, created_at, email_verified_at`,
-        [user.id, user.email, user.displayName, user.passwordHash, user.createdAt],
+        [
+          user.id,
+          user.email,
+          user.displayName,
+          user.passwordHash,
+          user.createdAt,
+          user.emailVerifiedAt ?? null,
+        ],
       );
       await client.query('COMMIT');
       return result.rows[0] ? mapUser(result.rows[0]) : undefined;

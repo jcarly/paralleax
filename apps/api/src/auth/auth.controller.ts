@@ -24,9 +24,14 @@ export class AuthController {
 
   @Public()
   @Post('register')
-  async register(@Body() input: RegisterDto) {
+  async register(@Body() input: RegisterDto, @Res({ passthrough: true }) response: Response) {
     assertRegistrationAllowed(this.config.registrationMode);
-    return this.auth.register(input.email, input.password, input.displayName);
+    const result = await this.auth.register(input.email, input.password, input.displayName);
+    if (result.verificationRequired) {
+      return result;
+    }
+    this.setSessionCookie(response, result.token);
+    return { verificationRequired: false, user: result.user };
   }
 
   @Public()

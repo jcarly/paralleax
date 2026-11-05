@@ -3,6 +3,8 @@ import { paginated, prepareEditorPage, storyWithOpeningPath } from './editorTest
 
 test('creates a linked opening graph and focuses its root in the editor', async ({ page }) => {
   const createdStory = storyWithOpeningPath();
+  createdStory.interactions[0].title = '';
+  createdStory.interactions[1].title = '';
 
   await page.route(/\/api\/stories(?:\?.*)?$/, async (route) => {
     if (route.request().method() === 'POST') {
@@ -22,5 +24,5 @@ test('creates a linked opening graph and focuses its root in the editor', async 
   const rootNode = page.getByTestId('interaction-node').filter({ hasText: 'Start' });
   await expect(rootNode).toHaveClass(/selected/);
   await expect(page.getByRole('complementary', { name: 'Inspector' })).toBeVisible();
-  await expect(page.getByLabel('Title', { exact: true })).toHaveValue('Start');
+  await expect(page.getByLabel('Title', { exact: true })).toHaveAttribute('placeholder', 'Start');
 });

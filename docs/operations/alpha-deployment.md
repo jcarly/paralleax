@@ -2,7 +2,7 @@
 
 Status: Required operator runbook
 
-Last reviewed: 2026-10-24
+Last reviewed: 2026-10-28
 
 ## Scope
 
@@ -19,6 +19,15 @@ controlled non-production environment after the alpha notice and standard
 account, access, and privacy safeguards are ready. Do not use those sessions to
 accept valuable project data. Complete the provider and operator gates below
 before authors rely on the service to retain their projects.
+
+The authoring guide stores only its step and active Story pointer in the
+browser's account-scoped `localStorage`; it does not send guide activity to an
+analytics service. Do not enable journey milestones or a post-Simulation survey
+until an explicit consent flow and the alpha notice describe the purpose, fields,
+provider, and retention. The separate Formbricks feedback button is voluntary,
+but opening it sends survey context and Formbricks can record the full URL,
+including a Story id. Review the [Formbricks runbook](formbricks-feedback.md)
+and reflect that metadata in the tester notice before collecting responses.
 
 ## Required Topology
 

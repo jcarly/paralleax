@@ -208,10 +208,8 @@ export interface AuthUser {
   createdAt: string;
   emailVerifiedAt?: string;
 }
-export interface RegistrationResult {
-  email: string;
-  verificationRequired: true;
-}
+export type RegistrationResult =
+  { email: string; verificationRequired: true } | { user: AuthUser; verificationRequired: false };
 export interface ManagedUser {
   id: string;
   email: string;

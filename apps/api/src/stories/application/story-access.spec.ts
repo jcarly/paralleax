@@ -5,6 +5,7 @@ import { StoryAccessService } from './story-access';
 describe('StoryAccessService', () => {
   const repository = {
     getAccess: jest.fn(),
+    find: jest.fn(),
     updateAccess: jest.fn(),
     setCollaborator: jest.fn(),
     removeCollaborator: jest.fn(),
@@ -25,12 +26,22 @@ describe('StoryAccessService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     repository.getAccess.mockResolvedValue(access);
+    repository.find.mockResolvedValue(undefined);
   });
 
   it('does not expose access configuration to an unauthorized actor', async () => {
     repository.getAccess.mockResolvedValueOnce(undefined);
 
     await expect(service.get('story-1', 'user-2')).rejects.toThrow('Story not found');
+  });
+
+  it('distinguishes a readable Story from one hidden by access policy', async () => {
+    repository.getAccess.mockResolvedValueOnce(undefined);
+    repository.find.mockResolvedValueOnce({ id: 'story-1' });
+
+    await expect(service.get('story-1', 'reader-1')).rejects.toThrow(
+      'Story access management required',
+    );
   });
 
   it('updates access settings and publishes one invalidation', async () => {

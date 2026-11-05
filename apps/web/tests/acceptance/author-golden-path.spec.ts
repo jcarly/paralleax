@@ -47,7 +47,12 @@ test('an author creates, persists, resumes, and simulates a conditional story', 
   const rootCreation = waitForApiResponse(page, 'POST', /\/api\/stories\/[^/]+\/interactions$/);
   await page.getByRole('button', { name: 'Add root' }).click();
   const root = await createdInteraction(rootCreation);
+  await expect(page.locator('.onboarding-guide-positioner')).toHaveCSS('position', 'fixed');
+  await expect(interactionNode(page, 'New interaction')).toHaveClass(/onboarding-target-highlight/);
+  await interactionNode(page, 'New interaction').click();
+  await expect(page.getByRole('heading', { name: 'Write a scene' })).toBeVisible();
   await editInteraction(page, 'New interaction', 'Opening', 'Alice enters the atrium.');
+  await expect(page.getByRole('heading', { name: 'Create a choice' })).toBeVisible();
 
   let openingNode = interactionNode(page, 'Opening');
   await openingNode.click();
@@ -64,6 +69,21 @@ test('an author creates, persists, resumes, and simulates a conditional story', 
   const middle = await createdInteraction(middleCreation);
   await editInteraction(page, 'New interaction', 'Gain courage', 'Alice chooses to continue.');
 
+  await page.getByRole('button', { name: 'Fit View' }).click();
+  await expect(openingNode).toBeVisible();
+  const alternativeCreation = waitForApiResponse(
+    page,
+    'POST',
+    /\/api\/stories\/[^/]+\/interactions$/,
+  );
+  await openingNode.getByRole('button', { name: 'Create child interaction' }).click();
+  const alternative = await createdInteraction(alternativeCreation);
+  await editInteraction(page, 'New interaction', 'Leave the atrium', 'Alice takes another path.');
+  await page.getByRole('button', { name: 'Fit View' }).click();
+  await expect(page.getByRole('heading', { name: 'Test your story' })).toBeVisible();
+
+  await page.getByRole('button', { name: 'Collapse story context' }).click();
+  await interactionNode(page, 'Gain courage').click();
   const effectCreation = waitForInteractionPatch(page);
   await inspector.getByRole('button', { name: 'Add effect' }).click();
   await inspector
@@ -80,7 +100,6 @@ test('an author creates, persists, resumes, and simulates a conditional story', 
   await expect(inspector.getByLabel('Variable effect value')).toHaveValue('1');
   await expect(page.getByLabel('Story save status')).toHaveText('Saved');
 
-  await interactionNode(page, 'Gain courage').click();
   const finalCreation = waitForApiResponse(page, 'POST', /\/api\/stories\/[^/]+\/interactions$/);
   await interactionNode(page, 'Gain courage')
     .getByRole('button', { name: 'Create child interaction' })
@@ -119,6 +138,8 @@ test('an author creates, persists, resumes, and simulates a conditional story', 
   await expect(page.getByRole('button', { name: 'Atrium', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Alice', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Courage', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Collapse story context' }).click();
+  await page.getByRole('button', { name: 'Fit View' }).click();
   await interactionNode(page, 'Opening').click();
   await expect(inspector.getByRole('textbox', { name: 'Content' })).toHaveText(
     'Alice enters the atrium.',
@@ -150,17 +171,25 @@ test('an author creates, persists, resumes, and simulates a conditional story', 
   await expect(storyCard).toBeVisible();
   await storyCard.getByRole('link', { name: 'Edit' }).click();
   await expect(page.locator('.story-title-input')).toHaveValue(storyTitle);
+  await page.getByRole('button', { name: 'Fit View' }).click();
   openingNode = interactionNode(page, 'Opening');
   await openingNode.click();
-  await page.getByRole('link', { name: 'Test from current interaction' }).click();
+  await page.getByRole('link', { name: 'Test from start' }).click();
 
   await expect(page.getByText('Simulation', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Opening' }).click();
   await expect(page.getByLabel('Current interaction title')).toHaveValue('Opening');
   await page.getByRole('button', { name: 'Gain courage' }).click();
   await expect(page.getByLabel('Current interaction title')).toHaveValue('Gain courage');
+  await expect(page.getByRole('region', { name: 'Story ready to explore' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Share for testing' })).toHaveAttribute(
+    'href',
+    /settings=access/,
+  );
   await expect(page.getByRole('button', { name: 'Resolve' })).toBeEnabled();
   await page.getByRole('button', { name: 'Resolve' }).click();
   await expect(page.getByLabel('Current interaction title')).toHaveValue('Resolve');
 
   expect(root.id).not.toBe(middle.id);
+  expect(alternative.id).not.toBe(middle.id);
 });

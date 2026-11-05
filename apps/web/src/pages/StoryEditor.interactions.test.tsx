@@ -125,11 +125,15 @@ describe('StoryEditor interactions', () => {
     const user = userEvent.setup();
     await renderEditor(storyWithTwoInteractions());
 
-    const testLink = screen.getByRole('link', { name: 'Test' });
+    const testLink = screen.getByRole('link', { name: 'Test from start' });
     expect(testLink).toHaveAttribute('href', '/stories/story-1/play?mode=simulation');
 
     await user.click(screen.getByTestId('flow-node-interaction-2'));
 
+    expect(screen.getByRole('link', { name: 'Test from start' })).toHaveAttribute(
+      'href',
+      '/stories/story-1/play?mode=simulation',
+    );
     expect(screen.getByRole('link', { name: 'Test from current interaction' })).toHaveAttribute(
       'href',
       '/stories/story-1/play?mode=simulation&startInteractionId=interaction-2',
