@@ -42,6 +42,13 @@ Simulation diagnostics. Those projections must preserve global orientation and
 reuse the same canonical Story rather than introducing parallel models or
 separate editors.
 
+The graph is not the only possible interface for creating a story. Authors should
+be able to write long linear passages and inspect branching structure through
+complementary representations of the same canonical Interactions and Triggers.
+An alternate writing surface must not duplicate narrative data or require graph
+manipulation for every ordinary text edit. The exact document or sequence view is
+a product exploration, not a current feature commitment.
+
 Paralleax does not need to hide or remove narrative complexity. It should make
 that complexity understandable through progressive controls, focus, context,
 visual logic markers, and actionable explanations. See
