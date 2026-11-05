@@ -76,11 +76,9 @@ describe('AuthPage', () => {
     expect(screen.getByText('Passwords do not match.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Create account' })).toBeDisabled();
 
-    await user.clear(screen.getByPlaceholderText('Repeat your password'));
-    await user.type(
-      screen.getByPlaceholderText('Repeat your password'),
-      'correct horse battery staple',
-    );
+    const confirmation = screen.getByLabelText('Confirm password');
+    await user.clear(confirmation);
+    await user.type(confirmation, 'correct horse battery staple');
     expect(screen.queryByLabelText(/Invitation code/i)).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Create account' }));
 

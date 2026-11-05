@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { STORY_LIST_PAGE_SIZE, type Story, type StorySummary } from '@paralleax/shared';
 import { api, type AuthUser } from '../api';
 import { apiErrorMessage } from '../apiErrorMessages';
+import { FieldHelpTooltip } from '../components/FieldHelpTooltip';
 import { handleModalDialogKeyDown } from '../components/modalDialogKeyboard';
 import { ModalPortal } from '../components/ModalPortal';
 import { loadStoryEditor, loadStoryPlayer } from './storyRouteLoaders';
@@ -34,6 +35,7 @@ export function StoryList({ user }: { user: AuthUser | null }) {
   const [importing, setImporting] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [pending, setPending] = useState<'story' | 'demo' | ''>('');
+  const [deletingStoryId, setDeletingStoryId] = useState('');
   const [loadedRequestKey, setLoadedRequestKey] = useState('');
   const [loadingMore, setLoadingMore] = useState(false);
   const [page, setPage] = useState(1);
@@ -43,6 +45,7 @@ export function StoryList({ user }: { user: AuthUser | null }) {
   const [error, setError] = useState('');
   const [loadError, setLoadError] = useState('');
   const listRequestVersion = useRef(0);
+  const deletingStoryRef = useRef(false);
   const creationDialogTrigger = useRef<HTMLElement | null>(null);
   const importDialogTrigger = useRef<HTMLElement | null>(null);
   const listRequestKey = [
@@ -167,6 +170,11 @@ export function StoryList({ user }: { user: AuthUser | null }) {
   }
 
   async function remove(id: string) {
+    if (deletingStoryRef.current) {
+      return;
+    }
+    deletingStoryRef.current = true;
+    setDeletingStoryId(id);
     try {
       setError('');
       await api.deleteStory(id);
@@ -175,6 +183,9 @@ export function StoryList({ user }: { user: AuthUser | null }) {
       setRefreshVersion((version) => version + 1);
     } catch (caught) {
       setError(apiErrorMessage(caught, t, t('library.deleteFailed')));
+    } finally {
+      deletingStoryRef.current = false;
+      setDeletingStoryId('');
     }
   }
 
@@ -216,9 +227,6 @@ export function StoryList({ user }: { user: AuthUser | null }) {
     <main className="product-page library-main">
       <section className="library-heading">
         <div>
-          <span className="product-eyebrow">
-            {t(isAuthenticated ? 'library.eyebrow' : 'library.anonymous.eyebrow')}
-          </span>
           <h1>{t('library.title')}</h1>
           <p>{t(isAuthenticated ? 'library.description' : 'library.anonymous.description')}</p>
         </div>
@@ -345,12 +353,13 @@ export function StoryList({ user }: { user: AuthUser | null }) {
       ) : stories.length ? (
         <>
           <section className={`library-grid ${view === 'list' ? 'list' : ''}`}>
-            {stories.map((story, index) => (
+            {stories.map((story) => (
               <StoryCard
                 key={story.id}
                 story={story}
-                tone={storyTone(story.id, index)}
                 remove={remove}
+                deleting={deletingStoryId === story.id}
+                deleteDisabled={Boolean(deletingStoryId)}
               />
             ))}
           </section>
@@ -479,27 +488,19 @@ export function StoryList({ user }: { user: AuthUser | null }) {
 
 function StoryCard({
   story,
-  tone,
   remove,
+  deleting,
+  deleteDisabled,
 }: {
   story: StorySummary;
-  tone: number;
   remove: (id: string) => Promise<void>;
+  deleting: boolean;
+  deleteDisabled: boolean;
 }) {
   const { t, i18n } = useTranslation();
   const locale = i18n.resolvedLanguage ?? i18n.language;
   return (
     <article className="library-card">
-      <div
-        className={`story-cover tone-${tone}`}
-        role="img"
-        aria-label={t('library.card.cover', { title: story.title })}
-      >
-        <div className="cover-path" />
-        <span className="cover-node one" />
-        <span className="cover-trigger" />
-        <span className="cover-node two" />
-      </div>
       <div className="library-card-body">
         <span className="product-badge neutral">
           {t(`library.card.visibility.${story.access?.visibility ?? 'private'}`)}
@@ -510,69 +511,86 @@ function StoryCard({
             {t('library.card.author', { name: story.owner.displayName })}
           </span>
         ) : null}
-        <dl>
-          <div>
-            <dt>{t('library.card.interactions')}</dt>
-            <dd>{story.interactionCount}</dd>
-          </div>
-          <div>
-            <dt>{t('library.card.created')}</dt>
-            <dd>{formatDate(story.createdAt, locale, t('library.card.unknownDate'))}</dd>
-          </div>
-        </dl>
       </div>
       <footer>
-        <span>
+        <time dateTime={story.updatedAt}>
           {t('library.card.edited', {
             date: formatDate(story.updatedAt, locale, t('library.card.unknownDate')),
           })}
-        </span>
-        <div>
-          <Link
-            className="product-secondary compact"
-            to={`/stories/${story.id}/play`}
-            onMouseEnter={() => void loadStoryPlayer()}
-            onFocus={() => void loadStoryPlayer()}
-          >
-            {t('library.card.read')}
-          </Link>
-          {story.capabilities?.canEdit ? (
-            <Link
-              className="product-primary compact"
-              to={`/stories/${story.id}/edit`}
-              onMouseEnter={() => void loadStoryEditor()}
-              onFocus={() => void loadStoryEditor()}
-            >
-              {t('library.card.edit')} <span aria-hidden="true">→</span>
-            </Link>
-          ) : null}
-          {story.capabilities?.canManage ? (
-            <>
-              <Link
-                className="product-ghost compact"
-                to={`/stories/${story.id}/edit?settings=access`}
-                onMouseEnter={() => void loadStoryEditor()}
-                onFocus={() => void loadStoryEditor()}
-              >
-                {t('library.card.access')}
-              </Link>
-              <button
-                className="product-ghost danger-text compact"
-                type="button"
-                onClick={() => void remove(story.id)}
-              >
-                {t('library.card.delete')}
-              </button>
-            </>
-          ) : null}
-        </div>
+        </time>
+        <StoryCardActions
+          story={story}
+          remove={remove}
+          deleting={deleting}
+          deleteDisabled={deleteDisabled}
+        />
       </footer>
     </article>
   );
 }
 
-function storyTone(id: string, index: number) {
-  return [...id].reduce((total, character) => total + character.charCodeAt(0), index) % 4;
+function StoryCardActions({
+  story,
+  remove,
+  deleting,
+  deleteDisabled,
+}: {
+  story: StorySummary;
+  remove: (id: string) => Promise<void>;
+  deleting: boolean;
+  deleteDisabled: boolean;
+}) {
+  const { t } = useTranslation();
+  return (
+    <div>
+      <Link
+        className={`${story.capabilities?.canEdit ? 'product-secondary' : 'product-primary'} compact`}
+        to={`/stories/${story.id}/play`}
+        onMouseEnter={() => void loadStoryPlayer()}
+        onFocus={() => void loadStoryPlayer()}
+      >
+        {t('library.card.read')}
+      </Link>
+      {story.capabilities?.canEdit ? (
+        <Link
+          className="product-primary compact"
+          to={`/stories/${story.id}/edit`}
+          onMouseEnter={() => void loadStoryEditor()}
+          onFocus={() => void loadStoryEditor()}
+        >
+          {t('library.card.edit')} <span aria-hidden="true">→</span>
+        </Link>
+      ) : null}
+      {story.capabilities?.canManage ? (
+        <>
+          <Link
+            className="product-ghost compact"
+            to={`/stories/${story.id}/edit?settings=access`}
+            onMouseEnter={() => void loadStoryEditor()}
+            onFocus={() => void loadStoryEditor()}
+          >
+            {t('library.card.access')}
+          </Link>
+          <FieldHelpTooltip
+            label={t(deleting ? 'library.card.deleting' : 'library.card.delete')}
+            help={t('library.card.deleteTooltip')}
+            className="product-ghost danger-text compact library-card-delete"
+            disabled={deleteDisabled}
+            onClick={() => {
+              if (window.confirm(t('library.card.deleteConfirm', { title: story.title }))) {
+                void remove(story.id);
+              }
+            }}
+          >
+            <svg aria-hidden="true" viewBox="0 0 24 24">
+              <path d="M4 7h16M9 7V4h6v3M7 7l1 14h8l1-14" />
+              <path d="M10 11v6M14 11v6" />
+            </svg>
+          </FieldHelpTooltip>
+        </>
+      ) : null}
+    </div>
+  );
 }
 
 function formatDate(value: string, locale: string, unknownDate: string) {

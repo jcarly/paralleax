@@ -1043,7 +1043,7 @@ export function StoryPlayer({
                 </>
               ) : (
                 <>
-                  <h1>{current.title}</h1>
+                  <h1 className="sr-only">{current.title}</h1>
                   <RichTextContent
                     className="story-body"
                     html={current.body}

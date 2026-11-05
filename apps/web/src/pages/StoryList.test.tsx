@@ -177,22 +177,16 @@ describe('StoryList', () => {
     expect(screen.getByRole('heading', { name: 'Second story' })).toBeInTheDocument();
     expect(api.listStories).toHaveBeenCalledOnce();
     expect(api.listPublicStories).not.toHaveBeenCalled();
-    expect(
-      within(screen.getByRole('heading', { name: 'First story' }).closest('article')!).getByText(
-        '0',
-      ),
-    ).toBeInTheDocument();
-    expect(
-      within(screen.getByRole('heading', { name: 'Second story' }).closest('article')!).getByText(
-        '1',
-      ),
-    ).toBeInTheDocument();
-
     const firstCard = screen.getByRole('heading', { name: 'First story' }).closest('article')!;
+    expect(within(firstCard).queryByRole('img')).not.toBeInTheDocument();
+    expect(firstCard.querySelector('dl')).toBeNull();
+    expect(within(firstCard).queryByText('Interactions')).not.toBeInTheDocument();
     expect(within(firstCard).getByRole('link', { name: 'Edit' })).toHaveAttribute(
       'href',
       '/stories/story-1/edit',
     );
+    expect(within(firstCard).getByRole('link', { name: 'Edit' })).toHaveClass('product-primary');
+    expect(within(firstCard).getByRole('link', { name: 'Read' })).toHaveClass('product-secondary');
     expect(within(firstCard).getByRole('link', { name: 'Read' })).toHaveAttribute(
       'href',
       '/stories/story-1/play',
@@ -238,6 +232,7 @@ describe('StoryList', () => {
     expect(api.listPublicStories).toHaveBeenCalledOnce();
     expect(api.listStories).not.toHaveBeenCalled();
     expect(within(card).getByRole('link', { name: 'Read' })).toBeInTheDocument();
+    expect(within(card).getByRole('link', { name: 'Read' })).toHaveClass('product-primary');
     expect(within(card).queryByRole('link', { name: 'Edit' })).not.toBeInTheDocument();
     expect(within(card).queryByRole('link', { name: 'Access' })).not.toBeInTheDocument();
     expect(within(card).queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument();
@@ -273,6 +268,7 @@ describe('StoryList', () => {
 
   it('deletes a story from the list', async () => {
     const user = userEvent.setup();
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
     vi.mocked(api.listStories)
       .mockResolvedValueOnce(storyPage([structuredClone(stories[0])]))
       .mockResolvedValueOnce(storyPage([]));
@@ -286,7 +282,17 @@ describe('StoryList', () => {
     await screen.findByRole('heading', { name: 'First story' });
 
     const firstCard = screen.getByRole('heading', { name: 'First story' }).closest('article')!;
-    await user.click(within(firstCard).getByRole('button', { name: 'Delete' }));
+    const deleteButton = within(firstCard).getByRole('button', { name: 'Delete' });
+    fireEvent.focus(deleteButton);
+    expect(deleteButton).toHaveAttribute('aria-describedby');
+    expect(screen.getByRole('tooltip')).toHaveTextContent('Delete this story');
+    await user.click(deleteButton);
+    expect(confirm).toHaveBeenCalledWith('Delete “First story”? This cannot be undone.');
+    expect(api.deleteStory).not.toHaveBeenCalled();
+    expect(screen.getByRole('heading', { name: 'First story' })).toBeInTheDocument();
+
+    confirm.mockReturnValue(true);
+    await user.click(deleteButton);
 
     await waitFor(() =>
       expect(screen.queryByRole('heading', { name: 'First story' })).not.toBeInTheDocument(),
@@ -329,12 +335,7 @@ describe('StoryList', () => {
 
     await user.click(screen.getByRole('button', { name: 'Generate demos' }));
 
-    const demoCard = (
-      await screen.findByRole('heading', {
-        name: 'Demo 1: paths only',
-      })
-    ).closest('article')!;
-    expect(within(demoCard).getByText('1')).toBeInTheDocument();
+    await screen.findByRole('heading', { name: 'Demo 1: paths only' });
     expect(
       await screen.findByRole('heading', { name: 'Demo 2: visited interaction conditions' }),
     ).toBeInTheDocument();
@@ -414,7 +415,7 @@ describe('StoryList', () => {
     const importedCard = screen
       .getByRole('heading', { name: 'Imported story' })
       .closest('article')!;
-    expect(within(importedCard).getByText('1')).toBeInTheDocument();
+    expect(within(importedCard).queryByText('Interactions')).not.toBeInTheDocument();
   });
 
   it('imports a QSP game and displays the compatibility coverage matrix', async () => {

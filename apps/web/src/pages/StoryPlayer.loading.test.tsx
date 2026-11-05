@@ -196,7 +196,8 @@ describe('StoryPlayer loading and presentation', () => {
     const user = userEvent.setup();
     await renderPlayer();
 
-    expect(await screen.findByRole('heading', { name: 'Start' })).toBeInTheDocument();
+    const sceneTitle = await screen.findByRole('heading', { name: 'Start' });
+    expect(sceneTitle).toHaveClass('sr-only');
     expect(screen.queryByRole('heading', { name: /Start the story/ })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Start' })).not.toBeInTheDocument();
     expect(await screen.findByRole('button', { name: 'Next' })).toBeInTheDocument();
@@ -220,11 +221,56 @@ describe('StoryPlayer loading and presentation', () => {
     );
 
     await user.click(screen.getByRole('button', { name: 'Next' }));
-    expect(screen.getByRole('heading', { name: 'Next' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Next' })).toHaveClass('sr-only');
     expect(screen.getByRole('button', { name: 'Secret' })).toHaveAttribute(
       'title',
       '"Start" has been visited',
     );
+  });
+
+  it('keeps authored headings visible while hiding the technical scene title', async () => {
+    const titledStory = structuredClone(story);
+    titledStory.interactions[0].body = '<h2>At the door</h2><p>You arrive.</p>';
+    await renderPlayer('/stories/story-1/play', titledStory);
+
+    expect(await screen.findByRole('heading', { name: 'Start' })).toHaveClass('sr-only');
+    expect(screen.getByRole('heading', { name: 'At the door' })).toBeVisible();
+    expect(await screen.findByRole('button', { name: 'Next' })).toBeVisible();
+  });
+
+  it('uses the converged destination title after either incoming choice', async () => {
+    const user = userEvent.setup();
+    const convergingStory = structuredClone(story);
+    convergingStory.interactions[1] = {
+      ...convergingStory.interactions[1],
+      title: 'North path',
+      triggers: [{ id: 'north-trigger', inputInteractionIds: ['start'], conditions: [] }],
+    };
+    convergingStory.interactions[2] = {
+      ...convergingStory.interactions[2],
+      title: 'South path',
+      triggers: [{ id: 'south-trigger', inputInteractionIds: ['start'], conditions: [] }],
+    };
+    convergingStory.interactions.push({
+      id: 'common-room',
+      title: 'Common room',
+      body: 'The paths meet.',
+      position: { x: 300, y: 0 },
+      triggers: [{ id: 'common-trigger', inputInteractionIds: ['next', 'hidden'], conditions: [] }],
+    });
+    await renderPlayer('/stories/story-1/play', convergingStory);
+
+    await user.click(await screen.findByRole('button', { name: 'North path' }));
+    expect(await screen.findByRole('heading', { name: 'North path' })).toHaveClass('sr-only');
+    await user.click(screen.getByRole('button', { name: 'Common room' }));
+    expect(await screen.findByRole('heading', { name: 'Common room' })).toHaveClass('sr-only');
+
+    await user.click(screen.getByRole('button', { name: 'Restart' }));
+    await screen.findByRole('heading', { name: 'Start' });
+    await user.click(await screen.findByRole('button', { name: 'South path' }));
+    expect(await screen.findByRole('heading', { name: 'South path' })).toHaveClass('sr-only');
+    await user.click(screen.getByRole('button', { name: 'Common room' }));
+    expect(await screen.findByRole('heading', { name: 'Common room' })).toHaveClass('sr-only');
   });
 
   it('automatically passes through a body with no visible content and applies its state changes', async () => {
