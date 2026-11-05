@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FocusEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Navigate, useParams, useSearchParams } from 'react-router-dom';
+import { useLocation, useParams, useSearchParams } from 'react-router-dom';
 import type { ReaderProgressState, ReaderSave, Story } from '@paralleax/shared';
 import {
   canDeleteCommentThread,
@@ -22,6 +22,7 @@ import { PlayerChoices } from '../features/story-player/components/PlayerChoices
 import { PlayerContextPanels } from '../features/story-player/components/PlayerContextPanels';
 import { PlayerScene } from '../features/story-player/components/PlayerScene';
 import { PlayerToolbar } from '../features/story-player/components/PlayerToolbar';
+import { useOnboarding } from '../features/onboarding/onboardingContext';
 import { useReaderProgressPersistence } from '../features/story-player/useReaderProgressPersistence';
 import type { StoryPlayerRuntimeLoadResult } from '../features/story-player/loadStoryPlayerRuntime';
 import { useStoryPlayerLoading } from '../features/story-player/runtime/useStoryPlayerLoading';
@@ -49,6 +50,11 @@ import {
 } from '../features/story-player/storyPlayerPresentation';
 import { type StoryRealtimeInvalidation } from '../features/realtime/storyRealtime';
 import { useStoryRouteAccessRecovery } from '../features/story/useStoryRouteAccessRecovery';
+import {
+  interactionTitleForDisplay,
+  interactionTitlePlaceholder,
+} from '../features/story/interactionTitlePresentation';
+import { StoryUnavailablePage } from '../features/story/StoryUnavailablePage';
 import { useStoryRealtime } from '../hooks/useStoryRealtime';
 import { usePendingSaveGuard } from '../hooks/usePendingSaveGuard';
 import { describeTriggerCondition } from '../triggerConditionPresentation';
@@ -62,6 +68,7 @@ export function StoryPlayer({
 }) {
   const { t } = useTranslation();
   const { storyId = '' } = useParams();
+  const location = useLocation();
   const { storyRouteInaccessible, markStoryInaccessible, recoverFromStoryAccessError } =
     useStoryRouteAccessRecovery(storyId);
   const [searchParams] = useSearchParams();
@@ -115,6 +122,17 @@ export function StoryPlayer({
     randomSeed = '',
     stepStartedAt = [],
   } = session;
+  const { reportStoryDeleted, reportStepComplete } = useOnboarding();
+  useEffect(() => {
+    if (storyRouteInaccessible) {
+      reportStoryDeleted(storyId);
+    }
+  }, [reportStoryDeleted, storyId, storyRouteInaccessible]);
+  useEffect(() => {
+    if (isSimulationMode && !startInteractionId && story && journey.length > 1) {
+      reportStepComplete(storyId, 'test-story');
+    }
+  }, [isSimulationMode, journey.length, reportStepComplete, startInteractionId, story, storyId]);
   const {
     markRuntimeSliceLoaded,
     runtimeOptionsError,
@@ -833,7 +851,12 @@ export function StoryPlayer({
   }
 
   if (storyRouteInaccessible) {
-    return <Navigate to="/" replace />;
+    return (
+      <StoryUnavailablePage
+        authenticated={authenticated}
+        returnTo={`${location.pathname}${location.search}`}
+      />
+    );
   }
 
   if (!story || loadedKey !== loadKey) {
@@ -957,6 +980,7 @@ export function StoryPlayer({
                   <input
                     className="simulation-title-input"
                     aria-label={t('player.currentInteractionTitle')}
+                    placeholder={interactionTitlePlaceholder(current, t)}
                     value={current.title}
                     onChange={(event) => patchCurrentInteraction({ title: event.target.value })}
                     onBlur={(event) => void saveCurrentInteraction({ title: event.target.value })}
@@ -1043,7 +1067,7 @@ export function StoryPlayer({
                 </>
               ) : (
                 <>
-                  <h1>{current.title}</h1>
+                  <h1>{interactionTitleForDisplay(current, t)}</h1>
                   <RichTextContent
                     className="story-body"
                     html={current.body}

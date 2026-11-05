@@ -20,7 +20,7 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import '../features/story-editor/graph/storyGraph.css';
-import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom';
+import { Link, Navigate, useLocation, useParams, useSearchParams } from 'react-router-dom';
 import {
   canDeleteCommentThread as canActorDeleteCommentThread,
   canManageCommentThread as canActorManageCommentThread,
@@ -75,6 +75,14 @@ import { useStoryComments } from '../features/comments/useStoryComments';
 import { GraphDecorationInspector } from '../features/graph-decorations/GraphDecorationInspector';
 import { GraphDecorationNode } from '../features/graph-decorations/GraphDecorationNode';
 import { buildGraphDecorationNodes } from '../features/graph-decorations/graphDecorationNodes';
+import {
+  storyHasAuthoredScene,
+  storyHasBranchingChoice,
+} from '../features/onboarding/branchingChoice';
+import { useOnboarding } from '../features/onboarding/onboardingContext';
+import { currentOnboardingStep } from '../features/onboarding/onboardingProgress';
+import { interactionTitleForDisplay } from '../features/story/interactionTitlePresentation';
+import { StoryUnavailablePage } from '../features/story/StoryUnavailablePage';
 import { isRealtimeEditableTarget } from '../features/realtime/storyRealtime';
 import { useStoryConnectionController } from '../features/story-editor/graph/useStoryConnectionController';
 import { useTwoFingerCanvasPan } from '../features/story-editor/graph/useTwoFingerCanvasPan';
@@ -160,6 +168,7 @@ function scheduleIdleWork(callback: () => void) {
 export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
   const { t } = useTranslation();
   const { storyId = '' } = useParams();
+  const routeLocation = useLocation();
   const [connectionConflict, setConnectionConflict] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
   const {
@@ -288,6 +297,32 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
     handleGraphSelectionChange,
     handleGraphSelectionEnd,
   } = useStoryEditorSelection(story);
+  const { progress, reportStoryDeleted, reportStoryState, reportStepComplete } = useOnboarding();
+  const lastOnboardingSnapshot = useRef<string | null>(null);
+  useEffect(() => {
+    if (storyRouteInaccessible) {
+      reportStoryDeleted(storyId);
+    }
+  }, [reportStoryDeleted, storyId, storyRouteInaccessible]);
+  useEffect(() => {
+    if (loadPhase !== 'ready' || !story || story.id !== storyId) {
+      return;
+    }
+    const snapshot = `${storyId}:${story.revision ?? 'loaded'}`;
+    if (lastOnboardingSnapshot.current === snapshot) {
+      return;
+    }
+    lastOnboardingSnapshot.current = snapshot;
+    reportStoryState(storyId, storyHasAuthoredScene(story), storyHasBranchingChoice(story));
+  }, [loadPhase, reportStoryState, story, storyId]);
+  useEffect(() => {
+    if (loadPhase !== 'ready' || !story || story.id !== storyId || !selectedId) {
+      return;
+    }
+    if (story.interactions.some(({ id }) => id === selectedId)) {
+      reportStepComplete(storyId, 'discover-interactions');
+    }
+  }, [loadPhase, progress, reportStepComplete, selectedId, story, storyId]);
   const selectExclusive = useCallback(
     (selection?: StoryEditorExclusiveSelection) => {
       if (selection) setCommentsOpen(false);
@@ -525,8 +560,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
   const hasInspector = commentsOpen || hasInspectorSelection;
 
   useEffect(() => {
-    const storyId = story?.id;
-    if (loadPhase !== 'ready' || !storyId) return;
+    if (loadPhase !== 'ready' || !story?.id) return;
 
     return scheduleIdleWork(() => {
       void preloadStoryGraphElk().catch(() => undefined);
@@ -718,36 +752,44 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
     },
     [createRoot, focusInteractionNode, getClickCreationPosition],
   );
-  const storyNodes = useMemo(
-    () =>
-      buildInteractionNodes(story, selectedId, selectedTrigger, {
-        onCreateChild: reviewOnly
-          ? undefined
-          : (interactionId) => void createChildAndFocus(interactionId),
-        onCreateParent: reviewOnly
-          ? undefined
-          : (interactionId) => void createParentAndFocus(interactionId),
-        onSelectRootTrigger: (interactionId, triggerId) =>
-          selectExclusive({ type: 'trigger', trigger: { interactionId, triggerId } }),
-        occurrenceCounts,
-        emphasizedInteractionIds,
-        commentCounts: graphCommentCounts,
-        onOpenComments: openCommentsForTarget,
-      }),
-    [
-      createChildAndFocus,
-      createParentAndFocus,
+  const storyNodes = useMemo(() => {
+    const onboardingBranchSourceId =
+      currentOnboardingStep(progress) === 'create-branch'
+        ? story?.interactions.find((interaction) =>
+            interaction.triggers.some(
+              ({ inputInteractionIds }) => inputInteractionIds.length === 0,
+            ),
+          )?.id
+        : undefined;
+    return buildInteractionNodes(story, selectedId, selectedTrigger, {
+      onCreateChild: reviewOnly
+        ? undefined
+        : (interactionId) => void createChildAndFocus(interactionId),
+      onCreateParent: reviewOnly
+        ? undefined
+        : (interactionId) => void createParentAndFocus(interactionId),
+      onSelectRootTrigger: (interactionId, triggerId) =>
+        selectExclusive({ type: 'trigger', trigger: { interactionId, triggerId } }),
+      onboardingBranchSourceId,
       occurrenceCounts,
       emphasizedInteractionIds,
-      graphCommentCounts,
-      openCommentsForTarget,
-      reviewOnly,
-      selectExclusive,
-      selectedId,
-      selectedTrigger,
-      story,
-    ],
-  );
+      commentCounts: graphCommentCounts,
+      onOpenComments: openCommentsForTarget,
+    });
+  }, [
+    createChildAndFocus,
+    createParentAndFocus,
+    occurrenceCounts,
+    emphasizedInteractionIds,
+    graphCommentCounts,
+    openCommentsForTarget,
+    progress,
+    reviewOnly,
+    selectExclusive,
+    selectedId,
+    selectedTrigger,
+    story,
+  ]);
   const decorationNodes = useMemo(
     () =>
       buildGraphDecorationNodes(
@@ -1345,7 +1387,13 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
       if (target.kind === 'interaction') {
         const interaction = story?.interactions.find(({ id }) => id === target.interactionId);
         if (!interaction) return;
-        if (!window.confirm(t('editor.confirmDeleteInteraction', { title: interaction.title }))) {
+        if (
+          !window.confirm(
+            t('editor.confirmDeleteInteraction', {
+              title: interactionTitleForDisplay(interaction, t),
+            }),
+          )
+        ) {
           return;
         }
         await deleteInteraction(interaction.id);
@@ -1481,19 +1529,37 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
     });
   }
 
-  if (storyRouteInaccessible) return <Navigate to="/" replace />;
+  if (storyRouteInaccessible) {
+    return (
+      <StoryUnavailablePage
+        authenticated={Boolean(currentUserId)}
+        returnTo={`${routeLocation.pathname}${routeLocation.search}`}
+      />
+    );
+  }
   if (!story) return <main className="page">{error || t('editor.loading')}</main>;
   if (storySettingsRouteTab === 'access' && !story.capabilities?.canManage) {
-    return <Navigate to="/" replace />;
+    return (
+      <StoryUnavailablePage
+        authenticated={Boolean(currentUserId)}
+        reason="access-settings"
+        returnTo={`${routeLocation.pathname}${routeLocation.search}`}
+        storyId={storyId}
+      />
+    );
   }
   if (story.capabilities?.canEdit !== true) {
     return <Navigate to={`/stories/${storyId}/play`} replace />;
   }
+  const startingInteraction = story.interactions.find((interaction) =>
+    interaction.triggers.some(({ inputInteractionIds }) => inputInteractionIds.length === 0),
+  );
   const simulationPath = selected
     ? `/stories/${storyId}/play?mode=simulation&startInteractionId=${encodeURIComponent(
         selected.id,
       )}`
     : `/stories/${storyId}/play?mode=simulation`;
+  const simulationFromStartPath = `/stories/${storyId}/play?mode=simulation`;
   const selectedLayoutTargets: StoryGraphLayoutTarget[] = (() => {
     const graphSelectionTargets = getStoryGraphSelectionTargets(graphSelection);
     if (graphSelectionTargets.length > 0) return graphSelectionTargets;
@@ -1530,9 +1596,9 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
       await new Promise<void>((resolve) => {
         window.requestAnimationFrame(() => window.requestAnimationFrame(() => resolve()));
       });
-      const interactionSizes = getMeasuredInteractionSizes(nodes);
+      const measuredInteractionSizes = getMeasuredInteractionSizes(nodes);
       const layout = await computeStoryGraphElkLayout(story, {
-        interactionSizes,
+        interactionSizes: measuredInteractionSizes,
         scope,
       });
       if (scope.kind === 'all') {
@@ -1656,18 +1722,26 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
                     : ''}
             </span>
           ) : null}
-          <Link
-            className="button secondary"
-            to={reviewOnly ? `/stories/${storyId}/play` : simulationPath}
-          >
-            {t(
-              reviewOnly
-                ? 'editor.openReader'
-                : selected
-                  ? 'editor.testFromCurrent'
-                  : 'editor.test',
-            )}
-          </Link>
+          {reviewOnly ? (
+            <Link className="button secondary" to={`/stories/${storyId}/play`}>
+              {t('editor.openReader')}
+            </Link>
+          ) : (
+            <>
+              <Link
+                className="button secondary"
+                data-onboarding-target="simulation-launch"
+                to={simulationFromStartPath}
+              >
+                {t('editor.testFromStart')}
+              </Link>
+              {selected && selected.id !== startingInteraction?.id ? (
+                <Link className="button secondary" to={simulationPath}>
+                  {t('editor.testFromCurrent')}
+                </Link>
+              ) : null}
+            </>
+          )}
         </div>
       </div>
       {error ? (
@@ -1853,7 +1927,12 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
             </div>
           ) : null}
         </nav>
-        <section className="canvas" ref={canvasRef} aria-busy={isOrganizing}>
+        <section
+          className="canvas"
+          data-onboarding-target="graph"
+          ref={canvasRef}
+          aria-busy={isOrganizing}
+        >
           {connectionConflict ? (
             <div
               className="save-error graph-connection-alert"
@@ -2048,7 +2127,11 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
             />
           </div>
         ) : hasInspectorSelection ? (
-          <aside className="inspector" aria-label={t('editor.inspector')}>
+          <aside
+            className="inspector"
+            data-onboarding-target={selected && !reviewOnly ? 'scene-inspector' : undefined}
+            aria-label={t('editor.inspector')}
+          >
             <div className="inspector-header">
               {selectedCommentTarget && story.capabilities?.canComment ? (
                 <div className="inspector-comment-actions">
@@ -2168,6 +2251,11 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
                   interaction={selected}
                   onChange={(next) => setStory(next)}
                   onPatch={patchInteraction}
+                  onContentSaved={(body) => {
+                    if (body.replace(/<[^>]*>/g, ' ').trim()) {
+                      reportStepComplete(storyId, 'write-scene');
+                    }
+                  }}
                   onDelete={remove}
                   onSelectInteraction={(interactionId) =>
                     selectExclusive({ type: 'interaction', id: interactionId })
@@ -2279,7 +2367,7 @@ function ReviewTargetInspector({
           textCommentCounts={textCommentCounts}
           onOpenTextComments={onOpenTextComments}
         >
-          <h2 data-comment-field="title">{interaction.title}</h2>
+          <h2 data-comment-field="title">{interactionTitleForDisplay(interaction, t)}</h2>
         </InspectorCommentField>
         <InspectorCommentField
           field="body"

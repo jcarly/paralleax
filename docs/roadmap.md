@@ -2,7 +2,7 @@
 
 This roadmap describes the progression from the validated narrative core to a public Paralleax platform.
 
-Status reviewed: 2026-10-28.
+Status reviewed: 2026-11-04.
 
 It is organized around **user capabilities** rather than implementation areas. Engineering work supports these milestones but does not define them by itself.
 
@@ -72,6 +72,24 @@ first-Story authoring improvement ahead of guided sessions: Story creation now
 starts with a linked root and child Interaction and opens the editor focused on
 the root. The broader UX selection remains tied to session observations.
 
+**Priority decision, 2026-10-28:** deliver a small, optional authoring guide and
+user-initiated feedback path before the guided sessions so first-time authors
+can get help without a moderator explaining every editor surface. The four-step
+guide and lazy, click-only Formbricks entrypoint are implemented. Guide progress
+stays in browser storage. Automatic behavioral milestones and a post-Simulation
+survey remain deferred until explicit consent and the privacy notice cover that
+collection. This slice supports guided sessions; it does not replace disposable
+project safeguards or the provider and operator readiness gates.
+
+**Priority decision, 2026-11-04:** complete confirmed, narrow P0/P1 items in
+[UX Quick Wins — Préparation des tests](code-quality-backlog.md#ux-quick-wins--préparation-des-tests)
+before the first guided session. If the reported create/link discovery problem
+needs more than the bounded label/placement change, record it for the session
+instead of delaying it. Lot B is opportunistic and must not delay that session;
+Lot C remains observation-led. This short preparation does not replace guided
+sessions as the main source of UX validation or make cosmetic proposals release
+gates.
+
 1. **Prepare the alpha session brief.** Reuse the private-alpha runbook to state
    the hypotheses, representative author tasks, project-data boundary, and a
    lightweight observation record for first-time, narrative-tool-experienced,
@@ -79,53 +97,64 @@ the root. The broader UX selection remains tied to session observations.
    a defined starting state and observable outcome, and the record captures
    success, blockage, workaround, and data/recovery issues without numeric pass
    thresholds.
-2. **Run guided author sessions on disposable projects.** Cover creating and
+2. **Complete confirmed Lot A quick fixes.** Resolve the destructive
+   library-delete path and the confirmed untranslated default; make the bounded
+   create/link label change if browser reproduction supports it. **Depends on:**
+   task 1 and the existing implementation/test environment. **Acceptance:**
+   confirmed code gaps pass their Lot A scenarios; unverified discovery reports
+   have a defined observation task and do not expand this preparation into a
+   redesign.
+3. **Run guided author sessions on disposable projects.** Cover creating and
    connecting Interactions (including drag and drop), editing rich content,
    conditions and effects, running Simulation, saving, reloading, and recovering
-   from a failed save. **Depends on:** task 1 and the existing invitation/test
+   from a failed save. **Depends on:** tasks 1–2 and the existing invitation/test
    environment. **Acceptance:**
    each observed task has a concise outcome and evidence; no valuable user-owned
    project data is introduced.
-3. **Triage observations and close essential blockers.** Separate data/security
+4. **Triage observations and close essential blockers.** Separate data/security
    hazards and failures in the core authoring journey from workarounds, isolated
-   preferences, and new feature ideas. Use the consolidated candidate tasks in
-   [Code quality backlog](code-quality-backlog.md#consolidated-ux-follow-ups-2026-10-25),
-   including the 2026-10-25 UX intake, as evidence for sequencing without
-   bypassing this observation step. **Depends on:** task 2. **Acceptance:** every
+   preferences, and new feature ideas. Use the selected tasks in
+   [UX Quick Wins](code-quality-backlog.md#ux-quick-wins--préparation-des-tests)
+   and the detailed consolidated candidate tasks in
+   [Code quality backlog](code-quality-backlog.md#consolidated-ux-follow-ups-2026-10-25)
+   as evidence without bypassing this observation step. **Depends on:** task 3.
+   **Acceptance:** every
    blocker has an owner and a retest scenario; suggestions do not become
    commitments without evidence.
-4. **Complete the valuable-project safety gate.** Close the applicable P0 items
+5. **Complete the valuable-project safety gate.** Close the applicable P0 items
    in [Production readiness](production-readiness.md): add the representative
    migration regression, configure monitored encrypted off-site backups, record
    a provider restore drill, verify the HTTPS/secrets/staging path, complete the
    operator notice/recovery/request procedures, and test application rollback.
-   **Can run in parallel with:** tasks 1–3. **Acceptance:** evidence is recorded
+   **Can run in parallel with:** tasks 1–4. **Acceptance:** evidence is recorded
    for each applicable P0 gate; only then may invited authors rely on Paralleax
    to retain valuable project data.
-5. **Ship the next UX improvement selected by observation.** Choose one
-   independently usable improvement on any product surface from the consolidated
+6. **Ship the next UX improvement selected by observation.** Choose one
+   independently usable improvement on any product surface from
+   [UX Quick Wins](code-quality-backlog.md#ux-quick-wins--préparation-des-tests)
+   or the detailed
    [Code quality backlog](code-quality-backlog.md#consolidated-ux-follow-ups-2026-10-25),
-   based on task 2 evidence. **Depends on:** task 3. **Acceptance:** the author
+   based on guided-session evidence. **Depends on:** task 4. **Acceptance:** the author
    completes the targeted task with the intended result, the whole-Story model
    remains available where applicable, and the scenario is retested on a
    representative Story.
-6. **Define and deliver native Paralleax backup/export and restore/import.**
+7. **Define and deliver native Paralleax backup/export and restore/import.**
    Specify the supported authored Story data and validation/diagnostic behavior,
    then verify a saved Story can be restored without loss of supported entities
-   or links. **Can run in parallel with:** task 5 after the supported model
+   or links. **Can run in parallel with:** task 6 after the supported model
    boundary is agreed. **Acceptance:** round-trip evidence covers representative
    Stories and invalid input is rejected before persistence. This task does not
    depend on advanced collaboration, offline authoring, or text-merge support.
-7. **Make import reports durable before promising retained reports or production
+8. **Make import reports durable before promising retained reports or production
    imports.** Keep report retention and job metadata separate from the
    already implemented cancellation lifecycle. **Depends on:** the import
    workflow's retention promise and storage choice. **Acceptance:** completed,
    failed, and cancelled diagnostics survive the supported restart/instance
    boundary, with documented ownership and retention.
-8. **Prepare any open creator alpha from observed evidence.** Close the applicable
+9. **Prepare any open creator alpha from observed evidence.** Close the applicable
    provider abuse, secret/container scanning, manual keyboard/focus, and measured
    performance gates in [Production readiness](production-readiness.md), then
-   repeat the essential author tasks. **Depends on:** tasks 3–6, task 7 when
+   repeat the essential author tasks. **Depends on:** tasks 4–7, task 8 when
    production imports are included, and every gate marked for open creator alpha.
    **Acceptance:** remaining limitations and
    operating procedures are documented; essential tasks have observable outcomes
@@ -342,10 +371,11 @@ and operational gates in [Production readiness](production-readiness.md).
    as the separate P2 decision below. **Completed 2026-09-30:** Nodemailer SMTP
    delivery initially sent purpose-specific verification and recovery messages.
    **Updated 2026-10-08:** the transport now uses the Brevo HTTPS API so restricted
-   hosting plans do not require outbound SMTP access. New
-   registrations cannot sign in before verification; verification and reset
-   tokens are random, hashed at rest, scoped, expiry-bound, and atomic one-use
-   actions. Password reset/change revokes existing sessions, the account dialog
+   hosting plans do not require outbound SMTP access. Production and test
+   registrations cannot sign in before verification; local development defaults
+   to a development-only verification bypass. Verification and reset tokens are
+   random, hashed at rest, scoped, expiry-bound, and atomic one-use actions.
+   Password reset/change revokes existing sessions, the account dialog
    can revoke other sessions, unknown reset addresses receive a neutral response,
    and the forward migration preserves access for pre-existing accounts.
 2. **Story configuration and access.** Put configuration behind a gear beside

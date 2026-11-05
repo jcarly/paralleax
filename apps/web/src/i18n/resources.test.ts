@@ -58,3 +58,17 @@ describe('condition operator resources', () => {
     }).toEqual(symbols);
   });
 });
+
+describe('empty Interaction placeholders', () => {
+  it.each([
+    [englishTranslation, 'Start', 'New interaction', 'Describe what happens here.'],
+    [frenchTranslation, 'Départ', 'Nouvelle interaction', 'Décrivez ce qui se passe ici.'],
+    [italianTranslation, 'Inizio', 'Nuova interazione', 'Descrivi cosa succede qui.'],
+  ])('localizes empty titles and scene bodies', (translation, start, next, body) => {
+    expect(translation.interactionInspector).toMatchObject({
+      startTitlePlaceholder: start,
+      newTitlePlaceholder: next,
+      bodyPlaceholder: body,
+    });
+  });
+});

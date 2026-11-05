@@ -2,12 +2,11 @@ import { lazy, Suspense, useEffect, useRef, useState, type FormEvent } from 'rea
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
 import { STORY_LIST_PAGE_SIZE, type Story, type StorySummary } from '@paralleax/shared';
+import type { TFunction } from 'i18next';
 import { api, type AuthUser } from '../api';
-import { apiErrorMessage } from '../apiErrorMessages';
 import { handleModalDialogKeyDown } from '../components/modalDialogKeyboard';
 import { ModalPortal } from '../components/ModalPortal';
 import { loadStoryEditor, loadStoryPlayer } from './storyRouteLoaders';
-import './ProductPages.css';
 
 const StoryImportDialog = lazy(() =>
   import('../features/story-import/StoryImportDialog').then(({ StoryImportDialog }) => ({
@@ -15,11 +14,24 @@ const StoryImportDialog = lazy(() =>
   })),
 );
 
+async function describeApiError(caught: unknown, t: TFunction, fallback: string): Promise<string> {
+  const { apiErrorMessage } = await import('../apiErrorMessages');
+  return apiErrorMessage(caught, t, fallback);
+}
+
 type StoryFilter = 'all' | 'editable' | 'commentable' | 'owned';
 type StorySort = 'updated' | 'title';
 type StoryView = 'grid' | 'list';
 
-export function StoryList({ user }: { user: AuthUser | null }) {
+export function StoryList({
+  user,
+  onStoryCreated,
+  onStoryDeleted,
+}: {
+  user: AuthUser | null;
+  onStoryCreated?: (storyId: string) => void;
+  onStoryDeleted?: (storyId: string) => void;
+}) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const isAuthenticated = user !== null;
@@ -77,9 +89,12 @@ export function StoryList({ user }: { user: AuthUser | null }) {
         setHasMore(result.hasMore);
         setLoadError('');
       })
-      .catch((caught: unknown) => {
+      .catch(async (caught: unknown) => {
         if (active && requestVersion === listRequestVersion.current) {
-          setLoadError(apiErrorMessage(caught, t, t('library.loadFailed')));
+          const message = await describeApiError(caught, t, t('library.loadFailed'));
+          if (active && requestVersion === listRequestVersion.current) {
+            setLoadError(message);
+          }
         }
       })
       .finally(() => {
@@ -115,7 +130,7 @@ export function StoryList({ user }: { user: AuthUser | null }) {
       setHasMore(result.hasMore);
     } catch (caught) {
       if (requestVersion === listRequestVersion.current) {
-        setError(apiErrorMessage(caught, t, t('library.loadMoreFailed')));
+        setError(await describeApiError(caught, t, t('library.loadMoreFailed')));
       }
     } finally {
       setLoadingMore(false);
@@ -130,6 +145,7 @@ export function StoryList({ user }: { user: AuthUser | null }) {
       setError('');
       setPending('story');
       const story = await api.createStory(title);
+      onStoryCreated?.(story.id);
       setNewTitle('');
       closeCreationDialog();
       const openingInteraction =
@@ -141,7 +157,7 @@ export function StoryList({ user }: { user: AuthUser | null }) {
         : '';
       void navigate(`/stories/${story.id}/edit${focusQuery}`);
     } catch (caught) {
-      setError(apiErrorMessage(caught, t, t('library.createFailed')));
+      setError(await describeApiError(caught, t, t('library.createFailed')));
     } finally {
       setPending('');
     }
@@ -160,7 +176,7 @@ export function StoryList({ user }: { user: AuthUser | null }) {
       setTotalCount((count) => count + demos.length);
       resetLibraryView();
     } catch (caught) {
-      setError(apiErrorMessage(caught, t, t('library.demoFailed')));
+      setError(await describeApiError(caught, t, t('library.demoFailed')));
     } finally {
       setPending('');
     }
@@ -170,11 +186,12 @@ export function StoryList({ user }: { user: AuthUser | null }) {
     try {
       setError('');
       await api.deleteStory(id);
+      onStoryDeleted?.(id);
       setStories((items) => items.filter((item) => item.id !== id));
       setTotalCount((count) => Math.max(0, count - 1));
       setRefreshVersion((version) => version + 1);
     } catch (caught) {
-      setError(apiErrorMessage(caught, t, t('library.deleteFailed')));
+      setError(await describeApiError(caught, t, t('library.deleteFailed')));
     }
   }
 
@@ -244,6 +261,7 @@ export function StoryList({ user }: { user: AuthUser | null }) {
             </button>
             <button
               className="product-primary"
+              data-onboarding-target="story-create"
               type="button"
               onClick={(event) => openCreationDialog(event.currentTarget)}
             >

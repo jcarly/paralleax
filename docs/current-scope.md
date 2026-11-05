@@ -8,6 +8,20 @@ no longer matches the current repository.
 
 Paralleax currently includes:
 
+- An optional first-Story authoring guide: a non-modal floating four-step card
+  for graph exploration, scene writing, branching, and Simulation. It does not
+  change page layout and outlines the new-Story action or the current editor or
+  Simulation target while leaving other controls interactive. New Stories start
+  the guide; authors can pause, skip, restart, or reopen it. Progress is saved
+  only in browser storage scoped by the signed-in account, and completion follows
+  loaded or successfully saved state. Guide activity is not sent to an analytics
+  service. See [Authoring guide architecture](onboarding.md).
+- An optional Formbricks feedback button in the product header when configured.
+  The SDK and feedback context load only after a user clicks it. Formbricks'
+  standard response metadata can still include the full URL and Story id; see the
+  [feedback runbook](operations/formbricks-feedback.md). Automatic journey
+  milestones and post-Simulation surveys are not enabled pending explicit
+  consent and privacy-notice coverage.
 - Story authoring and PostgreSQL persistence.
 - Interactions with rich content, graph positions, location context, character cast,
   typed stat effects, item effects, and duration. Rich content supports editable,
@@ -104,8 +118,10 @@ Paralleax currently includes:
 - Reusable item definitions.
 - Exact authored item instances, including nested item relationships.
 - Character- or location-rooted item placement and nested item relationships.
-- Authentication, verified email/password accounts, opaque revocable sessions,
-  password recovery/change, self-service revocation of other sessions, creator ownership, required non-unique display names,
+- Authentication, including verified email/password accounts and opaque
+  revocable sessions (verification is skipped by default in local development),
+  password recovery/change, self-service session revocation, creator ownership,
+  required non-unique display names,
   self-service display-name editing, global user/admin roles, per-story
   visibility including unlisted link-readable stories, editing, and editor/reader
   comment policies, reader/editor grants,
@@ -117,17 +133,21 @@ Paralleax currently includes:
   the access tab directly. Story cards, comments, and change
   history project current display names by user id without exposing account
   emails; self-service, administration, and explicit access management retain
-  email where needed. An inaccessible or missing direct Story editor, player, or
-  access URL returns to the Story library without rendering the API detail;
-  readable accounts that merely lack edit permission still move from the editor
-  URL to the player.
+  email where needed. An inaccessible or missing direct Story editor or player
+  shows a generic localized explanation with library and sign-in navigation,
+  without rendering Story details; direct Access URLs explain when the account
+  cannot manage sharing and offer a return to the Story. Accounts that can read
+  a Story but cannot edit or manage it receive `403`; hidden or missing Stories
+  remain `404`, and protected writes without a session remain `401`.
 - Transactional-email delivery through the Brevo HTTPS API for account
   verification and recovery. The API uses the official Brevo Node.js SDK with a
   configured sender, disables automatic delivery retries, accepts no partial
   configuration, and keeps recipients, message content, credentials, and raw
   provider responses out of application logs. New registrations require a
-  verified email before a session is created. Account-action tokens are
-  purpose-bound, stored only as hashes, expire, and are consumed once; password
+  verified email before a session is created except in local development, where
+  the development-only bypass marks the account verified and signs it in.
+  Account-action tokens remain purpose-bound, stored only as hashes, expiring,
+  and single-use; password
   resets and changes revoke prior
   sessions. Accounts predating this feature migrate as verified to avoid lockout.
 - Story review post-its on the graph, interactions, triggers, characters, locations,
@@ -161,8 +181,11 @@ Paralleax currently includes:
   users see every story they can read with capability and ownership filters.
   Search, filtering, sorting, and incremental pagination use lightweight server
   summaries and do not load Story graphs. Creating a new Story from the library
-  atomically seeds a `Start → New interaction` chain with empty bodies, then
-  opens its editor with the root selected, centered, and shown in the Inspector.
+  atomically seeds a root and child Interaction with empty titles and bodies.
+  English, French, and Italian placeholders identify the starting Interaction,
+  new Interactions, and empty scene bodies without writing translated copy into
+  authored Story data.
+  The editor opens with the root selected, centered, and shown in the Inspector.
   Local return-to-page navigation is preserved through sign-in and registration.
 - Paginated, revision-consistent Story read projections. The editor displays
   context lists first, then interaction and Trigger structure, then bodies,
@@ -297,9 +320,17 @@ Paralleax currently includes:
   translated by the interface layer. Operational API failures are presented
   through localized stable error codes across authentication, access, imports,
   authoring persistence, comments, administration, reader loading, and saves.
-- Optional Formbricks-powered contextual feedback from the application header,
-  with localized controls and non-content route, surface, version, viewport, and
-  language context. The integration stays disabled when it is not configured.
+- An optional four-step authoring guide for exploring the graph, writing a scene,
+  creating a branch, and testing the Story. It starts after a new Story is
+  created, can be restarted from the authenticated header, saves progress in
+  account-scoped browser storage, and advances from observed editor/Simulation
+  actions. It can be skipped or closed and does not change the Story model.
+- Optional Formbricks feedback from the application header, with localized
+  controls and non-content route, surface, version, viewport, and language
+  context. The SDK now loads only after a tester clicks the button. It remains
+  disabled when not configured. Formbricks' standard full-URL metadata can still
+  contain a Story id after that user-initiated action; automatic journey events
+  and the post-Simulation survey remain disabled until explicit consent exists.
 - Unit, integration, PostgreSQL, component, fast mocked Playwright UI testing,
   and a real-stack Playwright alpha-acceptance path covering registration,
   authoring, reload, reconnection, persistence, Simulation Mode, durable content
@@ -321,6 +352,32 @@ Paralleax currently includes:
   exact production-origin enforcement, verified-email registration with an
   operator-controlled open/closed mode, deployment smoke checks, and operator
   runbooks for a creator alpha.
+
+## UX Implementation Cross-check — 2026-11-04
+
+Static source review at `dev` commit `8338468` anchors the open UX items in the
+[Code quality backlog](code-quality-backlog.md#ux-quick-wins--préparation-des-tests).
+This review did not run tests or inspect the pages in a browser; existing test
+assertions are recorded as coverage references, not as passing results.
+
+- Login and registration retain standalone routes. `AuthPage` still renders a
+  decorative showcase panel on wide layouts; the auth modal is not implemented.
+- Story cards display an abstract graph cover and the Interaction count to
+  readers and authors. The Story delete action calls the permanent delete API
+  directly; the interaction and comment confirmations do not cover it.
+- Story creation seeds a linked root and child and focuses the root in the
+  editor. The graph creation helper still uses the English default title
+  `New interaction`; the broader first-use discovery report has not been
+  reproduced.
+- The Interaction Inspector's Context and timing and Effects disclosures start
+  open. Available Reader and Simulation choices receive a condition summary in
+  their `title` attribute.
+- Reader rendering omits the current Interaction title; the title remains
+  editable in the editor and Simulation. `PlayerScene` still renders a visual
+  placeholder without an authored location image and always displays Story
+  time. The related component-test assertion was inspected but not run.
+- The current Story-ended screen describes a branch end. An explicit
+  Story-completion state remains outside the stable product contract.
 
 ## Not yet a stable product contract
 

@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type {
   StoryAccessConfiguration,
@@ -8,6 +8,7 @@ import type {
 import { api } from '../../api';
 import { apiErrorMessage } from '../../apiErrorMessages';
 import { FieldHelpTooltip } from '../../components/FieldHelpTooltip';
+import { CollaboratorInviteForm } from './CollaboratorInviteForm';
 
 interface StoryAccessSettingsProps {
   storyId: string;
@@ -21,8 +22,6 @@ const commentOptions = ['readers', 'editors'] as const;
 export function StoryAccessSettings({ storyId, onInaccessible }: StoryAccessSettingsProps) {
   const { t } = useTranslation();
   const [access, setAccess] = useState<StoryAccessConfiguration>();
-  const [email, setEmail] = useState('');
-  const [role, setRole] = useState<StoryCollaboratorRole>('viewer');
   const [pending, setPending] = useState(false);
   const [error, setError] = useState('');
   const [accessStatus, setAccessStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
@@ -64,14 +63,12 @@ export function StoryAccessSettings({ storyId, onInaccessible }: StoryAccessSett
     }
   }
 
-  async function addUser(event: FormEvent) {
-    event.preventDefault();
-    if (!email.trim() || pending) return;
+  async function addUser(email: string, role: StoryCollaboratorRole): Promise<boolean> {
     const updated = await runAccessOperation(
       () => api.setStoryCollaborator(storyId, email.trim(), role),
       t('access.inviteFailed'),
     );
-    if (updated) setEmail('');
+    return Boolean(updated);
   }
 
   async function changeRole(emailAddress: string, nextRole: StoryCollaboratorRole) {
@@ -228,33 +225,11 @@ export function StoryAccessSettings({ storyId, onInaccessible }: StoryAccessSett
             help={t('access.collaboratorsHelp')}
           />
         </div>
-        <form className="collaborator-form" onSubmit={(event) => void addUser(event)}>
-          <label className="form-field form-field--standard">
-            <span>{t('access.email')}</span>
-            <input
-              className="form-control form-control--standard"
-              type="email"
-              value={email}
-              disabled={pending}
-              onChange={(event) => setEmail(event.target.value)}
-            />
-          </label>
-          <label className="form-field form-field--standard">
-            <span>{t('access.role.label')}</span>
-            <select
-              className="form-control form-control--standard"
-              value={role}
-              disabled={pending}
-              onChange={(event) => setRole(event.target.value as StoryCollaboratorRole)}
-            >
-              <option value="viewer">{t('access.role.viewer')}</option>
-              <option value="editor">{t('access.role.editor')}</option>
-            </select>
-          </label>
-          <button className="product-primary" disabled={pending || !email.trim()}>
-            {t('access.add')}
-          </button>
-        </form>
+        <CollaboratorInviteForm
+          collaborators={access.collaborators}
+          pending={pending}
+          onInvite={addUser}
+        />
         <ul className="access-list">
           {access.collaborators.map((collaborator) => (
             <li key={collaborator.userId}>

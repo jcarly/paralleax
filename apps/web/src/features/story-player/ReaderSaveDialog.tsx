@@ -12,6 +12,7 @@ import { api } from '../../api';
 import { apiErrorMessage } from '../../apiErrorMessages';
 import { handleModalDialogKeyDown } from '../../components/modalDialogKeyboard';
 import { ModalPortal } from '../../components/ModalPortal';
+import { interactionTitleForDisplay } from '../story/interactionTitlePresentation';
 
 export function ReaderSaveDialog({
   story,
@@ -53,8 +54,14 @@ export function ReaderSaveDialog({
   }, [story.id, t]);
 
   const interactionTitles = useMemo(
-    () => new Map(story.interactions.map(({ id, title }) => [id, title])),
-    [story.interactions],
+    () =>
+      new Map(
+        story.interactions.map((interaction) => [
+          interaction.id,
+          interactionTitleForDisplay(interaction, t),
+        ]),
+      ),
+    [story.interactions, t],
   );
 
   const snapshot = {
@@ -182,9 +189,9 @@ export function ReaderSaveDialog({
           {!loading && saves.length > 0 ? (
             <div className="reader-save-list">
               {saves.map((save) => {
+                const storedTitle = save.currentInteractionTitle?.trim();
                 const currentTitle = save.currentInteractionId
-                  ? (save.currentInteractionTitle ??
-                    interactionTitles.get(save.currentInteractionId))
+                  ? storedTitle || interactionTitles.get(save.currentInteractionId)
                   : undefined;
                 return (
                   <article key={save.id}>

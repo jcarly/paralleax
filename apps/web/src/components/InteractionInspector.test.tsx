@@ -1,12 +1,125 @@
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useState } from 'react';
 import type { Story } from '@paralleax/shared';
 import { InteractionInspector } from './InteractionInspector';
 
-afterEach(cleanup);
+beforeEach(() => {
+  Object.defineProperty(Range.prototype, 'getClientRects', {
+    configurable: true,
+    value: () => [],
+  });
+  Object.defineProperty(Range.prototype, 'getBoundingClientRect', {
+    configurable: true,
+    value: () => new DOMRect(0, 0, 0, 0),
+  });
+  Object.defineProperty(HTMLElement.prototype, 'getClientRects', {
+    configurable: true,
+    value: () => [],
+  });
+  Object.defineProperty(HTMLElement.prototype, 'getBoundingClientRect', {
+    configurable: true,
+    value: () => new DOMRect(0, 0, 0, 0),
+  });
+  Object.defineProperty(document, 'elementFromPoint', {
+    configurable: true,
+    value: () => document.body,
+  });
+});
+
+afterEach(() => {
+  cleanup();
+  vi.restoreAllMocks();
+  Reflect.deleteProperty(Range.prototype, 'getClientRects');
+  Reflect.deleteProperty(Range.prototype, 'getBoundingClientRect');
+  Reflect.deleteProperty(HTMLElement.prototype, 'getClientRects');
+  Reflect.deleteProperty(HTMLElement.prototype, 'getBoundingClientRect');
+  Reflect.deleteProperty(document, 'elementFromPoint');
+});
 
 describe('InteractionInspector time', () => {
+  it('reports authored scene content after the save succeeds', async () => {
+    const user = userEvent.setup();
+    const interaction: Story['interactions'][number] = {
+      id: 'interaction-1',
+      title: 'Start',
+      body: '',
+      position: { x: 0, y: 0 },
+      triggers: [],
+    };
+    const story: Story = {
+      id: 'story-1',
+      title: 'Story',
+      interactions: [interaction],
+      createdAt: '2026-10-21T08:00:00Z',
+      updatedAt: '2026-10-21T08:00:00Z',
+    };
+    const onPatch = vi.fn(
+      async (_id: string, _patch: Partial<Story['interactions'][number]>) => true,
+    );
+    const onContentSaved = vi.fn();
+
+    render(
+      <InteractionInspector
+        story={story}
+        interaction={interaction}
+        onChange={vi.fn()}
+        onPatch={onPatch}
+        onContentSaved={onContentSaved}
+        onDelete={vi.fn()}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Add content' }));
+    const editor = await screen.findByRole('textbox', { name: 'Content' }, { timeout: 5_000 });
+    await user.type(editor, 'A scene');
+    await user.click(screen.getByLabelText('Title'));
+
+    await waitFor(() => expect(onContentSaved).toHaveBeenCalledOnce());
+    const savedPatch = onPatch.mock.calls[0]?.[1];
+    expect(savedPatch?.body).toContain('A scene');
+  });
+
+  it('does not report scene content when its save fails', async () => {
+    const user = userEvent.setup();
+    const interaction: Story['interactions'][number] = {
+      id: 'interaction-1',
+      title: 'Start',
+      body: '',
+      position: { x: 0, y: 0 },
+      triggers: [],
+    };
+    const story: Story = {
+      id: 'story-1',
+      title: 'Story',
+      interactions: [interaction],
+      createdAt: '2026-10-21T08:00:00Z',
+      updatedAt: '2026-10-21T08:00:00Z',
+    };
+    const onPatch = vi.fn().mockResolvedValue(false);
+    const onContentSaved = vi.fn();
+
+    render(
+      <InteractionInspector
+        story={story}
+        interaction={interaction}
+        onChange={vi.fn()}
+        onPatch={onPatch}
+        onContentSaved={onContentSaved}
+        onDelete={vi.fn()}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Add content' }));
+    const editor = await screen.findByRole('textbox', { name: 'Content' }, { timeout: 5_000 });
+    await user.type(editor, 'A scene');
+    await user.click(screen.getByLabelText('Title'));
+
+    await waitFor(() => expect(onPatch).toHaveBeenCalled());
+    expect(onContentSaved).not.toHaveBeenCalled();
+  });
+
   it.each(['number', 'boolean', 'string'] as const)(
     'switches a %s effect between a literal and an expression',
     (valueType) => {
@@ -146,6 +259,7 @@ describe('InteractionInspector time', () => {
     );
 
     expect(screen.queryByRole('textbox', { name: 'Content' })).not.toBeInTheDocument();
+    expect(screen.getByText('Describe what happens here.')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Add content' }));
     expect(
       await screen.findByRole('textbox', { name: 'Content' }, { timeout: 5_000 }),

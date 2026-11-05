@@ -49,8 +49,33 @@ describe('AuthRepository', () => {
     await expect(repository.createUser(user)).resolves.toBeUndefined();
     expect(clientQuery).toHaveBeenCalledWith(
       expect.stringContaining('ON CONFLICT (email) DO NOTHING'),
-      [user.id, user.email, user.displayName, user.passwordHash, user.createdAt],
+      [user.id, user.email, user.displayName, user.passwordHash, user.createdAt, null],
     );
+  });
+
+  it('persists an account verification timestamp supplied at creation', async () => {
+    const verifiedAt = '2026-07-18T01:00:00.000Z';
+    const verifiedUser = { ...user, emailVerifiedAt: verifiedAt };
+    const row = {
+      id: verifiedUser.id,
+      email: verifiedUser.email,
+      display_name: verifiedUser.displayName,
+      password_hash: verifiedUser.passwordHash,
+      role: verifiedUser.role,
+      created_at: new Date(verifiedUser.createdAt),
+      email_verified_at: new Date(verifiedAt),
+    };
+    clientQuery.mockResolvedValue({ rows: [row] });
+
+    await expect(repository.createUser(verifiedUser)).resolves.toEqual(verifiedUser);
+    expect(clientQuery).toHaveBeenCalledWith(expect.stringContaining('email_verified_at'), [
+      verifiedUser.id,
+      verifiedUser.email,
+      verifiedUser.displayName,
+      verifiedUser.passwordHash,
+      verifiedUser.createdAt,
+      verifiedAt,
+    ]);
   });
 
   it('loads users by email and active session', async () => {

@@ -27,8 +27,11 @@ sequence; [Production readiness](production-readiness.md) owns release gates.
 This backlog is intentionally broader than the near-term delivery queue. The
 [Roadmap](roadmap.md) now schedules the bounded strict quality-gate initiative
 before guided author validation, by explicit author decision on 2026-10-26.
-After that prerequisite, use the
-following order when choosing incremental quality work:
+After that prerequisite, the only additional pre-session UX work is the bounded
+Lot A in [UX Quick Wins — Préparation des tests](#ux-quick-wins--préparation-des-tests).
+Lot B is optional and Lot C follows author observation; guided sessions remain
+the main source of UX validation. Then use the following order when choosing
+incremental quality work:
 
 1. **Protect the current alpha journey:** address observed data/security issues or
    failures that prevent a scheduled author task. Disposable-project sessions do
@@ -52,8 +55,322 @@ following order when choosing incremental quality work:
 
 Dependency-watch entries such as the Swagger `js-yaml` override and the
 development-only `glob@10.5.0` warning are removal conditions, not active feature
-work. UX ideas and library candidates remain discovery inputs until a product task
-promotes them.
+work. Other UX ideas and library candidates remain discovery inputs until a
+product task promotes them.
+
+## UX Quick Wins — Préparation des tests
+
+This is the active, bounded UX selection for the first external author tests. The
+three lots distinguish essential fixes, low-risk visual simplification, and items
+whose solution should be informed by observation. Priority uses the definitions
+above; effort includes focused regression coverage and is an estimate, not a
+release gate. A quick win should normally fit in four hours; items above that
+threshold remain useful UX work but must not be relabelled to fit the heading.
+
+Evidence snapshot: local code at `08de5d8` was compared with GitHub `dev` at
+`8338468` (2026-11-04); the only difference is the 12-line roadmap addition for
+[issue #26](https://github.com/jcarly/paralleax/issues/26). Relevant components,
+styles, documentation, and existing test assertions were inspected. No tests or
+browser sessions were run. “Present in code” therefore records static evidence,
+not a passed runtime check. Issue #26 is already the P2 opt-in updates / tester
+signup task; it does not block disposable author sessions and is not duplicated
+here.
+
+### Lot A — Before the tests
+
+Do only the narrow items that protect data or remove a concrete obstacle in the
+first authoring journey. Keep optional redesign out of this gate.
+
+- **Confirm permanent Story deletion.** **Priority:** P0. **Effort:** 2–4 hours.
+  **Impact / frequency:** low-frequency action with potentially total loss of a
+  Story; the direct delete affordance is available on every manageable Story
+  card. **Status:** missing in code. The card calls `api.deleteStory` directly,
+  and the repository issues `DELETE FROM stories`; there is no confirmation or
+  undo in this path. **Dependencies:** none. **Risk:** an unclear prompt or
+  keyboard-inaccessible icon could still lead to accidental deletion.
+  **Acceptance:** show an explicit, accessible delete icon/action and a localized
+  confirmation naming the Story; cancel leaves the Story unchanged, confirm
+  deletes it once and preserves the current error feedback. **Verification:**
+  component coverage for confirm/cancel/API failure and a browser check with
+  keyboard focus and the card removed only after confirmation. This is new work;
+  interaction and comment deletion confirmations elsewhere do not cover it.
+- **Make the first “add a choice” action apparent and distinguish it from
+  linking an existing Interaction.** **Priority:** P1. **Effort:** 2–4 hours for
+  a bounded label/placement change; keep destination search or a new creation
+  model outside this slice.
+  **Impact / frequency:** high for first-time authors because adding a branch is
+  a core task; frequency has not been measured and is expected when authors
+  expand a Story. **Status:** reported, not reproduced in a browser. Story
+  creation now seeds a root and child, and
+  the editor has child-creation controls, handles, and a graph context menu;
+  the feedback concerns discovery and wording, not a missing domain operation.
+  **Backlog:** enriches “Distinguish creation from connection” under
+  [the retained 2026-10-15 follow-ups](#other-2026-10-15-follow-ups-retained).
+  **Dependencies:** existing graph creation and connection controls.
+  **Risk:** changing gestures or combining create/link flows can introduce
+  ambiguous writes. **Acceptance:** a first-time author can identify “create a
+  new choice” and “link an existing interaction” as separate actions; existing
+  drag-to-create and link semantics remain unchanged. **Verification:** a
+  focused editor test and a short browser task from a new Story, including
+  keyboard access and a failed-save recovery check.
+- **Localize generated default Interaction text.** **Priority:** P1. **Effort:**
+  2–4 hours for the confirmed default plus a focused scan. **Impact / frequency:**
+  high for authors using a non-English interface; generated text appears at the
+  start of a new graph branch. **Status:** one untranslated default is confirmed
+  statically: `storyGraphCreationLayout.ts` assigns the literal `New interaction`.
+  A full inventory of generated defaults has not been completed. **Backlog:**
+  new narrow item; the broader terminology/translation follow-up remains separate.
+  **Dependencies:**
+  existing English, French, and Italian translation catalogues.
+  **Risk:** replacing authored or persisted text on language changes would be
+  harmful. **Acceptance:** newly generated default labels use the selected
+  interface language; existing and user-authored Story titles are never
+  rewritten. **Verification:** focused tests in all three locales and one browser
+  creation flow per locale. Extend the task only if the source scan finds more
+  literal defaults.
+
+**Lot A estimate:** 6–12 focused hours including the indicated tests
+(0.75–1.5 person-days). With an explicit 50% uncertainty reserve, schedule about
+1–2.25 person-days. If the discovery task needs a broader interaction redesign,
+ship the deletion and localization fixes first and validate the authoring report
+in a guided session instead of delaying that session.
+
+### Lot B — Visual simplification
+
+Schedule only the high-value items that fit the available preparation window;
+these do not block the first guided sessions.
+
+- **Simplify login and registration presentation.** **Priority:** P1. **Effort:**
+  2–4 hours for removing the showcase and tightening copy; broader form redesign
+  needs separate sizing. **Impact / frequency:** high first-impression and access impact;
+  encountered by every new tester. **Status:** the standalone routes and form
+  flows exist, but desktop `AuthPage` includes a decorative left showcase panel
+  and graph. **Backlog:** new bounded presentation slice; no modal task is
+  implied. **Dependencies:** current auth routes, language switcher, password
+  recovery, verification, and shared product-page styles. **Risk:** a layout
+  change could hide essential recovery, pending, or verification states.
+  **Acceptance:** remove the decorative panel, keep standalone login and
+  registration routes, retain consistent application navigation and all form
+  states, and reduce redundant copy without weakening error or password help.
+  **Verification:** existing auth flow coverage plus responsive browser checks
+  for login, registration, recovery return, validation, and verification.
+  Studying a login modal is a separate, observation-led item and must not remove
+  these routes.
+- **Simplify Story cards for readers.** **Priority:** P2. **Effort:** 2–4 hours
+  for the cover, count prominence, and action hierarchy slice.
+  **Impact / frequency:** broad, repeated library exposure; expected to improve
+  scanning and reduce prominence of author-only structure. **Status:** cards
+  currently render a decorative graph cover and show the Interaction count to
+  readers and authors; the card also mixes read, edit, access, and delete actions.
+  **Backlog:** consolidates the existing “Streamline the home/creation flow”
+  follow-up. **Dependencies:** current Story summary data and responsive card
+  styles. **Risk:** removing useful ownership/access information or hiding an
+  essential action. **Acceptance:** remove covers without informative content,
+  demote or omit Interaction count on reader-facing cards, establish one clear
+  primary action and quieter secondary actions. Use an icon when its meaning is
+  recognizable and give it an accessible name; keep visible text where the icon
+  alone would be unclear. **Verification:** library component coverage for
+  anonymous, reader, editor, and owner capabilities plus desktop and narrow
+  browser checks. The deletion confirmation is tracked in Lot A.
+- **Start the Interaction Inspector with secondary context folded.** **Priority:**
+  P2. **Effort:** 2–4 hours for the default state; saved section preferences are
+  not included. **Impact / frequency:** frequent for every interaction edit;
+  reduces initial panel density while keeping advanced fields available.
+  **Status:** the Context and timing and Effects `<details>` currently render
+  with `open`; they are not folded by default. **Backlog:** first slice of “Reduce
+  Inspector density and retain temporary section choices” under
+  [the 2026-10-25 UX follow-ups](#p2--workflow-comprehension-and-debugging).
+  **Dependencies:** current native disclosure controls.
+  **Risk:** authors may miss useful context/effect details if the summary is
+  unclear. **Acceptance:** the requested Context and timing sections start
+  closed, remain keyboard-operable, and expose a concise summary; do not persist
+  preferences across account or Story changes in this slice. **Verification:**
+  component coverage for default, open/close, selection change, and keyboard use.
+- **Keep reader choices free of technical condition summaries.** **Priority:**
+  P2. **Effort:** 1–2 hours. **Impact / frequency:** moderate; affects readers
+  who inspect or hover an available choice. **Status:** `PlayerChoices` currently
+  puts `getConditionSummary` in the `title` attribute for available choices in
+  both modes. **Backlog:** new focused Reader presentation candidate.
+  **Dependencies:** keep the existing Simulation diagnostics.
+  **Risk:** removing useful author diagnostics or accessible choice context.
+  **Acceptance:** public Reader choices do not disclose authored condition rules
+  in hover text; Simulation keeps its relevant diagnostics and choice labels
+  remain complete without hover. **Verification:** component and browser checks
+  in Reader and Simulation, including keyboard/screen-reader accessible names.
+
+### Lot C — Validate after observation
+
+Keep these open at their current priority, but settle the exact problem and
+solution with a guided task or a browser reproduction before implementation.
+
+- **Reach essential editor controls at narrow and short viewports.** **Priority:**
+  P1. **Effort:** 4–8 hours after reproduction. **Impact / frequency:** high if
+  a graph command, title, comment, or header action is actually inaccessible;
+  otherwise limited to affected screen sizes. **Status:** reported, not
+  reproduced in this pass; the existing backlog already tracks essential
+  controls at narrow sizes. **Dependencies:** editor grid and comment overlay.
+  **Risk:** fixing a fixed panel can compress the graph or break focus and
+  scrolling. **Acceptance:** essential actions remain reachable without overlap
+  at agreed supported widths/heights. **Verification:** browser keyboard pass
+  and viewport matrix before and after the change.
+- **Clarify graph navigation and cursor affordances.** **Priority:** P2.
+  **Effort:** 4–12 hours depending on whether the issue is copy/discovery or a
+  gesture defect. **Impact / frequency:** affects authors navigating or editing
+  complex graphs; frequency is story-size dependent. **Status:** reported,
+  unverified. Existing pan alternatives and graph coverage are present; the
+  remaining backlog separately records Space+drag discovery, zoom information,
+  the hand cursor report, and graph navigation commands. **Dependencies:**
+  React Flow gestures and current creation/link controls.
+  **Risk:** changes can conflict with selection, panning, linking, or large-graph
+  rendering. **Acceptance:** each tested gesture has an understandable label or
+  matching cursor through press/release/cancel; do not add another gesture or
+  dense graph markers without evidence. **Verification:** browser scenarios for
+  pan, select, connect, cancel, and supported viewport sizes.
+- **Remove redundant steps from variable selection where ownership is
+  unambiguous.** **Priority:** P2. **Effort:** 2–4 hours including locale and
+  selection coverage. **Impact / frequency:** recurring during rich text,
+  expression, and Trigger-condition authoring; the impact is greatest when one
+  owner exists. **Status:** existing P2 task; VariablePicker is shared, but the
+  reported redundant owner choice remains unverified in a browser.
+  **Backlog:** “Simplify variable-owner selection” under
+  [workflow comprehension](#p2--workflow-comprehension-and-debugging).
+  **Dependencies:** same-Story assignment tree and existing localized path
+  labels. **Risk:** removing an owner step must not make references ambiguous or
+  hide valid Story, character, location, or exact-item targets.
+  **Acceptance:** a lone eligible owner does not require a redundant choice;
+  multiple owners retain readable localized paths and all saved targets remain
+  selectable. **Verification:** component coverage in English, French, and
+  Italian plus a browser insertion flow.
+- **Reduce always-visible Reader controls and statuses without hiding failures.**
+  **Priority:** P2. **Effort:** 2–4 hours after a concrete observation.
+  **Impact / frequency:** broad Reader exposure, but distraction and useful
+  sign-in/save context vary by user state. **Status:** the Reader toolbar keeps
+  save access and, for anonymous readers, a persistent sign-in-to-save notice;
+  authenticated save status is empty at idle and shown during writes/failures.
+  Simulation also shows mode and realtime status. No excessive-control report
+  was reproduced. **Backlog:** new observation candidate; no exact task exists.
+  **Dependencies:** existing save/recovery and Simulation mutation feedback.
+  **Risk:** hiding a failure could conceal unsaved progress or a required
+  recovery action. **Acceptance:** keep actionable errors and recovery controls
+  visible; hide or reduce only statuses users identify as redundant after
+  observation. **Verification:** browser checks for anonymous, saved, saving,
+  failed-save, and Simulation states.
+- **Finish the first-Story guidance and its conclusion.** **Priority:** P2.
+  **Effort:** 2–4 hours to define/review the missing completion cue; UI effort is
+  TBD until the target guide is identified. **Impact / frequency:** potentially
+  high for first-time authors, but only if the reported guide is part of the
+  current onboarding path. **Status:** no in-app tutorial/guide was found in the
+  inspected web source; creation currently seeds a root and child and then
+  focuses the root. **Backlog:** aligns with “Deliver progressive onboarding
+  through V0.7” and depends on guided author-session findings.
+  **Risk:** adding a tutorial can teach an unvalidated workflow or distract
+  returning authors. **Acceptance:** record the actual point where the guide
+  ends and a concise success/next-action cue; do not add a mandatory tutorial.
+  **Verification:** observe a first-time author from creation to first playable
+  branch and record where they stop or ask what to do next.
+- **Reduce Reader scene chrome only when it adds no useful context.** **Priority:**
+  P2. **Effort:** 4–8 hours after agreeing a relevance rule. **Impact / frequency:**
+  broad Reader exposure, but the importance of time/location varies by Story.
+  **Status:** `PlayerScene` currently renders an abstract placeholder and the
+  current Story time even when no location image is authored. **Backlog:** retain
+  “Lighten Reader presentation without disabling time” under
+  [the 2026-10-25 UX follow-ups](#p2--workflow-comprehension-and-debugging).
+  **Dependencies:** an authored-data relevance rule; no runtime or saved-state
+  changes. **Risk:** hiding time or scene context that explains a real condition
+  or effect. **Acceptance:** remove only irrelevant placeholder/context; timed
+  conditions, progression, and saved state remain unchanged.
+  **Verification:** Reader checks for empty, location-rich, timed, and
+  time-sensitive Stories.
+- **Clarify end-of-branch messaging.** **Priority:** P2. **Effort:** 2–4 hours
+  after a product wording decision. **Impact / frequency:** limited to paths
+  without a currently available choice. **Status:** current UI says “Branch end”
+  and has generic help; the product has no stable explicit Story completion
+  semantics. **Backlog:** new wording candidate. **Dependencies:** preserve that
+  semantic boundary.
+  **Risk:** telling a reader that a Story is complete when the author intends a
+  branch ending. **Acceptance:** explain the immediate next action without
+  inventing a saved/final Story state. **Verification:** review translation and
+  test endings, unavailable options, and automatic transitions in the Reader.
+- **Review auth modal exploration.** **Priority:** P2. **Effort:** 2–4 hours for
+  a focused prototype/review; implementation is not estimated.
+  **Impact / frequency:** may reduce navigation friction, but depends on whether
+  users want to sign in from the public library. **Status:** not implemented and
+  not a quick win. **Backlog:** separate exploration candidate.
+  **Dependencies:** standalone route and return-path behavior.
+  **Risk:** modal adds focus, history, recovery, and verification complexity.
+  **Acceptance:** compare the modal journey with standalone pages after observing
+  sign-in entry; retain autonomous routes. **Verification:** guided browser task
+  including back navigation, verification, and recovery.
+- **Keep estimated reading/play duration deferred.** **Priority:** Deferred / P2
+  exploration. **Effort:** not estimated until the Story model has an authored
+  or otherwise defensible duration basis. **Impact / frequency:** useful only
+  when an estimate is trustworthy. **Status:** not implemented.
+  **Backlog:** deliberately deferred; no quick-win task is created.
+  **Dependencies:** a model decision and representative data.
+  **Risk:** misleading readers if duration is guessed from Interaction count.
+  **Acceptance:** never infer duration from a raw count of interactions.
+  **Verification:** validate the estimate against representative authored
+  journeys before showing it in reader-facing cards.
+
+### Existing work verified or retained
+
+- **Interaction title in Reader:** absent from the Reader rendering path in the
+  inspected code; `StoryPlayer.access-and-comments.test.tsx` already asserts
+  that the title editor is not rendered there. The Simulation title remains
+  editable in `StoryPlayer.tsx`, as does the title in the editor. Do not create
+  a duplicate task or substitute the prior choice label; confirm the test and
+  convergent/automatic transitions in a browser before declaring the behavior
+  fully verified.
+- **Effect authoring readability:** retain the existing P1 “Make effect
+  authoring easier to scan” entry under [core authoring and access](#p1--core-authoring-and-access).
+  It needs authored-value summaries and editing; code currently has effect type
+  selection and cards but does not meet that acceptance. It is broader than a
+  four-hour quick win, so keep it P1 and choose it using author evidence.
+- **Authored-empty graph status, variable-owner selection, graph navigation,
+  multi-selection, Simulation state, and Reader mode launch:** retain their
+  existing detailed tasks under [core authoring and access](#p1--core-authoring-and-access)
+  and [workflow comprehension](#p2--workflow-comprehension-and-debugging).
+  Do not create parallel tickets for the same symptoms.
+- **Variable selection and create/link distinction:** both are already tracked
+  in the [retained follow-ups](#other-2026-10-15-follow-ups-retained); this
+  triage only promotes the first-use wording/discovery slice above. Destination
+  search and extra owner-selection work remain separate until observation shows
+  they are needed.
+- **Global copy and terminology simplification:** retain the existing
+  terminology/translation follow-up. Do a targeted, screen-by-screen edit only
+  after identifying confusing or repeated text in a session; a blanket rewrite
+  could remove the context new authors need.
+- **Deletion elsewhere:** comments and named reader saves already ask for
+  confirmation. Their behavior does not protect permanent Story deletion from
+  the library.
+
+### Other surfaces reviewed; existing work retained
+
+- **Account management and access:** keep the existing standalone recovery,
+  verified-email, account, and Story-access flows. No separate account task was
+  promoted from this static pass; the auth presentation change above is distinct
+  from changing account or permission behavior.
+- **Trigger conditions, effects, context, characters, items, and variables:**
+  retain the existing concise condition editor, the P1 effect-summary task, and
+  the P2 variable-owner selection task. The latter two are broader than the
+  confirmed Lot A fixes; do not duplicate them as new tasks.
+- **Tiptap, Simulation, and Reader:** preserve progressive editing and the
+  existing Reader projection. The proposed source mode remains in the P1 editor
+  migration, and runtime checkpoint persistence remains governed by ADR-040;
+  neither is an interface-only quick win.
+- **Comments, history, saves, and feedback:** comments have recoverable deletion
+  and confirmation; named save deletion already confirms; history and
+  save-recovery work remain separately tracked. Keep Formbricks feedback
+  distinct from issue #26's opt-in subscription.
+- **Import and export:** import diagnostics/retention remain the conditional P1
+  durability task. No static evidence from this pass justifies presenting the
+  current adapters as a native, lossless Story export or adding a separate
+  library action.
+
+The quick-win index above is the active status and order for these UX items. The
+detailed 2026-10-15 and 2026-10-25 entries below retain their original acceptance
+scenarios and audit references; they are supporting detail, not additional work
+items when a row above points to them.
 
 ## Priority Reclassifications
 
@@ -93,9 +410,11 @@ promotes them.
   shows current behavior can lose saved user work or blocks the alpha journey.
 - **Scoped architecture guardrails: explicitly commissioned on 2026-10-25.** Add
   workspace/cycle checks and the calibrated complexity gate as a bounded
-  preventive task. This does not change the Roadmap's next product activity:
-  guided author sessions remain first. The existing-code complexity baseline is
-  a reviewable debt list, not a request for a broad refactor.
+  preventive task. At that decision point, guided author sessions remained the
+  next product activity. The narrow pre-session Lot A approved on 2026-11-04 is
+  recorded in [UX Quick Wins](#ux-quick-wins--préparation-des-tests); it does not
+  schedule broad refactoring. The existing-code complexity baseline is a
+  reviewable debt list, not a request for a broad refactor.
 
 ## Completed In The First Review Batch
 
@@ -771,12 +1090,14 @@ regression cases in the repository, not tests executed for this audit.
       domain decision.
 - [ ] **Deliver progressive onboarding through V0.7.** Refine the existing
       coherent onboarding / first-story flow around short contextual guidance,
-      not a mandatory long tutorial. **Depends on:** guided author-session
-      findings. **Risk:** guidance can distract returning authors or teach a
-      workflow that changes. **Acceptance:** a first-time author can create and
-      test a small branching Story with help available at the point of need; no
-      blocking tutorial is required. **Verification:** observe the flow in the
-      guided sessions and record workarounds or confusion.
+      not a mandatory long tutorial. **Initial alpha slice implemented
+      2026-10-28:** an optional four-step, non-modal guide with local progress,
+      pause/skip/restart controls, and save-aware completion. **Remaining:**
+      observe the flow in guided author sessions and refine it from recorded
+      workarounds or confusion. **Risk:** guidance can distract returning
+      authors or teach a workflow that changes. **Acceptance:** a first-time
+      author can create and test a small branching Story with help available at
+      the point of need; no blocking tutorial is required.
 
 ### P3 — Finish and polish
 

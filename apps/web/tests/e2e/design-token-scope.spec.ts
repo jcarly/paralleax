@@ -76,10 +76,12 @@ test('keeps Simulation styling consistent across direct and editor navigation', 
   await page.getByRole('button', { name: 'Close history' }).click();
 
   await page.getByTestId('interaction-node').click();
-  await page.getByRole('link', { name: 'Test from current interaction' }).click();
-  await page.waitForURL('**/stories/story-1/play?mode=simulation&startInteractionId=interaction-1');
+  await page.getByRole('link', { name: 'Test from start' }).click();
+  await page.waitForURL('**/stories/story-1/play?mode=simulation');
   await expect(page.locator('.simulation-controls .product-eyebrow')).toBeVisible();
   await expect(page.locator('.simulation-mode .player-top .mode-pill')).toHaveText('Simulation');
+  await expect(page.getByRole('heading', { name: 'Start the story' })).toBeVisible();
+  await page.getByRole('button', { name: 'Original title' }).click();
   await expect(page.getByRole('textbox', { name: 'Current interaction title' })).toHaveValue(
     'Original title',
   );

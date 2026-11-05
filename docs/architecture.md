@@ -227,8 +227,11 @@ framework classes, including streamed-file responses.
 
 `AuthController` exposes registration, verification, credential recovery, login,
 logout, session revocation, and current-user endpoints. New registrations do not
-receive a session until their email-verification action succeeds. The account
-action table stores only SHA-256 hashes of random, URL-safe verification/reset
+receive a session until their email-verification action succeeds, except in
+local development where `DEV_SKIP_EMAIL_VERIFICATION` defaults to `true`; that
+path writes the verification timestamp with the new account and returns a
+session. Configuration rejects the bypass in test and production environments.
+The account action table stores only SHA-256 hashes of random, URL-safe verification/reset
 values, scopes each value to one purpose, expires it, and consumes it atomically
 with the corresponding user update. Resetting or changing a password deletes
 previous sessions before a fresh session is issued; revoking other sessions keeps
@@ -246,8 +249,8 @@ self-service, administration, and explicit Story access management retain it.
 Renaming therefore updates future reads without rewriting Story, comment, or
 history rows and without introducing a separate profile model.
 Production chooses an explicit `open` or `closed` registration mode. Open
-registration creates an unverified account; the emailed verification action must
-be consumed before a session can be issued. A global origin guard rejects
+registration in production and test creates an unverified account; the emailed
+verification action must be consumed before a session can be issued. A global origin guard rejects
 mutative production requests unless their `Origin` exactly matches the configured
 public origin, while safe and local/test requests remain unchanged.
 
@@ -1206,9 +1209,10 @@ classes directly.
   separately configured test stack through `PARALLEAX_ACCEPTANCE_BASE_URL`. A shared test-only
   harness owns registration, Story creation, mutation response checks, and common
   editor/access interactions without replacing the production HTTP boundary. The
-  locally started stack enables an in-memory email outbox only under `NODE_ENV=test`;
-  an external acceptance target must enable the same test-only outbox. The harness
-  follows its verification link through the normal account-action endpoint.
+  locally started acceptance stack enables an in-memory email outbox only under
+  `NODE_ENV=test`; an external acceptance target must enable the same test-only
+  outbox. Automated acceptance continues to exercise the normal verification
+  link and account-action endpoint.
   Isolated browser contexts exercise account-specific permissions, live
   collaboration, and the anchored reader-to-author review loop without sharing
   authentication state. Small ChoiceScript and QSP `locations` fixtures also

@@ -3,6 +3,10 @@ import { useTranslation } from 'react-i18next';
 import type { Interaction, Story, TriggerTimerResult } from '@paralleax/shared';
 import { ChoiceTimerBar } from '../ChoiceTimerBar';
 import { getConditionSummary } from '../storyPlayerPresentation';
+import {
+  interactionTitleForDisplay,
+  interactionTitlePlaceholder,
+} from '../../story/interactionTitlePresentation';
 
 type VisibleChoice = {
   interaction: Interaction;
@@ -47,7 +51,10 @@ export function PlayerChoices({
   const { t } = useTranslation();
 
   return (
-    <div className="choices">
+    <div
+      className="choices"
+      data-onboarding-target={isSimulationMode ? 'simulation-choices' : undefined}
+    >
       {choices.map(({ interaction, available, timerState, unavailableReason }) => (
         <div className="choice-row" key={interaction.id}>
           {timerState ? (
@@ -63,6 +70,7 @@ export function PlayerChoices({
                 ref={editingChoiceInputRef}
                 className="choice-title-input"
                 aria-label={t('player.newOptionTitle')}
+                placeholder={interactionTitlePlaceholder(interaction, t)}
                 value={interaction.title}
                 onChange={(event) =>
                   onPatchInteraction(interaction.id, { title: event.target.value })
@@ -88,7 +96,7 @@ export function PlayerChoices({
               }
             >
               <span className="choice-copy">
-                <strong>{interaction.title}</strong>
+                <strong>{interactionTitleForDisplay(interaction, t)}</strong>
                 {isSimulationMode && !available ? (
                   <small>
                     {unavailableReason ?? t('player.unavailable')}

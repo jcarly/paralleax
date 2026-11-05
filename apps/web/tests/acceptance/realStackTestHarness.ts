@@ -92,6 +92,7 @@ export async function createStory(page: Page, prefix: string) {
   await expect(page).toHaveURL(new RegExp(`/stories/${story.id}/edit`));
   await expect(page.locator('.story-title-input')).toHaveValue(storyTitle);
   await expect(page.getByRole('button', { name: 'Add root' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Explore the graph' })).toBeVisible();
 
   return { storyId: story.id, storyTitle };
 }

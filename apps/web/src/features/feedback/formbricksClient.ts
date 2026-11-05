@@ -2,7 +2,7 @@ import { formbricksFeedbackConfig, type FormbricksFeedbackConfig } from './feedb
 
 type FormbricksSdk = Pick<
   typeof import('@formbricks/js').default,
-  'setup' | 'setLanguage' | 'registerRouteChange' | 'track'
+  'setup' | 'setLanguage' | 'track'
 >;
 
 export function createFormbricksFeedbackClient(
@@ -18,7 +18,11 @@ export function createFormbricksFeedbackClient(
       setupPromise = sdk
         .setup(config)
         .then(isSdkLoaded)
-        .catch(() => false);
+        .catch(() => false)
+        .then((ready) => {
+          if (!ready) setupPromise = undefined;
+          return ready;
+        });
     }
     return setupPromise;
   };
@@ -34,16 +38,6 @@ export function createFormbricksFeedbackClient(
   return {
     isConfigured: config !== null,
     setup,
-    async registerRouteChange(language: string): Promise<boolean> {
-      if (!(await setup())) return false;
-      await setLanguage(language);
-      try {
-        await sdk.registerRouteChange();
-        return true;
-      } catch {
-        return false;
-      }
-    },
     async trackFeedback(language: string, hiddenFields: Record<string, string>): Promise<boolean> {
       if (!(await setup())) return false;
       await setLanguage(language);
@@ -60,14 +54,20 @@ export function createFormbricksFeedbackClient(
 let formbricksSdkPromise: Promise<FormbricksSdk> | undefined;
 
 function loadFormbricksSdk(): Promise<FormbricksSdk> {
-  formbricksSdkPromise ??= import('@formbricks/js').then(({ default: sdk }) => sdk);
+  if (!formbricksSdkPromise) {
+    formbricksSdkPromise = import('@formbricks/js')
+      .then(({ default: sdk }) => sdk)
+      .catch((caught: unknown) => {
+        formbricksSdkPromise = undefined;
+        throw caught;
+      });
+  }
   return formbricksSdkPromise;
 }
 
 const lazyFormbricksSdk: FormbricksSdk = {
   setup: (config) => loadFormbricksSdk().then((sdk) => sdk.setup(config)),
   setLanguage: (language) => loadFormbricksSdk().then((sdk) => sdk.setLanguage(language)),
-  registerRouteChange: () => loadFormbricksSdk().then((sdk) => sdk.registerRouteChange()),
   track: (event, properties) => loadFormbricksSdk().then((sdk) => sdk.track(event, properties)),
 };
 

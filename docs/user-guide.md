@@ -167,6 +167,18 @@ Stories are persisted in PostgreSQL. Restarting the API keeps the
 authored story data as long as the configured database or Docker volume remains
 available.
 
+## Use the optional authoring guide
+
+After creating a Story, select `Open story` in the guide card to start. The guide
+uses four short tasks: select an Interaction, write and save a scene, create a
+connected choice, then make a choice in Simulation. It advances when those
+actions are completed; the guide does not create or edit Story content for you.
+
+Select `Skip step` to move past the current task or close the card to pause.
+Progress stays in this browser for the signed-in account. Select `Guide` in the
+header to resume a paused guide or restart a finished one. The guide can also
+recognize content or a branch that already exists in the current Story.
+
 ## Edit the Story Title
 
 Use the title field at the top of the editor. The title is saved when the field loses focus.

@@ -43,6 +43,7 @@ export interface InteractionNodeActions {
   onCreateChild?: (interactionId: string) => void;
   onCreateParent?: (interactionId: string) => void;
   onSelectRootTrigger?: (interactionId: string, triggerId: string) => void;
+  onboardingBranchSourceId?: string;
   occurrenceCounts?: ReadonlyMap<string, number>;
   emphasizedInteractionIds?: ReadonlySet<string>;
   commentCounts?: ReadonlyMap<string, number>;
@@ -109,6 +110,7 @@ export function buildInteractionNodes(
         title: item.title,
         body: item.body,
         selected: item.id === selectedId,
+        ...(actions.onboardingBranchSourceId === item.id ? { onboardingBranchAdd: true } : {}),
         ...(location ? { location: { id: location.id, name: location.name } } : {}),
         ...(characters.length > 0 ? { characters } : {}),
         ...(actions.occurrenceCounts?.get(item.id)

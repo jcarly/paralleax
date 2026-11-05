@@ -9,7 +9,6 @@ import {
 test('documents and preserves the separate product and authoring action families', async ({
   page,
 }) => {
-  await prepareEditorPage(page);
   await page.goto('/design-system');
 
   const productActions = page.getByTestId('product-action-catalogue');
@@ -38,13 +37,18 @@ test('documents and preserves the separate product and authoring action families
   const actualProductSecondary = page.getByRole('button', { name: 'Import a story' });
   await expect(actualProductPrimary).toBeVisible();
   await expect(actualProductSecondary).toBeVisible();
-  expect(await readActionColors(actualProductPrimary)).toEqual(productPrimaryColors);
-  expect(await readActionColors(actualProductSecondary)).toEqual(productSecondaryColors);
+  await expectActionColors(actualProductPrimary, productPrimaryColors);
+  await expectActionColors(actualProductSecondary, productSecondaryColors);
 
-  await page.goto('/stories/story-1/edit');
-  const actualAuthoringSecondary = page.locator('.editor-toolbar .actions > a.button.secondary');
+  const editorPage = await page.context().newPage();
+  await prepareEditorPage(editorPage);
+  await editorPage.goto('/stories/story-1/edit');
+  await expect(editorPage.getByTestId('interaction-node')).toBeVisible();
+  const actualAuthoringSecondary = editorPage.getByRole('link', { name: 'Test from start' });
+  await expect(actualAuthoringSecondary).toHaveClass(/\bbutton\b/);
+  await expect(actualAuthoringSecondary).toHaveClass(/\bsecondary\b/);
   await expect(actualAuthoringSecondary).toBeVisible();
-  expect(await readActionColors(actualAuthoringSecondary)).toEqual(authoringSecondaryColors);
+  await expectActionColors(actualAuthoringSecondary, authoringSecondaryColors);
 });
 
 test('uses shared standard controls in story creation, settings, and reader saves', async ({
@@ -89,4 +93,13 @@ async function readActionColors(locator: Locator) {
       borderColor: style.borderTopColor,
     };
   });
+}
+
+async function expectActionColors(
+  locator: Locator,
+  expected: Awaited<ReturnType<typeof readActionColors>>,
+) {
+  await expect(locator).toHaveCSS('background-color', expected.backgroundColor);
+  await expect(locator).toHaveCSS('color', expected.color);
+  await expect(locator).toHaveCSS('border-top-color', expected.borderColor);
 }

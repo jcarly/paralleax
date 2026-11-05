@@ -67,7 +67,7 @@ describe('StoryEditor story context', () => {
     expect(await screen.findByText('Story not found')).toBeInTheDocument();
   });
 
-  it('returns to the Story library when the Story route is inaccessible', async () => {
+  it('explains when a direct Story route is inaccessible', async () => {
     vi.mocked(api.getStory).mockRejectedValue(
       Object.assign(new Error('Story not found'), { status: 404 }),
     );
@@ -81,7 +81,8 @@ describe('StoryEditor story context', () => {
       </TestDataRouter>,
     );
 
-    expect(await screen.findByText('Story library route')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Story unavailable' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Stories' })).toHaveAttribute('href', '/');
     expect(screen.queryByText('Story not found')).not.toBeInTheDocument();
   });
 
@@ -153,7 +154,7 @@ describe('StoryEditor story context', () => {
     expect(api.getStoryAccess).not.toHaveBeenCalled();
   });
 
-  it('returns non-managers from a direct Story access configuration URL', async () => {
+  it('explains when a non-manager opens a direct Story access configuration URL', async () => {
     const editorStory = cloneStory();
     editorStory.capabilities = {
       canRead: true,
@@ -172,7 +173,13 @@ describe('StoryEditor story context', () => {
       </TestDataRouter>,
     );
 
-    expect(await screen.findByText('Story library route')).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: 'Access settings unavailable' }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Back to story' })).toHaveAttribute(
+      'href',
+      '/stories/story-1/edit',
+    );
     expect(api.getStoryAccess).not.toHaveBeenCalled();
   });
 
