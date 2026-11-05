@@ -1,5 +1,10 @@
 import { useMemo, useState, type FormEvent, type ReactNode } from 'react';
-import { prototypeRoutes, type PrototypeRoute } from './ParalleaxPrototypeRoutes';
+import {
+  prototypeRoutes,
+  prototypeStoryRoute,
+  type PrototypeRoute,
+} from './ParalleaxPrototypeRoutes';
+import type { PrototypeScenarioId } from './prototypeScenarios';
 import './ParalleaxPrototypePages.css';
 
 interface PrototypePageProps {
@@ -22,7 +27,7 @@ function Brand({ onNavigate }: PrototypePageProps) {
 function PortalHeader({
   current,
   onNavigate,
-}: PrototypePageProps & { current: 'stories' | 'design-system' }) {
+}: PrototypePageProps & { current: 'stories' | 'design-system' | 'login' | 'register' }) {
   return (
     <header className="pp-portal-header">
       <Brand onNavigate={onNavigate} />
@@ -41,58 +46,24 @@ function PortalHeader({
         >
           Design system
         </button>
+        <button
+          className={current === 'login' ? 'active' : ''}
+          type="button"
+          onClick={() => onNavigate(prototypeRoutes.login)}
+        >
+          Sign in
+        </button>
+        <button
+          className={current === 'register' ? 'active' : ''}
+          type="button"
+          onClick={() => onNavigate(prototypeRoutes.register)}
+        >
+          Create account
+        </button>
       </nav>
       <div className="pp-portal-header-spacer" />
-      <button className="pp-portal-help" type="button">
-        Help
-      </button>
-      <button className="pp-portal-profile" type="button" aria-label="Open account menu">
-        <span>AV</span>
-        <span>
-          <b>Alex Varenne</b>
-          <small>alex@example.com</small>
-        </span>
-        <i aria-hidden="true">⌄</i>
-      </button>
-      <button
-        className="pp-portal-signout"
-        type="button"
-        onClick={() => onNavigate(prototypeRoutes.login)}
-      >
-        Sign out
-      </button>
+      <span className="pp-guest-badge">Guest preview</span>
     </header>
-  );
-}
-
-function MiniStoryGraph() {
-  return (
-    <div className="pp-auth-graph" aria-hidden="true">
-      <svg viewBox="0 0 560 360" preserveAspectRatio="none">
-        <path d="M280 76 V130" />
-        <path d="M280 158 V207 H144 V245" />
-        <path d="M280 158 V245" />
-        <path d="M280 158 V207 H416 V245" />
-      </svg>
-      <div className="pp-auth-node root">
-        <small>START</small>
-        <b>A room full of echoes</b>
-        <span>The Glasshouse</span>
-      </div>
-      <span className="pp-auth-trigger" />
-      <div className="pp-auth-node left">
-        <b>A quiet warning</b>
-        <span>Old quarter</span>
-      </div>
-      <div className="pp-auth-node center">
-        <b>The hidden passage</b>
-        <span>Lower archive</span>
-      </div>
-      <div className="pp-auth-node right">
-        <b>A voice in the dark</b>
-        <span>Lower archive</span>
-      </div>
-    </div>
   );
 }
 
@@ -105,224 +76,259 @@ export function PrototypeAuthPage({
   const [password, setPassword] = useState('');
   const [confirmation, setConfirmation] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [recovering, setRecovering] = useState(false);
+  const [recoverySent, setRecoverySent] = useState(false);
   const canSubmit =
-    email.includes('@') && password.length >= 8 && (!isRegister || password === confirmation);
+    email.includes('@') &&
+    (recovering || password.length >= 8) &&
+    (!isRegister || password === confirmation);
 
   function submit(event: FormEvent) {
     event.preventDefault();
-    if (canSubmit) onNavigate(prototypeRoutes.stories);
+    if (canSubmit) {
+      onNavigate(prototypeRoutes.stories);
+    }
+  }
+
+  function submitRecovery(event: FormEvent) {
+    event.preventDefault();
+    if (email.includes('@')) {
+      setRecoverySent(true);
+    }
   }
 
   return (
-    <main className="pp-prototype-portal pp-auth-page">
-      <section className="pp-auth-showcase">
-        <Brand onNavigate={onNavigate} />
-        <div className="pp-auth-message">
-          <span className="pp-portal-eyebrow">Interactive narrative design</span>
-          <h1>Every path stays visible.</h1>
-          <p>
-            Shape branching stories, test their rules, and keep characters, places, items, and time
-            in one coherent workspace.
-          </p>
-        </div>
-        <MiniStoryGraph />
-        <p className="pp-auth-quote">
-          “The graph helps you see the story. The model keeps every path reliable.”
-        </p>
-      </section>
-      <section className="pp-auth-panel">
-        <div className="pp-auth-card">
-          <div className="pp-auth-mobile-brand">
-            <Brand onNavigate={onNavigate} />
-          </div>
-          <span className="pp-portal-eyebrow">
-            {isRegister ? 'Start creating' : 'Welcome back'}
-          </span>
-          <h2>{isRegister ? 'Create your account' : 'Sign in to Paralleax'}</h2>
-          <p>
-            {isRegister
-              ? 'Create a private workspace for your interactive stories.'
-              : 'Continue working on your stories and simulations.'}
-          </p>
-          <form onSubmit={submit}>
-            <label className="pp-portal-field">
-              <span>Email address</span>
-              <input
-                autoComplete="email"
-                type="email"
-                placeholder="you@example.com"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-              />
-            </label>
-            <label className="pp-portal-field">
-              <span>Password</span>
-              <span className="pp-password-field">
-                <input
-                  autoComplete={isRegister ? 'new-password' : 'current-password'}
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder={isRegister ? 'At least 8 characters' : 'Enter your password'}
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                />
-                <button type="button" onClick={() => setShowPassword((current) => !current)}>
-                  {showPassword ? 'Hide' : 'Show'}
-                </button>
-              </span>
-            </label>
-            {isRegister ? (
-              <label className="pp-portal-field">
-                <span>Confirm password</span>
-                <input
-                  autoComplete="new-password"
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder="Repeat your password"
-                  value={confirmation}
-                  onChange={(event) => setConfirmation(event.target.value)}
-                />
-                {confirmation && password !== confirmation ? (
-                  <small className="pp-field-error">Passwords do not match.</small>
-                ) : null}
-              </label>
-            ) : (
-              <div className="pp-auth-options">
-                <label>
-                  <input type="checkbox" /> Keep me signed in
+    <div className="pp-prototype-portal pp-auth-route">
+      <PortalHeader current={recovering ? 'login' : mode} onNavigate={onNavigate} />
+      <main className="pp-auth-page">
+        <section className="pp-auth-panel">
+          <div className="pp-auth-card">
+            <span className="pp-portal-eyebrow">
+              {recovering ? 'Account recovery' : isRegister ? 'Start creating' : 'Welcome back'}
+            </span>
+            <h1>
+              {recovering
+                ? 'Reset your password'
+                : isRegister
+                  ? 'Create your account'
+                  : 'Sign in to Paralleax'}
+            </h1>
+            <p>
+              {recovering
+                ? 'Enter your email to preview the recovery confirmation.'
+                : isRegister
+                  ? 'Create a workspace for your interactive stories.'
+                  : 'Continue to your stories and simulations.'}
+            </p>
+            {recovering ? (
+              <form onSubmit={submitRecovery}>
+                <label className="pp-portal-field">
+                  <span>Email address</span>
+                  <input
+                    autoComplete="email"
+                    className="form-control form-control--standard"
+                    type="email"
+                    placeholder="you@example.com"
+                    value={email}
+                    onChange={(event) => {
+                      setRecoverySent(false);
+                      setEmail(event.target.value);
+                    }}
+                  />
                 </label>
-                <button type="button">Forgot password?</button>
-              </div>
+                {recoverySent ? (
+                  <p className="pp-auth-notice" role="status">
+                    Recovery confirmation shown locally. No email was sent.
+                  </p>
+                ) : null}
+                <button
+                  className="pp-portal-primary pp-auth-submit"
+                  type="submit"
+                  disabled={!email.includes('@')}
+                >
+                  Preview recovery <span aria-hidden="true">→</span>
+                </button>
+                <button
+                  className="pp-portal-ghost"
+                  type="button"
+                  onClick={() => setRecovering(false)}
+                >
+                  Back to sign in
+                </button>
+              </form>
+            ) : (
+              <form onSubmit={submit}>
+                <label className="pp-portal-field">
+                  <span>Email address</span>
+                  <input
+                    autoComplete="email"
+                    className="form-control form-control--standard"
+                    type="email"
+                    placeholder="you@example.com"
+                    value={email}
+                    onChange={(event) => setEmail(event.target.value)}
+                  />
+                </label>
+                <label className="pp-portal-field">
+                  <span>Password</span>
+                  <span className="pp-password-field">
+                    <input
+                      autoComplete={isRegister ? 'new-password' : 'current-password'}
+                      className="form-control form-control--standard"
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder={isRegister ? 'At least 8 characters' : 'Enter your password'}
+                      value={password}
+                      onChange={(event) => setPassword(event.target.value)}
+                    />
+                    <button type="button" onClick={() => setShowPassword((current) => !current)}>
+                      {showPassword ? 'Hide' : 'Show'}
+                    </button>
+                  </span>
+                </label>
+                {isRegister ? (
+                  <label className="pp-portal-field">
+                    <span>Confirm password</span>
+                    <input
+                      autoComplete="new-password"
+                      className="form-control form-control--standard"
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="Repeat your password"
+                      value={confirmation}
+                      onChange={(event) => setConfirmation(event.target.value)}
+                    />
+                    {confirmation && password !== confirmation ? (
+                      <small className="pp-field-error">Passwords do not match.</small>
+                    ) : null}
+                  </label>
+                ) : (
+                  <div className="pp-auth-options">
+                    <label>
+                      <input type="checkbox" /> Keep me signed in
+                    </label>
+                    <button type="button" onClick={() => setRecovering(true)}>
+                      Forgot password?
+                    </button>
+                  </div>
+                )}
+                <button
+                  className="pp-portal-primary pp-auth-submit"
+                  type="submit"
+                  disabled={!canSubmit}
+                >
+                  {isRegister ? 'Create account' : 'Sign in'}
+                  <span aria-hidden="true">→</span>
+                </button>
+              </form>
             )}
-            <button
-              className="pp-portal-primary pp-auth-submit"
-              type="submit"
-              disabled={!canSubmit}
-            >
-              {isRegister ? 'Create account' : 'Sign in'}
-              <span aria-hidden="true">→</span>
-            </button>
-          </form>
-          <div className="pp-auth-switch">
-            <span>{isRegister ? 'Already have an account?' : 'New to Paralleax?'}</span>
-            <button
-              type="button"
-              onClick={() =>
-                onNavigate(isRegister ? prototypeRoutes.login : prototypeRoutes.register)
-              }
-            >
-              {isRegister ? 'Sign in' : 'Create an account'}
-            </button>
+            {!recovering ? (
+              <div className="pp-auth-switch">
+                <span>{isRegister ? 'Already have an account?' : 'New to Paralleax?'}</span>
+                <button
+                  type="button"
+                  onClick={() =>
+                    onNavigate(isRegister ? prototypeRoutes.login : prototypeRoutes.register)
+                  }
+                >
+                  {isRegister ? 'Sign in' : 'Create an account'}
+                </button>
+              </div>
+            ) : null}
+            <small className="pp-prototype-note">
+              Prototype only — no account data is submitted.
+            </small>
           </div>
-          <small className="pp-prototype-note">
-            Prototype only — no account data is submitted.
-          </small>
-        </div>
-      </section>
-    </main>
+        </section>
+      </main>
+    </div>
   );
 }
 
-type StoryTone = 'glasshouse' | 'harbor' | 'embers' | 'blank';
 type StoryFilter = 'all' | 'recent' | 'empty';
 
 interface PrototypeStory {
   id: number;
+  scenario: PrototypeScenarioId;
   title: string;
   description: string;
-  interactions: number;
-  characters: number;
+  focus: string;
   updated: string;
-  tone: StoryTone;
   private: boolean;
 }
 
 const initialStories: PrototypeStory[] = [
   {
     id: 1,
-    title: 'The Archive Below',
-    description: 'An archivist follows a trail of erased memories beneath the old quarter.',
-    interactions: 18,
-    characters: 3,
+    scenario: 'quiet-line',
+    title: 'A Quiet Line',
+    description: 'A courier crosses the city before the last train leaves.',
+    focus: 'Mostly linear',
     updated: '12 minutes ago',
-    tone: 'glasshouse',
     private: true,
   },
   {
     id: 2,
+    scenario: 'harbor-signals',
     title: 'Harbor Signals',
     description: 'Three lighthouse keepers decode a message that arrives with every storm.',
-    interactions: 31,
-    characters: 5,
+    focus: 'Several branches',
     updated: 'Yesterday',
-    tone: 'harbor',
     private: true,
   },
   {
     id: 3,
-    title: 'Ashfall',
-    description: 'A city evacuation told through conflicting accounts and difficult choices.',
-    interactions: 9,
-    characters: 4,
+    scenario: 'archive-below',
+    title: 'The Archive Below',
+    description: 'An archivist follows a trail of erased memories beneath the old quarter.',
+    focus: 'Conditions and effects',
     updated: '4 days ago',
-    tone: 'embers',
     private: true,
   },
   {
     id: 4,
-    title: 'Untitled story',
-    description: 'A new story waiting for its first interaction.',
-    interactions: 0,
-    characters: 0,
+    scenario: 'ashfall',
+    title: 'Ashfall',
+    description: 'A city evacuation told through conflicting accounts and difficult choices.',
+    focus: 'Nested Groups and cast',
     updated: '2 weeks ago',
-    tone: 'blank',
     private: true,
   },
 ];
 
-function StoryCover({ story }: { story: PrototypeStory }) {
+function StoryCard({
+  story,
+  onOpen,
+  onDelete,
+}: {
+  story: PrototypeStory;
+  onOpen: () => void;
+  onDelete: () => void;
+}) {
   return (
-    <div
-      className={`pp-story-cover ${story.tone}`}
-      role="img"
-      aria-label={`Abstract cover for ${story.title}`}
-    >
-      <div className="pp-cover-path" />
-      <span className="pp-cover-node one" />
-      <span className="pp-cover-trigger" />
-      <span className="pp-cover-node two" />
-      <small>{String(story.id).padStart(2, '0')}</small>
-    </div>
-  );
-}
-
-function StoryCard({ story, onOpen }: { story: PrototypeStory; onOpen: () => void }) {
-  return (
-    <article className="pp-story-card">
-      <StoryCover story={story} />
+    <article aria-label={story.title} className="pp-story-card">
       <div className="pp-story-card-body">
         <div className="pp-story-card-title">
+          <span className="pp-portal-badge neutral">{story.focus}</span>
           <span className="pp-portal-badge neutral">{story.private ? 'Private' : 'Shared'}</span>
-          <button type="button" aria-label={`More actions for ${story.title}`}>
-            •••
-          </button>
         </div>
         <h3>{story.title}</h3>
         <p>{story.description}</p>
-        <dl>
-          <div>
-            <dt>Interactions</dt>
-            <dd>{story.interactions}</dd>
-          </div>
-          <div>
-            <dt>Characters</dt>
-            <dd>{story.characters}</dd>
-          </div>
-        </dl>
       </div>
       <footer>
         <span>Edited {story.updated}</span>
-        <button className="pp-portal-secondary" type="button" onClick={onOpen}>
-          Open editor <span aria-hidden="true">→</span>
-        </button>
+        <div className="pp-story-card-actions">
+          <button className="pp-portal-primary" type="button" onClick={onOpen}>
+            Open story <span aria-hidden="true">→</span>
+          </button>
+          <button
+            aria-label={`Delete ${story.title}`}
+            className="pp-icon-button pp-delete-story"
+            title={`Delete ${story.title}`}
+            type="button"
+            onClick={onDelete}
+          >
+            ×
+          </button>
+        </div>
       </footer>
     </article>
   );
@@ -336,34 +342,47 @@ export function PrototypeStoryList({ onNavigate }: PrototypePageProps) {
   const [view, setView] = useState<'grid' | 'list'>('grid');
   const [creating, setCreating] = useState(false);
   const [newTitle, setNewTitle] = useState('');
+  const [deleteStory, setDeleteStory] = useState<PrototypeStory>();
 
   const visibleStories = useMemo(() => {
     const normalizedQuery = query.trim().toLocaleLowerCase();
     const filtered = stories.filter((story) => {
-      if (filter === 'recent' && !['12 minutes ago', 'Yesterday'].includes(story.updated)) {
+      if (
+        filter === 'recent' &&
+        !['Just now', '12 minutes ago', 'Yesterday'].includes(story.updated)
+      ) {
         return false;
       }
-      if (filter === 'empty' && story.interactions !== 0) return false;
+      if (filter === 'empty' && story.scenario !== 'blank') {
+        return false;
+      }
       return `${story.title} ${story.description}`.toLocaleLowerCase().includes(normalizedQuery);
     });
     return filtered.sort((left, right) =>
-      sort === 'title' ? left.title.localeCompare(right.title) : left.id - right.id,
+      sort === 'title'
+        ? left.title.localeCompare(right.title)
+        : left.updated === 'Just now'
+          ? -1
+          : right.updated === 'Just now'
+            ? 1
+            : left.id - right.id,
     );
   }, [filter, query, sort, stories]);
 
   function createStory(event: FormEvent) {
     event.preventDefault();
     const title = newTitle.trim();
-    if (!title) return;
+    if (!title) {
+      return;
+    }
     setStories((current) => [
       {
         id: Math.max(...current.map(({ id }) => id), 0) + 1,
         title,
+        scenario: 'blank',
         description: 'A new story waiting for its first interaction.',
-        interactions: 0,
-        characters: 0,
+        focus: 'Empty story',
         updated: 'Just now',
-        tone: 'blank',
         private: true,
       },
       ...current,
@@ -458,7 +477,8 @@ export function PrototypeStoryList({ onNavigate }: PrototypePageProps) {
               <StoryCard
                 key={story.id}
                 story={story}
-                onOpen={() => onNavigate(prototypeRoutes.editor)}
+                onOpen={() => onNavigate(prototypeStoryRoute(story.scenario))}
+                onDelete={() => setDeleteStory(story)}
               />
             ))}
           </section>
@@ -516,6 +536,39 @@ export function PrototypeStoryList({ onNavigate }: PrototypePageProps) {
           </section>
         </div>
       ) : null}
+      {deleteStory ? (
+        <div className="pp-modal-backdrop" role="presentation">
+          <section
+            aria-labelledby="delete-story-title"
+            aria-modal="true"
+            className="pp-new-story-dialog"
+            role="dialog"
+          >
+            <span className="pp-portal-eyebrow">Local demo data</span>
+            <h2 id="delete-story-title">Delete “{deleteStory.title}”?</h2>
+            <p>This removes the card from this browser session only.</p>
+            <div className="pp-dialog-actions">
+              <button
+                className="pp-portal-secondary"
+                type="button"
+                onClick={() => setDeleteStory(undefined)}
+              >
+                Cancel
+              </button>
+              <button
+                className="pp-portal-danger"
+                type="button"
+                onClick={() => {
+                  setStories((current) => current.filter(({ id }) => id !== deleteStory.id));
+                  setDeleteStory(undefined);
+                }}
+              >
+                Delete story
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -546,14 +599,14 @@ function ReferenceSection({
 }
 
 const swatches = [
-  ['Ink', '#20221f', '--pp-ink'],
-  ['Moss', '#2f6250', '--pp-accent'],
-  ['Moss soft', '#e5ebe6', '--pp-accent-soft'],
-  ['Amber', '#b78335', '--pp-trigger'],
-  ['Paper', '#ffffff', '--pp-paper'],
-  ['Canvas', '#f1f1ed', '--pp-canvas'],
-  ['Line', '#dedfd9', '--pp-line'],
-  ['Danger', '#a5453f', '--pp-danger'],
+  ['Text', '--color-text'],
+  ['Primary', '--color-primary'],
+  ['Primary soft', '--color-primary-soft'],
+  ['Trigger', '--color-trigger'],
+  ['Surface', '--color-surface'],
+  ['Canvas', '--color-canvas'],
+  ['Border', '--color-border'],
+  ['Danger', '--color-danger'],
 ];
 
 export function PrototypeDesignSystem({ onNavigate }: PrototypePageProps) {
@@ -588,8 +641,8 @@ export function PrototypeDesignSystem({ onNavigate }: PrototypePageProps) {
           <span className="pp-portal-badge accent">Living reference</span>
           <h1>A calm interface for complex stories.</h1>
           <p>
-            These foundations and components are the visual source of truth for the Paralleax
-            prototype. Product screens should compose them before inventing a new pattern.
+            These shared foundations and components are the visual source of truth for Paralleax.
+            Product screens compose them before introducing a new pattern.
           </p>
           <dl>
             <div>
@@ -598,11 +651,11 @@ export function PrototypeDesignSystem({ onNavigate }: PrototypePageProps) {
             </div>
             <div>
               <dt>Body type</dt>
-              <dd>Inter</dd>
+              <dd>Geist</dd>
             </div>
             <div>
               <dt>Display type</dt>
-              <dd>Newsreader</dd>
+              <dd>Georgia</dd>
             </div>
             <div>
               <dt>Contrast</dt>
@@ -648,11 +701,11 @@ export function PrototypeDesignSystem({ onNavigate }: PrototypePageProps) {
               <code>CSS custom properties</code>
             </div>
             <div className="pp-swatch-grid">
-              {swatches.map(([name, color, token]) => (
+              {swatches.map(([name, token]) => (
                 <div className="pp-swatch" key={token}>
-                  <span style={{ background: color }} />
+                  <span style={{ background: `var(${token})` }} />
                   <b>{name}</b>
-                  <small>{color}</small>
+                  <small>{token}</small>
                   <code>{token}</code>
                 </div>
               ))}
@@ -671,22 +724,22 @@ export function PrototypeDesignSystem({ onNavigate }: PrototypePageProps) {
                   <br />
                   Ideas connect.
                 </b>
-                <small>48 / 52 · Newsreader</small>
+                <small>48 / 52 · Georgia</small>
               </div>
               <div className="heading">
                 <span>Heading</span>
                 <b>The Archive Below</b>
-                <small>24 / 30 · Inter Semibold</small>
+                <small>24 / 30 · Geist Semibold</small>
               </div>
               <div className="body">
                 <span>Body</span>
                 <p>A calm, readable rhythm keeps dense tools approachable.</p>
-                <small>14 / 22 · Inter Regular</small>
+                <small>14 / 22 · Geist Regular</small>
               </div>
               <div className="caption">
                 <span>Caption</span>
                 <b>EDITED 12 MINUTES AGO</b>
-                <small>11 / 16 · Inter Medium</small>
+                <small>11 / 16 · Geist Medium</small>
               </div>
             </div>
             <div className="pp-reference-card">

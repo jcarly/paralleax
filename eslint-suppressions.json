@@ -2121,13 +2121,7 @@
     }
   },
   "apps/web/src/pages/ParalleaxPrototype.tsx": {
-    "@typescript-eslint/no-unsafe-type-assertion": {
-      "count": 6
-    },
     "complexity": {
-      "count": 3
-    },
-    "curly": {
       "count": 3
     },
     "max-lines-per-function": {
@@ -2143,9 +2137,6 @@
     },
     "complexity": {
       "count": 1
-    },
-    "curly": {
-      "count": 3
     },
     "max-lines-per-function": {
       "count": 3
