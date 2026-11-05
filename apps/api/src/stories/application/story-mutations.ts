@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import {
   ensureStoryInteractionPositions,
   storyHistoryOperations,
@@ -33,7 +33,12 @@ export class StoryMutationService {
       userId,
       operation,
     );
-    if (!updated) throw new NotFoundException('Story not found');
+    if (!updated) {
+      if (await this.repository.find(storyId, userId)) {
+        throw new ForbiddenException('Story edit access required');
+      }
+      throw new NotFoundException('Story not found');
+    }
     this.events.publishChange(storyId, 'updated', updated.revision);
     return updated;
   }

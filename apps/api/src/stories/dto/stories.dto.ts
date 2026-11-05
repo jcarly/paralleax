@@ -24,6 +24,7 @@ import {
   IsBase64,
   IsBoolean,
   IsDefined,
+  IsEmail,
   IsNotEmpty,
   IsNumber,
   IsObject,
@@ -218,7 +219,7 @@ export class UpdateStoryAccessDto {
   commentPolicy!: StoryCommentPolicy;
 }
 export class SetStoryCollaboratorDto {
-  @IsString() @IsNotEmpty() @MaxLength(320) email!: string;
+  @IsEmail() @MaxLength(320) email!: string;
   @IsIn(['viewer', 'editor']) role!: StoryCollaboratorRole;
 }
 export class SaveReaderProgressDto {
@@ -355,7 +356,6 @@ export class UpdateGraphDecorationDto {
 export class UpdateInteractionDto {
   @ValidateIf((_, value) => value !== undefined)
   @IsString()
-  @IsNotEmpty()
   @MaxLength(200)
   title?: string;
   @ValidateIf((_, value) => value !== undefined && value !== null)

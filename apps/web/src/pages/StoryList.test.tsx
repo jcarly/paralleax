@@ -249,11 +249,15 @@ describe('StoryList', () => {
     const user = userEvent.setup();
     vi.mocked(api.listStories).mockResolvedValue(storyPage([structuredClone(stories[0])]));
     vi.mocked(api.createStory).mockResolvedValue(storyWithOpeningPath());
+    const onStoryCreated = vi.fn();
 
     render(
       <MemoryRouter>
         <Routes>
-          <Route path="/" element={<StoryList user={standardUser} />} />
+          <Route
+            path="/"
+            element={<StoryList user={standardUser} onStoryCreated={onStoryCreated} />}
+          />
           <Route path="/stories/story-3/edit" element={<StoryEditorRouteProbe />} />
         </Routes>
       </MemoryRouter>,
@@ -269,6 +273,7 @@ describe('StoryList', () => {
       }),
     ).toBeInTheDocument();
     expect(api.createStory).toHaveBeenCalledWith('New story');
+    expect(onStoryCreated).toHaveBeenCalledWith('story-3');
   });
 
   it('deletes a story from the list', async () => {

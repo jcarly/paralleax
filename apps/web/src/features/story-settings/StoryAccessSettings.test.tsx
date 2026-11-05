@@ -59,6 +59,45 @@ describe('StoryAccessSettings', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Access unavailable');
   });
 
+  it('blocks malformed email addresses before sending a collaborator request', async () => {
+    const user = userEvent.setup();
+    render(<StoryAccessSettings storyId="story-1" />);
+    const email = await screen.findByLabelText('User email');
+
+    await user.type(email, 'not-an-email');
+
+    expect(screen.getByText('Enter a valid email address.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add user' })).toBeDisabled();
+    expect(api.setStoryCollaborator).not.toHaveBeenCalled();
+  });
+
+  it('blocks duplicate collaborator addresses and points to the existing role selector', async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.getStoryAccess).mockResolvedValue({
+      ...structuredClone(access),
+      collaborators: [
+        {
+          userId: 'user-2',
+          email: 'reader@example.com',
+          displayName: 'Reader',
+          role: 'viewer',
+        },
+      ],
+    });
+
+    render(<StoryAccessSettings storyId="story-1" />);
+    const email = await screen.findByLabelText('User email');
+
+    await user.type(email, 'READER@example.com');
+
+    expect(
+      screen.getByText('This user already has access. Change their role below.'),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add user' })).toBeDisabled();
+    expect(screen.getByLabelText('Access for Reader')).toHaveValue('viewer');
+    expect(api.setStoryCollaborator).not.toHaveBeenCalled();
+  });
+
   it('localizes a collaborator API error instead of exposing its English server message', async () => {
     await changeInterfaceLanguage('fr');
     const user = userEvent.setup();

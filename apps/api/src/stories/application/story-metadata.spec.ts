@@ -85,13 +85,13 @@ describe('StoryMetadataService', () => {
     expect(story.interactions).toHaveLength(2);
     expect(story.interactions).toMatchObject([
       {
-        title: 'Start',
+        title: '',
         body: '',
         position: { x: 80, y: 120 },
         triggers: [{ inputInteractionIds: [], conditionGroups: [{ conditions: [] }] }],
       },
       {
-        title: 'New interaction',
+        title: '',
         body: '',
         position: { x: 80, y: 252 },
         triggers: [{ conditionGroups: [{ conditions: [] }] }],
@@ -139,7 +139,9 @@ describe('StoryMetadataService', () => {
   it('publishes deletion only after an authorized repository delete', async () => {
     repository.delete.mockResolvedValueOnce(false).mockResolvedValueOnce(true);
 
-    await expect(service.delete('story-1', 'reader-1')).rejects.toThrow('Story not found');
+    await expect(service.delete('story-1', 'reader-1')).rejects.toThrow(
+      'Story management access required',
+    );
     expect(events.publishChange).not.toHaveBeenCalled();
 
     await service.delete('story-1', 'user-1');

@@ -22,6 +22,7 @@ import { FieldHelpTooltip } from './FieldHelpTooltip';
 import { RichTextEditor } from './RichTextEditor';
 import { hasAuthoredRichTextContent } from './richTextProjection';
 import { VariablePicker } from './VariablePicker';
+import { interactionTitlePlaceholder } from '../features/story/interactionTitlePresentation';
 
 function getInitials(name: string) {
   return name
@@ -200,6 +201,7 @@ export function InteractionInspector({
   interaction,
   onChange,
   onPatch,
+  onContentSaved,
   onDelete,
   onSelectInteraction,
   textCommentCounts,
@@ -210,7 +212,8 @@ export function InteractionInspector({
   story: Story;
   interaction: Interaction;
   onChange: (story: Story) => void;
-  onPatch: (id: string, patch: Partial<Interaction>) => Promise<void>;
+  onPatch: (id: string, patch: Partial<Interaction>) => Promise<boolean | void>;
+  onContentSaved?: (body: string) => void;
   onDelete: () => Promise<void>;
   onSelectInteraction?: (interactionId: string) => void;
 } & InspectorTextCommentProps &
@@ -275,7 +278,11 @@ export function InteractionInspector({
       return;
     }
     updateLocalInteraction({ body: nextBody });
-    void onPatch(interaction.id, { body: nextBody });
+    void onPatch(interaction.id, { body: nextBody }).then((saved) => {
+      if (saved !== false) {
+        onContentSaved?.(nextBody);
+      }
+    });
   }
 
   function handleBodyBlur(body: string) {
@@ -350,6 +357,7 @@ export function InteractionInspector({
             <input
               className="form-control form-control--compact"
               data-comment-field="title"
+              placeholder={interactionTitlePlaceholder(interaction, t)}
               value={interaction.title}
               onChange={(event) => updateLocalInteraction({ title: event.target.value })}
               onBlur={(event) => void onPatch(interaction.id, { title: event.target.value })}
@@ -379,20 +387,29 @@ export function InteractionInspector({
                 onConditionalTextChange={(body, conditionalTextBlocks) => {
                   bodyDraftRef.current = undefined;
                   updateLocalInteraction({ body, conditionalTextBlocks });
-                  void onPatch(interaction.id, { body, conditionalTextBlocks });
+                  void onPatch(interaction.id, { body, conditionalTextBlocks }).then((saved) => {
+                    if (saved !== false) {
+                      onContentSaved?.(body);
+                    }
+                  });
                 }}
                 onConditionalTargetClick={onSelectInteraction}
               />
             </div>
           ) : (
-            <button
-              className="secondary interaction-content-edit-toggle"
-              data-comment-exclude="true"
-              type="button"
-              onClick={() => setBodyEditor({ interactionId: interaction.id, editing: true })}
-            >
-              {t('richText.addContent')}
-            </button>
+            <div className="interaction-content-empty">
+              <p className="interaction-content-empty-prompt">
+                {t('interactionInspector.bodyPlaceholder')}
+              </p>
+              <button
+                className="secondary interaction-content-edit-toggle"
+                data-comment-exclude="true"
+                type="button"
+                onClick={() => setBodyEditor({ interactionId: interaction.id, editing: true })}
+              >
+                {t('richText.addContent')}
+              </button>
+            </div>
           )}
         </InspectorCommentField>
       </section>

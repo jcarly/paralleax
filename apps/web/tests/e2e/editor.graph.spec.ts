@@ -14,6 +14,34 @@ test.describe('Story editor graph', () => {
     await prepareEditorPage(page);
   });
 
+  test('keeps the guide outside layout and follows the current editor target', async ({ page }) => {
+    const storyWithoutScene = structuredClone(story);
+    storyWithoutScene.interactions[0].body = '';
+    await mockStory(page, storyWithoutScene);
+    await page.addInitScript(() => {
+      window.localStorage.setItem(
+        'paralleax-onboarding:v1:user-1',
+        JSON.stringify({
+          status: 'active',
+          storyId: 'story-1',
+          completedSteps: [],
+          skippedSteps: [],
+        }),
+      );
+    });
+    await page.goto('/stories/story-1/edit');
+
+    await expect(page.getByRole('heading', { name: 'Explore the graph' })).toBeVisible();
+    await expect(page.locator('.onboarding-guide-positioner')).toHaveCSS('position', 'fixed');
+    const interaction = page.locator('.interaction-node').first();
+    await expect(interaction).toHaveClass(/onboarding-target-highlight/);
+    await interaction.click();
+
+    await expect(page.getByRole('heading', { name: 'Write a scene' })).toBeVisible();
+    await expect(page.locator('.inspector')).toHaveClass(/onboarding-target-highlight/);
+    await expect(interaction).not.toHaveClass(/onboarding-target-highlight/);
+  });
+
   test('keeps a wait cursor and prevents another organization until graph positions are saved', async ({
     page,
   }) => {

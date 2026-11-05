@@ -12,8 +12,8 @@ interface DefaultInteractionInput {
 export function buildInteractionWithDefaultTrigger({
   id,
   position,
-  title = 'New interaction',
-  body = 'Describe what happens here.',
+  title = '',
+  body = '',
   inputInteractionIds = [],
 }: DefaultInteractionInput): Interaction {
   return {

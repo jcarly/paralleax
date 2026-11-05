@@ -453,13 +453,13 @@ describe('Stories API', () => {
       access: { visibility: 'private', editPolicy: 'owner', commentPolicy: 'editors' },
       interactions: [
         {
-          title: 'Start',
+          title: '',
           body: '',
           position: { x: 80, y: 120 },
           triggers: [{ inputInteractionIds: [], conditionGroups: [{ conditions: [] }] }],
         },
         {
-          title: 'New interaction',
+          title: '',
           body: '',
           position: { x: 80, y: 252 },
           triggers: [{ conditionGroups: [{ conditions: [] }] }],
@@ -1189,7 +1189,7 @@ unknown_command
 
     const result = response.body as InteractionMutationResult;
     expect(result.interaction).toMatchObject({
-      title: 'New interaction',
+      title: '',
       position: { x: 10, y: 20 },
     });
     expect(result.interaction.triggers[0].inputInteractionIds).toEqual([]);
@@ -1317,6 +1317,11 @@ unknown_command
       .patch(`/api/stories/${story.id}/interactions/${interaction.id}`)
       .send({ durationMinutes: -1 })
       .expect(400);
+    const clearedTitle = await request(httpServer)
+      .patch(`/api/stories/${story.id}/interactions/${interaction.id}`)
+      .send({ title: '' })
+      .expect(200);
+    expect(clearedTitle.body).toMatchObject({ interaction: { title: '' } });
   });
 
   it('keeps persisted title and content when PATCH updates only an interaction position', async () => {
@@ -2690,20 +2695,22 @@ unknown_command
   });
 
   it('enforces invited reader, editor, and revoked permissions on existing story endpoints', async () => {
-    const ownerCookie = 'paralleax_session=user-one';
+    const ownerCookie = 'paralleax_session=test-user';
     const collaboratorCookie = 'paralleax_session=user-two';
-    const created = await request(httpServer)
-      .post('/api/stories')
-      .set('Cookie', ownerCookie)
-      .send({ title: 'Shared story' })
-      .expect(201);
-    const storyId = created.body.id as string;
+    const story = await createStory('Shared story');
+    const withInteraction = await createInteraction(story.id);
+    const storyId = story.id;
 
     await request(httpServer)
       .patch(`/api/stories/${storyId}/access`)
       .set('Cookie', ownerCookie)
       .send({ visibility: 'invitation', editPolicy: 'collaborators', commentPolicy: 'readers' })
       .expect(200);
+    await request(httpServer)
+      .post(`/api/stories/${storyId}/access/collaborators`)
+      .set('Cookie', ownerCookie)
+      .send({ email: 'not-an-email', role: 'viewer' })
+      .expect(400);
     const invalidInvitation = await request(httpServer)
       .post(`/api/stories/${storyId}/access/collaborators`)
       .set('Cookie', ownerCookie)
@@ -2725,14 +2732,43 @@ unknown_command
       .expect(200);
     expect(readable.body.capabilities).toMatchObject({ canRead: true, canEdit: false });
     await request(httpServer)
+      .get(`/api/stories/${storyId}`)
+      .set('Cookie', 'paralleax_session=anonymous')
+      .expect(404);
+    await request(httpServer)
+      .patch(`/api/stories/${storyId}`)
+      .set('Cookie', 'paralleax_session=anonymous')
+      .send({ title: 'Sign-in required' })
+      .expect(401);
+    await request(httpServer)
       .patch(`/api/stories/${storyId}`)
       .set('Cookie', collaboratorCookie)
       .send({ title: 'Forbidden rename' })
-      .expect(404);
+      .expect(403);
+    const rootInteractionId = withInteraction.interactions[0].id;
+    await request(httpServer)
+      .post(`/api/stories/${storyId}/interactions`)
+      .set('Cookie', collaboratorCookie)
+      .send({ position: { x: 40, y: 80 } })
+      .expect(403);
+    await request(httpServer)
+      .patch(`/api/stories/${storyId}/interactions/${rootInteractionId}`)
+      .set('Cookie', collaboratorCookie)
+      .send({ title: 'Forbidden scene' })
+      .expect(403);
+    await request(httpServer)
+      .patch(`/api/stories/${storyId}/access`)
+      .set('Cookie', collaboratorCookie)
+      .send({ visibility: 'public', editPolicy: 'owner', commentPolicy: 'editors' })
+      .expect(403);
     await request(httpServer)
       .get(`/api/stories/${storyId}/access`)
       .set('Cookie', collaboratorCookie)
-      .expect(404);
+      .expect(403);
+    await request(httpServer)
+      .delete(`/api/stories/${storyId}`)
+      .set('Cookie', collaboratorCookie)
+      .expect(403);
 
     await request(httpServer)
       .post(`/api/stories/${storyId}/access/collaborators`)

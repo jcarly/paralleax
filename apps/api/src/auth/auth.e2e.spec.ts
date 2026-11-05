@@ -3,6 +3,7 @@ import { ValidationPipe, type INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import * as request from 'supertest';
 import { AppModule } from '../app.module';
+import { AppConfigService } from '../config/app-config.service';
 import { DatabaseMigrator } from '../database/database.migrator';
 import { EmailService, type EmailMessage } from '../email/email.service';
 import { InMemoryStoriesRepository } from '../stories/stories.repository.memory';
@@ -23,7 +24,7 @@ describe('Auth API', () => {
       findUserByEmail: (email: string) => Promise.resolve(users.get(email)),
       findUserById: (id: string) =>
         Promise.resolve([...users.values()].find((candidate) => candidate.id === id)),
-      createUser: (user: Omit<AuthUser, 'role' | 'emailVerifiedAt'>) => {
+      createUser: (user: Omit<AuthUser, 'role'>) => {
         if (users.has(user.email)) return Promise.resolve(undefined);
         const created: AuthUser = { ...user, role: users.size === 0 ? 'admin' : 'user' };
         users.set(created.email, created);
@@ -190,6 +191,29 @@ describe('Auth API', () => {
     await agent.get('/api/auth/me').expect(401);
   });
 
+  it('issues a session immediately when the local verification bypass is enabled', async () => {
+    Object.assign(app.get(AppConfigService), { devSkipEmailVerification: true });
+    const agent = request.agent(httpServer);
+    const registered = await agent
+      .post('/api/auth/register')
+      .send({
+        email: 'local@example.com',
+        password: 'correct horse battery staple',
+        displayName: 'Local Author',
+      })
+      .expect(201);
+
+    expect(readProperty(registered.body, 'verificationRequired')).toBe(false);
+    const registeredUser = readProperty(registered.body, 'user');
+    expect(readProperty(registeredUser, 'email')).toBe('local@example.com');
+    expect(typeof readProperty(registeredUser, 'emailVerifiedAt')).toBe('string');
+    expect(registered.headers['set-cookie']).toBeDefined();
+    expect(sentMessages).toEqual([]);
+    const sessionResponse = await agent.get('/api/auth/me').expect(200);
+    expect(readProperty(sessionResponse.body, 'email')).toBe('local@example.com');
+    expect(typeof readProperty(sessionResponse.body, 'emailVerifiedAt')).toBe('string');
+  });
+
   it('returns a neutral password-reset response for an unknown email', async () => {
     await request(httpServer)
       .post('/api/auth/password-reset')
@@ -295,5 +319,12 @@ describe('Auth API', () => {
     const token = text.match(/[?&]token=([^\s&]+)/u)?.[1];
     if (!token) throw new Error('Expected an account action token in the email');
     return decodeURIComponent(token);
+  }
+
+  function readProperty(value: unknown, key: string): unknown {
+    if (!value || typeof value !== 'object') {
+      return undefined;
+    }
+    return Reflect.get(value, key);
   }
 });

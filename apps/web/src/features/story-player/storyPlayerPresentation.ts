@@ -9,12 +9,11 @@ import {
 } from '@paralleax/shared';
 import { describeTriggerCondition } from '../../triggerConditionPresentation';
 import { getStatTargets, statTargetLabel } from '../../storyStats';
+import { interactionTitleForDisplay } from '../story/interactionTitlePresentation';
 
-function getInteractionTitle(story: Story, interactionId: string) {
-  return (
-    story.interactions.find((interaction) => interaction.id === interactionId)?.title ??
-    interactionId
-  );
+function getInteractionTitle(story: Story, interactionId: string, t: TFunction) {
+  const interaction = story.interactions.find((item) => item.id === interactionId);
+  return interaction ? interactionTitleForDisplay(interaction, t) : interactionId;
 }
 
 export function getConditionSummary(
@@ -120,7 +119,7 @@ export function getUnavailableReason(
     );
   }
   if ('interactionId' in firstFailure) {
-    const title = getInteractionTitle(story, firstFailure.interactionId);
+    const title = getInteractionTitle(story, firstFailure.interactionId, t);
     return t(
       firstFailure.hasBeenVisited ? 'player.requirement.visited' : 'player.requirement.notVisited',
       { title },
