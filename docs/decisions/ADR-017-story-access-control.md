@@ -1,6 +1,6 @@
 # ADR-017: Global Administration and Story Access Control
 
-Status: Accepted; visibility extended by ADR-033
+Status: Accepted; visibility extended by ADR-033; denial responses clarified 2026-11-04
 
 Comment-policy values and defaults are superseded by
 [ADR-019](ADR-019-editor-graph-reader-comments.md).
@@ -49,6 +49,13 @@ Repository queries enforce object-level access. The shared package contains the
 pure capability resolver used by projections and tests, but client-side
 capabilities only adapt the interface and are never the security boundary.
 
+Protected mutations and access-management reads distinguish a readable Story
+from one hidden by policy: a signed-in user who can read but cannot perform the
+requested operation receives `403 Forbidden`; a missing or unreadable Story
+continues to receive `404 Not Found`. A protected mutation without a valid
+session receives `401 Unauthorized`. This distinction improves permission
+feedback without revealing hidden Story existence.
+
 Comment reads and writes use the resolved capability. Anonymous readers never
 receive comment authorship even when a story is public. Invitations do not send
 mail or create bearer links in this increment.
@@ -56,6 +63,8 @@ mail or create bearer links in this increment.
 ## Consequences
 
 - Story ids and direct URLs do not bypass access checks.
+- Readable users can distinguish a permission refusal from a hidden or missing
+  Story, while the API keeps hidden Story existence private.
 - Public stories can be read without an account, while progress remains tied to
   authenticated users.
 - The product home uses a dedicated anonymous summary projection and cannot leak

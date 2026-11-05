@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
 import { buildFeedbackHiddenFields } from './feedbackContext';
@@ -9,26 +9,10 @@ export function FeedbackButton() {
   const { t, i18n } = useTranslation();
   const location = useLocation();
   const language = i18n.resolvedLanguage ?? i18n.language;
-  const [ready, setReady] = useState(false);
   const [opening, setOpening] = useState(false);
+  const [unavailable, setUnavailable] = useState(false);
 
-  useEffect(() => {
-    if (!formbricksFeedbackClient.isConfigured) return;
-    let active = true;
-    void formbricksFeedbackClient.setup().then((configured) => {
-      if (active) setReady(configured);
-    });
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!ready) return;
-    void formbricksFeedbackClient.registerRouteChange(language);
-  }, [language, location.pathname, location.search, ready]);
-
-  if (!formbricksFeedbackClient.isConfigured || !ready) return null;
+  if (!formbricksFeedbackClient.isConfigured) return null;
 
   return (
     <button
@@ -41,6 +25,7 @@ export function FeedbackButton() {
         setOpening(true);
         void formbricksFeedbackClient
           .trackFeedback(language, buildFeedbackHiddenFields(location.pathname, language))
+          .then((opened) => setUnavailable(!opened))
           .finally(() => setOpening(false));
       }}
     >
@@ -49,6 +34,9 @@ export function FeedbackButton() {
         <path d="M8.5 9.5h7M8.5 12.5h4" />
       </svg>
       <span>{t('shell.feedback')}</span>
+      <span aria-live="polite" className="visually-hidden">
+        {unavailable ? t('shell.feedbackUnavailable') : ''}
+      </span>
     </button>
   );
 }

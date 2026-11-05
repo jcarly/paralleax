@@ -7,9 +7,9 @@ Date: 2026-10-12
 ## Context
 
 The creator alpha initially combined an invitation access code with account
-registration. Account safety now creates every new account unverified, sends a
-one-use verification action to its email address, and refuses to issue a session
-until that action is consumed.
+registration. Account safety creates production and test accounts unverified,
+sends a one-use verification action to the email address, and refuses to issue a
+session until that action is consumed.
 
 The shared alpha code no longer establishes an identity or a distinct durable
 permission. It adds a second secret-distribution workflow and another field to
@@ -24,6 +24,13 @@ password, creates an unverified account, and relies on the existing email
 verification action before sign-in. Closed registration rejects account
 creation before password hashing or persistence.
 
+Local development defaults `DEV_SKIP_EMAIL_VERIFICATION` to `true`. In that
+environment only, registration records the account as verified and creates a
+session immediately without sending verification email. Setting the variable to
+`false` restores the normal verification flow. Configuration rejects enabling
+the bypass in test or production, where the accepted verification requirement
+continues to apply.
+
 Remove the access code from the registration DTO, server policy, browser client,
 form, translations, and acceptance setup. Remove `access-code` from the allowed
 `REGISTRATION_MODE` values. Reject a non-empty legacy
@@ -37,11 +44,12 @@ origin enforcement unchanged.
 ## Consequences
 
 - Users no longer need an operator-distributed shared code to register.
-- Anyone who can reach an open deployment may submit a registration and trigger
-  verification email, subject to the existing rate limit; operators use
-  `REGISTRATION_MODE=closed` to stop new accounts.
+- Anyone who can reach an open production deployment may submit a registration
+  and trigger verification email, subject to the existing rate limit; operators
+  use `REGISTRATION_MODE=closed` to stop new accounts.
 - A submitted address still cannot obtain a session without access to its
-  verification email.
+  verification email in test and production; local development can bypass that
+  requirement to make account creation available without an email provider.
 - Deployments using the former mode must set `REGISTRATION_MODE=open` or
   `closed` and remove `REGISTRATION_ACCESS_CODE` before starting the new release.
 - No persistence migration is required because the access code was configuration

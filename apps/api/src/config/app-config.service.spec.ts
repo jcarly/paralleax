@@ -12,6 +12,7 @@ describe('AppConfigService', () => {
       registrationMode: 'open',
       authRegistrationRateLimit: 5,
       testEmailOutbox: false,
+      devSkipEmailVerification: true,
       brevoApiKey: undefined,
       emailFrom: undefined,
       emailReplyTo: undefined,
@@ -30,6 +31,13 @@ describe('AppConfigService', () => {
     expect(loadAppConfig({ NODE_ENV: 'test', TEST_EMAIL_OUTBOX: 'true' }).testEmailOutbox).toBe(
       true,
     );
+    expect(loadAppConfig({ NODE_ENV: 'test' }).devSkipEmailVerification).toBe(false);
+    expect(
+      loadAppConfig({
+        NODE_ENV: 'development',
+        DEV_SKIP_EMAIL_VERIFICATION: 'false',
+      }).devSkipEmailVerification,
+    ).toBe(false);
     expect(
       loadAppConfig({
         NODE_ENV: 'production',
@@ -48,6 +56,18 @@ describe('AppConfigService', () => {
         TEST_EMAIL_OUTBOX: 'true',
       }),
     ).toThrow('TEST_EMAIL_OUTBOX is only available in the test environment');
+    expect(() => loadAppConfig({ NODE_ENV: 'test', DEV_SKIP_EMAIL_VERIFICATION: 'true' })).toThrow(
+      'DEV_SKIP_EMAIL_VERIFICATION is only available in the development environment',
+    );
+    expect(() =>
+      loadAppConfig({
+        NODE_ENV: 'production',
+        DATABASE_URL: 'postgres://db/app',
+        CORS_ORIGIN: 'https://app.example.com',
+        REGISTRATION_MODE: 'closed',
+        DEV_SKIP_EMAIL_VERIFICATION: 'true',
+      }),
+    ).toThrow('DEV_SKIP_EMAIL_VERIFICATION is only available in the development environment');
   });
 
   it('normalizes optional configuration and enables production cookies', () => {
@@ -96,6 +116,7 @@ describe('AppConfigService', () => {
     ],
     [{ POSTGRES_SSL: 'yes' }, 'POSTGRES_SSL must be true or false'],
     [{ TEST_EMAIL_OUTBOX: 'yes' }, 'TEST_EMAIL_OUTBOX must be true or false'],
+    [{ DEV_SKIP_EMAIL_VERIFICATION: 'yes' }, 'DEV_SKIP_EMAIL_VERIFICATION must be true or false'],
     [
       { EMAIL_SMTP_URL: 'smtp://smtp.example.com' },
       'EMAIL_SMTP_URL is no longer supported; configure BREVO_API_KEY instead',

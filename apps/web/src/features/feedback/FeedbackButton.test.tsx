@@ -12,7 +12,6 @@ describe('FeedbackButton', () => {
   beforeEach(() => {
     formbricksFeedbackClient.isConfigured = true;
     vi.spyOn(formbricksFeedbackClient, 'setup').mockResolvedValue(true);
-    vi.spyOn(formbricksFeedbackClient, 'registerRouteChange').mockResolvedValue(true);
     vi.spyOn(formbricksFeedbackClient, 'trackFeedback').mockResolvedValue(true);
   });
 
@@ -22,7 +21,7 @@ describe('FeedbackButton', () => {
     cleanup();
   });
 
-  it('opens the configured action with normalized contextual metadata', async () => {
+  it('waits for an explicit click before loading Formbricks and sends normalized context', async () => {
     const user = userEvent.setup();
     render(
       <MemoryRouter initialEntries={['/stories/private-story/edit?panel=context']}>
@@ -31,9 +30,7 @@ describe('FeedbackButton', () => {
     );
 
     const button = await screen.findByRole('button', { name: 'Give feedback' });
-    await waitFor(() =>
-      expect(formbricksFeedbackClient.registerRouteChange).toHaveBeenCalledWith('en'),
-    );
+    expect(formbricksFeedbackClient.setup).not.toHaveBeenCalled();
     await user.click(button);
 
     await waitFor(() =>
@@ -53,7 +50,7 @@ describe('FeedbackButton', () => {
     );
   });
 
-  it('uses the localized label and survey language', async () => {
+  it('uses the localized label without loading the SDK until clicked', async () => {
     await i18n.changeLanguage('fr');
     render(
       <MemoryRouter>
@@ -62,9 +59,7 @@ describe('FeedbackButton', () => {
     );
 
     expect(await screen.findByRole('button', { name: 'Donner un retour' })).toBeInTheDocument();
-    await waitFor(() =>
-      expect(formbricksFeedbackClient.registerRouteChange).toHaveBeenCalledWith('fr'),
-    );
+    expect(formbricksFeedbackClient.setup).not.toHaveBeenCalled();
   });
 
   it('stays absent when the integration is disabled or setup fails', async () => {
@@ -78,13 +73,16 @@ describe('FeedbackButton', () => {
 
     cleanup();
     formbricksFeedbackClient.isConfigured = true;
-    vi.mocked(formbricksFeedbackClient.setup).mockResolvedValue(false);
+    vi.mocked(formbricksFeedbackClient.trackFeedback).mockResolvedValue(false);
     render(
       <MemoryRouter>
         <FeedbackButton />
       </MemoryRouter>,
     );
-    await waitFor(() => expect(formbricksFeedbackClient.setup).toHaveBeenCalled());
-    expect(screen.queryByRole('button', { name: 'Give feedback' })).not.toBeInTheDocument();
+    const button = await screen.findByRole('button', { name: 'Give feedback' });
+    await userEvent.setup().click(button);
+    expect(
+      await screen.findByText('The feedback form is unavailable. Try again later.'),
+    ).toBeInTheDocument();
   });
 });

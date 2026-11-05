@@ -104,7 +104,6 @@ export class StoryMetadataService {
     };
     const root = buildInteractionWithDefaultTrigger({
       id: randomUUID(),
-      title: 'Start',
       body: '',
       position: getNextRootPosition(story),
     });
@@ -154,6 +153,9 @@ export class StoryMetadataService {
 
   async delete(storyId: string, userId: string): Promise<void> {
     if (!(await this.repository.delete(storyId, userId))) {
+      if (await this.repository.find(storyId, userId)) {
+        throw new ForbiddenException('Story management access required');
+      }
       throw new NotFoundException('Story not found');
     }
     this.events.publishChange(storyId, 'deleted');

@@ -6,9 +6,7 @@ import {
   paginated,
 } from './editorTestHarness';
 
-test('returns inaccessible Story URLs to the library without exposing server details', async ({
-  page,
-}) => {
+test('explains inaccessible Story URLs without exposing server details', async ({ page }) => {
   await mockAuthenticatedUser(page);
   await page.route(/\/api\/stories(?:\?.*)?$/, (route) => route.fulfill({ json: paginated([]) }));
   await page.route('**/api/stories/private-story/**', (route) =>
@@ -21,10 +19,37 @@ test('returns inaccessible Story URLs to the library without exposing server det
     '/stories/private-story/access',
   ]) {
     await page.goto(path);
-    await expect(page).toHaveURL('/');
-    await expect(page.getByRole('heading', { name: 'Stories', exact: true })).toBeVisible();
+    await expect(page).toHaveURL(path);
+    await expect(page.getByRole('heading', { name: 'Story unavailable' })).toBeVisible();
+    await expect(page.getByRole('main').getByRole('link', { name: 'Stories' })).toHaveAttribute(
+      'href',
+      '/',
+    );
     await expect(page.getByText('Story not found')).toHaveCount(0);
   }
+});
+
+test('offers sign-in from an inaccessible direct link to an anonymous visitor', async ({
+  page,
+}) => {
+  await page.route('**/api/auth/me', (route) =>
+    route.fulfill({ status: 401, json: { message: 'Authentication required' } }),
+  );
+  await page.route('**/api/stories/private-story/**', (route) =>
+    route.fulfill({ status: 404, json: { message: 'Story not found' } }),
+  );
+
+  await page.goto('/stories/private-story/play');
+
+  await expect(page.getByRole('heading', { name: 'Story unavailable' })).toBeVisible();
+  await expect(page.getByRole('main').getByRole('link', { name: 'Stories' })).toHaveAttribute(
+    'href',
+    '/',
+  );
+  await expect(page.getByRole('main').getByRole('link', { name: 'Sign in' })).toHaveAttribute(
+    'href',
+    '/login?returnTo=%2Fstories%2Fprivate-story%2Fplay',
+  );
 });
 
 test('opens an unlisted Story at its player URL without signing in', async ({ page }) => {

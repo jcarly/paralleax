@@ -21,10 +21,11 @@ const sessionDurationMs = 30 * 24 * 60 * 60 * 1000;
 const verificationTokenDurationMs = 24 * 60 * 60 * 1000;
 const passwordResetTokenDurationMs = 60 * 60 * 1000;
 
-export interface RegistrationResult {
-  email: string;
-  verificationRequired: true;
-}
+type PublicAuthUser = Omit<AuthUser, 'passwordHash'>;
+
+export type RegistrationResult =
+  | { email: string; verificationRequired: true }
+  | { user: PublicAuthUser; token: string; verificationRequired: false };
 
 @Injectable()
 export class AuthService {
@@ -39,7 +40,9 @@ export class AuthService {
     password: string,
     displayName: string,
   ): Promise<RegistrationResult> {
-    this.assertEmailDeliveryConfigured();
+    if (!this.config.devSkipEmailVerification) {
+      this.assertEmailDeliveryConfigured();
+    }
     const normalizedEmail = email.trim().toLowerCase();
     const normalizedDisplayName = normalizeUserDisplayName(displayName);
     if (!isValidUserDisplayName(normalizedDisplayName)) {
@@ -62,12 +65,16 @@ export class AuthService {
       displayName: normalizedDisplayName,
       passwordHash: await hashPassword(password),
       createdAt: now,
+      ...(this.config.devSkipEmailVerification ? { emailVerifiedAt: now } : {}),
     };
     const user = await this.repository.createUser(candidate);
     if (!user) {
       throw new ConflictException(
         apiErrorResponse('EMAIL_ALREADY_REGISTERED', 'Email already registered'),
       );
+    }
+    if (this.config.devSkipEmailVerification) {
+      return { ...(await this.createSession(user)), verificationRequired: false };
     }
     await this.sendVerificationEmail(user);
     return { email: user.email, verificationRequired: true };
@@ -269,7 +276,7 @@ export class AuthService {
   }
 }
 
-function publicUser(user: AuthUser) {
+function publicUser(user: AuthUser): PublicAuthUser {
   return {
     id: user.id,
     email: user.email,

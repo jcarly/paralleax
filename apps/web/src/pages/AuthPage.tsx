@@ -42,13 +42,19 @@ export function AuthPage({
 
   async function submit(event: FormEvent) {
     event.preventDefault();
-    if (!canSubmit) return;
+    if (!canSubmit) {
+      return;
+    }
     try {
       setError('');
       setPending(true);
       if (isRegister) {
         const result = await api.register(email, password, normalizedDisplayName);
-        setVerificationEmail(result.email);
+        if (result.verificationRequired) {
+          setVerificationEmail(result.email);
+        } else {
+          await onAuthenticated(result.user);
+        }
       } else {
         await onAuthenticated(await api.login(email, password));
       }
@@ -61,7 +67,9 @@ export function AuthPage({
 
   async function switchMode() {
     const nextMode = isRegister ? 'login' : 'register';
-    if (!onModeChange) setLocalMode(nextMode);
+    if (!onModeChange) {
+      setLocalMode(nextMode);
+    }
     setConfirmation('');
     setError('');
     setVerificationEmail('');

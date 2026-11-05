@@ -95,6 +95,33 @@ describe('AuthPage', () => {
     expect(api.resendVerification).toHaveBeenCalledWith('new@example.com');
   });
 
+  it('signs in immediately when registration returns a local session', async () => {
+    const user = userEvent.setup();
+    const authenticated = {
+      id: 'user-1',
+      email: 'new@example.com',
+      displayName: 'New Author',
+      role: 'user' as const,
+      createdAt: '2026-01-01T00:00:00.000Z',
+      emailVerifiedAt: '2026-01-01T00:00:00.000Z',
+    };
+    vi.mocked(api.register).mockResolvedValue({
+      verificationRequired: false,
+      user: authenticated,
+    });
+    const onAuthenticated = vi.fn();
+    render(<AuthPage initialMode="register" onAuthenticated={onAuthenticated} />);
+
+    await user.type(screen.getByLabelText('Display name'), 'New Author');
+    await user.type(screen.getByLabelText('Email address'), 'new@example.com');
+    await user.type(screen.getByLabelText('Password'), 'correct horse battery staple');
+    await user.type(screen.getByLabelText('Confirm password'), 'correct horse battery staple');
+    await user.click(screen.getByRole('button', { name: 'Create account' }));
+
+    expect(onAuthenticated).toHaveBeenCalledWith(authenticated);
+    expect(screen.queryByRole('heading', { name: 'Check your email' })).not.toBeInTheDocument();
+  });
+
   it('shows a session notice', () => {
     render(<AuthPage notice="Your session expired." onAuthenticated={vi.fn()} />);
     expect(screen.getByText('Your session expired.')).toBeInTheDocument();

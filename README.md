@@ -119,24 +119,28 @@ database service at `db:5432`. Set it in `.env` only when the containers should
 connect to a different PostgreSQL server.
 
 The API also validates `PORT`, `POSTGRES_SSL`, `POSTGRES_SSL_CA`, `CORS_ORIGIN`,
-`REGISTRATION_MODE`, and `NODE_ENV` at startup. `DATABASE_URL`, `CORS_ORIGIN`,
-and `REGISTRATION_MODE` must be explicit in production. OpenAPI documentation is
-available at http://localhost:3300/api/docs outside production.
+`REGISTRATION_MODE`, `DEV_SKIP_EMAIL_VERIFICATION`, and `NODE_ENV` at startup.
+`DATABASE_URL`, `CORS_ORIGIN`, and `REGISTRATION_MODE` must be explicit in
+production. OpenAPI documentation is available at http://localhost:3300/api/docs
+outside production.
 
-`REGISTRATION_MODE` accepts `open` or `closed`. Open registration creates an
-unverified account and requires the emailed verification link before sign-in.
-The removed `access-code` mode and `REGISTRATION_ACCESS_CODE` setting are
-rejected so stale deployments fail visibly.
+`REGISTRATION_MODE` accepts `open` or `closed`. In local development, email
+verification is skipped by default and registration creates a verified account
+with an active session. Set `DEV_SKIP_EMAIL_VERIFICATION=false` to test the
+emailed verification flow; this requires Brevo delivery to be configured. The
+bypass is rejected outside `NODE_ENV=development`. The removed `access-code`
+mode and `REGISTRATION_ACCESS_CODE` setting are rejected so stale deployments
+fail visibly.
 
 ## Transactional email
 
 The API uses Brevo's HTTPS API for transactional email. Set `BREVO_API_KEY` and
 `EMAIL_FROM` together to enable delivery; `EMAIL_REPLY_TO` is optional. Use a
-Brevo API key rather than an SMTP key. Account registration, verification, and
-password recovery require `BREVO_API_KEY` and `EMAIL_FROM`; without them those
-account actions return a stable unavailable response rather than creating an
-unreachable account. Keep the API key in deployment secrets rather than source
-control.
+Brevo API key rather than an SMTP key. Email verification and password recovery
+require `BREVO_API_KEY` and `EMAIL_FROM`; without them those account actions
+return a stable unavailable response. Registration also requires delivery when
+email verification is enabled. Keep the API key in deployment secrets rather
+than source control.
 
 Using Docker Compose is the easiest way to start the API, web app, and local
 database together.

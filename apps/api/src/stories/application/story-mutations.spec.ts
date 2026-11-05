@@ -3,17 +3,20 @@ import type { StoriesRepository } from '../stories.repository';
 import type { StoryEventsService } from '../story.events';
 import { StoryMutationService } from './story-mutations';
 
+const repository = { mutate: jest.fn(), find: jest.fn() };
+const events = { publishChange: jest.fn() };
+const service = new StoryMutationService(
+  repository as unknown as StoriesRepository,
+  events as unknown as StoryEventsService,
+);
+
+beforeEach(() => {
+  jest.clearAllMocks();
+  repository.find.mockResolvedValue(undefined);
+});
+afterEach(() => jest.useRealTimers());
+
 describe('StoryMutationService', () => {
-  const repository = { mutate: jest.fn() };
-  const events = { publishChange: jest.fn() };
-  const service = new StoryMutationService(
-    repository as unknown as StoriesRepository,
-    events as unknown as StoryEventsService,
-  );
-
-  beforeEach(() => jest.clearAllMocks());
-  afterEach(() => jest.useRealTimers());
-
   it('normalizes and versions one authorized mutation before publishing it', async () => {
     jest.useFakeTimers().setSystemTime(new Date('2026-08-25T15:00:00.000Z'));
     repository.mutate.mockImplementation(
@@ -50,6 +53,17 @@ describe('StoryMutationService', () => {
       'Story not found',
     );
     expect(events.publishChange).not.toHaveBeenCalled();
+  });
+});
+
+describe('StoryMutationService access errors', () => {
+  it('returns forbidden for a readable Story that the actor cannot edit', async () => {
+    repository.mutate.mockResolvedValue(undefined);
+    repository.find.mockResolvedValue({ id: 'story-1' });
+
+    await expect(service.update('story-1', (story) => story, 'reader-1')).rejects.toThrow(
+      'Story edit access required',
+    );
   });
 });
 

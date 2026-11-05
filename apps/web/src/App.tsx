@@ -4,8 +4,11 @@ import { Link, Navigate, NavLink, Route, Routes, useLocation, useNavigate } from
 import { api, type AuthUser } from './api';
 import { authenticationPath, safeReturnTo } from './authNavigation';
 import { LanguageSwitcher } from './components/LanguageSwitcher';
+import { OnboardingHelpButton } from './features/onboarding/OnboardingHelpButton';
+import { OnboardingProvider } from './features/onboarding/OnboardingProvider';
+import { useOnboarding } from './features/onboarding/onboardingContext';
 import type { AccountAction } from './pages/AccountActionPage';
-import { StoryList } from './pages/StoryList';
+import './pages/ProductPages.css';
 import {
   loadParalleaxPrototype,
   loadStoryEditor,
@@ -13,40 +16,51 @@ import {
 } from './pages/storyRouteLoaders';
 
 const ParalleaxPrototype = lazy(() =>
-  loadParalleaxPrototype().then(({ ParalleaxPrototype }) => ({ default: ParalleaxPrototype })),
+  loadParalleaxPrototype().then(({ ParalleaxPrototype: component }) => ({ default: component })),
+);
+
+const StoryList = lazy(() =>
+  import('./pages/StoryList').then(({ StoryList: component }) => ({ default: component })),
 );
 
 const StoryEditor = lazy(() =>
-  loadStoryEditor().then(({ StoryEditor }) => ({ default: StoryEditor })),
+  loadStoryEditor().then(({ StoryEditor: component }) => ({ default: component })),
 );
 const StoryPlayer = lazy(() =>
-  loadStoryPlayer().then(({ StoryPlayer }) => ({ default: StoryPlayer })),
+  loadStoryPlayer().then(({ StoryPlayer: component }) => ({ default: component })),
 );
 const FeedbackButton = lazy(() =>
-  import('./features/feedback/FeedbackButton').then(({ FeedbackButton }) => ({
-    default: FeedbackButton,
+  import('./features/feedback/FeedbackButton').then(({ FeedbackButton: component }) => ({
+    default: component,
   })),
 );
+const OnboardingGuide = lazy(() => import('./features/onboarding/OnboardingGuide'));
 const AuthPage = lazy(() =>
-  import('./pages/AuthPage').then(({ AuthPage }) => ({ default: AuthPage })),
+  import('./pages/AuthPage').then(({ AuthPage: component }) => ({ default: component })),
 );
 const AccountDialog = lazy(() =>
-  import('./components/AccountDialog').then(({ AccountDialog }) => ({ default: AccountDialog })),
+  import('./components/AccountDialog').then(({ AccountDialog: component }) => ({
+    default: component,
+  })),
 );
 const AccountActionPage = lazy(() =>
-  import('./pages/AccountActionPage').then(({ AccountActionPage }) => ({
-    default: AccountActionPage,
+  import('./pages/AccountActionPage').then(({ AccountActionPage: component }) => ({
+    default: component,
   })),
 );
 const StoryAccessPage = lazy(() =>
-  import('./pages/StoryAccessPage').then(({ StoryAccessPage }) => ({ default: StoryAccessPage })),
+  import('./pages/StoryAccessPage').then(({ StoryAccessPage: component }) => ({
+    default: component,
+  })),
 );
 const AdminUsersPage = lazy(() =>
-  import('./pages/AdminUsersPage').then(({ AdminUsersPage }) => ({ default: AdminUsersPage })),
+  import('./pages/AdminUsersPage').then(({ AdminUsersPage: component }) => ({
+    default: component,
+  })),
 );
 const DesignSystemPage = lazy(() =>
-  import('./pages/DesignSystemPage').then(({ DesignSystemPage }) => ({
-    default: DesignSystemPage,
+  import('./pages/DesignSystemPage').then(({ DesignSystemPage: component }) => ({
+    default: component,
   })),
 );
 
@@ -111,6 +125,7 @@ export function App() {
   const authenticationReturnTo = isAuthenticationRoute ? returnTo : currentDestination;
   const signInPath = authenticationPath('login', authenticationReturnTo);
   const registerPath = authenticationPath('register', authenticationReturnTo);
+  const currentStoryId = location.pathname.match(/^\/stories\/([^/]+)\/(edit|play)\/?$/)?.[1];
   const authPage = (initialMode: 'login' | 'register') => (
     <AuthPage
       initialMode={initialMode}
@@ -127,108 +142,134 @@ export function App() {
   );
 
   return (
-    <div className="app">
-      <header
-        className={`product-app-header${isAuthenticationRoute ? ' product-app-header-auth' : ''}`}
-      >
-        <Link to="/" className="product-app-brand">
-          <span aria-hidden="true">P</span>
-          <b>Paralleax</b>
-        </Link>
-        <nav aria-label={t('shell.mainNavigation')}>
-          <NavLink to="/" end>
-            {t('shell.stories')}
-          </NavLink>
-          {user?.role === 'admin' ? (
-            <NavLink to="/admin/users">{t('shell.administration')}</NavLink>
-          ) : null}
-        </nav>
-        <span className="product-app-spacer" />
-        <Suspense fallback={null}>
-          <FeedbackButton />
-        </Suspense>
-        <LanguageSwitcher className="language-switcher-header" />
-        {user ? (
-          <>
-            <button
-              className="product-user"
-              type="button"
-              aria-label={`${user.displayName.slice(0, 2).toUpperCase()} ${user.displayName}: ${t('shell.account')}`}
-              onClick={() => setAccountOpen(true)}
-            >
-              <span aria-hidden="true">{user.displayName.slice(0, 2).toUpperCase()}</span>{' '}
-              <span>{user.displayName}</span>
-            </button>
-            <button
-              className="product-signout"
-              onClick={() => void api.logout().finally(() => setUser(null))}
-            >
-              {t('shell.signOut')}
-            </button>
-          </>
-        ) : (
-          <div className="product-auth-actions" role="group" aria-label={t('shell.accountAccess')}>
-            <Link className="product-secondary compact product-auth-signin" to={signInPath}>
-              {t('shell.signIn')}
-            </Link>
-            <Link className="product-primary product-account-create" to={registerPath}>
-              {t('shell.register')}
-            </Link>
-          </div>
-        )}
-      </header>
-      <Suspense fallback={<main className="page">{t('shell.loadingWorkspace')}</main>}>
-        <Routes>
-          <Route
-            path="/login"
-            element={user ? <Navigate to={returnTo} replace /> : authPage('login')}
-          />
-          <Route
-            path="/register"
-            element={user ? <Navigate to={returnTo} replace /> : authPage('register')}
-          />
-          <Route
-            path="/"
-            element={
-              <StoryList key={user ? `${user.id}:${user.displayName}` : 'anonymous'} user={user} />
-            }
-          />
-          <Route
-            path="/stories"
-            element={user ? <Navigate to="/" replace /> : <Navigate to={signInPath} replace />}
-          />
-          <Route
-            path="/stories/:storyId/edit"
-            element={
-              user ? <StoryEditor currentUserId={user.id} /> : <Navigate to={signInPath} replace />
-            }
-          />
-          <Route
-            path="/stories/:storyId/access"
-            element={user ? <StoryAccessPage /> : <Navigate to={signInPath} replace />}
-          />
-          <Route
-            path="/stories/:storyId/play"
-            element={<StoryPlayer authenticated={Boolean(user)} currentUserId={user?.id} />}
-          />
-          {user?.role === 'admin' ? (
-            <Route path="/admin/users" element={<AdminUsersPage currentUserId={user.id} />} />
+    <OnboardingProvider key={user?.id ?? 'anonymous'} userId={user?.id ?? null}>
+      <div className="app">
+        <header
+          className={`product-app-header${isAuthenticationRoute ? ' product-app-header-auth' : ''}`}
+        >
+          <Link to="/" className="product-app-brand">
+            <span aria-hidden="true">P</span>
+            <b>Paralleax</b>
+          </Link>
+          <nav aria-label={t('shell.mainNavigation')}>
+            <NavLink to="/" end>
+              {t('shell.stories')}
+            </NavLink>
+            {user?.role === 'admin' ? (
+              <NavLink to="/admin/users">{t('shell.administration')}</NavLink>
+            ) : null}
+          </nav>
+          <span className="product-app-spacer" />
+          <Suspense fallback={null}>
+            <FeedbackButton />
+          </Suspense>
+          {user ? <OnboardingHelpButton storyId={currentStoryId} /> : null}
+          <LanguageSwitcher className="language-switcher-header" />
+          {user ? (
+            <>
+              <button
+                className="product-user"
+                type="button"
+                aria-label={`${user.displayName.slice(0, 2).toUpperCase()} ${user.displayName}: ${t('shell.account')}`}
+                onClick={() => setAccountOpen(true)}
+              >
+                <span aria-hidden="true">{user.displayName.slice(0, 2).toUpperCase()}</span>{' '}
+                <span>{user.displayName}</span>
+              </button>
+              <button
+                className="product-signout"
+                onClick={() => void api.logout().finally(() => setUser(null))}
+              >
+                {t('shell.signOut')}
+              </button>
+            </>
           ) : (
-            <Route
-              path="/admin/users"
-              element={<Navigate to={user ? '/' : signInPath} replace />}
-            />
+            <div
+              className="product-auth-actions"
+              role="group"
+              aria-label={t('shell.accountAccess')}
+            >
+              <Link className="product-secondary compact product-auth-signin" to={signInPath}>
+                {t('shell.signIn')}
+              </Link>
+              <Link className="product-primary product-account-create" to={registerPath}>
+                {t('shell.register')}
+              </Link>
+            </div>
           )}
-          <Route path="/design-system" element={<DesignSystemPage />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </Suspense>
-      {user && accountOpen ? (
-        <Suspense fallback={null}>
-          <AccountDialog user={user} onClose={() => setAccountOpen(false)} onUpdated={setUser} />
+        </header>
+        <Suspense fallback={null}>{user ? <OnboardingGuide /> : null}</Suspense>
+        <Suspense fallback={<main className="page">{t('shell.loadingWorkspace')}</main>}>
+          <Routes>
+            <Route
+              path="/"
+              element={
+                <OnboardingStoryList
+                  key={user ? `${user.id}:${user.displayName}` : 'anonymous'}
+                  user={user}
+                />
+              }
+            />
+            <Route
+              path="/login"
+              element={user ? <Navigate to={returnTo} replace /> : authPage('login')}
+            />
+            <Route
+              path="/register"
+              element={user ? <Navigate to={returnTo} replace /> : authPage('register')}
+            />
+            <Route
+              path="/stories"
+              element={user ? <Navigate to="/" replace /> : <Navigate to={signInPath} replace />}
+            />
+            <Route
+              path="/stories/:storyId/edit"
+              element={
+                user ? (
+                  <StoryEditor currentUserId={user.id} />
+                ) : (
+                  <Navigate to={signInPath} replace />
+                )
+              }
+            />
+            <Route
+              path="/stories/:storyId/access"
+              element={user ? <StoryAccessPage /> : <Navigate to={signInPath} replace />}
+            />
+            <Route
+              path="/stories/:storyId/play"
+              element={<StoryPlayer authenticated={Boolean(user)} currentUserId={user?.id} />}
+            />
+            {user?.role === 'admin' ? (
+              <Route path="/admin/users" element={<AdminUsersPage currentUserId={user.id} />} />
+            ) : (
+              <Route
+                path="/admin/users"
+                element={<Navigate to={user ? '/' : signInPath} replace />}
+              />
+            )}
+            <Route path="/design-system" element={<DesignSystemPage />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
         </Suspense>
-      ) : null}
-    </div>
+        {user && accountOpen ? (
+          <Suspense fallback={null}>
+            <AccountDialog user={user} onClose={() => setAccountOpen(false)} onUpdated={setUser} />
+          </Suspense>
+        ) : null}
+      </div>
+    </OnboardingProvider>
+  );
+}
+
+function OnboardingStoryList({ user }: { user: AuthUser | null }) {
+  const onboarding = useOnboarding();
+  return (
+    <StoryList
+      user={user}
+      onStoryCreated={onboarding.beginForStory}
+      onStoryDeleted={onboarding.reportStoryDeleted}
+    />
   );
 }
 

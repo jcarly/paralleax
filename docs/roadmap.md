@@ -72,6 +72,15 @@ first-Story authoring improvement ahead of guided sessions: Story creation now
 starts with a linked root and child Interaction and opens the editor focused on
 the root. The broader UX selection remains tied to session observations.
 
+**Priority decision, 2026-10-28:** deliver a small, optional authoring guide and
+user-initiated feedback path before the guided sessions so first-time authors
+can get help without a moderator explaining every editor surface. The four-step
+guide and lazy, click-only Formbricks entrypoint are implemented. Guide progress
+stays in browser storage. Automatic behavioral milestones and a post-Simulation
+survey remain deferred until explicit consent and the privacy notice cover that
+collection. This slice supports guided sessions; it does not replace disposable
+project safeguards or the provider and operator readiness gates.
+
 **Priority decision, 2026-11-04:** complete confirmed, narrow P0/P1 items in
 [UX Quick Wins — Préparation des tests](code-quality-backlog.md#ux-quick-wins--préparation-des-tests)
 before the first guided session. If the reported create/link discovery problem
@@ -362,10 +371,11 @@ and operational gates in [Production readiness](production-readiness.md).
    as the separate P2 decision below. **Completed 2026-09-30:** Nodemailer SMTP
    delivery initially sent purpose-specific verification and recovery messages.
    **Updated 2026-10-08:** the transport now uses the Brevo HTTPS API so restricted
-   hosting plans do not require outbound SMTP access. New
-   registrations cannot sign in before verification; verification and reset
-   tokens are random, hashed at rest, scoped, expiry-bound, and atomic one-use
-   actions. Password reset/change revokes existing sessions, the account dialog
+   hosting plans do not require outbound SMTP access. Production and test
+   registrations cannot sign in before verification; local development defaults
+   to a development-only verification bypass. Verification and reset tokens are
+   random, hashed at rest, scoped, expiry-bound, and atomic one-use actions.
+   Password reset/change revokes existing sessions, the account dialog
    can revoke other sessions, unknown reset addresses receive a neutral response,
    and the forward migration preserves access for pre-existing accounts.
 2. **Story configuration and access.** Put configuration behind a gear beside

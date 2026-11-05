@@ -113,7 +113,30 @@ describe('StoryPlayer loading and presentation', () => {
     expect(api.getStory).toHaveBeenCalledTimes(2);
   });
 
-  it('returns to the Story library when the Story cannot be read', async () => {
+  it('explains an unavailable direct Story route without showing its details', async () => {
+    vi.mocked(api.getStory).mockRejectedValueOnce(
+      Object.assign(new Error('Private story'), { status: 404, code: 'STORY_NOT_FOUND' }),
+    );
+
+    render(
+      <TestDataRouter initialEntry="/stories/story-1/play">
+        <Routes>
+          <Route path="/stories/:storyId/play" element={<StoryPlayer authenticated={false} />} />
+          <Route path="/login" element={<p>Sign-in route</p>} />
+        </Routes>
+      </TestDataRouter>,
+    );
+
+    expect(await screen.findByRole('heading', { name: 'Story unavailable' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Stories' })).toHaveAttribute('href', '/');
+    expect(screen.getByRole('link', { name: 'Sign in' })).toHaveAttribute(
+      'href',
+      '/login?returnTo=%2Fstories%2Fstory-1%2Fplay',
+    );
+    expect(screen.queryByText('Private story')).not.toBeInTheDocument();
+  });
+
+  it('explains when a direct Story route cannot be read', async () => {
     vi.mocked(api.getStory).mockRejectedValue(
       Object.assign(new Error('Story not found'), { status: 404 }),
     );
@@ -127,7 +150,8 @@ describe('StoryPlayer loading and presentation', () => {
       </TestDataRouter>,
     );
 
-    expect(await screen.findByText('Story library route')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Story unavailable' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Stories' })).toHaveAttribute('href', '/');
     expect(screen.queryByText('Story not found')).not.toBeInTheDocument();
   });
 

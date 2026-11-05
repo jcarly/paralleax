@@ -328,17 +328,19 @@ export function useStoryGraphPersistence({
     [createConnectionTrigger, setStory, story, storyId, trackSave],
   );
 
-  function patchInteraction(id: string, patch: InteractionContentPatch): Promise<void> {
+  function patchInteraction(id: string, patch: InteractionContentPatch): Promise<boolean> {
+    let saved = false;
     setStory((current) => (current ? updateInteractionInStory(current, id, patch) : current));
     interactionSaveQueueRef.current = interactionSaveQueueRef.current.then(async () => {
       const updated = await trackSave(() => api.updateInteraction(storyId, id, patch));
       if (!updated) return;
+      saved = true;
       setStory((current) => {
         if (!current) return current;
         return applyInteractionPatchResult(current, updated, id, patch);
       });
     });
-    return interactionSaveQueueRef.current;
+    return interactionSaveQueueRef.current.then(() => saved);
   }
 
   async function deleteInteraction(interactionId: string) {
