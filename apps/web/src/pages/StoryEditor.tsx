@@ -1,4 +1,6 @@
 import {
+  lazy,
+  Suspense,
   useCallback,
   useEffect,
   useMemo,
@@ -59,7 +61,6 @@ import {
 } from '../features/story-editor/navigation/StoryContextEntitySections';
 import { StoryGraphSelectionInspector } from '../components/StoryGraphSelectionInspector';
 import { TriggerEdge } from '../components/TriggerEdge';
-import { TriggerInspector } from '../components/TriggerInspector';
 import { TriggerNode } from '../components/TriggerNode';
 import { describeTriggerCondition } from '../triggerConditionPresentation';
 import { RichTextContent } from '../components/RichTextContent';
@@ -124,6 +125,10 @@ import {
 import { getReferencedInteractionIds } from '../storyNavigation';
 import { computeStoryGraphElkLayout, preloadStoryGraphElk } from '../storyGraphElkLayout';
 import { TriggerEdgeRoutes } from '../triggerEdgeRouting';
+
+const TriggerInspector = lazy(() =>
+  import('../components/TriggerInspector').then((module) => ({ default: module.TriggerInspector })),
+);
 
 const nodeTypes = {
   interaction: InteractionNode,
@@ -2266,15 +2271,23 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
                   onOpenSemanticComments={openSemanticComments}
                 />
               ) : selectedTriggerTarget ? (
-                <TriggerInspector
-                  story={story}
-                  interaction={selectedTriggerTarget.interaction}
-                  trigger={selectedTriggerTarget.trigger}
-                  onSaveTrigger={saveTrigger}
-                  onDeleteTrigger={deleteSelectedTrigger}
-                  semanticCommentCounts={selectedSemanticCommentCounts}
-                  onOpenSemanticComments={openSemanticComments}
-                />
+                <Suspense
+                  fallback={
+                    <p className="hint" role="status">
+                      {t('shell.loading')}
+                    </p>
+                  }
+                >
+                  <TriggerInspector
+                    story={story}
+                    interaction={selectedTriggerTarget.interaction}
+                    trigger={selectedTriggerTarget.trigger}
+                    onSaveTrigger={saveTrigger}
+                    onDeleteTrigger={deleteSelectedTrigger}
+                    semanticCommentCounts={selectedSemanticCommentCounts}
+                    onOpenSemanticComments={openSemanticComments}
+                  />
+                </Suspense>
               ) : selectedLocation ? (
                 <LocationInspector
                   location={selectedLocation}
