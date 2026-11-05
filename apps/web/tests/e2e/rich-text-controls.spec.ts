@@ -108,11 +108,10 @@ test('shows a distinct active state for formatting toolbar buttons', async ({ pa
   );
   await bold.click();
   await expect(bold).toHaveAttribute('aria-pressed', 'true');
-  const activeBackground = await bold.evaluate(
-    (element) => getComputedStyle(element).backgroundColor,
-  );
 
-  expect(activeBackground).not.toBe(inactiveBackground);
+  await expect
+    .poll(() => bold.evaluate((element) => getComputedStyle(element).backgroundColor))
+    .not.toBe(inactiveBackground);
   await expect(content.locator('strong')).toHaveText('Text to format');
 });
 
