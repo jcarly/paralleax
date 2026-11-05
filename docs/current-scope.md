@@ -322,6 +322,32 @@ Paralleax currently includes:
   operator-controlled open/closed mode, deployment smoke checks, and operator
   runbooks for a creator alpha.
 
+## UX Implementation Cross-check — 2026-11-04
+
+Static source review at `dev` commit `8338468` anchors the open UX items in the
+[Code quality backlog](code-quality-backlog.md#ux-quick-wins--préparation-des-tests).
+This review did not run tests or inspect the pages in a browser; existing test
+assertions are recorded as coverage references, not as passing results.
+
+- Login and registration retain standalone routes. `AuthPage` still renders a
+  decorative showcase panel on wide layouts; the auth modal is not implemented.
+- Story cards display an abstract graph cover and the Interaction count to
+  readers and authors. The Story delete action calls the permanent delete API
+  directly; the interaction and comment confirmations do not cover it.
+- Story creation seeds a linked root and child and focuses the root in the
+  editor. The graph creation helper still uses the English default title
+  `New interaction`; the broader first-use discovery report has not been
+  reproduced.
+- The Interaction Inspector's Context and timing and Effects disclosures start
+  open. Available Reader and Simulation choices receive a condition summary in
+  their `title` attribute.
+- Reader rendering omits the current Interaction title; the title remains
+  editable in the editor and Simulation. `PlayerScene` still renders a visual
+  placeholder without an authored location image and always displays Story
+  time. The related component-test assertion was inspected but not run.
+- The current Story-ended screen describes a branch end. An explicit
+  Story-completion state remains outside the stable product contract.
+
 ## Not yet a stable product contract
 
 The following remain future or incomplete unless a task explicitly implements them:
