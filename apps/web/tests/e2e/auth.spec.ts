@@ -150,6 +150,7 @@ test('registers, verifies email, creates a story, signs out, and signs back in',
   await page.getByRole('button', { name: 'Sign in' }).click();
 
   await expect(page.getByRole('heading', { name: 'New story', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Close guide' }).click();
   page.once('dialog', (dialog) => dialog.accept());
   await page.getByRole('button', { name: 'Delete' }).click();
   await expect(page.getByRole('heading', { name: 'New story', exact: true })).toHaveCount(0);
