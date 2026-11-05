@@ -6,4 +6,9 @@ export const prototypeRoutes = {
   designSystem: '/prototype/paralleax/design-system',
 } as const;
 
-export type PrototypeRoute = (typeof prototypeRoutes)[keyof typeof prototypeRoutes];
+export function prototypeStoryRoute(storyId: string) {
+  return `${prototypeRoutes.editor}?story=${encodeURIComponent(storyId)}`;
+}
+
+export type PrototypeRoute =
+  (typeof prototypeRoutes)[keyof typeof prototypeRoutes] | ReturnType<typeof prototypeStoryRoute>;

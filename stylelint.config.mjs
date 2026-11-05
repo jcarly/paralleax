@@ -40,17 +40,4 @@ export default {
     'selector-no-invalid': true,
     'selector-pseudo-class-no-unknown': true,
   },
-  overrides: [
-    {
-      files: [
-        'apps/web/src/pages/ParalleaxPrototype.css',
-        'apps/web/src/pages/ParalleaxPrototypePages.css',
-      ],
-      rules: {
-        'color-named': null,
-        'color-no-hex': null,
-        'function-disallowed-list': null,
-      },
-    },
-  ],
 };

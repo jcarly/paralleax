@@ -136,12 +136,12 @@ test('allows an explained one-line color exception', async () => {
   assert.ok(!result.rules.includes('color-no-hex'));
 });
 
-test('keeps Prototype CSS outside production color-token enforcement', async () => {
+test('enforces production color-token rules in Prototype CSS', async () => {
   const prototypePath = path.join(repositoryRoot, 'apps/web/src/pages/ParalleaxPrototype.css');
   const result = await lintCss('.fixture { color: #123456; }', prototypePath);
 
-  assert.equal(result.errored, false);
-  assert.ok(!result.rules.includes('color-no-hex'));
+  assert.equal(result.errored, true);
+  assert.ok(result.rules.includes('color-no-hex'));
 });
 
 test('allows color literals in the canonical token block but rejects them in base UI rules', async () => {
