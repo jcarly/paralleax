@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Replaced named interview notes and a project-specific import example with an
+  anonymized product-discovery synthesis and source-neutral QSP import lessons.
+  Identifiable research records remain outside this public repository.
+
 - Local development registrations now skip email verification by default and
   sign in immediately. `DEV_SKIP_EMAIL_VERIFICATION=false` restores the normal
   email flow; the bypass cannot be enabled in test or production.
@@ -1249,14 +1253,8 @@
 - Added a project-wide production-readiness baseline and made its data safety,
   operations, performance, security, accessibility, publication, and
   collaboration gates part of the persistent agent rules and roadmap.
-- Added an idempotent, adult-only SQL compatibility prototype inspired by Girl
-  Life's broad work, study, village, progression, and inventory systems.
-- Added a Girl Life gap analysis covering licensing and safety constraints plus
-  the domain, reader, editor, persistence, and import capabilities required for
-  a substantially complete mechanical conversion.
-- Extended the Girl Life import analysis with current production-readiness
-  constraints around migration safety, full-graph operations, bulk persistence,
-  observability, backup, restoration, and publication.
+- Documented general large-import lessons around source rights, data safety,
+  migration strategy, bulk persistence, operational readiness, and domain gaps.
 - Added reusable story-level item definitions and separate character-owned item
   instances, including support for owning several copies of the same item.
 - Added item definition editing, character item assignment, relational
