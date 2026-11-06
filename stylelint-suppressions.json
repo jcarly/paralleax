@@ -28,13 +28,13 @@
       "count": 12
     },
     "no-descending-specificity": {
-      "count": 75
+      "count": 72
     },
     "no-duplicate-selectors": {
       "count": 1
     },
     "color-no-hex": {
-      "count": 97
+      "count": 73
     },
     "color-named": {
       "count": 12

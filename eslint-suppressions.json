@@ -917,7 +917,7 @@
       "count": 1
     },
     "curly": {
-      "count": 9
+      "count": 8
     },
     "max-lines-per-function": {
       "count": 1
@@ -2224,7 +2224,7 @@
   },
   "apps/web/src/pages/StoryList.test.tsx": {
     "@typescript-eslint/no-non-null-assertion": {
-      "count": 10
+      "count": 7
     },
     "curly": {
       "count": 4
@@ -2796,7 +2796,7 @@
   },
   "apps/web/tests/e2e/reader-simulation-styles.spec.ts": {
     "@typescript-eslint/no-shadow": {
-      "count": 2
+      "count": 1
     },
     "@typescript-eslint/no-unsafe-assignment": {
       "count": 2

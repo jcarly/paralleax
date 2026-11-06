@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Simplified account entry, the Story library, and settings. Sign-in and registration now
+  keep the site header and direct routes, while the library removes generated
+  graph art and reader-facing interaction counts. Story deletion now uses a
+  labeled trash action with confirmation, and settings drop their redundant
+  introduction. Reader scenes keep the authored Interaction title available to
+  assistive technology without displaying it as narrative content; choice labels
+  and authored body content remain unchanged.
+
 - Replaced named interview notes and a project-specific import example with an
   anonymized product-discovery synthesis and source-neutral QSP import lessons.
   Identifiable research records remain outside this public repository.
@@ -19,11 +27,11 @@
   coverage.
 
 - Stabilized first-story onboarding with localized placeholders for empty
-  Interaction titles and scene bodies, a direct branch target, distinct Simulation starts, and
-  completion links to the editor and Access settings. Inaccessible Story routes
-  now explain recovery without revealing Story details. Reader-only writes
-  return `403` while hidden Stories remain `404`; collaborator email validation
-  rejects malformed and duplicate entries.
+  Interaction titles and scene bodies, a direct branch target, distinct
+  Simulation starts, and completion links to the editor and Access settings.
+  Inaccessible Story routes now explain recovery without revealing Story
+  details. Reader-only writes return `403` while hidden Stories remain `404`;
+  collaborator email validation rejects malformed and duplicate entries.
 
 - Full Story reads now use one read-only repeatable-read snapshot, and malformed
   persisted graph decorations fail explicitly during projection.
