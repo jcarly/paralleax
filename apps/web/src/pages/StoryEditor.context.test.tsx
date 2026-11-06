@@ -298,7 +298,7 @@ describe('StoryEditor story context', () => {
     });
 
     await user.click(screen.getByRole('button', { name: 'Select root trigger' }));
-    await user.click(screen.getByRole('button', { name: 'Add condition' }));
+    await user.click(await screen.findByRole('button', { name: 'Add condition' }));
     await chooseTriggerConditionType(user, 'Location');
     expect(api.updateTrigger).toHaveBeenCalledWith('story-1', 'interaction-1', 'trigger-1', {
       conditionGroups: [
@@ -372,7 +372,7 @@ describe('StoryEditor story context', () => {
       triggerMutation(conditionedStory, 'interaction-1', 'trigger-1'),
     );
     await user.click(screen.getByRole('button', { name: 'Select root trigger' }));
-    await user.click(screen.getByRole('button', { name: 'Add condition' }));
+    await user.click(await screen.findByRole('button', { name: 'Add condition' }));
     await chooseTriggerConditionType(user, 'Character');
     expect(api.updateTrigger).toHaveBeenCalledWith('story-1', 'interaction-1', 'trigger-1', {
       conditionGroups: [
@@ -491,7 +491,7 @@ describe('StoryEditor story context', () => {
       triggerMutation(conditioned, 'interaction-1', 'trigger-1'),
     );
     await user.click(screen.getByRole('button', { name: 'Select root trigger' }));
-    await user.click(screen.getByRole('button', { name: 'Add condition' }));
+    await user.click(await screen.findByRole('button', { name: 'Add condition' }));
     await chooseTriggerConditionType(user, 'Variable');
     expect(api.updateTrigger).toHaveBeenCalledWith('story-1', 'interaction-1', 'trigger-1', {
       conditionGroups: [
