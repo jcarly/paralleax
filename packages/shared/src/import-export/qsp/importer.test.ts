@@ -57,7 +57,7 @@ gt 'End'
 
   it('combines qsrc location files and connects literal ARGS[0] variants', () => {
     const result = importSource({
-      name: 'Girl Life.qsrc',
+      name: 'sample.qsrc',
       format: 'locations',
       content: [
         {
@@ -89,7 +89,7 @@ end
       actionCount: 1,
       interactionCount: 5,
     });
-    expect(result.story?.title).toBe('Girl Life');
+    expect(result.story?.title).toBe('sample');
     expect(result.story?.interactions.map(({ title }) => title)).toEqual([
       'start',
       'start · menu',
@@ -113,25 +113,25 @@ end
 
   it('merges repeated independent ARGS[0] blocks into one ordered variant', () => {
     const result = importSource({
-      name: 'Girl Life.qsrc',
+      name: 'sample.qsrc',
       format: 'locations',
       content: [
         {
           name: 'locations/start.qsrc',
-          content: "# start\ngt 'sex_ev_pillow_talk2', 'morning_sore_pussy'\n--- start ---",
+          content: "# start\ngt 'event_sequence', 'entry'\n--- start ---",
         },
         {
-          name: 'locations/sex_ev_pillow_talk2.qsrc',
-          content: `# sex_ev_pillow_talk2
-if $ARGS[0] = 'morning_sore_pussy':
+          name: 'locations/event_sequence.qsrc',
+          content: `# event_sequence
+if $ARGS[0] = 'entry':
   'First part.'
 end
 ! other top-level code may separate repeated selectors
-if $ARGS[0] = 'morning_sore_pussy':
+if $ARGS[0] = 'entry':
   *pl 'Second part.'
   unknown_command
 end
---- sex_ev_pillow_talk2 ---`,
+--- event_sequence ---`,
         },
       ],
     });
@@ -139,8 +139,8 @@ end
     expect(result.story).toBeDefined();
     expect(result.story?.interactions.map(({ title }) => title)).toEqual([
       'start',
-      'sex_ev_pillow_talk2',
-      'sex_ev_pillow_talk2 · morning_sore_pussy',
+      'event_sequence',
+      'event_sequence · entry',
     ]);
     const [start, , variant] = result.story!.interactions;
     expect(variant.body).toBe('<p>First part.</p><p>Second part.</p>');
@@ -149,8 +149,8 @@ end
       expect.objectContaining({
         severity: 'warning',
         code: 'unsupported_statement',
-        fileName: 'locations/sex_ev_pillow_talk2.qsrc',
-        locationName: 'sex_ev_pillow_talk2',
+        fileName: 'locations/event_sequence.qsrc',
+        locationName: 'event_sequence',
         line: 8,
       }),
     );
@@ -271,18 +271,18 @@ end
   it('reports interpolated navigation targets without rejecting the import', () => {
     const content = writeQsp([
       {
-        name: 'sex_ev_sex',
+        name: 'event_start',
         description: [],
-        code: ["gt 'sex_ev_<<$sex_ev[''position'']>>', $sex_ev['pos_speed']"],
+        code: ["gt 'event_<<$state[''position'']>>', $state['speed']"],
         actions: [],
       },
-      { name: 'sex_ev_missionary', description: [], code: [], actions: [] },
+      { name: 'event_target', description: [], code: [], actions: [] },
     ]);
     const result = importSource({ name: 'dynamic-navigation.qsp', format: 'binary', content });
 
     expect(result.story?.interactions.map(({ title }) => title)).toEqual([
-      'sex_ev_sex',
-      'sex_ev_missionary',
+      'event_start',
+      'event_target',
     ]);
     expect(result.story?.interactions[1].triggers[0].inputInteractionIds).toEqual([]);
     expect(result.report.unsupportedStatementCount).toBe(1);
@@ -291,13 +291,13 @@ end
         expect.objectContaining({
           severity: 'warning',
           code: 'dynamic_navigation_target',
-          locationName: 'sex_ev_sex',
+          locationName: 'event_start',
           line: 1,
         }),
         expect.objectContaining({
           severity: 'warning',
           code: 'unreachable_location_imported_as_root',
-          locationName: 'sex_ev_missionary',
+          locationName: 'event_target',
         }),
       ]),
     );

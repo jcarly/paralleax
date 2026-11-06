@@ -2,7 +2,7 @@
 
 This roadmap describes the progression from the validated narrative core to a public Paralleax platform.
 
-Status reviewed: 2026-11-04.
+Status reviewed: 2026-11-05.
 
 It is organized around **user capabilities** rather than implementation areas. Engineering work supports these milestones but does not define them by itself.
 
@@ -93,10 +93,12 @@ gates.
 1. **Prepare the alpha session brief.** Reuse the private-alpha runbook to state
    the hypotheses, representative author tasks, project-data boundary, and a
    lightweight observation record for first-time, narrative-tool-experienced,
-   and professional authors. **Depends on:** none. **Acceptance:** each task has
-   a defined starting state and observable outcome, and the record captures
-   success, blockage, workaround, and data/recovery issues without numeric pass
-   thresholds.
+   and professional authors. Include optional observation prompts about writing
+   a long linear passage, finding notes, repeating authoring patterns, and
+   organizing reference material; do not turn these probes into required feature
+   tasks. **Depends on:** none. **Acceptance:** each task has a defined starting
+   state and observable outcome, and the record captures success, blockage,
+   workaround, and data/recovery issues without numeric pass thresholds.
 2. **Complete confirmed Lot A quick fixes.** Resolve the destructive
    library-delete path and the confirmed untranslated default; make the bounded
    create/link label change if browser reproduction supports it. **Depends on:**
@@ -107,13 +109,16 @@ gates.
 3. **Run guided author sessions on disposable projects.** Cover creating and
    connecting Interactions (including drag and drop), editing rich content,
    conditions and effects, running Simulation, saving, reloading, and recovering
-   from a failed save. **Depends on:** tasks 1–2 and the existing invitation/test
-   environment. **Acceptance:**
+   from a failed save. Use the optional prompts in task 1 when they fit the
+   participant's workflow. **Depends on:** tasks 1–2 and the existing
+   invitation/test environment. **Acceptance:**
    each observed task has a concise outcome and evidence; no valuable user-owned
    project data is introduced.
 4. **Triage observations and close essential blockers.** Separate data/security
    hazards and failures in the core authoring journey from workarounds, isolated
-   preferences, and new feature ideas. Use the selected tasks in
+   preferences, and new feature ideas. Compare themes with the anonymized
+   [product discovery synthesis](product-discovery-synthesis.md) without
+   treating one signal as consensus. Use the selected tasks in
    [UX Quick Wins](code-quality-backlog.md#ux-quick-wins--préparation-des-tests)
    and the detailed consolidated candidate tasks in
    [Code quality backlog](code-quality-backlog.md#consolidated-ux-follow-ups-2026-10-25)
@@ -159,6 +164,153 @@ gates.
    **Acceptance:** remaining limitations and
    operating procedures are documented; essential tasks have observable outcomes
    and no unresolved data/security blocker.
+
+### Product discovery follow-up
+
+The [anonymized product discovery synthesis](product-discovery-synthesis.md)
+keeps product reflections separate from implementation decisions.
+The priority labels below are proposals for discovery order, not release gates,
+accepted scope, or implementation commitments. Here **P0** means explore first;
+it does not mean a confirmed blocker in the [code quality backlog](code-quality-backlog.md).
+
+#### P0 — Continuous linear writing and document view
+
+- **Problem and value:** Long descriptions, dialogue, scenes, and consecutive
+  Interactions can require repetitive graph operations. Authors need a continuous
+  reading/editing flow and a quick return to structural context.
+- **Options:** Prototype a document projection over existing Interactions and
+  compare it with a higher-level scene/sequence model.
+- **Open questions and validation:** Determine whether the current Interaction
+  model suffices and whether Tiptap plus the proposed source mode can participate.
+  Validate edit continuity, graph navigation, and preservation of choices,
+  conditions, variables, comments, and one canonical Story.
+- **Related research signal:** A separate, brief discovery summary mentions
+  dialogue segmentation. Treat it as adjacent only: the workflow is too
+  underspecified to confirm the continuous-writing hypothesis.
+
+#### P0 — Typed author notes and annotations
+
+- **Problem and value:** Authors need lore/context, production guidance, ideas,
+  and questions close to their work. Current review discussions already have
+  replies and open/resolved state; standalone notes do not exist.
+- **Options:** Define a small category set, targets, visibility, and filters;
+  prototype a restrained authoring flow that can surface notes alongside
+  existing review discussions.
+- **Open questions and validation:** Distinguish persistent documentation from
+  threaded discussion and decide which target types matter. Validate that
+  authors can create, find, and tell a persistent note from a resolvable
+  discussion before deciding persistence.
+
+#### P1 — Simple reusable presets
+
+- **Problem and value:** Repeated setup may slow authors. Candidate cases include
+  preconfigured objects and common structures such as a choice dialogue,
+  conditional branch, random event, or loop.
+- **Options:** Inspect creation defaults and existing operations first; consider
+  a small built-in set of object and structure presets.
+- **Open questions and validation:** Validate recurring patterns and copy
+  behavior for ids, variable dependencies, and references. Add a built-in preset
+  only if it removes observed repeated work.
+
+#### P1 — Free context boards
+
+- **Problem and value:** Authors may need to arrange lore, character/faction
+  relations, locations, images, and research without creating an executable path.
+- **Options:** Compare existing Groups, entities, annotations, and canvas
+  navigation with a low-fidelity board inspired by PureRef.
+- **Open questions and validation:** Confirm which unmet cases a new board solves
+  and ensure documentary links cannot be mistaken for executable Triggers.
+
+#### P2 — Customizable presets
+
+- **Problem and value:** Authors may want to preserve their own repeated patterns
+  after basic presets have proven useful.
+- **Options:** Defer user-authored preset libraries until the simpler cases are
+  understood.
+- **Open questions and validation:** Test ownership/sharing, evolution, and how
+  duplication handles stable identifiers and references before scheduling.
+
+**Recommended sequence:** add these prompts to the existing alpha brief and
+observe the relevant workflows during guided sessions; do not delay those
+sessions to build the proposed capabilities. After task 4, promote only the
+research or prototype with the clearest observed frequency, friction, or risk.
+Linear writing should be evaluated as an authoring-experience change, not a
+cosmetic graph adjustment. Notes should be designed alongside the existing
+discussion lifecycle. Context boards and presets remain separate hypotheses until
+comparison and observation identify a concrete gap.
+
+**Backlog reconciliation:** the active code-quality backlog is limited to
+maintainability, reliability, performance, and test work. A read-only open-issue
+search surfaced issue #26, an unrelated opt-in updates/tester-interest signup,
+and no matching proposal. Recheck the tracker when task 4 selects a candidate;
+keep unscheduled discovery here and do not create implementation issues before
+the scope is agreed.
+
+### Competitive reference snapshot — 2026-11-05
+
+This focused check records relevant competitor workflows and official prices
+for product comparison.
+
+- **articy:draft:** Its official [feature list](https://www.articy.com/en/articydraft/feature-list/)
+  and Help Center describe several patterns relevant to Paralleax:
+  - a [nested Flow](https://articy.com/help/adx/UI_View_Flow.html) for branching
+    stories, dialogue, quests, cutscenes, and other graph-shaped material, with
+    [flow annotations](https://articy.com/help/adx/Flow_Objects_Annotation.html)
+    for design-time information;
+  - a word-processor-like [Document View](https://articy.com/help/adx/Documents_WhatsThis.html)
+    for linear design text and script-style dialogue, including
+    [conversion from screenplay-style text to Flow nodes](https://articy.com/help/adx/Documents_ConvertToFlow.html);
+  - an object database for entities and assets, plus
+    [editable templates](https://articy.com/help/adx/Templates_Templates.html)
+    for flow elements, entities, locations, assets, and documents;
+  - a [Presentation/Simulation View](https://articy.com/help/adx/Presentation_Simulation.html)
+    that evaluates conditions and instructions, supports player and analysis
+    modes, and exposes state while traversing a temporary journey.
+
+  These capabilities are competitor evidence, not a prescription to reproduce
+  the full production suite. In particular, the document-to-flow workflow means
+  a document view alone is not a defensible Paralleax differentiator.
+
+  **Pricing checked 2026-11-05:** Articy's [public pricing page](https://www.articy.com/en/pricing/)
+  lists articy:draft X Free at 700 objects per project with unlimited projects;
+  the single-user subscription is €6.99 per month or €69.99 per year with
+  unlimited objects; professional Team bundles start at €56 per month. The
+  [licensing help](https://articy.com/help/adx/Licensing.html) says each member
+  of a multi-user project needs a multi-user license. Regional tax and team
+  configuration can affect the actual offer. Compare project scale, collaborator
+  count, and required workflow before making a like-for-like price claim.
+
+  **Implications for Paralleax:** investigate how the alternatives preserve one
+  canonical story while moving between linear writing and graph structure; check
+  the burden of templates, annotations, references, and simulation in real tasks.
+  The current scan does not establish a unique Paralleax advantage. Any
+  differentiation claim needs comparative task evidence, not assumed feature
+  gaps.
+
+- **PureRef:** its official [product page](https://www.pureref.com/) describes
+  a standalone reference-image workspace that accepts images by paste or
+  drag-and-drop, supports quick notes and image arrangement, and can stay above
+  another application. Its [handbook](https://www.pureref.com/handbook/features/)
+  documents image-focused canvas tools. This supports the reference-board
+  hypothesis for collecting and arranging visual material, but it does not by
+  itself establish a need for Paralleax to model story entities, relationships,
+  or collaboration in a new board. That proposed scope is an inference and needs
+  user validation.
+
+- **Official integration:** [Arcweave's MCP documentation](https://docs.arcweave.com/integrations/mcp)
+  documents an Arcweave-hosted MCP server alongside scoped workspace API keys
+  with separate read and write permissions. Its [integration overview](https://docs.arcweave.com/integrations/overview)
+  also documents a REST API. This is a product precedent, not a required design
+  for Paralleax.
+- **Community projects:** [twine-play-mcp](https://github.com/adorablelovelymia/twine-play-mcp)
+  exposes tools for playing and testing Twine/interactive-fiction HTML projects;
+  [renpy-mcp](https://github.com/fracturedring/renpy-mcp) is a third-party
+  Ren'Py/MCP project. Neither reference is presented as an official Twine or
+  Ren'Py integration.
+- **Narrative QA reference:** [inkcheck](https://github.com/chaoz23/inkcheck)
+  is an independent Ink testing project documenting CLI and MCP access to
+  bounded, deterministic branch checks and reproducible reports. It is not
+  presented as an official Ink integration or as proof of exhaustive coverage.
 
 V0.x numbers remain capability targets, not a rigid sequence. In particular,
 finishing the remaining V0.3 conflict-safe collaboration work is not a prerequisite
@@ -1585,20 +1737,3 @@ conflicts, validation, and history mapping are settled.
   audit/undo an accepted authored change without losing unrelated work.
 - The integration remains optional, provider-neutral, and unable to alter
   Reader semantics or bypass the same validation used by the editor and imports.
-
-### Competitive reference snapshot — 2026-10-24
-
-- **Official integration:** [Arcweave's MCP documentation](https://docs.arcweave.com/integrations/mcp)
-  documents an Arcweave-hosted MCP server alongside scoped workspace API keys
-  with separate read and write permissions. Its [integration overview](https://docs.arcweave.com/integrations/overview)
-  also documents a REST API. This is a product precedent, not a required design
-  for Paralleax.
-- **Community projects:** [twine-play-mcp](https://github.com/adorablelovelymia/twine-play-mcp)
-  exposes tools for playing and testing Twine/interactive-fiction HTML projects;
-  [renpy-mcp](https://github.com/fracturedring/renpy-mcp) is a third-party
-  Ren'Py/MCP project. Neither reference is presented as an official Twine or
-  Ren'Py integration.
-- **Narrative QA reference:** [inkcheck](https://github.com/chaoz23/inkcheck)
-  is an independent Ink testing project documenting CLI and MCP access to
-  bounded, deterministic branch checks and reproducible reports. It is not
-  presented as an official Ink integration or as proof of exhaustive coverage.

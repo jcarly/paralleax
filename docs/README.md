@@ -66,6 +66,11 @@ When documents disagree, follow the precedence documented in the repository
 ## Planning Sources
 
 - [Roadmap](roadmap.md) orders user capabilities and durable product milestones.
+- [Product discovery synthesis](product-discovery-synthesis.md) keeps
+  anonymized product reflections. Identifiable source records stay in Drive,
+  outside this public repository; priorities flow through the roadmap.
+- [Large QSP import lessons](large-qsp-import-lessons.md) records source-neutral
+  engineering reflections from large-corpus analysis.
 - [Interaction inclusion proposal](interaction-inclusion-proposal.md) records an
   unaccepted native composition direction. The QSP adapter already maps a
   limited static, acyclic `GS` / `GOSUB` subset through ordinary interactions;

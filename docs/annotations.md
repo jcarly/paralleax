@@ -1,56 +1,57 @@
-# Annotations
+# Author Notes and Annotations
 
-Standalone annotations would be authoring notes attached to the Story model or
-canvas. They are not currently implemented. The existing anchored review
-discussions and graph post-its are collaboration comments, not a separate
-private-note model.
+## Current status
 
-They are not part of story execution. They should never affect reader
-availability, trigger evaluation, or exported runtime behavior unless a future
-export explicitly includes authoring metadata.
+Paralleax has no standalone author-note feature. Its existing anchored review
+discussions support graph post-its, entity and field anchors, text anchors,
+replies, and open/resolved status. They are collaboration resources, not private
+or durable author notes; see [ADR-018](decisions/ADR-018-anchored-review-comments.md),
+[ADR-019](decisions/ADR-019-editor-graph-reader-comments.md), and
+[Current scope](current-scope.md).
 
-## Possible Annotation Types
+Notes and review discussions both add context to authoring, but they have
+different lifecycles. A note may simply preserve lore, a production reminder, an
+idea, or an unresolved question. A discussion supports replies, participants,
+and resolution. The product may share terminology, targets, filtering, and visual
+entry points where useful; this does not decide that both should use one stored
+record or lifecycle.
 
-Future annotation types may include:
+## Candidate authoring needs
 
-- note on an interaction;
-- note on a trigger;
-- note on a condition;
-- annotation on a text range inside an interaction body;
-- free note on the canvas.
+The anonymized product discovery synthesis identifies these candidate note uses:
 
-## Rules
+- lore and world context;
+- production guidance;
+- ideas to revisit or expand;
+- problems and questions that still need a decision;
+- collaboration discussion, already partly covered by review comments.
 
-- An annotation is authoring metadata.
-- An annotation does not change the story path.
-- An annotation does not satisfy or fail trigger conditions.
-- An annotation may be private, shared, or review-related later when users and
-  permissions exist.
-- Each annotation should later keep its `userId`, making personal or team
-  filtering possible.
-- A suggestion or review comment may reuse annotation-like UI, but accepted story
-  changes should still be represented by story change events.
+Candidate targets include an Interaction, a narrative entity, a workspace, or no
+specific object. Free notes could be useful for preparation and reference, while
+attached notes could stay close to the relevant scene, character, location,
+faction, or production detail. Which targets authors need has not been validated.
 
-## Canvas Representation
+## Design questions
 
-Annotations may be represented by an icon on the canvas.
+Before defining persistence or adding a parallel note system, explore:
 
-This icon must stay visually quiet so it does not overload the graph. Exact
-placement and icon style should be decided during visual design work.
+- whether categories such as lore, production, idea, and issue help authors find
+  notes, or whether a small set of types and optional color/icon cues is enough;
+- whether notes attach to Interactions and existing entities, can be free within
+  the current workspace, or need a separate reference-board context;
+- whether visibility and ownership are personal, shared with collaborators, or
+  controlled by the Story's existing access model;
+- how note categories, visibility, and target type affect filters and canvas
+  indicators without overloading the graph;
+- how to relate an annotation to a threaded review comment without showing both
+  as duplicate records or implying that a note can be resolved like a discussion.
 
-Free canvas notes may exist without being attached to a specific story object.
-They behave like authoring post-its and still do not affect story execution.
+The [roadmap](roadmap.md#product-discovery-follow-up) treats this as a
+P0 product-definition exercise only. The [open questions](open-questions.md#author-notes-and-writing-workflows)
+track decisions that remain unresolved.
 
-## States
+## Runtime boundary
 
-Simple personal notes can start as free text later.
-
-Collaborative notes or suggestions may need states, such as open, resolved, or
-review-related statuses. This should be aligned with the future suggestion and
-review workflow rather than implemented as an isolated notes system.
-
-## Scope Boundary
-
-Do not treat this proposal as the specification for the implemented review
-discussion system. Any future standalone notes should have an explicit purpose
-and lifecycle before implementation.
+Author notes and documentary relations are authoring metadata. They must not
+change Reader availability, Trigger evaluation, or narrative execution. An
+export may include them only through an explicit authoring-metadata option.
