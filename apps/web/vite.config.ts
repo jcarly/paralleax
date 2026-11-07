@@ -9,6 +9,11 @@ export default defineConfig({
   plugins: [react(), ...(sentrySourceMapUpload ? [sentryVitePlugin(sentrySourceMapUpload)] : [])],
   build: {
     minify: 'terser',
+    terserOptions: {
+      compress: {
+        passes: 2,
+      },
+    },
     manifest: true,
     sourcemap: Boolean(sentrySourceMapUpload),
   },

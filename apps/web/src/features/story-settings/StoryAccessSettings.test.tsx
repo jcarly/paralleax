@@ -4,7 +4,7 @@ import { StrictMode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { StoryAccessConfiguration } from '@paralleax/shared';
 import { api } from '../../api';
-import { i18n } from '../../i18n';
+import { changeInterfaceLanguage, i18n } from '../../i18n';
 import { StoryAccessSettings } from './StoryAccessSettings';
 
 vi.mock('../../api', () => ({
@@ -99,7 +99,7 @@ describe('StoryAccessSettings', () => {
   });
 
   it('localizes a collaborator API error instead of exposing its English server message', async () => {
-    await i18n.changeLanguage('fr');
+    await changeInterfaceLanguage('fr');
     const user = userEvent.setup();
     vi.mocked(api.setStoryCollaborator).mockRejectedValue(
       Object.assign(new Error('The collaborator must be an existing non-owner account'), {

@@ -45,9 +45,14 @@ function applyLanguage(language: string) {
 
 export async function changeInterfaceLanguage(language: string) {
   const supportedLanguage = normalizeLanguage(language) ?? 'en';
-  if (supportedLanguage === 'it' && !i18n.hasResourceBundle('it', 'translation')) {
-    const { italianTranslation } = await import('./italian');
-    i18n.addResourceBundle('it', 'translation', italianTranslation, true, true);
+  if (!i18n.hasResourceBundle(supportedLanguage, 'translation')) {
+    if (supportedLanguage === 'fr') {
+      const { frenchTranslation } = await import('./french');
+      i18n.addResourceBundle('fr', 'translation', frenchTranslation, true, true);
+    } else if (supportedLanguage === 'it') {
+      const { italianTranslation } = await import('./italian');
+      i18n.addResourceBundle('it', 'translation', italianTranslation, true, true);
+    }
   }
   await i18n.changeLanguage(supportedLanguage);
 }
@@ -56,7 +61,7 @@ const detectedLanguage = detectInterfaceLanguage();
 
 void i18n.use(initReactI18next).init({
   resources,
-  lng: detectedLanguage === 'it' ? 'en' : detectedLanguage,
+  lng: 'en',
   fallbackLng: 'en',
   supportedLngs: supportedLanguages,
   load: 'languageOnly',
@@ -67,6 +72,11 @@ void i18n.use(initReactI18next).init({
 
 applyLanguage(detectedLanguage);
 i18n.on('languageChanged', applyLanguage);
-if (detectedLanguage === 'it') void changeInterfaceLanguage('it');
+export const i18nReady =
+  detectedLanguage === 'en'
+    ? Promise.resolve()
+    : changeInterfaceLanguage(detectedLanguage).catch(() => {
+        document.documentElement.lang = 'en';
+      });
 
 export { i18n };
