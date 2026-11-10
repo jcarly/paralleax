@@ -777,17 +777,6 @@
       "count": 1
     }
   },
-  "apps/api/src/stories/story-quotas.ts": {
-    "@typescript-eslint/no-unsafe-type-assertion": {
-      "count": 2
-    },
-    "complexity": {
-      "count": 1
-    },
-    "curly": {
-      "count": 2
-    }
-  },
   "apps/api/src/stories/story.events.spec.ts": {
     "max-lines-per-function": {
       "count": 1
