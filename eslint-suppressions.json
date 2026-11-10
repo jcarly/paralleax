@@ -578,23 +578,6 @@
       "count": 1
     }
   },
-  "apps/api/src/stories/persistence/stories.persistence.writer.ts": {
-    "complexity": {
-      "count": 10
-    },
-    "curly": {
-      "count": 4
-    },
-    "max-lines-per-function": {
-      "count": 8
-    },
-    "max-params": {
-      "count": 3
-    },
-    "sonarjs/cognitive-complexity": {
-      "count": 6
-    }
-  },
   "apps/api/src/stories/persistence/story-editor.persistence.spec.ts": {
     "@typescript-eslint/no-unsafe-member-access": {
       "count": 1
