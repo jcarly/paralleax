@@ -194,15 +194,23 @@ export function isCommentAnchor(value: unknown): value is CommentAnchor {
 }
 
 export function commentAnchorBelongsToStory(story: Story, anchor: CommentAnchor) {
-  if (anchor.kind === 'canvas') return true;
+  if (anchor.kind === 'canvas') {
+    return true;
+  }
   const target = findCommentTarget(story, anchor.targetType, anchor.targetId);
-  if (!target) return false;
-  if (anchor.kind !== 'text') return true;
+  if (!target) {
+    return false;
+  }
+  if (anchor.kind !== 'text') {
+    return true;
+  }
   return commentTextValue(target, anchor.targetType, anchor.field) !== undefined;
 }
 
 export function commentAnchorLabel(story: Story, anchor: CommentAnchor) {
-  if (anchor.kind === 'canvas') return 'Story graph';
+  if (anchor.kind === 'canvas') {
+    return 'Story graph';
+  }
   const target = findCommentTarget(story, anchor.targetType, anchor.targetId);
   const label =
     target && 'title' in target
@@ -217,12 +225,20 @@ export function commentAnchorLabel(story: Story, anchor: CommentAnchor) {
 }
 
 export function isCommentAnchorDetached(story: Story, anchor: CommentAnchor) {
-  if (anchor.kind === 'canvas') return false;
+  if (anchor.kind === 'canvas') {
+    return false;
+  }
   const target = findCommentTarget(story, anchor.targetType, anchor.targetId);
-  if (!target) return true;
-  if (anchor.kind !== 'text') return false;
+  if (!target) {
+    return true;
+  }
+  if (anchor.kind !== 'text') {
+    return false;
+  }
   const value = commentTextValue(target, anchor.targetType, anchor.field);
-  if (value === undefined) return true;
+  if (value === undefined) {
+    return true;
+  }
   return locateCommentQuote(value, anchor.selector) === undefined;
 }
 
@@ -251,7 +267,9 @@ export function locateCommentQuote(value: string, selector: CommentTextSelector)
     const end = index + selector.exact.length;
     const suffixMatches =
       !selector.suffix || value.slice(end, end + selector.suffix.length) === selector.suffix;
-    if (prefixMatches && suffixMatches) contextualMatches.push(index);
+    if (prefixMatches && suffixMatches) {
+      contextualMatches.push(index);
+    }
     index = value.indexOf(selector.exact, index + 1);
   }
   const match =
@@ -264,12 +282,18 @@ export function locateCommentQuote(value: string, selector: CommentTextSelector)
 }
 
 function findCommentTarget(story: Story, targetType: CommentTargetType, targetId: string) {
-  if (targetType === 'interaction') return story.interactions.find(({ id }) => id === targetId);
+  if (targetType === 'interaction') {
+    return story.interactions.find(({ id }) => id === targetId);
+  }
   if (targetType === 'trigger') {
     return story.interactions.flatMap(({ triggers }) => triggers).find(({ id }) => id === targetId);
   }
-  if (targetType === 'character') return story.characters?.find(({ id }) => id === targetId);
-  if (targetType === 'location') return story.locations?.find(({ id }) => id === targetId);
+  if (targetType === 'character') {
+    return story.characters?.find(({ id }) => id === targetId);
+  }
+  if (targetType === 'location') {
+    return story.locations?.find(({ id }) => id === targetId);
+  }
   if (targetType === 'itemDefinition') {
     return story.itemDefinitions?.find(({ id }) => id === targetId);
   }
@@ -277,9 +301,15 @@ function findCommentTarget(story: Story, targetType: CommentTargetType, targetId
 }
 
 function commentTextValue(target: object, targetType: CommentTargetType, field: CommentTextField) {
-  if (field === 'body' && targetType !== 'interaction') return undefined;
-  if (field === 'title' && targetType !== 'interaction') return undefined;
-  if (field === 'name' && ['interaction', 'trigger'].includes(targetType)) return undefined;
+  if (field === 'body' && targetType !== 'interaction') {
+    return undefined;
+  }
+  if (field === 'title' && targetType !== 'interaction') {
+    return undefined;
+  }
+  if (field === 'name' && ['interaction', 'trigger'].includes(targetType)) {
+    return undefined;
+  }
   if (
     field === 'description' &&
     !['character', 'location', 'itemDefinition'].includes(targetType)
@@ -287,7 +317,9 @@ function commentTextValue(target: object, targetType: CommentTargetType, field: 
     return undefined;
   }
   const value: unknown = Reflect.get(target, field);
-  if (typeof value !== 'string') return undefined;
+  if (typeof value !== 'string') {
+    return undefined;
+  }
   return field === 'body' ? richTextToPlainText(value) : value;
 }
 
