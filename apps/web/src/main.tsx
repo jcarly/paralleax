@@ -16,6 +16,7 @@ import './features/story-player/storySimulation.css';
 import './responsive.css';
 import { i18nReady } from './i18n';
 import { App } from './App';
+import { startBrowserMonitoring } from './observability/browserMonitoring';
 import { RouteErrorPage } from './pages/RouteErrorPage';
 
 const router = createBrowserRouter([
