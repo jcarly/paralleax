@@ -636,14 +636,6 @@
       "count": 1
     }
   },
-  "apps/api/src/stories/rich-text.ts": {
-    "curly": {
-      "count": 6
-    },
-    "max-lines-per-function": {
-      "count": 1
-    }
-  },
   "apps/api/src/stories/stories.controller.ts": {
     "curly": {
       "count": 2
