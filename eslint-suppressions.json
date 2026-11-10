@@ -325,11 +325,6 @@
       "count": 1
     }
   },
-  "apps/api/src/operations/request-context.ts": {
-    "curly": {
-      "count": 3
-    }
-  },
   "apps/api/src/security/origin.guard.spec.ts": {
     "@typescript-eslint/no-unsafe-type-assertion": {
       "count": 3
