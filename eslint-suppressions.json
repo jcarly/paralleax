@@ -788,11 +788,6 @@
       "count": 2
     }
   },
-  "apps/api/src/stories/story.events.spec.ts": {
-    "max-lines-per-function": {
-      "count": 1
-    }
-  },
   "apps/web/src/App.test.tsx": {
     "max-lines-per-function": {
       "count": 1
