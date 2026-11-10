@@ -1252,11 +1252,6 @@
       "count": 1
     }
   },
-  "apps/web/src/components/modalDialogKeyboard.ts": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 1
-    }
-  },
   "apps/web/src/components/richTextProjection.ts": {
     "@typescript-eslint/no-unsafe-type-assertion": {
       "count": 1
