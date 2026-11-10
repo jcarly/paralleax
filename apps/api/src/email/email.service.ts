@@ -39,7 +39,9 @@ export class EmailService {
   async send(message: EmailMessage): Promise<DeliveredEmail> {
     const normalized = normalizeMessage(message);
     if (this.config.testEmailOutbox) {
-      if (!this.testOutbox) throw unavailableEmailDelivery();
+      if (!this.testOutbox) {
+        throw unavailableEmailDelivery();
+      }
       return this.testOutbox.record(normalized);
     }
     try {
@@ -59,7 +61,9 @@ export class EmailService {
       this.logger.log({ event: 'email_delivery_accepted', provider: 'brevo', messageId });
       return { messageId };
     } catch (error) {
-      if (error instanceof ServiceUnavailableException) throw error;
+      if (error instanceof ServiceUnavailableException) {
+        throw error;
+      }
       this.logger.error(brevoFailureLog(error));
       throw unavailableEmailDelivery();
     }
@@ -82,7 +86,9 @@ function normalizeMessage(message: EmailMessage): EmailMessage {
   const to = nonEmptyHeaderValue('recipient', message.to);
   const subject = nonEmptyHeaderValue('subject', message.subject);
   const text = message.text.trim();
-  if (!text) throw new Error('Transactional emails require a text body');
+  if (!text) {
+    throw new Error('Transactional emails require a text body');
+  }
   const html = message.html?.trim();
   return { to, subject, text, ...(html ? { html } : {}) };
 }
@@ -138,7 +144,9 @@ function safeHttpStatus(value: unknown) {
 }
 
 function safeProviderCode(body: unknown) {
-  if (!body || typeof body !== 'object' || !('code' in body)) return undefined;
+  if (!body || typeof body !== 'object' || !('code' in body)) {
+    return undefined;
+  }
   return safeLogToken(body.code);
 }
 
