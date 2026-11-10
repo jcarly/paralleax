@@ -30,8 +30,12 @@ export class ImportReportWriter {
   }
 
   async start(): Promise<string> {
-    if (this.closed) throw new Error('This report writer is already closed.');
-    if (this.fileDescriptor !== undefined) return this.activePath!;
+    if (this.closed) {
+      throw new Error('This report writer is already closed.');
+    }
+    if (this.fileDescriptor !== undefined) {
+      return this.activePath!;
+    }
     const path =
       this.reportPath ?? (await this.storage!.createReportFile(this.importId!, this.format!));
     this.fileDescriptor = openSync(path, 'a', 0o600);
@@ -43,11 +47,17 @@ export class ImportReportWriter {
     if (this.closed || this.fileDescriptor === undefined) {
       throw new Error('The report writer must be started before writing diagnostics.');
     }
-    if (this.failure) throw this.failure;
+    if (this.failure) {
+      throw this.failure;
+    }
 
     const payload: Record<string, unknown> = { ...issue };
-    if (issue.fileName !== undefined) payload.file = issue.fileName;
-    if (issue.locationName !== undefined) payload.location = issue.locationName;
+    if (issue.fileName !== undefined) {
+      payload.file = issue.fileName;
+    }
+    if (issue.locationName !== undefined) {
+      payload.location = issue.locationName;
+    }
     delete payload.fileName;
     delete payload.locationName;
 
@@ -56,7 +66,9 @@ export class ImportReportWriter {
       let offset = 0;
       while (offset < line.length) {
         const written = writeSync(this.fileDescriptor, line, offset, line.length - offset);
-        if (written === 0) throw new Error('The import report write made no progress.');
+        if (written === 0) {
+          throw new Error('The import report write made no progress.');
+        }
         offset += written;
       }
     } catch (caught) {
@@ -67,7 +79,9 @@ export class ImportReportWriter {
 
   async close(): Promise<void> {
     if (this.closed) {
-      if (this.failure) throw this.failure;
+      if (this.failure) {
+        throw this.failure;
+      }
       return;
     }
     this.closed = true;
@@ -79,13 +93,17 @@ export class ImportReportWriter {
       }
       this.fileDescriptor = undefined;
     }
-    if (this.failure) throw this.failure;
+    if (this.failure) {
+      throw this.failure;
+    }
   }
 
   async persistSnapshot(report: ImportDiagnostics): Promise<void> {
     await this.start();
     try {
-      for (const issue of report.issues) this.writeIssue(issue);
+      for (const issue of report.issues) {
+        this.writeIssue(issue);
+      }
     } finally {
       await this.close();
     }
