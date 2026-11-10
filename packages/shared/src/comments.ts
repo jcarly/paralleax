@@ -143,54 +143,104 @@ export function canDeleteCommentThread(
 }
 
 export function isCommentAnchor(value: unknown): value is CommentAnchor {
-  if (!isRecord(value)) return false;
-  if (value.kind === 'canvas') {
-    return (
-      isRecord(value.position) &&
-      Number.isFinite(value.position.x) &&
-      Number.isFinite(value.position.y)
-    );
-  }
-  if (value.kind === 'entity') {
-    return isTargetType(value.targetType) && isIdentifier(value.targetId);
-  }
-  if (value.kind === 'field') {
-    return (
-      isTargetType(value.targetType) &&
-      isIdentifier(value.targetId) &&
-      isCommentEntityField(value.targetType, value.field)
-    );
-  }
-  if (value.kind === 'section') {
-    return (
-      isTargetType(value.targetType) &&
-      isIdentifier(value.targetId) &&
-      isCommentEntitySection(value.targetType, value.section)
-    );
-  }
-  if (value.kind !== 'text' || !isTargetType(value.targetType) || !isIdentifier(value.targetId)) {
+  if (!isRecord(value)) {
     return false;
   }
-  if (!['title', 'name', 'body', 'description'].includes(String(value.field))) return false;
-  const selector = value.selector;
+  switch (value.kind) {
+    case 'canvas':
+      return isCanvasAnchor(value);
+    case 'entity':
+      return isEntityAnchor(value);
+    case 'field':
+      return isFieldAnchor(value);
+    case 'section':
+      return isSectionAnchor(value);
+    case 'text':
+      return isTextAnchor(value);
+    default:
+      return false;
+  }
+}
+
+function isCanvasAnchor(value: Record<string, unknown>): boolean {
   return (
-    isRecord(selector) &&
-    typeof selector.exact === 'string' &&
-    selector.exact.length > 0 &&
-    selector.exact.length <= MAX_COMMENT_QUOTE_LENGTH &&
-    typeof selector.prefix === 'string' &&
-    selector.prefix.length <= 128 &&
-    typeof selector.suffix === 'string' &&
-    selector.suffix.length <= 128 &&
-    typeof selector.start === 'number' &&
-    Number.isInteger(selector.start) &&
-    typeof selector.end === 'number' &&
-    Number.isInteger(selector.end) &&
-    selector.start >= 0 &&
-    selector.end > selector.start &&
-    typeof selector.sourceHash === 'string' &&
-    selector.sourceHash.length <= 128
+    isRecord(value.position) &&
+    Number.isFinite(value.position.x) &&
+    Number.isFinite(value.position.y)
   );
+}
+
+function isEntityAnchor(value: Record<string, unknown>): boolean {
+  return isTargetType(value.targetType) && isIdentifier(value.targetId);
+}
+
+function isFieldAnchor(value: Record<string, unknown>): boolean {
+  if (!isTargetType(value.targetType) || !isIdentifier(value.targetId)) {
+    return false;
+  }
+  return isCommentEntityField(value.targetType, value.field);
+}
+
+function isSectionAnchor(value: Record<string, unknown>): boolean {
+  if (!isTargetType(value.targetType) || !isIdentifier(value.targetId)) {
+    return false;
+  }
+  return isCommentEntitySection(value.targetType, value.section);
+}
+
+function isTextAnchor(value: Record<string, unknown>): boolean {
+  return (
+    isTargetType(value.targetType) &&
+    isIdentifier(value.targetId) &&
+    isCommentTextField(value.field) &&
+    isCommentTextSelector(value.selector)
+  );
+}
+
+function isCommentTextField(value: unknown): value is CommentTextField {
+  return value === 'title' || value === 'name' || value === 'body' || value === 'description';
+}
+
+function isCommentTextSelector(value: unknown): value is CommentTextSelector {
+  return (
+    isRecord(value) &&
+    hasValidCommentQuote(value) &&
+    hasValidCommentContext(value) &&
+    hasValidCommentRange(value) &&
+    hasValidCommentSourceHash(value)
+  );
+}
+
+function hasValidCommentQuote(value: Record<string, unknown>): boolean {
+  return (
+    typeof value.exact === 'string' &&
+    value.exact.length > 0 &&
+    value.exact.length <= MAX_COMMENT_QUOTE_LENGTH
+  );
+}
+
+function hasValidCommentContext(value: Record<string, unknown>): boolean {
+  return (
+    typeof value.prefix === 'string' &&
+    value.prefix.length <= 128 &&
+    typeof value.suffix === 'string' &&
+    value.suffix.length <= 128
+  );
+}
+
+function hasValidCommentRange(value: Record<string, unknown>): boolean {
+  return (
+    typeof value.start === 'number' &&
+    Number.isInteger(value.start) &&
+    typeof value.end === 'number' &&
+    Number.isInteger(value.end) &&
+    value.start >= 0 &&
+    value.end > value.start
+  );
+}
+
+function hasValidCommentSourceHash(value: Record<string, unknown>): boolean {
+  return typeof value.sourceHash === 'string' && value.sourceHash.length <= 128;
 }
 
 export function commentAnchorBelongsToStory(story: Story, anchor: CommentAnchor) {
@@ -301,19 +351,7 @@ function findCommentTarget(story: Story, targetType: CommentTargetType, targetId
 }
 
 function commentTextValue(target: object, targetType: CommentTargetType, field: CommentTextField) {
-  if (field === 'body' && targetType !== 'interaction') {
-    return undefined;
-  }
-  if (field === 'title' && targetType !== 'interaction') {
-    return undefined;
-  }
-  if (field === 'name' && ['interaction', 'trigger'].includes(targetType)) {
-    return undefined;
-  }
-  if (
-    field === 'description' &&
-    !['character', 'location', 'itemDefinition'].includes(targetType)
-  ) {
+  if (!supportsCommentTextField(targetType, field)) {
     return undefined;
   }
   const value: unknown = Reflect.get(target, field);
@@ -321,6 +359,22 @@ function commentTextValue(target: object, targetType: CommentTargetType, field: 
     return undefined;
   }
   return field === 'body' ? richTextToPlainText(value) : value;
+}
+
+function supportsCommentTextField(targetType: CommentTargetType, field: CommentTextField) {
+  switch (field) {
+    case 'body':
+    case 'title':
+      return targetType === 'interaction';
+    case 'name':
+      return targetType !== 'interaction' && targetType !== 'trigger';
+    case 'description':
+      return (
+        targetType === 'character' || targetType === 'location' || targetType === 'itemDefinition'
+      );
+    default:
+      return false;
+  }
 }
 
 function richTextToPlainText(value: string) {
