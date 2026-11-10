@@ -9,14 +9,12 @@ import {
 } from '@nestjs/common';
 import { isValidUserDisplayName, normalizeUserDisplayName, type UserRole } from '@paralleax/shared';
 import { createHash, randomBytes, randomUUID, scrypt as nodeScrypt, timingSafeEqual } from 'crypto';
-import { promisify } from 'util';
 import { AuthRepository, type AuthUser } from './auth.repository';
 import { apiErrorResponse } from '../operations/api-error-response';
 import { EmailService } from '../email/email.service';
 import { AppConfigService } from '../config/app-config.service';
 import { passwordResetEmail, verificationEmail } from './auth-emails';
 
-const scrypt = promisify(nodeScrypt);
 const sessionDurationMs = 30 * 24 * 60 * 60 * 1000;
 const verificationTokenDurationMs = 24 * 60 * 60 * 1000;
 const passwordResetTokenDurationMs = 60 * 60 * 1000;
@@ -320,7 +318,7 @@ function invalidActionToken() {
 
 async function hashPassword(password: string) {
   const salt = randomBytes(16);
-  const derived = (await scrypt(password, salt, 64)) as Buffer;
+  const derived = await scryptAsync(password, salt, 64);
   return `scrypt:${salt.toString('hex')}:${derived.toString('hex')}`;
 }
 
@@ -330,6 +328,18 @@ async function verifyPassword(password: string, stored: string) {
     return false;
   }
   const expected = Buffer.from(hashHex, 'hex');
-  const actual = (await scrypt(password, Buffer.from(saltHex, 'hex'), expected.length)) as Buffer;
+  const actual = await scryptAsync(password, Buffer.from(saltHex, 'hex'), expected.length);
   return actual.length === expected.length && timingSafeEqual(actual, expected);
+}
+
+function scryptAsync(password: string, salt: Buffer, keyLength: number): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    nodeScrypt(password, salt, keyLength, (error, derivedKey) => {
+      if (error) {
+        reject(error);
+      } else {
+        resolve(derivedKey);
+      }
+    });
+  });
 }
