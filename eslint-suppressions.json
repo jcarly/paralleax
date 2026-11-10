@@ -354,11 +354,6 @@
       "count": 1
     }
   },
-  "apps/api/src/stories/application/qsp-import.worker.ts": {
-    "@typescript-eslint/no-unsafe-type-assertion": {
-      "count": 1
-    }
-  },
   "apps/api/src/stories/application/story-access.spec.ts": {
     "@typescript-eslint/no-unsafe-type-assertion": {
       "count": 2
