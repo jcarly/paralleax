@@ -383,11 +383,6 @@
       "count": 2
     }
   },
-  "apps/api/src/stories/application/story-context.ts": {
-    "max-params": {
-      "count": 1
-    }
-  },
   "apps/api/src/stories/application/story-graph.spec.ts": {
     "@typescript-eslint/no-unsafe-member-access": {
       "count": 1
