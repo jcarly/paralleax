@@ -224,11 +224,6 @@
       "count": 1
     }
   },
-  "apps/api/src/imports/import-report-writer.ts": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 4
-    }
-  },
   "apps/api/src/imports/import.controller.spec.ts": {
     "@typescript-eslint/consistent-type-imports": {
       "count": 2
