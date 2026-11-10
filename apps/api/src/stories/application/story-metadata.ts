@@ -76,7 +76,9 @@ export class StoryMetadataService {
 
   async get(storyId: string, userId?: string): Promise<Story> {
     const story = await this.repository.find(storyId, userId);
-    if (!story) throw new NotFoundException('Story not found');
+    if (!story) {
+      throw new NotFoundException('Story not found');
+    }
     return structuredClone(ensureStoryInteractionPositions(story));
   }
 
@@ -137,7 +139,9 @@ export class StoryMetadataService {
     return this.mutations.update(
       storyId,
       (story) => {
-        if (input.title !== undefined) story.title = input.title.trim() || 'Untitled';
+        if (input.title !== undefined) {
+          story.title = input.title.trim() || 'Untitled';
+        }
         if (input.startDateTime !== undefined) {
           if (!isStoryDateTime(input.startDateTime)) {
             throw new BadRequestException('Story start date and time is invalid');
@@ -163,7 +167,9 @@ export class StoryMetadataService {
 
   private async requireEditorProjection<T>(projection: Promise<T | undefined>): Promise<T> {
     const result = await projection;
-    if (!result) throw new NotFoundException('Story not found');
+    if (!result) {
+      throw new NotFoundException('Story not found');
+    }
     return result;
   }
 }

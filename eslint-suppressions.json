@@ -543,11 +543,6 @@
       "count": 1
     }
   },
-  "apps/api/src/stories/application/story-metadata.ts": {
-    "curly": {
-      "count": 3
-    }
-  },
   "apps/api/src/stories/application/story-mutations.spec.ts": {
     "@typescript-eslint/no-unsafe-type-assertion": {
       "count": 2
