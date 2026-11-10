@@ -33,16 +33,6 @@
       "count": 2
     }
   },
-  "apps/api/src/auth/auth.guard.ts": {
-    "curly": {
-      "count": 1
-    }
-  },
-  "apps/api/src/auth/auth.module.ts": {
-    "curly": {
-      "count": 2
-    }
-  },
   "apps/api/src/auth/auth.repository.spec.ts": {
     "@typescript-eslint/no-unsafe-type-assertion": {
       "count": 1
@@ -69,14 +59,6 @@
     },
     "max-lines-per-function": {
       "count": 1
-    }
-  },
-  "apps/api/src/auth/auth.service.ts": {
-    "@typescript-eslint/no-unsafe-type-assertion": {
-      "count": 2
-    },
-    "curly": {
-      "count": 7
     }
   },
   "apps/api/src/comments/comments.e2e.spec.ts": {
@@ -167,11 +149,6 @@
       "count": 1
     }
   },
-  "apps/api/src/database/database.migrator.ts": {
-    "curly": {
-      "count": 1
-    }
-  },
   "apps/api/src/email/email.service.spec.ts": {
     "@typescript-eslint/consistent-type-imports": {
       "count": 1
@@ -184,11 +161,6 @@
     },
     "max-lines-per-function": {
       "count": 1
-    }
-  },
-  "apps/api/src/email/email.service.ts": {
-    "curly": {
-      "count": 4
     }
   },
   "apps/api/src/health/health.controller.spec.ts": {
@@ -215,14 +187,6 @@
       "count": 1
     }
   },
-  "apps/api/src/imports/import-job.service.ts": {
-    "@typescript-eslint/no-unsafe-type-assertion": {
-      "count": 1
-    },
-    "curly": {
-      "count": 6
-    }
-  },
   "apps/api/src/imports/import-report-storage.spec.ts": {
     "@typescript-eslint/no-non-null-assertion": {
       "count": 1
@@ -231,14 +195,6 @@
       "count": 1
     },
     "curly": {
-      "count": 1
-    }
-  },
-  "apps/api/src/imports/import-report-storage.ts": {
-    "curly": {
-      "count": 7
-    },
-    "sonarjs/cognitive-complexity": {
       "count": 1
     }
   },
@@ -253,14 +209,6 @@
       "count": 1
     }
   },
-  "apps/api/src/imports/import-report-writer.ts": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 4
-    },
-    "curly": {
-      "count": 9
-    }
-  },
   "apps/api/src/imports/import.controller.spec.ts": {
     "@typescript-eslint/consistent-type-imports": {
       "count": 2
@@ -270,11 +218,6 @@
     },
     "max-lines-per-function": {
       "count": 1
-    }
-  },
-  "apps/api/src/imports/import.controller.ts": {
-    "curly": {
-      "count": 5
     }
   },
   "apps/api/src/observability/sentry-config.ts": {
@@ -347,11 +290,6 @@
       "count": 1
     }
   },
-  "apps/api/src/operations/request-context.ts": {
-    "curly": {
-      "count": 3
-    }
-  },
   "apps/api/src/security/origin.guard.spec.ts": {
     "@typescript-eslint/no-unsafe-type-assertion": {
       "count": 3
@@ -383,19 +321,9 @@
       "count": 1
     }
   },
-  "apps/api/src/stories/application/choicescript-import.worker.ts": {
-    "@typescript-eslint/no-unsafe-type-assertion": {
-      "count": 1
-    }
-  },
   "apps/api/src/stories/application/graph-decorations.ts": {
     "complexity": {
       "count": 1
-    }
-  },
-  "apps/api/src/stories/application/qsp-import-progress.service.ts": {
-    "curly": {
-      "count": 4
     }
   },
   "apps/api/src/stories/application/qsp-import-worker.service.spec.ts": {
@@ -438,11 +366,6 @@
     },
     "max-lines-per-function": {
       "count": 2
-    }
-  },
-  "apps/api/src/stories/application/story-context.ts": {
-    "max-params": {
-      "count": 1
     }
   },
   "apps/api/src/stories/application/story-graph.spec.ts": {
@@ -557,22 +480,12 @@
       "count": 1
     }
   },
-  "apps/api/src/stories/application/story-items.ts": {
-    "curly": {
-      "count": 1
-    }
-  },
   "apps/api/src/stories/application/story-metadata.spec.ts": {
     "@typescript-eslint/no-unsafe-type-assertion": {
       "count": 3
     },
     "max-lines-per-function": {
       "count": 1
-    }
-  },
-  "apps/api/src/stories/application/story-metadata.ts": {
-    "curly": {
-      "count": 3
     }
   },
   "apps/api/src/stories/application/story-mutations.spec.ts": {
@@ -677,17 +590,6 @@
       "count": 6
     }
   },
-  "apps/api/src/stories/persistence/story-editor.persistence.spec.ts": {
-    "@typescript-eslint/no-unsafe-member-access": {
-      "count": 1
-    },
-    "@typescript-eslint/no-unsafe-type-assertion": {
-      "count": 1
-    },
-    "max-lines-per-function": {
-      "count": 6
-    }
-  },
   "apps/api/src/stories/persistence/story-editor.persistence.ts": {
     "@typescript-eslint/no-non-null-assertion": {
       "count": 8
@@ -706,11 +608,6 @@
     "@typescript-eslint/no-unsafe-type-assertion": {
       "count": 1
     },
-    "max-lines-per-function": {
-      "count": 1
-    }
-  },
-  "apps/api/src/stories/persistence/story-history.persistence.ts": {
     "max-lines-per-function": {
       "count": 1
     }
@@ -844,17 +741,6 @@
       "count": 1
     }
   },
-  "apps/api/src/stories/stories.repository.ts": {
-    "curly": {
-      "count": 25
-    },
-    "max-lines-per-function": {
-      "count": 4
-    },
-    "max-params": {
-      "count": 1
-    }
-  },
   "apps/api/src/stories/stories.service.ts": {
     "max-params": {
       "count": 3
@@ -951,16 +837,6 @@
   "apps/web/src/apiErrorMessages.test.ts": {
     "max-lines-per-function": {
       "count": 1
-    }
-  },
-  "apps/web/src/apiErrorMessages.ts": {
-    "curly": {
-      "count": 2
-    }
-  },
-  "apps/web/src/authNavigation.ts": {
-    "curly": {
-      "count": 3
     }
   },
   "apps/web/src/components/AccountDialog.tsx": {
@@ -1108,11 +984,6 @@
       "count": 1
     }
   },
-  "apps/web/src/components/ModalPortal.tsx": {
-    "curly": {
-      "count": 1
-    }
-  },
   "apps/web/src/components/RichTextConditionDialog.tsx": {
     "curly": {
       "count": 1
@@ -1183,11 +1054,6 @@
   "apps/web/src/components/StoryCanvasToolbar.tsx": {
     "max-lines-per-function": {
       "count": 2
-    }
-  },
-  "apps/web/src/components/StoryContextList.tsx": {
-    "curly": {
-      "count": 3
     }
   },
   "apps/web/src/components/StoryGraphSelectionInspector.tsx": {
@@ -1315,14 +1181,6 @@
     },
     "max-lines-per-function": {
       "count": 1
-    }
-  },
-  "apps/web/src/components/modalDialogKeyboard.ts": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 1
-    },
-    "curly": {
-      "count": 5
     }
   },
   "apps/web/src/components/richTextProjection.ts": {
@@ -1520,11 +1378,6 @@
       "count": 4
     }
   },
-  "apps/web/src/features/story-editor/graph/storyGraphViewport.ts": {
-    "curly": {
-      "count": 1
-    }
-  },
   "apps/web/src/features/story-editor/graph/useStoryConnectionController.test.ts": {
     "@typescript-eslint/no-unsafe-type-assertion": {
       "count": 2
@@ -1695,14 +1548,6 @@
       "count": 3
     }
   },
-  "apps/web/src/features/story-editor/persistence/storyGraphPersistence.ts": {
-    "curly": {
-      "count": 37
-    },
-    "max-lines-per-function": {
-      "count": 1
-    }
-  },
   "apps/web/src/features/story-editor/persistence/storyGroupPersistence.test.ts": {
     "@typescript-eslint/no-non-null-assertion": {
       "count": 5
@@ -1712,11 +1557,6 @@
     },
     "max-lines-per-function": {
       "count": 1
-    }
-  },
-  "apps/web/src/features/story-editor/persistence/storyGroupPersistence.ts": {
-    "curly": {
-      "count": 3
     }
   },
   "apps/web/src/features/story-editor/persistence/useStoryPersistenceLifecycle.test.ts": {
@@ -1821,11 +1661,6 @@
       "count": 1
     },
     "sonarjs/cognitive-complexity": {
-      "count": 1
-    }
-  },
-  "apps/web/src/features/story-player/loadStoryPlayerRuntime.ts": {
-    "complexity": {
       "count": 1
     }
   },
@@ -1987,14 +1822,6 @@
       "count": 2
     }
   },
-  "apps/web/src/features/story/storyMutationResults.ts": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 1
-    },
-    "curly": {
-      "count": 6
-    }
-  },
   "apps/web/src/features/story/useStoryRouteAccessRecovery.ts": {
     "curly": {
       "count": 1
@@ -2044,23 +1871,6 @@
       "count": 1
     },
     "@typescript-eslint/no-unsafe-member-access": {
-      "count": 1
-    }
-  },
-  "apps/web/src/observability/sentry.ts": {
-    "@typescript-eslint/no-unsafe-argument": {
-      "count": 3
-    },
-    "@typescript-eslint/no-unsafe-type-assertion": {
-      "count": 1
-    },
-    "complexity": {
-      "count": 1
-    },
-    "curly": {
-      "count": 9
-    },
-    "sonarjs/cognitive-complexity": {
       "count": 1
     }
   },
@@ -2310,14 +2120,6 @@
   "apps/web/src/storyConnection.test.ts": {
     "max-lines-per-function": {
       "count": 1
-    }
-  },
-  "apps/web/src/storyConnection.ts": {
-    "complexity": {
-      "count": 1
-    },
-    "curly": {
-      "count": 11
     }
   },
   "apps/web/src/storyGraph.stress.test.ts": {
@@ -2848,17 +2650,6 @@
       "count": 2
     }
   },
-  "packages/shared/src/comments.ts": {
-    "complexity": {
-      "count": 2
-    },
-    "curly": {
-      "count": 18
-    },
-    "sonarjs/cognitive-complexity": {
-      "count": 1
-    }
-  },
   "packages/shared/src/demo/stories/character-items.ts": {
     "max-lines-per-function": {
       "count": 1
@@ -2903,22 +2694,9 @@
       "count": 1
     }
   },
-  "packages/shared/src/graph/placement.ts": {
-    "curly": {
-      "count": 4
-    }
-  },
   "packages/shared/src/graph/positions.test.ts": {
     "max-lines-per-function": {
       "count": 2
-    }
-  },
-  "packages/shared/src/graph/positions.ts": {
-    "curly": {
-      "count": 6
-    },
-    "sonarjs/cognitive-complexity": {
-      "count": 1
     }
   },
   "packages/shared/src/history/story-history.test.ts": {
@@ -3070,14 +2848,6 @@
     },
     "sonarjs/cognitive-complexity": {
       "count": 5
-    }
-  },
-  "packages/shared/src/import-export/qsp/converter.ts": {
-    "@typescript-eslint/no-unsafe-assignment": {
-      "count": 1
-    },
-    "@typescript-eslint/no-unsafe-type-assertion": {
-      "count": 3
     }
   },
   "packages/shared/src/import-export/qsp/expressions.test.ts": {
@@ -3281,11 +3051,6 @@
       "count": 1
     }
   },
-  "packages/shared/src/operations/groups.ts": {
-    "curly": {
-      "count": 11
-    }
-  },
   "packages/shared/src/operations/merge.ts": {
     "complexity": {
       "count": 1
@@ -3308,9 +3073,6 @@
   "packages/shared/src/reader/replay.ts": {
     "complexity": {
       "count": 3
-    },
-    "curly": {
-      "count": 20
     },
     "max-depth": {
       "count": 1
@@ -3361,11 +3123,6 @@
     },
     "max-lines-per-function": {
       "count": 10
-    }
-  },
-  "packages/shared/src/time/calendar.ts": {
-    "curly": {
-      "count": 3
     }
   },
   "packages/shared/src/time/conditions.ts": {

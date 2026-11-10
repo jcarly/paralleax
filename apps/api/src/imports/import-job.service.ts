@@ -48,7 +48,9 @@ export class ImportJobService implements OnModuleInit, OnModuleDestroy {
   }
 
   onModuleDestroy(): void {
-    if (this.cleanupTimer) clearInterval(this.cleanupTimer);
+    if (this.cleanupTimer) {
+      clearInterval(this.cleanupTimer);
+    }
   }
 
   create(ownerId: string, format: string): ImportJobSnapshot {
@@ -77,8 +79,12 @@ export class ImportJobService implements OnModuleInit, OnModuleDestroy {
 
   update(id: string, data: Partial<ImportJobSnapshot>): ImportJobSnapshot | undefined {
     const current = this.jobs.get(id);
-    if (!current) return undefined;
-    if (current.status === 'cancelled') return current;
+    if (!current) {
+      return undefined;
+    }
+    if (current.status === 'cancelled') {
+      return current;
+    }
     const next: ImportJobSnapshot = { ...current, ...data, updatedAt: new Date().toISOString() };
     this.jobs.set(id, next);
     this.emit(id, { type: 'state', data: next });
@@ -99,7 +105,9 @@ export class ImportJobService implements OnModuleInit, OnModuleDestroy {
 
   cancel(id: string): boolean {
     const current = this.jobs.get(id);
-    if (!current || isTerminal(current.status) || current.phase === 'saving') return false;
+    if (!current || isTerminal(current.status) || current.phase === 'saving') {
+      return false;
+    }
     this.update(id, { status: 'cancelled', reportAvailable: false });
     this.abortControllers.get(id)?.abort();
     this.complete(id);
@@ -108,7 +116,9 @@ export class ImportJobService implements OnModuleInit, OnModuleDestroy {
 
   beginPersistence(id: string, data: Partial<ImportJobSnapshot> = {}): boolean {
     const current = this.jobs.get(id);
-    if (!current || current.status !== 'running') return false;
+    if (!current || current.status !== 'running') {
+      return false;
+    }
     this.update(id, { ...data, status: 'running', phase: 'saving' });
     return true;
   }
@@ -129,8 +139,7 @@ export class ImportJobService implements OnModuleInit, OnModuleDestroy {
       }
       const sub = stream.subscribe({
         next: (event) => {
-          const payload = event.data as { ownerId?: string; id?: string } | undefined;
-          if (payload?.ownerId === ownerId || payload?.id === id) {
+          if (hasMatchingStreamIdentity(event.data, ownerId, id)) {
             subscriber.next(event);
           }
         },
@@ -162,7 +171,9 @@ export class ImportJobService implements OnModuleInit, OnModuleDestroy {
 
   private emit(id: string, event: MessageEvent): void {
     const stream = this.streams.get(id);
-    if (!stream) return;
+    if (!stream) {
+      return;
+    }
     stream.next(event);
   }
 }
@@ -174,6 +185,13 @@ function isTerminal(status: ImportJobStatus): boolean {
     status === 'failed' ||
     status === 'cancelled'
   );
+}
+
+function hasMatchingStreamIdentity(value: unknown, ownerId: string, id: string): boolean {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+  return ('ownerId' in value && value.ownerId === ownerId) || ('id' in value && value.id === id);
 }
 
 function cryptoRandomId(): string {

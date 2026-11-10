@@ -29,7 +29,9 @@ export class ImportController {
     @CurrentUser() user: RequestUser,
   ) {
     const job = this.jobs.get(importId);
-    if (!job) throw new NotFoundException('The import job does not exist.');
+    if (!job) {
+      throw new NotFoundException('The import job does not exist.');
+    }
     if (job.ownerId !== user.id && user.role !== 'admin') {
       throw new ForbiddenException('You do not have access to this import job.');
     }
@@ -58,14 +60,19 @@ export class ImportController {
     @CurrentUser() user: RequestUser,
   ) {
     const job = this.jobs.get(importId);
-    if (!job) throw new NotFoundException('The import job does not exist.');
+    if (!job) {
+      throw new NotFoundException('The import job does not exist.');
+    }
     if (job.ownerId !== user.id && user.role !== 'admin') {
       throw new ForbiddenException('You do not have access to this import report.');
     }
-    if (!job.reportAvailable)
+    if (!job.reportAvailable) {
       throw new NotFoundException('No report is available for this import.');
+    }
     const stream = await this.reportStorage.streamReport(importId);
-    if (!stream) throw new NotFoundException('No report is available for this import.');
+    if (!stream) {
+      throw new NotFoundException('No report is available for this import.');
+    }
     return new StreamableFile(stream, {
       type: 'application/x-ndjson; charset=utf-8',
       disposition: `attachment; filename="${importId}.jsonl"`,
@@ -84,7 +91,9 @@ export class ImportController {
     if (job.ownerId !== user.id && user.role !== 'admin') {
       throw new ForbiddenException('You do not have access to this import job.');
     }
-    if (!this.jobs.cancel(importId)) return { status: job.status };
+    if (!this.jobs.cancel(importId)) {
+      return { status: job.status };
+    }
     return { status: 'cancelled' };
   }
 }

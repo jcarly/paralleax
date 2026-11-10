@@ -29,7 +29,9 @@ export class DatabaseMigrator {
           'SELECT id FROM schema_migrations WHERE id = $1',
           [migration.id],
         );
-        if (applied.rowCount) continue;
+        if (applied.rowCount) {
+          continue;
+        }
 
         await this.applyMigration(client, migration.id, migration.sql);
       }

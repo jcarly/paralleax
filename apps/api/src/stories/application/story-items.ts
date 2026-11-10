@@ -12,7 +12,9 @@ export function moveStoryItemInstance(
   placement: MoveItemInstanceInput,
 ): Story {
   const result = moveItemInstanceInStory(story, itemId, placement);
-  if (result.ok) return result.story;
+  if (result.ok) {
+    return result.story;
+  }
   throw itemPlacementException(result.error);
 }
 

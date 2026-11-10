@@ -44,7 +44,9 @@ export function getNextRootPosition(story: Story): Position {
   const roots = story.interactions.filter((interaction) =>
     interaction.triggers.some((trigger) => trigger.inputInteractionIds.length === 0),
   );
-  if (roots.length === 0) return { x: rootColumnX, y: rootStartY };
+  if (roots.length === 0) {
+    return { x: rootColumnX, y: rootStartY };
+  }
 
   const lowestRoot = roots.reduce((lowest, interaction) => {
     const interactionPosition = getInteractionPosition(
@@ -79,7 +81,9 @@ function findFreePosition(occupied: Interaction[], x: number, firstY: number): P
         Math.abs(position.y - y) >= minNodeVerticalDistance
       );
     });
-    if (isFree) return { x, y };
+    if (isFree) {
+      return { x, y };
+    }
   }
 
   return { x, y: firstY + (occupied.length + 2) * childVerticalGap };
@@ -95,14 +99,18 @@ function findFreePositionAbove(occupied: Interaction[], x: number, firstY: numbe
         Math.abs(position.y - y) >= minNodeVerticalDistance
       );
     });
-    if (isFree) return { x, y };
+    if (isFree) {
+      return { x, y };
+    }
   }
 
   return { x, y: firstY - (occupied.length + 2) * childVerticalGap };
 }
 
 function getInteractionPosition(interaction: Interaction, index: number): Position {
-  if (hasPosition(interaction)) return interaction.position;
+  if (hasPosition(interaction)) {
+    return interaction.position;
+  }
   return getDefaultInteractionPosition(index);
 }
 

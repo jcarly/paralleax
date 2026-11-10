@@ -42,7 +42,11 @@ export class AuthModule {}
 
 function authRateLimit(context: ExecutionContext, registrationLimit: number) {
   const handler = context.getHandler();
-  if (handler === AuthController.prototype.register) return registrationLimit;
-  if (handler === AuthController.prototype.login) return 10;
+  if (handler === AuthController.prototype.register) {
+    return registrationLimit;
+  }
+  if (handler === AuthController.prototype.login) {
+    return 10;
+  }
   return 100;
 }
