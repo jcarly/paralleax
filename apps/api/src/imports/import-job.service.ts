@@ -139,8 +139,7 @@ export class ImportJobService implements OnModuleInit, OnModuleDestroy {
       }
       const sub = stream.subscribe({
         next: (event) => {
-          const payload = event.data as { ownerId?: string; id?: string } | undefined;
-          if (payload?.ownerId === ownerId || payload?.id === id) {
+          if (hasMatchingStreamIdentity(event.data, ownerId, id)) {
             subscriber.next(event);
           }
         },
@@ -186,6 +185,13 @@ function isTerminal(status: ImportJobStatus): boolean {
     status === 'failed' ||
     status === 'cancelled'
   );
+}
+
+function hasMatchingStreamIdentity(value: unknown, ownerId: string, id: string): boolean {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+  return ('ownerId' in value && value.ownerId === ownerId) || ('id' in value && value.id === id);
 }
 
 function cryptoRandomId(): string {
