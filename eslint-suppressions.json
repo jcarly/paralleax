@@ -1705,11 +1705,6 @@
       "count": 1
     }
   },
-  "apps/web/src/features/story-player/runtime/loadLatestRuntimeSliceForSession.ts": {
-    "curly": {
-      "count": 1
-    }
-  },
   "apps/web/src/features/story-player/runtime/useStoryPlayerLoading.ts": {
     "curly": {
       "count": 2
