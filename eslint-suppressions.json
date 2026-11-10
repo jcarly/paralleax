@@ -1973,20 +1973,6 @@
       "count": 1
     }
   },
-  "apps/web/src/observability/sentry.ts": {
-    "@typescript-eslint/no-unsafe-argument": {
-      "count": 3
-    },
-    "@typescript-eslint/no-unsafe-type-assertion": {
-      "count": 1
-    },
-    "complexity": {
-      "count": 1
-    },
-    "sonarjs/cognitive-complexity": {
-      "count": 1
-    }
-  },
   "apps/web/src/pages/AccountActionPage.tsx": {
     "complexity": {
       "count": 1

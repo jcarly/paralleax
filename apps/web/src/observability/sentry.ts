@@ -8,9 +8,9 @@ export interface BrowserSentryConfig {
 }
 
 export function parseBrowserSentryConfig(
-  dsnValue: string | undefined,
-  releaseValue: string | undefined,
-  tracesSampleRateValue: string | undefined,
+  dsnValue: unknown,
+  releaseValue: unknown,
+  tracesSampleRateValue: unknown,
 ): BrowserSentryConfig | null {
   const dsn = parseSentryDsn(dsnValue);
   if (!dsn) {
@@ -65,32 +65,30 @@ export function initializeSentry(configuration = browserSentryConfig) {
 }
 
 export function redactSentryEvent<T extends object>(event: T): T {
-  const redacted = event as unknown as Record<string, unknown>;
-  delete redacted.request;
-  delete redacted.user;
-  delete redacted.extra;
-  delete redacted.contexts;
-  redacted['breadcrumbs'] = [];
-  redactExceptionPayload(redacted.exception);
+  if (!isRecord(event)) {
+    return event;
+  }
+  redactSensitiveEventData(event);
   return event;
 }
 
-function parseSentryDsn(value: string | undefined): string | null {
-  const normalized = value?.trim();
+function redactSensitiveEventData(event: Record<string, unknown>) {
+  delete event.request;
+  delete event.user;
+  delete event.extra;
+  delete event.contexts;
+  event['breadcrumbs'] = [];
+  redactExceptionPayload(event.exception);
+}
+
+function parseSentryDsn(value: unknown): string | null {
+  const normalized = trimmedString(value);
   if (!normalized) {
     return null;
   }
   try {
     const url = new URL(normalized);
-    if (
-      (url.protocol !== 'http:' && url.protocol !== 'https:') ||
-      !url.username ||
-      url.password ||
-      !url.hostname ||
-      url.search ||
-      url.hash ||
-      url.pathname.split('/').filter(Boolean).length === 0
-    ) {
+    if (!isValidSentryDsnUrl(url)) {
       return null;
     }
     return normalized;
@@ -99,16 +97,30 @@ function parseSentryDsn(value: string | undefined): string | null {
   }
 }
 
-function parseRelease(value: string | undefined): string | undefined {
-  const normalized = value?.trim();
+function isValidSentryDsnUrl(url: URL): boolean {
+  const supportedProtocol = url.protocol === 'http:' || url.protocol === 'https:';
+  const hasPublicKey = Boolean(url.username) && !url.password;
+  const hasProjectPath = url.pathname.split('/').some(Boolean);
+  return (
+    supportedProtocol &&
+    hasPublicKey &&
+    Boolean(url.hostname) &&
+    !url.search &&
+    !url.hash &&
+    hasProjectPath
+  );
+}
+
+function parseRelease(value: unknown): string | undefined {
+  const normalized = trimmedString(value);
   if (!normalized || /[\r\n]/.test(normalized) || normalized.length > 200) {
     return undefined;
   }
   return normalized;
 }
 
-function parseSampleRate(value: string | undefined): number | undefined {
-  const normalized = value?.trim();
+function parseSampleRate(value: unknown): number | undefined {
+  const normalized = trimmedString(value);
   if (!normalized) {
     return undefined;
   }
@@ -116,29 +128,48 @@ function parseSampleRate(value: string | undefined): number | undefined {
   return Number.isFinite(parsed) && parsed >= 0 && parsed <= 1 ? parsed : undefined;
 }
 
+function trimmedString(value: unknown): string | undefined {
+  if (typeof value !== 'string') {
+    return undefined;
+  }
+  const normalized = value.trim();
+  return normalized || undefined;
+}
+
 function redactExceptionPayload(exception: unknown) {
   if (!isRecord(exception) || !Array.isArray(exception.values)) {
     return;
   }
   for (const value of exception.values) {
-    if (!isRecord(value)) {
-      continue;
-    }
-    delete value.value;
-    const frames = isRecord(value.stacktrace) ? value.stacktrace.frames : undefined;
-    if (!Array.isArray(frames)) {
-      continue;
-    }
-    for (const frame of frames) {
-      if (!isRecord(frame)) {
-        continue;
-      }
-      delete frame.context_line;
-      delete frame.pre_context;
-      delete frame.post_context;
-      delete frame.vars;
-    }
+    redactExceptionValue(value);
   }
+}
+
+function redactExceptionValue(value: unknown) {
+  if (!isRecord(value)) {
+    return;
+  }
+  delete value.value;
+  redactStacktracePayload(value.stacktrace);
+}
+
+function redactStacktracePayload(stacktrace: unknown) {
+  if (!isRecord(stacktrace) || !Array.isArray(stacktrace.frames)) {
+    return;
+  }
+  for (const frame of stacktrace.frames) {
+    redactFramePayload(frame);
+  }
+}
+
+function redactFramePayload(frame: unknown) {
+  if (!isRecord(frame)) {
+    return;
+  }
+  delete frame.context_line;
+  delete frame.pre_context;
+  delete frame.post_context;
+  delete frame.vars;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
