@@ -1623,11 +1623,6 @@
       "count": 1
     }
   },
-  "apps/web/src/features/story-editor/persistence/storyGroupPersistence.ts": {
-    "curly": {
-      "count": 3
-    }
-  },
   "apps/web/src/features/story-editor/persistence/useStoryPersistenceLifecycle.test.ts": {
     "curly": {
       "count": 2
