@@ -1,14 +1,15 @@
-type SentryModule = typeof import('./sentry');
+let initialization: ReturnType<typeof loadBrowserMonitoring> | undefined;
 
-let initialization: Promise<SentryModule | null> | undefined;
-
-export function startBrowserMonitoring(): Promise<SentryModule | null> {
+export function startBrowserMonitoring() {
   initialization ??= loadBrowserMonitoring();
   return initialization;
 }
 
-async function loadBrowserMonitoring(): Promise<SentryModule | null> {
-  if (!import.meta.env.VITE_SENTRY_DSN?.trim()) return null;
+async function loadBrowserMonitoring() {
+  const dsnValue: unknown = import.meta.env.VITE_SENTRY_DSN;
+  if (typeof dsnValue !== 'string' || dsnValue.trim() === '') {
+    return null;
+  }
   try {
     const module = await import('./sentry');
     if (!module.browserSentryConfig) {
