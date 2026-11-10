@@ -595,17 +595,6 @@
       "count": 6
     }
   },
-  "apps/api/src/stories/persistence/story-editor.persistence.spec.ts": {
-    "@typescript-eslint/no-unsafe-member-access": {
-      "count": 1
-    },
-    "@typescript-eslint/no-unsafe-type-assertion": {
-      "count": 1
-    },
-    "max-lines-per-function": {
-      "count": 6
-    }
-  },
   "apps/api/src/stories/persistence/story-editor.persistence.ts": {
     "@typescript-eslint/no-non-null-assertion": {
       "count": 8
