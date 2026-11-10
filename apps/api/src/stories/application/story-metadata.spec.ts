@@ -1,152 +1,160 @@
 import type { Story } from '@paralleax/shared';
-import type { StoriesRepository } from '../stories.repository';
-import type { StoryEventsService } from '../story.events';
+import { Test, type TestingModule } from '@nestjs/testing';
+import { StoriesRepository } from '../stories.repository';
+import { StoryEventsService } from '../story.events';
 import { StoryMetadataService } from './story-metadata';
-import type { StoryMutationService } from './story-mutations';
+import { StoryMutationService } from './story-mutations';
 
-describe('StoryMetadataService', () => {
-  const repository = {
-    list: jest.fn(),
-    listPublic: jest.fn(),
-    find: jest.fn(),
-    save: jest.fn(),
-    saveMany: jest.fn(),
-    delete: jest.fn(),
-  };
-  const events = { stream: jest.fn(), publishChange: jest.fn() };
-  const mutations = { update: jest.fn() };
-  const service = new StoryMetadataService(
-    repository as unknown as StoriesRepository,
-    events as unknown as StoryEventsService,
-    mutations as unknown as StoryMutationService,
+const repository = {
+  list: jest.fn(),
+  listPublic: jest.fn(),
+  find: jest.fn(),
+  save: jest.fn(),
+  saveMany: jest.fn(),
+  delete: jest.fn(),
+};
+const events = { stream: jest.fn(), publishChange: jest.fn() };
+const mutations = { update: jest.fn() };
+let moduleRef: TestingModule;
+let service: StoryMetadataService;
+
+beforeAll(async () => {
+  moduleRef = await Test.createTestingModule({
+    providers: [
+      StoryMetadataService,
+      { provide: StoriesRepository, useValue: repository },
+      { provide: StoryEventsService, useValue: events },
+      { provide: StoryMutationService, useValue: mutations },
+    ],
+  }).compile();
+  service = moduleRef.get(StoryMetadataService);
+});
+
+afterAll(async () => {
+  await moduleRef.close();
+});
+
+beforeEach(() => {
+  jest.clearAllMocks();
+  repository.find.mockResolvedValue(storyFixture());
+  repository.save.mockResolvedValue(undefined);
+  repository.saveMany.mockResolvedValue(undefined);
+});
+
+afterEach(() => jest.useRealTimers());
+
+it('delegates story lists and normalizes legacy positions on reads', async () => {
+  repository.list.mockResolvedValue({
+    items: [{ id: 'story-1' }],
+    page: 1,
+    pageSize: 24,
+    totalCount: 1,
+    hasMore: false,
+  });
+  repository.listPublic.mockResolvedValue({
+    items: [{ id: 'public-story' }],
+    page: 1,
+    pageSize: 24,
+    totalCount: 1,
+    hasMore: false,
+  });
+
+  await expect(service.list('user-1')).resolves.toMatchObject({ items: [{ id: 'story-1' }] });
+  await expect(service.listPublic()).resolves.toMatchObject({
+    items: [{ id: 'public-story' }],
+  });
+  await expect(service.get('story-1', 'user-1')).resolves.toMatchObject({
+    interactions: [{ id: 'root', position: { x: 80, y: 120 } }],
+  });
+});
+
+it('only exposes the authoring event stream to editors', async () => {
+  const stream = { kind: 'story-stream' };
+  events.stream.mockReturnValue(stream);
+
+  await expect(service.stream('story-1', 'user-1')).resolves.toBe(stream);
+
+  const readable = storyFixture();
+  readable.capabilities = { canRead: true, canEdit: false, canManage: false, canComment: true };
+  repository.find.mockResolvedValueOnce(readable);
+  await expect(service.stream('story-1', 'reader-1')).rejects.toThrow('Story edit access required');
+});
+
+it('creates a trimmed story with current defaults', async () => {
+  jest.useFakeTimers().setSystemTime(new Date('2026-08-25T16:30:00.000Z'));
+
+  const story = await service.create({ title: '  New story  ' }, 'user-1');
+
+  expect(story).toMatchObject({
+    revision: 1,
+    title: 'New story',
+    startDateTime: '2026-08-25T16:30',
+    access: { visibility: 'private', editPolicy: 'owner', commentPolicy: 'editors' },
+    createdAt: '2026-08-25T16:30:00.000Z',
+    updatedAt: '2026-08-25T16:30:00.000Z',
+  });
+  expect(story.interactions).toHaveLength(2);
+  expect(story.interactions).toMatchObject([
+    {
+      title: '',
+      body: '',
+      position: { x: 80, y: 120 },
+      triggers: [{ inputInteractionIds: [], conditionGroups: [{ conditions: [] }] }],
+    },
+    {
+      title: '',
+      body: '',
+      position: { x: 80, y: 252 },
+      triggers: [{ conditionGroups: [{ conditions: [] }] }],
+    },
+  ]);
+  expect(story.interactions[1].triggers[0].inputInteractionIds).toEqual([story.interactions[0].id]);
+  expect(repository.save).toHaveBeenCalledWith(story, 'user-1');
+});
+
+it('restricts deterministic demo creation to administrators', async () => {
+  await expect(service.createDemo('user-1', 'user')).rejects.toThrow(
+    'Administrator access required',
   );
 
-  beforeEach(() => {
-    jest.clearAllMocks();
-    repository.find.mockResolvedValue(storyFixture());
-    repository.save.mockResolvedValue(undefined);
-    repository.saveMany.mockResolvedValue(undefined);
-  });
+  const stories = await service.createDemo('admin-1', 'admin');
+  expect(stories.map(({ title }) => title)).toEqual([
+    'Demo 1: paths only',
+    'Demo 2: visited interaction conditions',
+    'Demo 3: world variables',
+    'Demo 4: character stats and simple items',
+    'Demo 5: body, equipment, and item stats',
+  ]);
+  expect(repository.saveMany).toHaveBeenCalledWith(stories, 'admin-1');
+});
 
-  afterEach(() => jest.useRealTimers());
+it('updates title and story-local start time through the shared mutation coordinator', async () => {
+  mutations.update.mockImplementation(async (_storyId: string, mutation: (story: Story) => Story) =>
+    mutation(storyFixture()),
+  );
 
-  it('delegates story lists and normalizes legacy positions on reads', async () => {
-    repository.list.mockResolvedValue({
-      items: [{ id: 'story-1' }],
-      page: 1,
-      pageSize: 24,
-      totalCount: 1,
-      hasMore: false,
-    });
-    repository.listPublic.mockResolvedValue({
-      items: [{ id: 'public-story' }],
-      page: 1,
-      pageSize: 24,
-      totalCount: 1,
-      hasMore: false,
-    });
+  await expect(
+    service.update(
+      'story-1',
+      { title: '  Renamed  ', startDateTime: '2026-08-26T09:45' },
+      'user-1',
+    ),
+  ).resolves.toMatchObject({ title: 'Renamed', startDateTime: '2026-08-26T09:45' });
+  await expect(
+    service.update('story-1', { startDateTime: '2026-02-30T09:45' }, 'user-1'),
+  ).rejects.toThrow('Story start date and time is invalid');
+});
 
-    await expect(service.list('user-1')).resolves.toMatchObject({ items: [{ id: 'story-1' }] });
-    await expect(service.listPublic()).resolves.toMatchObject({
-      items: [{ id: 'public-story' }],
-    });
-    await expect(service.get('story-1', 'user-1')).resolves.toMatchObject({
-      interactions: [{ id: 'root', position: { x: 80, y: 120 } }],
-    });
-  });
+it('publishes deletion only after an authorized repository delete', async () => {
+  repository.delete.mockResolvedValueOnce(false).mockResolvedValueOnce(true);
 
-  it('only exposes the authoring event stream to editors', async () => {
-    const stream = { kind: 'story-stream' };
-    events.stream.mockReturnValue(stream);
+  await expect(service.delete('story-1', 'reader-1')).rejects.toThrow(
+    'Story management access required',
+  );
+  expect(events.publishChange).not.toHaveBeenCalled();
 
-    await expect(service.stream('story-1', 'user-1')).resolves.toBe(stream);
-
-    const readable = storyFixture();
-    readable.capabilities = { canRead: true, canEdit: false, canManage: false, canComment: true };
-    repository.find.mockResolvedValueOnce(readable);
-    await expect(service.stream('story-1', 'reader-1')).rejects.toThrow(
-      'Story edit access required',
-    );
-  });
-
-  it('creates a trimmed story with current defaults', async () => {
-    jest.useFakeTimers().setSystemTime(new Date('2026-08-25T16:30:00.000Z'));
-
-    const story = await service.create({ title: '  New story  ' }, 'user-1');
-
-    expect(story).toMatchObject({
-      revision: 1,
-      title: 'New story',
-      startDateTime: '2026-08-25T16:30',
-      access: { visibility: 'private', editPolicy: 'owner', commentPolicy: 'editors' },
-      createdAt: '2026-08-25T16:30:00.000Z',
-      updatedAt: '2026-08-25T16:30:00.000Z',
-    });
-    expect(story.interactions).toHaveLength(2);
-    expect(story.interactions).toMatchObject([
-      {
-        title: '',
-        body: '',
-        position: { x: 80, y: 120 },
-        triggers: [{ inputInteractionIds: [], conditionGroups: [{ conditions: [] }] }],
-      },
-      {
-        title: '',
-        body: '',
-        position: { x: 80, y: 252 },
-        triggers: [{ conditionGroups: [{ conditions: [] }] }],
-      },
-    ]);
-    expect(story.interactions[1].triggers[0].inputInteractionIds).toEqual([
-      story.interactions[0].id,
-    ]);
-    expect(repository.save).toHaveBeenCalledWith(story, 'user-1');
-  });
-
-  it('restricts deterministic demo creation to administrators', async () => {
-    await expect(service.createDemo('user-1', 'user')).rejects.toThrow(
-      'Administrator access required',
-    );
-
-    const stories = await service.createDemo('admin-1', 'admin');
-    expect(stories.map(({ title }) => title)).toEqual([
-      'Demo 1: paths only',
-      'Demo 2: visited interaction conditions',
-      'Demo 3: world variables',
-      'Demo 4: character stats and simple items',
-      'Demo 5: body, equipment, and item stats',
-    ]);
-    expect(repository.saveMany).toHaveBeenCalledWith(stories, 'admin-1');
-  });
-
-  it('updates title and story-local start time through the shared mutation coordinator', async () => {
-    mutations.update.mockImplementation(
-      async (_storyId: string, mutation: (story: Story) => Story) => mutation(storyFixture()),
-    );
-
-    await expect(
-      service.update(
-        'story-1',
-        { title: '  Renamed  ', startDateTime: '2026-08-26T09:45' },
-        'user-1',
-      ),
-    ).resolves.toMatchObject({ title: 'Renamed', startDateTime: '2026-08-26T09:45' });
-    await expect(
-      service.update('story-1', { startDateTime: '2026-02-30T09:45' }, 'user-1'),
-    ).rejects.toThrow('Story start date and time is invalid');
-  });
-
-  it('publishes deletion only after an authorized repository delete', async () => {
-    repository.delete.mockResolvedValueOnce(false).mockResolvedValueOnce(true);
-
-    await expect(service.delete('story-1', 'reader-1')).rejects.toThrow(
-      'Story management access required',
-    );
-    expect(events.publishChange).not.toHaveBeenCalled();
-
-    await service.delete('story-1', 'user-1');
-    expect(events.publishChange).toHaveBeenCalledWith('story-1', 'deleted');
-  });
+  await service.delete('story-1', 'user-1');
+  expect(events.publishChange).toHaveBeenCalledWith('story-1', 'deleted');
 });
 
 function storyFixture(): Story {

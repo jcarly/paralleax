@@ -480,14 +480,6 @@
       "count": 1
     }
   },
-  "apps/api/src/stories/application/story-metadata.spec.ts": {
-    "@typescript-eslint/no-unsafe-type-assertion": {
-      "count": 3
-    },
-    "max-lines-per-function": {
-      "count": 1
-    }
-  },
   "apps/api/src/stories/application/story-mutations.spec.ts": {
     "@typescript-eslint/no-unsafe-type-assertion": {
       "count": 2
