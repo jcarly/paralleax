@@ -46,7 +46,9 @@ export function applyStoryMutationMetadata(
 }
 
 export function getStoryMutationRevision(result: unknown): number | undefined {
-  if (typeof result !== 'object' || result === null || !('revision' in result)) return undefined;
+  if (typeof result !== 'object' || result === null || !('revision' in result)) {
+    return undefined;
+  }
   return typeof result.revision === 'number' ? result.revision : undefined;
 }
 
@@ -264,7 +266,9 @@ export function applyTriggerMutationResult(story: Story, result: TriggerMutation
     {
       ...story,
       interactions: story.interactions.map((interaction) => {
-        if (interaction.id !== result.interactionId) return interaction;
+        if (interaction.id !== result.interactionId) {
+          return interaction;
+        }
         const exists = interaction.triggers.some(({ id }) => id === result.trigger.id);
         return {
           ...interaction,
@@ -285,8 +289,12 @@ export function findSavedInteraction(
   current: Story,
   interactionId?: string,
 ): Interaction | undefined {
-  if (!('interactions' in result)) return result.interaction;
-  if (interactionId) return result.interactions.find(({ id }) => id === interactionId);
+  if (!('interactions' in result)) {
+    return result.interaction;
+  }
+  if (interactionId) {
+    return result.interactions.find(({ id }) => id === interactionId);
+  }
   const currentIds = new Set(current.interactions.map(({ id }) => id));
   return result.interactions.find(({ id }) => !currentIds.has(id));
 }
@@ -297,9 +305,13 @@ export function findSavedTrigger(
   interactionId: string,
   triggerId?: string,
 ): Trigger | undefined {
-  if (!('interactions' in result)) return result.trigger;
+  if (!('interactions' in result)) {
+    return result.trigger;
+  }
   const triggers = result.interactions.find(({ id }) => id === interactionId)?.triggers ?? [];
-  if (triggerId) return triggers.find(({ id }) => id === triggerId);
+  if (triggerId) {
+    return triggers.find(({ id }) => id === triggerId);
+  }
   const currentIds = new Set(
     current.interactions.find(({ id }) => id === interactionId)?.triggers.map(({ id }) => id) ?? [],
   );
