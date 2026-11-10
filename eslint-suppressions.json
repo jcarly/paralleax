@@ -110,20 +110,6 @@
       "count": 1
     }
   },
-  "apps/api/src/config/app-config.service.ts": {
-    "complexity": {
-      "count": 2
-    },
-    "curly": {
-      "count": 5
-    },
-    "max-lines-per-function": {
-      "count": 1
-    },
-    "sonarjs/cognitive-complexity": {
-      "count": 1
-    }
-  },
   "apps/api/src/database/database.migrations.postgres.spec.ts": {
     "@typescript-eslint/no-non-null-assertion": {
       "count": 2
