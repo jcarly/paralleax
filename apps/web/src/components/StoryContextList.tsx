@@ -57,7 +57,9 @@ export function ContextCommentButton({
   onClick: () => void;
 }) {
   const { t } = useTranslation();
-  if (count < 1) return null;
+  if (count < 1) {
+    return null;
+  }
   return (
     <button
       className="context-comment-badge"
@@ -82,8 +84,12 @@ function groupContextEntities<T extends { id: string; category?: string }>(
   }
   return [...groups.entries()]
     .sort(([left], [right]) => {
-      if (left === uncategorizedLabel) return 1;
-      if (right === uncategorizedLabel) return -1;
+      if (left === uncategorizedLabel) {
+        return 1;
+      }
+      if (right === uncategorizedLabel) {
+        return -1;
+      }
       return left.localeCompare(right);
     })
     .map(([category, groupedItems]) => ({ category, items: groupedItems }));

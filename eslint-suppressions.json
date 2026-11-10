@@ -1140,11 +1140,6 @@
       "count": 2
     }
   },
-  "apps/web/src/components/StoryContextList.tsx": {
-    "curly": {
-      "count": 3
-    }
-  },
   "apps/web/src/components/StoryGraphSelectionInspector.tsx": {
     "@typescript-eslint/no-shadow": {
       "count": 1
