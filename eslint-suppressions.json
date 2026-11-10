@@ -149,11 +149,6 @@
       "count": 1
     }
   },
-  "apps/api/src/database/database.migrator.ts": {
-    "curly": {
-      "count": 1
-    }
-  },
   "apps/api/src/email/email.service.spec.ts": {
     "@typescript-eslint/consistent-type-imports": {
       "count": 1
