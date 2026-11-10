@@ -66,13 +66,8 @@ export function getPendingTriggerInputConnection(
   if (!story || !sourceId || !targetId || !triggerId) {
     return undefined;
   }
-  if (sourceId === targetId) {
-    return undefined;
-  }
-
-  const target = story.interactions.find((item) => item.id === targetId);
-  const source = story.interactions.find((item) => item.id === sourceId);
-  if (!target || !source) {
+  const target = findTargetForValidTriggerInputConnection(story, sourceId, targetId);
+  if (!target) {
     return undefined;
   }
 
@@ -85,6 +80,22 @@ export function getPendingTriggerInputConnection(
   }
 
   return { sourceId, targetId, trigger };
+}
+
+function findTargetForValidTriggerInputConnection(
+  story: Story,
+  sourceId: string,
+  targetId: string,
+): Interaction | undefined {
+  if (sourceId === targetId) {
+    return undefined;
+  }
+  const target = story.interactions.find((item) => item.id === targetId);
+  const source = story.interactions.find((item) => item.id === sourceId);
+  if (!target || !source) {
+    return undefined;
+  }
+  return target;
 }
 
 export function findCreatedTrigger(

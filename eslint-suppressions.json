@@ -2219,11 +2219,6 @@
       "count": 1
     }
   },
-  "apps/web/src/storyConnection.ts": {
-    "complexity": {
-      "count": 1
-    }
-  },
   "apps/web/src/storyGraph.stress.test.ts": {
     "max-lines-per-function": {
       "count": 1
