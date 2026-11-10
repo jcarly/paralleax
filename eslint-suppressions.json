@@ -1005,11 +1005,6 @@
       "count": 1
     }
   },
-  "apps/web/src/components/ModalPortal.tsx": {
-    "curly": {
-      "count": 1
-    }
-  },
   "apps/web/src/components/RichTextConditionDialog.tsx": {
     "curly": {
       "count": 1
