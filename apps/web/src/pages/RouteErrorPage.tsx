@@ -3,7 +3,13 @@ import { useRouteError } from 'react-router-dom';
 
 export function isDynamicImportError(error: unknown): boolean {
   if (!(error instanceof Error)) return false;
-  return /failed to fetch dynamically imported module|error loading dynamically imported module|importing a module script failed|loading (?:css )?chunk .+ failed/i.test(error.message);
+  const message = error.message.toLowerCase();
+  return (
+    message.includes('failed to fetch dynamically imported module') ||
+    message.includes('error loading dynamically imported module') ||
+    message.includes('importing a module script failed') ||
+    /loading (?:css )?chunk .+ failed/i.test(message)
+  );
 }
 
 export function RouteErrorPage() {
