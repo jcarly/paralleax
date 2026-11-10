@@ -1,7 +1,11 @@
 import { randomUUID } from 'node:crypto';
 import { parentPort, workerData } from 'node:worker_threads';
 
-import { importChoiceScript, type ChoiceScriptImportResult } from '@paralleax/shared';
+import {
+  importChoiceScript,
+  type ChoiceScriptImportResult,
+  type ChoiceScriptSourceFile,
+} from '@paralleax/shared';
 
 import { ImportReportWriter } from '../../imports/import-report-writer.js';
 import type {
@@ -15,7 +19,7 @@ if (!port) {
   throw new Error('ChoiceScript worker must run in a worker thread.');
 }
 
-const input = workerData as ChoiceScriptWorkerInput;
+const input = parseChoiceScriptWorkerInput(workerData);
 const writer = new ImportReportWriter({ reportPath: input.reportPath });
 
 void (async () => {
@@ -47,3 +51,28 @@ void (async () => {
     } satisfies ChoiceScriptWorkerMessage);
   }
 })();
+
+function parseChoiceScriptWorkerInput(value: unknown): ChoiceScriptWorkerInput {
+  if (!isRecord(value)) {
+    throw new Error('Invalid ChoiceScript worker input.');
+  }
+  const { files, reportPath, storyId, timestamp } = value;
+  if (
+    typeof reportPath !== 'string' ||
+    typeof storyId !== 'string' ||
+    typeof timestamp !== 'string' ||
+    !Array.isArray(files) ||
+    !files.every(isChoiceScriptSourceFile)
+  ) {
+    throw new Error('Invalid ChoiceScript worker input.');
+  }
+  return { files, reportPath, storyId, timestamp };
+}
+
+function isChoiceScriptSourceFile(value: unknown): value is ChoiceScriptSourceFile {
+  return isRecord(value) && typeof value.name === 'string' && typeof value.content === 'string';
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
