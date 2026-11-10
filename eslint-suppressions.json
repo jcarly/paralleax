@@ -186,11 +186,6 @@
       "count": 1
     }
   },
-  "apps/api/src/email/email.service.ts": {
-    "curly": {
-      "count": 4
-    }
-  },
   "apps/api/src/health/health.controller.spec.ts": {
     "@typescript-eslint/no-unsafe-type-assertion": {
       "count": 1
