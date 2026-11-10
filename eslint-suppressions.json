@@ -66,11 +66,6 @@
       "count": 1
     }
   },
-  "apps/api/src/auth/auth.service.ts": {
-    "@typescript-eslint/no-unsafe-type-assertion": {
-      "count": 2
-    }
-  },
   "apps/api/src/comments/comments.e2e.spec.ts": {
     "@typescript-eslint/no-non-null-assertion": {
       "count": 5
