@@ -1916,11 +1916,6 @@
       "count": 2
     }
   },
-  "apps/web/src/features/story/storyMutationResults.ts": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 1
-    }
-  },
   "apps/web/src/features/story/useStoryRouteAccessRecovery.ts": {
     "curly": {
       "count": 1

@@ -73,7 +73,7 @@ export function applyGroupResult(story: Story, result: GroupMutationResult): Sto
   );
   if (result.groupOrder && (story.revision ?? 0) <= result.revision) {
     const order = new Map(result.groupOrder.map((id, index) => [id, index]));
-    next.groups = [...next.groups!].sort(
+    next.groups = [...(next.groups ?? [])].sort(
       (left, right) => (order.get(left.id) ?? Infinity) - (order.get(right.id) ?? Infinity),
     );
   }
