@@ -3266,11 +3266,6 @@
       "count": 1
     }
   },
-  "packages/shared/src/operations/groups.ts": {
-    "curly": {
-      "count": 11
-    }
-  },
   "packages/shared/src/operations/merge.ts": {
     "complexity": {
       "count": 1
