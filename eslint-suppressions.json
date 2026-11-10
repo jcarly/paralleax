@@ -371,11 +371,6 @@
       "count": 1
     }
   },
-  "apps/api/src/stories/application/qsp-import-progress.service.ts": {
-    "curly": {
-      "count": 4
-    }
-  },
   "apps/api/src/stories/application/qsp-import-worker.service.spec.ts": {
     "@typescript-eslint/no-unsafe-assignment": {
       "count": 1
