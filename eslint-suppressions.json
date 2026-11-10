@@ -208,11 +208,6 @@
       "count": 1
     }
   },
-  "apps/api/src/imports/import-report-storage.ts": {
-    "sonarjs/cognitive-complexity": {
-      "count": 1
-    }
-  },
   "apps/api/src/imports/import-report-writer.spec.ts": {
     "@typescript-eslint/no-non-null-assertion": {
       "count": 2

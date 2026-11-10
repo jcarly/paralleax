@@ -14,6 +14,9 @@ export interface ImportReportMetadata {
   size: number;
 }
 
+const reportFileNamePattern =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.(?:choicescript|qsp)\.jsonl$/i;
+
 export abstract class ImportReportStorage {
   abstract getBaseDirectory(): string;
 
@@ -27,35 +30,38 @@ export abstract class ImportReportStorage {
 
   async cleanupExpiredReports(ttlMs = 7 * 24 * 60 * 60 * 1000): Promise<void> {
     const dir = this.getBaseDirectory();
-    let entries: string[];
-    try {
-      entries = await readdir(dir);
-    } catch (caught) {
-      if (isMissingPath(caught)) {
-        return;
-      }
-      throw caught;
-    }
+    const entries = await readReportEntries(dir);
     const now = Date.now();
     for (const entry of entries) {
-      if (
-        !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.(?:choicescript|qsp)\.jsonl$/i.test(
-          entry,
-        )
-      ) {
+      if (!reportFileNamePattern.test(entry)) {
         continue;
       }
-      try {
-        const fullPath = join(dir, entry);
-        const statResult = await lstat(fullPath);
-        if (statResult.isFile() && now - statResult.mtimeMs > ttlMs) {
-          await rm(fullPath, { force: true });
-        }
-      } catch (caught) {
-        if (!isMissingPath(caught)) {
-          throw caught;
-        }
-      }
+      await removeExpiredReportFile(join(dir, entry), now, ttlMs);
+    }
+  }
+}
+
+async function readReportEntries(directory: string): Promise<string[]> {
+  try {
+    return await readdir(directory);
+  } catch (caught) {
+    if (isMissingPath(caught)) {
+      return [];
+    }
+    throw caught;
+  }
+}
+
+async function removeExpiredReportFile(path: string, now: number, ttlMs: number): Promise<void> {
+  try {
+    const statResult = await lstat(path);
+    if (!statResult.isFile() || now - statResult.mtimeMs <= ttlMs) {
+      return;
+    }
+    await rm(path, { force: true });
+  } catch (caught) {
+    if (!isMissingPath(caught)) {
+      throw caught;
     }
   }
 }
