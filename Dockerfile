@@ -91,7 +91,8 @@ ENV VITE_SENTRY_DSN=${VITE_SENTRY_DSN}
 ENV NGINX_ENVSUBST_OUTPUT_DIR=/tmp/nginx
 ENV NGINX_ENTRYPOINT_LOCAL_RESOLVERS=1
 
-RUN mkdir -p /tmp/nginx && chown nginx:nginx /tmp/nginx
+RUN chmod +x /docker-entrypoint.d/15-sentry-csp.envsh \
+  && mkdir -p /tmp/nginx && chown nginx:nginx /tmp/nginx
 
 
 USER nginx
