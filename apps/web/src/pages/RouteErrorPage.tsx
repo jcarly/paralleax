@@ -1,8 +1,8 @@
 import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useRouteError } from 'react-router-dom';
 import { reportBrowserError } from '../observability/browserMonitoring';
 import { isDynamicImportError } from '../observability/dynamicImportError';
-import { useRouteError } from 'react-router-dom';
 
 export function RouteErrorPage() {
   const { t } = useTranslation();
