@@ -344,11 +344,6 @@
       "count": 1
     }
   },
-  "apps/api/src/stories/application/qsp-import-worker.service.ts": {
-    "curly": {
-      "count": 1
-    }
-  },
   "apps/api/src/stories/application/qsp-import.worker.spec.ts": {
     "max-lines-per-function": {
       "count": 1
