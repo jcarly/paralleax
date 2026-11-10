@@ -33,11 +33,6 @@
       "count": 2
     }
   },
-  "apps/api/src/auth/auth.guard.ts": {
-    "curly": {
-      "count": 1
-    }
-  },
   "apps/api/src/auth/auth.repository.spec.ts": {
     "@typescript-eslint/no-unsafe-type-assertion": {
       "count": 1
