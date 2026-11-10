@@ -45,7 +45,9 @@ export function applyStoryGraphPositionPatch(story: Story, patch: StoryGraphPosi
   for (const { interactionId, triggerIds, position } of patch.triggerUpdates) {
     const positions =
       triggerPositions.get(interactionId) ?? new Map<string, Position | undefined>();
-    for (const triggerId of triggerIds) positions.set(triggerId, position);
+    for (const triggerId of triggerIds) {
+      positions.set(triggerId, position);
+    }
     triggerPositions.set(interactionId, positions);
   }
   return {
@@ -56,16 +58,22 @@ export function applyStoryGraphPositionPatch(story: Story, patch: StoryGraphPosi
       const hasTriggerUpdate = interaction.triggers.some((trigger) =>
         interactionTriggerPositions?.has(trigger.id),
       );
-      if (!position && !hasTriggerUpdate) return interaction;
+      if (!position && !hasTriggerUpdate) {
+        return interaction;
+      }
       return {
         ...interaction,
         ...(position ? { position } : {}),
         ...(hasTriggerUpdate
           ? {
               triggers: interaction.triggers.map((trigger) => {
-                if (!interactionTriggerPositions?.has(trigger.id)) return trigger;
+                if (!interactionTriggerPositions?.has(trigger.id)) {
+                  return trigger;
+                }
                 const triggerPosition = interactionTriggerPositions.get(trigger.id);
-                if (triggerPosition) return { ...trigger, position: triggerPosition };
+                if (triggerPosition) {
+                  return { ...trigger, position: triggerPosition };
+                }
                 const withoutPosition = { ...trigger };
                 delete withoutPosition.position;
                 return withoutPosition;
@@ -87,7 +95,9 @@ export function diffStoryGraphPositions(before: Story, after: Story): StoryGraph
 
   for (const interaction of before.interactions) {
     const updatedInteraction = afterInteractions.get(interaction.id);
-    if (!updatedInteraction) continue;
+    if (!updatedInteraction) {
+      continue;
+    }
     if (!positionsEqual(interaction.position, updatedInteraction.position)) {
       interactionUpdates.push({
         interactionId: interaction.id,
@@ -100,7 +110,9 @@ export function diffStoryGraphPositions(before: Story, after: Story): StoryGraph
     );
     for (const trigger of interaction.triggers) {
       const updatedTrigger = updatedTriggers.get(trigger.id);
-      if (!updatedTrigger || positionsEqual(trigger.position, updatedTrigger.position)) continue;
+      if (!updatedTrigger || positionsEqual(trigger.position, updatedTrigger.position)) {
+        continue;
+      }
       triggerUpdates.push({
         interactionId: interaction.id,
         triggerIds: [trigger.id],

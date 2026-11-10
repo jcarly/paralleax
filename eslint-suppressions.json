@@ -2908,9 +2908,6 @@
     }
   },
   "packages/shared/src/graph/positions.ts": {
-    "curly": {
-      "count": 6
-    },
     "sonarjs/cognitive-complexity": {
       "count": 1
     }
