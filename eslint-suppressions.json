@@ -741,11 +741,6 @@
       "count": 1
     }
   },
-  "apps/api/src/stories/stories.service.ts": {
-    "max-params": {
-      "count": 3
-    }
-  },
   "apps/api/src/stories/stories.stress.postgres.spec.ts": {
     "@typescript-eslint/no-shadow": {
       "count": 2
