@@ -130,73 +130,7 @@ export class InMemoryStoriesRepository {
     pageSize: number,
   ): Promise<StoryEditorContextPage | undefined> {
     const story = await this.find(id, ownerId);
-    if (!story) {
-      return undefined;
-    }
-    const statAssignments: StoryEditorStatAssignment[] = [
-      ...(story.stats ?? []).map((stat) => ({ ...stat, ownerType: 'story' as const })),
-      ...(story.characters ?? []).flatMap((character) =>
-        (character.stats ?? []).map((stat) => ({
-          ...stat,
-          ownerType: 'character' as const,
-          ownerId: character.id,
-        })),
-      ),
-      ...(story.locations ?? []).flatMap((location) =>
-        (location.stats ?? []).map((stat) => ({
-          ...stat,
-          ownerType: 'location' as const,
-          ownerId: location.id,
-        })),
-      ),
-      ...(story.itemDefinitions ?? []).flatMap((definition) =>
-        (definition.stats ?? []).map((stat) => ({
-          ...stat,
-          ownerType: 'itemDefinition' as const,
-          ownerId: definition.id,
-        })),
-      ),
-    ];
-    const itemInstances: StoryEditorItemInstance[] = [
-      ...(story.characters ?? []).flatMap((character) =>
-        (character.items ?? []).map((item) => ({
-          ...item,
-          ...(!item.parentItemId ? { ownerType: 'character' as const, ownerId: character.id } : {}),
-        })),
-      ),
-      ...(story.locations ?? []).flatMap((location) =>
-        (location.items ?? []).map((item) => ({
-          ...item,
-          ...(!item.parentItemId ? { ownerType: 'location' as const, ownerId: location.id } : {}),
-        })),
-      ),
-    ];
-    const bootstrap = editorBootstrap(story);
-    return {
-      revision: story.revision ?? 1,
-      page,
-      pageSize,
-      hasMore: Object.values(bootstrap.contextCounts).some((count) => count > page * pageSize),
-      locations: pageItems(story.locations ?? [], page, pageSize).map((location) => ({
-        ...location,
-        stats: undefined,
-        items: undefined,
-      })),
-      characters: pageItems(story.characters ?? [], page, pageSize).map((character) => ({
-        ...character,
-        stats: undefined,
-        items: undefined,
-      })),
-      statDefinitions: pageItems(story.statDefinitions ?? [], page, pageSize),
-      statAssignments: pageItems(statAssignments, page, pageSize),
-      itemDefinitions: pageItems(story.itemDefinitions ?? [], page, pageSize).map((definition) => ({
-        ...definition,
-        stats: undefined,
-      })),
-      itemInstances: pageItems(itemInstances, page, pageSize),
-      groups: pageItems(story.groups ?? [], page, pageSize),
-      graphDecorations: pageItems(story.graphDecorations ?? [], page, pageSize),
-    };
+    return story ? editorContextPage(story, page, pageSize) : undefined;
   }
 
   async findEditorInteractionPage(
@@ -339,54 +273,7 @@ export class InMemoryStoriesRepository {
     request: StoryRuntimeSliceRequest,
   ): Promise<StoryRuntimeSlice | undefined> {
     const story = await this.find(id, ownerId);
-    if (!story) {
-      return undefined;
-    }
-    const candidates =
-      request.includeOptions === false
-        ? []
-        : story.interactions.filter((interaction) =>
-            interaction.triggers.some((trigger) =>
-              doesTriggerInputMatch(trigger, request.currentInteractionId ?? null),
-            ),
-          );
-    const start = (request.page - 1) * request.pageSize;
-    const optionPage = candidates.slice(start, start + request.pageSize);
-    const optionIds = new Set(optionPage.map(({ id: interactionId }) => interactionId));
-    const requestedIds = new Set(request.interactionIds ?? []);
-    const referencedIds = new Set(
-      optionPage.flatMap((interaction) =>
-        interaction.triggers.flatMap((trigger) =>
-          getTriggerConditions(trigger).flatMap((condition) =>
-            'interactionId' in condition ? [condition.interactionId] : [],
-          ),
-        ),
-      ),
-    );
-    return {
-      revision: story.revision ?? 1,
-      page: request.page,
-      pageSize: request.pageSize,
-      totalOptionCount: candidates.length,
-      hasMore: start + request.pageSize < candidates.length,
-      optionInteractionIds: [...optionIds],
-      interactionReferences: story.interactions
-        .filter(({ id: interactionId }) => referencedIds.has(interactionId))
-        .map(({ id: interactionId, title }) => ({ id: interactionId, title })),
-      interactions: story.interactions
-        .filter(
-          ({ id: interactionId }) =>
-            optionIds.has(interactionId) || requestedIds.has(interactionId),
-        )
-        .map((interaction) => ({
-          ...structuredClone(interaction),
-          triggers: optionIds.has(interaction.id)
-            ? interaction.triggers.filter((trigger) =>
-                doesTriggerInputMatch(trigger, request.currentInteractionId ?? null),
-              )
-            : [],
-        })),
-    };
+    return story ? runtimeSlice(story, request) : undefined;
   }
 
   async find(id: string, ownerId?: string): Promise<Story | undefined> {
@@ -470,18 +357,7 @@ export class InMemoryStoriesRepository {
       if (!current || !this.can(current, id, userId).canEdit) {
         return undefined;
       }
-      const events = this.history.get(id) ?? [];
-      const reversedEventIds = new Set(
-        events.flatMap(({ revertsEventId }) => (revertsEventId ? [revertsEventId] : [])),
-      );
-      const candidate = [...events]
-        .reverse()
-        .find(
-          (event) =>
-            event.actorUserId === userId &&
-            !reversedEventIds.has(event.id) &&
-            (action === 'undo' ? event.kind !== 'undo' : event.kind === 'undo'),
-        );
+      const candidate = latestHistoryRevertCandidate(this.history.get(id) ?? [], userId, action);
       if (!candidate) {
         return { kind: 'unavailable' as const };
       }
@@ -567,14 +443,25 @@ export class InMemoryStoriesRepository {
   }
 
   async saveProgress(
-    storyId: string,
-    userId: string,
-    state: ReaderProgressState,
-    updatedAt: string,
-    slotId = READER_AUTOSAVE_ID,
-    name?: string,
-    createdAt = updatedAt,
+    ...args: [
+      storyId: string,
+      userId: string,
+      state: ReaderProgressState,
+      updatedAt: string,
+      slotId?: string,
+      name?: string,
+      createdAt?: string,
+    ]
   ): Promise<boolean> {
+    const [
+      storyId,
+      userId,
+      state,
+      updatedAt,
+      slotId = READER_AUTOSAVE_ID,
+      name,
+      createdAt = updatedAt,
+    ] = args;
     const story = this.stories.get(storyId);
     if (!story || !this.can(story, storyId, userId).canRead) {
       return false;
@@ -756,6 +643,150 @@ export class InMemoryStoriesRepository {
   }
 }
 
+function editorStatAssignments(story: Story): StoryEditorStatAssignment[] {
+  return [
+    ...(story.stats ?? []).map((stat) => ({ ...stat, ownerType: 'story' as const })),
+    ...(story.characters ?? []).flatMap((character) =>
+      (character.stats ?? []).map((stat) => ({
+        ...stat,
+        ownerType: 'character' as const,
+        ownerId: character.id,
+      })),
+    ),
+    ...(story.locations ?? []).flatMap((location) =>
+      (location.stats ?? []).map((stat) => ({
+        ...stat,
+        ownerType: 'location' as const,
+        ownerId: location.id,
+      })),
+    ),
+    ...(story.itemDefinitions ?? []).flatMap((definition) =>
+      (definition.stats ?? []).map((stat) => ({
+        ...stat,
+        ownerType: 'itemDefinition' as const,
+        ownerId: definition.id,
+      })),
+    ),
+  ];
+}
+
+function latestHistoryRevertCandidate(
+  events: readonly MemoryStoryHistoryEvent[],
+  userId: string,
+  action: 'undo' | 'redo',
+): MemoryStoryHistoryEvent | undefined {
+  const reversedEventIds = new Set(
+    events.flatMap(({ revertsEventId }) => (revertsEventId ? [revertsEventId] : [])),
+  );
+  return [...events]
+    .reverse()
+    .find(
+      (event) =>
+        event.actorUserId === userId &&
+        !reversedEventIds.has(event.id) &&
+        (action === 'undo' ? event.kind !== 'undo' : event.kind === 'undo'),
+    );
+}
+
+function editorItemInstances(story: Story): StoryEditorItemInstance[] {
+  return [
+    ...(story.characters ?? []).flatMap((character) =>
+      (character.items ?? []).map((item) => ({
+        ...item,
+        ...(!item.parentItemId ? { ownerType: 'character' as const, ownerId: character.id } : {}),
+      })),
+    ),
+    ...(story.locations ?? []).flatMap((location) =>
+      (location.items ?? []).map((item) => ({
+        ...item,
+        ...(!item.parentItemId ? { ownerType: 'location' as const, ownerId: location.id } : {}),
+      })),
+    ),
+  ];
+}
+
+function editorContextPage(story: Story, page: number, pageSize: number): StoryEditorContextPage {
+  const bootstrap = editorBootstrap(story);
+  return {
+    revision: story.revision ?? 1,
+    page,
+    pageSize,
+    hasMore: Object.values(bootstrap.contextCounts).some((count) => count > page * pageSize),
+    locations: pageItems(story.locations ?? [], page, pageSize).map((location) => ({
+      ...location,
+      stats: undefined,
+      items: undefined,
+    })),
+    characters: pageItems(story.characters ?? [], page, pageSize).map((character) => ({
+      ...character,
+      stats: undefined,
+      items: undefined,
+    })),
+    statDefinitions: pageItems(story.statDefinitions ?? [], page, pageSize),
+    statAssignments: pageItems(editorStatAssignments(story), page, pageSize),
+    itemDefinitions: pageItems(story.itemDefinitions ?? [], page, pageSize).map((definition) => ({
+      ...definition,
+      stats: undefined,
+    })),
+    itemInstances: pageItems(editorItemInstances(story), page, pageSize),
+    groups: pageItems(story.groups ?? [], page, pageSize),
+    graphDecorations: pageItems(story.graphDecorations ?? [], page, pageSize),
+  };
+}
+
+function runtimeOptions(story: Story, request: StoryRuntimeSliceRequest): Story['interactions'] {
+  if (request.includeOptions === false) {
+    return [];
+  }
+  return story.interactions.filter((interaction) =>
+    interaction.triggers.some((trigger) =>
+      doesTriggerInputMatch(trigger, request.currentInteractionId ?? null),
+    ),
+  );
+}
+
+function runtimeReferencedInteractionIds(options: Story['interactions']): Set<string> {
+  return new Set(
+    options.flatMap((interaction) =>
+      interaction.triggers.flatMap((trigger) =>
+        getTriggerConditions(trigger).flatMap((condition) =>
+          'interactionId' in condition ? [condition.interactionId] : [],
+        ),
+      ),
+    ),
+  );
+}
+
+function runtimeSlice(story: Story, request: StoryRuntimeSliceRequest): StoryRuntimeSlice {
+  const candidates = runtimeOptions(story, request);
+  const start = (request.page - 1) * request.pageSize;
+  const optionPage = candidates.slice(start, start + request.pageSize);
+  const optionIds = new Set(optionPage.map(({ id }) => id));
+  const requestedIds = new Set(request.interactionIds ?? []);
+  const referencedIds = runtimeReferencedInteractionIds(optionPage);
+  return {
+    revision: story.revision ?? 1,
+    page: request.page,
+    pageSize: request.pageSize,
+    totalOptionCount: candidates.length,
+    hasMore: start + request.pageSize < candidates.length,
+    optionInteractionIds: [...optionIds],
+    interactionReferences: story.interactions
+      .filter(({ id }) => referencedIds.has(id))
+      .map(({ id, title }) => ({ id, title })),
+    interactions: story.interactions
+      .filter(({ id }) => optionIds.has(id) || requestedIds.has(id))
+      .map((interaction) => ({
+        ...structuredClone(interaction),
+        triggers: optionIds.has(interaction.id)
+          ? interaction.triggers.filter((trigger) =>
+              doesTriggerInputMatch(trigger, request.currentInteractionId ?? null),
+            )
+          : [],
+      })),
+  };
+}
+
 function paginate<T>(items: T[], page: number, pageSize: number): PaginatedResult<T> {
   return {
     items: pageItems(items, page, pageSize),
@@ -776,22 +807,30 @@ function matchesStoryList(
   ownerId: string | undefined,
   options: StoryListOptions,
 ) {
-  if (
-    options.query &&
-    !story.title.toLocaleLowerCase().includes(options.query.trim().toLocaleLowerCase())
-  ) {
-    return false;
+  return (
+    matchesStoryQuery(story, options.query) && matchesStoryFilter(story, ownerId, options.filter)
+  );
+}
+
+function matchesStoryQuery(story: StorySummary, query: string | undefined): boolean {
+  if (!query) {
+    return true;
   }
-  if (options.filter === 'editable' && !story.capabilities?.canEdit) {
-    return false;
-  }
-  if (options.filter === 'commentable' && !story.capabilities?.canComment) {
-    return false;
-  }
-  if (options.filter === 'owned' && story.owner?.id !== ownerId) {
-    return false;
-  }
-  return true;
+  return story.title.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase());
+}
+
+function matchesStoryFilter(
+  story: StorySummary,
+  ownerId: string | undefined,
+  filter: StoryListOptions['filter'],
+): boolean {
+  const results = {
+    editable: Boolean(story.capabilities?.canEdit),
+    commentable: Boolean(story.capabilities?.canComment),
+    owned: story.owner?.id === ownerId,
+    all: true,
+  };
+  return filter ? results[filter] : true;
 }
 
 function storyListComparator(sort: StoryListOptions['sort']) {
@@ -801,22 +840,48 @@ function storyListComparator(sort: StoryListOptions['sort']) {
       : Date.parse(right.updatedAt) - Date.parse(left.updatedAt) || left.id.localeCompare(right.id);
 }
 
-function editorBootstrap(story: Story): StoryEditorBootstrap {
-  const statAssignmentCount =
+function countOwnerEntries(
+  owners: Array<{ stats?: unknown[]; items?: unknown[] }>,
+  key: 'stats' | 'items',
+) {
+  return owners.reduce((total, owner) => total + (owner[key]?.length ?? 0), 0);
+}
+
+function statAssignmentCount(story: Story): number {
+  return (
     (story.stats?.length ?? 0) +
-    (story.characters ?? []).reduce(
-      (total, character) => total + (character.stats?.length ?? 0),
-      0,
-    ) +
-    (story.locations ?? []).reduce((total, location) => total + (location.stats?.length ?? 0), 0) +
-    (story.itemDefinitions ?? []).reduce(
-      (total, definition) => total + (definition.stats?.length ?? 0),
-      0,
-    );
-  const itemInstanceCount = [...(story.characters ?? []), ...(story.locations ?? [])].reduce(
-    (total, owner) => total + (owner.items?.length ?? 0),
-    0,
+    countOwnerEntries(story.characters ?? [], 'stats') +
+    countOwnerEntries(story.locations ?? [], 'stats') +
+    countOwnerEntries(story.itemDefinitions ?? [], 'stats')
   );
+}
+
+function itemInstanceCount(story: Story): number {
+  return countOwnerEntries([...(story.characters ?? []), ...(story.locations ?? [])], 'items');
+}
+
+function triggerCount(story: Story): number {
+  return story.interactions.reduce((total, interaction) => total + interaction.triggers.length, 0);
+}
+
+function collectionCount(items: unknown[] | undefined): number {
+  return items?.length ?? 0;
+}
+
+function editorContextCounts(story: Story): StoryEditorBootstrap['contextCounts'] {
+  return {
+    locations: collectionCount(story.locations),
+    characters: collectionCount(story.characters),
+    statDefinitions: collectionCount(story.statDefinitions),
+    statAssignments: statAssignmentCount(story),
+    itemDefinitions: collectionCount(story.itemDefinitions),
+    itemInstances: itemInstanceCount(story),
+    groups: collectionCount(story.groups),
+    graphDecorations: collectionCount(story.graphDecorations),
+  };
+}
+
+function editorBootstrap(story: Story): StoryEditorBootstrap {
   return {
     id: story.id,
     revision: story.revision,
@@ -827,21 +892,9 @@ function editorBootstrap(story: Story): StoryEditorBootstrap {
     owner: story.owner,
     createdAt: story.createdAt,
     updatedAt: story.updatedAt,
-    contextCounts: {
-      locations: story.locations?.length ?? 0,
-      characters: story.characters?.length ?? 0,
-      statDefinitions: story.statDefinitions?.length ?? 0,
-      statAssignments: statAssignmentCount,
-      itemDefinitions: story.itemDefinitions?.length ?? 0,
-      itemInstances: itemInstanceCount,
-      groups: story.groups?.length ?? 0,
-      graphDecorations: story.graphDecorations?.length ?? 0,
-    },
+    contextCounts: editorContextCounts(story),
     interactionCount: story.interactions.length,
-    triggerCount: story.interactions.reduce(
-      (total, interaction) => total + interaction.triggers.length,
-      0,
-    ),
+    triggerCount: triggerCount(story),
   };
 }
 

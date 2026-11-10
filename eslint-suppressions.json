@@ -704,17 +704,6 @@
       "count": 7
     }
   },
-  "apps/api/src/stories/stories.repository.memory.ts": {
-    "complexity": {
-      "count": 3
-    },
-    "max-lines-per-function": {
-      "count": 3
-    },
-    "max-params": {
-      "count": 1
-    }
-  },
   "apps/api/src/stories/stories.repository.spec.ts": {
     "@typescript-eslint/no-non-null-assertion": {
       "count": 17
