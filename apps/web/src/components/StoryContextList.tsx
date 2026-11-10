@@ -1,11 +1,20 @@
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
-export function ContextThumbnail({ imageUrl, fallback }: { imageUrl?: string; fallback: string }) {
+export function ContextThumbnail({
+  imageUrl,
+  fallback,
+  className = '',
+}: {
+  imageUrl?: string;
+  fallback: string;
+  className?: string;
+}) {
+  const classes = `context-picto ${className}`.trim();
   return imageUrl ? (
-    <img className="context-picto" src={imageUrl} alt="" />
+    <img className={classes} src={imageUrl} alt="" />
   ) : (
-    <span className="context-picto context-picto-placeholder" aria-hidden="true">
+    <span className={`${classes} context-picto-placeholder`} aria-hidden="true">
       {fallback}
     </span>
   );
@@ -71,19 +80,16 @@ export function ContextCommentButton({
   );
 }
 
-function groupContextEntities<T extends { id: string; category?: string }>(
-  items: T[],
-  uncategorizedLabel: string,
-) {
-  const groups = new Map<string, T[]>();
+function groupContextEntities<T extends { id: string; category?: string }>(items: T[]) {
+  const groups = new Map<string | undefined, T[]>();
   for (const item of items) {
-    const category = item.category?.trim() || uncategorizedLabel;
+    const category = item.category?.trim() || undefined;
     groups.set(category, [...(groups.get(category) ?? []), item]);
   }
   return [...groups.entries()]
     .sort(([left], [right]) => {
-      if (left === uncategorizedLabel) return 1;
-      if (right === uncategorizedLabel) return -1;
+      if (left === undefined) return 1;
+      if (right === undefined) return -1;
       return left.localeCompare(right);
     })
     .map(([category, groupedItems]) => ({ category, items: groupedItems }));
@@ -97,19 +103,28 @@ export function CategorizedContextList<T extends { id: string; category?: string
   renderItem: (item: T) => ReactNode;
 }) {
   const { t } = useTranslation();
+  const groups = groupContextEntities(items);
+  const hasNamedCategories = groups.some(({ category }) => category !== undefined);
   return (
     <div className="context-category-list">
-      {groupContextEntities(items, t('editor.uncategorized')).map(
-        ({ category, items: groupedItems }) => (
-          <section className="context-category-group" key={category}>
-            <div className="context-category-heading">
-              <span>{category}</span>
-              <small>{groupedItems.length}</small>
-            </div>
-            <ul className="context-entity-list">{groupedItems.map(renderItem)}</ul>
+      {groups.map(({ category, items: groupedItems }) => {
+        const showHeading = category !== undefined || hasNamedCategories;
+        const groupKey = category === undefined ? 'uncategorized-group' : `category:${category}`;
+        const listClassName = showHeading
+          ? 'context-entity-list'
+          : 'context-entity-list context-entity-list--without-category';
+        return (
+          <section className="context-category-group" key={groupKey}>
+            {showHeading ? (
+              <div className="context-category-heading">
+                <span>{category ?? t('editor.uncategorized')}</span>
+                <small>{groupedItems.length}</small>
+              </div>
+            ) : null}
+            <ul className={listClassName}>{groupedItems.map(renderItem)}</ul>
           </section>
-        ),
-      )}
+        );
+      })}
     </div>
   );
 }

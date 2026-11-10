@@ -131,7 +131,7 @@ export async function renderEditor(
     />,
   );
 
-  await screen.findByText('Original title', undefined, { timeout: 5_000 });
+  await screen.findByTestId('flow-node-interaction-1', undefined, { timeout: 5_000 });
 }
 
 export async function chooseTriggerConditionType(

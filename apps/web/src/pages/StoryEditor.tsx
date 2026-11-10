@@ -6,6 +6,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type CSSProperties,
   type MouseEvent as ReactMouseEvent,
 } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -22,7 +23,7 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import '../features/story-editor/graph/storyGraph.css';
-import { Link, Navigate, useLocation, useParams, useSearchParams } from 'react-router-dom';
+import { Navigate, useLocation, useParams, useSearchParams } from 'react-router-dom';
 import {
   canDeleteCommentThread as canActorDeleteCommentThread,
   canManageCommentThread as canActorManageCommentThread,
@@ -45,13 +46,14 @@ import {
   type Trigger,
 } from '@paralleax/shared';
 import { CharacterInspector } from '../components/CharacterInspector';
-import { InteractionInspector } from '../components/InteractionInspector';
 import { InteractionNode } from '../components/InteractionNode';
 import { ItemDefinitionInspector } from '../components/ItemDefinitionInspector';
 import { LocationInspector } from '../components/LocationInspector';
 import { StatDefinitionInspector } from '../components/StatDefinitionInspector';
 import { StoryCanvasContextMenu } from '../components/StoryCanvasContextMenu';
 import { StoryCanvasToolbar } from '../components/StoryCanvasToolbar';
+import { EditorToolbarActions } from '../features/story-editor/EditorToolbarActions';
+import { InspectorResizeHandle } from '../features/story-editor/inspectors/InspectorResizeHandle';
 import { StoryGroupsPanel } from '../features/story-editor/navigation/StoryGroupsPanel';
 import {
   CharacterContextSection,
@@ -129,6 +131,15 @@ import { TriggerEdgeRoutes } from '../triggerEdgeRouting';
 const TriggerInspector = lazy(() =>
   import('../components/TriggerInspector').then((module) => ({ default: module.TriggerInspector })),
 );
+const InteractionInspector = lazy(() =>
+  import('../components/InteractionInspector').then((module) => ({
+    default: module.InteractionInspector,
+  })),
+);
+
+const MIN_INSPECTOR_WIDTH = 280;
+const DEFAULT_INSPECTOR_WIDTH = 340;
+const MAX_INSPECTOR_WIDTH = 720;
 
 const nodeTypes = {
   interaction: InteractionNode,
@@ -234,6 +245,11 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
   const [editingGroupId, setEditingGroupId] = useState<string>();
   const creatingGroup = useRef(false);
   const [commentsOpen, setCommentsOpen] = useState(false);
+  const [inspectorWidth, setInspectorWidth] = useState(DEFAULT_INSPECTOR_WIDTH);
+  const [inspectorMaximized, setInspectorMaximized] = useState(false);
+  const [viewportWidth, setViewportWidth] = useState(() =>
+    typeof window === 'undefined' ? 1024 : window.innerWidth,
+  );
   const [contextualCommentsTargetKey, setContextualCommentsTargetKey] = useState<string>();
   const [historyOpen, setHistoryOpen] = useState(false);
   const storySettingsRouteTab: StorySettingsTab | undefined =
@@ -269,6 +285,7 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
   const appliedInitialFocusInteractionIdRef = useRef<string | undefined>(undefined);
   const storySettingsTriggerRef = useRef<HTMLButtonElement | null>(null);
   const canvasRef = useRef<HTMLElement | null>(null);
+  const editorLayoutRef = useRef<HTMLDivElement | null>(null);
   useTwoFingerCanvasPan(canvasRef, story?.id);
   const {
     selectedGroupId,
@@ -563,6 +580,44 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
     (contextualCommentsTargetKey === selectedCommentTargetKey || contextualDraftAnchor),
   );
   const hasInspector = commentsOpen || hasInspectorSelection;
+  const minimumInspectorWidth =
+    viewportWidth <= 800
+      ? Math.min(MIN_INSPECTOR_WIDTH, Math.floor(viewportWidth * 0.75))
+      : MIN_INSPECTOR_WIDTH;
+  const maximumInspectorWidth = Math.max(
+    minimumInspectorWidth,
+    Math.min(
+      MAX_INSPECTOR_WIDTH,
+      viewportWidth <= 800
+        ? Math.floor(viewportWidth * 0.9)
+        : Math.floor(viewportWidth - (isLocationPanelOpen ? 260 : 48) - 280),
+    ),
+  );
+  const visibleInspectorWidth = Math.max(
+    minimumInspectorWidth,
+    Math.min(maximumInspectorWidth, inspectorWidth),
+  );
+  const editorLayoutStyle: CSSProperties & { '--editor-inspector-width': string } = {
+    '--editor-inspector-width': `${visibleInspectorWidth}px`,
+  };
+  const resizeInspector = useCallback(
+    (width: number) => {
+      setInspectorWidth(Math.max(minimumInspectorWidth, Math.min(maximumInspectorWidth, width)));
+    },
+    [maximumInspectorWidth, minimumInspectorWidth],
+  );
+  const previewInspectorResize = useCallback((width: number) => {
+    editorLayoutRef.current?.style.setProperty('--editor-inspector-width', `${width}px`);
+  }, []);
+  const toggleInspectorMaximized = useCallback(() => {
+    setInspectorMaximized((maximized) => !maximized);
+  }, []);
+
+  useEffect(() => {
+    const updateViewportWidth = () => setViewportWidth(window.innerWidth);
+    window.addEventListener('resize', updateViewportWidth);
+    return () => window.removeEventListener('resize', updateViewportWidth);
+  }, []);
 
   useEffect(() => {
     if (loadPhase !== 'ready' || !story?.id) return;
@@ -1676,78 +1731,24 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
             </button>
           ) : null}
         </div>
-        <div className="actions">
-          {loadPhase !== 'ready' ? (
-            <span className="save-status saving" role="status" aria-live="polite">
-              {t(`editor.loadingPhase.${loadPhase}`)}
-            </span>
-          ) : null}
-          {commentAccess ? (
-            <button
-              className={`secondary comments-toolbar-button ${commentsOpen ? 'active' : ''}`}
-              type="button"
-              onClick={toggleCommentsList}
-            >
-              {t('comments.title')}
-              {comments.threads.filter(({ status, deletedAt }) => status === 'open' && !deletedAt)
-                .length ? (
-                <small>
-                  {
-                    comments.threads.filter(
-                      ({ status, deletedAt }) => status === 'open' && !deletedAt,
-                    ).length
-                  }
-                </small>
-              ) : null}
-            </button>
-          ) : null}
-          {!reviewOnly ? (
-            <span
-              className={`story-realtime-status ${realtimeStatus}`}
-              role="status"
-              aria-live="polite"
-            >
-              <span className={`realtime-status-dot ${realtimeStatus}`} aria-hidden="true" />
-              {t(`editor.realtime.${realtimeStatus}`)}
-            </span>
-          ) : null}
-          {!reviewOnly ? (
-            <span
-              className={`save-status ${saveStatus}`}
-              role="status"
-              aria-label={t('editor.saveStatus')}
-              aria-live="polite"
-            >
-              {saveStatus === 'saving'
-                ? t('editor.saving')
-                : saveStatus === 'saved'
-                  ? t('editor.saved')
-                  : saveStatus === 'error'
-                    ? t('editor.saveFailed')
-                    : ''}
-            </span>
-          ) : null}
-          {reviewOnly ? (
-            <Link className="button secondary" to={`/stories/${storyId}/play`}>
-              {t('editor.openReader')}
-            </Link>
-          ) : (
-            <>
-              <Link
-                className="button secondary"
-                data-onboarding-target="simulation-launch"
-                to={simulationFromStartPath}
-              >
-                {t('editor.testFromStart')}
-              </Link>
-              {selected && selected.id !== startingInteraction?.id ? (
-                <Link className="button secondary" to={simulationPath}>
-                  {t('editor.testFromCurrent')}
-                </Link>
-              ) : null}
-            </>
+        <EditorToolbarActions
+          loadLabel={loadPhase !== 'ready' ? t(`editor.loadingPhase.${loadPhase}`) : undefined}
+          commentAccess={commentAccess}
+          commentsOpen={commentsOpen}
+          openCommentCount={comments.threads.filter(
+            ({ status, deletedAt }) => status === 'open' && !deletedAt,
+          ).length}
+          onToggleComments={toggleCommentsList}
+          reviewOnly={reviewOnly}
+          readerPath={`/stories/${storyId}/play`}
+          saveStatus={saveStatus}
+          realtimeStatus={realtimeStatus}
+          simulationFromStartPath={simulationFromStartPath}
+          simulationPath={simulationPath}
+          hasCurrentSimulationTarget={Boolean(
+            selected && selected.id !== startingInteraction?.id,
           )}
-        </div>
+        />
       </div>
       {error ? (
         <div className="save-error" role="alert">
@@ -1778,9 +1779,13 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
         </div>
       ) : null}
       <div
+        ref={editorLayoutRef}
+        style={editorLayoutStyle}
         className={`editor-layout with-navigation ${isLocationPanelOpen ? '' : 'with-navigation-collapsed'} ${
           hasInspector ? 'with-inspector' : ''
-        } ${showContextualComments ? 'with-comment-rail' : ''}`}
+        } ${showContextualComments ? 'with-comment-rail' : ''} ${
+          inspectorMaximized && hasInspector ? 'is-inspector-maximized' : ''
+        }`}
       >
         <nav
           className={`location-panel ${isLocationPanelOpen ? '' : 'collapsed'}`}
@@ -2095,10 +2100,33 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
           />
         ) : null}
         {commentsOpen ? (
-          <div className="inspector comments-inspector" data-testid="comments-inspector">
+          <div
+            className="inspector comments-inspector"
+            id="story-inspector-panel"
+            data-testid="comments-inspector"
+          >
+            {!inspectorMaximized ? (
+              <InspectorResizeHandle
+                label={t('editor.resizeInspector')}
+                controls="story-inspector-panel"
+                value={visibleInspectorWidth}
+                minimum={minimumInspectorWidth}
+                maximum={maximumInspectorWidth}
+                onResize={resizeInspector}
+                onResizePreview={previewInspectorResize}
+              />
+            ) : null}
             <StoryCommentsPanel
               open
               placement="inspector"
+              headerActions={
+                <InspectorMaximizeButton
+                  maximized={inspectorMaximized}
+                  maximizeLabel={t('editor.maximizeInspector')}
+                  restoreLabel={t('editor.restoreInspector')}
+                  onToggle={toggleInspectorMaximized}
+                />
+              }
               loading={comments.loading}
               error={comments.error}
               threads={projectedCommentThreads}
@@ -2134,9 +2162,21 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
         ) : hasInspectorSelection ? (
           <aside
             className="inspector"
+            id="story-inspector-panel"
             data-onboarding-target={selected && !reviewOnly ? 'scene-inspector' : undefined}
             aria-label={t('editor.inspector')}
           >
+            {!inspectorMaximized ? (
+              <InspectorResizeHandle
+                label={t('editor.resizeInspector')}
+                controls="story-inspector-panel"
+                value={visibleInspectorWidth}
+                minimum={minimumInspectorWidth}
+                maximum={maximumInspectorWidth}
+                onResize={resizeInspector}
+                onResizePreview={previewInspectorResize}
+              />
+            ) : null}
             <div className="inspector-header">
               {selectedCommentTarget && story.capabilities?.canComment ? (
                 <div className="inspector-comment-actions">
@@ -2190,6 +2230,12 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
                   </button>
                 </div>
               ) : null}
+              <InspectorMaximizeButton
+                maximized={inspectorMaximized}
+                maximizeLabel={t('editor.maximizeInspector')}
+                restoreLabel={t('editor.restoreInspector')}
+                onToggle={toggleInspectorMaximized}
+              />
               <button
                 className="ghost inspector-close"
                 type="button"
@@ -2251,25 +2297,34 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
                   onOpenTextComments={openTextComments}
                 />
               ) : selected ? (
-                <InteractionInspector
-                  story={story}
-                  interaction={selected}
-                  onChange={(next) => setStory(next)}
-                  onPatch={patchInteraction}
-                  onContentSaved={(body) => {
-                    if (body.replace(/<[^>]*>/g, ' ').trim()) {
-                      reportStepComplete(storyId, 'write-scene');
-                    }
-                  }}
-                  onDelete={remove}
-                  onSelectInteraction={(interactionId) =>
-                    selectExclusive({ type: 'interaction', id: interactionId })
+                <Suspense
+                  fallback={
+                    <p className="hint" role="status">
+                      {t('shell.loading')}
+                    </p>
                   }
-                  textCommentCounts={selectedTextCommentCounts}
-                  onOpenTextComments={openTextComments}
-                  semanticCommentCounts={selectedSemanticCommentCounts}
-                  onOpenSemanticComments={openSemanticComments}
-                />
+                >
+                  <InteractionInspector
+                    story={story}
+                    interaction={selected}
+                    onChange={(next) => setStory(next)}
+                    onPatch={patchInteraction}
+                    onContentSaved={(body) => {
+                      if (body.replace(/<[^>]*>/g, ' ').trim()) {
+                        reportStepComplete(storyId, 'write-scene');
+                      }
+                    }}
+                    onDelete={remove}
+                    onSelectInteraction={(interactionId) =>
+                      selectExclusive({ type: 'interaction', id: interactionId })
+                    }
+                    onAddOption={() => createChildAndFocus(selected.id)}
+                    textCommentCounts={selectedTextCommentCounts}
+                    onOpenTextComments={openTextComments}
+                    semanticCommentCounts={selectedSemanticCommentCounts}
+                    onOpenSemanticComments={openSemanticComments}
+                  />
+                </Suspense>
               ) : selectedTriggerTarget ? (
                 <Suspense
                   fallback={
@@ -2352,6 +2407,32 @@ export function StoryEditor({ currentUserId }: { currentUserId?: string }) {
   );
 }
 
+function InspectorMaximizeButton({
+  maximized,
+  maximizeLabel,
+  restoreLabel,
+  onToggle,
+}: {
+  maximized: boolean;
+  maximizeLabel: string;
+  restoreLabel: string;
+  onToggle: () => void;
+}) {
+  const label = maximized ? restoreLabel : maximizeLabel;
+  return (
+    <button
+      className="ghost inspector-maximize"
+      type="button"
+      aria-label={label}
+      aria-pressed={maximized}
+      title={label}
+      onClick={onToggle}
+    >
+      <span aria-hidden="true">{maximized ? '▢' : '⛶'}</span>
+    </button>
+  );
+}
+
 function ReviewTargetInspector({
   interaction,
   trigger,
@@ -2373,7 +2454,6 @@ function ReviewTargetInspector({
   if (interaction) {
     return (
       <div className="review-target-inspector">
-        <h3>{t('inspector.interaction')}</h3>
         <InspectorCommentField
           field="title"
           label={t('interactionInspector.title')}

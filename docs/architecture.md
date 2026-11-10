@@ -1120,7 +1120,10 @@ the reply without closing its context. The global list is nested in the standard
 inspector pane, while explicit grid areas keep navigation, canvas, and inspector
 ordering stable. At the narrow breakpoint, navigation and inspector panes overlay
 a single full-width canvas column, including every contextual-comment layout
-variant. The global list is one inspector mode rather than a competing panel:
+variant. The Inspector width is transient editor state: its vertical separator
+supports pointer dragging and keyboard resizing, and maximize spans the graph
+area while leaving the navigation column available. The global list is one
+inspector mode rather than a competing panel:
 the shared editor selection entry points close it before projecting an element
 inspector. Moving a canvas post-it calls the existing
 thread-anchor update and reprojects its returned position; a failed mutation

@@ -33,7 +33,16 @@
     right: 0;
     top: 122px;
     bottom: 0;
-    width: min(340px, 90vw);
+    width: min(var(--editor-inspector-width, 340px), 90vw);
+    z-index: 5;
+  }
+  .editor-layout.is-inspector-maximized .inspector {
+    left: 0;
+    right: 0;
+    width: auto;
+    z-index: 4;
+  }
+  .editor-layout.is-inspector-maximized .location-panel {
     z-index: 5;
   }
   .contextual-comments-rail {

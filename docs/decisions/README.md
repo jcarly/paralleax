@@ -47,6 +47,7 @@ This folder records accepted architecture and product-shaping decisions.
 - [ADR-040 - Reader and Simulation Runtime Checkpoints](ADR-040-reader-simulation-runtime-checkpoints.md)
 - [ADR-041 - Strict Quality Gates and Native Baselines](ADR-041-strict-quality-gates-and-native-baselines.md)
 - [ADR-042 - Tiptap and CodeMirror for Rich Text Authoring](ADR-042-tiptap-and-codemirror-rich-text-authoring.md)
+- [ADR-044 - Shared Interaction Presentation Across Authoring and Reading Views](ADR-044-shared-interaction-presentation.md)
 
 ## Proposals
 

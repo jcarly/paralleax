@@ -28,6 +28,24 @@ vi.mock('@xyflow/react', async () => {
   return createReactFlowMock();
 });
 
+function hoverTitleCommentMarker(title: string) {
+  const marker = screen
+    .getByRole('button', { name: `Title: ${title}` })
+    .closest('.inspector-commentable-field');
+  if (!marker) {
+    throw new Error('Expected the title comment marker.');
+  }
+  fireEvent.mouseEnter(marker);
+}
+
+function hoverCommentField(fieldButton: HTMLElement) {
+  const marker = fieldButton.closest('.inspector-commentable-field');
+  if (!marker) {
+    throw new Error('Expected the Inspector comment field.');
+  }
+  fireEvent.mouseEnter(marker);
+}
+
 describe('StoryEditor graph collaboration and layout', () => {
   setupStoryEditorTestSuite();
 
@@ -61,7 +79,12 @@ describe('StoryEditor graph collaboration and layout', () => {
 
     await renderEditor(story, '/stories/story-1/edit?focusInteractionId=interaction-1');
 
-    expect(await screen.findByDisplayValue('Original title')).toBeInTheDocument();
+    const inspector = await screen.findByRole('complementary', { name: 'Inspector' });
+    await waitFor(() =>
+      expect(inspector.querySelector('.interaction-inspector-title-readout')).toHaveTextContent(
+        'Original title',
+      ),
+    );
     expect(
       screen.getByTestId('flow-node-interaction-1').querySelector('.interaction-node'),
     ).toHaveClass('selected');
@@ -106,7 +129,11 @@ describe('StoryEditor graph collaboration and layout', () => {
     expect(commentsInspector).toContainElement(commentList);
     await user.click(within(commentList).getByRole('button', { name: /Second interaction/ }));
 
-    expect(await screen.findByDisplayValue('Second interaction')).toBeInTheDocument();
+    expect(
+      await within(screen.getByRole('complementary', { name: 'Inspector' })).findByRole('button', {
+        name: 'Title: Second interaction',
+      }),
+    ).toBeInTheDocument();
     expect(
       screen.getByRole('complementary', { name: 'Comments for the selected element' }),
     ).toBeInTheDocument();
@@ -127,7 +154,11 @@ describe('StoryEditor graph collaboration and layout', () => {
 
     expect(screen.queryByTestId('comments-inspector')).not.toBeInTheDocument();
     expect(screen.getByRole('complementary', { name: 'Inspector' })).toBeInTheDocument();
-    expect(screen.getByDisplayValue('Second interaction')).toBeInTheDocument();
+    expect(
+      within(screen.getByRole('complementary', { name: 'Inspector' })).getByRole('button', {
+        name: 'Title: Second interaction',
+      }),
+    ).toBeInTheDocument();
   });
 
   it('persists an authorized canvas post-it move through its existing anchor', async () => {
@@ -332,7 +363,7 @@ describe('StoryEditor graph collaboration and layout', () => {
     expect(
       screen.queryByRole('complementary', { name: 'Comments for the selected element' }),
     ).not.toBeInTheDocument();
-    fireEvent.mouseEnter(screen.getByLabelText('Title').closest('.inspector-commentable-field')!);
+    hoverTitleCommentMarker('Second interaction');
     fireEvent.click(screen.getByRole('button', { name: 'Open comments for Title' }));
 
     expect(
@@ -367,7 +398,7 @@ describe('StoryEditor graph collaboration and layout', () => {
 
     await renderEditor(story);
     await user.click(screen.getByTestId('flow-node-interaction-2'));
-    fireEvent.mouseEnter(screen.getByText('Duration').closest('.inspector-commentable-field')!);
+    hoverCommentField(screen.getByRole('button', { name: 'Duration: No time change' }));
     fireEvent.click(screen.getByRole('button', { name: 'Comment on Duration' }));
 
     expect(
@@ -796,6 +827,7 @@ describe('StoryEditor graph collaboration and layout', () => {
     await renderEditor(story);
     await user.click(screen.getByTestId('flow-node-interaction-1'));
 
+    await user.click(screen.getByRole('button', { name: 'Title: Original title' }));
     const title = screen.getByLabelText('Title');
     title.focus();
     fireEvent.keyDown(title, { key: 'Delete' });

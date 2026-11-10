@@ -25,6 +25,13 @@ vi.mock('@xyflow/react', async () => {
   return createReactFlowMock();
 });
 
+function requirePosition<T>(position: T | undefined) {
+  if (!position) {
+    throw new Error('Expected a graph creation position.');
+  }
+  return position;
+}
+
 describe('StoryEditor interactions', () => {
   setupStoryEditorTestSuite();
 
@@ -81,8 +88,10 @@ describe('StoryEditor interactions', () => {
 
     await user.click(screen.getByRole('button', { name: 'Add root' }));
     expect(api.createInteraction).toHaveBeenCalledWith('story-1', { position: rootPosition });
-    expect(await screen.findByText('Created root')).toBeInTheDocument();
-    await waitFor(() => expect(screen.getByLabelText('Title')).toHaveValue('Created root'));
+    expect(await screen.findByRole('button', { name: 'Title: Created root' })).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Title: Created root' })).toBeInTheDocument(),
+    );
 
     await user.click(
       within(screen.getByTestId('flow-node-interaction-1')).getByRole('button', {
@@ -98,7 +107,30 @@ describe('StoryEditor interactions', () => {
         expect.objectContaining({ nodes: [{ id: 'interaction-2' }] }),
       ),
     );
-    expect(screen.getByLabelText('Title')).toHaveValue('Second interaction');
+    expect(screen.getByRole('button', { name: 'Title: Second interaction' })).toBeInTheDocument();
+  });
+
+  it('adds an Inspector option through canonical child Interaction creation', async () => {
+    const user = userEvent.setup();
+    const position = requirePosition(
+      await getStoryGraphClickCreationPosition(baseStory, {
+        kind: 'child',
+        sourceId: 'interaction-1',
+      }),
+    );
+    vi.mocked(api.createInteraction).mockResolvedValue(storyWithTwoInteractions());
+
+    await renderEditor();
+    await user.click(screen.getByTestId('flow-node-interaction-1'));
+    await user.click(screen.getByRole('button', { name: 'Add option' }));
+
+    await waitFor(() =>
+      expect(api.createInteraction).toHaveBeenCalledWith('story-1', {
+        parentId: 'interaction-1',
+        position,
+      }),
+    );
+    expect(api.addTrigger).not.toHaveBeenCalled();
   });
 
   it('uses measured interaction dimensions when calculating a child position', async () => {
@@ -174,7 +206,9 @@ describe('StoryEditor interactions', () => {
         position: { x: 425, y: 412 },
       });
     });
-    await waitFor(() => expect(screen.getByLabelText('Title')).toHaveValue('Dropped output'));
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Title: Dropped output' })).toBeInTheDocument(),
+    );
   });
 
   it('creates a child interaction from the hovered node action', async () => {
@@ -265,7 +299,9 @@ describe('StoryEditor interactions', () => {
       });
       expect(api.updateTrigger).not.toHaveBeenCalled();
     });
-    await waitFor(() => expect(screen.getByLabelText('Title')).toHaveValue('Dropped input'));
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Title: Dropped input' })).toBeInTheDocument(),
+    );
   });
 
   it('creates a parent interaction from the hovered node action', async () => {
@@ -310,7 +346,9 @@ describe('StoryEditor interactions', () => {
       });
       expect(api.updateTrigger).not.toHaveBeenCalled();
     });
-    await waitFor(() => expect(screen.getByLabelText('Title')).toHaveValue('Created source'));
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Title: Created source' })).toBeInTheDocument(),
+    );
   });
 
   it('places a new child interaction below occupied vertical outputs instead of overlapping them', async () => {
@@ -355,13 +393,13 @@ describe('StoryEditor interactions', () => {
     await renderEditor();
     await user.click(screen.getByTestId('flow-node-interaction-1'));
 
+    await user.click(screen.getByRole('button', { name: 'Title: Original title' }));
     const titleInput = screen.getByLabelText('Title');
     await user.clear(titleInput);
     await user.type(titleInput, 'New title');
     await user.tab();
 
-    expect(await screen.findByDisplayValue('New title')).toBeInTheDocument();
-    expect(screen.getByText('New title')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Title: New title' })).toBeInTheDocument();
     expect(screen.queryByText('Loading...')).not.toBeInTheDocument();
     expect(api.updateInteraction).toHaveBeenCalledWith('story-1', 'interaction-1', {
       title: 'New title',
@@ -377,7 +415,8 @@ describe('StoryEditor interactions', () => {
     await renderEditor();
     await user.click(screen.getByTestId('flow-node-interaction-1'));
 
-    const bodyInput = await screen.findByRole('textbox', { name: 'Content' });
+    await user.click(screen.getByRole('group', { name: 'Content. Select to edit' }));
+    const bodyInput = await screen.findByRole('textbox', { name: 'Content' }, { timeout: 10_000 });
     await user.clear(bodyInput);
     await user.type(bodyInput, 'Long new content');
     await user.tab();
@@ -386,7 +425,9 @@ describe('StoryEditor interactions', () => {
       body: '<p>Long new content</p>',
     });
     await waitFor(() =>
-      expect(screen.getByLabelText('Content')).toHaveTextContent('Long new content'),
+      expect(screen.getByRole('group', { name: 'Content. Select to edit' })).toHaveTextContent(
+        'Long new content',
+      ),
     );
   });
 
@@ -401,10 +442,12 @@ describe('StoryEditor interactions', () => {
     await renderEditor();
     fireEvent.click(screen.getByTestId('flow-node-interaction-1'));
 
+    await user.click(screen.getByRole('button', { name: 'Title: Original title' }));
     const titleInput = screen.getByLabelText('Title');
     await user.clear(titleInput);
     await user.type(titleInput, 'Saved title');
     await user.tab();
+    await user.click(screen.getByRole('group', { name: 'Content. Select to edit' }));
     const content = await screen.findByRole('textbox', { name: 'Content' });
     await user.clear(content);
     await user.type(content, 'Saved content');
@@ -430,8 +473,10 @@ describe('StoryEditor interactions', () => {
     fullySavedStory.interactions[0].body = '<p>Saved content</p>';
     await act(async () => resolveBodySave(fullySavedStory));
 
-    expect(await screen.findByDisplayValue('Saved title')).toBeInTheDocument();
-    expect(screen.getByLabelText('Content')).toHaveTextContent('Saved content');
+    expect(screen.getByRole('button', { name: 'Title: Saved title' })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Content. Select to edit' })).toHaveTextContent(
+      'Saved content',
+    );
     expect(await screen.findByText('Saved')).toBeInTheDocument();
   });
 
@@ -441,6 +486,7 @@ describe('StoryEditor interactions', () => {
 
     await renderEditor();
     await user.click(screen.getByTestId('flow-node-interaction-1'));
+    await user.click(screen.getByRole('button', { name: 'Title: Original title' }));
     await user.clear(screen.getByLabelText('Title'));
     await user.type(screen.getByLabelText('Title'), 'Unsaved title');
     await user.tab();

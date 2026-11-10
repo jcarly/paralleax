@@ -2,13 +2,34 @@
 
 ## Unreleased
 
+- Aligned Interaction presentation across the graph, Inspector, Simulation,
+  and Reader. Cards now show a label bubble, icon-marked location and cast,
+  a short wrapped narrative excerpt, and compact effect indicators. Label
+  bubbles include a direction arrow, and the Inspector groups its label, context,
+  and narrative in one quiet card. The Inspector uses icons for location, cast,
+  and duration while keeping values visible; empty body content shows only the
+  add-content action. Reader and Simulation share location, cast, and story-time
+  pictograms, while Simulation adds effect summaries. Existing trigger
+  diagnostics, conditional-text behavior, choice timers, transitions, and saves
+  continue through their current paths.
+
+- Made the editor Inspector resizable by pointer or keyboard and added a maximize
+  mode that covers the graph area. Restoring returns to the previous width, and
+  the context navigation stays available.
+
+- Replaced the editor header's text buttons with tooltip-labeled icons for
+  Simulation from the beginning or selected Interaction and for the comments
+  list. The comments icon retains its open-thread count. A combined sync icon is
+  green when the Story is saved and realtime updates are connected, with separate
+  accessible descriptions for saving, connection loss, and save errors.
+
 - Simplified account entry, the Story library, and settings. Sign-in and registration now
   keep the site header and direct routes, while the library removes generated
   graph art and reader-facing interaction counts. Story deletion now uses a
   labeled trash action with confirmation, and settings drop their redundant
-  introduction. Reader scenes keep the authored Interaction title available to
-  assistive technology without displaying it as narrative content; choice labels
-  and authored body content remain unchanged.
+  introduction. Reader scenes display the authored Interaction option label
+  above the scene context; choice labels and authored body content remain
+  unchanged.
 
 - Replaced named interview notes and a project-specific import example with an
   anonymized product-discovery synthesis and source-neutral QSP import lessons.

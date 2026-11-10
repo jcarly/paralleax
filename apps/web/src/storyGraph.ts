@@ -109,6 +109,8 @@ export function buildInteractionNodes(
       data: {
         title: item.title,
         body: item.body,
+        ...(item.statEffects?.length ? { statEffectCount: item.statEffects.length } : {}),
+        ...(item.itemEffects?.length ? { itemEffectCount: item.itemEffects.length } : {}),
         selected: item.id === selectedId,
         ...(actions.onboardingBranchSourceId === item.id ? { onboardingBranchAdd: true } : {}),
         ...(location ? { location: { id: location.id, name: location.name } } : {}),

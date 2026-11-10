@@ -30,6 +30,19 @@ describe('Reader pass-through presentation', () => {
 
     expect(await screen.findByRole('heading', { name: 'Secret' })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Next' })).not.toBeInTheDocument();
+    expect(screen.getByText('Harbor')).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Location: Harbor' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('group', { name: 'Characters present: Mira Vale' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('MV')).toBeInTheDocument();
+    expect(
+      document.querySelector('[data-interaction-metadata-icon="location"]'),
+    ).toBeInTheDocument();
+    expect(
+      document.querySelector('[data-interaction-metadata-icon="characters"]'),
+    ).toBeInTheDocument();
+    expect(document.querySelector('[data-interaction-metadata-icon="time"]')).toBeInTheDocument();
     expect(visibleCards).toEqual(['Start']);
   });
 });
@@ -42,6 +55,7 @@ describe('Simulation interaction presentation', () => {
 
     await user.click(await screen.findByRole('button', { name: 'Next' }));
     expect(await screen.findByDisplayValue('Next')).toBeInTheDocument();
+    expect(document.querySelector('[data-interaction-metadata-icon="time"]')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Back' }));
 
     expect(await screen.findByDisplayValue('Start')).toBeInTheDocument();
@@ -53,6 +67,7 @@ function createPassThroughStory(): Story {
   const passThroughStory = structuredClone(story);
   passThroughStory.startDateTime = '2026-07-27T09:00';
   passThroughStory.locations = [{ id: 'harbor', name: 'Harbor', description: '' }];
+  passThroughStory.characters = [{ id: 'mira', name: 'Mira Vale', description: '' }];
   passThroughStory.statDefinitions = [
     { id: 'score-definition', name: 'Score', valueType: 'number' },
   ];
@@ -60,6 +75,7 @@ function createPassThroughStory(): Story {
   passThroughStory.interactions[1] = {
     ...passThroughStory.interactions[1],
     body: '<div data-conditional-text-block="hidden-only"><p>Hidden text</p></div>',
+    characterIds: ['mira'],
     conditionalTextBlocks: [
       {
         id: 'hidden-only',
@@ -69,6 +85,10 @@ function createPassThroughStory(): Story {
     durationMinutes: 60,
     locationId: 'harbor',
     statEffects: [{ statId: 'score', operation: 'set', value: 3 }],
+  };
+  passThroughStory.interactions[2] = {
+    ...passThroughStory.interactions[2],
+    characterIds: ['mira'],
   };
   passThroughStory.interactions[2].triggers[0].conditions = [
     { statId: 'score', operator: 'gte', value: 3 },
@@ -89,7 +109,13 @@ function recordVisibleCards(): string[] {
       }
       const title =
         document.querySelector<HTMLInputElement>('.simulation-title-input')?.value ??
-        document.querySelector('.player-story-content > h1')?.textContent ??
+        document
+          .querySelector('.player-card > .player-interaction-label')
+          ?.textContent?.replace(
+            document.querySelector('.interaction-label-leading')?.textContent ?? '',
+            '',
+          )
+          .trim() ??
         '';
       visibleCards.push(title);
       return {};

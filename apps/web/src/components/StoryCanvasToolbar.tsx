@@ -11,7 +11,14 @@ export type CanvasActionIconName =
   | 'text'
   | 'organize'
   | 'postIt'
-  | 'delete';
+  | 'delete'
+  | 'comments'
+  | 'play'
+  | 'playFromInteraction'
+  | 'syncSaved'
+  | 'syncSaving'
+  | 'syncOffline'
+  | 'syncError';
 
 interface StoryCanvasToolbarProps {
   canEdit: boolean;
@@ -196,6 +203,44 @@ export function CanvasActionIcon({ name }: { name: CanvasActionIconName }) {
       <>
         <path d="M4 7h16M9 7V4h6v3M7 7l1 14h8l1-14" />
         <path d="M10 11v6M14 11v6" />
+      </>
+    ),
+    comments: (
+      <>
+        <path d="M4 5h16v12H9l-5 3V5Z" />
+        <path d="M8 9h8M8 13h5" />
+      </>
+    ),
+    play: <path d="m8 5 11 7-11 7V5Z" />,
+    playFromInteraction: (
+      <>
+        <circle cx="6.5" cy="12" r="3.5" />
+        <path d="m13 7 7 5-7 5V7Z" />
+        <path d="M10 12h3" />
+      </>
+    ),
+    syncSaved: (
+      <>
+        <path d="M7 18h10a4 4 0 0 0 .5-8A5.5 5.5 0 0 0 7 8a4 4 0 0 0 0 10Z" />
+        <path d="m9 13 2 2 4-4" />
+      </>
+    ),
+    syncSaving: (
+      <>
+        <circle cx="12" cy="12" r="8" />
+        <path d="M12 8v4l3 2" />
+      </>
+    ),
+    syncOffline: (
+      <>
+        <path d="M7 18h10a4 4 0 0 0 .5-8A5.5 5.5 0 0 0 7 8a4 4 0 0 0 0 10Z" />
+        <path d="m5 5 14 14" />
+      </>
+    ),
+    syncError: (
+      <>
+        <path d="M12 3 22 20H2L12 3Z" />
+        <path d="M12 9v5M12 17h.01" />
       </>
     ),
   } satisfies Record<CanvasActionIconName, ReactNode>;

@@ -8,6 +8,18 @@ no longer matches the current repository.
 
 Paralleax currently includes:
 
+- Interaction presentation follows one order across the graph, Inspector,
+  Simulation, and Reader: option label, location and cast, narrative content,
+  then effects where the view supports them. Graph cards stay compact. The
+  Inspector shows readable values first and opens existing editors on request;
+  its outgoing-options list is derived from Trigger links and lists each
+  destination once. Adding an Inspector option uses canonical child Interaction
+  and Trigger creation.
+- Reader displays the current Interaction option label above its scene context
+  and narrative. Simulation shares that presentation, adds current effects and
+  author diagnostics, and keeps unavailable conditional text visible with its
+  reason. Reader continues to hide effects, author tools, and unavailable
+  conditional text.
 - An optional first-Story authoring guide: a non-modal floating four-step card
   for graph exploration, scene writing, branching, and Simulation. It does not
   change page layout and outlines the new-Story action or the current editor or
@@ -34,12 +46,12 @@ Paralleax currently includes:
   preserves its content, and removing the final token unwraps the frame. Legacy
   target-based conditional frames remain readable.
 - Interaction content is edited with Tiptap/ProseMirror. In the Inspector,
-  existing content stays in a compact editable field; focusing it reveals the
-  WYSIWYG toolbar and expanded editor. Empty content shows only **Add content**;
+  existing content is readable at rest and selecting it opens the editor; its
+  WYSIWYG toolbar appears on focus. Empty content shows only **Add content**;
   leaving an empty draft returns to that action. Simulation keeps its Reader
-  projection interactive at rest; focusing the content field opens Tiptap in
-  place. Empty content shows only **Add content** and returns to it if left
-  empty. The CodeMirror source mode is not available yet. A concise
+  projection interactive at rest; selecting the content opens Tiptap in place.
+  Empty content shows only **Add content** and returns to it if left empty. The
+  CodeMirror source mode is not available yet. A concise
   native content syntax inspired by Ink is a proposed direction in
   [ADR-043](decisions/ADR-043-ink-inspired-narrative-source.md), not an accepted
   grammar. No source-to-canonical conversion is implemented.
@@ -66,6 +78,12 @@ Paralleax currently includes:
   and element context menus. Interaction and Trigger menus expose review,
   deletion, automatic placement, and child creation where applicable; decoration
   menus expose deletion. Keyboard deletion is disabled inside editable fields.
+- The editor header uses icon actions with tooltips for Simulation from the
+  beginning, Simulation from the selected Interaction, and the comments list.
+  The comments action retains its open-thread count. One accessible sync indicator
+  is green when saves are clear and realtime updates are connected; saving,
+  connection loss, and save errors remain individually described. It reports
+  save and update-stream status, not collaborator presence.
 - Reader execution with authenticated database-backed saves: one reader
   autosave, one editor-only Simulation Mode autosave, and up to 20 named manual
   saves per user and story. Manual saves and both autosaves can be loaded in
@@ -164,7 +182,9 @@ Paralleax currently includes:
   while that global list is open immediately restores the selected element's
   inspector. Inspector fields scroll independently from the graph; the fixed
   header keeps its comment toggle and, when discussions already exist, a separate
-  add-comment action visible and clickable across the pane border.
+  add-comment action visible and clickable across the pane border. Inspector
+  panes can be resized with the pointer or keyboard and maximized over the graph
+  area; restoring returns to the previous width while keeping the navigation visible.
   Authorized thread managers can move a graph post-it by updating its
   existing canvas anchor; failed moves restore the persisted position and remain
   visible as an operational error. A discussion author or Story manager can
@@ -182,9 +202,10 @@ Paralleax currently includes:
   Search, filtering, sorting, and incremental pagination use lightweight server
   summaries and do not load Story graphs. Creating a new Story from the library
   atomically seeds a root and child Interaction with empty titles and bodies.
-  English, French, and Italian placeholders identify the starting Interaction,
-  new Interactions, and empty scene bodies without writing translated copy into
-  authored Story data.
+  English, French, and Italian title placeholders identify the starting
+  Interaction and untitled Interactions in editor fields and reader choices;
+  untitled non-root Interactions stay blank on graph nodes. Empty scene-body
+  placeholders do not write translated copy into authored Story data.
   The editor opens with the root selected, centered, and shown in the Inspector.
   Local return-to-page navigation is preserved through sign-in and registration.
 - Paginated, revision-consistent Story read projections. The editor displays
@@ -378,6 +399,22 @@ assertions are recorded as coverage references, not as passing results.
   time. The related component-test assertion was inspected but not run.
 - The current Story-ended screen describes a branch end. An explicit
   Story-completion state remains outside the stable product contract.
+
+The Reader title and Inspector presentation observations above describe the
+2026-11-04 source snapshot. The interaction presentation update below supersedes
+those observations for the current implementation.
+
+## Interaction Presentation Update - 2026-11-08
+
+The graph now places its option-label bubble and icon-marked location and cast
+before the narrative excerpt and keeps effect indicators at the card bottom. The
+Inspector shows title, location, cast, duration, narrative, effects, and
+destinations as readable values, with category pictograms and editors revealed by
+direct selection. Simulation and Reader place the current option label above the
+shared scene context and narrative, with pictograms for location, cast, and story
+time; Simulation also shows effects. Trigger conditions, timers, deterministic
+availability, reader progress, and conditional-content evaluation remain on the
+existing runtime paths.
 
 ## Not yet a stable product contract
 

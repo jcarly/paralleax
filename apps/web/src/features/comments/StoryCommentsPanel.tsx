@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent } from 'react';
+import { useMemo, useState, type FormEvent, type ReactNode } from 'react';
 import {
   commentAnchorSlotLabel,
   type CommentAnchor,
@@ -20,6 +20,7 @@ export function StoryCommentsPanel({
   deletedLoading = false,
   realtimeStatus = 'unavailable',
   placement = 'overlay',
+  headerActions,
   onClose,
   onSelect,
   onCancelDraft,
@@ -43,6 +44,7 @@ export function StoryCommentsPanel({
   deletedLoading?: boolean;
   realtimeStatus?: CommentRealtimeStatus;
   placement?: 'overlay' | 'inspector';
+  headerActions?: ReactNode;
   onClose: () => void;
   onSelect: (threadId: string | undefined) => void;
   onCancelDraft: () => void;
@@ -96,9 +98,17 @@ export function StoryCommentsPanel({
             {t(`comments.realtime.${realtimeStatus}`)}
           </small>
         </div>
-        <button type="button" className="ghost" aria-label={t('comments.close')} onClick={onClose}>
-          ×
-        </button>
+        <div className="comments-panel-header-actions">
+          {headerActions}
+          <button
+            type="button"
+            className="ghost"
+            aria-label={t('comments.close')}
+            onClick={onClose}
+          >
+            ×
+          </button>
+        </div>
       </header>
       {error ? (
         <p className="comments-error" role="alert">

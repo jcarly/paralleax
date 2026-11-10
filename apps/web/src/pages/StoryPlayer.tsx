@@ -22,6 +22,8 @@ import { PlayerChoices } from '../features/story-player/components/PlayerChoices
 import { PlayerContextPanels } from '../features/story-player/components/PlayerContextPanels';
 import { PlayerScene } from '../features/story-player/components/PlayerScene';
 import { PlayerToolbar } from '../features/story-player/components/PlayerToolbar';
+import { InteractionEffectsSummary } from '../features/story/InteractionEffectsSummary';
+import { InteractionLabel } from '../features/story/InteractionLabel';
 import { useOnboarding } from '../features/onboarding/onboardingContext';
 import { useReaderProgressPersistence } from '../features/story-player/useReaderProgressPersistence';
 import type { StoryPlayerRuntimeLoadResult } from '../features/story-player/loadStoryPlayerRuntime';
@@ -50,7 +52,10 @@ import {
 } from '../features/story-player/storyPlayerPresentation';
 import { type StoryRealtimeInvalidation } from '../features/realtime/storyRealtime';
 import { useStoryRouteAccessRecovery } from '../features/story/useStoryRouteAccessRecovery';
-import { interactionTitlePlaceholder } from '../features/story/interactionTitlePresentation';
+import {
+  interactionTitleForDisplay,
+  interactionTitlePlaceholder,
+} from '../features/story/interactionTitlePresentation';
 import { StoryUnavailablePage } from '../features/story/StoryUnavailablePage';
 import { useStoryRealtime } from '../hooks/useStoryRealtime';
 import { usePendingSaveGuard } from '../hooks/usePendingSaveGuard';
@@ -938,6 +943,29 @@ export function StoryPlayer({
         className={`player-card${isCurrentInteractionPassingThrough ? ' player-card-passing' : ''}`}
         inert={isCurrentInteractionPassingThrough}
       >
+        {current && (playableCharacters.length === 0 || playedCharacter) ? (
+          isSimulationMode ? (
+            <InteractionLabel
+              label={current.title}
+              className="player-interaction-label simulation-title-input"
+              editable={{
+                'aria-label': t('player.currentInteractionTitle'),
+                placeholder: interactionTitlePlaceholder(current, t),
+                value: current.title,
+                onChange: (event) => patchCurrentInteraction({ title: event.target.value }),
+                onBlur: (event) =>
+                  void saveCurrentInteraction({ title: event.currentTarget.value }),
+              }}
+            />
+          ) : (
+            <InteractionLabel
+              label={interactionTitleForDisplay(current, t)}
+              className="player-interaction-label"
+              leadingIcon="→"
+              heading
+            />
+          )
+        ) : null}
         <PlayerScene
           location={currentLocation}
           characters={presentCharacters}
@@ -973,15 +1001,6 @@ export function StoryPlayer({
             <>
               {isSimulationMode ? (
                 <>
-                  {/* eslint-disable-next-line design-system/require-shared-form-control -- the Simulation title remains a narrative display editor */}
-                  <input
-                    className="simulation-title-input"
-                    aria-label={t('player.currentInteractionTitle')}
-                    placeholder={interactionTitlePlaceholder(current, t)}
-                    value={current.title}
-                    onChange={(event) => patchCurrentInteraction({ title: event.target.value })}
-                    onBlur={(event) => void saveCurrentInteraction({ title: event.target.value })}
-                  />
                   {bodyEditor.editing ? (
                     <div className="simulation-body-editor" onBlurCapture={handleBodyRegionBlur}>
                       <RichTextEditor
@@ -1061,10 +1080,13 @@ export function StoryPlayer({
                       {t('richText.addContent')}
                     </button>
                   ) : null}
+                  <section className="simulation-current-effects">
+                    <h2>{t('interactionInspector.effects')}</h2>
+                    <InteractionEffectsSummary story={story} interaction={current} />
+                  </section>
                 </>
               ) : (
                 <>
-                  <h1 className="sr-only">{current.title}</h1>
                   <RichTextContent
                     className="story-body"
                     html={current.body}

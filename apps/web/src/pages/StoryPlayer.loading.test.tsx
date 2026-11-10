@@ -1,7 +1,15 @@
-import { act, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Link, Route, Routes } from 'react-router-dom';
 import { TestDataRouter } from '../test/TestDataRouter';
+
+function requireSceneElement() {
+  const element = document.querySelector('.player-scene-visual');
+  if (!element) {
+    throw new Error('Expected the scene presentation.');
+  }
+  return element;
+}
 import { describe, expect, it, vi } from 'vitest';
 import {
   api,
@@ -220,8 +228,8 @@ describe('StoryPlayer loading and presentation', () => {
     const user = userEvent.setup();
     await renderPlayer();
 
-    const sceneTitle = await screen.findByRole('heading', { name: 'Start' });
-    expect(sceneTitle).toHaveClass('sr-only');
+    const currentOptionLabel = await screen.findByRole('heading', { name: 'Start' });
+    expect(currentOptionLabel).toBeVisible();
     expect(screen.queryByRole('heading', { name: /Start the story/ })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Start' })).not.toBeInTheDocument();
     expect(await screen.findByRole('button', { name: 'Next' })).toBeInTheDocument();
@@ -245,21 +253,71 @@ describe('StoryPlayer loading and presentation', () => {
     );
 
     await user.click(screen.getByRole('button', { name: 'Next' }));
-    expect(screen.getByRole('heading', { name: 'Next' })).toHaveClass('sr-only');
+    expect(screen.getByRole('heading', { name: 'Next' })).toBeVisible();
     expect(screen.getByRole('button', { name: 'Secret' })).toHaveAttribute(
       'title',
       '"Start" has been visited',
     );
   });
 
-  it('keeps authored headings visible while hiding the technical scene title', async () => {
+  it('shows the option label before the scene and authored narrative heading', async () => {
     const titledStory = structuredClone(story);
     titledStory.interactions[0].body = '<h2>At the door</h2><p>You arrive.</p>';
     await renderPlayer('/stories/story-1/play', titledStory);
 
-    expect(await screen.findByRole('heading', { name: 'Start' })).toHaveClass('sr-only');
+    const optionLabel = await screen.findByRole('heading', { name: 'Start' });
+    expect(optionLabel).toBeVisible();
     expect(screen.getByRole('heading', { name: 'At the door' })).toBeVisible();
+    expect(
+      optionLabel.compareDocumentPosition(screen.getByText('You arrive.')) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
     expect(await screen.findByRole('button', { name: 'Next' })).toBeVisible();
+  });
+
+  it('shares label, context, and narrative order while showing effects only in Simulation', async () => {
+    const user = userEvent.setup();
+    const presentationStory = structuredClone(story);
+    presentationStory.locations = [{ id: 'harbor', name: 'Harbor', description: '' }];
+    presentationStory.characters = [{ id: 'mira', name: 'Mira Vale', description: '' }];
+    presentationStory.statDefinitions = [
+      { id: 'trust-definition', name: 'Trust', valueType: 'number' },
+    ];
+    presentationStory.stats = [
+      { id: 'trust', statDefinitionId: 'trust-definition', initialValue: 0 },
+    ];
+    presentationStory.interactions[0].locationId = 'harbor';
+    presentationStory.interactions[0].characterIds = ['mira'];
+    presentationStory.interactions[0].statEffects = [
+      { statId: 'trust', operation: 'add', value: 1 },
+    ];
+
+    await renderPlayer('/stories/story-1/play?mode=simulation', presentationStory);
+    await user.click(screen.getByRole('button', { name: 'Start' }));
+
+    const simulationLabel = await screen.findByDisplayValue('Start');
+    const simulationScene = requireSceneElement();
+    const simulationBody = screen.getByText('You arrive.');
+    expect(
+      simulationLabel.compareDocumentPosition(simulationScene) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      simulationScene.compareDocumentPosition(simulationBody) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(screen.getByText('Playable story → Trust: add 1')).toBeInTheDocument();
+
+    cleanup();
+    await renderPlayer('/stories/story-1/play', presentationStory);
+    const readerLabel = await screen.findByRole('heading', { name: 'Start' });
+    const readerScene = requireSceneElement();
+    const readerBody = screen.getByText('You arrive.');
+    expect(
+      readerLabel.compareDocumentPosition(readerScene) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      readerScene.compareDocumentPosition(readerBody) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(screen.queryByText('Playable story → Trust: add 1')).not.toBeInTheDocument();
   });
 
   it('uses the converged destination title after either incoming choice', async () => {
@@ -285,16 +343,16 @@ describe('StoryPlayer loading and presentation', () => {
     await renderPlayer('/stories/story-1/play', convergingStory);
 
     await user.click(await screen.findByRole('button', { name: 'North path' }));
-    expect(await screen.findByRole('heading', { name: 'North path' })).toHaveClass('sr-only');
+    expect(await screen.findByRole('heading', { name: 'North path' })).toBeVisible();
     await user.click(screen.getByRole('button', { name: 'Common room' }));
-    expect(await screen.findByRole('heading', { name: 'Common room' })).toHaveClass('sr-only');
+    expect(await screen.findByRole('heading', { name: 'Common room' })).toBeVisible();
 
     await user.click(screen.getByRole('button', { name: 'Restart' }));
     await screen.findByRole('heading', { name: 'Start' });
     await user.click(await screen.findByRole('button', { name: 'South path' }));
-    expect(await screen.findByRole('heading', { name: 'South path' })).toHaveClass('sr-only');
+    expect(await screen.findByRole('heading', { name: 'South path' })).toBeVisible();
     await user.click(screen.getByRole('button', { name: 'Common room' }));
-    expect(await screen.findByRole('heading', { name: 'Common room' })).toHaveClass('sr-only');
+    expect(await screen.findByRole('heading', { name: 'Common room' })).toBeVisible();
   });
 
   it('automatically passes through a body with no visible content and applies its state changes', async () => {

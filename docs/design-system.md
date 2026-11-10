@@ -235,7 +235,11 @@ Interaction cards:
 - width stays fixed around `210px`;
 - cards stay neutral, white, and compact;
 - border radius should stay around `10px`;
-- title and excerpt are the only persistent content on the card;
+- the option label appears in an integrated bubble with a subtle direction arrow;
+- location names and character avatars appear with category pictograms before the
+  narrative excerpt, which wraps to at most two lines;
+- concise effect indicators appear at the bottom;
+- do not show option counts or artificial identifiers;
 - selected cards use the current green `--color-primary` accent through border
   and halo, not a filled background. This records current styling rather than
   approving a palette-wide decision.
@@ -269,9 +273,12 @@ Links:
 
 ## Component Direction
 
-Interaction cards are the core component. They should show only the information
-that helps authors recognize the story moment: title, short excerpt, and later
-quiet concept badges for characters, places, or groups.
+Interaction cards are the core component. They show the option label, location
+and cast, a short narrative excerpt, and compact effect indicators in that
+order. Keep the label bubble recognizable across views, with a small direction
+arrow. Preserve the 210px compact graph density and keep Triggers as separate
+entities. In the Inspector, group the label, icon-led context and narrative
+inside one quiet card before showing the editing sections.
 
 Triggers may evolve from simple circles toward a diamond or small hexagon shape
 if that makes them easier to distinguish from interaction handles. Hovering a
@@ -355,8 +362,9 @@ target is a project quality rule, while WCAG 2.4.13 Focus Appearance is AAA.
 
 - Amber comment counts use `--color-text` on `--color-trigger`; their darker
   hover surface uses `--color-surface` text.
-- Enabled save status text and the graph's location glyph use `--color-primary`.
-  `--color-place` remains available for fills and dots.
+- Enabled save status and synchronization indicators, plus the graph's location
+  glyph, use `--color-primary`. `--color-place` remains available for fills and
+  dots.
 - Product placeholders and Simulation help use `--color-muted`.
 - Buttons, links, and graph controls use a two-color keyboard indicator: an
   opaque `--color-surface` outline and an opaque `--color-primary` outer ring.

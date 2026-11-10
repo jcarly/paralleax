@@ -94,9 +94,11 @@
 }
 
 .simulation-mode .simulation-title-input {
-  width: 100%;
+  width: fit-content;
+  max-width: calc(100% - 2rem);
+  min-height: 0;
   border: 1px solid transparent;
-  border-radius: 8px;
+  border-radius: 999px;
   background: transparent;
   color: var(--color-text);
   font: inherit;
@@ -104,13 +106,15 @@
     border-color 150ms ease,
     background 150ms ease,
     box-shadow 150ms ease;
-  margin: 0.35rem 0 1rem;
-  padding: 0.3rem 0.45rem;
-  font-family: var(--font-narrative);
-  font-size: clamp(2rem, 4vw, 3rem);
-  font-weight: 500;
-  letter-spacing: -0.035em;
-  line-height: 1.08;
+  margin: 0.9rem auto 0.75rem;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.9rem;
+  font-weight: 650;
+  line-height: 1.25;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  box-shadow: none;
 }
 
 .simulation-mode .simulation-body-preview {

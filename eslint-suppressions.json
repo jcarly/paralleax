@@ -1032,7 +1032,7 @@
   },
   "apps/web/src/components/InteractionInspector.test.tsx": {
     "@typescript-eslint/no-non-null-assertion": {
-      "count": 4
+      "count": 3
     },
     "max-lines-per-function": {
       "count": 5
@@ -2165,9 +2165,6 @@
     }
   },
   "apps/web/src/pages/StoryEditor.graph.test.tsx": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 2
-    },
     "@typescript-eslint/no-unsafe-assignment": {
       "count": 3
     },

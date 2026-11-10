@@ -38,6 +38,45 @@ afterEach(() => {
   Reflect.deleteProperty(document, 'elementFromPoint');
 });
 
+function openEffectEditor(summaryPattern: RegExp) {
+  const summary = screen.getByText(summaryPattern).closest('summary');
+  if (!summary) {
+    throw new Error('Expected an effect summary.');
+  }
+  fireEvent.click(summary);
+}
+
+function contextStory() {
+  const interaction: Story['interactions'][number] = {
+    id: 'interaction-1',
+    title: 'Meet Mira',
+    body: '',
+    position: { x: 0, y: 0 },
+    locationId: 'harbor',
+    characterIds: ['mira'],
+    triggers: [{ id: 'trigger-1', inputInteractionIds: [], conditions: [] }],
+  };
+  const story: Story = {
+    id: 'story-1',
+    title: 'Story',
+    locations: [{ id: 'harbor', name: 'Harbor', description: '' }],
+    characters: [{ id: 'mira', name: 'Mira Vale', description: '' }],
+    interactions: [interaction],
+    createdAt: '2026-07-26T00:00:00.000Z',
+    updatedAt: '2026-07-26T00:00:00.000Z',
+  };
+  return { interaction, story };
+}
+
+function expectPresentationContainsContext(
+  titleReadout: HTMLElement,
+  locationReadout: HTMLElement,
+) {
+  const presentation = titleReadout.closest('.interaction-inspector-presentation');
+  expect(presentation).toContainElement(locationReadout);
+  expect(titleReadout.querySelector('.interaction-label-leading')).toHaveTextContent('→');
+}
+
 describe('InteractionInspector time', () => {
   it('reports authored scene content after the save succeeds', async () => {
     const user = userEvent.setup();
@@ -74,7 +113,7 @@ describe('InteractionInspector time', () => {
     await user.click(screen.getByRole('button', { name: 'Add content' }));
     const editor = await screen.findByRole('textbox', { name: 'Content' }, { timeout: 5_000 });
     await user.type(editor, 'A scene');
-    await user.click(screen.getByLabelText('Title'));
+    await user.click(screen.getByRole('button', { name: 'Title: Start' }));
 
     await waitFor(() => expect(onContentSaved).toHaveBeenCalledOnce());
     const savedPatch = onPatch.mock.calls[0]?.[1];
@@ -114,7 +153,7 @@ describe('InteractionInspector time', () => {
     await user.click(screen.getByRole('button', { name: 'Add content' }));
     const editor = await screen.findByRole('textbox', { name: 'Content' }, { timeout: 5_000 });
     await user.type(editor, 'A scene');
-    await user.click(screen.getByLabelText('Title'));
+    await user.click(screen.getByRole('button', { name: 'Title: Start' }));
 
     await waitFor(() => expect(onPatch).toHaveBeenCalled());
     expect(onContentSaved).not.toHaveBeenCalled();
@@ -156,6 +195,7 @@ describe('InteractionInspector time', () => {
         );
       }
       render(<Editor />);
+      openEffectEditor(/State: set to/);
       fireEvent.click(screen.getByRole('button', { name: 'Use expression' }));
       expect(onPatch).toHaveBeenLastCalledWith('root', {
         statEffects: [
@@ -228,25 +268,8 @@ describe('InteractionInspector time', () => {
     });
   });
 
-  it('shows an Add content action and organizes context and effects', async () => {
-    const interaction: Story['interactions'][number] = {
-      id: 'interaction-1',
-      title: 'Meet Mira',
-      body: '',
-      position: { x: 0, y: 0 },
-      locationId: 'harbor',
-      characterIds: ['mira'],
-      triggers: [{ id: 'trigger-1', inputInteractionIds: [], conditions: [] }],
-    };
-    const story: Story = {
-      id: 'story-1',
-      title: 'Story',
-      locations: [{ id: 'harbor', name: 'Harbor', description: '' }],
-      characters: [{ id: 'mira', name: 'Mira Vale', description: '' }],
-      interactions: [interaction],
-      createdAt: '2026-07-26T00:00:00.000Z',
-      updatedAt: '2026-07-26T00:00:00.000Z',
-    };
+  it('shows authored context and content before exposing their editors', async () => {
+    const { interaction, story } = contextStory();
 
     render(
       <InteractionInspector
@@ -258,27 +281,91 @@ describe('InteractionInspector time', () => {
       />,
     );
 
+    const titleReadout = screen.getByRole('button', { name: 'Title: Meet Mira' });
+    const locationReadout = screen.getByRole('button', { name: 'Location: Harbor' });
+    expectPresentationContainsContext(titleReadout, locationReadout);
+    expect(screen.queryByRole('heading', { name: 'Context and timing' })).not.toBeInTheDocument();
+    expect(
+      titleReadout.compareDocumentPosition(locationReadout) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
     expect(screen.queryByRole('textbox', { name: 'Content' })).not.toBeInTheDocument();
-    expect(screen.getByText('Describe what happens here.')).toBeInTheDocument();
+    expect(screen.queryByText('Describe what happens here.')).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Add content' }));
     expect(
       await screen.findByRole('textbox', { name: 'Content' }, { timeout: 5_000 }),
     ).toBeInTheDocument();
-    expect(screen.getByText('Interaction duration')).toBeInTheDocument();
-    expect(screen.getByText('1 present')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Location: Harbor' })).toBeInTheDocument();
+    const charactersReadout = screen.getByRole('button', {
+      name: 'Characters present: Mira Vale',
+    });
+    const durationReadout = screen.getByRole('button', { name: 'Duration: No time change' });
+    const locationTooltip = screen.getByText('Harbor');
+    const charactersTooltip = screen.getByText('Mira Vale');
+    const durationTooltip = screen.getByText('No time change');
+    expect(locationReadout).toHaveAttribute('aria-describedby', locationTooltip.id);
+    expect(charactersReadout).toHaveAttribute('aria-describedby', charactersTooltip.id);
+    expect(durationReadout).toHaveAttribute('aria-describedby', durationTooltip.id);
+    expect(charactersReadout).not.toHaveTextContent('Mira Vale');
+    expect(durationReadout).not.toHaveTextContent('No time change');
+    expect(locationReadout).toHaveTextContent('H');
     expect(screen.getByText('MV')).toBeInTheDocument();
+    expect(locationReadout.querySelector('.interaction-metadata-avatar')).toBeInTheDocument();
+    expect(charactersReadout.querySelector('.interaction-metadata-avatar')).toBeInTheDocument();
+    expect(
+      durationReadout.querySelector('[data-interaction-metadata-icon="time"]'),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Location: Harbor' }));
     expect(screen.getByLabelText('Location')).toHaveValue('harbor');
+    fireEvent.click(screen.getByRole('button', { name: 'Characters present: Mira Vale' }));
+    expect(screen.getByRole('checkbox')).toBeChecked();
+    expect(screen.getByRole('heading', { name: 'Effects' })).toBeInTheDocument();
+  });
 
-    for (const sectionName of ['Context and timing', 'Effects']) {
-      const summary = screen.getByText(sectionName).closest('summary');
-      expect(summary?.closest('details')).toHaveAttribute('open');
-    }
-    for (const emptyEffectGroup of ['Variable effects', 'Item effects']) {
-      expect(screen.queryByRole('heading', { name: emptyEffectGroup })).not.toBeInTheDocument();
-    }
+  it('lists each outgoing destination once and adds options through its callback', () => {
+    const interaction: Story['interactions'][number] = {
+      id: 'source',
+      title: 'Source',
+      body: '',
+      position: { x: 0, y: 0 },
+      triggers: [{ id: 'source-root', inputInteractionIds: [], conditions: [] }],
+    };
+    const destination: Story['interactions'][number] = {
+      id: 'destination',
+      title: 'Destination',
+      body: '',
+      position: { x: 0, y: 0 },
+      triggers: [
+        { id: 'route-one', inputInteractionIds: ['source'], conditions: [] },
+        { id: 'route-two', inputInteractionIds: ['source'], conditions: [] },
+      ],
+    };
+    const story: Story = {
+      id: 'story-1',
+      title: 'Story',
+      interactions: [interaction, destination],
+      createdAt: '2026-07-26T00:00:00.000Z',
+      updatedAt: '2026-07-26T00:00:00.000Z',
+    };
+    const onAddOption = vi.fn();
+    const onSelectInteraction = vi.fn();
 
-    const characterOption = screen.getByText('Mira Vale').closest('label');
-    expect(within(characterOption!).getByRole('checkbox')).toBeChecked();
+    render(
+      <InteractionInspector
+        story={story}
+        interaction={interaction}
+        onChange={vi.fn()}
+        onPatch={vi.fn().mockResolvedValue(undefined)}
+        onDelete={vi.fn()}
+        onAddOption={onAddOption}
+        onSelectInteraction={onSelectInteraction}
+      />,
+    );
+
+    expect(screen.getAllByRole('button', { name: 'Destination' })).toHaveLength(1);
+    fireEvent.click(screen.getByRole('button', { name: 'Destination' }));
+    expect(onSelectInteraction).toHaveBeenCalledWith('destination');
+    fireEvent.click(screen.getByRole('button', { name: 'Add option' }));
+    expect(onAddOption).toHaveBeenCalledOnce();
   });
 
   it('edits and persists a non-negative integer duration', () => {
@@ -310,6 +397,7 @@ describe('InteractionInspector time', () => {
       />,
     );
 
+    fireEvent.click(screen.getByRole('button', { name: 'Duration: 15 minutes' }));
     const duration = screen.getByLabelText('Duration (minutes)');
     fireEvent.change(duration, { target: { value: '42.8' } });
     fireEvent.blur(duration, { target: { value: '42.8' } });
@@ -412,6 +500,7 @@ describe('InteractionInspector time', () => {
       />,
     );
 
+    openEffectEditor(/Trust: add 1/);
     const target = screen.getByLabelText('Variable effect target');
     expect(screen.getByRole('heading', { name: 'Variable effects' })).toBeInTheDocument();
     expect(within(target).getAllByRole('combobox')[0]).toHaveValue('owner:character:mira');
@@ -468,6 +557,7 @@ describe('InteractionInspector time', () => {
       />,
     );
 
+    openEffectEditor(/Score: add/);
     const expressionField = screen.getByLabelText('Variable effect expression');
     expect(expressionField).toHaveValue('@{score} + 2');
 
@@ -550,6 +640,7 @@ describe('InteractionInspector time', () => {
         onDelete={vi.fn()}
       />,
     );
+    openEffectEditor(/Mira: obtain Key/);
     expect(screen.getByText('Inventory change 1')).toBeInTheDocument();
     expect(screen.getByRole('option', { name: 'Key' })).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText('Item effect target'), {
@@ -667,6 +758,7 @@ describe('InteractionInspector time', () => {
         onDelete={vi.fn()}
       />,
     );
+    openEffectEditor(/Durability: add/);
     expect(screen.getByText('Variable change 1')).toBeInTheDocument();
     const target = screen.getByLabelText('Variable effect target');
     expect(within(target).getAllByRole('combobox')[1]).toHaveValue('item:key-1');
