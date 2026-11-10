@@ -13,7 +13,9 @@ export function parseBrowserSentryConfig(
   tracesSampleRateValue: string | undefined,
 ): BrowserSentryConfig | null {
   const dsn = parseSentryDsn(dsnValue);
-  if (!dsn) return null;
+  if (!dsn) {
+    return null;
+  }
   const tracesSampleRate = parseSampleRate(tracesSampleRateValue);
   return {
     dsn,
@@ -29,7 +31,9 @@ export const browserSentryConfig = parseBrowserSentryConfig(
 );
 
 export function initializeSentry(configuration = browserSentryConfig) {
-  if (!configuration) return;
+  if (!configuration) {
+    return;
+  }
   Sentry.init({
     dsn: configuration.dsn,
     environment: import.meta.env.MODE,
@@ -73,7 +77,9 @@ export function redactSentryEvent<T extends object>(event: T): T {
 
 function parseSentryDsn(value: string | undefined): string | null {
   const normalized = value?.trim();
-  if (!normalized) return null;
+  if (!normalized) {
+    return null;
+  }
   try {
     const url = new URL(normalized);
     if (
@@ -95,26 +101,38 @@ function parseSentryDsn(value: string | undefined): string | null {
 
 function parseRelease(value: string | undefined): string | undefined {
   const normalized = value?.trim();
-  if (!normalized || /[\r\n]/.test(normalized) || normalized.length > 200) return undefined;
+  if (!normalized || /[\r\n]/.test(normalized) || normalized.length > 200) {
+    return undefined;
+  }
   return normalized;
 }
 
 function parseSampleRate(value: string | undefined): number | undefined {
   const normalized = value?.trim();
-  if (!normalized) return undefined;
+  if (!normalized) {
+    return undefined;
+  }
   const parsed = Number(normalized);
   return Number.isFinite(parsed) && parsed >= 0 && parsed <= 1 ? parsed : undefined;
 }
 
 function redactExceptionPayload(exception: unknown) {
-  if (!isRecord(exception) || !Array.isArray(exception.values)) return;
+  if (!isRecord(exception) || !Array.isArray(exception.values)) {
+    return;
+  }
   for (const value of exception.values) {
-    if (!isRecord(value)) continue;
+    if (!isRecord(value)) {
+      continue;
+    }
     delete value.value;
     const frames = isRecord(value.stacktrace) ? value.stacktrace.frames : undefined;
-    if (!Array.isArray(frames)) continue;
+    if (!Array.isArray(frames)) {
+      continue;
+    }
     for (const frame of frames) {
-      if (!isRecord(frame)) continue;
+      if (!isRecord(frame)) {
+        continue;
+      }
       delete frame.context_line;
       delete frame.pre_context;
       delete frame.post_context;
