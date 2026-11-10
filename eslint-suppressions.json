@@ -763,20 +763,6 @@
       "count": 3
     }
   },
-  "apps/api/src/stories/story-quotas.spec.ts": {
-    "@typescript-eslint/no-unsafe-argument": {
-      "count": 2
-    },
-    "@typescript-eslint/no-unsafe-assignment": {
-      "count": 2
-    },
-    "@typescript-eslint/no-unsafe-type-assertion": {
-      "count": 1
-    },
-    "max-lines-per-function": {
-      "count": 1
-    }
-  },
   "apps/api/src/stories/story-quotas.ts": {
     "@typescript-eslint/no-unsafe-type-assertion": {
       "count": 2
