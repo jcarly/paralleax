@@ -31,7 +31,9 @@ export abstract class ImportReportStorage {
     try {
       entries = await readdir(dir);
     } catch (caught) {
-      if (isMissingPath(caught)) return;
+      if (isMissingPath(caught)) {
+        return;
+      }
       throw caught;
     }
     const now = Date.now();
@@ -50,7 +52,9 @@ export abstract class ImportReportStorage {
           await rm(fullPath, { force: true });
         }
       } catch (caught) {
-        if (!isMissingPath(caught)) throw caught;
+        if (!isMissingPath(caught)) {
+          throw caught;
+        }
       }
     }
   }
@@ -98,7 +102,9 @@ export class LocalImportReportStorage extends ImportReportStorage implements OnM
     try {
       entries = await readdir(dir, { withFileTypes: true });
     } catch (caught) {
-      if (isMissingPath(caught)) return undefined;
+      if (isMissingPath(caught)) {
+        return undefined;
+      }
       throw caught;
     }
     const match = entries.find(
@@ -111,18 +117,24 @@ export class LocalImportReportStorage extends ImportReportStorage implements OnM
 
   async streamReport(importId: string): Promise<Readable | undefined> {
     const filePath = await this.getReportPath(importId);
-    if (!filePath) return undefined;
+    if (!filePath) {
+      return undefined;
+    }
     return createReadStream(filePath, { encoding: 'utf8' });
   }
 
   async deleteReport(importId: string): Promise<void> {
     validateImportId(importId);
     const filePath = await this.getReportPath(importId);
-    if (!filePath) return;
+    if (!filePath) {
+      return;
+    }
     try {
       await rm(filePath, { force: true });
     } catch (caught) {
-      if (!isMissingPath(caught)) throw caught;
+      if (!isMissingPath(caught)) {
+        throw caught;
+      }
     }
   }
 }
@@ -133,7 +145,9 @@ export async function copyImportReportFile(
   destination: string,
 ): Promise<void> {
   const source = await storage.getReportPath(importId);
-  if (!source) return;
+  if (!source) {
+    return;
+  }
   await mkdir(destination, { recursive: true });
   await pipeline(
     createReadStream(source),

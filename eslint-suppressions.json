@@ -235,9 +235,6 @@
     }
   },
   "apps/api/src/imports/import-report-storage.ts": {
-    "curly": {
-      "count": 7
-    },
     "sonarjs/cognitive-complexity": {
       "count": 1
     }
