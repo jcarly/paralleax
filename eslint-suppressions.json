@@ -239,17 +239,6 @@
       "count": 1
     }
   },
-  "apps/api/src/observability/sentry.ts": {
-    "@typescript-eslint/no-unsafe-type-assertion": {
-      "count": 1
-    },
-    "curly": {
-      "count": 5
-    },
-    "sonarjs/cognitive-complexity": {
-      "count": 1
-    }
-  },
   "apps/api/src/operations/api-exception.filter.spec.ts": {
     "@typescript-eslint/no-unsafe-type-assertion": {
       "count": 2
