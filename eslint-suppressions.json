@@ -2309,9 +2309,6 @@
   "apps/web/src/storyConnection.ts": {
     "complexity": {
       "count": 1
-    },
-    "curly": {
-      "count": 11
     }
   },
   "apps/web/src/storyGraph.stress.test.ts": {

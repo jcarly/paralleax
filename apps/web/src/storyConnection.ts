@@ -18,15 +18,23 @@ export function getPendingConnection(
   story: Story | undefined,
   connection: Connection,
 ): PendingConnection | undefined {
-  if (!story || !connection.source || !connection.target) return undefined;
-  if (connection.source === connection.target) return undefined;
+  if (!story || !connection.source || !connection.target) {
+    return undefined;
+  }
+  if (connection.source === connection.target) {
+    return undefined;
+  }
   if (connection.targetHandle && connection.targetHandle !== 'create-source-input') {
     return undefined;
   }
 
   const target = story.interactions.find((item) => item.id === connection.target);
-  if (!target) return undefined;
-  if (findTriggerConnectionConflict(story, connection.source, target.id)) return undefined;
+  if (!target) {
+    return undefined;
+  }
+  if (findTriggerConnectionConflict(story, connection.source, target.id)) {
+    return undefined;
+  }
 
   return {
     sourceId: connection.source,
@@ -36,8 +44,12 @@ export function getPendingConnection(
 }
 
 export function getPendingConnectionConflict(story: Story | undefined, connection: Connection) {
-  if (!story || !connection.source || !connection.target) return undefined;
-  if (connection.source === connection.target) return undefined;
+  if (!story || !connection.source || !connection.target) {
+    return undefined;
+  }
+  if (connection.source === connection.target) {
+    return undefined;
+  }
   if (connection.targetHandle && connection.targetHandle !== 'create-source-input') {
     return undefined;
   }
@@ -51,16 +63,26 @@ export function getPendingTriggerInputConnection(
   targetId: string | undefined,
   triggerId: string | undefined,
 ): PendingTriggerInputConnection | undefined {
-  if (!story || !sourceId || !targetId || !triggerId) return undefined;
-  if (sourceId === targetId) return undefined;
+  if (!story || !sourceId || !targetId || !triggerId) {
+    return undefined;
+  }
+  if (sourceId === targetId) {
+    return undefined;
+  }
 
   const target = story.interactions.find((item) => item.id === targetId);
   const source = story.interactions.find((item) => item.id === sourceId);
-  if (!target || !source) return undefined;
+  if (!target || !source) {
+    return undefined;
+  }
 
   const trigger = target.triggers.find((item) => item.id === triggerId);
-  if (!trigger || trigger.inputInteractionIds.includes(sourceId)) return undefined;
-  if (findTriggerConnectionConflict(story, sourceId, targetId, triggerId)) return undefined;
+  if (!trigger || trigger.inputInteractionIds.includes(sourceId)) {
+    return undefined;
+  }
+  if (findTriggerConnectionConflict(story, sourceId, targetId, triggerId)) {
+    return undefined;
+  }
 
   return { sourceId, targetId, trigger };
 }
