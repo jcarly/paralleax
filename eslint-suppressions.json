@@ -61,26 +61,6 @@
       "count": 1
     }
   },
-  "apps/api/src/comments/comments.e2e.spec.ts": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 5
-    },
-    "@typescript-eslint/no-unsafe-assignment": {
-      "count": 11
-    },
-    "@typescript-eslint/no-unsafe-member-access": {
-      "count": 26
-    },
-    "@typescript-eslint/no-unsafe-type-assertion": {
-      "count": 3
-    },
-    "max-lines-per-function": {
-      "count": 4
-    },
-    "max-params": {
-      "count": 2
-    }
-  },
   "apps/api/src/comments/comments.postgres.spec.ts": {
     "@typescript-eslint/no-unsafe-type-assertion": {
       "count": 1
