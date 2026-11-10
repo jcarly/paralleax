@@ -3,12 +3,12 @@ import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { changeInterfaceLanguage } from '../i18n';
 import { reportBrowserError } from '../observability/browserMonitoring';
+import { isDynamicImportError } from '../observability/dynamicImportError';
+import { RouteErrorPage } from './RouteErrorPage';
 
 vi.mock('../observability/browserMonitoring', () => ({
   reportBrowserError: vi.fn(),
 }));
-import { isDynamicImportError } from '../observability/dynamicImportError';
-import { RouteErrorPage } from './RouteErrorPage';
 
 function CrashingPage({ message }: { message: string }): null {
   throw new TypeError(message);
@@ -34,7 +34,6 @@ describe('dynamic import detection', () => {
     expect(isDynamicImportError(new Error('Network request failed'))).toBe(false);
     expect(isDynamicImportError(null)).toBe(false);
   });
-
 });
 
 describe('RouteErrorPage', () => {
