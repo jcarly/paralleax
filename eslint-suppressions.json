@@ -941,11 +941,6 @@
       "count": 2
     }
   },
-  "apps/web/src/authNavigation.ts": {
-    "curly": {
-      "count": 3
-    }
-  },
   "apps/web/src/components/AccountDialog.tsx": {
     "curly": {
       "count": 3
