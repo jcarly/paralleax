@@ -343,7 +343,9 @@ export class StoriesRepository {
       [id, userId],
     );
     const row = result.rows[0];
-    if (!row) return undefined;
+    if (!row) {
+      return undefined;
+    }
     return {
       id: row.id,
       revision: row.revision,
@@ -376,7 +378,9 @@ export class StoriesRepository {
     pageSize: number,
   ): Promise<StoryEditorContextPage | undefined> {
     const story = await this.findAccessibleStoryRow(this.database.pool, id, userId);
-    if (!story) return undefined;
+    if (!story) {
+      return undefined;
+    }
     return readStoryEditorContextPage(this.database.pool, {
       storyId: id,
       revision: story.revision,
@@ -392,7 +396,9 @@ export class StoriesRepository {
     pageSize: number,
   ): Promise<StoryEditorInteractionPage | undefined> {
     const story = await this.findAccessibleStoryRow(this.database.pool, id, userId);
-    if (!story) return undefined;
+    if (!story) {
+      return undefined;
+    }
     return readStoryEditorInteractionPage(this.database.pool, {
       storyId: id,
       revision: story.revision,
@@ -408,7 +414,9 @@ export class StoriesRepository {
     pageSize: number,
   ): Promise<StoryEditorTriggerPage | undefined> {
     const story = await this.findAccessibleStoryRow(this.database.pool, id, userId);
-    if (!story) return undefined;
+    if (!story) {
+      return undefined;
+    }
     return readStoryEditorTriggerPage(this.database.pool, {
       storyId: id,
       revision: story.revision,
@@ -424,7 +432,9 @@ export class StoriesRepository {
     pageSize: number,
   ): Promise<StoryEditorInteractionContentPage | undefined> {
     const story = await this.findAccessibleStoryRow(this.database.pool, id, userId);
-    if (!story) return undefined;
+    if (!story) {
+      return undefined;
+    }
     return readStoryEditorInteractionContentPage(this.database.pool, {
       storyId: id,
       revision: story.revision,
@@ -440,7 +450,9 @@ export class StoriesRepository {
     pageSize: number,
   ): Promise<StoryEditorTriggerContentPage | undefined> {
     const story = await this.findAccessibleStoryRow(this.database.pool, id, userId);
-    if (!story) return undefined;
+    if (!story) {
+      return undefined;
+    }
     return readStoryEditorTriggerContentPage(this.database.pool, {
       storyId: id,
       revision: story.revision,
@@ -480,7 +492,9 @@ export class StoriesRepository {
     pageSize: number,
   ): Promise<StoryRuntimeContextPage | undefined> {
     const story = await this.findAccessibleStoryRow(this.database.pool, id, userId);
-    if (!story) return undefined;
+    if (!story) {
+      return undefined;
+    }
     return readStoryEditorContextPage(
       this.database.pool,
       {
@@ -500,7 +514,9 @@ export class StoriesRepository {
     request: StoryRuntimeSliceRequest,
   ): Promise<StoryRuntimeSlice | undefined> {
     const story = await this.findAccessibleStoryRow(this.database.pool, id, userId);
-    if (!story) return undefined;
+    if (!story) {
+      return undefined;
+    }
     return readStoryRuntimeSlice(this.database.pool, {
       storyId: id,
       revision: story.revision,
@@ -527,8 +543,12 @@ export class StoriesRepository {
 
   async saveMany(stories: readonly Story[], ownerId: string): Promise<void> {
     await this.transaction(async (client) => {
-      for (const story of stories) assertStoryWithinQuotas(story);
-      for (const story of stories) await this.saveWith(client, story, ownerId);
+      for (const story of stories) {
+        assertStoryWithinQuotas(story);
+      }
+      for (const story of stories) {
+        await this.saveWith(client, story, ownerId);
+      }
     });
   }
 
@@ -539,9 +559,13 @@ export class StoriesRepository {
     operation: string = storyHistoryOperations.storyUpdated,
   ): Promise<Story | undefined> {
     return this.transaction(async (client) => {
-      if (!(await this.hasEditAccess(client, id, ownerId, true))) return undefined;
+      if (!(await this.hasEditAccess(client, id, ownerId, true))) {
+        return undefined;
+      }
       const current = await this.findWith(client, id, ownerId);
-      if (!current) return undefined;
+      if (!current) {
+        return undefined;
+      }
       const updated = await mutation(structuredClone(current));
       assertStoryWithinQuotas(updated, current);
       const changes = createStoryChangeDelta(current, updated);
@@ -562,7 +586,9 @@ export class StoriesRepository {
   }
 
   async getHistory(id: string, userId: string, limit = 50): Promise<StoryHistory | undefined> {
-    if (!(await this.hasEditAccess(this.database.pool, id, userId))) return undefined;
+    if (!(await this.hasEditAccess(this.database.pool, id, userId))) {
+      return undefined;
+    }
     return readStoryHistory(this.database.pool, id, userId, limit);
   }
 
@@ -578,11 +604,17 @@ export class StoriesRepository {
   > {
     try {
       return await this.transaction(async (client) => {
-        if (!(await this.hasEditAccess(client, id, userId, true))) return undefined;
+        if (!(await this.hasEditAccess(client, id, userId, true))) {
+          return undefined;
+        }
         const event = await findStoryHistoryCandidate(client, id, userId, action);
-        if (!event) return { kind: 'unavailable' as const };
+        if (!event) {
+          return { kind: 'unavailable' as const };
+        }
         const current = await this.findWith(client, id, userId);
-        if (!current) return undefined;
+        if (!current) {
+          return undefined;
+        }
         const reverted = applyStoryChangeDelta(current, event.changes, 'backward');
         if (!reverted.applied) {
           throw new StoryHistoryConflictError(reverted.conflicts.map(({ path }) => path));
@@ -616,7 +648,9 @@ export class StoriesRepository {
       if (error instanceof StoryHistoryConflictError) {
         return { kind: 'conflict', paths: error.paths };
       }
-      if (isPostgresHistoryConflict(error)) return { kind: 'conflict', paths: [] };
+      if (isPostgresHistoryConflict(error)) {
+        return { kind: 'conflict', paths: [] };
+      }
       throw error;
     }
   }
@@ -740,7 +774,9 @@ export class StoriesRepository {
       [id, userId],
     );
     const row = story.rows[0];
-    if (!row) return undefined;
+    if (!row) {
+      return undefined;
+    }
     const collaborators = await this.database.pool.query<{
       user_id: string;
       email: string;
@@ -846,7 +882,9 @@ export class StoriesRepository {
   }
 
   private async assemble(queryable: Queryable, storyRows: StoryRow[]): Promise<Story[]> {
-    if (storyRows.length === 0) return [];
+    if (storyRows.length === 0) {
+      return [];
+    }
     const storyIds = storyRows.map(({ id }) => id);
     const interactions = await queryable.query<InteractionRow>(
       `SELECT id, story_id, title, body, position_x, position_y, location_id,
@@ -1214,7 +1252,9 @@ function projectGraphDecorationRow(decoration: GraphDecorationRow): GraphDecorat
 
 function groupBy<T>(items: T[], key: (item: T) => string) {
   const grouped = new Map<string, T[]>();
-  for (const item of items) grouped.set(key(item), [...(grouped.get(key(item)) ?? []), item]);
+  for (const item of items) {
+    grouped.set(key(item), [...(grouped.get(key(item)) ?? []), item]);
+  }
   return grouped;
 }
 
@@ -1227,7 +1267,9 @@ function resolveItemCharacterOwner(
   let current: CharacterItemRow | undefined = item;
   while (current && !visited.has(current.id)) {
     visited.add(current.id);
-    if (current.character_id) return current.character_id;
+    if (current.character_id) {
+      return current.character_id;
+    }
     const parentId: string | undefined = relationshipsByChild.get(current.id)?.parent_item_id;
     current = parentId ? itemsById.get(parentId) : undefined;
   }
@@ -1243,7 +1285,9 @@ function resolveItemLocationOwner(
   let current: CharacterItemRow | undefined = item;
   while (current && !visited.has(current.id)) {
     visited.add(current.id);
-    if (current.location_id) return current.location_id;
+    if (current.location_id) {
+      return current.location_id;
+    }
     const parentId: string | undefined = relationshipsByChild.get(current.id)?.parent_item_id;
     current = parentId ? itemsById.get(parentId) : undefined;
   }
@@ -1301,7 +1345,9 @@ class StoryHistoryConflictError extends Error {
 }
 
 function isPostgresHistoryConflict(error: unknown): boolean {
-  if (!error || typeof error !== 'object' || !('code' in error)) return false;
+  if (!error || typeof error !== 'object' || !('code' in error)) {
+    return false;
+  }
   return ['23503', '23505', '23514'].includes(String(error.code));
 }
 
@@ -1373,12 +1419,16 @@ function authenticatedStoryFilter(filter: StoryListOptions['filter']) {
     OR stories.creator_user_id = $1
     OR stories.edit_policy = 'authenticated'
     OR (stories.visibility <> 'private' AND permission.role = 'editor'))`;
-  if (filter === 'editable') return editable;
+  if (filter === 'editable') {
+    return editable;
+  }
   if (filter === 'commentable') {
     return `(stories.comment_policy = 'readers'
       OR (stories.comment_policy = 'editors' AND ${editable}))`;
   }
-  if (filter === 'owned') return `(stories.creator_user_id = $1)`;
+  if (filter === 'owned') {
+    return `(stories.creator_user_id = $1)`;
+  }
   return 'TRUE';
 }
 

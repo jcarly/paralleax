@@ -845,9 +845,6 @@
     }
   },
   "apps/api/src/stories/stories.repository.ts": {
-    "curly": {
-      "count": 25
-    },
     "max-lines-per-function": {
       "count": 4
     },
