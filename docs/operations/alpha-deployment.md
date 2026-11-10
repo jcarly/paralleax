@@ -112,11 +112,23 @@ docker build --target web --tag registry.example/paralleax-web:<commit> .
 ```
 
 Use immutable commit or digest references. GitHub Actions builds both targets
-when Docker, production Compose, deployment, or dependency-manifest files change,
-and in the weekly/manual exhaustive lane. Application pull requests still run
-the affected workspace build and tests. CI validates images locally but does
-not publish them; a provider deployment should use reviewed image digests rather
-than rebuilding an unreviewed working tree.
+when Docker, production Compose, deployment, or dependency-manifest files change.
+Application pull requests still run the affected workspace build and tests. A
+newly created version tag in the exact `x.y.z` format runs exhaustive CI first;
+only after all required checks pass does the release job publish API and web
+images to GHCR and deploy those image digests to the Railway alpha. The job
+deploys the API first, waits for its healthcheck, then deploys the web image and
+runs the deployment smoke check. Re-tagging or deleting a version does not
+deploy. No branch push publishes images or runs the GitHub Actions release job.
+
+The release tags each image with the version and source commit for discovery,
+but Railway receives `ghcr.io/...@sha256:...` references. The web Sentry release
+and API `SENTRY_RELEASE` are set from the version tag so both services identify
+the same release. The workflow uses the existing public web Sentry DSN and
+optional public Formbricks build values from GitHub Actions repository variables.
+If browser source maps are enabled, store `SENTRY_AUTH_TOKEN` as a GitHub Actions
+secret; the Docker build mounts it only while building and does not store it in
+the image.
 
 Run the API image once as a migration job before replacing application traffic:
 
@@ -146,6 +158,38 @@ Railway does not run this Compose topology as one container. Create three
 services in the same project and environment: Railway PostgreSQL, `api`, and
 `web`. Connect both application services to this repository with the repository
 root as their root directory.
+
+The tag release job targets the existing `fearless-warmth` project and its
+`production` environment, where the services are named `@paralleax/api` and
+`@paralleax/web`. Before relying on the tag flow, disable Railway's native
+GitHub auto-deploy trigger for both services. Otherwise a push to `main` can
+still deploy independently of GitHub Actions. The first successful version-tag
+release switches each application service source from the branch to its
+published image; PostgreSQL remains unchanged.
+
+Before creating the first release tag, configure the GitHub repository:
+
+- Add a production-scoped Railway project token as the `RAILWAY_TOKEN` Actions
+  secret.
+- Copy the existing `VITE_SENTRY_DSN` build value into the `VITE_SENTRY_DSN`
+  Actions variable. If enabled, also add `VITE_FORMBRICKS_WORKSPACE_ID` and
+  `VITE_FORMBRICKS_APP_URL` and `VITE_SENTRY_TRACES_SAMPLE_RATE` as Actions
+  variables.
+- If browser source-map uploads are enabled, add `SENTRY_AUTH_TOKEN` as an
+  Actions secret and `SENTRY_ORG`, `SENTRY_PROJECT`, and optional `SENTRY_URL`
+  as Actions variables.
+- The workflow publishes packages linked to this public repository and checks
+  that both image digests can be pulled anonymously before it changes either
+  Railway service. If that check fails on the first release, set both package
+  visibilities to Public in GitHub Packages settings and rerun the tag workflow.
+  Public images require no Railway registry credentials.
+
+The workflow switches the service source to a digest but does not create Railway
+credentials. Keep the API migration pre-deploy command
+`node apps/api/dist/main.js --migrate` and `/api/health` healthcheck configured
+in Railway service settings; keep `/healthz` configured for the web service.
+These settings must remain available after the service source changes from the
+repository to an image.
 
 Configure the `api` service with Config File Path
 `/deploy/railway.api.json` and these variables:

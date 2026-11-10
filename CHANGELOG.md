@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Changed the Railway alpha release flow to run only for newly created `x.y.z`
+  tags after exhaustive CI. GitHub Actions now publishes API and web images to
+  GHCR and deploys their immutable digests in migration-first order before the
+  deployment smoke check.
+
 - Replaced named interview notes and a project-specific import example with an
   anonymized product-discovery synthesis and source-neutral QSP import lessons.
   Identifiable research records remain outside this public repository.
