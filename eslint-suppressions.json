@@ -1693,9 +1693,6 @@
     }
   },
   "apps/web/src/features/story-editor/persistence/storyGraphPersistence.ts": {
-    "curly": {
-      "count": 37
-    },
     "max-lines-per-function": {
       "count": 1
     }
