@@ -277,8 +277,8 @@ test('typed ESLint rules and the suppression baseline cover all production works
   const sourceConfigs = await Promise.all(
     sourceFiles.map((file) => eslint.calculateConfigForFile(path.join(repositoryRoot, file))),
   );
-  const [converterResult] = await eslint.lintFiles([
-    'packages/shared/src/import-export/qsp/converter.ts',
+  const [qspImporterResult] = await eslint.lintFiles([
+    'packages/shared/src/import-export/qsp/importer.test.ts',
   ]);
 
   for (const [index, sourceConfig] of sourceConfigs.entries()) {
@@ -291,7 +291,7 @@ test('typed ESLint rules and the suppression baseline cover all production works
     }
   }
   assert.ok(
-    converterResult.suppressedMessages.some(
+    qspImporterResult.suppressedMessages.some(
       ({ ruleId }) => ruleId === '@typescript-eslint/no-unsafe-assignment',
     ),
   );
