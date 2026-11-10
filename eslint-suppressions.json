@@ -331,11 +331,6 @@
       "count": 1
     }
   },
-  "apps/api/src/stories/application/graph-decorations.ts": {
-    "complexity": {
-      "count": 1
-    }
-  },
   "apps/api/src/stories/application/qsp-import-worker.service.spec.ts": {
     "@typescript-eslint/no-unsafe-assignment": {
       "count": 1
