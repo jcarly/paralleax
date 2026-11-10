@@ -131,9 +131,13 @@ export async function readStoryHistory(
      ORDER BY recent_entries.id DESC`,
     [storyId, actorUserId, limit],
   );
-  const availability = result.rows[0];
+  return projectStoryHistory(result.rows);
+}
+
+function projectStoryHistory(rows: StoryHistoryReadRow[]): StoryHistory {
+  const availability = rows[0];
   return {
-    entries: result.rows.filter(isStoryHistoryEventRow).map(storyHistoryEntry),
+    entries: rows.filter(isStoryHistoryEventRow).map(storyHistoryEntry),
     canUndo: availability?.can_undo ?? false,
     canRedo: availability?.can_redo ?? false,
   };
