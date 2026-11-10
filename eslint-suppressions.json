@@ -490,11 +490,6 @@
       "count": 1
     }
   },
-  "apps/api/src/stories/application/story-items.ts": {
-    "curly": {
-      "count": 1
-    }
-  },
   "apps/api/src/stories/application/story-metadata.spec.ts": {
     "@typescript-eslint/no-unsafe-type-assertion": {
       "count": 3
