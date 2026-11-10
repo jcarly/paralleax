@@ -208,6 +208,54 @@ type ReaderProgressRow = {
   updated_at: Date | string;
   current_interaction_title?: string | null;
 };
+type ReaderProgressSaveArguments = [
+  state: ReaderProgressState,
+  updatedAt: string,
+  slotId?: string,
+  name?: string,
+  createdAt?: string,
+];
+type StoryAssemblyRows = {
+  interactions: InteractionRow[];
+  graphDecorations: GraphDecorationRow[];
+  groups: GroupRow[];
+  groupInteractions: GroupInteractionRow[];
+  locations: LocationRow[];
+  characters: CharacterRow[];
+  statDefinitions: StatDefinitionRow[];
+  statAssignments: StatAssignmentRow[];
+  itemDefinitions: ItemDefinitionRow[];
+  interactionCharacters: InteractionCharacterRow[];
+  characterItems: CharacterItemRow[];
+  itemRelationships: ItemRelationshipRow[];
+  statEffects: PersistedStatEffectRow[];
+  itemEffects: PersistedItemEffectRow[];
+  triggers: PersistedTriggerRow[];
+  inputs: PersistedTriggerInputRow[];
+};
+type StoryAssemblyIndexes = {
+  interactionsByStory: Map<string, InteractionRow[]>;
+  graphDecorationsByStory: Map<string, GraphDecorationRow[]>;
+  groupsByStory: Map<string, GroupRow[]>;
+  interactionsByGroup: Map<string, GroupInteractionRow[]>;
+  locationsByStory: Map<string, LocationRow[]>;
+  charactersByStory: Map<string, CharacterRow[]>;
+  statDefinitionsByStory: Map<string, StatDefinitionRow[]>;
+  storyStatsByStory: Map<string, StatAssignmentRow[]>;
+  statsByCharacter: Map<string, StatAssignmentRow[]>;
+  statsByLocation: Map<string, StatAssignmentRow[]>;
+  statsByItemDefinition: Map<string, StatAssignmentRow[]>;
+  itemDefinitionsByStory: Map<string, ItemDefinitionRow[]>;
+  charactersByInteraction: Map<string, InteractionCharacterRow[]>;
+  itemRowsById: Map<string, CharacterItemRow>;
+  relationshipByChild: Map<string, ItemRelationshipRow>;
+  itemsByCharacter: Map<string, CharacterItemRow[]>;
+  itemsByLocation: Map<string, CharacterItemRow[]>;
+  effectsByInteraction: Map<string, PersistedStatEffectRow[]>;
+  itemEffectsByInteraction: Map<string, PersistedItemEffectRow[]>;
+  inputsByTrigger: Map<string, PersistedTriggerInputRow[]>;
+  triggersByInteraction: Map<string, PersistedTriggerRow[]>;
+};
 
 const storyAccessSelect = `SELECT stories.id, stories.revision, stories.title,
   stories.creator_user_id, owner.email AS owner_email,
@@ -346,29 +394,7 @@ export class StoriesRepository {
     if (!row) {
       return undefined;
     }
-    return {
-      id: row.id,
-      revision: row.revision,
-      title: row.title,
-      startDateTime: row.start_date_time,
-      access: accessSettings(row),
-      capabilities: capabilities(row, userId),
-      owner: { id: row.creator_user_id, displayName: row.owner_display_name },
-      createdAt: iso(row.created_at),
-      updatedAt: iso(row.updated_at),
-      contextCounts: {
-        locations: Number(row.location_count),
-        characters: Number(row.character_count),
-        statDefinitions: Number(row.stat_definition_count),
-        statAssignments: Number(row.stat_assignment_count),
-        itemDefinitions: Number(row.item_definition_count),
-        itemInstances: Number(row.item_instance_count),
-        groups: Number(row.group_count),
-        graphDecorations: Number(row.graph_decoration_count),
-      },
-      interactionCount: Number(row.interaction_count),
-      triggerCount: Number(row.trigger_count),
-    };
+    return editorBootstrap(row, userId);
   }
 
   async findEditorContextPage(
@@ -603,47 +629,9 @@ export class StoriesRepository {
     | undefined
   > {
     try {
-      return await this.transaction(async (client) => {
-        if (!(await this.hasEditAccess(client, id, userId, true))) {
-          return undefined;
-        }
-        const event = await findStoryHistoryCandidate(client, id, userId, action);
-        if (!event) {
-          return { kind: 'unavailable' as const };
-        }
-        const current = await this.findWith(client, id, userId);
-        if (!current) {
-          return undefined;
-        }
-        const reverted = applyStoryChangeDelta(current, event.changes, 'backward');
-        if (!reverted.applied) {
-          throw new StoryHistoryConflictError(reverted.conflicts.map(({ path }) => path));
-        }
-
-        const updated = reverted.story;
-        updated.id = id;
-        updated.updatedAt = new Date().toISOString();
-        updated.revision = (current.revision ?? 1) + 1;
-        assertStoryWithinQuotas(updated, current);
-        const changes = invertStoryChangeDelta(event.changes);
-
-        await persistStoryDifference(client, current, updated, changes);
-        await insertStoryHistoryEvent(client, {
-          storyId: id,
-          actorUserId: userId,
-          revision: updated.revision,
-          kind: action,
-          operation: event.operation,
-          changes,
-          createdAt: updated.updatedAt,
-          revertsEventId: String(event.id),
-        });
-        const history = await readStoryHistory(client, id, userId);
-        return {
-          kind: 'applied' as const,
-          result: createStoryHistoryMutationResult(current, updated, changes, history),
-        };
-      });
+      return await this.transaction((client) =>
+        this.revertHistoryInTransaction(client, id, userId, action),
+      );
     } catch (error) {
       if (error instanceof StoryHistoryConflictError) {
         return { kind: 'conflict', paths: error.paths };
@@ -653,6 +641,53 @@ export class StoriesRepository {
       }
       throw error;
     }
+  }
+
+  private async revertHistoryInTransaction(
+    client: PoolClient,
+    id: string,
+    userId: string,
+    action: 'undo' | 'redo',
+  ) {
+    if (!(await this.hasEditAccess(client, id, userId, true))) {
+      return undefined;
+    }
+    const event = await findStoryHistoryCandidate(client, id, userId, action);
+    if (!event) {
+      return { kind: 'unavailable' as const };
+    }
+    const current = await this.findWith(client, id, userId);
+    if (!current) {
+      return undefined;
+    }
+    const reverted = applyStoryChangeDelta(current, event.changes, 'backward');
+    if (!reverted.applied) {
+      throw new StoryHistoryConflictError(reverted.conflicts.map(({ path }) => path));
+    }
+
+    const updated = reverted.story;
+    updated.id = id;
+    updated.updatedAt = new Date().toISOString();
+    updated.revision = (current.revision ?? 1) + 1;
+    assertStoryWithinQuotas(updated, current);
+    const changes = invertStoryChangeDelta(event.changes);
+
+    await persistStoryDifference(client, current, updated, changes);
+    await insertStoryHistoryEvent(client, {
+      storyId: id,
+      actorUserId: userId,
+      revision: updated.revision,
+      kind: action,
+      operation: event.operation,
+      changes,
+      createdAt: updated.updatedAt,
+      revertsEventId: String(event.id),
+    });
+    const history = await readStoryHistory(client, id, userId);
+    return {
+      kind: 'applied' as const,
+      result: createStoryHistoryMutationResult(current, updated, changes, history),
+    };
   }
 
   async delete(id: string, ownerId: string): Promise<boolean> {
@@ -727,12 +762,9 @@ export class StoriesRepository {
   async saveProgress(
     storyId: string,
     userId: string,
-    state: ReaderProgressState,
-    updatedAt: string,
-    slotId = READER_AUTOSAVE_ID,
-    name?: string,
-    createdAt = updatedAt,
+    ...progress: ReaderProgressSaveArguments
   ): Promise<boolean> {
+    const [state, updatedAt, slotId = READER_AUTOSAVE_ID, name, createdAt = updatedAt] = progress;
     const result = await this.database.pool.query(
       `INSERT INTO story_reader_progress
          (user_id, story_id, slot_id, name, state, created_at, updated_at)
@@ -885,259 +917,11 @@ export class StoriesRepository {
     if (storyRows.length === 0) {
       return [];
     }
-    const storyIds = storyRows.map(({ id }) => id);
-    const interactions = await queryable.query<InteractionRow>(
-      `SELECT id, story_id, title, body, position_x, position_y, location_id,
-              duration_minutes, conditional_text_blocks, sort_order
-         FROM interactions WHERE story_id = ANY($1::text[])
-         ORDER BY story_id, sort_order`,
-      [storyIds],
+    const rows = await loadStoryAssemblyRows(
+      queryable,
+      storyRows.map(({ id }) => id),
     );
-    const graphDecorations = await queryable.query<GraphDecorationRow>(
-      `SELECT id, story_id, kind, position_x, position_y, width, height,
-              text_content, color, font_size, font_family, font_weight, font_style, sort_order
-         FROM graph_decorations WHERE story_id = ANY($1::text[])
-         ORDER BY story_id, sort_order`,
-      [storyIds],
-    );
-    const groups = await queryable.query<GroupRow>(
-      `SELECT id, story_id, title, parent_group_id, sort_order
-         FROM story_groups WHERE story_id = ANY($1::text[])
-         ORDER BY story_id, sort_order`,
-      [storyIds],
-    );
-    const groupInteractions = await queryable.query<GroupInteractionRow>(
-      `SELECT story_id, group_id, interaction_id, sort_order
-         FROM story_group_interactions WHERE story_id = ANY($1::text[])
-         ORDER BY story_id, group_id, sort_order`,
-      [storyIds],
-    );
-    const locations = await queryable.query<LocationRow>(
-      `SELECT id, story_id, name, description, category, image_url, sort_order
-         FROM locations WHERE story_id = ANY($1::text[])
-         ORDER BY story_id, sort_order`,
-      [storyIds],
-    );
-    const characters = await queryable.query<CharacterRow>(
-      `SELECT id, story_id, name, description, category, image_url, is_playable, sort_order
-         FROM characters WHERE story_id = ANY($1::text[])
-         ORDER BY story_id, sort_order`,
-      [storyIds],
-    );
-    const statDefinitions = await queryable.query<StatDefinitionRow>(
-      `SELECT id, story_id, name, value_type, category, image_url,
-              change_per_hour, sort_order
-         FROM stat_definitions WHERE story_id = ANY($1::text[])
-         ORDER BY story_id, sort_order`,
-      [storyIds],
-    );
-    const statAssignments = await queryable.query<StatAssignmentRow>(
-      `SELECT id, story_id, stat_definition_id, owner_type, character_id,
-              location_id, item_definition_id, initial_value, sort_order
-         FROM stat_assignments WHERE story_id = ANY($1::text[])
-         ORDER BY story_id, owner_type, sort_order`,
-      [storyIds],
-    );
-    const itemDefinitions = await queryable.query<ItemDefinitionRow>(
-      `SELECT id, story_id, name, description, category, image_url, sort_order
-         FROM item_definitions WHERE story_id = ANY($1::text[])
-         ORDER BY story_id, sort_order`,
-      [storyIds],
-    );
-    const interactionCharacters = await queryable.query<InteractionCharacterRow>(
-      `SELECT story_id, interaction_id, character_id, sort_order
-         FROM interaction_characters WHERE story_id = ANY($1::text[])
-         ORDER BY story_id, interaction_id, sort_order`,
-      [storyIds],
-    );
-    const characterItems = await queryable.query<CharacterItemRow>(
-      `SELECT id, story_id, owner_character_id AS character_id,
-              owner_location_id AS location_id, item_definition_id, sort_order
-         FROM item_instances
-         WHERE story_id = ANY($1::text[])
-         ORDER BY story_id, owner_character_id, owner_location_id, sort_order`,
-      [storyIds],
-    );
-    const itemRelationships = await queryable.query<ItemRelationshipRow>(
-      `SELECT story_id, parent_item_id, child_item_id, relationship_type, slot_key, sort_order
-         FROM item_instance_relationships WHERE story_id = ANY($1::text[])
-         ORDER BY story_id, parent_item_id, sort_order`,
-      [storyIds],
-    );
-    const statEffects = await queryable.query<PersistedStatEffectRow>(
-      `SELECT story_id, interaction_id, stat_id, item_id, operation, value, expression, sort_order
-         FROM interaction_stat_effects WHERE story_id = ANY($1::text[])
-         ORDER BY story_id, interaction_id, sort_order`,
-      [storyIds],
-    );
-    const itemEffects = await queryable.query<PersistedItemEffectRow>(
-      `SELECT story_id, interaction_id, item_id, item_definition_id, character_id,
-              operation, sort_order
-         FROM interaction_item_effects WHERE story_id = ANY($1::text[])
-         ORDER BY story_id, interaction_id, sort_order`,
-      [storyIds],
-    );
-    const triggers = await queryable.query<PersistedTriggerRow>(
-      `SELECT triggers.id, interactions.story_id, triggers.output_interaction_id,
-                triggers.position_x, triggers.position_y, triggers.sort_order,
-                triggers.condition_groups, triggers.appearance_probability,
-                triggers.timer_seconds
-         FROM triggers
-         JOIN interactions ON interactions.id = triggers.output_interaction_id
-         WHERE interactions.story_id = ANY($1::text[])
-         ORDER BY interactions.story_id, triggers.output_interaction_id, triggers.sort_order`,
-      [storyIds],
-    );
-    const inputs = await queryable.query<PersistedTriggerInputRow>(
-      `SELECT output.story_id, trigger_inputs.trigger_id,
-                trigger_inputs.input_interaction_id, trigger_inputs.sort_order
-         FROM trigger_inputs
-         JOIN triggers ON triggers.id = trigger_inputs.trigger_id
-         JOIN interactions output ON output.id = triggers.output_interaction_id
-         WHERE output.story_id = ANY($1::text[])
-         ORDER BY output.story_id, trigger_inputs.trigger_id, trigger_inputs.sort_order`,
-      [storyIds],
-    );
-    const inputsByTrigger = groupBy(inputs.rows, ({ trigger_id }) => trigger_id);
-    const triggersByInteraction = groupBy(
-      triggers.rows,
-      ({ output_interaction_id }) => output_interaction_id,
-    );
-    const interactionsByStory = groupBy(interactions.rows, ({ story_id }) => story_id);
-    const graphDecorationsByStory = groupBy(graphDecorations.rows, ({ story_id }) => story_id);
-    const groupsByStory = groupBy(groups.rows, ({ story_id }) => story_id);
-    const interactionsByGroup = groupBy(groupInteractions.rows, ({ group_id }) => group_id);
-    const locationsByStory = groupBy(locations.rows, ({ story_id }) => story_id);
-    const charactersByStory = groupBy(characters.rows, ({ story_id }) => story_id);
-    const statDefinitionsByStory = groupBy(statDefinitions.rows, ({ story_id }) => story_id);
-    const storyStats = groupBy(
-      statAssignments.rows.filter(({ owner_type }) => owner_type === 'story'),
-      ({ story_id }) => story_id,
-    );
-    const statsByCharacter = groupBy(
-      statAssignments.rows.filter(({ owner_type }) => owner_type === 'character'),
-      ({ character_id }) => character_id ?? '',
-    );
-    const statsByLocation = groupBy(
-      statAssignments.rows.filter(({ owner_type }) => owner_type === 'location'),
-      ({ location_id }) => location_id ?? '',
-    );
-    const statsByItemDefinition = groupBy(
-      statAssignments.rows.filter(({ owner_type }) => owner_type === 'item_definition'),
-      ({ item_definition_id }) => item_definition_id ?? '',
-    );
-    const itemDefinitionsByStory = groupBy(itemDefinitions.rows, ({ story_id }) => story_id);
-    const charactersByInteraction = groupBy(
-      interactionCharacters.rows,
-      ({ interaction_id }) => interaction_id,
-    );
-    const itemRowsById = new Map(characterItems.rows.map((item) => [item.id, item]));
-    const relationshipByChild = new Map(
-      itemRelationships.rows.map((relationship) => [relationship.child_item_id, relationship]),
-    );
-    const itemsByCharacter = groupBy(characterItems.rows, (item) =>
-      resolveItemCharacterOwner(item, itemRowsById, relationshipByChild),
-    );
-    const itemsByLocation = groupBy(characterItems.rows, (item) =>
-      resolveItemLocationOwner(item, itemRowsById, relationshipByChild),
-    );
-    const effectsByInteraction = groupBy(statEffects.rows, ({ interaction_id }) => interaction_id);
-    const itemEffectsByInteraction = groupBy(
-      itemEffects.rows,
-      ({ interaction_id }) => interaction_id,
-    );
-
-    return storyRows.map((row) => {
-      const storyAssignments = storyStats.get(row.id);
-      return {
-        id: row.id,
-        revision: row.revision,
-        title: row.title,
-        access: accessSettings(row),
-        capabilities: capabilities(row),
-        owner: { id: row.creator_user_id, displayName: row.owner_display_name },
-        startDateTime: row.start_date_time,
-        createdAt: iso(row.created_at),
-        updatedAt: iso(row.updated_at),
-        ...(storyAssignments?.length ? { stats: storyAssignments.map(projectStatAssignment) } : {}),
-        groups: (groupsByStory.get(row.id) ?? []).map((group): Group => ({
-          id: group.id,
-          title: group.title,
-          ...(group.parent_group_id ? { parentGroupId: group.parent_group_id } : {}),
-          interactionIds: (interactionsByGroup.get(group.id) ?? []).map(
-            ({ interaction_id }) => interaction_id,
-          ),
-        })),
-        graphDecorations: (graphDecorationsByStory.get(row.id) ?? []).map(
-          projectGraphDecorationRow,
-        ),
-        locations: (locationsByStory.get(row.id) ?? []).map((location) => {
-          const locationStats = statsByLocation.get(location.id);
-          const locationItems = itemsByLocation.get(location.id);
-          return {
-            id: location.id,
-            name: location.name,
-            description: location.description,
-            ...(location.category ? { category: location.category } : {}),
-            ...(location.image_url ? { imageUrl: location.image_url } : {}),
-            ...(locationStats?.length ? { stats: locationStats.map(projectStatAssignment) } : {}),
-            ...(locationItems?.length
-              ? {
-                  items: locationItems.map((item) =>
-                    projectItemInstance(item, relationshipByChild),
-                  ),
-                }
-              : {}),
-          };
-        }),
-        characters: (charactersByStory.get(row.id) ?? []).map((character) => ({
-          id: character.id,
-          name: character.name,
-          description: character.description,
-          ...(character.category ? { category: character.category } : {}),
-          ...(character.image_url ? { imageUrl: character.image_url } : {}),
-          ...(character.is_playable ? { isPlayable: true } : {}),
-          stats: (statsByCharacter.get(character.id) ?? []).map(projectStatAssignment),
-          items: (itemsByCharacter.get(character.id) ?? []).map((item) =>
-            projectItemInstance(item, relationshipByChild),
-          ),
-        })),
-        statDefinitions: (statDefinitionsByStory.get(row.id) ?? []).map((definition) => ({
-          id: definition.id,
-          name: definition.name,
-          valueType: definition.value_type,
-          ...(definition.category ? { category: definition.category } : {}),
-          ...(definition.image_url ? { imageUrl: definition.image_url } : {}),
-          ...(definition.change_per_hour ? { changePerHour: definition.change_per_hour } : {}),
-        })),
-        itemDefinitions: (itemDefinitionsByStory.get(row.id) ?? []).map((definition) => ({
-          id: definition.id,
-          name: definition.name,
-          description: definition.description,
-          ...(definition.category ? { category: definition.category } : {}),
-          ...(definition.image_url ? { imageUrl: definition.image_url } : {}),
-          stats: (statsByItemDefinition.get(definition.id) ?? []).map(projectStatAssignment),
-        })),
-        interactions: (interactionsByStory.get(row.id) ?? []).map((interaction) => ({
-          id: interaction.id,
-          title: interaction.title,
-          body: interaction.body,
-          position: { x: interaction.position_x, y: interaction.position_y },
-          locationId: interaction.location_id,
-          durationMinutes: interaction.duration_minutes,
-          conditionalTextBlocks: interaction.conditional_text_blocks,
-          characterIds: (charactersByInteraction.get(interaction.id) ?? []).map(
-            ({ character_id }) => character_id,
-          ),
-          statEffects: projectStatEffects(effectsByInteraction.get(interaction.id) ?? []),
-          itemEffects: projectItemEffects(itemEffectsByInteraction.get(interaction.id) ?? []),
-          triggers: projectTriggers(
-            triggersByInteraction.get(interaction.id) ?? [],
-            inputsByTrigger,
-          ),
-        })),
-      };
-    });
+    return projectStoryAssembly(storyRows, rows);
   }
 
   private async transaction<T>(work: (client: PoolClient) => Promise<T>): Promise<T> {
@@ -1210,6 +994,466 @@ export class StoriesRepository {
     );
     await replaceStoryGraph(client, story);
   }
+}
+
+async function loadStoryAssemblyRows(
+  queryable: Queryable,
+  storyIds: string[],
+): Promise<StoryAssemblyRows> {
+  return {
+    ...(await loadStoryStructureRows(queryable, storyIds)),
+    ...(await loadStoryContextRows(queryable, storyIds)),
+    ...(await loadStoryInventoryRows(queryable, storyIds)),
+    ...(await loadStoryEffectRows(queryable, storyIds)),
+    ...(await loadStoryTriggerRows(queryable, storyIds)),
+  };
+}
+
+async function loadStoryStructureRows(
+  queryable: Queryable,
+  storyIds: string[],
+): Promise<
+  Pick<StoryAssemblyRows, 'interactions' | 'graphDecorations' | 'groups' | 'groupInteractions'>
+> {
+  const interactions = await queryable.query<InteractionRow>(
+    `SELECT id, story_id, title, body, position_x, position_y, location_id,
+            duration_minutes, conditional_text_blocks, sort_order
+       FROM interactions WHERE story_id = ANY($1::text[])
+       ORDER BY story_id, sort_order`,
+    [storyIds],
+  );
+  const graphDecorations = await queryable.query<GraphDecorationRow>(
+    `SELECT id, story_id, kind, position_x, position_y, width, height,
+            text_content, color, font_size, font_family, font_weight, font_style, sort_order
+       FROM graph_decorations WHERE story_id = ANY($1::text[])
+       ORDER BY story_id, sort_order`,
+    [storyIds],
+  );
+  const groups = await queryable.query<GroupRow>(
+    `SELECT id, story_id, title, parent_group_id, sort_order
+       FROM story_groups WHERE story_id = ANY($1::text[])
+       ORDER BY story_id, sort_order`,
+    [storyIds],
+  );
+  const groupInteractions = await queryable.query<GroupInteractionRow>(
+    `SELECT story_id, group_id, interaction_id, sort_order
+       FROM story_group_interactions WHERE story_id = ANY($1::text[])
+       ORDER BY story_id, group_id, sort_order`,
+    [storyIds],
+  );
+  return {
+    interactions: interactions.rows,
+    graphDecorations: graphDecorations.rows,
+    groups: groups.rows,
+    groupInteractions: groupInteractions.rows,
+  };
+}
+
+async function loadStoryContextRows(
+  queryable: Queryable,
+  storyIds: string[],
+): Promise<
+  Pick<
+    StoryAssemblyRows,
+    | 'locations'
+    | 'characters'
+    | 'statDefinitions'
+    | 'statAssignments'
+    | 'itemDefinitions'
+    | 'interactionCharacters'
+  >
+> {
+  return {
+    ...(await loadStoryPlaceRows(queryable, storyIds)),
+    ...(await loadStoryDefinitionRows(queryable, storyIds)),
+  };
+}
+
+async function loadStoryPlaceRows(
+  queryable: Queryable,
+  storyIds: string[],
+): Promise<Pick<StoryAssemblyRows, 'locations' | 'characters'>> {
+  const locations = await queryable.query<LocationRow>(
+    `SELECT id, story_id, name, description, category, image_url, sort_order
+       FROM locations WHERE story_id = ANY($1::text[])
+       ORDER BY story_id, sort_order`,
+    [storyIds],
+  );
+  const characters = await queryable.query<CharacterRow>(
+    `SELECT id, story_id, name, description, category, image_url, is_playable, sort_order
+       FROM characters WHERE story_id = ANY($1::text[])
+       ORDER BY story_id, sort_order`,
+    [storyIds],
+  );
+  return { locations: locations.rows, characters: characters.rows };
+}
+
+async function loadStoryDefinitionRows(
+  queryable: Queryable,
+  storyIds: string[],
+): Promise<
+  Pick<
+    StoryAssemblyRows,
+    'statDefinitions' | 'statAssignments' | 'itemDefinitions' | 'interactionCharacters'
+  >
+> {
+  const statDefinitions = await queryable.query<StatDefinitionRow>(
+    `SELECT id, story_id, name, value_type, category, image_url,
+            change_per_hour, sort_order
+       FROM stat_definitions WHERE story_id = ANY($1::text[])
+       ORDER BY story_id, sort_order`,
+    [storyIds],
+  );
+  const statAssignments = await queryable.query<StatAssignmentRow>(
+    `SELECT id, story_id, stat_definition_id, owner_type, character_id,
+            location_id, item_definition_id, initial_value, sort_order
+       FROM stat_assignments WHERE story_id = ANY($1::text[])
+       ORDER BY story_id, owner_type, sort_order`,
+    [storyIds],
+  );
+  const itemDefinitions = await queryable.query<ItemDefinitionRow>(
+    `SELECT id, story_id, name, description, category, image_url, sort_order
+       FROM item_definitions WHERE story_id = ANY($1::text[])
+       ORDER BY story_id, sort_order`,
+    [storyIds],
+  );
+  const interactionCharacters = await queryable.query<InteractionCharacterRow>(
+    `SELECT story_id, interaction_id, character_id, sort_order
+       FROM interaction_characters WHERE story_id = ANY($1::text[])
+       ORDER BY story_id, interaction_id, sort_order`,
+    [storyIds],
+  );
+  return {
+    statDefinitions: statDefinitions.rows,
+    statAssignments: statAssignments.rows,
+    itemDefinitions: itemDefinitions.rows,
+    interactionCharacters: interactionCharacters.rows,
+  };
+}
+
+async function loadStoryInventoryRows(
+  queryable: Queryable,
+  storyIds: string[],
+): Promise<Pick<StoryAssemblyRows, 'characterItems' | 'itemRelationships'>> {
+  const characterItems = await queryable.query<CharacterItemRow>(
+    `SELECT id, story_id, owner_character_id AS character_id,
+            owner_location_id AS location_id, item_definition_id, sort_order
+       FROM item_instances
+       WHERE story_id = ANY($1::text[])
+       ORDER BY story_id, owner_character_id, owner_location_id, sort_order`,
+    [storyIds],
+  );
+  const itemRelationships = await queryable.query<ItemRelationshipRow>(
+    `SELECT story_id, parent_item_id, child_item_id, relationship_type, slot_key, sort_order
+       FROM item_instance_relationships WHERE story_id = ANY($1::text[])
+       ORDER BY story_id, parent_item_id, sort_order`,
+    [storyIds],
+  );
+  return { characterItems: characterItems.rows, itemRelationships: itemRelationships.rows };
+}
+
+async function loadStoryEffectRows(
+  queryable: Queryable,
+  storyIds: string[],
+): Promise<Pick<StoryAssemblyRows, 'statEffects' | 'itemEffects'>> {
+  const statEffects = await queryable.query<PersistedStatEffectRow>(
+    `SELECT story_id, interaction_id, stat_id, item_id, operation, value, expression, sort_order
+       FROM interaction_stat_effects WHERE story_id = ANY($1::text[])
+       ORDER BY story_id, interaction_id, sort_order`,
+    [storyIds],
+  );
+  const itemEffects = await queryable.query<PersistedItemEffectRow>(
+    `SELECT story_id, interaction_id, item_id, item_definition_id, character_id,
+            operation, sort_order
+       FROM interaction_item_effects WHERE story_id = ANY($1::text[])
+       ORDER BY story_id, interaction_id, sort_order`,
+    [storyIds],
+  );
+  return { statEffects: statEffects.rows, itemEffects: itemEffects.rows };
+}
+
+async function loadStoryTriggerRows(
+  queryable: Queryable,
+  storyIds: string[],
+): Promise<Pick<StoryAssemblyRows, 'triggers' | 'inputs'>> {
+  const triggers = await queryable.query<PersistedTriggerRow>(
+    `SELECT triggers.id, interactions.story_id, triggers.output_interaction_id,
+              triggers.position_x, triggers.position_y, triggers.sort_order,
+              triggers.condition_groups, triggers.appearance_probability,
+              triggers.timer_seconds
+       FROM triggers
+       JOIN interactions ON interactions.id = triggers.output_interaction_id
+       WHERE interactions.story_id = ANY($1::text[])
+       ORDER BY interactions.story_id, triggers.output_interaction_id, triggers.sort_order`,
+    [storyIds],
+  );
+  const inputs = await queryable.query<PersistedTriggerInputRow>(
+    `SELECT output.story_id, trigger_inputs.trigger_id,
+              trigger_inputs.input_interaction_id, trigger_inputs.sort_order
+       FROM trigger_inputs
+       JOIN triggers ON triggers.id = trigger_inputs.trigger_id
+       JOIN interactions output ON output.id = triggers.output_interaction_id
+       WHERE output.story_id = ANY($1::text[])
+       ORDER BY output.story_id, trigger_inputs.trigger_id, trigger_inputs.sort_order`,
+    [storyIds],
+  );
+  return { triggers: triggers.rows, inputs: inputs.rows };
+}
+
+function projectStoryAssembly(storyRows: StoryRow[], rows: StoryAssemblyRows): Story[] {
+  const indexes = indexStoryAssemblyRows(rows);
+  return storyRows.map((row) => projectStoryRow(row, indexes));
+}
+
+function indexStoryAssemblyRows(rows: StoryAssemblyRows): StoryAssemblyIndexes {
+  return {
+    ...indexStoryStructure(rows),
+    ...indexStoryContext(rows),
+    ...indexStoryInventory(rows),
+    ...indexStoryEffects(rows),
+    ...indexStoryTriggers(rows),
+  };
+}
+
+function indexStoryStructure(
+  rows: StoryAssemblyRows,
+): Pick<
+  StoryAssemblyIndexes,
+  'interactionsByStory' | 'graphDecorationsByStory' | 'groupsByStory' | 'interactionsByGroup'
+> {
+  return {
+    interactionsByStory: groupBy(rows.interactions, ({ story_id }) => story_id),
+    graphDecorationsByStory: groupBy(rows.graphDecorations, ({ story_id }) => story_id),
+    groupsByStory: groupBy(rows.groups, ({ story_id }) => story_id),
+    interactionsByGroup: groupBy(rows.groupInteractions, ({ group_id }) => group_id),
+  };
+}
+
+function indexStoryContext(
+  rows: StoryAssemblyRows,
+): Pick<
+  StoryAssemblyIndexes,
+  | 'locationsByStory'
+  | 'charactersByStory'
+  | 'statDefinitionsByStory'
+  | 'storyStatsByStory'
+  | 'statsByCharacter'
+  | 'statsByLocation'
+  | 'statsByItemDefinition'
+  | 'itemDefinitionsByStory'
+  | 'charactersByInteraction'
+> {
+  return {
+    locationsByStory: groupBy(rows.locations, ({ story_id }) => story_id),
+    charactersByStory: groupBy(rows.characters, ({ story_id }) => story_id),
+    statDefinitionsByStory: groupBy(rows.statDefinitions, ({ story_id }) => story_id),
+    storyStatsByStory: groupBy(
+      rows.statAssignments.filter(({ owner_type }) => owner_type === 'story'),
+      ({ story_id }) => story_id,
+    ),
+    statsByCharacter: groupBy(
+      rows.statAssignments.filter(({ owner_type }) => owner_type === 'character'),
+      ({ character_id }) => character_id ?? '',
+    ),
+    statsByLocation: groupBy(
+      rows.statAssignments.filter(({ owner_type }) => owner_type === 'location'),
+      ({ location_id }) => location_id ?? '',
+    ),
+    statsByItemDefinition: groupBy(
+      rows.statAssignments.filter(({ owner_type }) => owner_type === 'item_definition'),
+      ({ item_definition_id }) => item_definition_id ?? '',
+    ),
+    itemDefinitionsByStory: groupBy(rows.itemDefinitions, ({ story_id }) => story_id),
+    charactersByInteraction: groupBy(
+      rows.interactionCharacters,
+      ({ interaction_id }) => interaction_id,
+    ),
+  };
+}
+
+function indexStoryInventory(
+  rows: StoryAssemblyRows,
+): Pick<
+  StoryAssemblyIndexes,
+  'itemRowsById' | 'relationshipByChild' | 'itemsByCharacter' | 'itemsByLocation'
+> {
+  const itemRowsById = new Map(rows.characterItems.map((item) => [item.id, item]));
+  const relationshipByChild = new Map(
+    rows.itemRelationships.map((relationship) => [relationship.child_item_id, relationship]),
+  );
+  return {
+    itemRowsById,
+    relationshipByChild,
+    itemsByCharacter: groupBy(rows.characterItems, (item) =>
+      resolveItemCharacterOwner(item, itemRowsById, relationshipByChild),
+    ),
+    itemsByLocation: groupBy(rows.characterItems, (item) =>
+      resolveItemLocationOwner(item, itemRowsById, relationshipByChild),
+    ),
+  };
+}
+
+function indexStoryEffects(
+  rows: StoryAssemblyRows,
+): Pick<StoryAssemblyIndexes, 'effectsByInteraction' | 'itemEffectsByInteraction'> {
+  return {
+    effectsByInteraction: groupBy(rows.statEffects, ({ interaction_id }) => interaction_id),
+    itemEffectsByInteraction: groupBy(rows.itemEffects, ({ interaction_id }) => interaction_id),
+  };
+}
+
+function indexStoryTriggers(
+  rows: StoryAssemblyRows,
+): Pick<StoryAssemblyIndexes, 'inputsByTrigger' | 'triggersByInteraction'> {
+  return {
+    inputsByTrigger: groupBy(rows.inputs, ({ trigger_id }) => trigger_id),
+    triggersByInteraction: groupBy(
+      rows.triggers,
+      ({ output_interaction_id }) => output_interaction_id,
+    ),
+  };
+}
+
+function projectStoryRow(row: StoryRow, indexes: StoryAssemblyIndexes): Story {
+  const storyAssignments = indexes.storyStatsByStory.get(row.id);
+  return {
+    id: row.id,
+    revision: row.revision,
+    title: row.title,
+    access: accessSettings(row),
+    capabilities: capabilities(row),
+    owner: { id: row.creator_user_id, displayName: row.owner_display_name },
+    startDateTime: row.start_date_time,
+    createdAt: iso(row.created_at),
+    updatedAt: iso(row.updated_at),
+    ...(storyAssignments?.length ? { stats: storyAssignments.map(projectStatAssignment) } : {}),
+    groups: projectStoryGroups(row.id, indexes),
+    graphDecorations: (indexes.graphDecorationsByStory.get(row.id) ?? []).map(
+      projectGraphDecorationRow,
+    ),
+    locations: projectStoryLocations(row.id, indexes),
+    characters: projectStoryCharacters(row.id, indexes),
+    statDefinitions: projectStoryStatDefinitions(row.id, indexes),
+    itemDefinitions: projectStoryItemDefinitions(row.id, indexes),
+    interactions: projectStoryInteractions(row.id, indexes),
+  };
+}
+
+function projectStoryGroups(storyId: string, indexes: StoryAssemblyIndexes): Group[] {
+  return (indexes.groupsByStory.get(storyId) ?? []).map((group) => ({
+    id: group.id,
+    title: group.title,
+    ...(group.parent_group_id ? { parentGroupId: group.parent_group_id } : {}),
+    interactionIds: (indexes.interactionsByGroup.get(group.id) ?? []).map(
+      ({ interaction_id }) => interaction_id,
+    ),
+  }));
+}
+
+function projectStoryLocations(storyId: string, indexes: StoryAssemblyIndexes) {
+  return (indexes.locationsByStory.get(storyId) ?? []).map((location) => {
+    const locationStats = indexes.statsByLocation.get(location.id);
+    const locationItems = indexes.itemsByLocation.get(location.id);
+    return {
+      id: location.id,
+      name: location.name,
+      description: location.description,
+      ...(location.category ? { category: location.category } : {}),
+      ...(location.image_url ? { imageUrl: location.image_url } : {}),
+      ...(locationStats?.length ? { stats: locationStats.map(projectStatAssignment) } : {}),
+      ...(locationItems?.length
+        ? {
+            items: locationItems.map((item) =>
+              projectItemInstance(item, indexes.relationshipByChild),
+            ),
+          }
+        : {}),
+    };
+  });
+}
+
+function projectStoryCharacters(storyId: string, indexes: StoryAssemblyIndexes) {
+  return (indexes.charactersByStory.get(storyId) ?? []).map((character) => ({
+    id: character.id,
+    name: character.name,
+    description: character.description,
+    ...(character.category ? { category: character.category } : {}),
+    ...(character.image_url ? { imageUrl: character.image_url } : {}),
+    ...(character.is_playable ? { isPlayable: true } : {}),
+    stats: (indexes.statsByCharacter.get(character.id) ?? []).map(projectStatAssignment),
+    items: (indexes.itemsByCharacter.get(character.id) ?? []).map((item) =>
+      projectItemInstance(item, indexes.relationshipByChild),
+    ),
+  }));
+}
+
+function projectStoryStatDefinitions(storyId: string, indexes: StoryAssemblyIndexes) {
+  return (indexes.statDefinitionsByStory.get(storyId) ?? []).map((definition) => ({
+    id: definition.id,
+    name: definition.name,
+    valueType: definition.value_type,
+    ...(definition.category ? { category: definition.category } : {}),
+    ...(definition.image_url ? { imageUrl: definition.image_url } : {}),
+    ...(definition.change_per_hour ? { changePerHour: definition.change_per_hour } : {}),
+  }));
+}
+
+function projectStoryItemDefinitions(storyId: string, indexes: StoryAssemblyIndexes) {
+  return (indexes.itemDefinitionsByStory.get(storyId) ?? []).map((definition) => ({
+    id: definition.id,
+    name: definition.name,
+    description: definition.description,
+    ...(definition.category ? { category: definition.category } : {}),
+    ...(definition.image_url ? { imageUrl: definition.image_url } : {}),
+    stats: (indexes.statsByItemDefinition.get(definition.id) ?? []).map(projectStatAssignment),
+  }));
+}
+
+function projectStoryInteractions(storyId: string, indexes: StoryAssemblyIndexes) {
+  return (indexes.interactionsByStory.get(storyId) ?? []).map((interaction) => ({
+    id: interaction.id,
+    title: interaction.title,
+    body: interaction.body,
+    position: { x: interaction.position_x, y: interaction.position_y },
+    locationId: interaction.location_id,
+    durationMinutes: interaction.duration_minutes,
+    conditionalTextBlocks: interaction.conditional_text_blocks,
+    characterIds: (indexes.charactersByInteraction.get(interaction.id) ?? []).map(
+      ({ character_id }) => character_id,
+    ),
+    statEffects: projectStatEffects(indexes.effectsByInteraction.get(interaction.id) ?? []),
+    itemEffects: projectItemEffects(indexes.itemEffectsByInteraction.get(interaction.id) ?? []),
+    triggers: projectTriggers(
+      indexes.triggersByInteraction.get(interaction.id) ?? [],
+      indexes.inputsByTrigger,
+    ),
+  }));
+}
+
+function editorBootstrap(row: StoryEditorBootstrapRow, userId: string): StoryEditorBootstrap {
+  return {
+    id: row.id,
+    revision: row.revision,
+    title: row.title,
+    startDateTime: row.start_date_time,
+    access: accessSettings(row),
+    capabilities: capabilities(row, userId),
+    owner: { id: row.creator_user_id, displayName: row.owner_display_name },
+    createdAt: iso(row.created_at),
+    updatedAt: iso(row.updated_at),
+    contextCounts: {
+      locations: Number(row.location_count),
+      characters: Number(row.character_count),
+      statDefinitions: Number(row.stat_definition_count),
+      statAssignments: Number(row.stat_assignment_count),
+      itemDefinitions: Number(row.item_definition_count),
+      itemInstances: Number(row.item_instance_count),
+      groups: Number(row.group_count),
+      graphDecorations: Number(row.graph_decoration_count),
+    },
+    interactionCount: Number(row.interaction_count),
+    triggerCount: Number(row.trigger_count),
+  };
 }
 
 function projectGraphDecorationRow(decoration: GraphDecorationRow): GraphDecoration {
