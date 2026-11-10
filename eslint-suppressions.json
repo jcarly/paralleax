@@ -403,20 +403,6 @@
       "count": 1
     }
   },
-  "apps/api/src/stories/application/story-groups.ts": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 1
-    },
-    "@typescript-eslint/no-shadow": {
-      "count": 3
-    },
-    "@typescript-eslint/no-unsafe-type-assertion": {
-      "count": 1
-    },
-    "curly": {
-      "count": 5
-    }
-  },
   "apps/api/src/stories/application/story-history.ts": {
     "curly": {
       "count": 2
