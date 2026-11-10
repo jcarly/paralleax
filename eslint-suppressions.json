@@ -74,9 +74,6 @@
   "apps/api/src/auth/auth.service.ts": {
     "@typescript-eslint/no-unsafe-type-assertion": {
       "count": 2
-    },
-    "curly": {
-      "count": 7
     }
   },
   "apps/api/src/comments/comments.e2e.spec.ts": {
