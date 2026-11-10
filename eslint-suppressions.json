@@ -782,14 +782,6 @@
       "count": 1
     }
   },
-  "apps/api/src/stories/stories.repository.ts": {
-    "max-lines-per-function": {
-      "count": 4
-    },
-    "max-params": {
-      "count": 1
-    }
-  },
   "apps/api/src/stories/stories.service.ts": {
     "max-params": {
       "count": 3
