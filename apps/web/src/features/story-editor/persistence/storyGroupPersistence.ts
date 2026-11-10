@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import type { UpdateGroupInput } from '@paralleax/shared';
+import type { Story, UpdateGroupInput } from '@paralleax/shared';
 import { applyGroupResult, applyGroupDeletionResult } from '../../story/storyMutationResults';
 import { api } from '../../../api';
 import type { StoryStateSetter, TrackStorySave } from './storyPersistenceTypes';
@@ -24,11 +24,9 @@ export function useStoryGroupPersistence({
           ...(parentGroupId ? { parentGroupId } : {}),
         }),
       );
-      if (!result) return false;
-      setStory((current) =>
-        current?.id === storyId ? applyGroupResult(current, result) : current,
+      return (
+        applySavedGroupMutation(storyId, setStory, result, applyGroupResult)?.group.id ?? false
       );
-      return result.group.id;
     },
     [setStory, storyId, trackSave],
   );
@@ -36,24 +34,31 @@ export function useStoryGroupPersistence({
   const updateGroup = useCallback(
     async (groupId: string, input: UpdateGroupInput) => {
       const result = await trackSave(() => api.updateGroup(storyId, groupId, input));
-      if (!result) return false;
-      setStory((current) =>
-        current?.id === storyId ? applyGroupResult(current, result) : current,
-      );
-      return true;
+      return applySavedGroupMutation(storyId, setStory, result, applyGroupResult) !== undefined;
     },
     [setStory, storyId, trackSave],
   );
   const deleteGroup = useCallback(
     async (groupId: string) => {
       const result = await trackSave(() => api.deleteGroup(storyId, groupId));
-      if (!result) return false;
-      setStory((current) =>
-        current?.id === storyId ? applyGroupDeletionResult(current, result) : current,
+      return (
+        applySavedGroupMutation(storyId, setStory, result, applyGroupDeletionResult) !== undefined
       );
-      return true;
     },
     [setStory, storyId, trackSave],
   );
   return { createGroup, updateGroup, deleteGroup };
+}
+
+function applySavedGroupMutation<T>(
+  storyId: string,
+  setStory: StoryStateSetter,
+  result: T | undefined,
+  apply: (story: Story, result: T) => Story,
+): T | undefined {
+  if (!result) {
+    return undefined;
+  }
+  setStory((current) => (current?.id === storyId ? apply(current, result) : current));
+  return result;
 }
