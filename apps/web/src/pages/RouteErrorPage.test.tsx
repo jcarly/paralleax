@@ -2,6 +2,11 @@ import { cleanup, render, screen } from '@testing-library/react';
 import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { changeInterfaceLanguage } from '../i18n';
+import { reportBrowserError } from '../observability/browserMonitoring';
+
+vi.mock('../observability/browserMonitoring', () => ({
+  reportBrowserError: vi.fn(),
+}));
 import { isDynamicImportError, RouteErrorPage } from './RouteErrorPage';
 
 function CrashingPage({ message }: { message: string }) {
@@ -20,6 +25,7 @@ describe('RouteErrorPage', () => {
   afterEach(() => {
     cleanup();
     vi.restoreAllMocks();
+    vi.clearAllMocks();
   });
 
   it('detects missing dynamic imports without confusing generic errors', () => {
@@ -46,6 +52,12 @@ describe('RouteErrorPage', () => {
       'href',
       window.location.href,
     );
+    expect(reportBrowserError).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: 'Failed to fetch dynamically imported module: /assets/AdminUsersPage-abc.js',
+      }),
+      'dynamic-import',
+    );
   });
 
   it('does not mislabel a runtime exception as a deployment update', () => {
@@ -54,6 +66,7 @@ describe('RouteErrorPage', () => {
 
     expect(screen.getByRole('heading', { name: 'Something went wrong' })).toBeInTheDocument();
     expect(screen.queryByText(/updated while this tab was open/)).not.toBeInTheDocument();
+    expect(reportBrowserError).toHaveBeenCalledWith(expect.any(Error), 'route-error');
   });
 
   it('shows a translated recovery message', async () => {
