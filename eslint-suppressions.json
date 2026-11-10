@@ -1902,12 +1902,6 @@
   "apps/web/src/main.tsx": {
     "@typescript-eslint/no-non-null-assertion": {
       "count": 1
-    },
-    "@typescript-eslint/no-unsafe-call": {
-      "count": 1
-    },
-    "@typescript-eslint/no-unsafe-member-access": {
-      "count": 1
     }
   },
   "apps/web/src/pages/AccountActionPage.tsx": {
