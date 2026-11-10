@@ -43,7 +43,7 @@ export function handleModalDialogKeyDown(event: KeyboardEvent<HTMLElement>, onCa
   }
 
   const first = focusable[0];
-  const last = focusable.at(-1)!;
+  const last = focusable[focusable.length - 1];
   if (event.shiftKey && document.activeElement === first) {
     event.preventDefault();
     last.focus();
