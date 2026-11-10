@@ -913,11 +913,6 @@
       "count": 1
     }
   },
-  "apps/web/src/apiErrorMessages.ts": {
-    "curly": {
-      "count": 2
-    }
-  },
   "apps/web/src/components/AccountDialog.tsx": {
     "curly": {
       "count": 3
