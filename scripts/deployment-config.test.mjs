@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
+import { fileURLToPath } from 'node:url';
 
 const readRepositoryFile = (path) => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 
@@ -33,6 +35,14 @@ test('Railway web deployment probes the public reverse proxy', async () => {
   assert.equal(configuration.build.builder, 'DOCKERFILE');
   assert.equal(configuration.build.dockerfilePath, 'Dockerfile');
   assert.equal(configuration.deploy.healthcheckPath, '/healthz');
+  assert.match(
+    nginxConfiguration,
+    /connect-src 'self' \$\{SENTRY_CSP_ORIGIN\} \$\{VITE_FORMBRICKS_APP_URL\}/,
+  );
+  assert.match(dockerfile, /^ARG VITE_SENTRY_DSN=$/m);
+  assert.match(dockerfile, /^ENV VITE_SENTRY_DSN=\$\{VITE_SENTRY_DSN\}$/m);
+  assert.match(dockerfile, /COPY deploy\/sentry-csp\.envsh \/docker-entrypoint\.d\/15-sentry-csp\.envsh/);
+  assert.match(dockerfile, /chmod \+x \/docker-entrypoint\.d\/15-sentry-csp\.envsh/);
   assert.match(dockerfile, /^ENV NGINX_ENTRYPOINT_LOCAL_RESOLVERS=1$/m);
   assert.match(nginxConfiguration, /^\s*listen \$\{PORT\};$/m);
   assert.match(nginxConfiguration, /^\s*resolver \$\{NGINX_LOCAL_RESOLVERS\} valid=10s;$/m);
@@ -83,4 +93,19 @@ test('local development exposes services only through IPv4 loopback', async () =
   assert.doesNotMatch(localCompose, /^\s+- '5432:5432'$/m);
   assert.doesNotMatch(localCompose, /^\s+- '\$\{API_PORT:-3300\}:3000'$/m);
   assert.doesNotMatch(localCompose, /^\s+- '5173:5173'$/m);
+});
+
+test('the Sentry CSP origin uses only the public DSN hostname', () => {
+  const scriptPath = fileURLToPath(new URL('../deploy/sentry-csp.envsh', import.meta.url));
+  const originFor = (dsn) =>
+    execFileSync('sh', ['-c', '. "$1"; printf "%s" "$SENTRY_CSP_ORIGIN"', 'sh', scriptPath], {
+      encoding: 'utf8',
+      env: { ...process.env, VITE_SENTRY_DSN: dsn },
+    });
+
+  assert.equal(originFor('https://public-key@o123.ingest.de.sentry.io/42'), 'https://o123.ingest.de.sentry.io');
+  assert.equal(originFor('https://public-key@o987.ingest.sentry.io/42'), 'https://o987.ingest.sentry.io');
+  assert.equal(originFor(''), '');
+  assert.equal(originFor('not-a-dsn'), '');
+  assert.equal(originFor('https://key@bad-host.example;unsafe/42'), '');
 });
