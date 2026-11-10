@@ -23,6 +23,6 @@
     "vitest": "^5.0.0"
   },
   "dependencies": {
-    "@qsp/converters": "^1.0.1"
+    "@qsp/converters": "^2.0.0"
   }
 }
