@@ -1394,11 +1394,6 @@
       "count": 4
     }
   },
-  "apps/web/src/features/story-editor/graph/storyGraphViewport.ts": {
-    "curly": {
-      "count": 1
-    }
-  },
   "apps/web/src/features/story-editor/graph/useStoryConnectionController.test.ts": {
     "@typescript-eslint/no-unsafe-type-assertion": {
       "count": 2
