@@ -528,14 +528,6 @@
       "count": 2
     }
   },
-  "apps/api/src/stories/application/story-stats.spec.ts": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 1
-    },
-    "max-lines-per-function": {
-      "count": 3
-    }
-  },
   "apps/api/src/stories/application/story-stats.ts": {
     "@typescript-eslint/no-non-null-assertion": {
       "count": 3
