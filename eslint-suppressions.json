@@ -2869,11 +2869,6 @@
       "count": 1
     }
   },
-  "packages/shared/src/graph/placement.ts": {
-    "curly": {
-      "count": 4
-    }
-  },
   "packages/shared/src/graph/positions.test.ts": {
     "max-lines-per-function": {
       "count": 2
