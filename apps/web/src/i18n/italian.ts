@@ -22,7 +22,7 @@ export const italianTranslation = {
   routeError: {
     loadTitle: 'Impossibile caricare questa pagina',
     loadDescription:
-      "Paralleax potrebbe essere stato aggiornato mentre questa scheda era aperta oppure la connessione è stata interrotta.",
+      'Paralleax potrebbe essere stato aggiornato mentre questa scheda era aperta oppure la connessione è stata interrotta.',
     unexpectedTitle: 'Si è verificato un errore',
     unexpectedDescription: 'Impossibile visualizzare questa pagina. Prova a ricaricarla.',
     unsavedWarning: 'Ricaricando potresti perdere le modifiche non salvate.',
