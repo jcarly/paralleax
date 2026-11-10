@@ -47,9 +47,7 @@ describe('RouteErrorPage', () => {
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
     renderRouteError('Failed to fetch dynamically imported module: /assets/AdminUsersPage-abc.js');
 
-    expect(
-      screen.getByRole('heading', { name: 'Unable to load this page' }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Unable to load this page' })).toBeInTheDocument();
     expect(screen.getByText('Reloading may discard unsaved changes.')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Reload Paralleax' })).toHaveAttribute(
       'href',
