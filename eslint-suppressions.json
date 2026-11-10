@@ -97,14 +97,6 @@
       "count": 2
     }
   },
-  "apps/api/src/comments/comments.repository.ts": {
-    "curly": {
-      "count": 4
-    },
-    "max-params": {
-      "count": 3
-    }
-  },
   "apps/api/src/config/app-config.service.spec.ts": {
     "max-lines-per-function": {
       "count": 1
