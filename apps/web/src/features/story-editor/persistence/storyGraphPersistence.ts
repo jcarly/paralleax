@@ -55,17 +55,72 @@ interface StoryGraphPersistenceDependencies {
   onConnectionConflict?: (conflict: boolean) => void;
 }
 
-export function useStoryGraphPersistence({
+type StoryGraphPersistenceContext = StoryGraphPersistenceDependencies & {
+  onConnectionConflict: (conflict: boolean) => void;
+};
+
+const ignoreConnectionConflict = () => {};
+
+export function useStoryGraphPersistence(dependencies: StoryGraphPersistenceDependencies) {
+  const context = {
+    ...dependencies,
+    onConnectionConflict: dependencies.onConnectionConflict ?? ignoreConnectionConflict,
+  };
+  const triggers = useStoryTriggerActions(context);
+  const interactions = useStoryInteractionActions(context, triggers.createConnectionTrigger);
+  const decorations = useGraphDecorationActions(context);
+
+  return {
+    saveTrigger: triggers.saveTrigger,
+    moveTrigger: triggers.moveTrigger,
+    saveGraphPositions: triggers.saveGraphPositions,
+    deleteTrigger: triggers.deleteTrigger,
+    deleteTriggerInput: triggers.deleteTriggerInput,
+    connectInteractions: triggers.connectInteractions,
+    connectToExistingTrigger: triggers.connectToExistingTrigger,
+    createRoot: interactions.createRoot,
+    createChild: interactions.createChild,
+    createChildFromInteraction: interactions.createChildFromInteraction,
+    createParentForInteraction: interactions.createParentForInteraction,
+    patchInteraction: interactions.patchInteraction,
+    deleteInteraction: interactions.deleteInteraction,
+    createGraphDecoration: decorations.createGraphDecoration,
+    updateGraphDecoration: decorations.updateGraphDecoration,
+    deleteGraphDecoration: decorations.deleteGraphDecoration,
+  };
+}
+
+function useStoryTriggerActions(dependencies: StoryGraphPersistenceContext) {
+  const saveTrigger = useSaveTrigger(dependencies);
+  const moveTrigger = useMoveTrigger(dependencies);
+  const saveGraphPositions = useSaveGraphPositions(dependencies);
+  const deleteTrigger = useDeleteTrigger(dependencies);
+  const deleteTriggerInput = useDeleteTriggerInput(dependencies, saveTrigger);
+  const connectInteractions = useConnectInteractions(dependencies);
+  const connectExistingTriggerAction = useConnectToExistingTrigger(dependencies);
+  const createConnectionTrigger = useCreateConnectionTrigger(dependencies);
+
+  return {
+    saveTrigger,
+    moveTrigger,
+    saveGraphPositions,
+    deleteTrigger,
+    deleteTriggerInput,
+    connectInteractions,
+    connectToExistingTrigger: connectExistingTriggerAction,
+    createConnectionTrigger,
+  };
+}
+
+function useSaveTrigger({
   storyId,
   story,
   setStory,
   trackSave,
-  deletedTriggerIdsRef,
   deletedTriggerInputKeysRef,
-  onConnectionConflict = () => {},
-}: StoryGraphPersistenceDependencies) {
-  const interactionSaveQueueRef = useRef<Promise<void>>(Promise.resolve());
-  const saveTrigger = useCallback(
+  onConnectionConflict,
+}: StoryGraphPersistenceContext) {
+  return useCallback(
     async (interactionId: string, triggerId: string, input: UpdateTriggerInput) => {
       const patch = input.inputInteractionIds
         ? { ...input, inputInteractionIds: [...new Set(input.inputInteractionIds)] }
@@ -103,8 +158,14 @@ export function useStoryGraphPersistence({
     },
     [deletedTriggerInputKeysRef, onConnectionConflict, setStory, story, storyId, trackSave],
   );
+}
 
-  async function moveTrigger(interactionId: string, triggerIds: string[], position: Position) {
+function useMoveTrigger({ story, storyId, setStory, trackSave }: StoryGraphPersistenceContext) {
+  return async function moveTrigger(
+    interactionId: string,
+    triggerIds: string[],
+    position: Position,
+  ) {
     if (!story || triggerIds.length === 0) {
       return;
     }
@@ -134,9 +195,16 @@ export function useStoryGraphPersistence({
       }
       setStory((current) => (current ? applyTriggerResult(current, next) : current));
     }
-  }
+  };
+}
 
-  async function saveGraphPositions(updates: StoryGraphPositionUpdates) {
+function useSaveGraphPositions({
+  story,
+  storyId,
+  setStory,
+  trackSave,
+}: StoryGraphPersistenceContext) {
+  return async function saveGraphPositions(updates: StoryGraphPositionUpdates) {
     if (
       !story ||
       (updates.interactionUpdates.length === 0 && updates.triggerUpdates.length === 0)
@@ -158,9 +226,17 @@ export function useStoryGraphPersistence({
       return;
     }
     setStory((current) => (current ? applyStoryMutationMetadata(current, result) : current));
-  }
+  };
+}
 
-  async function deleteTrigger(interactionId: string, triggerId: string) {
+function useDeleteTrigger({
+  story,
+  storyId,
+  setStory,
+  trackSave,
+  deletedTriggerIdsRef,
+}: StoryGraphPersistenceContext) {
+  return async function deleteTrigger(interactionId: string, triggerId: string) {
     const interaction = story?.interactions.find((item) => item.id === interactionId);
     const removesTrigger = (interaction?.triggers.length ?? 0) > 1;
     if (removesTrigger) {
@@ -174,9 +250,14 @@ export function useStoryGraphPersistence({
       return;
     }
     setStory((current) => (current ? applyStoryMutationMetadata(current, next) : current));
-  }
+  };
+}
 
-  const deleteTriggerInput = useCallback(
+function useDeleteTriggerInput(
+  { story, deletedTriggerInputKeysRef }: StoryGraphPersistenceContext,
+  saveTrigger: ReturnType<typeof useSaveTrigger>,
+) {
+  return useCallback(
     async (interactionId: string, triggerId: string, inputInteractionId: string) => {
       const plan = planTriggerInputDeletion(story, interactionId, triggerId, inputInteractionId);
       if (!plan) {
@@ -190,8 +271,17 @@ export function useStoryGraphPersistence({
     },
     [deletedTriggerInputKeysRef, saveTrigger, story],
   );
+}
 
-  const connectInteractions = useCallback(
+function useConnectInteractions({
+  story,
+  storyId,
+  setStory,
+  trackSave,
+  deletedTriggerInputKeysRef,
+  onConnectionConflict,
+}: StoryGraphPersistenceContext) {
+  return useCallback(
     async (connection: Connection) => {
       if (!story) {
         return;
@@ -224,105 +314,86 @@ export function useStoryGraphPersistence({
     },
     [deletedTriggerInputKeysRef, onConnectionConflict, setStory, story, storyId, trackSave],
   );
+}
 
-  const connectToExistingTrigger = useCallback(
-    async (sourceId: string, targetId: string, triggerId: string) => {
-      onConnectionConflict(false);
-      if (story && findTriggerConnectionConflict(story, sourceId, targetId, triggerId)) {
-        onConnectionConflict(true);
-        return;
-      }
-      const pending = getPendingTriggerInputConnection(story, sourceId, targetId, triggerId);
-      if (!pending) {
-        return;
-      }
-
-      const inputInteractionIds = [...pending.trigger.inputInteractionIds, pending.sourceId];
-      deletedTriggerInputKeysRef.current.delete(`${pending.trigger.id}:${pending.sourceId}`);
-      const patch = {
-        inputInteractionIds,
-        conditionGroups: getTriggerConditionGroups(pending.trigger),
-        appearanceProbability: getTriggerAppearanceProbability(pending.trigger),
-      };
-      setStory((current) =>
-        current
-          ? updateTriggerInStory(current, pending.targetId, pending.trigger.id, patch)
-          : current,
-      );
-      const updated = await trackSave(() =>
-        api.updateTrigger(storyId, pending.targetId, pending.trigger.id, patch),
-      );
-      if (!updated) {
-        return;
-      }
-      setStory((current) => (current ? applyTriggerResult(current, updated) : current));
-    },
+function useConnectToExistingTrigger({
+  story,
+  storyId,
+  setStory,
+  trackSave,
+  deletedTriggerInputKeysRef,
+  onConnectionConflict,
+}: StoryGraphPersistenceContext) {
+  return useCallback(
+    (sourceId: string, targetId: string, triggerId: string) =>
+      connectToExistingTrigger(
+        { story, storyId, setStory, trackSave, deletedTriggerInputKeysRef, onConnectionConflict },
+        sourceId,
+        targetId,
+        triggerId,
+      ),
     [deletedTriggerInputKeysRef, onConnectionConflict, setStory, story, storyId, trackSave],
   );
+}
 
-  const createRoot = useCallback(
-    async (position?: Position) => {
-      const next = await trackSave(() =>
-        api.createInteraction(storyId, {
-          position:
-            position ??
-            (story ? getNextRootPosition(story) : getNextRootPosition(emptyStory(storyId))),
-        }),
-      );
-      if (!next) {
-        return;
-      }
-      setStory((current) => (current ? applyInteractionResult(current, next) : current));
-      return findSavedInteraction(next, story ?? emptyStory(storyId))?.id;
-    },
-    [setStory, story, storyId, trackSave],
+async function connectToExistingTrigger(
+  {
+    story,
+    storyId,
+    setStory,
+    trackSave,
+    deletedTriggerInputKeysRef,
+    onConnectionConflict,
+  }: Pick<
+    StoryGraphPersistenceContext,
+    | 'story'
+    | 'storyId'
+    | 'setStory'
+    | 'trackSave'
+    | 'deletedTriggerInputKeysRef'
+    | 'onConnectionConflict'
+  >,
+  sourceId: string,
+  targetId: string,
+  triggerId: string,
+) {
+  onConnectionConflict(false);
+  if (story && findTriggerConnectionConflict(story, sourceId, targetId, triggerId)) {
+    onConnectionConflict(true);
+    return;
+  }
+  const pending = getPendingTriggerInputConnection(story, sourceId, targetId, triggerId);
+  if (!pending) {
+    return;
+  }
+
+  const inputInteractionIds = [...pending.trigger.inputInteractionIds, pending.sourceId];
+  deletedTriggerInputKeysRef.current.delete(`${pending.trigger.id}:${pending.sourceId}`);
+  const patch = {
+    inputInteractionIds,
+    conditionGroups: getTriggerConditionGroups(pending.trigger),
+    appearanceProbability: getTriggerAppearanceProbability(pending.trigger),
+  };
+  setStory((current) =>
+    current ? updateTriggerInStory(current, pending.targetId, pending.trigger.id, patch) : current,
   );
-
-  const createChild = useCallback(
-    async (parent: Interaction) => {
-      if (!story) {
-        return;
-      }
-      const next = await trackSave(() =>
-        api.createInteraction(storyId, {
-          parentId: parent.id,
-          position: getNextChildPosition(story, parent),
-        }),
-      );
-      if (!next) {
-        return;
-      }
-      setStory((current) => (current ? applyInteractionResult(current, next) : current));
-      return findSavedInteraction(next, story)?.id;
-    },
-    [setStory, story, storyId, trackSave],
+  const updated = await trackSave(() =>
+    api.updateTrigger(storyId, pending.targetId, pending.trigger.id, patch),
   );
+  if (!updated) {
+    return;
+  }
+  setStory((current) => (current ? applyTriggerResult(current, updated) : current));
+}
 
-  const createChildFromInteraction = useCallback(
-    async (sourceId: string, position?: Position) => {
-      if (!story) {
-        return;
-      }
-      const source = story.interactions.find((interaction) => interaction.id === sourceId);
-      if (!source) {
-        return;
-      }
-      const next = await trackSave(() =>
-        api.createInteraction(storyId, {
-          parentId: source.id,
-          position: position ?? getNextChildPosition(story, source),
-        }),
-      );
-      if (!next) {
-        return;
-      }
-      setStory((current) => (current ? applyInteractionResult(current, next) : current));
-      return findSavedInteraction(next, story)?.id;
-    },
-    [setStory, story, storyId, trackSave],
-  );
-
-  const createConnectionTrigger = useCallback(
+function useCreateConnectionTrigger({
+  story,
+  storyId,
+  trackSave,
+  deletedTriggerInputKeysRef,
+  onConnectionConflict,
+}: StoryGraphPersistenceContext) {
+  return useCallback(
     async (sourceId: string, targetId: string) => {
       if (!story) {
         throw new Error('Story is not loaded');
@@ -348,8 +419,103 @@ export function useStoryGraphPersistence({
     },
     [deletedTriggerInputKeysRef, onConnectionConflict, story, storyId, trackSave],
   );
+}
 
-  const createParentForInteraction = useCallback(
+function useStoryInteractionActions(
+  dependencies: StoryGraphPersistenceContext,
+  createConnectionTrigger: ReturnType<typeof useCreateConnectionTrigger>,
+) {
+  return {
+    createRoot: useCreateRoot(dependencies),
+    createChild: useCreateChild(dependencies),
+    createChildFromInteraction: useCreateChildFromInteraction(dependencies),
+    createParentForInteraction: useCreateParentForInteraction(
+      dependencies,
+      createConnectionTrigger,
+    ),
+    patchInteraction: usePatchInteraction(dependencies),
+    deleteInteraction: useDeleteInteraction(dependencies),
+  };
+}
+
+function useCreateRoot({ storyId, story, setStory, trackSave }: StoryGraphPersistenceContext) {
+  return useCallback(
+    async (position?: Position) => {
+      const next = await trackSave(() =>
+        api.createInteraction(storyId, {
+          position:
+            position ??
+            (story ? getNextRootPosition(story) : getNextRootPosition(emptyStory(storyId))),
+        }),
+      );
+      if (!next) {
+        return;
+      }
+      setStory((current) => (current ? applyInteractionResult(current, next) : current));
+      return findSavedInteraction(next, story ?? emptyStory(storyId))?.id;
+    },
+    [setStory, story, storyId, trackSave],
+  );
+}
+
+function useCreateChild({ storyId, story, setStory, trackSave }: StoryGraphPersistenceContext) {
+  return useCallback(
+    async (parent: Interaction) => {
+      if (!story) {
+        return;
+      }
+      const next = await trackSave(() =>
+        api.createInteraction(storyId, {
+          parentId: parent.id,
+          position: getNextChildPosition(story, parent),
+        }),
+      );
+      if (!next) {
+        return;
+      }
+      setStory((current) => (current ? applyInteractionResult(current, next) : current));
+      return findSavedInteraction(next, story)?.id;
+    },
+    [setStory, story, storyId, trackSave],
+  );
+}
+
+function useCreateChildFromInteraction({
+  storyId,
+  story,
+  setStory,
+  trackSave,
+}: StoryGraphPersistenceContext) {
+  return useCallback(
+    async (sourceId: string, position?: Position) => {
+      if (!story) {
+        return;
+      }
+      const source = story.interactions.find((interaction) => interaction.id === sourceId);
+      if (!source) {
+        return;
+      }
+      const next = await trackSave(() =>
+        api.createInteraction(storyId, {
+          parentId: source.id,
+          position: position ?? getNextChildPosition(story, source),
+        }),
+      );
+      if (!next) {
+        return;
+      }
+      setStory((current) => (current ? applyInteractionResult(current, next) : current));
+      return findSavedInteraction(next, story)?.id;
+    },
+    [setStory, story, storyId, trackSave],
+  );
+}
+
+function useCreateParentForInteraction(
+  { storyId, story, setStory, trackSave }: StoryGraphPersistenceContext,
+  createConnectionTrigger: ReturnType<typeof useCreateConnectionTrigger>,
+) {
+  return useCallback(
     async (targetId: string, position?: Position) => {
       if (!story) {
         return;
@@ -385,8 +551,11 @@ export function useStoryGraphPersistence({
     },
     [createConnectionTrigger, setStory, story, storyId, trackSave],
   );
+}
 
-  function patchInteraction(id: string, patch: InteractionContentPatch): Promise<boolean> {
+function usePatchInteraction({ storyId, setStory, trackSave }: StoryGraphPersistenceContext) {
+  const interactionSaveQueueRef = useRef<Promise<void>>(Promise.resolve());
+  return function patchInteraction(id: string, patch: InteractionContentPatch): Promise<boolean> {
     let saved = false;
     setStory((current) => (current ? updateInteractionInStory(current, id, patch) : current));
     interactionSaveQueueRef.current = interactionSaveQueueRef.current.then(async () => {
@@ -403,9 +572,11 @@ export function useStoryGraphPersistence({
       });
     });
     return interactionSaveQueueRef.current.then(() => saved);
-  }
+  };
+}
 
-  async function deleteInteraction(interactionId: string) {
+function useDeleteInteraction({ storyId, setStory, trackSave }: StoryGraphPersistenceContext) {
+  return async function deleteInteraction(interactionId: string) {
     const result = await trackSave(() => api.deleteInteraction(storyId, interactionId));
     if (!result) {
       return;
@@ -418,9 +589,23 @@ export function useStoryGraphPersistence({
           )
         : current,
     );
-  }
+  };
+}
 
-  const createGraphDecoration = useCallback(
+function useGraphDecorationActions({ storyId, setStory, trackSave }: StoryGraphPersistenceContext) {
+  return {
+    createGraphDecoration: useCreateGraphDecoration(storyId, setStory, trackSave),
+    updateGraphDecoration: useUpdateGraphDecoration(storyId, setStory, trackSave),
+    deleteGraphDecoration: useDeleteGraphDecoration(storyId, setStory, trackSave),
+  };
+}
+
+function useCreateGraphDecoration(
+  storyId: string,
+  setStory: StoryStateSetter,
+  trackSave: TrackStorySave,
+) {
+  return useCallback(
     async (kind: 'frame' | 'text', position: Position) => {
       const result = await trackSave(() => api.createGraphDecoration(storyId, { kind, position }));
       if (!result) {
@@ -431,8 +616,14 @@ export function useStoryGraphPersistence({
     },
     [setStory, storyId, trackSave],
   );
+}
 
-  const updateGraphDecoration = useCallback(
+function useUpdateGraphDecoration(
+  storyId: string,
+  setStory: StoryStateSetter,
+  trackSave: TrackStorySave,
+) {
+  return useCallback(
     async (decorationId: string, patch: UpdateGraphDecorationInput) => {
       setStory((current) =>
         current ? updateGraphDecorationInStory(current, decorationId, patch) : current,
@@ -445,8 +636,14 @@ export function useStoryGraphPersistence({
     },
     [setStory, storyId, trackSave],
   );
+}
 
-  const deleteGraphDecoration = useCallback(
+function useDeleteGraphDecoration(
+  storyId: string,
+  setStory: StoryStateSetter,
+  trackSave: TrackStorySave,
+) {
+  return useCallback(
     async (decorationId: string) => {
       setStory((current) =>
         current ? deleteGraphDecorationFromStory(current, decorationId) : current,
@@ -459,25 +656,6 @@ export function useStoryGraphPersistence({
     },
     [setStory, storyId, trackSave],
   );
-
-  return {
-    saveTrigger,
-    moveTrigger,
-    saveGraphPositions,
-    deleteTrigger,
-    deleteTriggerInput,
-    connectInteractions,
-    connectToExistingTrigger,
-    createRoot,
-    createChild,
-    createChildFromInteraction,
-    createParentForInteraction,
-    patchInteraction,
-    deleteInteraction,
-    createGraphDecoration,
-    updateGraphDecoration,
-    deleteGraphDecoration,
-  };
 }
 
 function emptyStory(storyId: string): Story {
