@@ -515,14 +515,6 @@
       "count": 1
     }
   },
-  "apps/api/src/stories/application/story-runtime.spec.ts": {
-    "@typescript-eslint/no-unsafe-type-assertion": {
-      "count": 1
-    },
-    "max-lines-per-function": {
-      "count": 2
-    }
-  },
   "apps/api/src/stories/application/story-runtime.ts": {
     "curly": {
       "count": 2
