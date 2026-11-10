@@ -3318,11 +3318,6 @@
       "count": 10
     }
   },
-  "packages/shared/src/time/calendar.ts": {
-    "curly": {
-      "count": 3
-    }
-  },
   "packages/shared/src/time/conditions.ts": {
     "complexity": {
       "count": 1
