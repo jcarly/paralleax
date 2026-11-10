@@ -16,7 +16,15 @@ export function isDynamicImportError(error: unknown): boolean {
 
 export function RouteErrorPage() {
   const { t } = useTranslation();
-  const isLoadFailure = isDynamicImportError(useRouteError());
+  const error = useRouteError();
+  const isLoadFailure = isDynamicImportError(error);
+  const reportedError = useRef<unknown>(null);
+
+  useEffect(() => {
+    if (!(error instanceof Error) || reportedError.current === error) return;
+    reportedError.current = error;
+    reportBrowserError(error, isLoadFailure ? 'dynamic-import' : 'route-error');
+  }, [error, isLoadFailure]);
 
   return (
     <main className="page" role="main">
