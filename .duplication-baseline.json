@@ -50,10 +50,5 @@
     "eb5d6fe9aaa886d7c0bb7eab00aa41e0d3c1367ec1dc9dec50c21a496125abe5": {
       "count": 1
     }
-  },
-  "apps/api/src/observability/sentry.ts -> apps/web/src/observability/sentry.ts": {
-    "bbe7d2c23502a52fdb8dd0fb67197d36256b29c863fdb9cab333abca8d81555f": {
-      "count": 1
-    }
   }
 }
