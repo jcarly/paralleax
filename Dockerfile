@@ -11,7 +11,6 @@ ARG VITE_FORMBRICKS_APP_URL=
 ARG VITE_SENTRY_DSN=
 ARG VITE_SENTRY_RELEASE=
 ARG VITE_SENTRY_TRACES_SAMPLE_RATE=
-ARG SENTRY_AUTH_TOKEN=
 ARG SENTRY_ORG=
 ARG SENTRY_PROJECT=
 ARG SENTRY_URL=
@@ -20,7 +19,6 @@ ENV VITE_FORMBRICKS_APP_URL=${VITE_FORMBRICKS_APP_URL}
 ENV VITE_SENTRY_DSN=${VITE_SENTRY_DSN}
 ENV VITE_SENTRY_RELEASE=${VITE_SENTRY_RELEASE}
 ENV VITE_SENTRY_TRACES_SAMPLE_RATE=${VITE_SENTRY_TRACES_SAMPLE_RATE}
-ENV SENTRY_AUTH_TOKEN=${SENTRY_AUTH_TOKEN}
 ENV SENTRY_ORG=${SENTRY_ORG}
 ENV SENTRY_PROJECT=${SENTRY_PROJECT}
 ENV SENTRY_URL=${SENTRY_URL}
@@ -38,12 +36,19 @@ RUN npm ci --audit=false --no-update-notifier
 
 COPY . .
 
-RUN npm run build
+RUN --mount=type=secret,id=sentry_auth_token,required=false \
+  if [ -s /run/secrets/sentry_auth_token ]; then \
+    SENTRY_AUTH_TOKEN="$(cat /run/secrets/sentry_auth_token)" npm run build; \
+  else \
+    npm run build; \
+  fi
 
 FROM node:26-alpine AS api
 
+ARG SENTRY_RELEASE=
 ENV NODE_ENV=production
 ENV PORT=3000
+ENV SENTRY_RELEASE=${SENTRY_RELEASE}
 WORKDIR /app
 
 RUN apk add --no-cache dumb-init \
