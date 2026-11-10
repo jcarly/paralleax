@@ -218,9 +218,6 @@
   "apps/api/src/imports/import-job.service.ts": {
     "@typescript-eslint/no-unsafe-type-assertion": {
       "count": 1
-    },
-    "curly": {
-      "count": 6
     }
   },
   "apps/api/src/imports/import-report-storage.spec.ts": {
