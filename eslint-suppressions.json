@@ -746,23 +746,6 @@
       "count": 3
     }
   },
-  "apps/api/src/stories/stories.stress.postgres.spec.ts": {
-    "@typescript-eslint/no-shadow": {
-      "count": 2
-    },
-    "@typescript-eslint/no-unsafe-assignment": {
-      "count": 1
-    },
-    "@typescript-eslint/no-unsafe-return": {
-      "count": 2
-    },
-    "@typescript-eslint/no-unsafe-type-assertion": {
-      "count": 2
-    },
-    "max-lines-per-function": {
-      "count": 3
-    }
-  },
   "apps/api/src/stories/story-quotas.spec.ts": {
     "@typescript-eslint/no-unsafe-argument": {
       "count": 2
