@@ -98,30 +98,56 @@ export function diffStoryGraphPositions(before: Story, after: Story): StoryGraph
     if (!updatedInteraction) {
       continue;
     }
-    if (!positionsEqual(interaction.position, updatedInteraction.position)) {
-      interactionUpdates.push({
-        interactionId: interaction.id,
-        position: updatedInteraction.position,
-      });
+    const positionDiff = diffInteractionPositions(interaction, updatedInteraction);
+    if (positionDiff.interactionUpdate) {
+      interactionUpdates.push(positionDiff.interactionUpdate);
     }
-
-    const updatedTriggers = new Map(
-      updatedInteraction.triggers.map((trigger) => [trigger.id, trigger]),
-    );
-    for (const trigger of interaction.triggers) {
-      const updatedTrigger = updatedTriggers.get(trigger.id);
-      if (!updatedTrigger || positionsEqual(trigger.position, updatedTrigger.position)) {
-        continue;
-      }
-      triggerUpdates.push({
-        interactionId: interaction.id,
-        triggerIds: [trigger.id],
-        ...(updatedTrigger.position ? { position: updatedTrigger.position } : {}),
-      });
-    }
+    triggerUpdates.push(...positionDiff.triggerUpdates);
   }
 
   return { interactionUpdates, triggerUpdates };
+}
+
+function diffInteractionPositions(
+  interaction: Story['interactions'][number],
+  updatedInteraction: Story['interactions'][number],
+): {
+  interactionUpdate?: StoryGraphInteractionPositionUpdate;
+  triggerUpdates: StoryGraphTriggerPositionPatch[];
+} {
+  return {
+    ...(positionsEqual(interaction.position, updatedInteraction.position)
+      ? {}
+      : {
+          interactionUpdate: {
+            interactionId: interaction.id,
+            position: updatedInteraction.position,
+          },
+        }),
+    triggerUpdates: diffTriggerPositions(interaction, updatedInteraction),
+  };
+}
+
+function diffTriggerPositions(
+  interaction: Story['interactions'][number],
+  updatedInteraction: Story['interactions'][number],
+): StoryGraphTriggerPositionPatch[] {
+  const updatedTriggers = new Map(
+    updatedInteraction.triggers.map((trigger) => [trigger.id, trigger]),
+  );
+  const updates: StoryGraphTriggerPositionPatch[] = [];
+  for (const trigger of interaction.triggers) {
+    const updatedTrigger = updatedTriggers.get(trigger.id);
+    if (!updatedTrigger || positionsEqual(trigger.position, updatedTrigger.position)) {
+      continue;
+    }
+    updates.push({
+      interactionId: interaction.id,
+      triggerIds: [trigger.id],
+      ...(updatedTrigger.position ? { position: updatedTrigger.position } : {}),
+    });
+  }
+  return updates;
 }
 
 function positionsEqual(left: Position | undefined, right: Position | undefined): boolean {

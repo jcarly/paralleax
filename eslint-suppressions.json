@@ -2781,11 +2781,6 @@
       "count": 2
     }
   },
-  "packages/shared/src/graph/positions.ts": {
-    "sonarjs/cognitive-complexity": {
-      "count": 1
-    }
-  },
   "packages/shared/src/history/story-history.test.ts": {
     "@typescript-eslint/no-non-null-assertion": {
       "count": 8
