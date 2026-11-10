@@ -111,12 +111,12 @@ test(
   'the Sentry CSP origin uses only the public DSN hostname',
   { skip: process.platform === 'win32' },
   () => {
-  const scriptPath = fileURLToPath(new URL('../deploy/sentry-csp.envsh', import.meta.url));
-  const originFor = (dsn) =>
-    execFileSync('sh', ['-c', '. "$1"; printf "%s" "$SENTRY_CSP_ORIGIN"', 'sh', scriptPath], {
-      encoding: 'utf8',
-      env: { ...process.env, VITE_SENTRY_DSN: dsn },
-    });
+    const scriptPath = fileURLToPath(new URL('../deploy/sentry-csp.envsh', import.meta.url));
+    const originFor = (dsn) =>
+      execFileSync('sh', ['-c', '. "$1"; printf "%s" "$SENTRY_CSP_ORIGIN"', 'sh', scriptPath], {
+        encoding: 'utf8',
+        env: { ...process.env, VITE_SENTRY_DSN: dsn },
+      });
 
     assert.equal(
       originFor('https://public-key@o123.ingest.de.sentry.io/42'),
