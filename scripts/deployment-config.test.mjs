@@ -36,6 +36,10 @@ test('Railway web deployment probes the public reverse proxy', async () => {
   assert.match(dockerfile, /^ENV NGINX_ENTRYPOINT_LOCAL_RESOLVERS=1$/m);
   assert.match(nginxConfiguration, /^\s*listen \$\{PORT\};$/m);
   assert.match(nginxConfiguration, /^\s*resolver \$\{NGINX_LOCAL_RESOLVERS\} valid=10s;$/m);
+  // HTML must revalidate while hashed chunks may be cached long-term.
+  assert.match(nginxConfiguration, /location \/assets\/ \{\s*try_files \$uri =404;\s*expires 1y;/);
+  assert.match(nginxConfiguration, /location \/ \{\s*try_files \$uri \$uri\/ \/index\.html;\s*expires -1;/);
+
   assert.match(nginxConfiguration, /^ {4}client_max_body_size 128k;$/m);
   assert.match(nginxConfiguration, /^\s*set \$api_upstream "\$\{API_HOST\}:\$\{API_PORT\}";$/m);
   assert.match(nginxConfiguration, /^\s*proxy_pass http:\/\/\$api_upstream\$request_uri;$/m);
