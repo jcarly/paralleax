@@ -4,11 +4,6 @@
       "count": 2
     }
   },
-  "apps/api/src/auth/auth-testing.controller.ts": {
-    "curly": {
-      "count": 2
-    }
-  },
   "apps/api/src/auth/auth.controller.spec.ts": {
     "@typescript-eslint/no-unsafe-type-assertion": {
       "count": 2
