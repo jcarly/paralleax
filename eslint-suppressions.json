@@ -321,11 +321,6 @@
       "count": 1
     }
   },
-  "apps/api/src/stories/application/choicescript-import.worker.ts": {
-    "@typescript-eslint/no-unsafe-type-assertion": {
-      "count": 1
-    }
-  },
   "apps/api/src/stories/application/graph-decorations.ts": {
     "complexity": {
       "count": 1
