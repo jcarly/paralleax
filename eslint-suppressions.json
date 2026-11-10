@@ -1680,11 +1680,6 @@
       "count": 1
     }
   },
-  "apps/web/src/features/story-player/loadStoryPlayerRuntime.ts": {
-    "complexity": {
-      "count": 1
-    }
-  },
   "apps/web/src/features/story-player/navigation/restoreReaderSave.ts": {
     "max-params": {
       "count": 1
