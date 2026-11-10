@@ -2449,23 +2449,6 @@
       "count": 5
     }
   },
-  "apps/web/tests/e2e/editor.groups.spec.ts": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 46
-    },
-    "@typescript-eslint/no-unsafe-argument": {
-      "count": 6
-    },
-    "@typescript-eslint/no-unsafe-assignment": {
-      "count": 4
-    },
-    "@typescript-eslint/no-unsafe-member-access": {
-      "count": 9
-    },
-    "curly": {
-      "count": 1
-    }
-  },
   "apps/web/tests/e2e/editor.layout-quality.spec.ts": {
     "@typescript-eslint/no-non-null-assertion": {
       "count": 11
