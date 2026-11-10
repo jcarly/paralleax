@@ -99,19 +99,25 @@ export class AuthService {
   }
 
   async userForToken(token: string | undefined) {
-    if (!token) return undefined;
+    if (!token) {
+      return undefined;
+    }
     await this.repository.deleteExpiredSessions();
     return this.repository.findUserBySessionHash(hashToken(token));
   }
 
   async logout(token: string | undefined) {
-    if (token) await this.repository.deleteSession(hashToken(token));
+    if (token) {
+      await this.repository.deleteSession(hashToken(token));
+    }
   }
 
   async resendVerification(email: string): Promise<void> {
     this.assertEmailDeliveryConfigured();
     const user = await this.repository.findUserByEmail(email.trim().toLowerCase());
-    if (!user || user.emailVerifiedAt) return;
+    if (!user || user.emailVerifiedAt) {
+      return;
+    }
     await this.sendVerificationEmail(user);
   }
 
@@ -120,14 +126,18 @@ export class AuthService {
       hashToken(token),
       new Date().toISOString(),
     );
-    if (!user) throw invalidActionToken();
+    if (!user) {
+      throw invalidActionToken();
+    }
     return this.createSession(user);
   }
 
   async requestPasswordReset(email: string): Promise<void> {
     this.assertEmailDeliveryConfigured();
     const user = await this.repository.findUserByEmail(email.trim().toLowerCase());
-    if (!user) return;
+    if (!user) {
+      return;
+    }
     if (!user.emailVerifiedAt) {
       await this.sendVerificationEmail(user);
       return;
@@ -141,7 +151,9 @@ export class AuthService {
       await hashPassword(password),
       new Date().toISOString(),
     );
-    if (!user) throw invalidActionToken();
+    if (!user) {
+      throw invalidActionToken();
+    }
     return this.createSession(user);
   }
 
@@ -314,7 +326,9 @@ async function hashPassword(password: string) {
 
 async function verifyPassword(password: string, stored: string) {
   const [algorithm, saltHex, hashHex] = stored.split(':');
-  if (algorithm !== 'scrypt' || !saltHex || !hashHex) return false;
+  if (algorithm !== 'scrypt' || !saltHex || !hashHex) {
+    return false;
+  }
   const expected = Buffer.from(hashHex, 'hex');
   const actual = (await scrypt(password, Buffer.from(saltHex, 'hex'), expected.length)) as Buffer;
   return actual.length === expected.length && timingSafeEqual(actual, expected);
