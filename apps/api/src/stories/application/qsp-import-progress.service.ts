@@ -49,19 +49,27 @@ export class QspImportProgressService {
   }
 
   publish(userId: string, progressId: string | undefined, progress: QspImportProgress) {
-    if (!progressId) return;
+    if (!progressId) {
+      return;
+    }
 
     const channel = this.channels.get(progressId);
-    if (!channel || channel.userId !== userId) return;
+    if (!channel || channel.userId !== userId) {
+      return;
+    }
 
     channel.progress.next(progress);
   }
 
   complete(userId: string, progressId: string | undefined) {
-    if (!progressId) return;
+    if (!progressId) {
+      return;
+    }
 
     const channel = this.channels.get(progressId);
-    if (!channel || channel.userId !== userId) return;
+    if (!channel || channel.userId !== userId) {
+      return;
+    }
 
     this.channels.delete(progressId);
     channel.progress.complete();
