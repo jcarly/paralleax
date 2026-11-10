@@ -258,17 +258,6 @@
       "count": 1
     }
   },
-  "apps/api/src/operations/api-exception.filter.ts": {
-    "@typescript-eslint/no-unsafe-enum-comparison": {
-      "count": 1
-    },
-    "complexity": {
-      "count": 1
-    },
-    "sonarjs/cognitive-complexity": {
-      "count": 1
-    }
-  },
   "apps/api/src/operations/request-body.spec.ts": {
     "@typescript-eslint/no-unsafe-type-assertion": {
       "count": 2
