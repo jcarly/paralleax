@@ -644,14 +644,6 @@
       "count": 1
     }
   },
-  "apps/api/src/stories/stories.controller.ts": {
-    "curly": {
-      "count": 2
-    },
-    "max-params": {
-      "count": 3
-    }
-  },
   "apps/api/src/stories/stories.e2e.spec.ts": {
     "@typescript-eslint/no-non-null-assertion": {
       "count": 14
