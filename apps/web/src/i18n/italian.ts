@@ -19,6 +19,15 @@ export const italianTranslation = {
     loadingWorkspace: "Caricamento dell'area di lavoro…",
     sessionExpired: 'La tua sessione è scaduta. Accedi nuovamente per continuare.',
   },
+  routeError: {
+    loadTitle: 'Impossibile caricare questa pagina',
+    loadDescription:
+      "Paralleax potrebbe essere stato aggiornato mentre questa scheda era aperta oppure la connessione è stata interrotta.",
+    unexpectedTitle: 'Si è verificato un errore',
+    unexpectedDescription: 'Impossibile visualizzare questa pagina. Prova a ricaricarla.',
+    unsavedWarning: 'Ricaricando potresti perdere le modifiche non salvate.',
+    reload: 'Ricarica Paralleax',
+  },
   storyUnavailable: {
     title: 'Storia non disponibile',
     description: 'Questa storia non è disponibile o il tuo account non può più accedervi.',
