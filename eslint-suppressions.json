@@ -2477,17 +2477,6 @@
       "count": 1
     }
   },
-  "apps/web/tests/e2e/editor.graph.spec.ts": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 66
-    },
-    "@typescript-eslint/no-unsafe-type-assertion": {
-      "count": 3
-    },
-    "max-lines-per-function": {
-      "count": 5
-    }
-  },
   "apps/web/tests/e2e/editor.groups.spec.ts": {
     "@typescript-eslint/no-non-null-assertion": {
       "count": 46
