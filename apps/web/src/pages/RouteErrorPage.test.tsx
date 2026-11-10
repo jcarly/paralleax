@@ -23,7 +23,11 @@ describe('RouteErrorPage', () => {
   });
 
   it('detects missing dynamic imports without confusing generic errors', () => {
-    expect(isDynamicImportError(new TypeError('Failed to fetch dynamically imported module: /assets/AdminUsersPage-abc.js'))).toBe(true);
+    expect(
+      isDynamicImportError(
+        new TypeError('Failed to fetch dynamically imported module: /assets/AdminUsersPage-abc.js'),
+      ),
+    ).toBe(true);
     expect(isDynamicImportError(new Error('Importing a module script failed.'))).toBe(true);
     expect(isDynamicImportError(new Error('Loading chunk 42 failed.'))).toBe(true);
     expect(isDynamicImportError(new Error('Network request failed'))).toBe(false);
@@ -34,7 +38,9 @@ describe('RouteErrorPage', () => {
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
     renderRouteError('Failed to fetch dynamically imported module: /assets/AdminUsersPage-abc.js');
 
-    expect(screen.getByRole('heading', { name: 'Unable to load this page' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: 'Unable to load this page' }),
+    ).toBeInTheDocument();
     expect(screen.getByText('Reloading may discard unsaved changes.')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Reload Paralleax' })).toHaveAttribute(
       'href',
@@ -55,7 +61,9 @@ describe('RouteErrorPage', () => {
     await changeInterfaceLanguage('fr');
     renderRouteError('Failed to fetch dynamically imported module: /assets/StoryEditor-abc.js');
 
-    expect(screen.getByRole('heading', { name: 'Impossible de charger cette page' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: 'Impossible de charger cette page' }),
+    ).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Recharger Paralleax' })).toBeInTheDocument();
   });
 });
