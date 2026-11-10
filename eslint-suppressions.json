@@ -311,11 +311,6 @@
       "count": 2
     }
   },
-  "apps/api/src/stories/application/choicescript-import-worker.service.spec.ts": {
-    "@typescript-eslint/no-unsafe-assignment": {
-      "count": 1
-    }
-  },
   "apps/api/src/stories/application/choicescript-import-worker.service.ts": {
     "curly": {
       "count": 1
