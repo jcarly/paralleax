@@ -7,9 +7,10 @@ import { reportBrowserError } from '../observability/browserMonitoring';
 vi.mock('../observability/browserMonitoring', () => ({
   reportBrowserError: vi.fn(),
 }));
-import { isDynamicImportError, RouteErrorPage } from './RouteErrorPage';
+import { isDynamicImportError } from '../observability/dynamicImportError';
+import { RouteErrorPage } from './RouteErrorPage';
 
-function CrashingPage({ message }: { message: string }) {
+function CrashingPage({ message }: { message: string }): null {
   throw new TypeError(message);
 }
 
@@ -21,13 +22,7 @@ function renderRouteError(message: string) {
   render(<RouterProvider router={router} />);
 }
 
-describe('RouteErrorPage', () => {
-  afterEach(() => {
-    cleanup();
-    vi.restoreAllMocks();
-    vi.clearAllMocks();
-  });
-
+describe('dynamic import detection', () => {
   it('detects missing dynamic imports without confusing generic errors', () => {
     expect(
       isDynamicImportError(
@@ -38,6 +33,15 @@ describe('RouteErrorPage', () => {
     expect(isDynamicImportError(new Error('Loading chunk 42 failed.'))).toBe(true);
     expect(isDynamicImportError(new Error('Network request failed'))).toBe(false);
     expect(isDynamicImportError(null)).toBe(false);
+  });
+
+});
+
+describe('RouteErrorPage', () => {
+  afterEach(() => {
+    cleanup();
+    vi.restoreAllMocks();
+    vi.clearAllMocks();
   });
 
   it('offers a manual refresh after a stale chunk failure without reloading automatically', () => {
