@@ -295,11 +295,6 @@
       "count": 3
     }
   },
-  "apps/api/src/security/origin.guard.ts": {
-    "curly": {
-      "count": 2
-    }
-  },
   "apps/api/src/stories/application/abortable-import-worker.service.ts": {
     "@typescript-eslint/consistent-type-imports": {
       "count": 1
