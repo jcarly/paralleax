@@ -617,17 +617,6 @@
       "count": 2
     }
   },
-  "apps/api/src/stories/persistence/story-history.persistence.spec.ts": {
-    "@typescript-eslint/no-unsafe-member-access": {
-      "count": 1
-    },
-    "@typescript-eslint/no-unsafe-type-assertion": {
-      "count": 1
-    },
-    "max-lines-per-function": {
-      "count": 1
-    }
-  },
   "apps/api/src/stories/persistence/story-runtime.persistence.spec.ts": {
     "@typescript-eslint/no-unsafe-type-assertion": {
       "count": 1
