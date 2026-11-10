@@ -1,4 +1,6 @@
+import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import { reportBrowserError } from '../observability/browserMonitoring';
 import { useRouteError } from 'react-router-dom';
 
 export function isDynamicImportError(error: unknown): boolean {
