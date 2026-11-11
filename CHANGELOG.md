@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Simplified account entry, the Story library, and settings. Sign-in and registration now
+  keep the site header and direct routes, while the library removes generated
+  graph art and reader-facing interaction counts. Story deletion now uses a
+  labeled trash action with confirmation, and settings drop their redundant
+  introduction. Reader scenes keep the authored Interaction title available to
+  assistive technology without displaying it as narrative content; choice labels
+  and authored body content remain unchanged.
+
 - Changed the Railway alpha release flow to run only for newly created `x.y.z`
   tags after exhaustive CI. GitHub Actions now publishes API and web images to
   GHCR and deploys their immutable digests in migration-first order before the

@@ -14,800 +14,973 @@ import { StoriesRepository } from './stories.repository';
 const connectionString = process.env.POSTGRES_TEST_DATABASE_URL;
 const describePostgres = connectionString ? describe : describe.skip;
 
+const ownerId = `postgres-user-${randomUUID()}`;
+const collaboratorId = `postgres-collaborator-${randomUUID()}`;
+const adminId = `postgres-admin-${randomUUID()}`;
+const pool = new Pool({ connectionString });
+const database: DatabaseConnection = {
+  pool,
+  async onModuleDestroy() {
+    await pool.end();
+  },
+};
+const migrator = new DatabaseMigrator(database);
+const repository = new StoriesRepository(database);
+const storyIds: string[] = [];
+
 describePostgres('StoriesRepository PostgreSQL integration', () => {
-  const ownerId = `postgres-user-${randomUUID()}`;
-  const collaboratorId = `postgres-collaborator-${randomUUID()}`;
-  const adminId = `postgres-admin-${randomUUID()}`;
-  const pool = new Pool({ connectionString });
-  const database = { pool } as DatabaseConnection;
-  const migrator = new DatabaseMigrator(database);
-  const repository = new StoriesRepository(database);
-  const storyIds: string[] = [];
-
-  beforeAll(async () => {
-    await waitForPostgres(pool);
-    // Always start from a clean dedicated test schema. A previous interrupted
-    // migration scenario may otherwise leave historical tables without matching
-    // schema_migrations rows.
-    await pool.query('DROP SCHEMA public CASCADE');
-    await pool.query('CREATE SCHEMA public');
-    await migrator.run();
-    await pool.query(
-      `INSERT INTO users (id, email, password_hash, role, created_at)
-       VALUES
-         ($1, $2, 'test-only', 'user', now()),
-         ($3, $4, 'test-only', 'user', now()),
-         ($5, $6, 'test-only', 'admin', now())`,
-      [
-        ownerId,
-        `${ownerId}@example.test`,
-        collaboratorId,
-        `${collaboratorId}@example.test`,
-        adminId,
-        `${adminId}@example.test`,
-      ],
-    );
-  }, 30_000);
-
+  beforeAll(preparePostgresDatabase, 30_000);
   afterEach(async () => {
     await Promise.all(storyIds.splice(0).map((id) => repository.delete(id, ownerId)));
   });
-
   afterAll(async () => {
     await pool.query('DELETE FROM users WHERE id = ANY($1::text[])', [
       [ownerId, collaboratorId, adminId],
     ]);
     await pool.end();
   });
+  it(
+    'round-trips expressions through full, editor and runtime PostgreSQL projections',
+    runExpressionRoundTrip,
+  );
+  it(
+    'persists interaction and trigger moves across repository instances',
+    runInteractionAndTriggerMoves,
+  );
+  it(
+    'round trips nested groups, promotes children and preserves same-Story parent constraints',
+    runNestedGroupMoves,
+  );
+  it(
+    'persists moved sibling order through the existing sort_order column and editor reload',
+    runSiblingGroupOrder,
+  );
+  it('reads paginated editor projections and a targeted runtime slice', runPaginatedProjections);
+  it('merges concurrent field-level mutations without losing fields', runConcurrentMutations);
+  it('keeps reversible authored history across repository instances', runAuthoredHistory);
+  it('round-trips versioned reader progress JSON per user and story', runReaderProgressRoundTrip);
+  it(
+    'enforces private, invitation, editor, public, and administrator access in SQL',
+    runAccessPolicies,
+  );
+  it('allows unlisted URL reads without adding ungranted stories to libraries', runUnlistedReads);
+  it('stores the story graph in relational tables', runRelationalGraphPersistence);
+  it(
+    'round-trips the complete demo catalog without cross-story id collisions',
+    runDemoCatalogRoundTrip,
+  );
+});
 
-  function persistedStory(): Story {
-    const now = new Date().toISOString();
-    const id = `postgres-test-${randomUUID()}`;
-    storyIds.push(id);
-    return {
-      id,
-      title: 'PostgreSQL round trip',
-      startDateTime: '2026-07-27T09:30',
-      createdAt: now,
-      updatedAt: now,
-      locations: [
-        {
-          id: 'location-1',
-          name: 'Harbor',
-          description: 'A quiet harbor.',
-          category: 'Coast',
-          imageUrl: 'https://images.example/harbor.png',
-          stats: [
-            {
-              id: 'weather-stat',
-              statDefinitionId: 'weather-definition',
-              initialValue: 'calm',
-            },
-          ],
-        },
-      ],
-      statDefinitions: [
-        { id: 'alarm-definition', name: 'Alarm', valueType: 'boolean' },
-        {
-          id: 'courage-definition',
-          name: 'Courage',
-          valueType: 'number',
-          changePerHour: 2,
-        },
-        { id: 'weather-definition', name: 'Weather', valueType: 'string' },
-        { id: 'charge-definition', name: 'Charge', valueType: 'number' },
-        {
-          id: 'definition-1',
-          name: 'Trust',
-          valueType: 'number',
-          category: 'Relationships',
-          imageUrl: 'https://images.example/trust.svg',
-          changePerHour: -0.5,
-        },
-      ],
+async function preparePostgresDatabase() {
+  await waitForPostgres(pool);
+  // Always start from a clean dedicated test schema. A previous interrupted
+  // migration scenario may otherwise leave historical tables without matching
+  // schema_migrations rows.
+  await pool.query('DROP SCHEMA public CASCADE');
+  await pool.query('CREATE SCHEMA public');
+  await migrator.run();
+  await pool.query(
+    `INSERT INTO users (id, email, password_hash, role, created_at)
+     VALUES
+       ($1, $2, 'test-only', 'user', now()),
+       ($3, $4, 'test-only', 'user', now()),
+       ($5, $6, 'test-only', 'admin', now())`,
+    [
+      ownerId,
+      `${ownerId}@example.test`,
+      collaboratorId,
+      `${collaboratorId}@example.test`,
+      adminId,
+      `${adminId}@example.test`,
+    ],
+  );
+}
+
+function persistedStory(): Story {
+  const now = new Date().toISOString();
+  const id = `postgres-test-${randomUUID()}`;
+  storyIds.push(id);
+  return {
+    id,
+    title: 'PostgreSQL round trip',
+    startDateTime: '2026-07-27T09:30',
+    createdAt: now,
+    updatedAt: now,
+    locations: createPersistedLocations(),
+    statDefinitions: createPersistedStatDefinitions(),
+    stats: createPersistedStats(),
+    itemDefinitions: createPersistedItemDefinitions(),
+    characters: createPersistedCharacters(),
+    graphDecorations: createPersistedGraphDecorations(),
+    interactions: createPersistedInteractions(),
+  };
+}
+
+function createPersistedLocations(): NonNullable<Story['locations']> {
+  return [
+    {
+      id: 'location-1',
+      name: 'Harbor',
+      description: 'A quiet harbor.',
+      category: 'Coast',
+      imageUrl: 'https://images.example/harbor.png',
       stats: [
         {
-          id: 'alarm-stat',
-          statDefinitionId: 'alarm-definition',
-          initialValue: false,
+          id: 'weather-stat',
+          statDefinitionId: 'weather-definition',
+          initialValue: 'calm',
         },
       ],
-      itemDefinitions: [
+    },
+  ];
+}
+
+function createPersistedStatDefinitions(): NonNullable<Story['statDefinitions']> {
+  return [
+    { id: 'alarm-definition', name: 'Alarm', valueType: 'boolean' },
+    {
+      id: 'courage-definition',
+      name: 'Courage',
+      valueType: 'number',
+      changePerHour: 2,
+    },
+    { id: 'weather-definition', name: 'Weather', valueType: 'string' },
+    { id: 'charge-definition', name: 'Charge', valueType: 'number' },
+    {
+      id: 'definition-1',
+      name: 'Trust',
+      valueType: 'number',
+      category: 'Relationships',
+      imageUrl: 'https://images.example/trust.svg',
+      changePerHour: -0.5,
+    },
+  ];
+}
+
+function createPersistedStats(): NonNullable<Story['stats']> {
+  return [
+    {
+      id: 'alarm-stat',
+      statDefinitionId: 'alarm-definition',
+      initialValue: false,
+    },
+  ];
+}
+
+function createPersistedItemDefinitions(): NonNullable<Story['itemDefinitions']> {
+  return [
+    {
+      id: 'item-definition-1',
+      name: 'Key',
+      description: 'A brass key.',
+      category: 'Quest items',
+      imageUrl: 'https://images.example/key.png',
+      stats: [
         {
-          id: 'item-definition-1',
-          name: 'Key',
-          description: 'A brass key.',
-          category: 'Quest items',
-          imageUrl: 'https://images.example/key.png',
-          stats: [
-            {
-              id: 'charge-stat',
-              statDefinitionId: 'charge-definition',
-              initialValue: 10,
-            },
-          ],
+          id: 'charge-stat',
+          statDefinitionId: 'charge-definition',
+          initialValue: 10,
         },
       ],
-      characters: [
+    },
+  ];
+}
+
+function createPersistedCharacters(): NonNullable<Story['characters']> {
+  return [
+    {
+      id: 'character-1',
+      name: 'Mira',
+      description: 'An investigator.',
+      category: 'Allies',
+      imageUrl: 'https://images.example/mira.png',
+      stats: [
         {
-          id: 'character-1',
-          name: 'Mira',
-          description: 'An investigator.',
-          category: 'Allies',
-          imageUrl: 'https://images.example/mira.png',
-          stats: [
-            {
-              id: 'courage-stat',
-              statDefinitionId: 'courage-definition',
-              initialValue: 1,
-            },
-            { id: 'stat-1', statDefinitionId: 'definition-1', initialValue: 2 },
-          ],
-          items: [
-            { id: 'item-1', itemDefinitionId: 'item-definition-1' },
-            { id: 'item-2', itemDefinitionId: 'item-definition-1' },
-          ],
+          id: 'courage-stat',
+          statDefinitionId: 'courage-definition',
+          initialValue: 1,
         },
+        { id: 'stat-1', statDefinitionId: 'definition-1', initialValue: 2 },
       ],
-      graphDecorations: [
-        {
-          id: 'frame-1',
-          kind: 'frame',
-          position: { x: 20, y: 30 },
-          color: '#5b6ee1',
-          width: 420,
-          height: 240,
-        },
-        {
-          id: 'text-1',
-          kind: 'text',
-          position: { x: 40, y: 50 },
-          color: '#273043',
-          text: 'Act one',
-          fontSize: 32,
-          fontFamily: 'sans',
-          fontWeight: 'normal',
-          fontStyle: 'normal',
-        },
+      items: [
+        { id: 'item-1', itemDefinitionId: 'item-definition-1' },
+        { id: 'item-2', itemDefinitionId: 'item-definition-1' },
       ],
-      interactions: [
-        {
-          id: 'interaction-1',
-          title: 'Original title',
-          body: 'Original content',
-          position: { x: 80, y: 120 },
-          locationId: 'location-1',
-          characterIds: ['character-1'],
-          statEffects: [
-            { statId: 'stat-1', operation: 'add', value: 1 },
-            {
-              statId: 'alarm-stat',
-              operation: 'set',
-              value: true,
-            },
-            {
-              statId: 'courage-stat',
-              operation: 'add',
-              value: 2,
-            },
-            {
-              statId: 'charge-stat',
-              itemId: 'item-1',
-              operation: 'add',
-              value: -1,
-            },
-          ],
-          itemEffects: [{ itemId: 'item-1', operation: 'obtain' }],
-          durationMinutes: 45,
-          triggers: [{ id: 'trigger-1', inputInteractionIds: [], conditions: [] }],
-        },
-        {
-          id: 'interaction-2',
-          title: 'Next scene',
-          body: 'A linked scene',
-          position: { x: 320, y: 120 },
-          triggers: [
-            {
-              id: 'trigger-2',
-              inputInteractionIds: ['interaction-1'],
-              timerSeconds: 12,
-              conditions: [
-                { interactionId: 'interaction-1', hasBeenVisited: true },
-                { locationId: 'location-1', isCurrentLocation: true },
-                { characterId: 'character-1', isPresent: true },
-                { statId: 'stat-1', operator: 'gte', value: 3 },
-                { statId: 'alarm-stat', operator: 'eq', value: true },
-                { statId: 'courage-stat', operator: 'gte', value: 4 },
-                { statId: 'weather-stat', operator: 'eq', value: 'calm' },
-                {
-                  statId: 'charge-stat',
-                  itemId: 'item-1',
-                  operator: 'gte',
-                  value: 9,
-                },
-                {
-                  temporal: {
-                    weekdays: ['monday', 'tuesday'],
-                    timeSlots: [
-                      { startTime: '09:00', endTime: '12:00' },
-                      { startTime: '22:00', endTime: '02:00' },
-                    ],
-                  },
-                },
+    },
+  ];
+}
+
+function createPersistedGraphDecorations(): NonNullable<Story['graphDecorations']> {
+  return [
+    {
+      id: 'frame-1',
+      kind: 'frame',
+      position: { x: 20, y: 30 },
+      color: '#5b6ee1',
+      width: 420,
+      height: 240,
+    },
+    {
+      id: 'text-1',
+      kind: 'text',
+      position: { x: 40, y: 50 },
+      color: '#273043',
+      text: 'Act one',
+      fontSize: 32,
+      fontFamily: 'sans',
+      fontWeight: 'normal',
+      fontStyle: 'normal',
+    },
+  ];
+}
+
+function createPersistedInteractions(): Story['interactions'] {
+  return [createPersistedFirstInteraction(), createPersistedSecondInteraction()];
+}
+
+function createPersistedFirstInteraction(): Story['interactions'][number] {
+  return {
+    id: 'interaction-1',
+    title: 'Original title',
+    body: 'Original content',
+    position: { x: 80, y: 120 },
+    locationId: 'location-1',
+    characterIds: ['character-1'],
+    statEffects: [
+      { statId: 'stat-1', operation: 'add', value: 1 },
+      {
+        statId: 'alarm-stat',
+        operation: 'set',
+        value: true,
+      },
+      {
+        statId: 'courage-stat',
+        operation: 'add',
+        value: 2,
+      },
+      {
+        statId: 'charge-stat',
+        itemId: 'item-1',
+        operation: 'add',
+        value: -1,
+      },
+    ],
+    itemEffects: [{ itemId: 'item-1', operation: 'obtain' }],
+    durationMinutes: 45,
+    triggers: [{ id: 'trigger-1', inputInteractionIds: [], conditions: [] }],
+  };
+}
+
+function createPersistedSecondInteraction(): Story['interactions'][number] {
+  return {
+    id: 'interaction-2',
+    title: 'Next scene',
+    body: 'A linked scene',
+    position: { x: 320, y: 120 },
+    triggers: [
+      {
+        id: 'trigger-2',
+        inputInteractionIds: ['interaction-1'],
+        timerSeconds: 12,
+        conditions: [
+          { interactionId: 'interaction-1', hasBeenVisited: true },
+          { locationId: 'location-1', isCurrentLocation: true },
+          { characterId: 'character-1', isPresent: true },
+          { statId: 'stat-1', operator: 'gte', value: 3 },
+          { statId: 'alarm-stat', operator: 'eq', value: true },
+          { statId: 'courage-stat', operator: 'gte', value: 4 },
+          { statId: 'weather-stat', operator: 'eq', value: 'calm' },
+          {
+            statId: 'charge-stat',
+            itemId: 'item-1',
+            operator: 'gte',
+            value: 9,
+          },
+          {
+            temporal: {
+              weekdays: ['monday', 'tuesday'],
+              timeSlots: [
+                { startTime: '09:00', endTime: '12:00' },
+                { startTime: '22:00', endTime: '02:00' },
               ],
             },
-          ],
-        },
-      ],
-    };
+          },
+        ],
+      },
+    ],
+  };
+}
+
+async function runExpressionRoundTrip() {
+  const story = persistedStory();
+  const effects: NonNullable<Story['interactions'][number]['statEffects']> = [
+    { statId: 'stat-1', operation: 'set', expression: '@{stat-1} + 3' },
+    { statId: 'charge-stat', itemId: 'item-1', operation: 'set', expression: '@{stat-1} * 2' },
+  ];
+  story.interactions[0].statEffects = effects;
+  await repository.save(story, ownerId);
+  const fresh = new StoriesRepository(database);
+  expect((await fresh.find(story.id, ownerId))?.interactions[0].statEffects).toEqual(effects);
+  expect(
+    (await fresh.findEditorInteractionContentPage(story.id, ownerId, 1, 100))?.interactions[0]
+      .statEffects,
+  ).toEqual(effects);
+  const runtime = await fresh.findRuntimeSlice(story.id, ownerId, {
+    currentInteractionId: null,
+    interactionIds: ['interaction-1'],
+    page: 1,
+    pageSize: 100,
+  });
+  expect(runtime?.interactions[0].statEffects).toEqual(effects);
+  await fresh.mutate(
+    story.id,
+    (current) => {
+      current.interactions[0].statEffects = [{ ...effects[0], expression: '5 + 6' }];
+      return current;
+    },
+    ownerId,
+  );
+  expect((await fresh.find(story.id, ownerId))?.interactions[0].statEffects).toEqual([
+    { ...effects[0], expression: '5 + 6' },
+  ]);
+}
+
+async function runInteractionAndTriggerMoves() {
+  const story = persistedStory();
+  await repository.save(story, ownerId);
+  await repository.mutate(story.id, movePersistedGraph, ownerId);
+  const reloadedRepository = new StoriesRepository(database);
+  const reloaded = await reloadedRepository.find(story.id, ownerId);
+  expectMovedInteractionContent(reloaded, story);
+  expectMovedGraphDecorations(reloaded);
+  expectPersistedStoryCatalog(reloaded, story);
+  expectPersistedTriggerConfiguration(reloaded);
+}
+
+function movePersistedGraph(current: Story): Story {
+  current.interactions[0].position = { x: 420, y: 360 };
+  current.interactions[1].triggers[0].position = { x: 280, y: 240 };
+  const frame = current.graphDecorations?.find(({ id }) => id === 'frame-1');
+  if (frame?.kind === 'frame') {
+    frame.position = { x: 60, y: 70 };
+    frame.width = 560;
+    frame.height = 300;
   }
+  const text = current.graphDecorations?.find(({ id }) => id === 'text-1');
+  if (text?.kind === 'text') {
+    text.text = 'Opening act';
+    text.fontFamily = 'serif';
+    text.fontWeight = 'bold';
+  }
+  current.updatedAt = new Date().toISOString();
+  return current;
+}
 
-  it('round-trips expressions through full, editor and runtime PostgreSQL projections', async () => {
-    const story = persistedStory();
-    const effects: NonNullable<Story['interactions'][number]['statEffects']> = [
-      { statId: 'stat-1', operation: 'set', expression: '@{stat-1} + 3' },
-      { statId: 'charge-stat', itemId: 'item-1', operation: 'set', expression: '@{stat-1} * 2' },
-    ];
-    story.interactions[0].statEffects = effects;
-    await repository.save(story, ownerId);
-    const fresh = new StoriesRepository(database);
-    expect((await fresh.find(story.id, ownerId))?.interactions[0].statEffects).toEqual(effects);
-    expect(
-      (await fresh.findEditorInteractionContentPage(story.id, ownerId, 1, 100))?.interactions[0]
-        .statEffects,
-    ).toEqual(effects);
-    const runtime = await fresh.findRuntimeSlice(story.id, ownerId, {
-      currentInteractionId: null,
+function expectMovedInteractionContent(reloaded: Story | undefined, story: Story) {
+  expect(reloaded?.interactions[0]).toMatchObject({
+    title: 'Original title',
+    body: 'Original content',
+    position: { x: 420, y: 360 },
+    locationId: 'location-1',
+    characterIds: ['character-1'],
+    statEffects: story.interactions[0].statEffects,
+    itemEffects: [{ itemId: 'item-1', operation: 'obtain' }],
+    durationMinutes: 45,
+  });
+  expect(reloaded?.interactions[1].triggers[0]).toMatchObject({
+    id: 'trigger-2',
+    inputInteractionIds: ['interaction-1'],
+    position: { x: 280, y: 240 },
+  });
+}
+
+function expectMovedGraphDecorations(reloaded: Story | undefined) {
+  expect(reloaded?.graphDecorations).toEqual([
+    {
+      id: 'frame-1',
+      kind: 'frame',
+      position: { x: 60, y: 70 },
+      color: '#5b6ee1',
+      width: 560,
+      height: 300,
+    },
+    {
+      id: 'text-1',
+      kind: 'text',
+      position: { x: 40, y: 50 },
+      color: '#273043',
+      text: 'Opening act',
+      fontSize: 32,
+      fontFamily: 'serif',
+      fontWeight: 'bold',
+      fontStyle: 'normal',
+    },
+  ]);
+}
+
+function expectPersistedStoryCatalog(reloaded: Story | undefined, story: Story) {
+  const loaded = requireReloadedStory(reloaded);
+  expectPersistedLocations(loaded, story);
+  expectPersistedCharacters(loaded, story);
+  expectPersistedStatDefinitions(loaded, story);
+  expectPersistedItemDefinitions(loaded, story);
+}
+
+function expectPersistedLocations(loaded: Story, story: Story) {
+  expect(loaded.locations).toEqual([
+    {
+      id: 'location-1',
+      name: 'Harbor',
+      description: 'A quiet harbor.',
+      category: 'Coast',
+      imageUrl: 'https://images.example/harbor.png',
+      stats: story.locations?.[0].stats,
+    },
+  ]);
+}
+
+function expectPersistedCharacters(loaded: Story, story: Story) {
+  expect(loaded.characters?.[0].imageUrl).toBe('https://images.example/mira.png');
+  expect(loaded.characters?.[0].category).toBe('Allies');
+  expect(loaded.characters?.[0].stats).toEqual(story.characters?.[0].stats);
+}
+
+function expectPersistedStatDefinitions(loaded: Story, story: Story) {
+  expect(loaded.statDefinitions).toEqual(story.statDefinitions);
+  expect(loaded.stats).toEqual(story.stats);
+  const trustDefinition = loaded.statDefinitions?.find(({ id }) => id === 'definition-1');
+  expect(trustDefinition).toMatchObject({
+    imageUrl: 'https://images.example/trust.svg',
+    category: 'Relationships',
+    changePerHour: -0.5,
+  });
+}
+
+function expectPersistedItemDefinitions(loaded: Story, story: Story) {
+  expect(loaded.itemDefinitions?.[0].imageUrl).toBe('https://images.example/key.png');
+  expect(loaded.itemDefinitions?.[0].category).toBe('Quest items');
+  expect(loaded.itemDefinitions?.[0].stats).toEqual(story.itemDefinitions?.[0].stats);
+}
+
+function requireReloadedStory(story: Story | undefined): Story {
+  if (!story) {
+    throw new Error('Expected the persisted story to reload');
+  }
+  return story;
+}
+
+function expectPersistedTriggerConfiguration(reloaded: Story | undefined) {
+  expect(reloaded?.interactions[1].triggers[0]).toEqual({
+    id: 'trigger-2',
+    inputInteractionIds: ['interaction-1'],
+    position: { x: 280, y: 240 },
+    conditionGroups: [
+      {
+        id: 'trigger-2',
+        conditions: [
+          { interactionId: 'interaction-1', hasBeenVisited: true },
+          { locationId: 'location-1', isCurrentLocation: true },
+          { characterId: 'character-1', isPresent: true },
+          { statId: 'stat-1', operator: 'gte', value: 3 },
+          { statId: 'alarm-stat', operator: 'eq', value: true },
+          { statId: 'courage-stat', operator: 'gte', value: 4 },
+          { statId: 'weather-stat', operator: 'eq', value: 'calm' },
+          {
+            statId: 'charge-stat',
+            itemId: 'item-1',
+            operator: 'gte',
+            value: 9,
+          },
+          {
+            temporal: {
+              weekdays: ['monday', 'tuesday'],
+              timeSlots: [
+                { startTime: '09:00', endTime: '12:00' },
+                { startTime: '22:00', endTime: '02:00' },
+              ],
+            },
+          },
+        ],
+      },
+    ],
+    appearanceProbability: 100,
+    timerSeconds: 12,
+  });
+}
+
+async function runNestedGroupMoves() {
+  const story = persistedStory();
+  // Children can precede parents in the persisted authoring order.
+  story.groups = [
+    {
+      id: 'child-group',
+      title: 'Child',
+      parentGroupId: 'parent-group',
       interactionIds: ['interaction-1'],
-      page: 1,
-      pageSize: 100,
-    });
-    expect(runtime?.interactions[0].statEffects).toEqual(effects);
-    await fresh.mutate(
+    },
+    { id: 'parent-group', title: 'Parent', interactionIds: ['interaction-2'] },
+  ];
+  await repository.save(story, ownerId);
+  const freshRepository = new StoriesRepository(database);
+  await expectSavedNestedGroups(freshRepository, story);
+  await expectDuplicateGroupInteraction(story.id);
+  // The destination precedes the source; checks must wait until transaction commit.
+  await repository.mutate(story.id, moveChildGroupInteractions, ownerId);
+  await expectChildGroupInteractions(freshRepository, story.id);
+  await repository.mutate(story.id, promoteChildGroup, ownerId);
+  await expectPromotedChildGroup(freshRepository, story.id);
+  await expectForeignParentConstraint();
+  const loaded = await freshRepository.find(story.id, ownerId);
+  expect(loaded?.interactions).toHaveLength(2);
+}
+
+async function expectSavedNestedGroups(freshRepository: StoriesRepository, story: Story) {
+  expect((await freshRepository.find(story.id, ownerId))?.groups).toEqual(story.groups);
+  expect((await freshRepository.findEditorContextPage(story.id, ownerId, 1, 100))?.groups).toEqual(
+    story.groups,
+  );
+}
+
+async function expectDuplicateGroupInteraction(storyId: string) {
+  await expect(
+    pool.query(
+      `INSERT INTO story_group_interactions
+       (story_id, group_id, interaction_id, sort_order)
+       VALUES ($1, 'child-group', 'interaction-2', 1)`,
+      [storyId],
+    ),
+  ).rejects.toMatchObject({ code: '23505' });
+}
+
+function moveChildGroupInteractions(current: Story): Story {
+  return setStoryGroupInteractions(current, 'child-group', ['interaction-1', 'interaction-2']);
+}
+
+function promoteChildGroup(current: Story): Story {
+  const firstGroup = current.groups?.[0];
+  if (!firstGroup) {
+    throw new Error('Expected a child group to promote');
+  }
+  return {
+    ...current,
+    groups: [{ ...firstGroup, title: 'Moved', parentGroupId: undefined }],
+  };
+}
+
+async function expectChildGroupInteractions(freshRepository: StoriesRepository, storyId: string) {
+  expect(
+    (await freshRepository.find(storyId, ownerId))?.groups?.map(
+      ({ interactionIds }) => interactionIds,
+    ),
+  ).toEqual([['interaction-1', 'interaction-2'], []]);
+}
+
+async function expectPromotedChildGroup(freshRepository: StoriesRepository, storyId: string) {
+  expect((await freshRepository.find(storyId, ownerId))?.groups).toEqual([
+    { id: 'child-group', title: 'Moved', interactionIds: ['interaction-1', 'interaction-2'] },
+  ]);
+}
+
+async function expectForeignParentConstraint() {
+  await expect(
+    pool.query('UPDATE story_groups SET parent_group_id = $1 WHERE id = $2', [
+      'foreign-group',
+      'child-group',
+    ]),
+  ).rejects.toMatchObject({ code: '23503' });
+}
+
+async function runSiblingGroupOrder() {
+  const story = persistedStory();
+  story.groups = [
+    { id: 'first', title: 'First', interactionIds: ['interaction-1'] },
+    { id: 'second', title: 'Second', interactionIds: ['interaction-2'] },
+    { id: 'child', title: 'Child', interactionIds: [], parentGroupId: 'first' },
+  ];
+  await repository.save(story, ownerId);
+  await repository.mutate(story.id, moveSecondIntoChild, ownerId, 'group.updated');
+  const fresh = new StoriesRepository(database);
+  const loaded = await fresh.find(story.id, ownerId);
+  await expectSecondGroupNested(fresh, story.id, loaded, story);
+  await repository.mutate(story.id, moveSecondToRoot, ownerId, 'group.updated');
+  await expectSecondGroupAtRoot(fresh, story.id);
+  await expectGroupMoveUndoRedo(fresh, story.id, loaded);
+}
+
+function moveSecondIntoChild(current: Story): Story {
+  const moved = moveStoryGroup(current, 'second', 'first', 'child');
+  return { ...moved, revision: (current.revision ?? 1) + 1 };
+}
+
+function moveSecondToRoot(current: Story): Story {
+  const moved = moveStoryGroup(current, 'second', null, 'first');
+  return { ...moved, revision: (current.revision ?? 1) + 1 };
+}
+
+async function expectSecondGroupNested(
+  fresh: StoriesRepository,
+  storyId: string,
+  loaded: Story | undefined,
+  story: Story,
+) {
+  expect(loaded?.groups?.map(({ id }) => id)).toEqual(['first', 'second', 'child']);
+  expect(loaded?.groups?.[1].parentGroupId).toBe('first');
+  expect((await fresh.findEditorContextPage(storyId, ownerId, 1, 100))?.groups).toEqual(
+    loaded?.groups,
+  );
+  expect(loaded?.interactions.map(({ position }) => position)).toEqual(
+    story.interactions.map(({ position }) => position),
+  );
+}
+
+async function expectSecondGroupAtRoot(fresh: StoriesRepository, storyId: string) {
+  expect(
+    (await fresh.find(storyId, ownerId))?.groups?.map(({ id, parentGroupId }) => ({
+      id,
+      parentGroupId,
+    })),
+  ).toEqual([
+    { id: 'second', parentGroupId: undefined },
+    { id: 'first', parentGroupId: undefined },
+    { id: 'child', parentGroupId: 'first' },
+  ]);
+}
+
+async function expectGroupMoveUndoRedo(
+  fresh: StoriesRepository,
+  storyId: string,
+  loaded: Story | undefined,
+) {
+  expect((await fresh.revertHistory(storyId, ownerId, 'undo'))?.kind).toBe('applied');
+  expect((await fresh.find(storyId, ownerId))?.groups).toEqual(loaded?.groups);
+  expect((await fresh.revertHistory(storyId, ownerId, 'redo'))?.kind).toBe('applied');
+  expect((await fresh.find(storyId, ownerId))?.groups?.map(({ id }) => id)).toEqual([
+    'second',
+    'first',
+    'child',
+  ]);
+}
+
+async function runPaginatedProjections() {
+  const story = persistedStory();
+  story.groups = [
+    {
+      id: 'group-1',
+      title: 'Opening',
+      interactionIds: ['interaction-1', 'interaction-2'],
+    },
+  ];
+  await repository.save(story, ownerId);
+  const projections = await loadPaginatedProjections(story.id);
+  expectEditorProjectionPages(projections);
+  expectRuntimeProjectionPages(projections);
+}
+
+async function loadPaginatedProjections(storyId: string) {
+  const bootstrap = await repository.findEditorBootstrap(storyId, ownerId);
+  const context = await repository.findEditorContextPage(storyId, ownerId, 1, 1);
+  const interactionPage = await repository.findEditorInteractionPage(storyId, ownerId, 1, 1);
+  const finalInteractionPage = await repository.findEditorInteractionPage(storyId, ownerId, 2, 1);
+  const runtime = await repository.findRuntimeSlice(storyId, ownerId, {
+    currentInteractionId: 'interaction-1',
+    interactionIds: ['interaction-1'],
+    page: 1,
+    pageSize: 100,
+  });
+  const journeyOnly = await repository.findRuntimeSlice(storyId, ownerId, {
+    currentInteractionId: 'interaction-1',
+    interactionIds: ['interaction-1'],
+    includeOptions: false,
+    page: 1,
+    pageSize: 100,
+  });
+  return { bootstrap, context, interactionPage, finalInteractionPage, runtime, journeyOnly };
+}
+
+function expectEditorProjectionPages(
+  projections: Awaited<ReturnType<typeof loadPaginatedProjections>>,
+) {
+  expect(projections.bootstrap).toMatchObject({ interactionCount: 2, triggerCount: 2 });
+  expect(projections.bootstrap?.contextCounts.groups).toBe(1);
+  expect(projections.context).toMatchObject({ page: 1, pageSize: 1, hasMore: true });
+  expect(projections.context?.groups).toEqual([
+    { id: 'group-1', title: 'Opening', interactionIds: ['interaction-1', 'interaction-2'] },
+  ]);
+  expect(projections.interactionPage).toMatchObject({
+    hasMore: true,
+    interactions: [expect.objectContaining({ id: 'interaction-1', title: 'Original title' })],
+  });
+  expect(projections.finalInteractionPage).toMatchObject({
+    hasMore: false,
+    interactions: [expect.objectContaining({ id: 'interaction-2' })],
+  });
+}
+
+function expectRuntimeProjectionPages(
+  projections: Awaited<ReturnType<typeof loadPaginatedProjections>>,
+) {
+  expect(projections.runtime).toMatchObject({
+    totalOptionCount: 1,
+    hasMore: false,
+    optionInteractionIds: ['interaction-2'],
+    interactionReferences: [{ id: 'interaction-1', title: 'Original title' }],
+  });
+  expect(projections.runtime?.interactions).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ id: 'interaction-1', triggers: [] }),
+      expect.objectContaining({
+        id: 'interaction-2',
+        triggers: [
+          expect.objectContaining({
+            id: 'trigger-2',
+            inputInteractionIds: ['interaction-1'],
+            timerSeconds: 12,
+          }),
+        ],
+      }),
+    ]),
+  );
+  expect(projections.journeyOnly).toMatchObject({
+    totalOptionCount: 0,
+    optionInteractionIds: [],
+    interactions: [expect.objectContaining({ id: 'interaction-1', triggers: [] })],
+  });
+}
+
+async function runConcurrentMutations() {
+  const story = persistedStory();
+  await repository.save(story, ownerId);
+
+  await Promise.all([
+    repository.mutate(
       story.id,
-      (current) => {
-        current.interactions[0].statEffects = [{ ...effects[0], expression: '5 + 6' }];
+      async (current) => {
+        current.interactions[0].title = 'Concurrent title';
+        await new Promise((resolve) => setTimeout(resolve, 75));
         return current;
       },
       ownerId,
-    );
-    expect((await fresh.find(story.id, ownerId))?.interactions[0].statEffects).toEqual([
-      { ...effects[0], expression: '5 + 6' },
-    ]);
-  });
-
-  it('persists interaction and trigger moves across repository instances', async () => {
-    const story = persistedStory();
-    await repository.save(story, ownerId);
-    await repository.mutate(
+    ),
+    repository.mutate(
       story.id,
       (current) => {
-        current.interactions[0].position = { x: 420, y: 360 };
-        current.interactions[1].triggers[0].position = { x: 280, y: 240 };
-        const frame = current.graphDecorations?.find(({ id }) => id === 'frame-1');
-        if (frame?.kind === 'frame') {
-          frame.position = { x: 60, y: 70 };
-          frame.width = 560;
-          frame.height = 300;
-        }
-        const text = current.graphDecorations?.find(({ id }) => id === 'text-1');
-        if (text?.kind === 'text') {
-          text.text = 'Opening act';
-          text.fontFamily = 'serif';
-          text.fontWeight = 'bold';
-        }
-        current.updatedAt = new Date().toISOString();
+        current.interactions[0].body = 'Concurrent content';
         return current;
       },
       ownerId,
-    );
+    ),
+  ]);
 
-    const reloadedRepository = new StoriesRepository(database);
-    const reloaded = await reloadedRepository.find(story.id, ownerId);
-    expect(reloaded?.interactions[0]).toMatchObject({
-      title: 'Original title',
-      body: 'Original content',
-      position: { x: 420, y: 360 },
-      locationId: 'location-1',
-      characterIds: ['character-1'],
-      statEffects: story.interactions[0].statEffects,
-      itemEffects: [{ itemId: 'item-1', operation: 'obtain' }],
-      durationMinutes: 45,
-    });
-    expect(reloaded?.interactions[1].triggers[0]).toMatchObject({
-      id: 'trigger-2',
-      inputInteractionIds: ['interaction-1'],
-      position: { x: 280, y: 240 },
-    });
-    expect(reloaded?.graphDecorations).toEqual([
-      {
-        id: 'frame-1',
-        kind: 'frame',
-        position: { x: 60, y: 70 },
-        color: '#5b6ee1',
-        width: 560,
-        height: 300,
-      },
-      {
-        id: 'text-1',
-        kind: 'text',
-        position: { x: 40, y: 50 },
-        color: '#273043',
-        text: 'Opening act',
-        fontSize: 32,
-        fontFamily: 'serif',
-        fontWeight: 'bold',
-        fontStyle: 'normal',
-      },
-    ]);
-    expect(reloaded?.locations).toEqual([
-      {
-        id: 'location-1',
-        name: 'Harbor',
-        description: 'A quiet harbor.',
-        category: 'Coast',
-        imageUrl: 'https://images.example/harbor.png',
-        stats: story.locations?.[0].stats,
-      },
-    ]);
-    expect(reloaded?.characters?.[0].imageUrl).toBe('https://images.example/mira.png');
-    expect(reloaded?.characters?.[0].category).toBe('Allies');
-    expect(reloaded?.characters?.[0].stats).toEqual(story.characters?.[0].stats);
-    expect(reloaded?.statDefinitions).toEqual(story.statDefinitions);
-    expect(reloaded?.stats).toEqual(story.stats);
-    expect(reloaded?.statDefinitions?.[4].imageUrl).toBe('https://images.example/trust.svg');
-    expect(reloaded?.statDefinitions?.[4].category).toBe('Relationships');
-    expect(reloaded?.statDefinitions?.[4].changePerHour).toBe(-0.5);
-    expect(reloaded?.itemDefinitions?.[0].imageUrl).toBe('https://images.example/key.png');
-    expect(reloaded?.itemDefinitions?.[0].category).toBe('Quest items');
-    expect(reloaded?.itemDefinitions?.[0].stats).toEqual(story.itemDefinitions?.[0].stats);
-    expect(reloaded?.interactions[1].triggers[0]).toEqual({
-      id: 'trigger-2',
-      inputInteractionIds: ['interaction-1'],
-      position: { x: 280, y: 240 },
-      conditionGroups: [
-        {
-          id: 'trigger-2',
-          conditions: [
-            { interactionId: 'interaction-1', hasBeenVisited: true },
-            { locationId: 'location-1', isCurrentLocation: true },
-            { characterId: 'character-1', isPresent: true },
-            { statId: 'stat-1', operator: 'gte', value: 3 },
-            { statId: 'alarm-stat', operator: 'eq', value: true },
-            { statId: 'courage-stat', operator: 'gte', value: 4 },
-            { statId: 'weather-stat', operator: 'eq', value: 'calm' },
-            {
-              statId: 'charge-stat',
-              itemId: 'item-1',
-              operator: 'gte',
-              value: 9,
-            },
-            {
-              temporal: {
-                weekdays: ['monday', 'tuesday'],
-                timeSlots: [
-                  { startTime: '09:00', endTime: '12:00' },
-                  { startTime: '22:00', endTime: '02:00' },
-                ],
-              },
-            },
-          ],
-        },
-      ],
-      appearanceProbability: 100,
-      timerSeconds: 12,
-    });
+  const reloaded = await repository.find(story.id, ownerId);
+  expect(reloaded?.interactions[0]).toMatchObject({
+    title: 'Concurrent title',
+    body: 'Concurrent content',
+  });
+}
+
+async function runAuthoredHistory() {
+  const story = persistedStory();
+  story.revision = 1;
+  await repository.save(story, ownerId);
+  await repository.mutate(
+    story.id,
+    (current) => ({
+      ...current,
+      revision: 2,
+      title: 'Changed through history',
+      updatedAt: new Date().toISOString(),
+    }),
+    ownerId,
+  );
+
+  const reloadedRepository = new StoriesRepository(database);
+  await expect(reloadedRepository.getHistory(story.id, ownerId)).resolves.toMatchObject({
+    canUndo: true,
+    canRedo: false,
+    entries: [{ revision: 2, kind: 'change', reverted: false }],
+  });
+  const undone = await reloadedRepository.revertHistory(story.id, ownerId, 'undo');
+  expect(undone).toMatchObject({
+    kind: 'applied',
+    result: {
+      story: { title: 'PostgreSQL round trip', revision: 3 },
+      history: { canUndo: false, canRedo: true },
+    },
   });
 
-  it('round trips nested groups, promotes children and preserves same-Story parent constraints', async () => {
-    const story = persistedStory();
-    // Children can precede parents in the persisted authoring order.
-    story.groups = [
-      {
-        id: 'child-group',
-        title: 'Child',
-        parentGroupId: 'parent-group',
-        interactionIds: ['interaction-1'],
-      },
-      { id: 'parent-group', title: 'Parent', interactionIds: ['interaction-2'] },
-    ];
-    await repository.save(story, ownerId);
-    const freshRepository = new StoriesRepository(database);
-    expect((await freshRepository.find(story.id, ownerId))?.groups).toEqual(story.groups);
-    expect(
-      (await freshRepository.findEditorContextPage(story.id, ownerId, 1, 100))?.groups,
-    ).toEqual(story.groups);
-    await expect(
-      pool.query(
-        `INSERT INTO story_group_interactions
-        (story_id, group_id, interaction_id, sort_order)
-        VALUES ($1, 'child-group', 'interaction-2', 1)`,
-        [story.id],
-      ),
-    ).rejects.toMatchObject({ code: '23505' });
-    // The destination precedes the source; checks must wait until transaction commit.
-    await repository.mutate(
-      story.id,
-      (current) =>
-        setStoryGroupInteractions(current, 'child-group', ['interaction-1', 'interaction-2']),
-      ownerId,
-    );
-    expect(
-      (await freshRepository.find(story.id, ownerId))?.groups?.map(
-        ({ interactionIds }) => interactionIds,
-      ),
-    ).toEqual([['interaction-1', 'interaction-2'], []]);
-    await repository.mutate(
-      story.id,
-      (current) => ({
-        ...current,
-        groups: [{ ...current.groups![0], title: 'Moved', parentGroupId: undefined }],
+  const finalRepository = new StoriesRepository(database);
+  const redone = await finalRepository.revertHistory(story.id, ownerId, 'redo');
+  expect(redone).toMatchObject({
+    kind: 'applied',
+    result: {
+      story: { title: 'Changed through history', revision: 4 },
+      history: { canUndo: true, canRedo: false },
+    },
+  });
+}
+
+async function runReaderProgressRoundTrip() {
+  const story = persistedStory();
+  await repository.save(story, ownerId);
+  const state = buildReaderProgressState(
+    story,
+    ['interaction-1', 'interaction-2', 'interaction-1'],
+    ['item-1', 'item-2'],
+  );
+  const updatedAt = '2026-07-27T10:00:00.000Z';
+
+  await expect(repository.saveProgress(story.id, ownerId, state, updatedAt)).resolves.toBe(true);
+  await expect(repository.findProgress(story.id, ownerId)).resolves.toEqual({
+    id: 'reader-autosave',
+    kind: 'reader-autosave',
+    state,
+    createdAt: updatedAt,
+    updatedAt,
+  });
+  await repository.saveProgress(
+    story.id,
+    ownerId,
+    state,
+    '2026-07-27T10:01:00.000Z',
+    'simulation-autosave',
+  );
+  await repository.saveProgress(
+    story.id,
+    ownerId,
+    state,
+    '2026-07-27T10:02:00.000Z',
+    'manual-save-1',
+    'Before the gate',
+  );
+  await expect(repository.findProgressSaves(story.id, ownerId)).resolves.toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ id: 'reader-autosave', kind: 'reader-autosave' }),
+      expect.objectContaining({ id: 'simulation-autosave', kind: 'simulation-autosave' }),
+      expect.objectContaining({
+        id: 'manual-save-1',
+        kind: 'manual',
+        name: 'Before the gate',
+        currentInteractionTitle: 'Original title',
       }),
-      ownerId,
-    );
-    expect((await freshRepository.find(story.id, ownerId))?.groups).toEqual([
-      { id: 'child-group', title: 'Moved', interactionIds: ['interaction-1', 'interaction-2'] },
-    ]);
-    await expect(
-      pool.query('UPDATE story_groups SET parent_group_id = $1 WHERE id = $2', [
-        'foreign-group',
-        'child-group',
-      ]),
-    ).rejects.toMatchObject({ code: '23503' });
-    const loaded = await freshRepository.find(story.id, ownerId);
-    expect(loaded?.interactions).toHaveLength(2);
+    ]),
+  );
+
+  await repository.deleteProgress(story.id, ownerId);
+  await expect(repository.findProgress(story.id, ownerId)).resolves.toBeUndefined();
+}
+
+async function runAccessPolicies() {
+  const story = persistedStory();
+  await repository.save(story, ownerId);
+  await expectPrivateAndAdministratorAccess(story.id);
+  await inviteViewer(story.id);
+  await promoteCollaboratorToEditor(story.id);
+  await restrictAccessToPrivate(story.id);
+  await makeStoryPublic(story.id);
+}
+
+async function expectPrivateAndAdministratorAccess(storyId: string) {
+  await expect(repository.find(storyId)).resolves.toBeUndefined();
+  await expect(repository.find(storyId, collaboratorId)).resolves.toBeUndefined();
+  await expect(repository.find(storyId, adminId)).resolves.toMatchObject({
+    capabilities: { canRead: true, canEdit: true, canManage: true },
   });
+}
 
-  it('persists moved sibling order through the existing sort_order column and editor reload', async () => {
-    const story = persistedStory();
-    story.groups = [
-      { id: 'first', title: 'First', interactionIds: ['interaction-1'] },
-      { id: 'second', title: 'Second', interactionIds: ['interaction-2'] },
-      { id: 'child', title: 'Child', interactionIds: [], parentGroupId: 'first' },
-    ];
-    await repository.save(story, ownerId);
-    await repository.mutate(
-      story.id,
-      (current) => ({
-        ...moveStoryGroup(current, 'second', 'first', 'child'),
-        revision: (current.revision ?? 1) + 1,
-      }),
-      ownerId,
-      'group.updated',
-    );
-    const fresh = new StoriesRepository(database);
-    const loaded = await fresh.find(story.id, ownerId);
-    expect(loaded?.groups?.map(({ id }) => id)).toEqual(['first', 'second', 'child']);
-    expect(loaded?.groups?.[1].parentGroupId).toBe('first');
-    expect((await fresh.findEditorContextPage(story.id, ownerId, 1, 100))?.groups).toEqual(
-      loaded?.groups,
-    );
-    expect(loaded?.interactions.map(({ position }) => position)).toEqual(
-      story.interactions.map(({ position }) => position),
-    );
-    await repository.mutate(
-      story.id,
-      (current) => ({
-        ...moveStoryGroup(current, 'second', null, 'first'),
-        revision: (current.revision ?? 1) + 1,
-      }),
-      ownerId,
-      'group.updated',
-    );
-    expect(
-      (await fresh.find(story.id, ownerId))?.groups?.map(({ id, parentGroupId }) => ({
-        id,
-        parentGroupId,
-      })),
-    ).toEqual([
-      { id: 'second', parentGroupId: undefined },
-      { id: 'first', parentGroupId: undefined },
-      { id: 'child', parentGroupId: 'first' },
-    ]);
-    expect((await fresh.revertHistory(story.id, ownerId, 'undo'))?.kind).toBe('applied');
-    expect((await fresh.find(story.id, ownerId))?.groups).toEqual(loaded?.groups);
-    expect((await fresh.revertHistory(story.id, ownerId, 'redo'))?.kind).toBe('applied');
-    expect((await fresh.find(story.id, ownerId))?.groups?.map(({ id }) => id)).toEqual([
-      'second',
-      'first',
-      'child',
-    ]);
-  });
-
-  it('reads paginated editor projections and a targeted runtime slice', async () => {
-    const story = persistedStory();
-    story.groups = [
-      {
-        id: 'group-1',
-        title: 'Opening',
-        interactionIds: ['interaction-1', 'interaction-2'],
-      },
-    ];
-    await repository.save(story, ownerId);
-
-    const bootstrap = await repository.findEditorBootstrap(story.id, ownerId);
-    const context = await repository.findEditorContextPage(story.id, ownerId, 1, 1);
-    const interactionPage = await repository.findEditorInteractionPage(story.id, ownerId, 1, 1);
-    const finalInteractionPage = await repository.findEditorInteractionPage(
-      story.id,
-      ownerId,
-      2,
-      1,
-    );
-    const runtime = await repository.findRuntimeSlice(story.id, ownerId, {
-      currentInteractionId: 'interaction-1',
-      interactionIds: ['interaction-1'],
-      page: 1,
-      pageSize: 100,
-    });
-    const journeyOnly = await repository.findRuntimeSlice(story.id, ownerId, {
-      currentInteractionId: 'interaction-1',
-      interactionIds: ['interaction-1'],
-      includeOptions: false,
-      page: 1,
-      pageSize: 100,
-    });
-
-    expect(bootstrap).toMatchObject({ interactionCount: 2, triggerCount: 2 });
-    expect(bootstrap?.contextCounts.groups).toBe(1);
-    expect(context).toMatchObject({ page: 1, pageSize: 1, hasMore: true });
-    expect(context?.groups).toEqual([
-      { id: 'group-1', title: 'Opening', interactionIds: ['interaction-1', 'interaction-2'] },
-    ]);
-    expect(interactionPage).toMatchObject({
-      hasMore: true,
-      interactions: [expect.objectContaining({ id: 'interaction-1', title: 'Original title' })],
-    });
-    expect(finalInteractionPage).toMatchObject({
-      hasMore: false,
-      interactions: [expect.objectContaining({ id: 'interaction-2' })],
-    });
-    expect(runtime).toMatchObject({
-      totalOptionCount: 1,
-      hasMore: false,
-      optionInteractionIds: ['interaction-2'],
-      interactionReferences: [{ id: 'interaction-1', title: 'Original title' }],
-    });
-    expect(runtime?.interactions).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ id: 'interaction-1', triggers: [] }),
-        expect.objectContaining({
-          id: 'interaction-2',
-          triggers: [
-            expect.objectContaining({
-              id: 'trigger-2',
-              inputInteractionIds: ['interaction-1'],
-              timerSeconds: 12,
-            }),
-          ],
-        }),
-      ]),
-    );
-    expect(journeyOnly).toMatchObject({
-      totalOptionCount: 0,
-      optionInteractionIds: [],
-      interactions: [expect.objectContaining({ id: 'interaction-1', triggers: [] })],
-    });
-  });
-
-  it('merges concurrent field-level mutations without losing fields', async () => {
-    const story = persistedStory();
-    await repository.save(story, ownerId);
-
-    await Promise.all([
-      repository.mutate(
-        story.id,
-        async (current) => {
-          current.interactions[0].title = 'Concurrent title';
-          await new Promise((resolve) => setTimeout(resolve, 75));
-          return current;
-        },
-        ownerId,
-      ),
-      repository.mutate(
-        story.id,
-        (current) => {
-          current.interactions[0].body = 'Concurrent content';
-          return current;
-        },
-        ownerId,
-      ),
-    ]);
-
-    const reloaded = await repository.find(story.id, ownerId);
-    expect(reloaded?.interactions[0]).toMatchObject({
-      title: 'Concurrent title',
-      body: 'Concurrent content',
-    });
-  });
-
-  it('keeps reversible authored history across repository instances', async () => {
-    const story = persistedStory();
-    story.revision = 1;
-    await repository.save(story, ownerId);
-    await repository.mutate(
-      story.id,
-      (current) => ({
-        ...current,
-        revision: 2,
-        title: 'Changed through history',
-        updatedAt: new Date().toISOString(),
-      }),
-      ownerId,
-    );
-
-    const reloadedRepository = new StoriesRepository(database);
-    await expect(reloadedRepository.getHistory(story.id, ownerId)).resolves.toMatchObject({
-      canUndo: true,
-      canRedo: false,
-      entries: [{ revision: 2, kind: 'change', reverted: false }],
-    });
-    const undone = await reloadedRepository.revertHistory(story.id, ownerId, 'undo');
-    expect(undone).toMatchObject({
-      kind: 'applied',
-      result: {
-        story: { title: 'PostgreSQL round trip', revision: 3 },
-        history: { canUndo: false, canRedo: true },
-      },
-    });
-
-    const finalRepository = new StoriesRepository(database);
-    const redone = await finalRepository.revertHistory(story.id, ownerId, 'redo');
-    expect(redone).toMatchObject({
-      kind: 'applied',
-      result: {
-        story: { title: 'Changed through history', revision: 4 },
-        history: { canUndo: true, canRedo: false },
-      },
-    });
-  });
-
-  it('round-trips versioned reader progress JSON per user and story', async () => {
-    const story = persistedStory();
-    await repository.save(story, ownerId);
-    const state = buildReaderProgressState(
-      story,
-      ['interaction-1', 'interaction-2', 'interaction-1'],
-      ['item-1', 'item-2'],
-    );
-    const updatedAt = '2026-07-27T10:00:00.000Z';
-
-    await expect(repository.saveProgress(story.id, ownerId, state, updatedAt)).resolves.toBe(true);
-    await expect(repository.findProgress(story.id, ownerId)).resolves.toEqual({
-      id: 'reader-autosave',
-      kind: 'reader-autosave',
-      state,
-      createdAt: updatedAt,
-      updatedAt,
-    });
-    await repository.saveProgress(
-      story.id,
-      ownerId,
-      state,
-      '2026-07-27T10:01:00.000Z',
-      'simulation-autosave',
-    );
-    await repository.saveProgress(
-      story.id,
-      ownerId,
-      state,
-      '2026-07-27T10:02:00.000Z',
-      'manual-save-1',
-      'Before the gate',
-    );
-    await expect(repository.findProgressSaves(story.id, ownerId)).resolves.toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ id: 'reader-autosave', kind: 'reader-autosave' }),
-        expect.objectContaining({ id: 'simulation-autosave', kind: 'simulation-autosave' }),
-        expect.objectContaining({
-          id: 'manual-save-1',
-          kind: 'manual',
-          name: 'Before the gate',
-          currentInteractionTitle: 'Original title',
-        }),
-      ]),
-    );
-
-    await repository.deleteProgress(story.id, ownerId);
-    await expect(repository.findProgress(story.id, ownerId)).resolves.toBeUndefined();
-  });
-
-  it('enforces private, invitation, editor, public, and administrator access in SQL', async () => {
-    const story = persistedStory();
-    await repository.save(story, ownerId);
-
-    await expect(repository.find(story.id)).resolves.toBeUndefined();
-    await expect(repository.find(story.id, collaboratorId)).resolves.toBeUndefined();
-    await expect(repository.find(story.id, adminId)).resolves.toMatchObject({
-      capabilities: { canRead: true, canEdit: true, canManage: true },
-    });
-
-    await expect(
-      repository.updateAccess(story.id, ownerId, {
-        visibility: 'invitation',
-        editPolicy: 'collaborators',
-        commentPolicy: 'readers',
-      }),
-    ).resolves.toBe(true);
-    await expect(
-      repository.setCollaborator(story.id, ownerId, `${collaboratorId}@example.test`, 'viewer'),
-    ).resolves.toBe(true);
-    await expect(repository.find(story.id, collaboratorId)).resolves.toMatchObject({
-      capabilities: { canRead: true, canEdit: false, canManage: false, canComment: true },
-    });
-    await expect(
-      repository.mutate(story.id, (current) => current, collaboratorId),
-    ).resolves.toBeUndefined();
-
-    await repository.setCollaborator(story.id, ownerId, `${collaboratorId}@example.test`, 'editor');
-    await expect(
-      repository.mutate(
-        story.id,
-        (current) => ({ ...current, title: 'Edited by collaborator' }),
-        collaboratorId,
-      ),
-    ).resolves.toMatchObject({ title: 'Edited by collaborator' });
-
-    await repository.updateAccess(story.id, ownerId, {
-      visibility: 'private',
+async function inviteViewer(storyId: string) {
+  await expect(
+    repository.updateAccess(storyId, ownerId, {
+      visibility: 'invitation',
       editPolicy: 'collaborators',
-      commentPolicy: 'editors',
-    });
-    await expect(repository.find(story.id, collaboratorId)).resolves.toBeUndefined();
-    await repository.updateAccess(story.id, ownerId, {
-      visibility: 'public',
-      editPolicy: 'owner',
-      commentPolicy: 'editors',
-    });
-    await expect(repository.find(story.id)).resolves.toMatchObject({
-      capabilities: { canRead: true, canEdit: false, canManage: false },
-    });
-    await expect(repository.listPublic()).resolves.toMatchObject({
-      items: [
-        expect.objectContaining({
-          id: story.id,
-          capabilities: { canRead: true, canEdit: false, canManage: false, canComment: false },
-        }),
-      ],
-      totalCount: 1,
-    });
-  });
-
-  it('allows unlisted URL reads without adding ungranted stories to libraries', async () => {
-    const story = persistedStory();
-    await repository.save(story, ownerId);
-    await repository.updateAccess(story.id, ownerId, {
-      visibility: 'unlisted',
-      editPolicy: 'authenticated',
       commentPolicy: 'readers',
-    });
+    }),
+  ).resolves.toBe(true);
+  await expect(
+    repository.setCollaborator(storyId, ownerId, `${collaboratorId}@example.test`, 'viewer'),
+  ).resolves.toBe(true);
+  await expect(repository.find(storyId, collaboratorId)).resolves.toMatchObject({
+    capabilities: { canRead: true, canEdit: false, canManage: false, canComment: true },
+  });
+  await expect(
+    repository.mutate(storyId, (current) => current, collaboratorId),
+  ).resolves.toBeUndefined();
+}
 
-    await expect(repository.find(story.id)).resolves.toMatchObject({
-      access: { visibility: 'unlisted' },
-      capabilities: { canRead: true, canEdit: false, canManage: false },
-    });
-    await expect(repository.find(story.id, collaboratorId)).resolves.toMatchObject({
-      capabilities: { canRead: true, canEdit: true, canManage: false },
-    });
-    await expect(repository.list(collaboratorId)).resolves.toMatchObject({
-      items: [],
-      totalCount: 0,
-    });
-    await expect(repository.listPublic()).resolves.toMatchObject({ items: [], totalCount: 0 });
+async function promoteCollaboratorToEditor(storyId: string) {
+  await repository.setCollaborator(storyId, ownerId, `${collaboratorId}@example.test`, 'editor');
+  await expect(
+    repository.mutate(
+      storyId,
+      (current) => ({ ...current, title: 'Edited by collaborator' }),
+      collaboratorId,
+    ),
+  ).resolves.toMatchObject({ title: 'Edited by collaborator' });
+}
 
-    await repository.setCollaborator(story.id, ownerId, `${collaboratorId}@example.test`, 'viewer');
-    await expect(repository.list(collaboratorId)).resolves.toMatchObject({
-      items: [expect.objectContaining({ id: story.id })],
-      totalCount: 1,
-    });
+async function restrictAccessToPrivate(storyId: string) {
+  await repository.updateAccess(storyId, ownerId, {
+    visibility: 'private',
+    editPolicy: 'collaborators',
+    commentPolicy: 'editors',
+  });
+  await expect(repository.find(storyId, collaboratorId)).resolves.toBeUndefined();
+}
+
+async function makeStoryPublic(storyId: string) {
+  await repository.updateAccess(storyId, ownerId, {
+    visibility: 'public',
+    editPolicy: 'owner',
+    commentPolicy: 'editors',
+  });
+  await expect(repository.find(storyId)).resolves.toMatchObject({
+    capabilities: { canRead: true, canEdit: false, canManage: false },
+  });
+  await expect(repository.listPublic()).resolves.toMatchObject({
+    items: [
+      expect.objectContaining({
+        id: storyId,
+        capabilities: { canRead: true, canEdit: false, canManage: false, canComment: false },
+      }),
+    ],
+    totalCount: 1,
+  });
+}
+
+async function runUnlistedReads() {
+  const story = persistedStory();
+  await repository.save(story, ownerId);
+  await repository.updateAccess(story.id, ownerId, {
+    visibility: 'unlisted',
+    editPolicy: 'authenticated',
+    commentPolicy: 'readers',
   });
 
-  it('stores the story graph in relational tables', async () => {
-    const story = persistedStory();
-    await repository.save(story, ownerId);
+  await expect(repository.find(story.id)).resolves.toMatchObject({
+    access: { visibility: 'unlisted' },
+    capabilities: { canRead: true, canEdit: false, canManage: false },
+  });
+  await expect(repository.find(story.id, collaboratorId)).resolves.toMatchObject({
+    capabilities: { canRead: true, canEdit: true, canManage: false },
+  });
+  await expect(repository.list(collaboratorId)).resolves.toMatchObject({
+    items: [],
+    totalCount: 0,
+  });
+  await expect(repository.listPublic()).resolves.toMatchObject({ items: [], totalCount: 0 });
 
-    const result = await pool.query(
-      `SELECT
+  await repository.setCollaborator(story.id, ownerId, `${collaboratorId}@example.test`, 'viewer');
+  await expect(repository.list(collaboratorId)).resolves.toMatchObject({
+    items: [expect.objectContaining({ id: story.id })],
+    totalCount: 1,
+  });
+}
+
+async function runRelationalGraphPersistence() {
+  const story = persistedStory();
+  await repository.save(story, ownerId);
+
+  const result = await pool.query(
+    `SELECT
          (SELECT count(*)::int FROM interactions WHERE story_id = $1) AS interactions,
          (SELECT count(*)::int FROM locations WHERE story_id = $1) AS locations,
          (SELECT count(*)::int FROM characters WHERE story_id = $1) AS characters,
@@ -835,49 +1008,48 @@ describePostgres('StoriesRepository PostgreSQL integration', () => {
             FROM jsonb_array_elements(condition_groups) AS condition_group(value)
           ) AS group_count
           WHERE story_id = $1) AS conditions`,
-      [story.id],
-    );
+    [story.id],
+  );
 
-    expect(result.rows[0]).toEqual({
-      interactions: 2,
-      locations: 1,
-      characters: 1,
-      interaction_characters: 1,
-      stat_definitions: 5,
-      stat_assignments: 5,
-      interaction_stat_effects: 4,
-      interaction_item_effects: 1,
-      triggers: 2,
-      inputs: 1,
-      conditions: 9,
-    });
+  expect(result.rows[0]).toEqual({
+    interactions: 2,
+    locations: 1,
+    characters: 1,
+    interaction_characters: 1,
+    stat_definitions: 5,
+    stat_assignments: 5,
+    interaction_stat_effects: 4,
+    interaction_item_effects: 1,
+    triggers: 2,
+    inputs: 1,
+    conditions: 9,
   });
+}
 
-  it('round-trips the complete demo catalog without cross-story id collisions', async () => {
-    const now = new Date().toISOString();
-    const demos = createDemoStories(now, (kind) => `postgres-demo-${kind}-${randomUUID()}`);
-    storyIds.push(...demos.map(({ id }) => id));
+async function runDemoCatalogRoundTrip() {
+  const now = new Date().toISOString();
+  const demos = createDemoStories(now, (kind) => `postgres-demo-${kind}-${randomUUID()}`);
+  storyIds.push(...demos.map(({ id }) => id));
 
-    await repository.saveMany(demos, ownerId);
+  await repository.saveMany(demos, ownerId);
 
-    const reloaded = await Promise.all(demos.map(({ id }) => repository.find(id, ownerId)));
-    expect(reloaded.map((story) => story?.title)).toEqual(demos.map(({ title }) => title));
-    expect(reloaded[2]?.stats).toHaveLength(3);
-    expect(reloaded[3]?.characters?.[0].items).toHaveLength(2);
-    expect(
-      reloaded[4]?.characters?.[0].items?.some((item) => item.relationshipType === 'equipped'),
-    ).toBe(true);
-    expect(reloaded[4]?.itemDefinitions?.some((definition) => definition.stats?.length === 2)).toBe(
-      true,
-    );
-  });
-});
+  const reloaded = await Promise.all(demos.map(({ id }) => repository.find(id, ownerId)));
+  expect(reloaded.map((story) => story?.title)).toEqual(demos.map(({ title }) => title));
+  expect(reloaded[2]?.stats).toHaveLength(3);
+  expect(reloaded[3]?.characters?.[0].items).toHaveLength(2);
+  expect(
+    reloaded[4]?.characters?.[0].items?.some((item) => item.relationshipType === 'equipped'),
+  ).toBe(true);
+  expect(reloaded[4]?.itemDefinitions?.some((definition) => definition.stats?.length === 2)).toBe(
+    true,
+  );
+}
 
-async function waitForPostgres(pool: Pool) {
+async function waitForPostgres(postgresPool: Pool) {
   let lastError: unknown;
   for (let attempt = 0; attempt < 30; attempt += 1) {
     try {
-      await pool.query('SELECT 1');
+      await postgresPool.query('SELECT 1');
       return;
     } catch (error) {
       lastError = error;
