@@ -55,9 +55,7 @@ export function StorySettingsDialog({
               <StorySettingsIcon />
             </span>
             <div>
-              <span className="product-eyebrow">{t('storySettings.eyebrow')}</span>
               <h2 id="story-settings-title">{t('storySettings.title')}</h2>
-              <p>{t('storySettings.description')}</p>
             </div>
             <button
               className="product-ghost compact story-settings-close"

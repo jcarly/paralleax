@@ -5,7 +5,6 @@ import {
   ForbiddenException,
   Get,
   Header,
-  Headers,
   HttpCode,
   Param,
   ParseUUIDPipe,
@@ -65,6 +64,9 @@ import { readBinaryRequestBody } from '../operations/request-body';
 
 export const STORY_MUTATION_RATE_LIMIT = 60;
 export const STORY_READ_RATE_LIMIT = 100;
+
+type CharacterStatRouteParams = { storyId: string; characterId: string; statId: string };
+type TriggerRouteParams = { storyId: string; interactionId: string; triggerId: string };
 
 @Throttle({ default: { limit: STORY_MUTATION_RATE_LIMIT, ttl: 60_000 } })
 @Controller('stories')
@@ -137,12 +139,14 @@ export class StoriesController {
   @Post('imports/qsp/admin')
   async importUnlimitedQsp(
     @Query() input: QspImportQueryDto,
-    @Headers('content-type') contentType: string | undefined,
     @Req() request: Request,
     @CurrentUser() user: RequestUser,
     @Res({ passthrough: true }) response: Response,
   ) {
-    if (user.role !== 'admin') throw new ForbiddenException('Administrator access required');
+    if (user.role !== 'admin') {
+      throw new ForbiddenException('Administrator access required');
+    }
+    const contentType = request.get('content-type');
     if (!contentType?.toLocaleLowerCase().startsWith('application/octet-stream')) {
       throw new UnsupportedMediaTypeException('Expected an application/octet-stream QSP file');
     }
@@ -603,12 +607,11 @@ export class StoriesController {
   }
 
   @Patch(':storyId/characters/:characterId/stats/:statId') updateCharacterStat(
-    @Param('storyId') storyId: string,
-    @Param('characterId') characterId: string,
-    @Param('statId') statId: string,
+    @Param() params: CharacterStatRouteParams,
     @Body() input: UpdateCharacterStatDto,
     @CurrentUser() user: RequestUser,
   ) {
+    const { storyId, characterId, statId } = params;
     return this.stories.updateCharacterStat(storyId, characterId, statId, input, user.id);
   }
 
@@ -649,12 +652,11 @@ export class StoriesController {
   }
 
   @Patch(':storyId/interactions/:interactionId/triggers/:triggerId') updateTrigger(
-    @Param('storyId') storyId: string,
-    @Param('interactionId') interactionId: string,
-    @Param('triggerId') triggerId: string,
+    @Param() params: TriggerRouteParams,
     @Body() input: UpdateTriggerDto,
     @CurrentUser() user: RequestUser,
   ) {
+    const { storyId, interactionId, triggerId } = params;
     return this.stories.updateTrigger(storyId, interactionId, triggerId, input, user.id);
   }
 
@@ -671,7 +673,9 @@ export class StoriesController {
 function responseAbortSignal(response: Response): AbortSignal {
   const controller = new AbortController();
   response.once('close', () => {
-    if (!response.writableEnded) controller.abort();
+    if (!response.writableEnded) {
+      controller.abort();
+    }
   });
   return controller.signal;
 }
