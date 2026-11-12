@@ -27,8 +27,12 @@ workflow, while PostgreSQL has a separate persistence lifecycle.
 - Preserve the Dockerfile builder, build-input watch patterns, API migration
   pre-deploy command, healthchecks, timeouts, runtime, region, private network
   endpoints, and restart policies in IaC. Keep the existing custom web domain.
-- Omit `source` so the tagged GitHub Actions release remains the authority for
-  each service's source and immutable image digest.
+- Explicitly declare the existing `jcarly/paralleax` `main` source during initial
+  migration. The real Railway plan showed that omitting `source` would change
+  `source.repo` and `source.type` to `null`, despite the intended preservation.
+- GitHub Actions remains responsible for deploying immutable GHCR digests on
+  tagged releases. The declared GitHub source is a migration bootstrap value,
+  not a permanent instruction to switch a released service back to GitHub.
 - Declare each existing application variable with `preserve()` so Railway keeps
   its current value, including secrets and references, without exposing values in
   the repository. Update the preserved names whenever a service variable is
@@ -56,3 +60,9 @@ services while leaving the independently managed database and volume untouched.
   the list before applying a later plan.
 - Railway's native GitHub auto-deploy triggers remain a separate live setting
   and must stay disabled so pushes cannot replace a tagged image release.
+- After the first tagged release changes the service sources to GHCR image
+  digests, the IaC GitHub bootstrap declarations become stale. Future
+  `railway config plan` runs may propose reverting the source to GitHub.
+  Never apply such a plan: first reconcile source ownership and the immutable
+  digests in IaC or the release workflow. There is no automatic "preserve
+  current source" guarantee for omitted sources in the observed CLI plan.
