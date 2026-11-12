@@ -2,6 +2,7 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { sentryVitePlugin } from '@sentry/vite-plugin';
 import { fileURLToPath } from 'node:url';
+import { sentrySourceMapUploadConfig } from './src/observability/sentry-build-config.ts';
 
 const sentrySourceMapUpload = sentrySourceMapUploadConfig(process.env);
 
@@ -58,26 +59,3 @@ export default defineConfig({
     },
   },
 });
-
-function sentrySourceMapUploadConfig(environment: NodeJS.ProcessEnv) {
-  const authToken = environment.SENTRY_AUTH_TOKEN?.trim();
-  const org = environment.SENTRY_ORG?.trim();
-  const project = environment.SENTRY_PROJECT?.trim();
-  const configured = [authToken, org, project].filter(Boolean).length;
-  if (configured > 0 && configured < 3) {
-    throw new Error(
-      'SENTRY_AUTH_TOKEN, SENTRY_ORG, and SENTRY_PROJECT must be configured together',
-    );
-  }
-  if (!authToken || !org || !project) return undefined;
-  const release = environment.VITE_SENTRY_RELEASE?.trim();
-  return {
-    authToken,
-    org,
-    project,
-    ...(environment.SENTRY_URL?.trim() ? { url: environment.SENTRY_URL.trim() } : {}),
-    ...(release ? { release: { name: release } } : {}),
-    telemetry: false,
-    sourcemaps: { filesToDeleteAfterUpload: ['**/*.map'] },
-  };
-}
