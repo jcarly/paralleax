@@ -559,4 +559,4 @@ jobs:
           deploy_and_wait "$RAILWAY_WEB_SERVICE" "$WEB_IMAGE"
 
       - name: Run deployment smoke check
-        run: npm run smoke:deployment -- https://alpha.example.com
+        run: npm run smoke:deployment -- https://paralleax.app
