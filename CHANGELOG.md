@@ -15,6 +15,15 @@
   GHCR and deploys their immutable digests in migration-first order before the
   deployment smoke check.
 
+- Aligned production Docker builds with the Node 24 toolchain and split them by
+  API/web target. Railway source-build watch patterns now include shared and
+  Docker inputs, while Sentry upload credentials are mounted only as a web
+  BuildKit secret. Replaced the service Config as Code files with a named IaC
+  partial for API and web; it preserves existing app variable values and the
+  web domain, while Postgres and its volume remain unmanaged. Disabling live
+  branch auto-deploy, clearing Config File Path settings, and applying a reviewed
+  Railway plan are still required before the live services use this configuration.
+
 - Replaced named interview notes and a project-specific import example with an
   anonymized product-discovery synthesis and source-neutral QSP import lessons.
   Identifiable research records remain outside this public repository.

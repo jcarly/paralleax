@@ -2,50 +2,156 @@ import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
-import { fileURLToPath } from 'node:url';
+import { createRailwayContext } from 'railway/iac';
 
 const readRepositoryFile = (path) => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 
-test('the Dockerfile exposes a Railway-selectable runtime while defaulting to web', async () => {
+test('Dockerfile targets share the common build while compiling only their own app', async () => {
   const dockerfile = await readRepositoryFile('Dockerfile');
 
   assert.match(dockerfile, /^ARG RUNTIME_TARGET=web$/m);
   assert.match(dockerfile, /^FROM \$\{RUNTIME_TARGET\} AS runtime$/m);
-  assert.match(dockerfile, /^FROM node:26-alpine AS api$/m);
+  assert.match(dockerfile, /^FROM node:24-alpine AS build$/m);
+  assert.match(dockerfile, /^FROM build AS shared-build$/m);
+  assert.match(dockerfile, /^RUN npm run build --workspace=@paralleax\/shared$/m);
+  assert.match(dockerfile, /^FROM shared-build AS api-build$/m);
+  assert.match(dockerfile, /^RUN npm run build --workspace=@paralleax\/api$/m);
+  assert.match(dockerfile, /^FROM shared-build AS web-build$/m);
+  assert.match(dockerfile, /^RUN --mount=type=secret,id=sentry_auth_token,required=false \\/m);
+  assert.match(
+    dockerfile,
+    /SENTRY_AUTH_TOKEN="\$\(cat \/run\/secrets\/sentry_auth_token\)" npm run build --workspace=@paralleax\/web/,
+  );
+  assert.match(dockerfile, /^COPY --from=api-build \/workspace\/apps\/api\/dist apps\/api\/dist$/m);
+  assert.match(
+    dockerfile,
+    /^COPY --from=web-build \/workspace\/apps\/web\/dist \/usr\/share\/nginx\/html$/m,
+  );
+  assert.match(dockerfile, /^FROM node:24-alpine AS api$/m);
   assert.match(dockerfile, /^FROM nginx:alpine AS web$/m);
+  assert.doesNotMatch(dockerfile, /^ARG SENTRY_AUTH_TOKEN=/m);
 });
 
-test('Railway API deployment migrates first and probes process health', async () => {
-  const configuration = JSON.parse(await readRepositoryFile('deploy/railway.api.json'));
+test('Railway IaC partial owns the app services without pinning their release sources', async () => {
+  const { default: defineProject, partial } = await import('../.railway/railway.ts');
+  const configuration = await defineProject(createRailwayContext({ environment: 'production' }));
+  const services = configuration.resources;
+  const api = services.find(({ name }) => name === '@paralleax/api');
+  const web = services.find(({ name }) => name === '@paralleax/web');
+
+  assert.equal(partial, 'paralleax-apps');
+  assert.deepEqual(
+    services.map(({ name }) => name),
+    ['@paralleax/api', '@paralleax/web'],
+  );
+  assert.ok(api);
+  assert.ok(web);
+  assert.equal(api.source, undefined);
+  assert.equal(web.source, undefined);
+  assert.equal(api.configFile, undefined);
+  assert.equal(web.configFile, undefined);
+  assert.deepEqual(Object.keys(api.variables).sort(), [
+    'API_HOST',
+    'API_PORT',
+    'BREVO_API_KEY',
+    'CORS_ORIGIN',
+    'DATABASE_URL',
+    'EMAIL_FROM',
+    'EMAIL_REPLY_TO',
+    'NODE_ENV',
+    'NO_PROXY',
+    'POSTGRES_DB',
+    'POSTGRES_PASSWORD',
+    'POSTGRES_SSL',
+    'POSTGRES_USER',
+    'REGISTRATION_MODE',
+    'RUNTIME_TARGET',
+    'SENTRY_DSN',
+    'WEB_PORT',
+  ]);
+  assert.deepEqual(Object.keys(web.variables).sort(), [
+    'API_HOST',
+    'API_PORT',
+    'RUNTIME_TARGET',
+    'VITE_SENTRY_DSN',
+  ]);
+  assert.ok(Object.values(api.variables).every(({ type }) => type === 'preserve'));
+  assert.ok(Object.values(web.variables).every(({ type }) => type === 'preserve'));
+});
+
+test('Railway API IaC uses Docker, watches its build inputs, and migrates before healthcheck', async () => {
+  const { default: defineProject } = await import('../.railway/railway.ts');
+  const { resources } = await defineProject(createRailwayContext({ environment: 'production' }));
+  const configuration = resources.find(({ name }) => name === '@paralleax/api');
   const apiEntrypoint = await readRepositoryFile('apps/api/src/main.ts');
 
+  assert.ok(configuration);
   assert.equal(configuration.build.builder, 'DOCKERFILE');
   assert.equal(configuration.build.dockerfilePath, 'Dockerfile');
-  assert.equal(configuration.deploy.preDeployCommand, 'node apps/api/dist/main.js --migrate');
+  assert.equal(configuration.build.buildEnvironment, 'V3');
+  assert.deepEqual(configuration.build.watchPatterns, [
+    '/Dockerfile',
+    '/.dockerignore',
+    '/package.json',
+    '/package-lock.json',
+    '/apps/api/**',
+    '/apps/*/package.json',
+    '/packages/shared/**',
+    '/packages/*/package.json',
+    '/scripts/smoke-qsp-worker.mjs',
+    '/scripts/smoke-choicescript-worker.mjs',
+  ]);
+  assert.deepEqual(configuration.deploy.preDeployCommand, ['node apps/api/dist/main.js --migrate']);
+  assert.equal(configuration.networking.privateNetworkEndpoint, 'paralleaxapi');
   assert.equal(configuration.deploy.healthcheckPath, '/api/health');
+  assert.equal(configuration.deploy.healthcheckTimeout, 300);
+  assert.deepEqual(configuration.deploy.multiRegionConfig, { sfo: { numReplicas: 1 } });
+  assert.equal(configuration.deploy.runtime, 'V2');
+  assert.equal(configuration.deploy.useLegacyStacker, false);
+  assert.equal(configuration.deploy.ipv6EgressEnabled, false);
+  assert.equal(configuration.deploy.restartPolicyType, 'ON_FAILURE');
+  assert.equal(configuration.deploy.restartPolicyMaxRetries, 10);
   assert.match(apiEntrypoint, /await app\.listen\(config\.port\);/);
   assert.doesNotMatch(apiEntrypoint, /await app\.listen\(config\.port,\s*['"]::['"]\);/);
 });
 
-test('Railway web deployment probes the public reverse proxy', async () => {
-  const configuration = JSON.parse(await readRepositoryFile('deploy/railway.web.json'));
+test('Railway web IaC uses Docker and preserves its release, region, and networking settings', async () => {
+  const { default: defineProject } = await import('../.railway/railway.ts');
+  const { resources } = await defineProject(createRailwayContext({ environment: 'production' }));
+  const configuration = resources.find(({ name }) => name === '@paralleax/web');
+
+  assert.ok(configuration);
+  assert.equal(configuration.build.builder, 'DOCKERFILE');
+  assert.equal(configuration.build.dockerfilePath, 'Dockerfile');
+  assert.equal(configuration.build.buildEnvironment, 'V3');
+  assert.deepEqual(configuration.build.watchPatterns, [
+    '/Dockerfile',
+    '/.dockerignore',
+    '/package.json',
+    '/package-lock.json',
+    '/apps/web/**',
+    '/apps/*/package.json',
+    '/packages/shared/**',
+    '/packages/*/package.json',
+    '/scripts/check-web-bundle.mjs',
+    '/deploy/nginx.conf.template',
+  ]);
+  assert.equal(configuration.deploy.healthcheckPath, '/healthz');
+  assert.equal(configuration.deploy.healthcheckTimeout, 300);
+  assert.equal(configuration.networking.privateNetworkEndpoint, 'paralleaxweb');
+  assert.deepEqual(configuration.networking.customDomains, { 'paralleax.app': { port: 8080 } });
+  assert.deepEqual(configuration.deploy.multiRegionConfig, { sfo: { numReplicas: 1 } });
+  assert.equal(configuration.deploy.runtime, 'V2');
+  assert.equal(configuration.deploy.useLegacyStacker, false);
+  assert.equal(configuration.deploy.ipv6EgressEnabled, false);
+  assert.equal(configuration.deploy.restartPolicyType, 'ON_FAILURE');
+  assert.equal(configuration.deploy.restartPolicyMaxRetries, 10);
+});
+
+test('the public web reverse proxy and healthcheck share the Railway runtime port', async () => {
   const nginxConfiguration = await readRepositoryFile('deploy/nginx.conf.template');
   const dockerfile = await readRepositoryFile('Dockerfile');
 
-  assert.equal(configuration.build.builder, 'DOCKERFILE');
-  assert.equal(configuration.build.dockerfilePath, 'Dockerfile');
-  assert.equal(configuration.deploy.healthcheckPath, '/healthz');
-  assert.match(
-    nginxConfiguration,
-    /connect-src 'self' \$\{SENTRY_CSP_ORIGIN\} \$\{VITE_FORMBRICKS_APP_URL\}/,
-  );
-  assert.match(dockerfile, /^ARG VITE_SENTRY_DSN=$/m);
-  assert.match(dockerfile, /^ENV VITE_SENTRY_DSN=\$\{VITE_SENTRY_DSN\}$/m);
-  assert.match(
-    dockerfile,
-    /COPY deploy\/sentry-csp\.envsh \/docker-entrypoint\.d\/15-sentry-csp\.envsh/,
-  );
-  assert.match(dockerfile, /chmod \+x \/docker-entrypoint\.d\/15-sentry-csp\.envsh/);
   assert.match(dockerfile, /^ENV NGINX_ENTRYPOINT_LOCAL_RESOLVERS=1$/m);
   assert.match(nginxConfiguration, /^\s*listen \$\{PORT\};$/m);
   assert.match(nginxConfiguration, /^\s*resolver \$\{NGINX_LOCAL_RESOLVERS\} valid=10s;$/m);
@@ -75,6 +181,29 @@ test('Railway web deployment probes the public reverse proxy', async () => {
   assert.match(administratorImportLocation, /^\s*proxy_read_timeout 1h;$/m);
   assert.match(administratorImportLocation, /^\s*proxy_send_timeout 1h;$/m);
   assert.doesNotMatch(nginxConfiguration, /proxy_pass http:\/\/\$\{API_HOST\}/);
+});
+
+test('production Compose and release builds pass Sentry upload credentials only as a web build secret', async () => {
+  const productionCompose = await readRepositoryFile('compose.production.yaml');
+  const workflow = await readRepositoryFile('.github/workflows/ci.yml');
+
+  assert.match(workflow, /^\s+- 'scripts\/check-web-bundle\.mjs'$/m);
+  assert.match(workflow, /^\s+- 'scripts\/smoke-qsp-worker\.mjs'$/m);
+  assert.match(workflow, /^\s+- 'scripts\/smoke-choicescript-worker\.mjs'$/m);
+  assert.match(productionCompose, /^ {6}secrets:\n {8}- sentry_auth_token$/m);
+  assert.match(productionCompose, /^ {2}sentry_auth_token:\n {4}environment: SENTRY_AUTH_TOKEN$/m);
+  assert.doesNotMatch(productionCompose, /^\s+SENTRY_AUTH_TOKEN:/m);
+
+  const apiPublishStart = workflow.indexOf('      - name: Publish API image');
+  const webPublishStart = workflow.indexOf('      - name: Publish web image');
+  const releaseSummaryStart = workflow.indexOf('      - name: Record immutable release references');
+  assert.ok(apiPublishStart >= 0 && webPublishStart > apiPublishStart);
+  assert.ok(releaseSummaryStart > webPublishStart);
+  const apiPublish = workflow.slice(apiPublishStart, webPublishStart);
+  const webPublish = workflow.slice(webPublishStart, releaseSummaryStart);
+  assert.doesNotMatch(apiPublish, /SENTRY_AUTH_TOKEN|sentry_auth_token/);
+  assert.match(webPublish, /--secret id=sentry_auth_token,env=SENTRY_AUTH_TOKEN/);
+  assert.doesNotMatch(webPublish, /--build-arg SENTRY_AUTH_TOKEN/);
 });
 
 test('the optional Formbricks web build and CSP use the same public app URL', async () => {

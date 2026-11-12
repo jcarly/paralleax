@@ -63,10 +63,11 @@ services:
         VITE_SENTRY_DSN: ${VITE_SENTRY_DSN:-}
         VITE_SENTRY_RELEASE: ${VITE_SENTRY_RELEASE:-}
         VITE_SENTRY_TRACES_SAMPLE_RATE: ${VITE_SENTRY_TRACES_SAMPLE_RATE:-}
-        SENTRY_AUTH_TOKEN: ${SENTRY_AUTH_TOKEN:-}
         SENTRY_ORG: ${SENTRY_ORG:-}
         SENTRY_PROJECT: ${SENTRY_PROJECT:-}
         SENTRY_URL: ${SENTRY_URL:-}
+      secrets:
+        - sentry_auth_token
     environment:
       VITE_FORMBRICKS_WORKSPACE_ID: ${VITE_FORMBRICKS_WORKSPACE_ID:-}
       VITE_FORMBRICKS_APP_URL: ${VITE_FORMBRICKS_APP_URL:-}
@@ -83,3 +84,7 @@ services:
     depends_on:
       api:
         condition: service_healthy
+
+secrets:
+  sentry_auth_token:
+    environment: SENTRY_AUTH_TOKEN
