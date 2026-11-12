@@ -2227,14 +2227,6 @@
       "count": 5
     }
   },
-  "apps/web/vite.config.ts": {
-    "complexity": {
-      "count": 1
-    },
-    "curly": {
-      "count": 1
-    }
-  },
   "packages/shared/src/access-control.test.ts": {
     "max-lines-per-function": {
       "count": 1

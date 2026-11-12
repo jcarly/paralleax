@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
+import { fileURLToPath } from 'node:url';
 import { createRailwayContext } from 'railway/iac';
 
 const readRepositoryFile = (path) => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
