@@ -190,10 +190,14 @@ and web healthchecks still pass.
 The app settings are now authored in `.railway/railway.ts` as the named
 `paralleax-apps` partial. It owns only `@paralleax/api` and `@paralleax/web`.
 Postgres and `postgres-volume` remain outside IaC ownership, so a plan for this
-partial must not list either resource. The file omits service sources so GitHub
-Actions continues to select image digests. It declares the existing app
-variable names with `preserve()` so Railway keeps their values, including
-secrets and service references, without exposing them in Git. Add or remove a
+partial must not list either resource. For the initial migration, the file
+explicitly declares the existing `jcarly/paralleax` `main` source for both
+services: the tested CLI plan would otherwise replace each `source.repo` and
+`source.type` with `null`. GitHub Actions still selects immutable image digests
+for tagged releases; this GitHub declaration is a one-time migration bootstrap,
+not a permanent release source. The file declares the existing app variable
+names with `preserve()` so Railway keeps their values, including secrets and
+service references, without exposing them in Git. Add or remove a
 name in that preserve list whenever an app variable is added or retired.
 Existing private network endpoints and the `paralleax.app` web domain are also
 represented in IaC; Railway-generated service domains remain provider-managed.
@@ -219,6 +223,15 @@ To migrate the live app settings:
    deployment, keep the existing release validation gates and do not deploy an
    unvalidated image.
 6. Run `railway config plan` again and confirm there is no remaining drift.
+
+**Source drift after the first tagged release:** the GitHub Actions workflow
+changes both sources to immutable GHCR image digests. The IaC file still declares
+GitHub `main` to preserve the pre-release source during migration. A later
+`railway config plan` may therefore propose replacing an image digest with the
+GitHub repository. Do **not** apply that plan. Before making any further IaC
+changes, reconcile the source-of-truth strategy so the current immutable images
+are retained. A source change requires an explicit release decision, even when
+all other parts of the plan are safe.
 
 Railway's automatic Config as Code converter is not used for these custom file
 paths. The TypeScript config writes the Docker builder and restart policy
