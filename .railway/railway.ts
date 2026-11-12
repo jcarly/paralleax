@@ -1,6 +1,10 @@
-import { defineRailway, preserve, project, service } from 'railway/iac';
+import { defineRailway, github, preserve, project, service } from 'railway/iac';
 
 export const partial = 'paralleax-apps';
+
+// Initial migration only: preserve the services' existing GitHub source.
+// After a tagged GHCR release, do not re-apply this source without reviewing drift.
+const migrationSource = github('jcarly/paralleax', { branch: 'main' });
 
 const apiWatchPatterns = [
   '/Dockerfile',
@@ -57,6 +61,7 @@ const webEnvironment = {
 };
 
 const api = service('@paralleax/api', {
+  source: migrationSource,
   build: {
     builder: 'DOCKERFILE',
     dockerfilePath: 'Dockerfile',
@@ -81,6 +86,7 @@ const api = service('@paralleax/api', {
 });
 
 const web = service('@paralleax/web', {
+  source: migrationSource,
   build: {
     builder: 'DOCKERFILE',
     dockerfilePath: 'Dockerfile',
