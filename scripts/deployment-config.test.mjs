@@ -3,7 +3,7 @@ import { execFileSync } from 'node:child_process';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { createRailwayContext } from 'railway/iac';
+import { createRailwayContext, github } from 'railway/iac';
 
 const readRepositoryFile = (path) => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 
@@ -37,7 +37,7 @@ test('Dockerfile targets share the common build while compiling only their own a
   assert.doesNotMatch(dockerfile, /^ARG SENTRY_AUTH_TOKEN=/m);
 });
 
-test('Railway IaC partial owns the app services without pinning their release sources', async () => {
+test('Railway IaC partial explicitly retains GitHub sources for the initial migration', async () => {
   const { default: defineProject, partial } = await import('../.railway/railway.ts');
   const configuration = await defineProject(createRailwayContext({ environment: 'production' }));
   const services = configuration.resources;
@@ -51,8 +51,9 @@ test('Railway IaC partial owns the app services without pinning their release so
   );
   assert.ok(api);
   assert.ok(web);
-  assert.equal(api.source, undefined);
-  assert.equal(web.source, undefined);
+  const migrationSource = github('jcarly/paralleax', { branch: 'main' });
+  assert.deepEqual(api.source, migrationSource);
+  assert.deepEqual(web.source, migrationSource);
   assert.equal(api.configFile, undefined);
   assert.equal(web.configFile, undefined);
   assert.deepEqual(Object.keys(api.variables).sort(), [
