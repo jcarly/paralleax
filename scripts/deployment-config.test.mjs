@@ -28,6 +28,10 @@ test('Dockerfile targets share the common build while compiling only their own a
     dockerfile,
     /^COPY --from=web-build \/workspace\/apps\/web\/dist \/usr\/share\/nginx\/html$/m,
   );
+  assert.match(
+    dockerfile,
+    /^COPY deploy\/sentry-csp\.envsh \/docker-entrypoint\.d\/15-sentry-csp\.envsh$/m,
+  );
   assert.match(dockerfile, /^FROM node:24-alpine AS api$/m);
   assert.match(dockerfile, /^FROM nginx:alpine AS web$/m);
   assert.doesNotMatch(dockerfile, /^ARG SENTRY_AUTH_TOKEN=/m);
@@ -136,6 +140,7 @@ test('Railway web IaC uses Docker and preserves its release, region, and network
     '/packages/*/package.json',
     '/scripts/check-web-bundle.mjs',
     '/deploy/nginx.conf.template',
+    '/deploy/sentry-csp.envsh',
   ]);
   assert.equal(configuration.deploy.healthcheckPath, '/healthz');
   assert.equal(configuration.deploy.healthcheckTimeout, 300);

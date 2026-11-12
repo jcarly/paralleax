@@ -93,6 +93,7 @@ ARG VITE_FORMBRICKS_APP_URL=
 ARG VITE_SENTRY_DSN=
 
 COPY deploy/nginx.conf.template /etc/nginx/templates/nginx.conf.template
+COPY deploy/sentry-csp.envsh /docker-entrypoint.d/15-sentry-csp.envsh
 COPY --from=web-build /workspace/apps/web/dist /usr/share/nginx/html
 
 ENV API_HOST=api

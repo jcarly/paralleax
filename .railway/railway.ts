@@ -26,6 +26,7 @@ const webWatchPatterns = [
   '/packages/*/package.json',
   '/scripts/check-web-bundle.mjs',
   '/deploy/nginx.conf.template',
+  '/deploy/sentry-csp.envsh',
 ];
 
 const apiEnvironment = {
