@@ -160,7 +160,7 @@ test('an author creates, persists, resumes, and simulates a conditional story', 
   await expect(inspector.getByLabel('Variable effect value')).toHaveValue('1');
   await page.getByTestId(`flow-trigger-${final.id}-${finalTriggerId}`).click();
   await expect(
-    inspector.getByRole('button', { name: /Edit condition:.*Courage.*â‰¥ 1/ }),
+    inspector.getByRole('button', { name: /Edit condition:.*Courage.*≥ 1/ }),
   ).toBeVisible();
 
   await page.getByRole('link', { name: 'Stories', exact: true }).click();
@@ -202,4 +202,3 @@ test('an author creates, persists, resumes, and simulates a conditional story', 
   expect(root.id).not.toBe(middle.id);
   expect(alternative.id).not.toBe(middle.id);
 });
-

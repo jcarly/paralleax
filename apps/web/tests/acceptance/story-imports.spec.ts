@@ -173,16 +173,15 @@ test('imports and plays repository QSP location fixtures through the real stack'
   await expect(page.locator('.story-title-input')).toHaveValue('QSP locations');
   await expect(interactionNode(page, 'start')).toBeVisible();
   await expect(interactionNode(page, 'Enter the room')).toBeVisible();
-  await expect(interactionNode(page, 'room Â· inside')).toBeVisible();
+  await expect(interactionNode(page, 'room · inside')).toBeVisible();
 
   await page.getByRole('link', { name: 'Test from start' }).click();
   await page.getByRole('button', { name: 'start', exact: true }).click();
   await expect(page.getByLabel('Current interaction title')).toHaveValue('start');
   await page.getByRole('button', { name: 'Enter the room' }).click();
   await expect(page.getByLabel('Current interaction title')).toHaveValue('Enter the room');
-  await page.getByRole('button', { name: 'room Â· inside' }).click();
-  await expect(page.getByLabel('Current interaction title')).toHaveValue('room Â· inside');
+  await page.getByRole('button', { name: 'room · inside' }).click();
+  await expect(page.getByLabel('Current interaction title')).toHaveValue('room · inside');
 
   expect(qspResult.story.id).toBeTruthy();
 });
-

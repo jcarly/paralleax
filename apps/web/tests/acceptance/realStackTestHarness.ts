@@ -287,4 +287,3 @@ export async function requestApiJson<T>(
   }
   return (await response.json()) as T;
 }
-

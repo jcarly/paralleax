@@ -313,4 +313,3 @@ test('concurrent structural deletion and Trigger editing cannot leave dangling g
   expect(persistedChild?.triggers).toHaveLength(1);
   expect(persistedChild?.triggers[0].inputInteractionIds).not.toContain(rootResult.interaction.id);
 });
-

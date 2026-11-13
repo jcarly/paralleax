@@ -297,4 +297,3 @@ function positiveInteger(value: string | undefined, fallback: number) {
 function performanceBudget(name: string, fallback: number) {
   return positiveInteger(process.env[name], fallback);
 }
-
