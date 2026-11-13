@@ -58,7 +58,7 @@ export function ItemDefinitionInspector({
         textCommentCounts={textCommentCounts}
         onOpenTextComments={onOpenTextComments}
         onChange={(name) => onChange({ ...itemDefinition, name })}
-        onCommit={(name) => void onPatch(itemDefinition.id, { name })}
+        onCommit={(name) => onPatch(itemDefinition.id, { name })}
       />
       <InspectorCategoryField
         category={itemDefinition.category}

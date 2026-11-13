@@ -93,7 +93,7 @@ export function CharacterInspector({
         textCommentCounts={textCommentCounts}
         onOpenTextComments={onOpenTextComments}
         onChange={(name) => onChange({ name })}
-        onCommit={(name) => void onPatch(character.id, { name })}
+        onCommit={(name) => onPatch(character.id, { name })}
       />
       <InspectorCategoryField
         category={character.category}

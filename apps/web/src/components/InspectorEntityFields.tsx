@@ -38,7 +38,7 @@ export function InspectorImageField({
 type InspectorNameFieldProps = {
   value: string;
   onChange: (name: string) => void;
-  onCommit: (name: string) => void;
+  onCommit: (name: string) => Promise<boolean | void>;
 } & InspectorTextCommentProps;
 
 export function InspectorNameField({

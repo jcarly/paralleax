@@ -82,7 +82,7 @@ function LocationNameSection({
       textCommentCounts={textCommentCounts}
       onOpenTextComments={onOpenTextComments}
       onChange={(name) => onLocalChange({ ...location, name })}
-      onCommit={(name) => void onPatch(location.id, { name })}
+      onCommit={(name) => onPatch(location.id, { name })}
     />
   );
 }
