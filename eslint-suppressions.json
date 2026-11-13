@@ -2545,29 +2545,6 @@
       "count": 1
     }
   },
-  "packages/shared/src/import-export/qsp/subroutines.test.ts": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 36
-    },
-    "@typescript-eslint/no-shadow": {
-      "count": 3
-    },
-    "complexity": {
-      "count": 1
-    },
-    "curly": {
-      "count": 4
-    },
-    "max-depth": {
-      "count": 2
-    },
-    "max-lines-per-function": {
-      "count": 1
-    },
-    "sonarjs/cognitive-complexity": {
-      "count": 1
-    }
-  },
   "packages/shared/src/import-export/story-builders.ts": {
     "curly": {
       "count": 1
