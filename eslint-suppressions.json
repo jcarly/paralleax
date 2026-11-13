@@ -359,44 +359,6 @@
       "count": 1
     }
   },
-  "apps/api/src/stories/stories.e2e.spec.ts": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 14
-    },
-    "@typescript-eslint/no-unnecessary-type-assertion": {
-      "count": 1
-    },
-    "@typescript-eslint/no-unsafe-argument": {
-      "count": 5
-    },
-    "@typescript-eslint/no-unsafe-assignment": {
-      "count": 86
-    },
-    "@typescript-eslint/no-unsafe-call": {
-      "count": 3
-    },
-    "@typescript-eslint/no-unsafe-member-access": {
-      "count": 276
-    },
-    "@typescript-eslint/no-unsafe-return": {
-      "count": 1
-    },
-    "@typescript-eslint/no-unsafe-type-assertion": {
-      "count": 65
-    },
-    "complexity": {
-      "count": 1
-    },
-    "curly": {
-      "count": 8
-    },
-    "max-lines-per-function": {
-      "count": 17
-    },
-    "sonarjs/cognitive-complexity": {
-      "count": 1
-    }
-  },
   "apps/web/src/App.test.tsx": {
     "max-lines-per-function": {
       "count": 1
@@ -1977,12 +1939,6 @@
     "@typescript-eslint/no-non-null-assertion": {
       "count": 8
     },
-    "@typescript-eslint/no-unsafe-type-assertion": {
-      "count": 1
-    },
-    "curly": {
-      "count": 1
-    },
     "max-lines-per-function": {
       "count": 1
     }
@@ -2071,17 +2027,6 @@
     },
     "@typescript-eslint/no-unsafe-member-access": {
       "count": 1
-    }
-  },
-  "apps/web/tests/e2e/editor.graph.spec.ts": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 66
-    },
-    "@typescript-eslint/no-unsafe-type-assertion": {
-      "count": 3
-    },
-    "max-lines-per-function": {
-      "count": 5
     }
   },
   "apps/web/tests/e2e/editor.layout-quality.spec.ts": {
@@ -2424,23 +2369,6 @@
       "count": 2
     }
   },
-  "packages/shared/src/import-export/qsp/expressions.ts": {
-    "complexity": {
-      "count": 6
-    },
-    "curly": {
-      "count": 53
-    },
-    "max-depth": {
-      "count": 1
-    },
-    "max-lines-per-function": {
-      "count": 3
-    },
-    "sonarjs/cognitive-complexity": {
-      "count": 9
-    }
-  },
   "packages/shared/src/import-export/qsp/importer.test.ts": {
     "@typescript-eslint/no-non-null-assertion": {
       "count": 22
@@ -2522,29 +2450,6 @@
       "count": 1
     },
     "max-params": {
-      "count": 1
-    }
-  },
-  "packages/shared/src/import-export/qsp/subroutines.test.ts": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 36
-    },
-    "@typescript-eslint/no-shadow": {
-      "count": 3
-    },
-    "complexity": {
-      "count": 1
-    },
-    "curly": {
-      "count": 4
-    },
-    "max-depth": {
-      "count": 2
-    },
-    "max-lines-per-function": {
-      "count": 1
-    },
-    "sonarjs/cognitive-complexity": {
       "count": 1
     }
   },
