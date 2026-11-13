@@ -18,25 +18,53 @@ import {
 import type { Queryable } from './stories.persistence.types';
 
 export async function replaceStoryGraph(client: Queryable, story: Story) {
-  await client.query('DELETE FROM story_groups WHERE story_id = $1', [story.id]);
-  await client.query('DELETE FROM graph_decorations WHERE story_id = $1', [story.id]);
-  await client.query('DELETE FROM interactions WHERE story_id = $1', [story.id]);
-  await client.query('DELETE FROM characters WHERE story_id = $1', [story.id]);
-  await client.query('DELETE FROM item_definitions WHERE story_id = $1', [story.id]);
-  await client.query('DELETE FROM stat_definitions WHERE story_id = $1', [story.id]);
-  await client.query('DELETE FROM locations WHERE story_id = $1', [story.id]);
-  for (const [locationIndex, location] of (story.locations ?? []).entries()) {
-    await insertLocation(client, story.id, location, locationIndex);
+  await clearStoryGraph(client, story.id);
+  await insertStoryLocations(client, story);
+  await insertStoryStatDefinitions(client, story);
+  await insertStoryItemDefinitions(client, story);
+  await insertStoryCharacters(client, story);
+  await insertAuthoredItems(client, story);
+  await insertStoryDecorations(client, story);
+  await insertStatAssignments(client, story);
+  await insertInteractionGraph(client, story);
+  await insertStoryGroups(client, story);
+}
+
+async function clearStoryGraph(client: Queryable, storyId: string) {
+  await client.query('DELETE FROM story_groups WHERE story_id = $1', [storyId]);
+  await client.query('DELETE FROM graph_decorations WHERE story_id = $1', [storyId]);
+  await client.query('DELETE FROM interactions WHERE story_id = $1', [storyId]);
+  await client.query('DELETE FROM characters WHERE story_id = $1', [storyId]);
+  await client.query('DELETE FROM item_definitions WHERE story_id = $1', [storyId]);
+  await client.query('DELETE FROM stat_definitions WHERE story_id = $1', [storyId]);
+  await client.query('DELETE FROM locations WHERE story_id = $1', [storyId]);
+}
+
+async function insertStoryLocations(client: Queryable, story: Story) {
+  for (const [index, location] of (story.locations ?? []).entries()) {
+    await insertLocation(client, story.id, location, index);
   }
+}
+
+async function insertStoryStatDefinitions(client: Queryable, story: Story) {
   for (const [index, definition] of (story.statDefinitions ?? []).entries()) {
     await insertStatDefinition(client, story.id, definition, index);
   }
+}
+
+async function insertStoryItemDefinitions(client: Queryable, story: Story) {
   for (const [index, definition] of (story.itemDefinitions ?? []).entries()) {
     await insertItemDefinition(client, story.id, definition, index);
   }
-  for (const [characterIndex, character] of (story.characters ?? []).entries()) {
-    await insertCharacter(client, story.id, character, characterIndex);
+}
+
+async function insertStoryCharacters(client: Queryable, story: Story) {
+  for (const [index, character] of (story.characters ?? []).entries()) {
+    await insertCharacter(client, story.id, character, index);
   }
+}
+
+async function insertAuthoredItems(client: Queryable, story: Story) {
   const authoredItems = itemEntries(story);
   for (const entry of authoredItems) {
     await insertItemInstance(client, story.id, entry);
@@ -46,17 +74,33 @@ export async function replaceStoryGraph(client: Queryable, story: Story) {
       await insertItemRelationship(client, story.id, item, sortOrder);
     }
   }
+}
+
+async function insertStoryDecorations(client: Queryable, story: Story) {
   for (const [index, decoration] of (story.graphDecorations ?? []).entries()) {
     await insertGraphDecoration(client, story.id, decoration, index);
   }
-  await insertStatAssignments(client, story);
-  await insertInteractionGraph(client, story);
+}
+
+async function insertStoryGroups(client: Queryable, story: Story) {
   for (const [index, group] of (story.groups ?? []).entries()) {
     await insertGroup(client, story.id, group, index);
   }
 }
 
 async function insertInteractionGraph(client: Queryable, story: Story) {
+  await insertInteractionRows(client, story);
+  await insertInteractionCharacterRows(client, story);
+  await insertInteractionStatEffectRows(client, story);
+  await insertInteractionItemEffectRows(client, story);
+  const triggers = story.interactions.flatMap((interaction) =>
+    interaction.triggers.map((trigger, sortOrder) => ({ interaction, trigger, sortOrder })),
+  );
+  await insertTriggerRows(client, story, triggers);
+  await insertTriggerInputRows(client, story, triggers);
+}
+
+async function insertInteractionRows(client: Queryable, story: Story) {
   await insertJsonRows(
     client,
     `INSERT INTO interactions
@@ -82,6 +126,9 @@ async function insertInteractionGraph(client: Queryable, story: Story) {
       sort_order: sortOrder,
     })),
   );
+}
+
+async function insertInteractionCharacterRows(client: Queryable, story: Story) {
   await insertJsonRows(
     client,
     `INSERT INTO interaction_characters (story_id, interaction_id, character_id, sort_order)
@@ -98,6 +145,9 @@ async function insertInteractionGraph(client: Queryable, story: Story) {
       })),
     ),
   );
+}
+
+async function insertInteractionStatEffectRows(client: Queryable, story: Story) {
   await insertJsonRows(
     client,
     `INSERT INTO interaction_stat_effects
@@ -120,6 +170,9 @@ async function insertInteractionGraph(client: Queryable, story: Story) {
       })),
     ),
   );
+}
+
+async function insertInteractionItemEffectRows(client: Queryable, story: Story) {
   await insertJsonRows(
     client,
     `INSERT INTO interaction_item_effects
@@ -142,9 +195,11 @@ async function insertInteractionGraph(client: Queryable, story: Story) {
       })),
     ),
   );
-  const triggers = story.interactions.flatMap((interaction) =>
-    interaction.triggers.map((trigger, sortOrder) => ({ interaction, trigger, sortOrder })),
-  );
+}
+
+type TriggerInsertRow = { interaction: Interaction; trigger: Trigger; sortOrder: number };
+
+async function insertTriggerRows(client: Queryable, story: Story, triggers: TriggerInsertRow[]) {
   await insertJsonRows(
     client,
     `INSERT INTO triggers
@@ -169,6 +224,13 @@ async function insertInteractionGraph(client: Queryable, story: Story) {
       sort_order: sortOrder,
     })),
   );
+}
+
+async function insertTriggerInputRows(
+  client: Queryable,
+  story: Story,
+  triggers: TriggerInsertRow[],
+) {
   await insertJsonRows(
     client,
     `INSERT INTO trigger_inputs (story_id, trigger_id, input_interaction_id, sort_order)
@@ -188,7 +250,9 @@ async function insertInteractionGraph(client: Queryable, story: Story) {
 }
 
 async function insertJsonRows(client: Queryable, sql: string, rows: object[]) {
-  if (rows.length === 0) return;
+  if (rows.length === 0) {
+    return;
+  }
   await client.query(sql, [JSON.stringify(rows)]);
 }
 
@@ -198,6 +262,22 @@ export async function persistStoryDifference(
   after: Story,
   delta?: StoryChangeDelta,
 ) {
+  await persistStoryFields(client, before, after);
+  await persistGraphPositionDifference(client, before, after);
+  if (delta && isStoryGraphPositionDelta(delta)) {
+    return;
+  }
+
+  await persistEntityDifferences(client, before, after);
+  const statAssignmentsChanged = await persistStatAssignmentDifference(client, before, after);
+  await persistInteractionDifferences(client, before, after, statAssignmentsChanged);
+  if (statAssignmentsChanged) {
+    await insertInteractionStatEffects(client, after);
+  }
+  await persistGroupDifference(client, before, after);
+}
+
+async function persistStoryFields(client: Queryable, before: Story, after: Story) {
   const storyChanges: string[] = [];
   const storyValues: unknown[] = [after.id];
   addChange(storyChanges, storyValues, 'title', before.title, after.title);
@@ -213,16 +293,17 @@ export async function persistStoryDifference(
   if (storyChanges.length > 0) {
     await client.query(`UPDATE stories SET ${storyChanges.join(', ')} WHERE id = $1`, storyValues);
   }
+}
 
-  await persistGraphPositionDifference(client, before, after);
-  if (delta && isStoryGraphPositionDelta(delta)) return;
-
+async function persistEntityDifferences(client: Queryable, before: Story, after: Story) {
   await persistLocationDifference(client, before, after);
   await persistStatDefinitionDifference(client, before, after);
   await persistItemDefinitionDifference(client, before, after);
   await persistCharacterDifference(client, before, after);
   await persistGraphDecorationDifference(client, before, after);
+}
 
+async function persistStatAssignmentDifference(client: Queryable, before: Story, after: Story) {
   const statAssignmentsChanged =
     JSON.stringify(storyStatAssignmentState(before)) !==
     JSON.stringify(storyStatAssignmentState(after));
@@ -231,61 +312,113 @@ export async function persistStoryDifference(
     await client.query('DELETE FROM stat_assignments WHERE story_id = $1', [after.id]);
     await insertStatAssignments(client, after);
   }
+  return statAssignmentsChanged;
+}
 
+async function persistInteractionDifferences(
+  client: Queryable,
+  before: Story,
+  after: Story,
+  statAssignmentsChanged: boolean,
+) {
   const beforeInteractions = new Map(before.interactions.map((item) => [item.id, item]));
   const beforeInteractionIndexes = new Map(before.interactions.map(({ id }, index) => [id, index]));
   const afterInteractions = new Map(after.interactions.map((item) => [item.id, item]));
-  for (const interaction of before.interactions) {
+  await deleteRemovedInteractions(client, before.interactions, after.id, afterInteractions);
+  for (const [index, interaction] of after.interactions.entries()) {
+    await persistInteractionRow({
+      client,
+      afterStoryId: after.id,
+      interaction,
+      index,
+      previous: beforeInteractions.get(interaction.id),
+      previousIndex: beforeInteractionIndexes.get(interaction.id) ?? -1,
+      statAssignmentsChanged,
+    });
+  }
+}
+
+async function deleteRemovedInteractions(
+  client: Queryable,
+  before: Interaction[],
+  afterStoryId: string,
+  afterInteractions: Map<string, Interaction>,
+) {
+  for (const interaction of before) {
     if (!afterInteractions.has(interaction.id)) {
       await client.query('DELETE FROM interactions WHERE id = $1 AND story_id = $2', [
         interaction.id,
-        after.id,
+        afterStoryId,
       ]);
     }
   }
-  for (const [index, interaction] of after.interactions.entries()) {
-    const previous = beforeInteractions.get(interaction.id);
-    if (!previous) {
-      await insertInteraction(client, after.id, interaction, index);
-      await replaceInteractionCharacters(client, after.id, interaction);
-      if (!statAssignmentsChanged) {
-        await replaceInteractionStatEffects(client, after.id, interaction);
-      }
-      await replaceInteractionItemEffects(client, after.id, interaction);
-      for (const [triggerIndex, trigger] of interaction.triggers.entries()) {
-        await insertTrigger(client, after.id, interaction.id, trigger, triggerIndex);
-      }
-      continue;
-    }
-    await updateInteractionDifference(
-      client,
-      previous,
-      interaction,
-      beforeInteractionIndexes.get(interaction.id) ?? -1,
-      index,
-    );
-    if (
-      JSON.stringify(previous.characterIds ?? []) !== JSON.stringify(interaction.characterIds ?? [])
-    ) {
-      await replaceInteractionCharacters(client, after.id, interaction);
-    }
-    if (
-      !statAssignmentsChanged &&
-      JSON.stringify(previous.statEffects ?? []) !== JSON.stringify(interaction.statEffects ?? [])
-    ) {
-      await replaceInteractionStatEffects(client, after.id, interaction);
-    }
-    if (
-      JSON.stringify(previous.itemEffects ?? []) !== JSON.stringify(interaction.itemEffects ?? [])
-    ) {
-      await replaceInteractionItemEffects(client, after.id, interaction);
-    }
-    await persistTriggerDifference(client, after.id, previous, interaction);
+}
+
+type PersistInteractionRowInput = {
+  client: Queryable;
+  afterStoryId: string;
+  interaction: Interaction;
+  index: number;
+  previous: Interaction | undefined;
+  previousIndex: number;
+  statAssignmentsChanged: boolean;
+};
+
+async function persistInteractionRow(input: PersistInteractionRowInput) {
+  if (!input.previous) {
+    await insertNewInteraction(input);
+    return;
   }
-  if (statAssignmentsChanged) {
-    await insertInteractionStatEffects(client, after);
+  const previous = input.previous;
+  await updateInteractionDifference({
+    client: input.client,
+    before: previous,
+    after: input.interaction,
+    beforeSortOrder: input.previousIndex,
+    sortOrder: input.index,
+  });
+  await persistInteractionRelations({ ...input, previous });
+  await persistTriggerDifference(input.client, input.afterStoryId, previous, input.interaction);
+}
+
+async function insertNewInteraction(input: PersistInteractionRowInput) {
+  const { client, afterStoryId, interaction, index, statAssignmentsChanged } = input;
+  await insertInteraction(client, afterStoryId, interaction, index);
+  await replaceInteractionCharacters(client, afterStoryId, interaction);
+  if (!statAssignmentsChanged) {
+    await replaceInteractionStatEffects(client, afterStoryId, interaction);
   }
-  await persistGroupDifference(client, before, after);
+  await replaceInteractionItemEffects(client, afterStoryId, interaction);
+  for (const [triggerIndex, trigger] of interaction.triggers.entries()) {
+    await insertTrigger(client, afterStoryId, interaction.id, trigger, triggerIndex);
+  }
+}
+
+async function persistInteractionRelations(
+  input: Omit<PersistInteractionRowInput, 'previous'> & { previous: Interaction },
+) {
+  const { client, afterStoryId, previous, interaction, statAssignmentsChanged } = input;
+  if (interactionCharactersChanged(previous, interaction)) {
+    await replaceInteractionCharacters(client, afterStoryId, interaction);
+  }
+  if (!statAssignmentsChanged && interactionStatEffectsChanged(previous, interaction)) {
+    await replaceInteractionStatEffects(client, afterStoryId, interaction);
+  }
+  if (interactionItemEffectsChanged(previous, interaction)) {
+    await replaceInteractionItemEffects(client, afterStoryId, interaction);
+  }
+}
+
+function interactionCharactersChanged(previous: Interaction, current: Interaction) {
+  return JSON.stringify(previous.characterIds ?? []) !== JSON.stringify(current.characterIds ?? []);
+}
+
+function interactionStatEffectsChanged(previous: Interaction, current: Interaction) {
+  return JSON.stringify(previous.statEffects ?? []) !== JSON.stringify(current.statEffects ?? []);
+}
+
+function interactionItemEffectsChanged(previous: Interaction, current: Interaction) {
+  return JSON.stringify(previous.itemEffects ?? []) !== JSON.stringify(current.itemEffects ?? []);
 }
 
 async function insertGroup(client: Queryable, storyId: string, group: Group, sortOrder: number) {
@@ -321,40 +454,77 @@ async function replaceGroupInteractions(client: Queryable, storyId: string, grou
 async function persistGroupDifference(client: Queryable, before: Story, after: Story) {
   const beforeGroups = new Map((before.groups ?? []).map((group) => [group.id, group]));
   const afterGroups = new Map((after.groups ?? []).map((group) => [group.id, group]));
+  await deleteRemovedGroups(client, before.groups ?? [], after.id, afterGroups);
+  for (const [sortOrder, group] of (after.groups ?? []).entries()) {
+    await persistGroupRow({
+      client,
+      storyId: after.id,
+      group,
+      sortOrder,
+      previous: beforeGroups.get(group.id),
+      beforeGroups: before.groups ?? [],
+    });
+  }
+}
 
-  for (const group of before.groups ?? []) {
+async function deleteRemovedGroups(
+  client: Queryable,
+  beforeGroups: Group[],
+  storyId: string,
+  afterGroups: Map<string, Group>,
+) {
+  for (const group of beforeGroups) {
     if (!afterGroups.has(group.id)) {
       await client.query('DELETE FROM story_groups WHERE id = $1 AND story_id = $2', [
         group.id,
-        after.id,
+        storyId,
       ]);
-    }
-  }
-
-  for (const [sortOrder, group] of (after.groups ?? []).entries()) {
-    const previous = beforeGroups.get(group.id);
-    if (!previous) {
-      await insertGroup(client, after.id, group, sortOrder);
-      continue;
-    }
-
-    if (
-      previous.title !== group.title ||
-      previous.parentGroupId !== group.parentGroupId ||
-      (before.groups ?? []).indexOf(previous) !== sortOrder
-    ) {
-      await client.query(
-        'UPDATE story_groups SET title = $1, sort_order = $2, parent_group_id = $5 WHERE id = $3 AND story_id = $4',
-        [group.title, sortOrder, group.id, after.id, group.parentGroupId ?? null],
-      );
-    }
-    if (JSON.stringify(previous.interactionIds) !== JSON.stringify(group.interactionIds)) {
-      await replaceGroupInteractions(client, after.id, group);
     }
   }
 }
 
+async function persistGroupRow({
+  client,
+  storyId,
+  group,
+  sortOrder,
+  previous,
+  beforeGroups,
+}: {
+  client: Queryable;
+  storyId: string;
+  group: Group;
+  sortOrder: number;
+  previous: Group | undefined;
+  beforeGroups: Group[];
+}) {
+  if (!previous) {
+    await insertGroup(client, storyId, group, sortOrder);
+    return;
+  }
+
+  if (
+    previous.title !== group.title ||
+    previous.parentGroupId !== group.parentGroupId ||
+    beforeGroups.indexOf(previous) !== sortOrder
+  ) {
+    await client.query(
+      'UPDATE story_groups SET title = $1, sort_order = $2, parent_group_id = $5 WHERE id = $3 AND story_id = $4',
+      [group.title, sortOrder, group.id, storyId, group.parentGroupId ?? null],
+    );
+  }
+  if (JSON.stringify(previous.interactionIds) !== JSON.stringify(group.interactionIds)) {
+    await replaceGroupInteractions(client, storyId, group);
+  }
+}
+
 async function persistGraphPositionDifference(client: Queryable, before: Story, after: Story) {
+  const { interactionRows, triggerRows } = collectGraphPositionRows(before, after);
+  await updateInteractionPositions(client, after.id, interactionRows);
+  await updateTriggerPositions(client, after.id, triggerRows);
+}
+
+function collectGraphPositionRows(before: Story, after: Story) {
   const beforeInteractions = new Map(
     before.interactions.map((interaction) => [interaction.id, interaction]),
   );
@@ -363,7 +533,9 @@ async function persistGraphPositionDifference(client: Queryable, before: Story, 
 
   for (const interaction of after.interactions) {
     const previous = beforeInteractions.get(interaction.id);
-    if (!previous) continue;
+    if (!previous) {
+      continue;
+    }
     if (
       previous.position.x !== interaction.position.x ||
       previous.position.y !== interaction.position.y
@@ -374,25 +546,36 @@ async function persistGraphPositionDifference(client: Queryable, before: Story, 
         position_y: interaction.position.y,
       });
     }
+    triggerRows.push(...collectTriggerPositionRows(previous, interaction));
+  }
+  return { interactionRows, triggerRows };
+}
 
-    const beforeTriggers = new Map(previous.triggers.map((trigger) => [trigger.id, trigger]));
-    for (const trigger of interaction.triggers) {
-      const previousTrigger = beforeTriggers.get(trigger.id);
-      if (
-        previousTrigger &&
-        (previousTrigger.position?.x !== trigger.position?.x ||
-          previousTrigger.position?.y !== trigger.position?.y)
-      ) {
-        triggerRows.push({
-          id: trigger.id,
-          position_x: trigger.position?.x ?? null,
-          position_y: trigger.position?.y ?? null,
-        });
-      }
+function collectTriggerPositionRows(previous: Interaction, interaction: Interaction) {
+  const beforeTriggers = new Map(previous.triggers.map((trigger) => [trigger.id, trigger]));
+  const rows: object[] = [];
+  for (const trigger of interaction.triggers) {
+    const previousTrigger = beforeTriggers.get(trigger.id);
+    if (triggerPositionChanged(previousTrigger, trigger)) {
+      rows.push({
+        id: trigger.id,
+        position_x: trigger.position?.x ?? null,
+        position_y: trigger.position?.y ?? null,
+      });
     }
   }
+  return rows;
+}
 
-  if (interactionRows.length > 0) {
+function triggerPositionChanged(previous: Trigger | undefined, current: Trigger) {
+  return (
+    previous !== undefined &&
+    (previous.position?.x !== current.position?.x || previous.position?.y !== current.position?.y)
+  );
+}
+
+async function updateInteractionPositions(client: Queryable, storyId: string, rows: object[]) {
+  if (rows.length > 0) {
     await client.query(
       `UPDATE interactions AS target
        SET position_x = row.position_x, position_y = row.position_y
@@ -400,10 +583,13 @@ async function persistGraphPositionDifference(client: Queryable, before: Story, 
          id text, position_x double precision, position_y double precision
        )
        WHERE target.id = row.id AND target.story_id = $2`,
-      [JSON.stringify(interactionRows), after.id],
+      [JSON.stringify(rows), storyId],
     );
   }
-  if (triggerRows.length > 0) {
+}
+
+async function updateTriggerPositions(client: Queryable, storyId: string, rows: object[]) {
+  if (rows.length > 0) {
     await client.query(
       `UPDATE triggers AS target
        SET position_x = row.position_x, position_y = row.position_y
@@ -411,7 +597,7 @@ async function persistGraphPositionDifference(client: Queryable, before: Story, 
          id text, position_x double precision, position_y double precision
        )
        WHERE target.id = row.id AND target.story_id = $2`,
-      [JSON.stringify(triggerRows), after.id],
+      [JSON.stringify(rows), storyId],
     );
   }
 }
@@ -438,7 +624,37 @@ function storyStatAssignmentState(story: Story) {
 }
 
 async function insertStatAssignments(client: Queryable, story: Story) {
-  const assignments = [
+  const assignments = collectStatAssignmentEntries(story);
+  await insertJsonRows(
+    client,
+    `INSERT INTO stat_assignments
+     (id, story_id, stat_definition_id, owner_type, character_id, location_id,
+      item_definition_id, initial_value, sort_order)
+     SELECT id, story_id, stat_definition_id, owner_type, character_id, location_id,
+            item_definition_id, initial_value, sort_order
+     FROM jsonb_to_recordset($1::jsonb) AS row(
+       id text, story_id text, stat_definition_id text, owner_type text,
+       character_id text, location_id text, item_definition_id text,
+       initial_value jsonb, sort_order integer
+     )`,
+    assignments.map(
+      ({ stat, ownerType, characterId, locationId, itemDefinitionId, sortOrder }) => ({
+        id: stat.id,
+        story_id: story.id,
+        stat_definition_id: stat.statDefinitionId,
+        owner_type: ownerType,
+        character_id: characterId,
+        location_id: locationId,
+        item_definition_id: itemDefinitionId,
+        initial_value: stat.initialValue,
+        sort_order: sortOrder,
+      }),
+    ),
+  );
+}
+
+function collectStatAssignmentEntries(story: Story) {
+  return [
     ...(story.stats ?? []).map((stat, sortOrder) => ({
       stat,
       ownerType: 'story',
@@ -478,33 +694,6 @@ async function insertStatAssignments(client: Queryable, story: Story) {
       })),
     ),
   ];
-
-  await insertJsonRows(
-    client,
-    `INSERT INTO stat_assignments
-     (id, story_id, stat_definition_id, owner_type, character_id, location_id,
-      item_definition_id, initial_value, sort_order)
-     SELECT id, story_id, stat_definition_id, owner_type, character_id, location_id,
-            item_definition_id, initial_value, sort_order
-     FROM jsonb_to_recordset($1::jsonb) AS row(
-       id text, story_id text, stat_definition_id text, owner_type text,
-       character_id text, location_id text, item_definition_id text,
-       initial_value jsonb, sort_order integer
-     )`,
-    assignments.map(
-      ({ stat, ownerType, characterId, locationId, itemDefinitionId, sortOrder }) => ({
-        id: stat.id,
-        story_id: story.id,
-        stat_definition_id: stat.statDefinitionId,
-        owner_type: ownerType,
-        character_id: characterId,
-        location_id: locationId,
-        item_definition_id: itemDefinitionId,
-        initial_value: stat.initialValue,
-        sort_order: sortOrder,
-      }),
-    ),
-  );
 }
 
 async function insertInteractionStatEffects(client: Queryable, story: Story) {
@@ -569,91 +758,162 @@ async function persistGraphDecorationDifference(client: Queryable, before: Story
   const afterDecorations = new Map(
     (after.graphDecorations ?? []).map((decoration) => [decoration.id, decoration]),
   );
+  await deleteRemovedGraphDecorations(
+    client,
+    before.graphDecorations ?? [],
+    after.id,
+    afterDecorations,
+  );
+  for (const [index, decoration] of (after.graphDecorations ?? []).entries()) {
+    await persistGraphDecorationRow({
+      client,
+      storyId: after.id,
+      beforeDecorations: before.graphDecorations ?? [],
+      previous: beforeDecorations.get(decoration.id),
+      decoration,
+      sortOrder: index,
+    });
+  }
+}
 
-  for (const decoration of before.graphDecorations ?? []) {
+async function deleteRemovedGraphDecorations(
+  client: Queryable,
+  beforeDecorations: GraphDecoration[],
+  storyId: string,
+  afterDecorations: Map<string, GraphDecoration>,
+) {
+  for (const decoration of beforeDecorations) {
     if (!afterDecorations.has(decoration.id)) {
       await client.query('DELETE FROM graph_decorations WHERE id = $1 AND story_id = $2', [
         decoration.id,
-        after.id,
+        storyId,
       ]);
     }
   }
+}
 
-  for (const [index, decoration] of (after.graphDecorations ?? []).entries()) {
-    const previous = beforeDecorations.get(decoration.id);
-    if (!previous) {
-      await insertGraphDecoration(client, after.id, decoration, index);
-      continue;
-    }
-
-    const changes: string[] = [];
-    const values: unknown[] = [decoration.id];
-    addChange(changes, values, 'position_x', previous.position.x, decoration.position.x);
-    addChange(changes, values, 'position_y', previous.position.y, decoration.position.y);
-    addChange(changes, values, 'color', previous.color, decoration.color);
-    addChange(
-      changes,
-      values,
-      'width',
-      previous.kind === 'frame' ? previous.width : null,
-      decoration.kind === 'frame' ? decoration.width : null,
-    );
-    addChange(
-      changes,
-      values,
-      'height',
-      previous.kind === 'frame' ? previous.height : null,
-      decoration.kind === 'frame' ? decoration.height : null,
-    );
-    addChange(
-      changes,
-      values,
-      'text_content',
-      previous.kind === 'text' ? previous.text : null,
-      decoration.kind === 'text' ? decoration.text : null,
-    );
-    addChange(
-      changes,
-      values,
-      'font_size',
-      previous.kind === 'text' ? previous.fontSize : null,
-      decoration.kind === 'text' ? decoration.fontSize : null,
-    );
-    addChange(
-      changes,
-      values,
-      'font_family',
-      previous.kind === 'text' ? previous.fontFamily : null,
-      decoration.kind === 'text' ? decoration.fontFamily : null,
-    );
-    addChange(
-      changes,
-      values,
-      'font_weight',
-      previous.kind === 'text' ? previous.fontWeight : null,
-      decoration.kind === 'text' ? decoration.fontWeight : null,
-    );
-    addChange(
-      changes,
-      values,
-      'font_style',
-      previous.kind === 'text' ? previous.fontStyle : null,
-      decoration.kind === 'text' ? decoration.fontStyle : null,
-    );
-    addChange(
-      changes,
-      values,
-      'sort_order',
-      (before.graphDecorations ?? []).findIndex(({ id }) => id === decoration.id),
-      index,
-    );
-    if (changes.length > 0) {
-      await client.query(
-        `UPDATE graph_decorations SET ${changes.join(', ')} WHERE id = $1`,
-        values,
-      );
-    }
+async function persistGraphDecorationRow(input: {
+  client: Queryable;
+  storyId: string;
+  beforeDecorations: GraphDecoration[];
+  previous: GraphDecoration | undefined;
+  decoration: GraphDecoration;
+  sortOrder: number;
+}) {
+  const { client, storyId, beforeDecorations, previous, decoration, sortOrder } = input;
+  if (!previous) {
+    await insertGraphDecoration(client, storyId, decoration, sortOrder);
+    return;
   }
+  const { changes, values } = graphDecorationChanges(
+    previous,
+    decoration,
+    beforeDecorations.findIndex(({ id }) => id === decoration.id),
+    sortOrder,
+  );
+  if (changes.length > 0) {
+    await client.query(`UPDATE graph_decorations SET ${changes.join(', ')} WHERE id = $1`, values);
+  }
+}
+
+function graphDecorationChanges(
+  previous: GraphDecoration,
+  decoration: GraphDecoration,
+  previousSortOrder: number,
+  sortOrder: number,
+) {
+  const changes: string[] = [];
+  const values: unknown[] = [decoration.id];
+  addChange(changes, values, 'position_x', previous.position.x, decoration.position.x);
+  addChange(changes, values, 'position_y', previous.position.y, decoration.position.y);
+  addChange(changes, values, 'color', previous.color, decoration.color);
+  addGraphDecorationDimensions(changes, values, previous, decoration);
+  addGraphDecorationText(changes, values, previous, decoration);
+  addChange(changes, values, 'sort_order', previousSortOrder, sortOrder);
+  return { changes, values };
+}
+
+function addGraphDecorationDimensions(
+  changes: string[],
+  values: unknown[],
+  previous: GraphDecoration,
+  decoration: GraphDecoration,
+) {
+  addChange(
+    changes,
+    values,
+    'width',
+    previous.kind === 'frame' ? previous.width : null,
+    decoration.kind === 'frame' ? decoration.width : null,
+  );
+  addChange(
+    changes,
+    values,
+    'height',
+    previous.kind === 'frame' ? previous.height : null,
+    decoration.kind === 'frame' ? decoration.height : null,
+  );
+}
+
+function addGraphDecorationText(
+  changes: string[],
+  values: unknown[],
+  previous: GraphDecoration,
+  decoration: GraphDecoration,
+) {
+  addGraphDecorationTextContent(changes, values, previous, decoration);
+  addGraphDecorationTextStyle(changes, values, previous, decoration);
+}
+
+function addGraphDecorationTextContent(
+  changes: string[],
+  values: unknown[],
+  previous: GraphDecoration,
+  decoration: GraphDecoration,
+) {
+  addChange(
+    changes,
+    values,
+    'text_content',
+    previous.kind === 'text' ? previous.text : null,
+    decoration.kind === 'text' ? decoration.text : null,
+  );
+  addChange(
+    changes,
+    values,
+    'font_size',
+    previous.kind === 'text' ? previous.fontSize : null,
+    decoration.kind === 'text' ? decoration.fontSize : null,
+  );
+}
+
+function addGraphDecorationTextStyle(
+  changes: string[],
+  values: unknown[],
+  previous: GraphDecoration,
+  decoration: GraphDecoration,
+) {
+  addChange(
+    changes,
+    values,
+    'font_family',
+    previous.kind === 'text' ? previous.fontFamily : null,
+    decoration.kind === 'text' ? decoration.fontFamily : null,
+  );
+  addChange(
+    changes,
+    values,
+    'font_weight',
+    previous.kind === 'text' ? previous.fontWeight : null,
+    decoration.kind === 'text' ? decoration.fontWeight : null,
+  );
+  addChange(
+    changes,
+    values,
+    'font_style',
+    previous.kind === 'text' ? previous.fontStyle : null,
+    decoration.kind === 'text' ? decoration.fontStyle : null,
+  );
 }
 
 async function replaceInteractionCharacters(
@@ -754,11 +1014,13 @@ async function insertInteraction(
 }
 
 async function insertTrigger(
-  client: Queryable,
-  storyId: string,
-  outputInteractionId: string,
-  trigger: Trigger,
-  sortOrder: number,
+  ...[client, storyId, outputInteractionId, trigger, sortOrder]: [
+    client: Queryable,
+    storyId: string,
+    outputInteractionId: string,
+    trigger: Trigger,
+    sortOrder: number,
+  ]
 ) {
   await client.query(
     `INSERT INTO triggers
@@ -791,13 +1053,19 @@ async function replaceTriggerInputs(client: Queryable, storyId: string, trigger:
   }
 }
 
-async function updateInteractionDifference(
-  client: Queryable,
-  before: Interaction,
-  after: Interaction,
-  beforeSortOrder: number,
-  sortOrder: number,
-) {
+async function updateInteractionDifference({
+  client,
+  before,
+  after,
+  beforeSortOrder,
+  sortOrder,
+}: {
+  client: Queryable;
+  before: Interaction;
+  after: Interaction;
+  beforeSortOrder: number;
+  sortOrder: number;
+}) {
   const changes: string[] = [];
   const values: unknown[] = [after.id];
   addChange(changes, values, 'title', before.title, after.title);
@@ -844,45 +1112,66 @@ async function insertLocation(
   );
 }
 
-async function persistLocationDifference(client: Queryable, before: Story, after: Story) {
-  const beforeLocations = new Map(
-    (before.locations ?? []).map((location) => [location.id, location]),
-  );
-  const afterLocations = new Map(
-    (after.locations ?? []).map((location) => [location.id, location]),
-  );
+type PersistEntityRowsInput<T extends { id: string }> = {
+  client: Queryable;
+  storyId: string;
+  table: string;
+  before: T[];
+  after: T[];
+  insert: (item: T, sortOrder: number) => Promise<void>;
+  update: (previous: T, current: T, previousSortOrder: number, sortOrder: number) => Promise<void>;
+};
 
-  for (const location of before.locations ?? []) {
-    if (!afterLocations.has(location.id)) {
-      await client.query('DELETE FROM locations WHERE id = $1 AND story_id = $2', [
-        location.id,
-        after.id,
+async function persistEntityRows<T extends { id: string }>(input: PersistEntityRowsInput<T>) {
+  const beforeById = new Map(input.before.map((item) => [item.id, item]));
+  const afterIds = new Set(input.after.map(({ id }) => id));
+  const beforeIndexes = new Map(input.before.map(({ id }, index) => [id, index]));
+  for (const item of input.before) {
+    if (!afterIds.has(item.id)) {
+      await input.client.query(`DELETE FROM ${input.table} WHERE id = $1 AND story_id = $2`, [
+        item.id,
+        input.storyId,
       ]);
     }
   }
-  for (const [index, location] of (after.locations ?? []).entries()) {
-    const previous = beforeLocations.get(location.id);
+  for (const [index, item] of input.after.entries()) {
+    const previous = beforeById.get(item.id);
     if (!previous) {
-      await insertLocation(client, after.id, location, index);
-      continue;
-    }
-    const changes: string[] = [];
-    const values: unknown[] = [location.id];
-    addChange(changes, values, 'name', previous.name, location.name);
-    addChange(changes, values, 'description', previous.description, location.description);
-    addChange(changes, values, 'category', previous.category ?? '', location.category ?? '');
-    addChange(changes, values, 'image_url', previous.imageUrl ?? '', location.imageUrl ?? '');
-    addChange(
-      changes,
-      values,
-      'sort_order',
-      (before.locations ?? []).findIndex(({ id }) => id === location.id),
-      index,
-    );
-    if (changes.length > 0) {
-      await client.query(`UPDATE locations SET ${changes.join(', ')} WHERE id = $1`, values);
+      await input.insert(item, index);
+    } else {
+      await input.update(previous, item, beforeIndexes.get(item.id) ?? -1, index);
     }
   }
+}
+
+async function persistLocationDifference(client: Queryable, before: Story, after: Story) {
+  await persistEntityRows({
+    client,
+    storyId: after.id,
+    table: 'locations',
+    before: before.locations ?? [],
+    after: after.locations ?? [],
+    insert: (location, sortOrder) => insertLocation(client, after.id, location, sortOrder),
+    update: (previous, current, previousSortOrder, sortOrder) =>
+      updateLocationDifference({ client, previous, current, previousSortOrder, sortOrder }),
+  });
+}
+
+async function updateLocationDifference(input: {
+  client: Queryable;
+  previous: Location;
+  current: Location;
+  previousSortOrder: number;
+  sortOrder: number;
+}) {
+  const { client, previous, current, previousSortOrder, sortOrder } = input;
+  await updateEntityFields(client, 'locations', current.id, [
+    { column: 'name', previous: previous.name, current: current.name },
+    { column: 'description', previous: previous.description, current: current.description },
+    { column: 'category', previous: previous.category ?? '', current: current.category ?? '' },
+    { column: 'image_url', previous: previous.imageUrl ?? '', current: current.imageUrl ?? '' },
+    { column: 'sort_order', previous: previousSortOrder, current: sortOrder },
+  ]);
 }
 
 async function insertCharacter(
@@ -906,6 +1195,31 @@ async function insertCharacter(
       sortOrder,
     ],
   );
+}
+
+async function updateEntityRow(
+  client: Queryable,
+  table: string,
+  changes: string[],
+  values: unknown[],
+) {
+  if (changes.length > 0) {
+    await client.query(`UPDATE ${table} SET ${changes.join(', ')} WHERE id = $1`, values);
+  }
+}
+
+async function updateEntityFields(
+  client: Queryable,
+  table: string,
+  id: string,
+  fields: Array<{ column: string; previous: unknown; current: unknown }>,
+) {
+  const changes: string[] = [];
+  const values: unknown[] = [id];
+  for (const field of fields) {
+    addChange(changes, values, field.column, field.previous, field.current);
+  }
+  await updateEntityRow(client, table, changes, values);
 }
 
 async function insertStatDefinition(
@@ -989,96 +1303,74 @@ async function insertItemRelationship(
 }
 
 async function persistStatDefinitionDifference(client: Queryable, before: Story, after: Story) {
-  const beforeDefinitions = new Map(
-    (before.statDefinitions ?? []).map((definition) => [definition.id, definition]),
-  );
-  const afterDefinitions = new Map(
-    (after.statDefinitions ?? []).map((definition) => [definition.id, definition]),
-  );
-  for (const definition of before.statDefinitions ?? []) {
-    if (!afterDefinitions.has(definition.id)) {
-      await client.query('DELETE FROM stat_definitions WHERE id = $1 AND story_id = $2', [
-        definition.id,
-        after.id,
-      ]);
-    }
-  }
-  for (const [index, definition] of (after.statDefinitions ?? []).entries()) {
-    const previous = beforeDefinitions.get(definition.id);
-    if (!previous) {
-      await insertStatDefinition(client, after.id, definition, index);
-      continue;
-    }
-    const changes: string[] = [];
-    const values: unknown[] = [definition.id];
-    addChange(changes, values, 'name', previous.name, definition.name);
-    addChange(
-      changes,
-      values,
-      'value_type',
-      previous.valueType ?? 'number',
-      definition.valueType ?? 'number',
-    );
-    addChange(changes, values, 'category', previous.category ?? '', definition.category ?? '');
-    addChange(changes, values, 'image_url', previous.imageUrl ?? '', definition.imageUrl ?? '');
-    addChange(
-      changes,
-      values,
-      'change_per_hour',
-      previous.changePerHour ?? 0,
-      definition.changePerHour ?? 0,
-    );
-    addChange(
-      changes,
-      values,
-      'sort_order',
-      (before.statDefinitions ?? []).findIndex(({ id }) => id === definition.id),
-      index,
-    );
-    if (changes.length > 0) {
-      await client.query(`UPDATE stat_definitions SET ${changes.join(', ')} WHERE id = $1`, values);
-    }
-  }
+  await persistEntityRows({
+    client,
+    storyId: after.id,
+    table: 'stat_definitions',
+    before: before.statDefinitions ?? [],
+    after: after.statDefinitions ?? [],
+    insert: (definition, sortOrder) =>
+      insertStatDefinition(client, after.id, definition, sortOrder),
+    update: (previous, current, previousSortOrder, sortOrder) =>
+      updateStatDefinitionDifference({ client, previous, current, previousSortOrder, sortOrder }),
+  });
+}
+
+async function updateStatDefinitionDifference(input: {
+  client: Queryable;
+  previous: StatDefinition;
+  current: StatDefinition;
+  previousSortOrder: number;
+  sortOrder: number;
+}) {
+  const { client, previous, current, previousSortOrder, sortOrder } = input;
+  await updateEntityFields(client, 'stat_definitions', current.id, [
+    { column: 'name', previous: previous.name, current: current.name },
+    {
+      column: 'value_type',
+      previous: previous.valueType ?? 'number',
+      current: current.valueType ?? 'number',
+    },
+    { column: 'category', previous: previous.category ?? '', current: current.category ?? '' },
+    { column: 'image_url', previous: previous.imageUrl ?? '', current: current.imageUrl ?? '' },
+    {
+      column: 'change_per_hour',
+      previous: previous.changePerHour ?? 0,
+      current: current.changePerHour ?? 0,
+    },
+    { column: 'sort_order', previous: previousSortOrder, current: sortOrder },
+  ]);
 }
 
 async function persistItemDefinitionDifference(client: Queryable, before: Story, after: Story) {
-  const beforeDefinitions = new Map(
-    (before.itemDefinitions ?? []).map((definition) => [definition.id, definition]),
-  );
-  const afterDefinitions = new Map(
-    (after.itemDefinitions ?? []).map((definition) => [definition.id, definition]),
-  );
-  for (const definition of before.itemDefinitions ?? []) {
-    if (!afterDefinitions.has(definition.id)) {
-      await client.query('DELETE FROM item_definitions WHERE id = $1 AND story_id = $2', [
-        definition.id,
-        after.id,
-      ]);
-    }
-  }
-  for (const [index, definition] of (after.itemDefinitions ?? []).entries()) {
-    const previous = beforeDefinitions.get(definition.id);
-    if (!previous) {
-      await insertItemDefinition(client, after.id, definition, index);
-      continue;
-    }
-    const changes: string[] = [];
-    const values: unknown[] = [definition.id];
-    addChange(changes, values, 'name', previous.name, definition.name);
-    addChange(changes, values, 'description', previous.description, definition.description);
-    addChange(changes, values, 'category', previous.category ?? '', definition.category ?? '');
-    addChange(changes, values, 'image_url', previous.imageUrl ?? '', definition.imageUrl ?? '');
-    addChange(
-      changes,
-      values,
-      'sort_order',
-      (before.itemDefinitions ?? []).findIndex(({ id }) => id === definition.id),
-      index,
-    );
-    if (changes.length > 0) {
-      await client.query(`UPDATE item_definitions SET ${changes.join(', ')} WHERE id = $1`, values);
-    }
-  }
+  await persistEntityRows({
+    client,
+    storyId: after.id,
+    table: 'item_definitions',
+    before: before.itemDefinitions ?? [],
+    after: after.itemDefinitions ?? [],
+    insert: (definition, sortOrder) =>
+      insertItemDefinition(client, after.id, definition, sortOrder),
+    update: (previous, current, previousSortOrder, sortOrder) =>
+      updateItemDefinitionDifference({ client, previous, current, previousSortOrder, sortOrder }),
+  });
+}
+
+async function updateItemDefinitionDifference(input: {
+  client: Queryable;
+  previous: ItemDefinition;
+  current: ItemDefinition;
+  previousSortOrder: number;
+  sortOrder: number;
+}) {
+  const { client, previous, current, previousSortOrder, sortOrder } = input;
+  await updateEntityFields(client, 'item_definitions', current.id, [
+    { column: 'name', previous: previous.name, current: current.name },
+    { column: 'description', previous: previous.description, current: current.description },
+    { column: 'category', previous: previous.category ?? '', current: current.category ?? '' },
+    { column: 'image_url', previous: previous.imageUrl ?? '', current: current.imageUrl ?? '' },
+    { column: 'sort_order', previous: previousSortOrder, current: sortOrder },
+  ]);
 }
 
 async function persistCharacterDifference(client: Queryable, before: Story, after: Story) {
@@ -1087,51 +1379,39 @@ async function persistCharacterDifference(client: Queryable, before: Story, afte
   if (previousPlayableId !== nextPlayableId && previousPlayableId) {
     await client.query('UPDATE characters SET is_playable = false WHERE story_id = $1', [after.id]);
   }
-  const beforeCharacters = new Map(
-    (before.characters ?? []).map((character) => [character.id, character]),
-  );
-  const afterCharacters = new Map(
-    (after.characters ?? []).map((character) => [character.id, character]),
-  );
-  for (const character of before.characters ?? []) {
-    if (!afterCharacters.has(character.id)) {
-      await client.query('DELETE FROM characters WHERE id = $1 AND story_id = $2', [
-        character.id,
-        after.id,
-      ]);
-    }
-  }
-  for (const [index, character] of (after.characters ?? []).entries()) {
-    const previous = beforeCharacters.get(character.id);
-    if (!previous) {
-      await insertCharacter(client, after.id, character, index);
-      continue;
-    }
-    const changes: string[] = [];
-    const values: unknown[] = [character.id];
-    addChange(changes, values, 'name', previous.name, character.name);
-    addChange(changes, values, 'description', previous.description, character.description);
-    addChange(changes, values, 'category', previous.category ?? '', character.category ?? '');
-    addChange(changes, values, 'image_url', previous.imageUrl ?? '', character.imageUrl ?? '');
-    addChange(
-      changes,
-      values,
-      'is_playable',
-      previous.isPlayable ?? false,
-      character.isPlayable ?? false,
-    );
-    addChange(
-      changes,
-      values,
-      'sort_order',
-      (before.characters ?? []).findIndex(({ id }) => id === character.id),
-      index,
-    );
-    if (changes.length > 0) {
-      await client.query(`UPDATE characters SET ${changes.join(', ')} WHERE id = $1`, values);
-    }
-  }
+  await persistEntityRows({
+    client,
+    storyId: after.id,
+    table: 'characters',
+    before: before.characters ?? [],
+    after: after.characters ?? [],
+    insert: (character, sortOrder) => insertCharacter(client, after.id, character, sortOrder),
+    update: (previous, current, previousSortOrder, sortOrder) =>
+      updateCharacterDifference({ client, previous, current, previousSortOrder, sortOrder }),
+  });
   await persistItemInstanceDifference(client, before, after);
+}
+
+async function updateCharacterDifference(input: {
+  client: Queryable;
+  previous: Character;
+  current: Character;
+  previousSortOrder: number;
+  sortOrder: number;
+}) {
+  const { client, previous, current, previousSortOrder, sortOrder } = input;
+  await updateEntityFields(client, 'characters', current.id, [
+    { column: 'name', previous: previous.name, current: current.name },
+    { column: 'description', previous: previous.description, current: current.description },
+    { column: 'category', previous: previous.category ?? '', current: current.category ?? '' },
+    { column: 'image_url', previous: previous.imageUrl ?? '', current: current.imageUrl ?? '' },
+    {
+      column: 'is_playable',
+      previous: previous.isPlayable ?? false,
+      current: current.isPlayable ?? false,
+    },
+    { column: 'sort_order', previous: previousSortOrder, current: sortOrder },
+  ]);
 }
 
 async function persistItemInstanceDifference(client: Queryable, before: Story, after: Story) {
@@ -1141,63 +1421,121 @@ async function persistItemInstanceDifference(client: Queryable, before: Story, a
   const afterItems = new Map(afterEntries.map((entry) => [entry.item.id, entry]));
   const relationshipsChanged =
     itemRelationshipSignature(beforeEntries) !== itemRelationshipSignature(afterEntries);
+  await removeOldItemRelationships({
+    client,
+    storyId: after.id,
+    beforeItems,
+    afterItems,
+    relationshipsChanged,
+  });
+  await deleteRemovedItemInstances(client, after.id, beforeEntries, afterItems);
+  await persistItemInstanceRows({ client, storyId: after.id, afterEntries, beforeItems });
+  if (relationshipsChanged) {
+    await insertItemRelationships(client, after.id, afterEntries);
+  }
+}
+
+async function removeOldItemRelationships({
+  client,
+  storyId,
+  beforeItems,
+  afterItems,
+  relationshipsChanged,
+}: {
+  client: Queryable;
+  storyId: string;
+  beforeItems: Map<string, ReturnType<typeof itemEntries>[number]>;
+  afterItems: Map<string, ReturnType<typeof itemEntries>[number]>;
+  relationshipsChanged: boolean;
+}) {
   if (relationshipsChanged) {
     const childIds = new Set([...beforeItems.keys(), ...afterItems.keys()]);
     for (const childId of childIds) {
       await client.query(
         'DELETE FROM item_instance_relationships WHERE story_id = $1 AND child_item_id = $2',
-        [after.id, childId],
+        [storyId, childId],
       );
     }
   }
+}
+
+async function deleteRemovedItemInstances(
+  client: Queryable,
+  storyId: string,
+  beforeEntries: ReturnType<typeof itemEntries>,
+  afterItems: Map<string, ReturnType<typeof itemEntries>[number]>,
+) {
   for (const { item } of beforeEntries) {
     if (!afterItems.has(item.id)) {
       await client.query('DELETE FROM item_instances WHERE id = $1 AND story_id = $2', [
         item.id,
-        after.id,
+        storyId,
       ]);
     }
   }
+}
+
+async function persistItemInstanceRows({
+  client,
+  storyId,
+  afterEntries,
+  beforeItems,
+}: {
+  client: Queryable;
+  storyId: string;
+  afterEntries: ReturnType<typeof itemEntries>;
+  beforeItems: Map<string, ReturnType<typeof itemEntries>[number]>;
+}) {
   for (const entry of afterEntries) {
-    const { ownerCharacterId, ownerLocationId, item, sortOrder } = entry;
-    const previous = beforeItems.get(item.id);
+    const previous = beforeItems.get(entry.item.id);
     if (!previous) {
-      await insertItemInstance(client, after.id, entry);
+      await insertItemInstance(client, storyId, entry);
       continue;
     }
-    const changes: string[] = [];
-    const values: unknown[] = [item.id];
-    addChange(
-      changes,
-      values,
-      'item_definition_id',
-      previous.item.itemDefinitionId,
-      item.itemDefinitionId,
-    );
-    addChange(
-      changes,
-      values,
-      'owner_character_id',
-      previous.item.parentItemId ? null : previous.ownerCharacterId,
-      item.parentItemId ? null : ownerCharacterId,
-    );
-    addChange(
-      changes,
-      values,
-      'owner_location_id',
-      previous.item.parentItemId ? null : previous.ownerLocationId,
-      item.parentItemId ? null : ownerLocationId,
-    );
-    addChange(changes, values, 'sort_order', previous.sortOrder, sortOrder);
-    if (changes.length > 0) {
-      await client.query(`UPDATE item_instances SET ${changes.join(', ')} WHERE id = $1`, values);
-    }
+    await updateItemInstance(client, previous, entry);
   }
-  if (relationshipsChanged) {
-    for (const { item, sortOrder } of afterEntries) {
-      if (item.parentItemId && item.relationshipType) {
-        await insertItemRelationship(client, after.id, item, sortOrder);
-      }
+}
+
+async function updateItemInstance(
+  client: Queryable,
+  previous: ReturnType<typeof itemEntries>[number],
+  current: ReturnType<typeof itemEntries>[number],
+) {
+  const changes: string[] = [];
+  const values: unknown[] = [current.item.id];
+  addChange(
+    changes,
+    values,
+    'item_definition_id',
+    previous.item.itemDefinitionId,
+    current.item.itemDefinitionId,
+  );
+  addChange(
+    changes,
+    values,
+    'owner_character_id',
+    previous.item.parentItemId ? null : previous.ownerCharacterId,
+    current.item.parentItemId ? null : current.ownerCharacterId,
+  );
+  addChange(
+    changes,
+    values,
+    'owner_location_id',
+    previous.item.parentItemId ? null : previous.ownerLocationId,
+    current.item.parentItemId ? null : current.ownerLocationId,
+  );
+  addChange(changes, values, 'sort_order', previous.sortOrder, current.sortOrder);
+  await updateEntityRow(client, 'item_instances', changes, values);
+}
+
+async function insertItemRelationships(
+  client: Queryable,
+  storyId: string,
+  entries: ReturnType<typeof itemEntries>,
+) {
+  for (const { item, sortOrder } of entries) {
+    if (item.parentItemId && item.relationshipType) {
+      await insertItemRelationship(client, storyId, item, sortOrder);
     }
   }
 }
@@ -1230,55 +1568,111 @@ async function persistTriggerDifference(
 ) {
   const beforeTriggers = new Map(beforeInteraction.triggers.map((item) => [item.id, item]));
   const afterTriggers = new Map(afterInteraction.triggers.map((item) => [item.id, item]));
-  for (const trigger of beforeInteraction.triggers) {
+  await deleteRemovedTriggers(client, beforeInteraction.triggers, afterTriggers);
+  for (const [index, trigger] of afterInteraction.triggers.entries()) {
+    await persistTriggerRow({
+      client,
+      storyId,
+      beforeInteraction,
+      trigger,
+      sortOrder: index,
+      previous: beforeTriggers.get(trigger.id),
+    });
+  }
+}
+
+async function deleteRemovedTriggers(
+  client: Queryable,
+  beforeTriggers: Trigger[],
+  afterTriggers: Map<string, Trigger>,
+) {
+  for (const trigger of beforeTriggers) {
     if (!afterTriggers.has(trigger.id)) {
       await client.query('DELETE FROM triggers WHERE id = $1', [trigger.id]);
     }
   }
-  for (const [index, trigger] of afterInteraction.triggers.entries()) {
-    const previous = beforeTriggers.get(trigger.id);
-    if (!previous) {
-      await insertTrigger(client, storyId, afterInteraction.id, trigger, index);
-      continue;
-    }
-    const previousIndex = beforeInteraction.triggers.findIndex(({ id }) => id === trigger.id);
-    if (previousIndex !== index) {
-      await client.query('UPDATE triggers SET sort_order = $2 WHERE id = $1', [trigger.id, index]);
-    }
-    const inputsChanged =
-      JSON.stringify(previous.inputInteractionIds) !== JSON.stringify(trigger.inputInteractionIds);
-    const rulesChanged =
-      JSON.stringify(getTriggerConditionGroups(previous)) !==
-        JSON.stringify(getTriggerConditionGroups(trigger)) ||
-      getTriggerAppearanceProbability(previous) !== getTriggerAppearanceProbability(trigger) ||
-      getTriggerTimerSeconds(previous) !== getTriggerTimerSeconds(trigger);
-    if (rulesChanged) {
-      await client.query(
-        `UPDATE triggers
-         SET condition_groups = $2, appearance_probability = $3, timer_seconds = $4
-         WHERE id = $1`,
-        [
-          trigger.id,
-          JSON.stringify(getTriggerConditionGroups(trigger)),
-          getTriggerAppearanceProbability(trigger),
-          getTriggerTimerSeconds(trigger),
-        ],
-      );
-    }
-    if (inputsChanged) {
-      await replaceTriggerInputs(client, storyId, trigger);
-    }
+}
+
+async function persistTriggerRow({
+  client,
+  storyId,
+  beforeInteraction,
+  trigger,
+  sortOrder,
+  previous,
+}: {
+  client: Queryable;
+  storyId: string;
+  beforeInteraction: Interaction;
+  trigger: Trigger;
+  sortOrder: number;
+  previous: Trigger | undefined;
+}) {
+  if (!previous) {
+    await insertTrigger(client, storyId, beforeInteraction.id, trigger, sortOrder);
+    return;
+  }
+  const previousSortOrder = beforeInteraction.triggers.findIndex(({ id }) => id === trigger.id);
+  if (previousSortOrder !== sortOrder) {
+    await client.query('UPDATE triggers SET sort_order = $2 WHERE id = $1', [
+      trigger.id,
+      sortOrder,
+    ]);
+  }
+  await persistTriggerFields(client, storyId, previous, trigger);
+}
+
+async function persistTriggerFields(
+  client: Queryable,
+  storyId: string,
+  previous: Trigger,
+  trigger: Trigger,
+) {
+  if (triggerRulesChanged(previous, trigger)) {
+    await client.query(
+      `UPDATE triggers
+       SET condition_groups = $2, appearance_probability = $3, timer_seconds = $4
+       WHERE id = $1`,
+      [
+        trigger.id,
+        JSON.stringify(getTriggerConditionGroups(trigger)),
+        getTriggerAppearanceProbability(trigger),
+        getTriggerTimerSeconds(trigger),
+      ],
+    );
+  }
+  if (triggerInputsChanged(previous, trigger)) {
+    await replaceTriggerInputs(client, storyId, trigger);
   }
 }
 
+function triggerRulesChanged(previous: Trigger, current: Trigger) {
+  return (
+    JSON.stringify(getTriggerConditionGroups(previous)) !==
+      JSON.stringify(getTriggerConditionGroups(current)) ||
+    getTriggerAppearanceProbability(previous) !== getTriggerAppearanceProbability(current) ||
+    getTriggerTimerSeconds(previous) !== getTriggerTimerSeconds(current)
+  );
+}
+
+function triggerInputsChanged(previous: Trigger, current: Trigger) {
+  return (
+    JSON.stringify(previous.inputInteractionIds) !== JSON.stringify(current.inputInteractionIds)
+  );
+}
+
 function addChange(
-  changes: string[],
-  values: unknown[],
-  column: string,
-  before: unknown,
-  after: unknown,
+  ...[changes, values, column, before, after]: [
+    changes: string[],
+    values: unknown[],
+    column: string,
+    before: unknown,
+    after: unknown,
+  ]
 ) {
-  if (before === after) return;
+  if (before === after) {
+    return;
+  }
   values.push(after);
   changes.push(`${column} = $${values.length}`);
 }
