@@ -1253,14 +1253,18 @@ classes directly.
 
 `CI` runs for pull requests targeting `dev` or `main` and for pushes to those
 branches. Feature-branch pushes do not start a second workflow beside the pull
-request run. The workflow does not use top-level path filters, so the stable
-`Quality` check remains present for documentation-only and workflow-only pull
-requests. An event-specific concurrency group cancels stale runs for the same
-pull request or branch without letting a scheduled run cancel a branch push.
+request run. Newly created tags matching `x.y.z` also run the exhaustive
+validation lane; only after every required check succeeds does the release job
+publish API/web images and deploy their immutable digests to the Railway alpha.
+The workflow does not use top-level path filters, so the stable `Quality` check
+remains present for documentation-only and workflow-only pull requests. An
+event-specific concurrency group cancels stale runs for the same pull request
+or branch without letting a scheduled run cancel a branch push.
 
 | Previous behavior                                                                 | Current behavior                                                                                                                                                                           |
 | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Every push on every branch and every pull request ran the full five-job workflow. | Pull requests to `dev`/`main` run once per update; branch pushes are limited to `dev`/`main`.                                                                                              |
+| Railway's connected `main` branch deployed directly on pushes.                    | GitHub Actions releases only newly created `x.y.z` tags after exhaustive CI; it publishes and deploys API then web by digest and runs the deployment smoke check.                          |
 | Every run collected coverage and built both production images.                    | Code changes build `shared` plus the affected workspace(s) and collect their coverage. Production images build for Docker, production Compose, deployment, or dependency-manifest changes. |
 | PostgreSQL integration and backup restoration ran for unrelated changes.          | API/shared/dependency changes run PostgreSQL integration and migration tests. Backup restoration runs for its scripts and in the exhaustive lane.                                          |
 | E2E, real-stack acceptance, and stress checks ran together on each event.         | Web/shared/dependency changes run browser E2E. Real-stack acceptance runs after relevant pushes to `dev`/`main`; full acceptance, stress, and performance checks remain weekly and manual. |
@@ -1279,6 +1283,28 @@ cache, although each isolated job still runs `npm ci`. Browser setup is shared b
 E2E and acceptance in a run. Their installs took 24 sec and 31 sec in the
 measured run, so Playwright's browser cache is not persisted; its storage and
 maintenance do not justify that short saving.
+
+Railway's native branch auto-deploy must be disabled for the alpha API and web
+services. The release job changes each service source to the published GHCR
+digest and waits for Railway success, keeping the API migration and healthcheck
+before web deployment. The workflow links both GHCR packages to the public
+repository and verifies anonymous pulls before deployment; public packages need
+no Railway registry credentials. The alpha deployment runbook documents the
+one-time visibility check.
+
+Railway service settings are authored in `.railway/railway.ts` as the named
+`paralleax-apps` partial. It manages only `@paralleax/api` and `@paralleax/web`;
+the Postgres service and its persistent volume remain outside IaC ownership.
+This is a deliberate lifecycle boundary: GitHub Actions controls the app source
+digests during tagged releases, while the database and its data are not part of
+this app release configuration. The IaC services omit `source`, so applying
+build and deploy settings cannot switch a service back to its GitHub branch.
+The current app variables are declared with `preserve()` so Railway keeps their
+values, including secrets, without storing them in source. Keep those preserved
+names in sync when service variables change. The existing private network
+endpoints and custom web domain are retained in the partial, while generated
+Railway domains stay provider-managed. Review `railway config plan` before
+applying and reject any change outside the two application services.
 
 The weekly schedule runs Monday at 04:00 UTC. Manual dispatch runs the same
 exhaustive lane: all workspace coverage and builds, PostgreSQL integration and

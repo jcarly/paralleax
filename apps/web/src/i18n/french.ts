@@ -65,6 +65,15 @@ export const frenchTranslation = {
     loadingWorkspace: 'Chargement de l’espace de travail…',
     sessionExpired: 'Votre session a expiré. Reconnectez-vous pour continuer.',
   },
+  routeError: {
+    loadTitle: 'Impossible de charger cette page',
+    loadDescription:
+      'Paralleax a peut-être été mis à jour pendant que cet onglet était ouvert, ou la connexion a été interrompue.',
+    unexpectedTitle: 'Une erreur est survenue',
+    unexpectedDescription: 'Cette page ne peut pas être affichée. Essayez de la recharger.',
+    unsavedWarning: 'Le rechargement peut entraîner la perte de modifications non enregistrées.',
+    reload: 'Recharger Paralleax',
+  },
   storyUnavailable: {
     title: 'Histoire indisponible',
     description: 'Cette histoire est indisponible ou votre compte n’y a plus accès.',

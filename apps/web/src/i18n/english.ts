@@ -19,6 +19,15 @@ export const englishTranslation = {
     loadingWorkspace: 'Loading workspace…',
     sessionExpired: 'Your session expired. Sign in again to continue.',
   },
+  routeError: {
+    loadTitle: 'Unable to load this page',
+    loadDescription:
+      'Paralleax may have been updated while this tab was open, or the connection may have been interrupted.',
+    unexpectedTitle: 'Something went wrong',
+    unexpectedDescription: 'This page could not be displayed. Try reloading it.',
+    unsavedWarning: 'Reloading may discard unsaved changes.',
+    reload: 'Reload Paralleax',
+  },
   storyUnavailable: {
     title: 'Story unavailable',
     description: 'This story is unavailable or your account no longer has access to it.',

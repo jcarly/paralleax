@@ -31,6 +31,20 @@
   above the scene context; choice labels and authored body content remain
   unchanged.
 
+- Changed the Railway alpha release flow to run only for newly created `x.y.z`
+  tags after exhaustive CI. GitHub Actions now publishes API and web images to
+  GHCR and deploys their immutable digests in migration-first order before the
+  deployment smoke check.
+
+- Aligned production Docker builds with the Node 24 toolchain and split them by
+  API/web target. Railway source-build watch patterns now include shared and
+  Docker inputs, while Sentry upload credentials are mounted only as a web
+  BuildKit secret. Replaced the service Config as Code files with a named IaC
+  partial for API and web; it preserves existing app variable values and the
+  web domain, while Postgres and its volume remain unmanaged. Disabling live
+  branch auto-deploy, clearing Config File Path settings, and applying a reviewed
+  Railway plan are still required before the live services use this configuration.
+
 - Replaced named interview notes and a project-specific import example with an
   anonymized product-discovery synthesis and source-neutral QSP import lessons.
   Identifiable research records remain outside this public repository.
@@ -48,11 +62,11 @@
   coverage.
 
 - Stabilized first-story onboarding with localized placeholders for empty
-  Interaction titles and scene bodies, a direct branch target, distinct
-  Simulation starts, and completion links to the editor and Access settings.
-  Inaccessible Story routes now explain recovery without revealing Story
-  details. Reader-only writes return `403` while hidden Stories remain `404`;
-  collaborator email validation rejects malformed and duplicate entries.
+  Interaction titles and scene bodies, a direct branch target, distinct Simulation starts, and
+  completion links to the editor and Access settings. Inaccessible Story routes
+  now explain recovery without revealing Story details. Reader-only writes
+  return `403` while hidden Stories remain `404`; collaborator email validation
+  rejects malformed and duplicate entries.
 
 - Full Story reads now use one read-only repeatable-read snapshot, and malformed
   persisted graph decorations fail explicitly during projection.
