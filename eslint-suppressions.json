@@ -2003,12 +2003,6 @@
     "@typescript-eslint/no-non-null-assertion": {
       "count": 8
     },
-    "@typescript-eslint/no-unsafe-type-assertion": {
-      "count": 1
-    },
-    "curly": {
-      "count": 1
-    },
     "max-lines-per-function": {
       "count": 1
     }
