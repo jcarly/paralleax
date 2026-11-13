@@ -213,6 +213,30 @@ test('production Compose and release builds pass Sentry upload credentials only 
   assert.doesNotMatch(webPublish, /--build-arg SENTRY_AUTH_TOKEN/);
 });
 
+test('Railway image releases use supported source connect options', async () => {
+  const workflow = await readRepositoryFile('.github/workflows/ci.yml');
+  const releaseStart = workflow.indexOf('      - name: Deploy API then web by immutable digest');
+  const smokeStart = workflow.indexOf('      - name: Run deployment smoke check', releaseStart);
+  assert.ok(releaseStart >= 0 && smokeStart > releaseStart);
+
+  const release = workflow.slice(releaseStart, smokeStart);
+  const sourceConnect = release
+    .split('\n')
+    .find((line) => line.includes('railway service source connect --image'));
+
+  assert.ok(sourceConnect, 'the release must connect each service to its immutable image');
+  for (const option of [
+    '--image "$image"',
+    '--service "$service"',
+    '--environment "$RAILWAY_ENVIRONMENT"',
+    '--project "$RAILWAY_PROJECT_ID"',
+  ]) {
+    assert.ok(sourceConnect.includes(option), 'missing required Railway option: ' + option);
+  }
+  assert.ok(!sourceConnect.includes(' --yes'), 'Railway source connect does not accept --yes');
+  assert.ok(!sourceConnect.includes(' --json'), 'Railway source connect does not accept --json');
+});
+
 test('the optional Formbricks web build and CSP use the same public app URL', async () => {
   const dockerfile = await readRepositoryFile('Dockerfile');
   const productionCompose = await readRepositoryFile('compose.production.yaml');
