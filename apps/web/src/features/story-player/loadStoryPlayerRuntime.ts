@@ -27,9 +27,9 @@ export async function loadStoryPlayerRuntime({
   const effectiveStartInteractionId = authorizedSimulation ? requestedStartInteractionId : null;
   const [runtimeStory, progress] = await Promise.all([
     loadStoryRuntimeContext(storyId, bootstrap),
-    !authenticated || (authorizedSimulation && effectiveStartInteractionId)
-      ? Promise.resolve(null)
-      : api.getReaderProgress(storyId, loadedProgressMode),
+    shouldLoadReaderProgress(authenticated, authorizedSimulation, effectiveStartInteractionId)
+      ? api.getReaderProgress(storyId, loadedProgressMode)
+      : Promise.resolve(null),
   ]);
   const journeyInteractionIds =
     progress?.state.journeyInteractionIds ??
@@ -43,4 +43,12 @@ export async function loadStoryPlayerRuntime({
   );
 
   return { positioned, progress, effectiveStartInteractionId, loadedProgressMode };
+}
+
+function shouldLoadReaderProgress(
+  authenticated: boolean,
+  authorizedSimulation: boolean,
+  effectiveStartInteractionId: string | null,
+): boolean {
+  return authenticated && !(authorizedSimulation && effectiveStartInteractionId);
 }

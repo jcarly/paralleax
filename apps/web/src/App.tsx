@@ -122,32 +122,31 @@ export function App() {
       </Suspense>
     );
 
-  if (user === null && isAuthenticationRoute)
-    return (
-      <Suspense fallback={<main className="page">{t('shell.loadingWorkspace')}</main>}>
-        <AuthPage
-          initialMode={location.pathname === '/register' ? 'register' : 'login'}
-          notice={sessionExpired ? t('shell.sessionExpired') : ''}
-          onModeChange={async (mode) => {
-            await navigate(authenticationPath(mode, returnTo), { replace: true });
-          }}
-          onAuthenticated={async (authenticatedUser) => {
-            setSessionExpired(false);
-            setUser(authenticatedUser);
-            await navigate(returnTo, { replace: true });
-          }}
-        />
-      </Suspense>
-    );
-
-  const signInPath = authenticationPath('login', currentDestination);
-  const registerPath = authenticationPath('register', currentDestination);
+  const authenticationReturnTo = isAuthenticationRoute ? returnTo : currentDestination;
+  const signInPath = authenticationPath('login', authenticationReturnTo);
+  const registerPath = authenticationPath('register', authenticationReturnTo);
   const currentStoryId = location.pathname.match(/^\/stories\/([^/]+)\/(edit|play)\/?$/)?.[1];
+  const authPage = (initialMode: 'login' | 'register') => (
+    <AuthPage
+      initialMode={initialMode}
+      notice={sessionExpired ? t('shell.sessionExpired') : ''}
+      onModeChange={async (mode) => {
+        await navigate(authenticationPath(mode, returnTo), { replace: true });
+      }}
+      onAuthenticated={async (authenticatedUser) => {
+        setSessionExpired(false);
+        setUser(authenticatedUser);
+        await navigate(returnTo, { replace: true });
+      }}
+    />
+  );
 
   return (
     <OnboardingProvider key={user?.id ?? 'anonymous'} userId={user?.id ?? null}>
       <div className="app">
-        <header className="product-app-header">
+        <header
+          className={`product-app-header${isAuthenticationRoute ? ' product-app-header-auth' : ''}`}
+        >
           <Link to="/" className="product-app-brand">
             <span aria-hidden="true">P</span>
             <b>Paralleax</b>
@@ -211,8 +210,14 @@ export function App() {
                 />
               }
             />
-            <Route path="/login" element={<Navigate to={returnTo} replace />} />
-            <Route path="/register" element={<Navigate to={returnTo} replace />} />
+            <Route
+              path="/login"
+              element={user ? <Navigate to={returnTo} replace /> : authPage('login')}
+            />
+            <Route
+              path="/register"
+              element={user ? <Navigate to={returnTo} replace /> : authPage('register')}
+            />
             <Route
               path="/stories"
               element={user ? <Navigate to="/" replace /> : <Navigate to={signInPath} replace />}

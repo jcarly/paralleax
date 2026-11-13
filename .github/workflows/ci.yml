@@ -3,6 +3,7 @@ name: CI
 on:
   push:
     branches: [dev, main]
+    tags: ['*.*.*']
   pull_request:
     branches: [dev, main]
   schedule:
@@ -41,7 +42,7 @@ jobs:
       security_audit: ${{ steps.full.outputs.full == 'true' || steps.filter.outputs.dependencies == 'true' }}
       operations: ${{ steps.full.outputs.full == 'true' || steps.filter.outputs.tooling == 'true' }}
       lint: ${{ steps.full.outputs.full == 'true' || steps.filter.outputs.application == 'true' || steps.filter.outputs.tooling == 'true' }}
-      workflow: ${{ steps.filter.outputs.workflow == 'true' }}
+      workflow: ${{ steps.full.outputs.full == 'true' || steps.filter.outputs.workflow == 'true' }}
     steps:
       - name: Check out pushed branch for change detection
         if: github.event_name == 'push'
@@ -51,7 +52,7 @@ jobs:
 
       - name: Detect changed areas
         id: filter
-        if: github.event_name == 'push' || github.event_name == 'pull_request'
+        if: (github.event_name == 'push' && github.ref_type != 'tag') || github.event_name == 'pull_request'
         uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
         with:
           base: ${{ github.ref_name }}
@@ -79,6 +80,7 @@ jobs:
               - 'scripts/verify-postgres-restore.mjs'
             tooling:
               - 'scripts/**'
+              - '.railway/**'
               - 'eslint.config.mjs'
               - 'stylelint.config.mjs'
               - '.dependency-cruiser*'
@@ -104,6 +106,9 @@ jobs:
               - '.dockerignore'
               - 'compose.production.yaml'
               - 'deploy/**'
+              - 'scripts/check-web-bundle.mjs'
+              - 'scripts/smoke-qsp-worker.mjs'
+              - 'scripts/smoke-choicescript-worker.mjs'
               - 'package.json'
               - 'package-lock.json'
               - 'apps/*/package.json'
@@ -113,7 +118,7 @@ jobs:
 
       - name: Select exhaustive validation
         id: full
-        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || github.ref_type == 'tag'
         run: echo 'full=true' >> "$GITHUB_OUTPUT"
 
   quality:
@@ -154,7 +159,7 @@ jobs:
       - name: Lint
         if: needs.changes.result == 'success' && needs.changes.outputs.lint == 'true'
         env:
-          BASELINE_BASE_REF: ${{ github.event.pull_request.base.sha || github.event.before || 'HEAD^' }}
+          BASELINE_BASE_REF: ${{ github.event.pull_request.base.sha || (github.ref_type == 'tag' && format('origin/{0}', github.event.repository.default_branch)) || github.event.before || 'HEAD^' }}
           BASELINE_DEFAULT_REF: origin/${{ github.event.repository.default_branch }}
         run: npm run lint
 
@@ -352,8 +357,15 @@ jobs:
 
   production-images:
     name: Production images
-    needs: changes
-    if: needs.changes.outputs.docker == 'true'
+    needs: [changes, quality, workflow-validation, postgres, browser]
+    if: >-
+      always() &&
+      github.ref_type != 'tag' &&
+      needs.changes.outputs.docker == 'true' &&
+      needs.quality.result == 'success' &&
+      (needs.workflow-validation.result == 'success' || needs.workflow-validation.result == 'skipped') &&
+      (needs.postgres.result == 'success' || needs.postgres.result == 'skipped') &&
+      (needs.browser.result == 'success' || needs.browser.result == 'skipped')
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
@@ -371,3 +383,180 @@ jobs:
 
       - name: Build production web image
         run: docker build --target web --tag paralleax-web:ci .
+
+  release:
+    name: Alpha release
+    needs: [changes, quality, workflow-validation, postgres, browser]
+    if: github.event_name == 'push' && github.ref_type == 'tag' && github.event.created == true && github.event.deleted != true
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      packages: write
+    env:
+      RAILWAY_PROJECT_ID: 824b247d-54c8-4e23-b194-a2476c2ac11e
+      RAILWAY_ENVIRONMENT: production
+      RAILWAY_API_SERVICE: '@paralleax/api'
+      RAILWAY_WEB_SERVICE: '@paralleax/web'
+    steps:
+      - name: Validate newly created version tag
+        env:
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          if [[ ! "$TAG_NAME" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "Release tags must use x.y.z without a prefix: $TAG_NAME" >&2
+            exit 1
+          fi
+
+      - name: Check out tagged commit
+        uses: actions/checkout@v7
+
+      - name: Set up Railway CLI
+        run: npm install --global @railway/cli@5.68.0
+
+      - name: Prepare Buildx
+        run: |
+          docker buildx create --name paralleax-release --driver docker-container --use
+          docker buildx inspect --bootstrap
+
+      - name: Validate production Compose configuration
+        env:
+          DATABASE_URL: postgresql://paralleax:ci-only@db.example:5432/paralleax
+          CORS_ORIGIN: https://alpha.example.com
+          REGISTRATION_MODE: open
+        run: docker compose -f compose.production.yaml config --quiet
+
+      - name: Log in to GitHub Container Registry
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: echo "$GH_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+
+      - name: Publish API image
+        id: api-image
+        env:
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          image="ghcr.io/$(printf '%s' "$GITHUB_REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')/paralleax-api"
+          docker buildx build \
+            --platform linux/amd64 \
+            --target api \
+            --tag "$image:$TAG_NAME" \
+            --tag "$image:sha-$GITHUB_SHA" \
+            --label "org.opencontainers.image.source=https://github.com/$GITHUB_REPOSITORY" \
+            --label "org.opencontainers.image.revision=$GITHUB_SHA" \
+            --label "org.opencontainers.image.version=$TAG_NAME" \
+            --build-arg "SENTRY_RELEASE=$TAG_NAME" \
+            --metadata-file "$RUNNER_TEMP/api-image.json" \
+            --push \
+            .
+          digest="$(jq -er '."containerimage.digest" | select(test("^sha256:[0-9a-f]{64}$"))' "$RUNNER_TEMP/api-image.json")"
+          echo "image=$image@$digest" >> "$GITHUB_OUTPUT"
+
+      - name: Publish web image
+        id: web-image
+        env:
+          TAG_NAME: ${{ github.ref_name }}
+          VITE_SENTRY_DSN: ${{ vars.VITE_SENTRY_DSN }}
+          VITE_SENTRY_TRACES_SAMPLE_RATE: ${{ vars.VITE_SENTRY_TRACES_SAMPLE_RATE }}
+          VITE_FORMBRICKS_WORKSPACE_ID: ${{ vars.VITE_FORMBRICKS_WORKSPACE_ID }}
+          VITE_FORMBRICKS_APP_URL: ${{ vars.VITE_FORMBRICKS_APP_URL }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ vars.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ vars.SENTRY_PROJECT }}
+          SENTRY_URL: ${{ vars.SENTRY_URL }}
+        run: |
+          set -euo pipefail
+          image="ghcr.io/$(printf '%s' "$GITHUB_REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')/paralleax-web"
+          docker buildx build \
+            --platform linux/amd64 \
+            --target web \
+            --tag "$image:$TAG_NAME" \
+            --tag "$image:sha-$GITHUB_SHA" \
+            --label "org.opencontainers.image.source=https://github.com/$GITHUB_REPOSITORY" \
+            --label "org.opencontainers.image.revision=$GITHUB_SHA" \
+            --label "org.opencontainers.image.version=$TAG_NAME" \
+            --build-arg VITE_SENTRY_DSN \
+            --build-arg "VITE_SENTRY_RELEASE=$TAG_NAME" \
+            --build-arg VITE_SENTRY_TRACES_SAMPLE_RATE \
+            --build-arg VITE_FORMBRICKS_WORKSPACE_ID \
+            --build-arg VITE_FORMBRICKS_APP_URL \
+            --build-arg SENTRY_ORG \
+            --build-arg SENTRY_PROJECT \
+            --build-arg SENTRY_URL \
+            --secret id=sentry_auth_token,env=SENTRY_AUTH_TOKEN \
+            --metadata-file "$RUNNER_TEMP/web-image.json" \
+            --push \
+            .
+          digest="$(jq -er '."containerimage.digest" | select(test("^sha256:[0-9a-f]{64}$"))' "$RUNNER_TEMP/web-image.json")"
+          echo "image=$image@$digest" >> "$GITHUB_OUTPUT"
+
+      - name: Record immutable release references
+        env:
+          API_IMAGE: ${{ steps.api-image.outputs.image }}
+          WEB_IMAGE: ${{ steps.web-image.outputs.image }}
+        run: |
+          {
+            echo "## Release $GITHUB_REF_NAME"
+            echo
+            echo "Commit: \`$GITHUB_SHA\`"
+            echo
+            echo "- API: \`$API_IMAGE\`"
+            echo "- Web: \`$WEB_IMAGE\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Verify GHCR images allow anonymous pulls
+        env:
+          API_IMAGE: ${{ steps.api-image.outputs.image }}
+          WEB_IMAGE: ${{ steps.web-image.outputs.image }}
+        run: |
+          set -euo pipefail
+          docker logout ghcr.io >/dev/null 2>&1 || true
+          for image in "$API_IMAGE" "$WEB_IMAGE"; do
+            if ! docker pull "$image"; then
+              echo "Image is not publicly pullable: $image. Set the GHCR package visibility to Public before deploying." >&2
+              exit 1
+            fi
+          done
+
+      - name: Deploy API then web by immutable digest
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          API_IMAGE: ${{ steps.api-image.outputs.image }}
+          WEB_IMAGE: ${{ steps.web-image.outputs.image }}
+        run: |
+          set -euo pipefail
+          : "${RAILWAY_TOKEN:?Configure the RAILWAY_TOKEN GitHub Actions secret}"
+
+          deploy_and_wait() {
+            local service="$1"
+            local image="$2"
+            local before before_id deployments deployment_id status deadline
+
+            before="$(railway deployment list --json --limit 1 --service "$service" --environment "$RAILWAY_ENVIRONMENT" --project "$RAILWAY_PROJECT_ID")"
+            before_id="$(printf '%s' "$before" | jq -r '.[0].id // empty')"
+            railway service source connect --image "$image" --service "$service" --environment "$RAILWAY_ENVIRONMENT" --project "$RAILWAY_PROJECT_ID" --yes --json
+            deadline=$((SECONDS + 900))
+
+            while (( SECONDS < deadline )); do
+              deployments="$(railway deployment list --json --limit 1 --service "$service" --environment "$RAILWAY_ENVIRONMENT" --project "$RAILWAY_PROJECT_ID")"
+              deployment_id="$(printf '%s' "$deployments" | jq -r '.[0].id // empty')"
+              status="$(printf '%s' "$deployments" | jq -r '.[0].status // empty')"
+              if [[ -n "$deployment_id" && "$deployment_id" != "$before_id" ]]; then
+                case "$status" in
+                  SUCCESS) return 0 ;;
+                  FAILED|CRASHED|REMOVED) echo "$service deployment ended with $status" >&2; return 1 ;;
+                esac
+              fi
+              sleep 10
+            done
+
+            echo "Timed out waiting for $service deployment" >&2
+            return 1
+          }
+
+          deploy_and_wait "$RAILWAY_API_SERVICE" "$API_IMAGE"
+          deploy_and_wait "$RAILWAY_WEB_SERVICE" "$WEB_IMAGE"
+
+      - name: Run deployment smoke check
+        run: npm run smoke:deployment -- https://paralleax.app

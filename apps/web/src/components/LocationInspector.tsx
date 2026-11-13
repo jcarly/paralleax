@@ -1,4 +1,3 @@
-import { EntityNameInput } from './EntityNameInput';
 import type {
   ItemDefinition,
   Location,
@@ -7,14 +6,17 @@ import type {
 } from '@paralleax/shared';
 import { useTranslation } from 'react-i18next';
 import {
-  InspectorCommentField,
   InspectorCommentSlot,
   type InspectorSemanticCommentProps,
   type InspectorTextCommentProps,
 } from '../features/comments/InspectorCommentField';
-import { CategoryField } from './CategoryField';
-import { ImageUrlField } from './ImageUrlField';
 import { ItemInstanceTree } from './ItemInstanceTree';
+import {
+  InspectorCategoryField,
+  InspectorDescriptionField,
+  InspectorImageField,
+  InspectorNameField,
+} from './InspectorEntityFields';
 
 type LocationInspectorProps = {
   location: Location;
@@ -53,20 +55,14 @@ function LocationImageSection({
   LocationInspectorProps,
   'location' | 'onLocalChange' | 'onPatch' | 'semanticCommentCounts' | 'onOpenSemanticComments'
 >) {
-  const { t } = useTranslation();
   return (
-    <InspectorCommentSlot
-      slot={{ kind: 'field', field: 'imageUrl' }}
-      label={t('inspector.imageUrl')}
+    <InspectorImageField
+      imageUrl={location.imageUrl}
       semanticCommentCounts={semanticCommentCounts}
       onOpenSemanticComments={onOpenSemanticComments}
-    >
-      <ImageUrlField
-        imageUrl={location.imageUrl}
-        onChange={(imageUrl) => onLocalChange({ ...location, imageUrl })}
-        onBlur={(imageUrl) => void onPatch(location.id, { imageUrl })}
-      />
-    </InspectorCommentSlot>
+      onChange={(imageUrl) => onLocalChange({ ...location, imageUrl })}
+      onCommit={(imageUrl) => void onPatch(location.id, { imageUrl })}
+    />
   );
 }
 
@@ -80,24 +76,14 @@ function LocationNameSection({
   LocationInspectorProps,
   'location' | 'onLocalChange' | 'onPatch' | 'textCommentCounts' | 'onOpenTextComments'
 >) {
-  const { t } = useTranslation();
   return (
-    <InspectorCommentField
-      field="name"
-      label={t('inspector.name')}
+    <InspectorNameField
+      value={location.name}
       textCommentCounts={textCommentCounts}
       onOpenTextComments={onOpenTextComments}
-    >
-      <label className="form-field form-field--compact">
-        {t('inspector.name')}
-        <EntityNameInput
-          data-comment-field="name"
-          value={location.name}
-          onChange={(name) => onLocalChange({ ...location, name })}
-          onCommit={(name) => onPatch(location.id, { name })}
-        />
-      </label>
-    </InspectorCommentField>
+      onChange={(name) => onLocalChange({ ...location, name })}
+      onCommit={(name) => void onPatch(location.id, { name })}
+    />
   );
 }
 
@@ -117,21 +103,15 @@ function LocationCategorySection({
   | 'semanticCommentCounts'
   | 'onOpenSemanticComments'
 >) {
-  const { t } = useTranslation();
   return (
-    <InspectorCommentSlot
-      slot={{ kind: 'field', field: 'category' }}
-      label={t('inspector.category')}
+    <InspectorCategoryField
+      category={location.category}
+      suggestions={categorySuggestions}
       semanticCommentCounts={semanticCommentCounts}
       onOpenSemanticComments={onOpenSemanticComments}
-    >
-      <CategoryField
-        category={location.category}
-        suggestions={categorySuggestions}
-        onChange={(category) => onLocalChange({ ...location, category })}
-        onBlur={(category) => void onPatch(location.id, { category })}
-      />
-    </InspectorCommentSlot>
+      onChange={(category) => onLocalChange({ ...location, category })}
+      onCommit={(category) => void onPatch(location.id, { category })}
+    />
   );
 }
 
@@ -185,25 +165,13 @@ function LocationDescriptionSection({
   LocationInspectorProps,
   'location' | 'onLocalChange' | 'onPatch' | 'textCommentCounts' | 'onOpenTextComments'
 >) {
-  const { t } = useTranslation();
   return (
-    <InspectorCommentField
-      field="description"
-      label={t('inspector.description')}
+    <InspectorDescriptionField
+      value={location.description}
       textCommentCounts={textCommentCounts}
       onOpenTextComments={onOpenTextComments}
-    >
-      <label className="form-field form-field--compact">
-        {t('inspector.description')}
-        <textarea
-          className="form-control form-control--compact form-control--multiline"
-          data-comment-field="description"
-          rows={7}
-          value={location.description}
-          onChange={(event) => onLocalChange({ ...location, description: event.target.value })}
-          onBlur={(event) => void onPatch(location.id, { description: event.target.value })}
-        />
-      </label>
-    </InspectorCommentField>
+      onChange={(description) => onLocalChange({ ...location, description })}
+      onCommit={(description) => void onPatch(location.id, { description })}
+    />
   );
 }

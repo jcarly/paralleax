@@ -1,4 +1,3 @@
-import { EntityNameInput } from './EntityNameInput';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type {
@@ -15,11 +14,14 @@ import {
   type InspectorSemanticCommentProps,
   type InspectorTextCommentProps,
 } from '../features/comments/InspectorCommentField';
-import { CategoryField } from './CategoryField';
-import { ImageUrlField } from './ImageUrlField';
 import { ItemInstanceTree } from './ItemInstanceTree';
 import { RemoveRowButton } from './RemoveRowButton';
 import { StatValueField } from './StatValueField';
+import {
+  InspectorCategoryField,
+  InspectorImageField,
+  InspectorNameField,
+} from './InspectorEntityFields';
 
 export function CharacterInspector({
   character,
@@ -79,47 +81,28 @@ export function CharacterInspector({
   return (
     <div>
       <h3>{t('inspector.character')}</h3>
-      <InspectorCommentSlot
-        slot={{ kind: 'field', field: 'imageUrl' }}
-        label={t('inspector.imageUrl')}
+      <InspectorImageField
+        imageUrl={character.imageUrl}
         semanticCommentCounts={semanticCommentCounts}
         onOpenSemanticComments={onOpenSemanticComments}
-      >
-        <ImageUrlField
-          imageUrl={character.imageUrl}
-          onChange={(imageUrl) => onChange({ imageUrl })}
-          onBlur={(imageUrl) => void onPatch(character.id, { imageUrl })}
-        />
-      </InspectorCommentSlot>
-      <InspectorCommentField
-        field="name"
-        label={t('inspector.name')}
+        onChange={(imageUrl) => onChange({ imageUrl })}
+        onCommit={(imageUrl) => void onPatch(character.id, { imageUrl })}
+      />
+      <InspectorNameField
+        value={character.name}
         textCommentCounts={textCommentCounts}
         onOpenTextComments={onOpenTextComments}
-      >
-        <label className="form-field form-field--compact">
-          {t('inspector.name')}
-          <EntityNameInput
-            data-comment-field="name"
-            value={character.name}
-            onChange={(name) => onChange({ name })}
-            onCommit={(name) => onPatch(character.id, { name })}
-          />
-        </label>
-      </InspectorCommentField>
-      <InspectorCommentSlot
-        slot={{ kind: 'field', field: 'category' }}
-        label={t('inspector.category')}
+        onChange={(name) => onChange({ name })}
+        onCommit={(name) => void onPatch(character.id, { name })}
+      />
+      <InspectorCategoryField
+        category={character.category}
+        suggestions={categorySuggestions}
         semanticCommentCounts={semanticCommentCounts}
         onOpenSemanticComments={onOpenSemanticComments}
-      >
-        <CategoryField
-          category={character.category}
-          suggestions={categorySuggestions}
-          onChange={(category) => onChange({ category })}
-          onBlur={(category) => void onPatch(character.id, { category })}
-        />
-      </InspectorCommentSlot>
+        onChange={(category) => onChange({ category })}
+        onCommit={(category) => void onPatch(character.id, { category })}
+      />
       <InspectorCommentSlot
         slot={{ kind: 'field', field: 'isPlayable' }}
         label={t('inspector.playableCharacter')}
