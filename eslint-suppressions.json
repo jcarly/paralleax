@@ -359,44 +359,6 @@
       "count": 1
     }
   },
-  "apps/api/src/stories/stories.e2e.spec.ts": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 14
-    },
-    "@typescript-eslint/no-unnecessary-type-assertion": {
-      "count": 1
-    },
-    "@typescript-eslint/no-unsafe-argument": {
-      "count": 5
-    },
-    "@typescript-eslint/no-unsafe-assignment": {
-      "count": 86
-    },
-    "@typescript-eslint/no-unsafe-call": {
-      "count": 3
-    },
-    "@typescript-eslint/no-unsafe-member-access": {
-      "count": 276
-    },
-    "@typescript-eslint/no-unsafe-return": {
-      "count": 1
-    },
-    "@typescript-eslint/no-unsafe-type-assertion": {
-      "count": 65
-    },
-    "complexity": {
-      "count": 1
-    },
-    "curly": {
-      "count": 8
-    },
-    "max-lines-per-function": {
-      "count": 17
-    },
-    "sonarjs/cognitive-complexity": {
-      "count": 1
-    }
-  },
   "apps/api/src/stories/stories.repository.spec.ts": {
     "@typescript-eslint/no-non-null-assertion": {
       "count": 17
