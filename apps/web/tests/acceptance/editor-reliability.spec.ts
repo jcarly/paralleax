@@ -266,10 +266,14 @@ test('a response lost after creation commit recovers canonically without duplica
   await expect(page.getByRole('button', { name: 'Reload story' })).toBeVisible();
 
   await page.getByRole('button', { name: 'Reload story' }).click();
-  await expect(interactionNode(page, 'New interaction')).toHaveCount(1);
+  await expect(page.getByTestId('interaction-node')).toHaveCount(3);
+  await expect(interactionNode(page, 'Existing interaction')).toHaveCount(1);
+  await expect(interactionNode(page, 'Start')).toHaveCount(2);
 
   await page.reload();
-  await expect(interactionNode(page, 'New interaction')).toHaveCount(1);
+  await expect(page.getByTestId('interaction-node')).toHaveCount(3);
+  await expect(interactionNode(page, 'Existing interaction')).toHaveCount(1);
+  await expect(interactionNode(page, 'Start')).toHaveCount(2);
 });
 
 test('concurrent structural deletion and Trigger editing cannot leave dangling graph references', async ({
@@ -309,3 +313,4 @@ test('concurrent structural deletion and Trigger editing cannot leave dangling g
   expect(persistedChild?.triggers).toHaveLength(1);
   expect(persistedChild?.triggers[0].inputInteractionIds).not.toContain(rootResult.interaction.id);
 });
+
