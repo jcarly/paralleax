@@ -359,32 +359,6 @@
       "count": 1
     }
   },
-  "apps/api/src/stories/stories.repository.spec.ts": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 17
-    },
-    "@typescript-eslint/no-unsafe-member-access": {
-      "count": 3
-    },
-    "@typescript-eslint/no-unsafe-return": {
-      "count": 1
-    },
-    "@typescript-eslint/no-unsafe-type-assertion": {
-      "count": 4
-    },
-    "complexity": {
-      "count": 1
-    },
-    "curly": {
-      "count": 3
-    },
-    "max-lines-per-function": {
-      "count": 10
-    },
-    "sonarjs/cognitive-complexity": {
-      "count": 1
-    }
-  },
   "apps/web/src/App.test.tsx": {
     "max-lines-per-function": {
       "count": 1
