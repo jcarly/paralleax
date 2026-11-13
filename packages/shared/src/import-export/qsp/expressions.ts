@@ -1,6 +1,7 @@
 import type { StatComparisonOperator } from '../../triggers/conditions.js';
 import type { StatValueType } from '../../model/stats.js';
 import type { QspSourceCondition, QspSourcePosition, QspVariableEffect } from './models.js';
+import { consumedLiteralLength, parseQspStringLiteral } from './string-literals.js';
 
 type Token =
   | { kind: 'identifier'; value: string }
@@ -249,24 +250,7 @@ function parseCompleteNumber(value: string): number | undefined {
 }
 
 function parseCompleteQuotedString(value: string): string | undefined {
-  const quote = value[0];
-  if (quote !== "'" && quote !== '"') {
-    return undefined;
-  }
-  let result = '';
-  for (let index = 1; index < value.length; index += 1) {
-    if (value[index] !== quote) {
-      result += value[index];
-      continue;
-    }
-    if (value[index + 1] === quote) {
-      result += quote;
-      index += 1;
-      continue;
-    }
-    return index === value.length - 1 ? result : undefined;
-  }
-  return undefined;
+  return consumedLiteralLength(value) === value.length ? parseQspStringLiteral(value) : undefined;
 }
 
 type QspVariableReferenceResult =

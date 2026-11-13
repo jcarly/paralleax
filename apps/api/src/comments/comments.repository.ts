@@ -36,6 +36,31 @@ type MessageRow = {
   edited_at: Date | string | null;
 };
 
+type UpdateStatusArguments = [
+  storyId: string,
+  threadId: string,
+  status: 'open' | 'resolved',
+  actorId: string,
+  timestamp: string,
+];
+
+type UpdateAnchorArguments = [
+  storyId: string,
+  threadId: string,
+  anchor: CommentAnchor,
+  anchorLabel: string,
+  timestamp: string,
+];
+
+type InsertMessageInput = {
+  client: PoolClient;
+  id: string;
+  threadId: string;
+  authorId: string;
+  body: string;
+  timestamp: string;
+};
+
 @Injectable()
 export class CommentsRepository {
   constructor(private readonly database: DatabaseConnection) {}
@@ -47,7 +72,9 @@ export class CommentsRepository {
       ) + ' ORDER BY thread.updated_at DESC',
       [storyId],
     );
-    if (result.rows.length === 0) return [];
+    if (result.rows.length === 0) {
+      return [];
+    }
     const messages = await this.database.pool.query<MessageRow>(
       `${messageSelect()} WHERE message.thread_id = ANY($1::text[])
        ORDER BY message.created_at, message.id`,
@@ -71,7 +98,9 @@ export class CommentsRepository {
       [storyId, threadId],
     );
     const row = result.rows[0];
-    if (!row) return undefined;
+    if (!row) {
+      return undefined;
+    }
     const messages = await this.database.pool.query<MessageRow>(
       `${messageSelect()} WHERE message.thread_id = $1 ORDER BY message.created_at, message.id`,
       [threadId],
@@ -105,14 +134,14 @@ export class CommentsRepository {
           input.timestamp,
         ],
       );
-      await insertMessage(
+      await insertMessage({
         client,
-        input.messageId,
-        input.id,
-        input.authorId,
-        input.body,
-        input.timestamp,
-      );
+        id: input.messageId,
+        threadId: input.id,
+        authorId: input.authorId,
+        body: input.body,
+        timestamp: input.timestamp,
+      });
       await client.query('COMMIT');
     } catch (error) {
       await client.query('ROLLBACK');
@@ -134,14 +163,14 @@ export class CommentsRepository {
     const client = await this.database.pool.connect();
     try {
       await client.query('BEGIN');
-      await insertMessage(
+      await insertMessage({
         client,
-        input.id,
-        input.threadId,
-        input.authorId,
-        input.body,
-        input.timestamp,
-      );
+        id: input.id,
+        threadId: input.threadId,
+        authorId: input.authorId,
+        body: input.body,
+        timestamp: input.timestamp,
+      });
       await client.query(
         `UPDATE story_comment_threads
          SET updated_at = $3, revision = revision + 1
@@ -158,13 +187,7 @@ export class CommentsRepository {
     return this.find(input.storyId, input.threadId);
   }
 
-  async updateStatus(
-    storyId: string,
-    threadId: string,
-    status: 'open' | 'resolved',
-    actorId: string,
-    timestamp: string,
-  ) {
+  async updateStatus(...[storyId, threadId, status, actorId, timestamp]: UpdateStatusArguments) {
     await this.database.pool.query(
       `UPDATE story_comment_threads
        SET status = $3,
@@ -179,11 +202,7 @@ export class CommentsRepository {
   }
 
   async updateAnchor(
-    storyId: string,
-    threadId: string,
-    anchor: CommentAnchor,
-    anchorLabel: string,
-    timestamp: string,
+    ...[storyId, threadId, anchor, anchorLabel, timestamp]: UpdateAnchorArguments
   ) {
     await this.database.pool.query(
       `UPDATE story_comment_threads
@@ -237,14 +256,14 @@ function messageSelect() {
           JOIN users AS author ON author.id = message.author_user_id`;
 }
 
-async function insertMessage(
-  client: PoolClient,
-  id: string,
-  threadId: string,
-  authorId: string,
-  body: string,
-  timestamp: string,
-) {
+async function insertMessage({
+  client,
+  id,
+  threadId,
+  authorId,
+  body,
+  timestamp,
+}: InsertMessageInput) {
   await client.query(
     `INSERT INTO story_comment_messages
      (id, thread_id, author_user_id, body, created_at)
@@ -290,8 +309,11 @@ function groupMessagesByThread(rows: MessageRow[]) {
   const messagesByThread = new Map<string, MessageRow[]>();
   for (const row of rows) {
     const messages = messagesByThread.get(row.thread_id);
-    if (messages) messages.push(row);
-    else messagesByThread.set(row.thread_id, [row]);
+    if (messages) {
+      messages.push(row);
+    } else {
+      messagesByThread.set(row.thread_id, [row]);
+    }
   }
   return messagesByThread;
 }

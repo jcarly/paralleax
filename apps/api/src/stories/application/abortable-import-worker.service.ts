@@ -1,4 +1,5 @@
-import { OnModuleDestroy, ServiceUnavailableException } from '@nestjs/common';
+import { ServiceUnavailableException } from '@nestjs/common';
+import type { OnModuleDestroy } from '@nestjs/common';
 import { Worker } from 'node:worker_threads';
 
 export type ImportWorkerMessage<TProgress, TResult> =
@@ -11,6 +12,12 @@ interface ExecuteWorkerOptions<TProgress> {
   onProgress?: (progress: TProgress) => void;
   abortSignal?: AbortSignal;
   transferList?: ArrayBuffer[];
+}
+
+interface WorkerExecutionCallbacks<TResult> {
+  isSettled: () => boolean;
+  fail: (error: Error) => void;
+  succeed: (result: TResult) => void;
 }
 
 export abstract class AbortableImportWorkerService implements OnModuleDestroy {
@@ -40,63 +47,79 @@ export abstract class AbortableImportWorkerService implements OnModuleDestroy {
         transferList: options.transferList ?? [],
       });
       this.workers.add(worker);
-
-      let settled = false;
-      let abort: () => void = () => undefined;
-
-      const removeAbortListener = () => options.abortSignal?.removeEventListener('abort', abort);
-
-      const fail = (error: Error) => {
-        if (settled) return;
-
-        settled = true;
-        removeAbortListener();
-        rejectPromise(error);
-      };
-
-      abort = () => {
-        if (settled) return;
-
-        void worker
-          .terminate()
-          .catch(() => undefined)
-          .finally(() => fail(new Error(`${options.name} worker cancelled.`)));
-      };
-      options.abortSignal?.addEventListener('abort', abort, { once: true });
-
-      worker.on('message', (message: ImportWorkerMessage<TProgress, TResult>) => {
-        if (settled) return;
-
-        if (message.type === 'progress') {
-          try {
-            options.onProgress?.(message.progress);
-          } catch (error) {
-            fail(error instanceof Error ? error : new Error(String(error)));
-            void worker.terminate();
-          }
-          return;
-        }
-
-        if (message.type === 'result') {
-          settled = true;
-          removeAbortListener();
-          resolvePromise(message.result);
-          return;
-        }
-
-        if (message.type === 'error') fail(new Error(message.message));
-      });
-
-      worker.once('error', fail);
-
-      worker.once('exit', (code) => {
-        this.workers.delete(worker);
-        if (!settled) {
-          fail(
-            new Error(`${options.name} worker exited before returning a result (code ${code}).`),
-          );
-        }
-      });
+      this.observeWorker(worker, options, resolvePromise, rejectPromise);
     });
   }
+
+  private observeWorker<TProgress, TResult>(
+    worker: Worker,
+    options: ExecuteWorkerOptions<TProgress>,
+    resolvePromise: (result: TResult) => void,
+    rejectPromise: (error: Error) => void,
+  ) {
+    let settled = false;
+    let abort: () => void = () => undefined;
+    const removeAbortListener = () => options.abortSignal?.removeEventListener('abort', abort);
+    const settle = (action: () => void) => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      removeAbortListener();
+      action();
+    };
+    const fail = (error: Error) => settle(() => rejectPromise(error));
+    const succeed = (result: TResult) => settle(() => resolvePromise(result));
+
+    abort = () => {
+      if (settled) {
+        return;
+      }
+      void worker
+        .terminate()
+        .catch(() => undefined)
+        .finally(() => fail(new Error(`${options.name} worker cancelled.`)));
+    };
+    options.abortSignal?.addEventListener('abort', abort, { once: true });
+    observeWorkerMessages(worker, options, {
+      isSettled: () => settled,
+      fail,
+      succeed,
+    });
+    worker.once('error', fail);
+    worker.once('exit', (code) => {
+      this.workers.delete(worker);
+      if (!settled) {
+        fail(new Error(`${options.name} worker exited before returning a result (code ${code}).`));
+      }
+    });
+  }
+}
+
+function observeWorkerMessages<TProgress, TResult>(
+  worker: Worker,
+  options: ExecuteWorkerOptions<TProgress>,
+  callbacks: WorkerExecutionCallbacks<TResult>,
+) {
+  worker.on('message', (message: ImportWorkerMessage<TProgress, TResult>) => {
+    if (callbacks.isSettled()) {
+      return;
+    }
+    if (message.type === 'progress') {
+      try {
+        options.onProgress?.(message.progress);
+      } catch (error) {
+        callbacks.fail(error instanceof Error ? error : new Error(String(error)));
+        void worker.terminate();
+      }
+      return;
+    }
+    if (message.type === 'result') {
+      callbacks.succeed(message.result);
+      return;
+    }
+    if (message.type === 'error') {
+      callbacks.fail(new Error(message.message));
+    }
+  });
 }

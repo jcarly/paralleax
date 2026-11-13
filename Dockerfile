@@ -1,10 +1,10 @@
 # syntax=docker/dockerfile:1.7
 
-# The default remains the web image. Platforms that build only the final stage,
-# such as Railway, can set RUNTIME_TARGET=api for the API service.
+# The default runtime remains the web image. Set RUNTIME_TARGET=api when using
+# the runtime alias for the API service.
 ARG RUNTIME_TARGET=web
 
-FROM node:26-alpine AS build
+FROM node:24-alpine AS build
 
 ARG VITE_FORMBRICKS_WORKSPACE_ID=
 ARG VITE_FORMBRICKS_APP_URL=
@@ -36,14 +36,24 @@ RUN npm ci --audit=false --no-update-notifier
 
 COPY . .
 
+FROM build AS shared-build
+
+RUN npm run build --workspace=@paralleax/shared
+
+FROM shared-build AS api-build
+
+RUN npm run build --workspace=@paralleax/api
+
+FROM shared-build AS web-build
+
 RUN --mount=type=secret,id=sentry_auth_token,required=false \
   if [ -s /run/secrets/sentry_auth_token ]; then \
-    SENTRY_AUTH_TOKEN="$(cat /run/secrets/sentry_auth_token)" npm run build; \
+    SENTRY_AUTH_TOKEN="$(cat /run/secrets/sentry_auth_token)" npm run build --workspace=@paralleax/web; \
   else \
-    npm run build; \
+    npm run build --workspace=@paralleax/web; \
   fi
 
-FROM node:26-alpine AS api
+FROM node:24-alpine AS api
 
 ARG SENTRY_RELEASE=
 ENV NODE_ENV=production
@@ -62,7 +72,7 @@ COPY packages/shared/package.json packages/shared/package.json
 RUN npm ci --omit=dev --audit=false --no-update-notifier \
   && npm cache clean --force
 
-COPY --from=build /workspace/apps/api/dist apps/api/dist
+COPY --from=api-build /workspace/apps/api/dist apps/api/dist
 
 RUN mkdir -p /app/storage/imports \
   && chown -R node:node /app/storage
@@ -80,20 +90,24 @@ FROM nginx:alpine AS web
 
 ARG VITE_FORMBRICKS_WORKSPACE_ID=
 ARG VITE_FORMBRICKS_APP_URL=
+ARG VITE_SENTRY_DSN=
 
 COPY deploy/nginx.conf.template /etc/nginx/templates/nginx.conf.template
-COPY --from=build /workspace/apps/web/dist /usr/share/nginx/html
+COPY deploy/sentry-csp.envsh /docker-entrypoint.d/15-sentry-csp.envsh
+COPY --from=web-build /workspace/apps/web/dist /usr/share/nginx/html
 
 ENV API_HOST=api
 ENV API_PORT=3000
 ENV PORT=8080
 ENV VITE_FORMBRICKS_WORKSPACE_ID=${VITE_FORMBRICKS_WORKSPACE_ID}
 ENV VITE_FORMBRICKS_APP_URL=${VITE_FORMBRICKS_APP_URL}
+ENV VITE_SENTRY_DSN=${VITE_SENTRY_DSN}
 
 ENV NGINX_ENVSUBST_OUTPUT_DIR=/tmp/nginx
 ENV NGINX_ENTRYPOINT_LOCAL_RESOLVERS=1
 
-RUN mkdir -p /tmp/nginx && chown nginx:nginx /tmp/nginx
+RUN chmod +x /docker-entrypoint.d/15-sentry-csp.envsh \
+  && mkdir -p /tmp/nginx && chown nginx:nginx /tmp/nginx
 
 
 USER nginx

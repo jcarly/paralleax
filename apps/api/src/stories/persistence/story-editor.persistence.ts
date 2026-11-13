@@ -2,6 +2,7 @@ import type {
   StoryEditorContextPage,
   StoryEditorInteractionContentPage,
   StoryEditorInteractionPage,
+  StoryEditorStatOwnerType,
   StoryEditorTriggerContentPage,
   StoryEditorTriggerPage,
   StatValue,
@@ -141,6 +142,17 @@ type TriggerContentRow = {
   sort_order: number;
 };
 
+type ContextPageRows = {
+  locations: ContextRow[];
+  characters: CharacterRow[];
+  statDefinitions: StatDefinitionRow[];
+  statAssignments: StatAssignmentRow[];
+  itemDefinitions: ContextRow[];
+  itemInstances: ItemInstanceRow[];
+  graphDecorations: GraphDecorationRow[];
+  groups: GroupRow[];
+};
+
 export async function readStoryEditorContextPage(
   queryable: Queryable,
   options: ReadPageOptions,
@@ -148,64 +160,122 @@ export async function readStoryEditorContextPage(
   includeGroups = true,
 ): Promise<StoryEditorContextPage> {
   const { storyId, revision, page, pageSize } = options;
-  const offset = (page - 1) * pageSize;
-  const parameters = pageQueryParameters(storyId, pageSize, offset);
-  const [
-    locations,
-    characters,
-    statDefinitions,
-    statAssignments,
-    itemDefinitions,
-    itemInstances,
-    graphDecorations,
-    groups,
-  ] = await Promise.all([
+  const rows = await readContextPageRows(
+    queryable,
+    options,
+    includeGraphDecorations,
+    includeGroups,
+  );
+  const interactionsByGroup = await readGroupInteractions(
+    queryable,
+    storyId,
+    rows.groups,
+    pageSize,
+  );
+  return {
+    revision,
+    page,
+    pageSize,
+    hasMore: contextPageHasMore(rows, pageSize),
+    locations: mapLocationRows(rows.locations, pageSize),
+    characters: mapCharacterRows(rows.characters, pageSize),
+    statDefinitions: mapStatDefinitionRows(rows.statDefinitions, pageSize),
+    statAssignments: mapStatAssignmentRows(rows.statAssignments, pageSize),
+    itemDefinitions: mapItemDefinitionRows(rows.itemDefinitions, pageSize),
+    itemInstances: mapItemInstanceRows(rows.itemInstances, pageSize),
+    groups: mapGroupRows(rows.groups, pageSize, interactionsByGroup),
+    graphDecorations: mapGraphDecorationRows(rows.graphDecorations, pageSize),
+  };
+}
+
+async function readContextPageRows(
+  queryable: Queryable,
+  options: ReadPageOptions,
+  includeGraphDecorations: boolean,
+  includeGroups: boolean,
+): Promise<ContextPageRows> {
+  const { storyId, page, pageSize } = options;
+  const parameters = pageQueryParameters(storyId, pageSize, (page - 1) * pageSize);
+  const [locationRows, statRows, itemRows, optionalRows] = await Promise.all([
+    readLocationAndCharacterRows(queryable, parameters),
+    readStatContextRows(queryable, parameters),
+    readItemContextRows(queryable, parameters),
+    readOptionalContextRows(queryable, parameters, includeGraphDecorations, includeGroups),
+  ]);
+  return { ...locationRows, ...statRows, ...itemRows, ...optionalRows };
+}
+
+async function readLocationAndCharacterRows(queryable: Queryable, parameters: unknown[]) {
+  const [locations, characters] = await Promise.all([
     queryable.query<ContextRow>(
       `SELECT id, name, description, category, image_url, sort_order
-           FROM locations WHERE story_id = $1
-           ORDER BY sort_order, id LIMIT $2 OFFSET $3`,
+       FROM locations WHERE story_id = $1
+       ORDER BY sort_order, id LIMIT $2 OFFSET $3`,
       parameters,
     ),
     queryable.query<CharacterRow>(
       `SELECT id, name, description, category, image_url, is_playable, sort_order
-           FROM characters WHERE story_id = $1
-           ORDER BY sort_order, id LIMIT $2 OFFSET $3`,
+       FROM characters WHERE story_id = $1
+       ORDER BY sort_order, id LIMIT $2 OFFSET $3`,
       parameters,
     ),
+  ]);
+  return { locations: locations.rows, characters: characters.rows };
+}
+
+async function readStatContextRows(queryable: Queryable, parameters: unknown[]) {
+  const [statDefinitions, statAssignments] = await Promise.all([
     queryable.query<StatDefinitionRow>(
       `SELECT id, name, value_type, category, image_url, change_per_hour, sort_order
-           FROM stat_definitions WHERE story_id = $1
-           ORDER BY sort_order, id LIMIT $2 OFFSET $3`,
+       FROM stat_definitions WHERE story_id = $1
+       ORDER BY sort_order, id LIMIT $2 OFFSET $3`,
       parameters,
     ),
     queryable.query<StatAssignmentRow>(
       `SELECT id, stat_definition_id, owner_type, character_id, location_id,
-                item_definition_id, initial_value, sort_order
-           FROM stat_assignments WHERE story_id = $1
-           ORDER BY owner_type, sort_order, id LIMIT $2 OFFSET $3`,
+              item_definition_id, initial_value, sort_order
+       FROM stat_assignments WHERE story_id = $1
+       ORDER BY owner_type, sort_order, id LIMIT $2 OFFSET $3`,
       parameters,
     ),
+  ]);
+  return { statDefinitions: statDefinitions.rows, statAssignments: statAssignments.rows };
+}
+
+async function readItemContextRows(queryable: Queryable, parameters: unknown[]) {
+  const [itemDefinitions, itemInstances] = await Promise.all([
     queryable.query<ContextRow>(
       `SELECT id, name, description, category, image_url, sort_order
-           FROM item_definitions WHERE story_id = $1
-           ORDER BY sort_order, id LIMIT $2 OFFSET $3`,
+       FROM item_definitions WHERE story_id = $1
+       ORDER BY sort_order, id LIMIT $2 OFFSET $3`,
       parameters,
     ),
     queryable.query<ItemInstanceRow>(
       `SELECT items.id, items.owner_character_id, items.owner_location_id,
-                items.item_definition_id, relationship.parent_item_id,
-                relationship.relationship_type, relationship.slot_key, items.sort_order
-           FROM item_instances AS items
-           LEFT JOIN item_instance_relationships AS relationship
-             ON relationship.child_item_id = items.id
-           WHERE items.story_id = $1
-           ORDER BY items.sort_order, items.id LIMIT $2 OFFSET $3`,
+              items.item_definition_id, relationship.parent_item_id,
+              relationship.relationship_type, relationship.slot_key, items.sort_order
+       FROM item_instances AS items
+       LEFT JOIN item_instance_relationships AS relationship
+         ON relationship.child_item_id = items.id
+       WHERE items.story_id = $1
+       ORDER BY items.sort_order, items.id LIMIT $2 OFFSET $3`,
       parameters,
     ),
+  ]);
+  return { itemDefinitions: itemDefinitions.rows, itemInstances: itemInstances.rows };
+}
+
+async function readOptionalContextRows(
+  queryable: Queryable,
+  parameters: unknown[],
+  includeGraphDecorations: boolean,
+  includeGroups: boolean,
+) {
+  const [graphDecorations, groups] = await Promise.all([
     includeGraphDecorations
       ? queryable.query<GraphDecorationRow>(
           `SELECT id, kind, position_x, position_y, width, height, text_content, color,
-                font_size, font_family, font_weight, font_style, sort_order
+                  font_size, font_family, font_weight, font_style, sort_order
            FROM graph_decorations WHERE story_id = $1
            ORDER BY sort_order, id LIMIT $2 OFFSET $3`,
           parameters,
@@ -214,117 +284,162 @@ export async function readStoryEditorContextPage(
     includeGroups
       ? queryable.query<GroupRow>(
           `SELECT id, title, parent_group_id, sort_order
-             FROM story_groups WHERE story_id = $1
-             ORDER BY sort_order, id LIMIT $2 OFFSET $3`,
+           FROM story_groups WHERE story_id = $1
+           ORDER BY sort_order, id LIMIT $2 OFFSET $3`,
           parameters,
         )
       : Promise.resolve({ rows: [] as GroupRow[] }),
   ]);
-  const groupRows = pageRows(groups.rows, pageSize);
-  const groupInteractions = groupRows.length
-    ? await queryable.query<GroupInteractionRow>(
-        `SELECT group_id, interaction_id, sort_order
-           FROM story_group_interactions
-           WHERE story_id = $1 AND group_id = ANY($2::text[])
-           ORDER BY group_id, sort_order`,
-        [storyId, groupRows.map(({ id }) => id)],
-      )
-    : { rows: [] as GroupInteractionRow[] };
-  const interactionsByGroup = groupBy(groupInteractions.rows, ({ group_id }) => group_id);
+  return { graphDecorations: graphDecorations.rows, groups: groups.rows };
+}
 
-  return {
-    revision,
-    page,
-    pageSize,
-    hasMore: [
-      locations,
-      characters,
-      statDefinitions,
-      statAssignments,
-      itemDefinitions,
-      itemInstances,
-      graphDecorations,
-      groups,
-    ].some((result) => hasPageLookahead(result.rows, pageSize)),
-    locations: pageRows(locations.rows, pageSize).map((row) => ({
-      id: row.id,
-      name: row.name,
-      description: row.description,
-      ...(row.category ? { category: row.category } : {}),
-      ...(row.image_url ? { imageUrl: row.image_url } : {}),
-    })),
-    characters: pageRows(characters.rows, pageSize).map((row) => ({
-      id: row.id,
-      name: row.name,
-      description: row.description,
-      ...(row.category ? { category: row.category } : {}),
-      ...(row.image_url ? { imageUrl: row.image_url } : {}),
-      ...(row.is_playable ? { isPlayable: true } : {}),
-    })),
-    statDefinitions: pageRows(statDefinitions.rows, pageSize).map((row) => ({
-      id: row.id,
-      name: row.name,
-      valueType: row.value_type,
-      ...(row.category ? { category: row.category } : {}),
-      ...(row.image_url ? { imageUrl: row.image_url } : {}),
-      ...(row.change_per_hour ? { changePerHour: row.change_per_hour } : {}),
-    })),
-    statAssignments: pageRows(statAssignments.rows, pageSize).map((row) => ({
+async function readGroupInteractions(
+  queryable: Queryable,
+  storyId: string,
+  groups: GroupRow[],
+  pageSize: number,
+) {
+  const currentPageGroups = pageRows(groups, pageSize);
+  if (currentPageGroups.length === 0) {
+    return new Map<string, GroupInteractionRow[]>();
+  }
+  const result = await queryable.query<GroupInteractionRow>(
+    `SELECT group_id, interaction_id, sort_order
+     FROM story_group_interactions
+     WHERE story_id = $1 AND group_id = ANY($2::text[])
+     ORDER BY group_id, sort_order`,
+    [storyId, currentPageGroups.map(({ id }) => id)],
+  );
+  return groupBy(result.rows, ({ group_id }) => group_id);
+}
+
+function contextPageHasMore(rows: ContextPageRows, pageSize: number) {
+  return Object.values(rows).some((resultRows) => hasPageLookahead(resultRows, pageSize));
+}
+
+function mapLocationRows(rows: ContextRow[], pageSize: number) {
+  return pageRows(rows, pageSize).map((row) => ({
+    id: row.id,
+    name: row.name,
+    description: row.description,
+    ...(row.category ? { category: row.category } : {}),
+    ...(row.image_url ? { imageUrl: row.image_url } : {}),
+  }));
+}
+
+function mapCharacterRows(rows: CharacterRow[], pageSize: number) {
+  return pageRows(rows, pageSize).map((row) => ({
+    id: row.id,
+    name: row.name,
+    description: row.description,
+    ...(row.category ? { category: row.category } : {}),
+    ...(row.image_url ? { imageUrl: row.image_url } : {}),
+    ...(row.is_playable ? { isPlayable: true } : {}),
+  }));
+}
+
+function mapStatDefinitionRows(rows: StatDefinitionRow[], pageSize: number) {
+  return pageRows(rows, pageSize).map((row) => ({
+    id: row.id,
+    name: row.name,
+    valueType: row.value_type,
+    ...(row.category ? { category: row.category } : {}),
+    ...(row.image_url ? { imageUrl: row.image_url } : {}),
+    ...(row.change_per_hour ? { changePerHour: row.change_per_hour } : {}),
+  }));
+}
+
+function mapStatAssignmentRows(rows: StatAssignmentRow[], pageSize: number) {
+  return pageRows(rows, pageSize).map((row) => {
+    const ownerType: StoryEditorStatOwnerType =
+      row.owner_type === 'item_definition' ? 'itemDefinition' : row.owner_type;
+    return {
       id: row.id,
       statDefinitionId: row.stat_definition_id,
       initialValue: row.initial_value,
-      ownerType: row.owner_type === 'item_definition' ? 'itemDefinition' : row.owner_type,
+      ownerType,
       ...statOwner(row),
-    })),
-    itemDefinitions: pageRows(itemDefinitions.rows, pageSize).map((row) => ({
-      id: row.id,
-      name: row.name,
-      description: row.description,
-      ...(row.category ? { category: row.category } : {}),
-      ...(row.image_url ? { imageUrl: row.image_url } : {}),
-    })),
-    itemInstances: pageRows(itemInstances.rows, pageSize).map((row) => ({
-      id: row.id,
-      itemDefinitionId: row.item_definition_id,
-      ...(row.owner_character_id
-        ? { ownerType: 'character' as const, ownerId: row.owner_character_id }
-        : row.owner_location_id
-          ? { ownerType: 'location' as const, ownerId: row.owner_location_id }
-          : {}),
-      ...(row.parent_item_id ? { parentItemId: row.parent_item_id } : {}),
-      ...(row.relationship_type ? { relationshipType: row.relationship_type } : {}),
-      ...(row.slot_key ? { slotKey: row.slot_key } : {}),
-    })),
-    groups: groupRows.map((group) => ({
-      id: group.id,
-      title: group.title,
-      ...(group.parent_group_id ? { parentGroupId: group.parent_group_id } : {}),
-      interactionIds: (interactionsByGroup.get(group.id) ?? []).map(
-        ({ interaction_id }) => interaction_id,
-      ),
-    })),
-    graphDecorations: pageRows(graphDecorations.rows, pageSize).map((row) =>
-      row.kind === 'frame'
-        ? {
-            id: row.id,
-            kind: 'frame',
-            position: { x: row.position_x, y: row.position_y },
-            color: row.color,
-            width: row.width!,
-            height: row.height!,
-          }
-        : {
-            id: row.id,
-            kind: 'text',
-            position: { x: row.position_x, y: row.position_y },
-            color: row.color,
-            text: row.text_content!,
-            fontSize: row.font_size!,
-            fontFamily: row.font_family!,
-            fontWeight: row.font_weight!,
-            fontStyle: row.font_style!,
-          },
+    };
+  });
+}
+
+function mapItemDefinitionRows(rows: ContextRow[], pageSize: number) {
+  return pageRows(rows, pageSize).map((row) => ({
+    id: row.id,
+    name: row.name,
+    description: row.description,
+    ...(row.category ? { category: row.category } : {}),
+    ...(row.image_url ? { imageUrl: row.image_url } : {}),
+  }));
+}
+
+function mapItemInstanceRows(rows: ItemInstanceRow[], pageSize: number) {
+  return pageRows(rows, pageSize).map((row) => ({
+    id: row.id,
+    itemDefinitionId: row.item_definition_id,
+    ...(row.owner_character_id
+      ? { ownerType: 'character' as const, ownerId: row.owner_character_id }
+      : row.owner_location_id
+        ? { ownerType: 'location' as const, ownerId: row.owner_location_id }
+        : {}),
+    ...(row.parent_item_id ? { parentItemId: row.parent_item_id } : {}),
+    ...(row.relationship_type ? { relationshipType: row.relationship_type } : {}),
+    ...(row.slot_key ? { slotKey: row.slot_key } : {}),
+  }));
+}
+
+function mapGroupRows(
+  rows: GroupRow[],
+  pageSize: number,
+  interactionsByGroup: Map<string, GroupInteractionRow[]>,
+) {
+  return pageRows(rows, pageSize).map((group) => ({
+    id: group.id,
+    title: group.title,
+    ...(group.parent_group_id ? { parentGroupId: group.parent_group_id } : {}),
+    interactionIds: (interactionsByGroup.get(group.id) ?? []).map(
+      ({ interaction_id }) => interaction_id,
     ),
+  }));
+}
+
+function mapGraphDecorationRows(rows: GraphDecorationRow[], pageSize: number) {
+  return pageRows(rows, pageSize).map(mapGraphDecoration);
+}
+
+function mapGraphDecoration(row: GraphDecorationRow) {
+  if (row.kind === 'frame') {
+    if (row.width === null || row.height === null) {
+      throw new Error('Frame graph decoration has missing dimensions');
+    }
+    return {
+      id: row.id,
+      kind: 'frame' as const,
+      position: { x: row.position_x, y: row.position_y },
+      color: row.color,
+      width: row.width,
+      height: row.height,
+    };
+  }
+  if (
+    row.text_content === null ||
+    row.font_size === null ||
+    row.font_family === null ||
+    row.font_weight === null ||
+    row.font_style === null
+  ) {
+    throw new Error('Text graph decoration has missing style or content');
+  }
+  return {
+    id: row.id,
+    kind: 'text' as const,
+    position: { x: row.position_x, y: row.position_y },
+    color: row.color,
+    text: row.text_content,
+    fontSize: row.font_size,
+    fontFamily: row.font_family,
+    fontWeight: row.font_weight,
+    fontStyle: row.font_style,
   };
 }
 
@@ -405,81 +520,124 @@ export async function readStoryEditorInteractionContentPage(
   queryable: Queryable,
   options: ReadPageOptions,
 ): Promise<StoryEditorInteractionContentPage> {
-  const { storyId, revision, page, pageSize } = options;
-  const offset = (page - 1) * pageSize;
-  const interactions = await queryable.query<InteractionContentRow>(
-    `SELECT id, body, duration_minutes, conditional_text_blocks, sort_order
-       FROM interactions WHERE story_id = $1
-       ORDER BY sort_order, id LIMIT $2 OFFSET $3`,
-    pageQueryParameters(storyId, pageSize, offset),
-  );
-  const interactionRows = pageRows(interactions.rows, pageSize);
+  const { revision, page, pageSize } = options;
+  const interactions = await readInteractionContentRows(queryable, options);
+  const interactionRows = pageRows(interactions, pageSize);
   const interactionIds = interactionRows.map(({ id }) => id);
-  const [characters, statEffects, itemEffects] = interactionIds.length
-    ? await Promise.all([
-        queryable.query<InteractionCharacterRow>(
-          `SELECT interaction_id, character_id, sort_order
-             FROM interaction_characters WHERE interaction_id = ANY($1::text[])
-             ORDER BY interaction_id, sort_order`,
-          [interactionIds],
-        ),
-        queryable.query<StatEffectRow>(
-          `SELECT interaction_id, stat_id, item_id, operation, value, expression, sort_order
-             FROM interaction_stat_effects WHERE interaction_id = ANY($1::text[])
-             ORDER BY interaction_id, sort_order`,
-          [interactionIds],
-        ),
-        queryable.query<ItemEffectRow>(
-          `SELECT interaction_id, item_id, item_definition_id, character_id,
-                  operation, sort_order
-             FROM interaction_item_effects WHERE interaction_id = ANY($1::text[])
-             ORDER BY interaction_id, sort_order`,
-          [interactionIds],
-        ),
-      ])
-    : [
-        { rows: [] as InteractionCharacterRow[] },
-        { rows: [] as StatEffectRow[] },
-        { rows: [] as ItemEffectRow[] },
-      ];
-  const charactersByInteraction = groupBy(characters.rows, ({ interaction_id }) => interaction_id);
+  const relations = await readInteractionContentRelations(queryable, interactionIds);
+  const charactersByInteraction = groupBy(
+    relations.characters,
+    ({ interaction_id }) => interaction_id,
+  );
   const statEffectsByInteraction = groupBy(
-    statEffects.rows,
+    relations.statEffects,
     ({ interaction_id }) => interaction_id,
   );
   const itemEffectsByInteraction = groupBy(
-    itemEffects.rows,
+    relations.itemEffects,
     ({ interaction_id }) => interaction_id,
   );
   return {
     revision,
     page,
     pageSize,
-    hasMore: hasPageLookahead(interactions.rows, pageSize),
-    interactions: interactionRows.map((row) => ({
-      interactionId: row.id,
-      body: row.body,
-      durationMinutes: row.duration_minutes,
-      conditionalTextBlocks: row.conditional_text_blocks,
-      characterIds: (charactersByInteraction.get(row.id) ?? []).map(
-        ({ character_id }) => character_id,
+    hasMore: hasPageLookahead(interactions, pageSize),
+    interactions: interactionRows.map((row) =>
+      mapInteractionContentRow(
+        row,
+        charactersByInteraction,
+        statEffectsByInteraction,
+        itemEffectsByInteraction,
       ),
-      statEffects: (statEffectsByInteraction.get(row.id) ?? []).map((effect) => ({
-        statId: effect.stat_id,
-        ...(effect.item_id ? { itemId: effect.item_id } : {}),
-        operation: effect.operation,
-        ...(typeof effect.expression === 'string'
-          ? { expression: effect.expression }
-          : { value: effect.value! }),
-      })),
-      itemEffects: (itemEffectsByInteraction.get(row.id) ?? []).map((effect) => ({
-        ...(effect.item_id ? { itemId: effect.item_id } : {}),
-        ...(effect.item_definition_id ? { itemDefinitionId: effect.item_definition_id } : {}),
-        ...(effect.character_id ? { characterId: effect.character_id } : {}),
-        operation: effect.operation,
-      })),
+    ),
+  };
+}
+
+async function readInteractionContentRows(queryable: Queryable, options: ReadPageOptions) {
+  const { storyId, page, pageSize } = options;
+  return (
+    await queryable.query<InteractionContentRow>(
+      `SELECT id, body, duration_minutes, conditional_text_blocks, sort_order
+       FROM interactions WHERE story_id = $1
+       ORDER BY sort_order, id LIMIT $2 OFFSET $3`,
+      pageQueryParameters(storyId, pageSize, (page - 1) * pageSize),
+    )
+  ).rows;
+}
+
+async function readInteractionContentRelations(queryable: Queryable, interactionIds: string[]) {
+  if (interactionIds.length === 0) {
+    return {
+      characters: [] as InteractionCharacterRow[],
+      statEffects: [] as StatEffectRow[],
+      itemEffects: [] as ItemEffectRow[],
+    };
+  }
+  const [characters, statEffects, itemEffects] = await Promise.all([
+    queryable.query<InteractionCharacterRow>(
+      `SELECT interaction_id, character_id, sort_order
+       FROM interaction_characters WHERE interaction_id = ANY($1::text[])
+       ORDER BY interaction_id, sort_order`,
+      [interactionIds],
+    ),
+    queryable.query<StatEffectRow>(
+      `SELECT interaction_id, stat_id, item_id, operation, value, expression, sort_order
+       FROM interaction_stat_effects WHERE interaction_id = ANY($1::text[])
+       ORDER BY interaction_id, sort_order`,
+      [interactionIds],
+    ),
+    queryable.query<ItemEffectRow>(
+      `SELECT interaction_id, item_id, item_definition_id, character_id,
+              operation, sort_order
+       FROM interaction_item_effects WHERE interaction_id = ANY($1::text[])
+       ORDER BY interaction_id, sort_order`,
+      [interactionIds],
+    ),
+  ]);
+  return {
+    characters: characters.rows,
+    statEffects: statEffects.rows,
+    itemEffects: itemEffects.rows,
+  };
+}
+
+function mapInteractionContentRow(
+  row: InteractionContentRow,
+  charactersByInteraction: Map<string, InteractionCharacterRow[]>,
+  statEffectsByInteraction: Map<string, StatEffectRow[]>,
+  itemEffectsByInteraction: Map<string, ItemEffectRow[]>,
+) {
+  return {
+    interactionId: row.id,
+    body: row.body,
+    durationMinutes: row.duration_minutes,
+    conditionalTextBlocks: row.conditional_text_blocks,
+    characterIds: (charactersByInteraction.get(row.id) ?? []).map(
+      ({ character_id }) => character_id,
+    ),
+    statEffects: (statEffectsByInteraction.get(row.id) ?? []).map(mapStatEffectRow),
+    itemEffects: (itemEffectsByInteraction.get(row.id) ?? []).map((effect) => ({
+      ...(effect.item_id ? { itemId: effect.item_id } : {}),
+      ...(effect.item_definition_id ? { itemDefinitionId: effect.item_definition_id } : {}),
+      ...(effect.character_id ? { characterId: effect.character_id } : {}),
+      operation: effect.operation,
     })),
   };
+}
+
+function mapStatEffectRow(effect: StatEffectRow) {
+  const target = {
+    statId: effect.stat_id,
+    ...(effect.item_id ? { itemId: effect.item_id } : {}),
+    operation: effect.operation,
+  };
+  if (typeof effect.expression === 'string') {
+    return { ...target, expression: effect.expression };
+  }
+  if (effect.value === null) {
+    throw new Error('Literal stat effect is missing its value');
+  }
+  return { ...target, value: effect.value };
 }
 
 export async function readStoryEditorTriggerContentPage(
@@ -515,8 +673,12 @@ export async function readStoryEditorTriggerContentPage(
 }
 
 function statOwner(row: StatAssignmentRow): { ownerId?: string } {
-  if (row.owner_type === 'character' && row.character_id) return { ownerId: row.character_id };
-  if (row.owner_type === 'location' && row.location_id) return { ownerId: row.location_id };
+  if (row.owner_type === 'character' && row.character_id) {
+    return { ownerId: row.character_id };
+  }
+  if (row.owner_type === 'location' && row.location_id) {
+    return { ownerId: row.location_id };
+  }
   if (row.owner_type === 'item_definition' && row.item_definition_id) {
     return { ownerId: row.item_definition_id };
   }
@@ -525,7 +687,9 @@ function statOwner(row: StatAssignmentRow): { ownerId?: string } {
 
 function groupBy<T>(items: T[], key: (item: T) => string) {
   const grouped = new Map<string, T[]>();
-  for (const item of items) grouped.set(key(item), [...(grouped.get(key(item)) ?? []), item]);
+  for (const item of items) {
+    grouped.set(key(item), [...(grouped.get(key(item)) ?? []), item]);
+  }
   return grouped;
 }
 
