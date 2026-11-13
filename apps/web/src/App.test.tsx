@@ -247,9 +247,7 @@ describe('App', () => {
       </MemoryRouter>,
     );
 
-    expect(
-      await screen.findByRole('heading', { name: 'Sign in to Paralleax' }),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument();
     await user.type(screen.getByLabelText('Email address'), 'author@example.com');
     await user.type(screen.getByLabelText('Password'), 'secret-password');
     await user.click(screen.getByRole('button', { name: 'Sign in' }));
@@ -282,6 +280,9 @@ describe('App', () => {
     );
 
     expect(await screen.findByRole('heading', { name: 'Create your account' })).toBeInTheDocument();
+    expect(screen.getByRole('navigation', { name: 'Main navigation' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Paralleax' })).toHaveAttribute('href', '/');
+    expect(screen.getByRole('group', { name: 'Account access' })).toBeInTheDocument();
   });
 
   it('verifies an email from its account action link and returns to the library', async () => {
@@ -354,9 +355,7 @@ describe('App', () => {
     ).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Back to sign in' }));
 
-    expect(
-      await screen.findByRole('heading', { name: 'Sign in to Paralleax' }),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument();
   });
 
   it('signs out and returns to the anonymous library', async () => {
@@ -386,9 +385,7 @@ describe('App', () => {
       window.dispatchEvent(new Event('paralleax:session-expired'));
     });
 
-    expect(
-      await screen.findByRole('heading', { name: 'Sign in to Paralleax' }),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument();
     expect(
       screen.getByText('Your session expired. Sign in again to continue.'),
     ).toBeInTheDocument();

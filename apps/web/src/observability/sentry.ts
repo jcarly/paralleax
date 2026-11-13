@@ -64,6 +64,15 @@ export function initializeSentry(configuration = browserSentryConfig) {
   });
 }
 
+export function captureBrowserException(
+  error: Error,
+  kind: 'dynamic-import' | 'route-error',
+): void {
+  Sentry.captureException(error, {
+    tags: { source: 'react-router', failure_kind: kind },
+  });
+}
+
 export function redactSentryEvent<T extends object>(event: T): T {
   if (!isRecord(event)) {
     return event;

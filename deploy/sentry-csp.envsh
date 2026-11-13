@@ -1,0 +1,24 @@
+# Loaded by the official Nginx entrypoint before envsubst processes templates.
+# Only the DSN's origin is allowed by CSP; the public DSN key is not included.
+SENTRY_CSP_ORIGIN=''
+if [ -n "${VITE_SENTRY_DSN:-}" ]; then
+  case "$VITE_SENTRY_DSN" in
+    https://*@*/* | http://*@*/*)
+      sentry_scheme="${VITE_SENTRY_DSN%%://*}"
+      sentry_host_and_path="${VITE_SENTRY_DSN#*@}"
+      sentry_host="${sentry_host_and_path%%/*}"
+      case "$sentry_host" in
+        '' | *[!a-zA-Z0-9.:-]* | *..* | .* | *.)
+          echo "Sentry DSN hostname invalid; Sentry CSP origin unavailable" >&2
+          ;;
+        *)
+          SENTRY_CSP_ORIGIN="$sentry_scheme://$sentry_host"
+          ;;
+      esac
+      ;;
+    *)
+      echo "Sentry DSN invalid; Sentry CSP origin unavailable" >&2
+      ;;
+  esac
+fi
+export SENTRY_CSP_ORIGIN

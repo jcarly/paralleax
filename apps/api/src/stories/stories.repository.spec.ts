@@ -526,6 +526,31 @@ function readInteractions(saved: Story): Promise<MockQueryResult> {
   });
 }
 
+const invalidDecorationCases: InvalidDecorationCase[] = [
+  {
+    kind: 'frame',
+    width: null,
+    height: 240,
+    text_content: null,
+    font_size: null,
+    font_family: null,
+    font_weight: null,
+    font_style: null,
+    expectedError: 'Invalid persisted frame decoration: dimensions are missing',
+  },
+  {
+    kind: 'text',
+    width: null,
+    height: null,
+    text_content: 'Act one',
+    font_size: null,
+    font_family: 'sans',
+    font_weight: 'bold',
+    font_style: 'italic',
+    expectedError: 'Invalid persisted text decoration: content or style is missing',
+  },
+];
+
 describe('StoriesRepository', registerRepositorySuite);
 
 function registerRepositorySuite() {
@@ -606,31 +631,6 @@ type InvalidDecorationCase = {
   font_style: string | null;
   expectedError: string;
 };
-
-const invalidDecorationCases: InvalidDecorationCase[] = [
-  {
-    kind: 'frame',
-    width: null,
-    height: 240,
-    text_content: null,
-    font_size: null,
-    font_family: null,
-    font_weight: null,
-    font_style: null,
-    expectedError: 'Invalid persisted frame decoration: dimensions are missing',
-  },
-  {
-    kind: 'text',
-    width: null,
-    height: null,
-    text_content: 'Act one',
-    font_size: null,
-    font_family: 'sans',
-    font_weight: 'bold',
-    font_style: 'italic',
-    expectedError: 'Invalid persisted text decoration: content or style is missing',
-  },
-];
 
 async function rejectInvalidDecoration(decoration: InvalidDecorationCase) {
   const saved = graphStory();

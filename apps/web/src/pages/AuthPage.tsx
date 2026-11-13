@@ -4,51 +4,9 @@ import { isValidUserDisplayName, normalizeUserDisplayName } from '@paralleax/sha
 import { api, type AuthUser } from '../api';
 import { apiErrorMessage } from '../apiErrorMessages';
 import { FieldHelpTooltip } from '../components/FieldHelpTooltip';
-import { LanguageSwitcher } from '../components/LanguageSwitcher';
 import './ProductPages.css';
 
 export type AuthMode = 'login' | 'register';
-
-function ProductBrand() {
-  return (
-    <div className="product-brand" aria-label="Paralleax">
-      <span aria-hidden="true">P</span>
-      <b>Paralleax</b>
-    </div>
-  );
-}
-
-function MiniStoryGraph() {
-  const { t } = useTranslation();
-  return (
-    <div className="auth-graph" aria-hidden="true">
-      <svg viewBox="0 0 560 360" preserveAspectRatio="none">
-        <path d="M280 76 V130" />
-        <path d="M280 158 V207 H144 V245" />
-        <path d="M280 158 V245" />
-        <path d="M280 158 V207 H416 V245" />
-      </svg>
-      <div className="auth-graph-node root">
-        <small>{t('auth.showcase.graph.start')}</small>
-        <b>{t('auth.showcase.graph.root')}</b>
-        <span>{t('auth.showcase.graph.glasshouse')}</span>
-      </div>
-      <span className="auth-graph-trigger" />
-      <div className="auth-graph-node left">
-        <b>{t('auth.showcase.graph.warning')}</b>
-        <span>{t('auth.showcase.graph.oldQuarter')}</span>
-      </div>
-      <div className="auth-graph-node center">
-        <b>{t('auth.showcase.graph.passage')}</b>
-        <span>{t('auth.showcase.graph.archive')}</span>
-      </div>
-      <div className="auth-graph-node right">
-        <b>{t('auth.showcase.graph.voice')}</b>
-        <span>{t('auth.showcase.graph.archive')}</span>
-      </div>
-    </div>
-  );
-}
 
 export function AuthPage({
   onAuthenticated,
@@ -123,37 +81,21 @@ export function AuthPage({
   }
 
   return (
-    <main className="product-page auth-layout">
-      <section className="auth-showcase">
-        <ProductBrand />
-        <div className="auth-message">
-          <span className="product-eyebrow">{t('auth.showcase.eyebrow')}</span>
-          <h1>{t('auth.showcase.title')}</h1>
-          <p>{t('auth.showcase.description')}</p>
-        </div>
-        <MiniStoryGraph />
-        <p className="auth-quote">{t('auth.showcase.quote')}</p>
-      </section>
-
+    <main className="product-page auth-route">
       <section className="auth-panel">
-        <div className="auth-card">
-          <LanguageSwitcher className="language-switcher-auth" />
-          <div className="auth-mobile-brand">
-            <ProductBrand />
-          </div>
-          <span className="product-eyebrow">
-            {t(isRegister ? 'auth.register.eyebrow' : 'auth.login.eyebrow')}
-          </span>
-          <h2>
+        <div className="auth-card" aria-labelledby="auth-title">
+          <h1 id="auth-title">
             {verificationEmail
               ? t('auth.verification.title')
               : t(isRegister ? 'auth.register.title' : 'auth.login.title')}
-          </h2>
-          <p>
-            {verificationEmail
-              ? t('auth.verification.description', { email: verificationEmail })
-              : t(isRegister ? 'auth.register.description' : 'auth.login.description')}
-          </p>
+          </h1>
+          {verificationEmail || isRegister ? (
+            <p>
+              {verificationEmail
+                ? t('auth.verification.description', { email: verificationEmail })
+                : t('auth.register.description')}
+            </p>
+          ) : null}
           {notice ? (
             <p className="auth-notice" role="status">
               {notice}
@@ -230,9 +172,7 @@ export function AuthPage({
                     aria-label={t('auth.password')}
                     autoComplete={isRegister ? 'new-password' : 'current-password'}
                     type={showPassword ? 'text' : 'password'}
-                    placeholder={t(
-                      isRegister ? 'auth.newPasswordPlaceholder' : 'auth.passwordPlaceholder',
-                    )}
+                    placeholder={isRegister ? t('auth.newPasswordPlaceholder') : undefined}
                     value={password}
                     onChange={(event) => setPassword(event.target.value)}
                     minLength={8}
@@ -244,13 +184,13 @@ export function AuthPage({
                 </span>
               </label>
               {isRegister ? (
-                <label className="form-field form-field--standard">
-                  <span>{t('auth.confirmPassword')}</span>
+                <div className="form-field form-field--standard">
+                  <label htmlFor="auth-confirm-password">{t('auth.confirmPassword')}</label>
                   <input
                     className="form-control form-control--standard"
+                    id="auth-confirm-password"
                     autoComplete="new-password"
                     type={showPassword ? 'text' : 'password'}
-                    placeholder={t('auth.confirmPasswordPlaceholder')}
                     value={confirmation}
                     onChange={(event) => setConfirmation(event.target.value)}
                     required
@@ -258,7 +198,7 @@ export function AuthPage({
                   {confirmation && !passwordsMatch ? (
                     <small className="field-error">{t('auth.passwordsDoNotMatch')}</small>
                   ) : null}
-                </label>
+                </div>
               ) : null}
               {error ? (
                 <p className="form-error" role="alert">
