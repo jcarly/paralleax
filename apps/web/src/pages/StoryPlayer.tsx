@@ -50,10 +50,7 @@ import {
 } from '../features/story-player/storyPlayerPresentation';
 import { type StoryRealtimeInvalidation } from '../features/realtime/storyRealtime';
 import { useStoryRouteAccessRecovery } from '../features/story/useStoryRouteAccessRecovery';
-import {
-  interactionTitleForDisplay,
-  interactionTitlePlaceholder,
-} from '../features/story/interactionTitlePresentation';
+import { interactionTitlePlaceholder } from '../features/story/interactionTitlePresentation';
 import { StoryUnavailablePage } from '../features/story/StoryUnavailablePage';
 import { useStoryRealtime } from '../hooks/useStoryRealtime';
 import { usePendingSaveGuard } from '../hooks/usePendingSaveGuard';
@@ -1067,7 +1064,7 @@ export function StoryPlayer({
                 </>
               ) : (
                 <>
-                  <h1>{interactionTitleForDisplay(current, t)}</h1>
+                  <h1 className="sr-only">{current.title}</h1>
                   <RichTextContent
                     className="story-body"
                     html={current.body}

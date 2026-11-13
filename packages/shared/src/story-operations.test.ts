@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { expect, it } from 'vitest';
 import {
   deleteInteractionFromStory,
   deleteGraphDecorationFromStory,
@@ -17,7 +17,7 @@ import {
   updateTriggerInStory,
   updateGraphDecorationInStory,
   type Story,
-} from './index';
+} from './index.js';
 
 function storyFixture(): Story {
   return {
@@ -57,1053 +57,1024 @@ function storyFixture(): Story {
   };
 }
 
-describe('shared story operations', () => {
-  it('updates and deletes graph decorations without changing narrative interactions', () => {
-    const story = storyFixture();
-    story.graphDecorations = [
-      {
-        id: 'frame-1',
-        kind: 'frame',
-        position: { x: 20, y: 30 },
-        color: '#5b6ee1',
-        width: 420,
-        height: 240,
-      },
-      {
-        id: 'text-1',
-        kind: 'text',
-        position: { x: 40, y: 50 },
-        color: '#273043',
-        text: 'Act one',
-        fontSize: 32,
-        fontFamily: 'sans',
-        fontWeight: 'normal',
-        fontStyle: 'normal',
-      },
-    ];
-    const interactions = structuredClone(story.interactions);
+function typedStatsFixture(): Story {
+  const story = storyFixture();
+  story.statDefinitions = [
+    { id: 'score-definition', name: 'Score', valueType: 'number', changePerHour: 2 },
+    { id: 'open-definition', name: 'Door open', valueType: 'boolean' },
+    { id: 'name-definition', name: 'Alias', valueType: 'string' },
+  ];
+  story.stats = [
+    { id: 'score', statDefinitionId: 'score-definition', initialValue: 2 },
+    { id: 'door-open', statDefinitionId: 'open-definition', initialValue: false },
+    { id: 'alias', statDefinitionId: 'name-definition', initialValue: 'Mira' },
+  ];
+  story.interactions[0].statEffects = [
+    { statId: 'score', operation: 'add', value: 3 },
+    { statId: 'door-open', operation: 'set', value: true },
+  ];
+  story.interactions[0].durationMinutes = 30;
+  story.interactions[1].triggers[0].conditions = [
+    { statId: 'door-open', operator: 'eq', value: true },
+    { statId: 'alias', operator: 'neq', value: 'Unknown' },
+  ];
+  return story;
+}
 
-    const updated = updateGraphDecorationInStory(story, 'text-1', {
+function expectTypedStatConditions(story: Story): void {
+  const values = getJourneyStatValues(story, ['root']);
+  expect(values).toEqual({ score: 6, 'door-open': true, alias: 'Mira' });
+  const available = getAvailableInteractions(story, 'root', ['root'], null, [], values);
+  expect(available).toContainEqual(story.interactions[1]);
+
+  story.interactions[1].triggers[0].conditions = [{ statId: 'missing', operator: 'eq', value: 0 }];
+  expect(getAvailableInteractions(story, 'root', ['root'], null, [], values)).not.toContain(
+    story.interactions[1],
+  );
+}
+
+function independentItemStatFixture(): Story {
+  const story = storyFixture();
+  story.statDefinitions = [{ id: 'charge-definition', name: 'Charge', valueType: 'number' }];
+  story.itemDefinitions = [
+    {
+      id: 'battery-definition',
+      name: 'Battery',
+      description: '',
+      stats: [{ id: 'battery-charge', statDefinitionId: 'charge-definition', initialValue: 10 }],
+    },
+  ];
+  story.stats = [{ id: 'bonus', statDefinitionId: 'charge-definition', initialValue: 2 }];
+  story.characters = [
+    {
+      id: 'mira',
+      name: 'Mira',
+      description: '',
+      items: [
+        { id: 'battery-1', itemDefinitionId: 'battery-definition' },
+        { id: 'battery-2', itemDefinitionId: 'battery-definition' },
+      ],
+    },
+  ];
+  story.interactions[0].statEffects = [
+    {
+      statId: 'battery-charge',
+      itemId: 'battery-1',
+      operation: 'set',
+      expression: '@{bonus} + @{battery-charge|battery-2}',
+    },
+  ];
+  return story;
+}
+
+function expectIndependentItemStatReplay(story: Story): void {
+  const progress = buildReaderProgressState(story, ['root']);
+  expect(progress.itemStatValues).toEqual({
+    'battery-1': { 'battery-charge': 12 },
+    'battery-2': { 'battery-charge': 10 },
+  });
+  story.interactions[0].statEffects = [
+    { statId: 'battery-charge', itemId: 'battery-1', operation: 'set', value: 7 },
+    { statId: 'bonus', operation: 'set', expression: '@{battery-charge|battery-1} * 2' },
+    {
+      statId: 'battery-charge',
+      itemId: 'battery-2',
+      operation: 'set',
+      expression: '@{bonus} + @{battery-charge|battery-1}',
+    },
+  ];
+  const ordered = buildReaderProgressState(story, ['root']);
+  expect(ordered.statValues).toEqual({ bonus: 14 });
+  expect(ordered.itemStatValues).toEqual({
+    'battery-1': { 'battery-charge': 7 },
+    'battery-2': { 'battery-charge': 21 },
+  });
+  expect(getJourneyStatValues(story, ['root'])).toEqual(ordered.statValues);
+}
+
+function targetedItemStatFixture(): Story {
+  const story = storyFixture();
+  story.statDefinitions = [{ id: 'durability-definition', name: 'Durability' }];
+  story.itemDefinitions = [
+    {
+      id: 'key-definition',
+      name: 'Key',
+      description: '',
+      stats: [
+        { id: 'key-durability', statDefinitionId: 'durability-definition', initialValue: 10 },
+      ],
+    },
+  ];
+  story.characters = [
+    {
+      id: 'mira',
+      name: 'Mira',
+      description: '',
+      items: [
+        { id: 'key-1', itemDefinitionId: 'key-definition' },
+        { id: 'key-2', itemDefinitionId: 'key-definition' },
+      ],
+    },
+  ];
+  return story;
+}
+
+function expectTargetedItemStatConditions(story: Story): void {
+  const itemStatValues = {
+    'key-1': { 'key-durability': 6 },
+    'key-2': { 'key-durability': 2 },
+  };
+  story.interactions[1].triggers[0].conditions = [
+    { statId: 'key-durability', itemId: 'key-1', operator: 'gte', value: 5 },
+  ];
+  expect(
+    getAvailableInteractions(story, 'root', ['root'], null, [], {}, undefined, [], itemStatValues),
+  ).toContain(story.interactions[1]);
+
+  story.interactions[1].triggers[0].conditions = [
+    { statId: 'key-durability', itemId: 'key-2', operator: 'gte', value: 5 },
+  ];
+  expect(
+    getAvailableInteractions(story, 'root', ['root'], null, [], {}, undefined, [], itemStatValues),
+  ).not.toContain(story.interactions[1]);
+}
+
+function readerProgressFixture(): Story {
+  const story = storyFixture();
+  story.startDateTime = '2026-07-27T09:00';
+  story.interactions[0].durationMinutes = 15;
+  story.interactions[0].locationId = 'harbor';
+  story.characters = [
+    {
+      id: 'mira',
+      name: 'Mira',
+      description: '',
+      stats: [{ id: 'trust', statDefinitionId: 'trust-definition', initialValue: 1 }],
+      items: [{ id: 'key-1', itemDefinitionId: 'key-definition' }],
+    },
+  ];
+  story.interactions[0].statEffects = [{ statId: 'trust', operation: 'add', value: 2 }];
+  story.interactions[0].itemEffects = [{ itemId: 'key-1', operation: 'obtain' }];
+  story.statDefinitions = [
+    { id: 'trust-definition', name: 'Trust', changePerHour: 0 },
+    { id: 'durability-definition', name: 'Durability', changePerHour: -2 },
+  ];
+  story.itemDefinitions = [
+    {
+      id: 'key-definition',
+      name: 'Key',
+      description: '',
+      stats: [
+        {
+          id: 'key-durability',
+          statDefinitionId: 'durability-definition',
+          initialValue: 10,
+        },
+      ],
+    },
+  ];
+  story.interactions[0].statEffects = [
+    { statId: 'trust', operation: 'add', value: 2 },
+    { itemId: 'key-1', statId: 'key-durability', operation: 'add', value: 3 },
+  ];
+  return story;
+}
+
+function addCharacterRootedItems(story: Story): void {
+  story.characters = [
+    {
+      id: 'mira',
+      name: 'Mira',
+      description: '',
+      items: [
+        { id: 'backpack-1', itemDefinitionId: 'backpack-definition' },
+        {
+          id: 'key-1',
+          itemDefinitionId: 'key-definition',
+          parentItemId: 'backpack-1',
+          relationshipType: 'contained',
+        },
+        {
+          id: 'charm-1',
+          itemDefinitionId: 'charm-definition',
+          parentItemId: 'key-1',
+          relationshipType: 'attached',
+        },
+        {
+          id: 'orphan-1',
+          itemDefinitionId: 'orphan-definition',
+          parentItemId: 'missing-parent',
+          relationshipType: 'contained',
+        },
+      ],
+    },
+  ];
+}
+
+function addCharacterRootedItemDefinitions(story: Story): void {
+  story.itemDefinitions = [
+    {
+      id: 'backpack-definition',
+      name: 'Backpack',
+      description: '',
+      stats: [
+        { id: 'backpack-durability', statDefinitionId: 'durability-definition', initialValue: 20 },
+      ],
+    },
+    {
+      id: 'key-definition',
+      name: 'Key',
+      description: '',
+      stats: [
+        { id: 'key-durability', statDefinitionId: 'durability-definition', initialValue: 10 },
+      ],
+    },
+    {
+      id: 'charm-definition',
+      name: 'Charm',
+      description: '',
+      stats: [
+        { id: 'charm-durability', statDefinitionId: 'durability-definition', initialValue: 5 },
+      ],
+    },
+    {
+      id: 'orphan-definition',
+      name: 'Orphan',
+      description: '',
+      stats: [
+        { id: 'orphan-durability', statDefinitionId: 'durability-definition', initialValue: 1 },
+      ],
+    },
+  ];
+}
+
+function characterRootedItemFixture(): Story {
+  const story = storyFixture();
+  story.statDefinitions = [
+    { id: 'durability-definition', name: 'Durability', valueType: 'number' },
+  ];
+  addCharacterRootedItems(story);
+  addCharacterRootedItemDefinitions(story);
+  story.interactions[0].itemEffects = [{ itemId: 'key-1', operation: 'obtain' }];
+  return story;
+}
+
+function expectCharacterRootedItems(story: Story): void {
+  const progress = buildReaderProgressState(story, ['root']);
+  expect(getItemDefinitionIdForInstance(story, 'key-1')).toBe('key-definition');
+  expect(getItemDefinitionIdForInstance(story, 'charm-1')).toBe('charm-definition');
+  expect(getItemDefinitionIdForInstance(story, 'orphan-1')).toBeUndefined();
+  expect(getItemOwnerIdForInstance(story, 'key-1')).toBe('mira');
+  expect(getItemOwnerIdForInstance(story, 'charm-1')).toBe('mira');
+  expect(getItemOwnerIdForInstance(story, 'orphan-1')).toBeUndefined();
+  expect(progress.ownedItemIds).toEqual(['key-1']);
+  expect(progress.itemStatValues).toEqual({
+    'backpack-1': { 'backpack-durability': 20 },
+    'key-1': { 'key-durability': 10 },
+    'charm-1': { 'charm-durability': 5 },
+  });
+}
+
+it('updates and deletes graph decorations without changing narrative interactions', () => {
+  const story = storyFixture();
+  story.graphDecorations = [
+    {
+      id: 'frame-1',
+      kind: 'frame',
+      position: { x: 20, y: 30 },
+      color: '#5b6ee1',
+      width: 420,
+      height: 240,
+    },
+    {
+      id: 'text-1',
+      kind: 'text',
+      position: { x: 40, y: 50 },
+      color: '#273043',
+      text: 'Act one',
+      fontSize: 32,
+      fontFamily: 'sans',
+      fontWeight: 'normal',
+      fontStyle: 'normal',
+    },
+  ];
+  const interactions = structuredClone(story.interactions);
+
+  const updated = updateGraphDecorationInStory(story, 'text-1', {
+    text: 'Opening act',
+    fontSize: 44,
+    fontWeight: 'bold',
+    position: { x: 90, y: 110 },
+    width: 999,
+  });
+  const deleted = deleteGraphDecorationFromStory(updated, 'frame-1');
+
+  expect(deleted.graphDecorations).toEqual([
+    {
+      id: 'text-1',
+      kind: 'text',
+      position: { x: 90, y: 110 },
+      color: '#273043',
       text: 'Opening act',
       fontSize: 44,
+      fontFamily: 'sans',
       fontWeight: 'bold',
-      position: { x: 90, y: 110 },
-      width: 999,
-    });
-    const deleted = deleteGraphDecorationFromStory(updated, 'frame-1');
+      fontStyle: 'normal',
+    },
+  ]);
+  expect(deleted.interactions).toEqual(interactions);
+});
 
-    expect(deleted.graphDecorations).toEqual([
-      {
-        id: 'text-1',
-        kind: 'text',
-        position: { x: 90, y: 110 },
-        color: '#273043',
-        text: 'Opening act',
-        fontSize: 44,
-        fontFamily: 'sans',
-        fontWeight: 'bold',
-        fontStyle: 'normal',
-      },
-    ]);
-    expect(deleted.interactions).toEqual(interactions);
+it('keeps graph decorations out of reader availability and replay state', () => {
+  const plain = storyFixture();
+  const decorated = structuredClone(plain);
+  decorated.graphDecorations = [
+    {
+      id: 'frame-1',
+      kind: 'frame',
+      position: { x: 0, y: 0 },
+      color: '#5b6ee1',
+      width: 420,
+      height: 240,
+    },
+  ];
+
+  expect(getAvailableInteractions(decorated, 'root', ['root'])).toEqual(
+    getAvailableInteractions(plain, 'root', ['root']),
+  );
+  expect(buildReaderProgressState(decorated, ['root', 'middle'])).toEqual(
+    buildReaderProgressState(plain, ['root', 'middle']),
+  );
+});
+
+it('deduplicates trigger inputs when updating a trigger', () => {
+  const updated = updateTriggerInStory(storyFixture(), 'end', 'trigger-end', {
+    inputInteractionIds: ['root', 'root', 'middle'],
+    conditions: [],
   });
 
-  it('keeps graph decorations out of reader availability and replay state', () => {
-    const plain = storyFixture();
-    const decorated = structuredClone(plain);
-    decorated.graphDecorations = [
-      {
-        id: 'frame-1',
-        kind: 'frame',
-        position: { x: 0, y: 0 },
-        color: '#5b6ee1',
-        width: 420,
-        height: 240,
-      },
-    ];
+  expect(updated.interactions[2].triggers[0].inputInteractionIds).toEqual(['root', 'middle']);
+});
 
-    expect(getAvailableInteractions(decorated, 'root', ['root'])).toEqual(
-      getAvailableInteractions(plain, 'root', ['root']),
-    );
-    expect(buildReaderProgressState(decorated, ['root', 'middle'])).toEqual(
-      buildReaderProgressState(plain, ['root', 'middle']),
-    );
+it('updates only a trigger canvas position when given a position patch', () => {
+  const updated = updateTriggerInStory(storyFixture(), 'middle', 'trigger-middle', {
+    position: { x: 240, y: 315 },
   });
 
-  it('deduplicates trigger inputs when updating a trigger', () => {
-    const updated = updateTriggerInStory(storyFixture(), 'end', 'trigger-end', {
-      inputInteractionIds: ['root', 'root', 'middle'],
-      conditions: [],
-    });
+  expect(updated.interactions[1].triggers[0]).toEqual({
+    id: 'trigger-middle',
+    inputInteractionIds: ['root'],
+    conditionGroups: [{ id: 'trigger-middle', conditions: [] }],
+    appearanceProbability: 100,
+    timerSeconds: null,
+    position: { x: 240, y: 315 },
+  });
+});
 
-    expect(updated.interactions[2].triggers[0].inputInteractionIds).toEqual(['root', 'middle']);
+it('removes only the requested trigger from its output interaction', () => {
+  const story = storyFixture();
+  story.interactions[2].triggers.push({
+    id: 'trigger-alt',
+    inputInteractionIds: ['middle'],
+    conditions: [],
   });
 
-  it('updates only a trigger canvas position when given a position patch', () => {
-    const updated = updateTriggerInStory(storyFixture(), 'middle', 'trigger-middle', {
-      position: { x: 240, y: 315 },
-    });
+  const updated = deleteTriggerInStory(story, 'end', 'trigger-end');
 
-    expect(updated.interactions[1].triggers[0]).toEqual({
+  expect(updated.interactions[2].triggers).toEqual([
+    { id: 'trigger-alt', inputInteractionIds: ['middle'], conditions: [] },
+  ]);
+});
+
+it('turns the last trigger of an interaction into a root trigger', () => {
+  const updated = deleteTriggerInStory(storyFixture(), 'middle', 'trigger-middle');
+
+  expect(updated.interactions[1].triggers).toEqual([
+    {
       id: 'trigger-middle',
-      inputInteractionIds: ['root'],
+      inputInteractionIds: [],
       conditionGroups: [{ id: 'trigger-middle', conditions: [] }],
       appearanceProbability: 100,
       timerSeconds: null,
-      position: { x: 240, y: 315 },
-    });
+    },
+  ]);
+});
+
+it('keeps triggers as root triggers when deleting their only input interaction', () => {
+  const story = storyFixture();
+  story.groups = [
+    { id: 'group-1', title: 'Beginning', interactionIds: ['root', 'middle'] },
+    { id: 'group-2', title: 'Shared', interactionIds: ['root'] },
+  ];
+  const updated = deleteInteractionFromStory(story, 'root');
+
+  expect(updated.interactions.map((item) => item.id)).toEqual(['middle', 'end']);
+  expect(updated.interactions[0].triggers).toEqual([
+    {
+      id: 'trigger-middle',
+      inputInteractionIds: [],
+      conditionGroups: [{ id: 'trigger-middle', conditions: [] }],
+      appearanceProbability: 100,
+      timerSeconds: null,
+    },
+  ]);
+  expect(updated.interactions[1].triggers[0].inputInteractionIds).toEqual(['middle']);
+  expect(updated.interactions[1].triggers[0].conditionGroups).toEqual([
+    { id: 'trigger-end', conditions: [] },
+  ]);
+  expect(updated.interactions[1].triggers[0].appearanceProbability).toBe(100);
+  expect(updated.groups).toEqual([
+    { id: 'group-1', title: 'Beginning', interactionIds: ['middle'] },
+    { id: 'group-2', title: 'Shared', interactionIds: [] },
+  ]);
+});
+
+it('does not restore locally deleted triggers from stale server stories', () => {
+  const story = storyFixture();
+  story.interactions[1].triggers.push({
+    id: 'trigger-middle-alt',
+    inputInteractionIds: [],
+    conditions: [],
+  });
+  const current = deleteTriggerInStory(story, 'middle', 'trigger-middle');
+  const staleIncoming = structuredClone(story);
+
+  const merged = mergeServerStory(current, staleIncoming, undefined, {
+    deletedTriggerIds: new Set(['trigger-middle']),
   });
 
-  it('removes only the requested trigger from its output interaction', () => {
-    const story = storyFixture();
-    story.interactions[2].triggers.push({
-      id: 'trigger-alt',
-      inputInteractionIds: ['middle'],
-      conditions: [],
-    });
+  expect(merged.interactions[1].triggers).toEqual([
+    { id: 'trigger-middle-alt', inputInteractionIds: [], conditions: [] },
+  ]);
+});
 
-    const updated = deleteTriggerInStory(story, 'end', 'trigger-end');
+it('does not replace a newer local revision with an older complete Story response', () => {
+  const current = storyFixture();
+  current.revision = 3;
+  current.title = 'Latest title';
+  current.interactions.push({
+    id: 'new-child',
+    title: 'New child',
+    body: '',
+    position: { x: 0, y: 400 },
+    triggers: [{ id: 'new-child-trigger', inputInteractionIds: ['middle'], conditions: [] }],
+  });
+  const staleIncoming = storyFixture();
+  staleIncoming.revision = 2;
+  staleIncoming.title = 'Older response';
 
-    expect(updated.interactions[2].triggers).toEqual([
-      { id: 'trigger-alt', inputInteractionIds: ['middle'], conditions: [] },
-    ]);
+  expect(mergeServerStory(current, staleIncoming)).toBe(current);
+});
+
+it('does not restore locally deleted trigger inputs from stale server stories', () => {
+  const current = updateTriggerInStory(storyFixture(), 'middle', 'trigger-middle', {
+    inputInteractionIds: [],
+    conditions: [],
+  });
+  const staleIncoming = storyFixture();
+
+  const merged = mergeServerStory(current, staleIncoming, undefined, {
+    deletedTriggerInputKeys: new Set(['trigger-middle:root']),
   });
 
-  it('turns the last trigger of an interaction into a root trigger', () => {
-    const updated = deleteTriggerInStory(storyFixture(), 'middle', 'trigger-middle');
+  expect(merged.interactions[1].triggers).toEqual([
+    { id: 'trigger-middle', inputInteractionIds: [], conditions: [] },
+  ]);
+});
 
-    expect(updated.interactions[1].triggers).toEqual([
+it('preserves local triggers when merging interaction-only saves', () => {
+  const story = storyFixture();
+  story.interactions[1].triggers.push({
+    id: 'trigger-middle-alt',
+    inputInteractionIds: [],
+    conditions: [],
+  });
+  const current = deleteTriggerInStory(story, 'middle', 'trigger-middle');
+  const staleIncoming = structuredClone(story);
+  staleIncoming.interactions[1].position = { x: 445, y: 275 };
+
+  const merged = mergeServerStory(
+    current,
+    staleIncoming,
+    {
+      interactionId: 'middle',
+      patch: { position: { x: 445, y: 275 } },
+    },
+    { preserveCurrentTriggers: true },
+  );
+
+  expect(merged.interactions[1].position).toEqual({ x: 445, y: 275 });
+  expect(merged.interactions[1].triggers).toEqual([
+    { id: 'trigger-middle-alt', inputInteractionIds: [], conditions: [] },
+  ]);
+});
+
+it('normalizes trigger inputs without changing their first-seen order', () => {
+  expect(normalizeTriggerInputIds(['b', 'a', 'b', 'c'])).toEqual(['b', 'a', 'c']);
+});
+
+it('keeps inputless triggers without conditions available only at story start', () => {
+  const story = storyFixture();
+
+  expect(getAvailableInteractions(story, null, []).map((item) => item.id)).toEqual(['root']);
+  expect(getAvailableInteractions(story, 'root', ['root']).map((item) => item.id)).toEqual([
+    'middle',
+    'end',
+  ]);
+});
+
+it('evaluates inputless triggers with conditions during reading', () => {
+  const story = storyFixture();
+  story.interactions.push({
+    id: 'contextual',
+    title: 'Contextual',
+    body: 'Available after root without a direct input.',
+    position: { x: 320, y: 270 },
+    triggers: [
       {
-        id: 'trigger-middle',
+        id: 'trigger-contextual',
         inputInteractionIds: [],
-        conditionGroups: [{ id: 'trigger-middle', conditions: [] }],
-        appearanceProbability: 100,
-        timerSeconds: null,
+        conditions: [{ interactionId: 'root', hasBeenVisited: true }],
       },
-    ]);
+    ],
   });
 
-  it('keeps triggers as root triggers when deleting their only input interaction', () => {
-    const story = storyFixture();
-    story.groups = [
-      { id: 'group-1', title: 'Beginning', interactionIds: ['root', 'middle'] },
-      { id: 'group-2', title: 'Shared', interactionIds: ['root'] },
-    ];
-    const updated = deleteInteractionFromStory(story, 'root');
+  expect(getAvailableInteractions(story, null, []).map((item) => item.id)).toEqual(['root']);
+  expect(
+    getAvailableInteractions(story, 'middle', ['root', 'middle']).map((item) => item.id),
+  ).toEqual(['end', 'contextual']);
+});
 
-    expect(updated.interactions.map((item) => item.id)).toEqual(['middle', 'end']);
-    expect(updated.interactions[0].triggers).toEqual([
+it('evaluates not-visited interaction conditions', () => {
+  const story = storyFixture();
+  story.interactions[1].triggers[0].conditions = [{ interactionId: 'end', hasBeenVisited: false }];
+
+  expect(getAvailableInteractions(story, 'root', ['root']).map(({ id }) => id)).toContain('middle');
+  expect(
+    getAvailableInteractions(story, 'root', ['root', 'end']).map(({ id }) => id),
+  ).not.toContain('middle');
+});
+
+it('deduplicates interactions made available by several eligible triggers', () => {
+  const story = storyFixture();
+  story.interactions[2].triggers.push({
+    id: 'trigger-end-contextual',
+    inputInteractionIds: [],
+    conditions: [{ interactionId: 'middle', hasBeenVisited: true }],
+  });
+
+  expect(
+    getAvailableInteractions(story, 'middle', ['root', 'middle']).map((item) => item.id),
+  ).toEqual(['end']);
+});
+
+it('lists input-reachable interactions without applying trigger conditions', () => {
+  const story = storyFixture();
+  story.interactions.push({
+    id: 'unrelated',
+    title: 'Unrelated',
+    body: 'Not reachable from the current input.',
+    position: { x: 320, y: 270 },
+    triggers: [
       {
-        id: 'trigger-middle',
-        inputInteractionIds: [],
-        conditionGroups: [{ id: 'trigger-middle', conditions: [] }],
-        appearanceProbability: 100,
-        timerSeconds: null,
+        id: 'trigger-unrelated',
+        inputInteractionIds: ['end'],
+        conditions: [],
       },
-    ]);
-    expect(updated.interactions[1].triggers[0].inputInteractionIds).toEqual(['middle']);
-    expect(updated.interactions[1].triggers[0].conditionGroups).toEqual([
-      { id: 'trigger-end', conditions: [] },
-    ]);
-    expect(updated.interactions[1].triggers[0].appearanceProbability).toBe(100);
-    expect(updated.groups).toEqual([
-      { id: 'group-1', title: 'Beginning', interactionIds: ['middle'] },
-      { id: 'group-2', title: 'Shared', interactionIds: [] },
-    ]);
+    ],
   });
 
-  it('does not restore locally deleted triggers from stale server stories', () => {
-    const story = storyFixture();
-    story.interactions[1].triggers.push({
-      id: 'trigger-middle-alt',
-      inputInteractionIds: [],
-      conditions: [],
-    });
-    const current = deleteTriggerInStory(story, 'middle', 'trigger-middle');
-    const staleIncoming = structuredClone(story);
+  expect(getInputReachableInteractions(story, 'root').map((item) => item.id)).toEqual([
+    'middle',
+    'end',
+  ]);
+  expect(getAvailableInteractions(story, 'root', []).map((item) => item.id)).toEqual(['middle']);
+});
 
-    const merged = mergeServerStory(current, staleIncoming, undefined, {
-      deletedTriggerIds: new Set(['trigger-middle']),
-    });
+it('explains failed trigger conditions for input-reachable interactions', () => {
+  const story = storyFixture();
 
-    expect(merged.interactions[1].triggers).toEqual([
-      { id: 'trigger-middle-alt', inputInteractionIds: [], conditions: [] },
-    ]);
+  expect(getTriggerConditionFailures(story.interactions[2], 'root', [])).toEqual([
+    {
+      triggerId: 'trigger-end',
+      conditionGroupId: 'trigger-end',
+      condition: { interactionId: 'root', hasBeenVisited: true },
+    },
+  ]);
+});
+
+it('does not report condition failures when another matching trigger is eligible', () => {
+  const story = storyFixture();
+  story.interactions[2].triggers.push({
+    id: 'trigger-end-unconditional',
+    inputInteractionIds: ['root'],
+    conditions: [],
   });
 
-  it('does not replace a newer local revision with an older complete Story response', () => {
-    const current = storyFixture();
-    current.revision = 3;
-    current.title = 'Latest title';
-    current.interactions.push({
-      id: 'new-child',
-      title: 'New child',
-      body: '',
-      position: { x: 0, y: 400 },
-      triggers: [{ id: 'new-child-trigger', inputInteractionIds: ['middle'], conditions: [] }],
-    });
-    const staleIncoming = storyFixture();
-    staleIncoming.revision = 2;
-    staleIncoming.title = 'Older response';
+  expect(getTriggerConditionFailures(story.interactions[2], 'root', [])).toEqual([]);
+});
 
-    expect(mergeServerStory(current, staleIncoming)).toBe(current);
-  });
+it('evaluates current-location trigger conditions', () => {
+  const story = storyFixture();
+  story.locations = [{ id: 'harbor', name: 'Harbor', description: '' }];
+  story.interactions[1].triggers[0].conditions = [
+    { locationId: 'harbor', isCurrentLocation: true },
+  ];
 
-  it('does not restore locally deleted trigger inputs from stale server stories', () => {
-    const current = updateTriggerInStory(storyFixture(), 'middle', 'trigger-middle', {
-      inputInteractionIds: [],
-      conditions: [],
-    });
-    const staleIncoming = storyFixture();
+  expect(
+    getAvailableInteractions(story, 'root', ['root'], 'harbor').map((item) => item.id),
+  ).toContain('middle');
+  expect(
+    getAvailableInteractions(story, 'root', ['root'], null).map((item) => item.id),
+  ).not.toContain('middle');
+  expect(getTriggerConditionFailures(story.interactions[1], 'root', [], null)).toEqual([
+    {
+      triggerId: 'trigger-middle',
+      conditionGroupId: 'trigger-middle',
+      condition: { locationId: 'harbor', isCurrentLocation: true },
+    },
+  ]);
+});
 
-    const merged = mergeServerStory(current, staleIncoming, undefined, {
-      deletedTriggerInputKeys: new Set(['trigger-middle:root']),
-    });
+it('supports triggers that forbid the current location', () => {
+  const story = storyFixture();
+  story.interactions[1].triggers[0].conditions = [
+    { locationId: 'harbor', isCurrentLocation: false },
+  ];
 
-    expect(merged.interactions[1].triggers).toEqual([
-      { id: 'trigger-middle', inputInteractionIds: [], conditions: [] },
-    ]);
-  });
+  expect(getAvailableInteractions(story, 'root', ['root'], null).map((item) => item.id)).toContain(
+    'middle',
+  );
+  expect(
+    getAvailableInteractions(story, 'root', ['root'], 'harbor').map((item) => item.id),
+  ).not.toContain('middle');
+});
 
-  it('preserves local triggers when merging interaction-only saves', () => {
-    const story = storyFixture();
-    story.interactions[1].triggers.push({
-      id: 'trigger-middle-alt',
-      inputInteractionIds: [],
-      conditions: [],
-    });
-    const current = deleteTriggerInStory(story, 'middle', 'trigger-middle');
-    const staleIncoming = structuredClone(story);
-    staleIncoming.interactions[1].position = { x: 445, y: 275 };
+it('evaluates character presence conditions from the current interaction', () => {
+  const story = storyFixture();
+  story.characters = [{ id: 'mira', name: 'Mira', description: '' }];
+  story.interactions[1].triggers[0].conditions = [{ characterId: 'mira', isPresent: true }];
 
-    const merged = mergeServerStory(
-      current,
-      staleIncoming,
-      {
-        interactionId: 'middle',
-        patch: { position: { x: 445, y: 275 } },
+  expect(
+    getAvailableInteractions(story, 'root', ['root'], null, ['mira']).map((item) => item.id),
+  ).toContain('middle');
+  expect(
+    getAvailableInteractions(story, 'root', ['root'], null, []).map((item) => item.id),
+  ).not.toContain('middle');
+  expect(getTriggerConditionFailures(story.interactions[1], 'root', [], null, [])).toEqual([
+    {
+      triggerId: 'trigger-middle',
+      conditionGroupId: 'trigger-middle',
+      condition: { characterId: 'mira', isPresent: true },
+    },
+  ]);
+});
+
+it('supports triggers that require a character to be absent', () => {
+  const story = storyFixture();
+  story.interactions[1].triggers[0].conditions = [{ characterId: 'mira', isPresent: false }];
+
+  expect(
+    getAvailableInteractions(story, 'root', ['root'], null, []).map((item) => item.id),
+  ).toContain('middle');
+  expect(
+    getAvailableInteractions(story, 'root', ['root'], null, ['mira']).map((item) => item.id),
+  ).not.toContain('middle');
+});
+
+it('applies add and set effects in journey order and evaluates stat conditions', () => {
+  const story = storyFixture();
+  story.characters = [
+    {
+      id: 'mira',
+      name: 'Mira',
+      description: '',
+      stats: [{ id: 'trust', statDefinitionId: 'trust-definition', initialValue: 2 }],
+    },
+  ];
+  story.statDefinitions = [{ id: 'trust-definition', name: 'Trust' }];
+  story.interactions[0].statEffects = [{ statId: 'trust', operation: 'add', value: 3 }];
+  story.interactions[1].statEffects = [{ statId: 'trust', operation: 'set', value: 10 }];
+  story.interactions[1].triggers[0].conditions = [{ statId: 'trust', operator: 'gte', value: 5 }];
+
+  const afterRoot = getJourneyStatValues(story, ['root']);
+  expect(afterRoot).toEqual({ trust: 5 });
+  expect(getAvailableInteractions(story, 'root', ['root'], null, [], afterRoot)).toContainEqual(
+    story.interactions[1],
+  );
+  expect(getJourneyStatValues(story, ['root', 'middle'])).toEqual({ trust: 10 });
+});
+
+it('applies positive and negative hourly changes before explicit interaction effects', () => {
+  const story = storyFixture();
+  story.characters = [
+    {
+      id: 'mira',
+      name: 'Mira',
+      description: '',
+      stats: [
+        { id: 'energy', statDefinitionId: 'energy-definition', initialValue: 10 },
+        { id: 'trust', statDefinitionId: 'trust-definition', initialValue: 2 },
+      ],
+    },
+  ];
+  story.statDefinitions = [
+    { id: 'energy-definition', name: 'Energy', changePerHour: -2 },
+    { id: 'trust-definition', name: 'Trust', changePerHour: 1 },
+  ];
+  story.interactions[0].durationMinutes = 90;
+  story.interactions[0].statEffects = [{ statId: 'energy', operation: 'add', value: 1 }];
+
+  expect(getJourneyStatValues(story, ['root'])).toEqual({ energy: 8, trust: 3.5 });
+  expect(getJourneyStatValues(story, ['root', 'root'])).toEqual({ energy: 6, trust: 5 });
+});
+
+it('evaluates typed expression effects against the ordered replay state', () => {
+  const story = storyFixture();
+  story.statDefinitions = [{ id: 'number-definition', name: 'Number', valueType: 'number' }];
+  story.stats = [
+    { id: 'score', statDefinitionId: 'number-definition', initialValue: 2 },
+    { id: 'bonus', statDefinitionId: 'number-definition', initialValue: 3 },
+  ];
+  story.interactions[0].statEffects = [
+    { statId: 'score', operation: 'set', expression: '@{score} + @{bonus}' },
+    { statId: 'bonus', operation: 'set', expression: '@{score} * 2' },
+  ];
+
+  expect(getJourneyStatValues(story, ['root'])).toEqual({ score: 5, bonus: 10 });
+  story.interactions[0].statEffects = [
+    { statId: 'score', operation: 'set', expression: '@{bonus} / 0' },
+    { statId: 'bonus', operation: 'set', expression: 'true' },
+  ];
+  expect(getJourneyStatValues(story, ['root'])).toEqual({ score: 2, bonus: 3 });
+});
+
+it('advances time for every interaction visit and across calendar boundaries', () => {
+  const story = storyFixture();
+  story.startDateTime = '2026-07-26T23:50';
+  story.interactions[0].durationMinutes = 15;
+  story.interactions[1].durationMinutes = 30;
+
+  expect(addStoryMinutes('2024-02-28T23:50', 20)).toBe('2024-02-29T00:10');
+  expect(getJourneyDateTime(story, ['root', 'middle', 'root'])).toBe('2026-07-27T00:50');
+});
+
+it('matches several dates, weekdays, and time slots with overnight support', () => {
+  const story = storyFixture();
+  story.interactions[1].triggers[0].conditions = [
+    {
+      temporal: {
+        dateRanges: [{ startDate: '2026-07-27', endDate: '2026-07-31' }],
+        weekdays: ['monday', 'tuesday'],
+        timeSlots: [
+          { startTime: '09:00', endTime: '12:00' },
+          { startTime: '22:00', endTime: '02:00' },
+        ],
       },
-      { preserveCurrentTriggers: true },
-    );
+    },
+  ];
 
-    expect(merged.interactions[1].position).toEqual({ x: 445, y: 275 });
-    expect(merged.interactions[1].triggers).toEqual([
-      { id: 'trigger-middle-alt', inputInteractionIds: [], conditions: [] },
-    ]);
+  expect(
+    getAvailableInteractions(story, 'root', ['root'], null, [], {}, '2026-07-27T10:30'),
+  ).toContainEqual(story.interactions[1]);
+  expect(
+    getAvailableInteractions(story, 'root', ['root'], null, [], {}, '2026-07-28T23:30'),
+  ).toContainEqual(story.interactions[1]);
+  expect(
+    getAvailableInteractions(story, 'root', ['root'], null, [], {}, '2026-07-29T10:30'),
+  ).not.toContainEqual(story.interactions[1]);
+  expect(
+    getAvailableInteractions(story, 'root', ['root'], null, [], {}, '2026-07-27T12:00'),
+  ).not.toContainEqual(story.interactions[1]);
+});
+
+it('treats exact dates and date ranges as alternatives', () => {
+  const story = storyFixture();
+  story.interactions[1].triggers[0].conditions = [
+    {
+      temporal: {
+        dates: ['2026-08-15'],
+        dateRanges: [{ startDate: '2026-09-01', endDate: '2026-09-03' }],
+      },
+    },
+  ];
+
+  expect(
+    getAvailableInteractions(story, 'root', ['root'], null, [], {}, '2026-08-15T08:00'),
+  ).toContainEqual(story.interactions[1]);
+  expect(
+    getAvailableInteractions(story, 'root', ['root'], null, [], {}, '2026-09-02T08:00'),
+  ).toContainEqual(story.interactions[1]);
+});
+
+it('replays typed effects and evaluates stat conditions without defaulting missing values', () => {
+  expectTypedStatConditions(typedStatsFixture());
+});
+
+it('keeps independent item stat values per exact instance', () => {
+  expectIndependentItemStatReplay(independentItemStatFixture());
+});
+
+it('evaluates trigger conditions against the targeted item instance value', () => {
+  expectTargetedItemStatConditions(targetedItemStatFixture());
+});
+
+it('materializes replayable state while keeping repeated journey visits', () => {
+  expect(
+    buildReaderProgressState(readerProgressFixture(), ['root', 'middle', 'root'], ['key-1']),
+  ).toEqual({
+    version: 4,
+    randomSeed: 'legacy-reader:story-1',
+    journeyInteractionIds: ['root', 'middle', 'root'],
+    currentInteractionId: 'root',
+    visitedInteractionIds: ['root', 'middle'],
+    currentDateTime: '2026-07-27T09:30',
+    currentLocationId: 'harbor',
+    statValues: { trust: 5 },
+    ownedItemIds: ['key-1'],
+    itemStatValues: { 'key-1': { 'key-durability': 15 } },
   });
+});
 
-  it('normalizes trigger inputs without changing their first-seen order', () => {
-    expect(normalizeTriggerInputIds(['b', 'a', 'b', 'c'])).toEqual(['b', 'a', 'c']);
+it('reconciles deleted interactions, unknown items, and duplicate items', () => {
+  const story = storyFixture();
+  story.characters = [
+    {
+      id: 'mira',
+      name: 'Mira',
+      description: '',
+      items: [{ id: 'key-1', itemDefinitionId: 'key-definition' }],
+    },
+  ];
+  story.interactions[0].itemEffects = [{ itemId: 'key-1', operation: 'obtain' }];
+
+  expect(
+    buildReaderProgressState(story, ['root', 'deleted', 'middle'], ['key-1', 'unknown', 'key-1']),
+  ).toMatchObject({
+    journeyInteractionIds: ['root', 'middle'],
+    currentInteractionId: 'middle',
+    visitedInteractionIds: ['root', 'middle'],
+    ownedItemIds: ['key-1'],
   });
+});
 
-  it('keeps inputless triggers without conditions available only at story start', () => {
-    const story = storyFixture();
+it('obtains and loses distinct item instances deterministically', () => {
+  const story = storyFixture();
+  story.characters = [
+    {
+      id: 'mira',
+      name: 'Mira',
+      description: '',
+      items: [
+        { id: 'key-1', itemDefinitionId: 'key-definition' },
+        { id: 'key-2', itemDefinitionId: 'key-definition' },
+      ],
+    },
+  ];
+  story.interactions[0].itemEffects = [
+    { itemId: 'key-1', operation: 'obtain' },
+    { itemId: 'key-2', operation: 'obtain' },
+  ];
+  story.interactions[1].itemEffects = [{ itemId: 'key-1', operation: 'lose' }];
 
-    expect(getAvailableInteractions(story, null, []).map((item) => item.id)).toEqual(['root']);
-    expect(getAvailableInteractions(story, 'root', ['root']).map((item) => item.id)).toEqual([
-      'middle',
-      'end',
-    ]);
-  });
+  expect(buildReaderProgressState(story, ['root', 'root', 'middle']).ownedItemIds).toEqual([
+    'key-2',
+  ]);
+});
 
-  it('evaluates inputless triggers with conditions during reading', () => {
-    const story = storyFixture();
-    story.interactions.push({
-      id: 'contextual',
-      title: 'Contextual',
-      body: 'Available after root without a direct input.',
-      position: { x: 320, y: 270 },
-      triggers: [
+it('resolves character-rooted item trees and ignores disconnected instances', () => {
+  expectCharacterRootedItems(characterRootedItemFixture());
+});
+
+it('resolves location-rooted item trees during replay', () => {
+  const story = storyFixture();
+  story.statDefinitions = [
+    { id: 'durability-definition', name: 'Durability', valueType: 'number' },
+  ];
+  story.locations = [
+    {
+      id: 'home',
+      name: 'Home',
+      description: '',
+      items: [
+        { id: 'cabinet-1', itemDefinitionId: 'cabinet-definition' },
         {
-          id: 'trigger-contextual',
-          inputInteractionIds: [],
-          conditions: [{ interactionId: 'root', hasBeenVisited: true }],
+          id: 'supply-1',
+          itemDefinitionId: 'supply-definition',
+          parentItemId: 'cabinet-1',
+          relationshipType: 'contained',
         },
       ],
-    });
-
-    expect(getAvailableInteractions(story, null, []).map((item) => item.id)).toEqual(['root']);
-    expect(
-      getAvailableInteractions(story, 'middle', ['root', 'middle']).map((item) => item.id),
-    ).toEqual(['end', 'contextual']);
-  });
-
-  it('evaluates not-visited interaction conditions', () => {
-    const story = storyFixture();
-    story.interactions[1].triggers[0].conditions = [
-      { interactionId: 'end', hasBeenVisited: false },
-    ];
-
-    expect(getAvailableInteractions(story, 'root', ['root']).map(({ id }) => id)).toContain(
-      'middle',
-    );
-    expect(
-      getAvailableInteractions(story, 'root', ['root', 'end']).map(({ id }) => id),
-    ).not.toContain('middle');
-  });
-
-  it('deduplicates interactions made available by several eligible triggers', () => {
-    const story = storyFixture();
-    story.interactions[2].triggers.push({
-      id: 'trigger-end-contextual',
-      inputInteractionIds: [],
-      conditions: [{ interactionId: 'middle', hasBeenVisited: true }],
-    });
-
-    expect(
-      getAvailableInteractions(story, 'middle', ['root', 'middle']).map((item) => item.id),
-    ).toEqual(['end']);
-  });
-
-  it('lists input-reachable interactions without applying trigger conditions', () => {
-    const story = storyFixture();
-    story.interactions.push({
-      id: 'unrelated',
-      title: 'Unrelated',
-      body: 'Not reachable from the current input.',
-      position: { x: 320, y: 270 },
-      triggers: [
-        {
-          id: 'trigger-unrelated',
-          inputInteractionIds: ['end'],
-          conditions: [],
-        },
+    },
+  ];
+  story.itemDefinitions = [
+    { id: 'cabinet-definition', name: 'Cabinet', description: '' },
+    {
+      id: 'supply-definition',
+      name: 'Supply',
+      description: '',
+      stats: [
+        { id: 'supply-durability', statDefinitionId: 'durability-definition', initialValue: 10 },
       ],
-    });
+    },
+  ];
+  story.interactions[0].itemEffects = [{ itemId: 'supply-1', operation: 'obtain' }];
 
-    expect(getInputReachableInteractions(story, 'root').map((item) => item.id)).toEqual([
+  const progress = buildReaderProgressState(story, ['root']);
+
+  expect(getItemDefinitionIdForInstance(story, 'supply-1')).toBe('supply-definition');
+  expect(getItemOwnerIdForInstance(story, 'supply-1')).toBe('home');
+  expect(progress.ownedItemIds).toEqual(['supply-1']);
+  expect(progress.itemStatValues['supply-1']).toEqual({ 'supply-durability': 10 });
+});
+
+it('obtains reusable item definitions and evaluates item ownership conditions', () => {
+  const story = storyFixture();
+  story.itemDefinitions = [
+    { id: 'key-definition', name: 'Key', description: '' },
+    { id: 'map-definition', name: 'Map', description: '' },
+  ];
+  story.characters = [{ id: 'mira', name: 'Mira', description: '' }];
+  story.interactions[0].itemEffects = [
+    { itemDefinitionId: 'key-definition', characterId: 'mira', operation: 'obtain' },
+  ];
+  story.interactions[1].itemEffects = [
+    { itemDefinitionId: 'key-definition', characterId: 'mira', operation: 'obtain' },
+  ];
+  story.interactions[2].triggers[0].conditions = [
+    { itemDefinitionId: 'key-definition', isOwned: true },
+    { itemDefinitionId: 'map-definition', isOwned: false },
+  ];
+
+  const progress = buildReaderProgressState(story, ['root', 'middle']);
+  expect(progress.ownedItemIds).toHaveLength(2);
+  expect(new Set(progress.ownedItemIds).size).toBe(2);
+  expect(getItemOwnerIdForInstance(story, progress.ownedItemIds[0])).toBe('mira');
+  expect(
+    getAvailableInteractions(
+      story,
       'middle',
-      'end',
-    ]);
-    expect(getAvailableInteractions(story, 'root', []).map((item) => item.id)).toEqual(['middle']);
-  });
-
-  it('explains failed trigger conditions for input-reachable interactions', () => {
-    const story = storyFixture();
-
-    expect(getTriggerConditionFailures(story.interactions[2], 'root', [])).toEqual([
-      {
-        triggerId: 'trigger-end',
-        conditionGroupId: 'trigger-end',
-        condition: { interactionId: 'root', hasBeenVisited: true },
-      },
-    ]);
-  });
-
-  it('does not report condition failures when another matching trigger is eligible', () => {
-    const story = storyFixture();
-    story.interactions[2].triggers.push({
-      id: 'trigger-end-unconditional',
-      inputInteractionIds: ['root'],
-      conditions: [],
-    });
-
-    expect(getTriggerConditionFailures(story.interactions[2], 'root', [])).toEqual([]);
-  });
-
-  it('evaluates current-location trigger conditions', () => {
-    const story = storyFixture();
-    story.locations = [{ id: 'harbor', name: 'Harbor', description: '' }];
-    story.interactions[1].triggers[0].conditions = [
-      { locationId: 'harbor', isCurrentLocation: true },
-    ];
-
-    expect(
-      getAvailableInteractions(story, 'root', ['root'], 'harbor').map((item) => item.id),
-    ).toContain('middle');
-    expect(
-      getAvailableInteractions(story, 'root', ['root'], null).map((item) => item.id),
-    ).not.toContain('middle');
-    expect(getTriggerConditionFailures(story.interactions[1], 'root', [], null)).toEqual([
-      {
-        triggerId: 'trigger-middle',
-        conditionGroupId: 'trigger-middle',
-        condition: { locationId: 'harbor', isCurrentLocation: true },
-      },
-    ]);
-  });
-
-  it('supports triggers that forbid the current location', () => {
-    const story = storyFixture();
-    story.interactions[1].triggers[0].conditions = [
-      { locationId: 'harbor', isCurrentLocation: false },
-    ];
-
-    expect(
-      getAvailableInteractions(story, 'root', ['root'], null).map((item) => item.id),
-    ).toContain('middle');
-    expect(
-      getAvailableInteractions(story, 'root', ['root'], 'harbor').map((item) => item.id),
-    ).not.toContain('middle');
-  });
-
-  it('evaluates character presence conditions from the current interaction', () => {
-    const story = storyFixture();
-    story.characters = [{ id: 'mira', name: 'Mira', description: '' }];
-    story.interactions[1].triggers[0].conditions = [{ characterId: 'mira', isPresent: true }];
-
-    expect(
-      getAvailableInteractions(story, 'root', ['root'], null, ['mira']).map((item) => item.id),
-    ).toContain('middle');
-    expect(
-      getAvailableInteractions(story, 'root', ['root'], null, []).map((item) => item.id),
-    ).not.toContain('middle');
-    expect(getTriggerConditionFailures(story.interactions[1], 'root', [], null, [])).toEqual([
-      {
-        triggerId: 'trigger-middle',
-        conditionGroupId: 'trigger-middle',
-        condition: { characterId: 'mira', isPresent: true },
-      },
-    ]);
-  });
-
-  it('supports triggers that require a character to be absent', () => {
-    const story = storyFixture();
-    story.interactions[1].triggers[0].conditions = [{ characterId: 'mira', isPresent: false }];
-
-    expect(
-      getAvailableInteractions(story, 'root', ['root'], null, []).map((item) => item.id),
-    ).toContain('middle');
-    expect(
-      getAvailableInteractions(story, 'root', ['root'], null, ['mira']).map((item) => item.id),
-    ).not.toContain('middle');
-  });
+      ['root', 'middle'],
+      null,
+      [],
+      {},
+      story.startDateTime,
+      ['key-definition', 'key-definition'],
+    ).map(({ id }) => id),
+  ).toContain('end');
+  expect(
+    getTriggerConditionFailures(
+      story.interactions[2],
+      'middle',
+      ['root', 'middle'],
+      null,
+      [],
+      {},
+      story.startDateTime,
+      [],
+    ),
+  ).toHaveLength(1);
 });
 
-describe('character stats', () => {
-  it('applies add and set effects in journey order and evaluates stat conditions', () => {
-    const story = storyFixture();
-    story.characters = [
-      {
-        id: 'mira',
-        name: 'Mira',
-        description: '',
-        stats: [{ id: 'trust', statDefinitionId: 'trust-definition', initialValue: 2 }],
-      },
-    ];
-    story.statDefinitions = [{ id: 'trust-definition', name: 'Trust' }];
-    story.interactions[0].statEffects = [{ statId: 'trust', operation: 'add', value: 3 }];
-    story.interactions[1].statEffects = [{ statId: 'trust', operation: 'set', value: 10 }];
-    story.interactions[1].triggers[0].conditions = [{ statId: 'trust', operator: 'gte', value: 5 }];
+it('keeps independent runtime stat values for instances of one item definition', () => {
+  const story = storyFixture();
+  story.statDefinitions = [{ id: 'durability', name: 'Durability' }];
+  story.itemDefinitions = [
+    {
+      id: 'key-definition',
+      name: 'Key',
+      description: '',
+      stats: [{ id: 'key-durability', statDefinitionId: 'durability', initialValue: 10 }],
+    },
+  ];
+  story.characters = [
+    {
+      id: 'mira',
+      name: 'Mira',
+      description: '',
+      items: [
+        { id: 'key-1', itemDefinitionId: 'key-definition' },
+        { id: 'key-2', itemDefinitionId: 'key-definition' },
+      ],
+    },
+  ];
+  story.interactions[0].statEffects = [
+    {
+      itemId: 'key-1',
+      statId: 'key-durability',
+      operation: 'add',
+      value: -4,
+    },
+    {
+      itemId: 'key-2',
+      statId: 'key-durability',
+      operation: 'set',
+      value: 3,
+    },
+  ];
 
-    const afterRoot = getJourneyStatValues(story, ['root']);
-    expect(afterRoot).toEqual({ trust: 5 });
-    expect(getAvailableInteractions(story, 'root', ['root'], null, [], afterRoot)).toContainEqual(
-      story.interactions[1],
-    );
-    expect(getJourneyStatValues(story, ['root', 'middle'])).toEqual({ trust: 10 });
-  });
-
-  it('applies positive and negative hourly changes before explicit interaction effects', () => {
-    const story = storyFixture();
-    story.characters = [
-      {
-        id: 'mira',
-        name: 'Mira',
-        description: '',
-        stats: [
-          { id: 'energy', statDefinitionId: 'energy-definition', initialValue: 10 },
-          { id: 'trust', statDefinitionId: 'trust-definition', initialValue: 2 },
-        ],
-      },
-    ];
-    story.statDefinitions = [
-      { id: 'energy-definition', name: 'Energy', changePerHour: -2 },
-      { id: 'trust-definition', name: 'Trust', changePerHour: 1 },
-    ];
-    story.interactions[0].durationMinutes = 90;
-    story.interactions[0].statEffects = [{ statId: 'energy', operation: 'add', value: 1 }];
-
-    expect(getJourneyStatValues(story, ['root'])).toEqual({ energy: 8, trust: 3.5 });
-    expect(getJourneyStatValues(story, ['root', 'root'])).toEqual({ energy: 6, trust: 5 });
-  });
-
-  it('evaluates typed expression effects against the ordered replay state', () => {
-    const story = storyFixture();
-    story.statDefinitions = [{ id: 'number-definition', name: 'Number', valueType: 'number' }];
-    story.stats = [
-      { id: 'score', statDefinitionId: 'number-definition', initialValue: 2 },
-      { id: 'bonus', statDefinitionId: 'number-definition', initialValue: 3 },
-    ];
-    story.interactions[0].statEffects = [
-      { statId: 'score', operation: 'set', expression: '@{score} + @{bonus}' },
-      { statId: 'bonus', operation: 'set', expression: '@{score} * 2' },
-    ];
-
-    expect(getJourneyStatValues(story, ['root'])).toEqual({ score: 5, bonus: 10 });
-    story.interactions[0].statEffects = [
-      { statId: 'score', operation: 'set', expression: '@{bonus} / 0' },
-      { statId: 'bonus', operation: 'set', expression: 'true' },
-    ];
-    expect(getJourneyStatValues(story, ['root'])).toEqual({ score: 2, bonus: 3 });
-  });
-});
-
-describe('story time', () => {
-  it('advances time for every interaction visit and across calendar boundaries', () => {
-    const story = storyFixture();
-    story.startDateTime = '2026-07-26T23:50';
-    story.interactions[0].durationMinutes = 15;
-    story.interactions[1].durationMinutes = 30;
-
-    expect(addStoryMinutes('2024-02-28T23:50', 20)).toBe('2024-02-29T00:10');
-    expect(getJourneyDateTime(story, ['root', 'middle', 'root'])).toBe('2026-07-27T00:50');
-  });
-
-  it('matches several dates, weekdays, and time slots with overnight support', () => {
-    const story = storyFixture();
-    story.interactions[1].triggers[0].conditions = [
-      {
-        temporal: {
-          dateRanges: [{ startDate: '2026-07-27', endDate: '2026-07-31' }],
-          weekdays: ['monday', 'tuesday'],
-          timeSlots: [
-            { startTime: '09:00', endTime: '12:00' },
-            { startTime: '22:00', endTime: '02:00' },
-          ],
-        },
-      },
-    ];
-
-    expect(
-      getAvailableInteractions(story, 'root', ['root'], null, [], {}, '2026-07-27T10:30'),
-    ).toContainEqual(story.interactions[1]);
-    expect(
-      getAvailableInteractions(story, 'root', ['root'], null, [], {}, '2026-07-28T23:30'),
-    ).toContainEqual(story.interactions[1]);
-    expect(
-      getAvailableInteractions(story, 'root', ['root'], null, [], {}, '2026-07-29T10:30'),
-    ).not.toContainEqual(story.interactions[1]);
-    expect(
-      getAvailableInteractions(story, 'root', ['root'], null, [], {}, '2026-07-27T12:00'),
-    ).not.toContainEqual(story.interactions[1]);
-  });
-
-  it('treats exact dates and date ranges as alternatives', () => {
-    const story = storyFixture();
-    story.interactions[1].triggers[0].conditions = [
-      {
-        temporal: {
-          dates: ['2026-08-15'],
-          dateRanges: [{ startDate: '2026-09-01', endDate: '2026-09-03' }],
-        },
-      },
-    ];
-
-    expect(
-      getAvailableInteractions(story, 'root', ['root'], null, [], {}, '2026-08-15T08:00'),
-    ).toContainEqual(story.interactions[1]);
-    expect(
-      getAvailableInteractions(story, 'root', ['root'], null, [], {}, '2026-09-02T08:00'),
-    ).toContainEqual(story.interactions[1]);
-  });
-});
-
-describe('typed stats', () => {
-  it('replays typed effects and evaluates stat conditions without defaulting missing values', () => {
-    const story = storyFixture();
-    story.statDefinitions = [
-      {
-        id: 'score-definition',
-        name: 'Score',
-        valueType: 'number',
-        changePerHour: 2,
-      },
-      { id: 'open-definition', name: 'Door open', valueType: 'boolean' },
-      { id: 'name-definition', name: 'Alias', valueType: 'string' },
-    ];
-    story.stats = [
-      { id: 'score', statDefinitionId: 'score-definition', initialValue: 2 },
-      { id: 'door-open', statDefinitionId: 'open-definition', initialValue: false },
-      { id: 'alias', statDefinitionId: 'name-definition', initialValue: 'Mira' },
-    ];
-    story.interactions[0].statEffects = [
-      { statId: 'score', operation: 'add', value: 3 },
-      { statId: 'door-open', operation: 'set', value: true },
-    ];
-    story.interactions[0].durationMinutes = 30;
-    story.interactions[1].triggers[0].conditions = [
-      { statId: 'door-open', operator: 'eq', value: true },
-      { statId: 'alias', operator: 'neq', value: 'Unknown' },
-    ];
-
-    const values = getJourneyStatValues(story, ['root']);
-    expect(values).toEqual({ score: 6, 'door-open': true, alias: 'Mira' });
-    expect(
-      getAvailableInteractions(
-        story,
-        'root',
-        ['root'],
-        null,
-        [],
-        values,
-        story.startDateTime,
-        [],
-      ).map(({ id }) => id),
-    ).toContain('middle');
-
-    story.interactions[1].triggers[0].conditions = [
-      { statId: 'missing', operator: 'eq', value: 0 },
-    ];
-    expect(
-      getAvailableInteractions(
-        story,
-        'root',
-        ['root'],
-        null,
-        [],
-        values,
-        story.startDateTime,
-        [],
-      ).map(({ id }) => id),
-    ).not.toContain('middle');
-  });
-
-  it('keeps independent item stat values per exact instance', () => {
-    const story = storyFixture();
-    story.statDefinitions = [{ id: 'charge-definition', name: 'Charge', valueType: 'number' }];
-    story.itemDefinitions = [
-      {
-        id: 'battery-definition',
-        name: 'Battery',
-        description: '',
-        stats: [{ id: 'battery-charge', statDefinitionId: 'charge-definition', initialValue: 10 }],
-      },
-    ];
-    story.stats = [{ id: 'bonus', statDefinitionId: 'charge-definition', initialValue: 2 }];
-    story.characters = [
-      {
-        id: 'mira',
-        name: 'Mira',
-        description: '',
-        items: [
-          { id: 'battery-1', itemDefinitionId: 'battery-definition' },
-          { id: 'battery-2', itemDefinitionId: 'battery-definition' },
-        ],
-      },
-    ];
-    story.interactions[0].statEffects = [
-      {
-        statId: 'battery-charge',
-        itemId: 'battery-1',
-        operation: 'set',
-        expression: '@{bonus} + @{battery-charge|battery-2}',
-      },
-    ];
-
-    const progress = buildReaderProgressState(story, ['root']);
-    expect(progress.itemStatValues).toEqual({
-      'battery-1': { 'battery-charge': 12 },
-      'battery-2': { 'battery-charge': 10 },
-    });
-    story.interactions[0].statEffects = [
-      { statId: 'battery-charge', itemId: 'battery-1', operation: 'set', value: 7 },
-      { statId: 'bonus', operation: 'set', expression: '@{battery-charge|battery-1} * 2' },
-      {
-        statId: 'battery-charge',
-        itemId: 'battery-2',
-        operation: 'set',
-        expression: '@{bonus} + @{battery-charge|battery-1}',
-      },
-    ];
-    const ordered = buildReaderProgressState(story, ['root']);
-    expect(ordered.statValues).toEqual({ bonus: 14 });
-    expect(ordered.itemStatValues).toEqual({
-      'battery-1': { 'battery-charge': 7 },
-      'battery-2': { 'battery-charge': 21 },
-    });
-    expect(getJourneyStatValues(story, ['root'])).toEqual(ordered.statValues);
-  });
-
-  it('evaluates trigger conditions against the targeted item instance value', () => {
-    const story = storyFixture();
-    story.statDefinitions = [{ id: 'durability-definition', name: 'Durability' }];
-    story.itemDefinitions = [
-      {
-        id: 'key-definition',
-        name: 'Key',
-        description: '',
-        stats: [
-          { id: 'key-durability', statDefinitionId: 'durability-definition', initialValue: 10 },
-        ],
-      },
-    ];
-    story.characters = [
-      {
-        id: 'mira',
-        name: 'Mira',
-        description: '',
-        items: [
-          { id: 'key-1', itemDefinitionId: 'key-definition' },
-          { id: 'key-2', itemDefinitionId: 'key-definition' },
-        ],
-      },
-    ];
-    story.interactions[1].triggers[0].conditions = [
-      { statId: 'key-durability', itemId: 'key-1', operator: 'gte', value: 5 },
-    ];
-    const itemStatValues = {
-      'key-1': { 'key-durability': 6 },
-      'key-2': { 'key-durability': 2 },
-    };
-
-    expect(
-      getAvailableInteractions(
-        story,
-        'root',
-        ['root'],
-        null,
-        [],
-        {},
-        story.startDateTime,
-        [],
-        itemStatValues,
-      ).map(({ id }) => id),
-    ).toContain('middle');
-
-    story.interactions[1].triggers[0].conditions = [
-      { statId: 'key-durability', itemId: 'key-2', operator: 'gte', value: 5 },
-    ];
-    expect(
-      getAvailableInteractions(
-        story,
-        'root',
-        ['root'],
-        null,
-        [],
-        {},
-        story.startDateTime,
-        [],
-        itemStatValues,
-      ).map(({ id }) => id),
-    ).not.toContain('middle');
-  });
-});
-
-describe('reader progress', () => {
-  it('materializes replayable state while keeping repeated journey visits', () => {
-    const story = storyFixture();
-    story.startDateTime = '2026-07-27T09:00';
-    story.interactions[0].durationMinutes = 15;
-    story.interactions[0].locationId = 'harbor';
-    story.characters = [
-      {
-        id: 'mira',
-        name: 'Mira',
-        description: '',
-        stats: [{ id: 'trust', statDefinitionId: 'trust-definition', initialValue: 1 }],
-        items: [{ id: 'key-1', itemDefinitionId: 'key-definition' }],
-      },
-    ];
-    story.interactions[0].statEffects = [{ statId: 'trust', operation: 'add', value: 2 }];
-    story.interactions[0].itemEffects = [{ itemId: 'key-1', operation: 'obtain' }];
-    story.statDefinitions = [
-      { id: 'trust-definition', name: 'Trust', changePerHour: 0 },
-      { id: 'durability-definition', name: 'Durability', changePerHour: -2 },
-    ];
-    story.itemDefinitions = [
-      {
-        id: 'key-definition',
-        name: 'Key',
-        description: '',
-        stats: [
-          {
-            id: 'key-durability',
-            statDefinitionId: 'durability-definition',
-            initialValue: 10,
-          },
-        ],
-      },
-    ];
-    story.interactions[0].statEffects = [
-      { statId: 'trust', operation: 'add', value: 2 },
-      {
-        itemId: 'key-1',
-        statId: 'key-durability',
-        operation: 'add',
-        value: 3,
-      },
-    ];
-
-    expect(buildReaderProgressState(story, ['root', 'middle', 'root'], ['key-1'])).toEqual({
-      version: 4,
-      randomSeed: 'legacy-reader:story-1',
-      journeyInteractionIds: ['root', 'middle', 'root'],
-      currentInteractionId: 'root',
-      visitedInteractionIds: ['root', 'middle'],
-      currentDateTime: '2026-07-27T09:30',
-      currentLocationId: 'harbor',
-      statValues: { trust: 5 },
-      ownedItemIds: ['key-1'],
-      itemStatValues: { 'key-1': { 'key-durability': 15 } },
-    });
-  });
-
-  it('reconciles deleted interactions, unknown items, and duplicate items', () => {
-    const story = storyFixture();
-    story.characters = [
-      {
-        id: 'mira',
-        name: 'Mira',
-        description: '',
-        items: [{ id: 'key-1', itemDefinitionId: 'key-definition' }],
-      },
-    ];
-    story.interactions[0].itemEffects = [{ itemId: 'key-1', operation: 'obtain' }];
-
-    expect(
-      buildReaderProgressState(story, ['root', 'deleted', 'middle'], ['key-1', 'unknown', 'key-1']),
-    ).toMatchObject({
-      journeyInteractionIds: ['root', 'middle'],
-      currentInteractionId: 'middle',
-      visitedInteractionIds: ['root', 'middle'],
-      ownedItemIds: ['key-1'],
-    });
-  });
-
-  it('obtains and loses distinct item instances deterministically', () => {
-    const story = storyFixture();
-    story.characters = [
-      {
-        id: 'mira',
-        name: 'Mira',
-        description: '',
-        items: [
-          { id: 'key-1', itemDefinitionId: 'key-definition' },
-          { id: 'key-2', itemDefinitionId: 'key-definition' },
-        ],
-      },
-    ];
-    story.interactions[0].itemEffects = [
-      { itemId: 'key-1', operation: 'obtain' },
-      { itemId: 'key-2', operation: 'obtain' },
-    ];
-    story.interactions[1].itemEffects = [{ itemId: 'key-1', operation: 'lose' }];
-
-    expect(buildReaderProgressState(story, ['root', 'root', 'middle']).ownedItemIds).toEqual([
-      'key-2',
-    ]);
-  });
-
-  it('resolves character-rooted item trees and ignores disconnected instances', () => {
-    const story = storyFixture();
-    story.statDefinitions = [
-      { id: 'durability-definition', name: 'Durability', valueType: 'number' },
-    ];
-    story.characters = [
-      {
-        id: 'mira',
-        name: 'Mira',
-        description: '',
-        items: [
-          { id: 'backpack-1', itemDefinitionId: 'backpack-definition' },
-          {
-            id: 'key-1',
-            itemDefinitionId: 'key-definition',
-            parentItemId: 'backpack-1',
-            relationshipType: 'contained',
-          },
-          {
-            id: 'charm-1',
-            itemDefinitionId: 'charm-definition',
-            parentItemId: 'key-1',
-            relationshipType: 'attached',
-          },
-          {
-            id: 'orphan-1',
-            itemDefinitionId: 'orphan-definition',
-            parentItemId: 'missing-parent',
-            relationshipType: 'contained',
-          },
-        ],
-      },
-    ];
-    story.itemDefinitions = [
-      {
-        id: 'backpack-definition',
-        name: 'Backpack',
-        description: '',
-        stats: [
-          {
-            id: 'backpack-durability',
-            statDefinitionId: 'durability-definition',
-            initialValue: 20,
-          },
-        ],
-      },
-      {
-        id: 'key-definition',
-        name: 'Key',
-        description: '',
-        stats: [
-          { id: 'key-durability', statDefinitionId: 'durability-definition', initialValue: 10 },
-        ],
-      },
-      {
-        id: 'charm-definition',
-        name: 'Charm',
-        description: '',
-        stats: [
-          { id: 'charm-durability', statDefinitionId: 'durability-definition', initialValue: 5 },
-        ],
-      },
-      {
-        id: 'orphan-definition',
-        name: 'Orphan',
-        description: '',
-        stats: [
-          { id: 'orphan-durability', statDefinitionId: 'durability-definition', initialValue: 1 },
-        ],
-      },
-    ];
-    story.interactions[0].itemEffects = [{ itemId: 'key-1', operation: 'obtain' }];
-
-    const progress = buildReaderProgressState(story, ['root']);
-
-    expect(getItemDefinitionIdForInstance(story, 'key-1')).toBe('key-definition');
-    expect(getItemDefinitionIdForInstance(story, 'charm-1')).toBe('charm-definition');
-    expect(getItemDefinitionIdForInstance(story, 'orphan-1')).toBeUndefined();
-    expect(getItemOwnerIdForInstance(story, 'key-1')).toBe('mira');
-    expect(getItemOwnerIdForInstance(story, 'charm-1')).toBe('mira');
-    expect(getItemOwnerIdForInstance(story, 'orphan-1')).toBeUndefined();
-    expect(progress.ownedItemIds).toEqual(['key-1']);
-    expect(progress.itemStatValues).toEqual({
-      'backpack-1': { 'backpack-durability': 20 },
-      'key-1': { 'key-durability': 10 },
-      'charm-1': { 'charm-durability': 5 },
-    });
-  });
-
-  it('resolves location-rooted item trees during replay', () => {
-    const story = storyFixture();
-    story.statDefinitions = [
-      { id: 'durability-definition', name: 'Durability', valueType: 'number' },
-    ];
-    story.locations = [
-      {
-        id: 'home',
-        name: 'Home',
-        description: '',
-        items: [
-          { id: 'cabinet-1', itemDefinitionId: 'cabinet-definition' },
-          {
-            id: 'supply-1',
-            itemDefinitionId: 'supply-definition',
-            parentItemId: 'cabinet-1',
-            relationshipType: 'contained',
-          },
-        ],
-      },
-    ];
-    story.itemDefinitions = [
-      { id: 'cabinet-definition', name: 'Cabinet', description: '' },
-      {
-        id: 'supply-definition',
-        name: 'Supply',
-        description: '',
-        stats: [
-          { id: 'supply-durability', statDefinitionId: 'durability-definition', initialValue: 10 },
-        ],
-      },
-    ];
-    story.interactions[0].itemEffects = [{ itemId: 'supply-1', operation: 'obtain' }];
-
-    const progress = buildReaderProgressState(story, ['root']);
-
-    expect(getItemDefinitionIdForInstance(story, 'supply-1')).toBe('supply-definition');
-    expect(getItemOwnerIdForInstance(story, 'supply-1')).toBe('home');
-    expect(progress.ownedItemIds).toEqual(['supply-1']);
-    expect(progress.itemStatValues['supply-1']).toEqual({ 'supply-durability': 10 });
-  });
-
-  it('obtains reusable item definitions and evaluates item ownership conditions', () => {
-    const story = storyFixture();
-    story.itemDefinitions = [
-      { id: 'key-definition', name: 'Key', description: '' },
-      { id: 'map-definition', name: 'Map', description: '' },
-    ];
-    story.characters = [{ id: 'mira', name: 'Mira', description: '' }];
-    story.interactions[0].itemEffects = [
-      { itemDefinitionId: 'key-definition', characterId: 'mira', operation: 'obtain' },
-    ];
-    story.interactions[1].itemEffects = [
-      { itemDefinitionId: 'key-definition', characterId: 'mira', operation: 'obtain' },
-    ];
-    story.interactions[2].triggers[0].conditions = [
-      { itemDefinitionId: 'key-definition', isOwned: true },
-      { itemDefinitionId: 'map-definition', isOwned: false },
-    ];
-
-    const progress = buildReaderProgressState(story, ['root', 'middle']);
-    expect(progress.ownedItemIds).toHaveLength(2);
-    expect(new Set(progress.ownedItemIds).size).toBe(2);
-    expect(getItemOwnerIdForInstance(story, progress.ownedItemIds[0])).toBe('mira');
-    expect(
-      getAvailableInteractions(
-        story,
-        'middle',
-        ['root', 'middle'],
-        null,
-        [],
-        {},
-        story.startDateTime,
-        ['key-definition', 'key-definition'],
-      ).map(({ id }) => id),
-    ).toContain('end');
-    expect(
-      getTriggerConditionFailures(
-        story.interactions[2],
-        'middle',
-        ['root', 'middle'],
-        null,
-        [],
-        {},
-        story.startDateTime,
-        [],
-      ),
-    ).toHaveLength(1);
-  });
-
-  it('keeps independent runtime stat values for instances of one item definition', () => {
-    const story = storyFixture();
-    story.statDefinitions = [{ id: 'durability', name: 'Durability' }];
-    story.itemDefinitions = [
-      {
-        id: 'key-definition',
-        name: 'Key',
-        description: '',
-        stats: [{ id: 'key-durability', statDefinitionId: 'durability', initialValue: 10 }],
-      },
-    ];
-    story.characters = [
-      {
-        id: 'mira',
-        name: 'Mira',
-        description: '',
-        items: [
-          { id: 'key-1', itemDefinitionId: 'key-definition' },
-          { id: 'key-2', itemDefinitionId: 'key-definition' },
-        ],
-      },
-    ];
-    story.interactions[0].statEffects = [
-      {
-        itemId: 'key-1',
-        statId: 'key-durability',
-        operation: 'add',
-        value: -4,
-      },
-      {
-        itemId: 'key-2',
-        statId: 'key-durability',
-        operation: 'set',
-        value: 3,
-      },
-    ];
-
-    expect(buildReaderProgressState(story, ['root']).itemStatValues).toEqual({
-      'key-1': { 'key-durability': 6 },
-      'key-2': { 'key-durability': 3 },
-    });
+  expect(buildReaderProgressState(story, ['root']).itemStatValues).toEqual({
+    'key-1': { 'key-durability': 6 },
+    'key-2': { 'key-durability': 3 },
   });
 });

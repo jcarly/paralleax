@@ -120,10 +120,14 @@ describe('StoryPlayer simulation authoring', () => {
     });
     expect(await screen.findByDisplayValue('Renamed step')).toBeInTheDocument();
 
-    expect(await screen.findByText('You continue.')).toBeInTheDocument();
+    const bodyInput = await screen.findByRole(
+      'textbox',
+      { name: 'Current interaction content' },
+      { timeout: 10_000 },
+    );
+    expect(bodyInput).toHaveTextContent('You continue.');
     expect(screen.queryByRole('button', { name: 'Edit content' })).not.toBeInTheDocument();
 
-    const bodyInput = await screen.findByRole('textbox', { name: 'Current interaction content' });
     await user.clear(bodyInput);
     await user.type(bodyInput, 'Rewritten content.');
     await user.tab();

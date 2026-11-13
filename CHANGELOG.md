@@ -2,6 +2,28 @@
 
 ## Unreleased
 
+- Simplified account entry, the Story library, and settings. Sign-in and registration now
+  keep the site header and direct routes, while the library removes generated
+  graph art and reader-facing interaction counts. Story deletion now uses a
+  labeled trash action with confirmation, and settings drop their redundant
+  introduction. Reader scenes keep the authored Interaction title available to
+  assistive technology without displaying it as narrative content; choice labels
+  and authored body content remain unchanged.
+
+- Changed the Railway alpha release flow to run only for newly created `x.y.z`
+  tags after exhaustive CI. GitHub Actions now publishes API and web images to
+  GHCR and deploys their immutable digests in migration-first order before the
+  deployment smoke check.
+
+- Aligned production Docker builds with the Node 24 toolchain and split them by
+  API/web target. Railway source-build watch patterns now include shared and
+  Docker inputs, while Sentry upload credentials are mounted only as a web
+  BuildKit secret. Replaced the service Config as Code files with a named IaC
+  partial for API and web; it preserves existing app variable values and the
+  web domain, while Postgres and its volume remain unmanaged. Disabling live
+  branch auto-deploy, clearing Config File Path settings, and applying a reviewed
+  Railway plan are still required before the live services use this configuration.
+
 - Replaced named interview notes and a project-specific import example with an
   anonymized product-discovery synthesis and source-neutral QSP import lessons.
   Identifiable research records remain outside this public repository.

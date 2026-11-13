@@ -12,7 +12,20 @@ export function configureRequestBodyParsing(app: INestApplication) {
 export async function readBinaryRequestBody(request: Request) {
   const chunks: Buffer[] = [];
   for await (const chunk of request) {
-    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    chunks.push(requestBodyChunk(chunk));
   }
   return Buffer.concat(chunks);
+}
+
+function requestBodyChunk(chunk: unknown): Buffer {
+  if (typeof chunk === 'string') {
+    return Buffer.from(chunk);
+  }
+  if (Buffer.isBuffer(chunk)) {
+    return Buffer.from([...chunk]);
+  }
+  if (chunk instanceof Uint8Array) {
+    return Buffer.from(chunk);
+  }
+  throw new TypeError('Request body chunks must be strings or byte arrays');
 }

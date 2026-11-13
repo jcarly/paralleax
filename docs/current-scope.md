@@ -351,7 +351,9 @@ Paralleax currently includes:
 - Provider-neutral production API/web images, a migration-first Compose shape,
   exact production-origin enforcement, verified-email registration with an
   operator-controlled open/closed mode, deployment smoke checks, and operator
-  runbooks for a creator alpha.
+  runbooks for a creator alpha. GitHub Actions publishes immutable GHCR images
+  and deploys the Railway alpha only after exhaustive CI succeeds for a newly
+  created `x.y.z` version tag.
 
 ## UX Implementation Cross-check — 2026-11-04
 

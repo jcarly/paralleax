@@ -104,7 +104,10 @@ delete both legacy values from the deployment environment before release.
 
 ## Build And Release
 
-The multi-stage `Dockerfile` has two production targets:
+The multi-stage `Dockerfile` uses Node 24, matching the repository and CI, and
+has two production targets. Each compiles the shared
+package and only the application in its target, so web source changes do not
+affect the API image build and vice versa:
 
 ```bash
 docker build --target api --tag registry.example/paralleax-api:<commit> .
@@ -112,11 +115,27 @@ docker build --target web --tag registry.example/paralleax-web:<commit> .
 ```
 
 Use immutable commit or digest references. GitHub Actions builds both targets
-when Docker, production Compose, deployment, or dependency-manifest files change,
-and in the weekly/manual exhaustive lane. Application pull requests still run
-the affected workspace build and tests. CI validates images locally but does
-not publish them; a provider deployment should use reviewed image digests rather
-than rebuilding an unreviewed working tree.
+when Docker, production Compose, deployment, or dependency-manifest files change.
+Application pull requests still run the affected workspace build and tests. A
+newly created version tag in the exact `x.y.z` format runs exhaustive CI first;
+only after all required checks pass does the release job publish API and web
+images to GHCR and deploy those image digests to the Railway alpha. The job
+deploys the API first, waits for its healthcheck, then deploys the web image and
+runs the deployment smoke check. Re-tagging or deleting a version does not
+deploy. No branch push publishes images or runs the GitHub Actions release job.
+
+The release tags each image with the version and source commit for discovery,
+but Railway receives `ghcr.io/...@sha256:...` references. The web Sentry release
+and API `SENTRY_RELEASE` are set from the version tag so both services identify
+the same release. The workflow uses the existing public web Sentry DSN and
+optional public Formbricks build values from GitHub Actions repository variables.
+If browser source maps are enabled, store `SENTRY_AUTH_TOKEN` as a GitHub Actions
+secret. Only the web image build mounts it as a BuildKit secret; it is not passed
+to the API build, a build argument, or the final image. Local production Compose
+uses the same build-secret mount when `SENTRY_AUTH_TOKEN` is present in the
+operator environment. Since BuildKit does not include secret contents in its
+cache key, use `docker compose build --no-cache web` after adding or rotating the
+local token so a cached web layer cannot skip the upload.
 
 Run the API image once as a migration job before replacing application traffic:
 
@@ -147,8 +166,102 @@ services in the same project and environment: Railway PostgreSQL, `api`, and
 `web`. Connect both application services to this repository with the repository
 root as their root directory.
 
-Configure the `api` service with Config File Path
-`/deploy/railway.api.json` and these variables:
+The tag release job targets the existing `fearless-warmth` project and its
+`production` environment, where the services are named `@paralleax/api` and
+`@paralleax/web`. GitHub Actions is the sole application deployment path: disable
+Railway's native GitHub auto-deploy trigger on both services. Otherwise a push
+to `main` can deploy independently of CI and later replace a tagged release.
+The first successful version-tag release switches each application service
+source from the branch to its published image digest; PostgreSQL remains
+unchanged.
+
+The production configuration was checked on 2026-11-11. Both application
+services were still connected to `main` with native deployments active. The API
+service's effective builder was `RAILPACK` despite the repository declaring
+`DOCKERFILE`; its failed build rejected the Dockerfile's BuildKit secret mount.
+The API watched only `/apps/api/**` and the web service only `/apps/web/**`,
+missing shared packages and Docker build inputs. The live Config File Path
+settings still point at the legacy custom files until the one-time migration
+below is applied. Do not treat repository configuration as proof that the live
+Railway builder, triggers, or Config File Path have changed. Once the first
+version tag deploys, verify both sources show immutable GHCR digests and the API
+and web healthchecks still pass.
+
+The app settings are now authored in `.railway/railway.ts` as the named
+`paralleax-apps` partial. It owns only `@paralleax/api` and `@paralleax/web`.
+Postgres and `postgres-volume` remain outside IaC ownership, so a plan for this
+partial must not list either resource. For the initial migration, the file
+explicitly declares the existing `jcarly/paralleax` `main` source for both
+services: the tested CLI plan would otherwise replace each `source.repo` and
+`source.type` with `null`. GitHub Actions still selects immutable image digests
+for tagged releases; this GitHub declaration is a one-time migration bootstrap,
+not a permanent release source. The file declares the existing app variable
+names with `preserve()` so Railway keeps their values, including secrets and
+service references, without exposing them in Git. Add or remove a
+name in that preserve list whenever an app variable is added or retired.
+Existing private network endpoints and the `paralleax.app` web domain are also
+represented in IaC; Railway-generated service domains remain provider-managed.
+
+To migrate the live app settings:
+
+1. Before merging the legacy JSON file removals or pushing a source change,
+   disable native GitHub auto-deploy on both app services and verify it is off.
+2. Install Railway CLI `5.68.0` or newer, link the repository root to
+   `fearless-warmth` / `production`, and run `railway config partials list`.
+   Resolve any existing owner for either app service before proceeding.
+3. In each application's Railway service settings, clear the custom Config File
+   Path (`/deploy/railway.api.json` or `/deploy/railway.web.json`). Railway
+   requires legacy service configuration to be cleared before IaC can manage
+   that service.
+4. Run `railway config plan` and review the full plan. It may update build or
+   deploy settings on the API and web only, and remove the old Railpack build
+   command. Stop if it creates, deletes, or changes another resource, a variable,
+   domain, source, Postgres, or volume. In particular, verify that all existing
+   application variables are preserved and the immutable image sources remain
+   untouched.
+5. Apply only the reviewed plan with `railway config apply`. If Railway stages a
+   deployment, keep the existing release validation gates and do not deploy an
+   unvalidated image.
+6. Run `railway config plan` again and confirm there is no remaining drift.
+
+**Source drift after the first tagged release:** the GitHub Actions workflow
+changes both sources to immutable GHCR image digests. The IaC file still declares
+GitHub `main` to preserve the pre-release source during migration. A later
+`railway config plan` may therefore propose replacing an image digest with the
+GitHub repository. Do **not** apply that plan. Before making any further IaC
+changes, reconcile the source-of-truth strategy so the current immutable images
+are retained. A source change requires an explicit release decision, even when
+all other parts of the plan are safe.
+
+Railway's automatic Config as Code converter is not used for these custom file
+paths. The TypeScript config writes the Docker builder and restart policy
+explicitly so the migration does not depend on converter output.
+
+Before creating the first release tag, configure the GitHub repository:
+
+- Add a production-scoped Railway project token as the `RAILWAY_TOKEN` Actions
+  secret.
+- Copy the existing `VITE_SENTRY_DSN` build value into the `VITE_SENTRY_DSN`
+  Actions variable. If enabled, also add `VITE_FORMBRICKS_WORKSPACE_ID` and
+  `VITE_FORMBRICKS_APP_URL` and `VITE_SENTRY_TRACES_SAMPLE_RATE` as Actions
+  variables.
+- If browser source-map uploads are enabled, add `SENTRY_AUTH_TOKEN` as an
+  Actions secret and `SENTRY_ORG`, `SENTRY_PROJECT`, and optional `SENTRY_URL`
+  as Actions variables. Keep the token in GitHub Actions only; Railway deploys
+  the already-built web image and does not need this build secret.
+- The workflow publishes packages linked to this public repository and checks
+  that both image digests can be pulled anonymously before it changes either
+  Railway service. If that check fails on the first release, set both package
+  visibilities to Public in GitHub Packages settings and rerun the tag workflow.
+  Public images require no Railway registry credentials.
+
+The workflow switches the service source to a digest but does not create Railway
+credentials. The IaC partial keeps the API migration pre-deploy command
+`node apps/api/dist/main.js --migrate`, the `/api/health` API healthcheck, and
+the `/healthz` web healthcheck configured after the service source changes from
+the repository to an image.
+
+Configure the `api` service with these variables:
 
 ```dotenv
 RUNTIME_TARGET=api
@@ -165,15 +278,13 @@ SENTRY_RELEASE=<immutable-commit-or-image-digest>
 The `Postgres` and `web` names in reference variables are case-sensitive and
 must match the Railway service names. A custom public domain may replace the
 generated web domain in `CORS_ORIGIN`. Do not generate a public domain for the
-API service. The API configuration runs migrations as a Railway pre-deploy
-command, then uses `/api/health` to verify that the HTTP process is listening.
-Database and schema readiness remain mandatory release checks through
-`/api/ready`; Railway's deployment healthcheck should not conflate an HTTP
-listener failure with a PostgreSQL readiness failure.
+API service. The IaC API config runs migrations as a Railway pre-deploy command,
+then uses `/api/health` to verify that the HTTP process is listening. Database
+and schema readiness remain mandatory release checks through `/api/ready`;
+Railway's deployment healthcheck should not conflate an HTTP listener failure
+with a PostgreSQL readiness failure.
 
-Configure the `web` service with Config File Path
-`/deploy/railway.web.json`, generate its public domain on container port `8080`,
-and set:
+Keep the `web` service's public domain on container port `8080` and set:
 
 ```dotenv
 PORT=8080
@@ -185,11 +296,12 @@ If Formbricks feedback is enabled, add its two `VITE_FORMBRICKS_*` values to the
 web service so Railway makes them available to the Docker build and the runtime
 Content Security Policy.
 
-To enable browser reports, add `VITE_SENTRY_DSN` and `VITE_SENTRY_RELEASE` to
-the `web` service build environment. To upload browser source maps, also add the
-web-build-only `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, and `SENTRY_PROJECT` values.
+Browser reports are configured at image build time. Set `VITE_SENTRY_DSN`,
+`VITE_SENTRY_TRACES_SAMPLE_RATE`, and the release value through the GitHub
+Actions variables used by the tag workflow. For source-map uploads, provide
+`SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, and `SENTRY_PROJECT` there as described above.
 The token needs Sentry project write/release administration access and must not
-be exposed as a `VITE_*` value or copied into the final web image.
+be exposed as a `VITE_*` value, a build argument, or part of the final web image.
 
 Nginx listens on `PORT`, and both image and Railway healthchecks use that same
 value. Keep the public-domain target port and `PORT` aligned; `8080` is the
