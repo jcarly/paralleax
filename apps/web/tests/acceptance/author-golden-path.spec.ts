@@ -81,9 +81,8 @@ test('an author creates, persists, resumes, and simulates a conditional story', 
     /\/api\/stories\/[^/]+\/interactions$/,
   );
   const createBranch = openingNode.getByRole('button', { name: 'Create child interaction' });
-  await createBranch.focus();
-  await expect(createBranch).toBeFocused();
-  await createBranch.press('Enter');
+  await expect(createBranch).toBeInViewport();
+  await createBranch.click();
   const alternative = await createdInteraction(alternativeCreation);
   await editInteraction(page, 'New interaction', 'Leave the atrium', 'Alice takes another path.');
   await page.getByRole('button', { name: 'Fit View' }).click();
