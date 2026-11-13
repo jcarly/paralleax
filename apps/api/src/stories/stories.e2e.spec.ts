@@ -36,9 +36,9 @@ interface ApiJsonObject {
   title?: string;
   name?: string;
   code?: string;
-  message?: string;
+  message?: string | string[];
   importId?: string;
-  status?: string;
+  status?: string | number;
   category?: string;
   imageUrl?: string | null;
   updatedAt?: string;
@@ -82,7 +82,7 @@ interface ApiJsonObject {
   interaction?: ApiJsonObject;
   decoration?: ApiJsonObject;
   trigger?: ApiJsonObject;
-  location?: ApiJsonObject;
+  location?: ApiJsonObject | string | null;
   character?: ApiJsonObject;
   statDefinition?: ApiJsonObject;
   itemDefinition?: ApiJsonObject;
@@ -119,6 +119,7 @@ interface ApiJsonObject {
   conditionalTextBlocks?: ApiJsonObject[];
   conditions?: ApiJsonObject[];
   coverage?: ApiJsonObject[];
+  contextCounts?: Record<string, number>;
 }
 const stringFields = new Set([
   'id',
@@ -186,6 +187,7 @@ const objectFields = new Set([
   'owner',
   'access',
   'position',
+  'contextCounts',
 ]);
 const objectArrayFields = new Set([
   'stats',
@@ -227,6 +229,13 @@ const jsonFieldValidators = new Map<string, (value: unknown) => boolean>([
   ['parentGroupId', isNullableString],
   ['changePerHour', isNullableNumber],
   ['timerSeconds', isNullableNumber],
+  ['status', (value: unknown) => typeof value === 'string' || typeof value === 'number'],
+  ['message', (value: unknown) => typeof value === 'string' || isStringArray(value)],
+  [
+    'location',
+    (value: unknown) => value === null || typeof value === 'string' || isJsonObject(value),
+  ],
+  ['contextCounts', isNumberRecord],
 ]);
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -239,6 +248,9 @@ function isNullableNumber(value: unknown): boolean {
 }
 function isStringArray(value: unknown): boolean {
   return Array.isArray(value) && value.every((item) => typeof item === 'string');
+}
+function isNumberRecord(value: unknown): boolean {
+  return isRecord(value) && Object.values(value).every((item) => typeof item === 'number');
 }
 function isJsonObject(value: unknown): value is ApiJsonObject {
   return isRecord(value) && isApiJsonValue(value);
@@ -1549,7 +1561,7 @@ async function saveAndExpectReaderProgress(fixture: ReaderProgressFixture): Prom
     },
     400,
   );
-  expect(responseStringAt(parseResponse(invalid), 'message')).toEqual(
+  expect(responseValueAt(parseResponse(invalid), 'message')).toEqual(
     expect.arrayContaining([
       'property currentDateTime should not exist',
       'property statValues should not exist',
@@ -1566,7 +1578,7 @@ async function saveAndExpectReaderProgress(fixture: ReaderProgressFixture): Prom
 
 async function expectProgressSaveSlots(storyId: string, manualSaveId: string): Promise<void> {
   const saves = await getApi(`/api/stories/${storyId}/progress/saves`, 200);
-  expect(parseResponse(saves)).toEqual(
+  expect(parseResponseArray(saves)).toEqual(
     expect.arrayContaining([
       expect.objectContaining({ kind: 'reader-autosave' }),
       expect.objectContaining({ kind: 'simulation-autosave' }),
@@ -2124,7 +2136,7 @@ it('PATCH /api/stories/:storyId/interactions/:interactionId/triggers/:triggerId 
     { timerSeconds: null },
     200,
   );
-  expect(responseNumberAt(parseResponse(cleared), 'trigger', 'timerSeconds')).toBeNull();
+  expect(responseValueAt(parseResponse(cleared), 'trigger', 'timerSeconds')).toBeNull();
 });
 it('updates only a trigger canvas position without changing its narrative rules', async () => {
   const story = await createStory();
@@ -3564,13 +3576,19 @@ it('lists only public stories without authentication', async () => {
     .send({ visibility: 'public', editPolicy: 'owner', commentPolicy: 'editors' })
     .expect(200);
   const response = await getApi('/api/stories/public', 200);
-  expect(responseObjectArrayAt(parseResponse(response), 'items')).toEqual([
+  const publicItems = responseObjectArrayAt(parseResponse(response), 'items');
+  expect(publicItems).toEqual([
     expect.objectContaining({
       id: responseStringAt(parseResponse(publicStory), 'id'),
       title: 'Public catalogue story',
-      capabilities: { canRead: true, canEdit: false, canManage: false },
     }),
   ]);
+  expect(
+    responseObjectAt(
+      required(publicItems[0], 'Expected a public story to be present.'),
+      'capabilities',
+    ),
+  ).toMatchObject({ canRead: true, canEdit: false, canManage: false });
   expect(responseObjectAt(parseResponse(response), 'items', 0)).toHaveProperty('owner', {
     id: 'user-1',
     displayName: 'User One',
