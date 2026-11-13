@@ -874,13 +874,11 @@ it('POST /api/stories/demo is admin-only and creates the populated demo catalog'
   expect(
     required(stories[3].characters?.[0], 'Expected this response value to be present.').items,
   ).toHaveLength(2);
-  expect(
-    required(
-      required(stories[4].characters?.[0], 'Expected this response value to be present.').items
-        ?.some,
-      'Expected this response value to be present.',
-    )((item) => item.relationshipType === 'equipped'),
-  ).toBe(true);
+  const equippedItems = required(
+    required(stories[4].characters?.[0], 'Expected this response value to be present.').items,
+    'Expected this response value to be present.',
+  );
+  expect(equippedItems.some((item) => item.relationshipType === 'equipped')).toBe(true);
   const listResponse = await request(httpServer)
     .get('/api/stories')
     .set('Cookie', 'paralleax_session=admin')
