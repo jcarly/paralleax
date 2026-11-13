@@ -1,9 +1,23 @@
 import { createPortal } from 'react-dom';
-import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
+import type { KeyboardEvent as ReactKeyboardEvent, ReactNode } from 'react';
 import { useContext, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { ModalPortalContext } from './modalPortalContext';
 
-export function FieldHelpTooltip({ label, help }: { label: string; help: string }) {
+export function FieldHelpTooltip({
+  label,
+  help,
+  children,
+  className,
+  disabled,
+  onClick,
+}: {
+  label: string;
+  help: string;
+  children?: ReactNode;
+  className?: string;
+  disabled?: boolean;
+  onClick?: () => void;
+}) {
   const modalPortal = useContext(ModalPortalContext);
   const tooltipId = useId();
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -90,10 +104,12 @@ export function FieldHelpTooltip({ label, help }: { label: string; help: string 
     <>
       <button
         aria-describedby={tooltipId}
-        aria-label={`? — ${label}`}
-        className="field-help-tooltip-trigger"
+        aria-label={children === undefined ? `? — ${label}` : label}
+        className={`field-help-tooltip-trigger${className ? ` ${className}` : ''}`}
+        disabled={disabled}
         ref={triggerRef}
         type="button"
+        onClick={onClick}
         onBlur={() => {
           triggerFocusedRef.current = false;
           scheduleTooltipClose();
@@ -112,7 +128,7 @@ export function FieldHelpTooltip({ label, help }: { label: string; help: string 
           scheduleTooltipClose();
         }}
       >
-        ?
+        {children ?? '?'}
       </button>
       {createPortal(
         <span

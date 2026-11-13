@@ -1165,14 +1165,13 @@ async function updateLocationDifference(input: {
   sortOrder: number;
 }) {
   const { client, previous, current, previousSortOrder, sortOrder } = input;
-  const changes: string[] = [];
-  const values: unknown[] = [current.id];
-  addChange(changes, values, 'name', previous.name, current.name);
-  addChange(changes, values, 'description', previous.description, current.description);
-  addChange(changes, values, 'category', previous.category ?? '', current.category ?? '');
-  addChange(changes, values, 'image_url', previous.imageUrl ?? '', current.imageUrl ?? '');
-  addChange(changes, values, 'sort_order', previousSortOrder, sortOrder);
-  await updateEntityRow(client, 'locations', changes, values);
+  await updateEntityFields(client, 'locations', current.id, [
+    { column: 'name', previous: previous.name, current: current.name },
+    { column: 'description', previous: previous.description, current: current.description },
+    { column: 'category', previous: previous.category ?? '', current: current.category ?? '' },
+    { column: 'image_url', previous: previous.imageUrl ?? '', current: current.imageUrl ?? '' },
+    { column: 'sort_order', previous: previousSortOrder, current: sortOrder },
+  ]);
 }
 
 async function insertCharacter(
@@ -1207,6 +1206,20 @@ async function updateEntityRow(
   if (changes.length > 0) {
     await client.query(`UPDATE ${table} SET ${changes.join(', ')} WHERE id = $1`, values);
   }
+}
+
+async function updateEntityFields(
+  client: Queryable,
+  table: string,
+  id: string,
+  fields: Array<{ column: string; previous: unknown; current: unknown }>,
+) {
+  const changes: string[] = [];
+  const values: unknown[] = [id];
+  for (const field of fields) {
+    addChange(changes, values, field.column, field.previous, field.current);
+  }
+  await updateEntityRow(client, table, changes, values);
 }
 
 async function insertStatDefinition(
@@ -1311,27 +1324,22 @@ async function updateStatDefinitionDifference(input: {
   sortOrder: number;
 }) {
   const { client, previous, current, previousSortOrder, sortOrder } = input;
-  const changes: string[] = [];
-  const values: unknown[] = [current.id];
-  addChange(changes, values, 'name', previous.name, current.name);
-  addChange(
-    changes,
-    values,
-    'value_type',
-    previous.valueType ?? 'number',
-    current.valueType ?? 'number',
-  );
-  addChange(changes, values, 'category', previous.category ?? '', current.category ?? '');
-  addChange(changes, values, 'image_url', previous.imageUrl ?? '', current.imageUrl ?? '');
-  addChange(
-    changes,
-    values,
-    'change_per_hour',
-    previous.changePerHour ?? 0,
-    current.changePerHour ?? 0,
-  );
-  addChange(changes, values, 'sort_order', previousSortOrder, sortOrder);
-  await updateEntityRow(client, 'stat_definitions', changes, values);
+  await updateEntityFields(client, 'stat_definitions', current.id, [
+    { column: 'name', previous: previous.name, current: current.name },
+    {
+      column: 'value_type',
+      previous: previous.valueType ?? 'number',
+      current: current.valueType ?? 'number',
+    },
+    { column: 'category', previous: previous.category ?? '', current: current.category ?? '' },
+    { column: 'image_url', previous: previous.imageUrl ?? '', current: current.imageUrl ?? '' },
+    {
+      column: 'change_per_hour',
+      previous: previous.changePerHour ?? 0,
+      current: current.changePerHour ?? 0,
+    },
+    { column: 'sort_order', previous: previousSortOrder, current: sortOrder },
+  ]);
 }
 
 async function persistItemDefinitionDifference(client: Queryable, before: Story, after: Story) {
@@ -1356,14 +1364,13 @@ async function updateItemDefinitionDifference(input: {
   sortOrder: number;
 }) {
   const { client, previous, current, previousSortOrder, sortOrder } = input;
-  const changes: string[] = [];
-  const values: unknown[] = [current.id];
-  addChange(changes, values, 'name', previous.name, current.name);
-  addChange(changes, values, 'description', previous.description, current.description);
-  addChange(changes, values, 'category', previous.category ?? '', current.category ?? '');
-  addChange(changes, values, 'image_url', previous.imageUrl ?? '', current.imageUrl ?? '');
-  addChange(changes, values, 'sort_order', previousSortOrder, sortOrder);
-  await updateEntityRow(client, 'item_definitions', changes, values);
+  await updateEntityFields(client, 'item_definitions', current.id, [
+    { column: 'name', previous: previous.name, current: current.name },
+    { column: 'description', previous: previous.description, current: current.description },
+    { column: 'category', previous: previous.category ?? '', current: current.category ?? '' },
+    { column: 'image_url', previous: previous.imageUrl ?? '', current: current.imageUrl ?? '' },
+    { column: 'sort_order', previous: previousSortOrder, current: sortOrder },
+  ]);
 }
 
 async function persistCharacterDifference(client: Queryable, before: Story, after: Story) {
@@ -1393,21 +1400,18 @@ async function updateCharacterDifference(input: {
   sortOrder: number;
 }) {
   const { client, previous, current, previousSortOrder, sortOrder } = input;
-  const changes: string[] = [];
-  const values: unknown[] = [current.id];
-  addChange(changes, values, 'name', previous.name, current.name);
-  addChange(changes, values, 'description', previous.description, current.description);
-  addChange(changes, values, 'category', previous.category ?? '', current.category ?? '');
-  addChange(changes, values, 'image_url', previous.imageUrl ?? '', current.imageUrl ?? '');
-  addChange(
-    changes,
-    values,
-    'is_playable',
-    previous.isPlayable ?? false,
-    current.isPlayable ?? false,
-  );
-  addChange(changes, values, 'sort_order', previousSortOrder, sortOrder);
-  await updateEntityRow(client, 'characters', changes, values);
+  await updateEntityFields(client, 'characters', current.id, [
+    { column: 'name', previous: previous.name, current: current.name },
+    { column: 'description', previous: previous.description, current: current.description },
+    { column: 'category', previous: previous.category ?? '', current: current.category ?? '' },
+    { column: 'image_url', previous: previous.imageUrl ?? '', current: current.imageUrl ?? '' },
+    {
+      column: 'is_playable',
+      previous: previous.isPlayable ?? false,
+      current: current.isPlayable ?? false,
+    },
+    { column: 'sort_order', previous: previousSortOrder, current: sortOrder },
+  ]);
 }
 
 async function persistItemInstanceDifference(client: Queryable, before: Story, after: Story) {

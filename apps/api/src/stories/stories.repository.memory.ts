@@ -51,6 +51,20 @@ interface MemoryStoryHistoryEvent {
   revertsEventId?: string;
 }
 
+type MemoryHistoryRevertResult =
+  | { kind: 'applied'; result: StoryHistoryMutationResult }
+  | { kind: 'unavailable' }
+  | { kind: 'conflict'; paths: string[] }
+  | undefined;
+
+type ReaderProgressSaveArguments = [
+  state: ReaderProgressState,
+  updatedAt: string,
+  slotId?: string,
+  name?: string,
+  createdAt?: string,
+];
+
 export class InMemoryStoriesRepository {
   private readonly stories = new Map<string, Story>();
   private readonly owners = new Map<string, string>();
@@ -130,73 +144,7 @@ export class InMemoryStoriesRepository {
     pageSize: number,
   ): Promise<StoryEditorContextPage | undefined> {
     const story = await this.find(id, ownerId);
-    if (!story) {
-      return undefined;
-    }
-    const statAssignments: StoryEditorStatAssignment[] = [
-      ...(story.stats ?? []).map((stat) => ({ ...stat, ownerType: 'story' as const })),
-      ...(story.characters ?? []).flatMap((character) =>
-        (character.stats ?? []).map((stat) => ({
-          ...stat,
-          ownerType: 'character' as const,
-          ownerId: character.id,
-        })),
-      ),
-      ...(story.locations ?? []).flatMap((location) =>
-        (location.stats ?? []).map((stat) => ({
-          ...stat,
-          ownerType: 'location' as const,
-          ownerId: location.id,
-        })),
-      ),
-      ...(story.itemDefinitions ?? []).flatMap((definition) =>
-        (definition.stats ?? []).map((stat) => ({
-          ...stat,
-          ownerType: 'itemDefinition' as const,
-          ownerId: definition.id,
-        })),
-      ),
-    ];
-    const itemInstances: StoryEditorItemInstance[] = [
-      ...(story.characters ?? []).flatMap((character) =>
-        (character.items ?? []).map((item) => ({
-          ...item,
-          ...(!item.parentItemId ? { ownerType: 'character' as const, ownerId: character.id } : {}),
-        })),
-      ),
-      ...(story.locations ?? []).flatMap((location) =>
-        (location.items ?? []).map((item) => ({
-          ...item,
-          ...(!item.parentItemId ? { ownerType: 'location' as const, ownerId: location.id } : {}),
-        })),
-      ),
-    ];
-    const bootstrap = editorBootstrap(story);
-    return {
-      revision: story.revision ?? 1,
-      page,
-      pageSize,
-      hasMore: Object.values(bootstrap.contextCounts).some((count) => count > page * pageSize),
-      locations: pageItems(story.locations ?? [], page, pageSize).map((location) => ({
-        ...location,
-        stats: undefined,
-        items: undefined,
-      })),
-      characters: pageItems(story.characters ?? [], page, pageSize).map((character) => ({
-        ...character,
-        stats: undefined,
-        items: undefined,
-      })),
-      statDefinitions: pageItems(story.statDefinitions ?? [], page, pageSize),
-      statAssignments: pageItems(statAssignments, page, pageSize),
-      itemDefinitions: pageItems(story.itemDefinitions ?? [], page, pageSize).map((definition) => ({
-        ...definition,
-        stats: undefined,
-      })),
-      itemInstances: pageItems(itemInstances, page, pageSize),
-      groups: pageItems(story.groups ?? [], page, pageSize),
-      graphDecorations: pageItems(story.graphDecorations ?? [], page, pageSize),
-    };
+    return story ? editorContextPage(story, page, pageSize) : undefined;
   }
 
   async findEditorInteractionPage(
@@ -339,54 +287,7 @@ export class InMemoryStoriesRepository {
     request: StoryRuntimeSliceRequest,
   ): Promise<StoryRuntimeSlice | undefined> {
     const story = await this.find(id, ownerId);
-    if (!story) {
-      return undefined;
-    }
-    const candidates =
-      request.includeOptions === false
-        ? []
-        : story.interactions.filter((interaction) =>
-            interaction.triggers.some((trigger) =>
-              doesTriggerInputMatch(trigger, request.currentInteractionId ?? null),
-            ),
-          );
-    const start = (request.page - 1) * request.pageSize;
-    const optionPage = candidates.slice(start, start + request.pageSize);
-    const optionIds = new Set(optionPage.map(({ id: interactionId }) => interactionId));
-    const requestedIds = new Set(request.interactionIds ?? []);
-    const referencedIds = new Set(
-      optionPage.flatMap((interaction) =>
-        interaction.triggers.flatMap((trigger) =>
-          getTriggerConditions(trigger).flatMap((condition) =>
-            'interactionId' in condition ? [condition.interactionId] : [],
-          ),
-        ),
-      ),
-    );
-    return {
-      revision: story.revision ?? 1,
-      page: request.page,
-      pageSize: request.pageSize,
-      totalOptionCount: candidates.length,
-      hasMore: start + request.pageSize < candidates.length,
-      optionInteractionIds: [...optionIds],
-      interactionReferences: story.interactions
-        .filter(({ id: interactionId }) => referencedIds.has(interactionId))
-        .map(({ id: interactionId, title }) => ({ id: interactionId, title })),
-      interactions: story.interactions
-        .filter(
-          ({ id: interactionId }) =>
-            optionIds.has(interactionId) || requestedIds.has(interactionId),
-        )
-        .map((interaction) => ({
-          ...structuredClone(interaction),
-          triggers: optionIds.has(interaction.id)
-            ? interaction.triggers.filter((trigger) =>
-                doesTriggerInputMatch(trigger, request.currentInteractionId ?? null),
-              )
-            : [],
-        })),
-    };
+    return story ? runtimeSlice(story, request) : undefined;
   }
 
   async find(id: string, ownerId?: string): Promise<Story | undefined> {
@@ -459,59 +360,8 @@ export class InMemoryStoriesRepository {
     id: string,
     userId: string,
     action: 'undo' | 'redo',
-  ): Promise<
-    | { kind: 'applied'; result: StoryHistoryMutationResult }
-    | { kind: 'unavailable' }
-    | { kind: 'conflict'; paths: string[] }
-    | undefined
-  > {
-    return this.serializeMutation(id, async () => {
-      const current = this.stories.get(id);
-      if (!current || !this.can(current, id, userId).canEdit) {
-        return undefined;
-      }
-      const events = this.history.get(id) ?? [];
-      const reversedEventIds = new Set(
-        events.flatMap(({ revertsEventId }) => (revertsEventId ? [revertsEventId] : [])),
-      );
-      const candidate = [...events]
-        .reverse()
-        .find(
-          (event) =>
-            event.actorUserId === userId &&
-            !reversedEventIds.has(event.id) &&
-            (action === 'undo' ? event.kind !== 'undo' : event.kind === 'undo'),
-        );
-      if (!candidate) {
-        return { kind: 'unavailable' as const };
-      }
-      const reverted = applyStoryChangeDelta(current, candidate.changes, 'backward');
-      if (!reverted.applied) {
-        return {
-          kind: 'conflict' as const,
-          paths: reverted.conflicts.map(({ path }) => path),
-        };
-      }
-      const changes = this.commitHistoryRevert(
-        { id, userId, action },
-        current,
-        candidate,
-        reverted.story,
-      );
-      const story = await this.find(id, userId);
-      if (!story) {
-        return undefined;
-      }
-      return {
-        kind: 'applied' as const,
-        result: createStoryHistoryMutationResult(
-          current,
-          story,
-          changes,
-          this.historyFor(id, userId),
-        ),
-      };
-    });
+  ): Promise<MemoryHistoryRevertResult> {
+    return this.serializeMutation(id, () => this.revertHistoryMutation(id, userId, action));
   }
 
   async delete(id: string, ownerId: string): Promise<boolean> {
@@ -569,12 +419,9 @@ export class InMemoryStoriesRepository {
   async saveProgress(
     storyId: string,
     userId: string,
-    state: ReaderProgressState,
-    updatedAt: string,
-    slotId = READER_AUTOSAVE_ID,
-    name?: string,
-    createdAt = updatedAt,
+    ...progress: ReaderProgressSaveArguments
   ): Promise<boolean> {
+    const [state, updatedAt, slotId = READER_AUTOSAVE_ID, name, createdAt = updatedAt] = progress;
     const story = this.stories.get(storyId);
     if (!story || !this.can(story, storyId, userId).canRead) {
       return false;
@@ -662,6 +509,44 @@ export class InMemoryStoriesRepository {
       isOwner: this.owners.get(id) === userId,
       collaboratorRole: userId ? this.permissions.get(id)?.get(userId) : undefined,
     });
+  }
+
+  private async revertHistoryMutation(
+    id: string,
+    userId: string,
+    action: 'undo' | 'redo',
+  ): Promise<MemoryHistoryRevertResult> {
+    const current = this.stories.get(id);
+    if (!current || !this.can(current, id, userId).canEdit) {
+      return undefined;
+    }
+    const candidate = findHistoryRevertCandidate(this.history.get(id) ?? [], userId, action);
+    if (!candidate) {
+      return { kind: 'unavailable' };
+    }
+    const reverted = applyStoryChangeDelta(current, candidate.changes, 'backward');
+    if (!reverted.applied) {
+      return { kind: 'conflict', paths: reverted.conflicts.map(({ path }) => path) };
+    }
+    const changes = this.commitHistoryRevert(
+      { id, userId, action },
+      current,
+      candidate,
+      reverted.story,
+    );
+    const story = await this.find(id, userId);
+    if (!story) {
+      return undefined;
+    }
+    return {
+      kind: 'applied',
+      result: createStoryHistoryMutationResult(
+        current,
+        story,
+        changes,
+        this.historyFor(id, userId),
+      ),
+    };
   }
 
   private ownerIdForStory(id: string): string {
@@ -756,6 +641,158 @@ export class InMemoryStoriesRepository {
   }
 }
 
+function runtimeSlice(story: Story, request: StoryRuntimeSliceRequest): StoryRuntimeSlice {
+  const candidates = runtimeOptionCandidates(story, request);
+  const start = (request.page - 1) * request.pageSize;
+  const optionPage = candidates.slice(start, start + request.pageSize);
+  const optionIds = new Set(optionPage.map(({ id }) => id));
+  const requestedIds = new Set(request.interactionIds ?? []);
+  const referencedIds = runtimeReferenceIds(optionPage);
+  return {
+    revision: story.revision ?? 1,
+    page: request.page,
+    pageSize: request.pageSize,
+    totalOptionCount: candidates.length,
+    hasMore: start + request.pageSize < candidates.length,
+    optionInteractionIds: [...optionIds],
+    interactionReferences: story.interactions
+      .filter(({ id }) => referencedIds.has(id))
+      .map(({ id, title }) => ({ id, title })),
+    interactions: projectRuntimeInteractions(story, request, optionIds, requestedIds),
+  };
+}
+
+function findHistoryRevertCandidate(
+  events: MemoryStoryHistoryEvent[],
+  userId: string,
+  action: 'undo' | 'redo',
+) {
+  const reversedEventIds = new Set(
+    events.flatMap(({ revertsEventId }) => (revertsEventId ? [revertsEventId] : [])),
+  );
+  return [...events]
+    .reverse()
+    .find(
+      (event) =>
+        event.actorUserId === userId &&
+        !reversedEventIds.has(event.id) &&
+        (action === 'undo' ? event.kind !== 'undo' : event.kind === 'undo'),
+    );
+}
+
+function runtimeOptionCandidates(story: Story, request: StoryRuntimeSliceRequest) {
+  if (request.includeOptions === false) {
+    return [];
+  }
+  return story.interactions.filter((interaction) =>
+    interaction.triggers.some((trigger) =>
+      doesTriggerInputMatch(trigger, request.currentInteractionId ?? null),
+    ),
+  );
+}
+
+function runtimeReferenceIds(optionPage: Story['interactions']) {
+  return new Set(
+    optionPage.flatMap((interaction) =>
+      interaction.triggers.flatMap((trigger) =>
+        getTriggerConditions(trigger).flatMap((condition) =>
+          'interactionId' in condition ? [condition.interactionId] : [],
+        ),
+      ),
+    ),
+  );
+}
+
+function projectRuntimeInteractions(
+  story: Story,
+  request: StoryRuntimeSliceRequest,
+  optionIds: Set<string>,
+  requestedIds: Set<string>,
+) {
+  return story.interactions
+    .filter(({ id }) => optionIds.has(id) || requestedIds.has(id))
+    .map((interaction) => ({
+      ...structuredClone(interaction),
+      triggers: optionIds.has(interaction.id)
+        ? interaction.triggers.filter((trigger) =>
+            doesTriggerInputMatch(trigger, request.currentInteractionId ?? null),
+          )
+        : [],
+    }));
+}
+
+function editorContextPage(story: Story, page: number, pageSize: number): StoryEditorContextPage {
+  const { statAssignments, itemInstances } = editorContextRows(story);
+  const bootstrap = editorBootstrap(story);
+  return {
+    revision: story.revision ?? 1,
+    page,
+    pageSize,
+    hasMore: Object.values(bootstrap.contextCounts).some((count) => count > page * pageSize),
+    locations: pageItems(story.locations ?? [], page, pageSize).map((location) => ({
+      ...location,
+      stats: undefined,
+      items: undefined,
+    })),
+    characters: pageItems(story.characters ?? [], page, pageSize).map((character) => ({
+      ...character,
+      stats: undefined,
+      items: undefined,
+    })),
+    statDefinitions: pageItems(story.statDefinitions ?? [], page, pageSize),
+    statAssignments: pageItems(statAssignments, page, pageSize),
+    itemDefinitions: pageItems(story.itemDefinitions ?? [], page, pageSize).map((definition) => ({
+      ...definition,
+      stats: undefined,
+    })),
+    itemInstances: pageItems(itemInstances, page, pageSize),
+    groups: pageItems(story.groups ?? [], page, pageSize),
+    graphDecorations: pageItems(story.graphDecorations ?? [], page, pageSize),
+  };
+}
+
+function editorContextRows(story: Story) {
+  const statAssignments: StoryEditorStatAssignment[] = [
+    ...(story.stats ?? []).map((stat) => ({ ...stat, ownerType: 'story' as const })),
+    ...(story.characters ?? []).flatMap((character) =>
+      (character.stats ?? []).map((stat) => ({
+        ...stat,
+        ownerType: 'character' as const,
+        ownerId: character.id,
+      })),
+    ),
+    ...(story.locations ?? []).flatMap((location) =>
+      (location.stats ?? []).map((stat) => ({
+        ...stat,
+        ownerType: 'location' as const,
+        ownerId: location.id,
+      })),
+    ),
+    ...(story.itemDefinitions ?? []).flatMap((definition) =>
+      (definition.stats ?? []).map((stat) => ({
+        ...stat,
+        ownerType: 'itemDefinition' as const,
+        ownerId: definition.id,
+      })),
+    ),
+  ];
+  const itemInstances: StoryEditorItemInstance[] = [
+    ...(story.characters ?? []).flatMap((character) =>
+      (character.items ?? []).map((item) => ({
+        ...item,
+        ...(!item.parentItemId ? { ownerType: 'character' as const, ownerId: character.id } : {}),
+      })),
+    ),
+    ...(story.locations ?? []).flatMap((location) =>
+      (location.items ?? []).map((item) => ({
+        ...item,
+        ...(!item.parentItemId ? { ownerType: 'location' as const, ownerId: location.id } : {}),
+      })),
+    ),
+  ];
+  return { statAssignments, itemInstances };
+}
+
 function paginate<T>(items: T[], page: number, pageSize: number): PaginatedResult<T> {
   return {
     items: pageItems(items, page, pageSize),
@@ -776,22 +813,33 @@ function matchesStoryList(
   ownerId: string | undefined,
   options: StoryListOptions,
 ) {
-  if (
-    options.query &&
-    !story.title.toLocaleLowerCase().includes(options.query.trim().toLocaleLowerCase())
-  ) {
-    return false;
+  return (
+    matchesStoryTitle(story, options.query) &&
+    matchesStoryCapability(story, options.filter) &&
+    matchesStoryOwner(story, ownerId, options.filter)
+  );
+}
+
+function matchesStoryTitle(story: StorySummary, query: string | undefined) {
+  return !query || story.title.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase());
+}
+
+function matchesStoryCapability(story: StorySummary, filter: StoryListOptions['filter']) {
+  if (filter === 'editable') {
+    return Boolean(story.capabilities?.canEdit);
   }
-  if (options.filter === 'editable' && !story.capabilities?.canEdit) {
-    return false;
-  }
-  if (options.filter === 'commentable' && !story.capabilities?.canComment) {
-    return false;
-  }
-  if (options.filter === 'owned' && story.owner?.id !== ownerId) {
-    return false;
+  if (filter === 'commentable') {
+    return Boolean(story.capabilities?.canComment);
   }
   return true;
+}
+
+function matchesStoryOwner(
+  story: StorySummary,
+  ownerId: string | undefined,
+  filter: StoryListOptions['filter'],
+) {
+  return filter !== 'owned' || story.owner?.id === ownerId;
 }
 
 function storyListComparator(sort: StoryListOptions['sort']) {
@@ -802,21 +850,6 @@ function storyListComparator(sort: StoryListOptions['sort']) {
 }
 
 function editorBootstrap(story: Story): StoryEditorBootstrap {
-  const statAssignmentCount =
-    (story.stats?.length ?? 0) +
-    (story.characters ?? []).reduce(
-      (total, character) => total + (character.stats?.length ?? 0),
-      0,
-    ) +
-    (story.locations ?? []).reduce((total, location) => total + (location.stats?.length ?? 0), 0) +
-    (story.itemDefinitions ?? []).reduce(
-      (total, definition) => total + (definition.stats?.length ?? 0),
-      0,
-    );
-  const itemInstanceCount = [...(story.characters ?? []), ...(story.locations ?? [])].reduce(
-    (total, owner) => total + (owner.items?.length ?? 0),
-    0,
-  );
   return {
     id: story.id,
     revision: story.revision,
@@ -827,22 +860,72 @@ function editorBootstrap(story: Story): StoryEditorBootstrap {
     owner: story.owner,
     createdAt: story.createdAt,
     updatedAt: story.updatedAt,
-    contextCounts: {
-      locations: story.locations?.length ?? 0,
-      characters: story.characters?.length ?? 0,
-      statDefinitions: story.statDefinitions?.length ?? 0,
-      statAssignments: statAssignmentCount,
-      itemDefinitions: story.itemDefinitions?.length ?? 0,
-      itemInstances: itemInstanceCount,
-      groups: story.groups?.length ?? 0,
-      graphDecorations: story.graphDecorations?.length ?? 0,
-    },
+    contextCounts: editorContextCounts(story),
     interactionCount: story.interactions.length,
-    triggerCount: story.interactions.reduce(
-      (total, interaction) => total + interaction.triggers.length,
-      0,
-    ),
+    triggerCount: storyTriggerCount(story),
   };
+}
+
+function editorContextCounts(story: Story) {
+  return {
+    ...basicContextCounts(story),
+    ...ownedContextCounts(story),
+  };
+}
+
+function basicContextCounts(story: Story) {
+  return {
+    ...entityContextCounts(story),
+    ...editorStructureCounts(story),
+  };
+}
+
+function entityContextCounts(story: Story) {
+  return {
+    locations: story.locations?.length ?? 0,
+    characters: story.characters?.length ?? 0,
+    statDefinitions: story.statDefinitions?.length ?? 0,
+    itemDefinitions: story.itemDefinitions?.length ?? 0,
+  };
+}
+
+function editorStructureCounts(story: Story) {
+  return {
+    groups: story.groups?.length ?? 0,
+    graphDecorations: story.graphDecorations?.length ?? 0,
+  };
+}
+
+function ownedContextCounts(story: Story) {
+  return {
+    statAssignments: storyStatAssignmentCount(story),
+    itemInstances: storyItemInstanceCount(story),
+  };
+}
+
+function storyStatAssignmentCount(story: Story) {
+  return (
+    (story.stats?.length ?? 0) +
+    nestedStatCount(story.characters ?? []) +
+    nestedStatCount(story.locations ?? []) +
+    nestedStatCount(story.itemDefinitions ?? [])
+  );
+}
+
+function nestedStatCount(owners: readonly { stats?: readonly unknown[] }[]) {
+  return owners.reduce((total, owner) => total + (owner.stats?.length ?? 0), 0);
+}
+
+function storyItemInstanceCount(story: Story) {
+  return nestedItemCount([...(story.characters ?? []), ...(story.locations ?? [])]);
+}
+
+function nestedItemCount(owners: readonly { items?: readonly unknown[] }[]) {
+  return owners.reduce((total, owner) => total + (owner.items?.length ?? 0), 0);
+}
+
+function storyTriggerCount(story: Story) {
+  return story.interactions.reduce((total, interaction) => total + interaction.triggers.length, 0);
 }
 
 function progressKey(userId: string, storyId: string, slotId: string): string {

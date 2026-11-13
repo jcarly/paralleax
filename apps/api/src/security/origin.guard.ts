@@ -9,9 +9,13 @@ export class OriginGuard implements CanActivate {
   constructor(private readonly config: AppConfigService) {}
 
   canActivate(context: ExecutionContext) {
-    if (this.config.nodeEnvironment !== 'production') return true;
+    if (this.config.nodeEnvironment !== 'production') {
+      return true;
+    }
     const request = context.switchToHttp().getRequest<Request>();
-    if (safeMethods.has(request.method.toUpperCase())) return true;
+    if (safeMethods.has(request.method.toUpperCase())) {
+      return true;
+    }
     if (request.header('origin') !== this.config.corsOrigin) {
       throw new ForbiddenException('Request origin is not allowed');
     }

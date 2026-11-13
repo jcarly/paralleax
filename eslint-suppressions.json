@@ -4,19 +4,9 @@
       "count": 2
     }
   },
-  "apps/api/src/auth/auth-testing.controller.ts": {
-    "curly": {
-      "count": 2
-    }
-  },
   "apps/api/src/auth/auth.controller.spec.ts": {
     "@typescript-eslint/no-unsafe-type-assertion": {
       "count": 2
-    }
-  },
-  "apps/api/src/auth/auth.decorators.ts": {
-    "@typescript-eslint/consistent-type-imports": {
-      "count": 1
     }
   },
   "apps/api/src/auth/auth.e2e.spec.ts": {
@@ -61,26 +51,6 @@
       "count": 1
     }
   },
-  "apps/api/src/comments/comments.e2e.spec.ts": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 5
-    },
-    "@typescript-eslint/no-unsafe-assignment": {
-      "count": 11
-    },
-    "@typescript-eslint/no-unsafe-member-access": {
-      "count": 26
-    },
-    "@typescript-eslint/no-unsafe-type-assertion": {
-      "count": 3
-    },
-    "max-lines-per-function": {
-      "count": 4
-    },
-    "max-params": {
-      "count": 2
-    }
-  },
   "apps/api/src/comments/comments.postgres.spec.ts": {
     "@typescript-eslint/no-unsafe-type-assertion": {
       "count": 1
@@ -97,30 +67,8 @@
       "count": 2
     }
   },
-  "apps/api/src/comments/comments.repository.ts": {
-    "curly": {
-      "count": 4
-    },
-    "max-params": {
-      "count": 3
-    }
-  },
   "apps/api/src/config/app-config.service.spec.ts": {
     "max-lines-per-function": {
-      "count": 1
-    }
-  },
-  "apps/api/src/config/app-config.service.ts": {
-    "complexity": {
-      "count": 2
-    },
-    "curly": {
-      "count": 5
-    },
-    "max-lines-per-function": {
-      "count": 1
-    },
-    "sonarjs/cognitive-complexity": {
       "count": 1
     }
   },
@@ -220,14 +168,6 @@
       "count": 1
     }
   },
-  "apps/api/src/observability/sentry-config.ts": {
-    "complexity": {
-      "count": 1
-    },
-    "curly": {
-      "count": 3
-    }
-  },
   "apps/api/src/observability/sentry.spec.ts": {
     "@typescript-eslint/consistent-type-imports": {
       "count": 1
@@ -239,17 +179,6 @@
       "count": 1
     }
   },
-  "apps/api/src/observability/sentry.ts": {
-    "@typescript-eslint/no-unsafe-type-assertion": {
-      "count": 1
-    },
-    "curly": {
-      "count": 5
-    },
-    "sonarjs/cognitive-complexity": {
-      "count": 1
-    }
-  },
   "apps/api/src/operations/api-exception.filter.spec.ts": {
     "@typescript-eslint/no-unsafe-type-assertion": {
       "count": 2
@@ -258,25 +187,9 @@
       "count": 1
     }
   },
-  "apps/api/src/operations/api-exception.filter.ts": {
-    "@typescript-eslint/no-unsafe-enum-comparison": {
-      "count": 1
-    },
-    "complexity": {
-      "count": 1
-    },
-    "sonarjs/cognitive-complexity": {
-      "count": 1
-    }
-  },
   "apps/api/src/operations/request-body.spec.ts": {
     "@typescript-eslint/no-unsafe-type-assertion": {
       "count": 2
-    }
-  },
-  "apps/api/src/operations/request-body.ts": {
-    "@typescript-eslint/no-unsafe-argument": {
-      "count": 1
     }
   },
   "apps/api/src/operations/request-context.spec.ts": {
@@ -295,82 +208,9 @@
       "count": 3
     }
   },
-  "apps/api/src/security/origin.guard.ts": {
-    "curly": {
-      "count": 2
-    }
-  },
-  "apps/api/src/stories/application/abortable-import-worker.service.ts": {
-    "@typescript-eslint/consistent-type-imports": {
-      "count": 1
-    },
-    "curly": {
-      "count": 4
-    },
-    "max-lines-per-function": {
-      "count": 2
-    }
-  },
-  "apps/api/src/stories/application/choicescript-import-worker.service.spec.ts": {
-    "@typescript-eslint/no-unsafe-assignment": {
-      "count": 1
-    }
-  },
-  "apps/api/src/stories/application/choicescript-import-worker.service.ts": {
-    "curly": {
-      "count": 1
-    }
-  },
-  "apps/api/src/stories/application/choicescript-import.worker.ts": {
-    "@typescript-eslint/no-unsafe-type-assertion": {
-      "count": 1
-    }
-  },
-  "apps/api/src/stories/application/graph-decorations.ts": {
-    "complexity": {
-      "count": 1
-    }
-  },
-  "apps/api/src/stories/application/qsp-import-worker.service.spec.ts": {
-    "@typescript-eslint/no-unsafe-assignment": {
-      "count": 1
-    },
-    "max-lines-per-function": {
-      "count": 1
-    }
-  },
-  "apps/api/src/stories/application/qsp-import-worker.service.ts": {
-    "curly": {
-      "count": 1
-    }
-  },
   "apps/api/src/stories/application/qsp-import.worker.spec.ts": {
     "max-lines-per-function": {
       "count": 1
-    }
-  },
-  "apps/api/src/stories/application/qsp-import.worker.ts": {
-    "@typescript-eslint/no-unsafe-type-assertion": {
-      "count": 1
-    }
-  },
-  "apps/api/src/stories/application/story-access.spec.ts": {
-    "@typescript-eslint/no-unsafe-type-assertion": {
-      "count": 2
-    },
-    "max-lines-per-function": {
-      "count": 1
-    }
-  },
-  "apps/api/src/stories/application/story-context.spec.ts": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 3
-    },
-    "@typescript-eslint/no-unsafe-type-assertion": {
-      "count": 1
-    },
-    "max-lines-per-function": {
-      "count": 2
     }
   },
   "apps/api/src/stories/application/story-graph.spec.ts": {
@@ -382,29 +222,6 @@
     },
     "max-lines-per-function": {
       "count": 1
-    }
-  },
-  "apps/api/src/stories/application/story-graph.ts": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 15
-    },
-    "@typescript-eslint/no-shadow": {
-      "count": 10
-    },
-    "complexity": {
-      "count": 2
-    },
-    "curly": {
-      "count": 7
-    },
-    "max-lines-per-function": {
-      "count": 4
-    },
-    "max-params": {
-      "count": 1
-    },
-    "sonarjs/cognitive-complexity": {
-      "count": 3
     }
   },
   "apps/api/src/stories/application/story-groups.spec.ts": {
@@ -419,20 +236,6 @@
     },
     "max-lines-per-function": {
       "count": 1
-    }
-  },
-  "apps/api/src/stories/application/story-groups.ts": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 1
-    },
-    "@typescript-eslint/no-shadow": {
-      "count": 3
-    },
-    "@typescript-eslint/no-unsafe-type-assertion": {
-      "count": 1
-    },
-    "curly": {
-      "count": 5
     }
   },
   "apps/api/src/stories/application/story-history.ts": {
@@ -485,14 +288,6 @@
       "count": 1
     }
   },
-  "apps/api/src/stories/application/story-metadata.spec.ts": {
-    "@typescript-eslint/no-unsafe-type-assertion": {
-      "count": 3
-    },
-    "max-lines-per-function": {
-      "count": 1
-    }
-  },
   "apps/api/src/stories/application/story-mutations.spec.ts": {
     "@typescript-eslint/no-unsafe-type-assertion": {
       "count": 2
@@ -520,45 +315,9 @@
       "count": 1
     }
   },
-  "apps/api/src/stories/application/story-runtime.spec.ts": {
-    "@typescript-eslint/no-unsafe-type-assertion": {
-      "count": 1
-    },
-    "max-lines-per-function": {
-      "count": 2
-    }
-  },
   "apps/api/src/stories/application/story-runtime.ts": {
     "curly": {
       "count": 2
-    }
-  },
-  "apps/api/src/stories/application/story-stats.spec.ts": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 1
-    },
-    "max-lines-per-function": {
-      "count": 3
-    }
-  },
-  "apps/api/src/stories/application/story-stats.ts": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 3
-    },
-    "@typescript-eslint/no-shadow": {
-      "count": 1
-    },
-    "complexity": {
-      "count": 6
-    },
-    "curly": {
-      "count": 17
-    },
-    "max-lines-per-function": {
-      "count": 2
-    },
-    "sonarjs/cognitive-complexity": {
-      "count": 4
     }
   },
   "apps/api/src/stories/persistence/stories.persistence.writer.spec.ts": {
@@ -578,77 +337,9 @@
       "count": 1
     }
   },
-  "apps/api/src/stories/persistence/story-editor.persistence.spec.ts": {
-    "@typescript-eslint/no-unsafe-member-access": {
-      "count": 1
-    },
-    "@typescript-eslint/no-unsafe-type-assertion": {
-      "count": 1
-    },
-    "max-lines-per-function": {
-      "count": 6
-    }
-  },
-  "apps/api/src/stories/persistence/story-editor.persistence.ts": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 8
-    },
-    "curly": {
-      "count": 3
-    },
-    "max-lines-per-function": {
-      "count": 2
-    }
-  },
-  "apps/api/src/stories/persistence/story-history.persistence.spec.ts": {
-    "@typescript-eslint/no-unsafe-member-access": {
-      "count": 1
-    },
-    "@typescript-eslint/no-unsafe-type-assertion": {
-      "count": 1
-    },
-    "max-lines-per-function": {
-      "count": 1
-    }
-  },
-  "apps/api/src/stories/persistence/story-runtime.persistence.spec.ts": {
-    "@typescript-eslint/no-unsafe-type-assertion": {
-      "count": 1
-    },
-    "curly": {
-      "count": 1
-    },
-    "max-lines-per-function": {
-      "count": 3
-    }
-  },
-  "apps/api/src/stories/persistence/story-runtime.persistence.ts": {
-    "curly": {
-      "count": 1
-    },
-    "max-lines-per-function": {
-      "count": 1
-    }
-  },
   "apps/api/src/stories/rich-text.spec.ts": {
     "max-lines-per-function": {
       "count": 1
-    }
-  },
-  "apps/api/src/stories/rich-text.ts": {
-    "curly": {
-      "count": 6
-    },
-    "max-lines-per-function": {
-      "count": 1
-    }
-  },
-  "apps/api/src/stories/stories.controller.ts": {
-    "curly": {
-      "count": 2
-    },
-    "max-params": {
-      "count": 3
     }
   },
   "apps/api/src/stories/stories.e2e.spec.ts": {
@@ -689,31 +380,6 @@
       "count": 1
     }
   },
-  "apps/api/src/stories/stories.postgres.spec.ts": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 1
-    },
-    "@typescript-eslint/no-unsafe-type-assertion": {
-      "count": 1
-    },
-    "complexity": {
-      "count": 2
-    },
-    "max-lines-per-function": {
-      "count": 7
-    }
-  },
-  "apps/api/src/stories/stories.repository.memory.ts": {
-    "complexity": {
-      "count": 3
-    },
-    "max-lines-per-function": {
-      "count": 3
-    },
-    "max-params": {
-      "count": 1
-    }
-  },
   "apps/api/src/stories/stories.repository.spec.ts": {
     "@typescript-eslint/no-non-null-assertion": {
       "count": 17
@@ -740,58 +406,6 @@
       "count": 1
     }
   },
-  "apps/api/src/stories/stories.service.ts": {
-    "max-params": {
-      "count": 3
-    }
-  },
-  "apps/api/src/stories/stories.stress.postgres.spec.ts": {
-    "@typescript-eslint/no-shadow": {
-      "count": 2
-    },
-    "@typescript-eslint/no-unsafe-assignment": {
-      "count": 1
-    },
-    "@typescript-eslint/no-unsafe-return": {
-      "count": 2
-    },
-    "@typescript-eslint/no-unsafe-type-assertion": {
-      "count": 2
-    },
-    "max-lines-per-function": {
-      "count": 3
-    }
-  },
-  "apps/api/src/stories/story-quotas.spec.ts": {
-    "@typescript-eslint/no-unsafe-argument": {
-      "count": 2
-    },
-    "@typescript-eslint/no-unsafe-assignment": {
-      "count": 2
-    },
-    "@typescript-eslint/no-unsafe-type-assertion": {
-      "count": 1
-    },
-    "max-lines-per-function": {
-      "count": 1
-    }
-  },
-  "apps/api/src/stories/story-quotas.ts": {
-    "@typescript-eslint/no-unsafe-type-assertion": {
-      "count": 2
-    },
-    "complexity": {
-      "count": 1
-    },
-    "curly": {
-      "count": 2
-    }
-  },
-  "apps/api/src/stories/story.events.spec.ts": {
-    "max-lines-per-function": {
-      "count": 1
-    }
-  },
   "apps/web/src/App.test.tsx": {
     "max-lines-per-function": {
       "count": 1
@@ -802,7 +416,7 @@
       "count": 1
     },
     "curly": {
-      "count": 9
+      "count": 8
     },
     "max-lines-per-function": {
       "count": 1
@@ -980,11 +594,6 @@
   },
   "apps/web/src/components/ModalPortal.test.tsx": {
     "max-lines-per-function": {
-      "count": 1
-    }
-  },
-  "apps/web/src/components/ModalPortal.tsx": {
-    "curly": {
       "count": 1
     }
   },
@@ -1382,11 +991,6 @@
       "count": 4
     }
   },
-  "apps/web/src/features/story-editor/graph/storyGraphViewport.ts": {
-    "curly": {
-      "count": 1
-    }
-  },
   "apps/web/src/features/story-editor/graph/useStoryConnectionController.test.ts": {
     "@typescript-eslint/no-unsafe-type-assertion": {
       "count": 2
@@ -1673,18 +1277,8 @@
       "count": 1
     }
   },
-  "apps/web/src/features/story-player/loadStoryPlayerRuntime.ts": {
-    "complexity": {
-      "count": 1
-    }
-  },
   "apps/web/src/features/story-player/navigation/restoreReaderSave.ts": {
     "max-params": {
-      "count": 1
-    }
-  },
-  "apps/web/src/features/story-player/runtime/loadLatestRuntimeSliceForSession.ts": {
-    "curly": {
       "count": 1
     }
   },
@@ -1880,12 +1474,6 @@
   "apps/web/src/main.tsx": {
     "@typescript-eslint/no-non-null-assertion": {
       "count": 1
-    },
-    "@typescript-eslint/no-unsafe-call": {
-      "count": 1
-    },
-    "@typescript-eslint/no-unsafe-member-access": {
-      "count": 1
     }
   },
   "apps/web/src/pages/AccountActionPage.tsx": {
@@ -2048,7 +1636,7 @@
   },
   "apps/web/src/pages/StoryList.test.tsx": {
     "@typescript-eslint/no-non-null-assertion": {
-      "count": 10
+      "count": 7
     },
     "curly": {
       "count": 4
@@ -2258,11 +1846,6 @@
   "apps/web/src/storySelection.ts": {
     "curly": {
       "count": 2
-    }
-  },
-  "apps/web/src/storyStats.ts": {
-    "complexity": {
-      "count": 1
     }
   },
   "apps/web/src/storyTriggerInput.ts": {
@@ -2510,23 +2093,6 @@
       "count": 5
     }
   },
-  "apps/web/tests/e2e/editor.groups.spec.ts": {
-    "@typescript-eslint/no-non-null-assertion": {
-      "count": 46
-    },
-    "@typescript-eslint/no-unsafe-argument": {
-      "count": 6
-    },
-    "@typescript-eslint/no-unsafe-assignment": {
-      "count": 4
-    },
-    "@typescript-eslint/no-unsafe-member-access": {
-      "count": 9
-    },
-    "curly": {
-      "count": 1
-    }
-  },
   "apps/web/tests/e2e/editor.layout-quality.spec.ts": {
     "@typescript-eslint/no-non-null-assertion": {
       "count": 11
@@ -2612,7 +2178,7 @@
   },
   "apps/web/tests/e2e/reader-simulation-styles.spec.ts": {
     "@typescript-eslint/no-shadow": {
-      "count": 2
+      "count": 1
     },
     "@typescript-eslint/no-unsafe-assignment": {
       "count": 2
@@ -2642,14 +2208,6 @@
     },
     "curly": {
       "count": 5
-    }
-  },
-  "apps/web/vite.config.ts": {
-    "complexity": {
-      "count": 1
-    },
-    "curly": {
-      "count": 1
     }
   },
   "packages/shared/src/access-control.test.ts": {
@@ -3120,26 +2678,6 @@
   "packages/shared/src/stats/targets.ts": {
     "curly": {
       "count": 2
-    }
-  },
-  "packages/shared/src/story-operations.test.ts": {
-    "@typescript-eslint/no-unsafe-argument": {
-      "count": 1
-    },
-    "@typescript-eslint/no-unsafe-assignment": {
-      "count": 60
-    },
-    "@typescript-eslint/no-unsafe-call": {
-      "count": 112
-    },
-    "@typescript-eslint/no-unsafe-member-access": {
-      "count": 175
-    },
-    "@typescript-eslint/no-unsafe-return": {
-      "count": 23
-    },
-    "max-lines-per-function": {
-      "count": 10
     }
   },
   "packages/shared/src/time/conditions.ts": {

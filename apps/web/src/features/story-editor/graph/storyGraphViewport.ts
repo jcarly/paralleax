@@ -8,7 +8,9 @@ const initialEntryInteractionLimit = 8;
 export function getInitialStoryFitViewOptions(
   story: Story | undefined,
 ): FitViewOptions<StoryFlowNode> {
-  if (!story) return { padding: 0.18, maxZoom: 1 };
+  if (!story) {
+    return { padding: 0.18, maxZoom: 1 };
+  }
   if (story.interactions.length <= fullGraphFitInteractionLimit) {
     return { padding: 0.18, maxZoom: 1 };
   }
