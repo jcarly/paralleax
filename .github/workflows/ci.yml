@@ -535,7 +535,7 @@ jobs:
 
             before="$(railway deployment list --json --limit 1 --service "$service" --environment "$RAILWAY_ENVIRONMENT" --project "$RAILWAY_PROJECT_ID")"
             before_id="$(printf '%s' "$before" | jq -r '.[0].id // empty')"
-            railway service source connect --image "$image" --service "$service" --environment "$RAILWAY_ENVIRONMENT" --project "$RAILWAY_PROJECT_ID" --yes --json
+            railway service source connect --image "$image" --service "$service" --environment "$RAILWAY_ENVIRONMENT" --project "$RAILWAY_PROJECT_ID"
             deadline=$((SECONDS + 900))
 
             while (( SECONDS < deadline )); do
