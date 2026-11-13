@@ -523,11 +523,6 @@
       "count": 2
     }
   },
-  "apps/web/src/components/LocationInspector.tsx": {
-    "max-lines-per-function": {
-      "count": 1
-    }
-  },
   "apps/web/src/components/ModalPortal.test.tsx": {
     "max-lines-per-function": {
       "count": 1
