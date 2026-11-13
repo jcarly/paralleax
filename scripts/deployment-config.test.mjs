@@ -221,7 +221,7 @@ test('Railway image releases use supported source connect options', async () => 
 
   const release = workflow.slice(releaseStart, smokeStart);
   const sourceConnect = release
-    .split(String.fromCharCode(10))
+    .split('\n')
     .find((line) => line.includes('railway service source connect --image'));
 
   assert.ok(sourceConnect, 'the release must connect each service to its immutable image');
