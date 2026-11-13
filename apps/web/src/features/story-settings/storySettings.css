@@ -22,9 +22,9 @@
   min-width: 0;
 }
 
-.story-settings-header h2,
-.story-settings-header p {
+.story-settings-header h2 {
   overflow-wrap: anywhere;
+  margin: 0.25rem 0;
 }
 
 .story-settings-heading-icon {
@@ -48,16 +48,6 @@
   stroke-width: 1.7;
 }
 
-.story-settings-header h2 {
-  margin: 0.25rem 0;
-}
-
-.story-settings-header .product-eyebrow {
-  color: var(--color-primary-strong);
-  opacity: 1;
-}
-
-.story-settings-header p,
 .story-settings-properties > p,
 .settings-card > p {
   margin: 0;

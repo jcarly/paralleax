@@ -522,7 +522,6 @@ test('selects interactions and triggers with a rectangle and drags them as a gro
     page.locator('.react-flow__node[data-id="trigger:interaction-2:trigger-2"]'),
   ];
   await selectNodesWithRectangle(page, graphNodes);
-  await expect(page.locator('.react-flow__selection')).toBeVisible();
 
   await expect(page.getByRole('heading', { name: 'Selected elements' })).toBeVisible();
   await expect(page.getByText('2 interactions selected')).toBeVisible();

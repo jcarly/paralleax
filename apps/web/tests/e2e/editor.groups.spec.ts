@@ -2,11 +2,72 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Locator, type Page, type Route } from '@playwright/test';
 import {
   moveStoryGroup,
-  setStoryGroupInteractions,
   removeStoryGroup,
+  setStoryGroupInteractions,
+  type CreateGroupInput,
+  type Group,
   type Story,
+  type UpdateGroupInput,
 } from '@paralleax/shared';
 import { mockStory, prepareEditorPage, storyWithConditionCandidate } from './editorTestHarness';
+
+function requireValue<T>(value: T | null | undefined, description: string): T {
+  if (value === null || value === undefined) {
+    throw new Error(`Expected ${description} to exist`);
+  }
+  return value;
+}
+
+function requireRevision(story: Story): number {
+  return requireValue(story.revision, 'story revision');
+}
+
+function requireStoryGroups(story: Story): Group[] {
+  return requireValue(story.groups, 'story groups');
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function isOptionalString(value: unknown): boolean {
+  return value === undefined || typeof value === 'string';
+}
+
+function isOptionalNullableString(value: unknown): boolean {
+  return value === undefined || value === null || typeof value === 'string';
+}
+
+function isStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((entry: unknown) => typeof entry === 'string');
+}
+
+function isGroupUpdateInput(value: unknown): value is UpdateGroupInput {
+  return (
+    isRecord(value) &&
+    isOptionalString(value.title) &&
+    isOptionalNullableString(value.parentGroupId) &&
+    isOptionalNullableString(value.beforeGroupId) &&
+    (value.interactionIds === undefined || isStringArray(value.interactionIds))
+  );
+}
+
+function isCreateGroupInput(value: unknown): value is CreateGroupInput {
+  return (
+    isRecord(value) &&
+    typeof value.title === 'string' &&
+    isStringArray(value.interactionIds) &&
+    isOptionalString(value.parentGroupId)
+  );
+}
+
+function incrementRevision(story: Story): void {
+  story.revision = requireRevision(story) + 1;
+}
+
+function requireBoundingBox(box: Awaited<ReturnType<Locator['boundingBox']>>, label: string) {
+  return requireValue(box, `${label} bounding box`);
+}
 
 async function installGroups(page: Page, input?: Story) {
   await prepareEditorPage(page);
@@ -42,8 +103,8 @@ async function installGroupHistoryRoutes(page: Page, state: GroupFixtureState) {
   );
   await page.route('**/api/stories/story-1/history/undo', (route) => {
     state.current = {
-      ...structuredClone(state.before!),
-      revision: state.current.revision! + 1,
+      ...structuredClone(requireValue(state.before, 'previous story snapshot')),
+      revision: requireRevision(state.current) + 1,
     };
     return route.fulfill({
       json: { story: state.current, history: { entries: [], canUndo: false, canRedo: true } },
@@ -51,8 +112,8 @@ async function installGroupHistoryRoutes(page: Page, state: GroupFixtureState) {
   });
   await page.route('**/api/stories/story-1/history/redo', (route) => {
     state.current = {
-      ...structuredClone(state.after!),
-      revision: state.current.revision! + 1,
+      ...structuredClone(requireValue(state.after, 'next story snapshot')),
+      revision: requireRevision(state.current) + 1,
     };
     return route.fulfill({
       json: { story: state.current, history: { entries: [], canUndo: true, canRedo: false } },
@@ -72,10 +133,10 @@ async function installGroupMutationRoutes(page: Page, state: GroupFixtureState) 
 async function updateGroupFromRequest(route: Route, state: GroupFixtureState) {
   state.writes++;
   state.before = structuredClone(state.current);
-  const id = route.request().url().split('/').at(-1)!;
+  const id = requireValue(route.request().url().split('/').at(-1), 'group route identifier');
   if (route.request().method() === 'DELETE') {
     state.current = removeStoryGroup(state.current, id);
-    state.current.revision!++;
+    incrementRevision(state.current);
     state.after = structuredClone(state.current);
     await route.fulfill({
       json: {
@@ -90,7 +151,11 @@ async function updateGroupFromRequest(route: Route, state: GroupFixtureState) {
 }
 
 async function patchGroupFromRequest(route: Route, state: GroupFixtureState, id: string) {
-  const patch = route.request().postDataJSON();
+  const requestBody: unknown = route.request().postDataJSON();
+  if (!isGroupUpdateInput(requestBody)) {
+    throw new Error('Expected a valid group update request');
+  }
+  const patch = requestBody;
   if (patch.beforeGroupId !== undefined) {
     state.current = moveStoryGroup(
       state.current,
@@ -99,32 +164,45 @@ async function patchGroupFromRequest(route: Route, state: GroupFixtureState, id:
       patch.beforeGroupId,
     );
   }
-  const group = state.current.groups!.find((entry) => entry.id === id)!;
-  if (patch.title) group.title = patch.title;
+  const group = requireValue(
+    requireStoryGroups(state.current).find((entry) => entry.id === id),
+    `group ${id}`,
+  );
+  if (patch.title) {
+    group.title = patch.title;
+  }
   if (patch.interactionIds) {
     state.current = setStoryGroupInteractions(state.current, id, patch.interactionIds);
   }
-  state.current.revision!++;
+  incrementRevision(state.current);
   state.after = structuredClone(state.current);
   await route.fulfill({ json: getGroupMutationResult(state, id) });
 }
 
 function getGroupMutationResult(state: GroupFixtureState, id: string) {
+  const groups = requireStoryGroups(state.current);
   return {
     revision: state.current.revision,
     updatedAt: state.current.updatedAt,
-    group: state.current.groups!.find((group) => group.id === id),
-    groupOrder: state.current.groups!.map(({ id: groupId }) => groupId),
+    group: requireValue(
+      groups.find((group) => group.id === id),
+      `group ${id}`,
+    ),
+    groupOrder: groups.map(({ id: groupId }) => groupId),
   };
 }
 
 async function createGroupFromRequest(route: Route, state: GroupFixtureState) {
   state.writes++;
   state.before = structuredClone(state.current);
-  const group = { id: 'new-' + state.writes, ...route.request().postDataJSON() };
-  state.current.groups!.push(group);
+  const requestBody: unknown = route.request().postDataJSON();
+  if (!isCreateGroupInput(requestBody)) {
+    throw new Error('Expected a valid group creation request');
+  }
+  const group: Group = { id: 'new-' + state.writes, ...requestBody };
+  requireStoryGroups(state.current).push(group);
   state.current = setStoryGroupInteractions(state.current, group.id, group.interactionIds);
-  state.current.revision!++;
+  incrementRevision(state.current);
   state.after = structuredClone(state.current);
   await route.fulfill({
     json: {
@@ -148,17 +226,15 @@ async function openGroupTree(page: Page, state: GroupFixtureState) {
 }
 async function startDrag(page: Page, source: Locator) {
   await expect(source.locator('..').locator('.story-group-actions')).toBeEnabled();
-  const box = await source.boundingBox();
-  expect(box).not.toBeNull();
-  await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2);
+  const box = requireBoundingBox(await source.boundingBox(), 'drag source');
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
   await page.mouse.down();
-  await page.mouse.move(box!.x + box!.width / 2 + 8, box!.y + box!.height / 2, { steps: 3 });
+  await page.mouse.move(box.x + box.width / 2 + 8, box.y + box.height / 2, { steps: 3 });
 }
 async function hoverRow(page: Page, target: Locator, fraction = 0.5) {
   await target.scrollIntoViewIfNeeded();
-  const box = await target.boundingBox();
-  expect(box).not.toBeNull();
-  await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height * fraction, { steps: 10 });
+  const box = requireBoundingBox(await target.boundingBox(), 'drop target');
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height * fraction, { steps: 10 });
 }
 
 test('drags into collapsed groups, returns to root, reorders, undoes and reloads canonical order', async ({
@@ -172,7 +248,7 @@ test('drags into collapsed groups, returns to root, reorders, undoes and reloads
   expect(state.writes()).toBe(0);
   await page.mouse.up();
   await expect
-    .poll(() => state.story().groups!.find(({ id }) => id === 'other')?.parentGroupId)
+    .poll(() => requireStoryGroups(state.story()).find(({ id }) => id === 'other')?.parentGroupId)
     .toBe('parent');
   await startDrag(page, page.getByRole('button', { name: 'Other 0 interactions' }));
   const rootDrop = page.locator('.story-group-root-drop');
@@ -180,23 +256,23 @@ test('drags into collapsed groups, returns to root, reorders, undoes and reloads
   await expect(rootDrop).toHaveClass(/active/);
   await page.mouse.up();
   await expect
-    .poll(() => state.story().groups!.find(({ id }) => id === 'other')?.parentGroupId)
+    .poll(() => requireStoryGroups(state.story()).find(({ id }) => id === 'other')?.parentGroupId)
     .toBeUndefined();
   await startDrag(page, page.getByRole('button', { name: 'Other 0 interactions' }));
   await hoverRow(page, page.locator('#story-group-parent'), 0.1);
   await page.mouse.up();
   await expect
-    .poll(() => state.story().groups!.map(({ id }) => id))
+    .poll(() => requireStoryGroups(state.story()).map(({ id }) => id))
     .toEqual(['other', 'parent', 'child']);
   await expect(page.getByRole('button', { name: 'Undo last Story change' })).toBeEnabled();
   await page.keyboard.press('Control+z');
   await expect
-    .poll(() => state.story().groups!.map(({ id }) => id))
+    .poll(() => requireStoryGroups(state.story()).map(({ id }) => id))
     .toEqual(['parent', 'child', 'other']);
   await expect(page.getByRole('button', { name: 'Redo Story change' })).toBeEnabled();
   await page.keyboard.press('Control+Shift+z');
   await expect
-    .poll(() => state.story().groups!.map(({ id }) => id))
+    .poll(() => requireStoryGroups(state.story()).map(({ id }) => id))
     .toEqual(['other', 'parent', 'child']);
   await page.reload();
   const groups = page.getByRole('region', { name: 'Groups', exact: true });
@@ -224,9 +300,8 @@ test('rejects descendant cycles and cancels valid drags without saving', async (
 test('requires the configured mouse movement before activating a group drag', async ({ page }) => {
   const state = await installGroups(page);
   const source = page.getByRole('button', { name: 'Other 0 interactions' });
-  const bounds = await source.boundingBox();
-  expect(bounds).not.toBeNull();
-  const start = { x: bounds!.x + bounds!.width / 2, y: bounds!.y + bounds!.height / 2 };
+  const bounds = requireBoundingBox(await source.boundingBox(), 'group drag source');
+  const start = { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 };
 
   await page.mouse.move(start.x, start.y);
   await page.mouse.down();
@@ -297,15 +372,18 @@ async function createGroupWithShortcut(page: Page, groups: Locator) {
 async function exerciseGroupMenusAndKeyboard(page: Page, groups: Locator) {
   const title = page.getByRole('textbox', { name: 'Group title', exact: true });
   await groups.getByRole('button', { name: 'Expand or collapse Act' }).click();
-  const parentLabel = await groups
-    .getByRole('button', { name: 'Act 1 interaction' })
-    .locator('strong')
-    .boundingBox();
-  const childLabel = await groups
-    .getByRole('button', { name: 'Scene 1 interaction' })
-    .locator('strong')
-    .boundingBox();
-  expect(childLabel!.x).toBeGreaterThan(parentLabel!.x);
+  const parentLabel = requireBoundingBox(
+    await groups.getByRole('button', { name: 'Act 1 interaction' }).locator('strong').boundingBox(),
+    'parent group label',
+  );
+  const childLabel = requireBoundingBox(
+    await groups
+      .getByRole('button', { name: 'Scene 1 interaction' })
+      .locator('strong')
+      .boundingBox(),
+    'child group label',
+  );
+  expect(childLabel.x).toBeGreaterThan(parentLabel.x);
   await groups.getByRole('button', { name: 'Actions for Scene' }).click();
   await page.getByRole('menuitem', { name: 'Create subgroup' }).click();
   await expect(title).toBeFocused();
@@ -439,9 +517,8 @@ test('auto-scrolls the navigation panel during a group drag', async ({ page }) =
   const group = page.getByRole('button', { name: 'Group 0 0 interactions', exact: true });
   await startDrag(page, group);
   await expect(page.locator('#story-group-g0')).toHaveClass(/dragging/);
-  const bounds = await scroller.boundingBox();
-  expect(bounds).not.toBeNull();
-  await page.mouse.move(bounds!.x + bounds!.width / 2, bounds!.y + bounds!.height - 3, {
+  const bounds = requireBoundingBox(await scroller.boundingBox(), 'navigation panel');
+  await page.mouse.move(bounds.x + bounds.width / 2, bounds.y + bounds.height - 3, {
     steps: 10,
   });
   await expect.poll(() => scroller.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
@@ -460,12 +537,11 @@ test('adds with Shift rectangles and removes with Alt rectangles without changin
   const second = page.locator('.react-flow__node[data-id="interaction-2"]');
   await first.click({ modifiers: ['Control'] });
   async function rectangle(node: typeof first, modifier: 'Shift' | 'Alt') {
-    const bounds = await node.boundingBox();
-    expect(bounds).not.toBeNull();
+    const bounds = requireBoundingBox(await node.boundingBox(), 'selection node');
     await page.keyboard.down(modifier);
-    await page.mouse.move(bounds!.x - 6, bounds!.y - 6);
+    await page.mouse.move(bounds.x - 6, bounds.y - 6);
     await page.mouse.down();
-    await page.mouse.move(bounds!.x + bounds!.width + 6, bounds!.y + bounds!.height + 6, {
+    await page.mouse.move(bounds.x + bounds.width + 6, bounds.y + bounds.height + 6, {
       steps: 8,
     });
     await page.mouse.up();

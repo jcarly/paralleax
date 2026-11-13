@@ -28,14 +28,14 @@ export class StoryGroupService {
 
     const story = await this.mutations.update(
       storyId,
-      (story) => {
-        (story.groups ??= []).push({
+      (currentStory) => {
+        (currentStory.groups ??= []).push({
           id: groupId,
           title,
           interactionIds: [...input.interactionIds],
           ...(input.parentGroupId ? { parentGroupId: input.parentGroupId } : {}),
         });
-        const next = setStoryGroupInteractions(story, groupId, input.interactionIds);
+        const next = setStoryGroupInteractions(currentStory, groupId, input.interactionIds);
         this.validate(next);
         return next;
       },
@@ -56,20 +56,25 @@ export class StoryGroupService {
   ): Promise<GroupMutationResult> {
     const story = await this.mutations.update(
       storyId,
-      (story) => {
-        const group = this.group(story, groupId);
-        if (input.title !== undefined) group.title = input.title.trim();
-        if (input.parentGroupId === null) delete group.parentGroupId;
-        else if (input.parentGroupId !== undefined) group.parentGroupId = input.parentGroupId;
+      (currentStory) => {
+        const group = this.group(currentStory, groupId);
+        if (input.title !== undefined) {
+          group.title = input.title.trim();
+        }
+        if (input.parentGroupId === null) {
+          delete group.parentGroupId;
+        } else if (input.parentGroupId !== undefined) {
+          group.parentGroupId = input.parentGroupId;
+        }
         let next =
           input.interactionIds === undefined
-            ? story
-            : setStoryGroupInteractions(story, groupId, input.interactionIds);
+            ? currentStory
+            : setStoryGroupInteractions(currentStory, groupId, input.interactionIds);
         if (input.beforeGroupId !== undefined) {
           try {
             next = moveStoryGroup(next, groupId, group.parentGroupId ?? null, input.beforeGroupId);
           } catch (error) {
-            throw new BadRequestException((error as Error).message);
+            throw new BadRequestException(error instanceof Error ? error.message : String(error));
           }
         }
         this.validate(next);
@@ -82,7 +87,7 @@ export class StoryGroupService {
       ...storyMutationMetadata(story),
       group: this.group(story, groupId),
       ...(input.beforeGroupId !== undefined
-        ? { groupOrder: story.groups!.map(({ id }) => id) }
+        ? { groupOrder: (story.groups ?? []).map(({ id }) => id) }
         : {}),
     };
   }
@@ -90,9 +95,9 @@ export class StoryGroupService {
   async delete(storyId: string, groupId: string, userId: string): Promise<GroupDeletionResult> {
     const story = await this.mutations.update(
       storyId,
-      (story) => {
-        this.group(story, groupId);
-        return removeStoryGroup(story, groupId);
+      (currentStory) => {
+        this.group(currentStory, groupId);
+        return removeStoryGroup(currentStory, groupId);
       },
       userId,
       storyHistoryOperations.groupDeleted,
@@ -102,12 +107,16 @@ export class StoryGroupService {
 
   private validate(story: Story) {
     const error = validateStoryGroups(story);
-    if (error) throw new BadRequestException(error);
+    if (error) {
+      throw new BadRequestException(error);
+    }
   }
 
   private group(story: Story, groupId: string) {
     const group = (story.groups ?? []).find(({ id }) => id === groupId);
-    if (!group) throw new NotFoundException('Group not found');
+    if (!group) {
+      throw new NotFoundException('Group not found');
+    }
     return group;
   }
 }
