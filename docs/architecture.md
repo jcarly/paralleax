@@ -1289,6 +1289,20 @@ repository and verifies anonymous pulls before deployment; public packages need
 no Railway registry credentials. The alpha deployment runbook documents the
 one-time visibility check.
 
+Railway service settings are authored in `.railway/railway.ts` as the named
+`paralleax-apps` partial. It manages only `@paralleax/api` and `@paralleax/web`;
+the Postgres service and its persistent volume remain outside IaC ownership.
+This is a deliberate lifecycle boundary: GitHub Actions controls the app source
+digests during tagged releases, while the database and its data are not part of
+this app release configuration. The IaC services omit `source`, so applying
+build and deploy settings cannot switch a service back to its GitHub branch.
+The current app variables are declared with `preserve()` so Railway keeps their
+values, including secrets, without storing them in source. Keep those preserved
+names in sync when service variables change. The existing private network
+endpoints and custom web domain are retained in the partial, while generated
+Railway domains stay provider-managed. Review `railway config plan` before
+applying and reject any change outside the two application services.
+
 The weekly schedule runs Monday at 04:00 UTC. Manual dispatch runs the same
 exhaustive lane: all workspace coverage and builds, PostgreSQL integration and
 stress, backup restoration, E2E and performance samples, real-stack acceptance

@@ -449,6 +449,14 @@ is no character profile, the player omits the context panel if there are no item
 definitions and no Simulation controls to show. Other characters assigned to the
 current interaction are shown as encounter cards in a right panel.
 
+Reader Mode presents authored Interaction content and destination titles as
+navigation choices. It does not display the current Interaction's technical
+title in the narrative scene. That title remains a screen-reader heading for
+scene orientation and remains editable in Simulation Mode. The Reader does not
+substitute the previous choice label when it enters a scene, so root entries,
+automatic pass-through, and converging routes use the same presentation rule.
+Titles explicitly written into the Interaction body remain part of its content.
+
 Simulation keeps unavailable choices visible for inspection except when their
 matched route fails a location condition; location-blocked choices are hidden to
 avoid presenting impossible movement from the simulated scene.

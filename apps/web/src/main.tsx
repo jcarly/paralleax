@@ -16,14 +16,15 @@ import './features/story-player/storySimulation.css';
 import './responsive.css';
 import { i18nReady } from './i18n';
 import { App } from './App';
+import { startBrowserMonitoring } from './observability/browserMonitoring';
+import { RouteErrorPage } from './pages/RouteErrorPage';
 
-const router = createBrowserRouter([{ path: '*', element: <App /> }]);
+const router = createBrowserRouter([
+  { path: '*', element: <App />, errorElement: <RouteErrorPage /> },
+]);
 
-if (import.meta.env.VITE_SENTRY_DSN?.trim()) {
-  void import('./observability/sentry')
-    .then(({ initializeSentry }) => initializeSentry())
-    .catch(() => undefined);
-}
+// Start monitoring on page load, without preventing normal app startup.
+void startBrowserMonitoring();
 
 void i18nReady.then(() => {
   ReactDOM.createRoot(document.getElementById('root')!).render(
