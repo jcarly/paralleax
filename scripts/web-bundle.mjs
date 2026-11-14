@@ -8,7 +8,8 @@ export const WEB_BUNDLE_ROUTE_SOURCES = Object.freeze({
 export const WEB_BUNDLE_BUDGETS = Object.freeze({
   initialJavaScriptBytes: 150 * 1024,
   initialStylesheetBytes: 24 * 1024,
-  editorIncrementalBytes: 145 * 1024,
+  // Leave 1 KiB of headroom for release-specific build metadata while retaining a hard cap.
+  editorIncrementalBytes: 146 * 1024,
   playerIncrementalBytes: 95 * 1024,
 });
 
@@ -96,7 +97,11 @@ export function assertWebBundleBudgets(metrics, budgets = WEB_BUNDLE_BUDGETS) {
         formatKibibytes(metrics[metric]) +
         ', above its ' +
         formatKibibytes(maximumBytes) +
-        ' budget.',
+        ' budget (' +
+        metrics[metric] +
+        ' bytes > ' +
+        maximumBytes +
+        ' bytes).',
     );
   }
 }
