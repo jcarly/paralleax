@@ -239,8 +239,14 @@ explicitly so the migration does not depend on converter output.
 
 Before creating the first release tag, configure the GitHub repository:
 
-- Add a production-scoped Railway project token as the `RAILWAY_TOKEN` Actions
-  secret.
+- Create a Railway **workspace token** with access to `fearless-warmth`, or an
+  **account token** if the project belongs to your personal Railway account.
+  Store it as the repository Actions secret `RAILWAY_API_TOKEN`. The tagged
+  release changes service sources to GHCR images, which requires broader
+  permissions than a project-scoped `RAILWAY_TOKEN` provides. Do not pass both
+  token types to the same CLI invocation. Treat this credential as privileged;
+  keep it in GitHub Actions secrets, not build arguments or application images.
+  The workflow verifies read access to both services before building images.
 - Copy the existing `VITE_SENTRY_DSN` build value into the `VITE_SENTRY_DSN`
   Actions variable. If enabled, also add `VITE_FORMBRICKS_WORKSPACE_ID` and
   `VITE_FORMBRICKS_APP_URL` and `VITE_SENTRY_TRACES_SAMPLE_RATE` as Actions
