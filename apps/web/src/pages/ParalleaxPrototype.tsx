@@ -268,7 +268,9 @@ function EffectList({ kind, initialCount = 1 }: { kind: EffectKind; initialCount
     setEffects((current) => {
       const next = [...current];
       const target = index + direction;
-      if (target < 0 || target >= next.length) return current;
+      if (target < 0 || target >= next.length) {
+        return current;
+      }
       [next[index], next[target]] = [next[target], next[index]];
       return next;
     });
@@ -920,8 +922,9 @@ function StoryGraph({ select }: { select: (kind: InspectorKind) => void }) {
   const connect = (connection: Connection) => {
     const source = nodes.find((node) => node.id === connection.source);
     const target = nodes.find((node) => node.id === connection.target);
-    if (!source || !target || source.type !== 'interaction' || target.type !== 'interaction')
+    if (!source || !target || source.type !== 'interaction' || target.type !== 'interaction') {
       return;
+    }
     const id = `t${Date.now()}`;
     setNodes((current) => [
       ...current,
@@ -1187,7 +1190,9 @@ function PrototypeStoryEditor({ onNavigate }: { onNavigate: (route: PrototypeRou
     () => localStorage.setItem('paralleax-prototype-sidebar', collapsed ? 'collapsed' : 'open'),
     [collapsed],
   );
-  if (playing) return <Player onExit={() => setPlaying(false)} />;
+  if (playing) {
+    return <Player onExit={() => setPlaying(false)} />;
+  }
   return (
     <div className={`pp-shell ${collapsed ? 'is-collapsed' : ''}`}>
       <header className="pp-topbar">

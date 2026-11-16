@@ -31,7 +31,9 @@ export function mapChoiceScriptGraphToStory(
   );
   const interactionIds = new Map(graph.nodes.map((node) => [node.key, options.createId()]));
   const incoming = new Map(graph.nodes.map((node) => [node.key, [] as DirectEdge[]]));
-  for (const edge of graph.edges) incoming.get(edge.to)?.push(edge);
+  for (const edge of graph.edges) {
+    incoming.get(edge.to)?.push(edge);
+  }
   const positions = layoutChoiceScriptGraph(graph.nodes, graph.edges);
   const interactions: Interaction[] = graph.nodes.map((node) => {
     const incomingEdges = incoming.get(node.key) ?? [];
@@ -139,10 +141,14 @@ export function collectChoiceScriptVariableDeclarations(
   const visit = (statements: Statement[]) => {
     for (const statement of statements) {
       if (statement.kind === 'choice') {
-        for (const option of statement.options) visit(option.statements);
+        for (const option of statement.options) {
+          visit(option.statements);
+        }
         continue;
       }
-      if (statement.kind !== 'declare') continue;
+      if (statement.kind !== 'declare') {
+        continue;
+      }
       const sourceKey = statement.temporary
         ? temporaryVariableKey(statement.source.sceneName, statement.name)
         : globalVariableKey(statement.name);
@@ -167,7 +173,9 @@ export function collectChoiceScriptVariableDeclarations(
       });
     }
   };
-  for (const scene of scenes) visit(scene.statements);
+  for (const scene of scenes) {
+    visit(scene.statements);
+  }
   return declarations;
 }
 
@@ -246,8 +254,12 @@ function globalVariableKey(name: string) {
 }
 
 function inferStatValueType(value: StatValue): StatValueType {
-  if (typeof value === 'number') return 'number';
-  if (typeof value === 'boolean') return 'boolean';
+  if (typeof value === 'number') {
+    return 'number';
+  }
+  if (typeof value === 'boolean') {
+    return 'boolean';
+  }
   return 'string';
 }
 

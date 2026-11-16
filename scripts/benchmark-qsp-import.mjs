@@ -74,8 +74,11 @@ for (const node of story.interactions) {
   }
   for (const trigger of node.triggers) {
     for (const group of getTriggerConditionGroups(trigger)) {
-      if (!group.conditions.length)
-        for (const input of trigger.inputInteractionIds) destinations.set(input, node);
+      if (!group.conditions.length) {
+        for (const input of trigger.inputInteractionIds) {
+          destinations.set(input, node);
+        }
+      }
       for (const condition of group.conditions) {
         if (
           'statId' in condition &&
@@ -91,10 +94,16 @@ for (const node of story.interactions) {
 const examples = [];
 let inspected = 0;
 for (const [statId, sites] of callSites) {
-  if (examples.length >= 3 || inspected >= 20) break;
-  if (sites.length < 2) continue;
+  if (examples.length >= 3 || inspected >= 20) {
+    break;
+  }
+  if (sites.length < 2) {
+    continue;
+  }
   const target = destinations.get(sites[0].node.id);
-  if (!target) continue;
+  if (!target) {
+    continue;
+  }
   inspected += 1;
   const checks = sites.slice(0, 2).map((site) => {
     const expected = continuations.get(`${statId}\0${site.value}`);
@@ -109,7 +118,9 @@ for (const [statId, sites] of callSites) {
         getJourneyStatValues(story, journey),
       );
     const exit = available().find((node) => node.title.endsWith(' — Return'));
-    if (exit) journey.push(exit.id);
+    if (exit) {
+      journey.push(exit.id);
+    }
     const eligibleIds = new Set(available().map((node) => node.id));
     return {
       caller: site.node.title,

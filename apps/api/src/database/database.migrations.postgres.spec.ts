@@ -650,7 +650,9 @@ describePostgres('Database migrations PostgreSQL upgrade', () => {
     await pool.query('DROP SCHEMA public CASCADE');
     await pool.query('CREATE SCHEMA public');
 
-    for (const migration of databaseMigrations) await pool.query(migration.sql);
+    for (const migration of databaseMigrations) {
+      await pool.query(migration.sql);
+    }
 
     await pool.query(
       `INSERT INTO users (id, email, password_hash, created_at)

@@ -71,10 +71,14 @@ export function mapQspLocationsToStory(
   );
 
   const incoming = new Map(nodes.map(({ key }) => [key, [] as (typeof edges)[number][]]));
-  for (const edge of edges) incoming.get(edge.to)?.push(edge);
+  for (const edge of edges) {
+    incoming.get(edge.to)?.push(edge);
+  }
   locations.slice(1).forEach((location, index) => {
     const key = `location:${index + 1}`;
-    if ((incoming.get(key) ?? []).length > 0) return;
+    if ((incoming.get(key) ?? []).length > 0) {
+      return;
+    }
     addQspSourceIssue(
       report,
       location.source,
@@ -188,11 +192,17 @@ function collectQspVariables(
     }
   };
   for (const location of locations) {
-    for (const effect of location.analysis.effects) add(effect.variableName);
+    for (const effect of location.analysis.effects) {
+      add(effect.variableName);
+    }
     for (const action of location.actions) {
-      for (const effect of action.analysis.effects) add(effect.variableName);
+      for (const effect of action.analysis.effects) {
+        add(effect.variableName);
+      }
       for (const group of action.action.conditionGroups ?? []) {
-        for (const condition of group) add(condition.variableName);
+        for (const condition of group) {
+          add(condition.variableName);
+        }
       }
     }
   }
@@ -231,7 +241,9 @@ function displayQspVariableName(name: string) {
     .replace(/[_.-]+/g, ' ')
     .trim();
   const baseName = value ? value.charAt(0).toLocaleUpperCase() + value.slice(1) : 'QSP variable';
-  if (indexStart < 0) return baseName;
+  if (indexStart < 0) {
+    return baseName;
+  }
   const serializedIndex = name.slice(indexStart + 1, -1);
   let displayIndex = serializedIndex;
   if (serializedIndex.startsWith('"')) {

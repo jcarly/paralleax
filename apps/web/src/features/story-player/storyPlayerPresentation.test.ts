@@ -4,12 +4,24 @@ import type { Interaction, StatValue, Story, Trigger, TriggerCondition } from '@
 import { getConditionSummary, getUnavailableReason } from './storyPlayerPresentation';
 
 const t = ((key: string, options?: Record<string, unknown>) => {
-  if (key === 'player.condition.and') return 'AND';
-  if (key === 'player.condition.or') return 'OR';
-  if (key === 'player.condition.noConditions') return 'always';
-  if (key === 'player.condition.visited') return `visited:${options?.title}`;
-  if (key === 'player.condition.owns') return `owns:${options?.name}`;
-  if (key === 'player.requirement.locationIs') return `location:${options?.name}`;
+  if (key === 'player.condition.and') {
+    return 'AND';
+  }
+  if (key === 'player.condition.or') {
+    return 'OR';
+  }
+  if (key === 'player.condition.noConditions') {
+    return 'always';
+  }
+  if (key === 'player.condition.visited') {
+    return `visited:${options?.title}`;
+  }
+  if (key === 'player.condition.owns') {
+    return `owns:${options?.name}`;
+  }
+  if (key === 'player.requirement.locationIs') {
+    return `location:${options?.name}`;
+  }
   return key;
 }) as unknown as TFunction;
 

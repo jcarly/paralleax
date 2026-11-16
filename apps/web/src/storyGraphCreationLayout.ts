@@ -39,8 +39,12 @@ export async function getStoryGraphClickCreationPosition(
     creation.kind === 'parent'
       ? positionedStory.interactions.find(({ id }) => id === creation.targetId)
       : undefined;
-  if (creation.kind === 'child' && !source) return undefined;
-  if (creation.kind === 'parent' && !target) return undefined;
+  if (creation.kind === 'child' && !source) {
+    return undefined;
+  }
+  if (creation.kind === 'parent' && !target) {
+    return undefined;
+  }
 
   const fallbackPosition = getFallbackPosition(positionedStory, creation, source, target);
   const placeholderTrigger: Trigger = {
@@ -106,8 +110,12 @@ function getFallbackPosition(
   source: Interaction | undefined,
   target: Interaction | undefined,
 ) {
-  if (creation.kind === 'child' && source) return getNextChildPosition(story, source);
-  if (creation.kind === 'parent' && target) return getNextParentPosition(story, target);
+  if (creation.kind === 'child' && source) {
+    return getNextChildPosition(story, source);
+  }
+  if (creation.kind === 'parent' && target) {
+    return getNextParentPosition(story, target);
+  }
   return getNextRootPosition(story);
 }
 

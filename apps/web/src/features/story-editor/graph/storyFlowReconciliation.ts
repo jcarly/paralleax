@@ -18,8 +18,12 @@ export function reconcileStoryFlowNodes(
 
   return projectedNodes.map((projectedNode) => {
     const currentNode = currentById.get(projectedNode.id);
-    if (!currentNode || currentNode.type !== projectedNode.type) return projectedNode;
-    if (haveSameProjection(currentNode, projectedNode, transientNodeKeys)) return currentNode;
+    if (!currentNode || currentNode.type !== projectedNode.type) {
+      return projectedNode;
+    }
+    if (haveSameProjection(currentNode, projectedNode, transientNodeKeys)) {
+      return currentNode;
+    }
 
     return preserveMeasuredNodeState(currentNode, projectedNode);
   });
@@ -74,8 +78,12 @@ function haveSameProjection(
 }
 
 function areProjectionValuesEqual(left: unknown, right: unknown): boolean {
-  if (Object.is(left, right)) return true;
-  if (!left || !right || typeof left !== 'object' || typeof right !== 'object') return false;
+  if (Object.is(left, right)) {
+    return true;
+  }
+  if (!left || !right || typeof left !== 'object' || typeof right !== 'object') {
+    return false;
+  }
 
   if (Array.isArray(left) || Array.isArray(right)) {
     return (

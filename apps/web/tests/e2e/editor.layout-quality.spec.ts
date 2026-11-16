@@ -107,7 +107,7 @@ test('audits real routes after organizing a tangled 100-interaction story', asyn
   const afterReport = analyzeLayoutGeometry(after.nodes, after.edges);
   const twoInteractionCycles = complexLayoutStoryMotifs.twoInteractionCycles.map(
     ([first, second]) => {
-      const interactionIds = [first!, second!];
+      const interactionIds = [first, second];
       const nodeIds = new Set(interactionIds);
       for (const interaction of story.interactions.filter(({ id }) => nodeIds.has(id))) {
         for (const trigger of interaction.triggers) {
@@ -203,11 +203,13 @@ test('audits top-input routes in a two-interaction cycle after organization and 
   await page.setViewportSize({ width: 1600, height: 1400 });
   // Reuse the same cycle as the stress story, isolated from unrelated branches.
   let story = createComplexLayoutStoryFixture();
-  const interactionIds = complexLayoutStoryMotifs.twoInteractionCycles[0]!.slice(0, 2);
+  const interactionIds = complexLayoutStoryMotifs.twoInteractionCycles[0].slice(0, 2);
   story.interactions = story.interactions.filter(({ id }) => interactionIds.includes(id));
   story.interactions.forEach((interaction, index) => {
     interaction.position = { x: 100, y: 80 + index * 500 };
-    for (const trigger of interaction.triggers) delete trigger.position;
+    for (const trigger of interaction.triggers) {
+      delete trigger.position;
+    }
   });
   const connections = buildTriggerEdges(story).map(({ id, source, target }) => ({
     id,

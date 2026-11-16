@@ -45,7 +45,9 @@ export function AccountActionPage({
 
   async function submit(event: FormEvent) {
     event.preventDefault();
-    if (!canSubmit) return;
+    if (!canSubmit) {
+      return;
+    }
     try {
       setPending(true);
       setError('');

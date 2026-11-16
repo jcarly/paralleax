@@ -12,7 +12,9 @@ export function planTriggerInputDeletion(
 ): TriggerInputDeletionPlan | undefined {
   const interaction = story?.interactions.find((item) => item.id === interactionId);
   const trigger = interaction?.triggers.find((item) => item.id === triggerId);
-  if (!trigger) return undefined;
+  if (!trigger) {
+    return undefined;
+  }
 
   const inputInteractionIds = trigger.inputInteractionIds.filter((id) => id !== inputInteractionId);
   return {

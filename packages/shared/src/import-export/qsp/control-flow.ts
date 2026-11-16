@@ -45,7 +45,9 @@ export function buildQspDraftGraph(
   locations.forEach((entry, owner) => {
     for (const analysis of analyses(entry)) {
       for (const statement of analysis.statements) {
-        if (statement.kind !== 'call' || !statement.target) continue;
+        if (statement.kind !== 'call' || !statement.target) {
+          continue;
+        }
         const target = targets.get(
           targetKey(statement.target.locationName, statement.target.argument),
         );
@@ -77,10 +79,14 @@ export function buildQspDraftGraph(
   });
 
   const adjacency = locations.map(() => new Set<number>());
-  for (const { owner, target } of calls.values()) adjacency[owner].add(target);
+  for (const { owner, target } of calls.values()) {
+    adjacency[owner].add(target);
+  }
   const cyclic = cyclicVertices(adjacency);
   for (const [call, { target }] of calls) {
-    if (!cyclic.has(target)) continue;
+    if (!cyclic.has(target)) {
+      continue;
+    }
     issue(
       call.source,
       'recursive_subroutine_call',
@@ -93,13 +99,16 @@ export function buildQspDraftGraph(
   const reserved = new Set<string>();
   for (const { location } of locations) {
     for (const line of [...location.code, ...location.actions.flatMap((action) => action.code)]) {
-      for (const match of line.matchAll(/[$%]?__qsp_return_[a-z0-9_.]*/gi))
+      for (const match of line.matchAll(/[$%]?__qsp_return_[a-z0-9_.]*/gi)) {
         reserved.add(qspVariableKey(match[0]));
+      }
     }
   }
   const returnVariables = new Map<number, string>();
   for (const { target } of calls.values()) {
-    if (returnVariables.has(target)) continue;
+    if (returnVariables.has(target)) {
+      continue;
+    }
     const location = locations[target].location;
     const slug = normalizeQspName(location.name).replace(/[^a-z0-9_]/g, '_') || 'location';
     const base = `$__qsp_return_${slug}`;
@@ -115,11 +124,15 @@ export function buildQspDraftGraph(
   // Navigation abandons the active call chain. Clear possible ancestors so a later
   // ordinary visit cannot expose an abandoned continuation through a stale value.
   const ancestors = locations.map(() => new Set<number>());
-  for (const { owner, target } of calls.values()) ancestors[target].add(owner);
+  for (const { owner, target } of calls.values()) {
+    ancestors[target].add(owner);
+  }
   const activeVariableCache = new Map<number, string[]>();
   const activeVariables = (owner: number) => {
     const cached = activeVariableCache.get(owner);
-    if (cached) return cached;
+    if (cached) {
+      return cached;
+    }
     const found = new Set<number>([owner]);
     const queue = [owner];
     for (let index = 0; index < queue.length; index += 1) {
@@ -185,8 +198,9 @@ export function buildQspDraftGraph(
     if (!ordered) {
       node.body = renderQspBody([...description, ...analysis.text]);
       node.effects = [...analysis.effects];
-      for (const target of analysis.navigationTargets)
+      for (const target of analysis.navigationTargets) {
         pendingNavigation.push({ from: key, target });
+      }
       return analysis.navigationTargets.length ? undefined : key;
     }
     let text = [...description];
@@ -211,14 +225,24 @@ export function buildQspDraftGraph(
         return undefined;
       }
       if (statement.kind === 'navigation') {
-        for (const variable of activeVariables(owner)) setEffect(node, variable, '', source);
-        if (statement.target) pendingNavigation.push({ from: node.key, target: statement.target });
+        for (const variable of activeVariables(owner)) {
+          setEffect(node, variable, '', source);
+        }
+        if (statement.target) {
+          pendingNavigation.push({ from: node.key, target: statement.target });
+        }
         return undefined;
       }
-      if (statement.kind === 'exit') return node.key;
-      if (statement.kind !== 'call') continue;
+      if (statement.kind === 'exit') {
+        return node.key;
+      }
+      if (statement.kind !== 'call') {
+        continue;
+      }
       const call = calls.get(statement);
-      if (!call) return undefined;
+      if (!call) {
+        return undefined;
+      }
       translatedCalls.add(statement);
       const variable = returnVariables.get(call.target)!;
       const continuation = `${key}:continue:${++segment}`;
@@ -286,8 +310,12 @@ export function buildQspDraftGraph(
       const actionInput =
         (end && (!ordered || !exit || exit.source.line >= action.source.line) ? end : undefined) ??
         (!ordered ? `location:${owner}` : undefined);
-      if (actionInput) addEdge(actionInput, key);
-      if (actionEnd && actionInput) normalExits.push(actionEnd);
+      if (actionInput) {
+        addEdge(actionInput, key);
+      }
+      if (actionEnd && actionInput) {
+        normalExits.push(actionEnd);
+      }
       if (action.image) {
         addQspSourceIssue(
           report,
@@ -336,7 +364,9 @@ export function buildQspDraftGraph(
         `${location.name} — Return`,
         location.source,
       );
-      for (const source of sources) addEdge(source, exit.key);
+      for (const source of sources) {
+        addEdge(source, exit.key);
+      }
       sources = [exit.key];
     }
     for (const pending of continuations) {
@@ -399,12 +429,16 @@ function targetKey(name: string, argument?: string) {
 function cyclicVertices(graph: Set<number>[]) {
   const reverse = graph.map(() => new Set<number>());
   graph.forEach((targets, owner) => {
-    for (const target of targets) reverse[target].add(owner);
+    for (const target of targets) {
+      reverse[target].add(owner);
+    }
   });
   const seen = new Set<number>();
   const order: number[] = [];
   for (let start = 0; start < graph.length; start += 1) {
-    if (seen.has(start)) continue;
+    if (seen.has(start)) {
+      continue;
+    }
     const stack: Array<[number, boolean]> = [[start, false]];
     while (stack.length) {
       const [node, expanded] = stack.pop()!;
@@ -412,16 +446,24 @@ function cyclicVertices(graph: Set<number>[]) {
         order.push(node);
         continue;
       }
-      if (seen.has(node)) continue;
+      if (seen.has(node)) {
+        continue;
+      }
       seen.add(node);
       stack.push([node, true]);
-      for (const target of graph[node]) if (!seen.has(target)) stack.push([target, false]);
+      for (const target of graph[node]) {
+        if (!seen.has(target)) {
+          stack.push([target, false]);
+        }
+      }
     }
   }
   seen.clear();
   const cyclic = new Set<number>();
   for (const start of order.reverse()) {
-    if (seen.has(start)) continue;
+    if (seen.has(start)) {
+      continue;
+    }
     const component: number[] = [];
     const queue = [start];
     seen.add(start);
@@ -435,8 +477,11 @@ function cyclicVertices(graph: Set<number>[]) {
         }
       }
     }
-    if (component.length > 1 || graph[start].has(start))
-      for (const node of component) cyclic.add(node);
+    if (component.length > 1 || graph[start].has(start)) {
+      for (const node of component) {
+        cyclic.add(node);
+      }
+    }
   }
   return cyclic;
 }
@@ -447,6 +492,8 @@ function renderQspBody(parts: readonly string[]) {
     .filter(Boolean)
     .map((part) => `<p>${escapeImportedHtml(part)}</p>`)
     .join('');
-  if (body.length <= MAX_INTERACTION_BODY_LENGTH) return body;
+  if (body.length <= MAX_INTERACTION_BODY_LENGTH) {
+    return body;
+  }
   return `<p>${escapeImportedHtml(truncateImportedText(parts.filter(Boolean).join('\n\n'), MAX_INTERACTION_BODY_LENGTH - 20))}</p>`;
 }

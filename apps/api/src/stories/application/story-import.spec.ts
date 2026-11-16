@@ -58,7 +58,7 @@ describe('StoryImportService', () => {
       run: jest.fn(async () => {
         const importId = createJob.mock.results[0]?.value.id;
         expect(importId).toBeDefined();
-        jobs.cancel(importId!);
+        jobs.cancel(importId);
         return result;
       }),
     };
@@ -101,7 +101,7 @@ describe('StoryImportService', () => {
       run: jest.fn(async () => {
         const importId = createJob.mock.results[0]?.value.id;
         expect(importId).toBeDefined();
-        jobs.cancel(importId!);
+        jobs.cancel(importId);
         return choiceScriptResult;
       }),
     };

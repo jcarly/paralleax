@@ -26,16 +26,22 @@ export function lexQspLines(lines: readonly string[]): string[] {
 
       if (stringQuote) {
         if (character === stringQuote && line[index + 1] === stringQuote) {
-          if (!continuesMultilineString) executable += `${character}${line[index + 1]}`;
+          if (!continuesMultilineString) {
+            executable += `${character}${line[index + 1]}`;
+          }
           index += 1;
           continue;
         }
         if (character === stringQuote) {
-          if (!continuesMultilineString) executable += character;
+          if (!continuesMultilineString) {
+            executable += character;
+          }
           stringQuote = undefined;
           continue;
         }
-        if (!continuesMultilineString) executable += character;
+        if (!continuesMultilineString) {
+          executable += character;
+        }
         continue;
       }
 
@@ -44,10 +50,14 @@ export function lexQspLines(lines: readonly string[]): string[] {
         index += 1;
         continue;
       }
-      if (character === '!' && !isQspNotEqualOperator(line, index)) break;
+      if (character === '!' && !isQspNotEqualOperator(line, index)) {
+        break;
+      }
 
       executable += character;
-      if (character === "'" || character === '"') stringQuote = character;
+      if (character === "'" || character === '"') {
+        stringQuote = character;
+      }
     }
 
     executableLines.push(executable);
@@ -59,6 +69,8 @@ export function lexQspLines(lines: readonly string[]): string[] {
 function isQspNotEqualOperator(line: string, index: number) {
   const statementStart =
     Math.max(line.lastIndexOf('&', index - 1), line.lastIndexOf(':', index - 1)) + 1;
-  if (!/^\s*(?:if|elseif)\b/i.test(line.slice(statementStart, index))) return false;
+  if (!/^\s*(?:if|elseif)\b/i.test(line.slice(statementStart, index))) {
+    return false;
+  }
   return line.slice(index + 1).includes(':');
 }

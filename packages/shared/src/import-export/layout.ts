@@ -29,18 +29,29 @@ export function layoutImportedGraph(
     for (const target of outgoing.get(key) ?? []) {
       depth.set(target, Math.max(depth.get(target) ?? 0, (depth.get(key) ?? 0) + 1));
       indegree.set(target, (indegree.get(target) ?? 1) - 1);
-      if (indegree.get(target) === 0) queue.push(target);
+      if (indegree.get(target) === 0) {
+        queue.push(target);
+      }
     }
   }
   let fallbackDepth = 0;
-  for (const value of depth.values()) fallbackDepth = Math.max(fallbackDepth, value);
-  for (const node of nodes) if (!processed.has(node.key)) depth.set(node.key, fallbackDepth + 1);
+  for (const value of depth.values()) {
+    fallbackDepth = Math.max(fallbackDepth, value);
+  }
+  for (const node of nodes) {
+    if (!processed.has(node.key)) {
+      depth.set(node.key, fallbackDepth + 1);
+    }
+  }
   const layers = new Map<number, string[]>();
   for (const node of nodes) {
     const layer = depth.get(node.key) ?? 0;
     const keys = layers.get(layer);
-    if (keys) keys.push(node.key);
-    else layers.set(layer, [node.key]);
+    if (keys) {
+      keys.push(node.key);
+    } else {
+      layers.set(layer, [node.key]);
+    }
   }
   const result = new Map<string, { x: number; y: number }>();
   let visualRow = 0;

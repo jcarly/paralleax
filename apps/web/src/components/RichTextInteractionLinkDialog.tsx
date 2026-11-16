@@ -28,7 +28,9 @@ export function RichTextInteractionLinkDialog({
 
   function submit(event: FormEvent) {
     event.preventDefault();
-    if (!canConfirm) return;
+    if (!canConfirm) {
+      return;
+    }
     onConfirm({ targetId, text: text.trim() });
   }
 

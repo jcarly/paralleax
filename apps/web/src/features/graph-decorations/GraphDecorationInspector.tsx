@@ -59,7 +59,9 @@ export function GraphDecorationInspector({
               rows={5}
               defaultValue={decoration.text}
               onBlur={(event) => {
-                if (event.target.value !== decoration.text) onPatch({ text: event.target.value });
+                if (event.target.value !== decoration.text) {
+                  onPatch({ text: event.target.value });
+                }
               }}
             />
           </label>
@@ -138,7 +140,9 @@ function DecorationNumberInput({
     const parsed = Number(input.value);
     const next = Number.isFinite(parsed) ? Math.min(max ?? Infinity, Math.max(min, parsed)) : value;
     input.value = String(next);
-    if (next !== value) onCommit(next);
+    if (next !== value) {
+      onCommit(next);
+    }
   }
 
   return (
@@ -152,7 +156,9 @@ function DecorationNumberInput({
       defaultValue={value}
       onBlur={(event) => commit(event.currentTarget)}
       onKeyDown={(event) => {
-        if (event.key === 'Enter') event.currentTarget.blur();
+        if (event.key === 'Enter') {
+          event.currentTarget.blur();
+        }
       }}
     />
   );

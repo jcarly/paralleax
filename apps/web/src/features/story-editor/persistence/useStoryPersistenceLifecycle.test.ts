@@ -157,7 +157,9 @@ describe('story persistence lifecycle', () => {
     vi.mocked(api.getStory).mockClear();
     vi.mocked(api.getStory).mockResolvedValue({ ...storyFixture(), title: 'Remote title' });
     const invalidate = vi.mocked(useStoryRealtime).mock.calls.at(-1)?.[2];
-    if (!invalidate) throw new Error('Expected a realtime callback');
+    if (!invalidate) {
+      throw new Error('Expected a realtime callback');
+    }
 
     act(() => result.current.beginLocalEdit());
     act(() => invalidate('changed'));
@@ -181,7 +183,9 @@ describe('story persistence lifecycle', () => {
         }),
     );
     const invalidate = vi.mocked(useStoryRealtime).mock.calls.at(-1)?.[2];
-    if (!invalidate) throw new Error('Expected a realtime callback');
+    if (!invalidate) {
+      throw new Error('Expected a realtime callback');
+    }
 
     act(() => invalidate('changed'));
     await waitFor(() => expect(resolveRefresh).toBeDefined());

@@ -46,13 +46,17 @@ export function useStoryEditorPersistence(
 
   async function renameStory(title: string) {
     const next = await trackAuthoredSave(() => api.renameStory(storyId, title));
-    if (!next) return;
+    if (!next) {
+      return;
+    }
     setStory((current) => (current ? persistence.mergeIncomingStory(current, next) : next));
   }
 
   async function updateStoryStartDateTime(startDateTime: string) {
     const next = await trackAuthoredSave(() => api.updateStory(storyId, { startDateTime }));
-    if (!next) return false;
+    if (!next) {
+      return false;
+    }
     setStory((current) => (current ? persistence.mergeIncomingStory(current, next) : next));
     return true;
   }

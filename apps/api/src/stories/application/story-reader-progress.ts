@@ -89,7 +89,9 @@ export class StoryReaderProgressService {
   async getSave(storyId: string, saveId: string, userId: string): Promise<ReaderSave> {
     await this.runtime.getAccess(storyId, userId);
     const save = await this.repository.findProgress(storyId, userId, saveId);
-    if (!save) throw new NotFoundException('Reader save not found');
+    if (!save) {
+      throw new NotFoundException('Reader save not found');
+    }
     return save;
   }
 
@@ -128,7 +130,9 @@ export class StoryReaderProgressService {
       throw new BadRequestException('Autosaves are updated by their reader mode');
     }
     const existing = await this.repository.findProgress(storyId, userId, saveId);
-    if (!existing) throw new NotFoundException('Reader save not found');
+    if (!existing) {
+      throw new NotFoundException('Reader save not found');
+    }
     return this.persist(story, input, userId, saveId, this.name(input.name), existing.createdAt);
   }
 
@@ -138,7 +142,9 @@ export class StoryReaderProgressService {
       throw new BadRequestException('Autosaves are reset by their reader mode');
     }
     const existing = await this.repository.findProgress(storyId, userId, saveId);
-    if (!existing) throw new NotFoundException('Reader save not found');
+    if (!existing) {
+      throw new NotFoundException('Reader save not found');
+    }
     await this.repository.deleteProgress(storyId, userId, saveId);
   }
 
@@ -243,7 +249,9 @@ export class StoryReaderProgressService {
 
   private name(value: string): string {
     const name = value.trim();
-    if (!name) throw new BadRequestException('Reader save name cannot be blank');
+    if (!name) {
+      throw new BadRequestException('Reader save name cannot be blank');
+    }
     if (name.length > MAX_READER_SAVE_NAME_LENGTH) {
       throw new BadRequestException(
         `Reader save name cannot exceed ${MAX_READER_SAVE_NAME_LENGTH} characters`,

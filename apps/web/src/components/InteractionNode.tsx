@@ -51,14 +51,18 @@ export function InteractionNode({ id, data }: NodeProps<Node<InteractionNodeData
     d.onCreateChild?.(id);
   };
   const selectRootTrigger = (event: MouseEvent<HTMLButtonElement>) => {
-    if (!rootTriggerId) return;
+    if (!rootTriggerId) {
+      return;
+    }
     event.preventDefault();
     event.stopPropagation();
     d.onSelectRootTrigger?.(id, rootTriggerId);
   };
   const triggerKeyboardAction =
     (callback: (event: NodeActionEvent) => void) => (event: KeyboardEvent<HTMLDivElement>) => {
-      if (event.key !== 'Enter' && event.key !== ' ') return;
+      if (event.key !== 'Enter' && event.key !== ' ') {
+        return;
+      }
       callback(event);
     };
 

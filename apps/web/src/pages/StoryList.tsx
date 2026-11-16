@@ -85,7 +85,9 @@ export function StoryList({
       sort,
     })
       .then((result) => {
-        if (!active || requestVersion !== listRequestVersion.current) return;
+        if (!active || requestVersion !== listRequestVersion.current) {
+          return;
+        }
         setStories(result.items);
         setPage(result.page);
         setTotalCount(result.totalCount);
@@ -111,7 +113,9 @@ export function StoryList({
   }, [debouncedQuery, filter, isAuthenticated, listRequestKey, sort, t]);
 
   async function loadMoreStories() {
-    if (!hasMore || loadingMore) return;
+    if (!hasMore || loadingMore) {
+      return;
+    }
     const requestVersion = listRequestVersion.current;
     try {
       setError('');
@@ -123,7 +127,9 @@ export function StoryList({
         filter: isAuthenticated ? filter : 'all',
         sort,
       });
-      if (requestVersion !== listRequestVersion.current) return;
+      if (requestVersion !== listRequestVersion.current) {
+        return;
+      }
       setStories((current) => [
         ...current,
         ...result.items.filter((item) => !current.some(({ id }) => id === item.id)),
@@ -143,7 +149,9 @@ export function StoryList({
   async function create(event: FormEvent) {
     event.preventDefault();
     const title = newTitle.trim();
-    if (!title || pending) return;
+    if (!title || pending) {
+      return;
+    }
     try {
       setError('');
       setPending('story');
@@ -167,7 +175,9 @@ export function StoryList({
   }
 
   async function createDemos() {
-    if (pending) return;
+    if (pending) {
+      return;
+    }
     try {
       setError('');
       setPending('demo');
@@ -440,7 +450,9 @@ export function StoryList({
               aria-label={t('library.dialog.title')}
               onKeyDown={(event) =>
                 handleModalDialogKeyDown(event, () => {
-                  if (pending !== 'story') closeCreationDialog();
+                  if (pending !== 'story') {
+                    closeCreationDialog();
+                  }
                 })
               }
             >
@@ -613,7 +625,9 @@ function StoryCardActions({
 
 function formatDate(value: string, locale: string, unknownDate: string) {
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return unknownDate;
+  if (Number.isNaN(date.getTime())) {
+    return unknownDate;
+  }
   return new Intl.DateTimeFormat(locale, {
     day: 'numeric',
     month: 'short',

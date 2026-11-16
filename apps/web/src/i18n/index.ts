@@ -20,14 +20,18 @@ export function normalizeLanguage(value: string | null | undefined): SupportedLa
 export function detectInterfaceLanguage(): SupportedLanguage {
   try {
     const storedLanguage = normalizeLanguage(window.localStorage.getItem(languageStorageKey));
-    if (storedLanguage) return storedLanguage;
+    if (storedLanguage) {
+      return storedLanguage;
+    }
   } catch {
     // The interface still follows the browser when storage is unavailable.
   }
 
   for (const language of globalThis.navigator?.languages ?? []) {
     const supportedLanguage = normalizeLanguage(language);
-    if (supportedLanguage) return supportedLanguage;
+    if (supportedLanguage) {
+      return supportedLanguage;
+    }
   }
 
   return normalizeLanguage(globalThis.navigator?.language) ?? 'en';

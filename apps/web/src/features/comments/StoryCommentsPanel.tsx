@@ -72,18 +72,24 @@ export function StoryCommentsPanel({
 
   async function submit(event: FormEvent) {
     event.preventDefault();
-    if (!body.trim() || pending) return;
+    if (!body.trim() || pending) {
+      return;
+    }
     setPending(true);
     const result = draftAnchor
       ? await onCreate(body.trim())
       : selectedThread
         ? await onReply(selectedThread.id, body.trim())
         : undefined;
-    if (result) setBody('');
+    if (result) {
+      setBody('');
+    }
     setPending(false);
   }
 
-  if (!open) return null;
+  if (!open) {
+    return null;
+  }
   return (
     <aside
       className={`comments-panel ${placement === 'inspector' ? 'inspector-placement' : ''}`}
@@ -215,7 +221,9 @@ export function StoryCommentsPanel({
                 aria-pressed={filter === value}
                 onClick={() => {
                   setFilter(value);
-                  if (value === 'deleted') void onLoadDeleted?.();
+                  if (value === 'deleted') {
+                    void onLoadDeleted?.();
+                  }
                 }}
                 key={value}
               >
@@ -272,8 +280,12 @@ export function StoryCommentsPanel({
 }
 
 function anchorDescription(anchor: CommentAnchor, t: (key: string) => string) {
-  if (anchor.kind === 'canvas') return t('comments.anchor.canvas');
-  if (anchor.kind === 'text') return `“${anchor.selector.exact}”`;
+  if (anchor.kind === 'canvas') {
+    return t('comments.anchor.canvas');
+  }
+  if (anchor.kind === 'text') {
+    return `“${anchor.selector.exact}”`;
+  }
   if (anchor.kind === 'field' || anchor.kind === 'section') {
     return `${t(`comments.anchor.${anchor.targetType}`)}: ${commentAnchorSlotLabel(anchor)}`;
   }

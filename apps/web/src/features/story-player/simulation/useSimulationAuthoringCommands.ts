@@ -46,7 +46,9 @@ export function useSimulationAuthoringCommands({
 }) {
   const saveCurrentInteraction = useCallback(
     async (patch: InteractionContentPatch) => {
-      if (!current) return;
+      if (!current) {
+        return;
+      }
       await runMutation(
         () => api.updateInteraction(storyId, current.id, patch),
         (result) =>
@@ -60,7 +62,9 @@ export function useSimulationAuthoringCommands({
 
   const patchInteraction = useCallback(
     (interactionId: string, patch: InteractionContentPatch) => {
-      if (!story) return;
+      if (!story) {
+        return;
+      }
       setStory({
         ...story,
         interactions: story.interactions.map((interaction) =>
@@ -73,14 +77,18 @@ export function useSimulationAuthoringCommands({
 
   const patchCurrentInteraction = useCallback(
     (patch: InteractionContentPatch) => {
-      if (!current) return;
+      if (!current) {
+        return;
+      }
       patchInteraction(current.id, patch);
     },
     [current, patchInteraction],
   );
 
   const addOption = useCallback(async () => {
-    if (!story) return;
+    if (!story) {
+      return;
+    }
     const creation = current
       ? ({ kind: 'child', sourceId: current.id } as const)
       : ({ kind: 'root' } as const);
@@ -151,6 +159,8 @@ export function useSimulationAuthoringCommands({
 }
 
 function applyInteractionResponse(story: Story, result: InteractionMutationResult | Story) {
-  if ('interactions' in result) return ensureStoryInteractionPositions(result);
+  if ('interactions' in result) {
+    return ensureStoryInteractionPositions(result);
+  }
   return ensureStoryInteractionPositions(applyInteractionMutationResult(story, result));
 }

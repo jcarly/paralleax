@@ -10,7 +10,9 @@ for (const chunk of Object.values(manifest)) {
   if (typeof chunk.file === 'string' && isMeasuredAsset(chunk.file)) {
     assetNames.add(chunk.file);
   }
-  for (const stylesheet of chunk.css ?? []) assetNames.add(stylesheet);
+  for (const stylesheet of chunk.css ?? []) {
+    assetNames.add(stylesheet);
+  }
 }
 
 const compressedAssetBytes = new Map(

@@ -372,8 +372,7 @@ function InteractionInspectorView({
   const locationSummary = location?.name ?? t('interactionInspector.noLocationChange');
   const locationTooltip = locationSummary;
   const characterSummary =
-    presentCharacters.map(({ name }) => name).join(', ') ||
-    t('interactionInspector.noCharacters');
+    presentCharacters.map(({ name }) => name).join(', ') || t('interactionInspector.noCharacters');
   const characterTooltip = characterSummary;
   const hasDuration = interaction.durationMinutes !== undefined;
   const durationSummary = hasDuration
@@ -613,9 +612,7 @@ function InteractionInspectorView({
                         onChange={(event) => {
                           const characterIds = event.target.checked
                             ? [...(interaction.characterIds ?? []), character.id]
-                            : (interaction.characterIds ?? []).filter(
-                                (id) => id !== character.id,
-                              );
+                            : (interaction.characterIds ?? []).filter((id) => id !== character.id);
                           updateLocalInteraction({ characterIds });
                           void onPatch(interaction.id, { characterIds });
                         }}
@@ -635,11 +632,7 @@ function InteractionInspectorView({
                     </label>
                   ))
                 )}
-                <button
-                  className="ghost"
-                  type="button"
-                  onClick={() => setEditingCharacters(false)}
-                >
+                <button className="ghost" type="button" onClick={() => setEditingCharacters(false)}>
                   {t('interactionInspector.doneEditing')}
                 </button>
               </fieldset>
@@ -712,9 +705,7 @@ function InteractionInspectorView({
                       setEditingDuration(false);
                     }}
                   />
-                  <small className="form-control-suffix">
-                    {t('interactionInspector.minutes')}
-                  </small>
+                  <small className="form-control-suffix">{t('interactionInspector.minutes')}</small>
                 </span>
               </div>
             ) : (
@@ -726,9 +717,7 @@ function InteractionInspectorView({
               >
                 <InteractionMetadataIcon kind="time" />
                 {hasDuration ? (
-                  <span className="interaction-metadata-duration-value">
-                    {durationSummary}
-                  </span>
+                  <span className="interaction-metadata-duration-value">{durationSummary}</span>
                 ) : null}
               </FieldHelpTooltip>
             )}

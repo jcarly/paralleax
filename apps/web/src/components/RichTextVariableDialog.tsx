@@ -64,7 +64,9 @@ export function RichTextVariableDialog({
           disabled={!selection}
           type="button"
           onClick={() => {
-            if (selection) onConfirm(selection.target, selection.reference);
+            if (selection) {
+              onConfirm(selection.target, selection.reference);
+            }
           }}
         >
           {t(isEditing ? 'richText.updateVariable' : 'richText.insertVariable')}

@@ -154,7 +154,9 @@ function TestReactFlow({
         {nodes.map((node) => {
           const NodeComponent = nodeTypes[node.type ?? 'default'] as
             ComponentType<NodeProps<TestFlowNode>> | undefined;
-          if (!NodeComponent) return null;
+          if (!NodeComponent) {
+            return null;
+          }
 
           return (
             <div
@@ -216,7 +218,9 @@ function TestReactFlow({
                     },
                   }));
                   const movedNode = movedNodes.find((candidate) => candidate.id === node.id);
-                  if (movedNode) onNodeDrag?.(event.nativeEvent, movedNode, movedNodes);
+                  if (movedNode) {
+                    onNodeDrag?.(event.nativeEvent, movedNode, movedNodes);
+                  }
                 }}
               />
               <span
@@ -234,7 +238,9 @@ function TestReactFlow({
                     },
                   }));
                   const movedNode = movedNodes.find((candidate) => candidate.id === node.id);
-                  if (!movedNode) return;
+                  if (!movedNode) {
+                    return;
+                  }
                   onNodeDragStart?.(event.nativeEvent, node, selectedNodes);
                   onNodeDragStop?.(event.nativeEvent, movedNode, movedNodes);
                 }}

@@ -115,7 +115,9 @@ function uploadBinary<T>(
     xhr.open('POST', `/api${path}`);
     xhr.setRequestHeader('Content-Type', 'application/octet-stream');
     xhr.upload.onprogress = (event) => {
-      if (!event.lengthComputable || event.total <= 0) return;
+      if (!event.lengthComputable || event.total <= 0) {
+        return;
+      }
       onUploadProgress?.(Math.min(100, Math.round((event.loaded / event.total) * 100)));
     };
     xhr.upload.onload = () => onUploadProgress?.(100);
@@ -168,8 +170,11 @@ function apiError(path: string, status: number, body: string) {
       requestId?: string;
       details?: unknown;
     };
-    if (Array.isArray(error.message)) message = error.message.join(', ');
-    else if (error.message) message = error.message;
+    if (Array.isArray(error.message)) {
+      message = error.message.join(', ');
+    } else if (error.message) {
+      message = error.message;
+    }
     code = error.code;
     requestId = error.requestId;
     details = error.details;
@@ -196,7 +201,9 @@ function storyListPath(path: string, options: Partial<StoryListOptions>): string
     sort: options.sort ?? 'updated',
   });
   const query = options.query?.trim();
-  if (query) search.set('query', query);
+  if (query) {
+    search.set('query', query);
+  }
   return `${path}?${search.toString()}`;
 }
 

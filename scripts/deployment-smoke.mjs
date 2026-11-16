@@ -17,10 +17,14 @@ export async function checkDeployment(baseUrl, options = {}) {
       redirect: 'error',
       signal: options.signal ?? AbortSignal.timeout(10_000),
     });
-    if (!response.ok) throw new Error(`${check.path} returned HTTP ${response.status}`);
+    if (!response.ok) {
+      throw new Error(`${check.path} returned HTTP ${response.status}`);
+    }
     if (check.kind === 'json') {
       const body = await response.json();
-      if (body?.status !== 'ok') throw new Error(`${check.path} did not report status ok`);
+      if (body?.status !== 'ok') {
+        throw new Error(`${check.path} did not report status ok`);
+      }
     } else if ((await response.text()).trim() !== 'ok') {
       throw new Error(`${check.path} did not return the web health marker`);
     }
@@ -50,7 +54,9 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   } else {
     checkDeployment(baseUrl, { allowHttp: process.env.ALLOW_HTTP_SMOKE === 'true' })
       .then((results) => {
-        for (const result of results) console.log(`ok ${result.status} ${result.path}`);
+        for (const result of results) {
+          console.log(`ok ${result.status} ${result.path}`);
+        }
       })
       .catch((error) => {
         console.error(error instanceof Error ? error.message : error);

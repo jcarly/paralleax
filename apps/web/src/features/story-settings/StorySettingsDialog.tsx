@@ -35,7 +35,9 @@ export function StorySettingsDialog({
   const tabs: StorySettingsTab[] = canManageAccess ? ['properties', 'access'] : ['properties'];
 
   async function saveProperties() {
-    if (propertiesStatus === 'saving' || draftStartDateTime === startDateTime) return;
+    if (propertiesStatus === 'saving' || draftStartDateTime === startDateTime) {
+      return;
+    }
     setPropertiesStatus('saving');
     setPropertiesStatus((await onSaveStartDateTime(draftStartDateTime)) ? 'saved' : 'error');
   }

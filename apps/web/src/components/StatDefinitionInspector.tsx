@@ -24,8 +24,12 @@ import { StatValueField } from './StatValueField';
 
 function defaultValue(definition: StatDefinition): StatValue {
   const valueType = getStatValueType(definition);
-  if (valueType === 'number') return 0;
-  if (valueType === 'boolean') return false;
+  if (valueType === 'number') {
+    return 0;
+  }
+  if (valueType === 'boolean') {
+    return false;
+  }
   return '';
 }
 
@@ -181,7 +185,9 @@ export function StatDefinitionInspector({
       </div>
     );
   }
-  if (!statDefinition) return null;
+  if (!statDefinition) {
+    return null;
+  }
 
   const owners = getStatAssignmentOwners(story);
   const assignedOwners = owners.flatMap((owner) =>
@@ -420,7 +426,9 @@ function StatDefinitionEditor({
         className="ghost danger"
         type="button"
         onClick={() => {
-          if (!window.confirm(t('attributes.deleteConfirm', { name: definition.name }))) return;
+          if (!window.confirm(t('attributes.deleteConfirm', { name: definition.name }))) {
+            return;
+          }
           void api
             .deleteStatDefinition(story.id, definition.id)
             .then((next) => {

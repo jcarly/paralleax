@@ -1,6 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 import { cleanup, render, screen, within } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import type userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import { afterEach, beforeEach, vi } from 'vitest';
 import type {
@@ -51,7 +51,9 @@ export function interactionMutation(
   interactionId: string,
 ): InteractionMutationResult {
   const interaction = story.interactions.find(({ id }) => id === interactionId);
-  if (!interaction) throw new Error(`Missing interaction ${interactionId} in test fixture`);
+  if (!interaction) {
+    throw new Error(`Missing interaction ${interactionId} in test fixture`);
+  }
   return {
     interaction: structuredClone(interaction),
     revision: story.revision ?? 2,
@@ -67,7 +69,9 @@ export function triggerMutation(
   const trigger = story.interactions
     .find(({ id }) => id === interactionId)
     ?.triggers.find(({ id }) => id === triggerId);
-  if (!trigger) throw new Error(`Missing trigger ${triggerId} in test fixture`);
+  if (!trigger) {
+    throw new Error(`Missing trigger ${triggerId} in test fixture`);
+  }
   return {
     interactionId,
     trigger: structuredClone(trigger),
@@ -81,7 +85,9 @@ export function graphDecorationMutation(
   decorationId: string,
 ): GraphDecorationMutationResult {
   const decoration = story.graphDecorations?.find(({ id }) => id === decorationId);
-  if (!decoration) throw new Error(`Missing graph decoration ${decorationId} in test fixture`);
+  if (!decoration) {
+    throw new Error(`Missing graph decoration ${decorationId} in test fixture`);
+  }
   return {
     decoration: structuredClone(decoration),
     revision: story.revision ?? 2,
@@ -196,6 +202,8 @@ function mockProgressiveStoryLoading() {
 }
 
 function requiredLoadedStory(story: Story | undefined): Story {
-  if (!story) throw new Error('The editor bootstrap must be loaded first.');
+  if (!story) {
+    throw new Error('The editor bootstrap must be loaded first.');
+  }
   return story;
 }

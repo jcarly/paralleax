@@ -37,7 +37,9 @@ export function AdminUsersPage({ currentUserId }: { currentUserId?: string }) {
   }, [query, roleFilter, users]);
 
   async function changeRole(user: ManagedUser, role: UserRole) {
-    if (role === user.role) return;
+    if (role === user.role) {
+      return;
+    }
     try {
       setPendingId(user.id);
       setError('');

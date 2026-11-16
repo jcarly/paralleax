@@ -49,7 +49,9 @@ export function getStoryGraphSelectionNodeIds(
 export function getStoryGraphSelectionTargets(
   selection: StoryGraphSelection | undefined,
 ): StoryGraphLayoutTarget[] {
-  if (!selection) return [];
+  if (!selection) {
+    return [];
+  }
   return [
     ...selection.interactionIds.map((interactionId): StoryGraphLayoutTarget => ({
       type: 'interaction',
@@ -67,11 +69,15 @@ export function applyStoryGraphSelection(
   nodes: readonly StoryFlowNode[],
   selection: StoryGraphSelection | undefined,
 ): StoryFlowNode[] {
-  if (!selection) return [...nodes];
+  if (!selection) {
+    return [...nodes];
+  }
   const selectedNodeIds = getStoryGraphSelectionNodeIds(selection);
 
   return nodes.map((node) => {
-    if (node.type !== 'interaction' && node.type !== 'trigger') return node;
+    if (node.type !== 'interaction' && node.type !== 'trigger') {
+      return node;
+    }
     const selected = selectedNodeIds.has(node.id);
     return {
       ...node,

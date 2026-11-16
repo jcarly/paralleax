@@ -39,7 +39,9 @@ export class ChoiceScriptGraphBuilder {
   ) {}
 
   compileScene(scene: ParsedScene) {
-    if (scene.statements.length === 0) return;
+    if (scene.statements.length === 0) {
+      return;
+    }
     this.compileStatements(
       scene,
       scene.statements,
@@ -84,8 +86,12 @@ export class ChoiceScriptGraphBuilder {
       const node = this.addNode(scene, title, body, source);
       node.effects.push(...pendingEffects);
       pendingEffects = [];
-      for (const predecessor of active) this.connect(predecessor, node.key);
-      for (const anchor of pendingAnchors) this.defineAnchor(anchor, node.key, source);
+      for (const predecessor of active) {
+        this.connect(predecessor, node.key);
+      }
+      for (const anchor of pendingAnchors) {
+        this.defineAnchor(anchor, node.key, source);
+      }
       active = [node.key];
       pendingAnchors = [];
       pendingTitle = humanizeIdentifier(scene.name);
@@ -96,7 +102,9 @@ export class ChoiceScriptGraphBuilder {
     for (let index = 0; index < statements.length; index += 1) {
       const statement = statements[index];
       if (statement.kind === 'declare' || statement.kind === 'set') {
-        if (statement.kind === 'declare' && !statement.temporary) continue;
+        if (statement.kind === 'declare' && !statement.temporary) {
+          continue;
+        }
         const effect: SourceEffect = {
           name: statement.name,
           sceneName: scene.name,
@@ -109,7 +117,9 @@ export class ChoiceScriptGraphBuilder {
           return node ? [node] : [];
         });
         if (activeNodes.length > 0) {
-          for (const node of activeNodes) node.effects.push(effect);
+          for (const node of activeNodes) {
+            node.effects.push(effect);
+          }
         } else {
           pendingEffects.push(effect);
         }
@@ -123,13 +133,19 @@ export class ChoiceScriptGraphBuilder {
         continue;
       }
       if (statement.kind === 'text') {
-        if (terminated && pendingAnchors.length === 0) continue;
+        if (terminated && pendingAnchors.length === 0) {
+          continue;
+        }
         const text = passageText(statement.lines, this.report, statement.source);
-        if (text) createNode(pendingTitle, text, statement.source);
+        if (text) {
+          createNode(pendingTitle, text, statement.source);
+        }
         continue;
       }
       if (statement.kind === 'choice') {
-        if (terminated && pendingAnchors.length === 0) continue;
+        if (terminated && pendingAnchors.length === 0) {
+          continue;
+        }
         if (active.length === 0 || pendingAnchors.length > 0) {
           createNode(pendingTitle, '', statement.source);
         }
@@ -205,8 +221,9 @@ export class ChoiceScriptGraphBuilder {
         terminated = true;
       }
     }
-    if (pendingAnchors.length > 0)
+    if (pendingAnchors.length > 0) {
       createNode(pendingTitle, '', statements.at(-1)?.source ?? fallbackSource(scene));
+    }
     return active;
   }
 
@@ -261,12 +278,17 @@ function passageText(
   const paragraphs: string[] = [];
   let current: string[] = [];
   const flush = () => {
-    if (current.length > 0) paragraphs.push(current.join(' '));
+    if (current.length > 0) {
+      paragraphs.push(current.join(' '));
+    }
     current = [];
   };
   for (const line of lines) {
-    if (line) current.push(line);
-    else flush();
+    if (line) {
+      current.push(line);
+    } else {
+      flush();
+    }
   }
   flush();
   let text = paragraphs.join('\n\n');

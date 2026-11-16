@@ -78,7 +78,7 @@ describe('StoryGroupService', () => {
       { title: ' Renamed ', parentGroupId: 'parent', interactionIds: ['interaction-2'] },
       'user-1',
     );
-    expect(current.groups![1]).toEqual({
+    expect(current.groups[1]).toEqual({
       id: 'child',
       title: 'Renamed',
       parentGroupId: 'parent',
@@ -119,12 +119,12 @@ describe('StoryGroupService', () => {
       { title: 'New', interactionIds: ['interaction-1'] },
       'user-1',
     );
-    expect(current.groups![0].interactionIds).toEqual([]);
-    expect(current.groups![1].interactionIds).toEqual(['interaction-2']);
+    expect(current.groups[0].interactionIds).toEqual([]);
+    expect(current.groups[1].interactionIds).toEqual(['interaction-2']);
     await service.update('story-1', 'parent', { interactionIds: ['interaction-1'] }, 'user-1');
-    expect(current.groups!.find(({ id }) => id === created.group.id)!.interactionIds).toEqual([]);
-    expect(current.groups![0].interactionIds).toEqual(['interaction-1']);
-    expect(current.groups![1].parentGroupId).toBe('parent');
+    expect(current.groups.find(({ id }) => id === created.group.id)!.interactionIds).toEqual([]);
+    expect(current.groups[0].interactionIds).toEqual(['interaction-1']);
+    expect(current.groups[1].parentGroupId).toBe('parent');
   });
 
   it('rejects a blank group title after trimming whitespace', async () => {

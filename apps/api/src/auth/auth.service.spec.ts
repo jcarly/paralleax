@@ -23,7 +23,9 @@ describe('AuthService', () => {
       Promise.resolve([...users.values()].find((user) => user.id === id)),
     ),
     createUser: jest.fn((user: Omit<AuthUser, 'role'>) => {
-      if (users.has(user.email)) return Promise.resolve(undefined);
+      if (users.has(user.email)) {
+        return Promise.resolve(undefined);
+      }
       const created: AuthUser = { ...user, role: users.size === 0 ? 'admin' : 'user' };
       users.set(created.email, created);
       return Promise.resolve(created);
@@ -42,8 +44,9 @@ describe('AuthService', () => {
     }),
     deleteOtherSessions: jest.fn((userId: string, currentTokenHash: string) => {
       for (const [tokenHash, candidateUserId] of sessions) {
-        if (candidateUserId === userId && tokenHash !== currentTokenHash)
+        if (candidateUserId === userId && tokenHash !== currentTokenHash) {
           sessions.delete(tokenHash);
+        }
       }
       return Promise.resolve();
     }),
@@ -52,8 +55,9 @@ describe('AuthService', () => {
     createOrReplaceAccountActionToken: jest.fn(
       (token: { userId: string; kind: AccountActionTokenKind; tokenHash: string }) => {
         for (const [hash, candidate] of actionTokens) {
-          if (candidate.userId === token.userId && candidate.kind === token.kind)
+          if (candidate.userId === token.userId && candidate.kind === token.kind) {
             actionTokens.delete(hash);
+          }
         }
         actionTokens.set(token.tokenHash, { userId: token.userId, kind: token.kind });
         return Promise.resolve();
@@ -61,30 +65,42 @@ describe('AuthService', () => {
     ),
     verifyEmailWithActionToken: jest.fn((tokenHash: string, now: string) => {
       const token = actionTokens.get(tokenHash);
-      if (!token || token.kind !== 'verify_email') return Promise.resolve(undefined);
+      if (!token || token.kind !== 'verify_email') {
+        return Promise.resolve(undefined);
+      }
       actionTokens.delete(tokenHash);
       const user = [...users.values()].find((candidate) => candidate.id === token.userId);
-      if (user) user.emailVerifiedAt = now;
+      if (user) {
+        user.emailVerifiedAt = now;
+      }
       return Promise.resolve(user);
     }),
     resetPasswordWithActionToken: jest.fn((tokenHash: string, passwordHash: string) => {
       const token = actionTokens.get(tokenHash);
-      if (!token || token.kind !== 'reset_password') return Promise.resolve(undefined);
+      if (!token || token.kind !== 'reset_password') {
+        return Promise.resolve(undefined);
+      }
       actionTokens.delete(tokenHash);
       const user = [...users.values()].find((candidate) => candidate.id === token.userId);
       if (user) {
         user.passwordHash = passwordHash;
         for (const [sessionHash, candidateUserId] of sessions) {
-          if (candidateUserId === user.id) sessions.delete(sessionHash);
+          if (candidateUserId === user.id) {
+            sessions.delete(sessionHash);
+          }
         }
       }
       return Promise.resolve(user);
     }),
     updatePasswordAndRevokeSessions: jest.fn((userId: string, passwordHash: string) => {
       const user = [...users.values()].find((candidate) => candidate.id === userId);
-      if (user) user.passwordHash = passwordHash;
+      if (user) {
+        user.passwordHash = passwordHash;
+      }
       for (const [sessionHash, candidateUserId] of sessions) {
-        if (candidateUserId === userId) sessions.delete(sessionHash);
+        if (candidateUserId === userId) {
+          sessions.delete(sessionHash);
+        }
       }
       return Promise.resolve();
     }),
@@ -102,7 +118,9 @@ describe('AuthService', () => {
     ),
     updateUserRole: jest.fn((id: string, role: AuthUser['role']) => {
       const user = [...users.values()].find((candidate) => candidate.id === id);
-      if (!user) return Promise.resolve(undefined);
+      if (!user) {
+        return Promise.resolve(undefined);
+      }
       user.role = role;
       return Promise.resolve({
         id: user.id,
@@ -115,7 +133,9 @@ describe('AuthService', () => {
     }),
     updateDisplayName: jest.fn((id: string, displayName: string) => {
       const user = [...users.values()].find((candidate) => candidate.id === id);
-      if (!user) return Promise.resolve(undefined);
+      if (!user) {
+        return Promise.resolve(undefined);
+      }
       user.displayName = displayName;
       return Promise.resolve({
         id: user.id,
@@ -321,7 +341,9 @@ describe('AuthService', () => {
   function emailToken() {
     const message = jest.mocked(email.send).mock.calls.at(-1)?.[0];
     const match = message?.text.match(/[?&]token=([^\s&]+)/u);
-    if (!match?.[1]) throw new Error('Expected an account action token in the email');
+    if (!match?.[1]) {
+      throw new Error('Expected an account action token in the email');
+    }
     return decodeURIComponent(match[1]);
   }
 });

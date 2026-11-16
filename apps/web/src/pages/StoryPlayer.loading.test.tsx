@@ -63,7 +63,9 @@ describe('StoryPlayer loading and presentation', () => {
     });
 
     const loadRuntimeSlice = vi.mocked(api.getStoryRuntimeSlice).getMockImplementation();
-    if (!loadRuntimeSlice) throw new Error('Expected runtime slice loading to be mocked.');
+    if (!loadRuntimeSlice) {
+      throw new Error('Expected runtime slice loading to be mocked.');
+    }
     let staleSliceRequested = false;
     let releaseStaleSlice: (() => void) | undefined;
     vi.mocked(api.getStoryRuntimeSlice).mockImplementation((storyId, request = {}) => {

@@ -36,7 +36,9 @@ describe('Story authored change history', () => {
     const result = applyStoryChangeDelta(later, delta, 'backward');
 
     expect(result.applied).toBe(true);
-    if (!result.applied) return;
+    if (!result.applied) {
+      return;
+    }
     expect(result.story.interactions[0].position).toEqual({ x: 10, y: 20 });
     expect(result.story.interactions[0].title).toBe('Later title');
   });
@@ -52,7 +54,9 @@ describe('Story authored change history', () => {
     expect(isStoryGraphPositionDelta(inverse)).toBe(true);
     const restored = applyStoryChangeDelta(moved, inverse, 'forward');
     expect(restored.applied).toBe(true);
-    if (!restored.applied) return;
+    if (!restored.applied) {
+      return;
+    }
     expect(restored.story.interactions[0].position).toEqual(story.interactions[0].position);
     expect(restored.story.interactions[0].triggers[0].position).toBeUndefined();
   });
@@ -79,7 +83,9 @@ describe('Story authored change history', () => {
     expect(undone.applied && undone.story.interactions.map(({ id }) => id)).toEqual([
       'interaction-1',
     ]);
-    if (!undone.applied) return;
+    if (!undone.applied) {
+      return;
+    }
     const redone = applyStoryChangeDelta(undone.story, delta, 'forward');
     expect(redone.applied && redone.story.interactions.map(({ id }) => id)).toEqual([
       'interaction-1',
@@ -219,7 +225,9 @@ describe('Story authored change history', () => {
     const durationMs = performance.now() - startedAt;
 
     expect(restored.applied).toBe(true);
-    if (!restored.applied) return;
+    if (!restored.applied) {
+      return;
+    }
     expect(restored.story.interactions.map(({ position }) => position)).toEqual(
       before.interactions.map(({ position }) => position),
     );

@@ -50,7 +50,9 @@ export function hasQspImportErrors(report: QspImportReport): boolean {
 
 export function touchQspFeature(report: QspImportReport, feature: QspFeatureId, count = 1) {
   const coverage = report.coverage.find((candidate) => candidate.feature === feature);
-  if (coverage) coverage.occurrences += count;
+  if (coverage) {
+    coverage.occurrences += count;
+  }
 }
 
 export function addQspImportIssue(report: QspImportReport, issue: QspImportIssue) {

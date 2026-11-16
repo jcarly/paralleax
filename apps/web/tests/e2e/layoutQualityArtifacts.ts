@@ -22,7 +22,9 @@ export async function readRenderedLayout(
       const viewport = document.querySelector<HTMLElement>('.react-flow__viewport')!;
       const origin = viewport.getBoundingClientRect();
       const scale = new DOMMatrix(getComputedStyle(viewport).transform).a;
-      if (!Number.isFinite(scale) || scale <= 0) throw new Error('Invalid graph viewport scale');
+      if (!Number.isFinite(scale) || scale <= 0) {
+        throw new Error('Invalid graph viewport scale');
+      }
       const nodes = [...document.querySelectorAll<HTMLElement>('.react-flow__node')].map(
         (element) => {
           const box = element.getBoundingClientRect();
@@ -41,7 +43,9 @@ export async function readRenderedLayout(
           const id = element.dataset.id!;
           const connection = byId.get(id);
           const path = element.querySelector<SVGPathElement>('.react-flow__edge-path');
-          if (!connection || !path) throw new Error(`Missing rendered edge metadata: ${id}`);
+          if (!connection || !path) {
+            throw new Error(`Missing rendered edge metadata: ${id}`);
+          }
           const length = path.getTotalLength();
           const matrix = path.getScreenCTM();
           if (!matrix || !Number.isFinite(length) || length <= 0) {
@@ -71,7 +75,9 @@ export async function readRenderedLayout(
               : Math.hypot(middle.x - start.x, middle.y - start.y);
             // Arc length detects return bends even if their midpoint lies on the chord.
             if (to - from - chord > tolerance || deviation > tolerance) {
-              if (depth >= 24) throw new Error(`Path approximation did not converge: ${id}`);
+              if (depth >= 24) {
+                throw new Error(`Path approximation did not converge: ${id}`);
+              }
               const half = (from + to) / 2;
               append(from, half, start, middle, depth + 1);
               append(half, to, middle, end, depth + 1);

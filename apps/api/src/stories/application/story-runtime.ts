@@ -73,7 +73,9 @@ export class StoryRuntimeService {
       const result = await this.getContextPage(storyId, userId, page, STORY_EDITOR_PAGE_SIZE);
       this.assertRevision(bootstrap.revision, result.revision);
       appendStoryContextPage(context, result);
-      if (!result.hasMore || result.page * result.pageSize >= totalCount) break;
+      if (!result.hasMore || result.page * result.pageSize >= totalCount) {
+        break;
+      }
     }
     return projectStoryContext(createStoryLoadingProjection(bootstrap), context);
   }
@@ -86,7 +88,9 @@ export class StoryRuntimeService {
 
   private async requireProjection<T>(projection: Promise<T | undefined>): Promise<T> {
     const result = await projection;
-    if (!result) throw new NotFoundException('Story not found');
+    if (!result) {
+      throw new NotFoundException('Story not found');
+    }
     return result;
   }
 }

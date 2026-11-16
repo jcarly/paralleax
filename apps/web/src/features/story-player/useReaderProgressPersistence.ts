@@ -54,8 +54,12 @@ export function useReaderProgressPersistence({
       attempts.current.set(displayScope, currentAttempt);
       setScopedStatus({ scope: displayScope, value: 'saving' });
       const updateStatus = (value: ReaderProgressStatus) => {
-        if (currentLifecycleVersion !== lifecycleVersion.current) return;
-        if (currentAttempt !== attempts.current.get(displayScope)) return;
+        if (currentLifecycleVersion !== lifecycleVersion.current) {
+          return;
+        }
+        if (currentAttempt !== attempts.current.get(displayScope)) {
+          return;
+        }
         setScopedStatus((current) =>
           current.scope === displayScope ? { scope: displayScope, value } : current,
         );
@@ -72,7 +76,9 @@ export function useReaderProgressPersistence({
 
   const save = useCallback(
     (session: ReaderProgressState, modeOverride?: ReaderAutosaveMode) => {
-      if (!authenticated) return;
+      if (!authenticated) {
+        return;
+      }
       const persistenceMode = modeOverride ?? mode;
       const queueScope = `${storyId}:${persistenceMode}`;
       enqueuePersistence(
@@ -95,7 +101,9 @@ export function useReaderProgressPersistence({
   );
 
   const reset = useCallback(() => {
-    if (!authenticated) return;
+    if (!authenticated) {
+      return;
+    }
     const queueScope = `${storyId}:${mode}`;
     enqueuePersistence(queueScope, () => api.deleteReaderProgress(storyId, mode), 'idle');
   }, [authenticated, enqueuePersistence, mode, storyId]);

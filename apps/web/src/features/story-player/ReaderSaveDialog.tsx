@@ -38,7 +38,9 @@ export function ReaderSaveDialog({
     void api
       .listReaderSaves(story.id)
       .then((nextSaves) => {
-        if (!cancelled) setSaves(nextSaves);
+        if (!cancelled) {
+          setSaves(nextSaves);
+        }
       })
       .catch((caught: unknown) => {
         if (!cancelled) {
@@ -46,7 +48,9 @@ export function ReaderSaveDialog({
         }
       })
       .finally(() => {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       });
     return () => {
       cancelled = true;
@@ -74,7 +78,9 @@ export function ReaderSaveDialog({
   async function create(event: FormEvent) {
     event.preventDefault();
     const trimmedName = name.trim();
-    if (!trimmedName) return;
+    if (!trimmedName) {
+      return;
+    }
     setPending('create');
     setError('');
     try {
@@ -102,7 +108,9 @@ export function ReaderSaveDialog({
   }
 
   async function overwrite(save: ReaderSaveSummary) {
-    if (save.kind !== 'manual' || !save.name) return;
+    if (save.kind !== 'manual' || !save.name) {
+      return;
+    }
     setPending(`overwrite:${save.id}`);
     setError('');
     try {
@@ -119,7 +127,9 @@ export function ReaderSaveDialog({
   }
 
   async function remove(save: ReaderSaveSummary) {
-    if (save.kind !== 'manual' || !window.confirm(t('player.saves.deleteConfirm'))) return;
+    if (save.kind !== 'manual' || !window.confirm(t('player.saves.deleteConfirm'))) {
+      return;
+    }
     setPending(`delete:${save.id}`);
     setError('');
     try {
@@ -249,8 +259,12 @@ function saveLabel(
   save: ReaderSaveSummary,
   t: (key: string, options?: Record<string, unknown>) => string,
 ): string {
-  if (save.kind === 'reader-autosave') return t('player.saves.readerAutosave');
-  if (save.kind === 'simulation-autosave') return t('player.saves.simulationAutosave');
+  if (save.kind === 'reader-autosave') {
+    return t('player.saves.readerAutosave');
+  }
+  if (save.kind === 'simulation-autosave') {
+    return t('player.saves.simulationAutosave');
+  }
   return save.name ?? t('player.saves.manual');
 }
 

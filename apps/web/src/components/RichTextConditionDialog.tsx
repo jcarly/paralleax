@@ -26,7 +26,9 @@ export function RichTextConditionDialog({
 
   function submit(event: FormEvent) {
     event.preventDefault();
-    if (condition) onConfirm(condition);
+    if (condition) {
+      onConfirm(condition);
+    }
   }
 
   return (

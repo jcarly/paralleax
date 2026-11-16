@@ -163,8 +163,9 @@ async function readEffectFieldPresentation(card: Locator) {
     const label = element.querySelector('.interaction-effect-fields label');
     const input = element.querySelector('.interaction-effect-fields input[type="number"]');
     const select = element.querySelector('.interaction-effect-fields select');
-    if (!label || !input || !select)
+    if (!label || !input || !select) {
       throw new Error('Expected effect label, number input, and select');
+    }
 
     const capture = (field: HTMLElement) => {
       const style = getComputedStyle(field);

@@ -84,7 +84,9 @@ describe('Sentry observability', () => {
     await jest.isolateModulesAsync(async () => {
       ({ captureApiException } = await import('./sentry'));
     });
-    if (!captureApiException) throw new Error('Expected Sentry capture function to be available');
+    if (!captureApiException) {
+      throw new Error('Expected Sentry capture function to be available');
+    }
 
     expect(init).toHaveBeenCalledWith(
       expect.objectContaining({

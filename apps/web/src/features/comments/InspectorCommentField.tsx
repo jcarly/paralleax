@@ -22,7 +22,9 @@ function useCommentBadgePosition() {
 
   useLayoutEffect(() => {
     const field = fieldRef.current;
-    if (!field) return;
+    if (!field) {
+      return;
+    }
     const update = () => {
       const fieldBounds = field.getBoundingClientRect();
       const inspectorBounds = field.closest('.inspector')?.getBoundingClientRect();
@@ -65,7 +67,9 @@ function CommentBadge({
   onMouseEnter: () => void;
   onMouseLeave: () => void;
 }) {
-  if (!position) return null;
+  if (!position) {
+    return null;
+  }
   return createPortal(
     <button
       className="inspector-field-comment-badge inspector-comment-toggle"
@@ -98,12 +102,14 @@ function useCommentBadgeVisibility() {
     fieldHandlers: {
       onMouseEnter: () => setHovered(true),
       onMouseLeave: (event: MouseEvent<HTMLDivElement>) => {
-        if (!isCommentBadgeTarget(event.relatedTarget)) setHovered(false);
+        if (!isCommentBadgeTarget(event.relatedTarget)) {
+          setHovered(false);
+        }
       },
       onFocus: () => setHovered(true),
       onBlur: (event: FocusEvent<HTMLDivElement>) => {
         const target = event.relatedTarget;
-        if (!event.currentTarget.contains(target as Node | null) && !isCommentBadgeTarget(target)) {
+        if (!event.currentTarget.contains(target) && !isCommentBadgeTarget(target)) {
           setHovered(false);
         }
       },

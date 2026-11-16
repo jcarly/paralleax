@@ -55,8 +55,9 @@ export async function registerUser(page: Page, prefix: string): Promise<Acceptan
   const verificationUrl = verificationEmail.text.match(
     /https?:\/\/[^\s]+\/verify-email\?token=[A-Za-z0-9_-]{43}/,
   )?.[0];
-  if (!verificationUrl)
+  if (!verificationUrl) {
     throw new Error('The verification email did not contain an account action link');
+  }
   await page.goto(verificationUrl);
   const verification = waitForApiResponse(page, 'POST', /\/api\/auth\/verify-email$/);
   await page.getByRole('button', { name: 'Verify and sign in' }).click();
@@ -133,7 +134,9 @@ async function autoSaveAccessOption(
   value: string,
 ) {
   const field = page.getByRole('combobox', { name: label });
-  if ((await field.inputValue()) === value) return;
+  if ((await field.inputValue()) === value) {
+    return;
+  }
   const accessUpdate = waitForApiResponse(
     page,
     'PATCH',

@@ -48,7 +48,9 @@ export function useStoryContextPersistence({
     const result = await trackSave(() =>
       api.createLocation(storyId, { name: 'New location', description: '' }),
     );
-    if (!result) return undefined;
+    if (!result) {
+      return undefined;
+    }
     setStory((current) => (current ? applyLocationResult(current, result) : current));
     return result.location.id;
   }
@@ -56,7 +58,9 @@ export function useStoryContextPersistence({
   async function updateLocation(locationId: string, patch: LocationPatch) {
     setStory((current) => (current ? updateLocalLocation(current, locationId, patch) : current));
     const result = await trackSave(() => api.updateLocation(storyId, locationId, patch));
-    if (!result) return;
+    if (!result) {
+      return;
+    }
     setStory((current) =>
       current ? applyLocationPatchResult(current, result, locationId, patch) : current,
     );
@@ -66,7 +70,9 @@ export function useStoryContextPersistence({
     const result = await trackSave(() =>
       api.createCharacter(storyId, { name: 'New character', description: '' }),
     );
-    if (!result) return undefined;
+    if (!result) {
+      return undefined;
+    }
     setStory((current) => (current ? applyCharacterResult(current, result) : current));
     return result.character.id;
   }
@@ -74,7 +80,9 @@ export function useStoryContextPersistence({
   async function updateCharacter(characterId: string, patch: CharacterPatch) {
     setStory((current) => (current ? updateLocalCharacter(current, characterId, patch) : current));
     const result = await trackSave(() => api.updateCharacter(storyId, characterId, patch));
-    if (!result) return;
+    if (!result) {
+      return;
+    }
     setStory((current) =>
       current ? applyCharacterPatchResult(current, result, characterId, patch) : current,
     );
@@ -89,7 +97,9 @@ export function useStoryContextPersistence({
         initialValue: valueType === 'number' ? 0 : valueType === 'boolean' ? false : '',
       }),
     );
-    if (!result) return;
+    if (!result) {
+      return;
+    }
     setStory((current) => (current ? applyCharacterStatResult(current, result) : current));
   }
 
@@ -104,7 +114,9 @@ export function useStoryContextPersistence({
     const result = await trackSave(() =>
       api.updateCharacterStat(storyId, characterId, statId, patch),
     );
-    if (!result) return;
+    if (!result) {
+      return;
+    }
     setStory((current) =>
       current
         ? applyStoryMutationMetadata(
@@ -117,7 +129,9 @@ export function useStoryContextPersistence({
 
   async function deleteCharacterStat(characterId: string, statId: string) {
     const result = await trackSave(() => api.deleteCharacterStat(storyId, characterId, statId));
-    if (!result) return;
+    if (!result) {
+      return;
+    }
     setStory((current) =>
       current
         ? applyStoryMutationMetadata(
@@ -130,7 +144,9 @@ export function useStoryContextPersistence({
 
   async function createStatDefinition(input: CreateStatDefinitionInput) {
     const result = await trackSave(() => api.createStatDefinition(storyId, input));
-    if (!result) return undefined;
+    if (!result) {
+      return undefined;
+    }
     setStory((current) =>
       current
         ? applyStoryMutationMetadata(addLocalStatDefinition(current, result.statDefinition), result)
@@ -146,7 +162,9 @@ export function useStoryContextPersistence({
     const result = await trackSave(() =>
       api.updateStatDefinition(storyId, statDefinitionId, patch),
     );
-    if (!result) return;
+    if (!result) {
+      return;
+    }
     setStory((current) => (current ? applyStoryMutationMetadata(current, result) : current));
   }
 
@@ -154,7 +172,9 @@ export function useStoryContextPersistence({
     const result = await trackSave(() =>
       api.createItemDefinition(storyId, { name: 'New item', description: '' }),
     );
-    if (!result) return undefined;
+    if (!result) {
+      return undefined;
+    }
     setStory((current) =>
       current
         ? applyStoryMutationMetadata(addLocalItemDefinition(current, result.itemDefinition), result)
@@ -170,7 +190,9 @@ export function useStoryContextPersistence({
     const result = await trackSave(() =>
       api.updateItemDefinition(storyId, itemDefinitionId, patch),
     );
-    if (!result) return;
+    if (!result) {
+      return;
+    }
     setStory((current) => (current ? applyStoryMutationMetadata(current, result) : current));
   }
 
@@ -178,13 +200,17 @@ export function useStoryContextPersistence({
     const result = await trackSave(() =>
       api.createCharacterItem(storyId, characterId, { itemDefinitionId }),
     );
-    if (!result) return;
+    if (!result) {
+      return;
+    }
     setStory((current) => (current ? applyCharacterItemResult(current, result) : current));
   }
 
   async function deleteCharacterItem(characterId: string, itemId: string) {
     const result = await trackSave(() => api.deleteCharacterItem(storyId, characterId, itemId));
-    if (!result) return;
+    if (!result) {
+      return;
+    }
     setStory((current) =>
       current
         ? applyStoryMutationMetadata(deleteItemInstanceFromStory(current, result.itemId), result)
@@ -194,7 +220,9 @@ export function useStoryContextPersistence({
 
   async function moveItemInstance(itemId: string, placement: MoveItemInstanceInput) {
     const result = await trackSave(() => api.moveItemInstance(storyId, itemId, placement));
-    if (!result) return;
+    if (!result) {
+      return;
+    }
     setStory((current) => (current ? mergeServerStory(current, result) : current));
   }
 

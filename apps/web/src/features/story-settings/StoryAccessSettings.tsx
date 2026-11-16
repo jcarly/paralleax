@@ -31,10 +31,14 @@ export function StoryAccessSettings({ storyId, onInaccessible }: StoryAccessSett
     api
       .getStoryAccess(storyId)
       .then((loadedAccess) => {
-        if (!cancelled) setAccess(loadedAccess);
+        if (!cancelled) {
+          setAccess(loadedAccess);
+        }
       })
       .catch((caught: unknown) => {
-        if (cancelled || onInaccessible?.(caught)) return;
+        if (cancelled || onInaccessible?.(caught)) {
+          return;
+        }
         setError(apiErrorMessage(caught, t, t('access.loadFailed')));
       });
     return () => {
@@ -46,7 +50,9 @@ export function StoryAccessSettings({ storyId, onInaccessible }: StoryAccessSett
     key: Key,
     value: StoryAccessSettings[Key],
   ) {
-    if (!access || pending) return;
+    if (!access || pending) {
+      return;
+    }
     const previous = access;
     const next = { ...access, [key]: value };
     setAccess(next);
@@ -72,7 +78,9 @@ export function StoryAccessSettings({ storyId, onInaccessible }: StoryAccessSett
   }
 
   async function changeRole(emailAddress: string, nextRole: StoryCollaboratorRole) {
-    if (pending) return;
+    if (pending) {
+      return;
+    }
     await runAccessOperation(
       () => api.setStoryCollaborator(storyId, emailAddress, nextRole),
       t('access.roleUpdateFailed'),
@@ -80,7 +88,9 @@ export function StoryAccessSettings({ storyId, onInaccessible }: StoryAccessSett
   }
 
   async function remove(userId: string) {
-    if (!access || pending) return;
+    if (!access || pending) {
+      return;
+    }
     try {
       setPending(true);
       setError('');
@@ -90,7 +100,9 @@ export function StoryAccessSettings({ storyId, onInaccessible }: StoryAccessSett
         collaborators: access.collaborators.filter((item) => item.userId !== userId),
       });
     } catch (caught) {
-      if (onInaccessible?.(caught)) return;
+      if (onInaccessible?.(caught)) {
+        return;
+      }
       setError(apiErrorMessage(caught, t, t('access.removeFailed')));
     } finally {
       setPending(false);
@@ -124,7 +136,9 @@ export function StoryAccessSettings({ storyId, onInaccessible }: StoryAccessSett
       </p>
     );
   }
-  if (!access) return <p>{t('access.loading')}</p>;
+  if (!access) {
+    return <p>{t('access.loading')}</p>;
+  }
 
   return (
     <div className="settings-grid story-access-settings">

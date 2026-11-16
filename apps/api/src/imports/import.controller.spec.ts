@@ -4,8 +4,8 @@ import { of } from 'rxjs';
 import type { RequestUser } from '../auth/auth.decorators';
 import type { ImportJobSnapshot } from './import-job.service';
 import { ImportController } from './import.controller';
-import { ImportJobService } from './import-job.service';
-import { ImportReportStorage } from './import-report-storage';
+import type { ImportJobService } from './import-job.service';
+import type { ImportReportStorage } from './import-report-storage';
 
 const importId = 'e8896cd2-ddaa-4c81-9432-cbc4ba278db7';
 const owner: RequestUser = {
